@@ -7,10 +7,9 @@ bitnet.cpp is the official inference framework for 1-bit LLMs (e.g., BitNet b1.5
 The first release of bitnet.cpp is to support inference on CPUs. bitnet.cpp achieves speedups of **1.37x** to **5.07x** on ARM CPUs, with larger models experiencing greater performance gains. Additionally, it reduces energy consumption by **55.4%** to **70.0%**, further boosting overall efficiency. On x86 CPUs, speedups range from **2.37x** to **6.17x** with energy reductions between **71.9%** to **82.2%**. Furthermore, bitnet.cpp can run a 100B BitNet b1.58 model on a single CPU, achieving speeds comparable to human reading (5-7 tokens per second), significantly enhancing the potential for running LLMs on local devices. More details will be provided soon.
 
 <img src="./assets/m2_performance.jpg" alt="m2_performance" width="800"/>
+<img src="./assets/intel_performance.jpg" alt="m2_performance" width="800"/>
 
 >The tested models are dummy setups used in a research context to demonstrate the inference performance of bitnet.cpp.
-
-We hope the release of bitnet.cpp can inspire more 1-bit LLMs trained in large-scale settings.
 
 ## Demo
 
@@ -26,8 +25,7 @@ https://github.com/user-attachments/assets/7f46b736-edec-4828-b809-4be780a3e5b1
 
 ## Supported Models
 
-bitnet.cpp supports a list of 1-bit models available on [Hugging Face](https://huggingface.co/), which are trained with research settings.
-
+bitnet.cpp supports a list of 1-bit models available on [Hugging Face](https://huggingface.co/), which are trained with research settings. We hope the release of bitnet.cpp can inspire more 1-bit LLMs trained in large-scale settings.
 
 <table>
     </tr>
