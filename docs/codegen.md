@@ -8,7 +8,7 @@ We cutting weight into multiple compute blocks to best utilize hardware capabili
 ### Example
 bitnet_b1_58-large:
 
-- Make sure Mamtul kernels shapes \
+- Make sure Matmul kernels shapes \
 For example, bitnet_b1_58-large Matmul kernel shapes are:\
 [1536, 4096]\
 [1536, 1536]\

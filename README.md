@@ -14,7 +14,7 @@ We hope the release of bitnet.cpp can inspire more 1-bit LLMs trained in large-s
 
 ## Demo
 
-A demo of bitnet.cpp runing a BitNet b1.58 3B model on Apple M2:
+A demo of bitnet.cpp running a BitNet b1.58 3B model on Apple M2:
 
 https://github.com/user-attachments/assets/7f46b736-edec-4828-b809-4be780a3e5b1
 
