@@ -24,8 +24,7 @@ https://github.com/user-attachments/assets/7f46b736-edec-4828-b809-4be780a3e5b1
 - 10/17/2023 [BitNet: Scaling 1-bit Transformers for Large Language Models](https://arxiv.org/abs/2310.11453)
 
 ## Supported Models
-
-bitnet.cpp supports a list of 1-bit models available on [Hugging Face](https://huggingface.co/), which are trained with research settings. We hope the release of bitnet.cpp can inspire more 1-bit LLMs trained in large-scale settings.
+❗️**We use existing 1-bit LLMs available on [Hugging Face](https://huggingface.co/) to demonstrate the inference capabilities of bitnet.cpp. These models are neither trained nor released by Microsoft. We hope the release of bitnet.cpp will inspire the development of 1-bit LLMs in large-scale settings in terms of model size and training tokens.**
 
 <table>
     </tr>
