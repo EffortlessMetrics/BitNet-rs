@@ -101,7 +101,7 @@ https://github.com/user-attachments/assets/7f46b736-edec-4828-b809-4be780a3e5b1
         -  MS-Build Support for LLVM-Toolset (clang)
     - For Debian/Ubuntu users, you can download with [Automatic installation script](https://apt.llvm.org/)
 
-        ` bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"`
+        `bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"`
 - conda (highly recommend)
 
 ### Build from source
