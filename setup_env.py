@@ -20,6 +20,9 @@ SUPPORTED_HF_MODELS = {
     "HF1BitLLM/Llama3-8B-1.58-100B-tokens": {
         "model_name": "Llama3-8B-1.58-100B-tokens",
     },
+    "tiiuae/falcon3-7b-instruct-1.58bit": {
+        "model_name": "falcon3-7b-1.58bit",
+    },
     "tiiuae/falcon3-7b-1.58bit": {
         "model_name": "falcon3-7b-1.58bit",
     }

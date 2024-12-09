@@ -676,7 +676,7 @@ def read_model_config(model_dir: str) -> dict[str, Any]:
     with open(config, "r") as f:
         return json.load(f)
 
-@Model.register("LLaMAForCausalLM", "LlamaForCausalLM", "MistralForCausalLM", "MixtralForCausalLM", "Falcon3ForCausalLM")
+@Model.register("LLaMAForCausalLM", "LlamaForCausalLM", "MistralForCausalLM", "MixtralForCausalLM")
 class LlamaModel(Model):
     model_arch = gguf.MODEL_ARCH.LLAMA
 
