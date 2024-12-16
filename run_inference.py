@@ -31,7 +31,7 @@ def run_inference():
         '-c', str(args.ctx_size),
         '--temp', str(args.temperature),
         "-b", "1",
-        "-cnv" if args.cnv else ""
+        "-cnv" if args.conversation else ""
     ]
     run_command(command)
 
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--threads", type=int, help="Number of threads to use", required=False, default=2)
     parser.add_argument("-c", "--ctx-size", type=int, help="Size of the prompt context", required=False, default=2048)
     parser.add_argument("-temp", "--temperature", type=float, help="Temperature, a hyperparameter that controls the randomness of the generated text", required=False, default=0.8)
-    parser.add_argument("-cnv", "--conversation", ction='store_true', help="Whether to enable chat mode or not (for instruct models.)")
+    parser.add_argument("-cnv", "--conversation", action='store_true', help="Whether to enable chat mode or not (for instruct models.)")
 
     args = parser.parse_args()
     run_inference()
