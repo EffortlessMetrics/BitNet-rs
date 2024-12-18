@@ -159,7 +159,7 @@ optional arguments:
 ### Basic usage
 ```bash
 # Run inference with the quantized model
-python run_inference.py -m models/Falcon3-7B-Instruct-1.58bit/ggml-model-i2_s.gguf -cnv "You are a helpful assistant"
+python run_inference.py -m models/Falcon3-7B-Instruct-1.58bit/ggml-model-i2_s.gguf -p "You are a helpful assistant" -cnv
 
 # Output:
 # Daniel went back to the the the garden. Mary travelled to the kitchen. Sandra journeyed to the kitchen. Sandra went to the hallway. John went to the bedroom. Mary went back to the garden. Where is Mary?
@@ -167,7 +167,7 @@ python run_inference.py -m models/Falcon3-7B-Instruct-1.58bit/ggml-model-i2_s.gg
 
 ```
 <pre>
-usage: run_inference.py [-h] [-m MODEL] [-n N_PREDICT] -p PROMPT [-t THREADS] [-c CTX_SIZE] [-temp TEMPERATURE]
+usage: run_inference.py [-h] [-m MODEL] [-n N_PREDICT] -p PROMPT [-t THREADS] [-c CTX_SIZE] [-temp TEMPERATURE] [-cnv]
 
 Run inference
 
@@ -185,6 +185,7 @@ optional arguments:
                         Size of the prompt context
   -temp TEMPERATURE, --temperature TEMPERATURE
                         Temperature, a hyperparameter that controls the randomness of the generated text
+  -cnv, --conversation  Whether to enable chat mode or not (for instruct models.)
 </pre>
 
 ### Benchmark
