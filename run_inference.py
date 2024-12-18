@@ -31,8 +31,9 @@ def run_inference():
         '-c', str(args.ctx_size),
         '--temp', str(args.temperature),
         "-b", "1",
-        "-cnv" if args.conversation else ""
     ]
+    if args.conversation:
+        command.append("-cnv")
     run_command(command)
 
 def signal_handler(sig, frame):
