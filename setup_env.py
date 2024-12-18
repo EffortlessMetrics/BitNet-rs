@@ -140,6 +140,9 @@ def setup_gguf():
 
 def gen_code():
     _, arch = system_info()
+    
+    llama3_f3_models = ["Llama3-8B-1.58-100B-tokens", "Falcon3-7B-1.58bit", "Falcon3-10B-1.58bit", "Falcon3-3B-1.58bit", "Falcon3-1B-1.58bit", "Falcon3-1B-Instruct-1.58bit", "Falcon3-3B-Instruct-1.58bit", "Falcon3-7B-Instruct-1.58bit", "Falcon3-10B-Instruct-1.58bit"]
+
     if arch == "arm64":
         if args.use_pretuned:
             pretuned_kernels = os.path.join("preset_kernels", get_model_name())
@@ -154,7 +157,7 @@ def gen_code():
                 shutil.copyfile(os.path.join(pretuned_kernels, "kernel_config_tl2.ini"), "include/kernel_config.ini")
         if get_model_name() == "bitnet_b1_58-large":
             run_command([sys.executable, "utils/codegen_tl1.py", "--model", "bitnet_b1_58-large", "--BM", "256,128,256", "--BK", "128,64,128", "--bm", "32,64,32"], log_step="codegen")
-        elif get_model_name() in ["Llama3-8B-1.58-100B-tokens", "Falcon3-7B-1.58bit", "Falcon3-10B-1.58bit", "Falcon3-3B-1.58bit", "Falcon3-1B-1.58bit"]:
+        elif get_model_name() in llama3_f3_models:
             run_command([sys.executable, "utils/codegen_tl1.py", "--model", "Llama3-8B-1.58-100B-tokens", "--BM", "256,128,256,128", "--BK", "128,64,128,64", "--bm", "32,64,32,64"], log_step="codegen")
         elif get_model_name() == "bitnet_b1_58-3B":
             run_command([sys.executable, "utils/codegen_tl1.py", "--model", "bitnet_b1_58-3B", "--BM", "160,320,320", "--BK", "64,128,64", "--bm", "32,64,32"], log_step="codegen")
@@ -170,7 +173,7 @@ def gen_code():
             shutil.copyfile(os.path.join(pretuned_kernels, "bitnet-lut-kernels-tl2.h"), "include/bitnet-lut-kernels.h")
         if get_model_name() == "bitnet_b1_58-large":
             run_command([sys.executable, "utils/codegen_tl2.py", "--model", "bitnet_b1_58-large", "--BM", "256,128,256", "--BK", "96,192,96", "--bm", "32,32,32"], log_step="codegen")
-        elif get_model_name() in ["Llama3-8B-1.58-100B-tokens", "Falcon3-7B-1.58bit", "Falcon3-10B-1.58bit", "Falcon3-3B-1.58bit", "Falcon3-1B-1.58bit"]:
+        elif get_model_name() in llama3_f3_models:
             run_command([sys.executable, "utils/codegen_tl2.py", "--model", "Llama3-8B-1.58-100B-tokens", "--BM", "256,128,256,128", "--BK", "96,96,96,96", "--bm", "32,32,32,32"], log_step="codegen")
         elif get_model_name() == "bitnet_b1_58-3B":
             run_command([sys.executable, "utils/codegen_tl2.py", "--model", "bitnet_b1_58-3B", "--BM", "160,320,320", "--BK", "96,96,96", "--bm", "32,32,32"], log_step="codegen")
