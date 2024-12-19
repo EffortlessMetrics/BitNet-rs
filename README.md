@@ -252,6 +252,7 @@ optional arguments:
                         Quantization type
   --quant-embd          Quantize the embeddings to f16
   --use-pretuned, -p    Use the pretuned kernel parameters
+                        (When this option is turned on, the specified prompt by -p will be used as the system prompt.)
 </pre>
 ## Usage
 ### Basic usage
