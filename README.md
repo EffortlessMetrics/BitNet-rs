@@ -252,7 +252,6 @@ optional arguments:
                         Quantization type
   --quant-embd          Quantize the embeddings to f16
   --use-pretuned, -p    Use the pretuned kernel parameters
-                        (When this option is turned on, the specified prompt by -p will be used as the system prompt.)
 </pre>
 ## Usage
 ### Basic usage
@@ -280,6 +279,7 @@ optional arguments:
   -temp TEMPERATURE, --temperature TEMPERATURE
                         Temperature, a hyperparameter that controls the randomness of the generated text
   -cnv, --conversation  Whether to enable chat mode or not (for instruct models.)
+                        (When this option is turned on, the prompt specified by -p will be used as the system prompt.)
 </pre>
 
 ### Benchmark
