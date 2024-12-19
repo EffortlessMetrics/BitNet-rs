@@ -88,6 +88,104 @@ This project is based on the [llama.cpp](https://github.com/ggerganov/llama.cpp)
         <td>&#10004;</td>
         <td>&#10008;</td>
     </tr>
+    <tr>
+        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-1B-Instruct-1.58bit">Falcon3-1B-Instruct-1.58bit</a></td>
+        <td rowspan="2">1.0B</td>
+        <td>x86</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+        <td>&#10004;</td>
+    </tr>
+    <tr>
+        <td>ARM</td>
+        <td>&#10004;</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+    </tr>
+    <tr>
+        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-3B-1.58bit">Falcon3-3B-1.58bit</a></td>
+        <td rowspan="2">3.0B</td>
+        <td>x86</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+        <td>&#10004;</td>
+    </tr>
+    <tr>
+        <td>ARM</td>
+        <td>&#10004;</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+    </tr>
+    <tr>
+        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-3B-Instruct-1.58bit">Falcon3-3B-Instruct-1.58bit</a></td>
+        <td rowspan="2">3.0B</td>
+        <td>x86</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+        <td>&#10004;</td>
+    </tr>
+    <tr>
+        <td>ARM</td>
+        <td>&#10004;</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+    </tr>
+    <tr>
+        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-7B-1.58bit">Falcon3-7B-1.58bit</a></td>
+        <td rowspan="2">7.0B</td>
+        <td>x86</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+        <td>&#10004;</td>
+    </tr>
+    <tr>
+        <td>ARM</td>
+        <td>&#10004;</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+    </tr>
+    <tr>
+        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-7B-Instruct-1.58bit">Falcon3-7B-Instruct-1.58bit</a></td>
+        <td rowspan="2">7.0B</td>
+        <td>x86</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+        <td>&#10004;</td>
+    </tr>
+    <tr>
+        <td>ARM</td>
+        <td>&#10004;</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+    </tr>
+    <tr>
+        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-10B-1.58bit">Falcon3-10B-1.58bit</a></td>
+        <td rowspan="2">10.0B</td>
+        <td>x86</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+        <td>&#10004;</td>
+    </tr>
+    <tr>
+        <td>ARM</td>
+        <td>&#10004;</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+    </tr>
+    <tr>
+        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-10B-Instruct-1.58bit">Falcon3-10B-Instruct-1.58bit</a></td>
+        <td rowspan="2">10.0B</td>
+        <td>x86</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+        <td>&#10004;</td>
+    </tr>
+    <tr>
+        <td>ARM</td>
+        <td>&#10004;</td>
+        <td>&#10004;</td>
+        <td>&#10008;</td>
+    </tr>
 </table>
 
 
@@ -160,11 +258,6 @@ optional arguments:
 ```bash
 # Run inference with the quantized model
 python run_inference.py -m models/Falcon3-7B-Instruct-1.58bit/ggml-model-i2_s.gguf -p "You are a helpful assistant" -cnv
-
-# Output:
-# Daniel went back to the the the garden. Mary travelled to the kitchen. Sandra journeyed to the kitchen. Sandra went to the hallway. John went to the bedroom. Mary went back to the garden. Where is Mary?
-# Answer: Mary is in the garden.
-
 ```
 <pre>
 usage: run_inference.py [-h] [-m MODEL] [-n N_PREDICT] -p PROMPT [-t THREADS] [-c CTX_SIZE] [-temp TEMPERATURE] [-cnv]
