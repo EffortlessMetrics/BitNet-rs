@@ -89,102 +89,18 @@ This project is based on the [llama.cpp](https://github.com/ggerganov/llama.cpp)
         <td>&#10060;</td>
     </tr>
     <tr>
-        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-1B-Instruct-1.58bit">Falcon3-1B-Instruct-1.58bit</a></td>
-        <td rowspan="2">1.0B</td>
+        <td rowspan="2"><a href="https://huggingface.co/collections/tiiuae/falcon3-67605ae03578be86e4e87026">Falcon3 Family</a></td>
+        <td rowspan="2">1B-10B</td>
         <td>x86</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
-        <td>&#10004;</td>
+        <td>&#9989;</td>
+        <td>&#10060;</td>
+        <td>&#9989;</td>
     </tr>
     <tr>
         <td>ARM</td>
-        <td>&#10004;</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
-    </tr>
-    <tr>
-        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-3B-1.58bit">Falcon3-3B-1.58bit</a></td>
-        <td rowspan="2">3.0B</td>
-        <td>x86</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
-        <td>&#10004;</td>
-    </tr>
-    <tr>
-        <td>ARM</td>
-        <td>&#10004;</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
-    </tr>
-    <tr>
-        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-3B-Instruct-1.58bit">Falcon3-3B-Instruct-1.58bit</a></td>
-        <td rowspan="2">3.0B</td>
-        <td>x86</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
-        <td>&#10004;</td>
-    </tr>
-    <tr>
-        <td>ARM</td>
-        <td>&#10004;</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
-    </tr>
-    <tr>
-        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-7B-1.58bit">Falcon3-7B-1.58bit</a></td>
-        <td rowspan="2">7.0B</td>
-        <td>x86</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
-        <td>&#10004;</td>
-    </tr>
-    <tr>
-        <td>ARM</td>
-        <td>&#10004;</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
-    </tr>
-    <tr>
-        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-7B-Instruct-1.58bit">Falcon3-7B-Instruct-1.58bit</a></td>
-        <td rowspan="2">7.0B</td>
-        <td>x86</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
-        <td>&#10004;</td>
-    </tr>
-    <tr>
-        <td>ARM</td>
-        <td>&#10004;</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
-    </tr>
-    <tr>
-        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-10B-1.58bit">Falcon3-10B-1.58bit</a></td>
-        <td rowspan="2">10.0B</td>
-        <td>x86</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
-        <td>&#10004;</td>
-    </tr>
-    <tr>
-        <td>ARM</td>
-        <td>&#10004;</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
-    </tr>
-    <tr>
-        <td rowspan="2"><a href="https://huggingface.co/tiiuae/Falcon3-10B-Instruct-1.58bit">Falcon3-10B-Instruct-1.58bit</a></td>
-        <td rowspan="2">10.0B</td>
-        <td>x86</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
-        <td>&#10004;</td>
-    </tr>
-    <tr>
-        <td>ARM</td>
-        <td>&#10004;</td>
-        <td>&#10004;</td>
-        <td>&#10008;</td>
+        <td>&#9989;</td>
+        <td>&#9989;</td>
+        <td>&#10060;</td>
     </tr>
 </table>
 
