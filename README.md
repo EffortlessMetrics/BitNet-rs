@@ -88,6 +88,20 @@ This project is based on the [llama.cpp](https://github.com/ggerganov/llama.cpp)
         <td>&#9989;</td>
         <td>&#10060;</td>
     </tr>
+    <tr>
+        <td rowspan="2"><a href="https://huggingface.co/collections/tiiuae/falcon3-67605ae03578be86e4e87026">Falcon3 Family</a></td>
+        <td rowspan="2">1B-10B</td>
+        <td>x86</td>
+        <td>&#9989;</td>
+        <td>&#10060;</td>
+        <td>&#9989;</td>
+    </tr>
+    <tr>
+        <td>ARM</td>
+        <td>&#9989;</td>
+        <td>&#9989;</td>
+        <td>&#10060;</td>
+    </tr>
 </table>
 
 
@@ -160,11 +174,6 @@ optional arguments:
 ```bash
 # Run inference with the quantized model
 python run_inference.py -m models/Falcon3-7B-Instruct-1.58bit/ggml-model-i2_s.gguf -p "You are a helpful assistant" -cnv
-
-# Output:
-# Daniel went back to the the the garden. Mary travelled to the kitchen. Sandra journeyed to the kitchen. Sandra went to the hallway. John went to the bedroom. Mary went back to the garden. Where is Mary?
-# Answer: Mary is in the garden.
-
 ```
 <pre>
 usage: run_inference.py [-h] [-m MODEL] [-n N_PREDICT] -p PROMPT [-t THREADS] [-c CTX_SIZE] [-temp TEMPERATURE] [-cnv]
@@ -186,6 +195,7 @@ optional arguments:
   -temp TEMPERATURE, --temperature TEMPERATURE
                         Temperature, a hyperparameter that controls the randomness of the generated text
   -cnv, --conversation  Whether to enable chat mode or not (for instruct models.)
+                        (When this option is turned on, the prompt specified by -p will be used as the system prompt.)
 </pre>
 
 ### Benchmark
