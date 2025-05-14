@@ -44,6 +44,12 @@ SUPPORTED_HF_MODELS = {
     "microsoft/BitNet-b1.58-2B-4T": {
         "model_name": "BitNet-b1.58-2B-4T",
     },
+    "tiiuae/Falcon-E-3B-Instruct": {
+        "model_name": "Falcon-E-3B-Instruct",
+    },
+    "tiiuae/Falcon-E-1B-Instruct": {
+        "model_name": "Falcon-E-1B-Instruct",
+    },
 }
 
 SUPPORTED_QUANT_TYPES = {
@@ -144,7 +150,7 @@ def setup_gguf():
 def gen_code():
     _, arch = system_info()
     
-    llama3_f3_models = set([model['model_name'] for model in SUPPORTED_HF_MODELS.values() if model['model_name'].startswith("Falcon3") or model['model_name'].startswith("Llama")])
+    llama3_f3_models = set([model['model_name'] for model in SUPPORTED_HF_MODELS.values() if model['model_name'].startswith("Falcon") or model['model_name'].startswith("Llama")])
 
     if arch == "arm64":
         if args.use_pretuned:
