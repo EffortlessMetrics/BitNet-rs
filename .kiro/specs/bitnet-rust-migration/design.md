@@ -8,31 +8,37 @@ The migration follows a staged approach with FFI bootstrapping, allowing for gra
 
 ## Architecture
 
-### High-Level System Architecture
+### Modular System Architecture
 
 ```mermaid
 graph TB
     subgraph "User Interfaces"
-        CLI[CLI Tool]
-        CAPI[C API]
-        PyAPI[Python API]
-        WebAPI[Web API]
+        CLI[bitnet-cli]
+        CAPI[bitnet-ffi]
+        PyAPI[bitnet-py]
+        WASM[bitnet-wasm]
+        Server[bitnet-server]
     end
     
-    subgraph "Core Library (bitnet-core)"
-        IE[Inference Engine]
-        ML[Model Loader]
-        QS[Quantization System]
-        TM[Tokenizer Manager]
+    subgraph "Core Inference Layer"
+        IE[bitnet-inference]
+        TOK[bitnet-tokenizers]
     end
     
-    subgraph "Compute Backends"
-        CK[CPU Kernels]
-        GK[GPU Kernels]
-        WK[WASM Kernels]
+    subgraph "Model Layer"
+        MOD[bitnet-models]
+        QUANT[bitnet-quantization]
     end
     
-    subgraph "Model Formats"
+    subgraph "Compute Layer"
+        KERN[bitnet-kernels]
+    end
+    
+    subgraph "Foundation"
+        COMMON[bitnet-common]
+    end
+    
+    subgraph "External Formats"
         GGUF[GGUF Files]
         ST[SafeTensors]
         HF[HuggingFace]
@@ -41,19 +47,26 @@ graph TB
     CLI --> IE
     CAPI --> IE
     PyAPI --> IE
-    WebAPI --> IE
+    WASM --> IE
+    Server --> IE
     
-    IE --> ML
-    IE --> QS
-    IE --> TM
+    IE --> MOD
+    IE --> TOK
+    IE --> KERN
     
-    IE --> CK
-    IE --> GK
-    IE --> WK
+    MOD --> QUANT
+    MOD --> COMMON
     
-    ML --> GGUF
-    ML --> ST
-    ML --> HF
+    QUANT --> KERN
+    QUANT --> COMMON
+    
+    KERN --> COMMON
+    
+    TOK --> COMMON
+    
+    MOD --> GGUF
+    MOD --> ST
+    MOD --> HF
 ```
 
 ### Modular Workspace Structure
@@ -210,30 +223,365 @@ bitnet-rs/
         └── ggml-bitnet.h
 ```
 
-### Feature Flags and Target Support
+### Crate Dependencies and Feature Flags
 
+#### Workspace Dependencies
 ```toml
+# Cargo.toml (workspace root)
+[workspace]
+members = [
+    "crates/bitnet-common",
+    "crates/bitnet-models", 
+    "crates/bitnet-quantization",
+    "crates/bitnet-kernels",
+    "crates/bitnet-inference",
+    "crates/bitnet-tokenizers",
+    "crates/bitnet-server",
+    "crates/bitnet-cli",
+    "crates/bitnet-ffi",
+    "crates/bitnet-py",
+    "crates/bitnet-wasm",
+]
+
+[workspace.dependencies]
+# Shared dependencies across crates
+anyhow = "1.0"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+candle-core = "0.8"
+```
+
+#### Individual Crate Features
+```toml
+# bitnet-kernels features
+[features]
+default = ["cpu-fallback"]
+cpu-fallback = []            # Basic CPU kernels
+cpu-optimized = ["avx2", "neon"]  # Optimized SIMD kernels
+avx2 = []                    # x86 AVX2 support
+avx512 = []                  # x86 AVX-512 support  
+neon = []                    # ARM NEON support
+cuda = ["cudarc"]            # CUDA GPU support
+metal = ["metal-rs"]         # Metal GPU support (future)
+ffi-bridge = ["cc", "bindgen"]  # C++ FFI bridge
+
+# bitnet-inference features
 [features]
 default = ["cpu"]
-cpu     = []                 # Pure-Rust + optional FFI kernels
-cuda    = ["cudarc"]         # GPU path; gated because it requires NVCC
-wasm    = ["wasm-bindgen", "js-sys", "web-sys"]  # WebAssembly support
-python  = ["pyo3", "maturin"]# Build Python wheels
-full    = ["cpu", "cuda", "python"]
+cpu = ["bitnet-kernels/cpu-optimized"]
+gpu = ["bitnet-kernels/cuda"]
+streaming = ["tokio", "futures"]
+batch = ["rayon"]
 
-# WebAssembly-specific dependencies
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = "0.2"
-js-sys = "0.3"
-web-sys = "0.3"
-console_error_panic_hook = "0.1"
+# bitnet-wasm features
+[features]
+default = ["browser"]
+browser = ["wasm-bindgen", "js-sys", "web-sys"]
+nodejs = ["wasm-bindgen"]
+embedded = []                # no_std support
+
+# Top-level convenience features
+[features]
+default = ["cpu"]
+cpu = ["bitnet-inference/cpu"]
+gpu = ["bitnet-inference/gpu"] 
+wasm = ["bitnet-wasm"]
+python = ["bitnet-py"]
+server = ["bitnet-server"]
+full = ["cpu", "gpu", "python", "server"]
 ```
 
 ## Components and Interfaces
 
-### Core Library (bitnet-core)
+### Foundation Layer (bitnet-common)
 
-#### Model System
+#### Shared Types and Configuration
+```rust
+// bitnet-common/src/lib.rs
+pub mod config;
+pub mod error;
+pub mod tensor;
+pub mod types;
+
+// Common configuration types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BitNetConfig {
+    pub model: ModelConfig,
+    pub inference: InferenceConfig,
+    pub quantization: QuantizationConfig,
+    pub performance: PerformanceConfig,
+}
+
+// Unified error handling
+#[derive(Error, Debug)]
+pub enum BitNetError {
+    #[error("Model error: {0}")]
+    Model(#[from] ModelError),
+    #[error("Quantization error: {0}")]
+    Quantization(#[from] QuantizationError),
+    #[error("Kernel error: {0}")]
+    Kernel(#[from] KernelError),
+    #[error("Inference error: {0}")]
+    Inference(#[from] InferenceError),
+}
+
+// Tensor abstraction
+pub trait Tensor: Send + Sync {
+    fn shape(&self) -> &[usize];
+    fn dtype(&self) -> DType;
+    fn device(&self) -> &Device;
+    fn as_slice<T>(&self) -> Result<&[T]>;
+}
+```
+
+### Model Layer (bitnet-models)
+
+#### Model Definitions and Loading
+```rust
+// bitnet-models/src/lib.rs
+use bitnet_common::{BitNetConfig, BitNetError, Tensor};
+
+pub trait Model: Send + Sync {
+    type Config: ModelConfig;
+    
+    fn config(&self) -> &Self::Config;
+    fn forward(&self, input: &dyn Tensor, cache: &mut KVCache) -> Result<Box<dyn Tensor>>;
+    fn generate(&self, tokens: &[u32], config: &GenerationConfig) -> Result<Vec<u32>>;
+}
+
+pub struct BitNetModel {
+    config: BitNetConfig,
+    layers: Vec<TransformerBlock>,
+    embeddings: Embedding,
+    output: Linear,
+    quantization: QuantizationType,
+}
+
+// Model loading with pluggable format support
+pub struct ModelLoader {
+    device: Device,
+    dtype: DType,
+    loaders: HashMap<String, Box<dyn FormatLoader>>,
+}
+
+pub trait FormatLoader: Send + Sync {
+    fn can_load(&self, path: &Path) -> bool;
+    fn load(&self, path: &Path, config: &LoadConfig) -> Result<Box<dyn Model>>;
+}
+
+// Format-specific implementations
+pub struct GgufLoader;
+pub struct SafeTensorsLoader;
+pub struct HuggingFaceLoader;
+```
+
+### Quantization Layer (bitnet-quantization)
+
+#### Quantization Algorithms
+```rust
+// bitnet-quantization/src/lib.rs
+use bitnet_common::{Tensor, BitNetError};
+
+#[derive(Debug, Clone, Copy)]
+pub enum QuantizationType {
+    I2S,    // 2-bit signed
+    TL1,    // Table lookup 1 (ARM optimized)
+    TL2,    // Table lookup 2 (x86 optimized)
+}
+
+pub trait Quantize {
+    fn quantize(&self, qtype: QuantizationType) -> Result<QuantizedTensor>;
+    fn dequantize(&self) -> Result<Box<dyn Tensor>>;
+}
+
+pub struct QuantizedTensor {
+    data: Vec<u8>,
+    scales: Vec<f32>,
+    shape: Vec<usize>,
+    qtype: QuantizationType,
+}
+
+// Modular quantization implementations
+pub mod i2s;
+pub mod tl1;
+pub mod tl2;
+```
+
+### Compute Layer (bitnet-kernels)
+
+#### High-Performance Kernels
+```rust
+// bitnet-kernels/src/lib.rs
+use bitnet_common::BitNetError;
+
+pub trait KernelProvider: Send + Sync {
+    fn name(&self) -> &'static str;
+    fn is_available(&self) -> bool;
+    fn matmul_i2s(&self, a: &[i8], b: &[u8], c: &mut [f32], m: usize, n: usize, k: usize) -> Result<()>;
+    fn quantize(&self, input: &[f32], output: &mut [u8], scales: &mut [f32], qtype: QuantizationType) -> Result<()>;
+}
+
+// Kernel selection and management
+pub struct KernelManager {
+    providers: Vec<Box<dyn KernelProvider>>,
+    selected: Option<usize>,
+}
+
+impl KernelManager {
+    pub fn new() -> Self {
+        let mut providers: Vec<Box<dyn KernelProvider>> = vec![
+            Box::new(FallbackKernel),
+        ];
+        
+        #[cfg(target_arch = "x86_64")]
+        {
+            if is_x86_feature_detected!("avx2") {
+                providers.push(Box::new(Avx2Kernel));
+            }
+            if is_x86_feature_detected!("avx512f") {
+                providers.push(Box::new(Avx512Kernel));
+            }
+        }
+        
+        #[cfg(target_arch = "aarch64")]
+        {
+            if std::arch::is_aarch64_feature_detected!("neon") {
+                providers.push(Box::new(NeonKernel));
+            }
+        }
+        
+        #[cfg(feature = "cuda")]
+        {
+            if let Ok(cuda_kernel) = CudaKernel::new() {
+                providers.push(Box::new(cuda_kernel));
+            }
+        }
+        
+        Self {
+            providers,
+            selected: None,
+        }
+    }
+    
+    pub fn select_best(&mut self) -> Result<&dyn KernelProvider> {
+        // Select the best available kernel
+        for (i, provider) in self.providers.iter().enumerate() {
+            if provider.is_available() {
+                self.selected = Some(i);
+                return Ok(provider.as_ref());
+            }
+        }
+        Err(BitNetError::Kernel("No available kernel provider".into()))
+    }
+}
+
+// Individual kernel implementations
+pub mod cpu;
+pub mod gpu;
+pub mod ffi;
+```
+
+### Inference Layer (bitnet-inference)
+
+#### Inference Engines
+```rust
+// bitnet-inference/src/lib.rs
+use bitnet_models::Model;
+use bitnet_tokenizers::Tokenizer;
+use bitnet_kernels::KernelManager;
+use bitnet_common::{BitNetConfig, BitNetError};
+
+pub struct InferenceEngine {
+    model: Box<dyn Model>,
+    tokenizer: Arc<dyn Tokenizer>,
+    kernels: KernelManager,
+    device: Device,
+    config: InferenceConfig,
+}
+
+impl InferenceEngine {
+    pub fn new(
+        model: Box<dyn Model>,
+        tokenizer: Arc<dyn Tokenizer>,
+        device: Device,
+    ) -> Result<Self> {
+        let mut kernels = KernelManager::new();
+        kernels.select_best()?;
+        
+        Ok(Self {
+            model,
+            tokenizer,
+            kernels,
+            device,
+            config: InferenceConfig::default(),
+        })
+    }
+    
+    pub fn generate(&mut self, prompt: &str) -> Result<String> {
+        let tokens = self.tokenizer.encode(prompt, false)?;
+        let generated = self.generate_tokens(&tokens, &self.config)?;
+        Ok(self.tokenizer.decode(&generated, true)?)
+    }
+    
+    pub fn generate_stream(&mut self, prompt: &str) -> impl Stream<Item = Result<String>> {
+        GenerationStream::new(self, prompt)
+    }
+}
+
+// Specialized engines for different backends
+pub mod cpu;
+pub mod gpu;
+pub mod streaming;
+pub mod batch;
+```
+
+### Tokenization Layer (bitnet-tokenizers)
+
+#### Tokenizer Abstraction
+```rust
+// bitnet-tokenizers/src/lib.rs
+use bitnet_common::BitNetError;
+
+pub trait Tokenizer: Send + Sync {
+    fn encode(&self, text: &str, add_special_tokens: bool) -> Result<Vec<u32>>;
+    fn decode(&self, tokens: &[u32], skip_special_tokens: bool) -> Result<String>;
+    fn vocab_size(&self) -> usize;
+    fn eos_token_id(&self) -> Option<u32>;
+    fn pad_token_id(&self) -> Option<u32>;
+}
+
+// Tokenizer implementations
+pub struct Gpt2Tokenizer {
+    inner: tokenizers::Tokenizer,
+}
+
+pub struct SentencePieceTokenizer {
+    processor: sentencepiece::SentencePieceProcessor,
+}
+
+pub struct HuggingFaceTokenizer {
+    tokenizer: tokenizers::Tokenizer,
+}
+
+// Tokenizer factory
+pub struct TokenizerBuilder;
+
+impl TokenizerBuilder {
+    pub fn from_pretrained(name: &str) -> Result<Box<dyn Tokenizer>> {
+        match name {
+            "gpt2" => Ok(Box::new(Gpt2Tokenizer::new()?)),
+            name if name.contains("sentencepiece") => {
+                Ok(Box::new(SentencePieceTokenizer::from_file(name)?))
+            }
+            _ => Ok(Box::new(HuggingFaceTokenizer::from_pretrained(name)?)),
+        }
+    }
+}
+```
+
+### Server Layer (bitnet-server)
+
+#### HTTP Server Implementation
 
 ```rust
 // Core model traits and implementations
