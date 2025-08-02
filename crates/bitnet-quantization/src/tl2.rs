@@ -5,8 +5,8 @@
 //! on x86 architectures, with runtime CPU feature detection for optimal instruction set selection.
 
 use crate::{utils::*, QuantizedTensor, QuantizerTrait};
-use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result};
-use candle_core::{Device, DType};
+use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
+use candle_core::Device;
 use rayon::prelude::*;
 use std::collections::HashMap;
 
@@ -379,7 +379,7 @@ impl TL2Quantizer {
         Ok(dequantized)
     }
 
-    /// AVX-512 optimized quantization for x86_64
+    /// AVX-512 optimized quantization for x86_64 (fallback to AVX2 for now)
     #[cfg(target_arch = "x86_64")]
     fn quantize_avx512(
         &self, 
@@ -387,45 +387,15 @@ impl TL2Quantizer {
         lookup_table: &VectorizedLookupTable, 
         scales: &[f32]
     ) -> Result<Vec<i8>> {
-        if !is_x86_feature_detected!("avx512f") {
-            return self.quantize_avx2(data, lookup_table, scales);
-        }
-
-        let mut quantized = vec![0i8; data.len()];
-        
-        quantized
-            .par_chunks_mut(self.config.block_size)
-            .zip(data.par_chunks(self.config.block_size))
-            .zip(scales.par_iter())
-            .for_each(|((quant_block, data_block), &scale)| {
-                unsafe {
-                    self.quantize_avx512_block(data_block, quant_block, lookup_table, scale);
-                }
-            });
-        
-        Ok(quantized)
+        // AVX-512 is unstable, fallback to AVX2
+        self.quantize_avx2(data, lookup_table, scales)
     }
 
-    /// AVX-512 optimized dequantization for x86_64
+    /// AVX-512 optimized dequantization for x86_64 (fallback to AVX2 for now)
     #[cfg(target_arch = "x86_64")]
     fn dequantize_avx512(&self, quantized: &[i8], scales: &[f32]) -> Result<Vec<f32>> {
-        if !is_x86_feature_detected!("avx512f") {
-            return self.dequantize_avx2(quantized, scales);
-        }
-
-        let mut dequantized = vec![0.0f32; quantized.len()];
-        
-        dequantized
-            .par_chunks_mut(self.config.block_size)
-            .zip(quantized.par_chunks(self.config.block_size))
-            .zip(scales.par_iter())
-            .for_each(|((dequant_block, quant_block), &scale)| {
-                unsafe {
-                    self.dequantize_avx512_block(quant_block, dequant_block, scale);
-                }
-            });
-        
-        Ok(dequantized)
+        // AVX-512 is unstable, fallback to AVX2
+        self.dequantize_avx2(quantized, scales)
     }
 
     /// Fallback to scalar for non-x86 architectures
@@ -537,82 +507,8 @@ impl TL2Quantizer {
         }
     }
 
-    /// AVX-512 kernel for quantizing a single block
-    #[cfg(target_arch = "x86_64")]
-    #[target_feature(enable = "avx512f")]
-    unsafe fn quantize_avx512_block(
-        &self, 
-        data: &[f32], 
-        output: &mut [i8], 
-        lookup_table: &VectorizedLookupTable, 
-        scale: f32
-    ) {
-        use std::arch::x86_64::*;
-        
-        let inv_scale = 1.0 / scale;
-        let inv_scale_vec = _mm512_set1_ps(inv_scale);
-        let offset_vec = _mm512_set1_ps(128.0);
-        
-        let chunks = data.chunks_exact(16);
-        let remainder = chunks.remainder();
-        
-        for (i, chunk) in chunks.enumerate() {
-            let data_vec = _mm512_loadu_ps(chunk.as_ptr());
-            let scaled = _mm512_mul_ps(data_vec, inv_scale_vec);
-            let offset = _mm512_add_ps(scaled, offset_vec);
-            let indices = _mm512_cvtps_epi32(offset);
-            
-            // Vectorized lookup table access with AVX-512
-            let mut result = [0i8; 16];
-            for j in 0..16 {
-                let idx = _mm512_extract_epi32(indices, j).max(0).min(255) as usize;
-                result[j] = lookup_table.forward[idx];
-            }
-            
-            // Store results
-            std::ptr::copy_nonoverlapping(
-                result.as_ptr(),
-                output.as_mut_ptr().add(i * 16),
-                16,
-            );
-        }
-        
-        // Handle remainder with scalar code
-        for (i, &value) in remainder.iter().enumerate() {
-            let idx = data.len() - remainder.len() + i;
-            output[idx] = lookup_table.quantize(value);
-        }
-    }
-
-    /// AVX-512 kernel for dequantizing a single block
-    #[cfg(target_arch = "x86_64")]
-    #[target_feature(enable = "avx512f")]
-    unsafe fn dequantize_avx512_block(&self, quantized: &[i8], output: &mut [f32], scale: f32) {
-        use std::arch::x86_64::*;
-        
-        let scale_vec = _mm512_set1_ps(scale);
-        
-        let chunks = quantized.chunks_exact(16);
-        let remainder = chunks.remainder();
-        
-        for (i, chunk) in chunks.enumerate() {
-            // Load 16 i8 values and convert to i32
-            let i8_vec = _mm_loadu_si128(chunk.as_ptr() as *const __m128i);
-            let i32_vec = _mm512_cvtepi8_epi32(i8_vec);
-            
-            // Convert to float and scale
-            let f32_vec = _mm512_cvtepi32_ps(i32_vec);
-            let result = _mm512_mul_ps(f32_vec, scale_vec);
-            
-            _mm512_storeu_ps(output.as_mut_ptr().add(i * 16), result);
-        }
-        
-        // Handle remainder with scalar code
-        for (i, &value) in remainder.iter().enumerate() {
-            let idx = quantized.len() - remainder.len() + i;
-            output[idx] = dequantize_value(value, scale);
-        }
-    }
+    // AVX-512 kernels removed due to unstable features
+    // Will be re-added when AVX-512 support is stabilized
 
     /// Pack TL2 quantized values (optimized for x86 cache efficiency)
     fn pack_tl2_values(&self, values: &[i8]) -> Vec<u8> {

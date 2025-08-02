@@ -5,8 +5,8 @@
 //! The implementation includes SIMD-optimized kernels for x86_64 and ARM64.
 
 use crate::{utils::*, QuantizedTensor, QuantizerTrait};
-use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result};
-use candle_core::{Device, DType};
+use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
+use candle_core::Device;
 use rayon::prelude::*;
 
 /// I2_S quantization implementation with bit-packing optimization

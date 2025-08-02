@@ -15,6 +15,8 @@ pub enum BitNetError {
     Inference(#[from] InferenceError),
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("Candle error: {0}")]
+    Candle(#[from] candle_core::Error),
     #[error("Configuration error: {0}")]
     Config(String),
     #[error("Validation error: {0}")]

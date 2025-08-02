@@ -5,8 +5,8 @@
 //! with configurable block sizes for optimal performance on ARM architectures.
 
 use crate::{utils::*, QuantizedTensor, QuantizerTrait};
-use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result};
-use candle_core::{Device, DType};
+use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
+use candle_core::Device;
 use rayon::prelude::*;
 use std::collections::HashMap;
 
