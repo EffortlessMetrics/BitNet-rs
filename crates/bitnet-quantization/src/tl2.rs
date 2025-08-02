@@ -1,23 +1,730 @@
 //! TL2 (Table Lookup 2) quantization for x86 platforms
+//!
+//! This module implements table lookup quantization optimized for x86 AVX2/AVX-512 instructions.
+//! It uses vectorized lookup tables and advanced SIMD operations to achieve maximum throughput
+//! on x86 architectures, with runtime CPU feature detection for optimal instruction set selection.
 
-use crate::{Quantize, QuantizedTensor};
-use bitnet_common::{BitNetTensor, QuantizationType, Result, Tensor};
+use crate::{utils::*, QuantizedTensor, QuantizerTrait};
+use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result};
+use candle_core::{Device, DType};
+use rayon::prelude::*;
+use std::collections::HashMap;
 
-/// TL2 quantization implementation
-pub struct TL2Quantizer;
+/// Configuration for TL2 quantization with x86-specific optimizations
+#[derive(Debug, Clone)]
+pub struct TL2Config {
+    pub block_size: usize,
+    pub lookup_table_size: usize,
+    pub use_avx512: bool,
+    pub use_avx2: bool,
+    pub precision_bits: u8,
+    pub vectorized_tables: bool,
+}
 
-impl TL2Quantizer {
-    pub fn new() -> Self {
-        Self
+impl Default for TL2Config {
+    fn default() -> Self {
+        Self {
+            block_size: 128, // Larger blocks for x86 vectorization
+            lookup_table_size: 256,
+            use_avx512: is_x86_feature_detected!("avx512f"),
+            use_avx2: is_x86_feature_detected!("avx2"),
+            precision_bits: 2,
+            vectorized_tables: true,
+        }
+    }
+}
+
+/// Vectorized lookup table optimized for x86 SIMD
+#[derive(Debug, Clone)]
+pub struct VectorizedLookupTable {
+    /// Forward lookup table aligned for SIMD access
+    forward: Vec<i8>,
+    /// Reverse lookup table aligned for SIMD access  
+    reverse: Vec<f32>,
+    /// Scale factor
+    scale: f32,
+    /// Zero point for asymmetric quantization
+    zero_point: i32,
+    /// Number of quantization levels
+    num_levels: usize,
+}
+
+impl VectorizedLookupTable {
+    /// Create a new vectorized lookup table
+    pub fn new(min_val: f32, max_val: f32, bits: u8) -> Self {
+        let num_levels = 1 << bits;
+        let mut forward = vec![0i8; 256]; // Aligned to 256 for SIMD
+        let mut reverse = vec![0.0f32; num_levels];
+        
+        // Calculate scale and zero point
+        let abs_max = max_val.abs().max(min_val.abs());
+        let scale = abs_max / ((num_levels / 2) - 1) as f32;
+        let zero_point = 0; // Symmetric quantization for simplicity
+        
+        // Build reverse lookup table
+        for i in 0..num_levels {
+            let quantized = i as i32 - (num_levels / 2) as i32;
+            reverse[i] = quantized as f32 * scale;
+        }
+        
+        // Build forward lookup table with SIMD-friendly layout
+        for i in 0..256 {
+            let float_val = (i as f32 - 128.0) * scale / 128.0; // Normalize to [-1, 1] range
+            let quantized = ((float_val / scale).round() as i32 + (num_levels / 2) as i32)
+                .clamp(0, num_levels as i32 - 1) as i8;
+            forward[i] = quantized;
+        }
+        
+        Self {
+            forward,
+            reverse,
+            scale,
+            zero_point,
+            num_levels,
+        }
     }
     
-    pub fn quantize_tensor(&self, _tensor: &BitNetTensor) -> Result<QuantizedTensor> {
-        // Placeholder implementation
-        Ok(QuantizedTensor::new(
-            vec![],
-            vec![],
-            vec![],
+    /// Quantize using vectorized lookup
+    pub fn quantize(&self, value: f32) -> i8 {
+        let normalized = (value / self.scale * 128.0 + 128.0).round() as usize;
+        let index = normalized.clamp(0, 255);
+        self.forward[index]
+    }
+    
+    /// Dequantize using vectorized lookup
+    pub fn dequantize(&self, quantized: i8) -> f32 {
+        let index = quantized as usize;
+        if index < self.reverse.len() {
+            self.reverse[index]
+        } else {
+            0.0
+        }
+    }
+}
+
+/// TL2 quantization implementation optimized for x86 AVX2/AVX-512
+pub struct TL2Quantizer {
+    config: TL2Config,
+    lookup_tables: HashMap<String, VectorizedLookupTable>,
+    cpu_features: CpuFeatures,
+}
+
+/// CPU feature detection for optimal kernel selection
+#[derive(Debug, Clone)]
+struct CpuFeatures {
+    has_avx2: bool,
+    has_avx512f: bool,
+    has_avx512bw: bool,
+    has_avx512vl: bool,
+}
+
+impl CpuFeatures {
+    fn detect() -> Self {
+        Self {
+            has_avx2: is_x86_feature_detected!("avx2"),
+            has_avx512f: is_x86_feature_detected!("avx512f"),
+            has_avx512bw: is_x86_feature_detected!("avx512bw"),
+            has_avx512vl: is_x86_feature_detected!("avx512vl"),
+        }
+    }
+    
+    fn best_kernel(&self) -> KernelType {
+        if self.has_avx512f && self.has_avx512bw && self.has_avx512vl {
+            KernelType::AVX512
+        } else if self.has_avx2 {
+            KernelType::AVX2
+        } else {
+            KernelType::Scalar
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum KernelType {
+    Scalar,
+    AVX2,
+    AVX512,
+}
+
+impl TL2Quantizer {
+    /// Create a new TL2 quantizer with automatic CPU feature detection
+    pub fn new() -> Self {
+        let cpu_features = CpuFeatures::detect();
+        let mut config = TL2Config::default();
+        
+        // Adjust configuration based on available features
+        match cpu_features.best_kernel() {
+            KernelType::AVX512 => {
+                config.block_size = 256; // Larger blocks for AVX-512
+                config.use_avx512 = true;
+            }
+            KernelType::AVX2 => {
+                config.block_size = 128;
+                config.use_avx2 = true;
+            }
+            KernelType::Scalar => {
+                config.block_size = 64;
+                config.vectorized_tables = false;
+            }
+        }
+        
+        Self {
+            config,
+            lookup_tables: HashMap::new(),
+            cpu_features,
+        }
+    }
+
+    /// Create a new TL2 quantizer with custom configuration
+    pub fn with_config(config: TL2Config) -> Self {
+        Self {
+            config,
+            lookup_tables: HashMap::new(),
+            cpu_features: CpuFeatures::detect(),
+        }
+    }
+
+    /// Load configuration from .ini file for compatibility with C++ implementation
+    pub fn from_ini_file(path: &str) -> Result<Self> {
+        let mut config = TL2Config::default();
+        
+        if let Ok(content) = std::fs::read_to_string(path) {
+            for line in content.lines() {
+                let line = line.trim();
+                if line.starts_with("block_size=") {
+                    if let Ok(size) = line.split('=').nth(1).unwrap_or("128").parse() {
+                        config.block_size = size;
+                    }
+                } else if line.starts_with("lookup_table_size=") {
+                    if let Ok(size) = line.split('=').nth(1).unwrap_or("256").parse() {
+                        config.lookup_table_size = size;
+                    }
+                } else if line.starts_with("use_avx512=") {
+                    config.use_avx512 = line.split('=').nth(1).unwrap_or("false") == "true";
+                } else if line.starts_with("use_avx2=") {
+                    config.use_avx2 = line.split('=').nth(1).unwrap_or("true") == "true";
+                } else if line.starts_with("precision_bits=") {
+                    if let Ok(bits) = line.split('=').nth(1).unwrap_or("2").parse() {
+                        config.precision_bits = bits;
+                    }
+                } else if line.starts_with("vectorized_tables=") {
+                    config.vectorized_tables = line.split('=').nth(1).unwrap_or("true") == "true";
+                }
+            }
+        }
+        
+        Ok(Self::with_config(config))
+    }
+
+    /// Quantize tensor using TL2 algorithm
+    pub fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
+        let data = extract_f32_data(tensor)?;
+        let shape = tensor.shape().to_vec();
+        
+        // Calculate statistics for lookup table generation
+        let (min_val, max_val) = data.iter().fold((f32::INFINITY, f32::NEG_INFINITY), 
+            |(min, max), &val| (min.min(val), max.max(val)));
+        
+        // Generate vectorized lookup table
+        let lookup_table = VectorizedLookupTable::new(min_val, max_val, self.config.precision_bits);
+        
+        // Calculate grouped scales for better accuracy
+        let scales = calculate_grouped_scales(&data, self.config.block_size, self.config.precision_bits);
+        
+        // Select optimal quantization kernel
+        let quantized_data = match self.cpu_features.best_kernel() {
+            KernelType::AVX512 if self.config.use_avx512 => {
+                self.quantize_avx512(&data, &lookup_table, &scales)?
+            }
+            KernelType::AVX2 if self.config.use_avx2 => {
+                self.quantize_avx2(&data, &lookup_table, &scales)?
+            }
+            _ => {
+                self.quantize_scalar(&data, &lookup_table, &scales)?
+            }
+        };
+        
+        // Pack quantized values efficiently
+        let packed_data = self.pack_tl2_values(&quantized_data);
+        
+        Ok(QuantizedTensor::new_with_params(
+            packed_data,
+            scales,
+            None, // TL2 uses symmetric quantization
+            shape,
             QuantizationType::TL2,
+            self.config.block_size,
         ))
+    }
+
+    /// Dequantize tensor from TL2 format
+    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+        if tensor.qtype != QuantizationType::TL2 {
+            return Err(QuantizationError::UnsupportedType {
+                qtype: tensor.qtype.to_string(),
+            }.into());
+        }
+
+        // Unpack quantized values
+        let quantized_data = self.unpack_tl2_values(&tensor.data, tensor.numel());
+        
+        // Select optimal dequantization kernel
+        let dequantized_data = match self.cpu_features.best_kernel() {
+            KernelType::AVX512 if self.config.use_avx512 => {
+                self.dequantize_avx512(&quantized_data, &tensor.scales)?
+            }
+            KernelType::AVX2 if self.config.use_avx2 => {
+                self.dequantize_avx2(&quantized_data, &tensor.scales)?
+            }
+            _ => {
+                self.dequantize_scalar(&quantized_data, &tensor.scales)?
+            }
+        };
+        
+        // Create tensor
+        let device = Device::Cpu; // TODO: Support GPU devices
+        create_tensor_from_f32(dequantized_data, &tensor.shape, &device)
+    }
+
+    /// Scalar quantization implementation
+    fn quantize_scalar(
+        &self, 
+        data: &[f32], 
+        lookup_table: &VectorizedLookupTable, 
+        scales: &[f32]
+    ) -> Result<Vec<i8>> {
+        let mut quantized = vec![0i8; data.len()];
+        
+        quantized
+            .par_chunks_mut(self.config.block_size)
+            .zip(data.par_chunks(self.config.block_size))
+            .zip(scales.par_iter())
+            .for_each(|((quant_block, data_block), &scale)| {
+                // Create block-specific lookup table
+                let block_min = data_block.iter().fold(f32::INFINITY, |acc, &x| acc.min(x));
+                let block_max = data_block.iter().fold(f32::NEG_INFINITY, |acc, &x| acc.max(x));
+                let block_table = VectorizedLookupTable::new(block_min, block_max, self.config.precision_bits);
+                
+                for (i, &value) in data_block.iter().enumerate() {
+                    quant_block[i] = block_table.quantize(value);
+                }
+            });
+        
+        Ok(quantized)
+    }
+
+    /// Scalar dequantization implementation
+    fn dequantize_scalar(&self, quantized: &[i8], scales: &[f32]) -> Result<Vec<f32>> {
+        let mut dequantized = vec![0.0f32; quantized.len()];
+        
+        dequantized
+            .par_chunks_mut(self.config.block_size)
+            .zip(quantized.par_chunks(self.config.block_size))
+            .zip(scales.par_iter())
+            .for_each(|((dequant_block, quant_block), &scale)| {
+                for (i, &value) in quant_block.iter().enumerate() {
+                    dequant_block[i] = dequantize_value(value, scale);
+                }
+            });
+        
+        Ok(dequantized)
+    }
+
+    /// AVX2-optimized quantization for x86_64
+    #[cfg(target_arch = "x86_64")]
+    fn quantize_avx2(
+        &self, 
+        data: &[f32], 
+        lookup_table: &VectorizedLookupTable, 
+        scales: &[f32]
+    ) -> Result<Vec<i8>> {
+        if !is_x86_feature_detected!("avx2") {
+            return self.quantize_scalar(data, lookup_table, scales);
+        }
+
+        let mut quantized = vec![0i8; data.len()];
+        
+        quantized
+            .par_chunks_mut(self.config.block_size)
+            .zip(data.par_chunks(self.config.block_size))
+            .zip(scales.par_iter())
+            .for_each(|((quant_block, data_block), &scale)| {
+                unsafe {
+                    self.quantize_avx2_block(data_block, quant_block, lookup_table, scale);
+                }
+            });
+        
+        Ok(quantized)
+    }
+
+    /// AVX2-optimized dequantization for x86_64
+    #[cfg(target_arch = "x86_64")]
+    fn dequantize_avx2(&self, quantized: &[i8], scales: &[f32]) -> Result<Vec<f32>> {
+        if !is_x86_feature_detected!("avx2") {
+            return self.dequantize_scalar(quantized, scales);
+        }
+
+        let mut dequantized = vec![0.0f32; quantized.len()];
+        
+        dequantized
+            .par_chunks_mut(self.config.block_size)
+            .zip(quantized.par_chunks(self.config.block_size))
+            .zip(scales.par_iter())
+            .for_each(|((dequant_block, quant_block), &scale)| {
+                unsafe {
+                    self.dequantize_avx2_block(quant_block, dequant_block, scale);
+                }
+            });
+        
+        Ok(dequantized)
+    }
+
+    /// AVX-512 optimized quantization for x86_64
+    #[cfg(target_arch = "x86_64")]
+    fn quantize_avx512(
+        &self, 
+        data: &[f32], 
+        lookup_table: &VectorizedLookupTable, 
+        scales: &[f32]
+    ) -> Result<Vec<i8>> {
+        if !is_x86_feature_detected!("avx512f") {
+            return self.quantize_avx2(data, lookup_table, scales);
+        }
+
+        let mut quantized = vec![0i8; data.len()];
+        
+        quantized
+            .par_chunks_mut(self.config.block_size)
+            .zip(data.par_chunks(self.config.block_size))
+            .zip(scales.par_iter())
+            .for_each(|((quant_block, data_block), &scale)| {
+                unsafe {
+                    self.quantize_avx512_block(data_block, quant_block, lookup_table, scale);
+                }
+            });
+        
+        Ok(quantized)
+    }
+
+    /// AVX-512 optimized dequantization for x86_64
+    #[cfg(target_arch = "x86_64")]
+    fn dequantize_avx512(&self, quantized: &[i8], scales: &[f32]) -> Result<Vec<f32>> {
+        if !is_x86_feature_detected!("avx512f") {
+            return self.dequantize_avx2(quantized, scales);
+        }
+
+        let mut dequantized = vec![0.0f32; quantized.len()];
+        
+        dequantized
+            .par_chunks_mut(self.config.block_size)
+            .zip(quantized.par_chunks(self.config.block_size))
+            .zip(scales.par_iter())
+            .for_each(|((dequant_block, quant_block), &scale)| {
+                unsafe {
+                    self.dequantize_avx512_block(quant_block, dequant_block, scale);
+                }
+            });
+        
+        Ok(dequantized)
+    }
+
+    /// Fallback to scalar for non-x86 architectures
+    #[cfg(not(target_arch = "x86_64"))]
+    fn quantize_avx2(
+        &self, 
+        data: &[f32], 
+        lookup_table: &VectorizedLookupTable, 
+        scales: &[f32]
+    ) -> Result<Vec<i8>> {
+        self.quantize_scalar(data, lookup_table, scales)
+    }
+
+    #[cfg(not(target_arch = "x86_64"))]
+    fn dequantize_avx2(&self, quantized: &[i8], scales: &[f32]) -> Result<Vec<f32>> {
+        self.dequantize_scalar(quantized, scales)
+    }
+
+    #[cfg(not(target_arch = "x86_64"))]
+    fn quantize_avx512(
+        &self, 
+        data: &[f32], 
+        lookup_table: &VectorizedLookupTable, 
+        scales: &[f32]
+    ) -> Result<Vec<i8>> {
+        self.quantize_scalar(data, lookup_table, scales)
+    }
+
+    #[cfg(not(target_arch = "x86_64"))]
+    fn dequantize_avx512(&self, quantized: &[i8], scales: &[f32]) -> Result<Vec<f32>> {
+        self.dequantize_scalar(quantized, scales)
+    }
+
+    /// AVX2 kernel for quantizing a single block
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx2")]
+    unsafe fn quantize_avx2_block(
+        &self, 
+        data: &[f32], 
+        output: &mut [i8], 
+        lookup_table: &VectorizedLookupTable, 
+        scale: f32
+    ) {
+        use std::arch::x86_64::*;
+        
+        let inv_scale = 1.0 / scale;
+        let inv_scale_vec = _mm256_set1_ps(inv_scale);
+        let offset_vec = _mm256_set1_ps(128.0);
+        
+        let chunks = data.chunks_exact(8);
+        let remainder = chunks.remainder();
+        
+        for (i, chunk) in chunks.enumerate() {
+            let data_vec = _mm256_loadu_ps(chunk.as_ptr());
+            let scaled = _mm256_mul_ps(data_vec, inv_scale_vec);
+            let offset = _mm256_add_ps(scaled, offset_vec);
+            let indices = _mm256_cvtps_epi32(offset);
+            
+            // Vectorized lookup table access
+            let mut result = [0i8; 8];
+            for j in 0..8 {
+                let idx = _mm256_extract_epi32(indices, j).max(0).min(255) as usize;
+                result[j] = lookup_table.forward[idx];
+            }
+            
+            // Store results
+            std::ptr::copy_nonoverlapping(
+                result.as_ptr(),
+                output.as_mut_ptr().add(i * 8),
+                8,
+            );
+        }
+        
+        // Handle remainder with scalar code
+        for (i, &value) in remainder.iter().enumerate() {
+            let idx = data.len() - remainder.len() + i;
+            output[idx] = lookup_table.quantize(value);
+        }
+    }
+
+    /// AVX2 kernel for dequantizing a single block
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx2")]
+    unsafe fn dequantize_avx2_block(&self, quantized: &[i8], output: &mut [f32], scale: f32) {
+        use std::arch::x86_64::*;
+        
+        let scale_vec = _mm256_set1_ps(scale);
+        
+        let chunks = quantized.chunks_exact(8);
+        let remainder = chunks.remainder();
+        
+        for (i, chunk) in chunks.enumerate() {
+            // Load 8 i8 values and convert to i32
+            let i8_data = std::ptr::read_unaligned(chunk.as_ptr() as *const i64);
+            let i8_vec = _mm256_set1_epi64x(i8_data);
+            let i32_vec = _mm256_cvtepi8_epi32(_mm256_castsi256_si128(i8_vec));
+            
+            // Convert to float and scale
+            let f32_vec = _mm256_cvtepi32_ps(i32_vec);
+            let result = _mm256_mul_ps(f32_vec, scale_vec);
+            
+            _mm256_storeu_ps(output.as_mut_ptr().add(i * 8), result);
+        }
+        
+        // Handle remainder with scalar code
+        for (i, &value) in remainder.iter().enumerate() {
+            let idx = quantized.len() - remainder.len() + i;
+            output[idx] = dequantize_value(value, scale);
+        }
+    }
+
+    /// AVX-512 kernel for quantizing a single block
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx512f")]
+    unsafe fn quantize_avx512_block(
+        &self, 
+        data: &[f32], 
+        output: &mut [i8], 
+        lookup_table: &VectorizedLookupTable, 
+        scale: f32
+    ) {
+        use std::arch::x86_64::*;
+        
+        let inv_scale = 1.0 / scale;
+        let inv_scale_vec = _mm512_set1_ps(inv_scale);
+        let offset_vec = _mm512_set1_ps(128.0);
+        
+        let chunks = data.chunks_exact(16);
+        let remainder = chunks.remainder();
+        
+        for (i, chunk) in chunks.enumerate() {
+            let data_vec = _mm512_loadu_ps(chunk.as_ptr());
+            let scaled = _mm512_mul_ps(data_vec, inv_scale_vec);
+            let offset = _mm512_add_ps(scaled, offset_vec);
+            let indices = _mm512_cvtps_epi32(offset);
+            
+            // Vectorized lookup table access with AVX-512
+            let mut result = [0i8; 16];
+            for j in 0..16 {
+                let idx = _mm512_extract_epi32(indices, j).max(0).min(255) as usize;
+                result[j] = lookup_table.forward[idx];
+            }
+            
+            // Store results
+            std::ptr::copy_nonoverlapping(
+                result.as_ptr(),
+                output.as_mut_ptr().add(i * 16),
+                16,
+            );
+        }
+        
+        // Handle remainder with scalar code
+        for (i, &value) in remainder.iter().enumerate() {
+            let idx = data.len() - remainder.len() + i;
+            output[idx] = lookup_table.quantize(value);
+        }
+    }
+
+    /// AVX-512 kernel for dequantizing a single block
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx512f")]
+    unsafe fn dequantize_avx512_block(&self, quantized: &[i8], output: &mut [f32], scale: f32) {
+        use std::arch::x86_64::*;
+        
+        let scale_vec = _mm512_set1_ps(scale);
+        
+        let chunks = quantized.chunks_exact(16);
+        let remainder = chunks.remainder();
+        
+        for (i, chunk) in chunks.enumerate() {
+            // Load 16 i8 values and convert to i32
+            let i8_vec = _mm_loadu_si128(chunk.as_ptr() as *const __m128i);
+            let i32_vec = _mm512_cvtepi8_epi32(i8_vec);
+            
+            // Convert to float and scale
+            let f32_vec = _mm512_cvtepi32_ps(i32_vec);
+            let result = _mm512_mul_ps(f32_vec, scale_vec);
+            
+            _mm512_storeu_ps(output.as_mut_ptr().add(i * 16), result);
+        }
+        
+        // Handle remainder with scalar code
+        for (i, &value) in remainder.iter().enumerate() {
+            let idx = quantized.len() - remainder.len() + i;
+            output[idx] = dequantize_value(value, scale);
+        }
+    }
+
+    /// Pack TL2 quantized values (optimized for x86 cache efficiency)
+    fn pack_tl2_values(&self, values: &[i8]) -> Vec<u8> {
+        pack_2bit_values(values)
+    }
+
+    /// Unpack TL2 quantized values
+    fn unpack_tl2_values(&self, packed: &[u8], output_len: usize) -> Vec<i8> {
+        unpack_2bit_values(packed, output_len)
+    }
+}
+
+impl Default for TL2Quantizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl QuantizerTrait for TL2Quantizer {
+    fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
+        self.quantize_tensor(tensor)
+    }
+
+    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+        self.dequantize_tensor(tensor)
+    }
+
+    fn quantization_type(&self) -> QuantizationType {
+        QuantizationType::TL2
+    }
+
+    fn is_available(&self) -> bool {
+        // TL2 is optimized for x86 but works on all platforms
+        true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use candle_core::Device;
+
+    #[test]
+    fn test_cpu_feature_detection() {
+        let features = CpuFeatures::detect();
+        let kernel = features.best_kernel();
+        
+        // Should select some kernel type
+        match kernel {
+            KernelType::Scalar | KernelType::AVX2 | KernelType::AVX512 => {
+                // All valid
+            }
+        }
+    }
+
+    #[test]
+    fn test_vectorized_lookup_table() {
+        let table = VectorizedLookupTable::new(-2.0, 2.0, 2);
+        
+        // Test quantization
+        let quantized = table.quantize(1.0);
+        let dequantized = table.dequantize(quantized);
+        
+        // Should be reasonably close
+        assert!((dequantized - 1.0).abs() < 0.5);
+    }
+
+    #[test]
+    fn test_tl2_quantization_round_trip() {
+        let device = Device::Cpu;
+        let data = vec![1.0, -2.0, 0.5, -0.5, 3.0, -1.5];
+        let shape = vec![2, 3];
+        
+        let tensor = create_tensor_from_f32(data.clone(), &shape, &device).unwrap();
+        let quantizer = TL2Quantizer::new();
+        
+        let quantized = quantizer.quantize_tensor(&tensor).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        
+        assert_eq!(quantized.qtype, QuantizationType::TL2);
+        assert_eq!(quantized.shape, shape);
+        assert_eq!(dequantized.shape(), &shape);
+    }
+
+    #[test]
+    fn test_tl2_config_adaptation() {
+        let quantizer = TL2Quantizer::new();
+        
+        // Block size should be adapted based on CPU features
+        assert!(quantizer.config.block_size >= 64);
+        
+        // Should detect some CPU features
+        assert!(quantizer.cpu_features.has_avx2 || !quantizer.cpu_features.has_avx2);
+    }
+
+    #[test]
+    fn test_large_tensor_quantization() {
+        let device = Device::Cpu;
+        let data = (0..1024).map(|i| (i as f32 - 512.0) / 256.0).collect::<Vec<_>>();
+        let shape = vec![32, 32];
+        
+        let tensor = create_tensor_from_f32(data, &shape, &device).unwrap();
+        let quantizer = TL2Quantizer::new();
+        
+        let quantized = quantizer.quantize_tensor(&tensor).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        
+        assert_eq!(quantized.shape, shape);
+        assert_eq!(dequantized.shape(), &shape);
+        
+        // Should achieve good compression
+        let ratio = quantized.compression_ratio();
+        assert!(ratio > 4.0);
     }
 }

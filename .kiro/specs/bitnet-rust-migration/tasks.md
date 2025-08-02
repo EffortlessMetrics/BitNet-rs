@@ -107,6 +107,9 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
 - [-] 3. Implement quantization algorithms with numerical validation
 
 
+
+
+
   - Create QuantizationType enum with I2_S, TL1, and TL2 variants
   - Implement Quantize trait for tensor quantization and dequantization operations
   - Add comprehensive property-based testing for quantization round-trip accuracy
@@ -114,7 +117,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Implement format conversion utilities between different quantization types
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 3.1 Implement I2_S quantization with bit-packing optimization
+- [-] 3.1 Implement I2_S quantization with bit-packing optimization
+
   - Create 2-bit signed quantization algorithm with scale factor computation
   - Implement efficient bit-packing for 4 values per byte storage
   - Add SIMD-optimized quantization kernels for x86_64 and ARM64
@@ -122,7 +126,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Ensure numerical accuracy within 0.01% of reference implementation
   - _Requirements: 3.1, 3.4, 3.5_
 
-- [ ] 3.2 Implement TL1 quantization for ARM platforms
+- [-] 3.2 Implement TL1 quantization for ARM platforms
+
   - Create lookup table generation optimized for ARM NEON instructions
   - Implement configurable block sizes with performance tuning
   - Add ARM-specific SIMD optimizations using std::arch::aarch64
@@ -130,7 +135,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Implement kernel configuration loading from .ini files for compatibility
   - _Requirements: 3.2, 3.4, 3.5_
 
-- [ ] 3.3 Implement TL2 quantization for x86 platforms
+- [-] 3.3 Implement TL2 quantization for x86 platforms
+
   - Create lookup table generation optimized for AVX2/AVX-512 instructions
   - Implement vectorized operations with runtime CPU feature detection
   - Add x86-specific SIMD optimizations using std::arch::x86_64
