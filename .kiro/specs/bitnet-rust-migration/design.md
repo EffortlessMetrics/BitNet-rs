@@ -56,7 +56,7 @@ graph TB
     ML --> HF
 ```
 
-### Workspace Structure
+### Modular Workspace Structure
 
 ```
 bitnet-rs/
@@ -70,23 +70,85 @@ bitnet-rs/
 │       ├── release.yml       # Automated releases
 │       └── benchmark.yml     # Performance tracking
 ├── crates/
-│   ├── bitnet-core/          # Core library
+│   ├── bitnet-common/        # Shared types and utilities
 │   │   ├── Cargo.toml
-│   │   ├── src/
-│   │   │   ├── lib.rs
-│   │   │   ├── models/       # Model definitions
-│   │   │   ├── inference/    # Inference engines
-│   │   │   ├── quantization/ # Quantization algorithms
-│   │   │   ├── kernels/      # CPU/GPU kernels
-│   │   │   ├── wasm/         # WebAssembly optimizations
-│   │   │   └── utils/        # Utilities
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── config.rs     # Configuration types
+│   │       ├── error.rs      # Error types
+│   │       ├── tensor.rs     # Tensor abstractions
+│   │       └── types.rs      # Common type definitions
+│   ├── bitnet-models/        # Model definitions and loading
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── bitnet.rs     # BitNet model implementation
+│   │       ├── loader.rs     # Model loading logic
+│   │       ├── formats/      # Format-specific loaders
+│   │       │   ├── gguf.rs
+│   │       │   ├── safetensors.rs
+│   │       │   └── huggingface.rs
+│   │       └── registry.rs   # Model registry/management
+│   ├── bitnet-quantization/  # Quantization algorithms
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── i2s.rs        # I2_S quantization
+│   │       ├── tl1.rs        # TL1 quantization (ARM)
+│   │       ├── tl2.rs        # TL2 quantization (x86)
+│   │       └── utils.rs      # Quantization utilities
+│   ├── bitnet-kernels/       # High-performance compute kernels
+│   │   ├── Cargo.toml
 │   │   ├── build.rs          # Kernel compilation
-│   │   └── benches/          # Criterion benchmarks
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── cpu/          # CPU kernels
+│   │       │   ├── mod.rs
+│   │       │   ├── fallback.rs
+│   │       │   ├── avx2.rs   # x86 AVX2 kernels
+│   │       │   ├── avx512.rs # x86 AVX-512 kernels
+│   │       │   └── neon.rs   # ARM NEON kernels
+│   │       ├── gpu/          # GPU kernels
+│   │       │   ├── mod.rs
+│   │       │   ├── cuda.rs   # CUDA implementation
+│   │       │   └── metal.rs  # Metal implementation (future)
+│   │       └── ffi/          # FFI to C++ kernels (temporary)
+│   │           ├── mod.rs
+│   │           └── bindings.rs
+│   ├── bitnet-inference/     # Inference engines
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── engine.rs     # Core inference engine
+│   │       ├── cpu.rs        # CPU-specific optimizations
+│   │       ├── gpu.rs        # GPU-specific optimizations
+│   │       ├── streaming.rs  # Streaming generation
+│   │       ├── batch.rs      # Batch processing
+│   │       └── sampling.rs   # Sampling strategies
+│   ├── bitnet-tokenizers/    # Tokenization support
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── gpt2.rs       # GPT-2 tokenizer
+│   │       ├── sentencepiece.rs # SentencePiece tokenizer
+│   │       └── huggingface.rs # HuggingFace tokenizer integration
+│   ├── bitnet-server/        # HTTP server implementation
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── handlers.rs   # Request handlers
+│   │       ├── middleware.rs # Middleware
+│   │       ├── streaming.rs  # Server-sent events
+│   │       └── metrics.rs    # Prometheus metrics
 │   ├── bitnet-cli/           # Command-line interface
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── main.rs
 │   │       ├── commands/     # CLI subcommands
+│   │       │   ├── inference.rs
+│   │       │   ├── convert.rs
+│   │       │   ├── benchmark.rs
+│   │       │   └── serve.rs
 │   │       └── config.rs     # Configuration management
 │   ├── bitnet-ffi/           # C API bindings
 │   │   ├── Cargo.toml
@@ -99,23 +161,48 @@ bitnet-rs/
 │   │   ├── Cargo.toml
 │   │   ├── pyproject.toml    # Maturin configuration
 │   │   └── src/
-│   │       └── lib.rs        # PyO3 bindings
+│   │       ├── lib.rs        # PyO3 bindings
+│   │       ├── model.rs      # Python model wrapper
+│   │       └── inference.rs  # Python inference wrapper
 │   └── bitnet-wasm/          # WebAssembly bindings
 │       ├── Cargo.toml
 │       ├── src/
-│       │   └── lib.rs        # wasm-bindgen bindings
+│       │   ├── lib.rs        # wasm-bindgen bindings
+│       │   ├── model.rs      # WASM model wrapper
+│       │   └── utils.rs      # WASM utilities
 │       └── pkg/              # Generated WASM package
 ├── examples/                 # Usage examples
-│   ├── cpu_basic.rs
-│   ├── gpu_inference.rs
-│   ├── server.rs
-│   ├── wasm_browser.html
-│   └── python_bridge.py
+│   ├── basic/
+│   │   ├── cpu_inference.rs
+│   │   ├── gpu_inference.rs
+│   │   └── streaming.rs
+│   ├── server/
+│   │   ├── simple_server.rs
+│   │   ├── load_balanced.rs
+│   │   └── docker/
+│   ├── integrations/
+│   │   ├── axum_server.rs
+│   │   ├── warp_server.rs
+│   │   └── jupyter_notebook.ipynb
+│   ├── wasm/
+│   │   ├── browser_demo.html
+│   │   ├── worker_demo.js
+│   │   └── npm_package/
+│   └── python/
+│       ├── basic_usage.py
+│       ├── migration_example.py
+│       └── async_streaming.py
 ├── tests/                    # Integration tests
 │   ├── cross_validation/     # Python parity tests
 │   ├── model_tests/          # Model loading tests
+│   ├── kernel_tests/         # Kernel correctness tests
 │   ├── wasm_tests/           # WebAssembly tests
 │   └── performance/          # Performance regression tests
+├── benches/                  # Comprehensive benchmarks
+│   ├── inference.rs          # Inference benchmarks
+│   ├── kernels.rs           # Kernel benchmarks
+│   ├── quantization.rs      # Quantization benchmarks
+│   └── memory.rs            # Memory usage benchmarks
 └── kernels/                  # C++ kernels (temporary)
     ├── ggml-bitnet-lut.cpp
     ├── ggml-bitnet-mad.cpp
