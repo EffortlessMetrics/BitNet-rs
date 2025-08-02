@@ -57,6 +57,15 @@ fn test_config_validation() {
 
 #[test]
 fn test_toml_config_loading() {
+    // Clean up any existing env vars first
+    let env_vars = [
+        "BITNET_VOCAB_SIZE", "BITNET_TEMPERATURE", "BITNET_USE_GPU", 
+        "BITNET_QUANTIZATION_TYPE", "BITNET_MEMORY_LIMIT", "BITNET_MODEL_FORMAT"
+    ];
+    for var in &env_vars {
+        env::remove_var(var);
+    }
+    
     let toml_content = r#"
 [model]
 vocab_size = 50000
@@ -93,6 +102,15 @@ batch_size = 4
 
 #[test]
 fn test_json_config_loading() {
+    // Clean up any existing env vars first
+    let env_vars = [
+        "BITNET_VOCAB_SIZE", "BITNET_TEMPERATURE", "BITNET_USE_GPU", 
+        "BITNET_QUANTIZATION_TYPE", "BITNET_MEMORY_LIMIT", "BITNET_MODEL_FORMAT"
+    ];
+    for var in &env_vars {
+        env::remove_var(var);
+    }
+    
     let json_content = r#"
 {
     "model": {
@@ -128,6 +146,15 @@ fn test_json_config_loading() {
 
 #[test]
 fn test_env_overrides() {
+    // Clean up any existing env vars first
+    let env_vars = [
+        "BITNET_VOCAB_SIZE", "BITNET_TEMPERATURE", "BITNET_USE_GPU", 
+        "BITNET_QUANTIZATION_TYPE", "BITNET_MEMORY_LIMIT", "BITNET_MODEL_FORMAT"
+    ];
+    for var in &env_vars {
+        env::remove_var(var);
+    }
+    
     // Set environment variables
     env::set_var("BITNET_VOCAB_SIZE", "60000");
     env::set_var("BITNET_TEMPERATURE", "0.7");
@@ -143,11 +170,9 @@ fn test_env_overrides() {
     assert_eq!(config.performance.memory_limit, Some(2 * 1024 * 1024 * 1024));
     
     // Clean up
-    env::remove_var("BITNET_VOCAB_SIZE");
-    env::remove_var("BITNET_TEMPERATURE");
-    env::remove_var("BITNET_USE_GPU");
-    env::remove_var("BITNET_QUANTIZATION_TYPE");
-    env::remove_var("BITNET_MEMORY_LIMIT");
+    for var in &env_vars {
+        env::remove_var(var);
+    }
 }
 
 #[test]
@@ -171,6 +196,15 @@ fn test_config_merging() {
 
 #[test]
 fn test_config_loader_precedence() {
+    // Clean up any existing env vars first
+    let env_vars = [
+        "BITNET_VOCAB_SIZE", "BITNET_TEMPERATURE", "BITNET_USE_GPU", 
+        "BITNET_QUANTIZATION_TYPE", "BITNET_MEMORY_LIMIT", "BITNET_MODEL_FORMAT"
+    ];
+    for var in &env_vars {
+        env::remove_var(var);
+    }
+    
     // Create a config file
     let toml_content = r#"
 [model]
@@ -194,11 +228,22 @@ temperature = 0.9
     assert_eq!(config.inference.temperature, 0.9);
     
     // Clean up
-    env::remove_var("BITNET_VOCAB_SIZE");
+    for var in &env_vars {
+        env::remove_var(var);
+    }
 }
 
 #[test]
 fn test_memory_limit_parsing() {
+    // Clean up any existing env vars first
+    let env_vars = [
+        "BITNET_VOCAB_SIZE", "BITNET_TEMPERATURE", "BITNET_USE_GPU", 
+        "BITNET_QUANTIZATION_TYPE", "BITNET_MEMORY_LIMIT", "BITNET_MODEL_FORMAT"
+    ];
+    for var in &env_vars {
+        env::remove_var(var);
+    }
+    
     env::set_var("BITNET_MEMORY_LIMIT", "1GB");
     let mut config = BitNetConfig::default();
     config.apply_env_overrides().unwrap();
@@ -212,23 +257,42 @@ fn test_memory_limit_parsing() {
     config.apply_env_overrides().unwrap();
     assert_eq!(config.performance.memory_limit, None);
     
-    env::remove_var("BITNET_MEMORY_LIMIT");
+    for var in &env_vars {
+        env::remove_var(var);
+    }
 }
 
 #[test]
 fn test_invalid_env_values() {
+    // Clean up any existing env vars first
+    let env_vars = [
+        "BITNET_VOCAB_SIZE", "BITNET_TEMPERATURE", "BITNET_USE_GPU", 
+        "BITNET_QUANTIZATION_TYPE", "BITNET_MEMORY_LIMIT", "BITNET_MODEL_FORMAT"
+    ];
+    for var in &env_vars {
+        env::remove_var(var);
+    }
+    
     env::set_var("BITNET_VOCAB_SIZE", "invalid");
     let mut config = BitNetConfig::default();
     assert!(config.apply_env_overrides().is_err());
     
+    // Reset for next test
+    env::remove_var("BITNET_VOCAB_SIZE");
+    config = BitNetConfig::default();
+    
     env::set_var("BITNET_MODEL_FORMAT", "invalid");
     assert!(config.apply_env_overrides().is_err());
+    
+    // Reset for next test
+    env::remove_var("BITNET_MODEL_FORMAT");
+    config = BitNetConfig::default();
     
     env::set_var("BITNET_USE_GPU", "maybe");
     assert!(config.apply_env_overrides().is_err());
     
     // Clean up
-    env::remove_var("BITNET_VOCAB_SIZE");
-    env::remove_var("BITNET_MODEL_FORMAT");
-    env::remove_var("BITNET_USE_GPU");
+    for var in &env_vars {
+        env::remove_var(var);
+    }
 }
