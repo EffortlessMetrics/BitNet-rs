@@ -1,0 +1,36 @@
+# Testing framework
+pytest>=7.0.0
+pytest-xdist>=3.0.0  # Parallel test execution
+pytest-cov>=4.0.0    # Coverage reporting
+pytest-benchmark>=4.0.0  # Performance benchmarking
+pytest-timeout>=2.1.0  # Test timeouts
+
+# Property-based testing
+hypothesis>=6.0.0
+
+# Numerical computing
+numpy>=1.21.0
+torch>=2.0.0
+torchvision>=0.15.0  # May be needed for some utilities
+
+# Data handling
+safetensors>=0.3.0  # For SafeTensors format support
+
+# Utilities
+tqdm>=4.64.0  # Progress bars
+psutil>=5.9.0  # System monitoring
+memory-profiler>=0.60.0  # Memory profiling
+
+# Optional dependencies for extended testing
+transformers>=4.20.0  # For tokenizer compatibility tests
+sentencepiece>=0.1.97  # For SentencePiece tokenizer tests
+einops>=0.6.0  # For tensor operations
+
+# Development tools
+black>=22.0.0  # Code formatting
+isort>=5.10.0  # Import sorting
+flake8>=5.0.0  # Linting
+
+# Documentation
+sphinx>=5.0.0  # Documentation generation
+sphinx-rtd-theme>=1.0.0  # Documentation theme
