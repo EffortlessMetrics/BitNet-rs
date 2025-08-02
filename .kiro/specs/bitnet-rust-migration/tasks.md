@@ -65,7 +65,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Implement configuration merging with precedence rules (env vars > config file > defaults)
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [-] 2.1 Create model loading abstraction with format detection
+- [x] 2.1 Create model loading abstraction with format detection
+
 
   - Implement ModelLoader trait with support for GGUF, SafeTensors, and HuggingFace formats
   - Add automatic format detection based on file extension and magic bytes
@@ -73,6 +74,7 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Create model metadata extraction and validation against expected schemas
   - Add progress reporting for large model loading operations
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+
 
 - [ ] 2.2 Implement GGUF format parser with full compatibility
   - Create GGUF reader that handles all metadata and tensor formats used by BitNet models
