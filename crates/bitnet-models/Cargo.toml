@@ -22,6 +22,7 @@ safetensors.workspace = true
 memmap2.workspace = true
 tracing.workspace = true
 bytemuck.workspace = true
+half = "2.4"
 
 [dev-dependencies]
 tempfile.workspace = true

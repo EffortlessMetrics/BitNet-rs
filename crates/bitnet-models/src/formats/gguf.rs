@@ -5,7 +5,7 @@ use crate::{Model, BitNetModel};
 use bitnet_common::{BitNetConfig, ModelMetadata, QuantizationType, Result, BitNetError, ModelError};
 use candle_core::Device;
 use std::path::Path;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 /// GGUF format loader
 pub struct GgufLoader;
@@ -217,12 +217,16 @@ impl GgufLoader {
             match dtype {
                 DType::F32 => {
                     let float_data = bytemuck::cast_slice::<u8, f32>(data);
-                    Tensor::from_slice(float_data, &info.shape, device)
+                    Tensor::from_slice(float_data, info.shape.as_slice(), device)
                         .map_err(|e| BitNetError::Validation(e.to_string()))
                 }
                 DType::F16 => {
-                    let half_data = bytemuck::cast_slice::<u8, candle_core::half::f16>(data);
-                    Tensor::from_slice(half_data, &info.shape, device)
+                    // For now, convert F16 data to F32 for compatibility
+                    let half_data = bytemuck::cast_slice::<u8, u16>(data);
+                    let float_data: Vec<f32> = half_data.iter()
+                        .map(|&h| half::f16::from_bits(h).to_f32())
+                        .collect();
+                    Tensor::from_slice(&float_data, info.shape.as_slice(), device)
                         .map_err(|e| BitNetError::Validation(e.to_string()))
                 }
                 _ => Err(BitNetError::Model(ModelError::InvalidFormat {
@@ -442,13 +446,13 @@ impl GgufValue {
                 
                 let mut array = Vec::with_capacity(array_len);
                 for _ in 0..array_len {
-                    // Temporarily set the type byte for reading array elements
-                    let saved_offset = *offset;
-                    *offset = saved_offset.saturating_sub(1);
-                    data[*offset] = array_type;
-                    *offset += 1;
+                    // Create a temporary buffer with the array type byte
+                    let mut temp_data = vec![array_type];
+                    temp_data.extend_from_slice(&data[*offset..]);
+                    let mut temp_offset = 0;
                     
-                    array.push(GgufValue::read(data, offset)?);
+                    array.push(GgufValue::read(&temp_data, &mut temp_offset)?);
+                    *offset += temp_offset - 1; // Adjust for the type byte we added
                 }
                 Ok(GgufValue::Array(array))
             }

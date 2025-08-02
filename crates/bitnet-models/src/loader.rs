@@ -1,13 +1,13 @@
 //! Model loading utilities
 
-use bitnet_common::{BitNetConfig, ModelFormat, ModelMetadata, Result, BitNetError};
+use bitnet_common::{BitNetConfig, ModelMetadata, Result, BitNetError};
 use crate::Model;
 use candle_core::Device;
 use memmap2::Mmap;
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
-use tracing::{info, debug, warn};
+use tracing::{info, debug};
 
 #[cfg(test)]
 mod tests;
@@ -16,11 +16,21 @@ mod tests;
 pub type ProgressCallback = Arc<dyn Fn(f32, &str) + Send + Sync>;
 
 /// Model loading configuration
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct LoadConfig {
     pub use_mmap: bool,
     pub validate_checksums: bool,
     pub progress_callback: Option<ProgressCallback>,
+}
+
+impl std::fmt::Debug for LoadConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LoadConfig")
+            .field("use_mmap", &self.use_mmap)
+            .field("validate_checksums", &self.validate_checksums)
+            .field("progress_callback", &self.progress_callback.is_some())
+            .finish()
+    }
 }
 
 impl Default for LoadConfig {
