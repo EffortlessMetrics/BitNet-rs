@@ -85,7 +85,7 @@ impl I2SQuantizer {
 
     /// Scalar quantization implementation
     fn quantize_scalar(&self, data: &[f32], scales: &[f32]) -> Result<Vec<i8>> {
-        let num_blocks = scales.len();
+        let _num_blocks = scales.len();
         let mut quantized = vec![0i8; data.len()];
         
         quantized

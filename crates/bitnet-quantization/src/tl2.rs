@@ -290,7 +290,7 @@ impl TL2Quantizer {
     fn quantize_scalar(
         &self, 
         data: &[f32], 
-        lookup_table: &VectorizedLookupTable, 
+        _lookup_table: &VectorizedLookupTable, 
         scales: &[f32]
     ) -> Result<Vec<i8>> {
         let mut quantized = vec![0i8; data.len()];
@@ -456,10 +456,14 @@ impl TL2Quantizer {
             
             // Vectorized lookup table access
             let mut result = [0i8; 8];
-            for j in 0..8 {
-                let idx = _mm256_extract_epi32(indices, j).max(0).min(255) as usize;
-                result[j] = lookup_table.forward[idx];
-            }
+            result[0] = lookup_table.forward[(_mm256_extract_epi32(indices, 0).max(0).min(255)) as usize];
+            result[1] = lookup_table.forward[(_mm256_extract_epi32(indices, 1).max(0).min(255)) as usize];
+            result[2] = lookup_table.forward[(_mm256_extract_epi32(indices, 2).max(0).min(255)) as usize];
+            result[3] = lookup_table.forward[(_mm256_extract_epi32(indices, 3).max(0).min(255)) as usize];
+            result[4] = lookup_table.forward[(_mm256_extract_epi32(indices, 4).max(0).min(255)) as usize];
+            result[5] = lookup_table.forward[(_mm256_extract_epi32(indices, 5).max(0).min(255)) as usize];
+            result[6] = lookup_table.forward[(_mm256_extract_epi32(indices, 6).max(0).min(255)) as usize];
+            result[7] = lookup_table.forward[(_mm256_extract_epi32(indices, 7).max(0).min(255)) as usize];
             
             // Store results
             std::ptr::copy_nonoverlapping(

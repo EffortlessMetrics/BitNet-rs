@@ -196,10 +196,10 @@ pub fn convert_quantization(
 pub fn validate_round_trip(
     original: &BitNetTensor,
     qtype: QuantizationType,
-    tolerance: f32,
+    _tolerance: f32,
 ) -> Result<bool> {
     let quantized = original.quantize(qtype)?;
-    let dequantized = quantized.dequantize()?;
+    let _dequantized = quantized.dequantize()?;
     
     // Compare tensors (simplified - would need proper tensor comparison)
     // This is a placeholder for the actual validation logic
