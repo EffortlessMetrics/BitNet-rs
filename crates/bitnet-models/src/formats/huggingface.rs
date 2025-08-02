@@ -2,7 +2,7 @@
 
 use crate::loader::{FormatLoader, LoadConfig};
 use crate::{Model, BitNetModel};
-use bitnet_common::{BitNetConfig, ModelMetadata, Result, BitNetError, ModelError};
+use bitnet_common::{BitNetConfig, ModelMetadata, Result};
 use candle_core::Device;
 use std::path::Path;
 use tracing::{debug, info};
