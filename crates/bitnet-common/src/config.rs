@@ -7,8 +7,12 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+#[cfg(test)]
+mod tests;
+
 /// Main BitNet configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct BitNetConfig {
     pub model: ModelConfig,
     pub inference: InferenceConfig,
@@ -29,6 +33,7 @@ impl Default for BitNetConfig {
 
 /// Model configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct ModelConfig {
     pub path: Option<PathBuf>,
     pub format: ModelFormat,
@@ -65,6 +70,7 @@ pub enum ModelFormat {
 
 /// Inference configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct InferenceConfig {
     pub max_length: usize,
     pub max_new_tokens: usize,

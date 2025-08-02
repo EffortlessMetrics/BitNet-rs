@@ -20,6 +20,9 @@ tracing.workspace = true
 bytemuck.workspace = true
 candle-core.workspace = true
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [features]
 default = []
 gpu = ["candle-core/cuda"]
