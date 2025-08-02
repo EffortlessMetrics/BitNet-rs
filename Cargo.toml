@@ -16,7 +16,7 @@ members = [
 
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/microsoft/BitNet"
 homepage = "https://github.com/microsoft/BitNet"
@@ -27,10 +27,10 @@ categories = ["science", "algorithms"]
 [workspace.dependencies]
 # Core dependencies
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-toml = "0.8"
+toml = "0.9"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
@@ -43,40 +43,40 @@ rayon = "1.8"
 bytemuck = { version = "1.14", features = ["derive"] }
 
 # Tensor operations
-candle-core = "0.8"
-candle-nn = "0.8"
-candle-transformers = "0.8"
+candle-core = "0.9"
+candle-nn = "0.9"
+candle-transformers = "0.9"
 
 # Serialization formats
-safetensors = "0.4"
+safetensors = "0.6"
 memmap2 = "0.9"
 
 # CLI and configuration
 clap = { version = "4.4", features = ["derive", "env"] }
-indicatif = "0.17"
+indicatif = "0.18"
 
 # Web server
-axum = "0.7"
-tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "trace"] }
+axum = "0.8"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
 
 # FFI and bindings
-pyo3 = { version = "0.20", features = ["extension-module"] }
+pyo3 = { version = "0.25", features = ["extension-module"] }
 wasm-bindgen = "0.2"
 js-sys = "0.3"
 web-sys = "0.3"
 
 # GPU support (optional)
-cudarc = { version = "0.11", optional = true }
+cudarc = { version = "0.17", optional = true }
 
 # Testing and benchmarking
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { version = "0.7", features = ["html_reports"] }
 proptest = "1.4"
 tempfile = "3.8"
 
 # Code quality
 cc = "1.0"
-bindgen = "0.69"
+bindgen = "0.72"
 
 [profile.release]
 lto = true
