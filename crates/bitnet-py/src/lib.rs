@@ -1,6 +1,7 @@
 //! Python bindings for BitNet
 
 use pyo3::prelude::*;
+use pyo3::types::PyModule;
 
 /// Python BitNet model wrapper
 #[pyclass]
@@ -24,7 +25,7 @@ impl BitNetModel {
 
 /// Python module definition
 #[pymodule]
-fn bitnet(_py: Python, m: &PyModule) -> PyResult<()> {
+fn bitnet(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<BitNetModel>()?;
     Ok(())
 }

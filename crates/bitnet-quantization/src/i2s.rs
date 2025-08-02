@@ -1,7 +1,7 @@
 //! I2_S (2-bit signed) quantization implementation
 
 use crate::{Quantize, QuantizedTensor};
-use bitnet_common::{QuantizationType, Result, Tensor};
+use bitnet_common::{BitNetTensor, QuantizationType, Result, Tensor};
 
 /// I2_S quantization implementation
 pub struct I2SQuantizer;

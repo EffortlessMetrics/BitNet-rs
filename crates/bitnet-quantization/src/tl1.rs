@@ -1,7 +1,7 @@
 //! TL1 (Table Lookup 1) quantization for ARM platforms
 
 use crate::{Quantize, QuantizedTensor};
-use bitnet_common::{QuantizationType, Result, Tensor};
+use bitnet_common::{BitNetTensor, QuantizationType, Result, Tensor};
 
 /// TL1 quantization implementation
 pub struct TL1Quantizer;
@@ -11,7 +11,7 @@ impl TL1Quantizer {
         Self
     }
     
-    pub fn quantize_tensor(&self, _tensor: &dyn Tensor) -> Result<QuantizedTensor> {
+    pub fn quantize_tensor(&self, _tensor: &BitNetTensor) -> Result<QuantizedTensor> {
         // Placeholder implementation
         Ok(QuantizedTensor::new(
             vec![],

@@ -43,7 +43,7 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::init();
+    tracing_subscriber::fmt::init();
     
     let cli = Cli::parse();
     
