@@ -10,7 +10,9 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
 
 ### Phase 1: Foundation and Test Infrastructure
 
-- [ ] 1. Establish Rust workspace and CI/CD pipeline
+- [-] 1. Establish Rust workspace and CI/CD pipeline
+
+
   - Create Cargo workspace with bitnet-core, bitnet-cli, bitnet-ffi, and bitnet-py crates
   - Configure GitHub Actions for multi-platform testing (Linux x86_64/ARM64, macOS Intel/Apple Silicon, Windows)
   - Set up automated benchmarking with Criterion and performance regression detection
@@ -18,7 +20,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Configure clippy pedantic lints, rustfmt, cargo audit, and cargo deny checks
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-- [ ] 1.1 Create comprehensive Python test suite for baseline validation
+- [-] 1.1 Create comprehensive Python test suite for baseline validation
+
   - Extract all existing Python functionality into comprehensive test cases covering model loading, quantization, and inference
   - Implement property-based testing for quantization round-trip accuracy using hypothesis
   - Create performance benchmarks for CPU and GPU inference with token/second metrics
@@ -37,6 +40,7 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
 ### Phase 2: Core Model Infrastructure
 
 - [ ] 2. Implement model configuration and loading system
+
   - Define BitNetConfig, ModelConfig, InferenceConfig, and QuantizationConfig structs with serde support
   - Implement configuration validation with comprehensive error messages
   - Add environment variable override support for deployment flexibility
@@ -71,6 +75,7 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
 ### Phase 3: Quantization System
 
 - [ ] 3. Implement quantization algorithms with numerical validation
+
   - Create QuantizationType enum with I2_S, TL1, and TL2 variants
   - Implement Quantize trait for tensor quantization and dequantization operations
   - Add comprehensive property-based testing for quantization round-trip accuracy
@@ -105,6 +110,7 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
 ### Phase 4: High-Performance Kernel System
 
 - [ ] 4. Implement CPU kernel system with SIMD optimization
+
   - Create CpuKernel trait with matmul_i2s and quantization operations
   - Implement runtime kernel selection with CPU feature detection
   - Add comprehensive fallback kernels for unsupported architectures
@@ -147,6 +153,7 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
 ### Phase 5: GPU Acceleration Support
 
 - [ ] 5. Implement GPU kernel system with CUDA integration
+
   - Integrate cudarc for safe CUDA kernel execution and memory management
   - Implement GPU kernel compilation with NVCC detection and graceful fallback
   - Create GPU memory management with efficient pooling and transfer optimization
@@ -181,6 +188,7 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
 ### Phase 6: Inference Engine Implementation
 
 - [ ] 6. Create inference engines with streaming support
+
   - Implement InferenceEngine with CPU and GPU backend support
   - Add streaming token generation with backpressure handling and cancellation
   - Create batch inference optimization for multiple concurrent requests
