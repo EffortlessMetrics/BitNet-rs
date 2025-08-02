@@ -23,7 +23,7 @@ impl BitNetTensor {
         Self { inner: tensor }
     }
 
-    pub fn from_slice<T: bytemuck::Pod>(
+    pub fn from_slice<T: bytemuck::Pod + candle_core::WithDType>(
         data: &[T],
         shape: &[usize],
         device: &Device,

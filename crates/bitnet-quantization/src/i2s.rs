@@ -11,7 +11,7 @@ impl I2SQuantizer {
         Self
     }
     
-    pub fn quantize_tensor(&self, _tensor: &dyn Tensor) -> Result<QuantizedTensor> {
+    pub fn quantize_tensor(&self, _tensor: &BitNetTensor) -> Result<QuantizedTensor> {
         // Placeholder implementation
         Ok(QuantizedTensor::new(
             vec![],

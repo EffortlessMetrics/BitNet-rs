@@ -1,6 +1,6 @@
 //! Quantization algorithms for BitNet models
 
-use bitnet_common::{QuantizationType, Result, Tensor};
+use bitnet_common::{BitNetTensor, QuantizationType, Result, Tensor};
 
 pub mod i2s;
 pub mod tl1;
@@ -9,7 +9,7 @@ pub mod tl2;
 /// Quantization trait
 pub trait Quantize {
     fn quantize(&self, qtype: QuantizationType) -> Result<QuantizedTensor>;
-    fn dequantize(&self) -> Result<Box<dyn Tensor>>;
+    fn dequantize(&self) -> Result<BitNetTensor>;
 }
 
 /// Quantized tensor representation
