@@ -193,14 +193,16 @@ impl TL1Quantizer {
         // Pack quantized values
         let packed_data = self.pack_tl1_values(&quantized_data);
         
+        let zero_points = if self.config.use_asymmetric { 
+            Some(vec![lookup_table.zero_point; scales.len()]) 
+        } else { 
+            None 
+        };
+        
         Ok(QuantizedTensor::new_with_params(
             packed_data,
             scales,
-            if self.config.use_asymmetric { 
-                Some(vec![lookup_table.zero_point; scales.len()]) 
-            } else { 
-                None 
-            },
+            zero_points,
             shape,
             QuantizationType::TL1,
             self.config.block_size,
@@ -219,7 +221,8 @@ impl TL1Quantizer {
         let quantized_data = self.unpack_tl1_values(&tensor.data, tensor.numel());
         
         // Reconstruct lookup table from scales and zero points
-        let zero_points = tensor.zero_points.as_ref().unwrap_or(&vec![0; tensor.scales.len()]);
+        let default_zero_points = vec![0; tensor.scales.len()];
+        let zero_points = tensor.zero_points.as_ref().unwrap_or(&default_zero_points);
         
         // Dequantize data
         let dequantized_data = if self.use_neon {
@@ -237,7 +240,7 @@ impl TL1Quantizer {
     fn quantize_scalar(
         &self, 
         data: &[f32], 
-        lookup_table: &LookupTable, 
+        _lookup_table: &LookupTable, 
         scales: &[f32]
     ) -> Result<Vec<i8>> {
         let mut quantized = vec![0i8; data.len()];

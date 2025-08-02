@@ -135,7 +135,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Implement kernel configuration loading from .ini files for compatibility
   - _Requirements: 3.2, 3.4, 3.5_
 
-- [-] 3.3 Implement TL2 quantization for x86 platforms
+- [ ] 3.3 Implement TL2 quantization for x86 platforms
+
 
   - Create lookup table generation optimized for AVX2/AVX-512 instructions
   - Implement vectorized operations with runtime CPU feature detection
