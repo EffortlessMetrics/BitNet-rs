@@ -272,40 +272,40 @@ impl BitNetConfig {
         }
         if let Ok(vocab_size) = env::var("BITNET_VOCAB_SIZE") {
             self.model.vocab_size = vocab_size.parse()
-                .map_err(|_| BitNetError::Config("Invalid BITNET_VOCAB_SIZE value".to_string()))?;
+                .map_err(|_| BitNetError::Config(format!("Invalid BITNET_VOCAB_SIZE value: '{}'", vocab_size)))?;
         }
         if let Ok(hidden_size) = env::var("BITNET_HIDDEN_SIZE") {
             self.model.hidden_size = hidden_size.parse()
-                .map_err(|_| BitNetError::Config("Invalid BITNET_HIDDEN_SIZE value".to_string()))?;
+                .map_err(|_| BitNetError::Config(format!("Invalid BITNET_HIDDEN_SIZE value: '{}'", hidden_size)))?;
         }
         if let Ok(num_layers) = env::var("BITNET_NUM_LAYERS") {
             self.model.num_layers = num_layers.parse()
-                .map_err(|_| BitNetError::Config("Invalid BITNET_NUM_LAYERS value".to_string()))?;
+                .map_err(|_| BitNetError::Config(format!("Invalid BITNET_NUM_LAYERS value: '{}'", num_layers)))?;
         }
         if let Ok(num_heads) = env::var("BITNET_NUM_HEADS") {
             self.model.num_heads = num_heads.parse()
-                .map_err(|_| BitNetError::Config("Invalid BITNET_NUM_HEADS value".to_string()))?;
+                .map_err(|_| BitNetError::Config(format!("Invalid BITNET_NUM_HEADS value: '{}'", num_heads)))?;
         }
         
         // Inference configuration overrides
         if let Ok(max_length) = env::var("BITNET_MAX_LENGTH") {
             self.inference.max_length = max_length.parse()
-                .map_err(|_| BitNetError::Config("Invalid BITNET_MAX_LENGTH value".to_string()))?;
+                .map_err(|_| BitNetError::Config(format!("Invalid BITNET_MAX_LENGTH value: '{}'", max_length)))?;
         }
         if let Ok(max_new_tokens) = env::var("BITNET_MAX_NEW_TOKENS") {
             self.inference.max_new_tokens = max_new_tokens.parse()
-                .map_err(|_| BitNetError::Config("Invalid BITNET_MAX_NEW_TOKENS value".to_string()))?;
+                .map_err(|_| BitNetError::Config(format!("Invalid BITNET_MAX_NEW_TOKENS value: '{}'", max_new_tokens)))?;
         }
         if let Ok(temperature) = env::var("BITNET_TEMPERATURE") {
             self.inference.temperature = temperature.parse()
-                .map_err(|_| BitNetError::Config("Invalid BITNET_TEMPERATURE value".to_string()))?;
+                .map_err(|_| BitNetError::Config(format!("Invalid BITNET_TEMPERATURE value: '{}'", temperature)))?;
         }
         if let Ok(top_k) = env::var("BITNET_TOP_K") {
             if top_k.to_lowercase() == "none" {
                 self.inference.top_k = None;
             } else {
                 self.inference.top_k = Some(top_k.parse()
-                    .map_err(|_| BitNetError::Config("Invalid BITNET_TOP_K value".to_string()))?);
+                    .map_err(|_| BitNetError::Config(format!("Invalid BITNET_TOP_K value: '{}'", top_k)))?);
             }
         }
         if let Ok(top_p) = env::var("BITNET_TOP_P") {
@@ -313,7 +313,7 @@ impl BitNetConfig {
                 self.inference.top_p = None;
             } else {
                 self.inference.top_p = Some(top_p.parse()
-                    .map_err(|_| BitNetError::Config("Invalid BITNET_TOP_P value".to_string()))?);
+                    .map_err(|_| BitNetError::Config(format!("Invalid BITNET_TOP_P value: '{}'", top_p)))?);
             }
         }
         if let Ok(seed) = env::var("BITNET_SEED") {
@@ -321,7 +321,7 @@ impl BitNetConfig {
                 self.inference.seed = None;
             } else {
                 self.inference.seed = Some(seed.parse()
-                    .map_err(|_| BitNetError::Config("Invalid BITNET_SEED value".to_string()))?);
+                    .map_err(|_| BitNetError::Config(format!("Invalid BITNET_SEED value: '{}'", seed)))?);
             }
         }
         
@@ -338,7 +338,7 @@ impl BitNetConfig {
         }
         if let Ok(block_size) = env::var("BITNET_BLOCK_SIZE") {
             self.quantization.block_size = block_size.parse()
-                .map_err(|_| BitNetError::Config("Invalid BITNET_BLOCK_SIZE value".to_string()))?;
+                .map_err(|_| BitNetError::Config(format!("Invalid BITNET_BLOCK_SIZE value: '{}'", block_size)))?;
         }
         
         // Performance configuration overrides
@@ -347,7 +347,7 @@ impl BitNetConfig {
                 self.performance.num_threads = None;
             } else {
                 self.performance.num_threads = Some(num_threads.parse()
-                    .map_err(|_| BitNetError::Config("Invalid BITNET_NUM_THREADS value".to_string()))?);
+                    .map_err(|_| BitNetError::Config(format!("Invalid BITNET_NUM_THREADS value: '{}'", num_threads)))?);
             }
         }
         if let Ok(use_gpu) = env::var("BITNET_USE_GPU") {
@@ -361,7 +361,7 @@ impl BitNetConfig {
         }
         if let Ok(batch_size) = env::var("BITNET_BATCH_SIZE") {
             self.performance.batch_size = batch_size.parse()
-                .map_err(|_| BitNetError::Config("Invalid BITNET_BATCH_SIZE value".to_string()))?;
+                .map_err(|_| BitNetError::Config(format!("Invalid BITNET_BATCH_SIZE value: '{}'", batch_size)))?;
         }
         match env::var("BITNET_MEMORY_LIMIT") {
             Ok(memory_limit) => {
@@ -381,7 +381,7 @@ impl BitNetConfig {
                     };
                     
                     let bytes: usize = value.parse::<usize>()
-                        .map_err(|_| BitNetError::Config("Invalid BITNET_MEMORY_LIMIT value".to_string()))?
+                        .map_err(|_| BitNetError::Config(format!("Invalid BITNET_MEMORY_LIMIT value: '{}'", memory_limit)))?
                         * multiplier;
                     self.performance.memory_limit = Some(bytes);
                 }
