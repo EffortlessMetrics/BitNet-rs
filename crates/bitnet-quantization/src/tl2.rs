@@ -1,7 +1,7 @@
 //! TL2 (Table Lookup 2) quantization for x86 platforms
 
 use crate::{Quantize, QuantizedTensor};
-use bitnet_common::{QuantizationType, Result, Tensor};
+use bitnet_common::{BitNetTensor, QuantizationType, Result, Tensor};
 
 /// TL2 quantization implementation
 pub struct TL2Quantizer;
@@ -11,7 +11,7 @@ impl TL2Quantizer {
         Self
     }
     
-    pub fn quantize_tensor(&self, _tensor: &dyn Tensor) -> Result<QuantizedTensor> {
+    pub fn quantize_tensor(&self, _tensor: &BitNetTensor) -> Result<QuantizedTensor> {
         // Placeholder implementation
         Ok(QuantizedTensor::new(
             vec![],
