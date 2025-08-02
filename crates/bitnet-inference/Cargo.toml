@@ -1,0 +1,26 @@
+[package]
+name = "bitnet-inference"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Inference engines for BitNet models"
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common" }
+bitnet-models = { path = "../bitnet-models" }
+bitnet-kernels = { path = "../bitnet-kernels" }
+anyhow.workspace = true
+tokio.workspace = true
+futures.workspace = true
+rayon.workspace = true
+
+[features]
+default = ["cpu"]
+cpu = ["bitnet-kernels/cpu-optimized"]
+gpu = ["bitnet-kernels/cuda"]
+streaming = []

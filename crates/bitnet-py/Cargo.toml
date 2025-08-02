@@ -1,0 +1,21 @@
+[package]
+name = "bitnet-py"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Python bindings for BitNet"
+
+[lib]
+name = "bitnet"
+crate-type = ["cdylib"]
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common" }
+bitnet-inference = { path = "../bitnet-inference" }
+pyo3.workspace = true
+anyhow.workspace = true
