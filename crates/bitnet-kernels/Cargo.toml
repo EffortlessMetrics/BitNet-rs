@@ -1,0 +1,46 @@
+[package]
+name = "bitnet-kernels"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "High-performance compute kernels for BitNet"
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common" }
+anyhow.workspace = true
+thiserror.workspace = true
+bytemuck.workspace = true
+rayon.workspace = true
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+# x86-specific dependencies
+
+[target.'cfg(target_arch = "aarch64")'.dependencies]
+# ARM-specific dependencies
+
+[features]
+default = ["cpu-fallback"]
+cpu-fallback = []
+cpu-optimized = ["avx2", "neon"]
+avx2 = []
+avx512 = []
+neon = []
+cuda = ["cudarc"]
+ffi-bridge = ["cc", "bindgen"]
+
+[dependencies.cudarc]
+workspace = true
+optional = true
+
+[dependencies.cc]
+workspace = true
+optional = true
+
+[dependencies.bindgen]
+workspace = true
+optional = true
