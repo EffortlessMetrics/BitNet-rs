@@ -4,6 +4,18 @@ use super::*;
 use std::env;
 use tempfile::NamedTempFile;
 use std::io::Write;
+use std::sync::Mutex;
+
+// Mutex to ensure environment variable tests don't run concurrently
+static ENV_TEST_MUTEX: Mutex<()> = Mutex::new(());
+
+// Helper function to safely acquire the mutex
+fn acquire_env_lock() -> std::sync::MutexGuard<'static, ()> {
+    ENV_TEST_MUTEX.lock().unwrap_or_else(|poisoned| {
+        // If the mutex is poisoned, clear it and continue
+        poisoned.into_inner()
+    })
+}
 
 #[test]
 fn test_default_config() {
@@ -146,6 +158,8 @@ fn test_json_config_loading() {
 
 #[test]
 fn test_env_overrides() {
+    let _lock = acquire_env_lock();
+    
     // Clean up any existing env vars first
     let env_vars = [
         "BITNET_VOCAB_SIZE", "BITNET_TEMPERATURE", "BITNET_USE_GPU", 
@@ -196,6 +210,8 @@ fn test_config_merging() {
 
 #[test]
 fn test_config_loader_precedence() {
+    let _lock = acquire_env_lock();
+    
     // Clean up any existing env vars first
     let env_vars = [
         "BITNET_VOCAB_SIZE", "BITNET_TEMPERATURE", "BITNET_USE_GPU", 
@@ -235,6 +251,8 @@ temperature = 0.9
 
 #[test]
 fn test_memory_limit_parsing() {
+    let _lock = acquire_env_lock();
+    
     // Clean up any existing env vars first
     let env_vars = [
         "BITNET_VOCAB_SIZE", "BITNET_TEMPERATURE", "BITNET_USE_GPU", 
@@ -264,6 +282,8 @@ fn test_memory_limit_parsing() {
 
 #[test]
 fn test_invalid_env_values() {
+    let _lock = acquire_env_lock();
+    
     // Clean up any existing env vars first
     let env_vars = [
         "BITNET_VOCAB_SIZE", "BITNET_TEMPERATURE", "BITNET_USE_GPU", 
@@ -273,23 +293,23 @@ fn test_invalid_env_values() {
         env::remove_var(var);
     }
     
+    // Test invalid vocab size
     env::set_var("BITNET_VOCAB_SIZE", "invalid");
     let mut config = BitNetConfig::default();
     assert!(config.apply_env_overrides().is_err());
-    
-    // Reset for next test
     env::remove_var("BITNET_VOCAB_SIZE");
-    config = BitNetConfig::default();
     
+    // Test invalid model format
     env::set_var("BITNET_MODEL_FORMAT", "invalid");
-    assert!(config.apply_env_overrides().is_err());
-    
-    // Reset for next test
-    env::remove_var("BITNET_MODEL_FORMAT");
     config = BitNetConfig::default();
-    
-    env::set_var("BITNET_USE_GPU", "maybe");
     assert!(config.apply_env_overrides().is_err());
+    env::remove_var("BITNET_MODEL_FORMAT");
+    
+    // Test invalid use_gpu value
+    env::set_var("BITNET_USE_GPU", "maybe");
+    config = BitNetConfig::default();
+    assert!(config.apply_env_overrides().is_err());
+    env::remove_var("BITNET_USE_GPU");
     
     // Clean up
     for var in &env_vars {
