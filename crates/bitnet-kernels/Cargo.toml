@@ -33,14 +33,6 @@ neon = []
 cuda = ["cudarc"]
 ffi-bridge = ["cc", "bindgen"]
 
-[dependencies.cudarc]
-workspace = true
-optional = true
-
-[dependencies.cc]
-workspace = true
-optional = true
-
-[dependencies.bindgen]
-workspace = true
-optional = true
+cudarc = { workspace = true, optional = true }
+cc = { workspace = true, optional = true }
+bindgen = { workspace = true, optional = true }

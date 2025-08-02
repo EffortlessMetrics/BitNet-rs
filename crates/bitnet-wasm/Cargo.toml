@@ -1,0 +1,27 @@
+[package]
+name = "bitnet-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "WebAssembly bindings for BitNet"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common" }
+bitnet-inference = { path = "../bitnet-inference" }
+wasm-bindgen.workspace = true
+js-sys.workspace = true
+web-sys.workspace = true
+anyhow.workspace = true
+
+[features]
+default = ["browser"]
+browser = []
+nodejs = []

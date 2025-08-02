@@ -1,47 +1,74 @@
-# Extensions
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
 
-*.a
-*.bat
-*.bin
-*.dll
-*.dot
-*.etag
-*.exe
-*.gcda
-*.gcno
-*.gcov
-*.gguf
-*.gguf.json
-*.lastModified
-*.log
-*.metallib
-*.o
-*.so
-*.tmp
-
-# IDE / OS
-
-.cache/
-.ccls-cache/
-.direnv/
-.DS_Store
-.envrc
-.idea/
-.swiftpm
-.vs/
+# IDE
 .vscode/
-nppBackup
+.idea/
+*.swp
+*.swo
+*~
 
-# Models
-models/*
-gpu/checkpoints/*
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
 
 # Python
-
-/.venv
 __pycache__/
-*/poetry.lock
-poetry.toml
-
+*.py[cod]
+*$py.class
+*.so
+.Python
 build/
-logs/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Environment variables
+.env
+.env.local
+
+# Benchmarks
+/target/criterion/
+
+# Coverage
+lcov.info
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Model files (large binaries)
+*.gguf
+*.safetensors
+*.bin
+models/
+
+# Build artifacts
+*.dll
+*.so
+*.dylib
+*.a
+*.lib

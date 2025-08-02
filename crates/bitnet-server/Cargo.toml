@@ -1,0 +1,21 @@
+[package]
+name = "bitnet-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "HTTP server for BitNet inference"
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common" }
+bitnet-inference = { path = "../bitnet-inference" }
+axum.workspace = true
+tokio.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+serde.workspace = true
+serde_json.workspace = true
