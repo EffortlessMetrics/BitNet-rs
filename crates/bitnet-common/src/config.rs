@@ -1,5 +1,6 @@
 //! Configuration types and utilities
 
+use crate::QuantizationType;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 

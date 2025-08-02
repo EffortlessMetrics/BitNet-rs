@@ -8,7 +8,7 @@ pub trait Model: Send + Sync {
     type Config;
     
     fn config(&self) -> &Self::Config;
-    fn forward(&self, input: &dyn Tensor) -> Result<Box<dyn Tensor>>;
+    fn forward(&self, input: &BitNetTensor) -> Result<BitNetTensor>;
     fn generate(&self, tokens: &[u32]) -> Result<Vec<u32>>;
 }
 
@@ -31,10 +31,10 @@ impl Model for BitNetModel {
         &self.config
     }
     
-    fn forward(&self, input: &dyn Tensor) -> Result<Box<dyn Tensor>> {
+    fn forward(&self, input: &BitNetTensor) -> Result<BitNetTensor> {
         // Placeholder implementation
         let output = BitNetTensor::zeros(input.shape(), input.dtype(), &self.device)?;
-        Ok(Box::new(output))
+        Ok(output)
     }
     
     fn generate(&self, _tokens: &[u32]) -> Result<Vec<u32>> {
