@@ -2,7 +2,6 @@
 
 use crate::{BitNetError, QuantizationType};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -68,6 +67,12 @@ pub enum ModelFormat {
     HuggingFace,
 }
 
+impl Default for ModelFormat {
+    fn default() -> Self {
+        Self::Gguf
+    }
+}
+
 /// Inference configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -97,6 +102,7 @@ impl Default for InferenceConfig {
 
 /// Quantization configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct QuantizationConfig {
     pub quantization_type: QuantizationType,
     pub block_size: usize,
@@ -115,6 +121,7 @@ impl Default for QuantizationConfig {
 
 /// Performance configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct PerformanceConfig {
     pub num_threads: Option<usize>,
     pub use_gpu: bool,
@@ -135,13 +142,13 @@ impl Default for PerformanceConfig {
 
 /// Configuration validation and loading utilities
 impl BitNetConfig {
-    /// Load configuration from file with environment variable overrides
+    /// Load configuration from file only (no environment overrides)
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, BitNetError> {
         let path = path.as_ref();
         let content = fs::read_to_string(path)
             .map_err(|e| BitNetError::Config(format!("Failed to read config file {}: {}", path.display(), e)))?;
         
-        let mut config = match path.extension().and_then(|s| s.to_str()) {
+        let config = match path.extension().and_then(|s| s.to_str()) {
             Some("toml") => toml::from_str::<Self>(&content)
                 .map_err(|e| BitNetError::Config(format!("Failed to parse TOML config: {}", e)))?,
             Some("json") => serde_json::from_str::<Self>(&content)
@@ -151,12 +158,17 @@ impl BitNetConfig {
             )),
         };
         
-        // Apply environment variable overrides
-        config.apply_env_overrides()?;
-        
         // Validate the configuration
         config.validate()?;
         
+        Ok(config)
+    }
+    
+    /// Load configuration from file with environment variable overrides
+    pub fn from_file_with_env<P: AsRef<Path>>(path: P) -> Result<Self, BitNetError> {
+        let mut config = Self::from_file(path)?;
+        config.apply_env_overrides()?;
+        config.validate()?;
         Ok(config)
     }
     
@@ -351,26 +363,31 @@ impl BitNetConfig {
             self.performance.batch_size = batch_size.parse()
                 .map_err(|_| BitNetError::Config("Invalid BITNET_BATCH_SIZE value".to_string()))?;
         }
-        if let Ok(memory_limit) = env::var("BITNET_MEMORY_LIMIT") {
-            if memory_limit.to_lowercase() == "none" {
-                self.performance.memory_limit = None;
-            } else {
-                // Parse memory limit with optional unit suffix (MB, GB)
-                let memory_limit = memory_limit.to_uppercase();
-                let (value, multiplier) = if memory_limit.ends_with("GB") {
-                    (memory_limit.trim_end_matches("GB"), 1024 * 1024 * 1024)
-                } else if memory_limit.ends_with("MB") {
-                    (memory_limit.trim_end_matches("MB"), 1024 * 1024)
-                } else if memory_limit.ends_with("KB") {
-                    (memory_limit.trim_end_matches("KB"), 1024)
+        match env::var("BITNET_MEMORY_LIMIT") {
+            Ok(memory_limit) => {
+                if memory_limit.to_lowercase() == "none" {
+                    self.performance.memory_limit = None;
                 } else {
-                    (memory_limit.as_str(), 1)
-                };
-                
-                let bytes: usize = value.parse::<usize>()
-                    .map_err(|_| BitNetError::Config("Invalid BITNET_MEMORY_LIMIT value".to_string()))?
-                    * multiplier;
-                self.performance.memory_limit = Some(bytes);
+                    // Parse memory limit with optional unit suffix (MB, GB)
+                    let memory_limit = memory_limit.to_uppercase();
+                    let (value, multiplier) = if memory_limit.ends_with("GB") {
+                        (memory_limit.trim_end_matches("GB"), 1024 * 1024 * 1024)
+                    } else if memory_limit.ends_with("MB") {
+                        (memory_limit.trim_end_matches("MB"), 1024 * 1024)
+                    } else if memory_limit.ends_with("KB") {
+                        (memory_limit.trim_end_matches("KB"), 1024)
+                    } else {
+                        (memory_limit.as_str(), 1)
+                    };
+                    
+                    let bytes: usize = value.parse::<usize>()
+                        .map_err(|_| BitNetError::Config("Invalid BITNET_MEMORY_LIMIT value".to_string()))?
+                        * multiplier;
+                    self.performance.memory_limit = Some(bytes);
+                }
+            }
+            Err(_) => {
+                // Environment variable not set, keep current value
             }
         }
         

@@ -65,7 +65,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Implement configuration merging with precedence rules (env vars > config file > defaults)
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 2.1 Create model loading abstraction with format detection
+- [-] 2.1 Create model loading abstraction with format detection
+
   - Implement ModelLoader trait with support for GGUF, SafeTensors, and HuggingFace formats
   - Add automatic format detection based on file extension and magic bytes
   - Implement memory-mapped file loading for large models with zero-copy operations

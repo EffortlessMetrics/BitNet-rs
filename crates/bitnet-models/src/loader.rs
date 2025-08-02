@@ -1,14 +1,42 @@
 //! Model loading utilities
 
-use bitnet_common::{BitNetConfig, ModelFormat, Result};
+use bitnet_common::{BitNetConfig, ModelFormat, ModelMetadata, Result, BitNetError};
 use crate::Model;
 use candle_core::Device;
-use std::path::Path;
+use memmap2::Mmap;
+use std::fs::File;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use tracing::{info, debug, warn};
 
-/// Model loader trait
-pub trait ModelLoader: Send + Sync {
+/// Progress callback for model loading operations
+pub type ProgressCallback = Arc<dyn Fn(f32, &str) + Send + Sync>;
+
+/// Model loading configuration
+#[derive(Debug, Clone)]
+pub struct LoadConfig {
+    pub use_mmap: bool,
+    pub validate_checksums: bool,
+    pub progress_callback: Option<ProgressCallback>,
+}
+
+impl Default for LoadConfig {
+    fn default() -> Self {
+        Self {
+            use_mmap: true,
+            validate_checksums: true,
+            progress_callback: None,
+        }
+    }
+}
+
+/// Format-specific loader trait
+pub trait FormatLoader: Send + Sync {
+    fn name(&self) -> &'static str;
     fn can_load(&self, path: &Path) -> bool;
-    fn load(&self, path: &Path, device: &Device) -> Result<Box<dyn Model<Config = BitNetConfig>>>;
+    fn detect_format(&self, path: &Path) -> Result<bool>;
+    fn extract_metadata(&self, path: &Path) -> Result<ModelMetadata>;
+    fn load(&self, path: &Path, device: &Device, config: &LoadConfig) -> Result<Box<dyn Model<Config = BitNetConfig>>>;
 }
 
 /// Main model loader with format detection
