@@ -89,6 +89,7 @@ class PythonRunner(ImplementationRunner):
     
     def __init__(self, python_path: Optional[str] = None):
         self.python_path = python_path or "python"
+        self.project_root = Path(__file__).parent.parent.parent
         self._validate_environment()
     
     def _validate_environment(self):
@@ -196,10 +197,54 @@ class PythonRunner(ImplementationRunner):
         return outputs
     
     def _run_inference(self, test_case: TestCase) -> Dict[str, Any]:
-        """Run inference test."""
-        # This would implement inference testing
-        # For now, return placeholder
-        return {"tokens": [1, 2, 3], "logits": [[0.1, 0.2, 0.7]]}
+        """Run inference test using subprocess to call original BitNet.cpp."""
+        try:
+            # Extract inputs
+            prompt = test_case.inputs.get("prompt", "Hello world")
+            max_tokens = test_case.inputs.get("max_tokens", 10)
+            temperature = test_case.inputs.get("temperature", 0.8)
+            model_path = test_case.inputs.get("model_path", "models/bitnet_b1_58-3B/ggml-model-i2_s.gguf")
+            
+            # Use subprocess to run original BitNet inference
+            cmd = [
+                self.python_path,
+                str(self.project_root / "run_inference.py"),
+                "-m", model_path,
+                "-p", prompt,
+                "-n", str(max_tokens),
+                "-temp", str(temperature),
+                "-t", "1",  # Single thread for reproducibility
+                "-c", "512"  # Small context for testing
+            ]
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=self.project_root
+            )
+            
+            if result.returncode != 0:
+                raise RuntimeError(f"Inference failed: {result.stderr}")
+            
+            # Parse output to extract generated tokens
+            output_text = result.stdout.strip()
+            
+            # For now, return the raw output - in a real implementation,
+            # we would parse this to extract tokens and logits
+            return {
+                "generated_text": output_text,
+                "prompt": prompt,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "raw_output": output_text
+            }
+            
+        except subprocess.TimeoutExpired:
+            raise RuntimeError("Inference subprocess timed out")
+        except Exception as e:
+            raise RuntimeError(f"Inference subprocess failed: {e}")
     
     def get_version_info(self) -> Dict[str, str]:
         """Get Python implementation version info."""
@@ -345,6 +390,193 @@ class RustRunner(ImplementationRunner):
                 "binary_path": str(self.rust_binary_path),
             }
 
+class TokenLevelComparator:
+    """Utilities for token-level comparison with configurable tolerance."""
+    
+    def __init__(self, tolerance_config: Dict[str, float]):
+        self.tolerance_config = tolerance_config
+    
+    def compare_token_sequences(self, seq1: List[int], seq2: List[int]) -> Tuple[bool, Dict[str, Any]]:
+        """Compare two token sequences with detailed analysis."""
+        if len(seq1) != len(seq2):
+            return False, {
+                "error": "sequence_length_mismatch",
+                "seq1_length": len(seq1),
+                "seq2_length": len(seq2),
+                "length_diff": abs(len(seq1) - len(seq2))
+            }
+        
+        # Exact match check
+        exact_matches = sum(1 for t1, t2 in zip(seq1, seq2) if t1 == t2)
+        total_tokens = len(seq1)
+        exact_match_ratio = exact_matches / total_tokens if total_tokens > 0 else 0.0
+        
+        # Token-level differences
+        differences = []
+        for i, (t1, t2) in enumerate(zip(seq1, seq2)):
+            if t1 != t2:
+                differences.append({
+                    "position": i,
+                    "token1": t1,
+                    "token2": t2,
+                    "diff": abs(t1 - t2)
+                })
+        
+        # Check if within tolerance
+        min_match_ratio = self.tolerance_config.get("min_token_match_ratio", 0.95)
+        max_differences = self.tolerance_config.get("max_token_differences", 5)
+        
+        within_tolerance = (
+            exact_match_ratio >= min_match_ratio and
+            len(differences) <= max_differences
+        )
+        
+        return within_tolerance, {
+            "exact_match_ratio": exact_match_ratio,
+            "total_tokens": total_tokens,
+            "exact_matches": exact_matches,
+            "differences": differences,
+            "within_tolerance": within_tolerance,
+            "tolerance_config": self.tolerance_config
+        }
+    
+    def compare_logits(self, logits1: List[List[float]], logits2: List[List[float]]) -> Tuple[bool, Dict[str, Any]]:
+        """Compare logits with numerical tolerance."""
+        try:
+            arr1 = np.array(logits1)
+            arr2 = np.array(logits2)
+            
+            if arr1.shape != arr2.shape:
+                return False, {
+                    "error": "shape_mismatch",
+                    "shape1": arr1.shape,
+                    "shape2": arr2.shape
+                }
+            
+            # Numerical comparison
+            rtol = self.tolerance_config.get("logits_rtol", 1e-3)
+            atol = self.tolerance_config.get("logits_atol", 1e-4)
+            
+            close_mask = np.isclose(arr1, arr2, rtol=rtol, atol=atol)
+            close_ratio = np.mean(close_mask)
+            
+            max_abs_diff = np.max(np.abs(arr1 - arr2))
+            mean_abs_diff = np.mean(np.abs(arr1 - arr2))
+            
+            # Check tolerance
+            min_close_ratio = self.tolerance_config.get("min_logits_close_ratio", 0.99)
+            max_abs_diff_threshold = self.tolerance_config.get("max_logits_abs_diff", 0.1)
+            
+            within_tolerance = (
+                close_ratio >= min_close_ratio and
+                max_abs_diff <= max_abs_diff_threshold
+            )
+            
+            return within_tolerance, {
+                "close_ratio": close_ratio,
+                "max_abs_diff": max_abs_diff,
+                "mean_abs_diff": mean_abs_diff,
+                "within_tolerance": within_tolerance,
+                "rtol": rtol,
+                "atol": atol
+            }
+            
+        except Exception as e:
+            return False, {"error": f"comparison_failed: {e}"}
+
+class PerformanceAnalyzer:
+    """Tools for performance comparison and regression detection."""
+    
+    def __init__(self, regression_threshold: float = 5.0):
+        self.regression_threshold = regression_threshold
+        self.baseline_times = {}
+    
+    def record_baseline(self, test_name: str, execution_time: float):
+        """Record baseline execution time for a test."""
+        self.baseline_times[test_name] = execution_time
+    
+    def analyze_performance(self, test_name: str, python_time: float, rust_time: float) -> Dict[str, Any]:
+        """Analyze performance comparison between implementations."""
+        analysis = {
+            "python_time": python_time,
+            "rust_time": rust_time,
+            "speedup": 0.0,
+            "regression_percent": 0.0,
+            "performance_status": "unknown",
+            "baseline_comparison": {}
+        }
+        
+        # Calculate speedup
+        if rust_time > 0:
+            analysis["speedup"] = python_time / rust_time
+            analysis["regression_percent"] = ((rust_time - python_time) / python_time) * 100
+            
+            # Determine performance status
+            if analysis["speedup"] >= 1.0:
+                analysis["performance_status"] = "improvement"
+            elif abs(analysis["regression_percent"]) <= self.regression_threshold:
+                analysis["performance_status"] = "acceptable"
+            else:
+                analysis["performance_status"] = "regression"
+        
+        # Compare against baseline if available
+        if test_name in self.baseline_times:
+            baseline_time = self.baseline_times[test_name]
+            analysis["baseline_comparison"] = {
+                "baseline_time": baseline_time,
+                "python_vs_baseline": ((python_time - baseline_time) / baseline_time) * 100,
+                "rust_vs_baseline": ((rust_time - baseline_time) / baseline_time) * 100 if rust_time > 0 else 0.0
+            }
+        
+        return analysis
+    
+    def detect_regressions(self, performance_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Detect performance regressions exceeding threshold."""
+        regressions = []
+        
+        for result in performance_results:
+            if result.get("performance_status") == "regression":
+                regressions.append({
+                    "test_name": result.get("test_name", "unknown"),
+                    "regression_percent": result.get("regression_percent", 0.0),
+                    "python_time": result.get("python_time", 0.0),
+                    "rust_time": result.get("rust_time", 0.0),
+                    "speedup": result.get("speedup", 0.0)
+                })
+        
+        return regressions
+    
+    def generate_performance_summary(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Generate comprehensive performance summary."""
+        if not results:
+            return {"error": "No performance results to analyze"}
+        
+        speedups = [r.get("speedup", 0) for r in results if r.get("speedup", 0) > 0]
+        regression_percents = [r.get("regression_percent", 0) for r in results]
+        
+        summary = {
+            "total_tests": len(results),
+            "improvements": sum(1 for r in results if r.get("performance_status") == "improvement"),
+            "acceptable": sum(1 for r in results if r.get("performance_status") == "acceptable"),
+            "regressions": sum(1 for r in results if r.get("performance_status") == "regression"),
+            "speedup_stats": {
+                "mean": np.mean(speedups) if speedups else 0.0,
+                "median": np.median(speedups) if speedups else 0.0,
+                "min": min(speedups) if speedups else 0.0,
+                "max": max(speedups) if speedups else 0.0,
+                "std": np.std(speedups) if speedups else 0.0
+            },
+            "regression_stats": {
+                "mean": np.mean(regression_percents),
+                "median": np.median(regression_percents),
+                "min": min(regression_percents),
+                "max": max(regression_percents),
+                "std": np.std(regression_percents)
+            }
+        }
+        
+        return summary
+
 class CrossLanguageValidator:
     """Main validator for cross-language testing."""
     
@@ -352,6 +584,10 @@ class CrossLanguageValidator:
         self.config = config
         self.python_runner = PythonRunner()
         self.rust_runner = None  # Will be initialized when Rust binary is available
+        self.token_comparator = TokenLevelComparator(config.numerical_tolerance)
+        self.performance_analyzer = PerformanceAnalyzer(
+            config.performance_tolerance.get("max_regression_percent", 5.0)
+        )
         
     def set_rust_runner(self, rust_binary_path: Optional[Path] = None):
         """Set up Rust runner when binary is available."""
@@ -381,7 +617,9 @@ class CrossLanguageValidator:
         outputs_match, numerical_errors = self._compare_outputs(python_outputs, rust_outputs)
         
         # Compare performance
-        performance_comparison = self._compare_performance(python_time, rust_time)
+        performance_comparison = self.performance_analyzer.analyze_performance(
+            test_case.name, python_time, rust_time
+        )
         
         return ValidationResult(
             test_name=test_case.name,
@@ -420,7 +658,7 @@ class CrossLanguageValidator:
         return results
     
     def _compare_outputs(self, python_outputs: Dict[str, Any], rust_outputs: Dict[str, Any]) -> Tuple[bool, List[str]]:
-        """Compare outputs between implementations."""
+        """Compare outputs between implementations with enhanced token-level comparison."""
         if not python_outputs or not rust_outputs:
             return False, ["One or both implementations produced no output"]
         
@@ -435,9 +673,28 @@ class CrossLanguageValidator:
             python_val = python_outputs[key]
             rust_val = rust_outputs[key]
             
-            # Compare based on type
+            # Special handling for token sequences
+            if key in ["tokens", "generated_tokens"] and isinstance(python_val, list) and isinstance(rust_val, list):
+                # Use token-level comparison
+                if all(isinstance(x, int) for x in python_val) and all(isinstance(x, int) for x in rust_val):
+                    match, details = self.token_comparator.compare_token_sequences(python_val, rust_val)
+                    if not match:
+                        errors.append(f"Token sequence mismatch for {key}: {details}")
+                    continue
+            
+            # Special handling for logits
+            if key in ["logits"] and isinstance(python_val, list) and isinstance(rust_val, list):
+                try:
+                    match, details = self.token_comparator.compare_logits(python_val, rust_val)
+                    if not match:
+                        errors.append(f"Logits mismatch for {key}: {details}")
+                    continue
+                except Exception as e:
+                    errors.append(f"Error comparing logits for {key}: {e}")
+                    continue
+            
+            # General numerical comparison
             if isinstance(python_val, (list, np.ndarray)) and isinstance(rust_val, (list, np.ndarray)):
-                # Numerical comparison
                 try:
                     python_array = np.array(python_val)
                     rust_array = np.array(rust_val)
@@ -527,6 +784,163 @@ class CrossLanguageValidator:
         
         logger.info(f"Validation report saved to: {output_path}")
         return report
+
+class EdgeCaseGenerator:
+    """Generate edge cases and stress test data."""
+    
+    @staticmethod
+    def generate_edge_case_inputs() -> List[Dict[str, Any]]:
+        """Generate edge case inputs for testing."""
+        edge_cases = []
+        
+        # Empty inputs
+        edge_cases.append({
+            "name": "empty_tokens",
+            "tokens": [],
+            "description": "Empty token sequence"
+        })
+        
+        # Single token
+        edge_cases.append({
+            "name": "single_token",
+            "tokens": [1],
+            "description": "Single token input"
+        })
+        
+        # Very long sequence
+        edge_cases.append({
+            "name": "long_sequence",
+            "tokens": list(range(1, 1025)),  # 1024 tokens
+            "description": "Very long token sequence"
+        })
+        
+        # Repeated tokens
+        edge_cases.append({
+            "name": "repeated_tokens",
+            "tokens": [42] * 100,
+            "description": "Repeated token sequence"
+        })
+        
+        # Large token values
+        edge_cases.append({
+            "name": "large_token_values",
+            "tokens": [65535, 65534, 65533, 65532],
+            "description": "Large token values near vocabulary limit"
+        })
+        
+        # Zero and negative values (if applicable)
+        edge_cases.append({
+            "name": "boundary_values",
+            "tokens": [0, 1, 2, 3],
+            "description": "Boundary token values"
+        })
+        
+        return edge_cases
+    
+    @staticmethod
+    def generate_stress_test_configs() -> List[Dict[str, Any]]:
+        """Generate configurations for stress testing."""
+        stress_configs = []
+        
+        # Minimal model
+        stress_configs.append({
+            "name": "minimal_model",
+            "config": {
+                "dim": 64,
+                "n_layers": 1,
+                "n_heads": 1,
+                "n_kv_heads": 1,
+                "vocab_size": 100,
+                "ffn_dim": 128,
+            },
+            "description": "Minimal model configuration"
+        })
+        
+        # Large model (within memory constraints)
+        stress_configs.append({
+            "name": "large_model",
+            "config": {
+                "dim": 512,
+                "n_layers": 8,
+                "n_heads": 16,
+                "n_kv_heads": 8,
+                "vocab_size": 10000,
+                "ffn_dim": 1024,
+            },
+            "description": "Large model configuration"
+        })
+        
+        # Unusual dimensions
+        stress_configs.append({
+            "name": "unusual_dimensions",
+            "config": {
+                "dim": 127,  # Prime number
+                "n_layers": 3,
+                "n_heads": 7,  # Prime number
+                "n_kv_heads": 3,
+                "vocab_size": 997,  # Prime number
+                "ffn_dim": 251,  # Prime number
+            },
+            "description": "Model with unusual prime dimensions"
+        })
+        
+        return stress_configs
+    
+    @staticmethod
+    def generate_numerical_edge_cases() -> List[Dict[str, Any]]:
+        """Generate numerical edge cases for quantization testing."""
+        edge_cases = []
+        
+        # All zeros
+        edge_cases.append({
+            "name": "all_zeros",
+            "weights": np.zeros((32, 64)).tolist(),
+            "description": "All zero weights"
+        })
+        
+        # All ones
+        edge_cases.append({
+            "name": "all_ones",
+            "weights": np.ones((32, 64)).tolist(),
+            "description": "All one weights"
+        })
+        
+        # Very small values
+        edge_cases.append({
+            "name": "very_small_values",
+            "weights": (np.random.randn(32, 64) * 1e-6).tolist(),
+            "description": "Very small weight values"
+        })
+        
+        # Very large values
+        edge_cases.append({
+            "name": "very_large_values",
+            "weights": (np.random.randn(32, 64) * 1e6).tolist(),
+            "description": "Very large weight values"
+        })
+        
+        # Mixed positive/negative
+        edge_cases.append({
+            "name": "mixed_signs",
+            "weights": np.where(
+                np.random.randn(32, 64) > 0,
+                np.random.randn(32, 64) * 100,
+                np.random.randn(32, 64) * -100
+            ).tolist(),
+            "description": "Mixed positive and negative large values"
+        })
+        
+        # Sparse weights (mostly zeros)
+        sparse_weights = np.zeros((32, 64))
+        sparse_indices = np.random.choice(32*64, size=32, replace=False)
+        sparse_weights.flat[sparse_indices] = np.random.randn(32)
+        edge_cases.append({
+            "name": "sparse_weights",
+            "weights": sparse_weights.tolist(),
+            "description": "Sparse weight matrix"
+        })
+        
+        return edge_cases
 
 class TestCaseGenerator:
     """Generate test cases for cross-validation."""
@@ -627,13 +1041,126 @@ class TestCaseGenerator:
         
         return test_cases
     
+    @staticmethod
+    def generate_edge_case_tests() -> List[TestCase]:
+        """Generate edge case test cases."""
+        test_cases = []
+        edge_generator = EdgeCaseGenerator()
+        
+        # Model forward edge cases
+        edge_inputs = edge_generator.generate_edge_case_inputs()
+        stress_configs = edge_generator.generate_stress_test_configs()
+        
+        for config_data in stress_configs:
+            for input_data in edge_inputs:
+                if len(input_data["tokens"]) > 0:  # Skip empty tokens for model tests
+                    model_inputs = {
+                        "token_values": input_data["tokens"][:min(len(input_data["tokens"]), 64)],  # Limit length
+                        "token_lengths": [min(len(input_data["tokens"]), 64)],
+                        "start_pos": [0],
+                        "cache_len": 128,
+                    }
+                    
+                    test_cases.append(TestCase(
+                        name=f"model_forward_edge_{config_data['name']}_{input_data['name']}",
+                        inputs={
+                            "config": config_data["config"],
+                            "model_inputs": model_inputs,
+                        },
+                        metadata={
+                            "description": f"Edge case: {config_data['description']} with {input_data['description']}",
+                            "category": "edge_case"
+                        }
+                    ))
+        
+        # Quantization edge cases
+        numerical_edge_cases = edge_generator.generate_numerical_edge_cases()
+        for edge_case in numerical_edge_cases:
+            test_cases.append(TestCase(
+                name=f"quantization_edge_{edge_case['name']}",
+                inputs={"weights": edge_case["weights"]},
+                metadata={
+                    "description": f"Quantization edge case: {edge_case['description']}",
+                    "category": "edge_case"
+                }
+            ))
+        
+        # Inference edge cases
+        inference_edge_cases = [
+            {"prompt": "", "description": "Empty prompt"},
+            {"prompt": "A" * 1000, "description": "Very long prompt"},
+            {"prompt": "Hello\n\nWorld\t\r", "description": "Prompt with special characters"},
+            {"prompt": "🚀🌟💫", "description": "Prompt with Unicode emojis"},
+        ]
+        
+        for edge_case in inference_edge_cases:
+            test_cases.append(TestCase(
+                name=f"inference_edge_{edge_case['description'].lower().replace(' ', '_')}",
+                inputs={
+                    "prompt": edge_case["prompt"],
+                    "max_tokens": 5,
+                    "temperature": 0.0,  # Deterministic for edge cases
+                },
+                metadata={
+                    "description": f"Inference edge case: {edge_case['description']}",
+                    "category": "edge_case"
+                }
+            ))
+        
+        return test_cases
+    
+    @staticmethod
+    def generate_stress_tests() -> List[TestCase]:
+        """Generate stress test cases."""
+        test_cases = []
+        
+        # High-load inference tests
+        stress_prompts = [
+            "Write a detailed essay about artificial intelligence and its impact on society.",
+            "Explain quantum computing in simple terms.",
+            "Create a story about a robot learning to understand human emotions.",
+        ]
+        
+        for i, prompt in enumerate(stress_prompts):
+            test_cases.append(TestCase(
+                name=f"stress_inference_long_{i}",
+                inputs={
+                    "prompt": prompt,
+                    "max_tokens": 100,
+                    "temperature": 0.8,
+                },
+                metadata={
+                    "description": f"Stress test: Long inference with prompt {i}",
+                    "category": "stress_test"
+                }
+            ))
+        
+        # Batch processing simulation
+        batch_prompts = ["Hello", "World", "Test", "Batch", "Processing"]
+        test_cases.append(TestCase(
+            name="stress_batch_processing",
+            inputs={
+                "prompts": batch_prompts,
+                "max_tokens": 10,
+                "temperature": 0.5,
+            },
+            metadata={
+                "description": "Stress test: Batch processing simulation",
+                "category": "stress_test"
+            }
+        ))
+        
+        return test_cases
+    
     @classmethod
     def generate_all_tests(cls) -> List[TestCase]:
-        """Generate all test cases."""
+        """Generate all test cases including edge cases and stress tests."""
         all_tests = []
         all_tests.extend(cls.generate_model_forward_tests())
         all_tests.extend(cls.generate_quantization_tests())
         all_tests.extend(cls.generate_inference_tests())
+        all_tests.extend(cls.generate_edge_case_tests())
+        all_tests.extend(cls.generate_stress_tests())
         return all_tests
 
 def create_default_config() -> ValidationConfig:
@@ -642,6 +1169,14 @@ def create_default_config() -> ValidationConfig:
         numerical_tolerance={
             "rtol": 1e-4,
             "atol": 1e-5,
+            # Token-level comparison tolerances
+            "min_token_match_ratio": 0.95,
+            "max_token_differences": 5,
+            # Logits comparison tolerances
+            "logits_rtol": 1e-3,
+            "logits_atol": 1e-4,
+            "min_logits_close_ratio": 0.99,
+            "max_logits_abs_diff": 0.1,
         },
         performance_tolerance={
             "max_regression_percent": 5.0,
