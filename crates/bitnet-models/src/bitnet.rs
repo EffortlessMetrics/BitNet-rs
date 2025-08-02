@@ -1,7 +1,8 @@
 //! BitNet model implementation
 
-use bitnet_common::{BitNetConfig, BitNetTensor, Result, Tensor};
+use bitnet_common::{BitNetConfig, BitNetTensor, Result, Tensor, BitNetError};
 use candle_core::Device;
+use std::collections::HashMap;
 
 /// Trait for BitNet models
 pub trait Model: Send + Sync {
@@ -16,11 +17,53 @@ pub trait Model: Send + Sync {
 pub struct BitNetModel {
     config: BitNetConfig,
     device: Device,
+    tensors: HashMap<String, candle_core::Tensor>,
 }
 
 impl BitNetModel {
     pub fn new(config: BitNetConfig, device: Device) -> Self {
-        Self { config, device }
+        Self { 
+            config, 
+            device,
+            tensors: HashMap::new(),
+        }
+    }
+    
+    /// Create a BitNet model from GGUF tensors
+    pub fn from_gguf(
+        config: BitNetConfig,
+        tensors: HashMap<String, candle_core::Tensor>,
+        device: Device,
+    ) -> Result<Self> {
+        // Validate that required tensors are present
+        let required_tensors = [
+            "token_embd.weight",
+            "output.weight",
+        ];
+        
+        for tensor_name in &required_tensors {
+            if !tensors.contains_key(*tensor_name) {
+                return Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+                    reason: format!("Missing required tensor: {}", tensor_name),
+                }));
+            }
+        }
+        
+        Ok(Self {
+            config,
+            device,
+            tensors,
+        })
+    }
+    
+    /// Get a tensor by name
+    pub fn get_tensor(&self, name: &str) -> Option<&candle_core::Tensor> {
+        self.tensors.get(name)
+    }
+    
+    /// List all tensor names
+    pub fn tensor_names(&self) -> Vec<&String> {
+        self.tensors.keys().collect()
     }
 }
 

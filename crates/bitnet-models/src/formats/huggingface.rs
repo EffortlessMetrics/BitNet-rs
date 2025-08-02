@@ -1,17 +1,64 @@
 //! HuggingFace format loader
 
-use bitnet_common::Result;
+use crate::loader::{FormatLoader, LoadConfig};
+use crate::{Model, BitNetModel};
+use bitnet_common::{BitNetConfig, ModelMetadata, Result, BitNetError, ModelError};
+use candle_core::Device;
+use std::path::Path;
+use tracing::{debug, info};
 
-/// HuggingFace format loader (placeholder)
+/// HuggingFace format loader
 pub struct HuggingFaceLoader;
 
-impl HuggingFaceLoader {
-    pub fn new() -> Self {
-        Self
+impl FormatLoader for HuggingFaceLoader {
+    fn name(&self) -> &'static str {
+        "HuggingFace"
     }
     
-    pub fn load(&self, _path: &std::path::Path) -> Result<()> {
-        // Placeholder implementation
-        Ok(())
+    fn can_load(&self, path: &Path) -> bool {
+        path.is_dir() && path.join("config.json").exists()
+    }
+    
+    fn detect_format(&self, path: &Path) -> Result<bool> {
+        if !path.exists() {
+            return Ok(false);
+        }
+        
+        Ok(self.can_load(path))
+    }
+    
+    fn extract_metadata(&self, path: &Path) -> Result<ModelMetadata> {
+        debug!("Extracting HuggingFace metadata from: {}", path.display());
+        
+        // TODO: Parse config.json to extract metadata
+        let metadata = ModelMetadata {
+            name: path.file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown")
+                .to_string(),
+            version: "unknown".to_string(),
+            architecture: "bitnet".to_string(),
+            vocab_size: 32000,
+            context_length: 2048,
+            quantization: None,
+        };
+        
+        debug!("Extracted HuggingFace metadata: {:?}", metadata);
+        Ok(metadata)
+    }
+    
+    fn load(
+        &self,
+        path: &Path,
+        device: &Device,
+        _config: &LoadConfig,
+    ) -> Result<Box<dyn Model<Config = BitNetConfig>>> {
+        info!("Loading HuggingFace model from: {}", path.display());
+        
+        // TODO: Implement HuggingFace loading
+        let config = BitNetConfig::default();
+        let model = BitNetModel::new(config, device.clone());
+        
+        Ok(Box::new(model))
     }
 }

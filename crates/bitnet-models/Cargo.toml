@@ -21,6 +21,10 @@ candle-nn.workspace = true
 safetensors.workspace = true
 memmap2.workspace = true
 tracing.workspace = true
+bytemuck.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [features]
 default = []
