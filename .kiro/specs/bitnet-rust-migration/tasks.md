@@ -76,7 +76,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
 
-- [ ] 2.2 Implement GGUF format parser with full compatibility
+- [x] 2.2 Implement GGUF format parser with full compatibility
+
   - Create GGUF reader that handles all metadata and tensor formats used by BitNet models
   - Implement tensor loading with proper endianness handling and data type conversion
   - Add support for quantized tensor formats (I2_S, TL1, TL2) with validation
@@ -84,7 +85,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Ensure bit-exact compatibility with original GGUF loader
   - _Requirements: 2.1, 2.2, 2.4, 2.5_
 
-- [ ] 2.3 Implement SafeTensors format support
+- [-] 2.3 Implement SafeTensors format support
+
   - Add SafeTensors parsing with metadata extraction and tensor loading
   - Implement conversion utilities between SafeTensors and internal tensor format
   - Create validation against HuggingFace model checkpoints
