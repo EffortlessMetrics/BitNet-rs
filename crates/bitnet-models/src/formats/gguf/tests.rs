@@ -1,6 +1,7 @@
 //! GGUF format tests
 
 use super::*;
+use crate::loader::FormatLoader;
 use tempfile::NamedTempFile;
 use std::io::Write;
 
@@ -62,7 +63,7 @@ fn test_gguf_value_types() {
     }
     
     // Test Bool value
-    let mut data = vec![7u8, 1u8]; // Bool type, true
+    let data = vec![7u8, 1u8]; // Bool type, true
     let mut offset = 0;
     let value = GgufValue::read(&data, &mut offset).unwrap();
     match value {

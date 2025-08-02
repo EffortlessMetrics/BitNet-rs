@@ -3,7 +3,7 @@
 use super::{GgufReader, GgufTensors, GgufTensorType};
 use crate::loader::{FormatLoader, LoadConfig, MmapFile};
 use crate::{Model, BitNetModel};
-use bitnet_common::{BitNetConfig, ModelMetadata, QuantizationType, Result, BitNetError, ModelError};
+use bitnet_common::{BitNetConfig, ModelMetadata, Result, BitNetError, ModelError};
 use candle_core::{Device, DType, Tensor};
 use std::path::Path;
 use tracing::{debug, info};

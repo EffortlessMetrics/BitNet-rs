@@ -8,5 +8,6 @@ mod types;
 mod tests;
 
 pub use loader::GgufLoader;
-pub use reader::{GgufReader, GgufTensors};
+pub use reader::GgufReader;
+pub use types::GgufTensors;
 pub use types::*;
