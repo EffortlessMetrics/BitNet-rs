@@ -162,7 +162,19 @@ This specification defines the requirements for migrating the BitNet.cpp inferen
 4. WHEN observability is needed THEN the system SHALL integrate with tracing for structured logging and metrics collection
 5. WHEN deployment is considered THEN the system SHALL provide Docker examples and cloud deployment guides for major platforms
 
-### Requirement 14: Backward Compatibility and Migration Support
+### Requirement 14: WebAssembly and Edge Deployment Support
+
+**User Story:** As a developer deploying 1.58B models in browsers and edge environments, I want BitNet to run efficiently in WebAssembly so that I can bring 1-bit LLMs to new deployment scenarios.
+
+#### Acceptance Criteria
+
+1. WHEN compiled for wasm32-unknown-unknown THEN the system SHALL provide CPU-only inference with optimized memory usage for browser constraints
+2. WHEN running in WebAssembly environments THEN the system SHALL support model loading from byte arrays and streaming inference
+3. WHEN memory is constrained THEN the system SHALL provide configurable memory limits and efficient memory management for edge devices
+4. WHEN JavaScript integration is needed THEN the system SHALL provide wasm-bindgen bindings with async/await support
+5. WHEN no_std compilation is requested THEN the system SHALL support embedded deployment with alloc-only requirements for maximum portability
+
+### Requirement 15: Backward Compatibility and Migration Support
 
 **User Story:** As an existing BitNet user, I want migration tools and compatibility layers so that I can gradually transition from Python to Rust without disrupting my current workflows.
 

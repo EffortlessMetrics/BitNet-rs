@@ -78,6 +78,7 @@ bitnet-rs/
 │   │   │   ├── inference/    # Inference engines
 │   │   │   ├── quantization/ # Quantization algorithms
 │   │   │   ├── kernels/      # CPU/GPU kernels
+│   │   │   ├── wasm/         # WebAssembly optimizations
 │   │   │   └── utils/        # Utilities
 │   │   ├── build.rs          # Kernel compilation
 │   │   └── benches/          # Criterion benchmarks
@@ -94,25 +95,51 @@ bitnet-rs/
 │   │   │   └── c_api.rs      # C-compatible API
 │   │   └── include/
 │   │       └── bitnet.h      # C header
-│   └── bitnet-py/            # Python bindings
+│   ├── bitnet-py/            # Python bindings
+│   │   ├── Cargo.toml
+│   │   ├── pyproject.toml    # Maturin configuration
+│   │   └── src/
+│   │       └── lib.rs        # PyO3 bindings
+│   └── bitnet-wasm/          # WebAssembly bindings
 │       ├── Cargo.toml
-│       ├── pyproject.toml    # Maturin configuration
-│       └── src/
-│           └── lib.rs        # PyO3 bindings
+│       ├── src/
+│       │   └── lib.rs        # wasm-bindgen bindings
+│       └── pkg/              # Generated WASM package
 ├── examples/                 # Usage examples
 │   ├── cpu_basic.rs
 │   ├── gpu_inference.rs
 │   ├── server.rs
+│   ├── wasm_browser.html
 │   └── python_bridge.py
 ├── tests/                    # Integration tests
 │   ├── cross_validation/     # Python parity tests
 │   ├── model_tests/          # Model loading tests
+│   ├── wasm_tests/           # WebAssembly tests
 │   └── performance/          # Performance regression tests
 └── kernels/                  # C++ kernels (temporary)
     ├── ggml-bitnet-lut.cpp
     ├── ggml-bitnet-mad.cpp
     └── include/
         └── ggml-bitnet.h
+```
+
+### Feature Flags and Target Support
+
+```toml
+[features]
+default = ["cpu"]
+cpu     = []                 # Pure-Rust + optional FFI kernels
+cuda    = ["cudarc"]         # GPU path; gated because it requires NVCC
+wasm    = ["wasm-bindgen", "js-sys", "web-sys"]  # WebAssembly support
+python  = ["pyo3", "maturin"]# Build Python wheels
+full    = ["cpu", "cuda", "python"]
+
+# WebAssembly-specific dependencies
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = "0.3"
+console_error_panic_hook = "0.1"
 ```
 
 ## Components and Interfaces
@@ -651,6 +678,129 @@ pub enum ModelCommands {
     },
 }
 ```
+
+### WebAssembly Integration
+
+```rust
+// WebAssembly bindings for browser deployment
+#[cfg(target_arch = "wasm32")]
+pub mod wasm {
+    use wasm_bindgen::prelude::*;
+    use js_sys::{Promise, Uint8Array};
+    use web_sys::console;
+    
+    // Set up panic hook for better error reporting
+    #[wasm_bindgen(start)]
+    pub fn main() {
+        console_error_panic_hook::set_once();
+    }
+    
+    #[wasm_bindgen]
+    pub struct WasmBitNetModel {
+        inner: BitNetModel,
+        tokenizer: Arc<Tokenizer>,
+    }
+    
+    #[wasm_bindgen]
+    impl WasmBitNetModel {
+        #[wasm_bindgen(constructor)]
+        pub fn new(model_bytes: &[u8]) -> Result<WasmBitNetModel, JsValue> {
+            let loader = ModelLoader::new(Device::Cpu, DType::F32);
+            let model = loader.load_from_bytes(model_bytes)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            
+            let tokenizer = Arc::new(
+                Tokenizer::from_bytes(include_bytes!("../assets/tokenizer.json"))
+                    .map_err(|e| JsValue::from_str(&e.to_string()))?
+            );
+            
+            Ok(WasmBitNetModel {
+                inner: model,
+                tokenizer,
+            })
+        }
+        
+        #[wasm_bindgen]
+        pub fn generate(&mut self, prompt: &str, max_tokens: usize) -> Result<String, JsValue> {
+            let mut engine = InferenceEngine::new(
+                Box::new(self.inner.clone()),
+                self.tokenizer.clone(),
+                Device::Cpu,
+            );
+            
+            let config = GenerationConfig {
+                max_new_tokens: max_tokens,
+                ..Default::default()
+            };
+            
+            engine.generate(prompt)
+                .map_err(|e| JsValue::from_str(&e.to_string()))
+        }
+        
+        #[wasm_bindgen]
+        pub fn generate_stream(&mut self, prompt: &str, max_tokens: usize) -> Result<js_sys::AsyncIterator, JsValue> {
+            // Implementation for streaming generation in WASM
+            let stream = self.create_generation_stream(prompt, max_tokens)?;
+            Ok(stream.into())
+        }
+        
+        // Memory-optimized inference for WASM constraints
+        #[wasm_bindgen]
+        pub fn set_memory_limit(&mut self, limit_mb: usize) {
+            // Configure memory limits for browser environments
+        }
+        
+        #[wasm_bindgen]
+        pub fn get_memory_usage(&self) -> usize {
+            // Return current memory usage in bytes
+            0 // Placeholder
+        }
+    }
+    
+    // Utility functions for WASM deployment
+    #[wasm_bindgen]
+    pub fn init_logging() {
+        console_log::init_with_level(log::Level::Info).unwrap();
+    }
+    
+    #[wasm_bindgen]
+    pub fn get_version() -> String {
+        env!("CARGO_PKG_VERSION").to_string()
+    }
+}
+
+// no_std support for embedded deployment
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
+pub mod embedded {
+    extern crate alloc;
+    use alloc::{vec::Vec, string::String, boxed::Box};
+    use core::mem::MaybeUninit;
+    
+    pub struct EmbeddedInferenceEngine {
+        model: BitNetModel,
+        // Minimal state for embedded deployment
+    }
+    
+    impl EmbeddedInferenceEngine {
+        pub fn new_in_place(
+            buffer: &mut [MaybeUninit<u8>],
+            model_data: &[u8],
+        ) -> Result<&mut Self, BitNetError> {
+            // Zero-allocation model loading for embedded systems
+            todo!("Implement embedded model loading")
+        }
+        
+        pub fn generate_bounded(
+            &mut self,
+            prompt: &str,
+            output_buffer: &mut [u8],
+            max_tokens: usize,
+        ) -> Result<usize, BitNetError> {
+            // Bounded generation for embedded systems
+            todo!("Implement bounded generation")
+        }
+    }
+}
 
 ### C API for FFI
 
