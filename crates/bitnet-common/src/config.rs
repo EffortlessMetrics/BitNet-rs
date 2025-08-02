@@ -1,8 +1,11 @@
 //! Configuration types and utilities
 
-use crate::QuantizationType;
+use crate::{BitNetError, QuantizationType};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::collections::HashMap;
+use std::env;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 /// Main BitNet configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -122,4 +125,480 @@ impl Default for PerformanceConfig {
             memory_limit: None,
         }
     }
+}
+
+/// Configuration validation and loading utilities
+impl BitNetConfig {
+    /// Load configuration from file with environment variable overrides
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, BitNetError> {
+        let path = path.as_ref();
+        let content = fs::read_to_string(path)
+            .map_err(|e| BitNetError::Config(format!("Failed to read config file {}: {}", path.display(), e)))?;
+        
+        let mut config = match path.extension().and_then(|s| s.to_str()) {
+            Some("toml") => toml::from_str::<Self>(&content)
+                .map_err(|e| BitNetError::Config(format!("Failed to parse TOML config: {}", e)))?,
+            Some("json") => serde_json::from_str::<Self>(&content)
+                .map_err(|e| BitNetError::Config(format!("Failed to parse JSON config: {}", e)))?,
+            _ => return Err(BitNetError::Config(
+                "Unsupported config file format. Use .toml or .json".to_string()
+            )),
+        };
+        
+        // Apply environment variable overrides
+        config.apply_env_overrides()?;
+        
+        // Validate the configuration
+        config.validate()?;
+        
+        Ok(config)
+    }
+    
+    /// Create configuration with environment variable overrides applied to defaults
+    pub fn from_env() -> Result<Self, BitNetError> {
+        let mut config = Self::default();
+        config.apply_env_overrides()?;
+        config.validate()?;
+        Ok(config)
+    }
+    
+    /// Merge this configuration with another, giving precedence to the other
+    pub fn merge_with(&mut self, other: Self) {
+        // Model config merging
+        if other.model.path.is_some() {
+            self.model.path = other.model.path;
+        }
+        if other.model.vocab_size != ModelConfig::default().vocab_size {
+            self.model.vocab_size = other.model.vocab_size;
+        }
+        if other.model.hidden_size != ModelConfig::default().hidden_size {
+            self.model.hidden_size = other.model.hidden_size;
+        }
+        if other.model.num_layers != ModelConfig::default().num_layers {
+            self.model.num_layers = other.model.num_layers;
+        }
+        if other.model.num_heads != ModelConfig::default().num_heads {
+            self.model.num_heads = other.model.num_heads;
+        }
+        if other.model.intermediate_size != ModelConfig::default().intermediate_size {
+            self.model.intermediate_size = other.model.intermediate_size;
+        }
+        if other.model.max_position_embeddings != ModelConfig::default().max_position_embeddings {
+            self.model.max_position_embeddings = other.model.max_position_embeddings;
+        }
+        
+        // Inference config merging
+        if other.inference.max_length != InferenceConfig::default().max_length {
+            self.inference.max_length = other.inference.max_length;
+        }
+        if other.inference.max_new_tokens != InferenceConfig::default().max_new_tokens {
+            self.inference.max_new_tokens = other.inference.max_new_tokens;
+        }
+        if other.inference.temperature != InferenceConfig::default().temperature {
+            self.inference.temperature = other.inference.temperature;
+        }
+        if other.inference.top_k != InferenceConfig::default().top_k {
+            self.inference.top_k = other.inference.top_k;
+        }
+        if other.inference.top_p != InferenceConfig::default().top_p {
+            self.inference.top_p = other.inference.top_p;
+        }
+        if other.inference.repetition_penalty != InferenceConfig::default().repetition_penalty {
+            self.inference.repetition_penalty = other.inference.repetition_penalty;
+        }
+        if other.inference.seed.is_some() {
+            self.inference.seed = other.inference.seed;
+        }
+        
+        // Quantization config merging
+        if other.quantization.quantization_type != QuantizationConfig::default().quantization_type {
+            self.quantization.quantization_type = other.quantization.quantization_type;
+        }
+        if other.quantization.block_size != QuantizationConfig::default().block_size {
+            self.quantization.block_size = other.quantization.block_size;
+        }
+        if other.quantization.precision != QuantizationConfig::default().precision {
+            self.quantization.precision = other.quantization.precision;
+        }
+        
+        // Performance config merging
+        if other.performance.num_threads.is_some() {
+            self.performance.num_threads = other.performance.num_threads;
+        }
+        if other.performance.use_gpu != PerformanceConfig::default().use_gpu {
+            self.performance.use_gpu = other.performance.use_gpu;
+        }
+        if other.performance.batch_size != PerformanceConfig::default().batch_size {
+            self.performance.batch_size = other.performance.batch_size;
+        }
+        if other.performance.memory_limit.is_some() {
+            self.performance.memory_limit = other.performance.memory_limit;
+        }
+    }
+    
+    /// Apply environment variable overrides
+    fn apply_env_overrides(&mut self) -> Result<(), BitNetError> {
+        // Model configuration overrides
+        if let Ok(path) = env::var("BITNET_MODEL_PATH") {
+            self.model.path = Some(PathBuf::from(path));
+        }
+        if let Ok(format) = env::var("BITNET_MODEL_FORMAT") {
+            self.model.format = match format.to_lowercase().as_str() {
+                "gguf" => ModelFormat::Gguf,
+                "safetensors" => ModelFormat::SafeTensors,
+                "huggingface" => ModelFormat::HuggingFace,
+                _ => return Err(BitNetError::Config(
+                    format!("Invalid model format '{}'. Use 'gguf', 'safetensors', or 'huggingface'", format)
+                )),
+            };
+        }
+        if let Ok(vocab_size) = env::var("BITNET_VOCAB_SIZE") {
+            self.model.vocab_size = vocab_size.parse()
+                .map_err(|_| BitNetError::Config("Invalid BITNET_VOCAB_SIZE value".to_string()))?;
+        }
+        if let Ok(hidden_size) = env::var("BITNET_HIDDEN_SIZE") {
+            self.model.hidden_size = hidden_size.parse()
+                .map_err(|_| BitNetError::Config("Invalid BITNET_HIDDEN_SIZE value".to_string()))?;
+        }
+        if let Ok(num_layers) = env::var("BITNET_NUM_LAYERS") {
+            self.model.num_layers = num_layers.parse()
+                .map_err(|_| BitNetError::Config("Invalid BITNET_NUM_LAYERS value".to_string()))?;
+        }
+        if let Ok(num_heads) = env::var("BITNET_NUM_HEADS") {
+            self.model.num_heads = num_heads.parse()
+                .map_err(|_| BitNetError::Config("Invalid BITNET_NUM_HEADS value".to_string()))?;
+        }
+        
+        // Inference configuration overrides
+        if let Ok(max_length) = env::var("BITNET_MAX_LENGTH") {
+            self.inference.max_length = max_length.parse()
+                .map_err(|_| BitNetError::Config("Invalid BITNET_MAX_LENGTH value".to_string()))?;
+        }
+        if let Ok(max_new_tokens) = env::var("BITNET_MAX_NEW_TOKENS") {
+            self.inference.max_new_tokens = max_new_tokens.parse()
+                .map_err(|_| BitNetError::Config("Invalid BITNET_MAX_NEW_TOKENS value".to_string()))?;
+        }
+        if let Ok(temperature) = env::var("BITNET_TEMPERATURE") {
+            self.inference.temperature = temperature.parse()
+                .map_err(|_| BitNetError::Config("Invalid BITNET_TEMPERATURE value".to_string()))?;
+        }
+        if let Ok(top_k) = env::var("BITNET_TOP_K") {
+            if top_k.to_lowercase() == "none" {
+                self.inference.top_k = None;
+            } else {
+                self.inference.top_k = Some(top_k.parse()
+                    .map_err(|_| BitNetError::Config("Invalid BITNET_TOP_K value".to_string()))?);
+            }
+        }
+        if let Ok(top_p) = env::var("BITNET_TOP_P") {
+            if top_p.to_lowercase() == "none" {
+                self.inference.top_p = None;
+            } else {
+                self.inference.top_p = Some(top_p.parse()
+                    .map_err(|_| BitNetError::Config("Invalid BITNET_TOP_P value".to_string()))?);
+            }
+        }
+        if let Ok(seed) = env::var("BITNET_SEED") {
+            if seed.to_lowercase() == "none" {
+                self.inference.seed = None;
+            } else {
+                self.inference.seed = Some(seed.parse()
+                    .map_err(|_| BitNetError::Config("Invalid BITNET_SEED value".to_string()))?);
+            }
+        }
+        
+        // Quantization configuration overrides
+        if let Ok(qtype) = env::var("BITNET_QUANTIZATION_TYPE") {
+            self.quantization.quantization_type = match qtype.to_uppercase().as_str() {
+                "I2S" | "I2_S" => QuantizationType::I2S,
+                "TL1" => QuantizationType::TL1,
+                "TL2" => QuantizationType::TL2,
+                _ => return Err(BitNetError::Config(
+                    format!("Invalid quantization type '{}'. Use 'I2S', 'TL1', or 'TL2'", qtype)
+                )),
+            };
+        }
+        if let Ok(block_size) = env::var("BITNET_BLOCK_SIZE") {
+            self.quantization.block_size = block_size.parse()
+                .map_err(|_| BitNetError::Config("Invalid BITNET_BLOCK_SIZE value".to_string()))?;
+        }
+        
+        // Performance configuration overrides
+        if let Ok(num_threads) = env::var("BITNET_NUM_THREADS") {
+            if num_threads.to_lowercase() == "auto" {
+                self.performance.num_threads = None;
+            } else {
+                self.performance.num_threads = Some(num_threads.parse()
+                    .map_err(|_| BitNetError::Config("Invalid BITNET_NUM_THREADS value".to_string()))?);
+            }
+        }
+        if let Ok(use_gpu) = env::var("BITNET_USE_GPU") {
+            self.performance.use_gpu = match use_gpu.to_lowercase().as_str() {
+                "true" | "1" | "yes" | "on" => true,
+                "false" | "0" | "no" | "off" => false,
+                _ => return Err(BitNetError::Config(
+                    format!("Invalid BITNET_USE_GPU value '{}'. Use 'true' or 'false'", use_gpu)
+                )),
+            };
+        }
+        if let Ok(batch_size) = env::var("BITNET_BATCH_SIZE") {
+            self.performance.batch_size = batch_size.parse()
+                .map_err(|_| BitNetError::Config("Invalid BITNET_BATCH_SIZE value".to_string()))?;
+        }
+        if let Ok(memory_limit) = env::var("BITNET_MEMORY_LIMIT") {
+            if memory_limit.to_lowercase() == "none" {
+                self.performance.memory_limit = None;
+            } else {
+                // Parse memory limit with optional unit suffix (MB, GB)
+                let memory_limit = memory_limit.to_uppercase();
+                let (value, multiplier) = if memory_limit.ends_with("GB") {
+                    (memory_limit.trim_end_matches("GB"), 1024 * 1024 * 1024)
+                } else if memory_limit.ends_with("MB") {
+                    (memory_limit.trim_end_matches("MB"), 1024 * 1024)
+                } else if memory_limit.ends_with("KB") {
+                    (memory_limit.trim_end_matches("KB"), 1024)
+                } else {
+                    (memory_limit.as_str(), 1)
+                };
+                
+                let bytes: usize = value.parse::<usize>()
+                    .map_err(|_| BitNetError::Config("Invalid BITNET_MEMORY_LIMIT value".to_string()))?
+                    * multiplier;
+                self.performance.memory_limit = Some(bytes);
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Validate the configuration
+    pub fn validate(&self) -> Result<(), BitNetError> {
+        let mut errors = Vec::new();
+        
+        // Model validation
+        if self.model.vocab_size == 0 {
+            errors.push("vocab_size must be greater than 0".to_string());
+        }
+        if self.model.hidden_size == 0 {
+            errors.push("hidden_size must be greater than 0".to_string());
+        }
+        if self.model.num_layers == 0 {
+            errors.push("num_layers must be greater than 0".to_string());
+        }
+        if self.model.num_heads == 0 {
+            errors.push("num_heads must be greater than 0".to_string());
+        }
+        if self.model.hidden_size % self.model.num_heads != 0 {
+            errors.push("hidden_size must be divisible by num_heads".to_string());
+        }
+        if self.model.intermediate_size == 0 {
+            errors.push("intermediate_size must be greater than 0".to_string());
+        }
+        if self.model.max_position_embeddings == 0 {
+            errors.push("max_position_embeddings must be greater than 0".to_string());
+        }
+        
+        // Inference validation
+        if self.inference.max_length == 0 {
+            errors.push("max_length must be greater than 0".to_string());
+        }
+        if self.inference.max_new_tokens == 0 {
+            errors.push("max_new_tokens must be greater than 0".to_string());
+        }
+        if self.inference.temperature <= 0.0 {
+            errors.push("temperature must be greater than 0".to_string());
+        }
+        if let Some(top_k) = self.inference.top_k {
+            if top_k == 0 {
+                errors.push("top_k must be greater than 0 when specified".to_string());
+            }
+        }
+        if let Some(top_p) = self.inference.top_p {
+            if top_p <= 0.0 || top_p > 1.0 {
+                errors.push("top_p must be between 0 and 1 when specified".to_string());
+            }
+        }
+        if self.inference.repetition_penalty <= 0.0 {
+            errors.push("repetition_penalty must be greater than 0".to_string());
+        }
+        
+        // Quantization validation
+        if self.quantization.block_size == 0 {
+            errors.push("block_size must be greater than 0".to_string());
+        }
+        if !self.quantization.block_size.is_power_of_two() {
+            errors.push("block_size should be a power of 2 for optimal performance".to_string());
+        }
+        if self.quantization.precision <= 0.0 {
+            errors.push("precision must be greater than 0".to_string());
+        }
+        
+        // Performance validation
+        if let Some(num_threads) = self.performance.num_threads {
+            if num_threads == 0 {
+                errors.push("num_threads must be greater than 0 when specified".to_string());
+            }
+        }
+        if self.performance.batch_size == 0 {
+            errors.push("batch_size must be greater than 0".to_string());
+        }
+        
+        if !errors.is_empty() {
+            return Err(BitNetError::Config(format!(
+                "Configuration validation failed:\n{}",
+                errors.join("\n")
+            )));
+        }
+        
+        Ok(())
+    }
+    
+    /// Create a configuration builder for fluent configuration
+    pub fn builder() -> ConfigBuilder {
+        ConfigBuilder::new()
+    }
+}
+
+/// Configuration builder for fluent configuration creation
+#[derive(Debug, Default)]
+pub struct ConfigBuilder {
+    config: BitNetConfig,
+}
+
+impl ConfigBuilder {
+    pub fn new() -> Self {
+        Self {
+            config: BitNetConfig::default(),
+        }
+    }
+    
+    pub fn model_path<P: Into<PathBuf>>(mut self, path: P) -> Self {
+        self.config.model.path = Some(path.into());
+        self
+    }
+    
+    pub fn model_format(mut self, format: ModelFormat) -> Self {
+        self.config.model.format = format;
+        self
+    }
+    
+    pub fn vocab_size(mut self, size: usize) -> Self {
+        self.config.model.vocab_size = size;
+        self
+    }
+    
+    pub fn hidden_size(mut self, size: usize) -> Self {
+        self.config.model.hidden_size = size;
+        self
+    }
+    
+    pub fn num_layers(mut self, layers: usize) -> Self {
+        self.config.model.num_layers = layers;
+        self
+    }
+    
+    pub fn num_heads(mut self, heads: usize) -> Self {
+        self.config.model.num_heads = heads;
+        self
+    }
+    
+    pub fn max_length(mut self, length: usize) -> Self {
+        self.config.inference.max_length = length;
+        self
+    }
+    
+    pub fn temperature(mut self, temp: f32) -> Self {
+        self.config.inference.temperature = temp;
+        self
+    }
+    
+    pub fn top_k(mut self, k: Option<usize>) -> Self {
+        self.config.inference.top_k = k;
+        self
+    }
+    
+    pub fn top_p(mut self, p: Option<f32>) -> Self {
+        self.config.inference.top_p = p;
+        self
+    }
+    
+    pub fn quantization_type(mut self, qtype: QuantizationType) -> Self {
+        self.config.quantization.quantization_type = qtype;
+        self
+    }
+    
+    pub fn use_gpu(mut self, use_gpu: bool) -> Self {
+        self.config.performance.use_gpu = use_gpu;
+        self
+    }
+    
+    pub fn num_threads(mut self, threads: Option<usize>) -> Self {
+        self.config.performance.num_threads = threads;
+        self
+    }
+    
+    pub fn batch_size(mut self, size: usize) -> Self {
+        self.config.performance.batch_size = size;
+        self
+    }
+    
+    pub fn build(self) -> Result<BitNetConfig, BitNetError> {
+        self.config.validate()?;
+        Ok(self.config)
+    }
+}
+
+/// Configuration loading utilities
+pub struct ConfigLoader;
+
+impl ConfigLoader {
+    /// Load configuration with precedence: env vars > config file > defaults
+    pub fn load_with_precedence<P: AsRef<Path>>(config_file: Option<P>) -> Result<BitNetConfig, BitNetError> {
+        let mut config = BitNetConfig::default();
+        
+        // Apply config file if provided
+        if let Some(path) = config_file {
+            let file_config = BitNetConfig::from_file(path)?;
+            config.merge_with(file_config);
+        }
+        
+        // Apply environment overrides
+        config.apply_env_overrides()?;
+        
+        // Final validation
+        config.validate()?;
+        
+        Ok(config)
+    }
+    
+    /// Load configuration from multiple sources and merge them
+    pub fn load_from_sources(sources: &[ConfigSource]) -> Result<BitNetConfig, BitNetError> {
+        let mut config = BitNetConfig::default();
+        
+        for source in sources {
+            match source {
+                ConfigSource::File(path) => {
+                    let file_config = BitNetConfig::from_file(path)?;
+                    config.merge_with(file_config);
+                }
+                ConfigSource::Environment => {
+                    config.apply_env_overrides()?;
+                }
+                ConfigSource::Inline(inline_config) => {
+                    config.merge_with(inline_config.clone());
+                }
+            }
+        }
+        
+        config.validate()?;
+        Ok(config)
+    }
+}
+
+/// Configuration source types
+#[derive(Debug, Clone)]
+pub enum ConfigSource {
+    File(PathBuf),
+    Environment,
+    Inline(BitNetConfig),
 }
