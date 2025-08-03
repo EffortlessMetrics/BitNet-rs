@@ -32,6 +32,9 @@ graph TB
     
     subgraph "Compute Layer"
         KERN[bitnet-kernels]
+        CPU[CPU Kernels: AVX2/NEON]
+        GPU[GPU Kernels: CUDA/cudarc]
+        FALL[Fallback Kernels]
     end
     
     subgraph "Foundation"
@@ -48,6 +51,23 @@ graph TB
     CAPI --> IE
     PyAPI --> IE
     WASM --> IE
+    
+    IE --> MOD
+    IE --> QUANT
+    MOD --> KERN
+    QUANT --> KERN
+    
+    KERN --> CPU
+    KERN --> GPU
+    KERN --> FALL
+    
+    MOD --> GGUF
+    MOD --> ST
+    MOD --> HF
+    
+    CPU --> COMMON
+    GPU --> COMMON
+    FALL --> COMMON
     Server --> IE
     
     IE --> MOD
@@ -1839,3 +1859,100 @@ criterion_main!(benches);
 ```
 
 This comprehensive design provides a solid foundation for the BitNet.cpp to Rust migration, incorporating all the production-quality requirements while maintaining the incremental migration strategy. The design emphasizes safety, performance, and maintainability while ensuring compatibility with existing systems through FFI and API layers.
+## 
+Performance Strategy and Optimization Roadmap
+
+### Current Performance Foundation
+
+The BitNet Rust implementation has established a solid performance foundation with:
+
+- **CPU SIMD Kernels**: AVX2 (x86) and NEON (ARM) optimizations delivering 20-400M elements/sec
+- **Quantization System**: Efficient I2S, TL1, TL2 implementations with bit-packing optimization
+- **Runtime Dispatch**: Zero-overhead kernel selection using `OnceLock` for feature detection
+- **Comprehensive Testing**: 50+ tests ensuring numerical accuracy and performance regression detection
+
+### GPU Acceleration Strategy
+
+#### Phase 1: Fix Current GPU Implementation
+- **API Alignment**: Correct cudarc imports (`CudaDevice`, `CudaModule` from `cudarc::driver`)
+- **Method Fixes**: Replace non-existent `get_func()` calls with proper module API
+- **Thread Safety**: Remove `CudaGraph` complexity, use direct kernel launches initially
+- **Memory Management**: Simplify GPU memory pooling for initial stability
+
+#### Phase 2: Validate GPU Performance
+- **Numerical Parity**: Ensure GPU kernels match CPU output within 1e-6 tolerance
+- **Performance Benchmarks**: Target 10-20x speedup over CPU for large matrices (≥2048²)
+- **Mixed Precision**: Implement FP16/BF16 operations for additional 1.5-2x throughput
+- **Memory Optimization**: Efficient host-device transfers with minimal copying
+
+### AVX-512 Future Strategy
+
+#### Current Status (2025)
+- **Rust Stability**: AVX-512 intrinsics remain nightly-only, awaiting stable SIMD API
+- **Performance Reality**: Real-world gains of 5-20% over AVX2, with frequency throttling downsides
+- **Power Trade-offs**: Significant power increase (290W vs 225W) for modest performance gains
+
+#### Strategic Decision
+- **Keep AVX2 Baseline**: Current AVX2 implementation provides optimal performance/portability balance
+- **Monitor Rust 1.90+**: Re-evaluate when stable SIMD and multiversioning arrive
+- **Selective Implementation**: Consider AVX-512 only for specialized DL workloads with VNNI/BF16 benefits
+
+### Threading and Parallelization
+
+#### Current Approach
+- **Single-threaded Kernels**: Focus on SIMD optimization within single threads
+- **Stream Parallelism**: Multiple CUDA streams for GPU concurrency
+- **Async Support**: Tokio integration for streaming inference
+
+#### Future Enhancements
+- **Rayon Integration**: Parallel matrix operations for large workloads
+- **NUMA Awareness**: Thread affinity and memory allocation optimization
+- **Dynamic Scaling**: Automatic thread pool sizing based on workload characteristics
+
+### Memory Optimization Strategy
+
+#### Current Implementation
+- **Efficient Quantization**: Bit-packing reduces memory footprint by 75%
+- **Zero-copy Operations**: Memory-mapped model loading
+- **SIMD Alignment**: Optimized memory access patterns
+
+#### Advanced Optimizations
+- **KV Cache Pooling**: Reusable memory pools for inference state
+- **Prefetching**: Hardware prefetch hints for large sequential operations
+- **Compression**: Runtime compression for inactive model layers
+
+### Performance Targets and Validation
+
+#### Baseline Comparisons
+- **Python Implementation**: Target 5-10x improvement for CPU inference
+- **C++ BitNet**: Match or exceed performance while improving safety
+- **Memory Usage**: Maintain or reduce memory footprint vs original
+
+#### Continuous Validation
+- **Regression Testing**: Automated performance monitoring in CI/CD
+- **Cross-platform Benchmarks**: Consistent performance across x86/ARM
+- **Real-world Workloads**: Validation with production-scale models and prompts
+
+### Deployment Optimization
+
+#### Edge Deployment
+- **WebAssembly**: CPU-only inference optimized for browser constraints
+- **Embedded Systems**: `no_std` compatibility with minimal memory footprint
+- **Mobile Optimization**: ARM NEON kernels for iOS/Android deployment
+
+#### Cloud Deployment
+- **GPU Scaling**: Multi-GPU support for large model inference
+- **Batch Optimization**: Efficient batching for high-throughput scenarios
+- **Container Optimization**: Minimal Docker images with optimal resource usage
+
+### Long-term Performance Vision
+
+The BitNet Rust implementation aims to establish new performance benchmarks:
+
+1. **CPU Performance**: Best-in-class SIMD utilization with AVX2/NEON
+2. **GPU Acceleration**: 10-20x speedup over optimized CPU kernels
+3. **Memory Efficiency**: Minimal memory footprint through advanced quantization
+4. **Cross-platform**: Consistent high performance across all target platforms
+5. **Developer Experience**: Zero-cost abstractions with compile-time optimization
+
+This performance strategy ensures the Rust implementation not only matches but exceeds the original BitNet.cpp while providing superior safety, maintainability, and ecosystem integration.
