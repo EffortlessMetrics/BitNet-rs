@@ -16,9 +16,13 @@ anyhow.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true
 rayon.workspace = true
+log.workspace = true
 cudarc = { version = "0.17", optional = true }
 cc = { version = "1.0", optional = true }
 bindgen = { version = "0.72", optional = true }
+
+[dev-dependencies]
+criterion.workspace = true
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 # x86-specific dependencies
@@ -35,3 +39,7 @@ avx512 = []
 neon = []
 cuda = ["cudarc"]
 ffi-bridge = ["cc", "bindgen"]
+
+[[bench]]
+name = "kernel_benchmarks"
+harness = false
