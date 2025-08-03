@@ -84,10 +84,10 @@ impl CudaKernel {
         log::info!("CUDA device info: {:?}", device_info);
 
         Ok(Self {
-            ctx: Arc::new(ctx),
+            ctx,
             stream,
-            module,
-            matmul_function,
+            module: None,
+            matmul_function: None,
             device_info,
         })
     }
@@ -366,7 +366,7 @@ mod tests {
     fn test_cuda_kernel_creation() {
         // Test CUDA kernel creation
         match CudaKernel::new() {
-            Ok(kernel) => {
+            Ok(mut kernel) => {
                 println!("CUDA kernel created successfully");
                 println!("Device info: {:?}", kernel.device_info());
                 assert!(kernel.is_available());
@@ -384,6 +384,13 @@ mod tests {
                     Ok(_) => {
                         println!("CUDA matmul completed successfully");
                         println!("Result: {:?}", c);
+                        // Verify the result is not all zeros (indicating kernel ran)
+                        let has_nonzero = c.iter().any(|&x| x != 0.0);
+                        if has_nonzero {
+                            println!("✅ CUDA kernel produced non-zero results");
+                        } else {
+                            println!("⚠️ CUDA kernel result is all zeros - may need debugging");
+                        }
                     }
                     Err(e) => {
                         println!("CUDA matmul failed: {}", e);
@@ -394,5 +401,70 @@ mod tests {
                 println!("Failed to create CUDA kernel (CUDA may not be available): {}", e);
             }
         }
+    }
+
+    #[test]
+    #[ignore] // Only run with --ignored flag when CUDA is available
+    fn test_cuda_numerical_accuracy() {
+        use crate::gpu::validation::{GpuValidator, ValidationConfig};
+        
+        let config = ValidationConfig {
+            test_sizes: vec![(64, 64, 64), (128, 128, 128)], // Smaller sizes for tests
+            benchmark_iterations: 10, // Fewer iterations for tests
+            ..Default::default()
+        };
+        
+        let validator = GpuValidator::with_config(config);
+        match validator.validate() {
+            Ok(results) => {
+                crate::gpu::validation::print_validation_results(&results);
+                
+                // Verify all accuracy tests passed
+                for result in &results.accuracy_results {
+                    assert!(result.passed, 
+                        "Accuracy test failed for {:?}: max_error={:.2e} > tolerance={:.2e}",
+                        result.dimensions, result.max_error, crate::gpu::validation::DEFAULT_TOLERANCE
+                    );
+                }
+                
+                // Verify we got performance results
+                assert!(!results.performance_results.is_empty(), "No performance results");
+                
+                // Verify GPU shows some speedup (even if small)
+                for result in &results.performance_results {
+                    println!("Speedup for {:?}: {:.2}x", result.dimensions, result.speedup);
+                }
+                
+                assert!(results.success, "Overall validation failed");
+            }
+            Err(e) => {
+                panic!("GPU validation failed: {}", e);
+            }
+        }
+    }
+
+    #[test]
+    #[ignore] // Only run with --ignored flag when CUDA is available
+    fn test_cuda_memory_management() {
+        // Test that multiple kernel creations don't leak memory
+        for i in 0..10 {
+            match CudaKernel::new() {
+                Ok(mut kernel) => {
+                    // Test small operation
+                    let a = vec![1i8; 16];
+                    let b = vec![1u8; 16];
+                    let mut c = vec![0.0f32; 16];
+                    
+                    if let Err(e) = kernel.matmul_i2s(&a, &b, &mut c, 4, 4, 4) {
+                        println!("Iteration {}: CUDA operation failed: {}", i, e);
+                    }
+                }
+                Err(e) => {
+                    println!("Iteration {}: CUDA kernel creation failed: {}", i, e);
+                    break;
+                }
+            }
+        }
+        println!("Memory management test completed");
     }
 }

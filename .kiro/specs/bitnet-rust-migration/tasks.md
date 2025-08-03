@@ -254,6 +254,7 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - _Requirements: 5.1, 5.2, 5.4_
 
 - [ ] 5.6 Validate GPU kernel correctness and performance
+
   - Create comprehensive test suite comparing GPU vs CPU kernel outputs
 
   - Implement numerical accuracy validation with configurable tolerance (1e-6)
