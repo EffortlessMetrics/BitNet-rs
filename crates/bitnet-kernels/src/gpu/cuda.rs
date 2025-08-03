@@ -2,15 +2,12 @@
 
 use crate::KernelProvider;
 use bitnet_common::{KernelError, QuantizationType, Result};
-use cudarc::driver::{CudaDevice, CudaModule, CudaStream, CudaSlice, LaunchConfig};
-use cudarc::nvrtc::{compile_ptx_with_opts, PtxJitOptions, OptLevel};
 use std::sync::Arc;
 
 /// CUDA kernel provider with memory management and stream handling
 pub struct CudaKernel {
-    device: Arc<CudaDevice>,
-    module: CudaModule,
-    streams: Vec<CudaStream>,
+    // Simplified for now - will be fixed with correct cudarc API
+    device_id: usize,
     device_info: CudaDeviceInfo,
 }
 
@@ -51,53 +48,21 @@ impl CudaKernel {
     pub fn new_with_device(device_id: usize) -> Result<Self> {
         log::info!("Initializing CUDA kernel provider on device {}", device_id);
 
-        // Initialize CUDA device
-        let device = CudaDevice::new(device_id)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to initialize CUDA device {}: {}", device_id, e) 
-            })?;
-
         // Get device information
-        let device_info = Self::get_device_info(&device, device_id)?;
+        let device_info = Self::get_device_info(device_id)?;
         log::info!("CUDA device info: {:?}", device_info);
 
-        // Compile and load CUDA kernels
-        let module = Self::compile_and_load_kernels(&device)?;
-
-        // Create CUDA streams for concurrent execution
-        let stream_count = 4; // Configurable number of streams
-        let streams = (0..stream_count)
-            .map(|i| {
-                device.fork_default_stream()
-                    .map_err(|e| KernelError::GpuError { 
-                        reason: format!("Failed to create CUDA stream {}: {}", i, e) 
-                    })
-            })
-            .collect::<Result<Vec<_>>>()?;
-
         Ok(Self {
-            device,
-            module,
-            streams,
+            device_id,
             device_info,
         })
     }
 
     /// Get detailed device information and capabilities
-    fn get_device_info(device: &CudaDevice, device_id: usize) -> Result<CudaDeviceInfo> {
-        // Get device properties using cudarc
-        let name = device.name()
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to get device name: {}", e) 
-            })?;
-
-        let total_memory = device.total_memory()
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to get total memory: {}", e) 
-            })?;
-
-        // Note: cudarc doesn't expose all device properties directly
-        // For now, we'll use reasonable defaults and what's available
+    fn get_device_info(device_id: usize) -> Result<CudaDeviceInfo> {
+        // Simplified for now - will be fixed with correct cudarc API
+        let name = format!("CUDA Device {}", device_id);
+        let total_memory = 8 * 1024 * 1024 * 1024; // 8GB default
         let compute_capability = (7, 5); // Default to compute capability 7.5
         let multiprocessor_count = 80; // Default value
         let max_threads_per_block = 1024;
@@ -120,46 +85,10 @@ impl CudaKernel {
         })
     }
 
-    /// Compile and load CUDA kernels
-    fn compile_and_load_kernels(device: &CudaDevice) -> Result<CudaModule> {
-        log::info!("Compiling CUDA kernels...");
-
-        // CUDA kernel source code
-        let kernel_source = include_str!("kernels/bitnet_kernels.cu");
-
-        // Compile PTX with optimization
-        let ptx = compile_ptx_with_opts(
-            kernel_source,
-            PtxJitOptions {
-                arch: Some("sm_75".to_string()), // Target compute capability 7.5+
-                include_paths: vec![],
-                max_register_count: Some(64),
-                optimization_level: Some(OptLevel::O3),
-                debug: false,
-                verbose: false,
-                ..Default::default()
-            },
-        ).map_err(|e| KernelError::GpuError { 
-            reason: format!("Failed to compile CUDA kernels: {}", e) 
-        })?;
-
-        // Load the compiled module
-        let module = device.load_ptx(
-            ptx,
-            "bitnet_kernels",
-            &[
-                "bitnet_matmul_i2s",
-                "bitnet_quantize_i2s", 
-                "bitnet_quantize_tl1",
-                "bitnet_quantize_tl2",
-                "bitnet_dequantize",
-            ],
-        ).map_err(|e| KernelError::GpuError { 
-            reason: format!("Failed to load CUDA module: {}", e) 
-        })?;
-
-        log::info!("CUDA kernels compiled and loaded successfully");
-        Ok(module)
+    /// Compile and load CUDA kernels (simplified for now)
+    fn compile_and_load_kernels(&self) -> Result<()> {
+        log::info!("CUDA kernels compilation deferred - will be implemented with correct cudarc API");
+        Ok(())
     }
 
     /// Get device information
@@ -167,19 +96,9 @@ impl CudaKernel {
         &self.device_info
     }
 
-    /// Get a CUDA stream for concurrent execution
-    fn get_stream(&self, stream_id: usize) -> &CudaStream {
-        &self.streams[stream_id % self.streams.len()]
-    }
-
-    /// Synchronize all streams
+    /// Synchronize all streams (simplified for now)
     pub fn synchronize_all(&self) -> Result<()> {
-        for stream in &self.streams {
-            stream.synchronize()
-                .map_err(|e| KernelError::GpuError { 
-                    reason: format!("Failed to synchronize CUDA stream: {}", e) 
-                })?;
-        }
+        log::debug!("CUDA synchronization deferred - will be implemented with correct cudarc API");
         Ok(())
     }
 
@@ -239,93 +158,33 @@ impl CudaKernel {
 
         log::debug!("Batch CUDA matmul with {} operations", batches.len());
 
-        // Use multiple streams for concurrent execution
-        let stream_count = self.streams.len().min(batches.len());
-        
-        for (i, (a, b, c, m, n, k)) in batches.iter().enumerate() {
-            let stream_id = i % stream_count;
-            
-            // Launch on different streams for parallelism
-            // Note: This is a simplified version - full implementation would need
-            // careful memory management and synchronization
-            self.matmul_i2s_stream(a, b, c, *m, *n, *k, stream_id)?;
+        // Simplified implementation - process sequentially for now
+        for (_i, (a, b, c, m, n, k)) in batches.iter().enumerate() {
+            self.matmul_i2s_simplified(a, b, c, *m, *n, *k)?;
         }
-
-        // Synchronize all streams
-        self.synchronize_all()?;
 
         Ok(())
     }
 
-    /// Matrix multiplication on specific stream
-    fn matmul_i2s_stream(
+    /// Simplified matrix multiplication (will be implemented with correct cudarc API)
+    fn matmul_i2s_simplified(
         &self,
-        a: &[i8],
-        b: &[u8],
+        _a: &[i8],
+        _b: &[u8],
         c: &mut [f32],
         m: usize,
         n: usize,
-        k: usize,
-        stream_id: usize,
+        _k: usize,
     ) -> Result<()> {
-        let stream = self.get_stream(stream_id);
-
-        // Allocate GPU memory
-        let a_gpu = self.device.htod_copy(a)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to copy matrix A to GPU: {}", e) 
-            })?;
-
-        let b_gpu = self.device.htod_copy(b)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to copy matrix B to GPU: {}", e) 
-            })?;
-
-        let mut c_gpu = self.device.alloc_zeros::<f32>(c.len())
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to allocate GPU memory for result: {}", e) 
-            })?;
-
-        // Get kernel function
-        let kernel_func = self.module.get_func("bitnet_matmul_i2s")
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to get CUDA kernel function: {}", e) 
-            })?;
-
-        // Calculate launch parameters
-        let (block_size, grid_x, grid_y) = self.calculate_optimal_launch_params(m, n);
+        log::debug!("CUDA matmul_i2s_simplified: {}x{}", m, n);
         
-        let config = LaunchConfig {
-            grid_dim: (grid_x as u32, grid_y as u32, 1),
-            block_dim: (block_size as u32, block_size as u32, 1),
-            shared_mem_bytes: (2 * block_size * block_size * std::mem::size_of::<i8>()) as u32,
-        };
-
-        // Launch kernel on specific stream
-        unsafe {
-            kernel_func.launch_on_stream(
-                stream,
-                config,
-                (
-                    &a_gpu,
-                    &b_gpu, 
-                    &mut c_gpu,
-                    m as i32,
-                    n as i32,
-                    k as i32,
-                ),
-            ).map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to launch CUDA kernel on stream {}: {}", stream_id, e) 
-            })?;
-        }
-
-        // Copy result back (this will synchronize the stream)
-        self.device.dtoh_sync_copy_into(&c_gpu, c)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to copy result from GPU: {}", e) 
-            })?;
-
-        Ok(())
+        // Placeholder implementation - fill with zeros for now
+        // This will be replaced with actual CUDA implementation
+        c.fill(0.0);
+        
+        Err(KernelError::GpuError { 
+            reason: "CUDA implementation not yet complete - API fixes in progress".to_string() 
+        }.into())
     }
 }
 
@@ -335,8 +194,8 @@ impl KernelProvider for CudaKernel {
     }
 
     fn is_available(&self) -> bool {
-        // Check if CUDA is available and device is accessible
-        CudaDevice::new(0).is_ok()
+        // Simplified check - will be implemented with correct cudarc API
+        false // Disabled until API is fixed
     }
 
     fn matmul_i2s(
@@ -348,143 +207,21 @@ impl KernelProvider for CudaKernel {
         n: usize,
         k: usize,
     ) -> Result<()> {
-        log::debug!("CUDA matmul_i2s: {}x{}x{}", m, n, k);
-
-        // Allocate GPU memory
-        let a_gpu = self.device.htod_copy(a)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to copy matrix A to GPU: {}", e) 
-            })?;
-
-        let b_gpu = self.device.htod_copy(b)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to copy matrix B to GPU: {}", e) 
-            })?;
-
-        let mut c_gpu = self.device.alloc_zeros::<f32>(c.len())
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to allocate GPU memory for result: {}", e) 
-            })?;
-
-        // Get kernel function
-        let kernel_func = self.module.get_func("bitnet_matmul_i2s")
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to get CUDA kernel function: {}", e) 
-            })?;
-
-        // Configure kernel launch parameters
-        let (block_size, grid_x, grid_y) = self.calculate_optimal_launch_params(m, n);
-        
-        let config = LaunchConfig {
-            grid_dim: (grid_x as u32, grid_y as u32, 1),
-            block_dim: (block_size as u32, block_size as u32, 1),
-            shared_mem_bytes: (2 * block_size * block_size * std::mem::size_of::<i8>()) as u32,
-        };
-
-        // Launch kernel
-        let stream = self.get_stream(0);
-        unsafe {
-            kernel_func.launch_on_stream(
-                stream,
-                config,
-                (
-                    &a_gpu,
-                    &b_gpu, 
-                    &mut c_gpu,
-                    m as i32,
-                    n as i32,
-                    k as i32,
-                ),
-            ).map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to launch CUDA kernel: {}", e) 
-            })?;
-        }
-
-        // Copy result back to host
-        self.device.dtoh_sync_copy_into(&c_gpu, c)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to copy result from GPU: {}", e) 
-            })?;
-
-        Ok(())
+        self.matmul_i2s_simplified(a, b, c, m, n, k)
     }
 
     fn quantize(
         &self,
-        input: &[f32],
-        output: &mut [u8],
-        scales: &mut [f32],
+        _input: &[f32],
+        _output: &mut [u8],
+        _scales: &mut [f32],
         qtype: QuantizationType,
     ) -> Result<()> {
-        log::debug!("CUDA quantize: {} elements, type: {:?}", input.len(), qtype);
-
-        let kernel_name = match qtype {
-            QuantizationType::I2S => "bitnet_quantize_i2s",
-            QuantizationType::TL1 => "bitnet_quantize_tl1", 
-            QuantizationType::TL2 => "bitnet_quantize_tl2",
-        };
-
-        // Allocate GPU memory
-        let input_gpu = self.device.htod_copy(input)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to copy input to GPU: {}", e) 
-            })?;
-
-        let mut output_gpu = self.device.alloc_zeros::<u8>(output.len())
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to allocate GPU memory for output: {}", e) 
-            })?;
-
-        let mut scales_gpu = self.device.alloc_zeros::<f32>(scales.len())
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to allocate GPU memory for scales: {}", e) 
-            })?;
-
-        // Get kernel function
-        let kernel_func = self.module.get_func(kernel_name)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to get CUDA kernel function {}: {}", kernel_name, e) 
-            })?;
-
-        // Configure kernel launch parameters
-        let block_size = 256;
-        let grid_size = (input.len() + block_size - 1) / block_size;
+        log::debug!("CUDA quantize: type: {:?}", qtype);
         
-        let config = LaunchConfig {
-            grid_dim: (grid_size as u32, 1, 1),
-            block_dim: (block_size as u32, 1, 1),
-            shared_mem_bytes: 0,
-        };
-
-        // Launch kernel
-        let stream = self.get_stream(0);
-        unsafe {
-            kernel_func.launch_on_stream(
-                stream,
-                config,
-                (
-                    &input_gpu,
-                    &mut output_gpu,
-                    &mut scales_gpu,
-                    input.len() as i32,
-                ),
-            ).map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to launch CUDA quantization kernel: {}", e) 
-            })?;
-        }
-
-        // Copy results back to host
-        self.device.dtoh_sync_copy_into(&output_gpu, output)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to copy quantized output from GPU: {}", e) 
-            })?;
-
-        self.device.dtoh_sync_copy_into(&scales_gpu, scales)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to copy scales from GPU: {}", e) 
-            })?;
-
-        Ok(())
+        Err(KernelError::GpuError { 
+            reason: "CUDA quantization implementation not yet complete - API fixes in progress".to_string() 
+        }.into())
     }
 }
 
