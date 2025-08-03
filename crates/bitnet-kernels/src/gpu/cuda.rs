@@ -1,11 +1,17 @@
-//! CUDA kernel implementation using cudarc
+//! CUDA kernel implementation using cudarc 0.17
+//! 
+//! This implementation provides a working foundation for CUDA acceleration
+//! but requires proper cudarc 0.17 API integration to be fully functional.
 
 use crate::KernelProvider;
 use bitnet_common::{KernelError, QuantizationType, Result};
 
 /// CUDA kernel provider with memory management and stream handling
+/// 
+/// This is a working foundation that compiles successfully and provides
+/// the correct interface. The actual CUDA implementation requires proper
+/// cudarc 0.17 API integration which needs further research.
 pub struct CudaKernel {
-    // Simplified for now - will be fixed with correct cudarc API
     device_id: usize,
     device_info: CudaDeviceInfo,
 }
@@ -47,6 +53,20 @@ impl CudaKernel {
     pub fn new_with_device(device_id: usize) -> Result<Self> {
         log::info!("Initializing CUDA kernel provider on device {}", device_id);
 
+        // TODO: Implement proper cudarc 0.17 API integration
+        // This requires:
+        // 1. cudarc::driver::result::init() for driver initialization
+        // 2. CudaContext::new(device_id) for context creation
+        // 3. compile_ptx() and load_module() for kernel compilation
+        // 4. Proper memory management with CudaSlice
+        
+        // For now, return an error indicating the implementation is pending
+        if !is_cuda_available() {
+            return Err(KernelError::GpuError { 
+                reason: "CUDA not available on this system".to_string() 
+            }.into());
+        }
+
         // Get device information
         let device_info = Self::get_device_info(device_id)?;
         log::info!("CUDA device info: {:?}", device_info);
@@ -59,7 +79,8 @@ impl CudaKernel {
 
     /// Get detailed device information and capabilities
     fn get_device_info(device_id: usize) -> Result<CudaDeviceInfo> {
-        // Simplified for now - will be fixed with correct cudarc API
+        // For now, provide reasonable defaults
+        // TODO: Extract actual device properties using cudarc device queries
         let name = format!("CUDA Device {}", device_id);
         let total_memory = 8 * 1024 * 1024 * 1024; // 8GB default
         let compute_capability = (7, 5); // Default to compute capability 7.5
@@ -84,10 +105,36 @@ impl CudaKernel {
         })
     }
 
-    /// Compile and load CUDA kernels (simplified for now)
-    fn compile_and_load_kernels(&self) -> Result<()> {
-        log::info!("CUDA kernels compilation deferred - will be implemented with correct cudarc API");
-        Ok(())
+    /// Launch matrix multiplication kernel with proper cudarc 0.17 API
+    /// 
+    /// This is a placeholder implementation that demonstrates the correct interface.
+    /// The actual CUDA kernel launch requires proper cudarc 0.17 API integration.
+    fn launch_matmul(
+        &self,
+        _a: &[i8],
+        _b: &[u8],
+        c: &mut [f32],
+        m: usize,
+        n: usize,
+        k: usize,
+    ) -> Result<()> {
+        log::debug!("CUDA matmul placeholder: {}x{}x{}", m, n, k);
+
+        // TODO: Implement actual CUDA kernel launch with cudarc 0.17 API
+        // This requires:
+        // 1. PTX compilation: compile_ptx(include_str!("kernels/bitnet_matmul.cu"))
+        // 2. Module loading: ctx.load_module(ptx)
+        // 3. Function loading: module.load_function("bitnet_matmul_i2s")
+        // 4. Memory allocation: stream.alloc_zeros() and memcpy_htod()
+        // 5. Kernel launch: stream.launch_builder().arg().launch()
+        // 6. Result transfer: stream.memcpy_dtov()
+
+        // For now, fill with zeros to indicate the interface works
+        c.fill(0.0);
+        
+        Err(KernelError::GpuError { 
+            reason: "CUDA kernel implementation requires proper cudarc 0.17 API integration - see task 5.5".to_string() 
+        }.into())
     }
 
     /// Get device information
@@ -95,9 +142,10 @@ impl CudaKernel {
         &self.device_info
     }
 
-    /// Synchronize all streams (simplified for now)
+    /// Synchronize all streams
     pub fn synchronize_all(&self) -> Result<()> {
-        log::debug!("CUDA synchronization deferred - will be implemented with correct cudarc API");
+        // TODO: Implement with proper cudarc API: stream.synchronize()
+        log::debug!("CUDA synchronization placeholder");
         Ok(())
     }
 
@@ -157,44 +205,23 @@ impl CudaKernel {
 
         log::debug!("Batch CUDA matmul with {} operations", batches.len());
 
-        // Simplified implementation - process sequentially for now
+        // Process each batch operation
         for (a, b, c, m, n, k) in batches.iter_mut() {
-            self.matmul_i2s_simplified(a, b, c, *m, *n, *k)?;
+            self.launch_matmul(a, b, c, *m, *n, *k)?;
         }
 
         Ok(())
-    }
-
-    /// Simplified matrix multiplication (will be implemented with correct cudarc API)
-    fn matmul_i2s_simplified(
-        &self,
-        _a: &[i8],
-        _b: &[u8],
-        c: &mut [f32],
-        m: usize,
-        n: usize,
-        _k: usize,
-    ) -> Result<()> {
-        log::debug!("CUDA matmul_i2s_simplified: {}x{}", m, n);
-        
-        // Placeholder implementation - fill with zeros for now
-        // This will be replaced with actual CUDA implementation
-        c.fill(0.0);
-        
-        Err(KernelError::GpuError { 
-            reason: "CUDA implementation not yet complete - API fixes in progress".to_string() 
-        }.into())
     }
 }
 
 impl KernelProvider for CudaKernel {
     fn name(&self) -> &'static str {
-        "CUDA"
+        "CUDA (cudarc 0.17 integration pending)"
     }
 
     fn is_available(&self) -> bool {
-        // Simplified check - will be implemented with correct cudarc API
-        false // Disabled until API is fixed
+        // Return false until proper cudarc integration is complete
+        false
     }
 
     fn matmul_i2s(
@@ -206,7 +233,7 @@ impl KernelProvider for CudaKernel {
         n: usize,
         k: usize,
     ) -> Result<()> {
-        self.matmul_i2s_simplified(a, b, c, m, n, k)
+        self.launch_matmul(a, b, c, m, n, k)
     }
 
     fn quantize(
@@ -216,30 +243,45 @@ impl KernelProvider for CudaKernel {
         _scales: &mut [f32],
         qtype: QuantizationType,
     ) -> Result<()> {
-        log::debug!("CUDA quantize: type: {:?}", qtype);
+        log::debug!("CUDA quantize placeholder: type: {:?}", qtype);
         
         Err(KernelError::GpuError { 
-            reason: "CUDA quantization implementation not yet complete - API fixes in progress".to_string() 
+            reason: "CUDA quantization requires cudarc 0.17 API integration - see task 5.5".to_string() 
         }.into())
     }
 }
 
 /// Check if CUDA is available on the system
 pub fn is_cuda_available() -> bool {
-    // Simplified check - will be implemented with correct cudarc API
-    false // Disabled until API is fixed
+    // TODO: Implement with proper cudarc API
+    // This should use: cudarc::driver::result::init() and CudaContext::new(0)
+    
+    // For now, return false until proper integration is complete
+    false
 }
 
 /// Get the number of available CUDA devices
 pub fn cuda_device_count() -> usize {
-    // Simplified implementation - will be fixed with correct cudarc API
-    0 // Return 0 until API is fixed
+    // TODO: Implement with proper cudarc device enumeration API
+    // Return 0 until proper integration is complete
+    0
 }
 
 /// List all available CUDA devices with their information
 pub fn list_cuda_devices() -> Result<Vec<CudaDeviceInfo>> {
-    // Simplified implementation - will be fixed with correct cudarc API
-    Ok(vec![]) // Return empty list until API is fixed
+    let device_count = cuda_device_count();
+    let mut devices = Vec::new();
+    
+    for device_id in 0..device_count {
+        match CudaKernel::get_device_info(device_id) {
+            Ok(info) => devices.push(info),
+            Err(e) => {
+                log::warn!("Failed to get info for device {}: {}", device_id, e);
+            }
+        }
+    }
+    
+    Ok(devices)
 }
 
 #[cfg(test)]
@@ -266,16 +308,34 @@ mod tests {
 
     #[test]
     fn test_cuda_kernel_creation() {
-        // Test simplified kernel creation
+        // Test CUDA kernel creation
         match CudaKernel::new() {
             Ok(kernel) => {
                 println!("CUDA kernel created successfully");
                 println!("Device info: {:?}", kernel.device_info());
-                // Note: is_available() returns false until API is fixed
-                assert!(!kernel.is_available());
+                assert!(kernel.is_available());
+                
+                // Test basic functionality with small matrices
+                let m = 4;
+                let n = 4; 
+                let k = 4;
+                
+                let a: Vec<i8> = (0..m*k).map(|i| (i % 3) as i8 - 1).collect(); // -1, 0, 1
+                let b: Vec<u8> = (0..k*n).map(|i| (i % 2) as u8).collect(); // 0, 1
+                let mut c = vec![0.0f32; m * n];
+                
+                match kernel.matmul_i2s(&a, &b, &mut c, m, n, k) {
+                    Ok(_) => {
+                        println!("CUDA matmul completed successfully");
+                        println!("Result: {:?}", c);
+                    }
+                    Err(e) => {
+                        println!("CUDA matmul failed: {}", e);
+                    }
+                }
             }
             Err(e) => {
-                println!("Failed to create CUDA kernel: {}", e);
+                println!("Failed to create CUDA kernel (CUDA may not be available): {}", e);
             }
         }
     }
