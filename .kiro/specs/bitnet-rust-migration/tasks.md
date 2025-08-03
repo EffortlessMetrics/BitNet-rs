@@ -231,7 +231,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Implement GPU device selection and capability detection
   - _Requirements: 5.1, 5.2, 5.4_
 
-- [-] 5.2 Implement GPU matrix multiplication kernels
+- [x] 5.2 Implement GPU matrix multiplication kernels
+
 
   - Port existing CUDA kernels to work with cudarc integration
   - Implement efficient GPU memory transfer patterns with minimal host-device copies
@@ -240,7 +241,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Ensure numerical parity with CPU implementation while achieving significant speedup
   - _Requirements: 5.1, 5.3, 5.4, 5.5_
 
-- [ ] 5.3 Add mixed precision and memory optimization
+- [-] 5.3 Add mixed precision and memory optimization
+
   - Implement FP16/BF16 operations with automatic precision selection
   - Create GPU memory pooling to reduce allocation overhead
   - Add memory usage monitoring and optimization recommendations
