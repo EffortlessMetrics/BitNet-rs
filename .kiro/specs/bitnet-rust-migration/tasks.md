@@ -234,6 +234,7 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
 
 
 
+
   - Fix cudarc API imports (CudaDevice, CudaModule from cudarc::driver)
   - Replace non-existent get_func calls with proper module.get_func() API
   - Remove CudaGraph thread safety issues by simplifying to direct kernel launches
@@ -241,7 +242,18 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Implement proper error handling for CUDA operations with detailed logging
   - _Requirements: 5.1, 5.2, 5.4_
 
-- [ ] 5.5 Validate GPU kernel correctness and performance
+- [ ] 5.5 Implement proper cudarc 0.17 API integration with working CUDA kernels
+  - Replace placeholder implementations with actual cudarc 0.17 API calls
+  - Implement proper CUDA context initialization with cudarc::driver::result::init()
+  - Create working PTX compilation and module loading using compile_ptx and CudaContext::load_module
+  - Implement correct memory management with CudaSlice and memcpy_htod/memcpy_dtov operations
+  - Add proper kernel launch using launch_builder pattern with unsafe launch calls
+  - Create basic bitnet_matmul_i2s CUDA kernel for matrix multiplication
+  - Implement numerical validation against CPU kernels with configurable tolerance
+  - Add comprehensive error handling with detailed CUDA error reporting
+  - _Requirements: 5.1, 5.2, 5.4_
+
+- [ ] 5.6 Validate GPU kernel correctness and performance
   - Create comprehensive test suite comparing GPU vs CPU kernel outputs
   - Implement numerical accuracy validation with configurable tolerance (1e-6)
   - Add performance benchmarks measuring GPU vs CPU speedup ratios

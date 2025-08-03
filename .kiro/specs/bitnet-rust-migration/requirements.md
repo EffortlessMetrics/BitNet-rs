@@ -60,11 +60,12 @@ This specification defines the requirements for migrating the BitNet.cpp inferen
 
 #### Acceptance Criteria
 
-1. WHEN CUDA support is enabled THEN the system SHALL integrate with cudarc for safe CUDA kernel execution and memory management
-2. WHEN GPU kernels are compiled THEN the system SHALL detect NVCC availability and compute capability, falling back gracefully if CUDA is unavailable
-3. WHEN GPU inference is performed THEN the system SHALL maintain numerical parity with CPU implementation while achieving significant speedup
-4. WHEN GPU memory is managed THEN the system SHALL implement efficient memory pooling and avoid unnecessary host-device transfers
-5. WHEN mixed precision is used THEN the system SHALL support FP16/BF16 operations with automatic precision selection based on hardware capabilities
+1. WHEN CUDA support is enabled THEN the system SHALL integrate with cudarc 0.17 for safe CUDA kernel execution and memory management using proper API patterns
+2. WHEN cudarc integration is implemented THEN the system SHALL use cudarc::driver::result::init() for initialization, CudaContext::load_module() for PTX loading, and launch_builder() for kernel execution
+3. WHEN GPU kernels are compiled THEN the system SHALL detect NVCC availability and compute capability, falling back gracefully if CUDA is unavailable
+4. WHEN GPU inference is performed THEN the system SHALL maintain numerical parity with CPU implementation while achieving significant speedup
+5. WHEN GPU memory is managed THEN the system SHALL implement efficient memory pooling using CudaSlice with memcpy_htod/memcpy_dtov operations and avoid unnecessary host-device transfers
+6. WHEN mixed precision is used THEN the system SHALL support FP16/BF16 operations with automatic precision selection based on hardware capabilities
 
 ### Requirement 6: Inference Engines
 
