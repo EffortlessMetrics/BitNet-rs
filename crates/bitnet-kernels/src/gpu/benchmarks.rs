@@ -143,7 +143,7 @@ impl GpuBenchmark {
 
     /// Generate test matrix with int8 values
     fn generate_test_matrix_i8(&self, size: usize) -> Vec<i8> {
-        (0..size).map(|i| ((i % 256) as i8).wrapping_sub(128)).collect()
+        (0..size).map(|i| ((i % 256) as u8).wrapping_sub(128) as i8).collect()
     }
 
     /// Generate test matrix with uint8 values (2-bit packed)
