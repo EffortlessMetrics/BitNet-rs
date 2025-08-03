@@ -2,7 +2,6 @@
 
 use crate::KernelProvider;
 use bitnet_common::{KernelError, QuantizationType, Result};
-use std::sync::Arc;
 
 /// CUDA kernel provider with memory management and stream handling
 pub struct CudaKernel {
@@ -150,7 +149,7 @@ impl CudaKernel {
     /// Batch matrix multiplication for multiple concurrent requests
     pub fn batch_matmul_i2s(
         &self,
-        batches: &[(&[i8], &[u8], &mut [f32], usize, usize, usize)],
+        batches: &mut [(&[i8], &[u8], &mut [f32], usize, usize, usize)],
     ) -> Result<()> {
         if batches.is_empty() {
             return Ok(());
@@ -159,7 +158,7 @@ impl CudaKernel {
         log::debug!("Batch CUDA matmul with {} operations", batches.len());
 
         // Simplified implementation - process sequentially for now
-        for (_i, (a, b, c, m, n, k)) in batches.iter().enumerate() {
+        for (a, b, c, m, n, k) in batches.iter_mut() {
             self.matmul_i2s_simplified(a, b, c, *m, *n, *k)?;
         }
 
