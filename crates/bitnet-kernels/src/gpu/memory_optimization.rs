@@ -1,7 +1,7 @@
 //! GPU memory optimization and monitoring
 
 use bitnet_common::{KernelError, Result};
-use cudarc::prelude::*;
+use cudarc::driver::{CudaDevice, CudaSlice};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};

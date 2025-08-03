@@ -1,8 +1,8 @@
 //! Mixed precision support for GPU kernels
 
-use crate::KernelProvider;
-use bitnet_common::{KernelError, QuantizationType, Result};
-use cudarc::prelude::*;
+use bitnet_common::{KernelError, Result};
+use cudarc::driver::{CudaDevice, CudaModule, CudaSlice, LaunchConfig};
+use cudarc::nvrtc::{compile_ptx_with_opts, PtxJitOptions, OptLevel};
 use std::sync::Arc;
 
 /// Mixed precision configuration
