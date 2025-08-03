@@ -38,30 +38,45 @@ pub struct KernelManager {
 
 impl KernelManager {
     pub fn new() -> Self {
-        let providers: Vec<Box<dyn KernelProvider>> = vec![
+        let mut providers: Vec<Box<dyn KernelProvider>> = vec![
             Box::new(cpu::FallbackKernel),
         ];
         
-        // Add optimized kernels in order of preference (best first)
+        // Add GPU kernels first (highest priority)
+        #[cfg(feature = "cuda")]
+        {
+            if let Ok(cuda_kernel) = gpu::CudaKernel::new() {
+                if cuda_kernel.is_available() {
+                    log::info!("CUDA kernel available, adding to providers");
+                    providers.insert(0, Box::new(cuda_kernel));
+                }
+            } else {
+                log::debug!("CUDA kernel not available");
+            }
+        }
+        
+        // Add optimized CPU kernels in order of preference (best first)
         // Note: AVX-512 is disabled due to unstable Rust features
         // #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
         // {
         //     if is_x86_feature_detected!("avx512f") {
-        //         providers.insert(0, Box::new(cpu::Avx512Kernel));
+        //         providers.insert(-1, Box::new(cpu::Avx512Kernel));
         //     }
         // }
         
         #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
         {
             if is_x86_feature_detected!("avx2") {
-                providers.insert(0, Box::new(cpu::Avx2Kernel));
+                let insert_pos = if providers.len() > 1 { providers.len() - 1 } else { 0 };
+                providers.insert(insert_pos, Box::new(cpu::Avx2Kernel));
             }
         }
         
         #[cfg(all(target_arch = "aarch64", feature = "neon"))]
         {
             if std::arch::is_aarch64_feature_detected!("neon") {
-                providers.insert(0, Box::new(cpu::NeonKernel));
+                let insert_pos = if providers.len() > 1 { providers.len() - 1 } else { 0 };
+                providers.insert(insert_pos, Box::new(cpu::NeonKernel));
             }
         }
         
