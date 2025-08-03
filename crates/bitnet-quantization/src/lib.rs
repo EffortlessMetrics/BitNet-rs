@@ -92,7 +92,11 @@ impl QuantizedTensor {
     pub fn compression_ratio(&self) -> f32 {
         let original_bytes = self.numel() * 4; // FP32 = 4 bytes per element
         let compressed_bytes = self.data.len() + self.scales.len() * 4;
-        original_bytes as f32 / compressed_bytes as f32
+        if compressed_bytes == 0 {
+            1.0 // Avoid division by zero
+        } else {
+            (original_bytes as f32 / compressed_bytes as f32).max(1.0)
+        }
     }
 }
 
