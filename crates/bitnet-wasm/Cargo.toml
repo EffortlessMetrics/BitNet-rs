@@ -8,20 +8,90 @@ homepage.workspace = true
 authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "WebAssembly bindings for BitNet"
+description = "WebAssembly bindings for BitNet 1-bit LLM inference"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common" }
-bitnet-inference = { path = "../bitnet-inference" }
-wasm-bindgen.workspace = true
-js-sys.workspace = true
-web-sys.workspace = true
-anyhow.workspace = true
+bitnet-models = { path = "../bitnet-models" }
+bitnet-quantization = { path = "../bitnet-quantization" }
+bitnet-kernels = { path = "../bitnet-kernels", features = ["cpu-fallback"] }
+bitnet-inference = { path = "../bitnet-inference", features = ["cpu"] }
+bitnet-tokenizers = { path = "../bitnet-tokenizers" }
+
+# WebAssembly specific dependencies
+wasm-bindgen = { workspace = true, features = ["serde-serialize"] }
+wasm-bindgen-futures = "0.4"
+js-sys = { workspace = true }
+web-sys = { workspace = true, features = [
+    "console",
+    "Performance",
+    "Window",
+    "Worker",
+    "MessageEvent",
+    "MessagePort",
+    "Blob",
+    "Url",
+    "Response",
+    "Request",
+    "Headers",
+    "ReadableStream",
+    "ReadableStreamDefaultReader",
+    "Uint8Array",
+    "ArrayBuffer",
+    "Promise",
+    "AbortController",
+    "AbortSignal",
+] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde-wasm-bindgen = "0.6"
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Async support
+futures = { workspace = true }
+wasm-streams = "0.4"
+
+# Memory management
+wee_alloc = { version = "0.4", optional = true }
+
+# Logging for WASM
+console_error_panic_hook = "0.1"
+wasm-logger = "0.2"
 
 [features]
 default = ["browser"]
-browser = []
+browser = ["wee_alloc"]
 nodejs = []
+embedded = []
+debug = ["console_error_panic_hook"]
+
+[dependencies.web-sys]
+workspace = true
+features = [
+    "console",
+    "Performance",
+    "Window",
+    "Worker",
+    "MessageEvent",
+    "MessagePort",
+    "Blob",
+    "Url",
+    "Response",
+    "Request",
+    "Headers",
+    "ReadableStream",
+    "ReadableStreamDefaultReader",
+    "Uint8Array",
+    "ArrayBuffer",
+    "Promise",
+    "AbortController",
+    "AbortSignal",
+]
