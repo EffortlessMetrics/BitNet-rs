@@ -162,7 +162,7 @@ impl GpuBenchmark {
         let cpu_kernel: Box<dyn KernelProvider> = {
             #[cfg(target_arch = "x86_64")]
             {
-                if is_x86_feature_detected!("avx2") {
+                if std::is_x86_feature_detected!("avx2") {
                     Box::new(Avx2Kernel)
                 } else {
                     Box::new(FallbackKernel)

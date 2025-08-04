@@ -4,7 +4,10 @@
 mod tests {
     use super::*;
     use crate::KernelProvider;
+    use crate::gpu::{CudaKernel, is_cuda_available, cuda_device_count, GpuBenchmark, BenchmarkConfig, 
+                     OptimizedMemoryPool, MemoryPoolConfig, MixedPrecisionKernel, PrecisionMode};
     use bitnet_common::QuantizationType;
+    use std::sync::Arc;
 
     #[test]
     fn test_cuda_availability() {
