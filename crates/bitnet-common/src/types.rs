@@ -37,6 +37,20 @@ impl Default for DeviceType {
     }
 }
 
+/// Device abstraction for computation
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Device {
+    Cpu,
+    Cuda(usize),
+    Metal,
+}
+
+impl Default for Device {
+    fn default() -> Self {
+        Self::Cpu
+    }
+}
+
 /// Generation configuration for inference
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerationConfig {

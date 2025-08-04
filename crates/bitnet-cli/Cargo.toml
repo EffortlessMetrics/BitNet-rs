@@ -18,13 +18,27 @@ path = "src/main.rs"
 bitnet-common = { path = "../bitnet-common" }
 bitnet-models = { path = "../bitnet-models" }
 bitnet-inference = { path = "../bitnet-inference" }
+bitnet-quantization = { path = "../bitnet-quantization" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers" }
+candle-core.workspace = true
 anyhow.workspace = true
-clap.workspace = true
-tokio.workspace = true
+clap = { workspace = true, features = ["derive", "env", "color"] }
+tokio = { workspace = true, features = ["full"] }
 tracing.workspace = true
-tracing-subscriber.workspace = true
-indicatif.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
+indicatif = { workspace = true, features = ["tokio"] }
 serde_json.workspace = true
+serde = { workspace = true, features = ["derive"] }
+toml.workspace = true
+futures.workspace = true
+console.workspace = true
+humantime.workspace = true
+humansize.workspace = true
+crossterm.workspace = true
+clap_complete.workspace = true
+num_cpus.workspace = true
+dirs.workspace = true
+chrono = { version = "0.4", features = ["serde"] }
 
 [features]
 default = ["cpu"]
