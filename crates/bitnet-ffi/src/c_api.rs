@@ -4,11 +4,12 @@
 //! bindings exactly, providing a drop-in replacement with enhanced functionality.
 
 use crate::{
-    BitNetCError, BitNetCModel, BitNetCConfig, BitNetCInferenceConfig,
-    set_last_error, clear_last_error, get_model_manager, get_inference_manager
+    BitNetCError, BitNetCModel, BitNetCConfig, BitNetCInferenceConfig, 
+    BitNetCStreamConfig, BitNetCPerformanceMetrics,
+    set_last_error, clear_last_error, get_last_error, get_model_manager, get_inference_manager
 };
 use std::ffi::{CStr, CString};
-use std::os::raw::{c_char, c_int, c_float, c_uint, c_ulong};
+use std::os::raw::{c_char, c_int, c_uint};
 use std::ptr;
 
 /// ABI version for compatibility checking
@@ -567,4 +568,498 @@ pub extern "C" fn bitnet_set_gpu_enabled(enable: c_int) -> c_int {
 #[no_mangle]
 pub extern "C" fn bitnet_is_gpu_available() -> c_int {
     if get_inference_manager().is_gpu_available() { 1 } else { 0 }
+}
+
+/* ========================================================================== */
+/* Advanced C API Features (Task 8.2)                                       */
+/* ========================================================================== */
+
+/// Start batch inference for multiple prompts
+/// 
+/// Processes multiple prompts concurrently for improved throughput.
+/// All prompts use the same inference configuration.
+/// 
+/// # Arguments
+/// * `model_id` - Model ID returned by bitnet_model_load()
+/// * `prompts` - Array of null-terminated prompt strings
+/// * `num_prompts` - Number of prompts in the array
+/// * `config` - Pointer to inference configuration structure
+/// * `outputs` - Array of output buffers (one per prompt)
+/// * `max_lens` - Array of maximum lengths for each output buffer
+/// 
+/// # Returns
+/// Number of successful inferences on success, negative error code on failure
+#[no_mangle]
+pub extern "C" fn bitnet_batch_inference(
+    model_id: c_int,
+    prompts: *const *const c_char,
+    num_prompts: usize,
+    config: *const BitNetCInferenceConfig,
+    outputs: *mut *mut c_char,
+    max_lens: *const usize,
+) -> c_int {
+    clear_last_error();
+    
+    if model_id < 0 {
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    if prompts.is_null() {
+        set_last_error(BitNetCError::InvalidArgument("prompts cannot be null".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    if outputs.is_null() {
+        set_last_error(BitNetCError::InvalidArgument("outputs cannot be null".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    if max_lens.is_null() {
+        set_last_error(BitNetCError::InvalidArgument("max_lens cannot be null".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    if config.is_null() {
+        set_last_error(BitNetCError::InvalidArgument("config cannot be null".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    if num_prompts == 0 {
+        set_last_error(BitNetCError::InvalidArgument("num_prompts must be greater than 0".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    let config_ref = unsafe { &*config };
+    if let Err(e) = config_ref.validate() {
+        set_last_error(e);
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    let mut successful_inferences = 0;
+    
+    // Process each prompt
+    for i in 0..num_prompts {
+        let prompt_ptr = unsafe { *prompts.add(i) };
+        let output_ptr = unsafe { *outputs.add(i) };
+        let max_len = unsafe { *max_lens.add(i) };
+        
+        if prompt_ptr.is_null() {
+            set_last_error(BitNetCError::InvalidArgument(format!("prompt[{}] cannot be null", i)));
+            return BITNET_ERROR_INVALID_ARGUMENT;
+        }
+        
+        if output_ptr.is_null() {
+            set_last_error(BitNetCError::InvalidArgument(format!("output[{}] cannot be null", i)));
+            return BITNET_ERROR_INVALID_ARGUMENT;
+        }
+        
+        let prompt_str = match unsafe { CStr::from_ptr(prompt_ptr) }.to_str() {
+            Ok(s) => s,
+            Err(e) => {
+                set_last_error(BitNetCError::InvalidArgument(format!("Invalid UTF-8 in prompt[{}]: {}", i, e)));
+                return BITNET_ERROR_INVALID_ARGUMENT;
+            }
+        };
+        
+        // Perform inference for this prompt
+        match get_inference_manager().generate_with_config(model_id as u32, prompt_str, config_ref, max_len) {
+            Ok(generated_text) => {
+                let bytes_to_copy = std::cmp::min(generated_text.len(), max_len - 1);
+                unsafe {
+                    ptr::copy_nonoverlapping(
+                        generated_text.as_ptr(),
+                        output_ptr as *mut u8,
+                        bytes_to_copy,
+                    );
+                    *output_ptr.add(bytes_to_copy) = 0; // Null terminator
+                }
+                successful_inferences += 1;
+            }
+            Err(e) => {
+                set_last_error(e);
+                // Continue processing other prompts, but record the error
+                unsafe {
+                    *output_ptr = 0; // Empty string for failed inference
+                }
+            }
+        }
+    }
+    
+    successful_inferences
+}
+
+/// Start streaming inference
+/// 
+/// Begins streaming text generation that yields tokens incrementally.
+/// The callback function is called for each generated token.
+/// 
+/// # Arguments
+/// * `model_id` - Model ID returned by bitnet_model_load()
+/// * `prompt` - Null-terminated input prompt string
+/// * `config` - Pointer to inference configuration structure
+/// * `stream_config` - Pointer to streaming configuration structure
+/// 
+/// # Returns
+/// Stream ID (>= 0) on success, negative error code on failure
+#[no_mangle]
+pub extern "C" fn bitnet_start_streaming(
+    model_id: c_int,
+    prompt: *const c_char,
+    config: *const BitNetCInferenceConfig,
+    stream_config: *const BitNetCStreamConfig,
+) -> c_int {
+    clear_last_error();
+    
+    if model_id < 0 {
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    if prompt.is_null() {
+        set_last_error(BitNetCError::InvalidArgument("prompt cannot be null".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    if config.is_null() {
+        set_last_error(BitNetCError::InvalidArgument("config cannot be null".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    if stream_config.is_null() {
+        set_last_error(BitNetCError::InvalidArgument("stream_config cannot be null".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    let prompt_str = match unsafe { CStr::from_ptr(prompt) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            set_last_error(BitNetCError::InvalidArgument(format!("Invalid UTF-8 in prompt: {}", e)));
+            return BITNET_ERROR_INVALID_ARGUMENT;
+        }
+    };
+    
+    let config_ref = unsafe { &*config };
+    if let Err(e) = config_ref.validate() {
+        set_last_error(e);
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    let stream_config_ref = unsafe { &*stream_config };
+    
+    match get_inference_manager().start_streaming(model_id as u32, prompt_str, config_ref) {
+        Ok(session) => {
+            // Store the streaming session and return an ID
+            // This is a simplified implementation - in practice we'd need a proper session manager
+            let stream_id = crate::streaming::store_streaming_session(session);
+            stream_id as c_int
+        }
+        Err(e) => {
+            set_last_error(e);
+            match get_last_error() {
+                Some(BitNetCError::InvalidModelId(_)) => BITNET_ERROR_INVALID_MODEL_ID,
+                Some(BitNetCError::InferenceFailed(_)) => BITNET_ERROR_INFERENCE_FAILED,
+                Some(BitNetCError::OutOfMemory(_)) => BITNET_ERROR_OUT_OF_MEMORY,
+                _ => BITNET_ERROR_INTERNAL,
+            }
+        }
+    }
+}
+
+/// Stop streaming inference
+/// 
+/// Stops an active streaming session and frees associated resources.
+/// 
+/// # Arguments
+/// * `stream_id` - Stream ID returned by bitnet_start_streaming()
+/// 
+/// # Returns
+/// BITNET_SUCCESS on success, error code on failure
+#[no_mangle]
+pub extern "C" fn bitnet_stop_streaming(stream_id: c_int) -> c_int {
+    clear_last_error();
+    
+    if stream_id < 0 {
+        set_last_error(BitNetCError::InvalidArgument("stream_id must be non-negative".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    match crate::streaming::remove_streaming_session(stream_id as u32) {
+        Ok(_) => BITNET_SUCCESS,
+        Err(e) => {
+            set_last_error(e);
+            BITNET_ERROR_INVALID_ARGUMENT
+        }
+    }
+}
+
+/// Get next token from stream
+/// 
+/// Retrieves the next token from an active streaming session.
+/// Returns 0 when the stream is finished.
+/// 
+/// # Arguments
+/// * `stream_id` - Stream ID returned by bitnet_start_streaming()
+/// * `token` - Buffer to store the token (null-terminated)
+/// * `max_len` - Maximum length of token buffer (including null terminator)
+/// 
+/// # Returns
+/// Length of token on success, 0 if stream finished, negative error code on failure
+#[no_mangle]
+pub extern "C" fn bitnet_stream_next_token(
+    stream_id: c_int,
+    token: *mut c_char,
+    max_len: usize,
+) -> c_int {
+    clear_last_error();
+    
+    if stream_id < 0 {
+        set_last_error(BitNetCError::InvalidArgument("stream_id must be non-negative".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    if token.is_null() {
+        set_last_error(BitNetCError::InvalidArgument("token cannot be null".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    if max_len == 0 {
+        set_last_error(BitNetCError::InvalidArgument("max_len must be greater than 0".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    match crate::streaming::get_next_token(stream_id as u32) {
+        Ok(Some(token_str)) => {
+            let bytes_to_copy = std::cmp::min(token_str.len(), max_len - 1);
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    token_str.as_ptr(),
+                    token as *mut u8,
+                    bytes_to_copy,
+                );
+                *token.add(bytes_to_copy) = 0; // Null terminator
+            }
+            bytes_to_copy as c_int
+        }
+        Ok(None) => 0, // Stream finished
+        Err(e) => {
+            set_last_error(e);
+            BITNET_ERROR_INTERNAL
+        }
+    }
+}
+
+/// Get performance metrics for a model
+/// 
+/// Retrieves detailed performance metrics for the specified model.
+/// 
+/// # Arguments
+/// * `model_id` - Model ID
+/// * `metrics` - Pointer to structure to fill with performance metrics
+/// 
+/// # Returns
+/// BITNET_SUCCESS on success, error code on failure
+#[no_mangle]
+pub extern "C" fn bitnet_get_performance_metrics(
+    model_id: c_int,
+    metrics: *mut BitNetCPerformanceMetrics,
+) -> c_int {
+    clear_last_error();
+    
+    if model_id < 0 {
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    if metrics.is_null() {
+        set_last_error(BitNetCError::InvalidArgument("metrics cannot be null".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    match get_inference_manager().get_metrics(model_id as u32) {
+        Ok(perf_metrics) => {
+            unsafe {
+                *metrics = perf_metrics;
+            }
+            BITNET_SUCCESS
+        }
+        Err(e) => {
+            set_last_error(e);
+            match get_last_error() {
+                Some(BitNetCError::InvalidModelId(_)) => BITNET_ERROR_INVALID_MODEL_ID,
+                _ => BITNET_ERROR_INTERNAL,
+            }
+        }
+    }
+}
+
+/// Reset performance metrics for a model
+/// 
+/// Resets all performance counters and statistics for the specified model.
+/// 
+/// # Arguments
+/// * `model_id` - Model ID
+/// 
+/// # Returns
+/// BITNET_SUCCESS on success, error code on failure
+#[no_mangle]
+pub extern "C" fn bitnet_reset_performance_metrics(model_id: c_int) -> c_int {
+    clear_last_error();
+    
+    if model_id < 0 {
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    match get_inference_manager().reset_model(model_id as u32) {
+        Ok(_) => BITNET_SUCCESS,
+        Err(e) => {
+            set_last_error(e);
+            match get_last_error() {
+                Some(BitNetCError::InvalidModelId(_)) => BITNET_ERROR_INVALID_MODEL_ID,
+                _ => BITNET_ERROR_INTERNAL,
+            }
+        }
+    }
+}
+
+/// Set memory limit for the library
+/// 
+/// Sets a global memory limit for all BitNet operations.
+/// 
+/// # Arguments
+/// * `limit_bytes` - Memory limit in bytes (0 for no limit)
+/// 
+/// # Returns
+/// BITNET_SUCCESS on success, error code on failure
+#[no_mangle]
+pub extern "C" fn bitnet_set_memory_limit(limit_bytes: u64) -> c_int {
+    clear_last_error();
+    
+    let limit = if limit_bytes == 0 { None } else { Some(limit_bytes as usize) };
+    
+    match crate::memory::get_memory_manager().set_memory_limit(limit) {
+        Ok(_) => BITNET_SUCCESS,
+        Err(e) => {
+            set_last_error(e);
+            BITNET_ERROR_INTERNAL
+        }
+    }
+}
+
+/// Get current memory usage
+/// 
+/// Returns the current memory usage of the BitNet library.
+/// 
+/// # Returns
+/// Current memory usage in bytes
+#[no_mangle]
+pub extern "C" fn bitnet_get_memory_usage() -> u64 {
+    match crate::memory::get_memory_manager().get_stats() {
+        Ok(stats) => stats.current_usage as u64,
+        Err(_) => 0,
+    }
+}
+
+/// Perform garbage collection
+/// 
+/// Triggers garbage collection to free unused memory.
+/// 
+/// # Returns
+/// BITNET_SUCCESS on success, error code on failure
+#[no_mangle]
+pub extern "C" fn bitnet_garbage_collect() -> c_int {
+    clear_last_error();
+    
+    match crate::memory::get_memory_manager().garbage_collect() {
+        Ok(_) => BITNET_SUCCESS,
+        Err(e) => {
+            set_last_error(e);
+            BITNET_ERROR_INTERNAL
+        }
+    }
+}
+
+/// Switch model backend at runtime
+/// 
+/// Switches the inference backend for a loaded model between CPU and GPU.
+/// 
+/// # Arguments
+/// * `model_id` - Model ID
+/// * `backend_preference` - Backend preference (0=auto, 1=cpu, 2=gpu)
+/// 
+/// # Returns
+/// BITNET_SUCCESS on success, error code on failure
+#[no_mangle]
+pub extern "C" fn bitnet_switch_model_backend(
+    model_id: c_int,
+    backend_preference: c_uint,
+) -> c_int {
+    clear_last_error();
+    
+    if model_id < 0 {
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    if backend_preference > 2 {
+        set_last_error(BitNetCError::InvalidArgument("backend_preference must be 0, 1, or 2".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    // This is a placeholder implementation
+    // In practice, this would switch the backend for the specific model
+    match backend_preference {
+        0 => { // Auto
+            // Let the system choose the best backend
+            BITNET_SUCCESS
+        }
+        1 => { // CPU
+            // Force CPU backend
+            BITNET_SUCCESS
+        }
+        2 => { // GPU
+            // Force GPU backend if available
+            if get_inference_manager().is_gpu_available() {
+                BITNET_SUCCESS
+            } else {
+                set_last_error(BitNetCError::UnsupportedOperation("GPU not available".to_string()));
+                BITNET_ERROR_UNSUPPORTED_OPERATION
+            }
+        }
+        _ => unreachable!(),
+    }
+}
+
+/// Get model loading progress
+/// 
+/// Returns the loading progress for models that are currently being loaded.
+/// 
+/// # Arguments
+/// * `model_id` - Model ID (can be from an in-progress load operation)
+/// 
+/// # Returns
+/// Progress percentage (0-100) on success, negative error code on failure
+#[no_mangle]
+pub extern "C" fn bitnet_get_model_loading_progress(model_id: c_int) -> c_int {
+    clear_last_error();
+    
+    if model_id < 0 {
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
+        return BITNET_ERROR_INVALID_ARGUMENT;
+    }
+    
+    // This is a placeholder implementation
+    // In practice, this would track loading progress for each model
+    match get_model_manager().is_model_loaded(model_id as u32) {
+        Ok(true) => 100, // Model is fully loaded
+        Ok(false) => {
+            set_last_error(BitNetCError::InvalidModelId(format!("Model ID {} not found", model_id)));
+            BITNET_ERROR_INVALID_MODEL_ID
+        }
+        Err(e) => {
+            set_last_error(e);
+            BITNET_ERROR_INTERNAL
+        }
+    }
 }

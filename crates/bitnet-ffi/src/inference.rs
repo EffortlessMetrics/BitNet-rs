@@ -4,13 +4,13 @@
 //! and performance monitoring for the C API.
 
 use crate::{BitNetCError, BitNetCInferenceConfig, BitNetCPerformanceMetrics, get_model_manager};
-use bitnet_common::{GenerationConfig, PerformanceMetrics};
+// use bitnet_common::PerformanceMetrics;
 use bitnet_inference::{InferenceEngine, BitNetInferenceEngine, InferenceConfig, BackendPreference};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock, Mutex};
 use std::time::Instant;
-use std::ffi::{CStr, CString};
-use std::os::raw::{c_char, c_uint};
+// use std::ffi::{CStr, CString};
+// use std::os::raw::{c_char, c_uint};
 
 /// Thread-safe inference manager
 pub struct InferenceManager {
@@ -57,7 +57,7 @@ impl InferenceManager {
         let generation_config = config.to_generation_config();
 
         // Perform inference
-        let start_time = Instant::now();
+        let _start_time = Instant::now();
         let result = {
             let mut engine_guard = engine.lock()
                 .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string()))?;
@@ -215,7 +215,7 @@ impl InferenceManager {
         }
 
         // Create new engine
-        let model = get_model_manager().get_model(model_id)?;
+        let _model = get_model_manager().get_model(model_id)?;
         
         let inference_config = {
             let default_config = self.default_config.read()
@@ -312,11 +312,16 @@ impl bitnet_models::Model for MockInferenceModel {
         CONFIG.get_or_init(|| bitnet_common::BitNetConfig::default())
     }
 
-    fn forward(&self, _input: &bitnet_common::Tensor) -> bitnet_common::Result<bitnet_common::Tensor> {
-        Err(bitnet_common::BitNetError::Internal(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Mock model forward not implemented"
-        )))
+    fn forward(&self, _input: &bitnet_common::BitNetTensor) -> bitnet_common::Result<bitnet_common::BitNetTensor> {
+        // Mock implementation - create a dummy tensor
+        use candle_core::Device;
+        let device = Device::Cpu;
+        bitnet_common::BitNetTensor::zeros(&[1, 1], candle_core::DType::F32, &device)
+    }
+
+    fn generate(&self, _tokens: &[u32]) -> bitnet_common::Result<Vec<u32>> {
+        // Mock implementation
+        Ok(vec![1, 2, 3]) // Return some dummy tokens
     }
 }
 
@@ -349,13 +354,14 @@ mod tests {
     fn test_streaming_session_creation() {
         // This would require a real stream implementation
         // For now, we just test that the struct can be created
-        let buffer = Vec::new();
+        let buffer: Vec<String> = Vec::new();
         assert_eq!(buffer.len(), 0);
     }
 
     #[test]
     fn test_mock_model() {
         let model = MockInferenceModel::new();
+        use bitnet_models::Model;
         let config = model.config();
         assert_eq!(config.model.vocab_size, 32000); // Default value
     }

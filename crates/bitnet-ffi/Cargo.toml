@@ -22,9 +22,13 @@ thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 num_cpus = "1.16"
+candle-core.workspace = true
 
 # Optional CUDA support
 cudarc = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [features]
 default = ["cpu"]

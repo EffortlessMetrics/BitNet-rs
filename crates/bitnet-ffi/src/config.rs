@@ -4,9 +4,9 @@
 //! the existing C++ API while providing enhanced functionality.
 
 use crate::BitNetCError;
-use bitnet_common::{BitNetConfig, ModelFormat, QuantizationType, DeviceType};
+use bitnet_common::{BitNetConfig, ModelFormat, QuantizationType};
 use std::os::raw::{c_char, c_int, c_uint, c_float, c_ulong};
-use std::ffi::{CStr, CString};
+use std::ffi::CStr;
 
 /// C API model configuration structure
 #[repr(C)]
@@ -275,7 +275,7 @@ impl BitNetCInferenceConfig {
             top_p: if self.top_p == 0.0 { None } else { Some(self.top_p) },
             repetition_penalty: self.repetition_penalty,
             do_sample: self.do_sample != 0,
-            seed: if self.seed == 0 { None } else { Some(self.seed) },
+            seed: if self.seed == 0 { None } else { Some(self.seed as u64) },
         }
     }
 }
@@ -334,10 +334,10 @@ impl BitNetCPerformanceMetrics {
 }
 
 /// C API streaming callback function type
-pub type BitNetCStreamCallback = extern "C" fn(
+pub type BitNetCStreamCallback = Option<extern "C" fn(
     token: *const c_char,
     user_data: *mut std::ffi::c_void,
-) -> c_int;
+) -> c_int>;
 
 /// C API streaming configuration
 #[repr(C)]

@@ -229,7 +229,7 @@ impl<T> Drop for ThreadSafeRefCounter<T> {
     }
 }
 
-/// Thread-local storage for C API state
+// Thread-local storage for C API state
 thread_local! {
     static THREAD_LOCAL_STATE: std::cell::RefCell<HashMap<String, Box<dyn std::any::Any>>> = 
         std::cell::RefCell::new(HashMap::new());
@@ -467,7 +467,7 @@ mod tests {
         let manager = ThreadManager::new();
         assert!(manager.initialize().is_ok());
         
-        let original_threads = manager.get_num_threads();
+        let _original_threads = manager.get_num_threads();
         assert!(manager.set_num_threads(4).is_ok());
         assert_eq!(manager.get_num_threads(), 4);
         

@@ -11,6 +11,7 @@ pub mod config;
 pub mod inference;
 pub mod memory;
 pub mod threading;
+pub mod streaming;
 
 pub use c_api::*;
 pub use error::*;
@@ -19,3 +20,4 @@ pub use config::*;
 pub use inference::*;
 pub use memory::*;
 pub use threading::*;
+pub use streaming::*;
