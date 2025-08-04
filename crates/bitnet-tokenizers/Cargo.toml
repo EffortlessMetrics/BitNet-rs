@@ -13,3 +13,4 @@ description = "Tokenization support for BitNet models"
 [dependencies]
 bitnet-common = { path = "../bitnet-common" }
 anyhow.workspace = true
+tracing.workspace = true
