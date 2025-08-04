@@ -8,8 +8,7 @@ use crate::{KernelProvider, cpu::x86::Avx2Kernel, cpu::fallback::FallbackKernel}
 use crate::gpu::cuda::CudaKernel;
 use crate::gpu::validation::PerformanceResult;
 use bitnet_common::Result;
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
+
 use std::time::Instant;
 
 /// Comprehensive benchmark suite for GPU kernels
@@ -160,10 +159,19 @@ impl GpuBenchmark {
     /// Benchmark CPU implementation
     fn benchmark_cpu(&self, a: &[i8], b: &[u8], m: usize, n: usize, k: usize) -> Result<f64> {
         let mut cpu_result = vec![0.0f32; m * n];
-        let cpu_kernel = if cfg!(target_arch = "x86_64") && is_x86_feature_detected!("avx2") {
-            Box::new(Avx2Kernel) as Box<dyn KernelProvider>
-        } else {
-            Box::new(FallbackKernel) as Box<dyn KernelProvider>
+        let cpu_kernel: Box<dyn KernelProvider> = {
+            #[cfg(target_arch = "x86_64")]
+            {
+                if is_x86_feature_detected!("avx2") {
+                    Box::new(Avx2Kernel)
+                } else {
+                    Box::new(FallbackKernel)
+                }
+            }
+            #[cfg(not(target_arch = "x86_64"))]
+            {
+                Box::new(FallbackKernel)
+            }
         };
 
         // Warmup
@@ -184,7 +192,7 @@ impl GpuBenchmark {
     /// Benchmark GPU implementation
     fn benchmark_gpu(&self, a: &[i8], b: &[u8], m: usize, n: usize, k: usize) -> Result<f64> {
         let mut gpu_result = vec![0.0f32; m * n];
-        let mut gpu_kernel = CudaKernel::new()?;
+        let gpu_kernel = CudaKernel::new()?;
 
         // Warmup
         for _ in 0..self.config.warmup_iterations {
