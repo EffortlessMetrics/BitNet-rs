@@ -15,5 +15,18 @@ crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common" }
+bitnet-models = { path = "../bitnet-models" }
 bitnet-inference = { path = "../bitnet-inference" }
 anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+num_cpus = "1.16"
+
+# Optional CUDA support
+cudarc = { workspace = true, optional = true }
+
+[features]
+default = ["cpu"]
+cpu = []
+cuda = ["cudarc", "bitnet-inference/gpu"]

@@ -1,38 +1,21 @@
 //! C API bindings for BitNet
+//!
+//! This module provides a comprehensive C API that serves as a drop-in replacement
+//! for the existing BitNet C++ bindings. It maintains exact signature compatibility
+//! while providing enhanced error handling, thread safety, and performance monitoring.
 
-use std::ffi::{CStr, CString};
-use std::os::raw::{c_char, c_int};
+pub mod c_api;
+pub mod error;
+pub mod model;
+pub mod config;
+pub mod inference;
+pub mod memory;
+pub mod threading;
 
-/// C API version
-#[no_mangle]
-pub extern "C" fn bitnet_version() -> *const c_char {
-    static VERSION: &str = "0.1.0\0";
-    VERSION.as_ptr() as *const c_char
-}
-
-/// Load a model (placeholder)
-#[no_mangle]
-pub extern "C" fn bitnet_load_model(path: *const c_char) -> c_int {
-    if path.is_null() {
-        return -1;
-    }
-    
-    // Placeholder implementation
-    0
-}
-
-/// Run inference (placeholder)
-#[no_mangle]
-pub extern "C" fn bitnet_inference(
-    model_id: c_int,
-    prompt: *const c_char,
-    output: *mut c_char,
-    max_len: usize,
-) -> c_int {
-    if prompt.is_null() || output.is_null() {
-        return -1;
-    }
-    
-    // Placeholder implementation
-    0
-}
+pub use c_api::*;
+pub use error::*;
+pub use model::*;
+pub use config::*;
+pub use inference::*;
+pub use memory::*;
+pub use threading::*;
