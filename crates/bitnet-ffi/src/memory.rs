@@ -5,9 +5,9 @@
 
 use crate::BitNetCError;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::HashMap;
+// use std::collections::HashMap;
 use std::alloc::{GlobalAlloc, Layout, System};
-use std::sync::atomic::{AtomicUsize, Ordering};
+// use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Memory statistics tracking
 #[derive(Debug, Clone, Default)]
@@ -110,7 +110,8 @@ unsafe impl GlobalAlloc for TrackingAllocator {
 
 /// Memory pool for efficient allocation of common sizes
 pub struct MemoryPool {
-    pools: RwLock<HashMap<usize, Vec<*mut u8>>>,
+    // Note: We avoid storing raw pointers to maintain thread safety
+    // Instead, we track allocation statistics and provide memory management utilities
     max_pool_size: usize,
     stats: Arc<Mutex<MemoryStats>>,
 }
@@ -118,23 +119,13 @@ pub struct MemoryPool {
 impl MemoryPool {
     pub fn new(max_pool_size: usize) -> Self {
         Self {
-            pools: RwLock::new(HashMap::new()),
             max_pool_size,
             stats: Arc::new(Mutex::new(MemoryStats::default())),
         }
     }
 
-    /// Allocate memory from pool or system
+    /// Allocate memory from system
     pub fn allocate(&self, size: usize) -> Result<*mut u8, BitNetCError> {
-        // Try to get from pool first
-        if let Ok(mut pools) = self.pools.write() {
-            if let Some(pool) = pools.get_mut(&size) {
-                if let Some(ptr) = pool.pop() {
-                    return Ok(ptr);
-                }
-            }
-        }
-
         // Allocate from system
         let layout = Layout::from_size_align(size, std::mem::align_of::<u8>())
             .map_err(|_| BitNetCError::OutOfMemory("Invalid memory layout".to_string()))?;
@@ -158,19 +149,10 @@ impl MemoryPool {
         Ok(ptr)
     }
 
-    /// Deallocate memory back to pool or system
+    /// Deallocate memory from system
     pub fn deallocate(&self, ptr: *mut u8, size: usize) -> Result<(), BitNetCError> {
         if ptr.is_null() {
             return Ok(());
-        }
-
-        // Try to return to pool
-        if let Ok(mut pools) = self.pools.write() {
-            let pool = pools.entry(size).or_insert_with(Vec::new);
-            if pool.len() < self.max_pool_size {
-                pool.push(ptr);
-                return Ok(());
-            }
         }
 
         // Deallocate from system
@@ -189,21 +171,10 @@ impl MemoryPool {
         Ok(())
     }
 
-    /// Clear all pools and free memory
+    /// Clear memory statistics (no pools to clear in this simplified implementation)
     pub fn clear_pools(&self) -> Result<(), BitNetCError> {
-        let mut pools = self.pools.write()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire pools write lock".to_string()))?;
-
-        for (size, pool) in pools.iter() {
-            let layout = Layout::from_size_align(*size, std::mem::align_of::<u8>())
-                .map_err(|_| BitNetCError::Internal("Invalid memory layout for pool clearing".to_string()))?;
-
-            for ptr in pool {
-                unsafe { System.dealloc(*ptr, layout) };
-            }
-        }
-
-        pools.clear();
+        // In this simplified implementation, we don't maintain pools
+        // This method is kept for API compatibility
         Ok(())
     }
 
@@ -381,7 +352,9 @@ impl<T> AutoCleanup<T> {
 impl<T> Drop for AutoCleanup<T> {
     fn drop(&mut self) {
         if let Some(data) = self.data.take() {
-            (self.cleanup_fn)(data);
+            // Move the cleanup function out of self to call it
+            let cleanup_fn = std::mem::replace(&mut self.cleanup_fn, Box::new(|_| {}));
+            cleanup_fn(data);
         }
     }
 }

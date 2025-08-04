@@ -8,7 +8,7 @@ use bitnet_common::{BitNetConfig, ModelFormat, QuantizationType};
 use bitnet_models::Model;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock, Mutex};
-use std::os::raw::{c_char, c_uint, c_ulong, c_float};
+use std::os::raw::{c_char, c_uint, c_ulong};
 use std::ffi::CString;
 
 /// C API model information structure
@@ -238,7 +238,7 @@ impl ModelManager {
         }
 
         // Detect format based on extension
-        let format = match path_obj.extension().and_then(|s| s.to_str()) {
+        let _format = match path_obj.extension().and_then(|s| s.to_str()) {
             Some("gguf") => ModelFormat::Gguf,
             Some("safetensors") => ModelFormat::SafeTensors,
             _ => {
@@ -319,12 +319,16 @@ impl Model for MockModel {
         &self.config
     }
 
-    fn forward(&self, _input: &bitnet_common::Tensor) -> bitnet_common::Result<bitnet_common::Tensor> {
+    fn forward(&self, _input: &bitnet_common::BitNetTensor) -> bitnet_common::Result<bitnet_common::BitNetTensor> {
+        // Mock implementation - create a dummy tensor
+        use candle_core::Device;
+        let device = Device::Cpu;
+        bitnet_common::BitNetTensor::zeros(&[1, 1], candle_core::DType::F32, &device)
+    }
+
+    fn generate(&self, _tokens: &[u32]) -> bitnet_common::Result<Vec<u32>> {
         // Mock implementation
-        Err(bitnet_common::BitNetError::Internal(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Mock model forward not implemented"
-        )))
+        Ok(vec![1, 2, 3]) // Return some dummy tokens
     }
 }
 
