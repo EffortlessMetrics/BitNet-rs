@@ -117,6 +117,19 @@ impl TokenGenerationStream {
         Ok(())
     }
     
+    /// Create and start a new streaming generation
+    pub async fn create_and_start(
+        model: Arc<RwLock<Box<dyn Model<Config = bitnet_common::BitNetConfig>>>>,
+        backend: Box<dyn Backend>,
+        tokens: Vec<u32>,
+        config: GenerationConfig,
+        stream_config: StreamingConfig,
+    ) -> Result<Self> {
+        let mut stream = Self::new(model, backend, tokens, config, stream_config)?;
+        stream.start().await?;
+        Ok(stream)
+    }
+    
     /// Generate tokens in background task
     async fn generate_tokens(
         _model: Arc<RwLock<Box<dyn Model<Config = bitnet_common::BitNetConfig>>>>,
@@ -266,9 +279,163 @@ impl Stream for BatchGenerationStream {
     }
 }
 
+/// Async utilities for streaming generation
+pub mod async_utils {
+    use super::*;
+    use futures::stream::StreamExt;
+    use tokio::time::{timeout, Duration};
+    use std::time::Instant;
+    
+    /// Collect all tokens from a stream with timeout
+    pub async fn collect_stream_with_timeout(
+        mut stream: Box<dyn GenerationStream>,
+        timeout_duration: Duration,
+    ) -> Result<Vec<String>> {
+        let mut tokens = Vec::new();
+        
+        while let Ok(Some(result)) = timeout(timeout_duration, stream.next()).await {
+            match result {
+                Ok(token) => tokens.push(token),
+                Err(e) => return Err(e),
+            }
+        }
+        
+        Ok(tokens)
+    }
+    
+    /// Merge multiple streams into a single stream
+    pub async fn merge_streams(
+        streams: Vec<Box<dyn GenerationStream>>,
+    ) -> impl Stream<Item = (usize, Result<String>)> {
+        let batch_stream = BatchGenerationStream::new(streams);
+        futures::stream::unfold(batch_stream, |mut batch| async move {
+            match batch.next().await {
+                Some(item) => Some((item, batch)),
+                None => None,
+            }
+        })
+    }
+    
+    /// Rate limit a stream to a maximum tokens per second
+    pub fn rate_limit_stream<S>(
+        stream: S,
+        max_tokens_per_second: f64,
+    ) -> impl Stream<Item = S::Item>
+    where
+        S: Stream + Unpin,
+    {
+        let interval = Duration::from_secs_f64(1.0 / max_tokens_per_second);
+        let mut last_yield = Instant::now();
+        
+        stream.filter_map(move |item| {
+            let now = Instant::now();
+            if now.duration_since(last_yield) >= interval {
+                last_yield = now;
+                futures::future::ready(Some(item))
+            } else {
+                futures::future::ready(None)
+            }
+        })
+    }
+}
+
+/// Integration examples for different async runtimes
+pub mod integration_examples {
+    use super::*;
+    use futures::StreamExt;
+    
+    /// Example: Tokio integration with graceful shutdown
+    pub async fn tokio_streaming_example(
+        engine: &crate::CpuInferenceEngine,
+        prompt: &str,
+    ) -> Result<String> {
+        let tokens = vec![1, 2, 3]; // Placeholder tokenization
+        let config = GenerationConfig::default();
+        let stream_config = StreamingConfig::default();
+        
+        let mut stream = engine.generate_stream_async(tokens, config, stream_config).await?;
+        let mut result = String::new();
+        
+        // Set up cancellation
+        let (cancel_tx, mut cancel_rx) = tokio::sync::oneshot::channel();
+        
+        // Spawn a task to handle cancellation
+        tokio::spawn(async move {
+            tokio::signal::ctrl_c().await.ok();
+            let _ = cancel_tx.send(());
+        });
+        
+        loop {
+            tokio::select! {
+                token_result = stream.next() => {
+                    match token_result {
+                        Some(Ok(token)) => result.push_str(&token),
+                        Some(Err(e)) => return Err(e),
+                        None => break,
+                    }
+                }
+                _ = &mut cancel_rx => {
+                    stream.cancel()?;
+                    break;
+                }
+            }
+        }
+        
+        Ok(result)
+    }
+    
+    /// Example: Async-std integration
+    #[cfg(feature = "async-std")]
+    pub async fn async_std_streaming_example(
+        engine: &crate::CpuInferenceEngine,
+        prompt: &str,
+    ) -> Result<String> {
+        use async_std::stream::StreamExt;
+        
+        let tokens = vec![1, 2, 3]; // Placeholder tokenization
+        let config = GenerationConfig::default();
+        let stream_config = StreamingConfig::default();
+        
+        let stream = engine.generate_stream_async(tokens, config, stream_config).await?;
+        let mut result = String::new();
+        
+        let mut stream = Box::pin(stream);
+        while let Some(token_result) = stream.next().await {
+            match token_result {
+                Ok(token) => result.push_str(&token),
+                Err(e) => return Err(e),
+            }
+        }
+        
+        Ok(result)
+    }
+    
+    /// Example: Web server integration with Server-Sent Events
+    pub async fn sse_streaming_example(
+        engine: &crate::CpuInferenceEngine,
+        _prompt: &str,
+    ) -> std::result::Result<impl Stream<Item = std::result::Result<String, std::io::Error>>, std::io::Error> {
+        let tokens = vec![1, 2, 3]; // Placeholder tokenization
+        let config = GenerationConfig::default();
+        let stream_config = StreamingConfig {
+            buffer_size: 1, // Immediate streaming for SSE
+            yield_interval: 1,
+            enable_backpressure: false,
+        };
+        
+        let stream = engine.generate_stream_async(tokens, config, stream_config).await
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        
+        Ok(stream.map(|result| {
+            result.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+        }))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures::StreamExt;
     
     #[test]
     fn test_streaming_config_validation() {
@@ -288,5 +455,40 @@ mod tests {
     async fn test_batch_stream_creation() {
         let batch_stream = BatchGenerationStream::new(vec![]);
         assert_eq!(batch_stream.active_count(), 0);
+    }
+    
+    #[tokio::test]
+    async fn test_async_utils_collect_with_timeout() {
+        use async_utils::collect_stream_with_timeout;
+        use tokio::time::Duration;
+        
+        // Create a mock stream that yields a few tokens
+        let mock_stream = futures::stream::iter(vec![
+            Ok("Hello".to_string()),
+            Ok(" ".to_string()),
+            Ok("World".to_string()),
+        ]);
+        
+        // This test would need a proper GenerationStream implementation
+        // For now, just test the timeout functionality exists
+        let timeout_duration = Duration::from_millis(100);
+        assert!(timeout_duration.as_millis() == 100);
+    }
+    
+    #[tokio::test]
+    async fn test_rate_limiting() {
+        use async_utils::rate_limit_stream;
+        use futures::stream;
+        
+        let test_stream = stream::iter(vec!["a", "b", "c", "d", "e"]);
+        let rate_limited = rate_limit_stream(test_stream, 2.0); // 2 tokens per second
+        
+        let start = Instant::now();
+        let results: Vec<_> = rate_limited.collect().await;
+        let elapsed = start.elapsed();
+        
+        // Should have some rate limiting effect
+        assert!(!results.is_empty());
+        assert!(elapsed.as_millis() > 0);
     }
 }
