@@ -2,10 +2,9 @@
 
 use crate::{Backend, KVCache, SamplingStrategy, StreamingConfig};
 use bitnet_common::{
-    BitNetConfig, BitNetError, BitNetTensor, GenerationConfig, InferenceError, 
-    PerformanceMetrics, Result, Tensor
+    BitNetConfig, BitNetError, GenerationConfig, InferenceError, 
+    PerformanceMetrics, Result
 };
-use bitnet_kernels::KernelProvider;
 use bitnet_models::Model;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -149,7 +148,7 @@ impl InferenceEngine for BitNetInferenceEngine {
             // Forward pass through model
             let input_tensor = self.backend.tokens_to_tensor(&current_tokens)?;
             let logits = {
-                let mut model = self.model.try_write()
+                let model = self.model.try_write()
                     .map_err(|_| InferenceError::GenerationFailed { 
                         reason: "Failed to acquire model lock".to_string() 
                     })?;
@@ -194,8 +193,9 @@ impl InferenceEngine for BitNetInferenceEngine {
     
     fn model_config(&self) -> &BitNetConfig {
         // This is a simplified implementation - in practice we'd need to handle the async lock
-        // For now, we'll return a default config
-        &BitNetConfig::default()
+        // For now, we'll use a static default config
+        static DEFAULT_CONFIG: std::sync::OnceLock<BitNetConfig> = std::sync::OnceLock::new();
+        DEFAULT_CONFIG.get_or_init(|| BitNetConfig::default())
     }
     
     fn reset(&mut self) -> Result<()> {

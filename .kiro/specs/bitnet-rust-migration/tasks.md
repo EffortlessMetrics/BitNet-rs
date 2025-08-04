@@ -280,7 +280,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Add comprehensive configuration support with runtime parameter adjustment
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [-] 6.1 Design inference engine architecture and abstractions
+- [x] 6.1 Design inference engine architecture and abstractions
+
 
   - Create InferenceEngine trait with CPU and GPU backend implementations
   - Design KV cache abstraction with efficient memory management
@@ -289,7 +290,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Design configuration system with runtime parameter adjustment
   - _Requirements: 6.1, 6.3, 6.4, 6.5_
 
-- [ ] 6.2 Implement CPU inference engine with Rayon parallelism
+- [-] 6.2 Implement CPU inference engine with Rayon parallelism
+
   - Create thread-safe CPU inference engine using Rayon for matrix operations
   - Implement efficient KV cache with memory pooling and reuse
   - Add comprehensive performance monitoring (tokens/sec, latency, memory usage)

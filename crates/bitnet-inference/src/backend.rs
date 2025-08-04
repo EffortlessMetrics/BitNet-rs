@@ -1,9 +1,9 @@
 //! Backend abstraction for inference engines
 
 use crate::{InferenceConfig, BackendPreference};
-use bitnet_common::{BitNetError, BitNetTensor, InferenceError, Result};
+use bitnet_common::{BitNetTensor, InferenceError, Result};
 use bitnet_kernels::KernelProvider;
-use std::sync::Arc;
+
 
 /// Backend trait for inference operations
 pub trait Backend: Send + Sync {

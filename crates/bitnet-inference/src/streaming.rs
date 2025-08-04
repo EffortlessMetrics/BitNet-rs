@@ -119,7 +119,7 @@ impl TokenGenerationStream {
     
     /// Generate tokens in background task
     async fn generate_tokens(
-        model: Arc<RwLock<Box<dyn Model<Config = bitnet_common::BitNetConfig>>>>,
+        _model: Arc<RwLock<Box<dyn Model<Config = bitnet_common::BitNetConfig>>>>,
         backend: Box<dyn Backend>,
         mut tokens: Vec<u32>,
         config: GenerationConfig,

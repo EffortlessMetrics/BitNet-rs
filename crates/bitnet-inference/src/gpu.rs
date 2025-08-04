@@ -2,7 +2,7 @@
 
 use crate::{Backend, DeviceInfo, DeviceType};
 use bitnet_common::{BitNetError, BitNetTensor, Result};
-use bitnet_kernels::{KernelProvider, GpuKernel};
+use bitnet_kernels::KernelProvider;
 use candle_core::Device;
 
 /// GPU backend for inference
