@@ -1,8 +1,8 @@
 //! CPU backend implementation
 
 use crate::{Backend, DeviceInfo, DeviceType};
-use bitnet_common::{BitNetError, BitNetTensor, Result};
-use bitnet_kernels::{KernelProvider, CpuKernel};
+use bitnet_common::{BitNetTensor, Result};
+use bitnet_kernels::KernelProvider;
 use candle_core::Device;
 
 /// CPU backend for inference

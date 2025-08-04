@@ -2,7 +2,7 @@
 
 use crate::Backend;
 use bitnet_common::{BitNetConfig, BitNetError, BitNetTensor, Result};
-use candle_core::{Device, DType, Tensor as CandleTensor};
+use candle_core::{Device, DType};
 use std::collections::HashMap;
 
 /// KV cache for storing key-value pairs during inference
@@ -136,8 +136,18 @@ impl KVCache {
             crate::backend::DeviceType::Cpu => Device::Cpu,
             crate::backend::DeviceType::Cuda(id) => Device::new_cuda(id)
                 .map_err(|e| BitNetError::Validation(e.to_string()))?,
-            crate::backend::DeviceType::Metal => Device::Metal(candle_core::MetalDevice::new(0)
-                .map_err(|e| BitNetError::Validation(e.to_string()))?),
+            crate::backend::DeviceType::Metal => {
+                #[cfg(feature = "metal")]
+                {
+                    use candle_core::backend::BackendDevice;
+                    Device::Metal(candle_core::MetalDevice::new(0)
+                        .map_err(|e| BitNetError::Validation(e.to_string()))?)
+                }
+                #[cfg(not(feature = "metal"))]
+                {
+                    return Err(BitNetError::Validation("Metal support not enabled".to_string()));
+                }
+            }
         };
         
         // Migrate all layer caches to new device
@@ -216,8 +226,8 @@ impl LayerCache {
     /// Update cache with new key-value pair
     pub fn update(
         &mut self,
-        key: BitNetTensor,
-        value: BitNetTensor,
+        _key: BitNetTensor,
+        _value: BitNetTensor,
         position: usize,
     ) -> Result<()> {
         if position >= self.max_length {

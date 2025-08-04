@@ -37,7 +37,7 @@ impl SamplingStrategy {
         &mut self,
         logits: &BitNetTensor,
         context_tokens: &[u32],
-        step: usize,
+        _step: usize,
         generation_config: &GenerationConfig,
     ) -> Result<u32> {
         // Convert logits to probabilities
@@ -114,7 +114,7 @@ impl SamplingStrategy {
     }
     
     /// Convert logits tensor to probability vector
-    fn logits_to_probs(&self, logits: &BitNetTensor) -> Result<Vec<f32>> {
+    fn logits_to_probs(&self, _logits: &BitNetTensor) -> Result<Vec<f32>> {
         // This is a simplified implementation
         // In practice, we'd extract the logits from the tensor and apply softmax
         let vocab_size = 32000; // Placeholder
@@ -313,7 +313,7 @@ impl SamplingStrategy {
 }
 
 /// Sampling method enumeration
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SamplingMethod {
     Greedy,
     TopK(usize),

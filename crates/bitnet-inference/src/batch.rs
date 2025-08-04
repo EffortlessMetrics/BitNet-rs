@@ -1,12 +1,12 @@
 //! Batch processing for inference
 
-use crate::{Backend, InferenceEngine};
+use crate::InferenceEngine;
 use bitnet_common::{BitNetError, GenerationConfig, PerformanceMetrics, Result};
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, RwLock, Semaphore};
-use tokio::time::timeout;
+
 
 /// Batch inference request
 #[derive(Debug, Clone)]
@@ -27,7 +27,7 @@ pub enum Priority {
 }
 
 /// Batch inference response
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct BatchResponse {
     pub id: String,
     pub result: Result<String>,
