@@ -86,8 +86,8 @@ impl CudaKernel {
         Ok(Self {
             ctx,
             stream,
-            module: None,
-            matmul_function: None,
+            module,
+            matmul_function,
             device_info,
         })
     }
@@ -164,9 +164,12 @@ impl CudaKernel {
         builder.arg(&a_dev);
         builder.arg(&b_dev);
         builder.arg(&mut c_dev);
-        builder.arg(&(m as i32));
-        builder.arg(&(n as i32));
-        builder.arg(&(k as i32));
+        let m_arg = m as i32;
+        let n_arg = n as i32;
+        let k_arg = k as i32;
+        builder.arg(&m_arg);
+        builder.arg(&n_arg);
+        builder.arg(&k_arg);
         
         unsafe { 
             builder.launch(cfg)

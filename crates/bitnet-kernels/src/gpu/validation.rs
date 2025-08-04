@@ -9,8 +9,7 @@
 use crate::{KernelProvider, cpu::x86::Avx2Kernel, cpu::fallback::FallbackKernel};
 use crate::gpu::cuda::CudaKernel;
 use bitnet_common::Result;
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
+
 use std::time::Instant;
 
 /// Tolerance for numerical accuracy validation
@@ -192,10 +191,19 @@ impl GpuValidator {
 
         // CPU reference implementation
         let mut cpu_result = vec![0.0f32; m * n];
-        let cpu_kernel = if cfg!(target_arch = "x86_64") && is_x86_feature_detected!("avx2") {
-            Box::new(Avx2Kernel) as Box<dyn KernelProvider>
-        } else {
-            Box::new(FallbackKernel) as Box<dyn KernelProvider>
+        let cpu_kernel: Box<dyn KernelProvider> = {
+            #[cfg(target_arch = "x86_64")]
+            {
+                if is_x86_feature_detected!("avx2") {
+                    Box::new(Avx2Kernel)
+                } else {
+                    Box::new(FallbackKernel)
+                }
+            }
+            #[cfg(not(target_arch = "x86_64"))]
+            {
+                Box::new(FallbackKernel)
+            }
         };
         cpu_kernel.matmul_i2s(&a, &b, &mut cpu_result, m, n, k)?;
 
@@ -241,9 +249,6 @@ impl GpuValidator {
 
         // Benchmark CPU
         let mut cpu_result = vec![0.0f32; m * n];
-        let mut cpu_kernel = Avx2Kernel::new().unwrap_or_else(|_| {
-            ScalarKernel::new().unwrap()
-        });
 
         let cpu_start = Instant::now();
         for _ in 0..self.config.benchmark_iterations {
