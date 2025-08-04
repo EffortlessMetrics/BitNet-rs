@@ -147,3 +147,63 @@ impl Default for KernelManager {
         Self::new()
     }
 }
+
+/// Select the best CPU kernel provider
+pub fn select_cpu_kernel() -> Result<Box<dyn KernelProvider>> {
+    let mut providers: Vec<Box<dyn KernelProvider>> = vec![
+        Box::new(cpu::FallbackKernel),
+    ];
+    
+    #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+    {
+        if is_x86_feature_detected!("avx2") {
+            providers.insert(0, Box::new(cpu::Avx2Kernel));
+        }
+    }
+    
+    #[cfg(all(target_arch = "aarch64", feature = "neon"))]
+    {
+        if std::arch::is_aarch64_feature_detected!("neon") {
+            providers.insert(0, Box::new(cpu::NeonKernel));
+        }
+    }
+    
+    for provider in providers {
+        if provider.is_available() {
+            return Ok(provider);
+        }
+    }
+    
+    Err(bitnet_common::BitNetError::Kernel(
+        bitnet_common::KernelError::NoProvider,
+    ))
+}
+
+/// Select the best GPU kernel provider
+#[cfg(feature = "cuda")]
+pub fn select_gpu_kernel(device_id: usize) -> Result<Box<dyn KernelProvider>> {
+    let cuda_kernel = gpu::CudaKernel::new_with_device(device_id)?;
+    if cuda_kernel.is_available() {
+        Ok(Box::new(cuda_kernel))
+    } else {
+        Err(bitnet_common::BitNetError::Kernel(
+            bitnet_common::KernelError::NoProvider,
+        ))
+    }
+}
+
+#[cfg(not(feature = "cuda"))]
+pub fn select_gpu_kernel(_device_id: usize) -> Result<Box<dyn KernelProvider>> {
+    Err(bitnet_common::BitNetError::Kernel(
+        bitnet_common::KernelError::NoProvider,
+    ))
+}
+
+// Re-export commonly used types
+pub use cpu::FallbackKernel;
+#[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+pub use cpu::Avx2Kernel;
+#[cfg(all(target_arch = "aarch64", feature = "neon"))]
+pub use cpu::NeonKernel;
+#[cfg(feature = "cuda")]
+pub use gpu::CudaKernel;
