@@ -21,6 +21,8 @@ rayon.workspace = true
 rand = "0.8"
 rand_chacha = "0.3"
 candle-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 
 [features]
 default = ["cpu"]

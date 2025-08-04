@@ -75,7 +75,7 @@ pub struct ModelMetadata {
 }
 
 /// Performance metrics
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PerformanceMetrics {
     pub tokens_per_second: f64,
     pub latency_ms: f64,
