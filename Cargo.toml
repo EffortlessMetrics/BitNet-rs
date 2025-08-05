@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    ".",  # Main library crate
     "crates/bitnet-common",
     "crates/bitnet-models", 
     "crates/bitnet-quantization",
@@ -14,15 +15,98 @@ members = [
     "crates/bitnet-wasm",
 ]
 
+[package]
+name = "bitnet"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/microsoft/BitNet"
+homepage = "https://github.com/microsoft/BitNet"
+documentation = "https://docs.rs/bitnet"
+authors = ["BitNet Contributors <bitnet@microsoft.com>"]
+keywords = ["machine-learning", "llm", "quantization", "inference", "bitnet"]
+categories = ["science", "algorithms", "mathematics", "wasm", "api-bindings"]
+description = "High-performance Rust implementation of BitNet 1-bit LLM inference with cross-platform support"
+readme = "README.md"
+rust-version = "1.70.0"
+
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/microsoft/BitNet"
 homepage = "https://github.com/microsoft/BitNet"
-authors = ["BitNet Contributors"]
+documentation = "https://docs.rs/bitnet"
+authors = ["BitNet Contributors <bitnet@microsoft.com>"]
 keywords = ["machine-learning", "llm", "quantization", "inference", "bitnet"]
-categories = ["science", "algorithms"]
+categories = ["science", "algorithms", "mathematics", "wasm", "api-bindings"]
+description = "High-performance Rust implementation of BitNet 1-bit LLM inference with cross-platform support"
+readme = "README.md"
+rust-version = "1.70.0"
+
+[dependencies]
+# Core crates - always included
+bitnet-common = { path = "crates/bitnet-common", version = "0.1.0" }
+bitnet-models = { path = "crates/bitnet-models", version = "0.1.0" }
+bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.1.0" }
+
+# Optional crates based on features
+bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.1.0", optional = true }
+bitnet-inference = { path = "crates/bitnet-inference", version = "0.1.0", optional = true }
+bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.1.0", optional = true }
+
+[build-dependencies]
+vergen = { version = "8.0", features = ["build", "git", "gitcl", "rustc", "cargo"] }
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+tempfile = "3.8"
+
+[features]
+default = ["cpu"]
+
+# Core inference features
+cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bitnet-inference/cpu"]
+gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cuda", "bitnet-inference/gpu"]
+
+# Component features
+kernels = ["dep:bitnet-kernels"]
+inference = ["dep:bitnet-inference", "kernels"]
+tokenizers = ["dep:bitnet-tokenizers"]
+
+# SIMD optimizations
+avx2 = ["bitnet-kernels/avx2"]
+avx512 = ["bitnet-kernels/avx512"]
+neon = ["bitnet-kernels/neon"]
+
+# Language bindings (not included in main crate)
+python = []  # Handled by bitnet-py crate
+wasm = []    # Handled by bitnet-wasm crate
+ffi = []     # Handled by bitnet-ffi crate
+
+# Server and CLI (not included in main crate)
+server = []  # Handled by bitnet-server crate
+cli = []     # Handled by bitnet-cli crate
+
+# Convenience features
+full = ["cpu", "gpu", "avx2", "avx512", "neon"]
+minimal = []  # Only core crates, no inference
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[[example]]
+name = "basic_inference"
+required-features = ["cpu"]
+
+[[example]]
+name = "gpu_inference"
+required-features = ["gpu"]
+
+[[example]]
+name = "streaming_generation"
+required-features = ["cpu"]
 
 [workspace.dependencies]
 # Core dependencies
@@ -102,6 +186,9 @@ reqwest = { version = "0.12", features = ["json"] }
 cc = "1.0"
 bindgen = "0.72"
 
+# Build-time information
+vergen = { version = "8.0", features = ["build", "git", "gitcl", "rustc", "cargo"] }
+
 [profile.release]
 lto = true
 codegen-units = 1
@@ -110,3 +197,34 @@ strip = true
 
 [profile.bench]
 debug = true
+
+# Workspace-level feature flags for convenience
+[workspace.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[workspace.metadata.release]
+sign-commit = true
+sign-tag = true
+pre-release-replacements = [
+  {file="README.md", search="bitnet = \"[a-z0-9\\.-]+\"", replace="bitnet = \"{{version}}\""},
+  {file="CHANGELOG.md", search="## \\[Unreleased\\]", replace="## [Unreleased]\n\n## [{{version}}] - {{date}}"},
+]
+
+# Workspace metadata for crates.io publication
+[workspace.metadata.bitnet]
+msrv = "1.70.0"
+categories = [
+    "science",           # Scientific computing
+    "algorithms",        # Algorithm implementations
+    "mathematics",       # Mathematical operations
+    "wasm",             # WebAssembly support
+    "api-bindings"      # Language bindings
+]
+keywords = [
+    "machine-learning",  # ML/AI domain
+    "llm",              # Large Language Models
+    "quantization",     # Model quantization
+    "inference",        # Model inference
+    "bitnet"           # BitNet specific
+]
