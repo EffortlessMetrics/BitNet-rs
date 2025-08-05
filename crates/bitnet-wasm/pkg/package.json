@@ -1,0 +1,75 @@
+{
+  "name": "@bitnet/wasm",
+  "version": "0.1.0",
+  "description": "WebAssembly bindings for BitNet 1-bit LLM inference",
+  "main": "bitnet_wasm.js",
+  "types": "bitnet_wasm.d.ts",
+  "files": [
+    "bitnet_wasm.js",
+    "bitnet_wasm_bg.wasm",
+    "bitnet_wasm.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "webassembly",
+    "wasm",
+    "machine-learning",
+    "llm",
+    "bitnet",
+    "quantization",
+    "inference",
+    "1-bit",
+    "neural-networks",
+    "ai"
+  ],
+  "author": "BitNet Contributors",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/microsoft/BitNet.git",
+    "directory": "crates/bitnet-wasm"
+  },
+  "homepage": "https://github.com/microsoft/BitNet",
+  "bugs": {
+    "url": "https://github.com/microsoft/BitNet/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "browser": {
+    "./bitnet_wasm.js": "./bitnet_wasm.js"
+  },
+  "sideEffects": [
+    "./bitnet_wasm.js"
+  ],
+  "scripts": {
+    "test": "node test.js",
+    "benchmark": "node benchmark.js"
+  },
+  "dependencies": {},
+  "peerDependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/microsoft"
+  },
+  "exports": {
+    ".": {
+      "import": "./bitnet_wasm.js",
+      "require": "./bitnet_wasm.js",
+      "types": "./bitnet_wasm.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "module": "bitnet_wasm.js",
+  "unpkg": "bitnet_wasm.js",
+  "jsdelivr": "bitnet_wasm.js"
+}

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BitNet WASM - Browser Integration Example</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .status {
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status.loading {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .input-group {
+            margin: 15px 0;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #28a745;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .streaming-output {
+            background-color: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            min-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .worker-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        .worker-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #dc3545;
+        }
+        
+        .worker-indicator.active {
+            background-color: #28a745;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .tab.active {
+            border-bottom-color: #007bff;
+            color: #007bff;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧠 BitNet WASM</h1>
+        <p>1-bit LLM Inference in the Browser</p>
+    </div>
+
+    <div class="container">
+        <div id="status" class="status loading">
+            Initializing WebAssembly module...
+        </div>
+        
+        <div class="progress-bar">
+            <div id="progress" class="progress-fill"></div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('basic')">Basic Inference</div>
+        <div class="tab" onclick="switchTab('streaming')">Streaming</div>
+        <div class="tab" onclick="switchTab('worker')">Web Workers</div>
+        <div class="tab" onclick="switchTab('benchmark')">Benchmarks</div>
+        <div class="tab" onclick="switchTab('settings')">Settings</div>
+    </div>
+
+    <!-- Basic Inference Tab -->
+    <div id="basic-tab" class="tab-content active">
+        <div class="container">
+            <h3>Basic Text Generation</h3>
+            
+            <div class="input-group">
+                <label for="model-file">Model File:</label>
+                <input type="file" id="model-file" accept=".gguf,.safetensors,.bin">
+            </div>
+            
+            <div class="input-group">
+                <label for="prompt">Prompt:</label>
+                <textarea id="prompt" placeholder="Enter your prompt here...">Hello, I am a BitNet model running in your browser!</textarea>
+            </div>
+            
+            <div class="controls">
+                <button id="load-model" onclick="loadModel()">Load Model</button>
+                <button id="generate" onclick="generateText()" disabled>Generate Text</button>
+                <button id="clear-output" onclick="clearOutput()">Clear Output</button>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div id="model-size" class="stat-value">-</div>
+                    <div class="stat-label">Model Size</div>
+                </div>
+                <div class="stat-card">
+                    <div id="memory-usage" class="stat-value">-</div>
+                    <div class="stat-label">Memory Usage</div>
+                </div>
+                <div class="stat-card">
+                    <div id="generation-time" class="stat-value">-</div>
+                    <div class="stat-label">Generation Time</div>
+                </div>
+                <div class="stat-card">
+                    <div id="tokens-per-sec" class="stat-value">-</div>
+                    <div class="stat-label">Tokens/sec</div>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label>Output:</label>
+                <div id="output" class="output">Generated text will appear here...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Streaming Tab -->
+    <div id="streaming-tab" class="tab-content">
+        <div class="container">
+            <h3>Streaming Text Generation</h3>
+            
+            <div class="input-group">
+                <label for="streaming-prompt">Prompt:</label>
+                <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming...">Once upon a time, in a world where AI models run in browsers,</textarea>
+            </div>
+            
+            <div class="controls">
+                <button id="start-streaming" onclick="startStreaming()">Start Streaming</button>
+                <button id="stop-streaming" onclick="stopStreaming()" disabled>Stop Streaming</button>
+                <button id="clear-streaming" onclick="clearStreaming()">Clear</button>
+            </div>
+            
+            <div class="input-group">
+                <label>Streaming Output:</label>
+                <div id="streaming-output" class="streaming-output">Streaming output will appear here...</div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div id="stream-tokens" class="stat-value">0</div>
+                    <div class="stat-label">Tokens Generated</div>
+                </div>
+                <div class="stat-card">
+                    <div id="stream-speed" class="stat-value">0</div>
+                    <div class="stat-label">Tokens/sec</div>
+                </div>
+                <div class="stat-card">
+                    <div id="stream-time" class="stat-value">0</div>
+                    <div class="stat-label">Elapsed Time (s)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Web Workers Tab -->
+    <div id="worker-tab" class="tab-content">
+        <div class="container">
+            <h3>Web Workers Integration</h3>
+            
+            <div class="worker-status">
+                <div id="worker-indicator" class="worker-indicator"></div>
+                <span id="worker-status-text">Worker not initialized</span>
+            </div>
+            
+            <div class="controls">
+                <button id="init-worker" onclick="initWorker()">Initialize Worker</button>
+                <button id="worker-generate" onclick="workerGenerate()" disabled>Generate in Worker</button>
+                <button id="terminate-worker" onclick="terminateWorker()" disabled>Terminate Worker</button>
+            </div>
+            
+            <div class="input-group">
+                <label for="worker-prompt">Prompt:</label>
+                <textarea id="worker-prompt" placeholder="Enter prompt for worker processing...">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
+            </div>
+            
+            <div class="input-group">
+                <label>Worker Output:</label>
+                <div id="worker-output" class="output">Worker output will appear here...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Benchmark Tab -->
+    <div id="benchmark-tab" class="tab-content">
+        <div class="container">
+            <h3>Performance Benchmarks</h3>
+            
+            <div class="controls">
+                <button id="run-benchmarks" onclick="runBenchmarks()">Run All Benchmarks</button>
+                <button id="kernel-bench" onclick="runKernelBenchmark()">Kernel Performance</button>
+                <button id="memory-bench" onclick="runMemoryBenchmark()">Memory Performance</button>
+                <button id="loading-bench" onclick="runLoadingBenchmark()">Loading Performance</button>
+            </div>
+            
+            <div id="benchmark-progress" class="progress-bar" style="display: none;">
+                <div id="benchmark-progress-fill" class="progress-fill"></div>
+            </div>
+            
+            <div class="input-group">
+                <label>Benchmark Results:</label>
+                <div id="benchmark-output" class="output">Run benchmarks to see performance metrics...</div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div id="platform-gflops" class="stat-value">-</div>
+                    <div class="stat-label">Estimated GFLOPS</div>
+                </div>
+                <div class="stat-card">
+                    <div id="platform-memory" class="stat-value">-</div>
+                    <div class="stat-label">Device Memory (GB)</div>
+                </div>
+                <div class="stat-card">
+                    <div id="platform-cores" class="stat-value">-</div>
+                    <div class="stat-label">CPU Cores</div>
+                </div>
+                <div class="stat-card">
+                    <div id="platform-simd" class="stat-value">-</div>
+                    <div class="stat-label">WASM SIMD</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="settings-tab" class="tab-content">
+        <div class="container">
+            <h3>Configuration Settings</h3>
+            
+            <div class="input-group">
+                <label for="max-tokens">Max New Tokens:</label>
+                <input type="number" id="max-tokens" value="100" min="1" max="1000">
+            </div>
+            
+            <div class="input-group">
+                <label for="temperature">Temperature:</label>
+                <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
+                <span id="temperature-value">0.7</span>
+            </div>
+            
+            <div class="input-group">
+                <label for="top-k">Top-K:</label>
+                <input type="number" id="top-k" value="50" min="1" max="100">
+            </div>
+            
+            <div class="input-group">
+                <label for="top-p">Top-P:</label>
+                <input type="range" id="top-p" min="0" max="1" step="0.05" value="0.9">
+                <span id="top-p-value">0.9</span>
+            </div>
+            
+            <div class="input-group">
+                <label for="memory-limit">Memory Limit (MB):</label>
+                <input type="number" id="memory-limit" value="512" min="128" max="2048">
+            </div>
+            
+            <div class="input-group">
+                <label for="chunk-size">Chunk Size (MB):</label>
+                <input type="number" id="chunk-size" value="64" min="16" max="256">
+            </div>
+            
+            <div class="controls">
+                <button onclick="saveSettings()">Save Settings</button>
+                <button onclick="resetSettings()">Reset to Defaults</button>
+                <button onclick="exportSettings()">Export Settings</button>
+                <input type="file" id="import-settings" accept=".json" style="display: none;" onchange="importSettings()">
+                <button onclick="document.getElementById('import-settings').click()">Import Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
