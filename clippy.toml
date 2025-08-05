@@ -1,7 +1,35 @@
-# Clippy configuration
+# Clippy configuration for BitNet.rs
+# Ensures high code quality standards for crates.io publication
+
+# MSRV compatibility
 msrv = "1.70.0"
+
+# Complexity thresholds
 cognitive-complexity-threshold = 30
 too-many-arguments-threshold = 8
 type-complexity-threshold = 250
 single-char-binding-names-threshold = 4
 trivial-copy-size-limit = 64
+
+# Performance lints
+large-types-passed-by-value = 256
+
+# Documentation requirements - enforced via lib.rs attributes
+# missing-docs-in-private-items = true  # Too strict for internal code
+# missing-errors-doc = true
+# missing-panics-doc = true
+# missing-safety-doc = true
+
+# Safety and correctness
+# undocumented-unsafe-blocks = true  # Enforced via lib.rs attributes
+# multiple-unsafe-ops-per-block = true
+
+# Style preferences
+max-trait-bounds = 5  # ML code often needs more trait bounds
+enum-variant-names-threshold = 3
+struct-excessive-bools = 3
+
+# Allow certain patterns common in ML/systems code
+allow-expect-in-tests = true
+allow-unwrap-in-tests = true
+allow-mixed-uninlined-format-args = true  # Performance in hot paths
