@@ -1,0 +1,289 @@
+{{- if .Values.cpu.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "bitnet.fullname" . }}-cpu
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "bitnet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: inference
+    app.kubernetes.io/variant: cpu
+spec:
+  replicas: {{ .Values.cpu.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "bitnet.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: inference
+      app.kubernetes.io/variant: cpu
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.service.metricsPort }}"
+        prometheus.io/path: "/metrics"
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "bitnet.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: inference
+        app.kubernetes.io/variant: cpu
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "bitnet.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: bitnet
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.cpu.image.variant }}-{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.config.server.port }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.config.monitoring.metrics_port }}
+              protocol: TCP
+          env:
+            - name: RUST_LOG
+              value: {{ .Values.config.logging.level }}
+            - name: BITNET_CONFIG_PATH
+              value: "/app/config/bitnet.toml"
+            - name: BITNET_MODEL_PATH
+              value: {{ .Values.config.model.path }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+            {{- if .Values.persistence.models.enabled }}
+            - name: models
+              mountPath: {{ .Values.config.model.path }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.persistence.cache.enabled }}
+            - name: cache
+              mountPath: /app/cache
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if .Values.healthCheck.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.healthCheck.failureThreshold }}
+          {{- end }}
+          {{- if .Values.readinessCheck.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessCheck.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.readinessCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessCheck.failureThreshold }}
+          {{- end }}
+          {{- if .Values.startupCheck.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.startupCheck.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.startupCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.startupCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.startupCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.startupCheck.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.cpu.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "bitnet.fullname" . }}-config
+        {{- if .Values.persistence.models.enabled }}
+        - name: models
+          persistentVolumeClaim:
+            claimName: {{ include "bitnet.fullname" . }}-models-pvc
+        {{- end }}
+        {{- if .Values.persistence.cache.enabled }}
+        - name: cache
+          persistentVolumeClaim:
+            claimName: {{ include "bitnet.fullname" . }}-cache-pvc
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.cpu.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.cpu.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.cpu.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+
+{{- if .Values.gpu.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "bitnet.fullname" . }}-gpu
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "bitnet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: inference
+    app.kubernetes.io/variant: gpu
+spec:
+  replicas: {{ .Values.gpu.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "bitnet.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: inference
+      app.kubernetes.io/variant: gpu
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.service.metricsPort }}"
+        prometheus.io/path: "/metrics"
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "bitnet.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: inference
+        app.kubernetes.io/variant: gpu
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "bitnet.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: bitnet
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.gpu.image.variant }}-{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.config.server.port }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.config.monitoring.metrics_port }}
+              protocol: TCP
+          env:
+            - name: RUST_LOG
+              value: {{ .Values.config.logging.level }}
+            - name: BITNET_CONFIG_PATH
+              value: "/app/config/bitnet.toml"
+            - name: BITNET_MODEL_PATH
+              value: {{ .Values.config.model.path }}
+            - name: CUDA_VISIBLE_DEVICES
+              value: "0"
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+            {{- if .Values.persistence.models.enabled }}
+            - name: models
+              mountPath: {{ .Values.config.model.path }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.persistence.cache.enabled }}
+            - name: cache
+              mountPath: /app/cache
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if .Values.healthCheck.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.path }}
+              port: http
+            initialDelaySeconds: {{ mul .Values.healthCheck.initialDelaySeconds 2 }}
+            periodSeconds: {{ .Values.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.healthCheck.failureThreshold }}
+          {{- end }}
+          {{- if .Values.readinessCheck.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessCheck.path }}
+              port: http
+            initialDelaySeconds: {{ mul .Values.readinessCheck.initialDelaySeconds 2 }}
+            periodSeconds: {{ .Values.readinessCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessCheck.failureThreshold }}
+          {{- end }}
+          {{- if .Values.startupCheck.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.startupCheck.path }}
+              port: http
+            initialDelaySeconds: {{ mul .Values.startupCheck.initialDelaySeconds 3 }}
+            periodSeconds: {{ .Values.startupCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.startupCheck.timeoutSeconds }}
+            failureThreshold: {{ mul .Values.startupCheck.failureThreshold 2 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.gpu.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "bitnet.fullname" . }}-config
+        {{- if .Values.persistence.models.enabled }}
+        - name: models
+          persistentVolumeClaim:
+            claimName: {{ include "bitnet.fullname" . }}-models-pvc
+        {{- end }}
+        {{- if .Values.persistence.cache.enabled }}
+        - name: cache
+          persistentVolumeClaim:
+            claimName: {{ include "bitnet.fullname" . }}-cache-pvc
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.gpu.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gpu.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gpu.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

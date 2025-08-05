@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bitnet-service
+  namespace: bitnet
+  labels:
+    app.kubernetes.io/name: bitnet
+    app.kubernetes.io/component: service
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: http
+    protocol: TCP
+    name: http
+  - port: 9090
+    targetPort: metrics
+    protocol: TCP
+    name: metrics
+  selector:
+    app.kubernetes.io/name: bitnet
+    app.kubernetes.io/component: inference
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bitnet-cpu-service
+  namespace: bitnet
+  labels:
+    app.kubernetes.io/name: bitnet
+    app.kubernetes.io/component: service
+    app.kubernetes.io/variant: cpu
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: http
+    protocol: TCP
+    name: http
+  - port: 9090
+    targetPort: metrics
+    protocol: TCP
+    name: metrics
+  selector:
+    app.kubernetes.io/name: bitnet
+    app.kubernetes.io/component: inference
+    app.kubernetes.io/variant: cpu
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bitnet-gpu-service
+  namespace: bitnet
+  labels:
+    app.kubernetes.io/name: bitnet
+    app.kubernetes.io/component: service
+    app.kubernetes.io/variant: gpu
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: http
+    protocol: TCP
+    name: http
+  - port: 9090
+    targetPort: metrics
+    protocol: TCP
+    name: metrics
+  selector:
+    app.kubernetes.io/name: bitnet
+    app.kubernetes.io/component: inference
+    app.kubernetes.io/variant: gpu

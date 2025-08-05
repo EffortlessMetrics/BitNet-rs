@@ -1,0 +1,59 @@
+# Multi-stage build for GPU-enabled BitNet deployment
+FROM nvidia/cuda:12.2-devel-ubuntu22.04 as builder
+
+# Install Rust
+RUN apt-get update && apt-get install -y \
+    curl \
+    pkg-config \
+    libssl-dev \
+    cmake \
+    build-essential \
+    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Create app directory
+WORKDIR /app
+
+# Copy workspace files
+COPY Cargo.toml Cargo.lock ./
+COPY crates/ ./crates/
+
+# Build release binary with GPU support
+RUN cargo build --release --bin bitnet-cli --features "cpu,gpu"
+
+# Runtime stage
+FROM nvidia/cuda:12.2-runtime-ubuntu22.04
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -r -s /bin/false bitnet
+
+# Copy binary from builder
+COPY --from=builder /app/target/release/bitnet-cli /usr/local/bin/bitnet
+
+# Create directories for models and config
+RUN mkdir -p /app/models /app/config && \
+    chown -R bitnet:bitnet /app
+
+# Switch to non-root user
+USER bitnet
+WORKDIR /app
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD bitnet --version || exit 1
+
+# Default command
+ENTRYPOINT ["bitnet"]
+CMD ["serve", "--host", "0.0.0.0", "--port", "8080", "--device", "cuda"]
+
+# Labels for metadata
+LABEL org.opencontainers.image.title="BitNet GPU"
+LABEL org.opencontainers.image.description="BitNet 1-bit LLM inference engine (GPU-enabled)"
+LABEL org.opencontainers.image.vendor="BitNet Project"
+LABEL org.opencontainers.image.licenses="MIT"
