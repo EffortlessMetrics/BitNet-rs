@@ -27,23 +27,6 @@ wasm-bindgen-futures = "0.4"
 js-sys = { workspace = true }
 web-sys = { workspace = true, features = [
     "console",
-    "Performance",
-    "Window",
-    "Worker",
-    "MessageEvent",
-    "MessagePort",
-    "Blob",
-    "Url",
-    "Response",
-    "Request",
-    "Headers",
-    "ReadableStream",
-    "ReadableStreamDefaultReader",
-    "Uint8Array",
-    "ArrayBuffer",
-    "Promise",
-    "AbortController",
-    "AbortSignal",
 ] }
 
 # Serialization
@@ -57,13 +40,13 @@ thiserror = { workspace = true }
 
 # Async support
 futures = { workspace = true }
-wasm-streams = "0.4"
+wasm-streams = "0.3"
 
 # Memory management
 wee_alloc = { version = "0.4", optional = true }
 
 # Logging for WASM
-console_error_panic_hook = "0.1"
+console_error_panic_hook = { version = "0.1", optional = true }
 wasm-logger = "0.2"
 
 [features]
@@ -73,25 +56,3 @@ nodejs = []
 embedded = []
 debug = ["console_error_panic_hook"]
 
-[dependencies.web-sys]
-workspace = true
-features = [
-    "console",
-    "Performance",
-    "Window",
-    "Worker",
-    "MessageEvent",
-    "MessagePort",
-    "Blob",
-    "Url",
-    "Response",
-    "Request",
-    "Headers",
-    "ReadableStream",
-    "ReadableStreamDefaultReader",
-    "Uint8Array",
-    "ArrayBuffer",
-    "Promise",
-    "AbortController",
-    "AbortSignal",
-]
