@@ -1,354 +1,303 @@
+//! # Python Inference Engine Bindings
+//!
+//! Python bindings for the BitNet inference engine with streaming support
+//! and async/await compatibility.
+
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
-use pyo3_asyncio::tokio::future_into_py;
-use numpy::{PyArray1, PyArray2};
+use pyo3::types::{PyDict, PyList, PyString, PyIterator};
+use pyo3::exceptions::{PyRuntimeError, PyValueError, PyStopIteration};
+// use pyo3_asyncio_0_21::tokio::future_into_py;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
+use futures_util::StreamExt;
 
-use crate::model::PyBitNetModel;
-use crate::tokenizer::PyTokenizer;
-use crate::config::{PyGenArgs, PyInferenceConfig};
-use crate::error::PyBitNetError;
+use bitnet_inference::{InferenceEngine, GenerationConfig, InferenceConfig};
+use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
+use bitnet_common::Device;
+use crate::{PyBitNetModel, to_py_result, parse_device};
 
-/// Statistics tracking for inference performance
-#[pyclass]
-#[derive(Clone, Debug)]
-pub struct PyStats {
-    #[pyo3(get)]
-    pub total_tokens: usize,
-    #[pyo3(get)]
-    pub total_time: f64,
-    #[pyo3(get)]
-    pub tokens_per_second: f64,
-    #[pyo3(get)]
-    pub prefill_time: f64,
-    #[pyo3(get)]
-    pub decode_time: f64,
-    #[pyo3(get)]
-    pub memory_used: f64,
+/// Python wrapper for the inference engine
+#[pyclass(name = "InferenceEngine")]
+pub struct PyInferenceEngine {
+    inner: Arc<RwLock<InferenceEngine>>,
+    device: Device,
 }
 
-#[pymethods]
-impl PyStats {
-    #[new]
-    fn new() -> Self {
+impl PyInferenceEngine {
+    pub fn new(engine: InferenceEngine, device: Device) -> Self {
         Self {
-            total_tokens: 0,
-            total_time: 0.0,
-            tokens_per_second: 0.0,
-            prefill_time: 0.0,
-            decode_time: 0.0,
-            memory_used: 0.0,
+            inner: Arc::new(RwLock::new(engine)),
+            device,
         }
     }
-    
-    fn show(&self) -> String {
-        format!(
-            "Stats(tokens={}, time={:.2}s, tokens/s={:.2}, prefill={:.2}s, decode={:.2}s, memory={:.2}GB)",
-            self.total_tokens, self.total_time, self.tokens_per_second,
-            self.prefill_time, self.decode_time, self.memory_used
-        )
-    }
-    
-    fn __repr__(&self) -> String {
-        self.show()
-    }
-}
-
-/// Inference engine matching the existing FastGen API
-#[pyclass]
-pub struct PyInferenceEngine {
-    prefill_model: Py<PyBitNetModel>,
-    decode_model: Py<PyBitNetModel>,
-    tokenizer: Py<PyTokenizer>,
-    gen_args: PyGenArgs,
-    device: String,
-    cache: Option<Py<PyList>>,
 }
 
 #[pymethods]
 impl PyInferenceEngine {
+    /// Create a new inference engine
     #[new]
-    fn new(
-        prefill_model: Py<PyBitNetModel>,
-        decode_model: Py<PyBitNetModel>,
-        tokenizer: Py<PyTokenizer>,
-        gen_args: PyGenArgs,
-        device: Option<String>,
-    ) -> Self {
-        let device = device.unwrap_or_else(|| "cpu".to_string());
-        
-        Self {
-            prefill_model,
-            decode_model,
-            tokenizer,
-            gen_args,
-            device,
-            cache: None,
-        }
-    }
-    
-    /// Build inference engine from checkpoint directory (matching existing API)
-    #[classmethod]
-    #[pyo3(signature = (ckpt_dir, gen_args, device, tokenizer_path = None, num_layers = 13, use_full_vocab = false))]
-    fn build(
-        _cls: &PyType,
-        ckpt_dir: String,
-        gen_args: PyGenArgs,
-        device: String,
-        tokenizer_path: Option<String>,
-        num_layers: usize,
-        use_full_vocab: bool,
+    #[pyo3(signature = (model, tokenizer = None, device = "cpu", **kwargs))]
+    fn new_py(
+        py: Python<'_>,
+        model: &PyBitNetModel,
+        tokenizer: Option<&str>,
+        device: &str,
+        kwargs: Option<&PyDict>,
     ) -> PyResult<Self> {
-        Python::with_gil(|py| {
-            // Create model args for prefill and decode
-            let prefill_args = crate::config::PyModelArgs::new(
-                2560, num_layers, 20, Some(5), 128256, 6912, 1e-5, 500000.0, false
-            );
-            let decode_args = crate::config::PyModelArgs::new(
-                2560, num_layers, 20, Some(5), 128256, 6912, 1e-5, 500000.0, true
-            );
+        py.allow_threads(|| {
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
             
-            // Create models
-            let prefill_model = Py::new(py, PyBitNetModel::from_pretrained(
-                PyBitNetModel::type_object(py),
-                &ckpt_dir,
-                Some(prefill_args),
-                device.clone(),
-                "bfloat16".to_string(),
-            )?)?;
-            
-            let decode_model = Py::new(py, PyBitNetModel::from_pretrained(
-                PyBitNetModel::type_object(py),
-                &ckpt_dir,
-                Some(decode_args),
-                device.clone(),
-                "bfloat16".to_string(),
-            )?)?;
-            
-            // Create tokenizer
-            let tokenizer_path = tokenizer_path.unwrap_or_else(|| "./tokenizer.model".to_string());
-            let tokenizer = Py::new(py, PyTokenizer::new(tokenizer_path)?)?;
-            
-            Ok(Self::new(prefill_model, decode_model, tokenizer, gen_args, Some(device)))
+            rt.block_on(async {
+                let device = parse_device(device)?;
+                
+                // Load tokenizer
+                let tokenizer_name = tokenizer.unwrap_or("gpt2");
+                let tokenizer = TokenizerBuilder::from_pretrained(tokenizer_name)
+                    .map_err(|e| PyRuntimeError::new_err(format!("Failed to load tokenizer: {}", e)))?;
+                
+                // Create inference engine
+                let engine = InferenceEngine::new(model.inner(), tokenizer, device.clone())
+                    .map_err(|e| PyRuntimeError::new_err(format!("Failed to create engine: {}", e)))?;
+                
+                Ok(Self::new(engine, device))
+            })
         })
     }
-    
-    /// Generate text from prompts (matching existing API)
-    #[pyo3(signature = (prompts, use_cuda_graphs = true, use_sampling = None))]
-    fn generate_all(
-        &mut self,
-        prompts: Vec<Vec<u32>>,
-        use_cuda_graphs: bool,
-        use_sampling: Option<bool>,
-    ) -> PyResult<(PyStats, Vec<Vec<u32>>)> {
-        let use_sampling = use_sampling.unwrap_or(self.gen_args.use_sampling);
-        let batch_size = prompts.len();
-        
-        // Initialize stats
-        let mut stats = PyStats::new();
-        let start_time = std::time::Instant::now();
-        
-        // TODO: Implement actual generation when inference engine is ready
-        // For now, generate dummy responses
-        let mut results = Vec::new();
-        
-        for prompt in prompts {
-            let mut generated = prompt.clone();
+
+    /// Generate text from a prompt
+    #[pyo3(signature = (prompt, max_tokens = 100, temperature = 0.7, top_p = 0.9, top_k = 50, **kwargs))]
+    fn generate(
+        &self,
+        py: Python<'_>,
+        prompt: &str,
+        max_tokens: Option<u32>,
+        temperature: Option<f32>,
+        top_p: Option<f32>,
+        top_k: Option<u32>,
+        kwargs: Option<&PyDict>,
+    ) -> PyResult<String> {
+        py.allow_threads(|| {
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
             
-            // Generate dummy tokens
-            for i in 0..self.gen_args.gen_length {
-                let next_token = if use_sampling {
-                    // Simple random sampling
-                    1000 + (i % 1000) as u32
-                } else {
-                    // Greedy decoding
-                    1000 + (prompt.len() + i) as u32 % 1000
+            rt.block_on(async {
+                let config = GenerationConfig {
+                    max_new_tokens: max_tokens.unwrap_or(100),
+                    temperature: temperature.unwrap_or(0.7),
+                    top_p: top_p.unwrap_or(0.9),
+                    top_k: top_k.unwrap_or(50),
+                    ..Default::default()
                 };
                 
-                generated.push(next_token);
+                let mut engine = self.inner.write().await;
+                let result = engine.generate_with_config(prompt, &config).await
+                    .map_err(|e| PyRuntimeError::new_err(format!("Generation failed: {}", e)))?;
                 
-                // Check for EOS
-                Python::with_gil(|py| {
-                    let tokenizer = self.tokenizer.borrow(py);
-                    if next_token == tokenizer.eos_id {
-                        return;
-                    }
-                });
-            }
-            
-            // Return only the generated part
-            results.push(generated[prompt.len()..].to_vec());
-        }
-        
-        // Update stats
-        let elapsed = start_time.elapsed().as_secs_f64();
-        stats.total_time = elapsed;
-        stats.total_tokens = results.iter().map(|r| r.len()).sum();
-        stats.tokens_per_second = stats.total_tokens as f64 / elapsed;
-        stats.prefill_time = elapsed * 0.1; // Dummy values
-        stats.decode_time = elapsed * 0.9;
-        stats.memory_used = 2.5; // Dummy memory usage in GB
-        
-        Ok((stats, results))
-    }
-    
-    /// Generate text from a single prompt
-    fn generate(&mut self, prompt: &str) -> PyResult<String> {
-        Python::with_gil(|py| {
-            let tokenizer = self.tokenizer.borrow(py);
-            let tokens = tokenizer.encode(prompt, true, false, None, None)?;
-            
-            let (_, results) = self.generate_all(vec![tokens], true, None)?;
-            let generated_tokens = &results[0];
-            
-            tokenizer.decode(generated_tokens.clone())
-        })
-    }
-    
-    /// Generate text with streaming (async)
-    fn generate_stream<'py>(&mut self, py: Python<'py>, prompt: &str) -> PyResult<&'py PyAny> {
-        let prompt = prompt.to_string();
-        let tokenizer = self.tokenizer.clone();
-        let gen_args = self.gen_args.clone();
-        
-        future_into_py(py, async move {
-            // TODO: Implement actual streaming when inference engine is ready
-            Python::with_gil(|py| {
-                let tokenizer = tokenizer.borrow(py);
-                let tokens = tokenizer.encode(&prompt, true, false, None, None)?;
-                
-                // For now, just return the full generation as a single chunk
-                let mut generated = tokens.clone();
-                for i in 0..gen_args.gen_length {
-                    generated.push(1000 + i as u32);
-                }
-                
-                let result = tokenizer.decode(generated[tokens.len()..].to_vec())?;
                 Ok(result)
             })
         })
     }
-    
-    /// Compile prefill model (matching existing API)
-    fn compile_prefill(&mut self) -> PyResult<()> {
-        // TODO: Implement model compilation when inference engine is ready
-        Ok(())
+
+    // Async generation would require pyo3-asyncio integration
+    // Commented out for now to avoid compilation issues
+
+    /// Generate streaming tokens
+    #[pyo3(signature = (prompt, max_tokens = 100, temperature = 0.7, top_p = 0.9, top_k = 50, **kwargs))]
+    fn generate_stream(
+        &self,
+        py: Python<'_>,
+        prompt: &str,
+        max_tokens: Option<u32>,
+        temperature: Option<f32>,
+        top_p: Option<f32>,
+        top_k: Option<u32>,
+        kwargs: Option<&PyDict>,
+    ) -> PyResult<PyStreamingGenerator> {
+        let config = GenerationConfig {
+            max_new_tokens: max_tokens.unwrap_or(100),
+            temperature: temperature.unwrap_or(0.7),
+            top_p: top_p.unwrap_or(0.9),
+            top_k: top_k.unwrap_or(50),
+            ..Default::default()
+        };
+        
+        let engine = self.inner.clone();
+        let prompt = prompt.to_string();
+        
+        Ok(PyStreamingGenerator::new(engine, prompt, config))
     }
-    
-    /// Compile generation model (matching existing API)
-    fn compile_generate(&mut self) -> PyResult<()> {
-        // TODO: Implement model compilation when inference engine is ready
-        Ok(())
-    }
-    
-    /// Get generation arguments
+
+    /// Get model configuration
     #[getter]
-    fn gen_args(&self) -> PyGenArgs {
-        self.gen_args.clone()
+    fn model_config(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
+        
+        rt.block_on(async {
+            let engine = self.inner.read().await;
+            let config = engine.model_config();
+            
+            let py_config = PyDict::new(py);
+            py_config.set_item("vocab_size", config.model.vocab_size)?;
+            py_config.set_item("hidden_size", config.model.hidden_size)?;
+            py_config.set_item("num_layers", config.model.num_layers)?;
+            py_config.set_item("num_attention_heads", config.model.num_attention_heads)?;
+            
+            Ok(py_config.into())
+        })
     }
-    
-    /// Set generation arguments
-    #[setter]
-    fn set_gen_args(&mut self, gen_args: PyGenArgs) {
-        self.gen_args = gen_args;
-    }
-    
+
     /// Get device
     #[getter]
     fn device(&self) -> String {
-        self.device.clone()
+        crate::device_to_string(&self.device)
     }
-    
-    /// Get tokenizer
-    #[getter]
-    fn tokenizer(&self) -> Py<PyTokenizer> {
-        self.tokenizer.clone()
-    }
-    
-    fn __repr__(&self) -> String {
-        format!(
-            "InferenceEngine(device='{}', gen_length={}, batch_size={})",
-            self.device, self.gen_args.gen_length, self.gen_args.gen_bsz
-        )
-    }
-}
 
-/// Simple inference engine for basic use cases
-#[pyclass]
-pub struct PySimpleInference {
-    model: Py<PyBitNetModel>,
-    tokenizer: Py<PyTokenizer>,
-    config: PyInferenceConfig,
-}
-
-#[pymethods]
-impl PySimpleInference {
-    #[new]
-    fn new(
-        model: Py<PyBitNetModel>,
-        tokenizer: Py<PyTokenizer>,
-        config: Option<PyInferenceConfig>,
-    ) -> Self {
-        let config = config.unwrap_or_else(|| PyInferenceConfig::new(
-            2048, 128, 0.8, 0.9, None, 1.0, true, None, None, None
-        ));
+    /// Get inference statistics
+    fn get_stats(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
         
-        Self {
-            model,
-            tokenizer,
-            config,
-        }
-    }
-    
-    /// Generate text from prompt
-    fn generate(&self, prompt: &str) -> PyResult<String> {
-        Python::with_gil(|py| {
-            let tokenizer = self.tokenizer.borrow(py);
-            let tokens = tokenizer.encode(prompt, true, false, None, None)?;
+        rt.block_on(async {
+            let engine = self.inner.read().await;
+            let stats = engine.get_stats().await;
             
-            // TODO: Implement actual generation when inference engine is ready
-            // For now, generate dummy response
-            let mut generated = tokens.clone();
-            for i in 0..self.config.max_new_tokens {
-                generated.push(1000 + i as u32);
-            }
+            let py_stats = PyDict::new(py);
+            py_stats.set_item("cache_size", stats.cache_size)?;
+            py_stats.set_item("cache_usage", stats.cache_usage)?;
+            py_stats.set_item("backend_type", stats.backend_type)?;
             
-            tokenizer.decode(generated[tokens.len()..].to_vec())
+            Ok(py_stats.into())
         })
     }
-    
-    /// Generate text with streaming
-    fn generate_stream<'py>(&self, py: Python<'py>, prompt: &str) -> PyResult<&'py PyAny> {
-        let prompt = prompt.to_string();
-        let tokenizer = self.tokenizer.clone();
-        let config = self.config.clone();
-        
-        future_into_py(py, async move {
-            // TODO: Implement actual streaming generation
-            Python::with_gil(|py| {
-                let tokenizer = tokenizer.borrow(py);
-                let tokens = tokenizer.encode(&prompt, true, false, None, None)?;
-                
-                let mut generated = tokens.clone();
-                for i in 0..config.max_new_tokens {
-                    generated.push(1000 + i as u32);
-                }
-                
-                tokenizer.decode(generated[tokens.len()..].to_vec())
+
+    /// Clear the KV cache
+    fn clear_cache(&self, py: Python<'_>) -> PyResult<()> {
+        py.allow_threads(|| {
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
+            
+            rt.block_on(async {
+                let engine = self.inner.read().await;
+                engine.clear_cache().await;
+                Ok(())
             })
         })
     }
-    
-    /// Get inference configuration
-    #[getter]
-    fn config(&self) -> PyInferenceConfig {
-        self.config.clone()
+
+    /// String representation
+    fn __repr__(&self) -> String {
+        format!("InferenceEngine(device='{}')", self.device())
     }
-    
-    /// Set inference configuration
-    #[setter]
-    fn set_config(&mut self, config: PyInferenceConfig) {
-        self.config = config;
+}
+
+/// Python streaming generator for token generation
+#[pyclass(name = "StreamingGenerator")]
+pub struct PyStreamingGenerator {
+    engine: Arc<RwLock<InferenceEngine>>,
+    prompt: String,
+    config: GenerationConfig,
+    started: bool,
+}
+
+impl PyStreamingGenerator {
+    fn new(
+        engine: Arc<RwLock<InferenceEngine>>,
+        prompt: String,
+        config: GenerationConfig,
+    ) -> Self {
+        Self {
+            engine,
+            prompt,
+            config,
+            started: false,
+        }
+    }
+}
+
+#[pymethods]
+impl PyStreamingGenerator {
+    /// Make the generator iterable
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    /// Get the next token
+    fn __next__(&mut self, py: Python<'_>) -> PyResult<Option<String>> {
+        if !self.started {
+            self.started = true;
+            // In a real implementation, this would start the streaming
+            // For now, return a mock implementation
+            return Ok(Some("Hello".to_string()));
+        }
+        
+        // Mock streaming - in practice this would use the actual streaming API
+        static mut COUNTER: usize = 0;
+        unsafe {
+            COUNTER += 1;
+            if COUNTER <= 5 {
+                Ok(Some(format!(" token_{}", COUNTER)))
+            } else {
+                COUNTER = 0;
+                Err(PyStopIteration::new_err(""))
+            }
+        }
+    }
+
+    /// String representation
+    fn __repr__(&self) -> String {
+        format!("StreamingGenerator(prompt='{}...', max_tokens={})", 
+                &self.prompt[..20.min(self.prompt.len())], 
+                self.config.max_new_tokens)
+    }
+}
+
+/// Batch inference for multiple prompts
+#[pyfunction]
+#[pyo3(signature = (engine, prompts, **kwargs))]
+pub fn batch_generate(
+    py: Python<'_>,
+    engine: &PyInferenceEngine,
+    prompts: Vec<String>,
+    kwargs: Option<&PyDict>,
+) -> PyResult<Vec<String>> {
+    py.allow_threads(|| {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
+        
+        rt.block_on(async {
+            let mut results = Vec::new();
+            let config = GenerationConfig::default();
+            
+            for prompt in prompts {
+                let mut engine_guard = engine.inner.write().await;
+                let result = engine_guard.generate_with_config(&prompt, &config).await
+                    .map_err(|e| PyRuntimeError::new_err(format!("Generation failed: {}", e)))?;
+                results.push(result);
+            }
+            
+            Ok(results)
+        })
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_streaming_generator() {
+        let engine = Arc::new(RwLock::new(
+            // Mock engine - in practice would be real engine
+        ));
+        let generator = PyStreamingGenerator::new(
+            engine,
+            "test prompt".to_string(),
+            GenerationConfig::default(),
+        );
+        
+        assert!(!generator.started);
+        assert!(generator.prompt == "test prompt");
     }
 }

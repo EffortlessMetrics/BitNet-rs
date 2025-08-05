@@ -13,16 +13,24 @@ description = "Inference engines for BitNet models"
 [dependencies]
 bitnet-common = { path = "../bitnet-common" }
 bitnet-models = { path = "../bitnet-models" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers" }
 bitnet-kernels = { path = "../bitnet-kernels" }
 anyhow.workspace = true
 tokio = { workspace = true, features = ["full"] }
 futures.workspace = true
+futures-util = "0.3"
 rayon.workspace = true
 rand = "0.8"
 rand_chacha = "0.3"
 candle-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+tracing.workspace = true
+async-trait = "0.1"
+num_cpus = "1.0"
+
+[dev-dependencies]
+tokio-test = "0.4"
 
 [features]
 default = ["cpu"]

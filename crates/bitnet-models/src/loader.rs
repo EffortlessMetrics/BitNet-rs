@@ -1,8 +1,7 @@
 //! Model loading utilities
 
-use bitnet_common::{BitNetConfig, ModelMetadata, Result, BitNetError};
+use bitnet_common::{BitNetConfig, ModelMetadata, Result, BitNetError, Device};
 use crate::Model;
-use candle_core::Device;
 use memmap2::Mmap;
 use std::fs::File;
 use std::path::Path;
@@ -49,7 +48,7 @@ pub trait FormatLoader: Send + Sync {
     fn can_load(&self, path: &Path) -> bool;
     fn detect_format(&self, path: &Path) -> Result<bool>;
     fn extract_metadata(&self, path: &Path) -> Result<ModelMetadata>;
-    fn load(&self, path: &Path, device: &Device, config: &LoadConfig) -> Result<Box<dyn Model<Config = BitNetConfig>>>;
+    fn load(&self, path: &Path, device: &Device, config: &LoadConfig) -> Result<Box<dyn Model>>;
 }
 
 /// Main model loader with automatic format detection
@@ -71,7 +70,7 @@ impl ModelLoader {
     }
     
     /// Load a model with automatic format detection
-    pub fn load<P: AsRef<Path>>(&self, path: P) -> Result<Box<dyn Model<Config = BitNetConfig>>> {
+    pub fn load<P: AsRef<Path>>(&self, path: P) -> Result<Box<dyn Model>> {
         self.load_with_config(path, &LoadConfig::default())
     }
     
@@ -80,7 +79,7 @@ impl ModelLoader {
         &self,
         path: P,
         config: &LoadConfig,
-    ) -> Result<Box<dyn Model<Config = BitNetConfig>>> {
+    ) -> Result<Box<dyn Model>> {
         let path = path.as_ref();
         
         info!("Loading model from: {}", path.display());

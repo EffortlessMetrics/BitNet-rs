@@ -1,494 +1,382 @@
-//! Streaming generation support
+//! # Streaming Generation Support
+//!
+//! Provides streaming token generation with async/await support, backpressure handling,
+//! and cancellation support for real-time applications.
 
-use crate::Backend;
-use bitnet_common::{BitNetError, GenerationConfig, Result};
+use anyhow::{Result, Context};
+use bitnet_common::{Device, Tensor, ConcreteTensor};
 use bitnet_models::Model;
-use futures::Stream;
+use bitnet_tokenizers::Tokenizer;
+use futures_util::Stream;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::task::{Context, Poll};
+use std::task::{Context as TaskContext, Poll};
 use tokio::sync::{mpsc, RwLock};
+use tracing::{debug, warn, instrument};
 
-/// Streaming configuration
-#[derive(Debug, Clone, PartialEq)]
+use crate::{
+    backends::Backend,
+    cache::KVCache,
+    config::GenerationConfig,
+    sampling::{SamplingStrategy, SamplingConfig},
+};
+
+/// Configuration for streaming generation
+#[derive(Debug, Clone)]
 pub struct StreamingConfig {
+    /// Size of the internal buffer for tokens
     pub buffer_size: usize,
-    pub yield_interval: usize,
-    pub enable_backpressure: bool,
+    /// Interval between token flushes in milliseconds
+    pub flush_interval_ms: u64,
 }
 
 impl Default for StreamingConfig {
     fn default() -> Self {
         Self {
-            buffer_size: 32,
-            yield_interval: 1,
-            enable_backpressure: true,
+            buffer_size: 10,
+            flush_interval_ms: 50,
         }
     }
 }
 
-impl StreamingConfig {
-    pub fn validate(&self) -> Result<()> {
-        if self.buffer_size == 0 {
-            return Err(BitNetError::Config(
-                "buffer_size must be greater than 0".to_string()
-            ));
-        }
-        
-        if self.yield_interval == 0 {
-            return Err(BitNetError::Config(
-                "yield_interval must be greater than 0".to_string()
-            ));
-        }
-        
-        Ok(())
-    }
-}
-
-/// Trait for streaming generation
-pub trait GenerationStream: Stream<Item = Result<String>> + Send + Unpin {
-    /// Cancel the generation
-    fn cancel(&mut self) -> Result<()>;
-    
-    /// Get current position in generation
-    fn position(&self) -> usize;
-    
-    /// Check if generation is complete
-    fn is_complete(&self) -> bool;
-}
-
-/// Token generation stream implementation
-pub struct TokenGenerationStream {
-    model: Arc<RwLock<Box<dyn Model<Config = bitnet_common::BitNetConfig>>>>,
-    backend: Box<dyn Backend>,
-    tokens: Vec<u32>,
-    config: GenerationConfig,
-    stream_config: StreamingConfig,
-    position: usize,
-    buffer: Vec<String>,
+/// A stream of generated tokens
+pub struct GenerationStream {
     receiver: mpsc::Receiver<Result<String>>,
-    sender: Option<mpsc::Sender<Result<String>>>,
-    is_cancelled: bool,
-    is_complete: bool,
+    _handle: tokio::task::JoinHandle<()>,
 }
 
-impl TokenGenerationStream {
-    /// Create a new token generation stream
+impl GenerationStream {
+    /// Create a new generation stream
+    #[instrument(skip(model, tokenizer, backend, cache))]
     pub fn new(
-        model: Arc<RwLock<Box<dyn Model<Config = bitnet_common::BitNetConfig>>>>,
+        model: Arc<dyn Model>,
+        tokenizer: Arc<dyn Tokenizer>,
         backend: Box<dyn Backend>,
-        tokens: Vec<u32>,
-        config: GenerationConfig,
-        stream_config: StreamingConfig,
-    ) -> Result<Self> {
-        stream_config.validate()?;
+        cache: Arc<RwLock<KVCache>>,
+        prompt: String,
+        generation_config: GenerationConfig,
+        streaming_config: StreamingConfig,
+    ) -> Self {
+        let (sender, receiver) = mpsc::channel(streaming_config.buffer_size);
         
-        let (sender, receiver) = mpsc::channel(stream_config.buffer_size);
-        
-        Ok(Self {
-            model,
-            backend,
-            tokens,
-            config,
-            stream_config,
-            position: 0,
-            buffer: Vec::new(),
-            receiver,
-            sender: Some(sender),
-            is_cancelled: false,
-            is_complete: false,
-        })
-    }
-    
-    /// Start the generation process
-    pub async fn start(&mut self) -> Result<()> {
-        if let Some(sender) = self.sender.take() {
-            let model = self.model.clone();
-            let backend = self.backend.clone_backend();
-            let tokens = self.tokens.clone();
-            let config = self.config.clone();
-            let stream_config = self.stream_config.clone();
-            
-            tokio::spawn(async move {
-                Self::generate_tokens(model, backend, tokens, config, stream_config, sender).await;
-            });
-        }
-        
-        Ok(())
-    }
-    
-    /// Create and start a new streaming generation
-    pub async fn create_and_start(
-        model: Arc<RwLock<Box<dyn Model<Config = bitnet_common::BitNetConfig>>>>,
-        backend: Box<dyn Backend>,
-        tokens: Vec<u32>,
-        config: GenerationConfig,
-        stream_config: StreamingConfig,
-    ) -> Result<Self> {
-        let mut stream = Self::new(model, backend, tokens, config, stream_config)?;
-        stream.start().await?;
-        Ok(stream)
-    }
-    
-    /// Generate tokens in background task
-    async fn generate_tokens(
-        _model: Arc<RwLock<Box<dyn Model<Config = bitnet_common::BitNetConfig>>>>,
-        backend: Box<dyn Backend>,
-        mut tokens: Vec<u32>,
-        config: GenerationConfig,
-        stream_config: StreamingConfig,
-        sender: mpsc::Sender<Result<String>>,
-    ) {
-        for step in 0..config.max_new_tokens {
-            // Check if receiver is closed (stream cancelled)
-            if sender.is_closed() {
-                break;
+        let handle = tokio::spawn(async move {
+            if let Err(e) = Self::generate_stream_internal(
+                model,
+                tokenizer,
+                backend,
+                cache,
+                prompt,
+                generation_config,
+                streaming_config,
+                sender.clone(),
+            ).await {
+                warn!("Stream generation failed: {}", e);
+                let _ = sender.send(Err(e)).await;
             }
-            
-            // Generate next token (placeholder implementation)
-            let next_token = step as u32 + 1000; // Placeholder
-            tokens.push(next_token);
-            
-            // Check for EOS token
-            if backend.is_eos_token(next_token) {
-                break;
-            }
-            
-            // Yield token at specified intervals
-            if step % stream_config.yield_interval == 0 {
-                let token_text = match backend.detokenize(&[next_token]) {
-                    Ok(text) => text,
-                    Err(e) => {
-                        let _ = sender.send(Err(e)).await;
-                        break;
-                    }
-                };
-                
-                if sender.send(Ok(token_text)).await.is_err() {
-                    break; // Receiver dropped
-                }
-            }
-            
-            // Apply backpressure if enabled
-            if stream_config.enable_backpressure && sender.capacity() == 0 {
-                tokio::task::yield_now().await;
-            }
-        }
-    }
-}
-
-impl GenerationStream for TokenGenerationStream {
-    fn cancel(&mut self) -> Result<()> {
-        self.is_cancelled = true;
-        self.receiver.close();
-        Ok(())
-    }
-    
-    fn position(&self) -> usize {
-        self.position
-    }
-    
-    fn is_complete(&self) -> bool {
-        self.is_complete
-    }
-}
-
-impl Stream for TokenGenerationStream {
-    type Item = Result<String>;
-    
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        if self.is_cancelled {
-            return Poll::Ready(None);
-        }
-        
-        match self.receiver.poll_recv(cx) {
-            Poll::Ready(Some(item)) => {
-                self.position += 1;
-                Poll::Ready(Some(item))
-            }
-            Poll::Ready(None) => {
-                self.is_complete = true;
-                Poll::Ready(None)
-            }
-            Poll::Pending => Poll::Pending,
-        }
-    }
-}
-
-/// Batch streaming for multiple requests
-pub struct BatchGenerationStream {
-    streams: Vec<Box<dyn GenerationStream>>,
-    current_index: usize,
-}
-
-impl BatchGenerationStream {
-    /// Create a new batch stream
-    pub fn new(streams: Vec<Box<dyn GenerationStream>>) -> Self {
-        Self {
-            streams,
-            current_index: 0,
-        }
-    }
-    
-    /// Add a stream to the batch
-    pub fn add_stream(&mut self, stream: Box<dyn GenerationStream>) {
-        self.streams.push(stream);
-    }
-    
-    /// Get number of active streams
-    pub fn active_count(&self) -> usize {
-        self.streams.iter().filter(|s| !s.is_complete()).count()
-    }
-}
-
-impl Stream for BatchGenerationStream {
-    type Item = (usize, Result<String>);
-    
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let mut all_complete = true;
-        
-        // Round-robin through streams
-        for _ in 0..self.streams.len() {
-            let stream_idx = self.current_index;
-            self.current_index = (self.current_index + 1) % self.streams.len();
-            
-            if let Some(stream) = self.streams.get_mut(stream_idx) {
-                if !stream.is_complete() {
-                    all_complete = false;
-                    
-                    match Pin::new(stream).poll_next(cx) {
-                        Poll::Ready(Some(item)) => {
-                            return Poll::Ready(Some((stream_idx, item)));
-                        }
-                        Poll::Ready(None) => {
-                            // Stream completed, continue to next
-                        }
-                        Poll::Pending => {
-                            // Stream not ready, continue to next
-                        }
-                    }
-                }
-            }
-        }
-        
-        if all_complete {
-            Poll::Ready(None)
-        } else {
-            Poll::Pending
-        }
-    }
-}
-
-/// Async utilities for streaming generation
-pub mod async_utils {
-    use super::*;
-    use futures::stream::StreamExt;
-    use tokio::time::{timeout, Duration};
-    use std::time::Instant;
-    
-    /// Collect all tokens from a stream with timeout
-    pub async fn collect_stream_with_timeout(
-        mut stream: Box<dyn GenerationStream>,
-        timeout_duration: Duration,
-    ) -> Result<Vec<String>> {
-        let mut tokens = Vec::new();
-        
-        while let Ok(Some(result)) = timeout(timeout_duration, stream.next()).await {
-            match result {
-                Ok(token) => tokens.push(token),
-                Err(e) => return Err(e),
-            }
-        }
-        
-        Ok(tokens)
-    }
-    
-    /// Merge multiple streams into a single stream
-    pub async fn merge_streams(
-        streams: Vec<Box<dyn GenerationStream>>,
-    ) -> impl Stream<Item = (usize, Result<String>)> {
-        let batch_stream = BatchGenerationStream::new(streams);
-        futures::stream::unfold(batch_stream, |mut batch| async move {
-            match batch.next().await {
-                Some(item) => Some((item, batch)),
-                None => None,
-            }
-        })
-    }
-    
-    /// Rate limit a stream to a maximum tokens per second
-    pub fn rate_limit_stream<S>(
-        stream: S,
-        max_tokens_per_second: f64,
-    ) -> impl Stream<Item = S::Item>
-    where
-        S: Stream + Unpin,
-    {
-        let interval = Duration::from_secs_f64(1.0 / max_tokens_per_second);
-        let mut last_yield = Instant::now();
-        
-        stream.filter_map(move |item| {
-            let now = Instant::now();
-            if now.duration_since(last_yield) >= interval {
-                last_yield = now;
-                futures::future::ready(Some(item))
-            } else {
-                futures::future::ready(None)
-            }
-        })
-    }
-}
-
-/// Integration examples for different async runtimes
-pub mod integration_examples {
-    use super::*;
-    use futures::StreamExt;
-    
-    /// Example: Tokio integration with graceful shutdown
-    pub async fn tokio_streaming_example(
-        engine: &crate::CpuInferenceEngine,
-        prompt: &str,
-    ) -> Result<String> {
-        let tokens = vec![1, 2, 3]; // Placeholder tokenization
-        let config = GenerationConfig::default();
-        let stream_config = StreamingConfig::default();
-        
-        let mut stream = engine.generate_stream_async(tokens, config, stream_config).await?;
-        let mut result = String::new();
-        
-        // Set up cancellation
-        let (cancel_tx, mut cancel_rx) = tokio::sync::oneshot::channel();
-        
-        // Spawn a task to handle cancellation
-        tokio::spawn(async move {
-            tokio::signal::ctrl_c().await.ok();
-            let _ = cancel_tx.send(());
         });
         
-        loop {
-            tokio::select! {
-                token_result = stream.next() => {
-                    match token_result {
-                        Some(Ok(token)) => result.push_str(&token),
-                        Some(Err(e)) => return Err(e),
-                        None => break,
-                    }
-                }
-                _ = &mut cancel_rx => {
-                    stream.cancel()?;
-                    break;
-                }
-            }
+        Self {
+            receiver,
+            _handle: handle,
         }
-        
-        Ok(result)
     }
-    
-    /// Example: Async-std integration
-    #[cfg(feature = "async-std")]
-    pub async fn async_std_streaming_example(
-        engine: &crate::CpuInferenceEngine,
-        prompt: &str,
-    ) -> Result<String> {
-        use async_std::stream::StreamExt;
+
+    /// Internal streaming generation implementation
+    async fn generate_stream_internal(
+        model: Arc<dyn Model>,
+        tokenizer: Arc<dyn Tokenizer>,
+        backend: Box<dyn Backend>,
+        cache: Arc<RwLock<KVCache>>,
+        prompt: String,
+        config: GenerationConfig,
+        streaming_config: StreamingConfig,
+        sender: mpsc::Sender<Result<String>>,
+    ) -> Result<()> {
+        debug!("Starting streaming generation for prompt");
         
-        let tokens = vec![1, 2, 3]; // Placeholder tokenization
-        let config = GenerationConfig::default();
-        let stream_config = StreamingConfig::default();
+        // Tokenize input
+        let input_tokens = tokenizer.encode(&prompt, true)
+            .context("Failed to tokenize input prompt")?;
         
-        let stream = engine.generate_stream_async(tokens, config, stream_config).await?;
-        let mut result = String::new();
+        let mut current_tokens = input_tokens.clone();
+        let mut generated_count = 0;
         
-        let mut stream = Box::pin(stream);
-        while let Some(token_result) = stream.next().await {
-            match token_result {
-                Ok(token) => result.push_str(&token),
-                Err(e) => return Err(e),
-            }
-        }
-        
-        Ok(result)
-    }
-    
-    /// Example: Web server integration with Server-Sent Events
-    pub async fn sse_streaming_example(
-        engine: &crate::CpuInferenceEngine,
-        _prompt: &str,
-    ) -> std::result::Result<impl Stream<Item = std::result::Result<String, std::io::Error>>, std::io::Error> {
-        let tokens = vec![1, 2, 3]; // Placeholder tokenization
-        let config = GenerationConfig::default();
-        let stream_config = StreamingConfig {
-            buffer_size: 1, // Immediate streaming for SSE
-            yield_interval: 1,
-            enable_backpressure: false,
+        let sampling_config = SamplingConfig {
+            temperature: config.temperature,
+            top_k: config.top_k,
+            top_p: config.top_p,
+            repetition_penalty: config.repetition_penalty,
+            seed: config.seed,
         };
         
-        let stream = engine.generate_stream_async(tokens, config, stream_config).await
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        let mut sampling_strategy = SamplingStrategy::new(sampling_config);
+        let mut token_buffer = Vec::new();
+        let mut last_flush = std::time::Instant::now();
         
-        Ok(stream.map(|result| {
-            result.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
-        }))
+        for _ in 0..config.max_new_tokens {
+            // Check if receiver is closed (client disconnected)
+            if sender.is_closed() {
+                debug!("Client disconnected, stopping generation");
+                break;
+            }
+            
+            // Forward pass through model
+            let logits = Self::forward_pass(
+                &*backend,
+                &current_tokens,
+                &cache,
+                &tokenizer,
+            ).await?;
+            
+            // Sample next token
+            let next_token = sampling_strategy.sample(&logits, &current_tokens)?;
+            
+            // Check for stop conditions
+            if Self::should_stop(next_token, &current_tokens, &config, &tokenizer) {
+                break;
+            }
+            
+            // Decode token to text
+            let token_text = tokenizer.decode(&[next_token], true)
+                .context("Failed to decode token")?;
+            
+            token_buffer.push(token_text);
+            current_tokens.push(next_token);
+            generated_count += 1;
+            
+            // Flush buffer based on size or time
+            let should_flush = token_buffer.len() >= streaming_config.buffer_size
+                || last_flush.elapsed().as_millis() >= streaming_config.flush_interval_ms as u128;
+            
+            if should_flush && !token_buffer.is_empty() {
+                let buffered_text = token_buffer.join("");
+                if sender.send(Ok(buffered_text)).await.is_err() {
+                    debug!("Client disconnected during send");
+                    break;
+                }
+                token_buffer.clear();
+                last_flush = std::time::Instant::now();
+            }
+            
+            // Limit context length
+            if current_tokens.len() > 2048 {
+                let keep_length = 1024;
+                current_tokens = current_tokens[current_tokens.len() - keep_length..].to_vec();
+            }
+        }
+        
+        // Flush remaining tokens
+        if !token_buffer.is_empty() {
+            let remaining_text = token_buffer.join("");
+            let _ = sender.send(Ok(remaining_text)).await;
+        }
+        
+        debug!("Streaming generation completed: {} tokens", generated_count);
+        Ok(())
+    }
+
+    /// Perform forward pass through the model
+    async fn forward_pass(
+        backend: &dyn Backend,
+        tokens: &[u32],
+        cache: &Arc<RwLock<KVCache>>,
+        tokenizer: &Arc<dyn Tokenizer>,
+    ) -> Result<Vec<f32>> {
+        // Convert tokens to tensor
+        let input_tensor = Self::tokens_to_tensor(tokens)?;
+        
+        // Get cache for this sequence
+        let mut cache_guard = cache.write().await;
+        
+        // Forward pass through backend
+        let output_tensor = backend.forward(&input_tensor, &mut *cache_guard).await?;
+        
+        // Extract logits from output tensor
+        Self::tensor_to_logits(&output_tensor, tokenizer.vocab_size())
+    }
+
+    /// Convert tokens to input tensor (mock implementation)
+    fn tokens_to_tensor(tokens: &[u32]) -> Result<ConcreteTensor> {
+        Ok(ConcreteTensor::mock(vec![1, tokens.len()]))
+    }
+
+    /// Extract logits from output tensor (mock implementation)
+    fn tensor_to_logits(_tensor: &ConcreteTensor, vocab_size: usize) -> Result<Vec<f32>> {
+        // In a real implementation, this would extract logits from the tensor
+        Ok(vec![0.1; vocab_size])
+    }
+
+    /// Check if generation should stop
+    fn should_stop(
+        token: u32,
+        current_tokens: &[u32],
+        config: &GenerationConfig,
+        tokenizer: &Arc<dyn Tokenizer>,
+    ) -> bool {
+        // Check for EOS token
+        if let Some(eos_token) = tokenizer.eos_token_id() {
+            if token == eos_token {
+                return true;
+            }
+        }
+        
+        // Check for stop sequences
+        if !config.stop_sequences.is_empty() {
+            if let Ok(current_text) = tokenizer.decode(current_tokens, true) {
+                for stop_seq in &config.stop_sequences {
+                    if current_text.ends_with(stop_seq) {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        false
     }
 }
+
+impl Stream for GenerationStream {
+    type Item = Result<String>;
+
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        cx: &mut TaskContext<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        self.receiver.poll_recv(cx)
+    }
+}
+
+// MockTensor is now defined in bitnet_common
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::StreamExt;
-    
-    #[test]
-    fn test_streaming_config_validation() {
-        let config = StreamingConfig::default();
-        assert!(config.validate().is_ok());
-        
-        let mut invalid_config = config.clone();
-        invalid_config.buffer_size = 0;
-        assert!(invalid_config.validate().is_err());
-        
-        invalid_config.buffer_size = 32;
-        invalid_config.yield_interval = 0;
-        assert!(invalid_config.validate().is_err());
+    use futures_util::StreamExt;
+    use std::sync::Arc;
+
+    struct MockModel {
+        config: bitnet_common::BitNetConfig,
     }
-    
-    #[tokio::test]
-    async fn test_batch_stream_creation() {
-        let batch_stream = BatchGenerationStream::new(vec![]);
-        assert_eq!(batch_stream.active_count(), 0);
+
+    impl MockModel {
+        fn new() -> Self {
+            Self {
+                config: bitnet_common::BitNetConfig::default(),
+            }
+        }
     }
-    
-    #[tokio::test]
-    async fn test_async_utils_collect_with_timeout() {
-        use async_utils::collect_stream_with_timeout;
-        use tokio::time::Duration;
-        
-        // Create a mock stream that yields a few tokens
-        let mock_stream = futures::stream::iter(vec![
-            Ok("Hello".to_string()),
-            Ok(" ".to_string()),
-            Ok("World".to_string()),
-        ]);
-        
-        // This test would need a proper GenerationStream implementation
-        // For now, just test the timeout functionality exists
-        let timeout_duration = Duration::from_millis(100);
-        assert!(timeout_duration.as_millis() == 100);
+
+    impl Model for MockModel {
+        fn config(&self) -> &bitnet_common::BitNetConfig {
+            &self.config
+        }
+
+        fn forward(
+            &self,
+            _input: &dyn Tensor,
+            _cache: &mut dyn std::any::Any,
+        ) -> Result<Box<dyn Tensor>> {
+            Ok(Box::new(MockTensor::new(vec![1, 50257])))
+        }
     }
-    
+
+    struct MockTokenizer;
+
+    impl Tokenizer for MockTokenizer {
+        fn encode(&self, _text: &str, _add_special_tokens: bool) -> Result<Vec<u32>> {
+            Ok(vec![1, 2, 3])
+        }
+
+        fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String> {
+            Ok(format!("token_{}", tokens.len()))
+        }
+
+        fn vocab_size(&self) -> usize {
+            50257
+        }
+
+        fn eos_token_id(&self) -> Option<u32> {
+            Some(50256)
+        }
+
+        fn pad_token_id(&self) -> Option<u32> {
+            None
+        }
+    }
+
+    struct MockBackend;
+
+    impl Backend for MockBackend {
+        fn backend_type(&self) -> String {
+            "mock".to_string()
+        }
+
+        fn clone_backend(&self) -> Box<dyn Backend> {
+            Box::new(MockBackend)
+        }
+
+        async fn forward(
+            &self,
+            _input: &dyn Tensor,
+            _cache: &mut KVCache,
+        ) -> Result<Box<dyn Tensor>> {
+            Ok(Box::new(MockTensor::new(vec![1, 50257])))
+        }
+    }
+
     #[tokio::test]
-    async fn test_rate_limiting() {
-        use async_utils::rate_limit_stream;
-        use futures::stream;
+    async fn test_streaming_generation() {
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer);
+        let backend = Box::new(MockBackend);
+        let cache = Arc::new(RwLock::new(KVCache::new(Default::default()).unwrap()));
         
-        let test_stream = stream::iter(vec!["a", "b", "c", "d", "e"]);
-        let rate_limited = rate_limit_stream(test_stream, 2.0); // 2 tokens per second
+        let config = GenerationConfig {
+            max_new_tokens: 5,
+            ..Default::default()
+        };
         
-        let start = Instant::now();
-        let results: Vec<_> = rate_limited.collect().await;
-        let elapsed = start.elapsed();
+        let streaming_config = StreamingConfig::default();
         
-        // Should have some rate limiting effect
-        assert!(!results.is_empty());
-        assert!(elapsed.as_millis() > 0);
+        let mut stream = GenerationStream::new(
+            model,
+            tokenizer,
+            backend,
+            cache,
+            "Hello".to_string(),
+            config,
+            streaming_config,
+        );
+        
+        let mut token_count = 0;
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(token_text) => {
+                    assert!(!token_text.is_empty());
+                    token_count += 1;
+                }
+                Err(e) => {
+                    panic!("Stream error: {}", e);
+                }
+            }
+            
+            // Prevent infinite loop in test
+            if token_count > 10 {
+                break;
+            }
+        }
+        
+        assert!(token_count > 0);
+    }
+
+    #[tokio::test]
+    async fn test_streaming_config() {
+        let config = StreamingConfig {
+            buffer_size: 5,
+            flush_interval_ms: 100,
+        };
+        
+        assert_eq!(config.buffer_size, 5);
+        assert_eq!(config.flush_interval_ms, 100);
     }
 }

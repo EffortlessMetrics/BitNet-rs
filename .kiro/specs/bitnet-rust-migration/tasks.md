@@ -272,6 +272,8 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
 
 
 
+
+
 ### Phase 6: Inference Engine Implementation
 
 - [ ] 6. Create inference engines with streaming support
@@ -485,6 +487,7 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
 
 
 
+
   - Implement Python wheel using PyO3 and maturin with identical API to existing Python implementation
   - Create comprehensive Python API documentation with migration guide
   - Add performance comparison tools showing improvement over original Python implementation
@@ -492,7 +495,9 @@ The plan prioritizes creating drop-in replacements for existing C bindings while
   - Create integration examples with popular Python ML frameworks
   - _Requirements: 7.3, 15.1, 15.2, 15.5_
 
-- [x] 10.1 Implement core Python API with PyO3
+- [ ] 10.1 Implement core Python API with PyO3
+
+
 
 
   - Create Python classes matching existing BitNet Python API exactly

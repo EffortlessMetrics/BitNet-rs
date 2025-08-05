@@ -1,16 +1,12 @@
 //! BitNet model implementation
 
-use bitnet_common::{BitNetConfig, BitNetTensor, Result, Tensor, BitNetError};
-use candle_core::Device;
+use bitnet_common::{BitNetConfig, BitNetTensor, Result, Tensor, BitNetError, ConcreteTensor, Device};
 use std::collections::HashMap;
 
 /// Trait for BitNet models
 pub trait Model: Send + Sync {
-    type Config;
-    
-    fn config(&self) -> &Self::Config;
-    fn forward(&self, input: &BitNetTensor) -> Result<BitNetTensor>;
-    fn generate(&self, tokens: &[u32]) -> Result<Vec<u32>>;
+    fn config(&self) -> &BitNetConfig;
+    fn forward(&self, input: &ConcreteTensor, cache: &mut dyn std::any::Any) -> Result<ConcreteTensor>;
 }
 
 /// BitNet model implementation
@@ -43,9 +39,9 @@ impl BitNetModel {
         
         for tensor_name in &required_tensors {
             if !tensors.contains_key(*tensor_name) {
-                return Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
-                    reason: format!("Missing required tensor: {}", tensor_name),
-                }));
+                return Err(BitNetError::Validation(
+                    format!("Missing required tensor: {}", tensor_name)
+                ));
             }
         }
         
@@ -68,20 +64,14 @@ impl BitNetModel {
 }
 
 impl Model for BitNetModel {
-    type Config = BitNetConfig;
-    
-    fn config(&self) -> &Self::Config {
+    fn config(&self) -> &BitNetConfig {
         &self.config
     }
     
-    fn forward(&self, input: &BitNetTensor) -> Result<BitNetTensor> {
-        // Placeholder implementation
-        let output = BitNetTensor::zeros(input.shape(), input.dtype(), &self.device)?;
-        Ok(output)
-    }
-    
-    fn generate(&self, _tokens: &[u32]) -> Result<Vec<u32>> {
-        // Placeholder implementation
-        Ok(vec![])
+    fn forward(&self, input: &ConcreteTensor, _cache: &mut dyn std::any::Any) -> Result<ConcreteTensor> {
+        // Placeholder implementation - create output tensor with vocab size
+        let batch_size = input.shape()[0];
+        let vocab_size = self.config.model.vocab_size;
+        Ok(ConcreteTensor::mock(vec![batch_size, vocab_size]))
     }
 }

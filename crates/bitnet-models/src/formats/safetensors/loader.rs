@@ -2,8 +2,8 @@
 
 use crate::loader::{FormatLoader, LoadConfig, MmapFile};
 use crate::{Model, BitNetModel};
-use bitnet_common::{BitNetConfig, ModelMetadata, Result, BitNetError, ModelError};
-use candle_core::{Device, Tensor};
+use bitnet_common::{BitNetConfig, ModelMetadata, Result, BitNetError, ModelError, Device};
+use candle_core::Tensor;
 use safetensors::{SafeTensors, Dtype as SafeDtype};
 use std::collections::HashMap;
 use std::path::Path;
@@ -11,6 +11,39 @@ use tracing::{debug, info};
 
 /// SafeTensors format loader
 pub struct SafeTensorsLoader;
+
+impl SafeTensorsLoader {
+    /// Convert our Device to candle Device
+    fn device_to_candle(device: &Device) -> Result<candle_core::Device> {
+        match device {
+            Device::Cpu => Ok(candle_core::Device::Cpu),
+            Device::Cuda(id) => {
+                #[cfg(feature = "gpu")]
+                {
+                    use candle_core::backend::BackendDevice;
+                    let cuda_device = candle_core::CudaDevice::new(*id)
+                        .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                    Ok(candle_core::Device::Cuda(cuda_device))
+                }
+                #[cfg(not(feature = "gpu"))]
+                {
+                    Err(BitNetError::Validation("CUDA not available".to_string()))
+                }
+            }
+            Device::Metal => {
+                #[cfg(feature = "gpu")]
+                {
+                    Ok(candle_core::Device::Metal(candle_core::MetalDevice::new(0)
+                        .map_err(|e| BitNetError::Validation(e.to_string()))?))
+                }
+                #[cfg(not(feature = "gpu"))]
+                {
+                    Err(BitNetError::Validation("Metal not available".to_string()))
+                }
+            }
+        }
+    }
+}
 
 impl FormatLoader for SafeTensorsLoader {
     fn name(&self) -> &'static str {
@@ -113,7 +146,7 @@ impl FormatLoader for SafeTensorsLoader {
         path: &Path,
         device: &Device,
         config: &LoadConfig,
-    ) -> Result<Box<dyn Model<Config = BitNetConfig>>> {
+    ) -> Result<Box<dyn Model>> {
         info!("Loading SafeTensors model from: {}", path.display());
         
         let mmap = if config.use_mmap {
@@ -258,11 +291,12 @@ impl SafeTensorsLoader {
     ) -> Result<Tensor> {
         let shape = tensor_view.shape();
         let data = tensor_view.data();
+        let candle_device = Self::device_to_candle(device)?;
         
         let candle_tensor = match tensor_view.dtype() {
             SafeDtype::F32 => {
                 let float_data = bytemuck::cast_slice::<u8, f32>(data);
-                Tensor::from_slice(float_data, shape, device)
+                Tensor::from_slice(float_data, shape, &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?
             }
             SafeDtype::F16 => {
@@ -270,7 +304,7 @@ impl SafeTensorsLoader {
                 let float_data: Vec<f32> = half_data.iter()
                     .map(|&h| half::f16::from_bits(h).to_f32())
                     .collect();
-                Tensor::from_slice(&float_data, shape, device)
+                Tensor::from_slice(&float_data, shape, &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?
             }
             SafeDtype::BF16 => {
@@ -278,23 +312,23 @@ impl SafeTensorsLoader {
                 let float_data: Vec<f32> = bf16_data.iter()
                     .map(|&h| half::bf16::from_bits(h).to_f32())
                     .collect();
-                Tensor::from_slice(&float_data, shape, device)
+                Tensor::from_slice(&float_data, shape, &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?
             }
             SafeDtype::I32 => {
                 let int_data = bytemuck::cast_slice::<u8, i32>(data);
                 // Convert i32 to u32 for Candle compatibility
                 let uint_data: Vec<u32> = int_data.iter().map(|&x| x as u32).collect();
-                Tensor::from_slice(&uint_data, shape, device)
+                Tensor::from_slice(&uint_data, shape, &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?
             }
             SafeDtype::I64 => {
                 let int_data = bytemuck::cast_slice::<u8, i64>(data);
-                Tensor::from_slice(int_data, shape, device)
+                Tensor::from_slice(int_data, shape, &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?
             }
             SafeDtype::U8 => {
-                Tensor::from_slice(data, shape, device)
+                Tensor::from_slice(data, shape, &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?
             }
             _ => {

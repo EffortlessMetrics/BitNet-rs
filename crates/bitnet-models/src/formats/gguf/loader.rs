@@ -3,13 +3,46 @@
 use super::{GgufReader, GgufTensors, GgufTensorType};
 use crate::loader::{FormatLoader, LoadConfig, MmapFile};
 use crate::{Model, BitNetModel};
-use bitnet_common::{BitNetConfig, ModelMetadata, Result, BitNetError, ModelError};
-use candle_core::{Device, DType, Tensor};
+use bitnet_common::{BitNetConfig, ModelMetadata, Result, BitNetError, ModelError, Device};
+use candle_core::{DType, Tensor};
 use std::path::Path;
 use tracing::{debug, info};
 
 /// GGUF format loader
 pub struct GgufLoader;
+
+impl GgufLoader {
+    /// Convert our Device to candle Device
+    fn device_to_candle(device: &Device) -> Result<candle_core::Device> {
+        match device {
+            Device::Cpu => Ok(candle_core::Device::Cpu),
+            Device::Cuda(id) => {
+                #[cfg(feature = "gpu")]
+                {
+                    use candle_core::backend::BackendDevice;
+                    let cuda_device = candle_core::CudaDevice::new(*id)
+                        .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                    Ok(candle_core::Device::Cuda(cuda_device))
+                }
+                #[cfg(not(feature = "gpu"))]
+                {
+                    Err(BitNetError::Validation("CUDA not available".to_string()))
+                }
+            }
+            Device::Metal => {
+                #[cfg(feature = "gpu")]
+                {
+                    Ok(candle_core::Device::Metal(candle_core::MetalDevice::new(0)
+                        .map_err(|e| BitNetError::Validation(e.to_string()))?))
+                }
+                #[cfg(not(feature = "gpu"))]
+                {
+                    Err(BitNetError::Validation("Metal not available".to_string()))
+                }
+            }
+        }
+    }
+}
 
 impl FormatLoader for GgufLoader {
     fn name(&self) -> &'static str {
@@ -80,7 +113,7 @@ impl FormatLoader for GgufLoader {
         path: &Path,
         device: &Device,
         config: &LoadConfig,
-    ) -> Result<Box<dyn Model<Config = BitNetConfig>>> {
+    ) -> Result<Box<dyn Model>> {
         info!("Loading GGUF model from: {}", path.display());
         
         let mmap = if config.use_mmap {
@@ -222,10 +255,12 @@ impl GgufLoader {
             GgufTensorType::Q6_K | GgufTensorType::Q8_K => DType::U8, // Quantized types stored as bytes
         };
         
+        let candle_device = Self::device_to_candle(device)?;
+        
         // For quantized tensors, we need special handling
         if info.tensor_type.is_quantized() {
             // Create tensor from raw bytes for quantized data
-            let tensor = Tensor::from_raw_buffer(data, dtype, &info.shape, device)
+            let tensor = Tensor::from_raw_buffer(data, dtype, &info.shape, &candle_device)
                 .map_err(|e| BitNetError::Validation(e.to_string()))?;
             Ok(tensor)
         } else {
@@ -233,7 +268,7 @@ impl GgufLoader {
             match dtype {
                 DType::F32 => {
                     let float_data = bytemuck::cast_slice::<u8, f32>(data);
-                    Tensor::from_slice(float_data, info.shape.as_slice(), device)
+                    Tensor::from_slice(float_data, info.shape.as_slice(), &candle_device)
                         .map_err(|e| BitNetError::Validation(e.to_string()))
                 }
                 DType::F16 => {
@@ -242,7 +277,7 @@ impl GgufLoader {
                     let float_data: Vec<f32> = half_data.iter()
                         .map(|&h| half::f16::from_bits(h).to_f32())
                         .collect();
-                    Tensor::from_slice(&float_data, info.shape.as_slice(), device)
+                    Tensor::from_slice(&float_data, info.shape.as_slice(), &candle_device)
                         .map_err(|e| BitNetError::Validation(e.to_string()))
                 }
                 _ => Err(BitNetError::Model(ModelError::InvalidFormat {
