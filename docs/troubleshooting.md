@@ -1,676 +1,653 @@
 # Troubleshooting Guide
 
-Common issues and solutions when using BitNet.rs.
+This guide helps you diagnose and resolve common issues with BitNet Rust.
 
-## Table of Contents
+## Common Issues
 
-- [Installation Issues](#installation-issues)
-- [Model Loading Issues](#model-loading-issues)
-- [Inference Issues](#inference-issues)
-- [Performance Issues](#performance-issues)
-- [Memory Issues](#memory-issues)
-- [GPU Issues](#gpu-issues)
-- [Server Issues](#server-issues)
-- [Debugging Tips](#debugging-tips)
+### Installation Issues
 
-## Installation Issues
+#### 1. Rust Compilation Errors
 
-### Issue: Compilation Fails with Missing Dependencies
+**Problem:** Build fails with compiler errors
 
 **Symptoms:**
 ```
-error: failed to run custom build command for `bitnet-kernels`
-  --- stderr
-  thread 'main' panicked at 'Unable to find libclang'
-```
-
-**Solutions:**
-
-**On Ubuntu/Debian:**
-```bash
-sudo apt update
-sudo apt install build-essential pkg-config libssl-dev cmake libclang-dev
-```
-
-**On macOS:**
-```bash
-# Install Xcode command line tools
-xcode-select --install
-
-# Or using Homebrew
-brew install cmake llvm
-```
-
-**On Windows:**
-```powershell
-# Install Visual Studio Build Tools
-# Download from: https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022
-
-# Or using chocolatey
-choco install visualstudio2022buildtools
-choco install cmake
-```
-
-### Issue: CUDA Compilation Fails
-
-**Symptoms:**
-```
-error: nvcc not found in PATH
-```
-
-**Solutions:**
-
-1. **Install CUDA Toolkit:**
-   ```bash
-   # Ubuntu
-   wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin
-   sudo mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
-   wget https://developer.download.nvidia.com/compute/cuda/12.0.0/local_installers/cuda-repo-ubuntu2004-12-0-local_12.0.0-525.60.13-1_amd64.deb
-   sudo dpkg -i cuda-repo-ubuntu2004-12-0-local_12.0.0-525.60.13-1_amd64.deb
-   sudo cp /var/cuda-repo-ubuntu2004-12-0-local/cuda-*-keyring.gpg /usr/share/keyrings/
-   sudo apt-get update
-   sudo apt-get -y install cuda
-   ```
-
-2. **Set Environment Variables:**
-   ```bash
-   export PATH=/usr/local/cuda/bin:$PATH
-   export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-   ```
-
-3. **Disable CUDA if not needed:**
-   ```bash
-   cargo build --no-default-features --features="cpu"
-   ```
-
-### Issue: Rust Version Too Old
-
-**Symptoms:**
-```
-error: package `bitnet-rs` requires Rust version 1.75.0 or newer
+error: failed to compile `bitnet-cli`
+error[E0554]: `#![feature(...)]` may not be used on the stable release channel
 ```
 
 **Solution:**
 ```bash
-# Update Rust
-rustup update
+# Ensure you have Rust 1.75 or later
+rustc --version
 
-# Or install specific version
-rustup install 1.75.0
-rustup default 1.75.0
+# Update Rust if needed
+rustup update stable
+
+# Clean and rebuild
+cargo clean
+cargo build --release
 ```
 
-## Model Loading Issues
+#### 2. CUDA Not Found
 
-### Issue: Model File Not Found
+**Problem:** GPU features fail to compile
 
 **Symptoms:**
 ```
-Error: Model error: No such file or directory (os error 2)
+error: could not find native static library `cudart`
+note: use the `-l` flag to specify native libraries to link
 ```
 
 **Solutions:**
 
-1. **Check file path:**
-   ```rust
-   use std::path::Path;
-   
-   let model_path = "models/bitnet-1.58b.gguf";
-   if !Path::new(model_path).exists() {
-       eprintln!("Model file not found: {}", model_path);
-       return Err("Model file not found".into());
-   }
-   ```
+**Option 1: Install CUDA**
+```bash
+# Ubuntu/Debian
+sudo apt install nvidia-cuda-toolkit
 
-2. **Use absolute path:**
-   ```rust
-   let model_path = std::env::current_dir()?
-       .join("models")
-       .join("bitnet-1.58b.gguf");
-   let model = BitNetModel::from_file(model_path).await?;
-   ```
+# Set environment variables
+export CUDA_HOME=/usr/local/cuda
+export PATH=$CUDA_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+```
 
-3. **Download model:**
-   ```bash
-   # Using CLI
-   bitnet download bitnet-1.58b-i2s --output ./models/
-   
-   # Or manually
-   mkdir -p models
-   wget https://huggingface.co/bitnet/bitnet-1.58b/resolve/main/model.gguf -O models/bitnet-1.58b.gguf
-   ```
+**Option 2: Build without GPU support**
+```bash
+cargo install bitnet-cli --no-default-features --features cli
+```
 
-### Issue: Unsupported Model Format
+#### 3. Python Binding Issues
+
+**Problem:** Python bindings fail to install
 
 **Symptoms:**
 ```
-Error: Model error: Unsupported model format
+error: Microsoft Visual C++ 14.0 is required
 ```
 
 **Solutions:**
 
-1. **Check supported formats:**
-   ```rust
-   // Supported formats: .gguf, .safetensors, .bin
-   let supported_extensions = vec![".gguf", ".safetensors", ".bin"];
-   ```
+**Windows:**
+```bash
+# Install Visual Studio Build Tools
+# Or use pre-built wheels
+pip install bitnet-py --only-binary=all
+```
 
-2. **Convert model format:**
-   ```bash
-   # Convert to GGUF
-   bitnet convert input.safetensors output.gguf --format gguf
-   
-   # Convert with quantization
-   bitnet convert input.bin output.gguf --format gguf --quantization i2s
-   ```
+**Linux/macOS:**
+```bash
+# Install development tools
+sudo apt install build-essential  # Ubuntu
+xcode-select --install            # macOS
 
-3. **Use format-specific loading:**
-   ```rust
-   // Explicitly specify format
-   let model = BitNetModel::from_gguf("model.gguf").await?;
-   let model = BitNetModel::from_safetensors("model.safetensors").await?;
-   ```
+# Install from source
+pip install bitnet-py --no-binary bitnet-py
+```
 
-### Issue: Model Corruption
+### Model Loading Issues
+
+#### 1. Model File Not Found
+
+**Problem:** Model fails to load
 
 **Symptoms:**
 ```
-Error: Model error: Invalid magic number in model file
+Error: Model error: File not found: model.gguf
 ```
 
 **Solutions:**
+```bash
+# Check file exists
+ls -la model.gguf
 
-1. **Verify file integrity:**
-   ```bash
-   # Check file size
-   ls -lh models/bitnet-1.58b.gguf
-   
-   # Verify checksum if available
-   sha256sum models/bitnet-1.58b.gguf
-   ```
+# Check permissions
+chmod 644 model.gguf
 
-2. **Re-download model:**
-   ```bash
-   rm models/bitnet-1.58b.gguf
-   bitnet download bitnet-1.58b-i2s --output ./models/
-   ```
+# Use absolute path
+bitnet-cli inference --model /absolute/path/to/model.gguf --prompt "Hello"
+```
 
-3. **Check disk space:**
-   ```bash
-   df -h .
-   ```
+#### 2. Unsupported Model Format
 
-## Inference Issues
-
-### Issue: Generation Produces Gibberish
-
-**Symptoms:**
-- Output contains random characters
-- Repeated tokens
-- Nonsensical text
-
-**Solutions:**
-
-1. **Check tokenizer compatibility:**
-   ```rust
-   // Ensure tokenizer matches model
-   let tokenizer = TokenizerBuilder::from_pretrained("gpt2")?;
-   
-   // Test tokenization
-   let tokens = tokenizer.encode("Hello, world!", true)?;
-   let decoded = tokenizer.decode(&tokens, true)?;
-   assert_eq!(decoded.trim(), "Hello, world!");
-   ```
-
-2. **Adjust generation parameters:**
-   ```rust
-   let config = GenerationConfig {
-       temperature: 0.7,  // Lower for more deterministic output
-       top_p: 0.9,        // Nucleus sampling
-       top_k: 50,         // Limit vocabulary
-       repetition_penalty: 1.1,  // Reduce repetition
-       ..Default::default()
-   };
-   ```
-
-3. **Validate model quantization:**
-   ```rust
-   // Check if model is properly quantized
-   let model_info = model.info();
-   println!("Quantization: {:?}", model_info.quantization);
-   ```
-
-### Issue: Generation is Too Slow
-
-**Symptoms:**
-- High latency (>1 second per token)
-- Low throughput
-
-**Solutions:**
-
-1. **Use GPU acceleration:**
-   ```rust
-   let device = Device::Cuda(0);  // Use GPU 0
-   let engine = InferenceEngine::new(model, tokenizer, device)?;
-   ```
-
-2. **Optimize CPU usage:**
-   ```rust
-   // Set number of threads
-   std::env::set_var("RAYON_NUM_THREADS", "8");
-   
-   // Use optimized kernels
-   let device = Device::Cpu;  // Will auto-select best CPU kernels
-   ```
-
-3. **Reduce model size:**
-   ```bash
-   # Use more aggressive quantization
-   bitnet convert model.gguf model-q4.gguf --quantization tl2
-   ```
-
-### Issue: Out of Memory During Inference
+**Problem:** Model format not recognized
 
 **Symptoms:**
 ```
-Error: CUDA out of memory
-Error: Cannot allocate memory
+Error: Model error: Unsupported format: unknown magic bytes
 ```
 
 **Solutions:**
+```bash
+# Check file format
+file model.bin
 
-1. **Reduce batch size:**
-   ```rust
-   let config = InferenceConfig {
-       batch_size: 1,  // Reduce from default
-       ..Default::default()
-   };
-   ```
+# Convert to supported format
+bitnet-cli convert --input model.bin --output model.gguf --format gguf
 
-2. **Use CPU instead of GPU:**
-   ```rust
-   let device = Device::Cpu;  // Fallback to CPU
-   ```
+# List supported formats
+bitnet-cli formats
+```
 
-3. **Limit sequence length:**
-   ```rust
-   let config = GenerationConfig {
-       max_new_tokens: 50,  // Reduce from default
-       ..Default::default()
-   };
-   ```
+#### 3. Corrupted Model File
 
-## Performance Issues
-
-### Issue: Poor CPU Performance
-
-**Symptoms:**
-- Slow inference on CPU
-- High CPU usage but low throughput
-
-**Solutions:**
-
-1. **Check CPU features:**
-   ```rust
-   // Verify SIMD support
-   #[cfg(target_arch = "x86_64")]
-   {
-       if is_x86_feature_detected!("avx2") {
-           println!("AVX2 supported");
-       } else {
-           println!("AVX2 not supported - performance will be limited");
-       }
-   }
-   ```
-
-2. **Enable CPU optimizations:**
-   ```bash
-   # Build with native CPU features
-   RUSTFLAGS="-C target-cpu=native" cargo build --release
-   ```
-
-3. **Tune thread count:**
-   ```rust
-   // Set optimal thread count
-   let num_threads = std::thread::available_parallelism()?.get();
-   std::env::set_var("RAYON_NUM_THREADS", num_threads.to_string());
-   ```
-
-### Issue: GPU Underutilization
-
-**Symptoms:**
-- Low GPU usage (<50%)
-- GPU memory not fully utilized
-
-**Solutions:**
-
-1. **Increase batch size:**
-   ```rust
-   let config = InferenceConfig {
-       batch_size: 8,  // Increase for better GPU utilization
-       ..Default::default()
-   };
-   ```
-
-2. **Use mixed precision:**
-   ```rust
-   let config = ModelConfig {
-       dtype: DType::F16,  // Use half precision
-       ..Default::default()
-   };
-   ```
-
-3. **Check GPU memory:**
-   ```bash
-   nvidia-smi  # Monitor GPU usage
-   ```
-
-## Memory Issues
-
-### Issue: Memory Leak
-
-**Symptoms:**
-- Memory usage increases over time
-- Eventually runs out of memory
-
-**Solutions:**
-
-1. **Check for resource leaks:**
-   ```rust
-   // Ensure proper cleanup
-   {
-       let engine = InferenceEngine::new(model, tokenizer, device)?;
-       // engine is automatically dropped here
-   }
-   ```
-
-2. **Monitor memory usage:**
-   ```rust
-   use std::alloc::{GlobalAlloc, Layout, System};
-   
-   // Custom allocator for monitoring
-   struct MonitoringAllocator;
-   
-   unsafe impl GlobalAlloc for MonitoringAllocator {
-       unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-           let ptr = System.alloc(layout);
-           println!("Allocated {} bytes", layout.size());
-           ptr
-       }
-       
-       unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-           println!("Deallocated {} bytes", layout.size());
-           System.dealloc(ptr, layout);
-       }
-   }
-   ```
-
-3. **Use memory profiling:**
-   ```bash
-   # Install valgrind (Linux)
-   sudo apt install valgrind
-   
-   # Run with memory checking
-   valgrind --tool=memcheck --leak-check=full ./target/release/bitnet-cli
-   ```
-
-### Issue: High Memory Usage
-
-**Symptoms:**
-- Uses more memory than expected
-- System becomes unresponsive
-
-**Solutions:**
-
-1. **Reduce model precision:**
-   ```rust
-   let config = ModelConfig {
-       dtype: DType::F16,  // Use 16-bit instead of 32-bit
-       ..Default::default()
-   };
-   ```
-
-2. **Limit cache size:**
-   ```rust
-   let config = InferenceConfig {
-       max_cache_size: 1024 * 1024 * 512,  // 512MB limit
-       ..Default::default()
-   };
-   ```
-
-3. **Use memory mapping:**
-   ```rust
-   let loader = ModelLoader::new()
-       .memory_map(true)  // Use memory mapping for large models
-       .build();
-   ```
-
-## GPU Issues
-
-### Issue: CUDA Driver Version Mismatch
+**Problem:** Model file is corrupted
 
 **Symptoms:**
 ```
-Error: CUDA driver version is insufficient for CUDA runtime version
+Error: Model error: Invalid model file: checksum mismatch
+```
+
+**Solutions:**
+```bash
+# Verify file integrity
+bitnet-cli verify --model model.gguf
+
+# Re-download model
+rm model.gguf
+bitnet-cli model download microsoft/bitnet-b1_58-large
+
+# Check disk space
+df -h
+```
+
+#### 4. Insufficient Memory
+
+**Problem:** Not enough RAM to load model
+
+**Symptoms:**
+```
+Error: Memory error: Failed to allocate 8GB for model weights
+```
+
+**Solutions:**
+```bash
+# Check available memory
+free -h
+
+# Use memory mapping
+bitnet-cli inference --model model.gguf --mmap --prompt "Hello"
+
+# Use smaller model
+bitnet-cli model download microsoft/bitnet-b1_58-small
+
+# Enable swap (Linux)
+sudo swapon --show
+sudo fallocate -l 8G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+```
+
+### Performance Issues
+
+#### 1. Slow Inference Speed
+
+**Problem:** Generation is slower than expected
+
+**Symptoms:**
+- Low tokens/second
+- High latency
+
+**Diagnostics:**
+```bash
+# Run benchmark
+bitnet-cli benchmark --model model.gguf --detailed
+
+# Check system resources
+htop
+nvidia-smi  # For GPU
 ```
 
 **Solutions:**
 
-1. **Update NVIDIA drivers:**
-   ```bash
-   # Ubuntu
-   sudo apt update
-   sudo apt install nvidia-driver-525
-   
-   # Or use the official installer
-   wget https://developer.download.nvidia.com/compute/cuda/12.0.0/local_installers/cuda_12.0.0_525.60.13_linux.run
-   sudo sh cuda_12.0.0_525.60.13_linux.run
-   ```
+**CPU Optimization:**
+```bash
+# Enable native CPU features
+RUSTFLAGS="-C target-cpu=native" cargo build --release
 
-2. **Check compatibility:**
-   ```bash
-   nvidia-smi  # Check driver version
-   nvcc --version  # Check CUDA version
-   ```
+# Set thread count
+export RAYON_NUM_THREADS=8
+bitnet-cli inference --model model.gguf --prompt "Hello"
 
-### Issue: GPU Not Detected
+# Use optimized BLAS
+export OPENBLAS_NUM_THREADS=8
+```
+
+**GPU Optimization:**
+```bash
+# Check GPU usage
+nvidia-smi
+
+# Enable GPU acceleration
+bitnet-cli inference --model model.gguf --device cuda --prompt "Hello"
+
+# Optimize batch size
+bitnet-cli inference --model model.gguf --device cuda --batch-size 16 --prompt "Hello"
+```
+
+#### 2. High Memory Usage
+
+**Problem:** Excessive memory consumption
+
+**Symptoms:**
+- Out of memory errors
+- System slowdown
+
+**Solutions:**
+```bash
+# Monitor memory usage
+bitnet-cli benchmark --model model.gguf --monitor-memory
+
+# Reduce KV cache size
+bitnet-cli inference --model model.gguf --kv-cache-size 1024 --prompt "Hello"
+
+# Use quantized model
+bitnet-cli convert --input model.gguf --output model_q4.gguf --quantize q4_0
+```
+
+#### 3. GPU Not Being Used
+
+**Problem:** Model runs on CPU despite GPU availability
 
 **Symptoms:**
 ```
-Error: No CUDA devices found
+Info: Using device: CPU (CUDA available but not selected)
 ```
 
 **Solutions:**
+```bash
+# Check CUDA installation
+nvidia-smi
+nvcc --version
 
-1. **Verify GPU is available:**
-   ```bash
-   nvidia-smi
-   lspci | grep -i nvidia
-   ```
+# Explicitly select GPU
+bitnet-cli inference --model model.gguf --device cuda:0 --prompt "Hello"
 
-2. **Check CUDA installation:**
-   ```bash
-   nvcc --version
-   ls /usr/local/cuda/lib64/
-   ```
+# Check GPU memory
+nvidia-smi
 
-3. **Fallback to CPU:**
-   ```rust
-   let device = if Device::cuda_is_available() {
-       Device::Cuda(0)
-   } else {
-       println!("CUDA not available, using CPU");
-       Device::Cpu
-   };
-   ```
+# Verify CUDA support
+bitnet-cli info --cuda
+```
 
-## Server Issues
+### Generation Issues
 
-### Issue: Server Won't Start
+#### 1. Poor Quality Output
+
+**Problem:** Generated text is incoherent or repetitive
 
 **Symptoms:**
-```
-Error: Address already in use (os error 98)
-```
+- Repetitive text
+- Nonsensical output
+- Abrupt endings
 
 **Solutions:**
+```bash
+# Adjust sampling parameters
+bitnet-cli inference \
+  --model model.gguf \
+  --prompt "Hello" \
+  --temperature 0.7 \
+  --top-p 0.9 \
+  --top-k 50 \
+  --repetition-penalty 1.1
 
-1. **Check port availability:**
-   ```bash
-   # Check what's using port 3000
-   lsof -i :3000
-   netstat -tulpn | grep :3000
-   ```
+# Try different sampling strategies
+bitnet-cli inference --model model.gguf --prompt "Hello" --sampling greedy
+bitnet-cli inference --model model.gguf --prompt "Hello" --sampling nucleus
+```
 
-2. **Use different port:**
-   ```rust
-   let server = BitNetServer::builder()
-       .bind("0.0.0.0:3001")  // Use different port
-       .build()
-       .await?;
-   ```
+#### 2. Generation Stops Early
 
-3. **Kill existing process:**
-   ```bash
-   # Find and kill process using port
-   sudo kill -9 $(lsof -t -i:3000)
-   ```
-
-### Issue: High Server Latency
+**Problem:** Text generation ends prematurely
 
 **Symptoms:**
-- Slow API responses
-- Timeouts
+- Short outputs
+- Incomplete sentences
 
 **Solutions:**
+```bash
+# Increase max tokens
+bitnet-cli inference --model model.gguf --prompt "Hello" --max-new-tokens 200
 
-1. **Increase worker threads:**
-   ```rust
-   let server = BitNetServer::builder()
-       .workers(8)  // Increase from default
-       .build()
-       .await?;
-   ```
+# Check stop sequences
+bitnet-cli inference --model model.gguf --prompt "Hello" --no-stop-sequences
 
-2. **Enable connection pooling:**
-   ```rust
-   let server = BitNetServer::builder()
-       .connection_pool_size(100)
-       .build()
-       .await?;
-   ```
+# Verify model configuration
+bitnet-cli info --model model.gguf
+```
 
-3. **Add caching:**
-   ```rust
-   let server = BitNetServer::builder()
-       .enable_caching(true)
-       .cache_size(1000)
-       .build()
-       .await?;
-   ```
+#### 3. Slow Token Generation
 
-## Debugging Tips
+**Problem:** Each token takes too long to generate
 
-### Enable Debug Logging
+**Solutions:**
+```bash
+# Profile generation
+bitnet-cli benchmark --model model.gguf --profile
+
+# Enable streaming
+bitnet-cli inference --model model.gguf --prompt "Hello" --stream
+
+# Optimize for latency
+bitnet-cli inference --model model.gguf --prompt "Hello" --optimize-latency
+```
+
+### API Issues
+
+#### 1. Python API Errors
+
+**Problem:** Python bindings crash or error
+
+**Symptoms:**
+```python
+RuntimeError: BitNet error: Device error: CUDA out of memory
+```
+
+**Solutions:**
+```python
+import bitnet
+
+# Handle errors gracefully
+try:
+    model = bitnet.BitNetModel.from_pretrained("model")
+    output = model.generate("Hello")
+except bitnet.BitNetError as e:
+    print(f"BitNet error: {e}")
+except Exception as e:
+    print(f"Unexpected error: {e}")
+
+# Use smaller batch size
+config = bitnet.ModelConfig(max_batch_size=1)
+model = bitnet.BitNetModel.from_pretrained("model", config=config)
+```
+
+#### 2. C API Memory Leaks
+
+**Problem:** Memory usage grows over time
+
+**Solutions:**
+```c
+// Always free resources
+BitNetModel* model = bitnet_model_load("model.gguf");
+char* output = bitnet_inference(model, "Hello", 100, 0.7f);
+
+// Use output...
+
+// Clean up
+bitnet_free_string(output);
+bitnet_model_free(model);
+
+// Check for leaks
+valgrind --leak-check=full ./your_program
+```
+
+#### 3. Async/Await Issues
+
+**Problem:** Async operations hang or fail
+
+**Solutions:**
+```rust
+use tokio::time::{timeout, Duration};
+
+// Add timeouts
+let result = timeout(
+    Duration::from_secs(30),
+    model.generate("Hello", &config)
+).await;
+
+match result {
+    Ok(Ok(output)) => println!("Generated: {}", output),
+    Ok(Err(e)) => eprintln!("Generation error: {}", e),
+    Err(_) => eprintln!("Timeout"),
+}
+```
+
+## Debugging Tools
+
+### 1. Enable Debug Logging
 
 ```bash
 # Set log level
 export RUST_LOG=debug
+bitnet-cli inference --model model.gguf --prompt "Hello"
 
-# Or more specific
-export RUST_LOG=bitnet=debug,bitnet_inference=trace
+# Trace level for detailed debugging
+export RUST_LOG=trace
+bitnet-cli inference --model model.gguf --prompt "Hello"
 
-# Run with logging
-cargo run --bin bitnet-cli -- generate "Hello" --model model.gguf
+# Module-specific logging
+export RUST_LOG=bitnet_inference=debug,bitnet_models=info
 ```
 
-### Use Debug Builds
+### 2. Performance Profiling
 
 ```bash
-# Build in debug mode for better error messages
-cargo build
-
-# Run with debug assertions
-cargo run --bin bitnet-cli
-```
-
-### Profiling
-
-```bash
-# Install profiling tools
+# CPU profiling
 cargo install flamegraph
+sudo flamegraph -- bitnet-cli inference --model model.gguf --prompt "Hello"
 
-# Generate flamegraph
-cargo flamegraph --bin bitnet-cli -- generate "Hello" --model model.gguf
+# Memory profiling
+valgrind --tool=massif bitnet-cli inference --model model.gguf --prompt "Hello"
 
-# Use perf (Linux)
-perf record --call-graph=dwarf ./target/release/bitnet-cli generate "Hello" --model model.gguf
-perf report
+# GPU profiling
+nsys profile bitnet-cli inference --model model.gguf --device cuda --prompt "Hello"
 ```
 
-### Memory Debugging
+### 3. Model Inspection
 
 ```bash
-# Use AddressSanitizer
-RUSTFLAGS="-Z sanitizer=address" cargo run --target x86_64-unknown-linux-gnu
+# Model information
+bitnet-cli info --model model.gguf
 
-# Use Miri for undefined behavior detection
-cargo +nightly miri run --bin bitnet-cli
+# Detailed model analysis
+bitnet-cli analyze --model model.gguf --verbose
+
+# Validate model integrity
+bitnet-cli verify --model model.gguf --checksum
 ```
 
-### Testing
+### 4. System Information
 
-```rust
-// Add comprehensive tests
-#[cfg(test)]
-mod tests {
-    use super::*;
+```bash
+# BitNet system info
+bitnet-cli info --system
 
-    #[tokio::test]
-    async fn test_model_loading() {
-        let model = BitNetModel::from_file("test_model.gguf").await;
-        assert!(model.is_ok(), "Failed to load test model: {:?}", model.err());
-    }
+# CUDA information
+bitnet-cli info --cuda
 
-    #[tokio::test]
-    async fn test_inference() {
-        let model = create_test_model().await.unwrap();
-        let tokenizer = create_test_tokenizer().unwrap();
-        let mut engine = InferenceEngine::new(model, tokenizer, Device::Cpu).unwrap();
-        
-        let response = engine.generate("Hello").await;
-        assert!(response.is_ok(), "Inference failed: {:?}", response.err());
-        assert!(!response.unwrap().is_empty(), "Empty response");
-    }
-}
+# Available devices
+bitnet-cli info --devices
+```
+
+## Environment-Specific Issues
+
+### Windows
+
+#### 1. Path Issues
+
+**Problem:** Long path names cause issues
+
+**Solutions:**
+```cmd
+# Enable long paths
+reg add HKLM\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1
+
+# Use short paths
+bitnet-cli inference --model C:\models\model.gguf --prompt "Hello"
+```
+
+#### 2. DLL Loading Issues
+
+**Problem:** Required DLLs not found
+
+**Solutions:**
+```cmd
+# Install Visual C++ Redistributable
+# Download from Microsoft website
+
+# Check DLL dependencies
+dumpbin /dependents bitnet-cli.exe
+
+# Add to PATH
+set PATH=%PATH%;C:\path\to\dlls
+```
+
+### macOS
+
+#### 1. Code Signing Issues
+
+**Problem:** Binary won't run due to code signing
+
+**Solutions:**
+```bash
+# Remove quarantine attribute
+xattr -d com.apple.quarantine bitnet-cli
+
+# Allow unsigned binaries
+sudo spctl --master-disable
+```
+
+#### 2. Metal GPU Issues
+
+**Problem:** Metal GPU acceleration not working
+
+**Solutions:**
+```bash
+# Check Metal support
+system_profiler SPDisplaysDataType
+
+# Use Metal device
+bitnet-cli inference --model model.gguf --device metal --prompt "Hello"
+```
+
+### Linux
+
+#### 1. GLIBC Version Issues
+
+**Problem:** Binary requires newer GLIBC
+
+**Solutions:**
+```bash
+# Check GLIBC version
+ldd --version
+
+# Build from source with older GLIBC
+cargo build --release --target x86_64-unknown-linux-musl
+```
+
+#### 2. GPU Driver Issues
+
+**Problem:** NVIDIA drivers not working
+
+**Solutions:**
+```bash
+# Check driver installation
+nvidia-smi
+
+# Install drivers
+sudo apt install nvidia-driver-535
+
+# Verify CUDA
+nvcc --version
 ```
 
 ## Getting Help
 
-If these solutions don't resolve your issue:
+### 1. Collect Debug Information
 
-1. **Check GitHub Issues**: [https://github.com/bitnet-rs/bitnet-rs/issues](https://github.com/bitnet-rs/bitnet-rs/issues)
-2. **Create a Bug Report**: Include:
-   - Operating system and version
-   - Rust version (`rustc --version`)
-   - BitNet.rs version
-   - Full error message
-   - Minimal reproduction case
-3. **Join Discord**: [https://discord.gg/bitnet-rs](https://discord.gg/bitnet-rs)
-4. **Stack Overflow**: Tag questions with `bitnet-rs`
+Before reporting issues, collect this information:
 
-## Reporting Bugs
+```bash
+# System information
+bitnet-cli info --system > debug_info.txt
 
-When reporting bugs, please include:
+# Error logs
+RUST_LOG=debug bitnet-cli inference --model model.gguf --prompt "Hello" 2>&1 | tee error.log
+
+# Model information
+bitnet-cli info --model model.gguf >> debug_info.txt
+
+# Environment
+env | grep -E "(CUDA|RUST|BITNET)" >> debug_info.txt
+```
+
+### 2. Minimal Reproduction
+
+Create a minimal example that reproduces the issue:
 
 ```rust
-// System information
-println!("OS: {}", std::env::consts::OS);
-println!("Arch: {}", std::env::consts::ARCH);
-println!("Rust version: {}", env!("RUSTC_VERSION"));
-println!("BitNet.rs version: {}", env!("CARGO_PKG_VERSION"));
+use bitnet::{BitNetModel, GenerationConfig};
 
-// Error context
-eprintln!("Error occurred at: {}:{}", file!(), line!());
-eprintln!("Error: {:?}", error);
+#[tokio::main]
+async fn main() -> bitnet::Result<()> {
+    let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
+    let config = GenerationConfig::default();
+    let output = model.generate("Hello", &config).await?;
+    println!("{}", output);
+    Ok(())
+}
+```
+
+### 3. Report Issues
+
+When reporting issues, include:
+
+- BitNet Rust version
+- Operating system and version
+- Hardware specifications (CPU, GPU, RAM)
+- Complete error messages
+- Steps to reproduce
+- Debug information collected above
+
+**GitHub Issues:** https://github.com/your-org/bitnet-rust/issues
+**Discord Community:** https://discord.gg/bitnet-rust
+
+### 4. Community Resources
+
+- **Documentation:** https://docs.rs/bitnet
+- **Examples:** https://github.com/your-org/bitnet-rust/tree/main/examples
+- **FAQ:** https://github.com/your-org/bitnet-rust/wiki/FAQ
+- **Performance Tips:** https://github.com/your-org/bitnet-rust/wiki/Performance
+
+## Emergency Procedures
+
+### 1. Rollback to Previous Version
+
+```bash
+# Uninstall current version
+cargo uninstall bitnet-cli
+
+# Install specific version
+cargo install bitnet-cli --version 0.1.0
+
+# Or use backup binary
+cp bitnet-cli.backup bitnet-cli
+```
+
+### 2. Use Fallback Implementation
+
+```python
+# Python fallback
+try:
+    import bitnet  # Rust implementation
+except ImportError:
+    import bitnet_fallback as bitnet  # Pure Python fallback
+
+model = bitnet.BitNetModel.from_pretrained("model")
+```
+
+### 3. Recovery Mode
+
+```bash
+# Reset configuration
+rm -rf ~/.config/bitnet/
+
+# Clear cache
+rm -rf ~/.cache/bitnet/
+
+# Rebuild from clean state
+cargo clean
+cargo build --release
 ```
