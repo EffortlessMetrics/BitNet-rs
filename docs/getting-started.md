@@ -1,221 +1,146 @@
-# Getting Started with BitNet.rs
+# Getting Started with BitNet Rust
 
-This guide will help you get up and running with BitNet.rs quickly.
-
-## Table of Contents
-
-- [Installation](#installation)
-- [System Requirements](#system-requirements)
-- [First Steps](#first-steps)
-- [Basic Usage](#basic-usage)
-- [Configuration](#configuration)
-- [Next Steps](#next-steps)
+This guide will help you get up and running with BitNet Rust, a high-performance implementation of BitNet models in Rust.
 
 ## Installation
 
 ### Prerequisites
 
 - Rust 1.75 or later
-- Git (for source installation)
-- CUDA toolkit (optional, for GPU acceleration)
+- CUDA 11.8+ (optional, for GPU acceleration)
+- Python 3.8+ (optional, for Python bindings)
 
-### Option 1: From Crates.io (Recommended)
+### Install from crates.io
 
-Add BitNet.rs to your `Cargo.toml`:
+```bash
+cargo install bitnet-cli
+```
+
+### Build from source
+
+```bash
+git clone https://github.com/your-org/bitnet-rust.git
+cd bitnet-rust
+cargo build --release
+```
+
+### Feature flags
+
+BitNet Rust supports several feature flags for customization:
+
+- `gpu`: Enable CUDA GPU acceleration (default: enabled)
+- `python`: Enable Python bindings (default: disabled)
+- `wasm`: Enable WebAssembly support (default: disabled)
+- `cli`: Enable CLI tool (default: enabled)
+
+```bash
+# Install with specific features
+cargo install bitnet-cli --features "gpu,python"
+
+# Build without GPU support
+cargo build --release --no-default-features --features "cli"
+```
+
+## Quick Start
+
+### Using the CLI
+
+1. **Download a model**:
+```bash
+bitnet-cli model download microsoft/bitnet-b1_58-large
+```
+
+2. **Run inference**:
+```bash
+bitnet-cli inference --model microsoft/bitnet-b1_58-large --prompt "Hello, world!"
+```
+
+3. **Stream generation**:
+```bash
+bitnet-cli inference --model microsoft/bitnet-b1_58-large --prompt "Tell me a story" --stream
+```
+
+### Using the Rust API
+
+Add BitNet to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bitnet-rs = "0.1.0"
-
-# Optional features
-bitnet-rs = { version = "0.1.0", features = ["gpu", "server"] }
+bitnet = "0.1.0"
 ```
 
-Available features:
-- `cpu` (default): CPU-optimized kernels
-- `gpu`: CUDA GPU acceleration
-- `server`: HTTP server functionality
-- `python`: Python bindings
-- `wasm`: WebAssembly support
-- `full`: All features enabled
-
-### Option 2: From Source
-
-```bash
-# Clone the repository
-git clone https://github.com/bitnet-rs/bitnet-rs.git
-cd bitnet-rs
-
-# Build with default features
-cargo build --release
-
-# Build with specific features
-cargo build --release --features="gpu,server"
-
-# Install the CLI tool
-cargo install --path crates/bitnet-cli
-```
-
-### Option 3: Using Docker
-
-```bash
-# Pull the latest image
-docker pull bitnet/bitnet-rs:latest
-
-# Run with default configuration
-docker run -p 3000:3000 bitnet/bitnet-rs:latest
-
-# Run with custom model
-docker run -v /path/to/models:/models -p 3000:3000 \
-  -e BITNET_MODEL_PATH=/models/your-model.gguf \
-  bitnet/bitnet-rs:latest
-```
-
-## System Requirements
-
-### Minimum Requirements
-
-- **CPU**: x86_64 or ARM64 processor
-- **RAM**: 4GB (for 1.58B parameter models)
-- **Storage**: 2GB free space
-- **OS**: Linux, macOS, or Windows
-
-### Recommended Requirements
-
-- **CPU**: Modern x86_64 with AVX2 or ARM64 with NEON
-- **RAM**: 8GB or more
-- **GPU**: NVIDIA GPU with CUDA 11.0+ (optional)
-- **Storage**: SSD with 10GB+ free space
-
-### GPU Requirements (Optional)
-
-- NVIDIA GPU with Compute Capability 6.0+
-- CUDA 11.0 or later
-- 4GB+ VRAM for 1.58B models
-
-## First Steps
-
-### 1. Verify Installation
-
-```bash
-# Check if CLI is installed
-bitnet --version
-
-# Run basic health check
-bitnet health
-```
-
-### 2. Download a Model
-
-```bash
-# Download a pre-quantized model
-bitnet download bitnet-1.58b-i2s
-
-# Or specify a custom path
-bitnet download bitnet-1.58b-i2s --output ./models/
-```
-
-### 3. Test Basic Inference
-
-```bash
-# Simple text generation
-bitnet generate "Hello, world!" --model ./models/bitnet-1.58b-i2s.gguf
-
-# With custom parameters
-bitnet generate "The future of AI is" \
-  --model ./models/bitnet-1.58b-i2s.gguf \
-  --max-tokens 50 \
-  --temperature 0.7
-```
-
-## Basic Usage
-
-### Command Line Interface
-
-The CLI provides the easiest way to get started:
-
-```bash
-# Generate text
-bitnet generate "Your prompt here" --model path/to/model.gguf
-
-# Start HTTP server
-bitnet serve --model path/to/model.gguf --port 3000
-
-# Convert model formats
-bitnet convert input.safetensors output.gguf --quantization i2s
-
-# Benchmark performance
-bitnet benchmark --model path/to/model.gguf
-```
-
-### Rust Library
+Basic usage:
 
 ```rust
-use bitnet_rs::prelude::*;
+use bitnet::{BitNetModel, InferenceConfig, GenerationConfig};
 use anyhow::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize logging
-    tracing_subscriber::fmt::init();
-
-    // Load model from file
-    let model = BitNetModel::from_file("models/bitnet-1.58b.gguf").await?;
-    println!("Model loaded: {} parameters", model.parameter_count());
-
-    // Create inference engine
-    let device = Device::best_available()?; // Auto-select best device
-    let mut engine = InferenceEngine::new(model, device)?;
-
-    // Simple generation
-    let response = engine.generate("Hello, world!").await?;
-    println!("Response: {}", response);
-
-    // Generation with custom config
+    // Load a model
+    let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
+    
+    // Configure generation
     let config = GenerationConfig {
         max_new_tokens: 100,
-        temperature: 0.8,
+        temperature: 0.7,
         top_p: 0.9,
-        top_k: 50,
         ..Default::default()
     };
-
-    let response = engine.generate_with_config("The future of AI is", &config).await?;
-    println!("Custom response: {}", response);
-
+    
+    // Generate text
+    let output = model.generate("Hello, world!", &config).await?;
+    println!("Generated: {}", output);
+    
     Ok(())
 }
 ```
 
-### HTTP Server
-
-Start a server for API access:
+### Streaming Generation
 
 ```rust
-use bitnet_rs::server::BitNetServer;
+use bitnet::{BitNetModel, GenerationConfig};
+use futures_util::StreamExt;
 use anyhow::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let server = BitNetServer::builder()
-        .model_path("models/bitnet-1.58b.gguf")
-        .bind("0.0.0.0:3000")
-        .build()
-        .await?;
-
-    println!("Server running on http://0.0.0.0:3000");
-    server.run().await?;
-
+    let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
+    let config = GenerationConfig::default();
+    
+    let mut stream = model.generate_stream("Tell me a story", &config);
+    
+    while let Some(token) = stream.next().await {
+        match token {
+            Ok(text) => print!("{}", text),
+            Err(e) => eprintln!("Error: {}", e),
+        }
+    }
+    
     Ok(())
 }
 ```
 
-Then make HTTP requests:
+## Model Formats
 
+BitNet Rust supports multiple model formats:
+
+### GGUF Format
 ```bash
-curl -X POST http://localhost:3000/api/generate \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "Hello, world!", "max_tokens": 50}'
+# Load GGUF model
+bitnet-cli inference --model path/to/model.gguf --prompt "Hello"
+```
+
+### SafeTensors Format
+```bash
+# Load SafeTensors model
+bitnet-cli inference --model path/to/model.safetensors --prompt "Hello"
+```
+
+### HuggingFace Hub
+```bash
+# Load from HuggingFace Hub
+bitnet-cli inference --model microsoft/bitnet-b1_58-large --prompt "Hello"
 ```
 
 ## Configuration
@@ -226,89 +151,108 @@ Create a `bitnet.toml` configuration file:
 
 ```toml
 [model]
-path = "models/bitnet-1.58b.gguf"
-device = "auto"  # "cpu", "cuda:0", or "auto"
+default_model = "microsoft/bitnet-b1_58-large"
+cache_dir = "~/.cache/bitnet"
 
 [inference]
-max_tokens = 100
+device = "auto"  # "cpu", "cuda", or "auto"
+max_batch_size = 8
+kv_cache_size = 2048
+
+[generation]
+max_new_tokens = 512
 temperature = 0.7
 top_p = 0.9
 top_k = 50
-
-[server]
-host = "0.0.0.0"
-port = 3000
-workers = 4
-
-[logging]
-level = "info"
-format = "json"  # "json" or "pretty"
+repetition_penalty = 1.0
 ```
 
 ### Environment Variables
 
+BitNet Rust respects these environment variables:
+
+- `BITNET_MODEL_CACHE`: Model cache directory
+- `BITNET_DEVICE`: Default device ("cpu", "cuda", "auto")
+- `BITNET_LOG_LEVEL`: Log level ("trace", "debug", "info", "warn", "error")
+- `CUDA_VISIBLE_DEVICES`: GPU device selection
+
+## Performance Optimization
+
+### CPU Optimization
+
+1. **Enable CPU features**:
 ```bash
-export BITNET_MODEL_PATH="models/bitnet-1.58b.gguf"
-export BITNET_DEVICE="cuda:0"
-export BITNET_LOG_LEVEL="debug"
-export RUST_LOG="bitnet=debug"
+RUSTFLAGS="-C target-cpu=native" cargo build --release
 ```
 
-### Programmatic Configuration
+2. **Tune thread count**:
+```bash
+export RAYON_NUM_THREADS=8
+bitnet-cli inference --model model.gguf --prompt "Hello"
+```
 
+### GPU Optimization
+
+1. **Enable mixed precision**:
 ```rust
-use bitnet_rs::config::*;
+let config = InferenceConfig {
+    use_mixed_precision: true,
+    ..Default::default()
+};
+```
 
-let config = BitNetConfig::builder()
-    .model_path("models/bitnet-1.58b.gguf")
-    .device(Device::Cuda(0))
-    .inference_config(
-        InferenceConfig::builder()
-            .max_tokens(100)
-            .temperature(0.7)
-            .build()
-    )
-    .build();
+2. **Optimize batch size**:
+```rust
+let config = InferenceConfig {
+    max_batch_size: 16,  // Adjust based on GPU memory
+    ..Default::default()
+};
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **CUDA not found**:
+   - Install CUDA 11.8 or later
+   - Set `CUDA_HOME` environment variable
+   - Build with `--no-default-features --features cli` for CPU-only
+
+2. **Model loading fails**:
+   - Check model format compatibility
+   - Verify model file integrity
+   - Ensure sufficient disk space and memory
+
+3. **Poor performance**:
+   - Enable native CPU features with `RUSTFLAGS="-C target-cpu=native"`
+   - Use GPU acceleration if available
+   - Adjust batch size and thread count
+
+### Debug Mode
+
+Enable debug logging:
+
+```bash
+RUST_LOG=debug bitnet-cli inference --model model.gguf --prompt "Hello"
+```
+
+### Memory Issues
+
+Monitor memory usage:
+
+```bash
+bitnet-cli benchmark --model model.gguf --monitor-memory
 ```
 
 ## Next Steps
 
-Now that you have BitNet.rs running, explore these topics:
-
-1. **[API Reference](api-reference.md)** - Complete API documentation
-2. **[Examples](../examples/)** - Practical usage examples
-3. **[Performance Guide](performance-guide.md)** - Optimization tips
-4. **[Migration Guide](migration-guide.md)** - Migrating from other implementations
-
-### Common Use Cases
-
-- **[Text Generation](../examples/basic/cpu_inference.rs)** - Basic text generation
-- **[Streaming](../examples/basic/streaming.rs)** - Real-time token streaming
-- **[Web Server](../examples/integrations/axum_server.rs)** - HTTP API server
-- **[Batch Processing](../examples/batch_processing.rs)** - Process multiple requests
-- **[Model Conversion](../examples/model_conversion.rs)** - Convert between formats
-
-### Advanced Topics
-
-- **[Custom Kernels](advanced/custom-kernels.md)** - Implementing custom compute kernels
-- **[Quantization](advanced/quantization.md)** - Understanding quantization algorithms
-- **[Deployment](../examples/deployment/)** - Production deployment guides
-- **[Monitoring](../examples/integrations/tracing_observability.rs)** - Observability setup
+- Read the [API Reference](api-reference.md) for detailed API documentation
+- Check out [Examples](examples/) for more usage patterns
+- See [Migration Guide](migration-guide.md) for migrating from Python/C++
+- Review [Performance Tuning](performance-tuning.md) for optimization tips
 
 ## Getting Help
 
-If you encounter issues:
-
-1. Check the [Troubleshooting Guide](troubleshooting.md)
-2. Search [GitHub Issues](https://github.com/bitnet-rs/bitnet-rs/issues)
-3. Ask in [GitHub Discussions](https://github.com/bitnet-rs/bitnet-rs/discussions)
-4. Join our [Discord Community](https://discord.gg/bitnet-rs)
-
-## Contributing
-
-We welcome contributions! See our [Contributing Guide](../CONTRIBUTING.md) for details on:
-
-- Setting up the development environment
-- Running tests
-- Submitting pull requests
-- Code style guidelines
+- [GitHub Issues](https://github.com/your-org/bitnet-rust/issues)
+- [Documentation](https://docs.rs/bitnet)
+- [Discord Community](https://discord.gg/bitnet-rust)

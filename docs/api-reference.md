@@ -1,238 +1,116 @@
-# BitNet.rs API Reference
+# API Reference
 
-Complete API documentation for BitNet.rs with examples and usage patterns.
-
-## Table of Contents
-
-- [Core Types](#core-types)
-- [Model Loading](#model-loading)
-- [Inference Engine](#inference-engine)
-- [Configuration](#configuration)
-- [Quantization](#quantization)
-- [Tokenization](#tokenization)
-- [Server API](#server-api)
-- [Error Handling](#error-handling)
+This document provides comprehensive API reference for BitNet Rust.
 
 ## Core Types
 
-### Device
-
-Represents the compute device for model execution.
-
-```rust
-use bitnet_rs::Device;
-
-// CPU device
-let device = Device::Cpu;
-
-// CUDA GPU device
-let device = Device::Cuda(0); // GPU index 0
-
-// Auto-select best available device
-let device = Device::best_available()?;
-
-// Check device capabilities
-if device.supports_quantization(QuantizationType::I2S) {
-    println!("Device supports I2S quantization");
-}
-```
-
-### BitNetConfig
-
-Main configuration structure for BitNet models.
-
-```rust
-use bitnet_rs::config::*;
-
-let config = BitNetConfig {
-    model: ModelConfig {
-        vocab_size: 50257,
-        hidden_size: 2048,
-        num_layers: 24,
-        num_attention_heads: 16,
-        max_position_embeddings: 2048,
-    },
-    inference: InferenceConfig {
-        max_new_tokens: 100,
-        temperature: 0.7,
-        top_p: 0.9,
-        top_k: 50,
-        repetition_penalty: 1.1,
-    },
-    quantization: QuantizationConfig {
-        qtype: QuantizationType::I2S,
-        block_size: 64,
-    },
-};
-```
-
-## Model Loading
-
 ### BitNetModel
 
-Main model structure for BitNet inference.
+The main model interface for loading and running BitNet models.
 
 ```rust
-use bitnet_rs::models::*;
-use anyhow::Result;
+pub struct BitNetModel {
+    // Internal fields
+}
 
 impl BitNetModel {
-    /// Load model from GGUF file
-    pub async fn from_gguf<P: AsRef<Path>>(path: P) -> Result<Self>;
+    /// Load a model from a file path
+    pub async fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, BitNetError>;
     
-    /// Load model from SafeTensors file
-    pub async fn from_safetensors<P: AsRef<Path>>(path: P) -> Result<Self>;
+    /// Load a model from HuggingFace Hub
+    pub async fn from_pretrained(model_id: &str) -> Result<Self, BitNetError>;
     
-    /// Load model from HuggingFace checkpoint
-    pub async fn from_huggingface<P: AsRef<Path>>(path: P) -> Result<Self>;
+    /// Load a model with custom configuration
+    pub async fn from_pretrained_with_config(
+        model_id: &str,
+        config: &ModelConfig,
+    ) -> Result<Self, BitNetError>;
     
-    /// Auto-detect format and load
-    pub async fn from_file<P: AsRef<Path>>(path: P) -> Result<Self>;
-    
-    /// Get model configuration
-    pub fn config(&self) -> &BitNetConfig;
-    
-    /// Get parameter count
-    pub fn parameter_count(&self) -> usize;
-    
-    /// Get memory usage in bytes
-    pub fn memory_usage(&self) -> usize;
-}
-```
-
-#### Examples
-
-```rust
-// Load from different formats
-let model = BitNetModel::from_gguf("models/bitnet-1.58b.gguf").await?;
-let model = BitNetModel::from_safetensors("models/model.safetensors").await?;
-let model = BitNetModel::from_file("models/model.bin").await?; // Auto-detect
-
-// Inspect model
-println!("Parameters: {}", model.parameter_count());
-println!("Memory usage: {} MB", model.memory_usage() / 1024 / 1024);
-println!("Vocab size: {}", model.config().model.vocab_size);
-```
-
-### ModelLoader
-
-Advanced model loading with custom options.
-
-```rust
-use bitnet_rs::models::ModelLoader;
-
-let loader = ModelLoader::new()
-    .device(Device::Cuda(0))
-    .dtype(DType::F16)
-    .memory_map(true)
-    .validate_checksums(true);
-
-let model = loader.load("models/bitnet-1.58b.gguf").await?;
-```
-
-## Inference Engine
-
-### InferenceEngine
-
-Main interface for text generation and inference.
-
-```rust
-use bitnet_rs::inference::*;
-
-impl InferenceEngine {
-    /// Create new inference engine
-    pub fn new(
-        model: BitNetModel,
-        tokenizer: Arc<dyn Tokenizer>,
-        device: Device,
-    ) -> Result<Self>;
-    
-    /// Generate text from prompt
-    pub async fn generate(&mut self, prompt: &str) -> Result<String>;
-    
-    /// Generate with custom configuration
-    pub async fn generate_with_config(
-        &mut self,
+    /// Generate text from a prompt
+    pub async fn generate(
+        &self,
         prompt: &str,
         config: &GenerationConfig,
-    ) -> Result<String>;
+    ) -> Result<String, BitNetError>;
     
-    /// Generate streaming tokens
+    /// Generate streaming text
     pub fn generate_stream(
-        &mut self,
-        prompt: &str,
-    ) -> impl Stream<Item = Result<String>>;
-    
-    /// Generate streaming with config
-    pub fn generate_stream_with_config(
-        &mut self,
+        &self,
         prompt: &str,
         config: &GenerationConfig,
-    ) -> impl Stream<Item = Result<String>>;
+    ) -> impl Stream<Item = Result<String, BitNetError>>;
+    
+    /// Get model information
+    pub fn model_info(&self) -> &ModelInfo;
     
     /// Get model configuration
-    pub fn model_config(&self) -> &BitNetConfig;
+    pub fn config(&self) -> &ModelConfig;
 }
 ```
 
-#### Basic Usage
+### ModelConfig
+
+Configuration for model loading and behavior.
 
 ```rust
-use bitnet_rs::prelude::*;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelConfig {
+    /// Device to run the model on
+    pub device: Device,
+    
+    /// Data type for model weights
+    pub dtype: DType,
+    
+    /// Maximum sequence length
+    pub max_seq_len: usize,
+    
+    /// Vocabulary size
+    pub vocab_size: usize,
+    
+    /// Number of attention heads
+    pub num_heads: usize,
+    
+    /// Hidden dimension size
+    pub hidden_size: usize,
+    
+    /// Number of layers
+    pub num_layers: usize,
+    
+    /// Quantization configuration
+    pub quantization: QuantizationConfig,
+    
+    /// KV cache configuration
+    pub kv_cache: KVCacheConfig,
+}
 
-// Create engine
-let model = BitNetModel::from_file("models/bitnet-1.58b.gguf").await?;
-let tokenizer = TokenizerBuilder::from_pretrained("gpt2")?;
-let mut engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
-
-// Simple generation
-let response = engine.generate("Hello, world!").await?;
-println!("Response: {}", response);
-```
-
-#### Advanced Usage
-
-```rust
-// Custom generation config
-let config = GenerationConfig {
-    max_new_tokens: 200,
-    temperature: 0.8,
-    top_p: 0.95,
-    top_k: 40,
-    repetition_penalty: 1.1,
-    stop_sequences: vec!["<|endoftext|>".to_string()],
-    seed: Some(42), // For reproducible generation
-};
-
-let response = engine.generate_with_config("The future of AI", &config).await?;
-```
-
-#### Streaming Generation
-
-```rust
-use futures_util::StreamExt;
-
-let mut stream = engine.generate_stream("Once upon a time");
-
-while let Some(token_result) = stream.next().await {
-    match token_result {
-        Ok(token) => print!("{}", token),
-        Err(e) => eprintln!("Error: {}", e),
+impl Default for ModelConfig {
+    fn default() -> Self {
+        Self {
+            device: Device::Auto,
+            dtype: DType::F16,
+            max_seq_len: 2048,
+            vocab_size: 32000,
+            num_heads: 32,
+            hidden_size: 4096,
+            num_layers: 32,
+            quantization: QuantizationConfig::default(),
+            kv_cache: KVCacheConfig::default(),
+        }
     }
 }
 ```
 
 ### GenerationConfig
 
-Configuration for text generation parameters.
+Configuration for text generation.
 
 ```rust
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerationConfig {
     /// Maximum number of new tokens to generate
     pub max_new_tokens: u32,
     
-    /// Sampling temperature (0.0 = deterministic, higher = more random)
+    /// Sampling temperature (0.0 = deterministic)
     pub temperature: f32,
     
     /// Top-p (nucleus) sampling threshold
@@ -241,10 +119,10 @@ pub struct GenerationConfig {
     /// Top-k sampling limit
     pub top_k: u32,
     
-    /// Repetition penalty (1.0 = no penalty, higher = less repetition)
+    /// Repetition penalty
     pub repetition_penalty: f32,
     
-    /// Stop sequences to end generation
+    /// Stop sequences
     pub stop_sequences: Vec<String>,
     
     /// Random seed for reproducible generation
@@ -252,6 +130,9 @@ pub struct GenerationConfig {
     
     /// Whether to skip special tokens in output
     pub skip_special_tokens: bool,
+    
+    /// Whether to stream output
+    pub stream: bool,
 }
 
 impl Default for GenerationConfig {
@@ -265,396 +146,417 @@ impl Default for GenerationConfig {
             stop_sequences: vec![],
             seed: None,
             skip_special_tokens: true,
+            stream: false,
         }
     }
 }
 ```
 
-## Configuration
+## Device Management
 
-### Builder Pattern
+### Device
 
-```rust
-use bitnet_rs::config::*;
-
-let config = BitNetConfig::builder()
-    .model_config(
-        ModelConfig::builder()
-            .vocab_size(50257)
-            .hidden_size(2048)
-            .num_layers(24)
-            .build()
-    )
-    .inference_config(
-        InferenceConfig::builder()
-            .max_tokens(200)
-            .temperature(0.8)
-            .build()
-    )
-    .build();
-```
-
-### From File
+Represents compute devices for model execution.
 
 ```rust
-// Load from TOML file
-let config = BitNetConfig::from_file("bitnet.toml")?;
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Device {
+    /// Automatic device selection
+    Auto,
+    /// CPU device
+    Cpu,
+    /// CUDA GPU device
+    Cuda(usize), // GPU index
+    /// Metal GPU device (macOS)
+    Metal,
+}
 
-// Load from JSON file
-let config = BitNetConfig::from_json_file("bitnet.json")?;
+impl Device {
+    /// Get available devices
+    pub fn available_devices() -> Vec<Device>;
+    
+    /// Check if device is available
+    pub fn is_available(&self) -> bool;
+    
+    /// Get device memory info
+    pub fn memory_info(&self) -> Result<DeviceMemoryInfo, BitNetError>;
+    
+    /// Get device capabilities
+    pub fn capabilities(&self) -> DeviceCapabilities;
+}
 
-// Load from environment variables
-let config = BitNetConfig::from_env()?;
-```
+#[derive(Debug, Clone)]
+pub struct DeviceMemoryInfo {
+    pub total: usize,
+    pub free: usize,
+    pub used: usize,
+}
 
-### Environment Variables
-
-```rust
-// Supported environment variables
-std::env::set_var("BITNET_MODEL_PATH", "models/bitnet-1.58b.gguf");
-std::env::set_var("BITNET_DEVICE", "cuda:0");
-std::env::set_var("BITNET_MAX_TOKENS", "100");
-std::env::set_var("BITNET_TEMPERATURE", "0.7");
-
-let config = BitNetConfig::from_env()?;
+#[derive(Debug, Clone)]
+pub struct DeviceCapabilities {
+    pub supports_f16: bool,
+    pub supports_bf16: bool,
+    pub supports_int8: bool,
+    pub max_threads: usize,
+    pub compute_capability: Option<(u32, u32)>, // For CUDA
+}
 ```
 
 ## Quantization
 
-### QuantizationType
+### QuantizationConfig
 
-Supported quantization algorithms.
+Configuration for model quantization.
 
 ```rust
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuantizationConfig {
+    /// Quantization type
+    pub qtype: QuantizationType,
+    
+    /// Block size for quantization
+    pub block_size: usize,
+    
+    /// Whether to use dynamic quantization
+    pub dynamic: bool,
+    
+    /// Calibration dataset size
+    pub calibration_size: Option<usize>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum QuantizationType {
+    /// No quantization (full precision)
+    None,
     /// 2-bit signed quantization
     I2S,
-    /// Table lookup 1 (ARM NEON optimized)
+    /// Table lookup quantization (ARM optimized)
     TL1,
-    /// Table lookup 2 (x86 AVX optimized)
+    /// Table lookup quantization (x86 optimized)
     TL2,
-}
-```
-
-### Quantization Operations
-
-```rust
-use bitnet_rs::quantization::*;
-
-// Quantize a tensor
-let quantized = tensor.quantize(QuantizationType::I2S)?;
-println!("Original size: {} bytes", tensor.size_bytes());
-println!("Quantized size: {} bytes", quantized.size_bytes());
-
-// Dequantize back to full precision
-let dequantized = quantized.dequantize()?;
-
-// Convert between quantization types
-let tl1_quantized = quantized.convert_to(QuantizationType::TL1)?;
-```
-
-### Custom Quantization
-
-```rust
-// Implement custom quantization
-struct CustomQuantizer {
-    block_size: usize,
-    precision: u8,
+    /// 8-bit integer quantization
+    Int8,
+    /// 4-bit integer quantization
+    Int4,
 }
 
-impl Quantizer for CustomQuantizer {
-    fn quantize(&self, tensor: &Tensor) -> Result<QuantizedTensor> {
-        // Custom quantization logic
-        todo!()
+impl Default for QuantizationConfig {
+    fn default() -> Self {
+        Self {
+            qtype: QuantizationType::I2S,
+            block_size: 64,
+            dynamic: false,
+            calibration_size: None,
+        }
     }
+}
+```
+
+## Inference Engine
+
+### InferenceEngine
+
+Low-level inference engine for advanced use cases.
+
+```rust
+pub struct InferenceEngine {
+    // Internal fields
+}
+
+impl InferenceEngine {
+    /// Create a new inference engine
+    pub fn new(
+        model: Arc<dyn Model>,
+        tokenizer: Arc<dyn Tokenizer>,
+        device: Device,
+    ) -> Result<Self, BitNetError>;
     
-    fn dequantize(&self, qtensor: &QuantizedTensor) -> Result<Tensor> {
-        // Custom dequantization logic
-        todo!()
-    }
+    /// Create with custom configuration
+    pub fn with_config(
+        model: Arc<dyn Model>,
+        tokenizer: Arc<dyn Tokenizer>,
+        device: Device,
+        config: InferenceConfig,
+    ) -> Result<Self, BitNetError>;
+    
+    /// Run inference on token IDs
+    pub async fn forward(
+        &self,
+        input_ids: &[u32],
+        attention_mask: Option<&[bool]>,
+    ) -> Result<Tensor, BitNetError>;
+    
+    /// Generate next token probabilities
+    pub async fn next_token_logits(
+        &self,
+        input_ids: &[u32],
+        temperature: f32,
+    ) -> Result<Vec<f32>, BitNetError>;
+    
+    /// Sample next token from logits
+    pub fn sample_token(
+        &self,
+        logits: &[f32],
+        config: &SamplingConfig,
+    ) -> Result<u32, BitNetError>;
+}
+
+#[derive(Debug, Clone)]
+pub struct InferenceConfig {
+    /// Maximum batch size
+    pub max_batch_size: usize,
+    
+    /// KV cache size
+    pub kv_cache_size: usize,
+    
+    /// Maximum concurrent requests
+    pub max_concurrent_requests: usize,
+    
+    /// Request timeout
+    pub request_timeout: Duration,
+    
+    /// Whether to use mixed precision
+    pub use_mixed_precision: bool,
 }
 ```
 
 ## Tokenization
 
-### Tokenizer Trait
+### Tokenizer
+
+Interface for text tokenization.
 
 ```rust
 pub trait Tokenizer: Send + Sync {
     /// Encode text to token IDs
-    fn encode(&self, text: &str, add_special_tokens: bool) -> Result<Vec<u32>>;
+    fn encode(&self, text: &str, add_special_tokens: bool) -> Result<Vec<u32>, TokenizerError>;
     
     /// Decode token IDs to text
-    fn decode(&self, tokens: &[u32], skip_special_tokens: bool) -> Result<String>;
+    fn decode(&self, token_ids: &[u32], skip_special_tokens: bool) -> Result<String, TokenizerError>;
     
     /// Get vocabulary size
     fn vocab_size(&self) -> usize;
     
-    /// Get EOS token ID
-    fn eos_token_id(&self) -> Option<u32>;
+    /// Get special token IDs
+    fn special_tokens(&self) -> &SpecialTokens;
     
-    /// Get PAD token ID
-    fn pad_token_id(&self) -> Option<u32>;
+    /// Batch encode multiple texts
+    fn encode_batch(
+        &self,
+        texts: &[&str],
+        add_special_tokens: bool,
+    ) -> Result<Vec<Vec<u32>>, TokenizerError>;
+    
+    /// Batch decode multiple token sequences
+    fn decode_batch(
+        &self,
+        token_ids: &[&[u32]],
+        skip_special_tokens: bool,
+    ) -> Result<Vec<String>, TokenizerError>;
 }
-```
 
-### TokenizerBuilder
-
-```rust
-use bitnet_rs::tokenizers::*;
-
-// Load from pretrained
-let tokenizer = TokenizerBuilder::from_pretrained("gpt2")?;
-
-// Load from file
-let tokenizer = TokenizerBuilder::from_file("tokenizer.json")?;
-
-// Create custom tokenizer
-let tokenizer = TokenizerBuilder::new()
-    .vocab_file("vocab.txt")
-    .merges_file("merges.txt")
-    .special_tokens(&[("<|endoftext|>", 50256)])
-    .build()?;
-```
-
-### Usage Examples
-
-```rust
-let tokenizer = TokenizerBuilder::from_pretrained("gpt2")?;
-
-// Encode text
-let tokens = tokenizer.encode("Hello, world!", true)?;
-println!("Tokens: {:?}", tokens);
-
-// Decode tokens
-let text = tokenizer.decode(&tokens, true)?;
-println!("Decoded: {}", text);
-
-// Batch operations
-let texts = vec!["Hello", "World", "!"];
-let token_batches: Vec<Vec<u32>> = texts
-    .iter()
-    .map(|text| tokenizer.encode(text, false))
-    .collect::<Result<Vec<_>>>()?;
-```
-
-## Server API
-
-### HTTP Endpoints
-
-#### POST /api/generate
-
-Generate text from a prompt.
-
-**Request:**
-```json
-{
-    "prompt": "Hello, world!",
-    "max_tokens": 100,
-    "temperature": 0.7,
-    "top_p": 0.9,
-    "top_k": 50,
-    "stream": false
+#[derive(Debug, Clone)]
+pub struct SpecialTokens {
+    pub bos_token_id: Option<u32>,
+    pub eos_token_id: Option<u32>,
+    pub pad_token_id: Option<u32>,
+    pub unk_token_id: Option<u32>,
 }
-```
-
-**Response:**
-```json
-{
-    "generated_text": "Hello, world! How are you doing today?",
-    "tokens_generated": 8,
-    "latency_ms": 150,
-    "model_info": {
-        "name": "BitNet-1.58B",
-        "quantization": "I2S",
-        "device": "Cpu"
-    }
-}
-```
-
-#### POST /api/generate/stream
-
-Stream generated tokens in real-time.
-
-**Request:** Same as `/api/generate`
-
-**Response:** Server-Sent Events stream
-```
-data: {"token": "Hello", "done": false}
-data: {"token": ",", "done": false}
-data: {"token": " world", "done": false}
-data: {"done": true, "total_tokens": 3}
-```
-
-#### GET /api/health
-
-Health check endpoint.
-
-**Response:**
-```json
-{
-    "status": "healthy",
-    "model_loaded": true,
-    "device": "Cpu",
-    "uptime_seconds": 3600
-}
-```
-
-### Server Configuration
-
-```rust
-use bitnet_rs::server::*;
-
-let server = BitNetServer::builder()
-    .model_path("models/bitnet-1.58b.gguf")
-    .bind("0.0.0.0:3000")
-    .workers(4)
-    .max_request_size(1024 * 1024) // 1MB
-    .timeout(Duration::from_secs(30))
-    .cors(true)
-    .auth_tokens(vec!["secret-token".to_string()])
-    .build()
-    .await?;
-
-server.run().await?;
 ```
 
 ## Error Handling
 
-### Error Types
+### BitNetError
+
+Main error type for BitNet operations.
 
 ```rust
-#[derive(Error, Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum BitNetError {
     #[error("Model error: {0}")]
     Model(#[from] ModelError),
     
-    #[error("Inference error: {0}")]
-    Inference(#[from] InferenceError),
+    #[error("Tokenization error: {0}")]
+    Tokenization(#[from] TokenizerError),
+    
+    #[error("Device error: {0}")]
+    Device(String),
     
     #[error("Quantization error: {0}")]
-    Quantization(#[from] QuantizationError),
-    
-    #[error("Tokenization error: {0}")]
-    Tokenization(#[from] TokenizationError),
+    Quantization(String),
     
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
     
     #[error("Configuration error: {0}")]
     Config(String),
-}
-```
-
-### Error Handling Patterns
-
-```rust
-use bitnet_rs::prelude::*;
-
-// Basic error handling
-match engine.generate("Hello").await {
-    Ok(response) => println!("Generated: {}", response),
-    Err(BitNetError::Model(e)) => eprintln!("Model error: {}", e),
-    Err(BitNetError::Inference(e)) => eprintln!("Inference error: {}", e),
-    Err(e) => eprintln!("Other error: {}", e),
-}
-
-// Using anyhow for error propagation
-use anyhow::Result;
-
-async fn generate_text() -> Result<String> {
-    let model = BitNetModel::from_file("model.gguf").await?;
-    let tokenizer = TokenizerBuilder::from_pretrained("gpt2")?;
-    let mut engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
     
-    let response = engine.generate("Hello, world!").await?;
-    Ok(response)
-}
-```
-
-### Custom Error Context
-
-```rust
-use anyhow::{Context, Result};
-
-let model = BitNetModel::from_file("model.gguf")
-    .await
-    .context("Failed to load model from file")?;
-
-let response = engine
-    .generate("Hello")
-    .await
-    .context("Failed to generate text")?;
-```
-
-## Advanced Usage
-
-### Custom Kernels
-
-```rust
-use bitnet_rs::kernels::*;
-
-struct CustomKernel;
-
-impl KernelProvider for CustomKernel {
-    fn name(&self) -> &'static str {
-        "custom"
-    }
+    #[error("Memory error: {0}")]
+    Memory(String),
     
-    fn is_available(&self) -> bool {
-        true
-    }
+    #[error("Timeout error: operation timed out after {0:?}")]
+    Timeout(Duration),
     
-    fn matmul_i2s(
-        &self,
-        a: &[i8],
-        b: &[u8],
-        c: &mut [f32],
-        m: usize,
-        n: usize,
-        k: usize,
-    ) -> Result<()> {
-        // Custom matrix multiplication implementation
-        todo!()
-    }
+    #[error("Capacity error: {0}")]
+    Capacity(String),
 }
 
-// Register custom kernel
-let mut kernel_manager = KernelManager::new();
-kernel_manager.register(Box::new(CustomKernel));
+pub type Result<T> = std::result::Result<T, BitNetError>;
 ```
 
-### Memory Management
+## Utilities
+
+### ModelInfo
+
+Information about a loaded model.
 
 ```rust
-// Monitor memory usage
-let memory_usage = engine.memory_usage();
-println!("Model memory: {} MB", memory_usage.model_mb);
-println!("Cache memory: {} MB", memory_usage.cache_mb);
-println!("Total memory: {} MB", memory_usage.total_mb);
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelInfo {
+    /// Model name
+    pub name: String,
+    
+    /// Model architecture
+    pub architecture: String,
+    
+    /// Parameter count
+    pub num_parameters: u64,
+    
+    /// Model size in bytes
+    pub model_size: u64,
+    
+    /// Quantization info
+    pub quantization: QuantizationInfo,
+    
+    /// Supported features
+    pub features: Vec<String>,
+}
 
-// Configure memory limits
-let config = InferenceConfig::builder()
-    .max_cache_size(1024 * 1024 * 1024) // 1GB cache limit
-    .memory_pool_size(512 * 1024 * 1024) // 512MB pool
-    .build();
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuantizationInfo {
+    pub qtype: QuantizationType,
+    pub bits_per_weight: f32,
+    pub compression_ratio: f32,
+}
 ```
 
 ### Performance Monitoring
 
 ```rust
-use bitnet_rs::metrics::*;
+#[derive(Debug, Clone)]
+pub struct PerformanceMetrics {
+    /// Tokens generated per second
+    pub tokens_per_second: f64,
+    
+    /// Time to first token (ms)
+    pub time_to_first_token: f64,
+    
+    /// Average latency per token (ms)
+    pub avg_latency_per_token: f64,
+    
+    /// Memory usage (bytes)
+    pub memory_usage: usize,
+    
+    /// GPU utilization (0.0-1.0)
+    pub gpu_utilization: Option<f32>,
+}
 
-// Enable metrics collection
-let metrics = MetricsCollector::new();
-let mut engine = InferenceEngine::with_metrics(model, tokenizer, device, metrics)?;
+impl BitNetModel {
+    /// Get performance metrics for the last generation
+    pub fn last_metrics(&self) -> Option<PerformanceMetrics>;
+    
+    /// Reset performance metrics
+    pub fn reset_metrics(&self);
+}
+```
 
-// Generate with timing
-let start = std::time::Instant::now();
-let response = engine.generate("Hello").await?;
-let duration = start.elapsed();
+## Feature Flags
 
-println!("Generation took: {:?}", duration);
-println!("Tokens per second: {:.2}", response.len() as f64 / duration.as_secs_f64());
+BitNet Rust supports conditional compilation with feature flags:
+
+- `gpu`: Enable CUDA GPU support
+- `python`: Enable Python bindings
+- `wasm`: Enable WebAssembly support
+- `cli`: Enable CLI tool
+- `serde`: Enable serialization support
+- `tracing`: Enable structured logging
+
+Example usage in `Cargo.toml`:
+
+```toml
+[dependencies]
+bitnet = { version = "0.1.0", features = ["gpu", "serde"] }
+```
+
+## Examples
+
+### Basic Text Generation
+
+```rust
+use bitnet::{BitNetModel, GenerationConfig};
+
+#[tokio::main]
+async fn main() -> bitnet::Result<()> {
+    let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
+    
+    let config = GenerationConfig {
+        max_new_tokens: 50,
+        temperature: 0.8,
+        ..Default::default()
+    };
+    
+    let output = model.generate("The future of AI is", &config).await?;
+    println!("Generated: {}", output);
+    
+    Ok(())
+}
+```
+
+### Streaming Generation
+
+```rust
+use bitnet::{BitNetModel, GenerationConfig};
+use futures_util::StreamExt;
+
+#[tokio::main]
+async fn main() -> bitnet::Result<()> {
+    let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
+    let config = GenerationConfig::default();
+    
+    let mut stream = model.generate_stream("Tell me about Rust:", &config);
+    
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(token) => print!("{}", token),
+            Err(e) => eprintln!("Error: {}", e),
+        }
+    }
+    
+    Ok(())
+}
+```
+
+### Custom Device Selection
+
+```rust
+use bitnet::{BitNetModel, Device, ModelConfig};
+
+#[tokio::main]
+async fn main() -> bitnet::Result<()> {
+    let config = ModelConfig {
+        device: Device::Cuda(0), // Use first GPU
+        ..Default::default()
+    };
+    
+    let model = BitNetModel::from_pretrained_with_config(
+        "microsoft/bitnet-b1_58-large",
+        &config,
+    ).await?;
+    
+    // Model will run on GPU 0
+    let output = model.generate("Hello", &Default::default()).await?;
+    println!("{}", output);
+    
+    Ok(())
+}
 ```
