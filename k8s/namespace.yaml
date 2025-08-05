@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bitnet
+  labels:
+    name: bitnet
+    app.kubernetes.io/name: bitnet
+    app.kubernetes.io/version: "1.0.0"

@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bitnet-ingress
+  namespace: bitnet
+  labels:
+    app.kubernetes.io/name: bitnet
+    app.kubernetes.io/component: ingress
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - bitnet.example.com
+    secretName: bitnet-tls
+  rules:
+  - host: bitnet.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bitnet-service
+            port:
+              number: 8080
+      - path: /cpu
+        pathType: Prefix
+        backend:
+          service:
+            name: bitnet-cpu-service
+            port:
+              number: 8080
+      - path: /gpu
+        pathType: Prefix
+        backend:
+          service:
+            name: bitnet-gpu-service
+            port:
+              number: 8080
