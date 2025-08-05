@@ -2,8 +2,7 @@
 
 use crate::loader::{FormatLoader, LoadConfig};
 use crate::{Model, BitNetModel};
-use bitnet_common::{BitNetConfig, ModelMetadata, Result};
-use candle_core::Device;
+use bitnet_common::{BitNetConfig, ModelMetadata, Result, Device};
 use std::path::Path;
 use tracing::{debug, info};
 
@@ -52,7 +51,7 @@ impl FormatLoader for HuggingFaceLoader {
         path: &Path,
         device: &Device,
         _config: &LoadConfig,
-    ) -> Result<Box<dyn Model<Config = BitNetConfig>>> {
+    ) -> Result<Box<dyn Model>> {
         info!("Loading HuggingFace model from: {}", path.display());
         
         // TODO: Implement HuggingFace loading

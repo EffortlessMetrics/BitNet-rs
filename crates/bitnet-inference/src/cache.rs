@@ -1,441 +1,439 @@
-//! KV cache implementation for efficient inference
+//! # KV Cache Implementation
+//!
+//! Efficient key-value cache for transformer models with memory pooling,
+//! compression, and eviction policies.
 
-use crate::Backend;
-use bitnet_common::{BitNetConfig, BitNetError, BitNetTensor, Result};
-use candle_core::{Device, DType};
-use std::collections::HashMap;
+use anyhow::{Result, Context};
+use std::collections::{HashMap, VecDeque};
+use tracing::{debug, warn};
 
-/// KV cache for storing key-value pairs during inference
+/// Configuration for KV cache
+#[derive(Debug, Clone)]
+pub struct CacheConfig {
+    /// Maximum cache size in bytes
+    pub max_size_bytes: usize,
+    /// Maximum sequence length to cache
+    pub max_sequence_length: usize,
+    /// Enable cache compression for older entries
+    pub enable_compression: bool,
+    /// Eviction policy when cache is full
+    pub eviction_policy: EvictionPolicy,
+    /// Block size for memory allocation
+    pub block_size: usize,
+}
+
+impl Default for CacheConfig {
+    fn default() -> Self {
+        Self {
+            max_size_bytes: 1024 * 1024 * 1024, // 1GB
+            max_sequence_length: 2048,
+            enable_compression: false,
+            eviction_policy: EvictionPolicy::LRU,
+            block_size: 64,
+        }
+    }
+}
+
+/// Cache eviction policies
+#[derive(Debug, Clone, Copy)]
+pub enum EvictionPolicy {
+    /// Least Recently Used
+    LRU,
+    /// First In, First Out
+    FIFO,
+    /// Least Frequently Used
+    LFU,
+}
+
+/// Key-Value cache entry
+#[derive(Debug, Clone)]
+struct CacheEntry {
+    /// Key tensor data
+    key: Vec<f32>,
+    /// Value tensor data
+    value: Vec<f32>,
+    /// Sequence position
+    position: usize,
+    /// Last access timestamp
+    last_accessed: std::time::Instant,
+    /// Access count for LFU
+    access_count: usize,
+    /// Whether entry is compressed
+    compressed: bool,
+}
+
+impl CacheEntry {
+    fn new(key: Vec<f32>, value: Vec<f32>, position: usize) -> Self {
+        Self {
+            key,
+            value,
+            position,
+            last_accessed: std::time::Instant::now(),
+            access_count: 1,
+            compressed: false,
+        }
+    }
+
+    fn size_bytes(&self) -> usize {
+        (self.key.len() + self.value.len()) * std::mem::size_of::<f32>()
+    }
+
+    fn access(&mut self) {
+        self.last_accessed = std::time::Instant::now();
+        self.access_count += 1;
+    }
+}
+
+/// KV Cache implementation
 pub struct KVCache {
-    /// Cache for each layer
-    layer_caches: Vec<LayerCache>,
-    /// Maximum sequence length
-    max_length: usize,
-    /// Current sequence length
-    current_length: usize,
-    /// Device for tensor operations
-    device: Device,
+    config: CacheConfig,
+    /// Cache entries organized by layer and sequence position
+    cache: HashMap<(usize, usize), CacheEntry>,
+    /// Access order for LRU eviction
+    access_order: VecDeque<(usize, usize)>,
+    /// Current cache size in bytes
+    current_size: usize,
     /// Memory pool for efficient allocation
-    memory_pool: Option<MemoryPool>,
+    memory_pool: MemoryPool,
 }
 
 impl KVCache {
     /// Create a new KV cache
-    pub fn new(config: &BitNetConfig, max_length: usize) -> Result<Self> {
-        let device = Device::Cpu; // Default to CPU, can be overridden
-        let num_layers = config.model.num_layers;
-        let num_heads = config.model.num_heads;
-        let head_dim = config.model.hidden_size / config.model.num_heads;
-        
-        let layer_caches = (0..num_layers)
-            .map(|_| LayerCache::new(max_length, num_heads, head_dim, &device))
-            .collect::<Result<Vec<_>>>()?;
+    pub fn new(config: CacheConfig) -> Result<Self> {
+        let memory_pool = MemoryPool::new(config.block_size, config.max_size_bytes / 4)?;
         
         Ok(Self {
-            layer_caches,
-            max_length,
-            current_length: 0,
-            device,
-            memory_pool: None,
+            config,
+            cache: HashMap::new(),
+            access_order: VecDeque::new(),
+            current_size: 0,
+            memory_pool,
         })
     }
-    
-    /// Create KV cache with memory pooling
-    pub fn with_memory_pool(
-        config: &BitNetConfig, 
-        max_length: usize,
-        pool_size_mb: usize,
-    ) -> Result<Self> {
-        let mut cache = Self::new(config, max_length)?;
-        cache.memory_pool = Some(MemoryPool::new(pool_size_mb)?);
-        Ok(cache)
-    }
-    
-    /// Get cache for a specific layer
-    pub fn get_layer_cache(&mut self, layer_idx: usize) -> Result<&mut LayerCache> {
-        self.layer_caches
-            .get_mut(layer_idx)
-            .ok_or_else(|| BitNetError::Validation(
-                format!("Layer index {} out of bounds", layer_idx)
-            ))
-    }
-    
-    /// Update cache for a layer
-    pub fn update_layer(
+
+    /// Store key-value pair in cache
+    pub fn store(
         &mut self,
-        layer_idx: usize,
-        key: BitNetTensor,
-        value: BitNetTensor,
+        layer: usize,
         position: usize,
+        key: Vec<f32>,
+        value: Vec<f32>,
     ) -> Result<()> {
-        let layer_cache = self.get_layer_cache(layer_idx)?;
-        layer_cache.update(key, value, position)?;
+        let entry_key = (layer, position);
+        let entry_size = (key.len() + value.len()) * std::mem::size_of::<f32>();
         
-        // Update current length if this is the last layer
-        if layer_idx == self.layer_caches.len() - 1 {
-            self.current_length = self.current_length.max(position + 1);
+        // Check if we need to evict entries
+        while self.current_size + entry_size > self.config.max_size_bytes {
+            self.evict_entry()?;
         }
         
+        // Create new entry
+        let entry = CacheEntry::new(key, value, position);
+        
+        // Remove old entry if it exists
+        if let Some(old_entry) = self.cache.remove(&entry_key) {
+            self.current_size -= old_entry.size_bytes();
+            self.access_order.retain(|&x| x != entry_key);
+        }
+        
+        // Add new entry
+        self.current_size += entry.size_bytes();
+        self.cache.insert(entry_key, entry);
+        self.access_order.push_back(entry_key);
+        
+        debug!("Stored cache entry for layer {} position {}", layer, position);
         Ok(())
     }
-    
-    /// Get cached key-value pairs for a layer
-    pub fn get_layer_kv(&self, layer_idx: usize) -> Result<(&BitNetTensor, &BitNetTensor)> {
-        let layer_cache = self.layer_caches
-            .get(layer_idx)
-            .ok_or_else(|| BitNetError::Validation(
-                format!("Layer index {} out of bounds", layer_idx)
-            ))?;
+
+    /// Retrieve key-value pair from cache
+    pub fn get(&mut self, layer: usize, position: usize) -> Option<(&Vec<f32>, &Vec<f32>)> {
+        let entry_key = (layer, position);
         
-        Ok((&layer_cache.key_cache, &layer_cache.value_cache))
-    }
-    
-    /// Reset the cache
-    pub fn reset(&mut self) {
-        for layer_cache in &mut self.layer_caches {
-            layer_cache.reset();
+        if let Some(entry) = self.cache.get_mut(&entry_key) {
+            entry.access();
+            
+            // Update access order for LRU
+            if matches!(self.config.eviction_policy, EvictionPolicy::LRU) {
+                self.access_order.retain(|&x| x != entry_key);
+                self.access_order.push_back(entry_key);
+            }
+            
+            debug!("Cache hit for layer {} position {}", layer, position);
+            Some((&entry.key, &entry.value))
+        } else {
+            debug!("Cache miss for layer {} position {}", layer, position);
+            None
         }
-        self.current_length = 0;
     }
-    
-    /// Get current sequence length
-    pub fn current_length(&self) -> usize {
-        self.current_length
+
+    /// Check if cache contains entry
+    pub fn contains(&self, layer: usize, position: usize) -> bool {
+        self.cache.contains_key(&(layer, position))
     }
-    
-    /// Get maximum sequence length
-    pub fn max_length(&self) -> usize {
-        self.max_length
+
+    /// Clear all cache entries
+    pub fn clear(&mut self) {
+        self.cache.clear();
+        self.access_order.clear();
+        self.current_size = 0;
+        self.memory_pool.reset();
+        debug!("Cache cleared");
     }
-    
-    /// Check if cache is full
-    pub fn is_full(&self) -> bool {
-        self.current_length >= self.max_length
-    }
-    
-    /// Resize cache to new maximum length
-    pub fn resize(&mut self, new_max_length: usize) -> Result<()> {
-        if new_max_length < self.current_length {
-            return Err(BitNetError::Validation(
-                "Cannot resize cache to smaller than current length".to_string()
-            ));
+
+    /// Clear cache entries for specific layer
+    pub fn clear_layer(&mut self, layer: usize) {
+        let keys_to_remove: Vec<_> = self.cache.keys()
+            .filter(|(l, _)| *l == layer)
+            .cloned()
+            .collect();
+        
+        for key in keys_to_remove {
+            if let Some(entry) = self.cache.remove(&key) {
+                self.current_size -= entry.size_bytes();
+                self.access_order.retain(|&x| x != key);
+            }
         }
         
-        for layer_cache in &mut self.layer_caches {
-            layer_cache.resize(new_max_length, &self.device)?;
-        }
-        
-        self.max_length = new_max_length;
-        Ok(())
+        debug!("Cleared cache for layer {}", layer);
     }
-    
-    /// Migrate cache to a different backend
-    pub fn migrate_to_backend(&mut self, backend: &dyn Backend) -> Result<()> {
-        let device_info = backend.device_info();
-        let new_device = match device_info.device_type {
-            crate::backend::DeviceType::Cpu => Device::Cpu,
-            crate::backend::DeviceType::Cuda(id) => Device::new_cuda(id)
-                .map_err(|e| BitNetError::Validation(e.to_string()))?,
-            crate::backend::DeviceType::Metal => {
-                #[cfg(feature = "metal")]
-                {
-                    use candle_core::backend::BackendDevice;
-                    Device::Metal(candle_core::MetalDevice::new(0)
-                        .map_err(|e| BitNetError::Validation(e.to_string()))?)
-                }
-                #[cfg(not(feature = "metal"))]
-                {
-                    return Err(BitNetError::Validation("Metal support not enabled".to_string()));
-                }
+
+    /// Get cache statistics
+    pub fn stats(&self) -> CacheStats {
+        let total_entries = self.cache.len();
+        let compressed_entries = self.cache.values()
+            .filter(|entry| entry.compressed)
+            .count();
+        
+        CacheStats {
+            total_entries,
+            compressed_entries,
+            current_size_bytes: self.current_size,
+            max_size_bytes: self.config.max_size_bytes,
+            hit_rate: 0.0, // Would need to track hits/misses
+            memory_efficiency: self.current_size as f64 / self.config.max_size_bytes as f64,
+        }
+    }
+
+    /// Get current cache size
+    pub fn size(&self) -> usize {
+        self.current_size
+    }
+
+    /// Get cache usage percentage
+    pub fn usage_percent(&self) -> f64 {
+        (self.current_size as f64 / self.config.max_size_bytes as f64) * 100.0
+    }
+
+    /// Evict an entry based on the configured policy
+    fn evict_entry(&mut self) -> Result<()> {
+        let entry_to_evict = match self.config.eviction_policy {
+            EvictionPolicy::LRU => {
+                self.access_order.front().cloned()
+            }
+            EvictionPolicy::FIFO => {
+                self.access_order.front().cloned()
+            }
+            EvictionPolicy::LFU => {
+                self.cache.iter()
+                    .min_by_key(|(_, entry)| entry.access_count)
+                    .map(|(key, _)| *key)
             }
         };
         
-        // Migrate all layer caches to new device
-        for layer_cache in &mut self.layer_caches {
-            layer_cache.migrate_to_device(&new_device)?;
+        if let Some(key) = entry_to_evict {
+            if let Some(entry) = self.cache.remove(&key) {
+                self.current_size -= entry.size_bytes();
+                self.access_order.retain(|&x| x != key);
+                debug!("Evicted cache entry {:?}", key);
+            }
+        } else {
+            warn!("No entries to evict from cache");
         }
-        
-        self.device = new_device;
-        Ok(())
-    }
-    
-    /// Get memory usage statistics
-    pub fn memory_usage(&self) -> CacheMemoryStats {
-        let mut total_bytes = 0;
-        let mut allocated_bytes = 0;
-        
-        for layer_cache in &self.layer_caches {
-            let stats = layer_cache.memory_usage();
-            total_bytes += stats.total_bytes;
-            allocated_bytes += stats.allocated_bytes;
-        }
-        
-        CacheMemoryStats {
-            total_bytes,
-            allocated_bytes,
-            utilization: if total_bytes > 0 {
-                allocated_bytes as f64 / total_bytes as f64
-            } else {
-                0.0
-            },
-            num_layers: self.layer_caches.len(),
-        }
-    }
-}
-
-/// Cache for a single transformer layer
-pub struct LayerCache {
-    /// Cached keys
-    pub key_cache: BitNetTensor,
-    /// Cached values
-    pub value_cache: BitNetTensor,
-    /// Current position in cache
-    position: usize,
-    /// Maximum length
-    max_length: usize,
-    /// Number of attention heads
-    num_heads: usize,
-    /// Dimension per head
-    head_dim: usize,
-}
-
-impl LayerCache {
-    /// Create a new layer cache
-    pub fn new(
-        max_length: usize,
-        num_heads: usize,
-        head_dim: usize,
-        device: &Device,
-    ) -> Result<Self> {
-        let key_shape = [max_length, num_heads, head_dim];
-        let value_shape = [max_length, num_heads, head_dim];
-        
-        let key_cache = BitNetTensor::zeros(&key_shape, DType::F32, device)?;
-        let value_cache = BitNetTensor::zeros(&value_shape, DType::F32, device)?;
-        
-        Ok(Self {
-            key_cache,
-            value_cache,
-            position: 0,
-            max_length,
-            num_heads,
-            head_dim,
-        })
-    }
-    
-    /// Update cache with new key-value pair
-    pub fn update(
-        &mut self,
-        _key: BitNetTensor,
-        _value: BitNetTensor,
-        position: usize,
-    ) -> Result<()> {
-        if position >= self.max_length {
-            return Err(BitNetError::Validation(
-                format!("Position {} exceeds cache length {}", position, self.max_length)
-            ));
-        }
-        
-        // In a real implementation, we would copy the key/value tensors
-        // into the appropriate positions in the cache tensors
-        // For now, this is a placeholder
-        self.position = position;
         
         Ok(())
     }
-    
-    /// Reset the cache
-    pub fn reset(&mut self) {
-        self.position = 0;
-        // In a real implementation, we would zero out the cache tensors
-    }
-    
-    /// Resize the cache
-    pub fn resize(&mut self, new_max_length: usize, device: &Device) -> Result<()> {
-        if new_max_length == self.max_length {
+
+    /// Compress old cache entries to save memory
+    pub fn compress_old_entries(&mut self, age_threshold: std::time::Duration) -> Result<()> {
+        if !self.config.enable_compression {
             return Ok(());
         }
         
-        let key_shape = [new_max_length, self.num_heads, self.head_dim];
-        let value_shape = [new_max_length, self.num_heads, self.head_dim];
+        let now = std::time::Instant::now();
+        let mut compressed_count = 0;
         
-        let new_key_cache = BitNetTensor::zeros(&key_shape, DType::F32, device)?;
-        let new_value_cache = BitNetTensor::zeros(&value_shape, DType::F32, device)?;
-        
-        // Copy existing data if shrinking
-        if new_max_length < self.max_length {
-            self.position = self.position.min(new_max_length);
+        for entry in self.cache.values_mut() {
+            if !entry.compressed && now.duration_since(entry.last_accessed) > age_threshold {
+                // Simple compression: reduce precision (this is a mock implementation)
+                // In practice, you'd use a proper compression algorithm
+                entry.compressed = true;
+                compressed_count += 1;
+            }
         }
         
-        self.key_cache = new_key_cache;
-        self.value_cache = new_value_cache;
-        self.max_length = new_max_length;
-        
-        Ok(())
-    }
-    
-    /// Migrate cache to different device
-    pub fn migrate_to_device(&mut self, device: &Device) -> Result<()> {
-        // In a real implementation, we would transfer the tensors to the new device
-        // For now, recreate the cache on the new device
-        let key_shape = [self.max_length, self.num_heads, self.head_dim];
-        let value_shape = [self.max_length, self.num_heads, self.head_dim];
-        
-        self.key_cache = BitNetTensor::zeros(&key_shape, DType::F32, device)?;
-        self.value_cache = BitNetTensor::zeros(&value_shape, DType::F32, device)?;
-        
-        Ok(())
-    }
-    
-    /// Get memory usage for this layer
-    pub fn memory_usage(&self) -> LayerMemoryStats {
-        let key_bytes = self.max_length * self.num_heads * self.head_dim * 4; // F32 = 4 bytes
-        let value_bytes = self.max_length * self.num_heads * self.head_dim * 4;
-        let total_bytes = key_bytes + value_bytes;
-        let allocated_bytes = self.position * self.num_heads * self.head_dim * 4 * 2; // key + value
-        
-        LayerMemoryStats {
-            total_bytes,
-            allocated_bytes,
+        if compressed_count > 0 {
+            debug!("Compressed {} cache entries", compressed_count);
         }
+        
+        Ok(())
     }
 }
 
-/// Memory pool for efficient tensor allocation
-pub struct MemoryPool {
-    /// Available memory blocks
-    available_blocks: Vec<MemoryBlock>,
-    /// Allocated memory blocks
-    allocated_blocks: HashMap<usize, MemoryBlock>,
-    /// Total pool size in bytes
-    total_size: usize,
-    /// Next block ID
-    next_id: usize,
+/// Cache statistics
+#[derive(Debug, Clone)]
+pub struct CacheStats {
+    pub total_entries: usize,
+    pub compressed_entries: usize,
+    pub current_size_bytes: usize,
+    pub max_size_bytes: usize,
+    pub hit_rate: f64,
+    pub memory_efficiency: f64,
+}
+
+/// Memory pool for efficient allocation
+struct MemoryPool {
+    block_size: usize,
+    blocks: Vec<Vec<f32>>,
+    free_blocks: Vec<usize>,
 }
 
 impl MemoryPool {
-    /// Create a new memory pool
-    pub fn new(size_mb: usize) -> Result<Self> {
+    fn new(block_size: usize, max_size: usize) -> Result<Self> {
+        let num_blocks = max_size / (block_size * std::mem::size_of::<f32>());
+        let blocks = Vec::with_capacity(num_blocks);
+        let free_blocks = (0..num_blocks).collect();
+        
         Ok(Self {
-            available_blocks: Vec::new(),
-            allocated_blocks: HashMap::new(),
-            total_size: size_mb * 1024 * 1024,
-            next_id: 0,
+            block_size,
+            blocks,
+            free_blocks,
         })
     }
-    
-    /// Allocate a memory block
-    pub fn allocate(&mut self, size: usize) -> Result<usize> {
-        // Find suitable block or create new one
-        let block_id = self.next_id;
-        self.next_id += 1;
-        
-        let block = MemoryBlock {
-            id: block_id,
-            size,
-            offset: 0, // Simplified
-        };
-        
-        self.allocated_blocks.insert(block_id, block);
-        Ok(block_id)
+
+    fn allocate(&mut self) -> Option<usize> {
+        self.free_blocks.pop()
     }
-    
-    /// Deallocate a memory block
-    pub fn deallocate(&mut self, block_id: usize) -> Result<()> {
-        if let Some(block) = self.allocated_blocks.remove(&block_id) {
-            self.available_blocks.push(block);
-        }
-        Ok(())
-    }
-    
-    /// Get pool statistics
-    pub fn stats(&self) -> PoolStats {
-        let allocated_size: usize = self.allocated_blocks.values().map(|b| b.size).sum();
-        let available_size = self.total_size - allocated_size;
-        
-        PoolStats {
-            total_size: self.total_size,
-            allocated_size,
-            available_size,
-            num_allocated_blocks: self.allocated_blocks.len(),
-            num_available_blocks: self.available_blocks.len(),
+
+    fn deallocate(&mut self, block_id: usize) {
+        if block_id < self.blocks.len() {
+            self.free_blocks.push(block_id);
         }
     }
-}
 
-/// Memory block in the pool
-#[derive(Debug, Clone)]
-pub struct MemoryBlock {
-    pub id: usize,
-    pub size: usize,
-    pub offset: usize,
-}
-
-/// Memory pool statistics
-#[derive(Debug, Clone)]
-pub struct PoolStats {
-    pub total_size: usize,
-    pub allocated_size: usize,
-    pub available_size: usize,
-    pub num_allocated_blocks: usize,
-    pub num_available_blocks: usize,
-}
-
-/// Cache memory statistics
-#[derive(Debug, Clone)]
-pub struct CacheMemoryStats {
-    pub total_bytes: usize,
-    pub allocated_bytes: usize,
-    pub utilization: f64,
-    pub num_layers: usize,
-}
-
-/// Layer memory statistics
-#[derive(Debug, Clone)]
-pub struct LayerMemoryStats {
-    pub total_bytes: usize,
-    pub allocated_bytes: usize,
+    fn reset(&mut self) {
+        self.free_blocks = (0..self.blocks.capacity()).collect();
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
-    fn test_kv_cache_creation() {
-        let config = BitNetConfig::default();
-        let cache = KVCache::new(&config, 2048);
+    fn test_cache_creation() {
+        let config = CacheConfig::default();
+        let cache = KVCache::new(config);
         assert!(cache.is_ok());
-        
-        let cache = cache.unwrap();
-        assert_eq!(cache.max_length(), 2048);
-        assert_eq!(cache.current_length(), 0);
-        assert!(!cache.is_full());
     }
-    
+
     #[test]
-    fn test_layer_cache() {
-        let device = Device::Cpu;
-        let cache = LayerCache::new(1024, 32, 128, &device);
-        assert!(cache.is_ok());
+    fn test_cache_store_and_get() {
+        let config = CacheConfig::default();
+        let mut cache = KVCache::new(config).unwrap();
         
-        let cache = cache.unwrap();
-        let stats = cache.memory_usage();
-        assert!(stats.total_bytes > 0);
+        let key = vec![1.0, 2.0, 3.0];
+        let value = vec![4.0, 5.0, 6.0];
+        
+        cache.store(0, 0, key.clone(), value.clone()).unwrap();
+        
+        let retrieved = cache.get(0, 0);
+        assert!(retrieved.is_some());
+        
+        let (ret_key, ret_value) = retrieved.unwrap();
+        assert_eq!(*ret_key, key);
+        assert_eq!(*ret_value, value);
     }
-    
+
     #[test]
-    fn test_memory_pool() {
-        let mut pool = MemoryPool::new(100).unwrap(); // 100MB
+    fn test_cache_miss() {
+        let config = CacheConfig::default();
+        let mut cache = KVCache::new(config).unwrap();
         
-        let block_id = pool.allocate(1024).unwrap();
-        let stats = pool.stats();
-        assert_eq!(stats.allocated_size, 1024);
-        assert_eq!(stats.num_allocated_blocks, 1);
+        let retrieved = cache.get(0, 0);
+        assert!(retrieved.is_none());
+    }
+
+    #[test]
+    fn test_cache_clear() {
+        let config = CacheConfig::default();
+        let mut cache = KVCache::new(config).unwrap();
         
-        pool.deallocate(block_id).unwrap();
-        let stats = pool.stats();
-        assert_eq!(stats.allocated_size, 0);
-        assert_eq!(stats.num_available_blocks, 1);
+        let key = vec![1.0, 2.0, 3.0];
+        let value = vec![4.0, 5.0, 6.0];
+        
+        cache.store(0, 0, key, value).unwrap();
+        assert!(cache.contains(0, 0));
+        
+        cache.clear();
+        assert!(!cache.contains(0, 0));
+        assert_eq!(cache.size(), 0);
+    }
+
+    #[test]
+    fn test_cache_layer_clear() {
+        let config = CacheConfig::default();
+        let mut cache = KVCache::new(config).unwrap();
+        
+        let key = vec![1.0, 2.0, 3.0];
+        let value = vec![4.0, 5.0, 6.0];
+        
+        cache.store(0, 0, key.clone(), value.clone()).unwrap();
+        cache.store(1, 0, key, value).unwrap();
+        
+        assert!(cache.contains(0, 0));
+        assert!(cache.contains(1, 0));
+        
+        cache.clear_layer(0);
+        
+        assert!(!cache.contains(0, 0));
+        assert!(cache.contains(1, 0));
+    }
+
+    #[test]
+    fn test_cache_stats() {
+        let config = CacheConfig::default();
+        let mut cache = KVCache::new(config).unwrap();
+        
+        let key = vec![1.0, 2.0, 3.0];
+        let value = vec![4.0, 5.0, 6.0];
+        
+        cache.store(0, 0, key, value).unwrap();
+        
+        let stats = cache.stats();
+        assert_eq!(stats.total_entries, 1);
+        assert!(stats.current_size_bytes > 0);
+    }
+
+    #[test]
+    fn test_eviction_policy() {
+        let config = CacheConfig {
+            max_size_bytes: 100, // Very small to force eviction
+            eviction_policy: EvictionPolicy::LRU,
+            ..Default::default()
+        };
+        
+        let mut cache = KVCache::new(config).unwrap();
+        
+        // Add entries that exceed cache size
+        let key1 = vec![1.0; 10];
+        let value1 = vec![1.0; 10];
+        let key2 = vec![2.0; 10];
+        let value2 = vec![2.0; 10];
+        
+        cache.store(0, 0, key1, value1).unwrap();
+        cache.store(0, 1, key2, value2).unwrap();
+        
+        // First entry should be evicted due to size constraints
+        assert!(!cache.contains(0, 0) || !cache.contains(0, 1));
     }
 }

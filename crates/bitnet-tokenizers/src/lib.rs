@@ -6,23 +6,38 @@ use std::sync::Arc;
 
 /// Tokenizer trait
 pub trait Tokenizer: Send + Sync {
-    fn encode(&self, text: &str) -> Result<Vec<u32>>;
-    fn decode(&self, tokens: &[u32]) -> Result<String>;
+    fn encode(&self, text: &str, add_special_tokens: bool) -> Result<Vec<u32>>;
+    fn decode(&self, tokens: &[u32], skip_special_tokens: bool) -> Result<String>;
+    fn vocab_size(&self) -> usize;
+    fn eos_token_id(&self) -> Option<u32>;
+    fn pad_token_id(&self) -> Option<u32>;
 }
 
 /// Basic tokenizer implementation
 pub struct BasicTokenizer;
 
 impl Tokenizer for BasicTokenizer {
-    fn encode(&self, text: &str) -> Result<Vec<u32>> {
+    fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>> {
         // Placeholder implementation - simple word-based tokenization
         let words: Vec<&str> = text.split_whitespace().collect();
         Ok(words.iter().enumerate().map(|(i, _)| i as u32).collect())
     }
     
-    fn decode(&self, tokens: &[u32]) -> Result<String> {
+    fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String> {
         // Placeholder implementation
         Ok(format!("Generated text from {} tokens", tokens.len()))
+    }
+
+    fn vocab_size(&self) -> usize {
+        50257 // GPT-2 vocab size
+    }
+
+    fn eos_token_id(&self) -> Option<u32> {
+        Some(50256)
+    }
+
+    fn pad_token_id(&self) -> Option<u32> {
+        None
     }
 }
 

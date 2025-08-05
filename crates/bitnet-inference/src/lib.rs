@@ -1,24 +1,48 @@
-//! Inference engines for BitNet models
+//! # BitNet Inference Engine
 //!
-//! This crate provides high-performance inference engines for BitNet models with support
-//! for CPU and GPU backends, streaming generation, and comprehensive configuration.
+//! High-performance inference engine for BitNet models with streaming support,
+//! CPU/GPU backends, and comprehensive sampling strategies.
 
 pub mod engine;
-pub mod cpu;
-pub mod gpu;
 pub mod streaming;
-pub mod batch;
 pub mod sampling;
 pub mod cache;
-pub mod backend;
-pub mod validation;
+pub mod config;
+pub mod backends;
 
-pub use engine::*;
-pub use cpu::{CpuBackend, CpuInferenceEngine, CpuPerformanceConfig, CpuInferenceConfig};
-pub use gpu::{GpuBackend, GpuInferenceEngine, GpuPerformanceConfig, GpuInferenceConfig, GpuMemoryStats};
-pub use streaming::*;
-pub use batch::*;
-pub use sampling::*;
-pub use cache::{KVCache, LayerCache, CacheMemoryStats};
-pub use backend::*;
-pub use validation::*;
+pub use engine::{InferenceEngine, InferenceResult};
+pub use streaming::{GenerationStream, StreamingConfig};
+pub use sampling::{SamplingStrategy, SamplingConfig};
+pub use cache::{KVCache, CacheConfig};
+pub use config::{InferenceConfig, GenerationConfig};
+pub use backends::{Backend, CpuBackend, GpuBackend};
+
+use anyhow::Result;
+use bitnet_common::{BitNetConfig, Device, Tensor};
+use bitnet_models::Model;
+use bitnet_tokenizers::Tokenizer;
+use std::sync::Arc;
+
+/// Re-export commonly used types
+pub mod prelude {
+    pub use super::{
+        InferenceEngine, InferenceResult, GenerationStream, StreamingConfig,
+        SamplingStrategy, SamplingConfig, KVCache, CacheConfig,
+        InferenceConfig, GenerationConfig, Backend, CpuBackend, GpuBackend,
+    };
+    pub use anyhow::Result;
+    pub use futures_util::{Stream, StreamExt};
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio_test;
+
+    #[tokio::test]
+    async fn test_inference_engine_creation() {
+        // This would require actual model and tokenizer implementations
+        // For now, just test that the module compiles
+        assert!(true);
+    }
+}

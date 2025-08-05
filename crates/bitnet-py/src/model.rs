@@ -1,274 +1,260 @@
+//! # Python Model Bindings
+//!
+//! Python bindings for BitNet models with automatic memory management
+//! and thread-safe access patterns.
+
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
-use numpy::{PyArray1, PyArray2};
-use std::path::PathBuf;
+use pyo3::types::{PyDict, PyString};
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use std::sync::Arc;
+use bitnet_models::{Model, BitNetModel, loader::ModelLoader};
+use bitnet_common::{Device, BitNetConfig};
+use crate::{to_py_result, device_to_string, parse_device};
 
-use crate::config::{PyModelArgs, PyGenArgs};
-use crate::error::PyBitNetError;
-
-/// BitNet model wrapper matching the existing Python API
-#[pyclass]
+/// Python wrapper for BitNet models
+#[pyclass(name = "BitNetModel")]
 pub struct PyBitNetModel {
-    // Internal Rust model - will be implemented when core model is ready
-    model_path: PathBuf,
-    model_args: PyModelArgs,
-    device: String,
-    dtype: String,
+    inner: Arc<dyn Model>,
+    device: Device,
+}
+
+impl PyBitNetModel {
+    pub fn new(model: Box<dyn Model>) -> Self {
+        Self {
+            inner: Arc::from(model),
+            device: Device::Cpu, // Default device
+        }
+    }
+
+    pub fn inner(&self) -> Arc<dyn Model> {
+        self.inner.clone()
+    }
 }
 
 #[pymethods]
 impl PyBitNetModel {
+    /// Create a new BitNet model from file
     #[new]
-    #[pyo3(signature = (model_args, device = "cpu".to_string(), dtype = "bfloat16".to_string()))]
-    fn new(model_args: PyModelArgs, device: String, dtype: String) -> Self {
-        Self {
-            model_path: PathBuf::new(),
-            model_args,
-            device,
-            dtype,
-        }
-    }
-    
-    /// Load model from checkpoint directory (matching existing API)
-    #[classmethod]
-    #[pyo3(signature = (ckpt_dir, model_args = None, device = "cpu".to_string(), dtype = "bfloat16".to_string()))]
-    fn from_pretrained(
-        _cls: &PyType,
-        ckpt_dir: &str,
-        model_args: Option<PyModelArgs>,
-        device: String,
-        dtype: String,
+    #[pyo3(signature = (path, device = "cpu", **kwargs))]
+    fn new_py(
+        py: Python<'_>,
+        path: &str,
+        device: &str,
+        kwargs: Option<&PyDict>,
     ) -> PyResult<Self> {
-        let model_args = model_args.unwrap_or_else(|| PyModelArgs::new(
-            2560, 30, 20, Some(5), 128256, 6912, 1e-5, 500000.0, false
-        ));
-        
-        let mut model = Self::new(model_args, device, dtype);
-        model.model_path = PathBuf::from(ckpt_dir);
-        
-        // TODO: Implement actual model loading when core model is ready
-        // For now, just validate the path exists
-        if !model.model_path.exists() {
-            return Err(PyBitNetError::new(
-                format!("Model directory not found: {}", ckpt_dir),
-                Some("ModelNotFoundError".to_string())
-            ).into());
-        }
-        
-        Ok(model)
-    }
-    
-    /// Load model from GGUF file
-    #[classmethod]
-    fn from_gguf(_cls: &PyType, model_path: &str, device: Option<String>) -> PyResult<Self> {
-        let device = device.unwrap_or_else(|| "cpu".to_string());
-        let path = PathBuf::from(model_path);
-        
-        if !path.exists() {
-            return Err(PyBitNetError::new(
-                format!("GGUF file not found: {}", model_path),
-                Some("ModelNotFoundError".to_string())
-            ).into());
-        }
-        
-        // TODO: Parse GGUF file to extract model args
-        let model_args = PyModelArgs::new(
-            2560, 30, 20, Some(5), 128256, 6912, 1e-5, 500000.0, false
-        );
-        
-        let mut model = Self::new(model_args, device, "bfloat16".to_string());
-        model.model_path = path;
-        
-        Ok(model)
-    }
-    
-    /// Load model from SafeTensors file
-    #[classmethod]
-    fn from_safetensors(_cls: &PyType, model_path: &str, device: Option<String>) -> PyResult<Self> {
-        let device = device.unwrap_or_else(|| "cpu".to_string());
-        let path = PathBuf::from(model_path);
-        
-        if !path.exists() {
-            return Err(PyBitNetError::new(
-                format!("SafeTensors file not found: {}", model_path),
-                Some("ModelNotFoundError".to_string())
-            ).into());
-        }
-        
-        // TODO: Parse SafeTensors file to extract model args
-        let model_args = PyModelArgs::new(
-            2560, 30, 20, Some(5), 128256, 6912, 1e-5, 500000.0, false
-        );
-        
-        let mut model = Self::new(model_args, device, "bfloat16".to_string());
-        model.model_path = path;
-        
-        Ok(model)
-    }
-    
-    /// Forward pass through the model (matching existing API)
-    fn forward(
-        &self,
-        token_values: &PyArray1<i32>,
-        token_lengths: Option<&PyArray1<i32>>,
-        start_pos: Option<&PyArray1<i32>>,
-        cache: Option<&PyList>,
-        kv_padding: Option<usize>,
-    ) -> PyResult<PyObject> {
-        // TODO: Implement actual forward pass when inference engine is ready
-        Python::with_gil(|py| {
-            // For now, return a dummy tensor with the right shape
-            let batch_size = token_values.len();
-            let vocab_size = self.model_args.vocab_size;
+        py.allow_threads(|| {
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
             
-            // Create dummy logits tensor
-            let logits = PyArray2::<f32>::zeros(py, (batch_size, vocab_size), false);
-            Ok(logits.into())
+            rt.block_on(async {
+                let device = parse_device(device)?;
+                let loader = ModelLoader::new(device.clone());
+                let model = loader.load(path)
+                    .map_err(|e| PyRuntimeError::new_err(format!("Failed to load model: {}", e)))?;
+                
+                Ok(Self {
+                    inner: Arc::from(model),
+                    device,
+                })
+            })
         })
     }
-    
-    /// Forward pass with attention bias (matching existing API)
-    fn forward_with_attn_bias(
-        &self,
-        token_values: &PyArray1<i32>,
-        attn_bias: &PyAny,
-        cache: &PyList,
-    ) -> PyResult<PyObject> {
-        // TODO: Implement actual forward pass with attention bias
-        Python::with_gil(|py| {
-            let batch_size = token_values.len();
-            let vocab_size = self.model_args.vocab_size;
-            
-            let logits = PyArray2::<f32>::zeros(py, (batch_size, vocab_size), false);
-            Ok(logits.into())
-        })
-    }
-    
-    /// Get model configuration
+
+    /// Get model configuration as a dictionary
     #[getter]
-    fn config(&self) -> PyModelArgs {
-        self.model_args.clone()
+    fn config(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let config = self.inner.config();
+        let py_config = PyDict::new(py);
+        
+        // Model configuration
+        let model_config = PyDict::new(py);
+        model_config.set_item("vocab_size", config.model.vocab_size)?;
+        model_config.set_item("hidden_size", config.model.hidden_size)?;
+        model_config.set_item("num_layers", config.model.num_layers)?;
+        model_config.set_item("num_attention_heads", config.model.num_attention_heads)?;
+        model_config.set_item("max_position_embeddings", config.model.max_position_embeddings)?;
+        py_config.set_item("model", model_config)?;
+        
+        // Quantization configuration
+        let quant_config = PyDict::new(py);
+        quant_config.set_item("qtype", format!("{:?}", config.quantization.qtype))?;
+        quant_config.set_item("block_size", config.quantization.block_size)?;
+        py_config.set_item("quantization", quant_config)?;
+        
+        Ok(py_config.into())
     }
-    
-    /// Get model device
+
+    /// Get the device the model is loaded on
     #[getter]
     fn device(&self) -> String {
-        self.device.clone()
+        device_to_string(&self.device)
     }
-    
-    /// Get model dtype
+
+    /// Get model parameter count
     #[getter]
-    fn dtype(&self) -> String {
-        self.dtype.clone()
-    }
-    
-    /// Get model path
-    #[getter]
-    fn model_path(&self) -> String {
-        self.model_path.to_string_lossy().to_string()
-    }
-    
-    /// Move model to device
-    fn to(&mut self, device: String) -> PyResult<()> {
-        self.device = device;
-        // TODO: Implement actual device transfer when model is ready
-        Ok(())
-    }
-    
-    /// Set model to evaluation mode
-    fn eval(&mut self) -> PyResult<()> {
-        // TODO: Implement evaluation mode when model is ready
-        Ok(())
-    }
-    
-    /// Set model to training mode
-    fn train(&mut self, mode: Option<bool>) -> PyResult<()> {
-        let _mode = mode.unwrap_or(true);
-        // TODO: Implement training mode when model is ready
-        Ok(())
-    }
-    
-    /// Get model parameters count
-    fn num_parameters(&self) -> usize {
-        // Rough estimate based on model architecture
-        let embed_params = self.model_args.vocab_size * self.model_args.dim;
-        let layer_params = self.model_args.n_layers * (
-            // Attention weights
-            self.model_args.dim * (self.model_args.n_heads + 2 * self.model_args.n_kv_heads.unwrap_or(self.model_args.n_heads)) * (self.model_args.dim / self.model_args.n_heads) +
-            self.model_args.n_heads * (self.model_args.dim / self.model_args.n_heads) * self.model_args.dim +
-            // FFN weights
-            self.model_args.dim * 2 * self.model_args.ffn_dim +
-            self.model_args.ffn_dim * self.model_args.dim +
-            // Layer norms
-            self.model_args.dim * 3
-        );
-        let output_params = self.model_args.dim * self.model_args.vocab_size;
+    fn parameter_count(&self) -> usize {
+        // Calculate parameter count from config
+        let config = self.inner.config();
+        let vocab_size = config.model.vocab_size;
+        let hidden_size = config.model.hidden_size;
+        let num_layers = config.model.num_layers;
         
-        embed_params + layer_params + output_params
+        // Rough estimation: embedding + layers + output
+        vocab_size * hidden_size + num_layers * hidden_size * hidden_size * 4 + hidden_size * vocab_size
     }
-    
+
+    /// Get model memory usage in bytes
+    #[getter]
+    fn memory_usage(&self) -> usize {
+        // Rough estimation based on parameter count and quantization
+        let params = self.parameter_count();
+        let config = self.inner.config();
+        
+        match config.quantization.qtype {
+            bitnet_common::QuantizationType::I2S => params / 4, // 2 bits per parameter
+            bitnet_common::QuantizationType::TL1 | bitnet_common::QuantizationType::TL2 => params / 2, // 4 bits per parameter
+        }
+    }
+
+    /// Get model architecture name
+    #[getter]
+    fn architecture(&self) -> &str {
+        "BitNet"
+    }
+
+    /// Get model quantization type
+    #[getter]
+    fn quantization(&self) -> String {
+        format!("{:?}", self.inner.config().quantization.qtype)
+    }
+
+    /// Check if model supports streaming
+    #[getter]
+    fn supports_streaming(&self) -> bool {
+        true
+    }
+
+    /// Get model information as a dictionary
+    fn info(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let info = PyDict::new(py);
+        let config = self.inner.config();
+        
+        info.set_item("architecture", self.architecture())?;
+        info.set_item("parameter_count", self.parameter_count())?;
+        info.set_item("memory_usage", self.memory_usage())?;
+        info.set_item("device", self.device())?;
+        info.set_item("quantization", self.quantization())?;
+        info.set_item("vocab_size", config.model.vocab_size)?;
+        info.set_item("hidden_size", config.model.hidden_size)?;
+        info.set_item("num_layers", config.model.num_layers)?;
+        info.set_item("supports_streaming", self.supports_streaming())?;
+        
+        Ok(info.into())
+    }
+
+    /// String representation
     fn __repr__(&self) -> String {
         format!(
-            "BitNetModel(path='{}', device='{}', dtype='{}', params={})",
-            self.model_path.to_string_lossy(),
-            self.device,
-            self.dtype,
-            self.num_parameters()
+            "BitNetModel(architecture='{}', parameters={}, device='{}', quantization='{}')",
+            self.architecture(),
+            self.parameter_count(),
+            self.device(),
+            self.quantization()
         )
+    }
+
+    /// String representation
+    fn __str__(&self) -> String {
+        self.__repr__()
     }
 }
 
-/// Create cache for the model (matching existing API)
-#[pyfunction]
-pub fn make_cache(
-    model_args: &PyModelArgs,
-    length: usize,
-    device: Option<String>,
-    n_layers: Option<usize>,
-    dtype: Option<String>,
-) -> PyResult<PyList> {
-    let _device = device.unwrap_or_else(|| "cpu".to_string());
-    let n_layers = n_layers.unwrap_or(model_args.n_layers);
-    let _dtype = dtype.unwrap_or_else(|| "bfloat16".to_string());
-    
-    Python::with_gil(|py| {
-        let cache = PyList::empty(py);
-        
-        // Create cache for each layer
-        for _ in 0..n_layers {
-            let head_dim = model_args.dim / model_args.n_heads;
-            let n_kv_heads = model_args.n_kv_heads.unwrap_or(model_args.n_heads);
-            
-            // Create key and value cache tensors
-            let k_cache = PyArray2::<f32>::zeros(py, (length, n_kv_heads * head_dim), false);
-            let v_cache = PyArray2::<f32>::zeros(py, (length, n_kv_heads * head_dim), false);
-            
-            let layer_cache = PyList::new(py, &[k_cache, v_cache]);
-            cache.append(layer_cache)?;
-        }
-        
-        Ok(cache)
-    })
+/// Python wrapper for model loader
+#[pyclass(name = "ModelLoader")]
+pub struct PyModelLoader {
+    device: Device,
 }
 
-/// Take a prefix view of a larger cache (matching existing API)
-#[pyfunction]
-pub fn cache_prefix(cache: &PyList, length: usize) -> PyResult<PyList> {
-    Python::with_gil(|py| {
-        let prefix_cache = PyList::empty(py);
-        
-        for item in cache.iter() {
-            let layer_cache = item.downcast::<PyList>()?;
-            let k_cache = layer_cache.get_item(0)?;
-            let v_cache = layer_cache.get_item(1)?;
+#[pymethods]
+impl PyModelLoader {
+    /// Create a new model loader
+    #[new]
+    #[pyo3(signature = (device = "cpu"))]
+    fn new(device: &str) -> PyResult<Self> {
+        let device = parse_device(device)?;
+        Ok(Self { device })
+    }
+
+    /// Load a model from file
+    #[pyo3(signature = (path, **kwargs))]
+    fn load(&self, py: Python<'_>, path: &str, kwargs: Option<&PyDict>) -> PyResult<PyBitNetModel> {
+        py.allow_threads(|| {
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
             
-            // TODO: Implement actual tensor slicing when tensor types are ready
-            // For now, just return the original cache
-            let layer_prefix = PyList::new(py, &[k_cache, v_cache]);
-            prefix_cache.append(layer_prefix)?;
-        }
+            rt.block_on(async {
+                let loader = ModelLoader::new(self.device.clone());
+                let model = loader.load(path)
+                    .map_err(|e| PyRuntimeError::new_err(format!("Failed to load model: {}", e)))?;
+                
+                Ok(PyBitNetModel {
+                    inner: Arc::from(model),
+                    device: self.device.clone(),
+                })
+            })
+        })
+    }
+
+    /// Extract metadata from a model file without loading it
+    fn extract_metadata(&self, py: Python<'_>, path: &str) -> PyResult<PyObject> {
+        py.allow_threads(|| {
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
+            
+            rt.block_on(async {
+                let loader = ModelLoader::new(self.device.clone());
+                let metadata = loader.extract_metadata(path)
+                    .map_err(|e| PyRuntimeError::new_err(format!("Failed to extract metadata: {}", e)))?;
+                
+                let py_metadata = PyDict::new(py);
+                py_metadata.set_item("architecture", metadata.architecture)?;
+                py_metadata.set_item("vocab_size", metadata.vocab_size)?;
+                py_metadata.set_item("context_length", metadata.context_length)?;
+                py_metadata.set_item("parameter_count", metadata.parameter_count)?;
+                py_metadata.set_item("quantization", format!("{:?}", metadata.quantization))?;
+                
+                Ok(py_metadata.into())
+            })
+        })
+    }
+
+    /// List available formats
+    fn available_formats(&self) -> Vec<String> {
+        vec!["GGUF".to_string(), "SafeTensors".to_string(), "HuggingFace".to_string()]
+    }
+
+    /// Get device
+    #[getter]
+    fn device(&self) -> String {
+        device_to_string(&self.device)
+    }
+
+    /// String representation
+    fn __repr__(&self) -> String {
+        format!("ModelLoader(device='{}')", self.device())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_model_loader_creation() {
+        let loader = PyModelLoader::new("cpu").unwrap();
+        assert_eq!(loader.device(), "cpu");
         
-        Ok(prefix_cache)
-    })
+        let formats = loader.available_formats();
+        assert!(formats.contains(&"GGUF".to_string()));
+    }
 }
