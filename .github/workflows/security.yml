@@ -1,0 +1,251 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run security audit daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+
+    - name: Cache cargo registry
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install cargo-audit
+      run: cargo install cargo-audit --locked
+
+    - name: Install cargo-deny
+      run: cargo install cargo-deny --locked
+
+    - name: Run cargo audit
+      run: cargo audit
+
+    - name: Run cargo deny
+      run: cargo deny check
+
+    - name: Run clippy security lints
+      run: cargo clippy --all-targets --all-features -- -D warnings -D clippy::all -D clippy::pedantic
+
+    - name: Check for unsafe code
+      run: |
+        echo "Checking for unsafe code blocks..."
+        unsafe_count=$(find . -name "*.rs" -exec grep -l "unsafe" {} \; | wc -l)
+        echo "Found $unsafe_count files with unsafe code"
+        if [ $unsafe_count -gt 0 ]; then
+          echo "Files with unsafe code:"
+          find . -name "*.rs" -exec grep -l "unsafe" {} \;
+          echo "Please ensure all unsafe code is documented in unsafe_report.md"
+        fi
+
+    - name: Validate unsafe code documentation
+      run: |
+        if [ -f "unsafe_report.md" ]; then
+          echo "unsafe_report.md exists"
+          # Check if the report is not empty
+          if [ -s "unsafe_report.md" ]; then
+            echo "unsafe_report.md is not empty"
+          else
+            echo "Warning: unsafe_report.md is empty"
+            exit 1
+          fi
+        else
+          echo "Error: unsafe_report.md not found"
+          exit 1
+        fi
+
+    - name: Check third-party licenses
+      run: |
+        if [ -f "THIRD_PARTY.md" ]; then
+          echo "THIRD_PARTY.md exists"
+        else
+          echo "Error: THIRD_PARTY.md not found"
+          exit 1
+        fi
+
+    - name: Generate dependency report
+      run: |
+        echo "# Dependency Security Report" > dependency_report.md
+        echo "" >> dependency_report.md
+        echo "Generated on: $(date)" >> dependency_report.md
+        echo "" >> dependency_report.md
+        echo "## Audit Results" >> dependency_report.md
+        echo "" >> dependency_report.md
+        cargo audit --format json > audit_results.json || true
+        if [ -s audit_results.json ]; then
+          echo "Security vulnerabilities found - see audit_results.json"
+          cat audit_results.json >> dependency_report.md
+        else
+          echo "No security vulnerabilities found" >> dependency_report.md
+        fi
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          dependency_report.md
+          audit_results.json
+        retention-days: 30
+
+  supply-chain-security:
+    name: Supply Chain Security
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Verify Cargo.lock is up to date
+      run: |
+        cargo generate-lockfile --offline
+        if ! git diff --exit-code Cargo.lock; then
+          echo "Cargo.lock is not up to date"
+          exit 1
+        fi
+
+    - name: Check for yanked dependencies
+      run: |
+        cargo install cargo-audit --locked
+        cargo audit --deny yanked
+
+    - name: Validate dependency sources
+      run: |
+        # Check that all dependencies come from crates.io
+        if grep -q "git =" Cargo.toml; then
+          echo "Warning: Git dependencies found in Cargo.toml"
+          grep "git =" Cargo.toml
+          echo "Please ensure these are from trusted sources"
+        fi
+
+    - name: Check for suspicious dependencies
+      run: |
+        # List all dependencies for manual review
+        echo "All workspace dependencies:"
+        cargo tree --workspace --format "{p} {l}"
+
+  license-compliance:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-license
+      run: cargo install cargo-license --locked
+
+    - name: Generate license report
+      run: |
+        echo "# License Compliance Report" > license_report.md
+        echo "" >> license_report.md
+        echo "Generated on: $(date)" >> license_report.md
+        echo "" >> license_report.md
+        cargo license --json > licenses.json
+        echo "## All Dependencies and Licenses" >> license_report.md
+        echo "" >> license_report.md
+        cargo license >> license_report.md
+
+    - name: Check for GPL licenses
+      run: |
+        if cargo license | grep -i gpl; then
+          echo "Error: GPL-licensed dependencies found"
+          cargo license | grep -i gpl
+          exit 1
+        fi
+
+    - name: Upload license report
+      uses: actions/upload-artifact@v4
+      with:
+        name: license-report
+        path: |
+          license_report.md
+          licenses.json
+        retention-days: 90
+
+  miri-test:
+    name: Miri Undefined Behavior Detection
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust nightly with miri
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: miri
+
+    - name: Setup miri
+      run: cargo miri setup
+
+    - name: Run miri tests on core crates
+      run: |
+        # Run miri on core crates that are most likely to have unsafe code
+        for crate in bitnet-common bitnet-kernels bitnet-quantization; do
+          if [ -d "crates/$crate" ]; then
+            echo "Running miri on $crate"
+            cd "crates/$crate"
+            cargo miri test || echo "Miri test failed for $crate"
+            cd ../..
+          fi
+        done
+
+    - name: Run miri on specific unsafe modules
+      run: |
+        # Test specific modules with unsafe code
+        echo "Testing unsafe code with miri..."
+        # This will be expanded as unsafe code is identified
+        cargo miri test --package bitnet-kernels --lib || true
+
+  security-scorecard:
+    name: OpenSSF Scorecard
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+      actions: read
+      contents: read
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    - name: Run analysis
+      uses: ossf/scorecard-action@v2.4.0
+      with:
+        results_file: results.sarif
+        results_format: sarif
+        publish_results: true
+
+    - name: Upload SARIF results
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: results.sarif
