@@ -23,6 +23,9 @@ memmap2.workspace = true
 tracing.workspace = true
 bytemuck.workspace = true
 half = "2.4"
+sha2 = "0.10"
+reqwest = { workspace = true, features = ["stream"] }
+futures.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
