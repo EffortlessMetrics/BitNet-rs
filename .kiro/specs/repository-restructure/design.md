@@ -18,11 +18,10 @@ This design document outlines the comprehensive restructuring of the BitNet repo
 ├── FEATURES.md                  # Rust feature documentation
 ├── SECURITY.md                  # Security policy
 ├── CONTRIBUTING.md              # Rust-focused contribution guide
-├── .gitattributes               # Mark legacy/* as linguist-vendored
 ├── .github/                     # GitHub workflows (Rust-focused)
 │   └── workflows/
 │       ├── rust-ci.yml          # Primary Rust CI/CD (fast)
-│       ├── nightly-crossval.yml # Optional legacy comparison (nightly)
+│       ├── nightly-crossval.yml # Optional external legacy comparison
 │       └── release.yml          # Rust package releases
 ├── crates/                      # Rust implementation (unchanged)
 │   ├── bitnet-common/
@@ -35,43 +34,37 @@ This design document outlines the comprehensive restructuring of the BitNet repo
 │   ├── bitnet-server/
 │   ├── bitnet-ffi/
 │   ├── bitnet-py/
-│   └── bitnet-wasm/
+│   ├── bitnet-wasm/
+│   └── bitnet-sys/              # FFI bindings (feature = "crossval")
 ├── examples/                    # Rust examples
 ├── benches/                     # Rust benchmarks
 ├── tests/                       # Rust integration tests
 ├── docs/                        # Rust documentation
-├── scripts/                     # Rust-focused scripts
-│   └── dev_setup.sh             # --with-legacy flag for GPU toolchain
+├── ci/                          # CI helper scripts
+│   ├── fetch_bitnet_cpp.sh      # Downloads & builds Microsoft's BitNet.cpp
+│   ├── apply_patches.sh         # Applies minimal patches if needed
+│   └── bump_bitnet_tag.sh       # Updates pinned version
+├── patches/                     # Minimal patches (ideally empty)
+│   └── (only if absolutely necessary)
+├── crossval/                    # Cross-validation harness
+│   ├── Cargo.toml               # Separate crate with crossval feature
+│   ├── benches/                 # Criterion benchmarks vs C++
+│   ├── tests/                   # Token-level equivalence tests
+│   └── fixtures/                # Small test models (~20KB)
 ├── deployment/                  # Rust deployment configs
 ├── docker/                      # Rust Docker configurations
 ├── k8s/                         # Kubernetes configs for Rust
 ├── helm/                        # Helm charts for Rust
 ├── monitoring/                  # Monitoring for Rust services
-├── .vscode/                     # Workspace: Rust primary, legacy secondary
-├── .idea/                       # IntelliJ workspace configuration
-├── legacy/                      # 🏛️ Legacy C++ (sandboxed & slim)
-│   ├── README.md                # "Legacy C++ reference – not for production"
-│   ├── cpp/                     # Core C++ implementation
-│   │   ├── CMakeLists.txt       # C++ build system
-│   │   ├── src/                 # C++ source files
-│   │   ├── include/             # C++ headers
-│   │   ├── 3rdparty/            # C++ dependencies
-│   │   ├── gpu/                 # GPU implementation
-│   │   ├── utils/               # C++ utilities
-│   │   ├── preset_kernels/      # Precomputed kernels
-│   │   ├── setup_env.py         # C++ environment setup
-│   │   ├── run_inference.py     # C++ inference runner
-│   │   ├── run_inference_server.py # C++ server
-│   │   └── requirements.txt     # Python dependencies
-│   └── docker/                  # Isolated C++ build containers
-│       ├── ubuntu-cuda.Dockerfile
-│       └── ubuntu-cpu.Dockerfile
-└── tools/                       # Cross-implementation tooling
-    ├── crossval/                # Rust ↔ C++ comparison harness
-    │   ├── pytest + rust scripts
-    │   └── fixtures/            # Test data and models
-    └── bench/                   # Criterion.rs + gbench wrappers
+└── .vscode/                     # Rust-focused workspace
 ```
+
+**Key Changes:**
+- ❌ **No C++ source code in repository**
+- ✅ **External fetch**: `ci/fetch_bitnet_cpp.sh` downloads Microsoft's official release
+- ✅ **Minimal patches**: Only if absolutely necessary for FFI compatibility
+- ✅ **Feature-gated**: Cross-validation behind `--features crossval`
+- ✅ **Zero maintenance**: We never fork or maintain C++ code
 
 ## Components and Interfaces
 
@@ -92,9 +85,9 @@ This design document outlines the comprehensive restructuring of the BitNet repo
 - REST API for server
 - CLI interface
 
-### 2. Legacy C++ Implementation
+### 2. External Legacy Reference
 
-**Location:** `/legacy/cpp/` (sandboxed & slim)
+**Location:** Downloaded on-demand to `$HOME/.cache/bitnet_cpp/`
 
 **Responsibilities:**
 - Benchmark and comparison target
@@ -103,20 +96,20 @@ This design document outlines the comprehensive restructuring of the BitNet repo
 - Performance baseline
 
 **Interfaces:**
-- C++ API (preserved for compatibility)
-- Python bindings (legacy)
-- CLI interface (legacy)
+- FFI bindings via `bitnet-sys` crate
+- Direct binary execution for CLI comparison
+- Shared library linking for performance tests
 
 **Key Design Decisions:**
-- **Sandboxed**: Complete build isolation via Docker containers
-- **Slim checkout**: `.gitattributes` marks as `linguist-vendored`, optional in shallow clones
-- **Patch-friendly**: Kept in-repo (not submodule) for cross-validation tweaks
-- **Clear deprecation**: Prominent "not for production" warnings
-- **CI efficiency**: Only runs on `/legacy` changes or nightly schedule
+- **External dependency**: Never checked into our repository
+- **Pinned version**: Fixed tag/commit for deterministic testing
+- **Cached builds**: Avoid recompilation via CI cache
+- **Minimal patches**: Only applied if absolutely necessary for FFI compatibility
+- **Feature-gated**: Only built when `--features crossval` is enabled
 
 ### 3. Cross-Validation Framework
 
-**Location:** `/tools/crossval/` (integrated tooling)
+**Location:** `/crossval/` (separate crate)
 
 **Responsibilities:**
 - Automated comparison testing
@@ -126,21 +119,34 @@ This design document outlines the comprehensive restructuring of the BitNet repo
 
 **Components:**
 
-#### 3.1 Comparison Scripts
-```python
-# tools/crossval/compare_implementations.py
-def compare_inference(model_path, prompts, tolerance=1e-6):
-    """Compare inference outputs between Rust and C++ implementations"""
-    rust_results = run_rust_inference(model_path, prompts)
-    # C++ runs in isolated Docker container
-    cpp_results = run_cpp_inference_docker(model_path, prompts)
-    return validate_numerical_accuracy(rust_results, cpp_results, tolerance)
+#### 3.1 Cross-Validation Tests
+```rust
+// crossval/tests/token_equivalence.rs
+#[cfg(feature = "crossval")]
+#[test]
+fn token_equivalence_small_prompt() {
+    let model = fixtures::mini_model(); // 20 kB GGUF stub
+    let prompt = "Rust and C++ walk into a bar…";
+    
+    let rust_out = bitnet_rs::generate(&model, prompt);
+    let cpp_out = bitnet_cpp::generate(&model, prompt); // via FFI
+    
+    assert_eq!(rust_out.tokens, cpp_out.tokens); // exact match
+}
 
-def benchmark_performance(model_path, test_cases):
-    """Benchmark performance with criterion.rs + gbench wrappers"""
-    rust_metrics = run_criterion_benchmarks(model_path, test_cases)
-    cpp_metrics = run_gbench_in_docker(model_path, test_cases)
-    return generate_performance_report(rust_metrics, cpp_metrics)
+// crossval/benches/performance.rs
+#[cfg(feature = "crossval")]
+fn criterion_benchmark(c: &mut Criterion) {
+    let model = fixtures::standard_model();
+    
+    c.bench_function("rust_inference", |b| {
+        b.iter(|| bitnet_rs::generate(&model, "test prompt"))
+    });
+    
+    c.bench_function("cpp_inference", |b| {
+        b.iter(|| bitnet_cpp::generate(&model, "test prompt"))
+    });
+}
 ```
 
 #### 3.2 Test Fixtures

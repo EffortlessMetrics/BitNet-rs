@@ -31,16 +31,16 @@ This creates confusion about:
 2. WHEN a developer examines the root directory THEN they SHALL find only Rust-related build files (Cargo.toml, build.rs)
 3. WHEN a developer reads the README THEN they SHALL understand BitNet.rs is the main implementation with superior performance and safety
 
-### Requirement 2: Legacy Implementation Isolation
+### Requirement 2: External Legacy Reference
 
-**User Story:** As a maintainer, I want the legacy C++ implementation isolated so it doesn't interfere with the primary Rust development workflow.
+**User Story:** As a maintainer, I want to test against the original BitNet.cpp without maintaining or hosting C++ code in our repository.
 
 #### Acceptance Criteria
 
-1. WHEN the repository is restructured THEN all C++ source code SHALL be moved to `/legacy/bitnet.cpp/`
-2. WHEN developers work on Rust code THEN they SHALL NOT encounter C++ build artifacts or configuration
-3. WHEN the legacy implementation is needed for benchmarking THEN it SHALL be easily accessible but clearly marked as legacy
-4. WHEN CI/CD runs THEN it SHALL primarily focus on Rust builds with optional legacy comparison
+1. WHEN the repository is restructured THEN all C++ source code SHALL be removed from the repository
+2. WHEN developers work on Rust code THEN they SHALL NOT encounter any C++ build systems or dependencies
+3. WHEN cross-validation is needed THEN the system SHALL fetch and build the original Microsoft BitNet.cpp on-demand
+4. WHEN CI/CD runs THEN it SHALL primarily focus on Rust builds with optional external legacy comparison
 
 ### Requirement 3: Cross-Validation Infrastructure
 
