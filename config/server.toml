@@ -1,0 +1,139 @@
+# BitNet.rs Server Configuration
+# Production-ready configuration for inference service
+
+[server]
+# Server binding configuration
+host = "0.0.0.0"
+port = 8080
+workers = 4
+
+# Request handling
+max_request_size = "10MB"
+timeout_seconds = 30
+keep_alive_seconds = 75
+
+# Rate limiting
+rate_limit_requests_per_minute = 1000
+rate_limit_burst = 100
+
+[model]
+# Model configuration
+path = "/var/lib/bitnet/model.gguf"
+format = "gguf"
+
+# Model loading options
+preload = true
+validate_on_load = true
+cache_size_mb = 1024
+
+# Quantization settings
+quantization = "auto"  # auto, i2s, tl1, tl2
+precision = "fp16"
+
+[inference]
+# Default inference parameters
+max_tokens = 512
+temperature = 0.7
+top_p = 0.9
+top_k = 50
+repetition_penalty = 1.1
+
+# Batch processing
+max_batch_size = 8
+batch_timeout_ms = 100
+
+# Streaming
+enable_streaming = true
+stream_chunk_size = 1
+
+[performance]
+# CPU optimization
+cpu_threads = 0  # 0 = auto-detect
+enable_simd = true
+prefer_avx2 = true
+
+# Memory management
+memory_pool_size_mb = 2048
+gc_threshold_mb = 1024
+
+# GPU settings (if available)
+enable_gpu = false
+gpu_device_id = 0
+gpu_memory_fraction = 0.8
+
+[security]
+# API security
+enable_cors = true
+cors_origins = ["*"]
+cors_methods = ["GET", "POST", "OPTIONS"]
+cors_headers = ["Content-Type", "Authorization"]
+
+# Authentication (optional)
+enable_auth = false
+auth_type = "bearer"  # bearer, basic, api_key
+auth_header = "Authorization"
+
+# Request validation
+validate_input = true
+max_prompt_length = 4096
+sanitize_output = true
+
+[logging]
+# Logging configuration
+level = "info"  # trace, debug, info, warn, error
+format = "json"  # json, text
+output = "stdout"  # stdout, stderr, file
+
+# File logging (if output = "file")
+log_file = "/var/log/bitnet/server.log"
+log_rotation = "daily"
+max_log_files = 7
+
+# Structured logging
+include_timestamp = true
+include_level = true
+include_target = true
+include_thread_id = false
+
+[metrics]
+# Metrics and monitoring
+enabled = true
+endpoint = "/metrics"
+format = "prometheus"
+
+# Custom metrics
+track_request_duration = true
+track_token_throughput = true
+track_memory_usage = true
+track_gpu_utilization = true
+
+# Health check
+health_endpoint = "/health"
+health_check_model = true
+health_check_dependencies = true
+
+[tracing]
+# Distributed tracing (optional)
+enabled = false
+service_name = "bitnet-server"
+endpoint = "http://jaeger:14268/api/traces"
+sample_rate = 0.1
+
+[cache]
+# Response caching
+enabled = true
+backend = "memory"  # memory, redis, disk
+max_size_mb = 512
+ttl_seconds = 3600
+
+# Redis configuration (if backend = "redis")
+redis_url = "redis://redis:6379"
+redis_db = 0
+redis_key_prefix = "bitnet:"
+
+[development]
+# Development and debugging options
+enable_debug_endpoints = false
+enable_profiling = false
+hot_reload_config = false
+verbose_errors = false
