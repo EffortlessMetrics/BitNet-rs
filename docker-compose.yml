@@ -1,0 +1,121 @@
+# Docker Compose configuration for BitNet.rs deployment
+# Provides a complete inference service with monitoring
+
+version: '3.8'
+
+services:
+  # Main BitNet inference service
+  bitnet:
+    build: .
+    container_name: bitnet-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount model directory
+      - ./models:/var/lib/bitnet:ro
+      # Mount configuration
+      - ./config/server.toml:/etc/bitnet/server.toml:ro
+      # Mount logs
+      - bitnet-logs:/var/log/bitnet
+    environment:
+      - RUST_LOG=info
+      - BITNET_CONFIG=/etc/bitnet/server.toml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - prometheus
+      - grafana
+    networks:
+      - bitnet-network
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: bitnet-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - bitnet-network
+
+  # Grafana for metrics visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: bitnet-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    networks:
+      - bitnet-network
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: bitnet-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - bitnet-network
+
+  # Nginx reverse proxy with SSL termination
+  nginx:
+    image: nginx:alpine
+    container_name: bitnet-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/nginx/ssl:/etc/nginx/ssl:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - bitnet
+    networks:
+      - bitnet-network
+
+volumes:
+  bitnet-logs:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  redis-data:
+    driver: local
+  nginx-logs:
+    driver: local
+
+networks:
+  bitnet-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
