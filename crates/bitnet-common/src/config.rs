@@ -410,8 +410,7 @@ impl BitNetConfig {
         }
         if self.model.num_heads == 0 {
             errors.push("num_heads must be greater than 0".to_string());
-        }
-        if self.model.hidden_size % self.model.num_heads != 0 {
+        } else if self.model.hidden_size % self.model.num_heads != 0 {
             errors.push("hidden_size must be divisible by num_heads".to_string());
         }
         if self.model.intermediate_size == 0 {
