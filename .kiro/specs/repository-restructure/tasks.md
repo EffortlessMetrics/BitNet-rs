@@ -8,50 +8,52 @@ This document outlines the detailed implementation tasks for restructuring the B
 
 ### Phase 1: Repository Structure Preparation
 
-- [ ] 1.1 Create legacy directory structure
-  - Create `/legacy/bitnet.cpp/` directory
-  - Set up proper directory permissions and .gitignore rules
+- [ ] 1.1 Create optimized legacy directory structure
+  - Create `/legacy/cpp/` directory (slim, sandboxed)
+  - Create `/legacy/docker/` for isolated build containers
+  - Set up `.gitattributes` with `legacy/* linguist-vendored`
   - _Requirements: 2.1, 2.2_
 
-- [ ] 1.2 Move C++ implementation files
-  - Move `src/` directory to `legacy/bitnet.cpp/src/`
-  - Move `include/` directory to `legacy/bitnet.cpp/include/`
-  - Move `CMakeLists.txt` to `legacy/bitnet.cpp/CMakeLists.txt`
-  - Move `3rdparty/` directory to `legacy/bitnet.cpp/3rdparty/`
+- [ ] 1.2 Move C++ implementation files (with git history preservation)
+  - Use `git mv` to move `src/` → `legacy/cpp/src/`
+  - Use `git mv` to move `include/` → `legacy/cpp/include/`
+  - Use `git mv` to move `CMakeLists.txt` → `legacy/cpp/CMakeLists.txt`
+  - Use `git mv` to move `3rdparty/` → `legacy/cpp/3rdparty/`
   - _Requirements: 2.1, 2.3_
 
 - [ ] 1.3 Move C++ related Python scripts
-  - Move `setup_env.py` to `legacy/bitnet.cpp/setup_env.py`
-  - Move `run_inference.py` to `legacy/bitnet.cpp/run_inference.py`
-  - Move `run_inference_server.py` to `legacy/bitnet.cpp/run_inference_server.py`
-  - Move `requirements.txt` to `legacy/bitnet.cpp/requirements.txt`
+  - Move `setup_env.py` → `legacy/cpp/setup_env.py`
+  - Move `run_inference.py` → `legacy/cpp/run_inference.py`
+  - Move `run_inference_server.py` → `legacy/cpp/run_inference_server.py`
+  - Move `requirements.txt` → `legacy/cpp/requirements.txt`
   - _Requirements: 2.1, 2.2_
 
 - [ ] 1.4 Move C++ specific directories
-  - Move `gpu/` directory to `legacy/bitnet.cpp/gpu/`
-  - Move `utils/` directory to `legacy/bitnet.cpp/utils/`
-  - Move `preset_kernels/` directory to `legacy/bitnet.cpp/preset_kernels/`
+  - Move `gpu/` → `legacy/cpp/gpu/`
+  - Move `utils/` → `legacy/cpp/utils/`
+  - Move `preset_kernels/` → `legacy/cpp/preset_kernels/`
   - _Requirements: 2.1, 2.3_
 
-- [ ] 1.5 Create cross-validation directory structure
-  - Create `/cross-validation/` directory
-  - Create subdirectories: `scripts/`, `benchmarks/`, `fixtures/`, `reports/`
+- [ ] 1.5 Create integrated tooling structure
+  - Create `/tools/crossval/` directory
+  - Create `/tools/bench/` for performance comparisons
+  - Create subdirectories: `fixtures/`, `scripts/`, `reports/`
   - Set up initial README and configuration files
   - _Requirements: 3.1, 3.2_
 
 ### Phase 2: Build System Isolation
 
-- [ ] 2.1 Update legacy CMake configuration
-  - Modify `legacy/bitnet.cpp/CMakeLists.txt` to work in new location
+- [ ] 2.1 Create Docker-based build isolation
+  - Create `legacy/docker/ubuntu-cuda.Dockerfile` for GPU builds
+  - Create `legacy/docker/ubuntu-cpu.Dockerfile` for CPU builds
+  - Add `make legacy-build` target that builds inside containers
+  - _Requirements: 4.1, 4.3_
+
+- [ ] 2.2 Update legacy CMake configuration
+  - Modify `legacy/cpp/CMakeLists.txt` to work in new location
   - Update all relative paths in CMake files
   - Add legacy build markers and documentation
   - _Requirements: 4.1, 4.3_
-
-- [ ] 2.2 Create legacy build scripts
-  - Create `legacy/bitnet.cpp/build.sh` for Unix systems
-  - Create `legacy/bitnet.cpp/build.bat` for Windows systems
-  - Add build isolation to prevent conflicts with Rust builds
-  - _Requirements: 4.1, 4.2_
 
 - [ ] 2.3 Update root Cargo.toml
   - Remove any C++ build dependencies from root Cargo.toml
@@ -65,10 +67,10 @@ This document outlines the detailed implementation tasks for restructuring the B
   - Add optional legacy integration hooks
   - _Requirements: 1.2, 4.1_
 
-- [ ] 2.5 Create cross-validation build integration
-  - Add optional build targets for legacy comparison
-  - Create scripts to build both implementations
-  - Ensure isolated build artifacts
+- [ ] 2.5 Create integrated tooling build system
+  - Add `tools/crossval/build.sh` for cross-validation setup
+  - Create scripts to build both implementations in isolation
+  - Add `scripts/dev_setup.sh --with-legacy` for GPU toolchain
   - _Requirements: 3.1, 4.3_
 
 ### Phase 3: Documentation Restructure
@@ -94,8 +96,8 @@ This document outlines the detailed implementation tasks for restructuring the B
   - Update troubleshooting guides
   - _Requirements: 5.1, 5.3, 6.2_
 
-- [ ] 3.4 Create cross-validation documentation
-  - Create `cross-validation/README.md`
+- [ ] 3.4 Create tooling documentation
+  - Create `tools/crossval/README.md`
   - Document comparison methodology
   - Provide usage instructions for benchmarking
   - Include interpretation guides for results

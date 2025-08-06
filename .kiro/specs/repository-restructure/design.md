@@ -10,7 +10,7 @@ This design document outlines the comprehensive restructuring of the BitNet repo
 
 ```
 /
-├── README.md                    # Rust-focused, primary documentation
+├── README.md                    # 🦀 "BitNet Rust – Production Implementation"
 ├── Cargo.toml                   # Root workspace configuration
 ├── build.rs                     # Rust build script
 ├── LICENSE                      # Project license
@@ -18,10 +18,11 @@ This design document outlines the comprehensive restructuring of the BitNet repo
 ├── FEATURES.md                  # Rust feature documentation
 ├── SECURITY.md                  # Security policy
 ├── CONTRIBUTING.md              # Rust-focused contribution guide
+├── .gitattributes               # Mark legacy/* as linguist-vendored
 ├── .github/                     # GitHub workflows (Rust-focused)
 │   └── workflows/
-│       ├── rust-ci.yml          # Primary Rust CI/CD
-│       ├── cross-validation.yml # Optional legacy comparison
+│       ├── rust-ci.yml          # Primary Rust CI/CD (fast)
+│       ├── nightly-crossval.yml # Optional legacy comparison (nightly)
 │       └── release.yml          # Rust package releases
 ├── crates/                      # Rust implementation (unchanged)
 │   ├── bitnet-common/
@@ -40,31 +41,36 @@ This design document outlines the comprehensive restructuring of the BitNet repo
 ├── tests/                       # Rust integration tests
 ├── docs/                        # Rust documentation
 ├── scripts/                     # Rust-focused scripts
+│   └── dev_setup.sh             # --with-legacy flag for GPU toolchain
 ├── deployment/                  # Rust deployment configs
 ├── docker/                      # Rust Docker configurations
 ├── k8s/                         # Kubernetes configs for Rust
 ├── helm/                        # Helm charts for Rust
 ├── monitoring/                  # Monitoring for Rust services
-├── legacy/                      # Legacy C++ implementation
-│   └── bitnet.cpp/
-│       ├── README.md            # Legacy-specific documentation
-│       ├── CMakeLists.txt       # C++ build system
-│       ├── src/                 # C++ source files
-│       ├── include/             # C++ headers
-│       ├── 3rdparty/            # C++ dependencies
-│       ├── gpu/                 # GPU implementation
-│       ├── utils/               # C++ utilities
-│       ├── preset_kernels/      # Precomputed kernels
-│       ├── setup_env.py         # C++ environment setup
-│       ├── run_inference.py     # C++ inference runner
-│       ├── run_inference_server.py # C++ server
-│       └── requirements.txt     # Python dependencies
-└── cross-validation/            # Cross-implementation testing
-    ├── README.md                # Cross-validation documentation
-    ├── scripts/                 # Comparison scripts
-    ├── benchmarks/              # Performance comparisons
-    ├── fixtures/                # Test data and models
-    └── reports/                 # Comparison reports
+├── .vscode/                     # Workspace: Rust primary, legacy secondary
+├── .idea/                       # IntelliJ workspace configuration
+├── legacy/                      # 🏛️ Legacy C++ (sandboxed & slim)
+│   ├── README.md                # "Legacy C++ reference – not for production"
+│   ├── cpp/                     # Core C++ implementation
+│   │   ├── CMakeLists.txt       # C++ build system
+│   │   ├── src/                 # C++ source files
+│   │   ├── include/             # C++ headers
+│   │   ├── 3rdparty/            # C++ dependencies
+│   │   ├── gpu/                 # GPU implementation
+│   │   ├── utils/               # C++ utilities
+│   │   ├── preset_kernels/      # Precomputed kernels
+│   │   ├── setup_env.py         # C++ environment setup
+│   │   ├── run_inference.py     # C++ inference runner
+│   │   ├── run_inference_server.py # C++ server
+│   │   └── requirements.txt     # Python dependencies
+│   └── docker/                  # Isolated C++ build containers
+│       ├── ubuntu-cuda.Dockerfile
+│       └── ubuntu-cpu.Dockerfile
+└── tools/                       # Cross-implementation tooling
+    ├── crossval/                # Rust ↔ C++ comparison harness
+    │   ├── pytest + rust scripts
+    │   └── fixtures/            # Test data and models
+    └── bench/                   # Criterion.rs + gbench wrappers
 ```
 
 ## Components and Interfaces
@@ -88,7 +94,7 @@ This design document outlines the comprehensive restructuring of the BitNet repo
 
 ### 2. Legacy C++ Implementation
 
-**Location:** `/legacy/bitnet.cpp/`
+**Location:** `/legacy/cpp/` (sandboxed & slim)
 
 **Responsibilities:**
 - Benchmark and comparison target
@@ -102,18 +108,19 @@ This design document outlines the comprehensive restructuring of the BitNet repo
 - CLI interface (legacy)
 
 **Key Design Decisions:**
-- Self-contained: All C++ dependencies and build files within `/legacy/`
-- Isolated build: No interference with Rust build process
-- Preserved functionality: Maintains all original capabilities
-- Clear documentation: Marked as legacy with migration guidance
+- **Sandboxed**: Complete build isolation via Docker containers
+- **Slim checkout**: `.gitattributes` marks as `linguist-vendored`, optional in shallow clones
+- **Patch-friendly**: Kept in-repo (not submodule) for cross-validation tweaks
+- **Clear deprecation**: Prominent "not for production" warnings
+- **CI efficiency**: Only runs on `/legacy` changes or nightly schedule
 
 ### 3. Cross-Validation Framework
 
-**Location:** `/cross-validation/`
+**Location:** `/tools/crossval/` (integrated tooling)
 
 **Responsibilities:**
 - Automated comparison testing
-- Performance benchmarking
+- Performance benchmarking  
 - Numerical accuracy validation
 - Compatibility verification
 
@@ -121,17 +128,18 @@ This design document outlines the comprehensive restructuring of the BitNet repo
 
 #### 3.1 Comparison Scripts
 ```python
-# cross-validation/scripts/compare_implementations.py
+# tools/crossval/compare_implementations.py
 def compare_inference(model_path, prompts, tolerance=1e-6):
     """Compare inference outputs between Rust and C++ implementations"""
     rust_results = run_rust_inference(model_path, prompts)
-    cpp_results = run_cpp_inference(model_path, prompts)
+    # C++ runs in isolated Docker container
+    cpp_results = run_cpp_inference_docker(model_path, prompts)
     return validate_numerical_accuracy(rust_results, cpp_results, tolerance)
 
 def benchmark_performance(model_path, test_cases):
-    """Benchmark performance of both implementations"""
-    rust_metrics = benchmark_rust(model_path, test_cases)
-    cpp_metrics = benchmark_cpp(model_path, test_cases)
+    """Benchmark performance with criterion.rs + gbench wrappers"""
+    rust_metrics = run_criterion_benchmarks(model_path, test_cases)
+    cpp_metrics = run_gbench_in_docker(model_path, test_cases)
     return generate_performance_report(rust_metrics, cpp_metrics)
 ```
 
