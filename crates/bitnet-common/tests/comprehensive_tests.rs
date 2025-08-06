@@ -2,6 +2,7 @@
 //! Covers edge cases, error conditions, and integration scenarios
 
 use bitnet_common::*;
+use candle_core::DType;
 use std::env;
 use std::fs;
 use tempfile::{NamedTempFile, TempDir};
@@ -105,29 +106,29 @@ mod config_comprehensive {
         
         // Test invalid numeric values
         env::set_var("BITNET_VOCAB_SIZE", "not_a_number");
-        let mut config = BitNetConfig::default();
-        assert!(config.apply_env_overrides().is_err());
+        let result = BitNetConfig::from_env();
+        assert!(result.is_err());
         env::remove_var("BITNET_VOCAB_SIZE");
 
         env::set_var("BITNET_TEMPERATURE", "invalid_float");
-        let mut config = BitNetConfig::default();
-        assert!(config.apply_env_overrides().is_err());
+        let result = BitNetConfig::from_env();
+        assert!(result.is_err());
         env::remove_var("BITNET_TEMPERATURE");
 
         // Test invalid enum values
         env::set_var("BITNET_MODEL_FORMAT", "invalid_format");
-        let mut config = BitNetConfig::default();
-        assert!(config.apply_env_overrides().is_err());
+        let result = BitNetConfig::from_env();
+        assert!(result.is_err());
         env::remove_var("BITNET_MODEL_FORMAT");
 
         env::set_var("BITNET_QUANTIZATION_TYPE", "INVALID_TYPE");
-        let mut config = BitNetConfig::default();
-        assert!(config.apply_env_overrides().is_err());
+        let result = BitNetConfig::from_env();
+        assert!(result.is_err());
         env::remove_var("BITNET_QUANTIZATION_TYPE");
 
         env::set_var("BITNET_USE_GPU", "maybe");
-        let mut config = BitNetConfig::default();
-        assert!(config.apply_env_overrides().is_err());
+        let result = BitNetConfig::from_env();
+        assert!(result.is_err());
         env::remove_var("BITNET_USE_GPU");
     }
 
