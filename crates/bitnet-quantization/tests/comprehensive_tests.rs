@@ -154,8 +154,8 @@ mod error_handling {
     fn test_all_same_value_tensor() {
         let quantizer = I2SQuantizer::new().unwrap();
         
-        let same_value_tensor = MockTensor::new(vec![5.0f32; 64]);
-        let result = quantizer.quantize(&tensor);
+        let same_value_tensor = MockTensor::new(vec![64]);
+        let result = quantizer.quantize(&same_value_tensor);
         assert!(result.is_ok());
         
         // All same values should have zero variance
