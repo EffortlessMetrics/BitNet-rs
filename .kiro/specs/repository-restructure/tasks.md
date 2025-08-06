@@ -8,33 +8,33 @@ This document outlines the detailed implementation tasks for restructuring the B
 
 ### Phase 1: Repository Cleanup
 
-- [ ] 1.1 Remove all C++ source code from repository
+- [x] 1.1 Remove all C++ source code from repository
   - Remove `src/` directory and all C++ source files
   - Remove `include/` directory and all C++ headers
   - Remove `CMakeLists.txt` and C++ build configuration
   - Remove `3rdparty/` directory and C++ dependencies
   - _Requirements: 2.1, 2.2_
 
-- [ ] 1.2 Remove C++ related Python scripts
+- [x] 1.2 Remove C++ related Python scripts
   - Remove `setup_env.py`, `run_inference.py`, `run_inference_server.py`
   - Remove `requirements.txt` (C++ Python dependencies)
   - Remove `gpu/`, `utils/`, `preset_kernels/` directories
   - _Requirements: 2.1, 2.2_
 
-- [ ] 1.3 Create CI helper scripts directory
+- [x] 1.3 Create CI helper scripts directory
   - Create `/ci/` directory for build automation
   - Set up structure for external dependency management
   - Add `.gitignore` entries for cached external builds
   - Create `.cargo/config.toml` to globally disable crossval feature by default
   - _Requirements: 2.3, 4.1_
 
-- [ ] 1.4 Create cross-validation crate structure
+- [x] 1.4 Create cross-validation crate structure
   - Create `/crossval/` directory as separate Rust crate
   - Create subdirectories: `src/`, `tests/`, `benches/`, `fixtures/`
   - Set up `crossval/Cargo.toml` with feature gates
   - _Requirements: 3.1, 3.2_
 
-- [ ] 1.5 Create patches directory (initially empty)
+- [x] 1.5 Create patches directory (initially empty)
   - Create `/patches/` directory for minimal patches if needed
   - Add README explaining patch policy (prefer upstream fixes)
   - Set up patch application automation
