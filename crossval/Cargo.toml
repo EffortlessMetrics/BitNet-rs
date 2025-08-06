@@ -1,0 +1,38 @@
+[package]
+name = "bitnet-crossval"
+version = "0.1.0"
+edition = "2021"
+description = "Cross-validation framework for BitNet Rust vs C++ implementations"
+license = "MIT"
+publish = false
+
+[features]
+default = []
+crossval = ["dep:bindgen", "dep:cc"]
+
+[dependencies]
+# Core dependencies (always available)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Cross-validation specific dependencies (feature-gated)
+bindgen = { version = "0.69", optional = true }
+cc = { version = "1.0", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+tempfile = "3.0"
+
+[[bench]]
+name = "performance"
+harness = false
+required-features = ["crossval"]
+
+[build-dependencies]
+cc = { version = "1.0", optional = true }
+bindgen = { version = "0.69", optional = true }
+
+[package.metadata.docs.rs]
+features = ["crossval"]
