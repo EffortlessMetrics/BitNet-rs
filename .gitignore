@@ -71,4 +71,11 @@ models/
 *.so
 *.dylib
 *.a
-*.lib
+*.lib# Exter
+nal dependency cache
+.cache/
+**/bitnet_cpp/
+
+# Cross-validation builds
+crossval/target/
+legacy/
