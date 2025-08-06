@@ -3,10 +3,25 @@
 //! This example provides a basic test of GPU kernel functionality
 //! without the complex test infrastructure.
 
+#[cfg(feature = "cuda")]
 use bitnet_kernels::gpu::{CudaKernel, is_cuda_available, cuda_device_count};
+#[cfg(feature = "cuda")]
 use bitnet_kernels::KernelProvider;
 
 fn main() {
+    #[cfg(not(feature = "cuda"))]
+    {
+        println!("❌ This example requires the 'cuda' feature to be enabled");
+        println!("Run with: cargo run --example simple_gpu_test --features cuda");
+        return;
+    }
+    
+    #[cfg(feature = "cuda")]
+    run_simple_gpu_test();
+}
+
+#[cfg(feature = "cuda")]
+fn run_simple_gpu_test() {
     println!("🚀 Simple GPU Kernel Test");
     println!("========================");
 
@@ -92,8 +107,3 @@ fn main() {
     println!("\n🎉 GPU kernel test completed successfully!");
 }
 
-#[cfg(not(feature = "cuda"))]
-fn main() {
-    println!("❌ This example requires the 'cuda' feature to be enabled");
-    println!("Run with: cargo run --example simple_gpu_test --features cuda");
-}

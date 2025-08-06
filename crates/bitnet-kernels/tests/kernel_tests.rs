@@ -46,7 +46,12 @@ impl SimpleRng {
     }
     
     fn next_i8(&mut self) -> i8 {
-        (self.next() % 256) as i8 - 128
+        let val = self.next() % 256;
+        if val < 128 {
+            val as i8
+        } else {
+            (val as i8) - (256i16 as i8)
+        }
     }
     
     fn next_u8(&mut self) -> u8 {
@@ -362,7 +367,7 @@ fn test_all_kernels_correctness() {
     
     // Test the selected kernel
     let kernel = manager.select_best().expect("Should have a kernel");
-    test_kernel_correctness(kernel.as_ref()).expect("Kernel correctness test failed");
+    test_kernel_correctness(kernel).expect("Kernel correctness test failed");
 }
 
 #[test]
@@ -370,7 +375,7 @@ fn test_performance_benchmarks() {
     let manager = KernelManager::new();
     let kernel = manager.select_best().expect("Should have a kernel");
     
-    let metrics = benchmark_kernel(kernel.as_ref())
+    let metrics = benchmark_kernel(kernel)
         .expect("Benchmark should succeed");
     
     assert!(!metrics.is_empty(), "Should have performance metrics");
