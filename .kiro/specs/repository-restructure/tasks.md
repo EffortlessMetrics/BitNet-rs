@@ -6,72 +6,70 @@ This document outlines the detailed implementation tasks for restructuring the B
 
 ## Task Breakdown
 
-### Phase 1: Repository Structure Preparation
+### Phase 1: Repository Cleanup
 
-- [ ] 1.1 Create optimized legacy directory structure
-  - Create `/legacy/cpp/` directory (slim, sandboxed)
-  - Create `/legacy/docker/` for isolated build containers
-  - Set up `.gitattributes` with `legacy/* linguist-vendored`
+- [ ] 1.1 Remove all C++ source code from repository
+  - Remove `src/` directory and all C++ source files
+  - Remove `include/` directory and all C++ headers
+  - Remove `CMakeLists.txt` and C++ build configuration
+  - Remove `3rdparty/` directory and C++ dependencies
   - _Requirements: 2.1, 2.2_
 
-- [ ] 1.2 Move C++ implementation files (with git history preservation)
-  - Use `git mv` to move `src/` → `legacy/cpp/src/`
-  - Use `git mv` to move `include/` → `legacy/cpp/include/`
-  - Use `git mv` to move `CMakeLists.txt` → `legacy/cpp/CMakeLists.txt`
-  - Use `git mv` to move `3rdparty/` → `legacy/cpp/3rdparty/`
-  - _Requirements: 2.1, 2.3_
-
-- [ ] 1.3 Move C++ related Python scripts
-  - Move `setup_env.py` → `legacy/cpp/setup_env.py`
-  - Move `run_inference.py` → `legacy/cpp/run_inference.py`
-  - Move `run_inference_server.py` → `legacy/cpp/run_inference_server.py`
-  - Move `requirements.txt` → `legacy/cpp/requirements.txt`
+- [ ] 1.2 Remove C++ related Python scripts
+  - Remove `setup_env.py`, `run_inference.py`, `run_inference_server.py`
+  - Remove `requirements.txt` (C++ Python dependencies)
+  - Remove `gpu/`, `utils/`, `preset_kernels/` directories
   - _Requirements: 2.1, 2.2_
 
-- [ ] 1.4 Move C++ specific directories
-  - Move `gpu/` → `legacy/cpp/gpu/`
-  - Move `utils/` → `legacy/cpp/utils/`
-  - Move `preset_kernels/` → `legacy/cpp/preset_kernels/`
-  - _Requirements: 2.1, 2.3_
+- [ ] 1.3 Create CI helper scripts directory
+  - Create `/ci/` directory for build automation
+  - Set up structure for external dependency management
+  - Add `.gitignore` entries for cached external builds
+  - _Requirements: 2.3, 4.1_
 
-- [ ] 1.5 Create integrated tooling structure
-  - Create `/tools/crossval/` directory
-  - Create `/tools/bench/` for performance comparisons
-  - Create subdirectories: `fixtures/`, `scripts/`, `reports/`
-  - Set up initial README and configuration files
+- [ ] 1.4 Create cross-validation crate structure
+  - Create `/crossval/` directory as separate Rust crate
+  - Create subdirectories: `src/`, `tests/`, `benches/`, `fixtures/`
+  - Set up `crossval/Cargo.toml` with feature gates
   - _Requirements: 3.1, 3.2_
 
-### Phase 2: Build System Isolation
+- [ ] 1.5 Create patches directory (initially empty)
+  - Create `/patches/` directory for minimal patches if needed
+  - Add README explaining patch policy (prefer upstream fixes)
+  - Set up patch application automation
+  - _Requirements: 2.4, 3.1_
 
-- [ ] 2.1 Create Docker-based build isolation
-  - Create `legacy/docker/ubuntu-cuda.Dockerfile` for GPU builds
-  - Create `legacy/docker/ubuntu-cpu.Dockerfile` for CPU builds
-  - Add `make legacy-build` target that builds inside containers
-  - _Requirements: 4.1, 4.3_
+### Phase 2: External Dependency System
 
-- [ ] 2.2 Update legacy CMake configuration
-  - Modify `legacy/cpp/CMakeLists.txt` to work in new location
-  - Update all relative paths in CMake files
-  - Add legacy build markers and documentation
-  - _Requirements: 4.1, 4.3_
+- [ ] 2.1 Create BitNet.cpp fetch script
+  - Implement `ci/fetch_bitnet_cpp.sh` with version pinning
+  - Add checksum verification for downloaded source
+  - Set up caching in `$HOME/.cache/bitnet_cpp/`
+  - _Requirements: 2.3, 4.1_
 
-- [ ] 2.3 Update root Cargo.toml
+- [ ] 2.2 Create patch application system
+  - Implement `ci/apply_patches.sh` for minimal patches
+  - Add patch validation and ordering system
+  - Create patch creation and maintenance documentation
+  - _Requirements: 2.4, 3.1_
+
+- [ ] 2.3 Update root Cargo.toml workspace
   - Remove any C++ build dependencies from root Cargo.toml
-  - Ensure workspace focuses only on Rust crates
-  - Add metadata about legacy location
+  - Add `crossval` crate to workspace members
+  - Add `bitnet-sys` crate for FFI bindings
   - _Requirements: 1.2, 4.1_
 
-- [ ] 2.4 Update build.rs for Rust
-  - Remove any C++ compilation from root build.rs
-  - Focus build script on Rust-specific build tasks
-  - Add optional legacy integration hooks
-  - _Requirements: 1.2, 4.1_
+- [ ] 2.4 Create bitnet-sys FFI crate
+  - Implement `crates/bitnet-sys/` with feature gates
+  - Add bindgen integration for C++ headers
+  - Set up conditional compilation for crossval feature
+  - _Requirements: 3.1, 3.2_
 
-- [ ] 2.5 Create integrated tooling build system
-  - Add `tools/crossval/build.sh` for cross-validation setup
-  - Create scripts to build both implementations in isolation
-  - Add `scripts/dev_setup.sh --with-legacy` for GPU toolchain
-  - _Requirements: 3.1, 4.3_
+- [ ] 2.5 Create version management system
+  - Implement `ci/bump_bitnet_tag.sh` for version updates
+  - Add automated dependency update checking
+  - Create documentation for version update process
+  - _Requirements: 2.3, 4.2_
 
 ### Phase 3: Documentation Restructure
 
@@ -111,40 +109,40 @@ This document outlines the detailed implementation tasks for restructuring the B
 
 ### Phase 4: Cross-Validation Framework
 
-- [ ] 4.1 Implement comparison scripts
-  - Create `cross-validation/scripts/compare_implementations.py`
-  - Implement numerical accuracy comparison functions
-  - Add support for multiple model formats
-  - Include configurable tolerance settings
+- [ ] 4.1 Implement token equivalence tests
+  - Create `crossval/tests/token_equivalence.rs`
+  - Implement exact token matching for small models
+  - Add tolerance-based comparison for floating point values
+  - Include multiple model format support
   - _Requirements: 3.1, 3.3_
 
-- [ ] 4.2 Create performance benchmarking
-  - Implement `cross-validation/scripts/benchmark_performance.py`
+- [ ] 4.2 Create performance benchmarks
+  - Implement `crossval/benches/performance.rs` using Criterion
   - Add throughput and latency measurements
-  - Create performance regression detection
+  - Create 5% performance regression guards
   - Generate comparison reports and charts
   - _Requirements: 3.2, 3.4_
 
 - [ ] 4.3 Set up test fixtures
-  - Create standard test models in `cross-validation/fixtures/`
-  - Add test prompt datasets
+  - Create small test models (~20KB) in `crossval/fixtures/`
+  - Add test prompt datasets for various scenarios
   - Include expected output baselines
-  - Set up model download and management scripts
+  - Set up fixture generation and validation scripts
   - _Requirements: 3.1, 3.2_
 
-- [ ] 4.4 Implement automated reporting
-  - Create report generation scripts
-  - Add HTML and markdown report formats
-  - Include performance charts and accuracy metrics
-  - Set up automated report publishing
-  - _Requirements: 3.3, 3.4_
+- [ ] 4.4 Implement FFI integration
+  - Create safe Rust wrappers around C++ functions
+  - Add error handling and memory management
+  - Implement model loading and inference calls
+  - Set up proper resource cleanup
+  - _Requirements: 3.1, 3.2_
 
-- [ ] 4.5 Integration with CI/CD
-  - Add cross-validation workflow to GitHub Actions
-  - Create optional legacy comparison jobs
-  - Set up performance regression alerts
-  - Configure report artifact publishing
-  - _Requirements: 3.4, 7.3_
+- [ ] 4.5 Add feature gate integration
+  - Implement conditional compilation for crossval feature
+  - Ensure zero overhead when feature is disabled
+  - Add documentation for feature usage
+  - Create developer setup instructions
+  - _Requirements: 3.4, 7.1_
 
 ### Phase 5: CI/CD and Workflow Updates
 
