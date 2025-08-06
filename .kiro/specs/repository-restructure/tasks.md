@@ -25,6 +25,7 @@ This document outlines the detailed implementation tasks for restructuring the B
   - Create `/ci/` directory for build automation
   - Set up structure for external dependency management
   - Add `.gitignore` entries for cached external builds
+  - Create `.cargo/config.toml` to globally disable crossval feature by default
   - _Requirements: 2.3, 4.1_
 
 - [ ] 1.4 Create cross-validation crate structure
@@ -61,8 +62,9 @@ This document outlines the detailed implementation tasks for restructuring the B
 
 - [ ] 2.4 Create bitnet-sys FFI crate
   - Implement `crates/bitnet-sys/` with feature gates
-  - Add bindgen integration for C++ headers
+  - Add bindgen integration for C++ headers with clang detection
   - Set up conditional compilation for crossval feature
+  - Add helpful build.rs error messages when clang is missing
   - _Requirements: 3.1, 3.2_
 
 - [ ] 2.5 Create version management system
@@ -125,9 +127,9 @@ This document outlines the detailed implementation tasks for restructuring the B
 
 - [ ] 4.3 Set up test fixtures
   - Create small test models (~20KB) in `crossval/fixtures/`
-  - Add test prompt datasets for various scenarios
-  - Include expected output baselines
-  - Set up fixture generation and validation scripts
+  - Add deterministic fixture generator (`cargo xtask gen-fixtures`)
+  - Include test prompt datasets for various scenarios
+  - Set up baseline performance numbers in committed JSON files
   - _Requirements: 3.1, 3.2_
 
 - [ ] 4.4 Implement FFI integration
@@ -152,10 +154,11 @@ This document outlines the detailed implementation tasks for restructuring the B
   - Add comprehensive Rust testing and quality checks
   - _Requirements: 1.2, 7.1, 7.3_
 
-- [ ] 5.2 Create legacy CI workflow
-  - Add optional legacy build and test workflow
-  - Ensure legacy builds don't block primary CI
-  - Set up legacy compatibility testing
+- [ ] 5.2 Create nightly cross-validation workflow
+  - Add nightly cron job for upstream API change detection
+  - Create optional `nightly-crossval` feature for long-running benchmarks
+  - Set up performance baseline tracking and drift detection
+  - Configure GitHub step outputs for tag/SHA visibility
   - _Requirements: 2.4, 7.3_
 
 - [ ] 5.3 Update release workflows
@@ -165,9 +168,10 @@ This document outlines the detailed implementation tasks for restructuring the B
   - _Requirements: 8.2, 8.3_
 
 - [ ] 5.4 Set up development environment scripts
-  - Create `scripts/setup-dev.sh` for Rust development
-  - Add `scripts/setup-legacy.sh` for legacy development
-  - Include cross-validation setup scripts
+  - Create `scripts/dev-setup.sh` for Rust development
+  - Add `scripts/dev-crossval.sh` one-liner for cross-validation setup
+  - Include environment variable configuration and fetch automation
+  - Add patch policy enforcement in CI (fail if patches/ non-empty without upstream issue)
   - _Requirements: 7.1, 7.2_
 
 ### Phase 6: Migration and Compatibility
@@ -175,8 +179,9 @@ This document outlines the detailed implementation tasks for restructuring the B
 - [ ] 6.1 Create migration documentation
   - Write comprehensive C++ to Rust migration guide
   - Include API compatibility matrices
-  - Add code examples for common migration patterns
-  - Document performance improvement expectations
+  - Add "why we don't vendor C++" rationale in FAQ
+  - Document upstream tag, license, and attribution requirements
+  - Add clear split: "Rust quick-start" vs "Legacy comparison guide"
   - _Requirements: 6.1, 6.3_
 
 - [ ] 6.2 Implement migration tools
@@ -223,33 +228,59 @@ This document outlines the detailed implementation tasks for restructuring the B
   - Create installation scripts focused on Rust
   - _Requirements: 8.2, 8.3_
 
-### Phase 8: Validation and Testing
+### Phase 8: Polish and Nice-to-Haves
 
-- [ ] 8.1 Comprehensive build testing
+- [ ] 8.1 Add binary caching optimization
+  - Set up GitHub Container Registry for pre-built bitnet_cpp libraries
+  - Cache builds keyed by tag+SHA for faster CI
+  - Reduce CI time from ~7min to <1min while maintaining reproducibility
+  - _Requirements: Performance optimization_
+
+- [ ] 8.2 Implement patch policy automation
+  - Add CI check that fails if patches/ is non-empty without upstream issue link
+  - Create automated issue creation when patches are added
+  - Set up patch lifecycle tracking and cleanup reminders
+  - _Requirements: 2.4, Maintenance_
+
+- [ ] 8.3 Add performance baseline tracking
+  - Commit baseline performance numbers to crossval/baselines.json
+  - Upload fresh benchmark results as CI artifacts
+  - Create performance drift detection and alerting
+  - _Requirements: 3.2, 3.4_
+
+- [ ] 8.4 Create developer convenience tools
+  - Add `cargo xtask gen-fixtures` for deterministic test model generation
+  - Create `./scripts/dev-crossval.sh` one-liner for easy setup
+  - Add IDE configuration to prevent accidental crossval feature activation
+  - _Requirements: 7.1, 7.2_
+
+### Phase 9: Validation and Testing
+
+- [ ] 9.1 Comprehensive build testing
   - Test Rust builds on all supported platforms
   - Validate legacy builds in isolated environment
   - Ensure no build system conflicts
   - _Requirements: 4.2, 4.3_
 
-- [ ] 8.2 Cross-validation framework testing
+- [ ] 9.2 Cross-validation framework testing
   - Test comparison scripts with real models
   - Validate numerical accuracy detection
   - Test performance benchmarking accuracy
   - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 8.3 Documentation validation
+- [ ] 9.3 Documentation validation
   - Test all documentation examples and code snippets
   - Validate migration guides with real scenarios
   - Ensure all links and references are correct
   - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 8.4 End-to-end workflow testing
+- [ ] 9.4 End-to-end workflow testing
   - Test complete development workflows
   - Validate CI/CD pipelines
   - Test deployment and distribution processes
   - _Requirements: 7.1, 7.2, 7.3_
 
-- [ ] 8.5 Performance validation
+- [ ] 9.5 Performance validation
   - Run comprehensive performance comparisons
   - Validate that Rust implementation meets performance claims
   - Test cross-validation accuracy and reliability
