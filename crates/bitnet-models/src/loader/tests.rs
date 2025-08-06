@@ -1,7 +1,7 @@
 //! Model loader tests
 
 use super::*;
-use candle_core::Device;
+use bitnet_common::Device;
 use tempfile::NamedTempFile;
 use std::io::Write;
 

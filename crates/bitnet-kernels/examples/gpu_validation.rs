@@ -8,14 +8,27 @@
 //!   cargo run --example gpu_validation --features cuda -- --benchmark-only
 //!   cargo run --example gpu_validation --features cuda -- --validation-only
 
+#[cfg(feature = "cuda")]
 use bitnet_kernels::gpu::{
     CudaKernel, GpuValidator, ValidationConfig, GpuBenchmark, BenchmarkConfig,
     print_validation_results, print_benchmark_results, is_cuda_available, cuda_device_count
 };
-use bitnet_kernels::KernelProvider;
 use std::env;
 
 fn main() {
+    #[cfg(not(feature = "cuda"))]
+    {
+        println!("❌ This example requires the 'cuda' feature to be enabled");
+        println!("Run with: cargo run --example gpu_validation --features cuda");
+        std::process::exit(1);
+    }
+    
+    #[cfg(feature = "cuda")]
+    run_gpu_validation();
+}
+
+#[cfg(feature = "cuda")]
+fn run_gpu_validation() {
     // Initialize logging
     env_logger::Builder::from_default_env()
         .filter_level(log::LevelFilter::Info)
@@ -184,9 +197,3 @@ fn run_benchmarks(quick_mode: bool) {
     }
 }
 
-#[cfg(not(feature = "cuda"))]
-fn main() {
-    println!("❌ This example requires the 'cuda' feature to be enabled");
-    println!("Run with: cargo run --example gpu_validation --features cuda");
-    std::process::exit(1);
-}

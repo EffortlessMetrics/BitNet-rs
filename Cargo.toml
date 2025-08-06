@@ -61,6 +61,7 @@ vergen = { version = "8.0", features = ["build", "git", "gitcl", "rustc", "cargo
 [dev-dependencies]
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 tempfile = "3.8"
+serde_json = "1.0"
 
 [features]
 default = ["cpu"]
