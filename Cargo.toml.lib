@@ -1,0 +1,78 @@
+[package]
+name = "bitnet"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Core crates - always included
+bitnet-common = { path = "crates/bitnet-common", version = "0.1.0" }
+bitnet-models = { path = "crates/bitnet-models", version = "0.1.0" }
+bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.1.0" }
+
+# Optional crates based on features
+bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.1.0", optional = true }
+bitnet-inference = { path = "crates/bitnet-inference", version = "0.1.0", optional = true }
+bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.1.0", optional = true }
+
+[build-dependencies]
+vergen = { version = "8.0", features = ["build", "git", "gitcl", "rustc", "cargo"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tempfile.workspace = true
+
+[features]
+default = ["cpu"]
+
+# Core inference features
+cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bitnet-inference/cpu"]
+gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cuda", "bitnet-inference/gpu"]
+
+# Component features
+kernels = ["dep:bitnet-kernels"]
+inference = ["dep:bitnet-inference", "kernels"]
+tokenizers = ["dep:bitnet-tokenizers"]
+
+# SIMD optimizations
+avx2 = ["bitnet-kernels/avx2"]
+avx512 = ["bitnet-kernels/avx512"]
+neon = ["bitnet-kernels/neon"]
+
+# Language bindings (not included in main crate)
+python = []  # Handled by bitnet-py crate
+wasm = []    # Handled by bitnet-wasm crate
+ffi = []     # Handled by bitnet-ffi crate
+
+# Server and CLI (not included in main crate)
+server = []  # Handled by bitnet-server crate
+cli = []     # Handled by bitnet-cli crate
+
+# Convenience features
+full = ["cpu", "gpu", "avx2", "avx512", "neon"]
+minimal = []  # Only core crates, no inference
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[[example]]
+name = "basic_inference"
+required-features = ["cpu"]
+
+[[example]]
+name = "gpu_inference"
+required-features = ["gpu"]
+
+[[example]]
+name = "streaming_generation"
+required-features = ["cpu"]

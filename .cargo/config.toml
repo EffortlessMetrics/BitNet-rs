@@ -1,0 +1,27 @@
+# Global Cargo configuration for BitNet.rs
+
+[build]
+# Disable crossval feature by default to avoid requiring C++ dependencies
+# Enable with: cargo build --features crossval
+rustflags = []
+
+[target.'cfg(all())']
+# Disable crossval feature by default across all targets
+rustflags = []
+
+# Environment variables for cross-validation
+[env]
+# Path to cached BitNet.cpp builds
+BITNET_CPP_CACHE_DIR = { value = "$HOME/.cache/bitnet_cpp", relative = false }
+
+# Cross-validation configuration
+BITNET_CROSSVAL_ENABLED = "false"
+
+# Optimization settings for release builds
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.bench]
+debug = true
