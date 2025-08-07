@@ -1,0 +1,47 @@
+[package]
+name = "bitnet-tests"
+version = "0.1.0"
+edition = "2021"
+description = "Comprehensive testing framework for BitNet.rs"
+
+[dependencies]
+# Async runtime and utilities
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
+
+# Serialization and configuration
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# HTTP client for fixture downloads
+reqwest = { version = "0.11", features = ["json", "stream"] }
+
+# Cryptography for checksums
+sha2 = "0.10"
+
+# Error handling
+thiserror = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# System utilities
+num_cpus = "1.0"
+
+# Testing utilities
+tempfile = "3.0"
+
+# Random number generation
+rand = "0.8"
+
+# Platform-specific dependencies
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["processthreadsapi", "psapi"] }
+
+[dev-dependencies]
+# Additional test dependencies can be added here
