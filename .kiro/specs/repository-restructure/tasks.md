@@ -42,32 +42,32 @@ This document outlines the detailed implementation tasks for restructuring the B
 
 ### Phase 2: External Dependency System
 
-- [ ] 2.1 Create BitNet.cpp fetch script
+- [x] 2.1 Create BitNet.cpp fetch script
   - Implement `ci/fetch_bitnet_cpp.sh` with version pinning
   - Add checksum verification for downloaded source
   - Set up caching in `$HOME/.cache/bitnet_cpp/`
   - _Requirements: 2.3, 4.1_
 
-- [ ] 2.2 Create patch application system
+- [x] 2.2 Create patch application system
   - Implement `ci/apply_patches.sh` for minimal patches
   - Add patch validation and ordering system
   - Create patch creation and maintenance documentation
   - _Requirements: 2.4, 3.1_
 
-- [ ] 2.3 Update root Cargo.toml workspace
+- [x] 2.3 Update root Cargo.toml workspace
   - Remove any C++ build dependencies from root Cargo.toml
   - Add `crossval` crate to workspace members
   - Add `bitnet-sys` crate for FFI bindings
   - _Requirements: 1.2, 4.1_
 
-- [ ] 2.4 Create bitnet-sys FFI crate
+- [x] 2.4 Create bitnet-sys FFI crate
   - Implement `crates/bitnet-sys/` with feature gates
   - Add bindgen integration for C++ headers with clang detection
   - Set up conditional compilation for crossval feature
   - Add helpful build.rs error messages when clang is missing
   - _Requirements: 3.1, 3.2_
 
-- [ ] 2.5 Create version management system
+- [x] 2.5 Create version management system
   - Implement `ci/bump_bitnet_tag.sh` for version updates
   - Add automated dependency update checking
   - Create documentation for version update process

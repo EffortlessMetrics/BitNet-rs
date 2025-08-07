@@ -13,6 +13,8 @@ members = [
     "crates/bitnet-ffi",
     "crates/bitnet-py",
     "crates/bitnet-wasm",
+    "crates/bitnet-sys",
+    "crossval",
 ]
 
 [package]
@@ -88,6 +90,9 @@ ffi = []     # Handled by bitnet-ffi crate
 # Server and CLI (not included in main crate)
 server = []  # Handled by bitnet-server crate
 cli = []     # Handled by bitnet-cli crate
+
+# Cross-validation features
+crossval = []  # Enable cross-validation against C++ implementation
 
 # Convenience features
 full = ["cpu", "gpu", "avx2", "avx512", "neon"]
