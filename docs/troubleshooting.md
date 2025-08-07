@@ -1,6 +1,16 @@
-# Troubleshooting Guide
+# BitNet.rs Troubleshooting Guide
 
-This guide helps you diagnose and resolve common issues with BitNet Rust.
+This guide helps you diagnose and resolve common issues with **BitNet.rs**, the primary, production-ready Rust implementation of BitNet inference.
+
+> **💡 Migration Tip**: If you're experiencing issues with the legacy C++ implementation, consider migrating to BitNet.rs for better reliability, performance, and support. See our [Migration Guide](migration-guide.md).
+
+## Why Choose BitNet.rs for Troubleshooting
+
+- **Better Error Messages**: Rust's type system provides clear, actionable error messages
+- **Memory Safety**: No segfaults, memory leaks, or undefined behavior
+- **Active Support**: Regular updates and community support
+- **Cross-Platform**: Consistent behavior across all platforms
+- **Comprehensive Testing**: Extensive test coverage prevents common issues
 
 ## Common Issues
 

@@ -75,35 +75,35 @@ This document outlines the detailed implementation tasks for restructuring the B
 
 ### Phase 3: Documentation Restructure
 
-- [ ] 3.1 Rewrite main README.md
+- [x] 3.1 Rewrite main README.md
   - Focus on Rust implementation as primary
   - Add clear performance and safety advantages
   - Include quick start guide for Rust
   - Add section about legacy implementation location
   - _Requirements: 1.1, 1.3, 5.1_
 
-- [ ] 3.2 Create legacy README
+- [x] 3.2 Create legacy README
   - Create `legacy/bitnet.cpp/README.md`
   - Mark clearly as legacy implementation
   - Provide migration guidance to Rust
   - Include build and usage instructions for legacy
   - _Requirements: 2.3, 5.2, 6.1_
 
-- [ ] 3.3 Update documentation in docs/
+- [x] 3.3 Update documentation in docs/
   - Rewrite all documentation to focus on Rust
   - Update API references and examples
   - Add migration guides from C++ to Rust
   - Update troubleshooting guides
   - _Requirements: 5.1, 5.3, 6.2_
 
-- [ ] 3.4 Create tooling documentation
+- [x] 3.4 Create tooling documentation
   - Create `tools/crossval/README.md`
   - Document comparison methodology
   - Provide usage instructions for benchmarking
   - Include interpretation guides for results
   - _Requirements: 3.3, 5.4_
 
-- [ ] 3.5 Update CHANGELOG and release notes
+- [x] 3.5 Update CHANGELOG and release notes
   - Create new CHANGELOG focused on Rust releases
   - Archive C++ changelog in legacy directory
   - Document the restructure as a major milestone
