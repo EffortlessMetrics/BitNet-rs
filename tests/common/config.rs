@@ -1,5 +1,5 @@
-use crate::common::errors::{TestError, TestResult};
-use crate::common::utils::get_optimal_parallel_tests;
+use crate::errors::{TestError, TestResult};
+use crate::utils::get_optimal_parallel_tests;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -29,7 +29,7 @@ impl Default for TestConfig {
     fn default() -> Self {
         Self {
             max_parallel_tests: get_optimal_parallel_tests(),
-            test_timeout: Duration::from_secs(crate::common::DEFAULT_TEST_TIMEOUT_SECS),
+            test_timeout: Duration::from_secs(crate::DEFAULT_TEST_TIMEOUT_SECS),
             cache_dir: PathBuf::from("tests/cache"),
             log_level: "info".to_string(),
             coverage_threshold: 0.9,
@@ -168,7 +168,7 @@ impl Default for ReportingConfig {
 }
 
 /// Available report formats
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ReportFormat {
     Html,
     Json,

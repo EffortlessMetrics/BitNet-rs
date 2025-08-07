@@ -11,7 +11,7 @@ use tracing_subscriber::{
     EnvFilter, Layer,
 };
 
-use crate::common::{
+use crate::{
     config::TestConfig,
     errors::{TestError, TestResult},
 };
@@ -520,7 +520,7 @@ impl PerformanceSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::config::TestConfig;
+    use crate::config::TestConfig;
 
     #[test]
     fn test_parse_log_level() {

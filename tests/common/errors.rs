@@ -23,7 +23,7 @@ pub enum TestError {
     ConfigError { message: String },
 
     #[error("IO error: {0}")]
-    IoError(#[from] std::io::Error),
+    IoError(std::io::Error),
 
     #[error("Serialization error: {0}")]
     SerializationError(#[from] serde_json::Error),
@@ -114,6 +114,26 @@ pub type ComparisonResult<T> = Result<T, ComparisonError>;
 
 /// Result type for implementation operations
 pub type ImplementationResult<T> = Result<T, ImplementationError>;
+
+impl From<std::io::Error> for TestError {
+    fn from(err: std::io::Error) -> Self {
+        Self::IoError(err)
+    }
+}
+
+impl From<tokio::io::Error> for TestError {
+    fn from(err: tokio::io::Error) -> Self {
+        Self::IoError(std::io::Error::new(err.kind(), err.to_string()))
+    }
+}
+
+impl From<tokio::io::Error> for FixtureError {
+    fn from(err: tokio::io::Error) -> Self {
+        Self::CacheError {
+            message: err.to_string(),
+        }
+    }
+}
 
 impl TestError {
     /// Create a setup error with a message
