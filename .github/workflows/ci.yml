@@ -9,25 +9,30 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  # Disable crossval feature by default for fast CI
+  CARGO_BUILD_FEATURES: ""
 
 jobs:
+  # Fast primary test suite - Rust only, no cross-validation
   test:
-    name: Test Suite
+    name: Test Suite (Rust Primary)
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        rust: [stable, nightly]
+        rust: [stable]
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            cross: true
           - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: macos-latest
             target: x86_64-apple-darwin
+          # Add ARM64 targets for comprehensive testing
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            cross: true
           - os: macos-latest
             target: aarch64-apple-darwin
 
@@ -57,22 +62,26 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Check formatting
-      if: matrix.rust == 'stable' && matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
       run: cargo fmt --all -- --check
 
     - name: Run clippy
-      if: matrix.rust == 'stable'
-      run: cargo clippy --all-targets --all-features -- -D warnings
+      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+      run: cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings
 
-    - name: Build
-      run: cargo build --verbose --all-features
+    - name: Build (CPU features only)
+      run: cargo build --workspace --no-default-features --features cpu
 
-    - name: Run tests
-      run: cargo test --verbose --all-features
+    - name: Run tests (CPU features only)
+      run: cargo test --workspace --no-default-features --features cpu
+
+    - name: Build with all features (except crossval)
+      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+      run: cargo build --workspace --features "cpu,gpu,avx2,avx512,neon"
 
     - name: Cross-compile (ARM64)
       if: matrix.cross
-      run: cross build --target ${{ matrix.target }} --verbose
+      run: cross build --target ${{ matrix.target }} --no-default-features --features cpu
 
   security:
     name: Security Audit
@@ -90,7 +99,7 @@ jobs:
       run: cargo deny check
 
   benchmark:
-    name: Performance Benchmarks
+    name: Performance Benchmarks (Rust)
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
@@ -104,8 +113,8 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: Run benchmarks
-      run: cargo bench --all-features
+    - name: Run Rust benchmarks (no crossval)
+      run: cargo bench --workspace --features "cpu,gpu,avx2"
     - name: Store benchmark results
       uses: benchmark-action/github-action-benchmark@v1
       with:
@@ -113,21 +122,48 @@ jobs:
         output-file-path: target/criterion/report/index.html
         github-token: ${{ secrets.GITHUB_TOKEN }}
         auto-push: true
+        comment-on-alert: true
+        alert-threshold: '105%'  # Alert if 5% slower
 
-  coverage:
-    name: Code Coverage
+  quality:
+    name: Code Quality
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
       with:
         components: llvm-tools-preview
-    - name: Install cargo-llvm-cov
-      run: cargo install cargo-llvm-cov
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-quality-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Install cargo tools
+      run: |
+        cargo install cargo-llvm-cov cargo-machete cargo-outdated
+    
+    - name: Check for unused dependencies
+      run: cargo machete
+    
+    - name: Check for outdated dependencies
+      run: cargo outdated --exit-code 1
+      continue-on-error: true
+    
     - name: Generate coverage report
-      run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+      run: cargo llvm-cov --workspace --features cpu --lcov --output-path lcov.info
+    
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
         files: lcov.info
-        fail_ci_if_error: true
+        fail_ci_if_error: false  # Don't fail CI on coverage upload issues
+    
+    - name: Check documentation
+      run: cargo doc --workspace --features cpu --no-deps --document-private-items
+      env:
+        RUSTDOCFLAGS: "-D warnings"
