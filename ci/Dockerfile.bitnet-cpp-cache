@@ -1,0 +1,102 @@
+# Dockerfile for BitNet.cpp Cache
+# This creates a container with pre-built BitNet.cpp libraries for faster CI builds
+
+FROM ubuntu:22.04 as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    wget \
+    curl \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build arguments
+ARG BITNET_CPP_VERSION=main
+ARG BITNET_CPP_SHA=unknown
+
+# Set working directory
+WORKDIR /build
+
+# Clone BitNet.cpp repository
+RUN if [ "$BITNET_CPP_VERSION" = "main" ]; then \
+        git clone https://github.com/microsoft/BitNet.git bitnet_cpp; \
+    else \
+        git clone --branch "$BITNET_CPP_VERSION" --depth 1 https://github.com/microsoft/BitNet.git bitnet_cpp; \
+    fi
+
+# Build BitNet.cpp
+WORKDIR /build/bitnet_cpp
+RUN mkdir -p build && cd build && \
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/opt/bitnet_cpp \
+        -DBUILD_SHARED_LIBS=ON \
+        -DENABLE_CUDA=OFF \
+        -DENABLE_METAL=OFF && \
+    make -j$(nproc) && \
+    make install
+
+# Verify installation
+RUN ls -la /opt/bitnet_cpp/ && \
+    ls -la /opt/bitnet_cpp/lib/ && \
+    ls -la /opt/bitnet_cpp/include/
+
+# Create final minimal image
+FROM ubuntu:22.04
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libstdc++6 \
+    libgcc-s1 \
+    libc6 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy built libraries and headers
+COPY --from=builder /opt/bitnet_cpp /opt/bitnet_cpp
+
+# Create cache metadata
+ARG BITNET_CPP_VERSION=main
+ARG BITNET_CPP_SHA=unknown
+RUN echo "{\
+  \"version\": \"$BITNET_CPP_VERSION\",\
+  \"sha\": \"$BITNET_CPP_SHA\",\
+  \"build_date\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\
+  \"platform\": \"$(uname -m)\",\
+  \"libraries\": $(find /opt/bitnet_cpp/lib -name '*.so*' -o -name '*.a' | jq -R . | jq -s .),\
+  \"headers\": $(find /opt/bitnet_cpp/include -name '*.h' -o -name '*.hpp' | jq -R . | jq -s .)\
+}" > /opt/bitnet_cpp/cache-metadata.json
+
+# Set environment variables
+ENV BITNET_CPP_ROOT=/opt/bitnet_cpp
+ENV BITNET_CPP_INCLUDE_DIR=/opt/bitnet_cpp/include
+ENV BITNET_CPP_LIB_DIR=/opt/bitnet_cpp/lib
+ENV LD_LIBRARY_PATH=/opt/bitnet_cpp/lib:$LD_LIBRARY_PATH
+ENV PKG_CONFIG_PATH=/opt/bitnet_cpp/lib/pkgconfig:$PKG_CONFIG_PATH
+
+# Create pkg-config file
+RUN mkdir -p /opt/bitnet_cpp/lib/pkgconfig && \
+    echo "prefix=/opt/bitnet_cpp\
+exec_prefix=\${prefix}\
+libdir=\${exec_prefix}/lib\
+includedir=\${prefix}/include\
+\
+Name: BitNet.cpp\
+Description: BitNet.cpp libraries for cross-validation\
+Version: $BITNET_CPP_VERSION\
+Libs: -L\${libdir} -lbitnet\
+Cflags: -I\${includedir}" > /opt/bitnet_cpp/lib/pkgconfig/bitnet-cpp.pc
+
+# Verify the cache works
+RUN echo "Cache verification:" && \
+    cat /opt/bitnet_cpp/cache-metadata.json && \
+    echo "Libraries:" && \
+    ls -la /opt/bitnet_cpp/lib/ && \
+    echo "Headers:" && \
+    ls -la /opt/bitnet_cpp/include/
+
+# Default command shows cache info
+CMD ["cat", "/opt/bitnet_cpp/cache-metadata.json"]

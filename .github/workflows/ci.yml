@@ -47,6 +47,13 @@ jobs:
         toolchain: ${{ matrix.rust }}
         targets: ${{ matrix.target }}
 
+    - name: Setup BitNet.cpp Cache (for crossval features)
+      if: contains(github.event.pull_request.labels.*.name, 'crossval') || github.ref == 'refs/heads/main'
+      run: |
+        chmod +x ci/use-bitnet-cpp-cache.sh
+        ./ci/use-bitnet-cpp-cache.sh
+      shell: bash
+
     - name: Install cross-compilation tools
       if: matrix.cross
       run: |

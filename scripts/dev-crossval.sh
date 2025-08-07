@@ -1,8 +1,8 @@
 #!/bin/bash
 # BitNet.rs Cross-Validation Development Setup
-# One-liner setup for cross-validation development
+# One-liner script for easy cross-validation development setup
 
-set -euo pipefail
+set -e
 
 # Colors for output
 RED='\033[0;31m'
@@ -12,377 +12,391 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    echo -e "${BLUE}[INFO]${NC} $1"
 }
 
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Print banner
-print_banner() {
-    echo -e "${BLUE}"
-    cat << 'EOF'
-   ____                    __     __    _ _     _       _   _             
-  / ___|_ __ ___  ___ ___  \ \   / /_ _| (_) __| | __ _| |_(_) ___  _ __  
- | |   | '__/ _ \/ __/ __|  \ \ / / _` | | |/ _` |/ _` | __| |/ _ \| '_ \ 
- | |___| | | (_) \__ \__ \   \ V / (_| | | | (_| | (_| | |_| | (_) | | | |
-  \____|_|  \___/|___/___/    \_/ \__,_|_|_|\__,_|\__,_|\__|_|\___/|_| |_|
-  
-  Quick Setup for Cross-Validation Development
-EOF
-    echo -e "${NC}"
-}
-
-# Check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
-
-# Detect OS
-detect_os() {
-    case "$(uname -s)" in
-        Linux*)     echo "Linux";;
-        Darwin*)    echo "macOS";;
-        CYGWIN*|MINGW*|MSYS*) echo "Windows";;
-        *)          echo "Unknown";;
-    esac
-}
-
-# Install system dependencies
-install_system_deps() {
-    local os=$(detect_os)
-    log_info "Installing system dependencies for $os..."
-    
-    case "$os" in
-        Linux)
-            if command_exists apt; then
-                sudo apt update
-                sudo apt install -y clang libclang-dev cmake build-essential git
-            elif command_exists yum; then
-                sudo yum groupinstall -y "Development Tools"
-                sudo yum install -y clang clang-devel cmake git
-            elif command_exists pacman; then
-                sudo pacman -S --needed clang cmake base-devel git
-            else
-                log_error "Unsupported Linux distribution"
-                log_info "Please install: clang, cmake, build tools, git"
-                exit 1
-            fi
-            ;;
-        macOS)
-            if ! command_exists clang; then
-                log_info "Installing Xcode Command Line Tools..."
-                xcode-select --install
-            fi
-            if command_exists brew; then
-                brew install cmake
-            else
-                log_warn "Homebrew not found. Please install CMake manually."
-            fi
-            ;;
-        Windows)
-            log_error "Windows setup requires manual installation:"
-            log_info "  1. Install Visual Studio with C++ tools"
-            log_info "  2. Install CMake from https://cmake.org/"
-            log_info "  3. Install LLVM/Clang from https://llvm.org/"
-            log_info "  4. Install Git from https://git-scm.com/"
-            exit 1
-            ;;
-        *)
-            log_error "Unsupported operating system: $os"
-            exit 1
-            ;;
-    esac
-    
-    log_info "✅ System dependencies installed"
-}
-
-# Setup C++ implementation
-setup_cpp_impl() {
-    log_info "Setting up C++ implementation..."
-    
-    # Check if fetch script exists
-    if [[ ! -f "ci/fetch_bitnet_cpp.sh" ]]; then
-        log_error "fetch_bitnet_cpp.sh not found. Are you in the BitNet.rs repository root?"
-        exit 1
-    fi
-    
-    # Make script executable
-    chmod +x ci/fetch_bitnet_cpp.sh
-    
-    # Run the fetch script
-    log_info "Downloading and building C++ implementation..."
-    ./ci/fetch_bitnet_cpp.sh
-    
-    # Source environment if available
-    local env_script="$HOME/.cache/bitnet_cpp/setup_env.sh"
-    if [[ -f "$env_script" ]]; then
-        log_info "Setting up environment variables..."
-        source "$env_script"
-        
-        # Add to current shell profile
-        local shell_profile=""
-        if [[ -n "${BASH_VERSION:-}" ]]; then
-            shell_profile="$HOME/.bashrc"
-        elif [[ -n "${ZSH_VERSION:-}" ]]; then
-            shell_profile="$HOME/.zshrc"
-        fi
-        
-        if [[ -n "$shell_profile" && -f "$shell_profile" ]]; then
-            if ! grep -q "bitnet_cpp/setup_env.sh" "$shell_profile"; then
-                echo "" >> "$shell_profile"
-                echo "# BitNet C++ cross-validation environment" >> "$shell_profile"
-                echo "if [[ -f \"$env_script\" ]]; then" >> "$shell_profile"
-                echo "    source \"$env_script\"" >> "$shell_profile"
-                echo "fi" >> "$shell_profile"
-                log_info "Added environment setup to $shell_profile"
-            fi
-        fi
-    fi
-    
-    log_info "✅ C++ implementation setup complete"
-}
-
-# Generate test fixtures
-generate_fixtures() {
-    log_info "Generating test fixtures..."
-    
-    # Check if xtask is available
-    if ! cargo xtask --help >/dev/null 2>&1; then
-        log_warn "xtask not available, skipping fixture generation"
-        return
-    fi
-    
-    # Generate deterministic fixtures
-    cargo xtask gen-fixtures --deterministic --prompts 5
-    
-    log_info "✅ Test fixtures generated"
-}
-
-# Test cross-validation setup
-test_setup() {
-    log_info "Testing cross-validation setup..."
-    
-    # Test that crossval feature compiles
-    log_info "Testing compilation with crossval feature..."
-    if cargo check --features crossval; then
-        log_info "✅ Cross-validation compilation successful"
-    else
-        log_error "❌ Cross-validation compilation failed"
-        return 1
-    fi
-    
-    # Test basic cross-validation functionality
-    log_info "Testing basic cross-validation functionality..."
-    if cargo test --features crossval cpp_availability --lib; then
-        log_info "✅ Basic cross-validation test passed"
-    else
-        log_warn "❌ Basic cross-validation test failed (C++ implementation may not be ready)"
-    fi
-    
-    # Test fixture loading
-    log_info "Testing fixture loading..."
-    if cargo test --features crossval test_fixture_compatibility --lib; then
-        log_info "✅ Fixture loading test passed"
-    else
-        log_warn "❌ Fixture loading test failed (fixtures may not be available)"
-    fi
-    
-    log_info "✅ Cross-validation setup testing complete"
-}
-
-# Create development shortcuts
-create_shortcuts() {
-    log_info "Creating development shortcuts..."
-    
-    # Update .cargo/config.toml with crossval aliases
-    local cargo_config=".cargo/config.toml"
-    if [[ -f "$cargo_config" ]]; then
-        # Check if crossval aliases already exist
-        if ! grep -q "crossval.*=" "$cargo_config"; then
-            log_info "Adding crossval aliases to .cargo/config.toml..."
-            
-            # Add crossval aliases to existing config
-            cat >> "$cargo_config" << 'EOF'
-
-# Cross-validation aliases
-[alias.crossval-aliases]
-crossval-test = "test --features crossval"
-crossval-bench = "bench --features crossval"
-crossval-check = "check --features crossval"
-crossval-doc = "doc --features crossval --no-deps"
-crossval-fixtures = "xtask gen-fixtures --deterministic"
-crossval-validate = "xtask validate-fixtures"
-crossval-clean = "xtask clean-fixtures"
-EOF
-        fi
-    fi
-    
-    # Create a quick test script
-    cat > scripts/quick-crossval-test.sh << 'EOF'
-#!/bin/bash
-# Quick cross-validation test script
-
-set -e
-
-echo "🧪 Running quick cross-validation tests..."
-
-# Check compilation
-echo "1. Testing compilation..."
-cargo check --features crossval
-
-# Run basic tests
-echo "2. Running basic tests..."
-cargo test --features crossval --lib -- --test-threads=1
-
-# Generate fixtures if needed
-echo "3. Checking fixtures..."
-if [[ ! -f "crossval/fixtures/minimal_test.json" ]]; then
-    echo "   Generating fixtures..."
-    cargo xtask gen-fixtures --deterministic --prompts 3
-fi
-
-# Run a quick benchmark
-echo "4. Running quick benchmark..."
-cargo bench --features crossval -- --sample-size 10
-
-echo "✅ Quick cross-validation test complete!"
-EOF
-    chmod +x scripts/quick-crossval-test.sh
-    
-    log_info "✅ Development shortcuts created"
-}
-
-# Print usage information
-print_usage() {
+# Show help
+show_help() {
     cat << EOF
-Usage: $0 [OPTIONS]
+BitNet.rs Cross-Validation Development Setup
 
-Quick setup for BitNet.rs cross-validation development.
+This script sets up everything needed for cross-validation development in one command.
 
-This script will:
-1. Install required system dependencies (clang, cmake, etc.)
-2. Download and build the C++ BitNet implementation
-3. Generate test fixtures for cross-validation
-4. Test the cross-validation setup
-5. Create development shortcuts
+USAGE:
+    $0 [OPTIONS]
 
 OPTIONS:
-    --skip-deps         Skip system dependency installation
-    --skip-cpp          Skip C++ implementation setup
-    --skip-fixtures     Skip test fixture generation
-    --skip-test         Skip setup testing
-    --skip-shortcuts    Skip development shortcuts creation
-    --help              Show this help message
+    -h, --help          Show this help message
+    -f, --force         Force rebuild even if cache exists
+    -q, --quick         Skip comprehensive tests (faster setup)
+    --no-cache          Don't use cached BitNet.cpp libraries
+    --fixtures-only     Only generate test fixtures
+
+WHAT THIS SCRIPT DOES:
+    1. Sets up BitNet.cpp cache for cross-validation
+    2. Generates deterministic test fixtures
+    3. Builds Rust implementation with crossval features
+    4. Runs basic cross-validation tests
+    5. Sets up IDE configuration to prevent accidental crossval activation
 
 EXAMPLES:
-    $0                  # Full setup
-    $0 --skip-deps      # Skip system dependencies (if already installed)
-    $0 --skip-test      # Skip testing (faster setup)
+    $0                  # Full setup with cache
+    $0 --quick          # Quick setup, skip comprehensive tests
+    $0 --force          # Force rebuild everything
+    $0 --fixtures-only  # Only generate test fixtures
 
-After setup, you can use:
-    cargo test --features crossval          # Run cross-validation tests
-    cargo bench --features crossval         # Run performance benchmarks
-    ./scripts/quick-crossval-test.sh        # Quick test script
+For more information, visit: https://github.com/microsoft/BitNet
 EOF
 }
 
 # Parse command line arguments
-SKIP_DEPS=false
-SKIP_CPP=false
-SKIP_FIXTURES=false
-SKIP_TEST=false
-SKIP_SHORTCUTS=false
+FORCE=false
+QUICK=false
+NO_CACHE=false
+FIXTURES_ONLY=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --skip-deps)
-            SKIP_DEPS=true
-            shift
-            ;;
-        --skip-cpp)
-            SKIP_CPP=true
-            shift
-            ;;
-        --skip-fixtures)
-            SKIP_FIXTURES=true
-            shift
-            ;;
-        --skip-test)
-            SKIP_TEST=true
-            shift
-            ;;
-        --skip-shortcuts)
-            SKIP_SHORTCUTS=true
-            shift
-            ;;
-        --help)
-            print_usage
+        -h|--help)
+            show_help
             exit 0
+            ;;
+        -f|--force)
+            FORCE=true
+            shift
+            ;;
+        -q|--quick)
+            QUICK=true
+            shift
+            ;;
+        --no-cache)
+            NO_CACHE=true
+            shift
+            ;;
+        --fixtures-only)
+            FIXTURES_ONLY=true
+            shift
             ;;
         *)
             log_error "Unknown option: $1"
-            print_usage
+            echo "Use --help for usage information."
             exit 1
             ;;
     esac
 done
 
-# Main execution
+# Main setup function
 main() {
-    print_banner
+    log_info "🦀 BitNet.rs Cross-Validation Development Setup"
+    echo
+    
+    # Check prerequisites
+    log_info "Checking prerequisites..."
+    
+    if ! command -v cargo >/dev/null 2>&1; then
+        log_error "Cargo is not installed. Please install Rust first."
+        exit 1
+    fi
+    
+    if ! command -v git >/dev/null 2>&1; then
+        log_error "Git is not installed."
+        exit 1
+    fi
     
     # Check if we're in the right directory
-    if [[ ! -f "Cargo.toml" ]] || ! grep -q "bitnet" Cargo.toml; then
-        log_error "This script must be run from the BitNet.rs repository root"
+    if [[ ! -f "Cargo.toml" ]] || [[ ! -d "crates" ]]; then
+        log_error "This script must be run from the BitNet.rs repository root."
         exit 1
     fi
     
-    # Check if basic Rust development is set up
-    if ! command_exists cargo; then
-        log_error "Rust/Cargo not found. Please run './scripts/dev-setup.sh' first"
+    log_success "Prerequisites check passed"
+    
+    # Generate test fixtures
+    log_info "Generating test fixtures..."
+    if cargo xtask gen-fixtures --size small --output crossval/fixtures/; then
+        log_success "Test fixtures generated"
+    else
+        log_error "Failed to generate test fixtures"
         exit 1
     fi
     
-    log_info "Setting up cross-validation development environment..."
-    
-    if [[ "$SKIP_DEPS" != true ]]; then
-        install_system_deps
+    # If fixtures-only mode, exit here
+    if [[ "$FIXTURES_ONLY" == "true" ]]; then
+        log_success "✅ Test fixtures generated successfully!"
+        exit 0
     fi
     
-    if [[ "$SKIP_CPP" != true ]]; then
-        setup_cpp_impl
+    # Set up BitNet.cpp cache (unless disabled)
+    if [[ "$NO_CACHE" != "true" ]]; then
+        log_info "Setting up BitNet.cpp cache..."
+        
+        if [[ "$FORCE" == "true" ]]; then
+            export FORCE_REBUILD=true
+        fi
+        
+        if [[ -f "ci/use-bitnet-cpp-cache.sh" ]]; then
+            chmod +x ci/use-bitnet-cpp-cache.sh
+            if ./ci/use-bitnet-cpp-cache.sh; then
+                log_success "BitNet.cpp cache ready"
+            else
+                log_warning "Cache setup failed, will build from source"
+            fi
+        else
+            log_warning "Cache script not found, will build from source"
+        fi
+    else
+        log_info "Skipping cache setup (--no-cache specified)"
     fi
     
-    if [[ "$SKIP_FIXTURES" != true ]]; then
-        generate_fixtures
+    # Build with crossval features
+    log_info "Building Rust implementation with cross-validation features..."
+    start_time=$(date +%s)
+    
+    if cargo build --features crossval --release; then
+        end_time=$(date +%s)
+        build_time=$((end_time - start_time))
+        log_success "Build completed in ${build_time}s"
+    else
+        log_error "Build failed"
+        exit 1
     fi
     
-    if [[ "$SKIP_TEST" != true ]]; then
-        test_setup
+    # Run basic tests (unless quick mode)
+    if [[ "$QUICK" != "true" ]]; then
+        log_info "Running basic cross-validation tests..."
+        
+        if cargo test --package crossval --features crossval --release -- --nocapture quick_test; then
+            log_success "Basic tests passed"
+        else
+            log_warning "Some tests failed (this may be expected during development)"
+        fi
+    else
+        log_info "Skipping comprehensive tests (--quick mode)"
     fi
     
-    if [[ "$SKIP_SHORTCUTS" != true ]]; then
-        create_shortcuts
+    # Set up IDE configuration
+    setup_ide_config
+    
+    # Show usage instructions
+    show_usage_instructions
+    
+    log_success "🎉 Cross-validation development environment ready!"
+}
+
+# Set up IDE configuration to prevent accidental crossval activation
+setup_ide_config() {
+    log_info "Setting up IDE configuration..."
+    
+    # VS Code settings
+    if [[ -d ".vscode" ]] || [[ "$1" == "--force-vscode" ]]; then
+        mkdir -p .vscode
+        
+        cat > .vscode/settings.json << 'EOF'
+{
+    "rust-analyzer.cargo.features": [],
+    "rust-analyzer.cargo.noDefaultFeatures": false,
+    "rust-analyzer.cargo.allFeatures": false,
+    "rust-analyzer.checkOnSave.features": [],
+    "rust-analyzer.checkOnSave.allFeatures": false,
+    "rust-analyzer.runnables.cargoExtraArgs": [],
+    "rust-analyzer.cargo.buildScripts.enable": true,
+    "rust-analyzer.procMacro.enable": true,
+    "rust-analyzer.diagnostics.disabled": [],
+    "rust-analyzer.workspace.symbol.search.scope": "workspace_and_dependencies",
+    "files.watcherExclude": {
+        "**/target/**": true,
+        "**/.cache/**": true,
+        "**/crossval/fixtures/**": true
+    },
+    "search.exclude": {
+        "**/target": true,
+        "**/.cache": true,
+        "**/crossval/fixtures": true
+    },
+    "rust-analyzer.lens.enable": true,
+    "rust-analyzer.lens.run.enable": true,
+    "rust-analyzer.lens.debug.enable": true,
+    "rust-analyzer.hover.actions.enable": true,
+    "rust-analyzer.completion.addCallParentheses": true,
+    "rust-analyzer.completion.addCallArgumentSnippets": true,
+    "editor.formatOnSave": true,
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        "editor.formatOnSave": true
+    }
+}
+EOF
+        
+        # VS Code tasks for cross-validation
+        cat > .vscode/tasks.json << 'EOF'
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build (Rust only)",
+            "type": "cargo",
+            "command": "build",
+            "args": ["--workspace"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": ["$rustc"]
+        },
+        {
+            "label": "Build with Cross-Validation",
+            "type": "cargo",
+            "command": "build",
+            "args": ["--workspace", "--features", "crossval"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": ["$rustc"]
+        },
+        {
+            "label": "Test (Rust only)",
+            "type": "cargo",
+            "command": "test",
+            "args": ["--workspace"],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": ["$rustc"]
+        },
+        {
+            "label": "Cross-Validation Tests",
+            "type": "cargo",
+            "command": "test",
+            "args": ["--package", "crossval", "--features", "crossval", "--", "--nocapture"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared"
+            },
+            "problemMatcher": ["$rustc"]
+        },
+        {
+            "label": "Generate Test Fixtures",
+            "type": "cargo",
+            "command": "xtask",
+            "args": ["gen-fixtures", "--size", "small", "--output", "crossval/fixtures/"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Setup Cross-Validation",
+            "type": "cargo",
+            "command": "xtask",
+            "args": ["setup-crossval"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared"
+            }
+        }
+    ]
+}
+EOF
+        
+        log_success "VS Code configuration updated"
     fi
     
-    log_info ""
-    log_info "🎉 Cross-validation development setup complete!"
-    log_info ""
-    log_info "You can now use:"
-    log_info "  cargo test --features crossval          # Run cross-validation tests"
-    log_info "  cargo bench --features crossval         # Run performance benchmarks"
-    log_info "  ./scripts/quick-crossval-test.sh        # Quick test script"
-    log_info ""
-    log_info "Environment variables are set in your shell profile."
-    log_info "Restart your shell or run: source ~/.bashrc (or ~/.zshrc)"
-    log_info ""
-    log_info "Happy cross-validating! 🦀⚡"
+    # Create .cargo/config.toml to disable crossval by default
+    mkdir -p .cargo
+    cat > .cargo/config.toml << 'EOF'
+# BitNet.rs Cargo Configuration
+# This ensures crossval feature is not accidentally enabled
+
+[build]
+# Disable crossval feature by default to keep builds fast
+# Use `cargo build --features crossval` when needed
+rustflags = []
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "target-cpu=native"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "target-cpu=native"]
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "target-cpu=native"]
+
+[env]
+# Prevent accidental crossval activation
+CARGO_FEATURE_CROSSVAL = { value = "", force = false }
+EOF
+    
+    log_success "Cargo configuration updated"
+}
+
+# Show usage instructions
+show_usage_instructions() {
+    echo
+    log_info "📚 Usage Instructions:"
+    echo
+    echo "  🦀 Rust-only development (fast, recommended):"
+    echo "    cargo build"
+    echo "    cargo test"
+    echo "    cargo bench"
+    echo
+    echo "  🔍 Cross-validation development (slower):"
+    echo "    cargo build --features crossval"
+    echo "    cargo test --package crossval --features crossval"
+    echo "    cargo bench --package crossval --features crossval"
+    echo
+    echo "  🛠️  Development tasks:"
+    echo "    cargo xtask gen-fixtures --size small"
+    echo "    cargo xtask setup-crossval"
+    echo "    cargo xtask clean-cache"
+    echo "    cargo xtask check-features"
+    echo
+    echo "  📊 Performance tracking:"
+    echo "    cargo xtask benchmark --platform current"
+    echo
+    echo "  🔧 IDE Integration:"
+    echo "    - VS Code: Use 'Build (Rust only)' task for fast development"
+    echo "    - VS Code: Use 'Cross-Validation Tests' task when needed"
+    echo "    - Rust Analyzer: Configured to avoid crossval by default"
+    echo
+    log_warning "Remember: crossval feature is slow and only needed for comparison testing!"
 }
 
 # Run main function

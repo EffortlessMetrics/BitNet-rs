@@ -1,119 +1,238 @@
-# BitNet C++ Patches
+# BitNet.rs Patch Policy
 
-This directory contains minimal patches applied to the external BitNet C++ implementation for compatibility with the Rust cross-validation framework.
+This directory contains minimal patches applied to external dependencies, primarily BitNet.cpp for cross-validation purposes.
 
-## Patch Policy
+## 🎯 Policy Overview
 
-**Our strong preference is to avoid patches entirely.** Patches create maintenance burden and can break when the upstream C++ implementation is updated.
+**Our patch policy prioritizes upstream fixes over local patches:**
 
-### When Patches Are Acceptable
+1. **Prefer upstream fixes**: Always try to fix issues upstream first
+2. **Minimal patches**: Keep patches as small and focused as possible  
+3. **Required metadata**: All patches must include upstream issue links
+4. **Regular review**: Patches are reviewed weekly for cleanup opportunities
+5. **Temporary nature**: Most patches should be temporary until upstream fixes
 
-Patches should only be used as a **last resort** when:
+## 📋 Patch Requirements
 
-1. **FFI Compatibility**: The C++ code needs minimal changes to expose a C-compatible API
-2. **Build System Integration**: Minor build script modifications for our specific use case
-3. **Critical Bug Fixes**: Upstream bugs that block cross-validation and haven't been fixed upstream
+Every patch file must include the following metadata in its header:
 
-### When Patches Are NOT Acceptable
+```patch
+# Upstream-Issue: https://github.com/microsoft/BitNet/issues/123
+# Reason: Fix compilation error on ARM64 platforms
+# Status: temporary
+# Created: 2024-01-15
+# Review-By: 2024-02-15
+# Author: BitNet.rs Team <team@bitnet.rs>
 
-- **Feature additions**: Contribute features upstream instead
-- **Performance optimizations**: These belong in the upstream project
-- **API changes**: Work with upstream to design better APIs
-- **Coding style**: Accept upstream coding conventions
-
-## Patch Requirements
-
-Every patch in this directory MUST:
-
-1. **Have an upstream issue**: Link to a GitHub issue in the upstream BitNet.cpp repository
-2. **Be minimal**: Change only what's absolutely necessary
-3. **Be documented**: Include clear rationale and expected upstream resolution
-4. **Be temporary**: Have a plan for removal when upstream is fixed
-
-## Patch Format
-
-Patches should be in standard unified diff format with descriptive names:
-
-```
-001-expose-c-api.patch          # Exposes C API for FFI
-002-fix-memory-leak-issue-123.patch  # References upstream issue #123
+--- a/src/example.cpp
++++ b/src/example.cpp
+@@ -10,7 +10,7 @@
+ // Your patch content here
 ```
 
-## Patch Application
+### Required Metadata Fields
 
-Patches are automatically applied by `ci/apply_patches.sh`:
+- **Upstream-Issue**: Link to the upstream GitHub issue tracking this problem
+- **Reason**: Brief explanation of why this patch is needed
+- **Status**: One of `temporary`, `permanent`, `under-review`
+- **Created**: Date when the patch was created (YYYY-MM-DD)
+- **Review-By**: Date when the patch should be reviewed (YYYY-MM-DD)
+- **Author**: Who created the patch
+
+### Status Values
+
+- **temporary**: Patch is temporary until upstream fix is available
+- **permanent**: Patch addresses a design difference that won't be upstreamed
+- **under-review**: Patch is being reviewed for upstream submission
+
+## 🛠️ Creating Patches
+
+### 1. Check if Upstream Fix Exists
+
+Before creating a patch, always check:
 
 ```bash
-# Apply all patches in order
-./ci/apply_patches.sh
+# Search upstream issues
+curl -s "https://api.github.com/repos/microsoft/BitNet/issues?q=your-search-terms"
 
-# Apply specific patch
-./ci/apply_patches.sh patches/001-expose-c-api.patch
+# Check if fix is already in main branch
+git log --oneline --grep="your-search-terms"
 ```
 
-## CI Enforcement
+### 2. Create Upstream Issue
 
-Our CI system enforces the patch policy:
+If no upstream issue exists, create one:
 
-- **Fails if patches exist without upstream issues**: Every patch must reference an upstream issue
-- **Warns about patch age**: Old patches (>90 days) trigger warnings
-- **Tracks patch lifecycle**: Automated reminders to check if upstream fixes are available
+1. Go to https://github.com/microsoft/BitNet/issues
+2. Create a detailed issue describing the problem
+3. Include reproduction steps and proposed solution
+4. Wait for upstream response before creating local patch
 
-## Creating a New Patch
+### 3. Create Minimal Patch
 
-If you absolutely must create a patch:
+```bash
+# Make your changes in a clean working directory
+cd /path/to/bitnet_cpp
 
-1. **Create upstream issue first**: File an issue in the BitNet.cpp repository
-2. **Make minimal changes**: Only change what's necessary for your specific need
-3. **Generate the patch**:
-   ```bash
-   cd ~/.cache/bitnet_cpp
-   git diff > ../../path/to/bitnet/patches/NNN-description-issue-XXX.patch
-   ```
-4. **Document the patch**: Add entry to this README with issue link and rationale
-5. **Set up tracking**: Add the patch to our automated tracking system
+# Create the patch
+git diff > ../patches/001-fix-arm64-compilation.patch
 
-## Current Patches
+# Add required metadata to the patch header
+cat > ../patches/001-fix-arm64-compilation.patch << 'EOF'
+# Upstream-Issue: https://github.com/microsoft/BitNet/issues/123
+# Reason: Fix compilation error on ARM64 platforms
+# Status: temporary
+# Created: 2024-01-15
+# Review-By: 2024-02-15
+# Author: BitNet.rs Team <team@bitnet.rs>
 
-*This directory is intentionally empty.* 
+EOF
 
-If patches are added, they will be documented here with:
-- Patch filename
-- Upstream issue link
-- Rationale for the patch
-- Expected resolution timeline
-- Maintenance contact
+# Append the actual diff
+git diff >> ../patches/001-fix-arm64-compilation.patch
+```
 
-## Patch Lifecycle
+### 4. Test the Patch
 
-1. **Creation**: Patch created with upstream issue reference
-2. **Review**: Patch reviewed for minimality and necessity
-3. **Application**: Patch automatically applied during C++ build
-4. **Tracking**: Automated monitoring of upstream issue status
-5. **Removal**: Patch removed when upstream fix is available
+```bash
+# Test patch application
+cd /path/to/clean/bitnet_cpp
+patch -p1 --dry-run < ../patches/001-fix-arm64-compilation.patch
 
-## Maintenance
+# Test that it fixes the issue
+make test
+```
 
-Patches require ongoing maintenance:
+### 5. Submit for Review
 
-- **Weekly**: Check upstream issue status for resolution
-- **Monthly**: Verify patches still apply cleanly to latest upstream
-- **Quarterly**: Review patch necessity and explore alternatives
+Create a PR with your patch and include:
 
-## Alternative Approaches
+- Link to upstream issue
+- Explanation of why the patch is needed
+- Test results showing the fix works
+- Timeline for upstream resolution
 
-Before creating a patch, consider these alternatives:
+## 🔄 Patch Lifecycle
 
-1. **Wrapper functions**: Create C wrapper functions in a separate file
-2. **Build-time configuration**: Use preprocessor flags to enable needed functionality
-3. **Runtime adaptation**: Adapt to the existing C++ API in Rust code
-4. **Upstream contribution**: Contribute the needed changes to upstream first
+### Weekly Review Process
 
-## Contact
+Every Monday, our automated system:
 
-For questions about patch policy or specific patches:
-- Create an issue in this repository
-- Tag the cross-validation team
-- Reference this document in discussions
+1. **Reviews patch age**: Identifies patches older than 30 days
+2. **Checks upstream status**: Verifies if upstream fixes are available
+3. **Creates review issues**: Generates tasks for patch cleanup
+4. **Updates tracking**: Maintains patch lifecycle documentation
 
-Remember: **The best patch is no patch.** Always explore alternatives first.
+### Patch Cleanup
+
+Patches should be removed when:
+
+- Upstream fix is available and tested
+- Issue is resolved in a different way
+- Patch is no longer needed
+- Upstream explicitly rejects the change
+
+### Review Schedule
+
+- **Daily**: Automated policy compliance checks
+- **Weekly**: Patch lifecycle review and cleanup
+- **Monthly**: Comprehensive patch audit and upstream sync
+
+## 🚨 Policy Enforcement
+
+### Automated Checks
+
+Our CI system automatically:
+
+- ✅ Validates patch format and metadata
+- ✅ Checks upstream issue links are valid
+- ✅ Ensures all required fields are present
+- ✅ Tracks patch age and review dates
+- ❌ Fails builds if patches violate policy
+
+### Manual Review
+
+All patches require:
+
+- Code review from at least one maintainer
+- Verification that upstream issue exists
+- Confirmation that minimal approach is used
+- Timeline for upstream resolution
+
+## 📊 Current Status
+
+<!-- This section is automatically updated by CI -->
+
+**Last Updated**: Auto-updated by CI
+**Total Patches**: 0
+**Policy Compliance**: ✅ Perfect
+
+## 🎯 Goals
+
+Our patch policy aims to:
+
+1. **Minimize maintenance burden**: Fewer patches = less maintenance
+2. **Improve upstream relationship**: Contribute fixes back to the community
+3. **Ensure reproducibility**: Clear tracking of all modifications
+4. **Maintain quality**: High standards for patch creation and review
+
+## 📚 Examples
+
+### Good Patch Example
+
+```patch
+# Upstream-Issue: https://github.com/microsoft/BitNet/issues/456
+# Reason: Fix memory leak in tensor allocation
+# Status: temporary
+# Created: 2024-01-15
+# Review-By: 2024-02-15
+# Author: BitNet.rs Team <team@bitnet.rs>
+
+--- a/src/tensor.cpp
++++ b/src/tensor.cpp
+@@ -45,6 +45,7 @@ Tensor::~Tensor() {
+     if (data_) {
+         free(data_);
++        data_ = nullptr;
+     }
+ }
+```
+
+### Bad Patch Example
+
+```patch
+# This patch is missing required metadata
+# and makes unnecessary changes
+
+--- a/src/tensor.cpp
++++ b/src/tensor.cpp
+@@ -1,10 +1,15 @@
++// BitNet.rs modifications
++// TODO: Fix this properly
++
+ #include "tensor.h"
+ 
+ // Large, unfocused changes that could be upstreamed
+```
+
+## 🤝 Contributing
+
+When contributing patches:
+
+1. **Follow the policy**: Ensure all requirements are met
+2. **Engage upstream**: Create issues and propose fixes upstream first
+3. **Keep it minimal**: Make the smallest change that fixes the issue
+4. **Document thoroughly**: Include clear metadata and reasoning
+5. **Test extensively**: Verify the patch works and doesn't break anything
+
+## 📞 Support
+
+For questions about patch policy:
+
+- **GitHub Issues**: https://github.com/microsoft/BitNet/issues
+- **Discussions**: https://github.com/microsoft/BitNet/discussions
+- **Documentation**: See `/docs/contributing.md`
+
+---
+
+**Remember**: The best patch is no patch. Always prefer upstream fixes!
