@@ -148,26 +148,26 @@ This document outlines the detailed implementation tasks for restructuring the B
 
 ### Phase 5: CI/CD and Workflow Updates
 
-- [ ] 5.1 Update primary CI workflow
+- [x] 5.1 Update primary CI workflow
   - Modify `.github/workflows/` to focus on Rust
   - Ensure fast, Rust-focused CI pipeline
   - Add comprehensive Rust testing and quality checks
   - _Requirements: 1.2, 7.1, 7.3_
 
-- [ ] 5.2 Create nightly cross-validation workflow
+- [x] 5.2 Create nightly cross-validation workflow
   - Add nightly cron job for upstream API change detection
   - Create optional `nightly-crossval` feature for long-running benchmarks
   - Set up performance baseline tracking and drift detection
   - Configure GitHub step outputs for tag/SHA visibility
   - _Requirements: 2.4, 7.3_
 
-- [ ] 5.3 Update release workflows
+- [x] 5.3 Update release workflows
   - Focus release process on Rust crates and binaries
   - Add automated crate publishing to crates.io
   - Create GitHub releases for Rust binaries
   - _Requirements: 8.2, 8.3_
 
-- [ ] 5.4 Set up development environment scripts
+- [x] 5.4 Set up development environment scripts
   - Create `scripts/dev-setup.sh` for Rust development
   - Add `scripts/dev-crossval.sh` one-liner for cross-validation setup
   - Include environment variable configuration and fetch automation

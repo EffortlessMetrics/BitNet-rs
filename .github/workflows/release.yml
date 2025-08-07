@@ -69,18 +69,23 @@ jobs:
 
       - name: Run comprehensive quality checks
         run: |
-          chmod +x scripts/quality-check.sh
-          ./scripts/quality-check.sh
+          echo "🔍 Running Rust quality checks..."
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets --features cpu -- -D warnings
+          cargo test --workspace --features cpu
 
       - name: Run security audit
         run: |
-          chmod +x scripts/security-audit.sh
-          ./scripts/security-audit.sh
+          echo "🔒 Running security audit..."
+          cargo audit
+          cargo deny check
 
       - name: Validate documentation
         run: |
-          chmod +x scripts/docs-validation.sh
-          ./scripts/docs-validation.sh
+          echo "📚 Validating documentation..."
+          cargo doc --workspace --features cpu --no-deps --document-private-items
+          # Check that README examples compile
+          cargo test --doc --features cpu
 
       - name: Check version consistency
         run: |
@@ -370,7 +375,9 @@ jobs:
           if [[ -f "CHANGELOG.md" ]]; then
             sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | head -n -1 >> release-notes.md
           else
-            echo "Release ${VERSION}" >> release-notes.md
+            echo "**BitNet.rs ${VERSION}** - Production-ready Rust implementation of BitNet 1-bit LLM inference." >> release-notes.md
+            echo "" >> release-notes.md
+            echo "This release focuses on the Rust implementation as the primary, actively maintained version." >> release-notes.md
           fi
           
           echo "" >> release-notes.md
