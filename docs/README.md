@@ -9,9 +9,14 @@ Welcome to the comprehensive documentation for BitNet.rs, the production-ready R
 - **[API Reference](api-reference.md)** - Complete API documentation with examples
 - **[Migration Guide](migration-guide.md)** - Migrate from Python/C++ BitNet implementations
 
-### Guides
+### User Guides
+- **[Migration Guide](migration-guide.md)** - Migrate from Python/C++ BitNet implementations
 - **[Performance Tuning](performance-tuning.md)** - Optimize performance for your hardware and use case
 - **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
+
+### Developer Guides
+- **[Architecture Overview](architecture.md)** - High-level architecture of the project
+- **[API Reference](api-reference.md)** - Complete API documentation with examples
 
 ### Examples
 - **[Basic Examples](../examples/basic/)** - Simple usage patterns
@@ -30,38 +35,6 @@ BitNet.rs is built around several key concepts:
 - **Streaming**: Real-time text generation with async/await support
 - **Cross-Validation**: Optional compatibility testing with legacy C++ implementation
 - **Device Abstraction**: Unified interface for CPU, CUDA, and Metal backends
-
-### Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Applications  │    │   Bindings      │    │   Interfaces    │
-│                 │    │                 │    │                 │
-│ • CLI Tool      │    │ • Python (PyO3) │    │ • C API         │
-│ • Web Services  │    │ • JavaScript    │    │ • WebAssembly   │
-│ • Desktop Apps  │    │ • Rust Native   │    │ • REST API      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-┌─────────────────────────────────┼─────────────────────────────────┐
-│                        BitNet Rust Core                           │
-├─────────────────────────────────┼─────────────────────────────────┤
-│ ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐   │
-│ │ Inference       │  │ Models          │  │ Quantization    │   │
-│ │ • CPU Engine    │  │ • BitNet        │  │ • I2S           │   │
-│ │ • GPU Engine    │  │ • Transformers  │  │ • TL1/TL2       │   │
-│ │ • Streaming     │  │ • Model Loading │  │ • Dynamic       │   │
-│ └─────────────────┘  └─────────────────┘  └─────────────────┘   │
-├─────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐   │
-│ │ Kernels         │  │ Memory          │  │ Device          │   │
-│ │ • SIMD (CPU)    │  │ • Allocators    │  │ • CPU           │   │
-│ │ • CUDA (GPU)    │  │ • KV Cache      │  │ • CUDA          │   │
-│ │ • Metal (macOS) │  │ • Memory Pool   │  │ • Metal         │   │
-│ └─────────────────┘  └─────────────────┘  └─────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-```
 
 ## Feature Matrix
 
@@ -211,24 +184,25 @@ char* output = bitnet_inference(model, "Hello, world!", 100, 0.7f);
 
 ## Roadmap
 
-### Current Release (v0.1.0)
-- ✅ Core inference engine
-- ✅ CPU/GPU optimization
-- ✅ Quantization support
-- ✅ CLI tool
-- ✅ C API
+The BitNet.rs project is under active development with a focus on performance, stability, and expanding the ecosystem.
 
-### Next Release (v0.2.0)
-- 🚧 Python bindings completion
-- 🚧 WebAssembly optimization
-- 🚧 Advanced batching
-- 🚧 Model parallelism
+### Near-Term (Next 1-3 Months)
+- **GPU Acceleration Stability**: Solidify and validate the existing CUDA GPU backend for performance and numerical parity.
+- **Advanced Memory Optimization**: Implement sophisticated memory management techniques like KV cache pooling and runtime memory compression.
+- **WebAssembly Enhancements**: Improve performance and reduce the binary size for in-browser and edge deployments.
+- **Broaden Model Support**: Add support for more model architectures and variants from the HuggingFace ecosystem.
 
-### Future Releases
-- 📋 Distributed inference
-- 📋 Custom model architectures
-- 📋 Advanced quantization methods
-- 📋 Mobile deployment
+### Mid-Term (3-6 Months)
+- **Threading and Parallelization**: Introduce `rayon` for parallelizing large workloads and explore NUMA-aware optimizations.
+- **macOS Metal Backend**: Add a native Metal backend for GPU acceleration on Apple Silicon.
+- **AVX-512 Kernels**: Investigate and implement AVX-512 kernels for specialized workloads, pending stabilization in the Rust compiler.
+- **Distributed Inference**: Begin work on supporting model parallelism and distributed inference for very large models.
+
+### Long-Term Vision
+- **Best-in-class Performance**: Establish BitNet.rs as the performance leader for 1-bit LLM inference on all supported platforms (CPU, GPU, Web).
+- **Mobile & Embedded Deployment**: Provide first-class support for `no_std` environments, enabling deployment on mobile and embedded devices.
+- **Advanced Quantization**: Research and implement novel quantization techniques beyond what is currently available.
+- **Seamless Ecosystem Integration**: Deepen integrations with the Rust ML ecosystem, including frameworks like Candle and popular web- and data-engineering frameworks.
 
 ## License
 
