@@ -1,0 +1,42 @@
+[package]
+name = "bitnet-rust-example"
+version = "0.1.0"
+edition = "2021"
+description = "Basic BitNet Rust example - migrated from C++"
+license = "MIT OR Apache-2.0"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[[bin]]
+name = "benchmark"
+path = "src/benchmark.rs"
+
+[dependencies]
+# In a real implementation, this would be the actual bitnet crate
+# bitnet = "0.1"
+
+# For this example, we'll use common dependencies
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+anyhow = "1.0"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+tempfile = "3.8"
+
+[[bench]]
+name = "performance"
+harness = false
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.bench]
+debug = true

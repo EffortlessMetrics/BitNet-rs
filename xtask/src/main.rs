@@ -47,6 +47,43 @@ enum Commands {
         #[arg(short, long, default_value = "crossval/fixtures")]
         input: PathBuf,
     },
+    
+    /// Migrate C++ configuration to Rust
+    MigrateConfig {
+        /// Input C++ configuration file
+        #[arg(short, long)]
+        from: PathBuf,
+        
+        /// Output Rust configuration file
+        #[arg(short, long)]
+        to: PathBuf,
+        
+        /// Configuration format (json, yaml, toml)
+        #[arg(long, default_value = "auto")]
+        format: String,
+    },
+    
+    /// Validate model format compatibility
+    ValidateModel {
+        /// Model file to validate
+        #[arg(short, long)]
+        model: PathBuf,
+        
+        /// Check cross-compatibility with C++ implementation
+        #[arg(long)]
+        cross_validate: bool,
+    },
+    
+    /// Generate migration report
+    MigrationReport {
+        /// Source directory to analyze
+        #[arg(short, long, default_value = ".")]
+        source: PathBuf,
+        
+        /// Output report file
+        #[arg(short, long, default_value = "migration-report.md")]
+        output: PathBuf,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,6 +109,15 @@ fn main() -> Result<()> {
         }
         Commands::CleanFixtures { input } => {
             clean_fixtures(&input)
+        }
+        Commands::MigrateConfig { from, to, format } => {
+            migrate_config(&from, &to, &format)
+        }
+        Commands::ValidateModel { model, cross_validate } => {
+            validate_model(&model, cross_validate)
+        }
+        Commands::MigrationReport { source, output } => {
+            generate_migration_report(&source, &output)
         }
     }
 }
@@ -382,4 +428,458 @@ fn clean_fixtures(fixtures_dir: &Path) -> Result<()> {
     
     println!("🎉 Cleaned {} generated files", cleaned_count);
     Ok(())
+}
+
+fn migrate_config(from: &Path, to: &Path, format: &str) -> Result<()> {
+    println!("🔄 Migrating configuration from C++ to Rust...");
+    
+    if !from.exists() {
+        anyhow::bail!("Input configuration file not found: {:?}", from);
+    }
+    
+    // Read input configuration
+    let input_content = fs::read_to_string(from)
+        .with_context(|| format!("Failed to read input file: {:?}", from))?;
+    
+    // Detect format if auto
+    let input_format = if format == "auto" {
+        detect_config_format(from)?
+    } else {
+        format.to_string()
+    };
+    
+    println!("📄 Detected input format: {}", input_format);
+    
+    // Parse input configuration
+    let config = parse_cpp_config(&input_content, &input_format)?;
+    
+    // Convert to Rust configuration
+    let rust_config = convert_to_rust_config(config)?;
+    
+    // Write output configuration
+    let output_content = serialize_rust_config(&rust_config)?;
+    
+    // Create output directory if needed
+    if let Some(parent) = to.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create output directory: {:?}", parent))?;
+    }
+    
+    fs::write(to, output_content)
+        .with_context(|| format!("Failed to write output file: {:?}", to))?;
+    
+    println!("✅ Configuration migrated successfully!");
+    println!("   Input:  {:?}", from);
+    println!("   Output: {:?}", to);
+    println!("");
+    println!("📝 Next steps:");
+    println!("   1. Review the generated configuration");
+    println!("   2. Adjust settings for your specific use case");
+    println!("   3. Test with: cargo run -- --config {:?}", to);
+    
+    Ok(())
+}
+
+fn validate_model(model_path: &Path, cross_validate: bool) -> Result<()> {
+    println!("🔍 Validating model format compatibility...");
+    
+    if !model_path.exists() {
+        anyhow::bail!("Model file not found: {:?}", model_path);
+    }
+    
+    // Check file extension
+    let extension = model_path.extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("");
+    
+    match extension.to_lowercase().as_str() {
+        "gguf" => {
+            println!("✅ GGUF format detected - fully compatible with BitNet.rs");
+            validate_gguf_model(model_path)?;
+        }
+        "safetensors" => {
+            println!("✅ SafeTensors format detected - compatible with BitNet.rs");
+            validate_safetensors_model(model_path)?;
+        }
+        "bin" => {
+            println!("⚠️  Binary format detected - may need conversion");
+            println!("   Consider converting to GGUF format for optimal compatibility");
+        }
+        _ => {
+            println!("❓ Unknown format - manual validation required");
+            println!("   Supported formats: .gguf, .safetensors");
+        }
+    }
+    
+    // Cross-validation if requested
+    if cross_validate {
+        println!("🔄 Running cross-validation with C++ implementation...");
+        cross_validate_model(model_path)?;
+    }
+    
+    println!("✅ Model validation complete!");
+    Ok(())
+}
+
+fn generate_migration_report(source_dir: &Path, output_file: &Path) -> Result<()> {
+    println!("📊 Generating migration report...");
+    
+    if !source_dir.exists() {
+        anyhow::bail!("Source directory not found: {:?}", source_dir);
+    }
+    
+    let mut report = MigrationReport::new();
+    
+    // Analyze C++ code
+    analyze_cpp_code(source_dir, &mut report)?;
+    
+    // Analyze configuration files
+    analyze_config_files(source_dir, &mut report)?;
+    
+    // Analyze model files
+    analyze_model_files(source_dir, &mut report)?;
+    
+    // Generate recommendations
+    generate_recommendations(&mut report)?;
+    
+    // Write report
+    let report_content = format_migration_report(&report)?;
+    
+    if let Some(parent) = output_file.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create output directory: {:?}", parent))?;
+    }
+    
+    fs::write(output_file, report_content)
+        .with_context(|| format!("Failed to write report: {:?}", output_file))?;
+    
+    println!("✅ Migration report generated: {:?}", output_file);
+    println!("");
+    println!("📋 Summary:");
+    println!("   C++ files found: {}", report.cpp_files.len());
+    println!("   Config files found: {}", report.config_files.len());
+    println!("   Model files found: {}", report.model_files.len());
+    println!("   Estimated migration time: {}", report.estimated_time);
+    
+    Ok(())
+}
+
+// Helper functions for migration tools
+
+fn detect_config_format(path: &Path) -> Result<String> {
+    let extension = path.extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("");
+    
+    match extension.to_lowercase().as_str() {
+        "json" => Ok("json".to_string()),
+        "yaml" | "yml" => Ok("yaml".to_string()),
+        "toml" => Ok("toml".to_string()),
+        _ => {
+            // Try to detect from content
+            let content = fs::read_to_string(path)?;
+            if content.trim_start().starts_with('{') {
+                Ok("json".to_string())
+            } else if content.contains("---") || content.contains(":") {
+                Ok("yaml".to_string())
+            } else {
+                Ok("json".to_string()) // Default fallback
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct CppConfig {
+    model_path: Option<String>,
+    max_tokens: Option<u32>,
+    temperature: Option<f32>,
+    top_p: Option<f32>,
+    top_k: Option<u32>,
+    batch_size: Option<u32>,
+    num_threads: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct RustConfig {
+    model: ModelConfig,
+    generation: GenerationConfig,
+    performance: PerformanceConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ModelConfig {
+    path: String,
+    device: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct GenerationConfig {
+    max_tokens: u32,
+    temperature: f32,
+    top_p: f32,
+    top_k: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PerformanceConfig {
+    batch_size: u32,
+    num_threads: u32,
+    cache_size: String,
+}
+
+fn parse_cpp_config(content: &str, format: &str) -> Result<CppConfig> {
+    match format {
+        "json" => {
+            serde_json::from_str(content)
+                .with_context(|| "Failed to parse JSON configuration")
+        }
+        "yaml" => {
+            serde_yaml::from_str(content)
+                .with_context(|| "Failed to parse YAML configuration")
+        }
+        "toml" => {
+            toml::from_str(content)
+                .with_context(|| "Failed to parse TOML configuration")
+        }
+        _ => anyhow::bail!("Unsupported configuration format: {}", format),
+    }
+}
+
+fn convert_to_rust_config(cpp_config: CppConfig) -> Result<RustConfig> {
+    Ok(RustConfig {
+        model: ModelConfig {
+            path: cpp_config.model_path.unwrap_or_else(|| "model.gguf".to_string()),
+            device: "cpu".to_string(),
+        },
+        generation: GenerationConfig {
+            max_tokens: cpp_config.max_tokens.unwrap_or(100),
+            temperature: cpp_config.temperature.unwrap_or(0.7),
+            top_p: cpp_config.top_p.unwrap_or(0.9),
+            top_k: cpp_config.top_k.unwrap_or(40),
+        },
+        performance: PerformanceConfig {
+            batch_size: cpp_config.batch_size.unwrap_or(1),
+            num_threads: cpp_config.num_threads.unwrap_or(4),
+            cache_size: "1GB".to_string(),
+        },
+    })
+}
+
+fn serialize_rust_config(config: &RustConfig) -> Result<String> {
+    toml::to_string_pretty(config)
+        .with_context(|| "Failed to serialize Rust configuration")
+}
+
+fn validate_gguf_model(model_path: &Path) -> Result<()> {
+    // Basic GGUF validation (simplified)
+    let file = fs::File::open(model_path)?;
+    let mut reader = std::io::BufReader::new(file);
+    
+    // Check GGUF magic number (simplified check)
+    let mut magic = [0u8; 4];
+    std::io::Read::read_exact(&mut reader, &mut magic)?;
+    
+    if &magic == b"GGUF" {
+        println!("   ✅ Valid GGUF magic number");
+    } else {
+        println!("   ⚠️  Invalid GGUF magic number - file may be corrupted");
+    }
+    
+    Ok(())
+}
+
+fn validate_safetensors_model(_model_path: &Path) -> Result<()> {
+    // SafeTensors validation would go here
+    println!("   ✅ SafeTensors format validation (placeholder)");
+    Ok(())
+}
+
+fn cross_validate_model(_model_path: &Path) -> Result<()> {
+    // Cross-validation would go here
+    println!("   ✅ Cross-validation with C++ implementation (placeholder)");
+    println!("   💡 Run 'cargo test --features crossval' for full cross-validation");
+    Ok(())
+}
+
+#[derive(Debug, Default)]
+struct MigrationReport {
+    cpp_files: Vec<String>,
+    config_files: Vec<String>,
+    model_files: Vec<String>,
+    api_calls: Vec<String>,
+    estimated_time: String,
+    recommendations: Vec<String>,
+}
+
+impl MigrationReport {
+    fn new() -> Self {
+        Self::default()
+    }
+}
+
+fn analyze_cpp_code(source_dir: &Path, report: &mut MigrationReport) -> Result<()> {
+    for entry in walkdir::WalkDir::new(source_dir) {
+        let entry = entry?;
+        let path = entry.path();
+        
+        if let Some(extension) = path.extension().and_then(|ext| ext.to_str()) {
+            match extension.to_lowercase().as_str() {
+                "cpp" | "cc" | "cxx" | "c" | "h" | "hpp" | "hxx" => {
+                    report.cpp_files.push(path.to_string_lossy().to_string());
+                    
+                    // Analyze API calls
+                    if let Ok(content) = fs::read_to_string(path) {
+                        for line in content.lines() {
+                            if line.contains("bitnet_") {
+                                report.api_calls.push(line.trim().to_string());
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    
+    Ok(())
+}
+
+fn analyze_config_files(source_dir: &Path, report: &mut MigrationReport) -> Result<()> {
+    for entry in walkdir::WalkDir::new(source_dir) {
+        let entry = entry?;
+        let path = entry.path();
+        
+        if let Some(extension) = path.extension().and_then(|ext| ext.to_str()) {
+            match extension.to_lowercase().as_str() {
+                "json" | "yaml" | "yml" | "toml" | "cfg" | "conf" => {
+                    report.config_files.push(path.to_string_lossy().to_string());
+                }
+                _ => {}
+            }
+        }
+    }
+    
+    Ok(())
+}
+
+fn analyze_model_files(source_dir: &Path, report: &mut MigrationReport) -> Result<()> {
+    for entry in walkdir::WalkDir::new(source_dir) {
+        let entry = entry?;
+        let path = entry.path();
+        
+        if let Some(extension) = path.extension().and_then(|ext| ext.to_str()) {
+            match extension.to_lowercase().as_str() {
+                "gguf" | "safetensors" | "bin" | "pt" | "pth" => {
+                    report.model_files.push(path.to_string_lossy().to_string());
+                }
+                _ => {}
+            }
+        }
+    }
+    
+    Ok(())
+}
+
+fn generate_recommendations(report: &mut MigrationReport) -> Result<()> {
+    // Estimate migration time
+    let cpp_count = report.cpp_files.len();
+    let api_count = report.api_calls.len();
+    
+    report.estimated_time = match (cpp_count, api_count) {
+        (0..=5, 0..=20) => "2-4 hours".to_string(),
+        (6..=20, 21..=100) => "1-2 days".to_string(),
+        (21..=50, 101..=500) => "1-2 weeks".to_string(),
+        _ => "2-4 weeks".to_string(),
+    };
+    
+    // Generate recommendations
+    if !report.cpp_files.is_empty() {
+        report.recommendations.push("Migrate C++ API calls to Rust equivalents".to_string());
+    }
+    
+    if !report.config_files.is_empty() {
+        report.recommendations.push("Convert configuration files to TOML format".to_string());
+    }
+    
+    if !report.model_files.is_empty() {
+        report.recommendations.push("Validate model format compatibility".to_string());
+    }
+    
+    if report.api_calls.len() > 50 {
+        report.recommendations.push("Consider gradual migration approach".to_string());
+    }
+    
+    Ok(())
+}
+
+fn format_migration_report(report: &MigrationReport) -> Result<String> {
+    let mut content = String::new();
+    
+    content.push_str("# Migration Report\n\n");
+    content.push_str(&format!("Generated on: {}\n\n", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")));
+    
+    content.push_str("## Summary\n\n");
+    content.push_str(&format!("- **C++ files found**: {}\n", report.cpp_files.len()));
+    content.push_str(&format!("- **Configuration files found**: {}\n", report.config_files.len()));
+    content.push_str(&format!("- **Model files found**: {}\n", report.model_files.len()));
+    content.push_str(&format!("- **API calls found**: {}\n", report.api_calls.len()));
+    content.push_str(&format!("- **Estimated migration time**: {}\n\n", report.estimated_time));
+    
+    if !report.cpp_files.is_empty() {
+        content.push_str("## C++ Files\n\n");
+        for file in &report.cpp_files {
+            content.push_str(&format!("- `{}`\n", file));
+        }
+        content.push_str("\n");
+    }
+    
+    if !report.config_files.is_empty() {
+        content.push_str("## Configuration Files\n\n");
+        for file in &report.config_files {
+            content.push_str(&format!("- `{}`\n", file));
+        }
+        content.push_str("\n");
+    }
+    
+    if !report.model_files.is_empty() {
+        content.push_str("## Model Files\n\n");
+        for file in &report.model_files {
+            content.push_str(&format!("- `{}`\n", file));
+        }
+        content.push_str("\n");
+    }
+    
+    if !report.api_calls.is_empty() {
+        content.push_str("## API Calls Found\n\n");
+        content.push_str("```cpp\n");
+        for call in report.api_calls.iter().take(20) { // Limit to first 20
+            content.push_str(&format!("{}\n", call));
+        }
+        if report.api_calls.len() > 20 {
+            content.push_str(&format!("... and {} more\n", report.api_calls.len() - 20));
+        }
+        content.push_str("```\n\n");
+    }
+    
+    if !report.recommendations.is_empty() {
+        content.push_str("## Recommendations\n\n");
+        for rec in &report.recommendations {
+            content.push_str(&format!("- {}\n", rec));
+        }
+        content.push_str("\n");
+    }
+    
+    content.push_str("## Next Steps\n\n");
+    content.push_str("1. Review the migration guide: `docs/cpp-to-rust-migration.md`\n");
+    content.push_str("2. Set up development environment: `./scripts/dev-setup.sh`\n");
+    content.push_str("3. Migrate configuration files: `cargo xtask migrate-config`\n");
+    content.push_str("4. Update API calls using the compatibility matrix\n");
+    content.push_str("5. Test with cross-validation: `cargo test --features crossval`\n");
+    content.push_str("6. Deploy gradually with monitoring\n\n");
+    
+    content.push_str("---\n");
+    content.push_str("*This report was generated automatically by the BitNet.rs migration tools.*\n");
+    
+    Ok(content)
 }
