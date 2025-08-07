@@ -15,6 +15,7 @@ members = [
     "crates/bitnet-wasm",
     "crates/bitnet-sys",
     "crossval",
+    "xtask",
 ]
 
 [package]
