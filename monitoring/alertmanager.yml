@@ -1,0 +1,164 @@
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'bitnet-alerts@example.com'
+  smtp_auth_username: 'bitnet-alerts@example.com'
+  smtp_auth_password: 'password'
+
+# Routing configuration
+route:
+  group_by: ['alertname', 'implementation']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+  routes:
+    # Critical alerts for Rust implementation
+    - match:
+        severity: critical
+        implementation: rust
+      receiver: 'rust-critical'
+      group_wait: 5s
+      repeat_interval: 30m
+    
+    # Warning alerts for Rust implementation
+    - match:
+        severity: warning
+        implementation: rust
+      receiver: 'rust-warning'
+      group_wait: 30s
+      repeat_interval: 2h
+    
+    # Cross-validation alerts
+    - match:
+        purpose: cross-validation
+      receiver: 'crossval-alerts'
+      group_wait: 1m
+      repeat_interval: 4h
+    
+    # Legacy alerts (lower priority)
+    - match:
+        implementation: cpp
+      receiver: 'legacy-alerts'
+      group_wait: 5m
+      repeat_interval: 12h
+
+# Receiver configurations
+receivers:
+  - name: 'web.hook'
+    webhook_configs:
+      - url: 'http://127.0.0.1:5001/'
+
+  - name: 'rust-critical'
+    email_configs:
+      - to: 'rust-team@example.com'
+        subject: '🚨 CRITICAL: BitNet.rs {{ .GroupLabels.alertname }}'
+        body: |
+          Alert: {{ .GroupLabels.alertname }}
+          Implementation: Rust (Primary)
+          Severity: CRITICAL
+          
+          {{ range .Alerts }}
+          Instance: {{ .Labels.instance }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+          
+          This is a critical alert for the primary Rust implementation.
+          Immediate action required.
+    slack_configs:
+      - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+        channel: '#bitnet-alerts'
+        title: '🚨 CRITICAL: BitNet.rs Alert'
+        text: |
+          *Alert:* {{ .GroupLabels.alertname }}
+          *Implementation:* Rust (Primary)
+          *Severity:* CRITICAL
+          
+          {{ range .Alerts }}
+          *Instance:* {{ .Labels.instance }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+
+  - name: 'rust-warning'
+    email_configs:
+      - to: 'rust-team@example.com'
+        subject: '⚠️ WARNING: BitNet.rs {{ .GroupLabels.alertname }}'
+        body: |
+          Alert: {{ .GroupLabels.alertname }}
+          Implementation: Rust (Primary)
+          Severity: WARNING
+          
+          {{ range .Alerts }}
+          Instance: {{ .Labels.instance }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+    slack_configs:
+      - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+        channel: '#bitnet-warnings'
+        title: '⚠️ WARNING: BitNet.rs Alert'
+        text: |
+          *Alert:* {{ .GroupLabels.alertname }}
+          *Implementation:* Rust (Primary)
+          *Severity:* WARNING
+          
+          {{ range .Alerts }}
+          *Instance:* {{ .Labels.instance }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+
+  - name: 'crossval-alerts'
+    email_configs:
+      - to: 'qa-team@example.com'
+        subject: '🔍 Cross-Validation: {{ .GroupLabels.alertname }}'
+        body: |
+          Alert: {{ .GroupLabels.alertname }}
+          Purpose: Cross-Validation
+          
+          {{ range .Alerts }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+          
+          This alert indicates an issue with cross-validation between
+          Rust and C++ implementations. Review comparison metrics.
+    slack_configs:
+      - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+        channel: '#bitnet-crossval'
+        title: '🔍 Cross-Validation Alert'
+        text: |
+          *Alert:* {{ .GroupLabels.alertname }}
+          *Purpose:* Cross-Validation
+          
+          {{ range .Alerts }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+
+  - name: 'legacy-alerts'
+    email_configs:
+      - to: 'legacy-support@example.com'
+        subject: '📜 Legacy: {{ .GroupLabels.alertname }}'
+        body: |
+          Alert: {{ .GroupLabels.alertname }}
+          Implementation: C++ (Legacy)
+          
+          {{ range .Alerts }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+          
+          Note: This is for the legacy C++ implementation.
+          Consider migrating to the Rust implementation for better reliability.
+
+# Inhibition rules
+inhibit_rules:
+  # Inhibit warning alerts when critical alerts are firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'implementation', 'instance']
+  
+  # Inhibit legacy alerts when Rust alerts are firing
+  - source_match:
+      implementation: 'rust'
+      severity: 'critical'
+    target_match:
+      implementation: 'cpp'
+    equal: ['alertname']

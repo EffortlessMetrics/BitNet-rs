@@ -26,7 +26,7 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisLabel": "",
+            "axisLabel": "Tokens/Second",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -38,7 +38,7 @@
               "vis": false
             },
             "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
@@ -67,36 +67,203 @@
               }
             ]
           },
-          "unit": "reqps"
+          "unit": "short"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rust Implementation"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "C++ Legacy"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 24,
         "x": 0,
         "y": 0
       },
       "id": 1,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["mean", "max", "current"],
+          "displayMode": "table",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "multi"
         }
       },
       "targets": [
         {
-          "expr": "rate(bitnet_requests_total{implementation=\"rust\"}[5m])",
+          "expr": "bitnet_tokens_per_second{implementation=\"rust\"}",
           "interval": "",
-          "legendFormat": "Rust {{instance}} - {{variant}}",
+          "legendFormat": "Rust Implementation - {{instance}}",
           "refId": "A"
+        },
+        {
+          "expr": "bitnet_tokens_per_second{implementation=\"cpp\"}",
+          "interval": "",
+          "legendFormat": "C++ Legacy - {{instance}}",
+          "refId": "B"
         }
       ],
-      "title": "Request Rate",
+      "title": "Throughput Comparison: Rust vs C++ Legacy",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Milliseconds",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "vis": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rust P95"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "C++ P95"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max", "current"],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(bitnet_request_duration_seconds_bucket{implementation=\"rust\"}[5m])) * 1000",
+          "interval": "",
+          "legendFormat": "Rust P95",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(bitnet_request_duration_seconds_bucket{implementation=\"cpp\"}[5m])) * 1000",
+          "interval": "",
+          "legendFormat": "C++ P95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.50, rate(bitnet_request_duration_seconds_bucket{implementation=\"rust\"}[5m])) * 1000",
+          "interval": "",
+          "legendFormat": "Rust P50",
+          "refId": "C"
+        },
+        {
+          "expr": "histogram_quantile(0.50, rate(bitnet_request_duration_seconds_bucket{implementation=\"cpp\"}[5m])) * 1000",
+          "interval": "",
+          "legendFormat": "C++ P50",
+          "refId": "D"
+        }
+      ],
+      "title": "Latency Comparison: Rust vs C++ Legacy",
       "type": "timeseries"
     },
     {
@@ -111,20 +278,20 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
               },
               {
                 "color": "yellow",
-                "value": 100
+                "value": 1.0
               },
               {
-                "color": "red",
-                "value": 500
+                "color": "green",
+                "value": 1.1
               }
             ]
           },
-          "unit": "ms"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -132,9 +299,9 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 0
+        "y": 8
       },
-      "id": 2,
+      "id": 3,
       "options": {
         "orientation": "auto",
         "reduceOptions": {
@@ -151,13 +318,13 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, rate(bitnet_request_duration_seconds_bucket{implementation=\"rust\"}[5m])) * 1000",
+          "expr": "bitnet_tokens_per_second{implementation=\"rust\"} / bitnet_tokens_per_second{implementation=\"cpp\"}",
           "interval": "",
-          "legendFormat": "Rust 95th percentile",
+          "legendFormat": "Rust/C++ Throughput Ratio",
           "refId": "A"
         }
       ],
-      "title": "Response Time (95th percentile)",
+      "title": "Performance Ratio (Rust/C++ - Higher is Better)",
       "type": "gauge"
     },
     {
@@ -168,7 +335,7 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisLabel": "",
+            "axisLabel": "Bytes",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -180,88 +347,7 @@
               "vis": false
             },
             "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 8
-      },
-      "id": 3,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "expr": "rate(container_cpu_usage_seconds_total{pod=~\"bitnet-.*\"}[5m]) * 100",
-          "interval": "",
-          "legendFormat": "{{pod}}",
-          "refId": "A"
-        }
-      ],
-      "title": "CPU Usage",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "vis": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
@@ -292,88 +378,38 @@
           },
           "unit": "bytes"
         },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 8
-      },
-      "id": 4,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "expr": "container_memory_usage_bytes{pod=~\"bitnet-.*\"}",
-          "interval": "",
-          "legendFormat": "{{pod}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Memory Usage",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "vis": false
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rust Memory"
             },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+            "properties": [
               {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
               }
             ]
           },
-          "unit": "short"
-        },
-        "overrides": []
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "C++ Memory"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -381,26 +417,32 @@
         "x": 0,
         "y": 16
       },
-      "id": 5,
+      "id": 4,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["mean", "max", "current"],
+          "displayMode": "table",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "multi"
         }
       },
       "targets": [
         {
-          "expr": "bitnet_tokens_per_second",
+          "expr": "container_memory_usage_bytes{pod=~\"bitnet-.*-rust.*\"}",
           "interval": "",
-          "legendFormat": "{{instance}} - {{variant}}",
+          "legendFormat": "Rust Memory - {{pod}}",
           "refId": "A"
+        },
+        {
+          "expr": "container_memory_usage_bytes{pod=~\"bitnet-.*-legacy.*\"}",
+          "interval": "",
+          "legendFormat": "C++ Memory - {{pod}}",
+          "refId": "B"
         }
       ],
-      "title": "Tokens per Second",
+      "title": "Memory Usage Comparison",
       "type": "timeseries"
     },
     {
@@ -411,7 +453,7 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisLabel": "",
+            "axisLabel": "Percentage",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -423,7 +465,7 @@
               "vis": false
             },
             "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
@@ -454,7 +496,38 @@
           },
           "unit": "percent"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rust CPU"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "C++ CPU"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -462,26 +535,32 @@
         "x": 12,
         "y": 16
       },
-      "id": 6,
+      "id": 5,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["mean", "max", "current"],
+          "displayMode": "table",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "multi"
         }
       },
       "targets": [
         {
-          "expr": "nvidia_gpu_utilization_gpu{pod=~\"bitnet-gpu.*\"}",
+          "expr": "rate(container_cpu_usage_seconds_total{pod=~\"bitnet-.*-rust.*\"}[5m]) * 100",
           "interval": "",
-          "legendFormat": "{{pod}} - GPU {{gpu}}",
+          "legendFormat": "Rust CPU - {{pod}}",
           "refId": "A"
+        },
+        {
+          "expr": "rate(container_cpu_usage_seconds_total{pod=~\"bitnet-.*-legacy.*\"}[5m]) * 100",
+          "interval": "",
+          "legendFormat": "C++ CPU - {{pod}}",
+          "refId": "B"
         }
       ],
-      "title": "GPU Utilization",
+      "title": "CPU Usage Comparison",
       "type": "timeseries"
     },
     {
@@ -491,16 +570,32 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "PASS"
+                },
+                "1": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "FAIL"
+                }
+              },
+              "type": "value"
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "green",
+                "color": "red",
                 "value": 1
               }
             ]
@@ -515,7 +610,7 @@
         "x": 0,
         "y": 24
       },
-      "id": 7,
+      "id": 6,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
@@ -534,13 +629,13 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "up{job=\"bitnet-cpu\"}",
+          "expr": "bitnet_crossval_test_failures_total > 0",
           "interval": "",
-          "legendFormat": "CPU Service",
+          "legendFormat": "Cross-Validation Status",
           "refId": "A"
         }
       ],
-      "title": "Service Health - CPU",
+      "title": "Cross-Validation Status",
       "type": "stat"
     },
     {
@@ -559,12 +654,16 @@
                 "value": null
               },
               {
+                "color": "yellow",
+                "value": 0.99
+              },
+              {
                 "color": "green",
-                "value": 1
+                "value": 0.999
               }
             ]
           },
-          "unit": "short"
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -574,10 +673,10 @@
         "x": 6,
         "y": 24
       },
-      "id": 8,
+      "id": 7,
       "options": {
-        "colorMode": "background",
-        "graphMode": "none",
+        "colorMode": "value",
+        "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -593,13 +692,13 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "up{job=\"bitnet-gpu\"}",
+          "expr": "1 - abs(bitnet_crossval_accuracy_difference)",
           "interval": "",
-          "legendFormat": "GPU Service",
+          "legendFormat": "Accuracy Match",
           "refId": "A"
         }
       ],
-      "title": "Service Health - GPU",
+      "title": "Cross-Validation Accuracy Match",
       "type": "stat"
     },
     {
@@ -619,11 +718,11 @@
               },
               {
                 "color": "yellow",
-                "value": 10
+                "value": 1.05
               },
               {
                 "color": "red",
-                "value": 50
+                "value": 1.2
               }
             ]
           },
@@ -637,10 +736,10 @@
         "x": 12,
         "y": 24
       },
-      "id": 9,
+      "id": 8,
       "options": {
         "colorMode": "value",
-        "graphMode": "none",
+        "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -656,13 +755,13 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum(rate(bitnet_requests_total{status=~\"4..|5..\"}[5m]))",
+          "expr": "bitnet_tokens_per_second{implementation=\"rust\"} / bitnet_tokens_per_second{implementation=\"cpp\"}",
           "interval": "",
-          "legendFormat": "Error Rate",
+          "legendFormat": "Rust Advantage",
           "refId": "A"
         }
       ],
-      "title": "Error Rate",
+      "title": "Rust Performance Advantage",
       "type": "stat"
     },
     {
@@ -682,11 +781,11 @@
               },
               {
                 "color": "yellow",
-                "value": 5
+                "value": 0.9
               },
               {
                 "color": "red",
-                "value": 10
+                "value": 0.8
               }
             ]
           },
@@ -700,10 +799,10 @@
         "x": 18,
         "y": 24
       },
-      "id": 10,
+      "id": 9,
       "options": {
         "colorMode": "value",
-        "graphMode": "none",
+        "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -719,13 +818,13 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum(bitnet_active_connections)",
+          "expr": "container_memory_usage_bytes{pod=~\"bitnet-.*-rust.*\"} / container_memory_usage_bytes{pod=~\"bitnet-.*-legacy.*\"}",
           "interval": "",
-          "legendFormat": "Active Connections",
+          "legendFormat": "Memory Efficiency",
           "refId": "A"
         }
       ],
-      "title": "Active Connections",
+      "title": "Rust Memory Efficiency (Lower is Better)",
       "type": "stat"
     }
   ],
@@ -735,9 +834,9 @@
   "tags": [
     "bitnet",
     "rust",
-    "llm",
-    "inference",
-    "primary"
+    "performance",
+    "comparison",
+    "cross-validation"
   ],
   "templating": {
     "list": []
@@ -748,7 +847,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "BitNet.rs Overview - Primary Rust Implementation",
-  "uid": "bitnet-rust-overview",
-  "version": 2
+  "title": "BitNet Performance Comparison: Rust vs C++ Legacy",
+  "uid": "bitnet-performance-comparison",
+  "version": 1
 }

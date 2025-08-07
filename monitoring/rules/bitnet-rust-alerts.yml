@@ -1,0 +1,173 @@
+groups:
+  - name: bitnet-rust-alerts
+    rules:
+      # High-level service health alerts for Rust implementation
+      - alert: BitNetRustServiceDown
+        expr: up{job=~"bitnet-rust-.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          implementation: rust
+          service: "{{ $labels.job }}"
+        annotations:
+          summary: "BitNet.rs service {{ $labels.job }} is down"
+          description: "BitNet.rs service {{ $labels.job }} has been down for more than 1 minute. This affects the primary Rust implementation."
+
+      - alert: BitNetRustHighErrorRate
+        expr: rate(bitnet_requests_total{implementation="rust",status=~"4..|5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          implementation: rust
+        annotations:
+          summary: "High error rate in BitNet.rs"
+          description: "BitNet.rs error rate is {{ $value | humanizePercentage }} which is above the 10% threshold."
+
+      - alert: BitNetRustHighLatency
+        expr: histogram_quantile(0.95, rate(bitnet_request_duration_seconds_bucket{implementation="rust"}[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          implementation: rust
+        annotations:
+          summary: "High latency in BitNet.rs"
+          description: "BitNet.rs 95th percentile latency is {{ $value }}s which is above 1s threshold."
+
+      # Resource utilization alerts
+      - alert: BitNetRustHighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{pod=~"bitnet-.*-rust.*"}[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          implementation: rust
+          resource: cpu
+        annotations:
+          summary: "High CPU usage in BitNet.rs pod"
+          description: "BitNet.rs pod {{ $labels.pod }} CPU usage is {{ $value }}% which is above 80% threshold."
+
+      - alert: BitNetRustHighMemoryUsage
+        expr: container_memory_usage_bytes{pod=~"bitnet-.*-rust.*"} / container_spec_memory_limit_bytes{pod=~"bitnet-.*-rust.*"} * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          implementation: rust
+          resource: memory
+        annotations:
+          summary: "High memory usage in BitNet.rs pod"
+          description: "BitNet.rs pod {{ $labels.pod }} memory usage is {{ $value }}% which is above 85% threshold."
+
+      # Performance degradation alerts
+      - alert: BitNetRustLowThroughput
+        expr: bitnet_tokens_per_second{implementation="rust"} < 100
+        for: 3m
+        labels:
+          severity: warning
+          implementation: rust
+          metric: throughput
+        annotations:
+          summary: "Low throughput in BitNet.rs"
+          description: "BitNet.rs throughput is {{ $value }} tokens/second which is below 100 tokens/second threshold."
+
+      # GPU-specific alerts
+      - alert: BitNetRustGPUHighUtilization
+        expr: nvidia_gpu_utilization_gpu{pod=~"bitnet-.*-rust.*"} > 95
+        for: 5m
+        labels:
+          severity: warning
+          implementation: rust
+          resource: gpu
+        annotations:
+          summary: "High GPU utilization in BitNet.rs"
+          description: "BitNet.rs GPU utilization is {{ $value }}% which is above 95% threshold."
+
+      - alert: BitNetRustGPUMemoryHigh
+        expr: nvidia_gpu_memory_used_bytes{pod=~"bitnet-.*-rust.*"} / nvidia_gpu_memory_total_bytes{pod=~"bitnet-.*-rust.*"} * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          implementation: rust
+          resource: gpu-memory
+        annotations:
+          summary: "High GPU memory usage in BitNet.rs"
+          description: "BitNet.rs GPU memory usage is {{ $value }}% which is above 90% threshold."
+
+  - name: bitnet-cross-validation-alerts
+    rules:
+      # Cross-validation failure alerts
+      - alert: BitNetCrossValidationFailure
+        expr: bitnet_crossval_test_failures_total > 0
+        for: 1m
+        labels:
+          severity: critical
+          purpose: cross-validation
+        annotations:
+          summary: "BitNet cross-validation tests failing"
+          description: "{{ $value }} cross-validation tests are failing. This indicates potential compatibility issues between Rust and C++ implementations."
+
+      - alert: BitNetCrossValidationAccuracyDrift
+        expr: abs(bitnet_crossval_accuracy_difference) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          purpose: cross-validation
+        annotations:
+          summary: "BitNet cross-validation accuracy drift detected"
+          description: "Accuracy difference between Rust and C++ implementations is {{ $value }}, which exceeds 1% threshold."
+
+      - alert: BitNetCrossValidationPerformanceRegression
+        expr: (bitnet_crossval_rust_throughput / bitnet_crossval_cpp_throughput) < 0.95
+        for: 10m
+        labels:
+          severity: warning
+          purpose: cross-validation
+          metric: performance
+        annotations:
+          summary: "BitNet.rs performance regression detected"
+          description: "Rust implementation throughput is {{ $value | humanizePercentage }} of C++ implementation, below 95% threshold."
+
+      - alert: BitNetLegacyServiceUnexpectedlyUp
+        expr: up{job="bitnet-legacy-cpp"} == 1
+        for: 5m
+        labels:
+          severity: info
+          implementation: cpp
+          purpose: legacy
+        annotations:
+          summary: "Legacy C++ service is running"
+          description: "The legacy C++ service is running. Ensure this is intentional for cross-validation purposes only."
+
+  - name: bitnet-business-logic-alerts
+    rules:
+      # Business logic and model-specific alerts
+      - alert: BitNetRustModelLoadFailure
+        expr: increase(bitnet_model_load_failures_total{implementation="rust"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          implementation: rust
+          component: model-loader
+        annotations:
+          summary: "BitNet.rs model loading failures"
+          description: "{{ $value }} model loading failures detected in the last 5 minutes."
+
+      - alert: BitNetRustInferenceQueueBacklog
+        expr: bitnet_inference_queue_size{implementation="rust"} > 100
+        for: 2m
+        labels:
+          severity: warning
+          implementation: rust
+          component: inference-queue
+        annotations:
+          summary: "BitNet.rs inference queue backlog"
+          description: "Inference queue size is {{ $value }}, indicating potential bottleneck."
+
+      - alert: BitNetRustMemoryLeakSuspected
+        expr: increase(container_memory_usage_bytes{pod=~"bitnet-.*-rust.*"}[1h]) > 100000000  # 100MB increase per hour
+        for: 30m
+        labels:
+          severity: warning
+          implementation: rust
+          issue: memory-leak
+        annotations:
+          summary: "Potential memory leak in BitNet.rs"
+          description: "Memory usage in {{ $labels.pod }} has increased by {{ $value | humanizeBytes }} in the last hour."
