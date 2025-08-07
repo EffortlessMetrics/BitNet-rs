@@ -1,6 +1,6 @@
 apiVersion: v2
 name: bitnet
-description: A Helm chart for BitNet 1-bit LLM inference engine
+description: A Helm chart for BitNet.rs - High-performance Rust implementation of 1-bit LLM inference
 type: application
 version: 1.0.0
 appVersion: "1.0.0"
@@ -8,14 +8,20 @@ home: https://github.com/bitnet-rs/bitnet
 sources:
   - https://github.com/bitnet-rs/bitnet
 maintainers:
-  - name: BitNet Team
+  - name: BitNet.rs Team
     email: team@bitnet.rs
 keywords:
+  - rust
   - llm
   - inference
   - machine-learning
   - ai
   - quantization
+  - performance
+  - safety
 annotations:
   category: MachineLearning
+  implementation: rust
+  performance: high
+  safety: memory-safe
 dependencies: []

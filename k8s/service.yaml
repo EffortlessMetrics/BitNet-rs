@@ -76,3 +76,28 @@ spec:
     app.kubernetes.io/name: bitnet
     app.kubernetes.io/component: inference
     app.kubernetes.io/variant: gpu
+
+---
+# Legacy service for cross-validation purposes only
+apiVersion: v1
+kind: Service
+metadata:
+  name: bitnet-legacy-service
+  namespace: bitnet
+  labels:
+    app.kubernetes.io/name: bitnet
+    app.kubernetes.io/component: service
+    app.kubernetes.io/variant: legacy
+  annotations:
+    description: "Legacy C++ service - use Rust services for production"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: bitnet
+    app.kubernetes.io/component: inference
+    app.kubernetes.io/variant: legacy
