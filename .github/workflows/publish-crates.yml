@@ -1,0 +1,240 @@
+name: Publish to crates.io
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Perform a dry run (do not actually publish)'
+        required: false
+        default: 'true'
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  publish:
+    name: Publish BitNet.rs Crates
+    runs-on: ubuntu-latest
+    environment: crates-io
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+
+    - name: Cache Cargo dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-publish-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-publish-
+          ${{ runner.os }}-cargo-
+
+    - name: Verify version consistency
+      run: |
+        echo "Verifying all crates have consistent versions..."
+        ./scripts/verify-versions.sh
+
+    - name: Run tests
+      run: |
+        echo "Running comprehensive test suite before publishing..."
+        cargo test --workspace --all-features
+        cargo test --workspace --no-default-features
+
+    - name: Check documentation
+      run: |
+        echo "Verifying documentation builds correctly..."
+        cargo doc --workspace --all-features --no-deps
+
+    - name: Publish crates in dependency order
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+      run: |
+        set -e
+        
+        DRY_RUN_FLAG=""
+        if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
+          echo "🔍 Performing dry run - no actual publishing"
+          DRY_RUN_FLAG="--dry-run"
+        else
+          echo "🚀 Publishing to crates.io"
+        fi
+        
+        # Publish in dependency order to avoid conflicts
+        echo "📦 Publishing BitNet.rs crates to crates.io..."
+        
+        # 1. Core foundation crates (no dependencies)
+        echo "Publishing bitnet-common..."
+        cd crates/bitnet-common
+        cargo publish $DRY_RUN_FLAG --allow-dirty
+        cd ../..
+        
+        # Wait between publishes to allow crates.io to process
+        if [[ -z "$DRY_RUN_FLAG" ]]; then
+          echo "⏳ Waiting for crates.io to process..."
+          sleep 30
+        fi
+        
+        # 2. Model and quantization crates
+        echo "Publishing bitnet-models..."
+        cd crates/bitnet-models
+        cargo publish $DRY_RUN_FLAG --allow-dirty
+        cd ../..
+        
+        if [[ -z "$DRY_RUN_FLAG" ]]; then sleep 30; fi
+        
+        echo "Publishing bitnet-quantization..."
+        cd crates/bitnet-quantization
+        cargo publish $DRY_RUN_FLAG --allow-dirty
+        cd ../..
+        
+        if [[ -z "$DRY_RUN_FLAG" ]]; then sleep 30; fi
+        
+        # 3. Kernel implementations
+        echo "Publishing bitnet-kernels..."
+        cd crates/bitnet-kernels
+        cargo publish $DRY_RUN_FLAG --allow-dirty
+        cd ../..
+        
+        if [[ -z "$DRY_RUN_FLAG" ]]; then sleep 30; fi
+        
+        # 4. Tokenizers (independent)
+        echo "Publishing bitnet-tokenizers..."
+        cd crates/bitnet-tokenizers
+        cargo publish $DRY_RUN_FLAG --allow-dirty
+        cd ../..
+        
+        if [[ -z "$DRY_RUN_FLAG" ]]; then sleep 30; fi
+        
+        # 5. Inference engine (depends on kernels, models, quantization)
+        echo "Publishing bitnet-inference..."
+        cd crates/bitnet-inference
+        cargo publish $DRY_RUN_FLAG --allow-dirty
+        cd ../..
+        
+        if [[ -z "$DRY_RUN_FLAG" ]]; then sleep 30; fi
+        
+        # 6. FFI bindings (depends on inference)
+        echo "Publishing bitnet-ffi..."
+        cd crates/bitnet-ffi
+        cargo publish $DRY_RUN_FLAG --allow-dirty
+        cd ../..
+        
+        if [[ -z "$DRY_RUN_FLAG" ]]; then sleep 30; fi
+        
+        # 7. Language bindings
+        echo "Publishing bitnet-py..."
+        cd crates/bitnet-py
+        cargo publish $DRY_RUN_FLAG --allow-dirty
+        cd ../..
+        
+        if [[ -z "$DRY_RUN_FLAG" ]]; then sleep 30; fi
+        
+        echo "Publishing bitnet-wasm..."
+        cd crates/bitnet-wasm
+        cargo publish $DRY_RUN_FLAG --allow-dirty
+        cd ../..
+        
+        if [[ -z "$DRY_RUN_FLAG" ]]; then sleep 30; fi
+        
+        # 8. Applications (depend on inference)
+        echo "Publishing bitnet-server..."
+        cd crates/bitnet-server
+        cargo publish $DRY_RUN_FLAG --allow-dirty
+        cd ../..
+        
+        if [[ -z "$DRY_RUN_FLAG" ]]; then sleep 30; fi
+        
+        echo "Publishing bitnet-cli..."
+        cd crates/bitnet-cli
+        cargo publish $DRY_RUN_FLAG --allow-dirty
+        cd ../..
+        
+        if [[ -z "$DRY_RUN_FLAG" ]]; then sleep 30; fi
+        
+        # 9. Main library crate (depends on most others)
+        echo "Publishing main bitnet crate..."
+        cargo publish $DRY_RUN_FLAG --allow-dirty
+        
+        echo "✅ All BitNet.rs crates published successfully!"
+
+    - name: Create GitHub Release
+      if: github.event.inputs.dry_run != 'true' && startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        name: BitNet.rs ${{ github.ref_name }}
+        body: |
+          # BitNet.rs ${{ github.ref_name }}
+          
+          ## 🦀 Primary Rust Implementation Release
+          
+          This release contains the latest version of BitNet.rs, the high-performance Rust implementation of 1-bit LLM inference.
+          
+          ### 📦 Published Crates
+          
+          All crates have been published to [crates.io](https://crates.io) and are ready for use:
+          
+          - **`bitnet`** - Main library crate
+          - **`bitnet-common`** - Common utilities and types
+          - **`bitnet-models`** - Model definitions and loading
+          - **`bitnet-quantization`** - Quantization algorithms
+          - **`bitnet-kernels`** - Optimized compute kernels
+          - **`bitnet-inference`** - Inference engine
+          - **`bitnet-tokenizers`** - Text tokenization
+          - **`bitnet-server`** - HTTP inference server
+          - **`bitnet-cli`** - Command-line interface
+          - **`bitnet-ffi`** - C FFI bindings
+          - **`bitnet-py`** - Python bindings
+          - **`bitnet-wasm`** - WebAssembly bindings
+          
+          ### 🚀 Quick Start
+          
+          ```bash
+          # Add to your Cargo.toml
+          cargo add bitnet
+          
+          # Or install CLI tools
+          cargo install bitnet-cli bitnet-server
+          ```
+          
+          ### 📚 Documentation
+          
+          - [API Documentation](https://docs.rs/bitnet)
+          - [User Guide](https://github.com/microsoft/BitNet/blob/main/docs/)
+          - [Migration Guide](https://github.com/microsoft/BitNet/blob/main/MIGRATION.md)
+          
+          ### 🔗 Links
+          
+          - [Crates.io](https://crates.io/crates/bitnet)
+          - [Documentation](https://docs.rs/bitnet)
+          - [Repository](https://github.com/microsoft/BitNet)
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Notify success
+      if: success() && github.event.inputs.dry_run != 'true'
+      run: |
+        echo "🎉 BitNet.rs ${{ github.ref_name }} published successfully!"
+        echo "📦 All crates are now available on crates.io"
+        echo "🔗 Release created at: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
