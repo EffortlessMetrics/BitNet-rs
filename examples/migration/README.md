@@ -11,13 +11,8 @@ This directory contains practical examples showing how to migrate from legacy Bi
 
 ### Advanced Migration Examples
 - **[server-migration](server-migration/)** - HTTP server migration from C++ to Rust
-- **[batch-processing](batch-processing/)** - Batch processing migration with performance comparison
-- **[streaming-migration](streaming-migration/)** - Migrating to streaming APIs
-
-### Performance Comparison Examples
-- **[performance-benchmarks](performance-benchmarks/)** - Before/after performance comparisons
-- **[memory-optimization](memory-optimization/)** - Memory usage optimization examples
-- **[concurrent-processing](concurrent-processing/)** - Concurrent processing improvements
+- **[concurrent-processing](concurrent-processing/)** - Thread pool to async migration
+- **[performance-benchmarks](performance-benchmarks/)** - Comprehensive performance comparisons
 
 ## Quick Start
 
