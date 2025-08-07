@@ -257,6 +257,144 @@ pub trait DataGenerator {
 }
 ```
 
+### 6. Golden Path Testing Framework
+
+#### Golden Path Test Suite (`tests/golden_path/`)
+```rust
+pub struct GoldenPathSuite {
+    prompts: Vec<GoldenPathPrompt>,
+    baseline_manager: BaselineManager,
+    diff_analyzer: DifferentialAnalyzer,
+}
+
+pub struct GoldenPathPrompt {
+    pub id: String,
+    pub source: PromptSource,
+    pub text: String,
+    pub expected_tokens: Vec<u32>,
+    pub performance_baseline: PerformanceBaseline,
+    pub metadata: PromptMetadata,
+}
+
+pub enum PromptSource {
+    HuggingFaceBenchmark(String),
+    LLMLeaderboard(String),
+    RealWorldWorkload(String),
+    EdgeCase(String),
+}
+
+pub struct PerformanceBaseline {
+    pub max_latency: Duration,
+    pub max_memory: u64,
+    pub min_throughput: f64,
+    pub tolerance: f64,
+}
+```
+
+#### Differential Analysis Framework (`tests/differential/`)
+```rust
+pub struct DifferentialAnalyzer {
+    tolerance: DiffTolerance,
+    trace_mode: bool,
+    output_formatter: Box<dyn DiffFormatter>,
+}
+
+pub struct DiffResult {
+    pub match_status: MatchStatus,
+    pub first_mismatch: Option<TokenMismatch>,
+    pub token_accuracy: f64,
+    pub probability_divergence: f64,
+    pub logit_correlation: f64,
+    pub detailed_analysis: DiffAnalysis,
+}
+
+pub struct TokenMismatch {
+    pub position: usize,
+    pub rust_token: u32,
+    pub cpp_token: u32,
+    pub rust_probability: f64,
+    pub cpp_probability: f64,
+    pub context: Vec<u32>,
+}
+
+pub trait DiffFormatter {
+    fn format_mismatch(&self, mismatch: &TokenMismatch) -> String;
+    fn format_summary(&self, result: &DiffResult) -> String;
+    fn format_trace_diff(&self, rust_trace: &[TraceEvent], cpp_trace: &[TraceEvent]) -> String;
+}
+```
+
+### 7. Advanced Fuzzing Framework
+
+#### Differential Fuzzing (`tests/fuzz/`)
+```rust
+pub struct DifferentialFuzzer {
+    rust_impl: Box<dyn BitNetImplementation>,
+    cpp_impl: Box<dyn BitNetImplementation>,
+    input_generators: Vec<Box<dyn FuzzInputGenerator>>,
+    crash_detector: CrashDetector,
+}
+
+pub trait FuzzInputGenerator {
+    fn generate_input(&self) -> FuzzInput;
+    fn mutate_input(&self, input: &FuzzInput) -> FuzzInput;
+    fn minimize_input(&self, input: &FuzzInput) -> FuzzInput;
+}
+
+pub struct FuzzInput {
+    pub prompt: String,
+    pub model_config: ModelConfig,
+    pub generation_config: GenerationConfig,
+    pub metadata: FuzzMetadata,
+}
+
+pub struct FuzzResult {
+    pub rust_result: Result<InferenceResult, InferenceError>,
+    pub cpp_result: Result<InferenceResult, InferenceError>,
+    pub consistency: ConsistencyAnalysis,
+    pub crashes: Vec<CrashReport>,
+}
+```
+
+### 8. Trace and Debug Analysis
+
+#### Trace Comparison System (`tests/trace/`)
+```rust
+pub struct TraceComparator {
+    rust_tracer: Box<dyn Tracer>,
+    cpp_tracer: Box<dyn Tracer>,
+    trace_analyzer: TraceAnalyzer,
+}
+
+pub trait Tracer {
+    fn start_trace(&mut self) -> Result<()>;
+    fn stop_trace(&mut self) -> Result<Vec<TraceEvent>>;
+    fn set_trace_level(&mut self, level: TraceLevel);
+}
+
+pub struct TraceEvent {
+    pub timestamp: SystemTime,
+    pub event_type: TraceEventType,
+    pub location: SourceLocation,
+    pub data: TraceData,
+}
+
+pub enum TraceEventType {
+    FunctionEntry(String),
+    FunctionExit(String),
+    MemoryAllocation { size: usize, ptr: usize },
+    MemoryDeallocation { ptr: usize },
+    ComputeKernel { kernel: String, duration: Duration },
+    ModelOperation { operation: String, shape: Vec<usize> },
+}
+
+pub struct TraceAnalyzer {
+    pub fn compare_traces(&self, rust_trace: &[TraceEvent], cpp_trace: &[TraceEvent]) -> TraceComparison;
+    pub fn find_divergence_point(&self, rust_trace: &[TraceEvent], cpp_trace: &[TraceEvent]) -> Option<TraceDivergence>;
+    pub fn analyze_performance_diff(&self, rust_trace: &[TraceEvent], cpp_trace: &[TraceEvent]) -> PerformanceDiff;
+}
+```
+
 ## Data Models
 
 ### Test Configuration

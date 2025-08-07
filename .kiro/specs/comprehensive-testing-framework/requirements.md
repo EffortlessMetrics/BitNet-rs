@@ -83,3 +83,29 @@ This specification defines the requirements for building a comprehensive testing
 4. WHEN alerting on issues THEN the system SHALL notify maintainers of significant regressions or failures
 5. WHEN managing baselines THEN the system SHALL update and maintain performance and correctness baselines
 6. WHEN generating regression reports THEN the system SHALL provide detailed analysis of changes and their impact
+
+### Requirement 7: Golden Path Real-World Testing
+
+**User Story:** As a user, I want confidence that BitNet.rs works correctly on real-world prompts and use cases, so that I can trust it for production workloads.
+
+#### Acceptance Criteria
+
+1. WHEN testing real-world scenarios THEN the system SHALL use curated prompts from HuggingFace benchmarks and LLM leaderboards
+2. WHEN comparing implementations THEN the system SHALL ensure identical outputs for golden path prompts within epsilon tolerance
+3. WHEN tracking performance THEN the system SHALL monitor timing, resource usage, and memory consumption for golden path tests
+4. WHEN validating releases THEN the system SHALL run golden path tests before every release
+5. WHEN detecting issues THEN the system SHALL provide detailed analysis of golden path failures
+6. WHEN updating golden paths THEN the system SHALL maintain versioned golden path test suites
+
+### Requirement 8: Differential Analysis and Debugging
+
+**User Story:** As a developer, I want detailed differential analysis when implementations diverge, so that I can quickly identify and fix compatibility issues.
+
+#### Acceptance Criteria
+
+1. WHEN outputs don't match THEN the system SHALL provide automated diff analysis with first mismatch location
+2. WHEN analyzing differences THEN the system SHALL show token-level, probability, and logit comparisons
+3. WHEN debugging issues THEN the system SHALL provide trace and log comparison capabilities
+4. WHEN fuzzing implementations THEN the system SHALL use differential fuzzing with random inputs
+5. WHEN testing edge cases THEN the system SHALL validate unusual inputs like long tokens, unicode, and edge-case model settings
+6. WHEN reporting mismatches THEN the system SHALL provide actionable debugging information with context
