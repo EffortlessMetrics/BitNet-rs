@@ -1,16 +1,19 @@
-# Default values for bitnet
-# This is a YAML-formatted file.
+# Default values for BitNet.rs
+# This is a YAML-formatted file for the primary Rust implementation.
+# For legacy C++ deployment options, see the 'legacy' section below.
 
 # Global configuration
 global:
   imageRegistry: ""
   imagePullSecrets: []
   storageClass: ""
+  # Primary implementation - always Rust for production
+  implementation: rust
 
-# Image configuration
+# Image configuration - Rust implementation
 image:
   registry: docker.io
-  repository: bitnet/bitnet
+  repository: bitnet/bitnet-rust
   tag: "1.0.0"
   pullPolicy: IfNotPresent
 
@@ -227,3 +230,42 @@ initContainers: []
 
 # Sidecar containers
 sidecars: []
+
+# Legacy C++ deployment (for cross-validation and migration support only)
+# WARNING: This is not recommended for production use
+legacy:
+  enabled: false
+  replicaCount: 1
+  image:
+    registry: docker.io
+    repository: bitnet/bitnet-cpp
+    tag: "legacy-latest"
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  nodeSelector:
+    kubernetes.io/arch: amd64
+  tolerations:
+    - key: "bitnet.io/legacy"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  affinity: {}
+  
+  # Legacy-specific configuration
+  config:
+    legacy_mode: true
+    cross_validation: true
+  
+  # Service configuration for legacy
+  service:
+    enabled: false  # Disabled by default
+    type: ClusterIP
+    port: 8080
+    annotations:
+      description: "Legacy C++ service - use Rust services for production"

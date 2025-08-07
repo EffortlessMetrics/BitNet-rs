@@ -1,0 +1,30 @@
+{{- if and .Values.legacy.enabled .Values.legacy.service.enabled }}
+# Legacy service for cross-validation purposes only
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "bitnet.fullname" . }}-legacy-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "bitnet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: service
+    app.kubernetes.io/variant: legacy
+    app.kubernetes.io/implementation: cpp
+  annotations:
+    description: "Legacy C++ service - use Rust services for production"
+    warning: "Not recommended for production use"
+    {{- with .Values.legacy.service.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.legacy.service.type }}
+  ports:
+  - port: {{ .Values.legacy.service.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "bitnet.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: inference
+    app.kubernetes.io/variant: legacy
+{{- end }}

@@ -1,0 +1,128 @@
+{{- if .Values.legacy.enabled }}
+# WARNING: This is the legacy C++ deployment for cross-validation only
+# Use the Rust implementation for production workloads
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "bitnet.fullname" . }}-legacy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "bitnet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: inference
+    app.kubernetes.io/variant: legacy
+    app.kubernetes.io/implementation: cpp
+  annotations:
+    description: "Legacy C++ implementation for cross-validation only"
+    warning: "Not recommended for production use"
+spec:
+  replicas: {{ .Values.legacy.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "bitnet.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: inference
+      app.kubernetes.io/variant: legacy
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "false"  # Disable metrics for legacy
+        description: "Legacy deployment - use Rust implementation for production"
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "bitnet.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: inference
+        app.kubernetes.io/variant: legacy
+        app.kubernetes.io/implementation: cpp
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "bitnet.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: bitnet-legacy
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.legacy.image.registry }}/{{ .Values.legacy.image.repository }}:{{ .Values.legacy.image.tag }}"
+          imagePullPolicy: {{ .Values.legacy.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.config.server.port }}
+              protocol: TCP
+          env:
+            - name: BITNET_LEGACY_MODE
+              value: "true"
+            - name: BITNET_CONFIG_PATH
+              value: "/app/config/bitnet.toml"
+            - name: BITNET_MODEL_PATH
+              value: {{ .Values.config.model.path }}
+            - name: BITNET_CROSS_VALIDATION
+              value: "{{ .Values.legacy.config.cross_validation }}"
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+            {{- if .Values.persistence.models.enabled }}
+            - name: models
+              mountPath: {{ .Values.config.model.path }}
+              readOnly: true
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if .Values.healthCheck.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.healthCheck.failureThreshold }}
+          {{- end }}
+          {{- if .Values.readinessCheck.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessCheck.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.readinessCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessCheck.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.legacy.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "bitnet.fullname" . }}-config
+        {{- if .Values.persistence.models.enabled }}
+        - name: models
+          persistentVolumeClaim:
+            claimName: {{ include "bitnet.fullname" . }}-models-pvc
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.legacy.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.legacy.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.legacy.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "bitnet.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "bitnet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: config
+data:
+  bitnet.toml: |
+    # BitNet.rs Configuration - Primary Rust Implementation
+    
+    [model]
+    path = "{{ .Values.config.model.path }}"
+    format = "{{ .Values.config.model.format }}"
+    
+    [inference]
+    max_tokens = {{ .Values.config.inference.max_tokens }}
+    temperature = {{ .Values.config.inference.temperature }}
+    top_k = {{ .Values.config.inference.top_k }}
+    top_p = {{ .Values.config.inference.top_p }}
+    
+    [server]
+    host = "{{ .Values.config.server.host }}"
+    port = {{ .Values.config.server.port }}
+    workers = {{ .Values.config.server.workers }}
+    
+    [monitoring]
+    metrics_enabled = {{ .Values.config.monitoring.metrics_enabled }}
+    metrics_port = {{ .Values.config.monitoring.metrics_port }}
+    health_check_enabled = {{ .Values.config.monitoring.health_check_enabled }}
+    
+    [logging]
+    level = "{{ .Values.config.logging.level }}"
+    format = "{{ .Values.config.logging.format }}"
+    
+    # Rust-specific optimizations
+    [rust]
+    enable_simd = true
+    memory_pool_size = "1GB"
+    thread_pool_size = "auto"

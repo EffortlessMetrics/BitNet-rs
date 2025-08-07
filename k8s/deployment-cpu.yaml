@@ -1,3 +1,4 @@
+# BitNet.rs CPU Deployment - Primary Rust Implementation
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,6 +8,7 @@ metadata:
     app.kubernetes.io/name: bitnet
     app.kubernetes.io/component: inference
     app.kubernetes.io/variant: cpu
+    app.kubernetes.io/implementation: rust
 spec:
   replicas: 3
   selector:
@@ -30,8 +32,8 @@ spec:
         runAsUser: 1000
         fsGroup: 1000
       containers:
-      - name: bitnet
-        image: bitnet:cpu-latest
+      - name: bitnet-rust
+        image: bitnet/bitnet-rust:cpu-latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080

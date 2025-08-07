@@ -1,0 +1,91 @@
+# Primary Rust implementation services
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "bitnet.fullname" . }}-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "bitnet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: service
+    app.kubernetes.io/implementation: rust
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{ .Values.service.metricsPort }}"
+    prometheus.io/path: "/metrics"
+    {{- with .Values.service.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - port: {{ .Values.service.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  - port: {{ .Values.service.metricsPort }}
+    targetPort: metrics
+    protocol: TCP
+    name: metrics
+  selector:
+    {{- include "bitnet.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: inference
+
+---
+{{- if .Values.cpu.enabled }}
+# CPU-specific service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "bitnet.fullname" . }}-cpu-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "bitnet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: service
+    app.kubernetes.io/variant: cpu
+    app.kubernetes.io/implementation: rust
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - port: {{ .Values.service.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  - port: {{ .Values.service.metricsPort }}
+    targetPort: metrics
+    protocol: TCP
+    name: metrics
+  selector:
+    {{- include "bitnet.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: inference
+    app.kubernetes.io/variant: cpu
+{{- end }}
+
+---
+{{- if .Values.gpu.enabled }}
+# GPU-specific service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "bitnet.fullname" . }}-gpu-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "bitnet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: service
+    app.kubernetes.io/variant: gpu
+    app.kubernetes.io/implementation: rust
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - port: {{ .Values.service.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  - port: {{ .Values.service.metricsPort }}
+    targetPort: metrics
+    protocol: TCP
+    name: metrics
+  selector:
+    {{- include "bitnet.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: inference
+    app.kubernetes.io/variant: gpu
+{{- end }}
