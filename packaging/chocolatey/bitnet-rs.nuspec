@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>bitnet-rs</id>
+    <version>1.0.0</version>
+    <packageSourceUrl>https://github.com/microsoft/BitNet</packageSourceUrl>
+    <owners>Microsoft</owners>
+    <title>BitNet.rs</title>
+    <authors>BitNet Contributors</authors>
+    <projectUrl>https://github.com/microsoft/BitNet</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/microsoft/BitNet/main/assets/logo.png</iconUrl>
+    <copyright>Copyright (c) Microsoft Corporation</copyright>
+    <licenseUrl>https://github.com/microsoft/BitNet/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/microsoft/BitNet</projectSourceUrl>
+    <docsUrl>https://docs.rs/bitnet</docsUrl>
+    <bugTrackerUrl>https://github.com/microsoft/BitNet/issues</bugTrackerUrl>
+    <tags>machine-learning llm inference rust bitnet quantization ai</tags>
+    <summary>High-performance Rust implementation of BitNet 1-bit LLM inference</summary>
+    <description>
+BitNet.rs is the primary, production-ready implementation of BitNet 1-bit Large Language Model inference engine, written in Rust for maximum performance and safety.
+
+## Features
+
+- **Memory Safety**: Rust's ownership system prevents memory leaks and buffer overflows
+- **High Performance**: Zero-cost abstractions and SIMD optimizations
+- **Cross-platform**: Native support for Windows, Linux, and macOS
+- **Reliability**: Comprehensive error handling and graceful degradation
+- **GPU Support**: CUDA acceleration for NVIDIA GPUs
+- **Multiple Interfaces**: CLI, HTTP server, and library APIs
+
+## Included Tools
+
+- **bitnet-cli**: Command-line interface for model inference
+- **bitnet-server**: HTTP server for inference API
+
+## Quick Start
+
+After installation, you can use BitNet.rs immediately:
+
+```
+# Check version
+bitnet-cli --version
+
+# Run inference
+bitnet-cli infer --model path/to/model.gguf --prompt "Hello, world!"
+
+# Start server
+bitnet-server --port 8080 --model path/to/model.gguf
+```
+
+## Documentation
+
+- API Documentation: https://docs.rs/bitnet
+- User Guide: https://github.com/microsoft/BitNet/blob/main/docs/
+- Installation Guide: https://github.com/microsoft/BitNet/blob/main/INSTALLATION.md
+
+## Support
+
+- GitHub Issues: https://github.com/microsoft/BitNet/issues
+- Discussions: https://github.com/microsoft/BitNet/discussions
+    </description>
+    <releaseNotes>https://github.com/microsoft/BitNet/releases</releaseNotes>
+    <dependencies>
+      <dependency id="vcredist2019" version="14.0.0" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

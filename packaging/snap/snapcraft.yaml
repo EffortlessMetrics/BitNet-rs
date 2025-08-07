@@ -1,0 +1,110 @@
+name: bitnet-rs
+base: core22
+version: '1.0.0'
+summary: High-performance Rust implementation of BitNet 1-bit LLM inference
+description: |
+  BitNet.rs is the primary, production-ready implementation of BitNet 1-bit 
+  Large Language Model inference engine, written in Rust for maximum 
+  performance and safety.
+
+  Features:
+  - Memory Safety: Rust's ownership system prevents memory leaks and buffer overflows
+  - High Performance: Zero-cost abstractions and SIMD optimizations  
+  - Cross-platform: Native support for Linux, macOS, and Windows
+  - Reliability: Comprehensive error handling and graceful degradation
+  - GPU Support: CUDA acceleration for NVIDIA GPUs
+  - Multiple Interfaces: CLI, HTTP server, and library APIs
+
+  This snap includes both the CLI tool (bitnet-cli) and HTTP server (bitnet-server).
+
+grade: stable
+confinement: strict
+
+architectures:
+  - build-on: amd64
+  - build-on: arm64
+
+apps:
+  bitnet-cli:
+    command: bin/bitnet-cli
+    plugs:
+      - home
+      - network
+      - removable-media
+    environment:
+      RUST_LOG: info
+
+  bitnet-server:
+    command: bin/bitnet-server
+    daemon: simple
+    plugs:
+      - network-bind
+      - home
+      - removable-media
+    environment:
+      RUST_LOG: info
+
+  cli:
+    command: bin/bitnet-cli
+    plugs:
+      - home
+      - network
+      - removable-media
+
+  server:
+    command: bin/bitnet-server
+    plugs:
+      - network-bind
+      - home
+      - removable-media
+
+parts:
+  bitnet-rs:
+    plugin: rust
+    source: https://github.com/microsoft/BitNet.git
+    source-type: git
+    source-tag: v1.0.0
+    
+    rust-features:
+      - cpu
+      - avx2
+    
+    build-packages:
+      - build-essential
+      - pkg-config
+      - libssl-dev
+    
+    stage-packages:
+      - libssl3
+      - ca-certificates
+    
+    override-build: |
+      # Build CLI
+      cargo install --locked --root $SNAPCRAFT_PART_INSTALL --path crates/bitnet-cli --features cpu,avx2
+      
+      # Build Server  
+      cargo install --locked --root $SNAPCRAFT_PART_INSTALL --path crates/bitnet-server --features cpu,avx2
+      
+      # Install shell completions
+      mkdir -p $SNAPCRAFT_PART_INSTALL/share/bash-completion/completions
+      mkdir -p $SNAPCRAFT_PART_INSTALL/share/zsh/site-functions
+      mkdir -p $SNAPCRAFT_PART_INSTALL/share/fish/vendor_completions.d
+      
+      # Generate completions if supported
+      if $SNAPCRAFT_PART_INSTALL/bin/bitnet-cli completion bash > /dev/null 2>&1; then
+        $SNAPCRAFT_PART_INSTALL/bin/bitnet-cli completion bash > $SNAPCRAFT_PART_INSTALL/share/bash-completion/completions/bitnet-cli
+        $SNAPCRAFT_PART_INSTALL/bin/bitnet-cli completion zsh > $SNAPCRAFT_PART_INSTALL/share/zsh/site-functions/_bitnet-cli
+        $SNAPCRAFT_PART_INSTALL/bin/bitnet-cli completion fish > $SNAPCRAFT_PART_INSTALL/share/fish/vendor_completions.d/bitnet-cli.fish
+      fi
+      
+      if $SNAPCRAFT_PART_INSTALL/bin/bitnet-server completion bash > /dev/null 2>&1; then
+        $SNAPCRAFT_PART_INSTALL/bin/bitnet-server completion bash > $SNAPCRAFT_PART_INSTALL/share/bash-completion/completions/bitnet-server
+        $SNAPCRAFT_PART_INSTALL/bin/bitnet-server completion zsh > $SNAPCRAFT_PART_INSTALL/share/zsh/site-functions/_bitnet-server  
+        $SNAPCRAFT_PART_INSTALL/bin/bitnet-server completion fish > $SNAPCRAFT_PART_INSTALL/share/fish/vendor_completions.d/bitnet-server.fish
+      fi
+
+layout:
+  /usr/share/ca-certificates:
+    bind: $SNAP/usr/share/ca-certificates
+  /etc/ssl/certs:
+    bind: $SNAP/etc/ssl/certs
