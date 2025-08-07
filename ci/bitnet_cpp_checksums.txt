@@ -1,0 +1,18 @@
+# SHA256 checksums for BitNet C++ implementation
+# This file contains checksums for key files to verify integrity
+# Update this file when updating to a new version of BitNet.cpp
+
+# Format: <checksum>  <filename>
+# Example:
+# a1b2c3d4e5f6...  src/main.cpp
+# f6e5d4c3b2a1...  include/bitnet.h
+
+# Note: This file is currently empty as checksums need to be generated
+# for the specific version being used. Run the following to generate:
+#
+# cd ~/.cache/bitnet_cpp
+# find . -name "*.cpp" -o -name "*.h" -o -name "*.hpp" | sort | xargs sha256sum > checksums.txt
+#
+# Then copy relevant checksums to this file for verification.
+
+# Checksums will be added here when a specific BitNet.cpp version is pinned

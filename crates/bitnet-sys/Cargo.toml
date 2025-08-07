@@ -1,0 +1,37 @@
+[package]
+name = "bitnet-sys"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Low-level FFI bindings to BitNet C++ implementation for cross-validation"
+readme = "README.md"
+rust-version.workspace = true
+publish = false  # Internal crate, not published
+
+[features]
+default = []
+crossval = ["dep:bindgen", "dep:cc"]
+
+[dependencies]
+# Only include FFI dependencies when crossval feature is enabled
+bindgen = { version = "0.69", optional = true }
+cc = { version = "1.0", optional = true }
+
+[build-dependencies]
+# Build-time dependencies for generating bindings
+bindgen = { version = "0.69", optional = true }
+cc = { version = "1.0", optional = true }
+
+[package.metadata.docs.rs]
+features = ["crossval"]
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lib]
+name = "bitnet_sys"
+path = "src/lib.rs"

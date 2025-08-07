@@ -1,27 +1,48 @@
-# Global Cargo configuration for BitNet.rs
+# Cargo configuration for BitNet Rust implementation
+# This file configures default behavior for the workspace
 
 [build]
-# Disable crossval feature by default to avoid requiring C++ dependencies
-# Enable with: cargo build --features crossval
+# Disable crossval feature by default to avoid C++ dependencies
+# Enable explicitly with: cargo build --features crossval
 rustflags = []
 
-[target.'cfg(all())']
-# Disable crossval feature by default across all targets
-rustflags = []
-
-# Environment variables for cross-validation
 [env]
-# Path to cached BitNet.cpp builds
-BITNET_CPP_CACHE_DIR = { value = "$HOME/.cache/bitnet_cpp", relative = false }
+# Environment variables for cross-validation
+# These are used when crossval feature is enabled
+BITNET_CPP_PATH = { value = "", relative = false }
 
-# Cross-validation configuration
-BITNET_CROSSVAL_ENABLED = "false"
+[alias]
+# Convenient aliases for common tasks
+crossval = "test --features crossval"
+crossval-bench = "bench --features crossval"
+check-all = "check --workspace --all-targets --all-features"
+test-all = "test --workspace --all-targets --all-features"
+doc-all = "doc --workspace --all-features --no-deps"
 
-# Optimization settings for release builds
-[profile.release]
-lto = true
-codegen-units = 1
-panic = "abort"
+# Cross-validation specific aliases
+fetch-cpp = "run --bin fetch_bitnet_cpp"
+apply-patches = "run --bin apply_patches"
 
-[profile.bench]
+[target.'cfg(windows)']
+# Windows-specific configuration
+rustflags = []
+
+[target.'cfg(unix)']
+# Unix-specific configuration  
+rustflags = []
+
+# Profile configurations for cross-validation
+[profile.crossval]
+inherits = "test"
 debug = true
+opt-level = 2  # Optimize for better performance comparison
+
+[profile.crossval-bench]
+inherits = "bench"
+debug = true
+opt-level = 3
+
+# Documentation configuration
+[doc]
+# Always build docs with all features for completeness
+all-features = true
