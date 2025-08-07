@@ -1,0 +1,166 @@
+# BitNet.rs GPU-enabled Dockerfile
+# Optimized for NVIDIA GPU inference with CUDA support
+
+# Build stage with CUDA development environment
+FROM nvidia/cuda:12.2-devel-ubuntu22.04 as builder
+
+# Install Rust
+RUN apt-get update && apt-get install -y \
+    curl \
+    pkg-config \
+    libssl-dev \
+    cmake \
+    build-essential \
+    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Create app directory
+WORKDIR /app
+
+# Copy dependency manifests
+COPY Cargo.toml Cargo.lock ./
+COPY crates/*/Cargo.toml ./crates/
+
+# Create dummy source files for dependency caching
+RUN mkdir -p crates/bitnet-common/src \
+    crates/bitnet-models/src \
+    crates/bitnet-quantization/src \
+    crates/bitnet-kernels/src \
+    crates/bitnet-inference/src \
+    crates/bitnet-tokenizers/src \
+    crates/bitnet-server/src \
+    crates/bitnet-cli/src \
+    crates/bitnet-ffi/src \
+    && echo "fn main() {}" > crates/bitnet-cli/src/main.rs \
+    && echo "fn main() {}" > crates/bitnet-server/src/main.rs \
+    && find crates -name "*.toml" -exec dirname {} \; | xargs -I {} touch {}/src/lib.rs
+
+# Build dependencies with GPU features
+RUN cargo build --release --features "gpu,cuda" --bin bitnet-server --bin bitnet-cli
+RUN rm -rf crates/*/src
+
+# Copy actual source code
+COPY . .
+
+# Build with GPU optimizations
+RUN cargo build --release --features "gpu,cuda" --bin bitnet-server --bin bitnet-cli
+
+# Runtime stage with CUDA runtime
+FROM nvidia/cuda:12.2-runtime-ubuntu22.04
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -r bitnet \
+    && useradd -r -g bitnet -s /bin/false bitnet
+
+# Copy binaries from builder
+COPY --from=builder /app/target/release/bitnet-server /usr/local/bin/
+COPY --from=builder /app/target/release/bitnet-cli /usr/local/bin/bitnet
+
+# Copy documentation
+COPY --from=builder /app/README.md /app/CHANGELOG.md /usr/share/doc/bitnet/
+COPY --from=builder /app/LICENSE* /usr/share/doc/bitnet/
+
+# Create directories
+RUN mkdir -p /etc/bitnet /var/lib/bitnet /var/log/bitnet /app/models \
+    && chown -R bitnet:bitnet /var/lib/bitnet /var/log/bitnet /app
+
+# Create GPU-optimized configuration
+RUN cat > /etc/bitnet/server.toml << 'EOF'
+[server]
+host = "0.0.0.0"
+port = 8080
+max_connections = 2000
+timeout = 60
+
+[model]
+path = "/app/models/model.gguf"
+max_tokens = 4096
+batch_size = 1024
+
+[inference]
+temperature = 0.7
+top_p = 0.9
+top_k = 40
+
+[performance]
+threads = 0  # Auto-detect
+use_gpu = true
+gpu_layers = 32
+memory_pool = "8GB"
+async_inference = true
+batch_processing = true
+
+[logging]
+level = "info"
+format = "json"
+file = "/var/log/bitnet/server.log"
+
+[metrics]
+enabled = true
+prometheus_port = 9090
+endpoint = "/metrics"
+
+[security]
+api_key_required = false
+cors_enabled = true
+max_request_size = "50MB"
+EOF
+
+# GPU health check script
+RUN cat > /usr/local/bin/gpu-health-check << 'EOF'
+#!/bin/bash
+set -e
+
+# Check NVIDIA GPU availability
+if ! nvidia-smi > /dev/null 2>&1; then
+    echo "GPU health check failed: nvidia-smi not available"
+    exit 1
+fi
+
+# Check server health
+if curl -f -s http://localhost:8080/health > /dev/null; then
+    echo "Server and GPU are healthy"
+    exit 0
+else
+    echo "Server health check failed"
+    exit 1
+fi
+EOF
+RUN chmod +x /usr/local/bin/gpu-health-check
+
+# Health check with GPU validation
+HEALTHCHECK --interval=30s --timeout=15s --start-period=90s --retries=3 \
+    CMD /usr/local/bin/gpu-health-check
+
+# Switch to non-root user
+USER bitnet
+WORKDIR /app
+
+# Expose ports
+EXPOSE 8080 9090
+
+# Set environment variables
+ENV RUST_LOG=info
+ENV RUST_BACKTRACE=1
+ENV BITNET_CONFIG=/etc/bitnet/server.toml
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Default command with GPU device specification
+CMD ["bitnet-server", "--config", "/etc/bitnet/server.toml", "--device", "cuda"]
+
+# Metadata labels
+LABEL org.opencontainers.image.title="BitNet.rs GPU"
+LABEL org.opencontainers.image.description="GPU-accelerated BitNet 1-bit LLM inference with CUDA support"
+LABEL org.opencontainers.image.vendor="BitNet Contributors"
+LABEL org.opencontainers.image.licenses="MIT OR Apache-2.0"
+LABEL org.opencontainers.image.source="https://github.com/microsoft/BitNet"
+LABEL org.opencontainers.image.documentation="https://docs.rs/bitnet"
+LABEL org.opencontainers.image.version="1.0.0-gpu"
+LABEL org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"

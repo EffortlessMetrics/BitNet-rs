@@ -1,0 +1,187 @@
+# Prometheus configuration for BitNet.rs monitoring
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'bitnet-production'
+    replica: 'prometheus-1'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+
+  # BitNet.rs primary server
+  - job_name: 'bitnet-server'
+    static_configs:
+      - targets: ['bitnet-server:9090']
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    params:
+      format: ['prometheus']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'bitnet-primary'
+      - target_label: service
+        replacement: 'bitnet-server'
+      - target_label: implementation
+        replacement: 'rust'
+
+  # BitNet.rs GPU server (if enabled)
+  - job_name: 'bitnet-gpu'
+    static_configs:
+      - targets: ['bitnet-gpu:9090']
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'bitnet-gpu'
+      - target_label: service
+        replacement: 'bitnet-server'
+      - target_label: implementation
+        replacement: 'rust'
+      - target_label: device
+        replacement: 'gpu'
+
+  # Nginx metrics
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:8080']
+    scrape_interval: 30s
+    metrics_path: '/nginx_status'
+    relabel_configs:
+      - target_label: service
+        replacement: 'nginx'
+
+  # Redis metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+    relabel_configs:
+      - target_label: service
+        replacement: 'redis'
+
+  # Node exporter for system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+    relabel_configs:
+      - target_label: service
+        replacement: 'node-exporter'
+
+  # Docker container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+    relabel_configs:
+      - target_label: service
+        replacement: 'cadvisor'
+
+# Recording rules for performance metrics
+recording_rules:
+  - name: bitnet_performance
+    rules:
+      # Request rate
+      - record: bitnet:request_rate_5m
+        expr: rate(bitnet_requests_total[5m])
+      
+      # Error rate
+      - record: bitnet:error_rate_5m
+        expr: rate(bitnet_requests_total{status=~"5.."}[5m]) / rate(bitnet_requests_total[5m])
+      
+      # Response time percentiles
+      - record: bitnet:response_time_p95_5m
+        expr: histogram_quantile(0.95, rate(bitnet_request_duration_seconds_bucket[5m]))
+      
+      - record: bitnet:response_time_p99_5m
+        expr: histogram_quantile(0.99, rate(bitnet_request_duration_seconds_bucket[5m]))
+      
+      # Inference metrics
+      - record: bitnet:inference_rate_5m
+        expr: rate(bitnet_inference_requests_total[5m])
+      
+      - record: bitnet:tokens_per_second_5m
+        expr: rate(bitnet_tokens_generated_total[5m])
+      
+      - record: bitnet:inference_latency_p95_5m
+        expr: histogram_quantile(0.95, rate(bitnet_inference_duration_seconds_bucket[5m]))
+
+# Alerting rules
+alerting_rules:
+  - name: bitnet_alerts
+    rules:
+      # High error rate
+      - alert: BitNetHighErrorRate
+        expr: bitnet:error_rate_5m > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: bitnet
+        annotations:
+          summary: "BitNet error rate is above 5%"
+          description: "BitNet error rate is {{ $value | humanizePercentage }} for the last 5 minutes"
+      
+      # High response time
+      - alert: BitNetHighLatency
+        expr: bitnet:response_time_p95_5m > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: bitnet
+        annotations:
+          summary: "BitNet response time is high"
+          description: "BitNet 95th percentile response time is {{ $value }}s"
+      
+      # Service down
+      - alert: BitNetServiceDown
+        expr: up{job="bitnet-server"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: bitnet
+        annotations:
+          summary: "BitNet service is down"
+          description: "BitNet service has been down for more than 1 minute"
+      
+      # High memory usage
+      - alert: BitNetHighMemoryUsage
+        expr: (bitnet_memory_usage_bytes / bitnet_memory_limit_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: bitnet
+        annotations:
+          summary: "BitNet memory usage is high"
+          description: "BitNet memory usage is {{ $value | humanizePercentage }}"
+      
+      # GPU utilization (if applicable)
+      - alert: BitNetGPUHighUtilization
+        expr: bitnet_gpu_utilization_percent > 95
+        for: 10m
+        labels:
+          severity: info
+          service: bitnet
+          device: gpu
+        annotations:
+          summary: "BitNet GPU utilization is very high"
+          description: "GPU utilization has been above 95% for 10 minutes"

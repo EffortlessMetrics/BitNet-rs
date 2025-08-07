@@ -1,0 +1,112 @@
+# Legacy C++ BitNet Dockerfile for cross-validation purposes only
+# This is NOT the primary implementation - use BitNet.rs instead
+# Only used for performance comparison and compatibility testing
+
+# Build stage
+FROM ubuntu:22.04 as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    curl \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Download and build BitNet.cpp (external dependency)
+RUN git clone https://github.com/microsoft/BitNet.git bitnet-cpp \
+    && cd bitnet-cpp \
+    && git checkout v1.0.0 \
+    && mkdir build \
+    && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release \
+    && make -j$(nproc)
+
+# Runtime stage
+FROM ubuntu:22.04
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -r bitnet \
+    && useradd -r -g bitnet -s /bin/false bitnet
+
+# Copy built binaries
+COPY --from=builder /app/bitnet-cpp/build/bin/* /usr/local/bin/
+
+# Create directories
+RUN mkdir -p /app/models /app/config /var/log/bitnet \
+    && chown -R bitnet:bitnet /app /var/log/bitnet
+
+# Create legacy configuration
+RUN cat > /app/config/bitnet.json << 'EOF'
+{
+  "model": {
+    "path": "/app/models/model.gguf",
+    "max_tokens": 2048,
+    "batch_size": 512
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "threads": 8
+  },
+  "inference": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "top_k": 40
+  }
+}
+EOF
+
+# Legacy health check script
+RUN cat > /usr/local/bin/legacy-health-check << 'EOF'
+#!/bin/bash
+set -e
+
+# Simple health check for legacy implementation
+if pgrep -f "bitnet" > /dev/null; then
+    echo "Legacy BitNet process is running"
+    exit 0
+else
+    echo "Legacy BitNet process not found"
+    exit 1
+fi
+EOF
+RUN chmod +x /usr/local/bin/legacy-health-check
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD /usr/local/bin/legacy-health-check
+
+# Switch to non-root user
+USER bitnet
+WORKDIR /app
+
+# Expose port
+EXPOSE 8080
+
+# Set environment variables
+ENV BITNET_CONFIG=/app/config/bitnet.json
+
+# Default command (legacy C++ server)
+CMD ["bitnet-server", "--config", "/app/config/bitnet.json"]
+
+# Metadata labels - clearly marked as legacy
+LABEL org.opencontainers.image.title="BitNet C++ Legacy"
+LABEL org.opencontainers.image.description="Legacy C++ BitNet implementation - FOR CROSS-VALIDATION ONLY"
+LABEL org.opencontainers.image.vendor="Microsoft (Legacy)"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.source="https://github.com/microsoft/BitNet"
+LABEL org.opencontainers.image.version="1.0.0-legacy"
+LABEL org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+LABEL bitnet.implementation="legacy-cpp"
+LABEL bitnet.purpose="cross-validation-only"
+LABEL bitnet.deprecated="true"
