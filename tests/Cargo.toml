@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 description = "Comprehensive testing framework for BitNet.rs"
 
+[lib]
+name = "bitnet_tests"
+path = "common/mod.rs"
+
 [dependencies]
 # Async runtime and utilities
 tokio = { version = "1.0", features = ["full"] }

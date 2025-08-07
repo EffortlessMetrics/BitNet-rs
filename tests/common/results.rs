@@ -1,4 +1,4 @@
-use crate::common::errors::TestError;
+use crate::errors::TestError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
