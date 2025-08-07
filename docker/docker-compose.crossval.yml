@@ -1,0 +1,207 @@
+# Cross-validation Docker Compose
+# Runs both Rust and legacy implementations for performance comparison
+# NOT for production use - development and testing only
+
+version: '3.8'
+
+services:
+  # Primary BitNet.rs implementation
+  bitnet-rust:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.rust-primary
+    container_name: bitnet-rust-crossval
+    restart: unless-stopped
+    ports:
+      - "8080:8080"  # Rust implementation
+      - "9090:9090"  # Rust metrics
+    volumes:
+      - ./models:/app/models:ro
+      - ./config/rust-server.toml:/etc/bitnet/server.toml:ro
+      - crossval-rust-logs:/var/log/bitnet
+    environment:
+      - RUST_LOG=debug
+      - RUST_BACKTRACE=1
+      - BITNET_CONFIG=/etc/bitnet/server.toml
+      - BITNET_IMPLEMENTATION=rust
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - crossval-network
+    labels:
+      - "bitnet.implementation=rust"
+      - "bitnet.purpose=crossval"
+
+  # Legacy C++ implementation (for comparison only)
+  bitnet-legacy:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.legacy-crossval
+    container_name: bitnet-legacy-crossval
+    restart: unless-stopped
+    ports:
+      - "8081:8080"  # Legacy implementation
+    volumes:
+      - ./models:/app/models:ro
+      - ./config/legacy-config.json:/app/config/bitnet.json:ro
+      - crossval-legacy-logs:/var/log/bitnet
+    environment:
+      - BITNET_CONFIG=/app/config/bitnet.json
+      - BITNET_IMPLEMENTATION=legacy-cpp
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - crossval-network
+    labels:
+      - "bitnet.implementation=legacy-cpp"
+      - "bitnet.purpose=crossval"
+      - "bitnet.deprecated=true"
+
+  # Cross-validation test runner
+  crossval-runner:
+    build:
+      context: ..
+      dockerfile: crossval/Dockerfile
+    container_name: bitnet-crossval-runner
+    restart: "no"  # Run once
+    volumes:
+      - ./models:/app/models:ro
+      - ./crossval/fixtures:/app/fixtures:ro
+      - crossval-results:/app/results
+    environment:
+      - RUST_LOG=info
+      - CROSSVAL_RUST_ENDPOINT=http://bitnet-rust:8080
+      - CROSSVAL_LEGACY_ENDPOINT=http://bitnet-legacy:8080
+      - CROSSVAL_OUTPUT_DIR=/app/results
+      - CROSSVAL_TOLERANCE=1e-6
+    depends_on:
+      - bitnet-rust
+      - bitnet-legacy
+    networks:
+      - crossval-network
+    command: ["cargo", "run", "--bin", "crossval-runner", "--", "--compare-all"]
+    labels:
+      - "bitnet.component=crossval-runner"
+
+  # Performance benchmarking service
+  benchmark-runner:
+    build:
+      context: ..
+      dockerfile: crossval/Dockerfile.benchmark
+    container_name: bitnet-benchmark-runner
+    restart: "no"
+    volumes:
+      - ./models:/app/models:ro
+      - crossval-results:/app/results
+    environment:
+      - RUST_LOG=info
+      - BENCHMARK_RUST_ENDPOINT=http://bitnet-rust:8080
+      - BENCHMARK_LEGACY_ENDPOINT=http://bitnet-legacy:8080
+      - BENCHMARK_OUTPUT_DIR=/app/results
+      - BENCHMARK_ITERATIONS=100
+    depends_on:
+      - bitnet-rust
+      - bitnet-legacy
+    networks:
+      - crossval-network
+    command: ["cargo", "run", "--bin", "benchmark-runner"]
+    labels:
+      - "bitnet.component=benchmark-runner"
+
+  # Prometheus for cross-validation metrics
+  prometheus-crossval:
+    image: prom/prometheus:latest
+    container_name: crossval-prometheus
+    restart: unless-stopped
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./config/prometheus/crossval.yml:/etc/prometheus/prometheus.yml:ro
+      - crossval-prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    networks:
+      - crossval-network
+
+  # Grafana for cross-validation visualization
+  grafana-crossval:
+    image: grafana/grafana:latest
+    container_name: crossval-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    volumes:
+      - crossval-grafana-data:/var/lib/grafana
+      - ./config/grafana/crossval-dashboards:/var/lib/grafana/dashboards:ro
+      - ./config/grafana/crossval-provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=crossval123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/crossval-overview.json
+    depends_on:
+      - prometheus-crossval
+    networks:
+      - crossval-network
+
+  # Results web server for viewing comparison reports
+  results-server:
+    image: nginx:alpine
+    container_name: crossval-results-server
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    volumes:
+      - crossval-results:/usr/share/nginx/html:ro
+      - ./config/nginx/results-server.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - crossval-network
+    labels:
+      - "bitnet.component=results-server"
+
+volumes:
+  # Cross-validation data
+  crossval-results:
+    driver: local
+  crossval-rust-logs:
+    driver: local
+  crossval-legacy-logs:
+    driver: local
+  
+  # Monitoring data
+  crossval-prometheus-data:
+    driver: local
+  crossval-grafana-data:
+    driver: local
+
+networks:
+  crossval-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+    labels:
+      - "bitnet.network=crossval"
+      - "bitnet.purpose=testing"
+
+# Helper scripts as services
+x-scripts:
+  run-crossval: &run-crossval
+    docker-compose -f docker-compose.crossval.yml up crossval-runner benchmark-runner
+  
+  view-results: &view-results
+    echo "Cross-validation results available at http://localhost:8082"
+    echo "Grafana dashboard available at http://localhost:3001 (admin/crossval123)"
+  
+  cleanup: &cleanup
+    docker-compose -f docker-compose.crossval.yml down -v
