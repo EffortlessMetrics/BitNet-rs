@@ -1,0 +1,20 @@
+{
+  "name": "standard_prompts",
+  "model_path": "test_model.gguf",
+  "test_prompts": [
+    "Hello, world!",
+    "The quick brown fox jumps over the lazy dog.",
+    "In a hole in the ground there lived a hobbit.",
+    "To be or not to be, that is the question.",
+    "1 + 1 = 2",
+    "Once upon a time, in a land far, far away...",
+    "The capital of France is Paris.",
+    "Artificial intelligence is transforming the world.",
+    "Rust is a systems programming language.",
+    "BitNet enables efficient 1-bit neural networks."
+  ],
+  "expected_tokens": null,
+  "description": "Standard test prompts covering various scenarios",
+  "model_size_kb": 100,
+  "max_tokens": 100
+}

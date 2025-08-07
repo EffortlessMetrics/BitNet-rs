@@ -16,6 +16,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
 thiserror = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
 
 # Cross-validation specific dependencies (feature-gated)
 bindgen = { version = "0.69", optional = true }

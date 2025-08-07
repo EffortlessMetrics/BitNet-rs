@@ -1,0 +1,9 @@
+{
+  "rust_tokens_per_second": 1250.0,
+  "cpp_tokens_per_second": 520.0,
+  "rust_memory_mb": 2100.0,
+  "cpp_memory_mb": 3200.0,
+  "speedup_ratio": 2.4,
+  "memory_reduction": 0.34,
+  "timestamp": "2024-01-01T00:00:00Z"
+}

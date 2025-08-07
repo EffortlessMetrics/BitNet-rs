@@ -111,35 +111,35 @@ This document outlines the detailed implementation tasks for restructuring the B
 
 ### Phase 4: Cross-Validation Framework
 
-- [ ] 4.1 Implement token equivalence tests
+- [x] 4.1 Implement token equivalence tests
   - Create `crossval/tests/token_equivalence.rs`
   - Implement exact token matching for small models
   - Add tolerance-based comparison for floating point values
   - Include multiple model format support
   - _Requirements: 3.1, 3.3_
 
-- [ ] 4.2 Create performance benchmarks
+- [x] 4.2 Create performance benchmarks
   - Implement `crossval/benches/performance.rs` using Criterion
   - Add throughput and latency measurements
   - Create 5% performance regression guards
   - Generate comparison reports and charts
   - _Requirements: 3.2, 3.4_
 
-- [ ] 4.3 Set up test fixtures
+- [x] 4.3 Set up test fixtures
   - Create small test models (~20KB) in `crossval/fixtures/`
   - Add deterministic fixture generator (`cargo xtask gen-fixtures`)
   - Include test prompt datasets for various scenarios
   - Set up baseline performance numbers in committed JSON files
   - _Requirements: 3.1, 3.2_
 
-- [ ] 4.4 Implement FFI integration
+- [x] 4.4 Implement FFI integration
   - Create safe Rust wrappers around C++ functions
   - Add error handling and memory management
   - Implement model loading and inference calls
   - Set up proper resource cleanup
   - _Requirements: 3.1, 3.2_
 
-- [ ] 4.5 Add feature gate integration
+- [x] 4.5 Add feature gate integration
   - Implement conditional compilation for crossval feature
   - Ensure zero overhead when feature is disabled
   - Add documentation for feature usage
