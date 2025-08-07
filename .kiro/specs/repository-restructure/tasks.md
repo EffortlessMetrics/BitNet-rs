@@ -230,25 +230,25 @@ This document outlines the detailed implementation tasks for restructuring the B
 
 ### Phase 8: Polish and Nice-to-Haves
 
-- [ ] 8.1 Add binary caching optimization
+- [x] 8.1 Add binary caching optimization
   - Set up GitHub Container Registry for pre-built bitnet_cpp libraries
   - Cache builds keyed by tag+SHA for faster CI
   - Reduce CI time from ~7min to <1min while maintaining reproducibility
   - _Requirements: Performance optimization_
 
-- [ ] 8.2 Implement patch policy automation
+- [x] 8.2 Implement patch policy automation
   - Add CI check that fails if patches/ is non-empty without upstream issue link
   - Create automated issue creation when patches are added
   - Set up patch lifecycle tracking and cleanup reminders
   - _Requirements: 2.4, Maintenance_
 
-- [ ] 8.3 Add performance baseline tracking
+- [x] 8.3 Add performance baseline tracking
   - Commit baseline performance numbers to crossval/baselines.json
   - Upload fresh benchmark results as CI artifacts
   - Create performance drift detection and alerting
   - _Requirements: 3.2, 3.4_
 
-- [ ] 8.4 Create developer convenience tools
+- [x] 8.4 Create developer convenience tools
   - Add `cargo xtask gen-fixtures` for deterministic test model generation
   - Create `./scripts/dev-crossval.sh` one-liner for easy setup
   - Add IDE configuration to prevent accidental crossval feature activation

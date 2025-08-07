@@ -1,0 +1,453 @@
+name: Patch Policy Enforcement
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'patches/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'patches/**'
+  schedule:
+    # Weekly patch lifecycle review
+    - cron: '0 9 * * 1'  # Monday 9 AM UTC
+  workflow_dispatch:
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  check-patch-policy:
+    name: Check Patch Policy Compliance
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check patches directory
+      id: check-patches
+      run: |
+        echo "Checking patches directory..."
+        
+        # Count patch files
+        patch_count=0
+        if [[ -d "patches" ]]; then
+          patch_count=$(find patches -name "*.patch" -o -name "*.diff" | wc -l)
+        fi
+        
+        echo "patch_count=$patch_count" >> $GITHUB_OUTPUT
+        echo "Found $patch_count patch files"
+        
+        # List patch files
+        if [[ $patch_count -gt 0 ]]; then
+          echo "Patch files found:"
+          find patches -name "*.patch" -o -name "*.diff" | while read -r patch_file; do
+            echo "  - $patch_file"
+          done
+        fi
+
+    - name: Validate patch metadata
+      if: steps.check-patches.outputs.patch_count > 0
+      id: validate-patches
+      run: |
+        echo "Validating patch metadata..."
+        
+        missing_metadata=()
+        invalid_patches=()
+        
+        find patches -name "*.patch" -o -name "*.diff" | while read -r patch_file; do
+          echo "Checking $patch_file..."
+          
+          # Check for required metadata in patch header
+          if ! grep -q "^# Upstream-Issue:" "$patch_file" 2>/dev/null; then
+            echo "  ❌ Missing Upstream-Issue metadata"
+            echo "$patch_file" >> missing_metadata.txt
+          fi
+          
+          if ! grep -q "^# Reason:" "$patch_file" 2>/dev/null; then
+            echo "  ❌ Missing Reason metadata"
+            echo "$patch_file" >> missing_reason.txt
+          fi
+          
+          if ! grep -q "^# Status:" "$patch_file" 2>/dev/null; then
+            echo "  ❌ Missing Status metadata"
+            echo "$patch_file" >> missing_status.txt
+          fi
+          
+          # Validate patch format
+          if ! patch --dry-run -p1 < "$patch_file" >/dev/null 2>&1; then
+            echo "  ❌ Invalid patch format"
+            echo "$patch_file" >> invalid_patches.txt
+          else
+            echo "  ✅ Valid patch format"
+          fi
+        done
+        
+        # Set outputs
+        if [[ -f missing_metadata.txt ]]; then
+          echo "has_missing_metadata=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_missing_metadata=false" >> $GITHUB_OUTPUT
+        fi
+        
+        if [[ -f invalid_patches.txt ]]; then
+          echo "has_invalid_patches=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_invalid_patches=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Check upstream issue links
+      if: steps.check-patches.outputs.patch_count > 0
+      id: check-upstream
+      run: |
+        echo "Checking upstream issue links..."
+        
+        broken_links=()
+        
+        find patches -name "*.patch" -o -name "*.diff" | while read -r patch_file; do
+          # Extract upstream issue URL
+          upstream_issue=$(grep "^# Upstream-Issue:" "$patch_file" 2>/dev/null | sed 's/^# Upstream-Issue: *//')
+          
+          if [[ -n "$upstream_issue" ]]; then
+            echo "Checking upstream issue: $upstream_issue"
+            
+            # Validate URL format
+            if [[ "$upstream_issue" =~ ^https://github\.com/.+/issues/[0-9]+$ ]]; then
+              # Check if issue exists (basic HTTP check)
+              if ! curl -s -f -I "$upstream_issue" >/dev/null; then
+                echo "  ❌ Upstream issue not accessible: $upstream_issue"
+                echo "$patch_file: $upstream_issue" >> broken_links.txt
+              else
+                echo "  ✅ Upstream issue accessible"
+              fi
+            else
+              echo "  ❌ Invalid upstream issue URL format: $upstream_issue"
+              echo "$patch_file: $upstream_issue" >> broken_links.txt
+            fi
+          fi
+        done
+        
+        if [[ -f broken_links.txt ]]; then
+          echo "has_broken_links=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_broken_links=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Generate patch policy report
+      if: steps.check-patches.outputs.patch_count > 0
+      run: |
+        cat > patch-policy-report.md << 'EOF'
+        # 🩹 Patch Policy Compliance Report
+        
+        **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        **Total Patches**: ${{ steps.check-patches.outputs.patch_count }}
+        
+        ## Policy Violations
+        
+        EOF
+        
+        violations=0
+        
+        if [[ "${{ steps.validate-patches.outputs.has_missing_metadata }}" == "true" ]]; then
+          echo "### ❌ Missing Required Metadata" >> patch-policy-report.md
+          echo "" >> patch-policy-report.md
+          echo "The following patches are missing required metadata:" >> patch-policy-report.md
+          echo "" >> patch-policy-report.md
+          
+          if [[ -f missing_metadata.txt ]]; then
+            while read -r patch_file; do
+              echo "- \`$patch_file\`" >> patch-policy-report.md
+            done < missing_metadata.txt
+          fi
+          
+          echo "" >> patch-policy-report.md
+          violations=$((violations + 1))
+        fi
+        
+        if [[ "${{ steps.validate-patches.outputs.has_invalid_patches }}" == "true" ]]; then
+          echo "### ❌ Invalid Patch Format" >> patch-policy-report.md
+          echo "" >> patch-policy-report.md
+          echo "The following patches have invalid format:" >> patch-policy-report.md
+          echo "" >> patch-policy-report.md
+          
+          if [[ -f invalid_patches.txt ]]; then
+            while read -r patch_file; do
+              echo "- \`$patch_file\`" >> patch-policy-report.md
+            done < invalid_patches.txt
+          fi
+          
+          echo "" >> patch-policy-report.md
+          violations=$((violations + 1))
+        fi
+        
+        if [[ "${{ steps.check-upstream.outputs.has_broken_links }}" == "true" ]]; then
+          echo "### ❌ Broken Upstream Links" >> patch-policy-report.md
+          echo "" >> patch-policy-report.md
+          echo "The following patches have broken upstream issue links:" >> patch-policy-report.md
+          echo "" >> patch-policy-report.md
+          
+          if [[ -f broken_links.txt ]]; then
+            while read -r line; do
+              echo "- \`$line\`" >> patch-policy-report.md
+            done < broken_links.txt
+          fi
+          
+          echo "" >> patch-policy-report.md
+          violations=$((violations + 1))
+        fi
+        
+        if [[ $violations -eq 0 ]]; then
+          echo "### ✅ All Patches Compliant" >> patch-policy-report.md
+          echo "" >> patch-policy-report.md
+          echo "All patches meet the required policy standards." >> patch-policy-report.md
+        fi
+        
+        echo "" >> patch-policy-report.md
+        echo "## Patch Policy Requirements" >> patch-policy-report.md
+        echo "" >> patch-policy-report.md
+        echo "Each patch must include the following metadata in its header:" >> patch-policy-report.md
+        echo "" >> patch-policy-report.md
+        echo "- \`# Upstream-Issue: <GitHub issue URL>\`" >> patch-policy-report.md
+        echo "- \`# Reason: <Brief explanation>\`" >> patch-policy-report.md
+        echo "- \`# Status: <temporary|permanent|under-review>\`" >> patch-policy-report.md
+        echo "- \`# Created: <YYYY-MM-DD>\`" >> patch-policy-report.md
+        echo "- \`# Review-By: <YYYY-MM-DD>\`" >> patch-policy-report.md
+        
+        echo "violations=$violations" >> $GITHUB_ENV
+
+    - name: Fail if policy violations found
+      if: steps.check-patches.outputs.patch_count > 0 && env.violations > 0
+      run: |
+        echo "❌ Patch policy violations found!"
+        echo ""
+        cat patch-policy-report.md
+        echo ""
+        echo "Please fix the policy violations before merging."
+        echo "See the patch policy documentation for details."
+        exit 1
+
+    - name: Create or update tracking issue
+      if: steps.check-patches.outputs.patch_count > 0 && github.event_name != 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read patch report
+          let reportContent = '';
+          try {
+            reportContent = fs.readFileSync('patch-policy-report.md', 'utf8');
+          } catch (error) {
+            reportContent = 'Patch policy check completed.';
+          }
+          
+          const issueTitle = '🩹 Patch Lifecycle Tracking';
+          const issueBody = `# Patch Lifecycle Tracking
+          
+          This issue tracks the lifecycle of patches in the repository and ensures compliance with our patch policy.
+          
+          ## Current Status
+          
+          **Last Updated**: ${new Date().toISOString()}
+          **Total Patches**: ${{ steps.check-patches.outputs.patch_count }}
+          
+          ${reportContent}
+          
+          ## Patch Policy
+          
+          Our patch policy prioritizes upstream fixes over local patches:
+          
+          1. **Prefer upstream fixes**: Always try to fix issues upstream first
+          2. **Minimal patches**: Keep patches as small and focused as possible
+          3. **Required metadata**: All patches must include upstream issue links
+          4. **Regular review**: Patches are reviewed weekly for cleanup opportunities
+          5. **Temporary nature**: Most patches should be temporary until upstream fixes
+          
+          ## Action Items
+          
+          - [ ] Review all patches for upstream fix opportunities
+          - [ ] Ensure all patches have valid upstream issue links
+          - [ ] Clean up obsolete patches
+          - [ ] Update patch metadata as needed
+          
+          ---
+          *This issue is automatically updated by the Patch Policy Enforcement workflow.*`;
+          
+          // Search for existing tracking issue
+          const { data: issues } = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            labels: 'patch-tracking',
+            state: 'open'
+          });
+          
+          if (issues.length > 0) {
+            // Update existing issue
+            const issue = issues[0];
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: issueBody
+            });
+            
+            console.log(`Updated tracking issue #${issue.number}`);
+          } else {
+            // Create new tracking issue
+            const { data: newIssue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: issueTitle,
+              body: issueBody,
+              labels: ['patch-tracking', 'maintenance']
+            });
+            
+            console.log(`Created tracking issue #${newIssue.number}`);
+          }
+
+    - name: Upload patch policy report
+      if: steps.check-patches.outputs.patch_count > 0
+      uses: actions/upload-artifact@v4
+      with:
+        name: patch-policy-report
+        path: patch-policy-report.md
+        retention-days: 30
+
+    - name: Success summary
+      if: steps.check-patches.outputs.patch_count == 0
+      run: |
+        echo "✅ No patches found - policy compliance perfect!"
+        echo ""
+        echo "The patches/ directory is empty, which aligns with our policy"
+        echo "of preferring upstream fixes over local patches."
+
+  # Weekly patch lifecycle review
+  patch-lifecycle-review:
+    name: Weekly Patch Lifecycle Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Analyze patch age and status
+      run: |
+        echo "Analyzing patch lifecycle..."
+        
+        if [[ ! -d "patches" ]] || [[ -z "$(find patches -name "*.patch" -o -name "*.diff")" ]]; then
+          echo "✅ No patches to review - excellent!"
+          exit 0
+        fi
+        
+        current_date=$(date +%s)
+        old_patches=()
+        review_needed=()
+        
+        find patches -name "*.patch" -o -name "*.diff" | while read -r patch_file; do
+          echo "Reviewing $patch_file..."
+          
+          # Extract creation date
+          created_date=$(grep "^# Created:" "$patch_file" 2>/dev/null | sed 's/^# Created: *//')
+          review_by_date=$(grep "^# Review-By:" "$patch_file" 2>/dev/null | sed 's/^# Review-By: *//')
+          status=$(grep "^# Status:" "$patch_file" 2>/dev/null | sed 's/^# Status: *//')
+          
+          if [[ -n "$created_date" ]]; then
+            created_timestamp=$(date -d "$created_date" +%s 2>/dev/null || echo "0")
+            age_days=$(( (current_date - created_timestamp) / 86400 ))
+            
+            echo "  Age: $age_days days"
+            echo "  Status: $status"
+            
+            # Check if patch is old (>30 days)
+            if [[ $age_days -gt 30 ]]; then
+              echo "$patch_file (${age_days} days old)" >> old_patches.txt
+            fi
+            
+            # Check if review is due
+            if [[ -n "$review_by_date" ]]; then
+              review_timestamp=$(date -d "$review_by_date" +%s 2>/dev/null || echo "0")
+              if [[ $current_date -gt $review_timestamp ]]; then
+                echo "$patch_file (review due: $review_by_date)" >> review_needed.txt
+              fi
+            fi
+          fi
+        done
+        
+        # Generate review report
+        cat > patch-lifecycle-review.md << 'EOF'
+        # 📅 Weekly Patch Lifecycle Review
+        
+        **Review Date**: $(date -u +"%Y-%m-%d")
+        
+        ## Summary
+        
+        EOF
+        
+        if [[ -f old_patches.txt ]]; then
+          echo "### 🕰️ Old Patches (>30 days)" >> patch-lifecycle-review.md
+          echo "" >> patch-lifecycle-review.md
+          echo "These patches have been in the repository for more than 30 days:" >> patch-lifecycle-review.md
+          echo "" >> patch-lifecycle-review.md
+          while read -r line; do
+            echo "- $line" >> patch-lifecycle-review.md
+          done < old_patches.txt
+          echo "" >> patch-lifecycle-review.md
+        fi
+        
+        if [[ -f review_needed.txt ]]; then
+          echo "### 📋 Review Due" >> patch-lifecycle-review.md
+          echo "" >> patch-lifecycle-review.md
+          echo "These patches are due for review:" >> patch-lifecycle-review.md
+          echo "" >> patch-lifecycle-review.md
+          while read -r line; do
+            echo "- $line" >> patch-lifecycle-review.md
+          done < review_needed.txt
+          echo "" >> patch-lifecycle-review.md
+        fi
+        
+        echo "## Recommendations" >> patch-lifecycle-review.md
+        echo "" >> patch-lifecycle-review.md
+        echo "1. **Review old patches**: Consider if they can be removed or upstreamed" >> patch-lifecycle-review.md
+        echo "2. **Update metadata**: Ensure all patches have current review dates" >> patch-lifecycle-review.md
+        echo "3. **Upstream engagement**: Actively work on getting patches accepted upstream" >> patch-lifecycle-review.md
+        echo "4. **Clean up**: Remove patches that are no longer needed" >> patch-lifecycle-review.md
+
+    - name: Create patch lifecycle review issue
+      if: github.event_name == 'schedule'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          let reviewContent = '';
+          try {
+            reviewContent = fs.readFileSync('patch-lifecycle-review.md', 'utf8');
+          } catch (error) {
+            reviewContent = 'Weekly patch lifecycle review completed.';
+          }
+          
+          const issueTitle = `📅 Weekly Patch Lifecycle Review - ${new Date().toISOString().split('T')[0]}`;
+          const issueBody = `${reviewContent}
+          
+          ---
+          *This issue was automatically created by the weekly patch lifecycle review.*`;
+          
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: issueTitle,
+            body: issueBody,
+            labels: ['patch-review', 'maintenance', 'weekly-review']
+          });
+
+    - name: Upload lifecycle review
+      uses: actions/upload-artifact@v4
+      with:
+        name: patch-lifecycle-review
+        path: patch-lifecycle-review.md
+        retention-days: 90
