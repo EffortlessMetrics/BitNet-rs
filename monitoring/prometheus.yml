@@ -2,8 +2,9 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
   external_labels:
-    cluster: 'bitnet'
+    cluster: 'bitnet-rust'
     replica: 'prometheus-1'
+    implementation: 'rust'
 
 rule_files:
   - "rules/*.yml"
@@ -15,8 +16,8 @@ alerting:
           - alertmanager:9093
 
 scrape_configs:
-  # BitNet application metrics
-  - job_name: 'bitnet-cpu'
+  # BitNet.rs application metrics - Primary Rust Implementation
+  - job_name: 'bitnet-rust-cpu'
     static_configs:
       - targets: ['bitnet-cpu-service:9090']
     metrics_path: /metrics
@@ -25,8 +26,12 @@ scrape_configs:
     honor_labels: true
     params:
       format: ['prometheus']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        target_label: implementation
+        replacement: 'rust'
 
-  - job_name: 'bitnet-gpu'
+  - job_name: 'bitnet-rust-gpu'
     static_configs:
       - targets: ['bitnet-gpu-service:9090']
     metrics_path: /metrics
@@ -35,6 +40,28 @@ scrape_configs:
     honor_labels: true
     params:
       format: ['prometheus']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        target_label: implementation
+        replacement: 'rust'
+
+  # BitNet.cpp legacy metrics - For cross-validation only
+  - job_name: 'bitnet-legacy-cpp'
+    static_configs:
+      - targets: ['bitnet-legacy-service:8080']
+    metrics_path: /metrics
+    scrape_interval: 30s  # Less frequent scraping for legacy
+    scrape_timeout: 10s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        target_label: implementation
+        replacement: 'cpp'
+      - source_labels: [__name__]
+        target_label: purpose
+        replacement: 'cross-validation'
 
   # Kubernetes cluster metrics
   - job_name: 'kubernetes-apiservers'
@@ -131,11 +158,28 @@ scrape_configs:
         regex: 'nvidia-dcgm-exporter'
         action: keep
 
-  # Custom BitNet metrics
-  - job_name: 'bitnet-custom-metrics'
+  # Custom BitNet.rs metrics - Rust-specific performance metrics
+  - job_name: 'bitnet-rust-custom-metrics'
     static_configs:
       - targets: ['bitnet-service:9090']
     metrics_path: /metrics/custom
     scrape_interval: 30s
     params:
       format: ['prometheus']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        target_label: implementation
+        replacement: 'rust'
+
+  # Cross-validation comparison metrics
+  - job_name: 'bitnet-crossval-metrics'
+    static_configs:
+      - targets: ['bitnet-crossval-service:9091']
+    metrics_path: /metrics/crossval
+    scrape_interval: 60s  # Less frequent for comparison metrics
+    params:
+      format: ['prometheus']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        target_label: purpose
+        replacement: 'cross-validation'

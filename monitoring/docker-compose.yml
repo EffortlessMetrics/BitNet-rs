@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  # Prometheus - Primary metrics collection for BitNet.rs
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: bitnet-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./rules:/etc/prometheus/rules
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    networks:
+      - bitnet-monitoring
+    labels:
+      - "monitoring.bitnet.rs/component=prometheus"
+      - "monitoring.bitnet.rs/implementation=rust"
+
+  # Grafana - Visualization for BitNet.rs metrics
+  grafana:
+    image: grafana/grafana:latest
+    container_name: bitnet-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/bitnet-rust-overview.json
+    networks:
+      - bitnet-monitoring
+    depends_on:
+      - prometheus
+    labels:
+      - "monitoring.bitnet.rs/component=grafana"
+      - "monitoring.bitnet.rs/implementation=rust"
+
+  # AlertManager - Alert handling for BitNet.rs
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: bitnet-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    networks:
+      - bitnet-monitoring
+    labels:
+      - "monitoring.bitnet.rs/component=alertmanager"
+      - "monitoring.bitnet.rs/implementation=rust"
+
+  # Node Exporter - System metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: bitnet-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - bitnet-monitoring
+    labels:
+      - "monitoring.bitnet.rs/component=node-exporter"
+
+  # cAdvisor - Container metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: bitnet-cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - bitnet-monitoring
+    labels:
+      - "monitoring.bitnet.rs/component=cadvisor"
+
+  # NVIDIA DCGM Exporter - GPU metrics (optional)
+  nvidia-dcgm-exporter:
+    image: nvcr.io/nvidia/k8s/dcgm-exporter:3.1.7-3.1.4-ubuntu20.04
+    container_name: bitnet-nvidia-dcgm-exporter
+    ports:
+      - "9400:9400"
+    environment:
+      - DCGM_EXPORTER_LISTEN=0.0.0.0:9400
+      - DCGM_EXPORTER_KUBERNETES=false
+    runtime: nvidia
+    networks:
+      - bitnet-monitoring
+    labels:
+      - "monitoring.bitnet.rs/component=nvidia-dcgm-exporter"
+    profiles:
+      - gpu  # Only start with --profile gpu
+
+volumes:
+  prometheus_data:
+    driver: local
+    labels:
+      - "monitoring.bitnet.rs/data=prometheus"
+  grafana_data:
+    driver: local
+    labels:
+      - "monitoring.bitnet.rs/data=grafana"
+  alertmanager_data:
+    driver: local
+    labels:
+      - "monitoring.bitnet.rs/data=alertmanager"
+
+networks:
+  bitnet-monitoring:
+    driver: bridge
+    labels:
+      - "monitoring.bitnet.rs/network=primary"
