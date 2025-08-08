@@ -114,7 +114,7 @@
   - Achieve >90% code coverage with numerical validation
   - _Requirements: 2.1, 2.3, 2.4_
 
-- [-] 9. Implement comprehensive unit tests for bitnet-kernels
+- [ ] 9. Implement comprehensive unit tests for bitnet-kernels
 
 
 - [ ] 9. Implement comprehensive unit tests for bitnet-kernels
@@ -124,6 +124,8 @@
   - Add kernel selection and dispatch tests
   - Achieve >90% code coverage with performance validation
   - _Requirements: 2.1, 2.2_
+-
+
 
 - [ ] 10. Implement comprehensive unit tests for bitnet-inference
 
@@ -131,8 +133,11 @@
   - Create tests for inference execution and result validation
   - Implement streaming inference and batch processing tests
   - Add inference performance and resource management tests
-  - Achieve >90% code coverage with end-to-end validation
+  - Achieve >90% code coverage wi
+
+th end-to-end validation
   - _Requirements: 2.1, 2.2, 2.5_
+-
 
 - [ ] 11. Implement comprehensive unit tests for bitnet-tokenizers
 
