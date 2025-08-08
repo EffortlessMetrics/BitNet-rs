@@ -8,13 +8,20 @@
 
 pub mod generators;
 pub mod models;
+pub mod performance;
 pub mod prompts;
+pub mod test_datasets;
 pub mod validators;
 
 // Re-export commonly used types
 pub use generators::{DataGenerator, ModelDataGenerator, PromptDataGenerator};
 pub use models::{ModelSize, TestModel, TestModelRegistry};
+pub use performance::{
+    measure_performance, simple_benchmark, BenchmarkResult, BenchmarkRunner,
+    PerformanceMeasurement, PerformanceTracker,
+};
 pub use prompts::{PromptCategory, TestPrompt, TestPromptRegistry};
+pub use test_datasets::{TestDatasets, TestScenario, TestScenarioConfig};
 pub use validators::{DataValidator, ModelValidator, PromptValidator};
 
 /// Standard test data configuration

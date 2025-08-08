@@ -160,6 +160,11 @@ impl TestError {
         }
     }
 
+    /// Create a timeout error with a duration
+    pub fn timeout(timeout: Duration) -> Self {
+        Self::TimeoutError { timeout }
+    }
+
     /// Check if this error is recoverable
     pub fn is_recoverable(&self) -> bool {
         match self {
