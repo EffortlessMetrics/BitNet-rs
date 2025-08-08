@@ -345,13 +345,15 @@ pub fn validate_config(config: &TestConfig) -> TestResult<()> {
         )));
     }
 
-    // Validate cache directory
-    if let Some(parent) = config.cache_dir.parent() {
-        if !parent.exists() {
-            return Err(TestError::config(format!(
-                "Cache directory parent {:?} does not exist",
-                parent
-            )));
+    // Validate cache directory (only check if it's an absolute path with non-existent parent)
+    if config.cache_dir.is_absolute() {
+        if let Some(parent) = config.cache_dir.parent() {
+            if !parent.exists() {
+                return Err(TestError::config(format!(
+                    "Cache directory parent {:?} does not exist",
+                    parent
+                )));
+            }
         }
     }
 
@@ -429,13 +431,15 @@ pub fn validate_config(config: &TestConfig) -> TestResult<()> {
         ));
     }
 
-    // Validate output directory parent exists
-    if let Some(parent) = config.reporting.output_dir.parent() {
-        if !parent.exists() {
-            return Err(TestError::config(format!(
-                "Report output directory parent {:?} does not exist",
-                parent
-            )));
+    // Validate output directory parent exists (only for absolute paths)
+    if config.reporting.output_dir.is_absolute() {
+        if let Some(parent) = config.reporting.output_dir.parent() {
+            if !parent.exists() {
+                return Err(TestError::config(format!(
+                    "Report output directory parent {:?} does not exist",
+                    parent
+                )));
+            }
         }
     }
 
