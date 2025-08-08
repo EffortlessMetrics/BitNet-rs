@@ -101,13 +101,21 @@
   - Achieve >90% code coverage with edge case validation
   - _Requirements: 2.1, 2.2, 2.4_
 
-- [ ] 8. Implement comprehensive unit tests for bitnet-quantization
+- [x] 8. Implement comprehensive unit tests for bitnet-quantization
+
+
+
+
+
   - Add tests for quantization algorithms and accuracy
   - Create tests for quantization parameter validation
   - Implement quantization performance and memory tests
   - Add quantization format compatibility tests
   - Achieve >90% code coverage with numerical validation
   - _Requirements: 2.1, 2.3, 2.4_
+
+- [-] 9. Implement comprehensive unit tests for bitnet-kernels
+
 
 - [ ] 9. Implement comprehensive unit tests for bitnet-kernels
   - Add tests for CPU kernel implementations
@@ -118,6 +126,7 @@
   - _Requirements: 2.1, 2.2_
 
 - [ ] 10. Implement comprehensive unit tests for bitnet-inference
+
   - Add tests for inference engine initialization and configuration
   - Create tests for inference execution and result validation
   - Implement streaming inference and batch processing tests
@@ -126,6 +135,7 @@
   - _Requirements: 2.1, 2.2, 2.5_
 
 - [ ] 11. Implement comprehensive unit tests for bitnet-tokenizers
+
   - Add tests for tokenization accuracy and consistency
   - Create tests for various tokenizer formats and configurations
   - Implement special token handling and edge case tests
