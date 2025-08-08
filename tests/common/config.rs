@@ -1,5 +1,5 @@
-use crate::errors::{TestError, TestResult};
-use crate::utils::get_optimal_parallel_tests;
+use super::errors::{TestError, TestResult};
+use super::utils::get_optimal_parallel_tests;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Duration;

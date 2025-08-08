@@ -12,6 +12,10 @@ path = "common/mod.rs"
 name = "validate_config"
 path = "bin/validate_config.rs"
 
+[[test]]
+name = "test_logging_infrastructure"
+path = "test_logging_infrastructure.rs"
+
 [dependencies]
 # Async runtime and utilities
 tokio = { version = "1.0", features = ["full"] }
