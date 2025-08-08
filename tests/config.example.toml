@@ -1,0 +1,84 @@
+# Example configuration file for BitNet.rs testing framework
+# Copy this to bitnet-test.toml or tests/config.toml to use
+
+# Core test execution settings
+max_parallel_tests = 4
+test_timeout = "300s"
+cache_dir = "tests/cache"
+log_level = "info"
+coverage_threshold = 0.9
+
+[fixtures]
+# Automatically download missing test fixtures
+auto_download = true
+
+# Maximum cache size in bytes (10 GB)
+max_cache_size = 10737418240
+
+# How often to clean up old fixtures (24 hours)
+cleanup_interval = "86400s"
+
+# Timeout for fixture downloads (5 minutes)
+download_timeout = "300s"
+
+# Base URL for fixture downloads (optional)
+# base_url = "https://huggingface.co/bitnet-models"
+
+# Custom fixture definitions
+[[fixtures.custom_fixtures]]
+name = "test-model-small"
+url = "https://example.com/models/test-small.gguf"
+checksum = "abc123def456789"
+description = "Small test model for basic validation"
+
+[[fixtures.custom_fixtures]]
+name = "test-model-large"
+url = "https://example.com/models/test-large.gguf"
+checksum = "def456abc123789"
+description = "Large test model for performance testing"
+
+[crossval]
+# Enable cross-validation testing against C++ implementation
+enabled = false
+
+# Path to C++ BitNet binary (required if enabled)
+# cpp_binary_path = "/path/to/bitnet-cpp"
+
+# Test cases to run for cross-validation
+test_cases = ["basic_inference", "tokenization", "model_loading"]
+
+# Enable performance and accuracy comparisons
+performance_comparison = true
+accuracy_comparison = true
+
+[crossval.tolerance]
+# Minimum token accuracy (99.9999%)
+min_token_accuracy = 0.999999
+
+# Maximum probability divergence
+max_probability_divergence = 0.000001
+
+# Maximum acceptable performance regression (10%)
+max_performance_regression = 0.1
+
+# Numerical tolerance for floating-point comparisons
+numerical_tolerance = 0.000001
+
+[reporting]
+# Output directory for test reports
+output_dir = "test-reports"
+
+# Report formats to generate
+formats = ["Html", "Json", "Junit"]
+
+# Include test artifacts in reports
+include_artifacts = true
+
+# Generate code coverage reports
+generate_coverage = true
+
+# Generate performance reports
+generate_performance = true
+
+# Upload reports to external services
+upload_reports = false

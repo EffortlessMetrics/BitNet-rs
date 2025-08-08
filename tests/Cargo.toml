@@ -8,6 +8,10 @@ description = "Comprehensive testing framework for BitNet.rs"
 name = "bitnet_tests"
 path = "common/mod.rs"
 
+[[bin]]
+name = "validate_config"
+path = "bin/validate_config.rs"
+
 [dependencies]
 # Async runtime and utilities
 tokio = { version = "1.0", features = ["full"] }
@@ -45,7 +49,12 @@ rand = "0.8"
 libc = "0.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-winapi = { version = "0.3", features = ["processthreadsapi", "psapi"] }
+winapi = { version = "0.3", features = [
+    "processthreadsapi",
+    "psapi",
+    "fileapi",
+    "minwindef",
+] }
 
 [dev-dependencies]
 # Additional test dependencies can be added here
