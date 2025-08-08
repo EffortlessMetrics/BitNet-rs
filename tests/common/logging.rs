@@ -3,7 +3,7 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{Level, Subscriber};
+use tracing::Level;
 use tracing_subscriber::{
     fmt::{self, format::FmtSpan},
     layer::SubscriberExt,
@@ -20,8 +20,8 @@ use crate::{
 pub fn init_logging(config: &TestConfig) -> TestResult<()> {
     let log_level = parse_log_level(&config.log_level)?;
 
-    // Create environment filter
-    let env_filter = EnvFilter::builder()
+    // Create environment filter for console
+    let console_filter = EnvFilter::builder()
         .with_default_directive(log_level.into())
         .from_env_lossy()
         .add_directive("bitnet=debug".parse().unwrap()) // Always debug BitNet crates
@@ -33,7 +33,7 @@ pub fn init_logging(config: &TestConfig) -> TestResult<()> {
         .with_thread_ids(true)
         .with_thread_names(true)
         .with_span_events(FmtSpan::CLOSE)
-        .with_filter(env_filter.clone());
+        .with_filter(console_filter);
 
     // Create file layer if output directory exists
     let file_layer = if config.reporting.output_dir.exists() {
@@ -41,6 +41,13 @@ pub fn init_logging(config: &TestConfig) -> TestResult<()> {
         let file = File::create(&log_file).map_err(|e| {
             TestError::config(format!("Failed to create log file {:?}: {}", log_file, e))
         })?;
+
+        // Create separate filter for file layer
+        let file_filter = EnvFilter::builder()
+            .with_default_directive(log_level.into())
+            .from_env_lossy()
+            .add_directive("bitnet=debug".parse().unwrap())
+            .add_directive("bitnet_tests=debug".parse().unwrap());
 
         Some(
             fmt::layer()
@@ -50,7 +57,7 @@ pub fn init_logging(config: &TestConfig) -> TestResult<()> {
                 .with_thread_ids(true)
                 .with_thread_names(true)
                 .with_span_events(FmtSpan::FULL)
-                .with_filter(env_filter),
+                .with_filter(file_filter),
         )
     } else {
         None
@@ -520,7 +527,6 @@ impl PerformanceSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::TestConfig;
 
     #[test]
     fn test_parse_log_level() {

@@ -4,10 +4,10 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 use tokio::fs;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 use crate::{
-    config::{CustomFixture, FixtureConfig},
+    config::FixtureConfig,
     errors::{FixtureError, FixtureResult, TestResult},
     utils::format_bytes,
 };
