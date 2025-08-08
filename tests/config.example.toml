@@ -3,7 +3,7 @@
 
 # Core test execution settings
 max_parallel_tests = 4
-test_timeout = "300s"
+test_timeout = { secs = 300, nanos = 0 }
 cache_dir = "tests/cache"
 log_level = "info"
 coverage_threshold = 0.9
@@ -16,10 +16,10 @@ auto_download = true
 max_cache_size = 10737418240
 
 # How often to clean up old fixtures (24 hours)
-cleanup_interval = "86400s"
+cleanup_interval = { secs = 86400, nanos = 0 }
 
 # Timeout for fixture downloads (5 minutes)
-download_timeout = "300s"
+download_timeout = { secs = 300, nanos = 0 }
 
 # Base URL for fixture downloads (optional)
 # base_url = "https://huggingface.co/bitnet-models"
