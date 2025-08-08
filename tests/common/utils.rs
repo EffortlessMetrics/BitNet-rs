@@ -247,7 +247,6 @@ fn get_memory_usage_linux() -> u64 {
 #[cfg(target_os = "macos")]
 fn get_memory_usage_macos() -> u64 {
     use std::mem;
-    use std::ptr;
 
     unsafe {
         let mut info: libc::mach_task_basic_info = mem::zeroed();
