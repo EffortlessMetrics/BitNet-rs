@@ -7,6 +7,7 @@
 // - Error handling and reporting utilities
 
 pub mod config;
+pub mod config_validator;
 pub mod errors;
 pub mod fixtures;
 pub mod harness;
@@ -16,6 +17,7 @@ pub mod utils;
 
 // Re-export commonly used types
 pub use config::{ci_config, dev_config, load_test_config, validate_config, TestConfig};
+pub use config_validator::{ConfigValidator, ValidationResult};
 pub use errors::{ComparisonError, FixtureError, ImplementationError, TestError};
 pub use fixtures::{FixtureInfo, FixtureManager, ModelFormat, ModelType};
 pub use harness::{ConsoleReporter, TestCase, TestHarness, TestReporter, TestSuite};

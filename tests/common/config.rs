@@ -29,7 +29,7 @@ impl Default for TestConfig {
     fn default() -> Self {
         Self {
             max_parallel_tests: get_optimal_parallel_tests(),
-            test_timeout: Duration::from_secs(crate::DEFAULT_TEST_TIMEOUT_SECS),
+            test_timeout: Duration::from_secs(super::DEFAULT_TEST_TIMEOUT_SECS),
             cache_dir: PathBuf::from("tests/cache"),
             log_level: "info".to_string(),
             coverage_threshold: 0.9,
@@ -258,6 +258,49 @@ fn load_config_from_env(config: &mut TestConfig) -> TestResult<()> {
         config.crossval.cpp_binary_path = Some(PathBuf::from(val));
     }
 
+    // Fixture configuration from environment
+    if let Ok(val) = std::env::var("BITNET_TEST_AUTO_DOWNLOAD") {
+        config.fixtures.auto_download = val
+            .parse()
+            .map_err(|e| TestError::config(format!("Invalid BITNET_TEST_AUTO_DOWNLOAD: {}", e)))?;
+    }
+
+    if let Ok(val) = std::env::var("BITNET_TEST_MAX_CACHE_SIZE") {
+        config.fixtures.max_cache_size = val
+            .parse()
+            .map_err(|e| TestError::config(format!("Invalid BITNET_TEST_MAX_CACHE_SIZE: {}", e)))?;
+    }
+
+    if let Ok(val) = std::env::var("BITNET_TEST_FIXTURE_BASE_URL") {
+        config.fixtures.base_url = Some(val);
+    }
+
+    // Reporting configuration from environment
+    if let Ok(val) = std::env::var("BITNET_TEST_REPORT_DIR") {
+        config.reporting.output_dir = PathBuf::from(val);
+    }
+
+    if let Ok(val) = std::env::var("BITNET_TEST_REPORT_FORMATS") {
+        let formats: Result<Vec<ReportFormat>, _> = val
+            .split(',')
+            .map(|s| match s.trim().to_lowercase().as_str() {
+                "html" => Ok(ReportFormat::Html),
+                "json" => Ok(ReportFormat::Json),
+                "junit" => Ok(ReportFormat::Junit),
+                "markdown" => Ok(ReportFormat::Markdown),
+                "csv" => Ok(ReportFormat::Csv),
+                _ => Err(TestError::config(format!("Invalid report format: {}", s))),
+            })
+            .collect();
+        config.reporting.formats = formats?;
+    }
+
+    if let Ok(val) = std::env::var("BITNET_TEST_GENERATE_COVERAGE") {
+        config.reporting.generate_coverage = val.parse().map_err(|e| {
+            TestError::config(format!("Invalid BITNET_TEST_GENERATE_COVERAGE: {}", e))
+        })?;
+    }
+
     Ok(())
 }
 
@@ -333,11 +376,67 @@ pub fn validate_config(config: &TestConfig) -> TestResult<()> {
         }
     }
 
+    // Validate fixture config
+    if config.fixtures.download_timeout.as_secs() == 0 {
+        return Err(TestError::config("download_timeout must be greater than 0"));
+    }
+
+    if config.fixtures.download_timeout.as_secs() > 3600 {
+        return Err(TestError::config(
+            "download_timeout should not exceed 1 hour",
+        ));
+    }
+
+    if config.fixtures.cleanup_interval.as_secs() == 0 {
+        return Err(TestError::config("cleanup_interval must be greater than 0"));
+    }
+
+    // Validate custom fixtures
+    for fixture in &config.fixtures.custom_fixtures {
+        if fixture.name.is_empty() {
+            return Err(TestError::config("Custom fixture name cannot be empty"));
+        }
+
+        if fixture.url.is_empty() {
+            return Err(TestError::config("Custom fixture URL cannot be empty"));
+        }
+
+        if fixture.checksum.is_empty() {
+            return Err(TestError::config("Custom fixture checksum cannot be empty"));
+        }
+
+        // Basic URL validation
+        if !fixture.url.starts_with("http://") && !fixture.url.starts_with("https://") {
+            return Err(TestError::config(format!(
+                "Invalid URL for fixture '{}': must start with http:// or https://",
+                fixture.name
+            )));
+        }
+
+        // Basic checksum validation (should be hex string)
+        if !fixture.checksum.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err(TestError::config(format!(
+                "Invalid checksum for fixture '{}': must be a hex string",
+                fixture.name
+            )));
+        }
+    }
+
     // Validate reporting config
     if config.reporting.formats.is_empty() {
         return Err(TestError::config(
             "At least one report format must be specified",
         ));
+    }
+
+    // Validate output directory parent exists
+    if let Some(parent) = config.reporting.output_dir.parent() {
+        if !parent.exists() {
+            return Err(TestError::config(format!(
+                "Report output directory parent {:?} does not exist",
+                parent
+            )));
+        }
     }
 
     Ok(())
@@ -389,6 +488,135 @@ pub fn dev_config() -> TestConfig {
     config
 }
 
+/// Create a test configuration optimized for minimal resource usage
+pub fn minimal_config() -> TestConfig {
+    let mut config = TestConfig::default();
+
+    // Use minimal parallel tests
+    config.max_parallel_tests = 1;
+
+    // Shorter timeout for quick feedback
+    config.test_timeout = Duration::from_secs(60);
+
+    // Minimal logging
+    config.log_level = "warn".to_string();
+
+    // Disable coverage and performance reporting
+    config.reporting.generate_coverage = false;
+    config.reporting.generate_performance = false;
+
+    // Only JSON reports for minimal overhead
+    config.reporting.formats = vec![ReportFormat::Json];
+
+    // Disable cross-validation
+    config.crossval.enabled = false;
+
+    // Disable auto-download to avoid network calls
+    config.fixtures.auto_download = false;
+
+    config
+}
+
+/// Merge two configurations, with the second taking precedence
+pub fn merge_configs(base: TestConfig, override_config: TestConfig) -> TestConfig {
+    TestConfig {
+        max_parallel_tests: override_config.max_parallel_tests,
+        test_timeout: override_config.test_timeout,
+        cache_dir: override_config.cache_dir,
+        log_level: override_config.log_level,
+        coverage_threshold: override_config.coverage_threshold,
+        fixtures: FixtureConfig {
+            auto_download: override_config.fixtures.auto_download,
+            max_cache_size: override_config.fixtures.max_cache_size,
+            cleanup_interval: override_config.fixtures.cleanup_interval,
+            download_timeout: override_config.fixtures.download_timeout,
+            base_url: override_config.fixtures.base_url.or(base.fixtures.base_url),
+            custom_fixtures: if override_config.fixtures.custom_fixtures.is_empty() {
+                base.fixtures.custom_fixtures
+            } else {
+                override_config.fixtures.custom_fixtures
+            },
+        },
+        crossval: CrossValidationConfig {
+            enabled: override_config.crossval.enabled,
+            tolerance: override_config.crossval.tolerance,
+            cpp_binary_path: override_config
+                .crossval
+                .cpp_binary_path
+                .or(base.crossval.cpp_binary_path),
+            test_cases: if override_config.crossval.test_cases.is_empty() {
+                base.crossval.test_cases
+            } else {
+                override_config.crossval.test_cases
+            },
+            performance_comparison: override_config.crossval.performance_comparison,
+            accuracy_comparison: override_config.crossval.accuracy_comparison,
+        },
+        reporting: ReportingConfig {
+            output_dir: override_config.reporting.output_dir,
+            formats: if override_config.reporting.formats.is_empty() {
+                base.reporting.formats
+            } else {
+                override_config.reporting.formats
+            },
+            include_artifacts: override_config.reporting.include_artifacts,
+            generate_coverage: override_config.reporting.generate_coverage,
+            generate_performance: override_config.reporting.generate_performance,
+            upload_reports: override_config.reporting.upload_reports,
+        },
+    }
+}
+
+/// Save configuration to a TOML file
+pub fn save_config_to_file(config: &TestConfig, path: &PathBuf) -> TestResult<()> {
+    let toml_string = toml::to_string_pretty(config)
+        .map_err(|e| TestError::config(format!("Failed to serialize config: {}", e)))?;
+
+    std::fs::write(path, toml_string)
+        .map_err(|e| TestError::config(format!("Failed to write config file {:?}: {}", path, e)))?;
+
+    Ok(())
+}
+
+/// Get configuration value by key path (e.g., "fixtures.auto_download")
+pub fn get_config_value(config: &TestConfig, key_path: &str) -> Option<String> {
+    let parts: Vec<&str> = key_path.split('.').collect();
+
+    match parts.as_slice() {
+        ["max_parallel_tests"] => Some(config.max_parallel_tests.to_string()),
+        ["test_timeout"] => Some(config.test_timeout.as_secs().to_string()),
+        ["cache_dir"] => Some(config.cache_dir.to_string_lossy().to_string()),
+        ["log_level"] => Some(config.log_level.clone()),
+        ["coverage_threshold"] => Some(config.coverage_threshold.to_string()),
+
+        ["fixtures", "auto_download"] => Some(config.fixtures.auto_download.to_string()),
+        ["fixtures", "max_cache_size"] => Some(config.fixtures.max_cache_size.to_string()),
+        ["fixtures", "download_timeout"] => {
+            Some(config.fixtures.download_timeout.as_secs().to_string())
+        }
+        ["fixtures", "base_url"] => config.fixtures.base_url.clone(),
+
+        ["crossval", "enabled"] => Some(config.crossval.enabled.to_string()),
+        ["crossval", "performance_comparison"] => {
+            Some(config.crossval.performance_comparison.to_string())
+        }
+        ["crossval", "accuracy_comparison"] => {
+            Some(config.crossval.accuracy_comparison.to_string())
+        }
+
+        ["reporting", "output_dir"] => {
+            Some(config.reporting.output_dir.to_string_lossy().to_string())
+        }
+        ["reporting", "include_artifacts"] => Some(config.reporting.include_artifacts.to_string()),
+        ["reporting", "generate_coverage"] => Some(config.reporting.generate_coverage.to_string()),
+        ["reporting", "generate_performance"] => {
+            Some(config.reporting.generate_performance.to_string())
+        }
+
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -435,5 +663,69 @@ mod tests {
         assert!(!config.reporting.generate_coverage);
         assert_eq!(config.reporting.formats, vec![ReportFormat::Html]);
         assert_eq!(config.log_level, "info");
+    }
+
+    #[test]
+    fn test_minimal_config() {
+        let config = minimal_config();
+        assert_eq!(config.max_parallel_tests, 1);
+        assert_eq!(config.test_timeout, Duration::from_secs(60));
+        assert_eq!(config.log_level, "warn");
+        assert!(!config.reporting.generate_coverage);
+        assert!(!config.crossval.enabled);
+        assert!(!config.fixtures.auto_download);
+    }
+
+    #[test]
+    fn test_merge_configs() {
+        let base = TestConfig::default();
+        let mut override_config = TestConfig::default();
+        override_config.max_parallel_tests = 8;
+        override_config.log_level = "debug".to_string();
+
+        let merged = merge_configs(base, override_config);
+        assert_eq!(merged.max_parallel_tests, 8);
+        assert_eq!(merged.log_level, "debug");
+    }
+
+    #[test]
+    fn test_get_config_value() {
+        let config = TestConfig::default();
+
+        assert_eq!(
+            get_config_value(&config, "max_parallel_tests"),
+            Some(config.max_parallel_tests.to_string())
+        );
+
+        assert_eq!(
+            get_config_value(&config, "fixtures.auto_download"),
+            Some(config.fixtures.auto_download.to_string())
+        );
+
+        assert_eq!(get_config_value(&config, "invalid.path"), None);
+    }
+
+    #[test]
+    fn test_validate_custom_fixtures() {
+        let mut config = TestConfig::default();
+
+        // Valid custom fixture
+        config.fixtures.custom_fixtures.push(CustomFixture {
+            name: "test-model".to_string(),
+            url: "https://example.com/model.bin".to_string(),
+            checksum: "abc123def456".to_string(),
+            description: Some("Test model".to_string()),
+        });
+
+        assert!(validate_config(&config).is_ok());
+
+        // Invalid URL
+        config.fixtures.custom_fixtures[0].url = "invalid-url".to_string();
+        assert!(validate_config(&config).is_err());
+
+        // Invalid checksum
+        config.fixtures.custom_fixtures[0].url = "https://example.com/model.bin".to_string();
+        config.fixtures.custom_fixtures[0].checksum = "invalid-checksum!".to_string();
+        assert!(validate_config(&config).is_err());
     }
 }
