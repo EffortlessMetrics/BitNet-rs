@@ -36,7 +36,7 @@ pub enum TestError {
 }
 
 /// Errors related to fixture management
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum FixtureError {
     #[error("Unknown fixture: {name}")]
     UnknownFixture { name: String },
@@ -62,7 +62,7 @@ pub enum FixtureError {
 }
 
 /// Errors related to cross-implementation comparison
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum ComparisonError {
     #[error("Implementation error: {0}")]
     ImplementationError(#[from] ImplementationError),
@@ -82,7 +82,7 @@ pub enum ComparisonError {
 }
 
 /// Errors from BitNet implementations
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum ImplementationError {
     #[error("Model not loaded")]
     ModelNotLoaded,

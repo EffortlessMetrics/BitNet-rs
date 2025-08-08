@@ -12,6 +12,7 @@ pub mod errors;
 pub mod fixtures;
 pub mod harness;
 pub mod logging;
+pub mod logging_example;
 pub mod results;
 pub mod utils;
 
