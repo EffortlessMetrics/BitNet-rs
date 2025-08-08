@@ -121,11 +121,7 @@ impl From<std::io::Error> for TestError {
     }
 }
 
-impl From<tokio::io::Error> for TestError {
-    fn from(err: tokio::io::Error) -> Self {
-        Self::IoError(std::io::Error::new(err.kind(), err.to_string()))
-    }
-}
+// Note: tokio::io::Error is an alias for std::io::Error, so we don't need a separate impl
 
 impl From<tokio::io::Error> for FixtureError {
     fn from(err: tokio::io::Error) -> Self {

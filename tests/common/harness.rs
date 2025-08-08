@@ -6,14 +6,11 @@ use tokio::sync::{RwLock, Semaphore};
 use tokio::time::timeout;
 use tracing::{debug, error, info, warn};
 
-use crate::common::{
+use crate::{
     config::TestConfig,
     errors::{TestError, TestResult},
     fixtures::FixtureManager,
-    results::{
-        TestMetrics, TestResult as TestResultData, TestStatus, TestSuiteResult, TestSummary,
-    },
-    utils::{get_memory_usage, measure_time},
+    results::{TestMetrics, TestResult as TestResultData, TestStatus, TestSuiteResult},
 };
 
 /// Core test harness for executing tests with parallel support and comprehensive reporting
@@ -103,12 +100,15 @@ impl TestHarness {
             TestSuiteResult::new(suite_name.clone(), test_results, total_duration);
 
         // Add environment information
-        suite_result.add_environment("rust_version", env!("RUSTC_VERSION"));
-        suite_result.add_environment("target_triple", env!("TARGET"));
         suite_result.add_environment(
-            "test_framework_version",
-            crate::common::TESTING_FRAMEWORK_VERSION,
+            "rust_version",
+            &std::env::var("RUSTC_VERSION").unwrap_or_else(|_| "unknown".to_string()),
         );
+        suite_result.add_environment(
+            "target_triple",
+            &std::env::var("TARGET").unwrap_or_else(|_| "unknown".to_string()),
+        );
+        suite_result.add_environment("test_framework_version", crate::TESTING_FRAMEWORK_VERSION);
 
         // Add configuration information
         suite_result.add_configuration(
