@@ -1,6 +1,6 @@
 //! Tensor abstractions and utilities
 
-use crate::{BitNetError, Result, Device};
+use crate::{BitNetError, Device, Result};
 use candle_core::{DType, Tensor as CandleTensor};
 
 /// Tensor trait for unified tensor operations
@@ -123,11 +123,11 @@ impl BitNetTensor {
     fn device_to_candle(device: &Device) -> Result<candle_core::Device> {
         match device {
             Device::Cpu => Ok(candle_core::Device::Cpu),
-            Device::Cuda(id) => {
+            Device::Cuda(_id) => {
                 #[cfg(feature = "gpu")]
                 {
                     use candle_core::backend::BackendDevice;
-                    let cuda_device = candle_core::CudaDevice::new(*id)
+                    let cuda_device = candle_core::CudaDevice::new(*_id)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
                     Ok(candle_core::Device::Cuda(cuda_device))
                 }
@@ -139,8 +139,10 @@ impl BitNetTensor {
             Device::Metal => {
                 #[cfg(feature = "gpu")]
                 {
-                    Ok(candle_core::Device::Metal(candle_core::MetalDevice::new(0)
-                        .map_err(|e| BitNetError::Validation(e.to_string()))?))
+                    Ok(candle_core::Device::Metal(
+                        candle_core::MetalDevice::new(0)
+                            .map_err(|e| BitNetError::Validation(e.to_string()))?,
+                    ))
                 }
                 #[cfg(not(feature = "gpu"))]
                 {
@@ -211,11 +213,11 @@ impl Tensor for MockTensor {
     fn to_candle(&self) -> Result<CandleTensor> {
         let candle_device = match &self.device {
             Device::Cpu => candle_core::Device::Cpu,
-            Device::Cuda(id) => {
+            Device::Cuda(_id) => {
                 #[cfg(feature = "gpu")]
                 {
                     use candle_core::backend::BackendDevice;
-                    let cuda_device = candle_core::CudaDevice::new(*id)
+                    let cuda_device = candle_core::CudaDevice::new(*_id)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
                     candle_core::Device::Cuda(cuda_device)
                 }
@@ -227,8 +229,10 @@ impl Tensor for MockTensor {
             Device::Metal => {
                 #[cfg(feature = "gpu")]
                 {
-                    candle_core::Device::Metal(candle_core::MetalDevice::new(0)
-                        .map_err(|e| BitNetError::Validation(e.to_string()))?)
+                    candle_core::Device::Metal(
+                        candle_core::MetalDevice::new(0)
+                            .map_err(|e| BitNetError::Validation(e.to_string()))?,
+                    )
                 }
                 #[cfg(not(feature = "gpu"))]
                 {
@@ -236,7 +240,7 @@ impl Tensor for MockTensor {
                 }
             }
         };
-        
+
         CandleTensor::from_slice(&self.data, self.shape.as_slice(), &candle_device)
             .map_err(|e| BitNetError::Validation(e.to_string()))
     }

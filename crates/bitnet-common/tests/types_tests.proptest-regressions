@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc f181b5f187b8d3e13b39ca21ee2249ec1574a721263f799e55b89f69c98eb7cf # shrinks to tokens_per_second = 0.0, latency_ms = 0.0, memory_usage_mb = 90708.44027903341, gpu_utilization = None
+cc ec6361ffca2ed624b5ce1739c144a3d39794bf4eff433c9d541a6e3f7cb517e5 # shrinks to tokens_per_second = 0.0, latency_ms = 0.0, memory_usage_mb = 0.0, gpu_utilization = Some(14.468720715895637)

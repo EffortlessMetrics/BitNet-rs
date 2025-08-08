@@ -22,6 +22,9 @@ candle-core.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+proptest.workspace = true
+criterion.workspace = true
+serde_json.workspace = true
 
 [features]
 default = []
