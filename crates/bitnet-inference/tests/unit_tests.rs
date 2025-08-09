@@ -465,8 +465,7 @@ mod cache_unit_tests {
     #[test]
     fn test_cache_config_creation() {
         let config = CacheConfig::default();
-        assert!(config.max_size > 0);
-        assert!(config.max_entries > 0);
+        assert!(config.max_size_bytes > 0);
     }
 
     #[test]
@@ -503,15 +502,8 @@ mod cache_unit_tests {
         assert!(cache.is_ok());
 
         // Test with zero max_size (should still work, might use default)
-        config.max_size = 0;
+        config.max_size_bytes = 0;
         let cache = KVCache::new(config.clone());
-        // Implementation might handle this gracefully
-        assert!(cache.is_ok());
-
-        // Test with zero max_entries
-        config.max_size = 1024 * 1024;
-        config.max_entries = 0;
-        let cache = KVCache::new(config);
         // Implementation might handle this gracefully
         assert!(cache.is_ok());
     }
@@ -519,8 +511,7 @@ mod cache_unit_tests {
     #[test]
     fn test_cache_size_limits() {
         let config = CacheConfig {
-            max_size: 1024, // Small cache
-            max_entries: 10,
+            max_size_bytes: 1024, // Small cache
             ..Default::default()
         };
 
@@ -574,14 +565,17 @@ mod backend_unit_tests {
         assert!(capabilities.memory_efficient);
     }
 
+    use bitnet_common::Tensor;
+    use tokio::sync::RwLock;
+
     #[tokio::test]
     async fn test_cpu_backend_forward() {
         let model = Arc::new(MockModel::new());
         let backend = CpuBackend::new(model).unwrap();
         let input = ConcreteTensor::mock(vec![1, 512]);
-        let mut cache = KVCache::new(CacheConfig::default()).unwrap();
+        let cache = Arc::new(RwLock::new(KVCache::new(CacheConfig::default()).unwrap()));
 
-        let output = backend.forward(&input, &mut cache).await;
+        let output = backend.forward(&input, cache).await;
         assert!(output.is_ok());
 
         let output_tensor = output.unwrap();
@@ -803,10 +797,8 @@ mod error_handling_unit_tests {
         let model = Arc::new(MockModel::new());
         let invalid_device = Device::Cpu; // CPU device for GPU backend
 
-        // This should work since we're using CPU device
         let backend = GpuBackend::new(model.clone(), invalid_device);
-        // Actually, this might fail because GPU backend expects CUDA device
-        // The behavior depends on implementation
+        assert!(backend.is_err());
     }
 
     #[test]
@@ -827,7 +819,7 @@ mod integration_unit_tests {
     #[tokio::test]
     async fn test_engine_with_different_configs() {
         let model = Arc::new(MockModel::new());
-        let tokenizer = Arc::new(MockTokenizer::new());
+        let tokenizer = Arc::new(MockTokenizer);
 
         // Test with CPU optimized config
         let cpu_config = InferenceConfig::cpu_optimized();
@@ -854,7 +846,7 @@ mod integration_unit_tests {
     #[tokio::test]
     async fn test_generation_with_different_configs() {
         let model = Arc::new(MockModel::new());
-        let tokenizer = Arc::new(MockTokenizer::new());
+        let tokenizer = Arc::new(MockTokenizer);
         let device = Device::Cpu;
 
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
@@ -878,7 +870,7 @@ mod integration_unit_tests {
     #[tokio::test]
     async fn test_cache_integration() {
         let model = Arc::new(MockModel::new());
-        let tokenizer = Arc::new(MockTokenizer::new());
+        let tokenizer = Arc::new(MockTokenizer);
         let device = Device::Cpu;
 
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();

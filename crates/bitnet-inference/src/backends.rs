@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use bitnet_common::{Device, Tensor, ConcreteTensor};
 use bitnet_models::Model;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
 use crate::cache::KVCache;
@@ -25,7 +26,7 @@ pub trait Backend: Send + Sync {
     async fn forward(
         &self,
         input: &ConcreteTensor,
-        cache: &mut KVCache,
+        cache: Arc<RwLock<KVCache>>,
     ) -> Result<ConcreteTensor>;
 
     /// Get backend capabilities
@@ -104,7 +105,7 @@ impl Backend for CpuBackend {
     async fn forward(
         &self,
         input: &ConcreteTensor,
-        cache: &mut KVCache,
+        cache: Arc<RwLock<KVCache>>,
     ) -> Result<ConcreteTensor> {
         debug!("CPU forward pass with input shape: {:?}", input.shape());
         
@@ -118,10 +119,10 @@ impl Backend for CpuBackend {
         let output = tokio::task::spawn_blocking({
             let model = self.model.clone();
             let input_tensor = input.clone();
+            let cache = cache.clone();
             move || {
-                // Convert cache to Any for the model interface
-                let mut cache_any: Box<dyn std::any::Any> = Box::new(());
-                model.forward(&input_tensor, &mut *cache_any)
+                let mut cache_guard = cache.blocking_write();
+                model.forward(&input_tensor, &mut *cache_guard)
             }
         }).await
         .context("CPU forward pass task failed")??;
@@ -144,10 +145,10 @@ impl Backend for CpuBackend {
         
         // Create a dummy input for warmup
         let dummy_input = ConcreteTensor::mock(vec![1, 512]);
-        let mut dummy_cache = KVCache::new(Default::default())?;
+        let dummy_cache = Arc::new(RwLock::new(KVCache::new(Default::default())?));
         
         // Perform a dummy forward pass
-        let _ = self.forward(&dummy_input, &mut dummy_cache).await?;
+        let _ = self.forward(&dummy_input, dummy_cache).await?;
         
         info!("CPU backend warmed up successfully");
         Ok(())
@@ -217,7 +218,7 @@ impl Backend for GpuBackend {
     async fn forward(
         &self,
         input: &ConcreteTensor,
-        cache: &mut KVCache,
+        cache: Arc<RwLock<KVCache>>,
     ) -> Result<ConcreteTensor> {
         debug!("GPU forward pass with input shape: {:?}", input.shape());
         
@@ -228,9 +229,10 @@ impl Backend for GpuBackend {
         let output = tokio::task::spawn_blocking({
             let model = self.model.clone();
             let input_tensor = gpu_input;
+            let cache = cache.clone();
             move || {
-                let mut cache_any: Box<dyn std::any::Any> = Box::new(());
-                model.forward(&input_tensor, &mut *cache_any)
+                let mut cache_guard = cache.blocking_write();
+                model.forward(&input_tensor, &mut *cache_guard)
             }
         }).await
         .context("GPU forward pass task failed")??;
@@ -258,10 +260,10 @@ impl Backend for GpuBackend {
         
         // Create a dummy input for warmup
         let dummy_input = ConcreteTensor::mock(vec![1, 512]);
-        let mut dummy_cache = KVCache::new(Default::default())?;
+        let dummy_cache = Arc::new(RwLock::new(KVCache::new(Default::default())?));
         
         // Perform a dummy forward pass
-        let _ = self.forward(&dummy_input, &mut dummy_cache).await?;
+        let _ = self.forward(&dummy_input, dummy_cache).await?;
         
         info!("GPU backend warmed up successfully");
         Ok(())
@@ -271,9 +273,43 @@ impl Backend for GpuBackend {
 impl GpuBackend {
     /// Ensure tensor is on GPU device
     fn ensure_gpu_tensor(&self, input: &ConcreteTensor) -> Result<ConcreteTensor> {
-        // In a real implementation, this would transfer the tensor to GPU
-        // For now, just create a mock GPU tensor
-        Ok(ConcreteTensor::mock(input.shape().to_vec()))
+        let candle_device = self.device_to_candle(&self.device)?;
+        let candle_tensor = input.to_candle()?;
+        let gpu_tensor = candle_tensor.to_device(&candle_device)
+            .map_err(|e| anyhow::anyhow!("Failed to move tensor to GPU: {}", e))?;
+        Ok(ConcreteTensor::bitnet(gpu_tensor))
+    }
+
+    fn device_to_candle(&self, device: &Device) -> Result<candle_core::Device> {
+        match device {
+            Device::Cpu => Ok(candle_core::Device::Cpu),
+            Device::Cuda(id) => {
+                #[cfg(feature = "gpu")]
+                {
+                    use candle_core::backend::BackendDevice;
+                    let cuda_device = candle_core::CudaDevice::new(*id)
+                        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+                    Ok(candle_core::Device::Cuda(cuda_device))
+                }
+                #[cfg(not(feature = "gpu"))]
+                {
+                    Err(anyhow::anyhow!("CUDA not available"))
+                }
+            }
+            Device::Metal => {
+                #[cfg(feature = "gpu")]
+                {
+                    Ok(candle_core::Device::Metal(
+                        candle_core::MetalDevice::new(0)
+                            .map_err(|e| anyhow::anyhow!(e.to_string()))?,
+                    ))
+                }
+                #[cfg(not(feature = "gpu"))]
+                {
+                    Err(anyhow::anyhow!("Metal not available"))
+                }
+            }
+        }
     }
 }
 
@@ -333,10 +369,10 @@ mod tests {
 
         fn forward(
             &self,
-            _input: &dyn Tensor,
+            _input: &ConcreteTensor,
             _cache: &mut dyn std::any::Any,
-        ) -> Result<Box<dyn Tensor>> {
-            Ok(Box::new(MockTensor::new(vec![1, 50257])))
+        ) -> bitnet_common::Result<ConcreteTensor> {
+            Ok(ConcreteTensor::mock(vec![1, 50257]))
         }
     }
 
@@ -351,10 +387,10 @@ mod tests {
     async fn test_cpu_backend_forward() {
         let model = Arc::new(MockModel::new());
         let backend = CpuBackend::new(model).unwrap();
-        let input = MockTensor::new(vec![1, 512]);
-        let mut cache = KVCache::new(Default::default()).unwrap();
+        let input = ConcreteTensor::mock(vec![1, 512]);
+        let cache = Arc::new(RwLock::new(KVCache::new(Default::default()).unwrap()));
 
-        let output = backend.forward(&input, &mut cache).await;
+        let output = backend.forward(&input, cache).await;
         assert!(output.is_ok());
     }
 
@@ -416,14 +452,4 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    #[test]
-    fn test_mock_tensor() {
-        let tensor = MockTensor::new(vec![2, 3]);
-        assert_eq!(tensor.shape(), &[2, 3]);
-        assert_eq!(tensor.dtype(), bitnet_common::DType::F32);
-        assert_eq!(tensor.device(), &Device::Cpu);
-        
-        let tensor_gpu = tensor.with_device(Device::Cuda(0));
-        assert_eq!(tensor_gpu.device(), &Device::Cuda(0));
-    }
 }

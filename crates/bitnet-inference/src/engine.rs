@@ -4,12 +4,13 @@
 //! and comprehensive configuration options.
 
 use anyhow::{Result, Context};
-use bitnet_common::{BitNetConfig, Device, Tensor, ConcreteTensor};
+use bitnet_common::{BitNetConfig, Device, Tensor, ConcreteTensor, BitNetTensor};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, debug, warn, instrument};
+use candle_core::IndexOp;
 
 use crate::{
     backends::{Backend, CpuBackend, GpuBackend},
@@ -35,6 +36,7 @@ pub struct InferenceEngine {
     backend: Box<dyn Backend>,
     cache: Arc<RwLock<KVCache>>,
     config: InferenceConfig,
+    device: Device,
 }
 
 impl InferenceEngine {
@@ -51,18 +53,18 @@ impl InferenceEngine {
         let cache_config = CacheConfig::default();
         let cache = Arc::new(RwLock::new(KVCache::new(cache_config)?));
         
-        let backend: Box<dyn Backend> = match device {
+        let backend: Box<dyn Backend> = match &device {
             Device::Cpu => {
                 debug!("Using CPU backend");
                 Box::new(CpuBackend::new(model.clone())?)
             }
             Device::Cuda(_) => {
                 debug!("Using GPU backend");
-                Box::new(GpuBackend::new(model.clone(), device)?)
+                Box::new(GpuBackend::new(model.clone(), device.clone())?)
             }
             Device::Metal => {
                 debug!("Using GPU backend (Metal)");
-                Box::new(GpuBackend::new(model.clone(), device)?)
+                Box::new(GpuBackend::new(model.clone(), device.clone())?)
             }
         };
         
@@ -72,6 +74,7 @@ impl InferenceEngine {
             backend,
             cache,
             config,
+            device,
         })
     }
 
@@ -209,11 +212,8 @@ impl InferenceEngine {
         // Convert tokens to tensor
         let input_tensor = self.tokens_to_tensor(tokens)?;
         
-        // Get cache for this sequence
-        let mut cache = self.cache.write().await;
-        
-        // Forward pass through backend
-        let output_tensor = self.backend.forward(&input_tensor, &mut *cache).await?;
+        // Forward pass through backend, passing the Arc<RwLock<KVCache>>
+        let output_tensor = self.backend.forward(&input_tensor, self.cache.clone()).await?;
         
         // Extract logits from output tensor
         self.tensor_to_logits(&output_tensor)
@@ -221,17 +221,33 @@ impl InferenceEngine {
 
     /// Convert tokens to input tensor
     fn tokens_to_tensor(&self, tokens: &[u32]) -> Result<ConcreteTensor> {
-        // This would create a proper tensor from token IDs
-        // For now, create a mock tensor
-        Ok(ConcreteTensor::mock(vec![1, tokens.len()]))
+        let shape = [1, tokens.len()];
+        let tensor = BitNetTensor::from_slice(tokens, &shape, &self.device)?;
+        Ok(ConcreteTensor::BitNet(tensor))
     }
 
     /// Extract logits from output tensor
     fn tensor_to_logits(&self, tensor: &ConcreteTensor) -> Result<Vec<f32>> {
-        // This would extract the logits from the output tensor
-        // For now, return mock logits
-        let vocab_size = self.tokenizer.vocab_size();
-        Ok(vec![0.1; vocab_size])
+        let candle_tensor = tensor.to_candle()?;
+        let shape = candle_tensor.shape().dims();
+
+        let logits_tensor = if shape.len() == 3 && shape[0] == 1 {
+            // Shape [1, seq_len, vocab_size]
+            let seq_len = shape[1];
+            candle_tensor.i((0, seq_len - 1, ..))
+        } else if shape.len() == 2 {
+            // Shape [seq_len, vocab_size], assume single sequence
+            let seq_len = shape[0];
+            candle_tensor.i((seq_len - 1, ..))
+        } else {
+            return Err(anyhow::anyhow!("Unsupported tensor shape for logits: {:?}", shape));
+        }
+        .map_err(|e| anyhow::anyhow!("Failed to get logits for last token: {}", e))?;
+
+        let logits_vec = logits_tensor.to_vec1::<f32>()
+            .map_err(|e| anyhow::anyhow!("Failed to convert logits to vec: {}", e))?;
+
+        Ok(logits_vec)
     }
 
     /// Check if generation should stop
@@ -298,6 +314,8 @@ mod tests {
     use super::*;
     use std::sync::Arc;
 
+    use bitnet_common::{BitNetError, MockTensor};
+
     struct MockModel {
         config: BitNetConfig,
     }
@@ -317,21 +335,21 @@ mod tests {
 
         fn forward(
             &self,
-            _input: &dyn Tensor,
+            _input: &ConcreteTensor,
             _cache: &mut dyn std::any::Any,
-        ) -> Result<Box<dyn Tensor>> {
-            Ok(Box::new(MockTensor::new(vec![1, 50257])))
+        ) -> bitnet_common::Result<ConcreteTensor> {
+            Ok(ConcreteTensor::Mock(MockTensor::new(vec![1, 50257])))
         }
     }
 
     struct MockTokenizer;
 
     impl Tokenizer for MockTokenizer {
-        fn encode(&self, _text: &str, _add_special_tokens: bool) -> Result<Vec<u32>> {
+        fn encode(&self, _text: &str, _add_special_tokens: bool) -> bitnet_common::Result<Vec<u32>> {
             Ok(vec![1, 2, 3])
         }
 
-        fn decode(&self, _tokens: &[u32], _skip_special_tokens: bool) -> Result<String> {
+        fn decode(&self, _tokens: &[u32], _skip_special_tokens: bool) -> bitnet_common::Result<String> {
             Ok("mock generated text".to_string())
         }
 

@@ -7,7 +7,7 @@
 //! - Performance and resource management
 //! - Error handling and edge cases
 
-use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, MockTensor};
+use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, MockTensor, InferenceError};
 use bitnet_inference::prelude::*;
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
@@ -48,7 +48,9 @@ impl Model for MockModel {
         _cache: &mut dyn std::any::Any,
     ) -> Result<ConcreteTensor, BitNetError> {
         if self.should_fail {
-            return Err(BitNetError::Inference("Mock model failure".to_string()));
+            return Err(BitNetError::Inference(InferenceError::GenerationFailed {
+                reason: "Mock model failure".to_string(),
+            }));
         }
         Ok(ConcreteTensor::mock(vec![1, 50257]))
     }
@@ -76,9 +78,9 @@ impl MockTokenizer {
 impl Tokenizer for MockTokenizer {
     fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>, BitNetError> {
         if self.should_fail {
-            return Err(BitNetError::Tokenization(
-                "Mock tokenizer failure".to_string(),
-            ));
+            return Err(BitNetError::Inference(InferenceError::TokenizationFailed {
+                reason: "Mock tokenizer failure".to_string(),
+            }));
         }
         // Simple mock encoding: convert text length to tokens
         Ok((0..text.len().min(10)).map(|i| i as u32 + 1).collect())
@@ -86,7 +88,9 @@ impl Tokenizer for MockTokenizer {
 
     fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String, BitNetError> {
         if self.should_fail {
-            return Err(BitNetError::Tokenization("Mock decode failure".to_string()));
+            return Err(BitNetError::Inference(InferenceError::TokenizationFailed {
+                reason: "Mock decode failure".to_string(),
+            }));
         }
         Ok(format!("decoded_{}_tokens", tokens.len()))
     }
@@ -209,7 +213,7 @@ mod engine_tests {
         let model_config = engine.model_config();
 
         // Should be able to access model configuration
-        assert!(model_config.vocab_size > 0);
+        assert!(model_config.model.vocab_size > 0);
     }
 
     #[tokio::test]
@@ -626,8 +630,9 @@ mod performance_tests {
         let num_requests = 10;
 
         let mut handles = Vec::new();
+        let engine = Arc::new(engine);
         for i in 0..num_requests {
-            let engine_clone = Arc::new(engine);
+            let engine_clone = engine.clone();
             let handle = tokio::spawn(async move {
                 let prompt = format!("Throughput test {}", i);
                 engine_clone.generate(&prompt).await
