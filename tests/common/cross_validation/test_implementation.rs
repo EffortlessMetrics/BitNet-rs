@@ -1,5 +1,5 @@
-use crate::common::errors::ImplementationResult;
 use crate::cross_validation::implementation::*;
+use crate::errors::ImplementationResult;
 use async_trait::async_trait;
 use std::path::Path;
 use std::time::Duration;
@@ -94,7 +94,7 @@ impl BitNetImplementation for MockImplementation {
     async fn inference(
         &self,
         tokens: &[u32],
-        config: &InferenceConfig,
+        _config: &InferenceConfig,
     ) -> ImplementationResult<InferenceResult> {
         let start_time = std::time::Instant::now();
 

@@ -1,4 +1,4 @@
-use crate::common::errors::{ImplementationError, ImplementationResult};
+use crate::errors::{ImplementationError, ImplementationResult};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -314,8 +314,11 @@ impl ResourceManager {
         self.active_implementations.get(id).map(|b| b.as_ref())
     }
 
-    pub fn get_implementation_mut(&mut self, id: &str) -> Option<&mut dyn BitNetImplementation> {
-        self.active_implementations.get_mut(id).map(|b| b.as_mut())
+    pub fn get_implementation_mut(
+        &mut self,
+        id: &str,
+    ) -> Option<&mut Box<dyn BitNetImplementation>> {
+        self.active_implementations.get_mut(id)
     }
 
     pub fn get_total_memory_usage(&self) -> u64 {
