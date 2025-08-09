@@ -17,6 +17,9 @@ pub mod results;
 pub mod test_utilities;
 pub mod utils;
 
+// Cross-validation module
+pub mod cross_validation;
+
 // Re-export commonly used types
 pub use config::TestConfig;
 pub use errors::TestError;
