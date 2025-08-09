@@ -157,7 +157,12 @@
 th end-to-end validation
   - _Requirements: 2.1, 2.2, 2.5_
 -
-- [-] 11. Implement comprehensive unit tests for bitnet-tokenizers
+- [ ] 11. Implement comprehensive unit tests for bitnet-tokenizers
+
+
+
+
+
 
 
 
@@ -211,6 +216,9 @@ th end-to-end validation
   - _Requirements: 3.1, 3.5_
 
 - [ ] 15. Build comparison framework
+
+
+
   - Implement `CrossValidationSuite` with configurable tolerance
   - Add accuracy comparison with token-level analysis
   - Create performance comparison with statistical analysis
