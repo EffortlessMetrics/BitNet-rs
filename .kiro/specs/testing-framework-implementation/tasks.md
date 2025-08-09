@@ -142,7 +142,9 @@
 
 -
 
-- [-] 10. Implement comprehensive unit tests for bitnet-inference
+- [x] 10. Implement comprehensive unit tests for bitnet-inference
+
+
 
 
 
@@ -155,6 +157,13 @@
 th end-to-end validation
   - _Requirements: 2.1, 2.2, 2.5_
 -
+- [x] 11. Implement comprehensive unit tests for bitnet-tokenizers
+
+
+
+
+
+
 
 - [ ] 11. Implement comprehensive unit tests for bitnet-tokenizers
 

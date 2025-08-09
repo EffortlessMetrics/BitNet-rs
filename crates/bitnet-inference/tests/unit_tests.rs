@@ -7,7 +7,7 @@
 //! - Backend selection and capabilities
 //! - Error handling and edge cases
 
-use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, MockTensor};
+use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, Tensor};
 use bitnet_inference::prelude::*;
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
@@ -42,6 +42,12 @@ impl Model for MockModel {
 }
 
 struct MockTokenizer;
+
+impl MockTokenizer {
+    fn new() -> Self {
+        Self
+    }
+}
 
 impl Tokenizer for MockTokenizer {
     fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>, BitNetError> {
@@ -465,8 +471,8 @@ mod cache_unit_tests {
     #[test]
     fn test_cache_config_creation() {
         let config = CacheConfig::default();
-        assert!(config.max_size > 0);
-        assert!(config.max_entries > 0);
+        assert!(config.max_size_bytes > 0);
+        assert!(config.max_sequence_length > 0);
     }
 
     #[test]
@@ -502,15 +508,15 @@ mod cache_unit_tests {
         let cache = KVCache::new(config.clone());
         assert!(cache.is_ok());
 
-        // Test with zero max_size (should still work, might use default)
-        config.max_size = 0;
+        // Test with zero max_size_bytes (should still work, might use default)
+        config.max_size_bytes = 0;
         let cache = KVCache::new(config.clone());
         // Implementation might handle this gracefully
         assert!(cache.is_ok());
 
-        // Test with zero max_entries
-        config.max_size = 1024 * 1024;
-        config.max_entries = 0;
+        // Test with zero max_sequence_length
+        config.max_size_bytes = 1024 * 1024;
+        config.max_sequence_length = 0;
         let cache = KVCache::new(config);
         // Implementation might handle this gracefully
         assert!(cache.is_ok());
@@ -519,8 +525,8 @@ mod cache_unit_tests {
     #[test]
     fn test_cache_size_limits() {
         let config = CacheConfig {
-            max_size: 1024, // Small cache
-            max_entries: 10,
+            max_size_bytes: 1024, // Small cache
+            max_sequence_length: 10,
             ..Default::default()
         };
 
