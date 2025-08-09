@@ -16,6 +16,10 @@ path = "bin/validate_config.rs"
 name = "test_logging_infrastructure"
 path = "test_logging_infrastructure.rs"
 
+[[test]]
+name = "test_bitnet_implementation"
+path = "test_bitnet_implementation.rs"
+
 [dependencies]
 # Async runtime and utilities
 tokio = { version = "1.0", features = ["full"] }
