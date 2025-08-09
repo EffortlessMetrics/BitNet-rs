@@ -14,3 +14,7 @@ description = "Tokenization support for BitNet models"
 bitnet-common = { path = "../bitnet-common" }
 anyhow.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }
+tempfile = "3.8"
