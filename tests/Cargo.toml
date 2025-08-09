@@ -52,6 +52,12 @@ tempfile = "3.0"
 # Random number generation
 rand = "0.8"
 
+# BitNet.rs crates for cross-validation
+bitnet-common = { path = "../crates/bitnet-common" }
+bitnet-models = { path = "../crates/bitnet-models" }
+bitnet-inference = { path = "../crates/bitnet-inference" }
+bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
+
 # Platform-specific dependencies
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2"

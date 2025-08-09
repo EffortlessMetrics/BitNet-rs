@@ -170,7 +170,7 @@ pub struct ModelInfo {
 }
 
 /// Supported model formats
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ModelFormat {
     GGUF,
     SafeTensors,
