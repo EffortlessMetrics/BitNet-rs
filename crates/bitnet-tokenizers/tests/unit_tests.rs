@@ -193,11 +193,11 @@ mod format_configuration_tests {
 
     #[test]
     fn test_custom_configuration() {
-        let tokenizer = BasicTokenizer::with_config(5000, Some(4999), Some(1));
+        let tokenizer = BasicTokenizer::with_config(5000, Some(4999), Some(5000));
 
         assert_eq!(tokenizer.vocab_size(), 5000);
         assert_eq!(tokenizer.eos_token_id(), Some(4999));
-        assert_eq!(tokenizer.pad_token_id(), Some(1));
+        assert_eq!(tokenizer.pad_token_id(), Some(5000));
 
         // Test with custom configuration
         let text = "custom configuration";
