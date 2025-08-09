@@ -157,7 +157,9 @@
 th end-to-end validation
   - _Requirements: 2.1, 2.2, 2.5_
 -
-- [ ] 11. Implement comprehensive unit tests for bitnet-tokenizers
+- [-] 11. Implement comprehensive unit tests for bitnet-tokenizers
+
+
 
 
   - Add tests for tokenization accuracy and consistency
@@ -195,8 +197,10 @@ th end-to-end validation
   - Create metrics collection and reporting
   - _Requirements: 3.1, 3.3_
 -
+- [x] 14. Implement C++ implementation wrapper
 
-- [-] 14. Implement C++ implementation wrapper
+- [x] 14. Implement C++ implementation wrapper
+
 
 
   - Create `CppImplementation` struct with FFI bindings
