@@ -23,13 +23,17 @@ pub mod cross_validation;
 // Re-export commonly used types
 pub use config::TestConfig;
 pub use errors::TestError;
-pub use fixtures::{FixtureManager, ModelFormat, ModelType};
+pub use fixtures::FixtureManager;
 pub use harness::{TestCase, TestHarness, TestSuite};
 pub use logging::init_logging;
 pub use results::{TestMetrics, TestResult};
-pub use test_utilities::{DataPattern, SystemInfo, TestSummary, TestUtilities};
-pub use utils::{
-    format_bytes, format_duration, get_memory_usage, get_peak_memory_usage, measure_time,
+pub use utils::{format_bytes, format_duration};
+
+// Re-export cross-validation types
+pub use cross_validation::{
+    BitNetImplementation, ImplementationCapabilities, ImplementationFactory,
+    ImplementationRegistry, InferenceConfig, InferenceResult, ModelFormat, ModelInfo,
+    PerformanceMetrics, ResourceInfo, ResourceLimits, ResourceManager, ResourceSummary,
 };
 
 /// Current version of the testing framework

@@ -1,5 +1,5 @@
-use bitnet_tests::cross_validation::implementation::*;
 use bitnet_tests::cross_validation::test_implementation::MockImplementation;
+use bitnet_tests::*;
 use std::path::PathBuf;
 
 #[tokio::test]
