@@ -6,6 +6,7 @@
 pub mod batch_processing_tests;
 pub mod component_interaction_tests;
 pub mod model_loading_tests;
+pub mod resource_management_tests;
 pub mod streaming_tests;
 pub mod tokenization_pipeline_tests;
 pub mod workflow_tests;
