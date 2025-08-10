@@ -35,23 +35,53 @@ impl RotaryEmbedding {
     }
     
     pub fn apply(&self, x: &Tensor, position: usize) -> Result<Tensor> {
-        let (_batch, _seq, dim) = x.dims3()?;
-        let half_dim = dim / 2;
-        
-        let x_reshaped = x.reshape(&[x.dims()[0], x.dims()[1], half_dim, 2])?;
-        let x0 = x_reshaped.narrow(3, 0, 1)?.squeeze(3)?;
-        let x1 = x_reshaped.narrow(3, 1, 1)?.squeeze(3)?;
-        
-        let cos = self.cos.narrow(0, position, 1)?;
-        let sin = self.sin.narrow(0, position, 1)?;
-        
-        let x0_rot = (x0.mul(&cos)? - x1.mul(&sin)?)?;
-        let x1_rot = (x0.mul(&sin)? + x1.mul(&cos)?)?;
-        
-        let rotated = Tensor::stack(&[x0_rot, x1_rot], 3)?
-            .reshape(&[x.dims()[0], x.dims()[1], dim])?;
-        
-        Ok(rotated)
+        // x shape: [B, H, T, D] for multi-head attention
+        if x.dims().len() == 4 {
+            let (batch, n_heads, seq_len, head_dim) = x.dims4()?;
+            let half_dim = head_dim / 2;
+            
+            // Reshape to separate real and imaginary parts
+            let x_reshaped = x.reshape(&[batch, n_heads, seq_len, half_dim, 2])?;
+            let x0 = x_reshaped.narrow(4, 0, 1)?.squeeze(4)?;
+            let x1 = x_reshaped.narrow(4, 1, 1)?.squeeze(4)?;
+            
+            // Get cos/sin for the position  
+            let cos = self.cos.narrow(0, position, seq_len)?
+                .unsqueeze(0)?  // Add batch dim
+                .unsqueeze(1)?  // Add heads dim  
+                .broadcast_as(&[batch, n_heads, seq_len, half_dim])?;
+            let sin = self.sin.narrow(0, position, seq_len)?
+                .unsqueeze(0)?
+                .unsqueeze(1)?
+                .broadcast_as(&[batch, n_heads, seq_len, half_dim])?;
+            
+            let x0_rot = (x0.mul(&cos)? - x1.mul(&sin)?)?;
+            let x1_rot = (x0.mul(&sin)? + x1.mul(&cos)?)?;
+            
+            let rotated = Tensor::stack(&[x0_rot, x1_rot], 4)?
+                .reshape(&[batch, n_heads, seq_len, head_dim])?;
+            
+            Ok(rotated)
+        } else {
+            // Original 3D implementation for other uses
+            let (_batch, _seq, dim) = x.dims3()?;
+            let half_dim = dim / 2;
+            
+            let x_reshaped = x.reshape(&[x.dims()[0], x.dims()[1], half_dim, 2])?;
+            let x0 = x_reshaped.narrow(3, 0, 1)?.squeeze(3)?;
+            let x1 = x_reshaped.narrow(3, 1, 1)?.squeeze(3)?;
+            
+            let cos = self.cos.narrow(0, position, 1)?;
+            let sin = self.sin.narrow(0, position, 1)?;
+            
+            let x0_rot = (x0.mul(&cos)? - x1.mul(&sin)?)?;
+            let x1_rot = (x0.mul(&sin)? + x1.mul(&cos)?)?;
+            
+            let rotated = Tensor::stack(&[x0_rot, x1_rot], 3)?
+                .reshape(&[x.dims()[0], x.dims()[1], dim])?;
+            
+            Ok(rotated)
+        }
     }
 }
 
@@ -134,8 +164,10 @@ impl MultiHeadAttention {
         let scores = scores.affine((1.0 / scale) as f64, 0.0)?;
         
         // Apply causal mask
-        let mask = self.create_causal_mask(seq_len, scores.device())?;
-        let scores = (scores + mask)?;
+        let mask = self.create_causal_mask(seq_len, scores.device())?
+            .unsqueeze(0)?  // Add batch dim
+            .unsqueeze(0)?; // Add heads dim
+        let scores = scores.broadcast_add(&mask)?;
         
         let attn_weights = candle_nn::ops::softmax(&scores, 3)?;
         let attn_output = attn_weights.matmul(&v)?;
@@ -248,15 +280,21 @@ impl LayerKVCache {
     }
     
     pub fn append(&mut self, k_new: &Tensor, v_new: &Tensor) -> Result<()> {
+        // Expect shapes: k: [B,H,T_new,Hd], v: [B,H,T_new,Hd]
         let new_seq_len = k_new.dims()[2];
         
-        if self.seq_len + new_seq_len > self.max_seq_len {
-            return Err(BitNetError::from(candle_core::Error::Msg("KV cache overflow".to_string())));
+        if self.seq_len == 0 {
+            // First append - just store the tensors
+            self.k = k_new.clone();
+            self.v = v_new.clone();
+        } else {
+            // Concatenate along time dimension (dim=2)
+            if self.seq_len + new_seq_len > self.max_seq_len {
+                return Err(BitNetError::from(candle_core::Error::Msg("KV cache overflow".to_string())));
+            }
+            self.k = Tensor::cat(&[&self.k, k_new], 2)?;
+            self.v = Tensor::cat(&[&self.v, v_new], 2)?;
         }
-        
-        // For now, just store the new values (TODO: implement proper slice assignment)
-        self.k = k_new.clone();
-        self.v = v_new.clone();
         
         self.seq_len += new_seq_len;
         Ok(())

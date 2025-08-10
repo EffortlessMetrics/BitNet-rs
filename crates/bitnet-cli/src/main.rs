@@ -79,6 +79,21 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Run simple text generation
+    Run {
+        /// Model file path
+        #[arg(short, long)]
+        model: std::path::PathBuf,
+        
+        /// Input prompt
+        #[arg(short, long)]
+        prompt: String,
+        
+        /// Maximum tokens to generate
+        #[arg(long, default_value_t = 32)]
+        max_tokens: usize,
+    },
+    
     /// Run inference on a model
     #[command(alias = "infer")]
     Inference(InferenceCommand),
@@ -141,6 +156,9 @@ async fn main() -> Result<()> {
     
     // Handle commands
     let result = match cli.command {
+        Some(Commands::Run { model, prompt, max_tokens }) => {
+            run_simple_generation(model, prompt, max_tokens).await
+        }
         Some(Commands::Inference(cmd)) => cmd.execute(&config).await,
         Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
         Some(Commands::Benchmark(cmd)) => cmd.execute(&config).await,
@@ -261,6 +279,113 @@ async fn handle_config_command(action: ConfigAction, config: &CliConfig) -> Resu
         }
     }
     Ok(())
+}
+
+/// Simple greedy text generation
+async fn run_simple_generation(
+    model_path: std::path::PathBuf,
+    prompt: String,
+    max_tokens: usize,
+) -> Result<()> {
+    use bitnet_models::{BitNetModel, Model, transformer::KVCache};
+    use bitnet_tokenizers::Tokenizer;
+    use bitnet_common::{Device, ConcreteTensor};
+    use std::sync::Arc;
+    
+    println!("Loading model from: {}", model_path.display());
+    
+    // Load model (for now, create a mock model)
+    // TODO: Implement actual GGUF loading
+    let config = bitnet_common::BitNetConfig::default();
+    let model = BitNetModel::new(config.clone(), Device::Cpu);
+    let model = Arc::new(model) as Arc<dyn Model>;
+    
+    // Load tokenizer (use a mock tokenizer for now)
+    let tokenizer = bitnet_tokenizers::MockTokenizer::new();
+    
+    // Tokenize prompt
+    let mut tokens = tokenizer.encode(&prompt, true)?;
+    println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
+    
+    // Create KV cache
+    let mut cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
+    let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
+    
+    print!("Generating: {}", prompt);
+    
+    // Generation loop
+    for _ in 0..max_tokens {
+        // Embed tokens
+        let x = model.embed(&tokens)?;
+        
+        // Forward pass
+        let h = model.forward(&x, any_cache.as_mut())?;
+        
+        // Get logits
+        let logits = model.logits(&h)?;
+        
+        // Extract last token logits
+        let logits_vec = extract_logits(&logits)?;
+        
+        // Greedy decoding - argmax
+        let next_token = argmax(&logits_vec);
+        tokens.push(next_token);
+        
+        // Decode and print the new token
+        let token_text = tokenizer.decode(&[next_token], true)?;
+        print!("{}", token_text);
+        std::io::Write::flush(&mut std::io::stdout())?;
+        
+        // Check for EOS
+        if let Some(eos) = tokenizer.eos_token_id() {
+            if next_token == eos {
+                break;
+            }
+        }
+    }
+    
+    println!("\n\nGeneration complete!");
+    Ok(())
+}
+
+/// Extract logits vector from tensor
+fn extract_logits(tensor: &ConcreteTensor) -> Result<Vec<f32>> {
+    use bitnet_common::BitNetError;
+    
+    let shape = tensor.shape();
+    if shape.len() != 3 {
+        return Err(BitNetError::Validation("Expected 3D tensor".into()).into());
+    }
+    
+    let (_batch, seq_len, _vocab) = (shape[0], shape[1], shape[2]);
+    
+    match tensor {
+        ConcreteTensor::BitNet(t) => {
+            let candle = t.to_candle()?;
+            let last = candle
+                .narrow(1, seq_len - 1, 1)?
+                .squeeze(1)?
+                .i(0)?;
+            Ok(last.to_vec1::<f32>()?)
+        }
+        ConcreteTensor::Mock(_) => {
+            // Return mock logits for testing
+            Ok(vec![0.1; 50257])
+        }
+    }
+}
+
+/// Simple argmax
+fn argmax(xs: &[f32]) -> u32 {
+    let mut best_idx = 0usize;
+    let mut best_val = f32::NEG_INFINITY;
+    for (i, &v) in xs.iter().enumerate() {
+        if v > best_val {
+            best_val = v;
+            best_idx = i;
+        }
+    }
+    best_idx as u32
 }
 
 /// Show system information
