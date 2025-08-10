@@ -9,8 +9,8 @@ pub struct RotaryEmbedding {
 }
 
 impl RotaryEmbedding {
-    pub fn new(dim: usize, max_seq_len: usize, device: &Device) -> Result<Self> {
-        let theta = 10000f32;
+    pub fn new(dim: usize, max_seq_len: usize, rope_theta: Option<f32>, device: &Device) -> Result<Self> {
+        let theta = rope_theta.unwrap_or(10000.0);
         let freqs = (0..dim)
             .step_by(2)
             .map(|i| 1.0 / theta.powf(i as f32 / dim as f32))
@@ -110,6 +110,7 @@ impl MultiHeadAttention {
         let rope = RotaryEmbedding::new(
             head_dim, 
             config.model.max_position_embeddings,
+            config.model.rope_theta,
             vb.device()
         ).ok();
         

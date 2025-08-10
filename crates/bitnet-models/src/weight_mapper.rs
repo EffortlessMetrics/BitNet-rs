@@ -9,97 +9,113 @@ pub fn remap_gguf_weights(
     tensors: &HashMap<String, Tensor>,
 ) -> Result<HashMap<String, Tensor>> {
     let mut mapped = HashMap::new();
+    let mut unmapped = Vec::new();
     
     for (name, tensor) in tensors {
-        // Common patterns for GGUF model names
-        let new_name = if name.contains("tok_embeddings.weight") || name.contains("token_embd.weight") {
-            "embed_tokens.weight".to_string()
-        } else if name.contains("output.weight") || name.contains("lm_head.weight") {
-            "lm_head.weight".to_string()
-        } else if name.contains("norm.weight") || name.contains("output_norm.weight") {
-            "norm.weight".to_string()
-        } else if name.contains("norm.bias") || name.contains("output_norm.bias") {
-            "norm.bias".to_string()
-        } else if let Some(layer_idx) = extract_layer_index(name) {
-            // Layer-specific mappings
-            map_layer_weight(name, layer_idx)?
+        let new_name = if let Some(mapped_name) = map_tensor_name(name) {
+            mapped_name
         } else {
-            // Keep original name if no mapping found
+            unmapped.push(name.clone());
             name.clone()
         };
         
         mapped.insert(new_name, tensor.clone());
     }
     
+    // Log unmapped tensors for debugging
+    if !unmapped.is_empty() {
+        eprintln!("Warning: {} unmapped tensors: {:?}", unmapped.len(), &unmapped[..5.min(unmapped.len())]);
+    }
+    
     Ok(mapped)
 }
 
-/// Extract layer index from tensor name
-fn extract_layer_index(name: &str) -> Option<usize> {
-    // Common patterns: "layers.0.", "blk.0.", "h.0."
-    if let Some(pos) = name.find("layers.") {
-        let after = &name[pos + 7..];
-        if let Some(dot_pos) = after.find('.') {
-            return after[..dot_pos].parse().ok();
+/// Map individual tensor name from GGUF to our transformer naming
+fn map_tensor_name(name: &str) -> Option<String> {
+    // Token embeddings variations
+    if name == "token_embd.weight" || name == "tok_embeddings.weight" || name == "model.embed_tokens.weight" {
+        return Some("embed_tokens.weight".to_string());
+    }
+    
+    // Output layer variations
+    if name == "output.weight" || name == "lm_head.weight" || name == "model.lm_head.weight" {
+        return Some("lm_head.weight".to_string());
+    }
+    
+    // Final normalization
+    if name == "output_norm.weight" || name == "norm.weight" || name == "model.norm.weight" {
+        return Some("final_norm.weight".to_string());
+    }
+    
+    // Handle "blk.N." prefix (common in GGUF)
+    if name.starts_with("blk.") {
+        let parts: Vec<&str> = name.split('.').collect();
+        if parts.len() >= 3 {
+            let layer_num = parts[1];
+            let component = parts[2..].join(".");
+            
+            let mapped_component = match component.as_str() {
+                // Attention weights
+                "attn_q.weight" => "self_attn.q_proj.weight",
+                "attn_k.weight" => "self_attn.k_proj.weight",
+                "attn_v.weight" => "self_attn.v_proj.weight",
+                "attn_output.weight" | "attn_o.weight" => "self_attn.o_proj.weight",
+                
+                // Attention normalization
+                "attn_norm.weight" => "input_layernorm.weight",
+                
+                // Feed-forward weights
+                "ffn_gate.weight" | "ffn_gate_inp.weight" => "mlp.gate_proj.weight",
+                "ffn_up.weight" | "ffn_up_proj.weight" => "mlp.up_proj.weight",
+                "ffn_down.weight" | "ffn_down_proj.weight" => "mlp.down_proj.weight",
+                
+                // FFN normalization
+                "ffn_norm.weight" => "post_attention_layernorm.weight",
+                
+                _ => return None,
+            };
+            
+            return Some(format!("layers.{}.{}", layer_num, mapped_component));
         }
     }
     
-    if let Some(pos) = name.find("blk.") {
-        let after = &name[pos + 4..];
-        if let Some(dot_pos) = after.find('.') {
-            return after[..dot_pos].parse().ok();
-        }
-    }
-    
-    if let Some(pos) = name.find("h.") {
-        let after = &name[pos + 2..];
-        if let Some(dot_pos) = after.find('.') {
-            return after[..dot_pos].parse().ok();
+    // Handle "layers.N." prefix (LLaMA style)
+    if name.starts_with("layers.") || name.starts_with("model.layers.") {
+        let clean_name = if name.starts_with("model.") {
+            &name[6..] // Remove "model." prefix
+        } else {
+            name
+        };
+        
+        let parts: Vec<&str> = clean_name.split('.').collect();
+        if parts.len() >= 3 && parts[0] == "layers" {
+            let layer_num = parts[1];
+            let component = parts[2..].join(".");
+            
+            let mapped_component = match component.as_str() {
+                // LLaMA-style attention
+                "attention.wq.weight" | "self_attn.q_proj.weight" => "self_attn.q_proj.weight",
+                "attention.wk.weight" | "self_attn.k_proj.weight" => "self_attn.k_proj.weight",
+                "attention.wv.weight" | "self_attn.v_proj.weight" => "self_attn.v_proj.weight",
+                "attention.wo.weight" | "self_attn.o_proj.weight" => "self_attn.o_proj.weight",
+                
+                // Normalization
+                "attention_norm.weight" | "input_layernorm.weight" => "input_layernorm.weight",
+                "ffn_norm.weight" | "post_attention_layernorm.weight" => "post_attention_layernorm.weight",
+                
+                // LLaMA-style FFN
+                "feed_forward.w1.weight" | "mlp.gate_proj.weight" => "mlp.gate_proj.weight",
+                "feed_forward.w3.weight" | "mlp.up_proj.weight" => "mlp.up_proj.weight",
+                "feed_forward.w2.weight" | "mlp.down_proj.weight" => "mlp.down_proj.weight",
+                
+                _ => return Some(format!("layers.{}.{}", layer_num, component)),
+            };
+            
+            return Some(format!("layers.{}.{}", layer_num, mapped_component));
         }
     }
     
     None
-}
-
-/// Map layer-specific weight names
-fn map_layer_weight(name: &str, layer_idx: usize) -> Result<String> {
-    let prefix = format!("layers.{}", layer_idx);
-    
-    // Attention weights
-    if name.contains("attention.wq") || name.contains("attn.q_proj") || name.contains("self_attn.q") {
-        Ok(format!("{}.attention.q_proj.weight", prefix))
-    } else if name.contains("attention.wk") || name.contains("attn.k_proj") || name.contains("self_attn.k") {
-        Ok(format!("{}.attention.k_proj.weight", prefix))
-    } else if name.contains("attention.wv") || name.contains("attn.v_proj") || name.contains("self_attn.v") {
-        Ok(format!("{}.attention.v_proj.weight", prefix))
-    } else if name.contains("attention.wo") || name.contains("attn.o_proj") || name.contains("self_attn.o") {
-        Ok(format!("{}.attention.o_proj.weight", prefix))
-    }
-    // Feed-forward weights
-    else if name.contains("feed_forward.w1") || name.contains("ffn.gate") || name.contains("mlp.gate") {
-        Ok(format!("{}.feed_forward.gate_proj.weight", prefix))
-    } else if name.contains("feed_forward.w3") || name.contains("ffn.up") || name.contains("mlp.up") {
-        Ok(format!("{}.feed_forward.up_proj.weight", prefix))
-    } else if name.contains("feed_forward.w2") || name.contains("ffn.down") || name.contains("mlp.down") {
-        Ok(format!("{}.feed_forward.down_proj.weight", prefix))
-    }
-    // Layer norms
-    else if name.contains("attention_norm") || name.contains("input_layernorm") {
-        if name.contains("weight") {
-            Ok(format!("{}.attention_norm.weight", prefix))
-        } else {
-            Ok(format!("{}.attention_norm.bias", prefix))
-        }
-    } else if name.contains("ffn_norm") || name.contains("post_attention_layernorm") {
-        if name.contains("weight") {
-            Ok(format!("{}.ffn_norm.weight", prefix))
-        } else {
-            Ok(format!("{}.ffn_norm.bias", prefix))
-        }
-    } else {
-        // Keep original name with layer prefix
-        Ok(name.to_string())
-    }
 }
 
 /// Create a VarBuilder from mapped tensors

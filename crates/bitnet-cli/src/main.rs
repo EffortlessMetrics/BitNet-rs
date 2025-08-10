@@ -12,6 +12,7 @@ use tracing::{error, info};
 
 mod commands;
 mod config;
+mod sampling;
 
 use commands::{BenchmarkCommand, ConvertCommand, InferenceCommand, ServeCommand};
 use config::{CliConfig, ConfigBuilder};
@@ -85,13 +86,37 @@ enum Commands {
         #[arg(short, long)]
         model: std::path::PathBuf,
         
+        /// Tokenizer file path (optional, will look for sibling file if not provided)
+        #[arg(long)]
+        tokenizer: Option<std::path::PathBuf>,
+        
         /// Input prompt
         #[arg(short, long)]
         prompt: String,
         
-        /// Maximum tokens to generate
+        /// Maximum new tokens to generate
         #[arg(long, default_value_t = 32)]
-        max_tokens: usize,
+        max_new_tokens: usize,
+        
+        /// Temperature for sampling (0 = greedy)
+        #[arg(long, default_value_t = 1.0)]
+        temperature: f32,
+        
+        /// Top-k sampling (0 = disabled)
+        #[arg(long, default_value_t = 0)]
+        top_k: usize,
+        
+        /// Top-p (nucleus) sampling
+        #[arg(long, default_value_t = 1.0)]
+        top_p: f32,
+        
+        /// Repetition penalty
+        #[arg(long, default_value_t = 1.1)]
+        repetition_penalty: f32,
+        
+        /// Random seed for reproducibility
+        #[arg(long)]
+        seed: Option<u64>,
     },
     
     /// Run inference on a model
@@ -156,8 +181,8 @@ async fn main() -> Result<()> {
     
     // Handle commands
     let result = match cli.command {
-        Some(Commands::Run { model, prompt, max_tokens }) => {
-            run_simple_generation(model, prompt, max_tokens).await
+        Some(Commands::Run { model, tokenizer, prompt, max_new_tokens, temperature, top_k, top_p, repetition_penalty, seed }) => {
+            run_simple_generation(model, tokenizer, prompt, max_new_tokens, temperature, top_k, top_p, repetition_penalty, seed).await
         }
         Some(Commands::Inference(cmd)) => cmd.execute(&config).await,
         Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
@@ -281,27 +306,55 @@ async fn handle_config_command(action: ConfigAction, config: &CliConfig) -> Resu
     Ok(())
 }
 
-/// Simple greedy text generation
+/// Run text generation with sampling
 async fn run_simple_generation(
     model_path: std::path::PathBuf,
+    tokenizer_path: Option<std::path::PathBuf>,
     prompt: String,
-    max_tokens: usize,
+    max_new_tokens: usize,
+    temperature: f32,
+    top_k: usize,
+    top_p: f32,
+    repetition_penalty: f32,
+    seed: Option<u64>,
 ) -> Result<()> {
-    use bitnet_models::{BitNetModel, Model, transformer::KVCache};
+    use bitnet_models::{Model, transformer::KVCache};
     use bitnet_tokenizers::Tokenizer;
     use bitnet_common::{Device, ConcreteTensor};
     use std::sync::Arc;
+    use crate::sampling::Sampler;
     
     println!("Loading model from: {}", model_path.display());
     
-    // Load model (for now, create a mock model)
-    // TODO: Implement actual GGUF loading
-    let config = bitnet_common::BitNetConfig::default();
-    let model = BitNetModel::new(config.clone(), Device::Cpu);
+    // Load model with real GGUF loader
+    let (config, tensors) = bitnet_models::loader::load_gguf(&model_path, Device::Cpu)
+        .context("Failed to load GGUF model")?;
+    
+    let model = bitnet_models::BitNetModel::from_gguf(config.clone(), tensors, Device::Cpu)
+        .context("Failed to build model from GGUF")?;
     let model = Arc::new(model) as Arc<dyn Model>;
     
-    // Load tokenizer (use a mock tokenizer for now)
-    let tokenizer = bitnet_tokenizers::MockTokenizer::new();
+    // Load tokenizer
+    let tokenizer_path = tokenizer_path.or_else(|| {
+        // Look for common tokenizer file names
+        let base = model_path.with_extension("");
+        for ext in &["tokenizer.json", "tokenizer.model", "vocab.json"] {
+            let path = base.with_extension(ext);
+            if path.exists() {
+                return Some(path);
+            }
+        }
+        None
+    });
+    
+    let tokenizer = if let Some(path) = tokenizer_path {
+        println!("Loading tokenizer from: {}", path.display());
+        bitnet_tokenizers::load_tokenizer(&path)
+            .context("Failed to load tokenizer")?  
+    } else {
+        println!("Warning: No tokenizer found, using mock tokenizer");
+        Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
+    };
     
     // Tokenize prompt
     let mut tokens = tokenizer.encode(&prompt, true)?;
@@ -311,10 +364,17 @@ async fn run_simple_generation(
     let mut cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
     let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
     
+    // Create sampler
+    let mut sampler = Sampler::new(temperature, top_k, top_p, repetition_penalty, seed);
+    
     print!("Generating: {}", prompt);
+    std::io::Write::flush(&mut std::io::stdout())?;
+    
+    // Track generated tokens for repetition penalty
+    let mut generated_tokens = Vec::new();
     
     // Generation loop
-    for _ in 0..max_tokens {
+    for _ in 0..max_new_tokens {
         // Embed tokens
         let x = model.embed(&tokens)?;
         
@@ -327,12 +387,13 @@ async fn run_simple_generation(
         // Extract last token logits
         let logits_vec = extract_logits(&logits)?;
         
-        // Greedy decoding - argmax
-        let next_token = argmax(&logits_vec);
+        // Sample next token
+        let next_token = sampler.sample(&logits_vec, &generated_tokens);
         tokens.push(next_token);
+        generated_tokens.push(next_token);
         
         // Decode and print the new token
-        let token_text = tokenizer.decode(&[next_token], true)?;
+        let token_text = tokenizer.decode(&[next_token], false)?;
         print!("{}", token_text);
         std::io::Write::flush(&mut std::io::stdout())?;
         
@@ -345,6 +406,7 @@ async fn run_simple_generation(
     }
     
     println!("\n\nGeneration complete!");
+    println!("Generated {} tokens", generated_tokens.len());
     Ok(())
 }
 
@@ -375,18 +437,6 @@ fn extract_logits(tensor: &ConcreteTensor) -> Result<Vec<f32>> {
     }
 }
 
-/// Simple argmax
-fn argmax(xs: &[f32]) -> u32 {
-    let mut best_idx = 0usize;
-    let mut best_val = f32::NEG_INFINITY;
-    for (i, &v) in xs.iter().enumerate() {
-        if v > best_val {
-            best_val = v;
-            best_idx = i;
-        }
-    }
-    best_idx as u32
-}
 
 /// Show system information
 async fn show_system_info() -> Result<()> {
