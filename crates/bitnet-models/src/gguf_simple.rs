@@ -23,5 +23,9 @@ pub fn load_gguf(path: &Path, device: Device) -> Result<(bitnet_common::BitNetCo
     // In a real implementation, we would parse the GGUF file and load tensors
     let tensor_map = HashMap::new();
     
+    if tensor_map.is_empty() {
+        tracing::warn!("Loaded GGUF with zero tensors: running with random/zero init weights.");
+    }
+    
     Ok((config, tensor_map))
 }
