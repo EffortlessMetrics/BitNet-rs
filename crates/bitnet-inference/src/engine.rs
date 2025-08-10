@@ -7,6 +7,7 @@ use anyhow::{Result, Context};
 use bitnet_common::{BitNetConfig, Device, Tensor, ConcreteTensor};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
+use candle_core::IndexOp;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, debug, warn, instrument};
@@ -222,7 +223,7 @@ impl InferenceEngine {
     /// Convert tokens to input tensor
     fn tokens_to_tensor(&self, tokens: &[u32]) -> Result<ConcreteTensor> {
         // Use the model's embed method to convert tokens to embeddings
-        self.model.embed(tokens)
+        Ok(self.model.embed(tokens)?)
     }
 
     /// Extract logits from output tensor

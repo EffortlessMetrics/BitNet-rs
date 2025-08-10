@@ -42,6 +42,8 @@ pub struct ModelConfig {
     pub num_heads: usize,
     pub intermediate_size: usize,
     pub max_position_embeddings: usize,
+    pub rope_theta: Option<f32>,
+    pub rope_scaling: Option<RopeScaling>,
 }
 
 impl Default for ModelConfig {
@@ -55,6 +57,8 @@ impl Default for ModelConfig {
             num_heads: 32,
             intermediate_size: 11008,
             max_position_embeddings: 2048,
+            rope_theta: None,
+            rope_scaling: None,
         }
     }
 }
@@ -65,6 +69,13 @@ pub enum ModelFormat {
     Gguf,
     SafeTensors,
     HuggingFace,
+}
+
+/// RoPE scaling configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RopeScaling {
+    pub scaling_type: String,
+    pub factor: f32,
 }
 
 impl Default for ModelFormat {
