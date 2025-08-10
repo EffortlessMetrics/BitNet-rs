@@ -1,6 +1,9 @@
 use std::time::Duration;
 use thiserror::Error;
 
+/// Type alias for test results using anyhow
+pub type TestResult<T = ()> = anyhow::Result<T>;
+
 /// Comprehensive error types for the testing framework
 #[derive(Debug, Error)]
 pub enum TestError {

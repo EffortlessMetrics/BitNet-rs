@@ -31,11 +31,11 @@ pub mod integration;
 
 // Re-export commonly used types
 pub use config::TestConfig;
-pub use errors::TestError;
+pub use errors::{TestError, TestResult};
 pub use fixtures::FixtureManager;
 pub use harness::{TestCase, TestHarness, TestSuite};
 pub use logging::init_logging;
-pub use results::{TestMetrics, TestResult};
+pub use results::TestMetrics;
 pub use utils::{format_bytes, format_duration};
 
 // Re-export cross-validation types

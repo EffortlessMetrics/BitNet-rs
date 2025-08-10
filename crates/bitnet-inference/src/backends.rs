@@ -336,7 +336,7 @@ mod tests {
             _input: &dyn Tensor,
             _cache: &mut dyn std::any::Any,
         ) -> Result<Box<dyn Tensor>> {
-            Ok(Box::new(MockTensor::new(vec![1, 50257])))
+            Ok(Box::new(ConcreteTensor::mock(vec![1, 50257])))
         }
     }
 
@@ -351,7 +351,7 @@ mod tests {
     async fn test_cpu_backend_forward() {
         let model = Arc::new(MockModel::new());
         let backend = CpuBackend::new(model).unwrap();
-        let input = MockTensor::new(vec![1, 512]);
+        let input = ConcreteTensor::mock(vec![1, 512]);
         let mut cache = KVCache::new(Default::default()).unwrap();
 
         let output = backend.forward(&input, &mut cache).await;
@@ -418,9 +418,9 @@ mod tests {
 
     #[test]
     fn test_mock_tensor() {
-        let tensor = MockTensor::new(vec![2, 3]);
+        let tensor = ConcreteTensor::mock(vec![2, 3]);
         assert_eq!(tensor.shape(), &[2, 3]);
-        assert_eq!(tensor.dtype(), bitnet_common::DType::F32);
+        assert_eq!(tensor.dtype(), candle_core::DType::F32);
         assert_eq!(tensor.device(), &Device::Cpu);
         
         let tensor_gpu = tensor.with_device(Device::Cuda(0));
