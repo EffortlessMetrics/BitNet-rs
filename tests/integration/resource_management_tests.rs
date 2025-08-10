@@ -265,10 +265,8 @@ impl TestCase for MemoryLeakDetectionTest {
         allocations.clear();
 
         // Force garbage collection (if applicable)
-        #[cfg(feature = "gc")]
-        {
-            // Trigger garbage collection if available
-        }
+        // Note: Rust doesn't have explicit garbage collection, but we can
+        // wait for the allocator to release memory
 
         // Wait for memory to be released
         sleep(Duration::from_millis(100)).await;
