@@ -157,7 +157,36 @@
 th end-to-end validation
   - _Requirements: 2.1, 2.2, 2.5_
 -
-- [ ] 11. Implement comprehensive unit tests for bitnet-tokenizers
+- [x] 11. Implement comprehensive unit tests for bitnet-tokenizers
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -214,8 +243,16 @@ th end-to-end validation
   - Add tokenization and inference through FFI
   - Create metrics collection from C++ implementation
   - _Requirements: 3.1, 3.5_
+-
 
-- [ ] 15. Build comparison framework
+- [x] 15. Build comparison framework
+
+
+
+
+
+
+
 
 
 

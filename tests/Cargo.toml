@@ -52,6 +52,9 @@ tempfile = "3.0"
 # Random number generation
 rand = "0.8"
 
+# Date and time utilities
+chrono = { version = "0.4", features = ["serde"] }
+
 # BitNet.rs crates for cross-validation
 bitnet-common = { path = "../crates/bitnet-common" }
 bitnet-models = { path = "../crates/bitnet-models" }
