@@ -408,19 +408,33 @@ impl BitNetConfig {
                 if memory_limit.to_lowercase() == "none" {
                     self.performance.memory_limit = None;
                 } else {
-                    // Parse memory limit with optional unit suffix (MB, GB)
-                    let memory_limit = memory_limit.to_uppercase();
-                    let (value, multiplier) = if memory_limit.ends_with("GB") {
+                    // Parse memory limit with optional unit suffix (K/KB, M/MB, G/GB, etc.)
+                    let memory_limit = memory_limit.trim().to_uppercase().replace('_', "");
+                    let (value, multiplier) = if memory_limit.ends_with("GIB") {
+                        (memory_limit.trim_end_matches("GIB"), 1024 * 1024 * 1024)
+                    } else if memory_limit.ends_with("GB") {
                         (memory_limit.trim_end_matches("GB"), 1024 * 1024 * 1024)
+                    } else if memory_limit.ends_with("G") {
+                        (memory_limit.trim_end_matches("G"), 1024 * 1024 * 1024)
+                    } else if memory_limit.ends_with("MIB") {
+                        (memory_limit.trim_end_matches("MIB"), 1024 * 1024)
                     } else if memory_limit.ends_with("MB") {
                         (memory_limit.trim_end_matches("MB"), 1024 * 1024)
+                    } else if memory_limit.ends_with("M") {
+                        (memory_limit.trim_end_matches("M"), 1024 * 1024)
+                    } else if memory_limit.ends_with("KIB") {
+                        (memory_limit.trim_end_matches("KIB"), 1024)
                     } else if memory_limit.ends_with("KB") {
                         (memory_limit.trim_end_matches("KB"), 1024)
+                    } else if memory_limit.ends_with("K") {
+                        (memory_limit.trim_end_matches("K"), 1024)
+                    } else if memory_limit.ends_with("B") {
+                        (memory_limit.trim_end_matches("B"), 1)
                     } else {
                         (memory_limit.as_str(), 1)
                     };
 
-                    let bytes: usize = value.parse::<usize>().map_err(|_| {
+                    let bytes: usize = value.trim().parse::<usize>().map_err(|_| {
                         BitNetError::Config(format!(
                             "Invalid BITNET_MEMORY_LIMIT value: '{}'",
                             memory_limit

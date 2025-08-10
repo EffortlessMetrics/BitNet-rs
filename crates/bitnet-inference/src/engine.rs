@@ -320,7 +320,7 @@ mod tests {
             _input: &dyn Tensor,
             _cache: &mut dyn std::any::Any,
         ) -> Result<Box<dyn Tensor>> {
-            Ok(Box::new(MockTensor::new(vec![1, 50257])))
+            Ok(Box::new(ConcreteTensor::mock(vec![1, 50257])))
         }
     }
 
