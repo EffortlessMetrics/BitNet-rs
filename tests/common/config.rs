@@ -206,7 +206,7 @@ pub fn load_test_config() -> TestResult<TestConfig> {
 }
 
 /// Load configuration from a TOML file
-fn load_config_from_file(path: &PathBuf) -> TestResult<TestConfig> {
+pub fn load_config_from_file(path: &PathBuf) -> TestResult<TestConfig> {
     let contents = std::fs::read_to_string(path)
         .map_err(|e| TestError::config(format!("Failed to read config file {:?}: {}", path, e)))?;
 
@@ -220,7 +220,7 @@ fn load_config_from_file(path: &PathBuf) -> TestResult<TestConfig> {
 }
 
 /// Load configuration from environment variables
-fn load_config_from_env(config: &mut TestConfig) -> TestResult<()> {
+pub fn load_config_from_env(config: &mut TestConfig) -> TestResult<()> {
     if let Ok(val) = std::env::var("BITNET_TEST_PARALLEL") {
         config.max_parallel_tests = val
             .parse()
