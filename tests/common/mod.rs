@@ -20,6 +20,10 @@ pub mod utils;
 // Cross-validation module
 pub mod cross_validation;
 
+// Data module
+#[path = "../data/mod.rs"]
+pub mod data;
+
 // Re-export commonly used types
 pub use config::TestConfig;
 pub use errors::TestError;
