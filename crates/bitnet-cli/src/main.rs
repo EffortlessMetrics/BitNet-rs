@@ -4,6 +4,7 @@
 //! Supports model loading, inference, conversion, benchmarking, and serving.
 
 use anyhow::{Context, Result};
+use bitnet_common::Result as BitNetResult;
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 use console::style;
@@ -11,11 +12,12 @@ use std::io;
 use tracing::{error, info};
 use candle_core::IndexOp;
 
-mod commands;
+// mod commands;
 mod config;
 mod sampling;
 
-use commands::{BenchmarkCommand, ConvertCommand, InferenceCommand, ServeCommand};
+// Temporarily disabled
+// use commands::{BenchmarkCommand, ConvertCommand, InferenceCommand, ServeCommand};
 use config::{CliConfig, ConfigBuilder};
 
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
@@ -120,21 +122,22 @@ enum Commands {
         seed: Option<u64>,
     },
     
-    /// Run inference on a model
-    #[command(alias = "infer")]
-    Inference(InferenceCommand),
+    // Temporarily disabled - these commands need fixes
+    // /// Run inference on a model
+    // #[command(alias = "infer")]
+    // Inference(InferenceCommand),
     
-    /// Convert between model formats
-    #[command(alias = "conv")]
-    Convert(ConvertCommand),
+    // /// Convert between model formats
+    // #[command(alias = "conv")]
+    // Convert(ConvertCommand),
     
-    /// Benchmark model performance
-    #[command(alias = "bench")]
-    Benchmark(BenchmarkCommand),
+    // /// Benchmark model performance
+    // #[command(alias = "bench")]
+    // Benchmark(BenchmarkCommand),
     
-    /// Start inference server
-    #[command(alias = "server")]
-    Serve(ServeCommand),
+    // /// Start inference server
+    // #[command(alias = "server")]
+    // Serve(ServeCommand),
     
     /// Manage configuration
     Config {
@@ -185,10 +188,11 @@ async fn main() -> Result<()> {
         Some(Commands::Run { model, tokenizer, prompt, max_new_tokens, temperature, top_k, top_p, repetition_penalty, seed }) => {
             run_simple_generation(model, tokenizer, prompt, max_new_tokens, temperature, top_k, top_p, repetition_penalty, seed).await
         }
-        Some(Commands::Inference(cmd)) => cmd.execute(&config).await,
-        Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
-        Some(Commands::Benchmark(cmd)) => cmd.execute(&config).await,
-        Some(Commands::Serve(cmd)) => cmd.execute(&config).await,
+        // Temporarily disabled
+        // Some(Commands::Inference(cmd)) => cmd.execute(&config).await,
+        // Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
+        // Some(Commands::Benchmark(cmd)) => cmd.execute(&config).await,
+        // Some(Commands::Serve(cmd)) => cmd.execute(&config).await,
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
         Some(Commands::Info) => show_system_info().await,
         None => {
