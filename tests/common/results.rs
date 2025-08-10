@@ -150,7 +150,7 @@ impl TestArtifact {
 
 /// Result of a single test execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestResult {
+pub struct TestResult<T = ()> {
     /// Name of the test
     pub test_name: String,
     /// Status of the test

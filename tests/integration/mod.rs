@@ -11,7 +11,7 @@ pub mod streaming_tests;
 pub mod tokenization_pipeline_tests;
 pub mod workflow_tests;
 
-use bitnet_common::{BitNetConfig, Device, MockTensor};
+use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, MockTensor};
 use bitnet_inference::{GenerationConfig, InferenceConfig, InferenceEngine};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
@@ -45,7 +45,7 @@ impl Model for MockModel {
         &self,
         _input: &bitnet_common::ConcreteTensor,
         _cache: &mut dyn std::any::Any,
-    ) -> anyhow::Result<bitnet_common::ConcreteTensor> {
+    ) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
         // Increment call counter
         *self.forward_calls.lock().unwrap() += 1;
 
@@ -80,7 +80,7 @@ impl MockTokenizer {
 }
 
 impl Tokenizer for MockTokenizer {
-    fn encode(&self, text: &str, _add_special_tokens: bool) -> anyhow::Result<Vec<u32>> {
+    fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>, BitNetError> {
         *self.encode_calls.lock().unwrap() += 1;
 
         // Simple mock encoding: convert text length to tokens
@@ -88,7 +88,7 @@ impl Tokenizer for MockTokenizer {
         Ok(tokens)
     }
 
-    fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> anyhow::Result<String> {
+    fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String, BitNetError> {
         *self.decode_calls.lock().unwrap() += 1;
 
         // Simple mock decoding: create text based on token count
