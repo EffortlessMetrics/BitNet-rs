@@ -24,6 +24,10 @@ pub mod cross_validation;
 #[path = "../data/mod.rs"]
 pub mod data;
 
+// Integration tests module
+#[path = "../integration/mod.rs"]
+pub mod integration;
+
 // Re-export commonly used types
 pub use config::TestConfig;
 pub use errors::TestError;

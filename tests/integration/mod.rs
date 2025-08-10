@@ -9,13 +9,7 @@ pub mod streaming_tests;
 pub mod tokenization_pipeline_tests;
 pub mod workflow_tests;
 
-// Re-export test utilities
-pub use crate::common::{
-    FixtureManager, TestCase, TestConfig, TestError, TestHarness, TestResult, TestSuite,
-};
-
-use anyhow::Result;
-use bitnet_common::{BitNetConfig, Device, MockTensor, Tensor};
+use bitnet_common::{BitNetConfig, Device, MockTensor};
 use bitnet_inference::{GenerationConfig, InferenceConfig, InferenceEngine};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
@@ -47,14 +41,14 @@ impl Model for MockModel {
 
     fn forward(
         &self,
-        _input: &dyn Tensor,
+        _input: &bitnet_common::ConcreteTensor,
         _cache: &mut dyn std::any::Any,
-    ) -> Result<Box<dyn Tensor>> {
+    ) -> anyhow::Result<bitnet_common::ConcreteTensor> {
         // Increment call counter
         *self.forward_calls.lock().unwrap() += 1;
 
         // Return mock output tensor with vocab size dimensions
-        Ok(Box::new(MockTensor::new(vec![1, 50257])))
+        Ok(MockTensor::new(vec![1, 50257]))
     }
 }
 
@@ -84,7 +78,7 @@ impl MockTokenizer {
 }
 
 impl Tokenizer for MockTokenizer {
-    fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>> {
+    fn encode(&self, text: &str, _add_special_tokens: bool) -> anyhow::Result<Vec<u32>> {
         *self.encode_calls.lock().unwrap() += 1;
 
         // Simple mock encoding: convert text length to tokens
@@ -92,7 +86,7 @@ impl Tokenizer for MockTokenizer {
         Ok(tokens)
     }
 
-    fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String> {
+    fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> anyhow::Result<String> {
         *self.decode_calls.lock().unwrap() += 1;
 
         // Simple mock decoding: create text based on token count

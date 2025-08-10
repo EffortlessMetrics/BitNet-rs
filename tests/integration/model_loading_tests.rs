@@ -3,7 +3,8 @@
 //! Tests model loading workflows, initialization processes, and configuration validation.
 
 use super::*;
-use crate::common::{FixtureManager, TestCase, TestError, TestMetrics, TestResult};
+use crate::{FixtureManager, TestCase, TestError, TestMetrics, TestResult};
+use anyhow::Result;
 use async_trait::async_trait;
 use bitnet_common::{BitNetConfig, Device};
 use std::time::Instant;
@@ -12,7 +13,7 @@ use tracing::{debug, info, warn};
 /// Test suite for model loading and initialization
 pub struct ModelLoadingTestSuite;
 
-impl crate::common::TestSuite for ModelLoadingTestSuite {
+impl crate::TestSuite for ModelLoadingTestSuite {
     fn name(&self) -> &str {
         "Model Loading Integration Tests"
     }
@@ -641,7 +642,7 @@ impl Model for FailingMockModel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::{TestConfig, TestHarness};
+    use crate::{TestConfig, TestHarness};
 
     #[tokio::test]
     async fn test_model_loading_suite() {
