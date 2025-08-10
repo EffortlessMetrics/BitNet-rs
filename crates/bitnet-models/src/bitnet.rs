@@ -70,6 +70,8 @@ impl BitNetModel {
         tensors: &HashMap<String, CandleTensor>,
         device: &Device,
     ) -> Result<Arc<TransformerModel>> {
+        use crate::weight_mapper::{remap_gguf_weights, create_var_builder};
+        
         // Create a VarBuilder that uses our loaded tensors
         let device = match device {
             Device::Cpu => candle_core::Device::Cpu,
@@ -77,10 +79,17 @@ impl BitNetModel {
             Device::Metal => return Err(BitNetError::Validation("Metal not yet supported".to_string())),
         };
         
-        // For now, create a random initialized model (will be replaced with actual weight loading)
-        let vb = VarBuilder::zeros(DType::F32, &device);
-        let model = TransformerModel::new(config.clone(), vb)?;
+        // If we have tensors, try to use them
+        let vb = if !tensors.is_empty() {
+            // Remap tensor names to match our transformer module structure
+            let mapped = remap_gguf_weights(tensors)?;
+            create_var_builder(mapped, DType::F32, &device)?
+        } else {
+            // Fallback to zeros for testing
+            VarBuilder::zeros(DType::F32, &device)
+        };
         
+        let model = TransformerModel::new(config.clone(), vb)?;
         Ok(Arc::new(model))
     }
     

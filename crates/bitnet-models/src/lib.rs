@@ -5,6 +5,7 @@ pub mod formats;
 pub mod loader;
 pub mod security;
 pub mod transformer;
+pub mod weight_mapper;
 
 pub use bitnet::*;
 pub use loader::*;
