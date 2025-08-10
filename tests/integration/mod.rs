@@ -4,6 +4,7 @@
 //! across the BitNet Rust ecosystem components.
 
 pub mod batch_processing_tests;
+pub mod component_interaction_tests;
 pub mod model_loading_tests;
 pub mod streaming_tests;
 pub mod tokenization_pipeline_tests;
