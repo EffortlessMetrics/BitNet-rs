@@ -13,6 +13,7 @@ pub mod fixtures;
 pub mod harness;
 pub mod logging;
 pub mod logging_example;
+pub mod reporting;
 pub mod results;
 pub mod test_utilities;
 pub mod utils;

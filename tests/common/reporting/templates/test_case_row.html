@@ -1,0 +1,10 @@
+<div class="test-case" onclick="toggleError('{{test_id}}')">
+    <div class="test-name">{{test_name}}</div>
+    <div class="test-status">
+        <span class="status-badge {{status_class}}">{{status}}</span>
+        <span class="duration">{{duration}}s</span>
+    </div>
+    {{#if has_error}}
+    <div class="error-details" id="error-{{test_id}}">{{error_message}}</div>
+    {{/if}}
+</div>
