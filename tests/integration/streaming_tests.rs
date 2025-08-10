@@ -3,7 +3,7 @@
 //! Tests streaming generation workflows, backpressure handling, and real-time performance.
 
 use super::*;
-use crate::common::{FixtureManager, TestCase, TestError, TestMetrics, TestResult};
+use crate::{FixtureManager, TestCase, TestError, TestMetrics, TestResult};
 use async_trait::async_trait;
 use bitnet_inference::{GenerationStream, StreamingConfig};
 use futures_util::StreamExt;
@@ -13,7 +13,7 @@ use tracing::{debug, info, warn};
 /// Test suite for streaming inference workflows
 pub struct StreamingWorkflowTestSuite;
 
-impl crate::common::TestSuite for StreamingWorkflowTestSuite {
+impl crate::TestSuite for StreamingWorkflowTestSuite {
     fn name(&self) -> &str {
         "Streaming Workflow Integration Tests"
     }
@@ -1137,7 +1137,7 @@ impl TestCase for StreamingPerformanceTest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::{TestConfig, TestHarness};
+    use crate::{TestConfig, TestHarness};
 
     #[tokio::test]
     async fn test_streaming_workflow_suite() {

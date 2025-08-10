@@ -4,7 +4,7 @@
 //! validating data flow and transformations between components.
 
 use super::*;
-use crate::common::{FixtureManager, TestCase, TestError, TestMetrics, TestResult};
+use crate::{FixtureManager, TestCase, TestError, TestMetrics, TestResult};
 use async_trait::async_trait;
 use std::time::Instant;
 use tracing::{debug, info, warn};
@@ -12,7 +12,7 @@ use tracing::{debug, info, warn};
 /// Test suite for tokenization pipeline integration
 pub struct TokenizationPipelineTestSuite;
 
-impl crate::common::TestSuite for TokenizationPipelineTestSuite {
+impl crate::TestSuite for TokenizationPipelineTestSuite {
     fn name(&self) -> &str {
         "Tokenization Pipeline Integration Tests"
     }
@@ -949,7 +949,7 @@ impl TestCase for TokenizationErrorHandlingTest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::{TestConfig, TestHarness};
+    use crate::{TestConfig, TestHarness};
 
     #[tokio::test]
     async fn test_tokenization_pipeline_suite() {

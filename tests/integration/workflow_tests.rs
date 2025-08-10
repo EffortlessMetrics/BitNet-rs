@@ -4,7 +4,7 @@
 //! validating the integration between all components.
 
 use super::*;
-use crate::common::{FixtureManager, TestCase, TestError, TestMetrics, TestResult};
+use crate::{FixtureManager, TestCase, TestError, TestMetrics, TestResult};
 use async_trait::async_trait;
 use std::time::Instant;
 use tracing::{debug, info};
@@ -12,7 +12,7 @@ use tracing::{debug, info};
 /// Test suite for end-to-end workflow integration
 pub struct WorkflowIntegrationTestSuite;
 
-impl crate::common::TestSuite for WorkflowIntegrationTestSuite {
+impl crate::TestSuite for WorkflowIntegrationTestSuite {
     fn name(&self) -> &str {
         "Workflow Integration Tests"
     }
@@ -535,7 +535,7 @@ impl TestCase for ResourceCleanupWorkflowTest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::{TestConfig, TestHarness};
+    use crate::{TestConfig, TestHarness};
 
     #[tokio::test]
     async fn test_workflow_integration_suite() {
