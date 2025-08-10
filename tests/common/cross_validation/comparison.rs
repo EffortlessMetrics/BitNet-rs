@@ -182,6 +182,11 @@ impl CrossValidationSuite {
         self.test_cases.extend(test_cases);
     }
 
+    /// Clear all test cases from the suite
+    pub fn clear_test_cases(&mut self) {
+        self.test_cases.clear();
+    }
+
     /// Set the context window size for mismatch reporting
     pub fn set_context_window(&mut self, size: usize) {
         self.context_window = size;
