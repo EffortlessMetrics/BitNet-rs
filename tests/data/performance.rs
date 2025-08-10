@@ -7,6 +7,7 @@ use tokio::sync::RwLock;
 use crate::common::{TestError, TestResult};
 
 /// Performance measurement utilities for testing
+#[derive(Clone, Debug)]
 pub struct PerformanceMeasurement {
     /// Start time of the measurement
     pub start_time: Instant,

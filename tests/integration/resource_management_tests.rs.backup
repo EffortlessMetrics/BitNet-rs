@@ -2605,19 +2605,4 @@ impl TestCase for ResourceThresholdTest {
     }
 }
 
-// Additional helper implementations for TestCase trait compatibility
-impl TestCaseClone for MemoryLeakDetectionTest {}
-impl TestCaseClone for MemoryUsageMonitoringTest {}
-impl TestCaseClone for MemoryPressureTest {}
-impl TestCaseClone for FileHandleLeakTest {}
-impl TestCaseClone for ResourceCleanupTest {}
-impl TestCaseClone for TempFileCleanupTest {}
-impl TestCaseClone for ConcurrentFileAccessTest {}
-impl TestCaseClone for ConcurrentMemoryAccessTest {}
-impl TestCaseClone for ResourceContentionTest {}
-impl TestCaseClone for FileHandleExhaustionTest {}
-impl TestCaseClone for MemoryExhaustionTest {}
-impl TestCaseClone for ResourceRecoveryTest {}
-impl TestCaseClone for ResourceMonitoringTest {}
-impl TestCaseClone for ResourceAlertingTest {}
-impl TestCaseClone for ResourceThresholdTest {}
+
