@@ -1,0 +1,16 @@
+<div class="test-suite">
+    <div class="suite-header" onclick="toggleSuite('{{suite_id}}')">
+        <div class="suite-title">
+            <span class="toggle-icon" id="icon-{{suite_id}}">▶</span> {{suite_name}}
+        </div>
+        <div class="suite-stats">
+            <span class="stat passed">{{passed_count}} passed</span>
+            <span class="stat failed">{{failed_count}} failed</span>
+            <span class="stat skipped">{{skipped_count}} skipped</span>
+            <span class="duration">{{duration}}s</span>
+        </div>
+    </div>
+    <div class="test-cases" id="cases-{{suite_id}}">
+        {{test_cases_content}}
+    </div>
+</div>
