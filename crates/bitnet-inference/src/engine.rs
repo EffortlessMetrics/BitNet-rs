@@ -221,15 +221,17 @@ impl InferenceEngine {
 
     /// Convert tokens to input tensor
     fn tokens_to_tensor(&self, tokens: &[u32]) -> Result<ConcreteTensor> {
-        // This would create a proper tensor from token IDs
-        // For now, create a mock tensor
-        Ok(ConcreteTensor::mock(vec![1, tokens.len()]))
+        // Use the model's embed method to convert tokens to embeddings
+        self.model.embed(tokens)
     }
 
     /// Extract logits from output tensor
     fn tensor_to_logits(&self, tensor: &ConcreteTensor) -> Result<Vec<f32>> {
-        // This would extract the logits from the output tensor
-        // For now, return mock logits
+        // Use the model's logits method to get vocabulary predictions
+        let logits_tensor = self.model.logits(tensor)?;
+        
+        // Convert tensor to Vec<f32> for sampling
+        // For now, return mock logits until we implement tensor extraction
         let vocab_size = self.tokenizer.vocab_size();
         Ok(vec![0.1; vocab_size])
     }
