@@ -1869,10 +1869,755 @@ impl ResourceThresholdMonitor {
     }
 }
 
-#[derive(Debug)]
-struct ThresholdResult {
-    threshold_bytes: u64,
-    threshold_exceeded: bool,
-    allocations_before_threshold: usize,
-    final_usage: u64,
+// File handle exhaustion test
+#[derive(Clone)]
+pub struct FileHandleExhaustionTest {
+    name: String,
 }
+
+impl FileHandleExhaustionTest {
+    pub fn new() -> Self {
+        Self {
+            name: "File Handle Exhaustion Test".to_string(),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl TestCase for FileHandleExhaustionTest {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+        tokio::fs::create_dir_all("tests/temp/exhaustion").await?;
+        Ok(())
+    }
+
+    async fn execute(&self) -> TestResult<TestMetrics> {
+        let mut file_handles = Vec::new();
+        let mut max_handles = 0;
+        let mut exhaustion_reached = false;
+
+        // Try to open as many files as possible until we hit system limits
+        for i in 0..10000 {
+            // Reasonable upper bound
+            let file_path = format!("tests/temp/exhaustion/handle_{}.txt", i);
+
+            match File::create(&file_path).await {
+                Ok(file) => {
+                    file_handles.push((file, file_path));
+                    max_handles = i + 1;
+                }
+                Err(e) => {
+                    info!("File handle exhaustion reached at {} handles: {}", i, e);
+                    exhaustion_reached = true;
+                    break;
+                }
+            }
+
+            // Check periodically if we should stop
+            if i % 100 == 0 && i > 1000 {
+                // Stop if we've opened a reasonable number without hitting limits
+                break;
+            }
+        }
+
+        // Test recovery by closing some handles
+        let handles_to_close = file_handles.len() / 2;
+        for _ in 0..handles_to_close {
+            if let Some((file, path)) = file_handles.pop() {
+                drop(file);
+                let _ = tokio::fs::remove_file(path).await;
+            }
+        }
+
+        // Try to open more files after recovery
+        let mut recovery_handles = 0;
+        for i in 0..100 {
+            let file_path = format!("tests/temp/exhaustion/recovery_{}.txt", i);
+
+            match File::create(&file_path).await {
+                Ok(file) => {
+                    file_handles.push((file, file_path));
+                    recovery_handles += 1;
+                }
+                Err(_) => break,
+            }
+        }
+
+        // Clean up remaining handles
+        for (file, path) in file_handles {
+            drop(file);
+            let _ = tokio::fs::remove_file(path).await;
+        }
+
+        let mut metrics = TestMetrics::default();
+        metrics.add_metric("max_file_handles", max_handles as f64);
+        metrics.add_metric(
+            "exhaustion_reached",
+            if exhaustion_reached { 1.0 } else { 0.0 },
+        );
+        metrics.add_metric("recovery_handles", recovery_handles as f64);
+
+        Ok(metrics)
+    }
+
+    async fn cleanup(&self) -> TestResult<()> {
+        let _ = tokio::fs::remove_dir_all("tests/temp/exhaustion").await;
+        Ok(())
+    }
+}
+
+// Memory exhaustion test
+#[derive(Clone)]
+pub struct MemoryExhaustionTest {
+    name: String,
+}
+
+impl MemoryExhaustionTest {
+    pub fn new() -> Self {
+        Self {
+            name: "Memory Exhaustion Test".to_string(),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl TestCase for MemoryExhaustionTest {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+        Ok(())
+    }
+
+    async fn execute(&self) -> TestResult<TestMetrics> {
+        let initial_memory = get_memory_usage();
+        let mut allocations = Vec::new();
+        let mut max_allocations = 0;
+        let mut exhaustion_reached = false;
+
+        // Try to allocate memory until we approach system limits
+        let allocation_size = 10 * 1024 * 1024; // 10MB chunks
+        let max_memory_limit = 1024 * 1024 * 1024; // 1GB limit for safety
+
+        for i in 0..100 {
+            // Max 100 allocations = 1GB
+            let current_memory = get_memory_usage();
+
+            if current_memory > initial_memory + max_memory_limit {
+                info!("Memory limit reached at {} allocations", i);
+                exhaustion_reached = true;
+                break;
+            }
+
+            match std::panic::catch_unwind(|| vec![0u8; allocation_size]) {
+                Ok(data) => {
+                    allocations.push(data);
+                    max_allocations = i + 1;
+                }
+                Err(_) => {
+                    warn!("Memory allocation failed at {} allocations", i);
+                    exhaustion_reached = true;
+                    break;
+                }
+            }
+
+            // Small delay to allow monitoring
+            sleep(Duration::from_millis(10)).await;
+        }
+
+        let peak_memory = get_memory_usage();
+
+        // Test recovery by freeing half the allocations
+        let allocations_to_free = allocations.len() / 2;
+        for _ in 0..allocations_to_free {
+            allocations.pop();
+        }
+
+        // Wait for memory to be released
+        sleep(Duration::from_millis(100)).await;
+
+        let recovery_memory = get_memory_usage();
+
+        // Try to allocate more after recovery
+        let mut recovery_allocations = 0;
+        for i in 0..10 {
+            match std::panic::catch_unwind(|| vec![0u8; allocation_size]) {
+                Ok(data) => {
+                    allocations.push(data);
+                    recovery_allocations += 1;
+                }
+                Err(_) => break,
+            }
+        }
+
+        // Clean up all allocations
+        allocations.clear();
+
+        let final_memory = get_memory_usage();
+
+        let mut metrics = TestMetrics::default();
+        metrics.add_metric("initial_memory_bytes", initial_memory as f64);
+        metrics.add_metric("peak_memory_bytes", peak_memory as f64);
+        metrics.add_metric("recovery_memory_bytes", recovery_memory as f64);
+        metrics.add_metric("final_memory_bytes", final_memory as f64);
+        metrics.add_metric("max_allocations", max_allocations as f64);
+        metrics.add_metric("recovery_allocations", recovery_allocations as f64);
+        metrics.add_metric(
+            "exhaustion_reached",
+            if exhaustion_reached { 1.0 } else { 0.0 },
+        );
+
+        Ok(metrics)
+    }
+
+    async fn cleanup(&self) -> TestResult<()> {
+        Ok(())
+    }
+}
+
+// Resource recovery test
+#[derive(Clone)]
+pub struct ResourceRecoveryTest {
+    name: String,
+}
+
+impl ResourceRecoveryTest {
+    pub fn new() -> Self {
+        Self {
+            name: "Resource Recovery Test".to_string(),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl TestCase for ResourceRecoveryTest {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+        tokio::fs::create_dir_all("tests/temp/recovery").await?;
+        Ok(())
+    }
+
+    async fn execute(&self) -> TestResult<TestMetrics> {
+        let initial_memory = get_memory_usage();
+        let mut recovery_phases = Vec::new();
+
+        // Phase 1: Create resource pressure
+        let mut resources = Vec::new();
+        for i in 0..50 {
+            // File resources
+            let file_path = format!("tests/temp/recovery/resource_{}.txt", i);
+            let mut file = File::create(&file_path).await?;
+            file.write_all(b"test data for recovery").await?;
+
+            // Memory resources
+            let data = vec![0u8; 1024 * 100]; // 100KB
+
+            resources.push((file, file_path, data));
+        }
+
+        let pressure_memory = get_memory_usage();
+        recovery_phases.push(("pressure_created", pressure_memory));
+
+        // Phase 2: Simulate resource failure/cleanup
+        let mut cleaned_resources = 0;
+        for (file, path, data) in resources.drain(0..25) {
+            // Clean up half the resources
+            drop(file);
+            drop(data);
+            let _ = tokio::fs::remove_file(path).await;
+            cleaned_resources += 1;
+        }
+
+        sleep(Duration::from_millis(50)).await;
+        let partial_recovery_memory = get_memory_usage();
+        recovery_phases.push(("partial_recovery", partial_recovery_memory));
+
+        // Phase 3: Full recovery
+        for (file, path, data) in resources {
+            drop(file);
+            drop(data);
+            let _ = tokio::fs::remove_file(path).await;
+            cleaned_resources += 1;
+        }
+
+        sleep(Duration::from_millis(100)).await;
+        let full_recovery_memory = get_memory_usage();
+        recovery_phases.push(("full_recovery", full_recovery_memory));
+
+        // Phase 4: Test system responsiveness after recovery
+        let mut post_recovery_allocations = Vec::new();
+        for i in 0..10 {
+            let data = vec![0u8; 1024 * 50]; // 50KB
+            post_recovery_allocations.push(data);
+
+            let file_path = format!("tests/temp/recovery/post_recovery_{}.txt", i);
+            let mut file = File::create(&file_path).await?;
+            file.write_all(b"post recovery test").await?;
+            drop(file);
+            let _ = tokio::fs::remove_file(file_path).await;
+        }
+
+        let final_memory = get_memory_usage();
+        recovery_phases.push(("post_recovery_test", final_memory));
+
+        // Calculate recovery metrics
+        let memory_recovered = pressure_memory.saturating_sub(full_recovery_memory);
+        let recovery_efficiency = if pressure_memory > initial_memory {
+            memory_recovered as f64 / (pressure_memory - initial_memory) as f64
+        } else {
+            1.0
+        };
+
+        let mut metrics = TestMetrics::default();
+        metrics.add_metric("initial_memory_bytes", initial_memory as f64);
+        metrics.add_metric("pressure_memory_bytes", pressure_memory as f64);
+        metrics.add_metric(
+            "partial_recovery_memory_bytes",
+            partial_recovery_memory as f64,
+        );
+        metrics.add_metric("full_recovery_memory_bytes", full_recovery_memory as f64);
+        metrics.add_metric("final_memory_bytes", final_memory as f64);
+        metrics.add_metric("cleaned_resources", cleaned_resources as f64);
+        metrics.add_metric("memory_recovered_bytes", memory_recovered as f64);
+        metrics.add_metric("recovery_efficiency", recovery_efficiency);
+
+        Ok(metrics)
+    }
+
+    async fn cleanup(&self) -> TestResult<()> {
+        let _ = tokio::fs::remove_dir_all("tests/temp/recovery").await;
+        Ok(())
+    }
+}
+
+// Resource monitoring test
+#[derive(Clone)]
+pub struct ResourceMonitoringTest {
+    name: String,
+}
+
+impl ResourceMonitoringTest {
+    pub fn new() -> Self {
+        Self {
+            name: "Resource Monitoring Test".to_string(),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl TestCase for ResourceMonitoringTest {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+        tokio::fs::create_dir_all("tests/temp/monitoring").await?;
+        Ok(())
+    }
+
+    async fn execute(&self) -> TestResult<TestMetrics> {
+        let monitor = ResourceMonitor::new();
+        let mut monitoring_data = Vec::new();
+
+        // Start monitoring task
+        let monitor_clone = Arc::new(monitor);
+        let monitoring_data_arc = Arc::new(Mutex::new(Vec::new()));
+
+        let monitor_handle = {
+            let monitor = Arc::clone(&monitor_clone);
+            let data = Arc::clone(&monitoring_data_arc);
+
+            tokio::spawn(async move {
+                for i in 0..100 {
+                    let metrics = monitor.get_metrics();
+                    monitor.record_memory_usage();
+
+                    let mut data_guard = data.lock().await;
+                    data_guard.push((i, metrics));
+                    drop(data_guard);
+
+                    sleep(Duration::from_millis(10)).await;
+                }
+            })
+        };
+
+        // Simulate workload while monitoring
+        let mut workload_resources = Vec::new();
+        for i in 0..20 {
+            // Create files
+            let file_path = format!("tests/temp/monitoring/workload_{}.txt", i);
+            let mut file = File::create(&file_path).await?;
+            file.write_all(&vec![0u8; 1024 * 10]).await?; // 10KB
+            workload_resources.push((file, file_path));
+
+            // Allocate memory
+            let data = vec![0u8; 1024 * 50]; // 50KB
+            workload_resources.push((data, String::new())); // Use empty string as placeholder
+
+            sleep(Duration::from_millis(50)).await;
+        }
+
+        // Wait for monitoring to complete
+        monitor_handle
+            .await
+            .map_err(|e| TestError::execution(format!("Monitor task failed: {}", e)))?;
+
+        // Get final monitoring data
+        monitoring_data = Arc::try_unwrap(monitoring_data_arc)
+            .map_err(|_| TestError::execution("Failed to unwrap monitoring data".to_string()))?
+            .into_inner();
+
+        // Clean up workload resources
+        for (resource, path) in workload_resources {
+            if !path.is_empty() {
+                // It's a file
+                drop(resource);
+                let _ = tokio::fs::remove_file(path).await;
+            } else {
+                // It's memory data
+                drop(resource);
+            }
+        }
+
+        // Analyze monitoring data
+        let memory_samples: Vec<u64> = monitoring_data
+            .iter()
+            .map(|(_, metrics)| metrics.current_memory)
+            .collect();
+
+        let min_memory = memory_samples.iter().min().unwrap_or(&0);
+        let max_memory = memory_samples.iter().max().unwrap_or(&0);
+        let avg_memory = if !memory_samples.is_empty() {
+            memory_samples.iter().sum::<u64>() / memory_samples.len() as u64
+        } else {
+            0
+        };
+
+        // Calculate memory trend
+        let memory_trend = if memory_samples.len() > 1 {
+            let first_half_avg = memory_samples[..memory_samples.len() / 2]
+                .iter()
+                .sum::<u64>() as f64
+                / (memory_samples.len() / 2) as f64;
+            let second_half_avg = memory_samples[memory_samples.len() / 2..]
+                .iter()
+                .sum::<u64>() as f64
+                / (memory_samples.len() - memory_samples.len() / 2) as f64;
+
+            (second_half_avg - first_half_avg) / first_half_avg
+        } else {
+            0.0
+        };
+
+        let mut metrics = TestMetrics::default();
+        metrics.add_metric("monitoring_samples", monitoring_data.len() as f64);
+        metrics.add_metric("min_memory_bytes", *min_memory as f64);
+        metrics.add_metric("max_memory_bytes", *max_memory as f64);
+        metrics.add_metric("avg_memory_bytes", avg_memory as f64);
+        metrics.add_metric("memory_variance_bytes", (*max_memory - *min_memory) as f64);
+        metrics.add_metric("memory_trend", memory_trend);
+
+        Ok(metrics)
+    }
+
+    async fn cleanup(&self) -> TestResult<()> {
+        let _ = tokio::fs::remove_dir_all("tests/temp/monitoring").await;
+        Ok(())
+    }
+}
+
+// Resource alerting test
+#[derive(Clone)]
+pub struct ResourceAlertingTest {
+    name: String,
+}
+
+impl ResourceAlertingTest {
+    pub fn new() -> Self {
+        Self {
+            name: "Resource Alerting Test".to_string(),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl TestCase for ResourceAlertingTest {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+        Ok(())
+    }
+
+    async fn execute(&self) -> TestResult<TestMetrics> {
+        let alert_threshold_memory = 50 * 1024 * 1024; // 50MB threshold
+        let alert_threshold_files = 20; // 20 files threshold
+
+        let alerts_triggered = Arc::new(AtomicUsize::new(0));
+        let memory_alerts = Arc::new(AtomicUsize::new(0));
+        let file_alerts = Arc::new(AtomicUsize::new(0));
+
+        // Start alerting monitor
+        let alerts_triggered_clone = Arc::clone(&alerts_triggered);
+        let memory_alerts_clone = Arc::clone(&memory_alerts);
+        let file_alerts_clone = Arc::clone(&file_alerts);
+
+        let alert_handle = tokio::spawn(async move {
+            let initial_memory = get_memory_usage();
+            let mut file_count = 0;
+
+            for _ in 0..100 {
+                let current_memory = get_memory_usage();
+                let memory_delta = current_memory.saturating_sub(initial_memory);
+
+                // Check memory threshold
+                if memory_delta > alert_threshold_memory {
+                    memory_alerts_clone.fetch_add(1, Ordering::Relaxed);
+                    alerts_triggered_clone.fetch_add(1, Ordering::Relaxed);
+                    info!(
+                        "Memory alert triggered: {} bytes over threshold",
+                        memory_delta
+                    );
+                }
+
+                // Check file threshold (simulated)
+                if file_count > alert_threshold_files {
+                    file_alerts_clone.fetch_add(1, Ordering::Relaxed);
+                    alerts_triggered_clone.fetch_add(1, Ordering::Relaxed);
+                    info!("File handle alert triggered: {} files", file_count);
+                }
+
+                // Simulate file count changes
+                file_count = (file_count + 1) % 30;
+
+                sleep(Duration::from_millis(20)).await;
+            }
+        });
+
+        // Create workload that should trigger alerts
+        let mut memory_allocations = Vec::new();
+        let mut file_handles = Vec::new();
+
+        // Gradually increase memory usage to trigger alerts
+        for i in 0..10 {
+            let allocation = vec![0u8; 10 * 1024 * 1024]; // 10MB
+            memory_allocations.push(allocation);
+
+            // Create files to potentially trigger file alerts
+            if i < 5 {
+                tokio::fs::create_dir_all("tests/temp/alerting").await?;
+                for j in 0..5 {
+                    let file_path = format!("tests/temp/alerting/alert_file_{}_{}.txt", i, j);
+                    let file = File::create(&file_path).await?;
+                    file_handles.push((file, file_path));
+                }
+            }
+
+            sleep(Duration::from_millis(100)).await;
+        }
+
+        // Wait for alerting to complete
+        alert_handle
+            .await
+            .map_err(|e| TestError::execution(format!("Alert task failed: {}", e)))?;
+
+        // Clean up resources
+        memory_allocations.clear();
+        for (file, path) in file_handles {
+            drop(file);
+            let _ = tokio::fs::remove_file(path).await;
+        }
+
+        let total_alerts = alerts_triggered.load(Ordering::Relaxed);
+        let memory_alert_count = memory_alerts.load(Ordering::Relaxed);
+        let file_alert_count = file_alerts.load(Ordering::Relaxed);
+
+        let mut metrics = TestMetrics::default();
+        metrics.add_metric("total_alerts", total_alerts as f64);
+        metrics.add_metric("memory_alerts", memory_alert_count as f64);
+        metrics.add_metric("file_alerts", file_alert_count as f64);
+        metrics.add_metric(
+            "alert_threshold_memory_bytes",
+            alert_threshold_memory as f64,
+        );
+        metrics.add_metric("alert_threshold_files", alert_threshold_files as f64);
+
+        // Verify that alerts were triggered appropriately
+        if total_alerts == 0 {
+            warn!("No alerts were triggered during the test");
+        }
+
+        Ok(metrics)
+    }
+
+    async fn cleanup(&self) -> TestResult<()> {
+        let _ = tokio::fs::remove_dir_all("tests/temp/alerting").await;
+        Ok(())
+    }
+}
+
+// Resource threshold test
+#[derive(Clone)]
+pub struct ResourceThresholdTest {
+    name: String,
+}
+
+impl ResourceThresholdTest {
+    pub fn new() -> Self {
+        Self {
+            name: "Resource Threshold Test".to_string(),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl TestCase for ResourceThresholdTest {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+        tokio::fs::create_dir_all("tests/temp/threshold").await?;
+        Ok(())
+    }
+
+    async fn execute(&self) -> TestResult<TestMetrics> {
+        // Define various thresholds
+        let memory_warning_threshold = 20 * 1024 * 1024; // 20MB
+        let memory_critical_threshold = 50 * 1024 * 1024; // 50MB
+        let file_warning_threshold = 10;
+        let file_critical_threshold = 25;
+
+        let initial_memory = get_memory_usage();
+        let mut threshold_events = Vec::new();
+        let mut allocations = Vec::new();
+        let mut files = Vec::new();
+
+        // Gradually increase resource usage and check thresholds
+        for i in 0..30 {
+            // Add memory allocation
+            let allocation = vec![0u8; 2 * 1024 * 1024]; // 2MB
+            allocations.push(allocation);
+
+            // Add file
+            let file_path = format!("tests/temp/threshold/file_{}.txt", i);
+            let file = File::create(&file_path).await?;
+            files.push((file, file_path));
+
+            let current_memory = get_memory_usage();
+            let memory_delta = current_memory.saturating_sub(initial_memory);
+            let file_count = files.len();
+
+            // Check memory thresholds
+            if memory_delta > memory_critical_threshold {
+                threshold_events.push(("memory_critical", i, memory_delta as f64));
+                info!("Memory critical threshold exceeded: {} bytes", memory_delta);
+            } else if memory_delta > memory_warning_threshold {
+                threshold_events.push(("memory_warning", i, memory_delta as f64));
+                info!("Memory warning threshold exceeded: {} bytes", memory_delta);
+            }
+
+            // Check file thresholds
+            if file_count > file_critical_threshold {
+                threshold_events.push(("file_critical", i, file_count as f64));
+                info!("File critical threshold exceeded: {} files", file_count);
+            } else if file_count > file_warning_threshold {
+                threshold_events.push(("file_warning", i, file_count as f64));
+                info!("File warning threshold exceeded: {} files", file_count);
+            }
+
+            sleep(Duration::from_millis(10)).await;
+        }
+
+        // Test threshold recovery
+        let recovery_start = threshold_events.len();
+
+        // Remove half the resources
+        allocations.truncate(allocations.len() / 2);
+        let files_to_remove = files.len() / 2;
+        for _ in 0..files_to_remove {
+            if let Some((file, path)) = files.pop() {
+                drop(file);
+                let _ = tokio::fs::remove_file(path).await;
+            }
+        }
+
+        sleep(Duration::from_millis(100)).await;
+
+        let recovery_memory = get_memory_usage();
+        let recovery_memory_delta = recovery_memory.saturating_sub(initial_memory);
+        let recovery_file_count = files.len();
+
+        // Check if we're back below thresholds
+        let memory_recovered = recovery_memory_delta < memory_warning_threshold;
+        let files_recovered = recovery_file_count < file_warning_threshold;
+
+        // Clean up remaining resources
+        allocations.clear();
+        for (file, path) in files {
+            drop(file);
+            let _ = tokio::fs::remove_file(path).await;
+        }
+
+        // Analyze threshold events
+        let memory_warning_events = threshold_events
+            .iter()
+            .filter(|(event_type, _, _)| event_type == &"memory_warning")
+            .count();
+        let memory_critical_events = threshold_events
+            .iter()
+            .filter(|(event_type, _, _)| event_type == &"memory_critical")
+            .count();
+        let file_warning_events = threshold_events
+            .iter()
+            .filter(|(event_type, _, _)| event_type == &"file_warning")
+            .count();
+        let file_critical_events = threshold_events
+            .iter()
+            .filter(|(event_type, _, _)| event_type == &"file_critical")
+            .count();
+
+        let mut metrics = TestMetrics::default();
+        metrics.add_metric("total_threshold_events", threshold_events.len() as f64);
+        metrics.add_metric("memory_warning_events", memory_warning_events as f64);
+        metrics.add_metric("memory_critical_events", memory_critical_events as f64);
+        metrics.add_metric("file_warning_events", file_warning_events as f64);
+        metrics.add_metric("file_critical_events", file_critical_events as f64);
+        metrics.add_metric("memory_recovered", if memory_recovered { 1.0 } else { 0.0 });
+        metrics.add_metric("files_recovered", if files_recovered { 1.0 } else { 0.0 });
+        metrics.add_metric("recovery_memory_delta_bytes", recovery_memory_delta as f64);
+        metrics.add_metric("recovery_file_count", recovery_file_count as f64);
+
+        Ok(metrics)
+    }
+
+    async fn cleanup(&self) -> TestResult<()> {
+        let _ = tokio::fs::remove_dir_all("tests/temp/threshold").await;
+        Ok(())
+    }
+}
+
+// Additional helper implementations for TestCase trait compatibility
+impl TestCaseClone for MemoryLeakDetectionTest {}
+impl TestCaseClone for MemoryUsageMonitoringTest {}
+impl TestCaseClone for MemoryPressureTest {}
+impl TestCaseClone for FileHandleLeakTest {}
+impl TestCaseClone for ResourceCleanupTest {}
+impl TestCaseClone for TempFileCleanupTest {}
+impl TestCaseClone for ConcurrentFileAccessTest {}
+impl TestCaseClone for ConcurrentMemoryAccessTest {}
+impl TestCaseClone for ResourceContentionTest {}
+impl TestCaseClone for FileHandleExhaustionTest {}
+impl TestCaseClone for MemoryExhaustionTest {}
+impl TestCaseClone for ResourceRecoveryTest {}
+impl TestCaseClone for ResourceMonitoringTest {}
+impl TestCaseClone for ResourceAlertingTest {}
+impl TestCaseClone for ResourceThresholdTest {}
