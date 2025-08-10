@@ -12,6 +12,7 @@ use tracing::{error, info};
 
 mod commands;
 mod config;
+mod sampling;
 
 use commands::{BenchmarkCommand, ConvertCommand, InferenceCommand, ServeCommand};
 use config::{CliConfig, ConfigBuilder};
@@ -79,6 +80,45 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Run simple text generation
+    Run {
+        /// Model file path
+        #[arg(short, long)]
+        model: std::path::PathBuf,
+        
+        /// Tokenizer file path (optional, will look for sibling file if not provided)
+        #[arg(long)]
+        tokenizer: Option<std::path::PathBuf>,
+        
+        /// Input prompt
+        #[arg(short, long)]
+        prompt: String,
+        
+        /// Maximum new tokens to generate
+        #[arg(long, default_value_t = 32)]
+        max_new_tokens: usize,
+        
+        /// Temperature for sampling (0 = greedy)
+        #[arg(long, default_value_t = 1.0)]
+        temperature: f32,
+        
+        /// Top-k sampling (0 = disabled)
+        #[arg(long, default_value_t = 0)]
+        top_k: usize,
+        
+        /// Top-p (nucleus) sampling
+        #[arg(long, default_value_t = 1.0)]
+        top_p: f32,
+        
+        /// Repetition penalty
+        #[arg(long, default_value_t = 1.1)]
+        repetition_penalty: f32,
+        
+        /// Random seed for reproducibility
+        #[arg(long)]
+        seed: Option<u64>,
+    },
+    
     /// Run inference on a model
     #[command(alias = "infer")]
     Inference(InferenceCommand),
@@ -141,6 +181,9 @@ async fn main() -> Result<()> {
     
     // Handle commands
     let result = match cli.command {
+        Some(Commands::Run { model, tokenizer, prompt, max_new_tokens, temperature, top_k, top_p, repetition_penalty, seed }) => {
+            run_simple_generation(model, tokenizer, prompt, max_new_tokens, temperature, top_k, top_p, repetition_penalty, seed).await
+        }
         Some(Commands::Inference(cmd)) => cmd.execute(&config).await,
         Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
         Some(Commands::Benchmark(cmd)) => cmd.execute(&config).await,
@@ -262,6 +305,138 @@ async fn handle_config_command(action: ConfigAction, config: &CliConfig) -> Resu
     }
     Ok(())
 }
+
+/// Run text generation with sampling
+async fn run_simple_generation(
+    model_path: std::path::PathBuf,
+    tokenizer_path: Option<std::path::PathBuf>,
+    prompt: String,
+    max_new_tokens: usize,
+    temperature: f32,
+    top_k: usize,
+    top_p: f32,
+    repetition_penalty: f32,
+    seed: Option<u64>,
+) -> Result<()> {
+    use bitnet_models::{Model, transformer::KVCache};
+    use bitnet_tokenizers::Tokenizer;
+    use bitnet_common::{Device, ConcreteTensor};
+    use std::sync::Arc;
+    use crate::sampling::Sampler;
+    
+    println!("Loading model from: {}", model_path.display());
+    
+    // Load model with real GGUF loader
+    let (config, tensors) = bitnet_models::loader::load_gguf(&model_path, Device::Cpu)
+        .context("Failed to load GGUF model")?;
+    
+    let model = bitnet_models::BitNetModel::from_gguf(config.clone(), tensors, Device::Cpu)
+        .context("Failed to build model from GGUF")?;
+    let model = Arc::new(model) as Arc<dyn Model>;
+    
+    // Load tokenizer
+    let tokenizer_path = tokenizer_path.or_else(|| {
+        // Look for common tokenizer file names
+        let base = model_path.with_extension("");
+        for ext in &["tokenizer.json", "tokenizer.model", "vocab.json"] {
+            let path = base.with_extension(ext);
+            if path.exists() {
+                return Some(path);
+            }
+        }
+        None
+    });
+    
+    let tokenizer = if let Some(path) = tokenizer_path {
+        println!("Loading tokenizer from: {}", path.display());
+        bitnet_tokenizers::load_tokenizer(&path)
+            .context("Failed to load tokenizer")?  
+    } else {
+        println!("Warning: No tokenizer found, using mock tokenizer");
+        Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
+    };
+    
+    // Tokenize prompt
+    let mut tokens = tokenizer.encode(&prompt, true)?;
+    println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
+    
+    // Create KV cache
+    let mut cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
+    let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
+    
+    // Create sampler
+    let mut sampler = Sampler::new(temperature, top_k, top_p, repetition_penalty, seed);
+    
+    print!("Generating: {}", prompt);
+    std::io::Write::flush(&mut std::io::stdout())?;
+    
+    // Track generated tokens for repetition penalty
+    let mut generated_tokens = Vec::new();
+    
+    // Generation loop
+    for _ in 0..max_new_tokens {
+        // Embed tokens
+        let x = model.embed(&tokens)?;
+        
+        // Forward pass
+        let h = model.forward(&x, any_cache.as_mut())?;
+        
+        // Get logits
+        let logits = model.logits(&h)?;
+        
+        // Extract last token logits
+        let logits_vec = extract_logits(&logits)?;
+        
+        // Sample next token
+        let next_token = sampler.sample(&logits_vec, &generated_tokens);
+        tokens.push(next_token);
+        generated_tokens.push(next_token);
+        
+        // Decode and print the new token
+        let token_text = tokenizer.decode(&[next_token], false)?;
+        print!("{}", token_text);
+        std::io::Write::flush(&mut std::io::stdout())?;
+        
+        // Check for EOS
+        if let Some(eos) = tokenizer.eos_token_id() {
+            if next_token == eos {
+                break;
+            }
+        }
+    }
+    
+    println!("\n\nGeneration complete!");
+    println!("Generated {} tokens", generated_tokens.len());
+    Ok(())
+}
+
+/// Extract logits vector from tensor
+fn extract_logits(tensor: &ConcreteTensor) -> Result<Vec<f32>> {
+    use bitnet_common::BitNetError;
+    
+    let shape = tensor.shape();
+    if shape.len() != 3 {
+        return Err(BitNetError::Validation("Expected 3D tensor".into()).into());
+    }
+    
+    let (_batch, seq_len, _vocab) = (shape[0], shape[1], shape[2]);
+    
+    match tensor {
+        ConcreteTensor::BitNet(t) => {
+            let candle = t.to_candle()?;
+            let last = candle
+                .narrow(1, seq_len - 1, 1)?
+                .squeeze(1)?
+                .i(0)?;
+            Ok(last.to_vec1::<f32>()?)
+        }
+        ConcreteTensor::Mock(_) => {
+            // Return mock logits for testing
+            Ok(vec![0.1; 50257])
+        }
+    }
+}
+
 
 /// Show system information
 async fn show_system_info() -> Result<()> {

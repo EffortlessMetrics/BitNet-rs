@@ -7,6 +7,7 @@ use anyhow::{Result, Context};
 use bitnet_common::{BitNetConfig, Device, Tensor, ConcreteTensor};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
+use candle_core::IndexOp;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, debug, warn, instrument};
@@ -221,17 +222,45 @@ impl InferenceEngine {
 
     /// Convert tokens to input tensor
     fn tokens_to_tensor(&self, tokens: &[u32]) -> Result<ConcreteTensor> {
-        // This would create a proper tensor from token IDs
-        // For now, create a mock tensor
-        Ok(ConcreteTensor::mock(vec![1, tokens.len()]))
+        // Use the model's embed method to convert tokens to embeddings
+        Ok(self.model.embed(tokens)?)
     }
 
     /// Extract logits from output tensor
     fn tensor_to_logits(&self, tensor: &ConcreteTensor) -> Result<Vec<f32>> {
-        // This would extract the logits from the output tensor
-        // For now, return mock logits
-        let vocab_size = self.tokenizer.vocab_size();
-        Ok(vec![0.1; vocab_size])
+        use bitnet_common::BitNetError;
+        
+        // Use the model's logits method to get vocabulary predictions
+        let logits_tensor = self.model.logits(tensor)?; // [B,T,V]
+        
+        // Extract shape
+        let shape = logits_tensor.shape();
+        if shape.len() != 3 {
+            return Err(BitNetError::Validation("Expected 3D logits tensor [B,T,V]".into()).into());
+        }
+        let (batch, seq_len, _vocab) = (shape[0], shape[1], shape[2]);
+        
+        if batch != 1 {
+            return Err(BitNetError::Validation("Only batch=1 supported".into()).into());
+        }
+        
+        // Get the underlying Candle tensor and extract last timestep
+        match &logits_tensor {
+            ConcreteTensor::BitNet(t) => {
+                let candle = t.to_candle()?;
+                // Get last timestep: narrow dim=1 at (seq_len-1), then squeeze
+                let last = candle
+                    .narrow(1, seq_len - 1, 1)?  // [B, 1, V]
+                    .squeeze(1)?                  // [B, V]
+                    .i(0)?;                        // [V]
+                Ok(last.to_vec1::<f32>()?)
+            }
+            ConcreteTensor::Mock(_) => {
+                // Fallback for tests
+                let vocab_size = self.tokenizer.vocab_size();
+                Ok(vec![0.1; vocab_size])
+            }
+        }
     }
 
     /// Check if generation should stop
