@@ -12,6 +12,10 @@ path = "common/mod.rs"
 name = "validate_config"
 path = "bin/validate_config.rs"
 
+[[bin]]
+name = "run_configuration_tests"
+path = "run_configuration_tests.rs"
+
 [[test]]
 name = "test_logging_infrastructure"
 path = "test_logging_infrastructure.rs"
