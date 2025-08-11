@@ -4,20 +4,20 @@
 //! Supports model loading, inference, conversion, benchmarking, and serving.
 
 use anyhow::{Context, Result};
-use bitnet_common::Result as BitNetResult;
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 use console::style;
 use std::io;
 use tracing::{error, info};
-use candle_core::IndexOp;
+use candle_core::{DType, IndexOp};
 
-// mod commands;
+#[cfg(feature = "full-cli")]
+mod commands;
 mod config;
 mod sampling;
 
-// Temporarily disabled
-// use commands::{BenchmarkCommand, ConvertCommand, InferenceCommand, ServeCommand};
+#[cfg(feature = "full-cli")]
+use commands::{BenchmarkCommand, ConvertCommand, InferenceCommand, ServeCommand};
 use config::{CliConfig, ConfigBuilder};
 
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
@@ -122,22 +122,25 @@ enum Commands {
         seed: Option<u64>,
     },
     
-    // Temporarily disabled - these commands need fixes
-    // /// Run inference on a model
-    // #[command(alias = "infer")]
-    // Inference(InferenceCommand),
+    #[cfg(feature = "full-cli")]
+    /// Run inference on a model
+    #[command(alias = "infer")]
+    Inference(InferenceCommand),
     
-    // /// Convert between model formats
-    // #[command(alias = "conv")]
-    // Convert(ConvertCommand),
+    #[cfg(feature = "full-cli")]
+    /// Convert between model formats
+    #[command(alias = "conv")]
+    Convert(ConvertCommand),
     
-    // /// Benchmark model performance
-    // #[command(alias = "bench")]
-    // Benchmark(BenchmarkCommand),
+    #[cfg(feature = "full-cli")]
+    /// Benchmark model performance
+    #[command(alias = "bench")]
+    Benchmark(BenchmarkCommand),
     
-    // /// Start inference server
-    // #[command(alias = "server")]
-    // Serve(ServeCommand),
+    #[cfg(feature = "full-cli")]
+    /// Start inference server
+    #[command(alias = "server")]
+    Serve(ServeCommand),
     
     /// Manage configuration
     Config {
@@ -188,11 +191,14 @@ async fn main() -> Result<()> {
         Some(Commands::Run { model, tokenizer, prompt, max_new_tokens, temperature, top_k, top_p, repetition_penalty, seed }) => {
             run_simple_generation(model, tokenizer, prompt, max_new_tokens, temperature, top_k, top_p, repetition_penalty, seed).await
         }
-        // Temporarily disabled
-        // Some(Commands::Inference(cmd)) => cmd.execute(&config).await,
-        // Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
-        // Some(Commands::Benchmark(cmd)) => cmd.execute(&config).await,
-        // Some(Commands::Serve(cmd)) => cmd.execute(&config).await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::Inference(cmd)) => cmd.execute(&config).await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::Benchmark(cmd)) => cmd.execute(&config).await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::Serve(cmd)) => cmd.execute(&config).await,
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
         Some(Commands::Info) => show_system_info().await,
         None => {
@@ -324,8 +330,8 @@ async fn run_simple_generation(
     seed: Option<u64>,
 ) -> Result<()> {
     use bitnet_models::{Model, transformer::KVCache};
-    use bitnet_tokenizers::{Tokenizer, MockTokenizer};
-    use bitnet_common::{Device, Tensor};
+    use bitnet_tokenizers::Tokenizer;
+    use bitnet_common::Device;
     use std::sync::Arc;
     use crate::sampling::Sampler;
     
@@ -356,10 +362,10 @@ async fn run_simple_generation(
         println!("Loading tokenizer from: {}", path.display());
         // For now just use mock tokenizer
         println!("Warning: Using mock tokenizer (real tokenizer loading not yet implemented)");
-        Box::new(MockTokenizer::new()) as Box<dyn Tokenizer>
+        Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
     } else {
         println!("Warning: No tokenizer found, using mock tokenizer");
-        Box::new(MockTokenizer::new()) as Box<dyn Tokenizer>
+        Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
     };
     
     // Tokenize prompt
@@ -367,7 +373,7 @@ async fn run_simple_generation(
     println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
     
     // Create KV cache
-    let mut cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
+    let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
     let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
     
     // Create sampler
@@ -434,6 +440,7 @@ fn extract_logits(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
                 .narrow(1, seq_len - 1, 1)?
                 .squeeze(1)?
                 .i(0)?;
+            let last = if last.dtype() != DType::F32 { last.to_dtype(DType::F32)? } else { last };
             Ok(last.to_vec1::<f32>()?)
         }
         ConcreteTensor::Mock(_) => {

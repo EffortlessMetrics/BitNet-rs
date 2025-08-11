@@ -46,3 +46,5 @@ rand_chacha = "0.3"
 default = ["cpu"]
 cpu = ["bitnet-inference/cpu"]
 gpu = ["bitnet-inference/gpu"]
+# build the extra subcommands only when you want them
+full-cli = []
