@@ -3,11 +3,15 @@
 //! This module provides a comprehensive test reporting system that supports
 //! multiple output formats including HTML, JSON, JUnit XML, and Markdown.
 
+pub mod dashboard;
 pub mod formats;
+pub mod performance_viz;
 pub mod reporter;
 pub mod templates;
 
+pub use dashboard::{create_performance_dashboard, DashboardConfig, PerformanceDashboardGenerator};
 pub use formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter};
+pub use performance_viz::{PerformanceComparison, PerformanceVisualizer, VisualizationConfig};
 pub use reporter::{ReportingManager, TestReporter};
 
 use crate::results::{TestResult, TestSuiteResult};
