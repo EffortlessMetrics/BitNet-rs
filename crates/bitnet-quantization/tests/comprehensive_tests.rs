@@ -61,7 +61,7 @@ mod error_handling {
         let quantizer = I2SQuantizer::new();
         let empty_tensor = MockTensor::new(vec![]);
 
-        let result = quantizer.quantize(&empty_tensor);
+        let result = quantizer.quantize_tensor(&empty_tensor);
         // Should handle empty tensors gracefully
         assert!(result.is_ok());
 
@@ -75,7 +75,7 @@ mod error_handling {
         let quantizer = I2SQuantizer::new();
         let tensor = MockTensor::new(vec![42.0]);
 
-        let result = quantizer.quantize(&tensor);
+        let result = quantizer.quantize_tensor(&tensor);
         assert!(result.is_ok());
 
         let quantized = result.unwrap();
@@ -93,7 +93,7 @@ mod error_handling {
 
         // This should be caught by the tensor implementation
         // The test verifies our quantizer handles such cases gracefully
-        let result = quantizer.quantize(&tensor);
+        let result = quantizer.quantize_tensor(&tensor);
         // Depending on implementation, this might succeed or fail
         // The important thing is it doesn't panic
     }
@@ -105,7 +105,7 @@ mod error_handling {
         // Test with very large values
         let large_values = vec![f32::MAX, f32::MAX / 2.0, f32::MAX / 4.0, f32::MAX / 8.0];
         let tensor = MockTensor::new(large_values);
-        let result = quantizer.quantize(&tensor);
+        let result = quantizer.quantize_tensor(&tensor);
         assert!(result.is_ok());
 
         // Test with very small values
@@ -116,13 +116,13 @@ mod error_handling {
             f32::MIN_POSITIVE * 8.0,
         ];
         let tensor = MockTensor::new(small_values);
-        let result = quantizer.quantize(&tensor);
+        let result = quantizer.quantize_tensor(&tensor);
         assert!(result.is_ok());
 
         // Test with infinity
         let inf_values = vec![f32::INFINITY, f32::NEG_INFINITY, 1.0, -1.0];
         let tensor = MockTensor::new(inf_values);
-        let result = quantizer.quantize(&tensor);
+        let result = quantizer.quantize_tensor(&tensor);
         // Should handle infinity gracefully (might clamp or error)
         // The important thing is it doesn't panic
     }
@@ -133,7 +133,7 @@ mod error_handling {
 
         let nan_values = vec![f32::NAN, 1.0, 2.0, 3.0];
         let tensor = MockTensor::new(nan_values);
-        let result = quantizer.quantize(&tensor);
+        let result = quantizer.quantize_tensor(&tensor);
 
         // NaN handling should be well-defined
         // Either error or handle gracefully, but no panic
@@ -144,7 +144,7 @@ mod error_handling {
         let quantizer = I2SQuantizer::new();
 
         let zero_tensor = MockTensor::new(vec![0.0f32; 64]);
-        let result = quantizer.quantize(&zero_tensor);
+        let result = quantizer.quantize_tensor(&zero_tensor);
         assert!(result.is_ok());
 
         let quantized = result.unwrap();
@@ -157,7 +157,7 @@ mod error_handling {
         let quantizer = I2SQuantizer::new();
 
         let same_value_tensor = MockTensor::new(vec![64]);
-        let result = quantizer.quantize(&same_value_tensor);
+        let result = quantizer.quantize_tensor(&same_value_tensor);
         assert!(result.is_ok());
 
         // All same values should have zero variance
@@ -189,7 +189,7 @@ mod algorithm_comprehensive {
 
         for (i, pattern) in patterns.iter().enumerate() {
             let tensor = MockTensor::new(pattern.clone());
-            let result = quantizer.quantize(&tensor);
+            let result = quantizer.quantize_tensor(&tensor);
             assert!(result.is_ok(), "Pattern {} failed", i);
 
             let quantized = result.unwrap();
@@ -197,7 +197,7 @@ mod algorithm_comprehensive {
             assert!(!quantized.scales.is_empty());
 
             // Test dequantization
-            let dequantized = quantizer.dequantize(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
             assert_eq!(dequantized.len(), pattern.len());
 
             // Check that dequantized values are reasonably close to original
@@ -233,11 +233,11 @@ mod algorithm_comprehensive {
                 .collect();
             let tensor = MockTensor::new(data.clone());
 
-            let result = quantizer.quantize(&tensor);
+            let result = quantizer.quantize_tensor(&tensor);
             assert!(result.is_ok(), "Block size {} failed", block_size);
 
             let quantized = result.unwrap();
-            let dequantized = quantizer.dequantize(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
 
             // Verify round-trip accuracy
             let max_error = data
@@ -273,11 +273,11 @@ mod algorithm_comprehensive {
             let data: Vec<f32> = (0..256).map(|i| (i as f32).sin() * 10.0).collect();
             let tensor = MockTensor::new(data.clone());
 
-            let result = quantizer.quantize(&tensor);
+            let result = quantizer.quantize_tensor(&tensor);
             assert!(result.is_ok(), "Precision {} failed", precision);
 
             let quantized = result.unwrap();
-            let dequantized = quantizer.dequantize(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
 
             // Higher precision should give better accuracy
             let mse: f32 = data
@@ -307,19 +307,19 @@ mod algorithm_comprehensive {
 
         // Test I2S compression
         let i2s_quantizer = I2SQuantizer::new();
-        let i2s_result = i2s_quantizer.quantize(&tensor).unwrap();
+        let i2s_result = i2s_quantizer.quantize_tensor(&tensor).unwrap();
         let i2s_size = i2s_result.data.len() + i2s_result.scales.len() * std::mem::size_of::<f32>();
         let i2s_ratio = original_size as f32 / i2s_size as f32;
 
         // Test TL1 compression
         let tl1_quantizer = TL1Quantizer::new();
-        let tl1_result = tl1_quantizer.quantize(&tensor).unwrap();
+        let tl1_result = tl1_quantizer.quantize_tensor(&tensor).unwrap();
         let tl1_size = tl1_result.data.len() + tl1_result.scales.len() * std::mem::size_of::<f32>();
         let tl1_ratio = original_size as f32 / tl1_size as f32;
 
         // Test TL2 compression
         let tl2_quantizer = TL2Quantizer::new();
-        let tl2_result = tl2_quantizer.quantize(&tensor).unwrap();
+        let tl2_result = tl2_quantizer.quantize_tensor(&tensor).unwrap();
         let tl2_size = tl2_result.data.len() + tl2_result.scales.len() * std::mem::size_of::<f32>();
         let tl2_ratio = original_size as f32 / tl2_size as f32;
 
@@ -351,7 +351,7 @@ mod performance_tests {
             // Test I2S performance
             let quantizer = I2SQuantizer::new();
             let start = Instant::now();
-            let result = quantizer.quantize(&tensor);
+            let result = quantizer.quantize_tensor(&tensor);
             let duration = start.elapsed();
 
             assert!(result.is_ok());
@@ -373,11 +373,11 @@ mod performance_tests {
         let tensor = MockTensor::new(data);
 
         let quantizer = I2SQuantizer::new();
-        let quantized = quantizer.quantize(&tensor).unwrap();
+        let quantized = quantizer.quantize_tensor(&tensor).unwrap();
 
         // Test dequantization performance
         let start = Instant::now();
-        let result = quantizer.dequantize(&quantized);
+        let result = quantizer.dequantize_tensor(&quantized);
         let duration = start.elapsed();
 
         assert!(result.is_ok());
@@ -401,7 +401,7 @@ mod performance_tests {
         let tensor = MockTensor::new(data.clone());
 
         let quantizer = I2SQuantizer::new();
-        let quantized = quantizer.quantize(&tensor).unwrap();
+        let quantized = quantizer.quantize_tensor(&tensor).unwrap();
 
         // Check memory usage
         let original_bytes = data.len() * std::mem::size_of::<f32>();
@@ -432,8 +432,8 @@ mod property_tests {
             let tensor = MockTensor::new(data.clone());
             let quantizer = I2SQuantizer::new();
 
-            let quantized = quantizer.quantize(&tensor).unwrap();
-            let dequantized = quantizer.dequantize(&quantized).unwrap();
+            let quantized = quantizer.quantize_tensor(&tensor).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
 
             prop_assert_eq!(dequantized.len(), data.len());
         }
@@ -445,8 +445,8 @@ mod property_tests {
             let tensor = MockTensor::new(data);
             let quantizer = I2SQuantizer::new();
 
-            let result1 = quantizer.quantize(&tensor).unwrap();
-            let result2 = quantizer.quantize(&tensor).unwrap();
+            let result1 = quantizer.quantize_tensor(&tensor).unwrap();
+            let result2 = quantizer.quantize_tensor(&tensor).unwrap();
 
             prop_assert_eq!(result1.data, result2.data);
             prop_assert_eq!(result1.scales, result2.scales);
@@ -459,8 +459,8 @@ mod property_tests {
             let tensor = MockTensor::new(data.clone());
             let quantizer = I2SQuantizer::new();
 
-            let quantized = quantizer.quantize(&tensor).unwrap();
-            let dequantized = quantizer.dequantize(&quantized).unwrap();
+            let quantized = quantizer.quantize_tensor(&tensor).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
 
             // Calculate maximum absolute error
             let max_error = data.iter()
@@ -479,7 +479,7 @@ mod property_tests {
             let tensor = MockTensor::new(data);
             let quantizer = I2SQuantizer::new();
 
-            let quantized = quantizer.quantize(&tensor).unwrap();
+            let quantized = quantizer.quantize_tensor(&tensor).unwrap();
 
             // All scales should be positive and finite
             for &scale in &quantized.scales {
@@ -528,12 +528,12 @@ mod integration_tests {
 
             // Quantize
             let start = std::time::Instant::now();
-            let quantized = quantizer.quantize(&tensor).unwrap();
+            let quantized = quantizer.quantize_tensor(&tensor).unwrap();
             let quantize_time = start.elapsed();
 
             // Dequantize
             let start = std::time::Instant::now();
-            let dequantized = quantizer.dequantize(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
             let dequantize_time = start.elapsed();
 
             // Verify correctness
@@ -595,13 +595,13 @@ mod integration_tests {
         let tl1_quantizer = TL1Quantizer::new();
         let tl2_quantizer = TL2Quantizer::new();
 
-        let i2s_result = i2s_quantizer.quantize(&tensor).unwrap();
-        let tl1_result = tl1_quantizer.quantize(&tensor).unwrap();
-        let tl2_result = tl2_quantizer.quantize(&tensor).unwrap();
+        let i2s_result = i2s_quantizer.quantize_tensor(&tensor).unwrap();
+        let tl1_result = tl1_quantizer.quantize_tensor(&tensor).unwrap();
+        let tl2_result = tl2_quantizer.quantize_tensor(&tensor).unwrap();
 
-        let i2s_deq = i2s_quantizer.dequantize(&i2s_result).unwrap();
-        let tl1_deq = tl1_quantizer.dequantize(&tl1_result).unwrap();
-        let tl2_deq = tl2_quantizer.dequantize(&tl2_result).unwrap();
+        let i2s_deq = i2s_quantizer.dequantize_tensor(&i2s_result).unwrap();
+        let tl1_deq = tl1_quantizer.dequantize_tensor(&tl1_result).unwrap();
+        let tl2_deq = tl2_quantizer.dequantize_tensor(&tl2_result).unwrap();
 
         // All should produce valid results
         assert_eq!(i2s_deq.len(), data.len());
