@@ -5,7 +5,7 @@ use crate::cross_validation::{
     ComparisonTestCase, ComparisonTolerance, CppImplementation, CrossValidationResult,
     CrossValidationSuite, RustImplementation,
 };
-use crate::data::models::{ModelSize, TestModelRegistry};
+// use crate::data::models::{ModelSize, TestModelRegistry};
 use crate::errors::{TestError, TestResult};
 use std::path::Path;
 use std::time::Instant;

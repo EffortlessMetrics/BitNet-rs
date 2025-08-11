@@ -7,8 +7,8 @@ use super::performance_viz::{
     create_performance_comparison, PerformanceComparison, PerformanceVisualizer,
     VisualizationConfig,
 };
-use crate::common::results::{TestResult, TestSuiteResult};
-use crate::data::performance::BenchmarkResult;
+// use crate::data::performance::BenchmarkResult;
+use crate::results::{TestResult, TestSuiteResult};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tokio::fs;

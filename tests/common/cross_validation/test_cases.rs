@@ -1,5 +1,5 @@
 use crate::cross_validation::{ComparisonTestCase, InferenceConfig};
-use crate::data::models::ModelSize;
+// use crate::data::models::ModelSize;
 use std::collections::HashMap;
 
 /// Comprehensive test case registry for cross-implementation comparison
