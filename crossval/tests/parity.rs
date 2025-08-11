@@ -12,6 +12,7 @@ use std::env;
 mod tests {
     use super::*;
     use bitnet_sys::wrapper::{self, Session as CppSession};
+    use bitnet_inference::{eval_logits_once, get_model_vocab_size, get_model_config};
     
     /// Tolerance for floating point comparisons
     const LOGIT_TOLERANCE: f32 = 1e-4;  // Start with 1e-4, can tighten to 5e-5
@@ -93,9 +94,19 @@ mod tests {
         println!("  n_ctx_train: {}", cpp_session.model.n_ctx_train());
         println!("  n_embd: {}", cpp_session.model.n_embd());
         
-        // TODO: Load model in Rust and compare properties
-        // let rust_model = bitnet::Model::load(&model_path)?;
-        // assert_eq!(rust_model.n_vocab(), cpp_session.model.n_vocab());
+        // Load model in Rust and compare properties
+        let rust_config = get_model_config(&model_path)?;
+        println!("\nRust Model properties:");
+        println!("  vocab_size: {}", rust_config.model.vocab_size);
+        println!("  hidden_size: {}", rust_config.model.hidden_size);
+        println!("  num_layers: {}", rust_config.model.num_layers);
+        
+        // Compare vocab sizes
+        assert_eq!(
+            rust_config.model.vocab_size, 
+            cpp_session.model.n_vocab() as usize,
+            "Vocab size mismatch between Rust and C++"
+        );
         
         Ok(())
     }
@@ -161,10 +172,26 @@ mod tests {
         println!("C++ next token ID: {}", cpp_next_token);
         println!("C++ logits shape: {}", cpp_logits.len());
         
-        // TODO: Compare with Rust
-        // let mut rust_session = bitnet::Session::load_deterministic(&model_path)?;
-        // let rust_logits = rust_session.eval_and_get_logits(&tokens, 0)?;
-        // compare_logits(&rust_logits, &cpp_logits, 0)?;
+        // Compare with Rust
+        println!("\nGetting logits from Rust...");
+        let rust_logits = eval_logits_once(&model_path, &tokens)?;
+        println!("Rust logits shape: {}", rust_logits.len());
+        
+        // Compare logits
+        compare_logits(&rust_logits, &cpp_logits, 0)?;
+        
+        // Compare argmax tokens
+        let rust_next_token = argmax(&rust_logits);
+        println!("Rust next token ID: {}", rust_next_token);
+        
+        if rust_next_token != cpp_next_token {
+            anyhow::bail!(
+                "Token selection mismatch! Rust {} vs C++ {}",
+                rust_next_token, cpp_next_token
+            );
+        }
+        
+        println!("✅ Single-step logits match!");
         
         Ok(())
     }
@@ -204,16 +231,17 @@ mod tests {
             
             println!("Step {}: Generated token {}", step, next_token);
             
-            // TODO: Compare with Rust at each step
-            // let rust_logits = rust_session.context.get_logits()?;
-            // compare_logits(&rust_logits, &cpp_logits, step)?;
-            // let rust_token = argmax(&rust_logits) as i32;
-            // if rust_token != next_token {
-            //     anyhow::bail!(
-            //         "Step {}: Token mismatch! Rust {} vs C++ {}",
-            //         step, rust_token, next_token
-            //     );
-            // }
+            // Compare with Rust at each step
+            let rust_logits = eval_logits_once(&model_path, &tokens)?;
+            compare_logits(&rust_logits, &cpp_logits, step)?;
+            
+            let rust_token = argmax(&rust_logits) as i32;
+            if rust_token != next_token {
+                anyhow::bail!(
+                    "Step {}: Token mismatch! Rust {} vs C++ {}",
+                    step, rust_token, next_token
+                );
+            }
             
             tokens.push(next_token);
             
@@ -224,6 +252,7 @@ mod tests {
         // Decode final text
         let generated_text = cpp_session.decode(&tokens[prompt_len..])?;
         println!("C++ generated text: {:?}", generated_text);
+        println!("✅ Multi-step generation matches!");
         
         Ok(())
     }

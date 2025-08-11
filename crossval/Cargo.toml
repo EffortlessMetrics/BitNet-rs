@@ -22,6 +22,11 @@ chrono = { version = "0.4", features = ["serde"] }
 bindgen = { version = "0.69", optional = true }
 cc = { version = "1.0", optional = true }
 
+# Internal crates for testing
+bitnet-sys = { path = "../crates/bitnet-sys", features = ["crossval"] }
+bitnet-inference = { path = "../crates/bitnet-inference" }
+scopeguard = "1.2"
+
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 tempfile = "3.0"

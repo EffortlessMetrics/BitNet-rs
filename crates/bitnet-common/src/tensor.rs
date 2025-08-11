@@ -155,6 +155,11 @@ impl BitNetTensor {
     pub fn inner(&self) -> &CandleTensor {
         &self.inner
     }
+    
+    /// Convenience method to get the underlying Candle tensor
+    pub fn as_candle(&self) -> &CandleTensor {
+        &self.inner
+    }
 
     pub fn into_inner(self) -> CandleTensor {
         self.inner

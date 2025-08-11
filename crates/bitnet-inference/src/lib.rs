@@ -9,6 +9,7 @@ pub mod sampling;
 pub mod cache;
 pub mod config;
 pub mod backends;
+pub mod parity;
 
 pub use engine::{InferenceEngine, InferenceResult};
 pub use streaming::{GenerationStream, StreamingConfig};
@@ -16,6 +17,7 @@ pub use sampling::{SamplingStrategy, SamplingConfig};
 pub use cache::{KVCache, CacheConfig};
 pub use config::{InferenceConfig, GenerationConfig};
 pub use backends::{Backend, CpuBackend, GpuBackend};
+pub use parity::{eval_logits_once, eval_logits_incremental, get_model_vocab_size, get_model_config};
 
 use anyhow::Result;
 use bitnet_common::{BitNetConfig, Device, Tensor};
