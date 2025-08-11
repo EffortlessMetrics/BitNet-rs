@@ -75,6 +75,9 @@ xml-rs = "0.8"
 # System interface for all platforms
 libc = "0.2"
 
+# Coverage reporting
+cargo_metadata = "0.18"
+
 # BitNet.rs crates for cross-validation
 bitnet-common = { path = "../crates/bitnet-common" }
 bitnet-models = { path = "../crates/bitnet-models" }
