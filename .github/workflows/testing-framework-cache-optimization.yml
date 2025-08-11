@@ -1,0 +1,442 @@
+name: Testing Framework - Cache & Optimization
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "tests/**"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/testing-framework-cache-optimization.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "tests/**"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/testing-framework-cache-optimization.yml"
+  workflow_dispatch:
+    inputs:
+      force_all_tests:
+        description: "Force run all tests (bypass incremental)"
+        required: false
+        default: false
+        type: boolean
+      cache_strategy:
+        description: "Cache strategy to use"
+        required: false
+        default: "smart"
+        type: choice
+        options:
+          - "smart"
+          - "aggressive"
+          - "conservative"
+          - "disabled"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  # Enable test caching and optimization features
+  BITNET_TEST_CACHE_ENABLED: true
+  BITNET_TEST_INCREMENTAL: ${{ github.event.inputs.force_all_tests != 'true' }}
+  BITNET_TEST_SMART_SELECTION: true
+  BITNET_TEST_PARALLEL_OPTIMIZATION: true
+  # Cache configuration
+  BITNET_TEST_CACHE_STRATEGY: ${{ github.event.inputs.cache_strategy || 'smart' }}
+
+jobs:
+  cache-setup:
+    name: Setup Test Cache
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+      fixture-cache-key: ${{ steps.fixture-cache-key.outputs.key }}
+      incremental-enabled: ${{ steps.config.outputs.incremental }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Need full history for incremental testing
+
+      - name: Generate cache configuration
+        id: config
+        run: |
+          echo "incremental=${{ env.BITNET_TEST_INCREMENTAL }}" >> $GITHUB_OUTPUT
+          echo "strategy=${{ env.BITNET_TEST_CACHE_STRATEGY }}" >> $GITHUB_OUTPUT
+
+      - name: Generate test cache key
+        id: cache-key
+        run: |
+          # Create deterministic cache key based on multiple factors
+          RUST_VERSION=$(rustc --version | cut -d' ' -f2)
+          CARGO_LOCK_HASH=$(sha256sum Cargo.lock | cut -d' ' -f1 | head -c8)
+          CONFIG_HASH="none"
+
+          if [[ -f "tests/config.toml" ]]; then
+            CONFIG_HASH=$(sha256sum tests/config.toml | cut -d' ' -f1 | head -c8)
+          fi
+
+          CACHE_KEY="bitnet-test-v2-${{ runner.os }}-${RUST_VERSION}-${CARGO_LOCK_HASH}-${CONFIG_HASH}-${{ env.BITNET_TEST_CACHE_STRATEGY }}"
+          echo "key=${CACHE_KEY}" >> $GITHUB_OUTPUT
+          echo "Generated cache key: ${CACHE_KEY}"
+
+      - name: Generate fixture cache key
+        id: fixture-cache-key
+        run: |
+          FIXTURE_HASH="default"
+          if [[ -f "tests/fixtures.toml" ]]; then
+            FIXTURE_HASH=$(sha256sum tests/fixtures.toml | cut -d' ' -f1 | head -c8)
+          fi
+
+          FIXTURE_KEY="bitnet-fixtures-v2-${FIXTURE_HASH}"
+          echo "key=${FIXTURE_KEY}" >> $GITHUB_OUTPUT
+          echo "Generated fixture cache key: ${FIXTURE_KEY}"
+
+  optimized-tests:
+    name: Optimized Test Execution
+    needs: cache-setup
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            features: "cpu,avx2"
+            cache-paths: |
+              tests/cache
+              target/debug/deps
+              ~/.cargo/registry/cache
+          - os: windows-latest
+            features: "cpu,avx2"
+            cache-paths: |
+              tests/cache
+              target/debug/deps
+              ~/.cargo/registry/cache
+          - os: macos-latest
+            features: "cpu,neon"
+            cache-paths: |
+              tests/cache
+              target/debug/deps
+              ~/.cargo/registry/cache
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Need full history for incremental testing
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Install testing tools
+        run: |
+          cargo install cargo-llvm-cov cargo-nextest --locked
+
+      - name: Restore test fixture cache
+        uses: actions/cache@v4
+        with:
+          path: tests/cache/fixtures
+          key: ${{ needs.cache-setup.outputs.fixture-cache-key }}
+          restore-keys: |
+            bitnet-fixtures-v2-
+            bitnet-fixtures-
+
+      - name: Restore test result cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ matrix.cache-paths }}
+          key: ${{ needs.cache-setup.outputs.cache-key }}
+          restore-keys: |
+            bitnet-test-v2-${{ runner.os }}-
+            bitnet-test-v2-
+
+      - name: Setup test environment
+        run: |
+          mkdir -p tests/cache
+          echo "Setting up optimized test environment"
+          echo "Cache strategy: ${{ env.BITNET_TEST_CACHE_STRATEGY }}"
+          echo "Incremental testing: ${{ env.BITNET_TEST_INCREMENTAL }}"
+          echo "Smart selection: ${{ env.BITNET_TEST_SMART_SELECTION }}"
+          echo "Parallel optimization: ${{ env.BITNET_TEST_PARALLEL_OPTIMIZATION }}"
+
+      - name: Analyze test changes (incremental)
+        if: env.BITNET_TEST_INCREMENTAL == 'true'
+        run: |
+          echo "Analyzing changes for incremental testing..."
+
+          # Get base commit for comparison
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="HEAD~1"
+          fi
+
+          echo "Comparing against: ${BASE_SHA}"
+
+          # Show changed files
+          git diff --name-only ${BASE_SHA} HEAD | head -20
+
+          # Set environment variable for test runner
+          echo "BITNET_TEST_BASE_REF=${BASE_SHA}" >> $GITHUB_ENV
+
+      - name: Run optimized unit tests
+        run: |
+          echo "Running optimized unit tests with caching and smart selection..."
+
+          # Set additional environment variables for optimization
+          export BITNET_TEST_PARALLEL=$(nproc)
+          export BITNET_TEST_TIMEOUT=300
+          export BITNET_TEST_LOG_LEVEL=info
+
+          # Run tests with coverage and optimization
+          cargo llvm-cov nextest \
+            --workspace \
+            --features "${{ matrix.features }}" \
+            --lcov --output-path coverage-optimized-${{ matrix.os }}.lcov \
+            --test-threads $(nproc) \
+            --profile ci \
+            -- --nocapture
+
+      - name: Generate optimization report
+        run: |
+          cat > optimization-report-${{ matrix.os }}.md << 'EOF'
+          # Test Optimization Report
+
+          **Platform**: ${{ matrix.os }}
+          **Features**: ${{ matrix.features }}
+          **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Cache Strategy**: ${{ env.BITNET_TEST_CACHE_STRATEGY }}
+
+          ## Optimization Features
+
+          - ✅ **Test Result Caching**: Enabled
+          - ✅ **Incremental Testing**: ${{ env.BITNET_TEST_INCREMENTAL }}
+          - ✅ **Smart Test Selection**: ${{ env.BITNET_TEST_SMART_SELECTION }}
+          - ✅ **Parallel Optimization**: ${{ env.BITNET_TEST_PARALLEL_OPTIMIZATION }}
+          - ✅ **GitHub Actions Cache**: Enabled
+
+          ## Cache Information
+
+          - **Test Cache Key**: ${{ needs.cache-setup.outputs.cache-key }}
+          - **Fixture Cache Key**: ${{ needs.cache-setup.outputs.fixture-cache-key }}
+
+          ## Performance Metrics
+
+          EOF
+
+          # Add cache statistics if available
+          if [[ -f "tests/cache/metadata.json" ]]; then
+            echo "### Cache Statistics" >> optimization-report-${{ matrix.os }}.md
+            echo "" >> optimization-report-${{ matrix.os }}.md
+            echo '```json' >> optimization-report-${{ matrix.os }}.md
+            cat tests/cache/metadata.json >> optimization-report-${{ matrix.os }}.md
+            echo '```' >> optimization-report-${{ matrix.os }}.md
+          fi
+
+      - name: Upload optimization report
+        uses: actions/upload-artifact@v4
+        with:
+          name: optimization-report-${{ matrix.os }}
+          path: optimization-report-${{ matrix.os }}.md
+          retention-days: 30
+
+      - name: Upload coverage with optimization metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-optimized-${{ matrix.os }}
+          path: coverage-optimized-${{ matrix.os }}.lcov
+          retention-days: 30
+
+      - name: Cache test results
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ matrix.cache-paths }}
+          key: ${{ needs.cache-setup.outputs.cache-key }}
+
+  benchmark-optimization:
+    name: Benchmark Optimization Impact
+    needs: [cache-setup, optimized-tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download optimization reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: optimization-report-*
+          path: reports
+
+      - name: Analyze optimization impact
+        run: |
+          echo "Analyzing optimization impact..."
+
+          cat > optimization-analysis.md << 'EOF'
+          # 🚀 Test Optimization Analysis
+
+          This analysis shows the impact of test caching and optimization features.
+
+          ## Summary
+
+          EOF
+
+          # Count reports
+          REPORT_COUNT=$(find reports -name "*.md" | wc -l)
+          echo "- **Platforms Tested**: ${REPORT_COUNT}" >> optimization-analysis.md
+          echo "- **Cache Strategy**: ${{ env.BITNET_TEST_CACHE_STRATEGY }}" >> optimization-analysis.md
+          echo "- **Incremental Testing**: ${{ needs.cache-setup.outputs.incremental-enabled }}" >> optimization-analysis.md
+
+          echo "" >> optimization-analysis.md
+          echo "## Platform Reports" >> optimization-analysis.md
+          echo "" >> optimization-analysis.md
+
+          # Include individual reports
+          for report in reports/*/optimization-report-*.md; do
+            if [[ -f "$report" ]]; then
+              echo "### $(basename "$report" .md)" >> optimization-analysis.md
+              echo "" >> optimization-analysis.md
+              cat "$report" >> optimization-analysis.md
+              echo "" >> optimization-analysis.md
+            fi
+          done
+
+      - name: Upload optimization analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: optimization-analysis
+          path: optimization-analysis.md
+          retention-days: 90
+
+      - name: Comment on PR with optimization results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            if (fs.existsSync('optimization-analysis.md')) {
+              const analysis = fs.readFileSync('optimization-analysis.md', 'utf8');
+              
+              // Truncate if too long for GitHub comment
+              const maxLength = 65000;
+              const content = analysis.length > maxLength 
+                ? analysis.substring(0, maxLength) + '\n\n... (truncated)'
+                : analysis;
+              
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: content
+              });
+            }
+
+  cache-cleanup:
+    name: Cache Cleanup
+    needs: [cache-setup, optimized-tests]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Cleanup old caches
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Clean up old cache entries to save storage
+            const caches = await github.rest.actions.getActionsCaches({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            const testCaches = caches.data.actions_caches.filter(cache => 
+              cache.key.startsWith('bitnet-test-') || cache.key.startsWith('bitnet-fixtures-')
+            );
+
+            // Keep only the 10 most recent caches
+            const cachesToDelete = testCaches
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+              .slice(10);
+
+            for (const cache of cachesToDelete) {
+              try {
+                await github.rest.actions.deleteActionsCacheById({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  cache_id: cache.id
+                });
+                console.log(`Deleted cache: ${cache.key}`);
+              } catch (error) {
+                console.log(`Failed to delete cache ${cache.key}: ${error.message}`);
+              }
+            }
+
+  summary:
+    name: Optimization Summary
+    needs: [cache-setup, optimized-tests, benchmark-optimization]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Generate summary
+        run: |
+          cat > optimization-summary.md << 'EOF'
+          # 🎯 Test Optimization Summary
+
+          ## Results
+
+          EOF
+
+          if [[ "${{ needs.optimized-tests.result }}" == "success" ]]; then
+            echo "✅ **Optimized Tests**: Passed" >> optimization-summary.md
+          else
+            echo "❌ **Optimized Tests**: Failed" >> optimization-summary.md
+          fi
+
+          if [[ "${{ needs.benchmark-optimization.result }}" == "success" ]]; then
+            echo "✅ **Optimization Analysis**: Completed" >> optimization-summary.md
+          else
+            echo "⚠️ **Optimization Analysis**: Skipped or Failed" >> optimization-summary.md
+          fi
+
+          echo "" >> optimization-summary.md
+          echo "## Configuration" >> optimization-summary.md
+          echo "" >> optimization-summary.md
+          echo "- **Cache Key**: ${{ needs.cache-setup.outputs.cache-key }}" >> optimization-summary.md
+          echo "- **Fixture Cache Key**: ${{ needs.cache-setup.outputs.fixture-cache-key }}" >> optimization-summary.md
+          echo "- **Incremental Testing**: ${{ needs.cache-setup.outputs.incremental-enabled }}" >> optimization-summary.md
+          echo "- **Cache Strategy**: ${{ env.BITNET_TEST_CACHE_STRATEGY }}" >> optimization-summary.md
+
+          echo "" >> optimization-summary.md
+          echo "## Features Enabled" >> optimization-summary.md
+          echo "" >> optimization-summary.md
+          echo "- 🗄️ Test Result Caching" >> optimization-summary.md
+          echo "- 📈 Incremental Testing" >> optimization-summary.md
+          echo "- 🧠 Smart Test Selection" >> optimization-summary.md
+          echo "- ⚡ Parallel Optimization" >> optimization-summary.md
+          echo "- 🔄 GitHub Actions Cache Integration" >> optimization-summary.md
+
+      - name: Upload summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: optimization-summary
+          path: optimization-summary.md
+          retention-days: 90
+
+      - name: Check overall success
+        run: |
+          if [[ "${{ needs.optimized-tests.result }}" == "success" ]]; then
+            echo "✅ Test optimization workflow completed successfully"
+          else
+            echo "❌ Test optimization workflow failed"
+            exit 1
+          fi

@@ -6,15 +6,20 @@
 // - Configuration management for test environments
 // - Error handling and reporting utilities
 
+pub mod cache;
 pub mod config;
 pub mod config_validator;
 pub mod errors;
 pub mod fixtures;
+pub mod github_cache;
 pub mod harness;
+pub mod incremental;
 pub mod logging;
 pub mod logging_example;
+pub mod parallel;
 pub mod reporting;
 pub mod results;
+pub mod selection;
 pub mod test_utilities;
 pub mod utils;
 
