@@ -69,7 +69,7 @@ export CROSSVAL_GGUF=/path/to/model.gguf
 
 ```bash
 # Build the crossval crate with C++ support
-cargo build --features crossval -p crossval --release
+cargo build --features crossval -p bitnet-crossval --release
 ```
 
 ## Running Tests
@@ -84,16 +84,16 @@ cargo build --features crossval -p crossval --release
 
 ```bash
 # Tokenization parity
-cargo test --features crossval -p crossval test_tokenization_parity -- --nocapture
+cargo test --features crossval -p bitnet-crossval test_tokenization_parity -- --nocapture
 
 # Single-step logits parity
-cargo test --features crossval -p crossval test_single_step_logits -- --nocapture
+cargo test --features crossval -p bitnet-crossval test_single_step_logits -- --nocapture
 
 # Multi-step generation parity
-cargo test --features crossval -p crossval test_multi_step_generation -- --nocapture
+cargo test --features crossval -p bitnet-crossval test_multi_step_generation -- --nocapture
 
 # Batch processing parity
-cargo test --features crossval -p crossval test_batch_processing -- --nocapture
+cargo test --features crossval -p bitnet-crossval test_batch_processing -- --nocapture
 ```
 
 ## Test Coverage
@@ -176,11 +176,11 @@ If tests show differences:
 Debug commands:
 ```bash
 # Maximum verbosity
-RUST_BACKTRACE=1 cargo test --features crossval -p crossval \
+RUST_BACKTRACE=1 cargo test --features crossval -p bitnet-crossval \
   test_single_step_logits -- --nocapture
 
 # Check just tokenization
-cargo test --features crossval -p crossval \
+cargo test --features crossval -p bitnet-crossval \
   test_tokenization_parity -- --nocapture
 ```
 
@@ -210,7 +210,7 @@ For GitHub Actions:
     
 - name: Run parity tests
   run: |
-    cargo test --features crossval -p crossval --release \
+    cargo test --features crossval -p bitnet-crossval --release \
       -- --test-threads=1
 ```
 

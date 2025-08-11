@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-env-changed=BITNET_CPP_DIR");
     println!("cargo:rerun-if-env-changed=BITNET_CPP_PATH");
     
     // Only build C++ bindings if crossval feature is enabled
@@ -18,7 +19,9 @@ fn main() {
     println!("cargo:warning=Building with cross-validation support");
     
     // Check if we have access to the C++ implementation
-    let cpp_path = env::var("BITNET_CPP_PATH")
+    // Support both BITNET_CPP_DIR and BITNET_CPP_PATH for consistency
+    let cpp_path = env::var("BITNET_CPP_DIR")
+        .or_else(|_| env::var("BITNET_CPP_PATH"))
         .unwrap_or_else(|_| {
             // Default path where ci/fetch_bitnet_cpp.sh places the code
             let home = env::var("HOME").or_else(|_| env::var("USERPROFILE"))
@@ -78,7 +81,7 @@ fn generate_bindings(cpp_path: &PathBuf) {
     let bindings = bindgen::Builder::default()
         .header(header_path.to_string_lossy())
         .clang_arg(format!("-I{}", cpp_path.join("include").display()))
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()
         .expect("Unable to generate bindings");
     
