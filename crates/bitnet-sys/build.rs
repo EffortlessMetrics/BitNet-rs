@@ -98,13 +98,22 @@ fn link_cpp_implementation(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::
         return Err("No library directories found. Is BitNet C++ built?".into());
     }
     
-    // Link the main libraries
+    // Helper to check if a library exists
+    fn lib_present(dir: &std::path::Path, name: &str) -> bool {
+        let so = dir.join(format!("lib{}.so", name));
+        let dylib = dir.join(format!("lib{}.dylib", name));
+        let a = dir.join(format!("lib{}.a", name));
+        so.exists() || dylib.exists() || a.exists()
+    }
+    
+    // Link the main llama library (required)
     println!("cargo:rustc-link-lib=dylib=llama");
     
-    // Try to link ggml if it's a separate library
+    // Only link ggml if it exists as a separate library
     // (it might be statically linked into llama)
-    // Note: This may cause a warning if ggml is statically linked, but that's OK
-    println!("cargo:rustc-link-lib=dylib=ggml");
+    if lib_search_paths.iter().any(|dir| lib_present(dir, "ggml")) {
+        println!("cargo:rustc-link-lib=dylib=ggml");
+    }
     
     // Platform-specific runtime dependencies
     #[cfg(target_os = "linux")]

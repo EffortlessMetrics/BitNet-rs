@@ -219,6 +219,10 @@ impl Context {
         // Create batch
         let mut batch = unsafe { llama_batch_init(tokens.len() as i32, 0, 1) };
         
+        // Create seq_id array with proper type
+        let seq_ids: [llama_seq_id; 1] = [0];
+        let seq_ids_ptr = seq_ids.as_ptr();
+        
         // Add tokens to batch using the official helper
         for (i, &token) in tokens.iter().enumerate() {
             unsafe {
@@ -226,7 +230,7 @@ impl Context {
                     &mut batch,
                     token,
                     n_past + i as i32,     // position
-                    &[0] as *const i32,    // seq_ids (single sequence)
+                    seq_ids_ptr,           // seq_ids pointer with correct type
                     1,                     // n_seq_ids
                     true,                  // logits for all tokens (since logits_all=true)
                 );
