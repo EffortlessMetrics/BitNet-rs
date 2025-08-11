@@ -1,0 +1,162 @@
+# Test Caching and Optimization Configuration
+# This file configures the advanced caching and optimization features
+# for the BitNet.rs testing framework
+
+[cache]
+# Enable test result caching
+enabled = true
+# Maximum age of cached results in seconds (24 hours)
+max_age_seconds = 86400
+# Maximum cache size in bytes (1 GB)
+max_size_bytes = 1073741824
+# Cache compression level (0-9, 0=no compression, 9=max compression)
+compression_level = 6
+
+[incremental]
+# Enable incremental testing (only run tests affected by changes)
+enabled = true
+# Base branch/commit for change detection (auto-detect if not specified)
+base_ref = "main"
+# Paths to always include in change detection
+always_include = ["Cargo.toml", "Cargo.lock", "tests/common"]
+# Patterns to ignore in change detection
+ignore_patterns = [
+    "*.md",
+    "*.txt",
+    "target/**",
+    ".git/**",
+    "docs/**",
+    "README*",
+    "LICENSE*",
+]
+# Force run all tests (bypass incremental)
+force_all = false
+# Maximum number of changed files before running all tests
+max_changed_files = 100
+
+[selection]
+# Enable smart test selection and prioritization
+enabled = true
+# Maximum number of tests to run in a single batch
+max_batch_size = 50
+# Prioritize recently failed tests
+prioritize_failures = true
+# Prioritize slow tests to run them early
+prioritize_slow_tests = true
+# Prioritize tests with low cache hit rates
+prioritize_cache_misses = true
+# Weight for failure history in prioritization
+failure_weight = 2.0
+# Weight for execution time in prioritization
+time_weight = 1.5
+# Weight for cache miss rate in prioritization
+cache_weight = 1.2
+# Minimum time threshold for considering a test "slow" (in seconds)
+slow_test_threshold = 10
+
+[parallel]
+# Maximum number of parallel tests (0 = auto-detect based on CPU cores)
+max_parallel = 0
+# Enable dynamic parallelism adjustment based on resource usage
+dynamic_parallelism = true
+# Enable resource monitoring
+resource_monitoring = true
+# Enable load balancing across workers
+load_balancing = true
+# CPU usage threshold for scaling down (0.0 to 1.0)
+cpu_threshold = 0.9
+# Memory usage threshold for scaling down (0.0 to 1.0)
+memory_threshold = 0.85
+# Minimum parallel tests (never go below this)
+min_parallel = 1
+# Resource check interval in seconds
+resource_check_interval = 5
+# Test timeout multiplier for parallel execution
+timeout_multiplier = 1.5
+
+[github_cache]
+# Enable GitHub Actions cache integration
+enabled = true
+# Cache key prefix
+key_prefix = "bitnet-test"
+# Cache version (increment to invalidate all caches)
+version = "v2"
+# Maximum cache size in MB
+max_size_mb = 1024
+# Environment variables to include in cache key
+key_env_vars = ["CARGO_PKG_VERSION", "RUSTC_VERSION", "TARGET"]
+# Paths to cache
+cache_paths = ["tests/cache", "target/debug/deps", "target/release/deps"]
+# Cache restore keys (fallback keys)
+restore_keys = ["bitnet-test-v2-"]
+
+[strategies]
+# Predefined optimization strategies
+
+[strategies.conservative]
+# Conservative strategy: prioritize reliability over speed
+cache.enabled = true
+cache.max_age_seconds = 43200        # 12 hours
+incremental.enabled = false
+selection.enabled = false
+parallel.max_parallel = 2
+parallel.dynamic_parallelism = false
+
+[strategies.balanced]
+# Balanced strategy: good mix of speed and reliability
+cache.enabled = true
+cache.max_age_seconds = 86400       # 24 hours
+incremental.enabled = true
+selection.enabled = true
+selection.max_batch_size = 25
+parallel.max_parallel = 0           # auto-detect
+parallel.dynamic_parallelism = true
+
+[strategies.aggressive]
+# Aggressive strategy: maximize speed and optimization
+cache.enabled = true
+cache.max_age_seconds = 172800      # 48 hours
+incremental.enabled = true
+incremental.max_changed_files = 200
+selection.enabled = true
+selection.max_batch_size = 100
+parallel.max_parallel = 0           # auto-detect
+parallel.dynamic_parallelism = true
+parallel.resource_monitoring = true
+
+[strategies.ci]
+# CI-optimized strategy: optimized for continuous integration
+cache.enabled = true
+cache.max_age_seconds = 86400        # 24 hours
+cache.compression_level = 9          # max compression for CI storage
+incremental.enabled = true
+selection.enabled = true
+selection.prioritize_failures = true
+parallel.max_parallel = 0            # auto-detect
+parallel.dynamic_parallelism = true
+parallel.cpu_threshold = 0.95        # allow higher CPU usage in CI
+github_cache.enabled = true
+
+[environment]
+# Environment-specific overrides
+
+[environment.development]
+# Development environment settings
+cache.max_age_seconds = 3600 # 1 hour for faster iteration
+incremental.enabled = true
+selection.enabled = false    # run all selected tests in dev
+parallel.max_parallel = 0    # use all available cores
+
+[environment.ci]
+# CI environment settings
+cache.compression_level = 9
+parallel.cpu_threshold = 0.95
+parallel.memory_threshold = 0.90
+github_cache.enabled = true
+
+[environment.testing]
+# Testing environment settings (for testing the framework itself)
+cache.enabled = false       # disable cache for framework tests
+incremental.enabled = false
+selection.enabled = false
+parallel.max_parallel = 1   # single-threaded for deterministic tests
