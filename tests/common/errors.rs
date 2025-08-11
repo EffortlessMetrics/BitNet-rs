@@ -1,8 +1,7 @@
 use std::time::Duration;
 use thiserror::Error;
 
-/// Type alias for test results using anyhow
-pub type TestResult<T = ()> = anyhow::Result<T>;
+// Removed duplicate TestResult type alias - using the one defined later
 
 /// Comprehensive error types for the testing framework
 #[derive(Debug, Error)]

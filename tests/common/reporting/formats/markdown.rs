@@ -1,7 +1,7 @@
 //! Markdown report format implementation for documentation
 
-use crate::common::reporting::{ReportError, ReportFormat, ReportResult, TestReporter};
-use crate::common::results::{TestResult, TestStatus, TestSuiteResult};
+use crate::reporting::{ReportError, ReportFormat, ReportResult, TestReporter};
+use crate::results::{TestResult, TestStatus, TestSuiteResult};
 use async_trait::async_trait;
 use std::path::Path;
 use std::time::Instant;
@@ -241,6 +241,7 @@ impl MarkdownReporter {
                 TestStatus::Failed => "❌",
                 TestStatus::Skipped => "⚠️",
                 TestStatus::Timeout => "⏰",
+                TestStatus::Running => "🔄",
             };
 
             let memory_info = test
@@ -361,7 +362,7 @@ impl TestReporter for MarkdownReporter {
         output_path: &Path,
     ) -> Result<ReportResult, ReportError> {
         let start_time = Instant::now();
-        self.prepare_output_path(output_path).await?;
+        crate::reporting::reporter::prepare_output_path(output_path).await?;
 
         let markdown_content = self.generate_markdown_content(results)?;
         fs::write(output_path, &markdown_content).await?;
@@ -395,7 +396,7 @@ impl Default for MarkdownReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::results::{TestMetrics, TestSummary};
+    use crate::results::{TestMetrics, TestSummary};
     use std::collections::HashMap;
     use std::time::Duration;
     use tempfile::TempDir;
@@ -415,9 +416,15 @@ mod tests {
                         cpu_time: Some(Duration::from_secs(3)),
                         wall_time: Duration::from_secs(4),
                         custom_metrics: HashMap::new(),
+                        assertions: 8,
+                        operations: 12,
                     },
                     error: None,
+                    stack_trace: None,
                     artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now() - Duration::from_secs(4),
+                    end_time: std::time::SystemTime::now(),
+                    metadata: HashMap::new(),
                 },
                 TestResult {
                     test_name: "test_markdown_fail".to_string(),
@@ -429,11 +436,15 @@ mod tests {
                         cpu_time: Some(Duration::from_secs(5)),
                         wall_time: Duration::from_secs(6),
                         custom_metrics: HashMap::new(),
+                        assertions: 4,
+                        operations: 6,
                     },
-                    error: Some(crate::common::errors::TestError::AssertionError {
-                        message: "Markdown test failed".to_string(),
-                    }),
+                    error: Some("Markdown test failed".to_string()),
+                    stack_trace: None,
                     artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now() - Duration::from_secs(6),
+                    end_time: std::time::SystemTime::now(),
+                    metadata: HashMap::new(),
                 },
                 TestResult {
                     test_name: "test_markdown_skip".to_string(),
@@ -445,9 +456,15 @@ mod tests {
                         cpu_time: None,
                         wall_time: Duration::from_secs(0),
                         custom_metrics: HashMap::new(),
+                        assertions: 0,
+                        operations: 0,
                     },
                     error: None,
+                    stack_trace: None,
                     artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now(),
+                    end_time: std::time::SystemTime::now(),
+                    metadata: HashMap::new(),
                 },
             ],
             summary: TestSummary {
@@ -455,9 +472,17 @@ mod tests {
                 passed: 1,
                 failed: 1,
                 skipped: 1,
-                success_rate: 0.33,
+                timeout: 0,
+                success_rate: 33.33,
                 total_duration: Duration::from_secs(12),
+                average_duration: Duration::from_secs(4),
+                peak_memory: Some(8192),
+                total_assertions: 12,
             },
+            environment: HashMap::new(),
+            configuration: HashMap::new(),
+            start_time: std::time::SystemTime::now() - Duration::from_secs(12),
+            end_time: std::time::SystemTime::now(),
         }
     }
 

@@ -1,7 +1,7 @@
 //! JUnit XML report format implementation for CI integration
 
-use crate::common::reporting::{ReportError, ReportFormat, ReportResult, TestReporter};
-use crate::common::results::{TestResult, TestStatus, TestSuiteResult};
+use crate::reporting::{ReportError, ReportFormat, ReportResult, TestReporter};
+use crate::results::{TestResult, TestStatus, TestSuiteResult};
 use async_trait::async_trait;
 use std::path::Path;
 use std::time::Instant;
@@ -237,6 +237,18 @@ impl JunitReporter {
             TestStatus::Passed => {
                 // No additional elements needed for passed tests
             }
+            TestStatus::Running => {
+                writer
+                    .write(
+                        XmlEvent::start_element("error")
+                            .attr("message", "Test is still running")
+                            .attr("type", "RunningError"),
+                    )
+                    .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                writer
+                    .write(XmlEvent::end_element()) // error
+                    .map_err(|e| ReportError::XmlError(e.to_string()))?;
+            }
         }
 
         // End testcase element
@@ -256,7 +268,7 @@ impl TestReporter for JunitReporter {
         output_path: &Path,
     ) -> Result<ReportResult, ReportError> {
         let start_time = Instant::now();
-        self.prepare_output_path(output_path).await?;
+        crate::reporting::reporter::prepare_output_path(output_path).await?;
 
         let xml_content = self.generate_xml_content(results)?;
         fs::write(output_path, &xml_content).await?;
@@ -290,7 +302,7 @@ impl Default for JunitReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::results::{TestMetrics, TestSummary};
+    use crate::results::{TestMetrics, TestSummary};
     use std::collections::HashMap;
     use std::time::Duration;
     use tempfile::TempDir;
@@ -310,9 +322,15 @@ mod tests {
                         cpu_time: Some(Duration::from_secs(2)),
                         wall_time: Duration::from_secs(3),
                         custom_metrics: HashMap::new(),
+                        assertions: 5,
+                        operations: 8,
                     },
                     error: None,
+                    stack_trace: None,
                     artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now() - Duration::from_secs(3),
+                    end_time: std::time::SystemTime::now(),
+                    metadata: HashMap::new(),
                 },
                 TestResult {
                     test_name: "module::test_fail".to_string(),
@@ -324,11 +342,15 @@ mod tests {
                         cpu_time: Some(Duration::from_secs(4)),
                         wall_time: Duration::from_secs(5),
                         custom_metrics: HashMap::new(),
+                        assertions: 3,
+                        operations: 4,
                     },
-                    error: Some(crate::common::errors::TestError::AssertionError {
-                        message: "Assertion failed".to_string(),
-                    }),
+                    error: Some("Assertion failed".to_string()),
+                    stack_trace: None,
                     artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now() - Duration::from_secs(5),
+                    end_time: std::time::SystemTime::now(),
+                    metadata: HashMap::new(),
                 },
                 TestResult {
                     test_name: "module::test_skip".to_string(),
@@ -340,9 +362,15 @@ mod tests {
                         cpu_time: None,
                         wall_time: Duration::from_secs(0),
                         custom_metrics: HashMap::new(),
+                        assertions: 0,
+                        operations: 0,
                     },
                     error: None,
+                    stack_trace: None,
                     artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now(),
+                    end_time: std::time::SystemTime::now(),
+                    metadata: HashMap::new(),
                 },
             ],
             summary: TestSummary {
@@ -350,9 +378,17 @@ mod tests {
                 passed: 1,
                 failed: 1,
                 skipped: 1,
-                success_rate: 0.33,
+                timeout: 0,
+                success_rate: 33.33,
                 total_duration: Duration::from_secs(10),
+                average_duration: Duration::from_millis(3333),
+                peak_memory: Some(2048),
+                total_assertions: 8,
             },
+            environment: HashMap::new(),
+            configuration: HashMap::new(),
+            start_time: std::time::SystemTime::now() - Duration::from_secs(10),
+            end_time: std::time::SystemTime::now(),
         }
     }
 

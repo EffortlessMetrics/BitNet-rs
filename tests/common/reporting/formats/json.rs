@@ -1,7 +1,7 @@
 //! JSON report format implementation
 
-use crate::common::reporting::{ReportError, ReportFormat, ReportResult, TestReporter};
-use crate::common::results::TestSuiteResult;
+use crate::reporting::{ReportError, ReportFormat, ReportResult, TestReporter};
+use crate::results::TestSuiteResult;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -61,7 +61,7 @@ impl TestReporter for JsonReporter {
         output_path: &Path,
     ) -> Result<ReportResult, ReportError> {
         let start_time = Instant::now();
-        self.prepare_output_path(output_path).await?;
+        crate::reporting::reporter::prepare_output_path(output_path).await?;
 
         // Calculate global summary
         let total_tests: usize = results.iter().map(|r| r.summary.total_tests).sum();
@@ -135,7 +135,7 @@ impl Default for JsonReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::results::{TestMetrics, TestResult, TestStatus, TestSummary};
+    use crate::results::{TestMetrics, TestResult, TestStatus, TestSummary};
     use std::collections::HashMap;
     use std::time::Duration;
     use tempfile::TempDir;
@@ -155,9 +155,15 @@ mod tests {
                         cpu_time: Some(Duration::from_secs(1)),
                         wall_time: Duration::from_secs(2),
                         custom_metrics: HashMap::new(),
+                        assertions: 5,
+                        operations: 10,
                     },
                     error: None,
+                    stack_trace: None,
                     artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now() - Duration::from_secs(2),
+                    end_time: std::time::SystemTime::now(),
+                    metadata: HashMap::new(),
                 },
                 TestResult {
                     test_name: "test_json_fail".to_string(),
@@ -169,11 +175,15 @@ mod tests {
                         cpu_time: Some(Duration::from_secs(2)),
                         wall_time: Duration::from_secs(3),
                         custom_metrics: HashMap::new(),
+                        assertions: 3,
+                        operations: 5,
                     },
-                    error: Some(crate::common::errors::TestError::AssertionError {
-                        message: "Expected true, got false".to_string(),
-                    }),
+                    error: Some("Expected true, got false".to_string()),
+                    stack_trace: None,
                     artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now() - Duration::from_secs(3),
+                    end_time: std::time::SystemTime::now(),
+                    metadata: HashMap::new(),
                 },
             ],
             summary: TestSummary {
@@ -181,9 +191,17 @@ mod tests {
                 passed: 1,
                 failed: 1,
                 skipped: 0,
-                success_rate: 0.5,
+                timeout: 0,
+                success_rate: 50.0,
                 total_duration: Duration::from_secs(5),
+                average_duration: Duration::from_millis(2500),
+                peak_memory: Some(2048),
+                total_assertions: 8,
             },
+            environment: HashMap::new(),
+            configuration: HashMap::new(),
+            start_time: std::time::SystemTime::now() - Duration::from_secs(5),
+            end_time: std::time::SystemTime::now(),
         }
     }
 

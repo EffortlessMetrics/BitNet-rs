@@ -10,7 +10,7 @@ pub mod templates;
 pub use formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter};
 pub use reporter::{ReportingManager, TestReporter};
 
-use crate::common::results::{TestResult, TestSuiteResult};
+use crate::results::{TestResult, TestSuiteResult};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use thiserror::Error;
@@ -26,7 +26,7 @@ pub struct ReportConfig {
 }
 
 /// Supported report formats
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ReportFormat {
     Html,
     Json,
@@ -35,22 +35,39 @@ pub enum ReportFormat {
 }
 
 /// Report generation errors
-#[derive(Debug, Error)]
+#[derive(Debug)]
 pub enum ReportError {
-    #[error("IO error: {0}")]
-    IoError(#[from] std::io::Error),
-
-    #[error("Template error: {0}")]
+    IoError(std::io::Error),
     TemplateError(String),
-
-    #[error("Serialization error: {0}")]
-    SerializationError(#[from] serde_json::Error),
-
-    #[error("XML generation error: {0}")]
+    SerializationError(serde_json::Error),
     XmlError(String),
-
-    #[error("Report generation failed: {0}")]
     GenerationError(String),
+}
+
+impl std::fmt::Display for ReportError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReportError::IoError(e) => write!(f, "IO error: {}", e),
+            ReportError::TemplateError(msg) => write!(f, "Template error: {}", msg),
+            ReportError::SerializationError(e) => write!(f, "Serialization error: {}", e),
+            ReportError::XmlError(msg) => write!(f, "XML generation error: {}", msg),
+            ReportError::GenerationError(msg) => write!(f, "Report generation failed: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ReportError {}
+
+impl From<std::io::Error> for ReportError {
+    fn from(error: std::io::Error) -> Self {
+        ReportError::IoError(error)
+    }
+}
+
+impl From<serde_json::Error> for ReportError {
+    fn from(error: serde_json::Error) -> Self {
+        ReportError::SerializationError(error)
+    }
 }
 
 /// Result of report generation
