@@ -606,9 +606,18 @@ mod bitnet_model_tests {
         let result = model.forward(&input, &mut cache);
         assert!(result.is_ok());
 
-        let output = result.unwrap();
+        let hidden = result.unwrap();
+        assert_eq!(hidden.shape()[0], 1); // batch_size
+        assert_eq!(hidden.shape()[1], 10); // seq_len
+
+        // Get logits from hidden states
+        let logits = model.logits(&hidden);
+        assert!(logits.is_ok());
+
+        let output = logits.unwrap();
         assert_eq!(output.shape()[0], 1); // batch_size
-        assert_eq!(output.shape()[1], config.model.vocab_size); // vocab_size
+        assert_eq!(output.shape()[1], 10); // seq_len
+        assert_eq!(output.shape()[2], config.model.vocab_size); // vocab_size
     }
 
     #[test]

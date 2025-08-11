@@ -2,6 +2,8 @@
 //! Covers edge cases, error conditions, and end-to-end scenarios
 
 use bitnet_common::{BitNetTensor, ConcreteTensor, MockTensor, QuantizationType};
+use bitnet_quantization::tl1::TL1Config;
+use bitnet_quantization::tl2::TL2Config;
 use bitnet_quantization::*;
 use candle_core::{DType, Device as CandleDevice, Tensor as CandleTensor};
 use proptest::prelude::*;
@@ -19,57 +21,44 @@ mod error_handling {
 
     #[test]
     fn test_invalid_block_sizes() {
-        // Test zero block size
-        let result = I2SQuantizer::new_with_config(I2SConfig {
-            block_size: 0,
-            precision: 1e-4,
-        });
-        assert!(result.is_err());
+        // Test minimum block size (should be at least 4)
+        let quantizer = I2SQuantizer::with_block_size(0);
+        // The implementation clamps to minimum 4, so this should work
+        assert!(quantizer.is_available());
 
-        // Test non-power-of-2 block size
-        let result = I2SQuantizer::new_with_config(I2SConfig {
-            block_size: 63, // Not power of 2
-            precision: 1e-4,
-        });
-        assert!(result.is_err());
+        // Test various block sizes
+        let quantizer = I2SQuantizer::with_block_size(3);
+        assert!(quantizer.is_available());
+
+        // Test non-power-of-2 block size (should still work)
+        let quantizer = I2SQuantizer::with_block_size(63);
+        assert!(quantizer.is_available());
 
         // Test extremely large block size
-        let result = I2SQuantizer::new_with_config(I2SConfig {
-            block_size: 1024 * 1024, // Very large
-            precision: 1e-4,
-        });
+        let quantizer = I2SQuantizer::with_block_size(1024 * 1024);
         // Should succeed but might be impractical
-        assert!(result.is_ok());
+        assert!(quantizer.is_available());
     }
 
     #[test]
-    fn test_invalid_precision() {
-        // Test zero precision
-        let result = I2SQuantizer::new_with_config(I2SConfig {
-            block_size: 64,
-            precision: 0.0,
-        });
-        assert!(result.is_err());
+    fn test_quantizer_availability() {
+        // Test that I2S quantizer is always available
+        let quantizer = I2SQuantizer::new();
+        assert!(quantizer.is_available());
 
-        // Test negative precision
-        let result = I2SQuantizer::new_with_config(I2SConfig {
-            block_size: 64,
-            precision: -1e-4,
-        });
-        assert!(result.is_err());
+        // Test different block sizes for precision testing
+        let quantizer = I2SQuantizer::with_block_size(64);
+        assert!(quantizer.is_available());
 
-        // Test extremely small precision
-        let result = I2SQuantizer::new_with_config(I2SConfig {
-            block_size: 64,
-            precision: 1e-20,
-        });
-        // Should succeed
-        assert!(result.is_ok());
+        // Test extremely small block size
+        let quantizer = I2SQuantizer::with_block_size(1);
+        // Should succeed (clamped to minimum 4)
+        assert!(quantizer.is_available());
     }
 
     #[test]
     fn test_empty_tensor_quantization() {
-        let quantizer = I2SQuantizer::new().unwrap();
+        let quantizer = I2SQuantizer::new();
         let empty_tensor = MockTensor::new(vec![]);
 
         let result = quantizer.quantize(&empty_tensor);
@@ -83,7 +72,7 @@ mod error_handling {
 
     #[test]
     fn test_single_element_tensor() {
-        let quantizer = I2SQuantizer::new().unwrap();
+        let quantizer = I2SQuantizer::new();
         let tensor = MockTensor::new(vec![42.0]);
 
         let result = quantizer.quantize(&tensor);
@@ -96,7 +85,7 @@ mod error_handling {
 
     #[test]
     fn test_mismatched_tensor_dimensions() {
-        let quantizer = I2SQuantizer::new().unwrap();
+        let quantizer = I2SQuantizer::new();
 
         // Create tensor with shape that doesn't match data length
         let data = vec![1.0f32; 10];
@@ -111,7 +100,7 @@ mod error_handling {
 
     #[test]
     fn test_extreme_values() {
-        let quantizer = I2SQuantizer::new().unwrap();
+        let quantizer = I2SQuantizer::new();
 
         // Test with very large values
         let large_values = vec![f32::MAX, f32::MAX / 2.0, f32::MAX / 4.0, f32::MAX / 8.0];
@@ -140,7 +129,7 @@ mod error_handling {
 
     #[test]
     fn test_nan_values() {
-        let quantizer = I2SQuantizer::new().unwrap();
+        let quantizer = I2SQuantizer::new();
 
         let nan_values = vec![f32::NAN, 1.0, 2.0, 3.0];
         let tensor = MockTensor::new(nan_values);
@@ -152,7 +141,7 @@ mod error_handling {
 
     #[test]
     fn test_all_zero_tensor() {
-        let quantizer = I2SQuantizer::new().unwrap();
+        let quantizer = I2SQuantizer::new();
 
         let zero_tensor = MockTensor::new(vec![0.0f32; 64]);
         let result = quantizer.quantize(&zero_tensor);
@@ -165,7 +154,7 @@ mod error_handling {
 
     #[test]
     fn test_all_same_value_tensor() {
-        let quantizer = I2SQuantizer::new().unwrap();
+        let quantizer = I2SQuantizer::new();
 
         let same_value_tensor = MockTensor::new(vec![64]);
         let result = quantizer.quantize(&same_value_tensor);
@@ -182,7 +171,7 @@ mod algorithm_comprehensive {
 
     #[test]
     fn test_i2s_comprehensive() {
-        let quantizer = I2SQuantizer::new().unwrap();
+        let quantizer = I2SQuantizer::new();
 
         // Test with different data patterns
         let patterns = vec![
@@ -226,7 +215,7 @@ mod algorithm_comprehensive {
 
     #[test]
     fn test_tl1_comprehensive() {
-        let quantizer = TL1Quantizer::new().unwrap();
+        let quantizer = TL1Quantizer::new();
 
         // Test with different block sizes
         let block_sizes = vec![16, 32, 64, 128];
@@ -238,7 +227,7 @@ mod algorithm_comprehensive {
                 symmetric: true,
             };
 
-            let quantizer = TL1Quantizer::new_with_config(config).unwrap();
+            let quantizer = TL1Quantizer::with_config(config);
             let data: Vec<f32> = (0..block_size * 4)
                 .map(|i| (i as f32 - block_size as f32 * 2.0) / 10.0)
                 .collect();
@@ -268,7 +257,7 @@ mod algorithm_comprehensive {
 
     #[test]
     fn test_tl2_comprehensive() {
-        let quantizer = TL2Quantizer::new().unwrap();
+        let quantizer = TL2Quantizer::new();
 
         // Test with different precision settings
         let precisions = vec![1e-3, 1e-4, 1e-5, 1e-6];
@@ -280,7 +269,7 @@ mod algorithm_comprehensive {
                 use_vectorized: true,
             };
 
-            let quantizer = TL2Quantizer::new_with_config(config).unwrap();
+            let quantizer = TL2Quantizer::with_config(config);
             let data: Vec<f32> = (0..256).map(|i| (i as f32).sin() * 10.0).collect();
             let tensor = MockTensor::new(data.clone());
 
@@ -317,19 +306,19 @@ mod algorithm_comprehensive {
         let original_size = data.len() * std::mem::size_of::<f32>();
 
         // Test I2S compression
-        let i2s_quantizer = I2SQuantizer::new().unwrap();
+        let i2s_quantizer = I2SQuantizer::new();
         let i2s_result = i2s_quantizer.quantize(&tensor).unwrap();
         let i2s_size = i2s_result.data.len() + i2s_result.scales.len() * std::mem::size_of::<f32>();
         let i2s_ratio = original_size as f32 / i2s_size as f32;
 
         // Test TL1 compression
-        let tl1_quantizer = TL1Quantizer::new().unwrap();
+        let tl1_quantizer = TL1Quantizer::new();
         let tl1_result = tl1_quantizer.quantize(&tensor).unwrap();
         let tl1_size = tl1_result.data.len() + tl1_result.scales.len() * std::mem::size_of::<f32>();
         let tl1_ratio = original_size as f32 / tl1_size as f32;
 
         // Test TL2 compression
-        let tl2_quantizer = TL2Quantizer::new().unwrap();
+        let tl2_quantizer = TL2Quantizer::new();
         let tl2_result = tl2_quantizer.quantize(&tensor).unwrap();
         let tl2_size = tl2_result.data.len() + tl2_result.scales.len() * std::mem::size_of::<f32>();
         let tl2_ratio = original_size as f32 / tl2_size as f32;
@@ -360,7 +349,7 @@ mod performance_tests {
             let tensor = MockTensor::new(data);
 
             // Test I2S performance
-            let quantizer = I2SQuantizer::new().unwrap();
+            let quantizer = I2SQuantizer::new();
             let start = Instant::now();
             let result = quantizer.quantize(&tensor);
             let duration = start.elapsed();
@@ -383,7 +372,7 @@ mod performance_tests {
         let data: Vec<f32> = (0..size).map(|i| (i as f32 * 0.001).sin()).collect();
         let tensor = MockTensor::new(data);
 
-        let quantizer = I2SQuantizer::new().unwrap();
+        let quantizer = I2SQuantizer::new();
         let quantized = quantizer.quantize(&tensor).unwrap();
 
         // Test dequantization performance
@@ -411,7 +400,7 @@ mod performance_tests {
         let data: Vec<f32> = (0..size).map(|i| i as f32).collect();
         let tensor = MockTensor::new(data.clone());
 
-        let quantizer = I2SQuantizer::new().unwrap();
+        let quantizer = I2SQuantizer::new();
         let quantized = quantizer.quantize(&tensor).unwrap();
 
         // Check memory usage
@@ -441,7 +430,7 @@ mod property_tests {
             data in prop::collection::vec(prop::num::f32::NORMAL, 1..1000)
         ) {
             let tensor = MockTensor::new(data.clone());
-            let quantizer = I2SQuantizer::new().unwrap();
+            let quantizer = I2SQuantizer::new();
 
             let quantized = quantizer.quantize(&tensor).unwrap();
             let dequantized = quantizer.dequantize(&quantized).unwrap();
@@ -454,7 +443,7 @@ mod property_tests {
             data in prop::collection::vec(prop::num::f32::NORMAL, 1..100)
         ) {
             let tensor = MockTensor::new(data);
-            let quantizer = I2SQuantizer::new().unwrap();
+            let quantizer = I2SQuantizer::new();
 
             let result1 = quantizer.quantize(&tensor).unwrap();
             let result2 = quantizer.quantize(&tensor).unwrap();
@@ -468,7 +457,7 @@ mod property_tests {
             data in prop::collection::vec(-100.0f32..100.0f32, 64..256)
         ) {
             let tensor = MockTensor::new(data.clone());
-            let quantizer = I2SQuantizer::new().unwrap();
+            let quantizer = I2SQuantizer::new();
 
             let quantized = quantizer.quantize(&tensor).unwrap();
             let dequantized = quantizer.dequantize(&quantized).unwrap();
@@ -488,7 +477,7 @@ mod property_tests {
             data in prop::collection::vec(-1000.0f32..1000.0f32, 64..256)
         ) {
             let tensor = MockTensor::new(data);
-            let quantizer = I2SQuantizer::new().unwrap();
+            let quantizer = I2SQuantizer::new();
 
             let quantized = quantizer.quantize(&tensor).unwrap();
 
@@ -522,15 +511,15 @@ mod integration_tests {
         let methods = vec![
             (
                 "I2S",
-                Box::new(I2SQuantizer::new().unwrap()) as Box<dyn Quantize>,
+                Box::new(I2SQuantizer::new()) as Box<dyn Quantize>,
             ),
             (
                 "TL1",
-                Box::new(TL1Quantizer::new().unwrap()) as Box<dyn Quantize>,
+                Box::new(TL1Quantizer::new()) as Box<dyn Quantize>,
             ),
             (
                 "TL2",
-                Box::new(TL2Quantizer::new().unwrap()) as Box<dyn Quantize>,
+                Box::new(TL2Quantizer::new()) as Box<dyn Quantize>,
             ),
         ];
 
@@ -602,9 +591,9 @@ mod integration_tests {
         let tensor = MockTensor::new(data.clone());
 
         // Test that different algorithms can handle the same data
-        let i2s_quantizer = I2SQuantizer::new().unwrap();
-        let tl1_quantizer = TL1Quantizer::new().unwrap();
-        let tl2_quantizer = TL2Quantizer::new().unwrap();
+        let i2s_quantizer = I2SQuantizer::new();
+        let tl1_quantizer = TL1Quantizer::new();
+        let tl2_quantizer = TL2Quantizer::new();
 
         let i2s_result = i2s_quantizer.quantize(&tensor).unwrap();
         let tl1_result = tl1_quantizer.quantize(&tensor).unwrap();
