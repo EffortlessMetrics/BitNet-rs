@@ -1,0 +1,471 @@
+# Example GitHub Actions workflow for BitNet.rs testing framework
+# This demonstrates comprehensive CI/CD integration with the testing framework
+
+name: BitNet.rs Testing Framework Example
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run nightly tests at 2 AM UTC
+    - cron: "0 2 * * *"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  BITNET_TEST_CACHE: ${{ github.workspace }}/test-cache
+  BITNET_LOG_LEVEL: info
+
+jobs:
+  # Job 1: Unit Tests with Coverage
+  unit-tests:
+    name: Unit Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        rust: [stable, beta]
+        exclude:
+          # Reduce matrix size for faster CI
+          - os: macos-latest
+            rust: beta
+          - os: windows-latest
+            rust: beta
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Cache test data
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.BITNET_TEST_CACHE }}
+          key: ${{ runner.os }}-test-data-${{ hashFiles('tests/fixtures/**') }}
+          restore-keys: |
+            ${{ runner.os }}-test-data-
+
+      - name: Install test dependencies
+        run: |
+          # Install coverage tools
+          cargo install cargo-tarpaulin --locked
+          # Install additional test utilities
+          cargo install cargo-nextest --locked
+
+      - name: Run code formatting check
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Run unit tests with coverage
+        run: |
+          cargo tarpaulin \
+            --verbose \
+            --all-features \
+            --workspace \
+            --timeout 120 \
+            --exclude-files "examples/*" "tests/*" \
+            --out xml \
+            --output-dir coverage/
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: coverage/cobertura.xml
+          flags: unittests
+          name: codecov-${{ matrix.os }}-${{ matrix.rust }}
+
+      - name: Run fast unit tests with nextest
+        run: |
+          cargo nextest run \
+            --all-features \
+            --workspace \
+            --exclude integration-tests \
+            --test-threads 4
+
+      - name: Generate test report
+        if: always()
+        run: |
+          mkdir -p test-results
+          cargo test --all-features --workspace -- --format json > test-results/unit-tests.json || true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: unit-test-results-${{ matrix.os }}-${{ matrix.rust }}
+          path: test-results/
+
+  # Job 2: Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-integration-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache test data
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.BITNET_TEST_CACHE }}
+          key: ${{ runner.os }}-integration-data-${{ hashFiles('tests/fixtures/**') }}
+
+      - name: Setup test environment
+        run: |
+          # Create test directories
+          mkdir -p ${{ env.BITNET_TEST_CACHE }}
+          mkdir -p test-results/integration
+
+          # Install system dependencies if needed
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Run integration tests
+        run: |
+          cargo test \
+            --test integration_tests \
+            --test workflow_integration_tests \
+            --test component_interaction_tests \
+            --features integration-tests \
+            --verbose \
+            -- --test-threads 2
+
+      - name: Run workflow integration tests
+        run: |
+          cargo test \
+            --test "*workflow*" \
+            --features integration-tests \
+            --verbose
+
+      - name: Generate integration test report
+        if: always()
+        run: |
+          cargo test \
+            --test integration_tests \
+            --features integration-tests \
+            -- --format json > test-results/integration/integration-tests.json || true
+
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: integration-test-results
+          path: test-results/integration/
+
+  # Job 3: Cross-Implementation Comparison
+  cross-validation:
+    name: Cross-Implementation Validation
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'cross-validation')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-crossval-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache C++ BitNet binary
+        uses: actions/cache@v3
+        with:
+          path: |
+            bitnet-cpp/
+          key: ${{ runner.os }}-bitnet-cpp-${{ hashFiles('ci/bitnet_cpp_version.txt') }}
+
+      - name: Setup C++ BitNet implementation
+        run: |
+          # Download and build C++ implementation
+          if [ ! -f "bitnet-cpp/bitnet" ]; then
+            git clone https://github.com/microsoft/BitNet.git bitnet-cpp
+            cd bitnet-cpp
+            make -j$(nproc)
+          fi
+
+          # Verify C++ binary works
+          ./bitnet-cpp/bitnet --version
+
+      - name: Cache cross-validation test data
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.BITNET_TEST_CACHE }}
+          key: ${{ runner.os }}-crossval-data-${{ hashFiles('tests/crossval/fixtures/**') }}
+
+      - name: Run cross-validation tests
+        env:
+          BITNET_CPP_BINARY: ${{ github.workspace }}/bitnet-cpp/bitnet
+        run: |
+          cargo test \
+            --test cross_validation_tests \
+            --features cross-validation \
+            --verbose \
+            -- --test-threads 1
+
+      - name: Generate cross-validation report
+        if: always()
+        run: |
+          mkdir -p test-results/crossval
+          cargo test \
+            --test cross_validation_tests \
+            --features cross-validation \
+            -- --format json > test-results/crossval/crossval-tests.json || true
+
+      - name: Upload cross-validation results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: cross-validation-results
+          path: test-results/crossval/
+
+  # Job 4: Performance Benchmarks
+  performance-benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'performance')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-bench-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install benchmark tools
+        run: |
+          cargo install cargo-criterion --locked
+
+      - name: Run performance benchmarks
+        run: |
+          cargo criterion \
+            --bench inference \
+            --bench kernels \
+            --message-format json > benchmark-results.json
+
+      - name: Generate benchmark report
+        run: |
+          mkdir -p benchmark-results
+          cp target/criterion/*/report/* benchmark-results/ || true
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-results
+          path: |
+            benchmark-results/
+            benchmark-results.json
+
+      - name: Comment benchmark results on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const results = JSON.parse(fs.readFileSync('benchmark-results.json', 'utf8'));
+              const comment = `## 🚀 Performance Benchmark Results
+              
+              | Benchmark | Time | Change |
+              |-----------|------|--------|
+              ${results.map(r => `| ${r.name} | ${r.time} | ${r.change || 'N/A'} |`).join('\n')}
+              
+              <details>
+              <summary>View detailed results</summary>
+              
+              \`\`\`json
+              ${JSON.stringify(results, null, 2)}
+              \`\`\`
+              </details>`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (error) {
+              console.log('Could not parse benchmark results:', error);
+            }
+
+  # Job 5: Test Report Generation
+  test-report:
+    name: Generate Test Report
+    runs-on: ubuntu-latest
+    needs:
+      [unit-tests, integration-tests, cross-validation, performance-benchmarks]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all test artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: all-test-results/
+
+      - name: Install report generation tools
+        run: |
+          pip install jinja2 matplotlib seaborn pandas
+
+      - name: Generate comprehensive test report
+        run: |
+          python scripts/generate_test_report.py \
+            --input-dir all-test-results/ \
+            --output-dir test-report/ \
+            --format html
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: comprehensive-test-report
+          path: test-report/
+
+      - name: Deploy test report to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: test-report/
+          destination_dir: test-reports/${{ github.run_number }}
+
+      - name: Comment test report link on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const comment = `## 📊 Test Report
+
+            A comprehensive test report has been generated for this PR.
+
+            **Test Summary:**
+            - ✅ Unit Tests: ${{ needs.unit-tests.result }}
+            - ✅ Integration Tests: ${{ needs.integration-tests.result }}
+            - ✅ Cross-Validation: ${{ needs.cross-validation.result }}
+            - ✅ Performance: ${{ needs.performance-benchmarks.result }}
+
+            [View detailed test report](https://your-org.github.io/bitnet-rs/test-reports/${{ github.run_number }})
+
+            <details>
+            <summary>Test Artifacts</summary>
+
+            - Unit test results and coverage reports
+            - Integration test results
+            - Cross-validation comparison results
+            - Performance benchmark results
+            </details>`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Job 6: Release Validation (only on release branches)
+  release-validation:
+    name: Release Validation
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/')
+    needs: [unit-tests, integration-tests, cross-validation]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run comprehensive release validation
+        run: |
+          # Run all tests with strict settings
+          cargo test --all-features --workspace --release
+
+          # Run security audit
+          cargo audit
+
+          # Check for outdated dependencies
+          cargo outdated --exit-code 1
+
+          # Validate documentation
+          cargo doc --all-features --no-deps
+
+          # Run additional release checks
+          cargo check --all-targets --all-features
+
+      - name: Generate release validation report
+        run: |
+          echo "# Release Validation Report" > release-validation.md
+          echo "## Test Results" >> release-validation.md
+          echo "- All tests passed: ✅" >> release-validation.md
+          echo "- Security audit: ✅" >> release-validation.md
+          echo "- Dependencies up to date: ✅" >> release-validation.md
+          echo "- Documentation builds: ✅" >> release-validation.md
+
+      - name: Upload release validation report
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-validation-report
+          path: release-validation.md
+
+# Workflow-level configuration
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
