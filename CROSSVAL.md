@@ -6,12 +6,12 @@ This document describes how to run cross-validation tests between BitNet.rs and 
 
 ```bash
 # One-command cross-validation (fetches, builds, and tests)
-./scripts/crossval.sh /path/to/model.gguf
+./scripts/test_parity.sh  # Will guide you through model download if needed
 
 # Or set environment and run tests directly
 export CROSSVAL_GGUF=/path/to/model.gguf
 export BITNET_CPP_DIR=$HOME/.cache/bitnet_cpp
-cargo test --features crossval
+cargo test --features crossval -p bitnet-crossval
 ```
 
 ## Prerequisites
@@ -22,11 +22,36 @@ cargo test --features crossval
 - Git with submodule support
 - bindgen dependencies (libclang)
 - ~2GB disk space for C++ build
-- A BitNet GGUF model file
+- A BitNet GGUF model file (see below for download instructions)
 
 ## Setup Process
 
-### 1. Fetch and Build Microsoft BitNet C++
+### 1. Download the BitNet Model
+
+Download the official Microsoft BitNet b1.58 2B model (1.19 GB):
+
+**Option 1: Using huggingface-cli (recommended)**
+```bash
+pip install -U "huggingface_hub[cli]"
+huggingface-cli download microsoft/bitnet-b1.58-2B-4T-gguf \
+  --include "ggml-model-i2_s.gguf" \
+  --local-dir ./models/bitnet-b1.58-2B-4T-gguf
+```
+
+**Option 2: Using git-lfs**
+```bash
+git lfs install
+git clone https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf models/bitnet-b1.58-2B-4T-gguf
+```
+
+**Option 3: Direct download**
+```bash
+mkdir -p models/bitnet-b1.58-2B-4T-gguf
+curl -L -o models/bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/ggml-model-i2_s.gguf
+```
+
+### 2. Fetch and Build Microsoft BitNet C++
 
 The fetch script clones the official Microsoft BitNet repository and builds it:
 
@@ -46,7 +71,7 @@ This script:
 
 The C++ implementation is cached at `$HOME/.cache/bitnet_cpp`.
 
-### 2. Set Environment Variables
+### 3. Set Environment Variables
 
 ```bash
 # Point to C++ implementation
@@ -61,11 +86,11 @@ export OPENBLAS_NUM_THREADS=1
 # Library paths (optional with RPATH support)
 export LD_LIBRARY_PATH=$BITNET_CPP_DIR/build/3rdparty/llama.cpp/src:$LD_LIBRARY_PATH
 
-# Your test model
-export CROSSVAL_GGUF=/path/to/model.gguf
+# Your test model (using the downloaded model)
+export CROSSVAL_GGUF=$(pwd)/models/bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 ```
 
-### 3. Build Rust with Cross-Validation
+### 4. Build Rust with Cross-Validation
 
 ```bash
 # Build the crossval crate with C++ support

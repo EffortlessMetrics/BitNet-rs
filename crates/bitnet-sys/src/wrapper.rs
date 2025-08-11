@@ -219,9 +219,9 @@ impl Context {
         // Create batch
         let mut batch = unsafe { llama_batch_init(tokens.len() as i32, 0, 1) };
         
-        // Create seq_id array with proper type
-        let seq_ids: [llama_seq_id; 1] = [0];
-        let seq_ids_ptr = seq_ids.as_ptr();
+        // Prepare seq_ids on the stack (more efficient than heap allocation)
+        let mut seq_ids: [llama_seq_id; 1] = [0];
+        let seq_ids_ptr = seq_ids.as_mut_ptr();
         
         // Populate the batch fields directly (no llama_batch_add in this version)
         unsafe {
@@ -231,14 +231,11 @@ impl Context {
                 *batch.pos.add(i) = n_past + i as i32;
                 *batch.n_seq_id.add(i) = 1;
                 
-                // Set seq_id for this token (points to our seq_ids array)
-                let seq_id_array = std::alloc::alloc(
-                    std::alloc::Layout::array::<llama_seq_id>(1).unwrap()
-                ) as *mut llama_seq_id;
-                *seq_id_array = 0;
-                *batch.seq_id.add(i) = seq_id_array;
+                // Point to the same stack-allocated seq_id array for all tokens
+                // This is safe because the array lives through the llama_decode call
+                *batch.seq_id.add(i) = seq_ids_ptr;
                 
-                // Request logits for all tokens
+                // Request logits for all tokens (could optimize to only last token if needed)
                 *batch.logits.add(i) = 1;
             }
             batch.n_tokens = tokens.len() as i32;
@@ -248,19 +245,6 @@ impl Context {
         let result = unsafe {
             llama_decode(self.ptr, batch)
         };
-        
-        // Clean up allocated seq_id arrays
-        unsafe {
-            for i in 0..tokens.len() {
-                let seq_id_ptr = *batch.seq_id.add(i);
-                if !seq_id_ptr.is_null() {
-                    std::alloc::dealloc(
-                        seq_id_ptr as *mut u8,
-                        std::alloc::Layout::array::<llama_seq_id>(1).unwrap()
-                    );
-                }
-            }
-        }
         
         // Free the batch
         unsafe {
