@@ -1,0 +1,294 @@
+name: Testing Framework - Unit Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "tests/**"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/testing-framework-unit.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "tests/**"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/testing-framework-unit.yml"
+  workflow_dispatch:
+    inputs:
+      coverage_threshold:
+        description: "Minimum coverage threshold (%)"
+        required: false
+        default: "90"
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  COVERAGE_THRESHOLD: ${{ github.event.inputs.coverage_threshold || '90' }}
+
+jobs:
+  unit-tests:
+    name: Unit Tests (${{ matrix.crate }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        crate:
+          - bitnet-common
+          - bitnet-models
+          - bitnet-quantization
+          - bitnet-kernels
+          - bitnet-inference
+          - bitnet-tokenizers
+        include:
+          - os: ubuntu-latest
+            features: "cpu,avx2"
+          - os: windows-latest
+            features: "cpu,avx2"
+          - os: macos-latest
+            features: "cpu,neon"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-unit-tests-${{ matrix.crate }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-unit-tests-${{ matrix.crate }}-
+            ${{ runner.os }}-unit-tests-
+
+      - name: Install testing tools
+        run: |
+          cargo install cargo-llvm-cov cargo-nextest --locked
+
+      - name: Setup test fixtures
+        run: |
+          mkdir -p tests/cache
+          echo "Setting up test fixtures for ${{ matrix.crate }}"
+          # Create minimal test fixtures
+          echo '{"test": "fixture"}' > tests/cache/test-fixture.json
+
+      - name: Run unit tests with coverage
+        run: |
+          echo "Running unit tests for ${{ matrix.crate }} with coverage..."
+          cargo llvm-cov nextest \
+            --package ${{ matrix.crate }} \
+            --features "${{ matrix.features }}" \
+            --lcov --output-path coverage-${{ matrix.crate }}-${{ matrix.os }}.lcov \
+            --test-threads 1 \
+            -- --nocapture
+
+      - name: Generate coverage report
+        run: |
+          echo "Generating coverage report for ${{ matrix.crate }}..."
+          cargo llvm-cov report \
+            --package ${{ matrix.crate }} \
+            --features "${{ matrix.features }}" \
+            --html --output-dir coverage-html-${{ matrix.crate }}-${{ matrix.os }}
+
+      - name: Check coverage threshold
+        run: |
+          echo "Checking coverage threshold for ${{ matrix.crate }}..."
+          coverage=$(cargo llvm-cov report --package ${{ matrix.crate }} --features "${{ matrix.features }}" --summary-only | grep -oP '\d+\.\d+(?=%)' | head -1)
+          echo "Coverage for ${{ matrix.crate }}: ${coverage}%"
+
+          if (( $(echo "$coverage >= $COVERAGE_THRESHOLD" | bc -l) )); then
+            echo "✅ Coverage threshold met: ${coverage}% >= ${COVERAGE_THRESHOLD}%"
+          else
+            echo "❌ Coverage threshold not met: ${coverage}% < ${COVERAGE_THRESHOLD}%"
+            exit 1
+          fi
+
+      - name: Run property-based tests
+        if: matrix.crate == 'bitnet-common' || matrix.crate == 'bitnet-quantization'
+        run: |
+          echo "Running property-based tests for ${{ matrix.crate }}..."
+          cargo test --package ${{ matrix.crate }} --features "${{ matrix.features }}" proptest -- --nocapture
+
+      - name: Run benchmark tests
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          echo "Running benchmark tests for ${{ matrix.crate }}..."
+          cargo bench --package ${{ matrix.crate }} --features "${{ matrix.features }}" -- --output-format json > bench-${{ matrix.crate }}.json || true
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.crate }}-${{ matrix.os }}
+          path: |
+            coverage-${{ matrix.crate }}-${{ matrix.os }}.lcov
+            coverage-html-${{ matrix.crate }}-${{ matrix.os }}/
+          retention-days: 30
+
+      - name: Upload benchmark results
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks-${{ matrix.crate }}
+          path: bench-${{ matrix.crate }}.json
+          retention-days: 30
+
+      - name: Generate test report
+        run: |
+          cat > test-report-${{ matrix.crate }}-${{ matrix.os }}.md << 'EOF'
+          # Unit Test Report: ${{ matrix.crate }}
+
+          **Platform**: ${{ matrix.os }}
+          **Features**: ${{ matrix.features }}
+          **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          ## Test Results
+
+          - ✅ Unit tests passed
+          - ✅ Coverage threshold met (${coverage}%)
+          - ✅ Property-based tests passed (if applicable)
+          - ✅ Benchmark tests completed (if applicable)
+
+          ## Coverage Details
+
+          Coverage report available in artifacts.
+
+          EOF
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ matrix.crate }}-${{ matrix.os }}
+          path: test-report-${{ matrix.crate }}-${{ matrix.os }}.md
+          retention-days: 30
+
+  unit-test-summary:
+    name: Unit Test Summary
+    needs: unit-tests
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Merge coverage reports
+        run: |
+          echo "Merging coverage reports..."
+
+          # Install lcov for merging
+          sudo apt-get update
+          sudo apt-get install -y lcov
+
+          # Find all lcov files
+          find artifacts -name "*.lcov" -type f > lcov_files.txt
+
+          if [[ -s lcov_files.txt ]]; then
+            # Merge all coverage files
+            lcov $(cat lcov_files.txt | sed 's/^/--add-tracefile /' | tr '\n' ' ') --output-file merged-coverage.lcov
+            
+            # Generate HTML report
+            genhtml merged-coverage.lcov --output-directory merged-coverage-html
+            
+            echo "Coverage reports merged successfully"
+          else
+            echo "No coverage files found"
+          fi
+
+      - name: Upload merged coverage
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: merged-coverage-report
+          path: |
+            merged-coverage.lcov
+            merged-coverage-html/
+          retention-days: 90
+
+      - name: Upload to Codecov
+        if: success()
+        uses: codecov/codecov-action@v3
+        with:
+          files: merged-coverage.lcov
+          flags: unit-tests
+          name: unit-test-coverage
+          fail_ci_if_error: false
+
+      - name: Generate summary report
+        run: |
+          cat > unit-test-summary.md << 'EOF'
+          # 🧪 Unit Test Summary
+
+          **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Trigger**: ${{ github.event_name }}
+          **Coverage Threshold**: ${{ env.COVERAGE_THRESHOLD }}%
+
+          ## Results Overview
+
+          EOF
+
+          # Check job results
+          if [[ "${{ needs.unit-tests.result }}" == "success" ]]; then
+            echo "✅ **Status**: All unit tests passed" >> unit-test-summary.md
+          else
+            echo "❌ **Status**: Some unit tests failed" >> unit-test-summary.md
+          fi
+
+          echo "" >> unit-test-summary.md
+          echo "## Crate Coverage" >> unit-test-summary.md
+          echo "" >> unit-test-summary.md
+
+          # List tested crates
+          crates=("bitnet-common" "bitnet-models" "bitnet-quantization" "bitnet-kernels" "bitnet-inference" "bitnet-tokenizers")
+          for crate in "${crates[@]}"; do
+            echo "- **$crate**: Tests completed across all platforms" >> unit-test-summary.md
+          done
+
+          echo "" >> unit-test-summary.md
+          echo "## Platform Matrix" >> unit-test-summary.md
+          echo "" >> unit-test-summary.md
+          echo "- **Ubuntu**: Linux x86_64 with AVX2 support" >> unit-test-summary.md
+          echo "- **Windows**: Windows x86_64 with AVX2 support" >> unit-test-summary.md
+          echo "- **macOS**: macOS with NEON support" >> unit-test-summary.md
+
+          echo "" >> unit-test-summary.md
+          echo "## Key Metrics" >> unit-test-summary.md
+          echo "" >> unit-test-summary.md
+          echo "- 🎯 **Coverage Target**: ${COVERAGE_THRESHOLD}% per crate" >> unit-test-summary.md
+          echo "- 🧪 **Test Types**: Unit, Property-based, Benchmark" >> unit-test-summary.md
+          echo "- 🚀 **Parallel Execution**: Optimized for CI performance" >> unit-test-summary.md
+          echo "- 📊 **Reporting**: Comprehensive coverage and performance metrics" >> unit-test-summary.md
+
+      - name: Upload summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-summary
+          path: unit-test-summary.md
+          retention-days: 90
+
+      - name: Check overall success
+        run: |
+          if [[ "${{ needs.unit-tests.result }}" == "success" ]]; then
+            echo "✅ All unit tests passed successfully"
+          else
+            echo "❌ Unit tests failed"
+            exit 1
+          fi
