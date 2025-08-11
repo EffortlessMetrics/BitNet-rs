@@ -51,6 +51,22 @@ cargo llvm-cov --workspace --features cpu --html
 
 ### Development Tools (xtask)
 ```bash
+# Download BitNet GGUF model from Hugging Face (supports resumable downloads)
+cargo xtask download-model  # Downloads default model
+cargo xtask download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf
+
+# Fetch and build Microsoft BitNet C++ (for cross-validation)
+cargo xtask fetch-cpp  # Uses default tag b1-65-ggml
+cargo xtask fetch-cpp --tag b1-65-ggml --force --clean
+
+# Run deterministic cross-validation tests
+cargo xtask crossval  # Uses default model path
+cargo xtask crossval --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+
+# Full cross-validation workflow (download + fetch + test)
+cargo xtask full-crossval  # Runs all three steps
+cargo xtask full-crossval --force  # Force redownload/rebuild
+
 # Generate test fixtures
 cargo xtask gen-fixtures --size small --output crossval/fixtures/
 

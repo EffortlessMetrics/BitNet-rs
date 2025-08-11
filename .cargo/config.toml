@@ -13,11 +13,14 @@ BITNET_CPP_PATH = { value = "", relative = false }
 
 [alias]
 # Convenient aliases for common tasks
+xtask = ["run", "-q", "--package", "xtask", "--"]
 crossval = "test --features crossval"
 crossval-bench = "bench --features crossval"
 check-all = "check --workspace --all-targets --all-features"
 test-all = "test --workspace --all-targets --all-features"
 doc-all = "doc --workspace --all-features --no-deps"
+quality = ["fmt", "--all", "--", "--check"]
+coverage = "llvm-cov --workspace --features cpu --html"
 
 # Cross-validation specific aliases
 fetch-cpp = "run --bin fetch_bitnet_cpp"

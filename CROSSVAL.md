@@ -5,7 +5,15 @@ This document describes how to run cross-validation tests between BitNet.rs and 
 ## Quick Start
 
 ```bash
-# One-command cross-validation (fetches, builds, and tests)
+# One-command cross-validation using xtask (recommended)
+cargo xtask full-crossval  # Downloads model, fetches C++, runs tests
+
+# Or run individual steps:
+cargo xtask download-model  # Download BitNet GGUF model
+cargo xtask fetch-cpp       # Fetch and build C++ implementation  
+cargo xtask crossval        # Run cross-validation tests
+
+# Legacy script approach (still works)
 ./scripts/test_parity.sh  # Will guide you through model download if needed
 
 # Or set environment and run tests directly

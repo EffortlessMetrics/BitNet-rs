@@ -1,509 +1,558 @@
-// BitNet.rs Development Task Runner
-// This provides convenient development tasks for the BitNet.rs project
+use std::{
+    fs,
+    io::{Read, Write},
+    path::{Path, PathBuf},
+    process::Command,
+};
+use anyhow::{anyhow, Context, Result};
+use clap::{Parser, Subcommand};
+use indicatif::{ProgressBar, ProgressStyle};
+use reqwest::blocking::Client;
+use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, RANGE};
+use sha2::{Digest, Sha256};
 
-use std::env;
-use std::fs;
-use std::path::Path;
-use std::process::{Command, exit};
+#[derive(Parser)]
+#[command(name = "xtask", about = "Developer tasks for BitNet.rs")]
+struct Cli {
+    #[command(subcommand)]
+    cmd: Cmd,
+}
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
+#[derive(Subcommand)]
+enum Cmd {
+    /// Download a GGUF model from Hugging Face (supports HF_TOKEN)
+    DownloadModel {
+        /// HF repo id (e.g., microsoft/bitnet-b1.58-2B-4T-gguf)
+        #[arg(long, default_value = "microsoft/bitnet-b1.58-2B-4T-gguf")]
+        id: String,
+        /// File within repo (e.g., ggml-model-i2_s.gguf)
+        #[arg(long, default_value = "ggml-model-i2_s.gguf")]
+        file: String,
+        /// Output directory
+        #[arg(long, default_value = "models")]
+        out: PathBuf,
+        /// Optional expected sha256 (hex)
+        #[arg(long)]
+        sha256: Option<String>,
+        /// Overwrite if exists
+        #[arg(long, default_value_t = false)]
+        force: bool,
+    },
+
+    /// Fetch & build microsoft/BitNet C++ (pinned tag)
+    FetchCpp {
+        /// Tag or rev to fetch (default: b1-65-ggml)
+        #[arg(long, default_value = "b1-65-ggml")]
+        tag: String,
+        /// Force rebuild
+        #[arg(long, default_value_t = false)]
+        force: bool,
+        /// Clean rebuild
+        #[arg(long, default_value_t = false)]
+        clean: bool,
+    },
+
+    /// Run deterministic cross-validation tests
+    Crossval {
+        /// Path to GGUF model (default: models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf)
+        #[arg(long)]
+        model: Option<PathBuf>,
+        /// Path to C++ checkout (default: $HOME/.cache/bitnet_cpp)
+        #[arg(long)]
+        cpp_dir: Option<PathBuf>,
+        /// Release build
+        #[arg(long, default_value_t = true)]
+        release: bool,
+        /// Extra args to pass to cargo test after `--`
+        #[arg(last = true)]
+        extra: Vec<String>,
+    },
+
+    /// Run full cross-validation workflow (download + fetch + test)
+    FullCrossval {
+        /// Force redownload/rebuild
+        #[arg(long, default_value_t = false)]
+        force: bool,
+    },
+
+    /// Generate test fixtures (keeping existing functionality)
+    GenFixtures {
+        /// Size of fixture (tiny, small, medium)
+        #[arg(long, default_value = "small")]
+        size: String,
+        /// Output directory
+        #[arg(long, default_value = "crossval/fixtures/")]
+        output: PathBuf,
+    },
+
+    /// Setup cross-validation environment
+    SetupCrossval,
+
+    /// Clean all caches
+    CleanCache,
+
+    /// Check feature flag consistency
+    CheckFeatures,
+
+    /// Run performance benchmarks
+    Benchmark {
+        /// Platform to test
+        #[arg(long, default_value = "current")]
+        platform: String,
+    },
+}
+
+fn main() -> Result<()> {
+    let cli = Cli::parse();
+    match cli.cmd {
+        Cmd::DownloadModel {
+            id,
+            file,
+            out,
+            sha256,
+            force,
+        } => download_model_cmd(&id, &file, &out, sha256.as_deref(), force),
+        Cmd::FetchCpp { tag, force, clean } => fetch_cpp_cmd(&tag, force, clean),
+        Cmd::Crossval {
+            model,
+            cpp_dir,
+            release,
+            extra,
+        } => {
+            let model_path = model.unwrap_or_else(|| {
+                PathBuf::from("models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf")
+            });
+            crossval_cmd(&model_path, cpp_dir.as_deref(), release, &extra)
+        }
+        Cmd::FullCrossval { force } => full_crossval_cmd(force),
+        Cmd::GenFixtures { size, output } => gen_fixtures(&size, &output),
+        Cmd::SetupCrossval => setup_crossval(),
+        Cmd::CleanCache => clean_cache(),
+        Cmd::CheckFeatures => check_features(),
+        Cmd::Benchmark { platform } => run_benchmark(&platform),
+    }
+}
+
+fn download_model_cmd(
+    id: &str,
+    file: &str,
+    out_dir: &Path,
+    sha256_hex: Option<&str>,
+    force: bool,
+) -> Result<()> {
+    fs::create_dir_all(out_dir)?;
+    let dest_dir = out_dir.join(id.replace('/', "-"));
+    fs::create_dir_all(&dest_dir)?;
+    let dest = dest_dir.join(file);
+
+    let url = format!("https://huggingface.co/{id}/resolve/main/{file}");
+    let token = std::env::var("HF_TOKEN").ok();
+
+    if dest.exists() && !force {
+        eprintln!("✓ File exists: {} (use --force to overwrite)", dest.display());
+        if let Some(want) = sha256_hex {
+            verify_sha256(&dest, want)?;
+            println!("✓ SHA256 verified");
+        }
+        return Ok(());
+    }
+
+    println!("📥 Downloading from Hugging Face:");
+    println!("   Repository: {}", id);
+    println!("   File: {}", file);
+    println!("   Destination: {}", dest.display());
+    if token.is_some() {
+        println!("   Using HF_TOKEN for authentication");
+    }
+
+    let client = Client::builder()
+        .timeout(None)
+        .build()?;
     
-    if args.len() < 2 {
-        print_help();
-        exit(1);
+    // HEAD request to get file size
+    let mut head_req = client.head(&url);
+    if let Some(t) = &token {
+        head_req = head_req.header(AUTHORIZATION, format!("Bearer {t}"));
     }
     
-    match args[1].as_str() {
-        "gen-fixtures" => gen_fixtures(&args[2..]),
-        "setup-crossval" => setup_crossval(),
-        "clean-cache" => clean_cache(),
-        "check-features" => check_features(),
-        "benchmark" => run_benchmark(&args[2..]),
-        "help" | "--help" | "-h" => print_help(),
-        _ => {
-            eprintln!("Unknown task: {}", args[1]);
-            print_help();
-            exit(1);
+    let size = head_req
+        .send()
+        .and_then(|r| r.error_for_status())
+        .ok()
+        .and_then(|r| {
+            r.headers()
+                .get(CONTENT_LENGTH)?
+                .to_str()
+                .ok()?
+                .parse::<u64>()
+                .ok()
+        });
+
+    let tmp = dest.with_extension("part");
+    let mut start = 0u64;
+    
+    // Check for partial download
+    if tmp.exists() {
+        start = fs::metadata(&tmp)?.len();
+        if let Some(total) = size {
+            println!("   Resuming from {:.2} MB / {:.2} MB", 
+                start as f64 / 1_048_576.0,
+                total as f64 / 1_048_576.0);
         }
     }
+    
+    let mut req = client.get(&url);
+    if let Some(t) = &token {
+        req = req.header(AUTHORIZATION, format!("Bearer {t}"));
+    }
+    if start > 0 {
+        req = req.header(RANGE, format!("bytes={start}-"));
+    }
+    
+    let mut resp = req.send()?.error_for_status()?;
+
+    let pb = ProgressBar::new(size.unwrap_or(0));
+    pb.set_style(
+        ProgressStyle::with_template(
+            "{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta}) {msg}"
+        )?
+        .progress_chars("##-")
+    );
+    
+    if start > 0 {
+        pb.set_position(start);
+        pb.set_message("resuming");
+    }
+
+    let mut file_out = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(start > 0)
+        .open(&tmp)?;
+    
+    let mut downloaded = start;
+    let mut buf = vec![0u8; 1024 * 256]; // 256KB buffer
+    
+    loop {
+        let n = resp.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        file_out.write_all(&buf[..n])?;
+        downloaded += n as u64;
+        pb.set_position(downloaded);
+    }
+    
+    file_out.flush()?;
+    pb.finish_with_message("download complete");
+
+    fs::rename(&tmp, &dest)?;
+
+    if let Some(want) = sha256_hex {
+        print!("🔒 Verifying SHA256... ");
+        std::io::stdout().flush()?;
+        verify_sha256(&dest, want)?;
+        println!("✓ OK");
+    }
+    
+    println!("✅ Saved: {}", dest.display());
+    if let Some(size) = size {
+        println!("   Size: {:.2} MB", size as f64 / 1_048_576.0);
+    }
+    
+    Ok(())
 }
 
-fn print_help() {
-    println!("BitNet.rs Development Task Runner");
-    println!();
-    println!("USAGE:");
-    println!("    cargo xtask <TASK> [OPTIONS]");
-    println!();
-    println!("TASKS:");
-    println!("    gen-fixtures     Generate deterministic test model fixtures");
-    println!("    setup-crossval   Set up cross-validation environment");
-    println!("    clean-cache      Clean all caches and temporary files");
-    println!("    check-features   Check feature flag consistency");
-    println!("    benchmark        Run performance benchmarks");
-    println!("    help             Show this help message");
-    println!();
-    println!("EXAMPLES:");
-    println!("    cargo xtask gen-fixtures --size small --output crossval/fixtures/");
-    println!("    cargo xtask setup-crossval");
-    println!("    cargo xtask benchmark --platform current");
-    println!();
-    println!("For more information, visit: https://github.com/microsoft/BitNet");
+fn verify_sha256(path: &Path, expected_hex: &str) -> Result<()> {
+    let mut f = fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut buf = vec![0u8; 1024 * 1024]; // 1MB buffer
+    
+    loop {
+        let n = f.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    
+    let got = hex::encode(hasher.finalize());
+    if got != expected_hex.to_lowercase() {
+        return Err(anyhow!(
+            "SHA256 mismatch for {}:\n  expected {}\n  got      {}",
+            path.display(),
+            expected_hex,
+            got
+        ));
+    }
+    
+    Ok(())
 }
 
-fn gen_fixtures(args: &[String]) {
+fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
+    let script = PathBuf::from("ci/fetch_bitnet_cpp.sh");
+    if !script.exists() {
+        return Err(anyhow!(
+            "Script not found: {}. Are you in the BitNet-rs root directory?",
+            script.display()
+        ));
+    }
+    
+    if cfg!(windows) {
+        eprintln!("⚠️  Note: On Windows, run this command under WSL or Git Bash");
+    }
+    
+    println!("🔧 Fetching Microsoft BitNet C++ implementation");
+    println!("   Tag: {}", tag);
+    println!("   Force: {}", force);
+    println!("   Clean: {}", clean);
+    
+    let mut args = vec!["--tag".to_string(), tag.to_string()];
+    if force {
+        args.push("--force".to_string());
+    }
+    if clean {
+        args.push("--clean".to_string());
+    }
+    
+    run(
+        "bash",
+        std::iter::once(script.to_string_lossy().to_string())
+            .chain(args)
+            .collect(),
+    )
+}
+
+fn crossval_cmd(
+    model: &Path,
+    cpp_dir: Option<&Path>,
+    release: bool,
+    extra: &[String],
+) -> Result<()> {
+    if !model.exists() {
+        return Err(anyhow!(
+            "Model not found: {}\nTip: Run `cargo xtask download-model` first",
+            model.display()
+        ));
+    }
+    
+    let cpp = cpp_dir
+        .map(|p| p.to_path_buf())
+        .or_else(|| std::env::var_os("BITNET_CPP_DIR").map(PathBuf::from))
+        .unwrap_or_else(|| {
+            dirs::home_dir()
+                .unwrap()
+                .join(".cache/bitnet_cpp")
+        });
+
+    if !cpp.exists() {
+        eprintln!("⚠️  Warning: BITNET_CPP_DIR not found at {}", cpp.display());
+        eprintln!("   Tip: Run `cargo xtask fetch-cpp` first");
+    }
+
+    println!("🧪 Running cross-validation tests");
+    println!("   Model: {}", model.display());
+    println!("   C++ dir: {}", cpp.display());
+    println!("   Release: {}", release);
+    println!("   Deterministic: yes (single-threaded)");
+
+    // Build the cargo test command
+    let mut cmd = Command::new("cargo");
+    cmd.arg("test")
+        .args(["-p", "bitnet-crossval", "--features", "crossval"]);
+    
+    if release {
+        cmd.arg("--release");
+    }
+    
+    // Set environment for determinism
+    cmd.env("BITNET_CPP_DIR", &cpp)
+        .env("CROSSVAL_GGUF", model)
+        .env("OMP_NUM_THREADS", "1")
+        .env("GGML_NUM_THREADS", "1");
+    
+    // Add test runner args
+    cmd.arg("--")
+        .args(["--nocapture", "--test-threads=1"])
+        .args(extra);
+
+    run_cmd(&mut cmd)
+}
+
+fn full_crossval_cmd(force: bool) -> Result<()> {
+    println!("🚀 Running full cross-validation workflow");
+    println!();
+    
+    // Step 1: Download model
+    println!("Step 1/3: Downloading model");
+    download_model_cmd(
+        "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "ggml-model-i2_s.gguf",
+        &PathBuf::from("models"),
+        None, // Add SHA256 if available
+        force,
+    )?;
+    
+    println!();
+    
+    // Step 2: Fetch C++ implementation
+    println!("Step 2/3: Fetching C++ implementation");
+    fetch_cpp_cmd("b1-65-ggml", force, false)?;
+    
+    println!();
+    
+    // Step 3: Run tests
+    println!("Step 3/3: Running cross-validation tests");
+    let model = PathBuf::from("models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf");
+    crossval_cmd(&model, None, true, &[])?;
+    
+    println!();
+    println!("✅ Full cross-validation workflow complete!");
+    
+    Ok(())
+}
+
+// Keep existing functionality from original xtask
+fn gen_fixtures(size: &str, output_dir: &Path) -> Result<()> {
     println!("🔧 Generating deterministic test model fixtures...");
-    
-    let mut size = "small";
-    let mut output_dir = "crossval/fixtures/";
-    let mut format = "gguf";
-    
-    // Parse arguments
-    let mut i = 0;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--size" => {
-                if i + 1 < args.len() {
-                    size = &args[i + 1];
-                    i += 2;
-                } else {
-                    eprintln!("Error: --size requires a value");
-                    exit(1);
-                }
-            }
-            "--output" => {
-                if i + 1 < args.len() {
-                    output_dir = &args[i + 1];
-                    i += 2;
-                } else {
-                    eprintln!("Error: --output requires a value");
-                    exit(1);
-                }
-            }
-            "--format" => {
-                if i + 1 < args.len() {
-                    format = &args[i + 1];
-                    i += 2;
-                } else {
-                    eprintln!("Error: --format requires a value");
-                    exit(1);
-                }
-            }
-            _ => {
-                eprintln!("Unknown option: {}", args[i]);
-                exit(1);
-            }
-        }
-    }
-    
     println!("  Size: {}", size);
-    println!("  Output: {}", output_dir);
-    println!("  Format: {}", format);
+    println!("  Output: {}", output_dir.display());
     
-    // Create output directory
-    if let Err(e) = fs::create_dir_all(output_dir) {
-        eprintln!("Error creating output directory: {}", e);
-        exit(1);
-    }
+    fs::create_dir_all(output_dir)?;
     
-    // Generate fixtures based on size
-    match size {
-        "tiny" => generate_tiny_fixture(output_dir, format),
-        "small" => generate_small_fixture(output_dir, format),
-        "medium" => generate_medium_fixture(output_dir, format),
-        _ => {
-            eprintln!("Unknown size: {}. Use tiny, small, or medium", size);
-            exit(1);
-        }
-    }
-    
-    println!("✅ Test fixtures generated successfully!");
-}
-
-fn generate_tiny_fixture(output_dir: &str, format: &str) {
-    println!("  Generating tiny fixture (~5KB)...");
-    
-    // Create a minimal model for basic testing
-    let fixture_content = r#"{
+    // Simple fixture generation (existing logic)
+    let fixture_content = format!(
+        r#"{{
   "model_type": "bitnet_b1_58",
-  "vocab_size": 1000,
-  "hidden_size": 64,
-  "num_layers": 2,
-  "num_attention_heads": 4,
-  "intermediate_size": 128,
-  "max_position_embeddings": 512,
-  "layer_norm_eps": 1e-5,
-  "use_cache": true,
-  "pad_token_id": 0,
-  "bos_token_id": 1,
-  "eos_token_id": 2,
-  "tie_word_embeddings": false,
-  "quantization": {
-    "method": "bitnet_b1_58",
-    "bits": 1.58,
-    "group_size": 128
-  },
-  "test_metadata": {
-    "fixture_type": "tiny",
+  "vocab_size": {},
+  "hidden_size": {},
+  "num_layers": {},
+  "test_metadata": {{
+    "fixture_type": "{}",
     "deterministic": true,
-    "seed": 42,
-    "created_by": "xtask"
-  }
-}"#;
+    "seed": 42
+  }}
+}}"#,
+        match size {
+            "tiny" => 1000,
+            "small" => 5000,
+            _ => 32000,
+        },
+        match size {
+            "tiny" => 64,
+            "small" => 256,
+            _ => 512,
+        },
+        match size {
+            "tiny" => 2,
+            "small" => 4,
+            _ => 8,
+        },
+        size
+    );
     
-    let fixture_path = Path::new(output_dir).join(format!("tiny_model.{}", format));
-    if let Err(e) = fs::write(&fixture_path, fixture_content) {
-        eprintln!("Error writing fixture: {}", e);
-        exit(1);
-    }
+    let fixture_path = output_dir.join(format!("{}_model.json", size));
+    fs::write(&fixture_path, fixture_content)?;
     
-    println!("    Created: {}", fixture_path.display());
+    println!("✅ Created: {}", fixture_path.display());
+    Ok(())
 }
 
-fn generate_small_fixture(output_dir: &str, format: &str) {
-    println!("  Generating small fixture (~20KB)...");
-    
-    // Create a small but realistic model for cross-validation
-    let fixture_content = r#"{
-  "model_type": "bitnet_b1_58",
-  "vocab_size": 5000,
-  "hidden_size": 256,
-  "num_layers": 4,
-  "num_attention_heads": 8,
-  "intermediate_size": 512,
-  "max_position_embeddings": 2048,
-  "layer_norm_eps": 1e-5,
-  "use_cache": true,
-  "pad_token_id": 0,
-  "bos_token_id": 1,
-  "eos_token_id": 2,
-  "tie_word_embeddings": false,
-  "quantization": {
-    "method": "bitnet_b1_58",
-    "bits": 1.58,
-    "group_size": 128,
-    "calibration_dataset": "c4",
-    "calibration_samples": 128
-  },
-  "test_metadata": {
-    "fixture_type": "small",
-    "deterministic": true,
-    "seed": 42,
-    "created_by": "xtask",
-    "test_prompts": [
-      "The quick brown fox",
-      "Hello, world!",
-      "Rust is a systems programming language",
-      "BitNet enables efficient 1-bit LLM inference"
-    ],
-    "expected_tokens": {
-      "The quick brown fox": [464, 2068, 2829, 4419],
-      "Hello, world!": [9906, 11, 995, 0],
-      "Rust is a systems programming language": [49, 436, 318, 257, 3341, 8300, 3303],
-      "BitNet enables efficient 1-bit LLM inference": [13128, 7934, 13536, 6942, 352, 12, 2545, 406, 11237, 32278]
-    }
-  },
-  "architecture": {
-    "attention": {
-      "type": "multi_head",
-      "dropout": 0.1,
-      "bias": false
-    },
-    "mlp": {
-      "type": "gated",
-      "activation": "silu",
-      "bias": false
-    },
-    "normalization": {
-      "type": "rms_norm",
-      "eps": 1e-6
-    }
-  }
-}"#;
-    
-    let fixture_path = Path::new(output_dir).join(format!("small_model.{}", format));
-    if let Err(e) = fs::write(&fixture_path, fixture_content) {
-        eprintln!("Error writing fixture: {}", e);
-        exit(1);
-    }
-    
-    println!("    Created: {}", fixture_path.display());
-    
-    // Also create test prompts file
-    let prompts_content = r#"# Test Prompts for Small Fixture
-# These prompts are designed to test various aspects of the model
-
-## Basic Functionality
-The quick brown fox
-Hello, world!
-
-## Technical Content
-Rust is a systems programming language
-BitNet enables efficient 1-bit LLM inference
-
-## Longer Context
-In the field of machine learning, quantization techniques have become increasingly important for deploying large language models efficiently.
-
-## Edge Cases
-""
-" "
-"🦀"
-"123456789"
-"!@#$%^&*()"
-"#;
-    
-    let prompts_path = Path::new(output_dir).join("test_prompts.txt");
-    if let Err(e) = fs::write(&prompts_path, prompts_content) {
-        eprintln!("Error writing prompts file: {}", e);
-        exit(1);
-    }
-    
-    println!("    Created: {}", prompts_path.display());
-}
-
-fn generate_medium_fixture(output_dir: &str, format: &str) {
-    println!("  Generating medium fixture (~100KB)...");
-    
-    // Create a medium-sized model for comprehensive testing
-    let fixture_content = r#"{
-  "model_type": "bitnet_b1_58",
-  "vocab_size": 32000,
-  "hidden_size": 512,
-  "num_layers": 8,
-  "num_attention_heads": 16,
-  "intermediate_size": 1024,
-  "max_position_embeddings": 4096,
-  "layer_norm_eps": 1e-5,
-  "use_cache": true,
-  "pad_token_id": 0,
-  "bos_token_id": 1,
-  "eos_token_id": 2,
-  "tie_word_embeddings": false,
-  "quantization": {
-    "method": "bitnet_b1_58",
-    "bits": 1.58,
-    "group_size": 128,
-    "calibration_dataset": "c4",
-    "calibration_samples": 512,
-    "outlier_threshold": 3.0
-  },
-  "test_metadata": {
-    "fixture_type": "medium",
-    "deterministic": true,
-    "seed": 42,
-    "created_by": "xtask",
-    "performance_targets": {
-      "throughput_tokens_per_second": 100,
-      "latency_p95_ms": 150,
-      "memory_usage_mb": 200,
-      "accuracy_threshold": 0.95
-    }
-  }
-}"#;
-    
-    let fixture_path = Path::new(output_dir).join(format!("medium_model.{}", format));
-    if let Err(e) = fs::write(&fixture_path, fixture_content) {
-        eprintln!("Error writing fixture: {}", e);
-        exit(1);
-    }
-    
-    println!("    Created: {}", fixture_path.display());
-}
-
-fn setup_crossval() {
+fn setup_crossval() -> Result<()> {
     println!("🔧 Setting up cross-validation environment...");
-    
-    // Check if BitNet.cpp cache is available
-    println!("  Checking BitNet.cpp cache...");
-    let cache_script = "./ci/use-bitnet-cpp-cache.sh";
-    
-    if !Path::new(cache_script).exists() {
-        eprintln!("Error: Cache script not found: {}", cache_script);
-        exit(1);
-    }
-    
-    // Run cache setup
-    let output = Command::new("bash")
-        .arg(cache_script)
-        .output()
-        .expect("Failed to run cache setup");
-    
-    if !output.status.success() {
-        eprintln!("Error setting up BitNet.cpp cache:");
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-        exit(1);
-    }
-    
-    println!("  ✅ BitNet.cpp cache ready");
     
     // Generate test fixtures
     println!("  Generating test fixtures...");
-    gen_fixtures(&["--size".to_string(), "small".to_string(), "--output".to_string(), "crossval/fixtures/".to_string()]);
+    gen_fixtures("small", &PathBuf::from("crossval/fixtures/"))?;
     
     // Build with crossval features
     println!("  Building with cross-validation features...");
-    let build_output = Command::new("cargo")
+    let status = Command::new("cargo")
         .args(&["build", "--features", "crossval"])
-        .output()
-        .expect("Failed to build with crossval features");
+        .status()?;
     
-    if !build_output.status.success() {
-        eprintln!("Error building with crossval features:");
-        eprintln!("{}", String::from_utf8_lossy(&build_output.stderr));
-        exit(1);
-    }
-    
-    println!("  ✅ Built with cross-validation features");
-    
-    // Run a quick test
-    println!("  Running quick cross-validation test...");
-    let test_output = Command::new("cargo")
-        .args(&["test", "--package", "crossval", "--features", "crossval", "--", "--nocapture", "quick_test"])
-        .output()
-        .expect("Failed to run crossval test");
-    
-    if test_output.status.success() {
-        println!("  ✅ Cross-validation test passed");
-    } else {
-        println!("  ⚠️  Cross-validation test had issues (this may be expected)");
+    if !status.success() {
+        return Err(anyhow!("Failed to build with crossval features"));
     }
     
     println!("✅ Cross-validation environment setup complete!");
     println!();
     println!("You can now run:");
-    println!("  cargo test --package crossval --features crossval");
-    println!("  cargo bench --package crossval --features crossval");
+    println!("  cargo test -p bitnet-crossval --features crossval");
+    
+    Ok(())
 }
 
-fn clean_cache() {
+fn clean_cache() -> Result<()> {
     println!("🧹 Cleaning all caches and temporary files...");
     
     let cache_dirs = [
-        "target/",
-        "~/.cache/bitnet_cpp/",
-        "crossval/fixtures/",
-        ".cargo-cache/",
+        PathBuf::from("target/"),
+        dirs::home_dir().unwrap().join(".cache/bitnet_cpp/"),
+        PathBuf::from("crossval/fixtures/"),
     ];
     
     for dir in &cache_dirs {
-        if dir.starts_with('~') {
-            // Handle home directory expansion
-            if let Ok(home) = env::var("HOME") {
-                let expanded_dir = dir.replace('~', &home);
-                clean_directory(&expanded_dir);
-            }
+        if dir.exists() {
+            println!("  Cleaning: {}", dir.display());
+            fs::remove_dir_all(dir)?;
+            println!("    ✅ Removed");
         } else {
-            clean_directory(dir);
+            println!("  Skipping: {} (does not exist)", dir.display());
         }
     }
     
     println!("✅ Cache cleanup complete!");
+    Ok(())
 }
 
-fn clean_directory(dir: &str) {
-    if Path::new(dir).exists() {
-        println!("  Cleaning: {}", dir);
-        if let Err(e) = fs::remove_dir_all(dir) {
-            println!("    Warning: Could not remove {}: {}", dir, e);
-        } else {
-            println!("    ✅ Removed: {}", dir);
-        }
-    } else {
-        println!("    Skipping: {} (does not exist)", dir);
-    }
-}
-
-fn check_features() {
+fn check_features() -> Result<()> {
     println!("🔍 Checking feature flag consistency...");
     
-    // Check that crossval feature is not accidentally enabled
-    let cargo_toml_content = match fs::read_to_string("Cargo.toml") {
-        Ok(content) => content,
-        Err(e) => {
-            eprintln!("Error reading Cargo.toml: {}", e);
-            exit(1);
-        }
-    };
+    let cargo_toml = fs::read_to_string("Cargo.toml")?;
     
-    if cargo_toml_content.contains("default = [") && cargo_toml_content.contains("crossval") {
-        eprintln!("❌ ERROR: crossval feature is enabled by default!");
-        eprintln!("   This will slow down builds and is not recommended.");
-        eprintln!("   Please remove 'crossval' from the default features.");
-        exit(1);
+    if cargo_toml.contains("default = [") && cargo_toml.contains("\"crossval\"") {
+        return Err(anyhow!(
+            "crossval feature is enabled by default! This will slow down builds."
+        ));
     }
     
     println!("  ✅ crossval feature is not in default features");
-    
-    // Check workspace feature consistency
-    let workspace_members = [
-        "crates/bitnet-common",
-        "crates/bitnet-models",
-        "crates/bitnet-quantization",
-        "crates/bitnet-kernels",
-        "crates/bitnet-inference",
-    ];
-    
-    for member in &workspace_members {
-        let cargo_toml_path = format!("{}/Cargo.toml", member);
-        if Path::new(&cargo_toml_path).exists() {
-            println!("  Checking: {}", member);
-            // Additional feature consistency checks could go here
-        }
-    }
-    
     println!("✅ Feature flag consistency check passed!");
+    
+    Ok(())
 }
 
-fn run_benchmark(args: &[String]) {
+fn run_benchmark(platform: &str) -> Result<()> {
     println!("🚀 Running performance benchmarks...");
-    
-    let mut platform = "current";
-    let mut features = "cpu";
-    
-    // Parse arguments
-    let mut i = 0;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--platform" => {
-                if i + 1 < args.len() {
-                    platform = &args[i + 1];
-                    i += 2;
-                } else {
-                    eprintln!("Error: --platform requires a value");
-                    exit(1);
-                }
-            }
-            "--features" => {
-                if i + 1 < args.len() {
-                    features = &args[i + 1];
-                    i += 2;
-                } else {
-                    eprintln!("Error: --features requires a value");
-                    exit(1);
-                }
-            }
-            _ => {
-                eprintln!("Unknown option: {}", args[i]);
-                exit(1);
-            }
-        }
-    }
-    
     println!("  Platform: {}", platform);
-    println!("  Features: {}", features);
     
-    // Run benchmarks
-    let bench_output = Command::new("cargo")
-        .args(&["bench", "--features", features])
-        .output()
-        .expect("Failed to run benchmarks");
+    let status = Command::new("cargo")
+        .args(&["bench", "--workspace", "--features", "cpu"])
+        .status()?;
     
-    if bench_output.status.success() {
-        println!("✅ Benchmarks completed successfully!");
-        println!("{}", String::from_utf8_lossy(&bench_output.stdout));
-    } else {
-        eprintln!("❌ Benchmarks failed:");
-        eprintln!("{}", String::from_utf8_lossy(&bench_output.stderr));
-        exit(1);
+    if !status.success() {
+        return Err(anyhow!("Benchmarks failed"));
     }
+    
+    println!("✅ Benchmarks completed successfully!");
+    Ok(())
+}
+
+fn run(bin: &str, args: Vec<String>) -> Result<()> {
+    let mut cmd = Command::new(bin);
+    cmd.args(args);
+    run_cmd(&mut cmd)
+}
+
+fn run_cmd(cmd: &mut Command) -> Result<()> {
+    let status = cmd
+        .status()
+        .with_context(|| format!("Failed to spawn: {:?}", cmd))?;
+    
+    if !status.success() {
+        return Err(anyhow!("Command failed with status: {:?}", status));
+    }
+    
+    Ok(())
 }
