@@ -51,6 +51,8 @@ fn main() {
     if let Err(e) = generate_bindings(&cpp_path) {
         println!("cargo:warning=bitnet-sys: Failed to generate bindings: {}", e);
         println!("cargo:warning=bitnet-sys: Cross-validation will be limited");
+        // Create a stub bindings file so compilation doesn't fail
+        create_stub_bindings();
     }
 }
 
@@ -145,6 +147,7 @@ fn setup_cpp_paths(cpp_path: &PathBuf) {
 #[cfg(feature = "crossval")]
 fn generate_bindings(cpp_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let header_paths = [
+        cpp_path.join("include").join("ggml-bitnet.h"),
         cpp_path.join("include").join("bitnet.h"),
         cpp_path.join("include").join("bitnet.hpp"),
         cpp_path.join("bitnet.h"),
@@ -161,18 +164,21 @@ fn generate_bindings(cpp_path: &PathBuf) -> Result<(), Box<dyn std::error::Error
     let bindings = bindgen::Builder::default()
         .header(header_path.to_string_lossy())
         .clang_arg(format!("-I{}", cpp_path.join("include").display()))
+        .clang_arg(format!("-I{}", cpp_path.join("3rdparty/llama.cpp/ggml/include").display()))
         .clang_arg(format!("-I{}", cpp_path.display()))
-        // Generate bindings for BitNet functions
-        .allowlist_function("bitnet_.*")
+        // Generate bindings for GGML BitNet functions
+        .allowlist_function("ggml_bitnet_.*")
+        .allowlist_function("ggml_qgemm_lut")
+        .allowlist_function("ggml_preprocessor")
         .allowlist_type("bitnet_.*")
-        .allowlist_var("BITNET_.*")
+        .allowlist_type("ggml_.*")
+        .allowlist_var("GGML_.*")
         // Generate safe wrappers
         .derive_debug(true)
         .derive_default(true)
         .derive_copy(true)
-        .derive_clone(true)
         // Handle C++ specifics
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()?;
     
     let out_path = PathBuf::from(env::var("OUT_DIR")?);
@@ -191,4 +197,36 @@ fn generate_bindings(_cpp_path: &PathBuf) -> Result<(), Box<dyn std::error::Erro
         "// Bindings disabled - crossval feature not enabled\n",
     )?;
     Ok(())
+}
+
+fn create_stub_bindings() {
+    let out_path = env::var("OUT_DIR").expect("OUT_DIR not set");
+    let out_path = PathBuf::from(out_path);
+    let content = r#"
+// Stub bindings - real C++ library not available
+// These are placeholder types to allow compilation
+
+#[repr(C)]
+pub struct ggml_tensor {
+    _private: [u8; 0],
+}
+
+#[repr(C)]
+pub struct bitnet_tensor_extra {
+    pub lut_scales_size: i32,
+    pub BK: i32,
+    pub n_tile_num: i32,
+    pub qweights: *mut u8,
+    pub scales: *mut f32,
+}
+
+// Placeholder functions
+extern "C" {
+    pub fn ggml_bitnet_init();
+    pub fn ggml_bitnet_free();
+}
+"#;
+    std::fs::write(out_path.join("bindings.rs"), content)
+        .expect("Failed to write stub bindings");
+    println!("cargo:warning=bitnet-sys: Created stub bindings for compilation");
 }
