@@ -35,6 +35,10 @@ pub mod bindings {
 
 #[cfg(feature = "crossval")]
 #[cfg_attr(docsrs, doc(cfg(feature = "crossval")))]
+pub mod wrapper;
+
+#[cfg(feature = "crossval")]
+#[cfg_attr(docsrs, doc(cfg(feature = "crossval")))]
 pub mod safe {
     //! Safe wrappers around the raw FFI bindings
     //!
@@ -209,7 +213,7 @@ pub mod disabled {
 
 // Re-export the appropriate module based on feature
 #[cfg(feature = "crossval")]
-pub use safe::*;
+pub use wrapper::*;
 
 #[cfg(not(feature = "crossval"))]
 pub use disabled::*;
