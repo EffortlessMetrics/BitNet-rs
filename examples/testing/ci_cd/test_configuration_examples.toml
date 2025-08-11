@@ -1,0 +1,362 @@
+# Example test configuration files for BitNet.rs testing framework
+# This demonstrates various testing scenarios and configurations
+
+# Default test configuration
+[default]
+max_parallel_tests = 4
+test_timeout = "300s"
+cache_dir = "tests/cache"
+log_level = "info"
+coverage_threshold = 90.0
+
+[default.fixtures]
+auto_download = true
+max_cache_size = "1GB"
+cleanup_interval = "24h"
+download_timeout = "300s"
+
+[default.crossval]
+enabled = true
+cpp_binary_path = "bitnet-cpp/bitnet"
+tolerance.min_token_accuracy = 0.95
+tolerance.max_probability_divergence = 0.1
+tolerance.max_performance_regression = 2.0
+
+[default.reporting]
+output_dir = "test-results"
+formats = ["html", "json", "junit"]
+include_artifacts = true
+generate_coverage = true
+
+# CI/CD optimized configuration
+[ci]
+max_parallel_tests = 8
+test_timeout = "600s"
+cache_dir = "/tmp/bitnet-test-cache"
+log_level = "warn"
+coverage_threshold = 85.0
+
+[ci.fixtures]
+auto_download = true
+max_cache_size = "2GB"
+cleanup_interval = "1h"
+download_timeout = "600s"
+
+[ci.crossval]
+enabled = true
+cpp_binary_path = "/usr/local/bin/bitnet"
+tolerance.min_token_accuracy = 0.90
+tolerance.max_probability_divergence = 0.15
+tolerance.max_performance_regression = 3.0
+
+[ci.reporting]
+output_dir = "ci-test-results"
+formats = ["json", "junit"]
+include_artifacts = false
+generate_coverage = true
+
+# Development configuration for fast iteration
+[dev]
+max_parallel_tests = 2
+test_timeout = "60s"
+cache_dir = "dev-cache"
+log_level = "debug"
+coverage_threshold = 70.0
+
+[dev.fixtures]
+auto_download = false    # Use local fixtures only
+max_cache_size = "500MB"
+cleanup_interval = "1h"
+download_timeout = "60s"
+
+[dev.crossval]
+enabled = false # Skip cross-validation in dev mode
+
+[dev.reporting]
+output_dir = "dev-results"
+formats = ["html"]
+include_artifacts = true
+generate_coverage = false
+
+# Performance testing configuration
+[performance]
+max_parallel_tests = 1   # Sequential for accurate measurements
+test_timeout = "1800s"   # 30 minutes for long benchmarks
+cache_dir = "perf-cache"
+log_level = "error"
+coverage_threshold = 0.0 # No coverage for performance tests
+
+[performance.fixtures]
+auto_download = true
+max_cache_size = "5GB"     # Large models for performance testing
+cleanup_interval = "7d"
+download_timeout = "1800s"
+
+[performance.crossval]
+enabled = true
+cpp_binary_path = "bitnet-cpp/bitnet"
+tolerance.min_token_accuracy = 0.99         # Strict accuracy for performance tests
+tolerance.max_probability_divergence = 0.05
+tolerance.max_performance_regression = 1.2  # Allow only 20% regression
+
+[performance.reporting]
+output_dir = "performance-results"
+formats = ["json", "html"]
+include_artifacts = true
+generate_coverage = false
+
+# Regression testing configuration
+[regression]
+max_parallel_tests = 4
+test_timeout = "900s"
+cache_dir = "regression-cache"
+log_level = "info"
+coverage_threshold = 95.0
+
+[regression.fixtures]
+auto_download = true
+max_cache_size = "3GB"
+cleanup_interval = "3d"
+download_timeout = "900s"
+
+[regression.crossval]
+enabled = true
+cpp_binary_path = "bitnet-cpp/bitnet"
+tolerance.min_token_accuracy = 0.98         # Very strict for regression tests
+tolerance.max_probability_divergence = 0.05
+tolerance.max_performance_regression = 1.1  # Allow only 10% regression
+
+[regression.reporting]
+output_dir = "regression-results"
+formats = ["html", "json", "junit"]
+include_artifacts = true
+generate_coverage = true
+
+# Nightly testing configuration
+[nightly]
+max_parallel_tests = 16
+test_timeout = "3600s"      # 1 hour timeout
+cache_dir = "nightly-cache"
+log_level = "info"
+coverage_threshold = 95.0
+
+[nightly.fixtures]
+auto_download = true
+max_cache_size = "10GB"    # Large cache for comprehensive testing
+cleanup_interval = "7d"
+download_timeout = "1800s"
+
+[nightly.crossval]
+enabled = true
+cpp_binary_path = "bitnet-cpp/bitnet"
+tolerance.min_token_accuracy = 0.95
+tolerance.max_probability_divergence = 0.1
+tolerance.max_performance_regression = 2.0
+
+[nightly.reporting]
+output_dir = "nightly-results"
+formats = ["html", "json", "junit", "markdown"]
+include_artifacts = true
+generate_coverage = true
+
+# Release validation configuration
+[release]
+max_parallel_tests = 8
+test_timeout = "1800s"
+cache_dir = "release-cache"
+log_level = "warn"
+coverage_threshold = 95.0
+
+[release.fixtures]
+auto_download = true
+max_cache_size = "5GB"
+cleanup_interval = "30d"   # Keep cache longer for releases
+download_timeout = "1800s"
+
+[release.crossval]
+enabled = true
+cpp_binary_path = "bitnet-cpp/bitnet"
+tolerance.min_token_accuracy = 0.98         # Very strict for releases
+tolerance.max_probability_divergence = 0.05
+tolerance.max_performance_regression = 1.0  # No performance regression allowed
+
+[release.reporting]
+output_dir = "release-results"
+formats = ["html", "json", "junit", "markdown"]
+include_artifacts = true
+generate_coverage = true
+
+# Platform-specific configurations
+
+# Windows configuration
+[windows]
+max_parallel_tests = 4
+test_timeout = "600s"
+cache_dir = "C:\\temp\\bitnet-test-cache"
+log_level = "info"
+coverage_threshold = 85.0
+
+[windows.fixtures]
+auto_download = true
+max_cache_size = "2GB"
+cleanup_interval = "24h"
+download_timeout = "600s"
+
+[windows.crossval]
+enabled = false # C++ implementation might not be available on Windows CI
+
+[windows.reporting]
+output_dir = "windows-results"
+formats = ["json", "junit"]
+include_artifacts = true
+generate_coverage = true
+
+# macOS configuration
+[macos]
+max_parallel_tests = 4
+test_timeout = "600s"
+cache_dir = "/tmp/bitnet-test-cache"
+log_level = "info"
+coverage_threshold = 85.0
+
+[macos.fixtures]
+auto_download = true
+max_cache_size = "2GB"
+cleanup_interval = "24h"
+download_timeout = "600s"
+
+[macos.crossval]
+enabled = true
+cpp_binary_path = "/usr/local/bin/bitnet"
+tolerance.min_token_accuracy = 0.90
+tolerance.max_probability_divergence = 0.15
+tolerance.max_performance_regression = 3.0
+
+[macos.reporting]
+output_dir = "macos-results"
+formats = ["json", "junit"]
+include_artifacts = true
+generate_coverage = true
+
+# Docker configuration for containerized testing
+[docker]
+max_parallel_tests = 8
+test_timeout = "900s"
+cache_dir = "/app/test-cache"
+log_level = "info"
+coverage_threshold = 90.0
+
+[docker.fixtures]
+auto_download = true
+max_cache_size = "3GB"
+cleanup_interval = "6h"
+download_timeout = "900s"
+
+[docker.crossval]
+enabled = true
+cpp_binary_path = "/usr/local/bin/bitnet"
+tolerance.min_token_accuracy = 0.95
+tolerance.max_probability_divergence = 0.1
+tolerance.max_performance_regression = 2.0
+
+[docker.reporting]
+output_dir = "/app/test-results"
+formats = ["json", "junit"]
+include_artifacts = false        # Minimize artifact size in containers
+generate_coverage = true
+
+# Memory-constrained environment configuration
+[memory_constrained]
+max_parallel_tests = 1
+test_timeout = "1200s"
+cache_dir = "constrained-cache"
+log_level = "warn"
+coverage_threshold = 80.0
+
+[memory_constrained.fixtures]
+auto_download = false     # Avoid downloading large files
+max_cache_size = "100MB"
+cleanup_interval = "1h"
+download_timeout = "300s"
+
+[memory_constrained.crossval]
+enabled = false # Skip cross-validation to save memory
+
+[memory_constrained.reporting]
+output_dir = "constrained-results"
+formats = ["json"]
+include_artifacts = false
+generate_coverage = false
+
+# GPU testing configuration
+[gpu]
+max_parallel_tests = 2    # Limited by GPU memory
+test_timeout = "1800s"
+cache_dir = "gpu-cache"
+log_level = "info"
+coverage_threshold = 85.0
+
+[gpu.fixtures]
+auto_download = true
+max_cache_size = "5GB"     # Larger models for GPU testing
+cleanup_interval = "24h"
+download_timeout = "1800s"
+
+[gpu.crossval]
+enabled = true
+cpp_binary_path = "bitnet-cpp/bitnet-gpu"
+tolerance.min_token_accuracy = 0.95
+tolerance.max_probability_divergence = 0.1
+tolerance.max_performance_regression = 0.5 # GPU should be faster
+
+[gpu.reporting]
+output_dir = "gpu-results"
+formats = ["html", "json"]
+include_artifacts = true
+generate_coverage = true
+
+# Security testing configuration
+[security]
+max_parallel_tests = 4
+test_timeout = "900s"
+cache_dir = "security-cache"
+log_level = "debug"          # Detailed logging for security analysis
+coverage_threshold = 95.0
+
+[security.fixtures]
+auto_download = true
+max_cache_size = "1GB"
+cleanup_interval = "24h"
+download_timeout = "600s"
+
+[security.crossval]
+enabled = false # Focus on security, not cross-validation
+
+[security.reporting]
+output_dir = "security-results"
+formats = ["html", "json", "junit"]
+include_artifacts = true
+generate_coverage = true
+
+# Fuzzing configuration
+[fuzzing]
+max_parallel_tests = 8
+test_timeout = "3600s"   # Long timeout for fuzzing
+cache_dir = "fuzz-cache"
+log_level = "error"      # Minimize noise during fuzzing
+coverage_threshold = 0.0 # Coverage not relevant for fuzzing
+
+[fuzzing.fixtures]
+auto_download = false     # Use generated inputs
+max_cache_size = "500MB"
+cleanup_interval = "1h"
+download_timeout = "300s"
+
+[fuzzing.crossval]
+enabled = false
+
+[fuzzing.reporting]
+output_dir = "fuzz-results"
+formats = ["json"]
+include_artifacts = true
+generate_coverage = false
