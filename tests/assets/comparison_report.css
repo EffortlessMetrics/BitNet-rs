@@ -1,0 +1,618 @@
+/* BitNet.rs Comparison Analysis Report Styles */
+
+:root {
+    --primary-color: #2563eb;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --error-color: #ef4444;
+    --info-color: #06b6d4;
+    --bg-color: #f8fafc;
+    --card-bg: #ffffff;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header Styles */
+.header {
+    background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+}
+
+.status-excellent {
+    background-color: var(--success-color);
+}
+
+.status-good {
+    background-color: #22c55e;
+}
+
+.status-acceptable {
+    background-color: var(--info-color);
+}
+
+.status-concerning {
+    background-color: var(--warning-color);
+}
+
+.status-critical {
+    background-color: var(--error-color);
+}
+
+.timestamp {
+    opacity: 0.9;
+    font-size: 0.875rem;
+}
+
+/* Navigation Tabs */
+.nav-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.tab-button {
+    background: none;
+    border: none;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+    color: var(--primary-color);
+    background-color: rgba(37, 99, 235, 0.05);
+}
+
+.tab-button.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background-color: rgba(37, 99, 235, 0.05);
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Card Styles */
+.section-card,
+.metric-card,
+.stat-card,
+.perf-stat-card {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+}
+
+.section-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.metric-card h4,
+.stat-card h3,
+.perf-stat-card h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.metric-value,
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-value.positive {
+    color: var(--success-color);
+}
+
+.stat-value.negative {
+    color: var(--error-color);
+}
+
+.stat-value.critical {
+    color: var(--error-color);
+}
+
+.stat-value.regression {
+    color: var(--warning-color);
+}
+
+/* Overview Stats */
+.overview-stats,
+.performance-overview,
+.regression-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+/* Status Indicators */
+.status-card {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+}
+
+.status-indicator {
+    display: inline-block;
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 1rem 0;
+}
+
+.confidence {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.summary-text {
+    font-size: 1.125rem;
+    color: var(--text-primary);
+}
+
+/* Tables */
+.test-cases-table,
+.performance-table,
+.regressions-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card-bg);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+}
+
+.test-cases-table th,
+.performance-table th,
+.regressions-table th {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+}
+
+.test-cases-table td,
+.performance-table td,
+.regressions-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.test-cases-table tr:hover,
+.performance-table tr:hover,
+.regressions-table tr:hover {
+    background-color: rgba(37, 99, 235, 0.02);
+}
+
+/* Severity and Category Badges */
+.severity-badge,
+.category-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.severity-critical,
+.category-critical {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.severity-high {
+    background-color: #fed7aa;
+    color: #9a3412;
+}
+
+.severity-medium {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.severity-low {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.severity-minimal {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.category-excellent {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.category-good {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.category-acceptable {
+    background-color: #e0f2fe;
+    color: #0c4a6e;
+}
+
+.category-concerning {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+/* Issue and Achievement Cards */
+.issue-card,
+.achievement-card,
+.recommendation-card {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+    border-left: 4px solid;
+}
+
+.issue-card {
+    border-left-color: var(--error-color);
+}
+
+.achievement-card {
+    border-left-color: var(--success-color);
+}
+
+.recommendation-card {
+    border-left-color: var(--info-color);
+}
+
+.issue-card.impact-high {
+    border-left-color: var(--error-color);
+}
+
+.issue-card.impact-medium {
+    border-left-color: var(--warning-color);
+}
+
+.issue-card.impact-low {
+    border-left-color: var(--info-color);
+}
+
+.recommendation-card.priority-critical {
+    border-left-color: var(--error-color);
+}
+
+.recommendation-card.priority-high {
+    border-left-color: var(--warning-color);
+}
+
+.recommendation-card.priority-medium {
+    border-left-color: var(--info-color);
+}
+
+.recommendation-card.priority-low {
+    border-left-color: var(--text-secondary);
+}
+
+.issue-meta,
+.recommendation-meta {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.business-value,
+.benefit {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: rgba(16, 185, 129, 0.1);
+    border-radius: 6px;
+    border-left: 3px solid var(--success-color);
+}
+
+.improvement {
+    font-weight: 600;
+    color: var(--success-color);
+}
+
+/* Pattern and Analysis Cards */
+.pattern-card,
+.bottleneck-card,
+.opportunity-card {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+}
+
+.examples {
+    margin-top: 1rem;
+}
+
+.examples ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.examples li {
+    margin-bottom: 0.5rem;
+}
+
+.examples code {
+    background-color: #f3f4f6;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+}
+
+/* Chart Containers */
+.chart-container {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow);
+}
+
+.chart-container h3 {
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+/* Recommendations */
+.recommendations-section {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow);
+}
+
+.recommendations-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.recommendations-list li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+    padding-left: 2rem;
+}
+
+.recommendations-list li:before {
+    content: "💡";
+    position: absolute;
+    left: 0;
+    top: 0.75rem;
+}
+
+.recommendations-list li:last-child {
+    border-bottom: none;
+}
+
+/* No Data States */
+.no-issues,
+.no-achievements,
+.no-regressions {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+
+    .header h1 {
+        font-size: 2rem;
+    }
+
+    .section-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .nav-tabs {
+        flex-wrap: wrap;
+    }
+
+    .tab-button {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .metrics-grid,
+    .overview-stats,
+    .performance-overview,
+    .regression-summary {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .test-cases-table,
+    .performance-table,
+    .regressions-table {
+        font-size: 0.875rem;
+    }
+
+    .test-cases-table th,
+    .performance-table th,
+    .regressions-table th,
+    .test-cases-table td,
+    .performance-table td,
+    .regressions-table td {
+        padding: 0.5rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .nav-tabs {
+        display: none;
+    }
+
+    .tab-content {
+        display: block !important;
+    }
+
+    .header {
+        background: var(--primary-color) !important;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .section-card,
+    .metric-card,
+    .stat-card {
+        break-inside: avoid;
+    }
+}
+
+/* Animation and Transitions */
+.tab-content {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.metric-card:hover,
+.stat-card:hover,
+.section-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+}
+
+/* Tooltip Styles */
+.tooltip {
+    position: absolute;
+    background-color: var(--text-primary);
+    color: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    z-index: 1000;
+    max-width: 200px;
+    word-wrap: break-word;
+}
+
+/* Expandable Sections */
+.expandable-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.expandable-header:after {
+    content: " ▼";
+    font-size: 0.75em;
+    transition: transform 0.2s ease;
+}
+
+.expandable-header.expanded:after {
+    transform: rotate(180deg);
+}
+
+.expandable-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.expandable-content.expanded {
+    max-height: 1000px;
+}
