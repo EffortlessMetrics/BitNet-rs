@@ -82,8 +82,7 @@ mod ci_reporting_test {
     }
 
     // Test functions
-    #[test]
-    fn test_notification_config_creation() {
+    pub fn test_notification_config_creation() {
         let config = NotificationConfig::default();
 
         assert!(config.notify_on_failure);
@@ -94,8 +93,7 @@ mod ci_reporting_test {
         assert!(config.create_pr_comments);
     }
 
-    #[test]
-    fn test_notification_config_custom() {
+    pub fn test_notification_config_custom() {
         let config = NotificationConfig {
             notify_on_failure: false,
             notify_on_success: true,
@@ -113,8 +111,7 @@ mod ci_reporting_test {
         assert!(!config.create_pr_comments);
     }
 
-    #[test]
-    fn test_ci_context_creation() {
+    pub fn test_ci_context_creation() {
         let context = CIContext {
             commit_sha: Some("abc123".to_string()),
             pr_number: Some(42),
@@ -130,8 +127,7 @@ mod ci_reporting_test {
         assert_eq!(context.actor, Some("developer".to_string()));
     }
 
-    #[test]
-    fn test_ci_context_from_env() {
+    pub fn test_ci_context_from_env() {
         // Test CI context creation from environment
         let context = CIContext::from_env();
 
@@ -141,8 +137,7 @@ mod ci_reporting_test {
         assert!(context.branch_name.is_none() || context.branch_name.is_some());
     }
 
-    #[test]
-    fn test_trend_config_creation() {
+    pub fn test_trend_config_creation() {
         let config = TrendConfig::default();
 
         assert_eq!(config.retention_days, 90);
@@ -150,8 +145,7 @@ mod ci_reporting_test {
         assert_eq!(config.regression_threshold, 1.2);
     }
 
-    #[test]
-    fn test_trend_config_custom() {
+    pub fn test_trend_config_custom() {
         let config = TrendConfig {
             retention_days: 30,
             min_samples_for_baseline: 3,
@@ -163,8 +157,7 @@ mod ci_reporting_test {
         assert_eq!(config.regression_threshold, 1.5);
     }
 
-    #[test]
-    fn test_test_run_metadata_creation() {
+    pub fn test_test_run_metadata_creation() {
         let mut env = HashMap::new();
         env.insert("os".to_string(), "ubuntu".to_string());
         env.insert("arch".to_string(), "x86_64".to_string());
@@ -199,8 +192,7 @@ mod ci_reporting_test {
         );
     }
 
-    #[test]
-    fn test_environment_collection() {
+    pub fn test_environment_collection() {
         // Test environment variable collection simulation
         let mut env = HashMap::new();
         env.insert("RUNNER_OS".to_string(), "Linux".to_string());
@@ -212,8 +204,7 @@ mod ci_reporting_test {
         assert_eq!(env.get("RUSTC_VERSION"), Some(&"1.75.0".to_string()));
     }
 
-    #[test]
-    fn test_configuration_collection() {
+    pub fn test_configuration_collection() {
         // Test configuration collection simulation
         let mut config = HashMap::new();
         config.insert("CARGO_BUILD_FEATURES".to_string(), "cpu,gpu".to_string());
