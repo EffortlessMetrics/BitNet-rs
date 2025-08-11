@@ -7,7 +7,7 @@ use anyhow::{Result, Context};
 use bitnet_common::{BitNetConfig, Device, Tensor, ConcreteTensor};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
-use candle_core::IndexOp;
+use candle_core::{DType, IndexOp};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, debug, warn, instrument};
@@ -253,6 +253,7 @@ impl InferenceEngine {
                     .narrow(1, seq_len - 1, 1)?  // [B, 1, V]
                     .squeeze(1)?                  // [B, V]
                     .i(0)?;                        // [V]
+                let last = if last.dtype() != DType::F32 { last.to_dtype(DType::F32)? } else { last };
                 Ok(last.to_vec1::<f32>()?)
             }
             ConcreteTensor::Mock(_) => {

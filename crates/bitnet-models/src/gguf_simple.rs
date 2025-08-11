@@ -27,9 +27,7 @@ pub fn load_gguf(_path: &Path, _device: Device) -> Result<(bitnet_common::BitNet
     let vocab_size = config.model.vocab_size;
     let hidden_size = config.model.hidden_size;
     let num_layers = config.model.num_layers;
-    let num_heads = config.model.num_heads;
     let intermediate_size = config.model.intermediate_size;
-    let head_dim = hidden_size / num_heads;
     
     // Token embedding and output projection
     tensor_map.insert(
