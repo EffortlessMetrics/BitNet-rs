@@ -132,7 +132,7 @@ impl Context {
         params.n_batch = n_batch;
         params.n_threads = n_threads;
         params.n_threads_batch = n_threads;
-        params.seed = 0;  // Deterministic seed
+        // Note: seed is not a field in llama_context_params in this version
         params.logits_all = true;  // Get logits for all tokens
         
         let ptr = unsafe {
@@ -223,24 +223,44 @@ impl Context {
         let seq_ids: [llama_seq_id; 1] = [0];
         let seq_ids_ptr = seq_ids.as_ptr();
         
-        // Add tokens to batch using the official helper
-        for (i, &token) in tokens.iter().enumerate() {
-            unsafe {
-                llama_batch_add(
-                    &mut batch,
-                    token,
-                    n_past + i as i32,     // position
-                    seq_ids_ptr,           // seq_ids pointer with correct type
-                    1,                     // n_seq_ids
-                    true,                  // logits for all tokens (since logits_all=true)
-                );
+        // Populate the batch fields directly (no llama_batch_add in this version)
+        unsafe {
+            // Set tokens
+            for (i, &token) in tokens.iter().enumerate() {
+                *batch.token.add(i) = token;
+                *batch.pos.add(i) = n_past + i as i32;
+                *batch.n_seq_id.add(i) = 1;
+                
+                // Set seq_id for this token (points to our seq_ids array)
+                let seq_id_array = std::alloc::alloc(
+                    std::alloc::Layout::array::<llama_seq_id>(1).unwrap()
+                ) as *mut llama_seq_id;
+                *seq_id_array = 0;
+                *batch.seq_id.add(i) = seq_id_array;
+                
+                // Request logits for all tokens
+                *batch.logits.add(i) = 1;
             }
+            batch.n_tokens = tokens.len() as i32;
         }
         
         // Decode the batch
         let result = unsafe {
             llama_decode(self.ptr, batch)
         };
+        
+        // Clean up allocated seq_id arrays
+        unsafe {
+            for i in 0..tokens.len() {
+                let seq_id_ptr = *batch.seq_id.add(i);
+                if !seq_id_ptr.is_null() {
+                    std::alloc::dealloc(
+                        seq_id_ptr as *mut u8,
+                        std::alloc::Layout::array::<llama_seq_id>(1).unwrap()
+                    );
+                }
+            }
+        }
         
         // Free the batch
         unsafe {
