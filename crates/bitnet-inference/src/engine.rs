@@ -347,21 +347,29 @@ mod tests {
 
         fn forward(
             &self,
-            _input: &dyn Tensor,
+            _input: &ConcreteTensor,
             _cache: &mut dyn std::any::Any,
-        ) -> Result<Box<dyn Tensor>> {
-            Ok(Box::new(ConcreteTensor::mock(vec![1, 50257])))
+        ) -> std::result::Result<ConcreteTensor, BitNetError> {
+            Ok(ConcreteTensor::mock(vec![1, 50257]))
+        }
+        
+        fn embed(&self, _tokens: &[u32]) -> std::result::Result<ConcreteTensor, BitNetError> {
+            Ok(ConcreteTensor::mock(vec![1, 10, 768]))
+        }
+        
+        fn logits(&self, _hidden: &ConcreteTensor) -> std::result::Result<ConcreteTensor, BitNetError> {
+            Ok(ConcreteTensor::mock(vec![1, 10, 50257]))
         }
     }
 
     struct MockTokenizer;
 
     impl Tokenizer for MockTokenizer {
-        fn encode(&self, _text: &str, _add_special_tokens: bool) -> Result<Vec<u32>> {
+        fn encode(&self, _text: &str, _add_special_tokens: bool) -> std::result::Result<Vec<u32>, BitNetError> {
             Ok(vec![1, 2, 3])
         }
 
-        fn decode(&self, _tokens: &[u32], _skip_special_tokens: bool) -> Result<String> {
+        fn decode(&self, _tokens: &[u32], _skip_special_tokens: bool) -> std::result::Result<String, BitNetError> {
             Ok("mock generated text".to_string())
         }
 
