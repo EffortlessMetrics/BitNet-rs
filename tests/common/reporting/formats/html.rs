@@ -1,7 +1,7 @@
 //! HTML report format implementation with interactive features
 
-use crate::common::reporting::{ReportError, ReportFormat, ReportResult, TestReporter};
-use crate::common::results::{TestResult, TestStatus, TestSuiteResult};
+use crate::reporting::{ReportError, ReportFormat, ReportResult, TestReporter};
+use crate::results::{TestResult, TestStatus, TestSuiteResult};
 use async_trait::async_trait;
 use std::path::Path;
 use std::time::Instant;
@@ -513,6 +513,7 @@ impl HtmlReporter {
             TestStatus::Failed => "failed",
             TestStatus::Skipped => "skipped",
             TestStatus::Timeout => "failed",
+            TestStatus::Running => "running",
         };
 
         let mut html = format!(
@@ -563,7 +564,7 @@ impl TestReporter for HtmlReporter {
         output_path: &Path,
     ) -> Result<ReportResult, ReportError> {
         let start_time = Instant::now();
-        self.prepare_output_path(output_path).await?;
+        crate::reporting::reporter::prepare_output_path(output_path).await?;
 
         let html_content = self.generate_html_content(results)?;
         fs::write(output_path, &html_content).await?;
@@ -597,7 +598,7 @@ impl Default for HtmlReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::results::{TestMetrics, TestSummary};
+    use crate::results::{TestMetrics, TestSummary};
     use std::collections::HashMap;
     use std::time::Duration;
     use tempfile::TempDir;
@@ -617,9 +618,15 @@ mod tests {
                         cpu_time: Some(Duration::from_secs(2)),
                         wall_time: Duration::from_secs(3),
                         custom_metrics: HashMap::new(),
+                        assertions: 3,
+                        operations: 5,
                     },
                     error: None,
+                    stack_trace: None,
                     artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now() - Duration::from_secs(3),
+                    end_time: std::time::SystemTime::now(),
+                    metadata: HashMap::new(),
                 },
                 TestResult {
                     test_name: "test_html_fail".to_string(),
@@ -631,11 +638,15 @@ mod tests {
                         cpu_time: Some(Duration::from_secs(4)),
                         wall_time: Duration::from_secs(5),
                         custom_metrics: HashMap::new(),
+                        assertions: 2,
+                        operations: 3,
                     },
-                    error: Some(crate::common::errors::TestError::AssertionError {
-                        message: "HTML test assertion failed".to_string(),
-                    }),
+                    error: Some("HTML test assertion failed".to_string()),
+                    stack_trace: None,
                     artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now() - Duration::from_secs(5),
+                    end_time: std::time::SystemTime::now(),
+                    metadata: HashMap::new(),
                 },
             ],
             summary: TestSummary {
@@ -643,9 +654,17 @@ mod tests {
                 passed: 1,
                 failed: 1,
                 skipped: 0,
-                success_rate: 0.5,
+                timeout: 0,
+                success_rate: 50.0,
                 total_duration: Duration::from_secs(8),
+                average_duration: Duration::from_secs(4),
+                peak_memory: Some(2048),
+                total_assertions: 5,
             },
+            environment: HashMap::new(),
+            configuration: HashMap::new(),
+            start_time: std::time::SystemTime::now() - Duration::from_secs(8),
+            end_time: std::time::SystemTime::now(),
         }
     }
 

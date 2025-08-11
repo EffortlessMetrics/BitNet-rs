@@ -1,4 +1,4 @@
-use super::errors::{TestError, TestResult};
+use super::errors::TestError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
@@ -150,7 +150,7 @@ impl TestArtifact {
 
 /// Result of a single test execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestResult<T = ()> {
+pub struct TestResult {
     /// Name of the test
     pub test_name: String,
     /// Status of the test

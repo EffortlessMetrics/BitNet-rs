@@ -1,7 +1,7 @@
 //! Core test reporter trait and management
 
 use super::{ReportConfig, ReportError, ReportFormat, ReportResult};
-use crate::common::results::{TestResult, TestSuiteResult};
+use crate::results::{TestResult, TestSuiteResult};
 use async_trait::async_trait;
 use std::path::Path;
 use std::time::Instant;
@@ -22,43 +22,89 @@ pub trait TestReporter: Send + Sync {
 
     /// Get the file extension for this format
     fn file_extension(&self) -> &'static str;
+}
 
-    /// Validate the output path and create directories if needed
-    async fn prepare_output_path(&self, output_path: &Path) -> Result<(), ReportError> {
-        if let Some(parent) = output_path.parent() {
-            fs::create_dir_all(parent).await?;
+/// Default implementation for preparing output path
+pub async fn prepare_output_path(output_path: &Path) -> Result<(), ReportError> {
+    if let Some(parent) = output_path.parent() {
+        fs::create_dir_all(parent).await?;
+    }
+    Ok(())
+}
+
+/// Enum wrapper for different reporter types to make them object-safe
+pub enum ReporterType {
+    Html(super::formats::HtmlReporter),
+    Json(super::formats::JsonReporter),
+    Junit(super::formats::JunitReporter),
+    Markdown(super::formats::MarkdownReporter),
+}
+
+#[async_trait]
+impl TestReporter for ReporterType {
+    async fn generate_report(
+        &self,
+        results: &[TestSuiteResult],
+        output_path: &Path,
+    ) -> Result<ReportResult, ReportError> {
+        match self {
+            ReporterType::Html(reporter) => reporter.generate_report(results, output_path).await,
+            ReporterType::Json(reporter) => reporter.generate_report(results, output_path).await,
+            ReporterType::Junit(reporter) => reporter.generate_report(results, output_path).await,
+            ReporterType::Markdown(reporter) => {
+                reporter.generate_report(results, output_path).await
+            }
         }
-        Ok(())
+    }
+
+    fn format(&self) -> ReportFormat {
+        match self {
+            ReporterType::Html(reporter) => reporter.format(),
+            ReporterType::Json(reporter) => reporter.format(),
+            ReporterType::Junit(reporter) => reporter.format(),
+            ReporterType::Markdown(reporter) => reporter.format(),
+        }
+    }
+
+    fn file_extension(&self) -> &'static str {
+        match self {
+            ReporterType::Html(reporter) => reporter.file_extension(),
+            ReporterType::Json(reporter) => reporter.file_extension(),
+            ReporterType::Junit(reporter) => reporter.file_extension(),
+            ReporterType::Markdown(reporter) => reporter.file_extension(),
+        }
     }
 }
 
 /// Manages multiple test reporters and coordinates report generation
 pub struct ReportingManager {
     config: ReportConfig,
-    reporters: Vec<Box<dyn TestReporter>>,
+    reporters: Vec<ReporterType>,
 }
 
 impl ReportingManager {
     /// Create a new reporting manager with the given configuration
     pub fn new(config: ReportConfig) -> Self {
-        let mut reporters: Vec<Box<dyn TestReporter>> = Vec::new();
+        let mut reporters: Vec<ReporterType> = Vec::new();
 
         // Register reporters based on configuration
         for format in &config.formats {
             match format {
                 ReportFormat::Html => {
-                    reporters.push(Box::new(super::formats::HtmlReporter::new(
+                    reporters.push(ReporterType::Html(super::formats::HtmlReporter::new(
                         config.interactive_html,
                     )));
                 }
                 ReportFormat::Json => {
-                    reporters.push(Box::new(super::formats::JsonReporter::new()));
+                    reporters.push(ReporterType::Json(super::formats::JsonReporter::new()));
                 }
                 ReportFormat::Junit => {
-                    reporters.push(Box::new(super::formats::JunitReporter::new()));
+                    reporters.push(ReporterType::Junit(super::formats::JunitReporter::new()));
                 }
                 ReportFormat::Markdown => {
-                    reporters.push(Box::new(super::formats::MarkdownReporter::new()));
+                    reporters.push(ReporterType::Markdown(
+                        super::formats::MarkdownReporter::new(),
+                    ));
                 }
             }
         }
@@ -128,7 +174,7 @@ impl ReportingManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::results::{TestMetrics, TestStatus, TestSummary};
+    use crate::results::{TestMetrics, TestStatus, TestSummary};
     use std::collections::HashMap;
     use std::time::Duration;
     use tempfile::TempDir;
@@ -147,18 +193,32 @@ mod tests {
                     cpu_time: Some(Duration::from_secs(4)),
                     wall_time: Duration::from_secs(5),
                     custom_metrics: HashMap::new(),
+                    assertions: 3,
+                    operations: 5,
                 },
                 error: None,
+                stack_trace: None,
                 artifacts: Vec::new(),
+                start_time: std::time::SystemTime::now() - Duration::from_secs(5),
+                end_time: std::time::SystemTime::now(),
+                metadata: HashMap::new(),
             }],
             summary: TestSummary {
                 total_tests: 1,
                 passed: 1,
                 failed: 0,
                 skipped: 0,
-                success_rate: 1.0,
+                timeout: 0,
+                success_rate: 100.0,
                 total_duration: Duration::from_secs(10),
+                average_duration: Duration::from_secs(5),
+                peak_memory: Some(1024),
+                total_assertions: 3,
             },
+            environment: HashMap::new(),
+            configuration: HashMap::new(),
+            start_time: std::time::SystemTime::now() - Duration::from_secs(10),
+            end_time: std::time::SystemTime::now(),
         }]
     }
 
