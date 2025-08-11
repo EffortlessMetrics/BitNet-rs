@@ -16,6 +16,18 @@ path = "bin/validate_config.rs"
 name = "run_configuration_tests"
 path = "run_configuration_tests.rs"
 
+[[bin]]
+name = "generate_ci_report"
+path = "bin/generate_ci_report.rs"
+
+[[bin]]
+name = "check_performance_regressions"
+path = "bin/check_performance_regressions.rs"
+
+[[bin]]
+name = "generate_trend_analysis"
+path = "bin/generate_trend_analysis.rs"
+
 [[test]]
 name = "test_logging_infrastructure"
 path = "test_logging_infrastructure.rs"
@@ -27,6 +39,10 @@ path = "test_bitnet_implementation.rs"
 [[test]]
 name = "test_reporting_minimal"
 path = "test_reporting_minimal.rs"
+
+[[test]]
+name = "test_ci_reporting_simple"
+path = "test_ci_reporting_simple.rs"
 
 [dependencies]
 # Async runtime and utilities
@@ -65,6 +81,9 @@ rand = "0.8"
 
 # Date and time utilities
 chrono = { version = "0.4", features = ["serde"] }
+
+# Command line argument parsing
+clap = { version = "4.0", features = ["derive"] }
 
 # HTML escaping for reports
 html-escape = "0.2"

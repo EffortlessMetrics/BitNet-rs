@@ -7,6 +7,7 @@
 // - Error handling and reporting utilities
 
 pub mod cache;
+pub mod ci_reporting;
 pub mod config;
 pub mod config_validator;
 pub mod errors;
@@ -21,6 +22,7 @@ pub mod reporting;
 pub mod results;
 pub mod selection;
 pub mod test_utilities;
+pub mod trend_reporting;
 pub mod utils;
 
 // Cross-validation module

@@ -1,0 +1,343 @@
+name: CI Reporting and Notifications
+
+on:
+  workflow_run:
+    workflows:
+      [
+        "CI",
+        "Testing Framework Unit Tests",
+        "Testing Framework Integration Tests",
+        "Testing Framework Cross-Validation",
+      ]
+    types:
+      - completed
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, develop]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  collect-test-results:
+    name: Collect and Report Test Results
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Need full history for trend analysis
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Download test artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: test-artifacts
+        continue-on-error: true
+
+      - name: Setup test results directory
+        run: |
+          mkdir -p test-results
+          mkdir -p trend-data
+
+      - name: Collect test results from artifacts
+        run: |
+          # Collect JUnit XML files
+          find test-artifacts -name "*.xml" -type f -exec cp {} test-results/ \;
+
+          # Collect JSON test results
+          find test-artifacts -name "test-results*.json" -type f -exec cp {} test-results/ \;
+
+          # List collected files
+          echo "Collected test result files:"
+          ls -la test-results/
+        continue-on-error: true
+
+      - name: Generate CI reports
+        run: |
+          cd tests
+          cargo run --bin generate_ci_report -- \
+            --results-dir ../test-results \
+            --output-dir ../ci-reports \
+            --trend-data-dir ../trend-data \
+            --commit-sha ${{ github.sha }} \
+            --pr-number ${{ github.event.pull_request.number || '' }} \
+            --branch ${{ github.ref_name }} \
+            --workflow-run-id ${{ github.run_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        continue-on-error: true
+
+      - name: Upload CI reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: ci-reports
+          path: ci-reports/
+          retention-days: 30
+        if: always()
+
+      - name: Upload trend data
+        uses: actions/upload-artifact@v3
+        with:
+          name: trend-data
+          path: trend-data/
+          retention-days: 90
+        if: always()
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: BitNet.rs Test Results
+          path: "test-results/*.xml"
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Look for PR comment file
+            const commentFile = 'ci-reports/pr-comment.md';
+            if (fs.existsSync(commentFile)) {
+              const body = fs.readFileSync(commentFile, 'utf8');
+              
+              // Find existing comment
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              });
+              
+              const botComment = comments.data.find(comment => 
+                comment.user.type === 'Bot' && 
+                comment.body.includes('<!-- BitNet.rs Test Results -->')
+              );
+              
+              if (botComment) {
+                // Update existing comment
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: body
+                });
+              } else {
+                // Create new comment
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: body
+                });
+              }
+            }
+
+      - name: Create status checks
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read status checks file if it exists
+            const statusFile = 'ci-reports/status-checks.json';
+            if (fs.existsSync(statusFile)) {
+              const statusChecks = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+              
+              for (const check of statusChecks) {
+                await github.rest.repos.createCommitStatus({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  sha: context.sha,
+                  state: check.state,
+                  target_url: check.target_url,
+                  description: check.description,
+                  context: check.context
+                });
+              }
+            }
+
+  performance-regression-check:
+    name: Performance Regression Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    needs: collect-test-results
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Download trend data
+        uses: actions/download-artifact@v3
+        with:
+          name: trend-data
+          path: trend-data
+        continue-on-error: true
+
+      - name: Download current test results
+        uses: actions/download-artifact@v3
+        with:
+          name: ci-reports
+          path: ci-reports
+        continue-on-error: true
+
+      - name: Check for performance regressions
+        run: |
+          cd tests
+          cargo run --bin check_performance_regressions -- \
+            --current-results ../ci-reports/test-results.json \
+            --trend-data ../trend-data \
+            --output ../regression-report.json \
+            --threshold 1.2
+        continue-on-error: true
+
+      - name: Report performance regressions
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+
+            const regressionFile = 'regression-report.json';
+            if (fs.existsSync(regressionFile)) {
+              const regressions = JSON.parse(fs.readFileSync(regressionFile, 'utf8'));
+              
+              if (regressions.length > 0) {
+                // Create status check for performance regression
+                await github.rest.repos.createCommitStatus({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  sha: context.sha,
+                  state: 'failure',
+                  description: `${regressions.length} performance regressions detected`,
+                  context: 'bitnet-rs/performance'
+                });
+                
+                // Create issue comment for PR
+                if (context.payload.pull_request) {
+                  let body = '## ⚠️ Performance Regressions Detected\n\n';
+                  body += '| Test | Regression | Baseline | Current |\n';
+                  body += '|------|------------|----------|----------|\n';
+                  
+                  for (const reg of regressions) {
+                    body += `| ${reg.test_name} | +${reg.regression_percent.toFixed(1)}% | ${reg.baseline_duration}ms | ${reg.current_duration}ms |\n`;
+                  }
+                  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: context.payload.pull_request.number,
+                    body: body
+                  });
+                }
+              }
+            }
+
+  trend-analysis:
+    name: Generate Trend Analysis
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: collect-test-results
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Download trend data
+        uses: actions/download-artifact@v3
+        with:
+          name: trend-data
+          path: trend-data
+        continue-on-error: true
+
+      - name: Generate trend analysis
+        run: |
+          cd tests
+          cargo run --bin generate_trend_analysis -- \
+            --trend-data ../trend-data \
+            --output-dir ../trend-reports \
+            --days-back 30 \
+            --branch main
+        continue-on-error: true
+
+      - name: Upload trend reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: trend-reports
+          path: trend-reports/
+          retention-days: 90
+        if: always()
+
+      - name: Deploy trend reports to GitHub Pages
+        if: success()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./trend-reports
+          destination_dir: trends
+          keep_files: true
+
+  notification-summary:
+    name: Send Notification Summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [collect-test-results, performance-regression-check, trend-analysis]
+
+    steps:
+      - name: Send Slack notification on failure
+        if: failure() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: "#bitnet-ci"
+          text: |
+            🚨 BitNet.rs CI Failure
+
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Workflow: ${{ github.workflow }}
+
+            Please check the failed jobs and address any issues.
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Send success notification for main branch
+        if: success() && github.ref == 'refs/heads/main'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          channel: "#bitnet-ci"
+          text: |
+            ✅ BitNet.rs CI Success
+
+            All tests passed on main branch!
+            Commit: ${{ github.sha }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
