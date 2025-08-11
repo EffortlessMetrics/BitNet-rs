@@ -61,6 +61,8 @@ fn test_serialization_with_all_types() {
             num_heads: 64,
             intermediate_size: 22016,
             max_position_embeddings: 4096,
+            rope_theta: Some(10000.0),
+            rope_scaling: None,
         },
         inference: InferenceConfig {
             max_length: 4096,

@@ -490,7 +490,10 @@ th end-to-end validation
 ## Success Criteria
 
 ### Technical Validation
-- [ ] All unit tests achieve >90% code coverage across target crates
+- [-] All unit tests achieve >90% code coverage across target crates
+
+
+
 - [ ] Cross-implementation comparison framework validates accuracy within 1e-6 tolerance
 - [ ] Integration tests validate complete workflows end-to-end
 - [ ] Performance benchmarks demonstrate 2x+ improvement over C++ baseline
