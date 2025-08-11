@@ -1,6 +1,6 @@
-#!/bin/bash
-# Fetch and build the external BitNet C++ implementation
-# This script downloads Microsoft's official BitNet.cpp for cross-validation
+#!/usr/bin/env bash
+# Fetches and builds the Microsoft BitNet C++ implementation for cross-validation
+# This provides the ground truth for our Rust implementation
 
 set -euo pipefail
 
@@ -8,16 +8,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Configuration
-BITNET_CPP_REPO="https://github.com/microsoft/BitNet.git"
-BITNET_CPP_TAG="${BITNET_CPP_TAG:-v1.0.0}"  # Default version, can be overridden
-CACHE_DIR="${BITNET_CPP_PATH:-$HOME/.cache/bitnet_cpp}"
-BUILD_DIR="$CACHE_DIR/build"
+CACHE_DIR="${BITNET_CPP_DIR:-${BITNET_CPP_CACHE:-$HOME/.cache/bitnet_cpp}}"
+REPO_URL="${BITNET_CPP_REPO:-https://github.com/microsoft/BitNet.git}"
+# Pin to specific commit for reproducibility
+# This is the latest stable release with working llama.cpp integration
+DEFAULT_REV="b1-65-ggml"  # v1.0 release with BitNet b1.58 support
+REV="${BITNET_CPP_REV:-$DEFAULT_REV}"
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 log_info() {
@@ -32,341 +33,249 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-log_debug() {
-    echo -e "${BLUE}[DEBUG]${NC} $1"
-}
-
-# Check dependencies
-check_dependencies() {
-    local missing_deps=()
-    
-    if ! command -v git >/dev/null 2>&1; then
-        missing_deps+=("git")
-    fi
-    
-    if ! command -v cmake >/dev/null 2>&1; then
-        missing_deps+=("cmake")
-    fi
-    
-    if ! command -v make >/dev/null 2>&1; then
-        missing_deps+=("make")
-    fi
-    
-    # Check for C++ compiler
-    if ! command -v g++ >/dev/null 2>&1 && ! command -v clang++ >/dev/null 2>&1; then
-        missing_deps+=("g++ or clang++")
-    fi
-    
-    if [[ ${#missing_deps[@]} -gt 0 ]]; then
-        log_error "Missing required dependencies: ${missing_deps[*]}"
-        log_error "Please install them and try again:"
-        log_error "  Ubuntu/Debian: apt install git cmake build-essential"
-        log_error "  macOS: xcode-select --install && brew install cmake"
-        log_error "  Windows: Install Visual Studio with C++ tools and CMake"
-        exit 1
-    fi
-}
-
-# Verify checksum of downloaded content
-verify_checksum() {
-    local target_dir="$1"
-    local expected_file="$SCRIPT_DIR/bitnet_cpp_checksums.txt"
-    
-    if [[ ! -f "$expected_file" ]]; then
-        log_warn "No checksum file found at $expected_file"
-        log_warn "Skipping checksum verification (not recommended for production)"
-        return 0
-    fi
-    
-    log_info "Verifying checksums..."
-    
-    cd "$target_dir"
-    if command -v sha256sum >/dev/null 2>&1; then
-        sha256sum -c "$expected_file"
-    elif command -v shasum >/dev/null 2>&1; then
-        shasum -a 256 -c "$expected_file"
-    else
-        log_warn "No checksum utility found (sha256sum or shasum)"
-        log_warn "Skipping checksum verification"
-        return 0
-    fi
-    
-    log_info "Checksum verification passed"
-}
-
-# Clone or update the repository
-fetch_source() {
-    log_info "Fetching BitNet C++ implementation..."
-    log_info "Repository: $BITNET_CPP_REPO"
-    log_info "Tag/Version: $BITNET_CPP_TAG"
-    log_info "Cache directory: $CACHE_DIR"
-    
-    if [[ -d "$CACHE_DIR/.git" ]]; then
-        log_info "Existing repository found, updating..."
-        cd "$CACHE_DIR"
-        
-        # Fetch latest changes
-        git fetch origin
-        
-        # Check if we're already on the right tag
-        current_tag=$(git describe --tags --exact-match 2>/dev/null || echo "unknown")
-        if [[ "$current_tag" == "$BITNET_CPP_TAG" ]]; then
-            log_info "Already on correct tag: $BITNET_CPP_TAG"
-            return 0
-        fi
-        
-        # Clean any local changes
-        git reset --hard
-        git clean -fd
-        
-        # Checkout the specified tag
-        git checkout "$BITNET_CPP_TAG"
-    else
-        log_info "Cloning fresh repository..."
-        
-        # Create cache directory
-        mkdir -p "$(dirname "$CACHE_DIR")"
-        
-        # Clone the repository
-        git clone --depth 1 --branch "$BITNET_CPP_TAG" "$BITNET_CPP_REPO" "$CACHE_DIR"
-        cd "$CACHE_DIR"
-    fi
-    
-    log_info "Source code fetched successfully"
-    
-    # Verify checksum if available
-    # verify_checksum "$CACHE_DIR"
-}
-
-# Build the C++ implementation
-build_cpp() {
-    log_info "Building BitNet C++ implementation..."
-    
-    cd "$CACHE_DIR"
-    
-    # Create build directory
-    mkdir -p "$BUILD_DIR"
-    cd "$BUILD_DIR"
-    
-    # Configure with CMake
-    log_info "Configuring build with CMake..."
-    cmake .. \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-        -DBUILD_SHARED_LIBS=ON \
-        -DCMAKE_INSTALL_PREFIX="$BUILD_DIR/install"
-    
-    # Build
-    log_info "Building (this may take a few minutes)..."
-    make -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
-    
-    # Install to local directory
-    log_info "Installing to local directory..."
-    make install
-    
-    log_info "Build completed successfully"
-}
-
-# Apply patches if any exist
-apply_patches() {
-    log_info "Checking for patches to apply..."
-    
-    if [[ -x "$SCRIPT_DIR/apply_patches.sh" ]]; then
-        log_info "Applying patches..."
-        "$SCRIPT_DIR/apply_patches.sh"
-    else
-        log_info "No patch application script found - using C++ implementation as-is"
-    fi
-}
-
-# Validate the build
-validate_build() {
-    log_info "Validating build..."
-    
-    local lib_dir="$BUILD_DIR/install/lib"
-    local include_dir="$BUILD_DIR/install/include"
-    
-    # Check for expected files
-    if [[ ! -d "$lib_dir" ]]; then
-        log_error "Library directory not found: $lib_dir"
-        return 1
-    fi
-    
-    if [[ ! -d "$include_dir" ]]; then
-        log_error "Include directory not found: $include_dir"
-        return 1
-    fi
-    
-    # Look for library files
-    local lib_files=($(find "$lib_dir" -name "*.so" -o -name "*.dylib" -o -name "*.dll" 2>/dev/null))
-    if [[ ${#lib_files[@]} -eq 0 ]]; then
-        log_warn "No shared libraries found in $lib_dir"
-        log_warn "This may be expected if only static libraries were built"
-    else
-        log_info "Found ${#lib_files[@]} library file(s)"
-    fi
-    
-    # Look for header files
-    local header_files=($(find "$include_dir" -name "*.h" -o -name "*.hpp" 2>/dev/null))
-    if [[ ${#header_files[@]} -eq 0 ]]; then
-        log_error "No header files found in $include_dir"
-        return 1
-    else
-        log_info "Found ${#header_files[@]} header file(s)"
-    fi
-    
-    log_info "Build validation passed"
-}
-
-# Create environment setup script
-create_env_script() {
-    local env_script="$CACHE_DIR/setup_env.sh"
-    
-    log_info "Creating environment setup script: $env_script"
-    
-    cat > "$env_script" << EOF
-#!/bin/bash
-# Environment setup for BitNet C++ cross-validation
-# Source this file to set up environment variables
-
-export BITNET_CPP_PATH="$CACHE_DIR"
-export BITNET_CPP_LIB_PATH="$BUILD_DIR/install/lib"
-export BITNET_CPP_INCLUDE_PATH="$BUILD_DIR/install/include"
-
-# Add to library path
-if [[ "\$OSTYPE" == "darwin"* ]]; then
-    export DYLD_LIBRARY_PATH="\$BITNET_CPP_LIB_PATH:\$DYLD_LIBRARY_PATH"
-else
-    export LD_LIBRARY_PATH="\$BITNET_CPP_LIB_PATH:\$LD_LIBRARY_PATH"
-fi
-
-# Add to pkg-config path if it exists
-if [[ -d "\$BITNET_CPP_LIB_PATH/pkgconfig" ]]; then
-    export PKG_CONFIG_PATH="\$BITNET_CPP_LIB_PATH/pkgconfig:\$PKG_CONFIG_PATH"
-fi
-
-echo "BitNet C++ environment configured:"
-echo "  Path: \$BITNET_CPP_PATH"
-echo "  Libraries: \$BITNET_CPP_LIB_PATH"
-echo "  Headers: \$BITNET_CPP_INCLUDE_PATH"
-EOF
-    
-    chmod +x "$env_script"
-}
-
-# Print usage information
-print_usage() {
-    cat << EOF
-Usage: $0 [OPTIONS]
-
-Fetch and build the external BitNet C++ implementation for cross-validation.
-
-OPTIONS:
-    -t, --tag TAG       Specify BitNet.cpp tag/version (default: $BITNET_CPP_TAG)
-    -p, --path PATH     Specify cache directory (default: $CACHE_DIR)
-    -f, --force         Force rebuild even if already built
-    -c, --clean         Clean build directory before building
-    -h, --help          Show this help message
-
-ENVIRONMENT VARIABLES:
-    BITNET_CPP_TAG      Override default tag/version
-    BITNET_CPP_PATH     Override default cache directory
-
-EXAMPLES:
-    $0                          # Use defaults
-    $0 --tag v1.1.0            # Use specific version
-    $0 --force                  # Force rebuild
-    $0 --clean --force          # Clean rebuild
-
-After successful build, source the environment setup:
-    source $CACHE_DIR/setup_env.sh
-EOF
-}
-
-# Parse command line arguments
-FORCE_BUILD=false
-CLEAN_BUILD=false
-
+# Parse arguments
+CLEAN=0
+FORCE=0
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -t|--tag)
-            BITNET_CPP_TAG="$2"
+        --rev|--tag)
+            REV="$2"
             shift 2
             ;;
-        -p|--path)
-            CACHE_DIR="$2"
-            BUILD_DIR="$CACHE_DIR/build"
-            shift 2
-            ;;
-        -f|--force)
-            FORCE_BUILD=true
+        --clean)
+            CLEAN=1
             shift
             ;;
-        -c|--clean)
-            CLEAN_BUILD=true
+        --force)
+            FORCE=1
             shift
             ;;
-        -h|--help)
-            print_usage
+        --help)
+            echo "Usage: $0 [--tag TAG] [--clean] [--force]"
+            echo "  --tag TAG    Git revision/tag to checkout (default: $DEFAULT_REV)"
+            echo "  --clean      Clean build before compiling"
+            echo "  --force      Force rebuild even if already built"
             exit 0
             ;;
         *)
             log_error "Unknown option: $1"
-            print_usage
             exit 1
             ;;
     esac
 done
 
-# Main execution
-main() {
-    log_info "BitNet C++ Fetch and Build Script"
-    log_info "=================================="
+# Check if already built (skip expensive operations if possible)
+if [[ -d "$CACHE_DIR/build" ]] && [[ $FORCE -eq 0 ]] && [[ $CLEAN -eq 0 ]]; then
+    # Quick check if libraries exist
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        LIB_CHECK="$CACHE_DIR/build/3rdparty/llama.cpp/src/libllama.dylib"
+    else
+        LIB_CHECK="$CACHE_DIR/build/3rdparty/llama.cpp/src/libllama.so"
+    fi
     
-    # Check if already built and not forcing rebuild
-    if [[ -d "$BUILD_DIR" && -f "$BUILD_DIR/install/lib" && "$FORCE_BUILD" != true ]]; then
+    if [[ -f "$LIB_CHECK" ]]; then
         log_info "BitNet C++ already built at $CACHE_DIR"
-        log_info "Use --force to rebuild or --clean --force for clean rebuild"
-        log_info "To use: source $CACHE_DIR/setup_env.sh"
+        log_info "Use --force to rebuild or --clean for clean rebuild"
+        # Still print setup instructions
+        exec "$0" --print-setup
         exit 0
     fi
-    
-    # Check dependencies
-    check_dependencies
-    
-    # Clean if requested
-    if [[ "$CLEAN_BUILD" == true && -d "$BUILD_DIR" ]]; then
-        log_info "Cleaning build directory..."
-        rm -rf "$BUILD_DIR"
-    fi
-    
-    # Fetch source code
-    fetch_source
-    
-    # Apply patches
-    apply_patches
-    
-    # Build
-    build_cpp
-    
-    # Validate
-    validate_build
-    
-    # Create environment script
-    create_env_script
-    
-    log_info "BitNet C++ setup completed successfully!"
-    log_info ""
-    log_info "To use in your shell:"
-    log_info "  source $CACHE_DIR/setup_env.sh"
-    log_info ""
-    log_info "To use in Rust cross-validation:"
-    log_info "  export BITNET_CPP_PATH=$CACHE_DIR"
-    log_info "  cargo test --features crossval"
-    log_info ""
-    log_info "Cache location: $CACHE_DIR"
-    log_info "Build artifacts: $BUILD_DIR"
-}
+fi
 
-# Run main function
-main "$@"
+# Clone or update repository
+if [[ ! -d "$CACHE_DIR/.git" ]]; then
+    log_info "Cloning BitNet repository to $CACHE_DIR..."
+    git clone --recurse-submodules "$REPO_URL" "$CACHE_DIR"
+    cd "$CACHE_DIR"
+    git checkout "$REV"
+    git submodule update --init --recursive
+else
+    log_info "Repository exists, checking revision..."
+    cd "$CACHE_DIR"
+    CURRENT_REV=$(git rev-parse HEAD)
+    TARGET_REV=$(git rev-parse "$REV" 2>/dev/null || echo "$REV")
+    
+    if [[ "$CURRENT_REV" != "$TARGET_REV" ]] || [[ $FORCE -eq 1 ]]; then
+        log_info "Updating to revision: $REV"
+        git fetch --tags origin
+        git checkout "$REV"
+        git submodule update --init --recursive
+    else
+        log_info "Already at revision: $REV"
+    fi
+fi
+
+log_info "Repository at commit: $(git rev-parse HEAD)"
+
+# Handle Git LFS if available (safe to run even if not needed)
+if command -v git-lfs >/dev/null 2>&1; then
+    git -C "$CACHE_DIR" lfs install --local || true
+    git -C "$CACHE_DIR" lfs pull || true
+fi
+
+# Sanity checks - fail fast if critical files are missing
+log_info "Verifying critical files..."
+
+# Check for the header that CMake complains about
+# This is a known issue with the Microsoft BitNet repo structure
+if [[ ! -f "$CACHE_DIR/include/bitnet-lut-kernels.h" ]]; then
+    # Try to use a preset kernel as fallback (Microsoft's workaround)
+    PRESET_KERNEL=""
+    for preset_dir in "$CACHE_DIR"/preset_kernels/*/; do
+        if [[ -f "$preset_dir/bitnet-lut-kernels-tl2.h" ]]; then
+            PRESET_KERNEL="$preset_dir/bitnet-lut-kernels-tl2.h"
+            break
+        elif [[ -f "$preset_dir/bitnet-lut-kernels.h" ]]; then
+            PRESET_KERNEL="$preset_dir/bitnet-lut-kernels.h"
+            break
+        fi
+    done
+    
+    if [[ -n "$PRESET_KERNEL" ]]; then
+        log_warn "bitnet-lut-kernels.h missing, copying from preset: $PRESET_KERNEL"
+        cp "$PRESET_KERNEL" "$CACHE_DIR/include/bitnet-lut-kernels.h"
+    else
+        log_error "FATAL: bitnet-lut-kernels.h not found and no preset available!"
+        log_error "This is a known issue with the Microsoft BitNet repo."
+        log_error "See: https://github.com/microsoft/BitNet/issues"
+        exit 1
+    fi
+fi
+
+# Check for llama.cpp submodule
+if [[ ! -f "$CACHE_DIR/3rdparty/llama.cpp/CMakeLists.txt" ]]; then
+    log_error "FATAL: llama.cpp submodule not initialized properly!"
+    log_error "Try: git -C '$CACHE_DIR' submodule update --init --recursive"
+    exit 1
+fi
+
+# Check for critical headers we'll need for bindings
+CRITICAL_HEADERS=(
+    "include/ggml-bitnet.h"
+    "3rdparty/llama.cpp/include/llama.h"
+    "3rdparty/llama.cpp/ggml/include/ggml.h"
+)
+
+for header in "${CRITICAL_HEADERS[@]}"; do
+    if [[ ! -f "$CACHE_DIR/$header" ]]; then
+        log_error "FATAL: Required header not found: $header"
+        exit 1
+    fi
+done
+
+# Create build directory
+BUILD_DIR="$CACHE_DIR/build"
+if [[ $CLEAN -eq 1 ]] && [[ -d "$BUILD_DIR" ]]; then
+    log_info "Cleaning build directory..."
+    rm -rf "$BUILD_DIR"
+fi
+mkdir -p "$BUILD_DIR"
+cd "$BUILD_DIR"
+
+# Configure and build
+log_info "Configuring BitNet build (CPU-only, shared libs for FFI)..."
+cmake .. \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DBUILD_SHARED_LIBS=ON \
+    -DLLAMA_BUILD_TESTS=OFF \
+    -DLLAMA_BUILD_EXAMPLES=OFF \
+    -DLLAMA_CUDA=OFF \
+    -DLLAMA_METAL=OFF \
+    -DLLAMA_BLAS=OFF \
+    -DLLAMA_ALL_WARNINGS=OFF
+
+log_info "Building BitNet (this may take a few minutes)..."
+cmake --build . -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+
+# Post-build verification
+log_info "Verifying build artifacts..."
+
+# Check for the main shared libraries
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    LLAMA_LIB="$BUILD_DIR/3rdparty/llama.cpp/src/libllama.so"
+    GGML_LIB="$BUILD_DIR/3rdparty/llama.cpp/ggml/src/libggml.so"
+    LIB_EXT="so"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    LLAMA_LIB="$BUILD_DIR/3rdparty/llama.cpp/src/libllama.dylib"
+    GGML_LIB="$BUILD_DIR/3rdparty/llama.cpp/ggml/src/libggml.dylib"
+    LIB_EXT="dylib"
+else
+    log_warn "Unknown OS type: $OSTYPE, assuming Linux"
+    LLAMA_LIB="$BUILD_DIR/3rdparty/llama.cpp/src/libllama.so"
+    GGML_LIB="$BUILD_DIR/3rdparty/llama.cpp/ggml/src/libggml.so"
+    LIB_EXT="so"
+fi
+
+# Find actual library locations (build paths can vary)
+FOUND_LIBS=()
+for search_dir in "$BUILD_DIR" "$BUILD_DIR/3rdparty/llama.cpp" "$BUILD_DIR/3rdparty/llama.cpp/src"; do
+    if [[ -f "$search_dir/libllama.$LIB_EXT" ]]; then
+        LLAMA_LIB="$search_dir/libllama.$LIB_EXT"
+        FOUND_LIBS+=("$LLAMA_LIB")
+        break
+    fi
+done
+
+for search_dir in "$BUILD_DIR" "$BUILD_DIR/3rdparty/llama.cpp/ggml" "$BUILD_DIR/3rdparty/llama.cpp/ggml/src"; do
+    if [[ -f "$search_dir/libggml.$LIB_EXT" ]]; then
+        GGML_LIB="$search_dir/libggml.$LIB_EXT"
+        FOUND_LIBS+=("$GGML_LIB")
+        break
+    fi
+done
+
+if [[ ${#FOUND_LIBS[@]} -eq 0 ]]; then
+    log_error "FATAL: No shared libraries found after build!"
+    log_error "Expected at least libllama.$LIB_EXT"
+    log_error "Build may have failed or produced static libraries only."
+    exit 1
+fi
+
+log_info "Found libraries:"
+for lib in "${FOUND_LIBS[@]}"; do
+    log_info "  - $lib"
+done
+
+# Check for CLI binary (optional, for manual testing)
+if [[ -f "$BUILD_DIR/bin/llama-cli" ]]; then
+    log_info "CLI binary found: $BUILD_DIR/bin/llama-cli"
+elif [[ -f "$BUILD_DIR/3rdparty/llama.cpp/bin/llama-cli" ]]; then
+    log_info "CLI binary found: $BUILD_DIR/3rdparty/llama.cpp/bin/llama-cli"
+else
+    log_warn "No llama-cli binary found (OK if not needed for FFI)"
+fi
+
+# Determine library paths for environment setup
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    LD_VAR="DYLD_LIBRARY_PATH"
+else
+    LD_VAR="LD_LIBRARY_PATH"
+fi
+
+LIB_PATHS="$(dirname "$LLAMA_LIB")"
+if [[ "$(dirname "$GGML_LIB")" != "$(dirname "$LLAMA_LIB")" ]]; then
+    LIB_PATHS="$LIB_PATHS:$(dirname "$GGML_LIB")"
+fi
+
+log_info ""
+log_info "================================================================"
+log_info "BitNet C++ build complete!"
+log_info "================================================================"
+log_info "Repository:     $CACHE_DIR"
+log_info "Build:          $BUILD_DIR"
+log_info "Git revision:   $REV ($(git -C "$CACHE_DIR" rev-parse --short HEAD))"
+log_info ""
+log_info "To use for cross-validation:"
+log_info ""
+log_info "  export BITNET_CPP_DIR='$CACHE_DIR'"
+log_info "  export ${LD_VAR}='${LIB_PATHS}:\$${LD_VAR}'"
+log_info "  export OMP_NUM_THREADS=1    # For determinism"
+log_info "  export GGML_NUM_THREADS=1"
+log_info ""
+log_info "Then run:"
+log_info "  cargo test --features crossval -p crossval"
+log_info ""
+log_info "Or use convenience script:"
+log_info "  ./scripts/crossval.sh /path/to/model.gguf"
+log_info "================================================================"
