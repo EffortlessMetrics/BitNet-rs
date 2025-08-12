@@ -10,6 +10,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::Client;
 use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, RANGE};
 use sha2::{Digest, Sha256};
+use walkdir::WalkDir;
 
 #[derive(Parser)]
 #[command(name = "xtask", about = "Developer tasks for BitNet.rs")]
@@ -54,7 +55,7 @@ enum Cmd {
 
     /// Run deterministic cross-validation tests
     Crossval {
-        /// Path to GGUF model (default: models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf)
+        /// Path to GGUF model (auto-discovers if not specified)
         #[arg(long)]
         model: Option<PathBuf>,
         /// Path to C++ checkout (default: $HOME/.cache/bitnet_cpp)
@@ -119,9 +120,10 @@ fn main() -> Result<()> {
             release,
             extra,
         } => {
-            let model_path = model.unwrap_or_else(|| {
-                PathBuf::from("models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf")
-            });
+            let model_path = match model {
+                Some(p) => p,
+                None => resolve_default_model()?,
+            };
             crossval_cmd(&model_path, cpp_dir.as_deref(), release, &extra)
         }
         Cmd::FullCrossval { force } => full_crossval_cmd(force),
@@ -211,13 +213,25 @@ fn download_model_cmd(
     
     let mut resp = req.send()?.error_for_status()?;
 
-    let pb = ProgressBar::new(size.unwrap_or(0));
-    pb.set_style(
-        ProgressStyle::with_template(
-            "{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta}) {msg}"
-        )?
-        .progress_chars("##-")
-    );
+    let pb = if let Some(total) = size {
+        let pb = ProgressBar::new(total);
+        pb.set_style(
+            ProgressStyle::with_template(
+                "{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta}) {msg}"
+            )?
+            .progress_chars("##-")
+        );
+        pb
+    } else {
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::with_template(
+                "{spinner:.green} downloading {bytes} {msg}"
+            )?
+        );
+        pb.enable_steady_tick(std::time::Duration::from_millis(120));
+        pb
+    };
     
     if start > 0 {
         pb.set_position(start);
@@ -260,7 +274,43 @@ fn download_model_cmd(
         println!("   Size: {:.2} MB", size as f64 / 1_048_576.0);
     }
     
+    // Print ready-to-use export command
+    let abs_path = dest.canonicalize().unwrap_or(dest.clone());
+    println!();
+    println!("To use this model for cross-validation:");
+    println!("  export CROSSVAL_GGUF=\"{}\"", abs_path.display());
+    
     Ok(())
+}
+
+fn resolve_default_model() -> Result<PathBuf> {
+    let root = PathBuf::from("models");
+    if !root.exists() {
+        return Err(anyhow!(
+            "No models directory found. Run `cargo xtask download-model` first."
+        ));
+    }
+    
+    // Prefer Microsoft path + filename
+    let preferred = root.join("microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf");
+    if preferred.exists() {
+        return Ok(preferred);
+    }
+    
+    // Fallback: scan for first *.gguf file
+    for entry in WalkDir::new(&root).into_iter().filter_map(Result::ok) {
+        if entry.file_type().is_file() {
+            if let Some(ext) = entry.path().extension() {
+                if ext == "gguf" {
+                    return Ok(entry.path().to_path_buf());
+                }
+            }
+        }
+    }
+    
+    Err(anyhow!(
+        "No GGUF model found under ./models.\nTip: Run `cargo xtask download-model` or pass --model <path/to/model.gguf>"
+    ))
 }
 
 fn verify_sha256(path: &Path, expected_hex: &str) -> Result<()> {
@@ -369,7 +419,10 @@ fn crossval_cmd(
     cmd.env("BITNET_CPP_DIR", &cpp)
         .env("CROSSVAL_GGUF", model)
         .env("OMP_NUM_THREADS", "1")
-        .env("GGML_NUM_THREADS", "1");
+        .env("GGML_NUM_THREADS", "1")
+        .env("MKL_NUM_THREADS", "1")
+        .env("OPENBLAS_NUM_THREADS", "1")
+        .env("RUST_BACKTRACE", "1");
     
     // Add test runner args
     cmd.arg("--")
