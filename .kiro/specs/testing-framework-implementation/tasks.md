@@ -510,7 +510,11 @@ th end-to-end validation
 
 
 - [ ] Performance benchmarks demonstrate 2x+ improvement over C++ baseline
+
 - [-] Test execution completes in <15 minutes for full suite
+
+
+
 
 
 
