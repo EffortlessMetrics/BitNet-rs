@@ -53,13 +53,15 @@ futures-util = "0.3"
 # Serialization and configuration
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde_yaml = "0.9"
 toml = "0.8"
 
 # HTTP client for fixture downloads
 reqwest = { version = "0.12", features = ["json", "stream"] }
 
 # Cryptography for checksums
-sha2 = "0.10"
+sha2 = { version = "0.10", features = ["std"] }
+digest = "0.10"
 
 # Error handling
 thiserror = "1.0"
@@ -71,6 +73,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # System utilities
 num_cpus = "1.0"
+walkdir = "2.0"
+regex = "1.0"
 
 # Testing utilities
 tempfile = "3.0"

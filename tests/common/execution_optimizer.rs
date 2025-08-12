@@ -449,7 +449,7 @@ impl ExecutionOptimizer {
                 || test
                     .file_path
                     .to_string_lossy()
-                    .contains(&file.to_string_lossy())
+                    .contains(&*file.to_string_lossy())
         })
     }
 

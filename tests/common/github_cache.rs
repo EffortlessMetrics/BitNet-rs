@@ -377,7 +377,8 @@ impl GitHubCacheManager {
     }
 
     /// Calculate size of a directory recursively
-    async fn calculate_directory_size(&self, path: &Path) -> TestResult<u64> {
+    fn calculate_directory_size(&self, path: &Path) -> std::pin::Pin<Box<dyn std::future::Future<Output = TestResult<u64>> + Send + '_>> {
+        Box::pin(async move {
         let mut total_size = 0u64;
 
         if path.is_file() {
