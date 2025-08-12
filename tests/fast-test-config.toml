@@ -1,0 +1,153 @@
+# Fast test execution configuration
+# Optimized for <15 minute execution time
+
+[general]
+target_duration_minutes = 15
+max_parallel_tests = 8       # Will be auto-detected if 0
+aggressive_mode = true
+skip_slow_tests = true
+enable_caching = true
+enable_incremental = true
+
+[timeouts]
+# Individual test timeout in seconds
+test_timeout = 60
+# Overall suite timeout in seconds
+suite_timeout = 900 # 15 minutes
+
+[optimization]
+# Skip tests that take longer than this threshold
+slow_test_threshold_seconds = 30
+# Enable dynamic parallelism adjustment
+dynamic_parallelism = true
+# Enable load balancing across workers
+load_balancing = true
+# CPU usage threshold for scaling down (0.0 to 1.0)
+cpu_threshold = 0.95
+# Memory usage threshold for scaling down (0.0 to 1.0)
+memory_threshold = 0.90
+
+[caching]
+# Enable test result caching
+enabled = true
+# Cache directory
+cache_dir = "tests/cache"
+# Maximum cache size in GB
+max_cache_size_gb = 5
+# Auto-download test fixtures
+auto_download = true
+# Cache cleanup interval in hours
+cleanup_interval_hours = 24
+
+[reporting]
+# Generate minimal reports for speed
+generate_coverage = false
+generate_performance = true
+# Output formats (json is fastest)
+formats = ["json"]
+# Include test artifacts
+include_artifacts = false
+# Output directory
+output_dir = "test-reports"
+
+[logging]
+# Reduce logging overhead
+level = "warn"
+# Disable verbose output
+verbose = false
+
+[selection]
+# Test selection strategy
+strategy = "smart" # Options: all, smart, incremental, fast-only
+
+# Test categories to prioritize (in order)
+priority_categories = ["unit", "integration", "performance", "crossval"]
+
+# Test patterns to skip in aggressive mode
+skip_patterns = [
+    "**/crossval/**",
+    "**/benchmark/**",
+    "**/slow_*",
+    "**/stress_*",
+]
+
+# Test patterns to always include (high priority)
+always_include_patterns = ["**/unit/**", "**/core/**", "**/basic/**"]
+
+[parallel]
+# Parallel execution configuration
+max_workers = 0 # 0 = auto-detect
+min_workers = 1
+# Resource monitoring
+enable_resource_monitoring = false   # Disabled for speed
+resource_check_interval_seconds = 10
+# Timeout multiplier for parallel execution
+timeout_multiplier = 0.8
+
+[incremental]
+# Incremental testing configuration
+enabled = true
+# Git-based change detection
+use_git_changes = true
+# File patterns that trigger full test suite
+full_suite_patterns = [
+    "Cargo.toml",
+    "Cargo.lock",
+    "build.rs",
+    ".github/workflows/**",
+]
+# Crate dependency mapping for change propagation
+dependency_mapping = true
+
+[environment]
+# Environment variables to set during test execution
+variables = [
+    { name = "BITNET_TEST_MODE", value = "fast" },
+    { name = "BITNET_LOG_LEVEL", value = "warn" },
+    { name = "RUST_BACKTRACE", value = "0" },
+    { name = "CARGO_TERM_QUIET", value = "true" },
+]
+
+# Platform-specific configurations
+[environment.windows]
+variables = [{ name = "BITNET_PLATFORM", value = "windows" }]
+
+[environment.linux]
+variables = [{ name = "BITNET_PLATFORM", value = "linux" }]
+
+[environment.macos]
+variables = [{ name = "BITNET_PLATFORM", value = "macos" }]
+
+# CI-specific optimizations
+[ci]
+# More aggressive optimizations for CI
+enabled = false              # Set to true in CI environment
+target_duration_minutes = 10
+max_parallel_tests = 4       # Conservative for CI stability
+skip_slow_tests = true
+enable_fail_fast = true
+
+# CI-specific test selection
+ci_test_patterns = ["**/unit/**", "**/integration/core/**"]
+
+# Development-specific optimizations
+[dev]
+# Less aggressive for development
+target_duration_minutes = 5
+skip_slow_tests = false     # Run all tests in dev
+enable_watch_mode = true
+enable_incremental = true
+
+# Test categories for different execution modes
+[categories]
+# Fast tests (< 5 seconds each)
+fast = ["unit", "core"]
+
+# Medium tests (5-30 seconds each)
+medium = ["integration", "api"]
+
+# Slow tests (> 30 seconds each)
+slow = ["performance", "benchmark", "crossval", "stress"]
+
+# Critical tests (always run)
+critical = ["unit/core", "integration/basic", "api/essential"]
