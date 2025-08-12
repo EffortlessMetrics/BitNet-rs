@@ -24,7 +24,7 @@ cargo test --features crossval -p bitnet-crossval
 
 ## Prerequisites
 
-- Rust 1.70+ with cargo
+- Rust 1.89+ with cargo
 - C++ compiler (g++ or clang++)
 - CMake 3.14+
 - Git with submodule support
