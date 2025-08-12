@@ -155,7 +155,7 @@ impl BitNetTensor {
     pub fn inner(&self) -> &CandleTensor {
         &self.inner
     }
-    
+
     /// Convenience method to get the underlying Candle tensor
     pub fn as_candle(&self) -> &CandleTensor {
         &self.inner
@@ -163,6 +163,13 @@ impl BitNetTensor {
 
     pub fn into_inner(self) -> CandleTensor {
         self.inner
+    }
+
+    /// Get the tensor data as a Vec<f32> for testing purposes
+    pub fn to_vec(&self) -> Result<Vec<f32>> {
+        self.inner
+            .to_vec1::<f32>()
+            .map_err(|e| BitNetError::Validation(format!("Failed to convert tensor to vec: {}", e)))
     }
 }
 
@@ -182,11 +189,26 @@ impl Tensor for BitNetTensor {
     }
 
     fn as_slice<T: bytemuck::Pod>(&self) -> Result<&[T]> {
-        // This is a simplified implementation - in practice, we'd need
-        // to handle device transfers and type conversions properly
-        Err(BitNetError::Validation(
-            "Direct slice access not implemented".to_string(),
-        ))
+        // For now, we'll implement a basic version that works with f32 on CPU
+        // In a full implementation, this would handle device transfers and type conversions
+        if std::any::TypeId::of::<T>() == std::any::TypeId::of::<f32>() {
+            match self.inner.to_vec1::<f32>() {
+                Ok(vec) => {
+                    // This is unsafe but necessary for the current test setup
+                    // In production, we'd need a better approach to lifetime management
+                    let leaked: &'static [f32] = Box::leak(vec.into_boxed_slice());
+                    Ok(unsafe { std::mem::transmute(leaked) })
+                }
+                Err(e) => Err(BitNetError::Validation(format!(
+                    "Failed to convert tensor to slice: {}",
+                    e
+                ))),
+            }
+        } else {
+            Err(BitNetError::Validation(
+                "Only f32 slice access is currently supported".to_string(),
+            ))
+        }
     }
 
     fn to_candle(&self) -> Result<CandleTensor> {
