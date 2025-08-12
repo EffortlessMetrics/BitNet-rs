@@ -15,6 +15,13 @@ fn create_test_tensor(data: Vec<f32>, shape: Vec<usize>) -> BitNetTensor {
     BitNetTensor::new(tensor)
 }
 
+/// Helper function to create test tensor from MockTensor data
+fn mock_to_bitnet_tensor(mock: MockTensor) -> BitNetTensor {
+    let data: &[f32] = mock.as_slice().unwrap();
+    let shape = mock.shape().to_vec();
+    create_test_tensor(data.to_vec(), shape)
+}
+
 /// Test error conditions and edge cases
 mod error_handling {
     use super::*;
@@ -59,7 +66,7 @@ mod error_handling {
     #[test]
     fn test_empty_tensor_quantization() {
         let quantizer = I2SQuantizer::new();
-        let empty_tensor = MockTensor::new(vec![]);
+        let empty_tensor = create_test_tensor(vec![], vec![0]);
 
         let result = quantizer.quantize_tensor(&empty_tensor);
         // Should handle empty tensors gracefully
@@ -73,7 +80,7 @@ mod error_handling {
     #[test]
     fn test_single_element_tensor() {
         let quantizer = I2SQuantizer::new();
-        let tensor = MockTensor::new(vec![42.0]);
+        let tensor = create_test_tensor(vec![], vec![.len()]);
 
         let result = quantizer.quantize_tensor(&tensor);
         assert!(result.is_ok());
@@ -104,7 +111,7 @@ mod error_handling {
 
         // Test with very large values
         let large_values = vec![f32::MAX, f32::MAX / 2.0, f32::MAX / 4.0, f32::MAX / 8.0];
-        let tensor = MockTensor::new(large_values);
+        let tensor = mock_to_bitnet_tensor(MockTensor::new(large_values));
         let result = quantizer.quantize_tensor(&tensor);
         assert!(result.is_ok());
 
@@ -115,13 +122,13 @@ mod error_handling {
             f32::MIN_POSITIVE * 4.0,
             f32::MIN_POSITIVE * 8.0,
         ];
-        let tensor = MockTensor::new(small_values);
+        let tensor = mock_to_bitnet_tensor(MockTensor::new(small_values));
         let result = quantizer.quantize_tensor(&tensor);
         assert!(result.is_ok());
 
         // Test with infinity
         let inf_values = vec![f32::INFINITY, f32::NEG_INFINITY, 1.0, -1.0];
-        let tensor = MockTensor::new(inf_values);
+        let tensor = mock_to_bitnet_tensor(MockTensor::new(inf_values));
         let result = quantizer.quantize_tensor(&tensor);
         // Should handle infinity gracefully (might clamp or error)
         // The important thing is it doesn't panic
@@ -132,7 +139,7 @@ mod error_handling {
         let quantizer = I2SQuantizer::new();
 
         let nan_values = vec![f32::NAN, 1.0, 2.0, 3.0];
-        let tensor = MockTensor::new(nan_values);
+        let tensor = mock_to_bitnet_tensor(MockTensor::new(nan_values));
         let result = quantizer.quantize_tensor(&tensor);
 
         // NaN handling should be well-defined
@@ -143,7 +150,7 @@ mod error_handling {
     fn test_all_zero_tensor() {
         let quantizer = I2SQuantizer::new();
 
-        let zero_tensor = MockTensor::new(vec![0.0f32; 64]);
+        let zero_tensor = mock_to_bitnet_tensor(MockTensor::new(vec![0.0f32; 64]));
         let result = quantizer.quantize_tensor(&zero_tensor);
         assert!(result.is_ok());
 
@@ -156,7 +163,7 @@ mod error_handling {
     fn test_all_same_value_tensor() {
         let quantizer = I2SQuantizer::new();
 
-        let same_value_tensor = MockTensor::new(vec![64]);
+        let same_value_tensor = mock_to_bitnet_tensor(MockTensor::new(vec![64]));
         let result = quantizer.quantize_tensor(&same_value_tensor);
         assert!(result.is_ok());
 
@@ -188,7 +195,7 @@ mod algorithm_comprehensive {
         ];
 
         for (i, pattern) in patterns.iter().enumerate() {
-            let tensor = MockTensor::new(pattern.clone());
+            let tensor = mock_to_bitnet_tensor(MockTensor::new(pattern.clone()));
             let result = quantizer.quantize_tensor(&tensor);
             assert!(result.is_ok(), "Pattern {} failed", i);
 
@@ -231,7 +238,7 @@ mod algorithm_comprehensive {
             let data: Vec<f32> = (0..block_size * 4)
                 .map(|i| (i as f32 - block_size as f32 * 2.0) / 10.0)
                 .collect();
-            let tensor = MockTensor::new(data.clone());
+            let tensor = mock_to_bitnet_tensor(MockTensor::new(data.clone()));
 
             let result = quantizer.quantize_tensor(&tensor);
             assert!(result.is_ok(), "Block size {} failed", block_size);
@@ -271,7 +278,7 @@ mod algorithm_comprehensive {
 
             let quantizer = TL2Quantizer::with_config(config);
             let data: Vec<f32> = (0..256).map(|i| (i as f32).sin() * 10.0).collect();
-            let tensor = MockTensor::new(data.clone());
+            let tensor = mock_to_bitnet_tensor(MockTensor::new(data.clone()));
 
             let result = quantizer.quantize_tensor(&tensor);
             assert!(result.is_ok(), "Precision {} failed", precision);
@@ -301,7 +308,7 @@ mod algorithm_comprehensive {
     #[test]
     fn test_quantization_compression_ratios() {
         let data: Vec<f32> = (0..1024).map(|i| (i as f32 * 0.01).sin()).collect();
-        let tensor = MockTensor::new(data.clone());
+        let tensor = mock_to_bitnet_tensor(MockTensor::new(data.clone()));
 
         let original_size = data.len() * std::mem::size_of::<f32>();
 
@@ -346,7 +353,7 @@ mod performance_tests {
 
         for size in sizes {
             let data: Vec<f32> = (0..size).map(|i| (i as f32 * 0.001).sin()).collect();
-            let tensor = MockTensor::new(data);
+            let tensor = mock_to_bitnet_tensor(MockTensor::new(data));
 
             // Test I2S performance
             let quantizer = I2SQuantizer::new();
@@ -370,7 +377,7 @@ mod performance_tests {
     fn test_dequantization_performance() {
         let size = 16384;
         let data: Vec<f32> = (0..size).map(|i| (i as f32 * 0.001).sin()).collect();
-        let tensor = MockTensor::new(data);
+        let tensor = mock_to_bitnet_tensor(MockTensor::new(data));
 
         let quantizer = I2SQuantizer::new();
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
@@ -398,7 +405,7 @@ mod performance_tests {
     fn test_memory_usage() {
         let size = 10000;
         let data: Vec<f32> = (0..size).map(|i| i as f32).collect();
-        let tensor = MockTensor::new(data.clone());
+        let tensor = mock_to_bitnet_tensor(MockTensor::new(data.clone()));
 
         let quantizer = I2SQuantizer::new();
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
@@ -429,7 +436,7 @@ mod property_tests {
         fn test_quantization_preserves_shape(
             data in prop::collection::vec(prop::num::f32::NORMAL, 1..1000)
         ) {
-            let tensor = MockTensor::new(data.clone());
+            let tensor = mock_to_bitnet_tensor(MockTensor::new(data.clone()));
             let quantizer = I2SQuantizer::new();
 
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
@@ -442,7 +449,7 @@ mod property_tests {
         fn test_quantization_deterministic(
             data in prop::collection::vec(prop::num::f32::NORMAL, 1..100)
         ) {
-            let tensor = MockTensor::new(data);
+            let tensor = mock_to_bitnet_tensor(MockTensor::new(data));
             let quantizer = I2SQuantizer::new();
 
             let result1 = quantizer.quantize_tensor(&tensor).unwrap();
@@ -456,7 +463,7 @@ mod property_tests {
         fn test_quantization_bounded_error(
             data in prop::collection::vec(-100.0f32..100.0f32, 64..256)
         ) {
-            let tensor = MockTensor::new(data.clone());
+            let tensor = mock_to_bitnet_tensor(MockTensor::new(data.clone()));
             let quantizer = I2SQuantizer::new();
 
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
@@ -476,7 +483,7 @@ mod property_tests {
         fn test_scale_values_reasonable(
             data in prop::collection::vec(-1000.0f32..1000.0f32, 64..256)
         ) {
-            let tensor = MockTensor::new(data);
+            let tensor = mock_to_bitnet_tensor(MockTensor::new(data));
             let quantizer = I2SQuantizer::new();
 
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
@@ -505,22 +512,13 @@ mod integration_tests {
             })
             .collect();
 
-        let tensor = MockTensor::new(model_weights.clone());
+        let tensor = mock_to_bitnet_tensor(MockTensor::new(model_weights.clone()));
 
         // Test all quantization methods
         let methods = vec![
-            (
-                "I2S",
-                Box::new(I2SQuantizer::new()) as Box<dyn Quantize>,
-            ),
-            (
-                "TL1",
-                Box::new(TL1Quantizer::new()) as Box<dyn Quantize>,
-            ),
-            (
-                "TL2",
-                Box::new(TL2Quantizer::new()) as Box<dyn Quantize>,
-            ),
+            ("I2S", Box::new(I2SQuantizer::new()) as Box<dyn Quantize>),
+            ("TL1", Box::new(TL1Quantizer::new()) as Box<dyn Quantize>),
+            ("TL2", Box::new(TL2Quantizer::new()) as Box<dyn Quantize>),
         ];
 
         for (name, quantizer) in methods {
@@ -588,7 +586,7 @@ mod integration_tests {
     #[test]
     fn test_cross_algorithm_compatibility() {
         let data: Vec<f32> = (0..256).map(|i| (i as f32 * 0.1).sin()).collect();
-        let tensor = MockTensor::new(data.clone());
+        let tensor = mock_to_bitnet_tensor(MockTensor::new(data.clone()));
 
         // Test that different algorithms can handle the same data
         let i2s_quantizer = I2SQuantizer::new();
