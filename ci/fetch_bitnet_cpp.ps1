@@ -2,8 +2,8 @@
 # PowerShell version for Windows systems
 
 param(
-    [string]$Tag = $env:BITNET_CPP_TAG ?? "v1.0.0",
-    [string]$CachePath = $env:BITNET_CPP_PATH ?? "$env:USERPROFILE\.cache\bitnet_cpp",
+    [string]$Tag = $(if ($env:BITNET_CPP_TAG) { $env:BITNET_CPP_TAG } else { "v1.0.0" }),
+    [string]$CachePath = $(if ($env:BITNET_CPP_PATH) { $env:BITNET_CPP_PATH } else { "$env:USERPROFILE\.cache\bitnet_cpp" }),
     [switch]$Force,
     [switch]$Clean,
     [switch]$Help
