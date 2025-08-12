@@ -4,9 +4,11 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     sync::{Arc, atomic::{AtomicBool, Ordering}},
-    time::Instant,
+    thread,
+    time::{Duration, Instant},
 };
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
+use fs2::available_space;
 use clap::{Parser, Subcommand};
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::Client;
@@ -40,10 +42,10 @@ enum Cmd {
         /// Output directory
         #[arg(long, default_value = "models")]
         out: PathBuf,
-        /// Optional expected sha256 (hex)
+        /// Optional expected SHA256 for verification
         #[arg(long)]
         sha256: Option<String>,
-        /// Overwrite if exists
+        /// Force download even if file exists
         #[arg(long, default_value_t = false)]
         force: bool,
     },
@@ -72,6 +74,9 @@ enum Cmd {
         /// Release build
         #[arg(long, default_value_t = true)]
         release: bool,
+        /// Print env and cargo test command, then exit
+        #[arg(long, help = "Print env and cargo test command, then exit")]
+        dry_run: bool,
         /// Extra args to pass to cargo test after `--`
         #[arg(last = true)]
         extra: Vec<String>,
@@ -126,13 +131,14 @@ fn main() -> Result<()> {
             model,
             cpp_dir,
             release,
+            dry_run,
             extra,
         } => {
             let model_path = match model {
                 Some(p) => p,
                 None => resolve_default_model()?,
             };
-            crossval_cmd(&model_path, cpp_dir.as_deref(), release, &extra)
+            crossval_cmd(&model_path, cpp_dir.as_deref(), release, &extra, dry_run)
         }
         Cmd::FullCrossval { force } => full_crossval_cmd(force),
         Cmd::GenFixtures { size, output } => gen_fixtures(&size, &output),
@@ -211,6 +217,22 @@ fn download_model_cmd(
                 .and_then(|s| s.rsplit('/').next()?.parse::<u64>().ok())
         });
 
+    // Check disk space before downloading
+    if let Some(total) = size {
+        let avail = available_space(&dest_dir)
+            .with_context(|| format!("failed to query free space in {}", dest_dir.display()))?;
+        // Leave 50MB headroom
+        let need = total + 50 * 1024 * 1024;
+        if avail < need {
+            bail!(
+                "Not enough disk space in {}: need ~{:.2} MB, have ~{:.2} MB",
+                dest_dir.display(),
+                need as f64 / 1_048_576.0,
+                avail as f64 / 1_048_576.0
+            );
+        }
+    }
+
     let tmp = dest.with_extension("part");
     let mut start = 0u64;
     
@@ -224,15 +246,48 @@ fn download_model_cmd(
         }
     }
     
-    let mut req = client.get(&url);
-    if let Some(t) = &token {
-        req = req.header(AUTHORIZATION, format!("Bearer {t}"));
-    }
-    if start > 0 {
-        req = req.header(RANGE, format!("bytes={start}-"));
-    }
-    
-    let mut resp = req.send()?.error_for_status()?;
+    // Request with retry logic and proper range handling
+    let mut attempt = 0;
+    let max_attempts = 3;
+    let mut resp = loop {
+        // If tmp larger than remote size, restart clean
+        if let Some(total) = size {
+            if start > total {
+                println!("   Local partial ({:.2} MB) exceeds remote size ({:.2} MB); restarting",
+                         start as f64 / 1_048_576.0, total as f64 / 1_048_576.0);
+                start = 0;
+            }
+        }
+
+        let mut rb = client.get(&url);
+        if let Some(t) = &token { rb = rb.header(AUTHORIZATION, format!("Bearer {t}")); }
+        if start > 0 { rb = rb.header(RANGE, format!("bytes={start}-")); }
+
+        let r = rb.send();
+
+        let r = match r {
+            Ok(r) => r,
+            Err(e) if attempt < max_attempts => {
+                attempt += 1;
+                let backoff = Duration::from_millis(200 * (1 << (attempt - 1)));
+                println!("   transient error: {e}; retrying in {} ms", backoff.as_millis());
+                thread::sleep(backoff);
+                continue;
+            }
+            Err(e) => return Err(e).context("download request failed"),
+        };
+
+        // If server says the Range was invalid, restart from 0
+        if r.status() == StatusCode::RANGE_NOT_SATISFIABLE && start > 0 {
+            println!("   Server rejected resume; restarting from 0");
+            start = 0;
+            attempt += 1;
+            if attempt > max_attempts { bail!("persistent 416 Range errors"); }
+            continue;
+        }
+
+        break r.error_for_status()?;
+    };
     
     // Check if server ignored Range header (must restart from 0)
     let resumed = start > 0;
@@ -453,6 +508,7 @@ fn crossval_cmd(
     cpp_dir: Option<&Path>,
     release: bool,
     extra: &[String],
+    dry_run: bool,
 ) -> Result<()> {
     if !model.exists() {
         return Err(anyhow!(
@@ -508,6 +564,16 @@ fn crossval_cmd(
         .args(["--nocapture", "--test-threads=1"])
         .args(extra);
 
+    if dry_run {
+        println!("\n[DRY RUN] Env + command:");
+        println!("  BITNET_CPP_DIR={}", cpp.display());
+        println!("  CROSSVAL_GGUF={}", model.display());
+        println!("  OMP_NUM_THREADS=1 GGML_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1");
+        println!("  RUST_BACKTRACE=1");
+        println!("  {:?}", cmd);
+        return Ok(());
+    }
+
     run_cmd(&mut cmd)
 }
 
@@ -538,7 +604,7 @@ fn full_crossval_cmd(force: bool) -> Result<()> {
     let model = PathBuf::from(format!("models/{}/{}",
         DEFAULT_MODEL_ID.replace('/', "-"),
         DEFAULT_MODEL_FILE));
-    crossval_cmd(&model, None, true, &[])?;
+    crossval_cmd(&model, None, true, &[], false)?;
     
     println!();
     println!("✅ Full cross-validation workflow complete!");
