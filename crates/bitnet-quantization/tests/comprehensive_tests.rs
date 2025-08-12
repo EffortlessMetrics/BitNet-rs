@@ -126,7 +126,8 @@ mod error_handling {
 
         // Test with infinity
         let inf_values = vec![f32::INFINITY, f32::NEG_INFINITY, 1.0, -1.0];
-        let tensor = create_test_tensor(inf_values, vec![inf_values.len()]);
+        let len = inf_values.len();
+        let tensor = create_test_tensor(inf_values, vec![len]);
         let result = quantizer.quantize_tensor(&tensor);
         // Should handle infinity gracefully (might clamp or error)
         // The important thing is it doesn't panic
@@ -137,7 +138,8 @@ mod error_handling {
         let quantizer = I2SQuantizer::new();
 
         let nan_values = vec![f32::NAN, 1.0, 2.0, 3.0];
-        let tensor = create_test_tensor(nan_values, vec![nan_values.len()]);
+        let len = nan_values.len();
+        let tensor = create_test_tensor(nan_values, vec![len]);
         let result = quantizer.quantize_tensor(&tensor);
 
         // NaN handling should be well-defined
@@ -203,12 +205,12 @@ mod algorithm_comprehensive {
 
             // Test dequantization
             let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
-            assert_eq!(dequantized.len(), pattern.len());
+            assert_eq!(dequantized.shape().iter().product::<usize>(), pattern.len());
 
             // Check that dequantized values are reasonably close to original
             let mse: f32 = pattern
                 .iter()
-                .zip(dequantized.iter())
+                .zip(dequantized.to_vec().unwrap().iter())
                 .map(|(orig, deq)| (orig - deq).powi(2))
                 .sum::<f32>()
                 / pattern.len() as f32;
@@ -228,15 +230,16 @@ mod algorithm_comprehensive {
         for block_size in block_sizes {
             let config = TL1Config {
                 block_size,
-                precision: 1e-4,
-                symmetric: true,
+                lookup_table_size: 256,
+                use_asymmetric: false,
+                precision_bits: 2,
             };
 
             let quantizer = TL1Quantizer::with_config(config);
             let data: Vec<f32> = (0..block_size * 4)
                 .map(|i| (i as f32 - block_size as f32 * 2.0) / 10.0)
                 .collect();
-            let tensor = create_test_tensor(data.clone(, vec![data.clone(.len()]));
+            let tensor = create_test_tensor(data.clone(), vec![data.len()]);
 
             let result = quantizer.quantize_tensor(&tensor);
             assert!(result.is_ok(), "Block size {} failed", block_size);
@@ -247,7 +250,7 @@ mod algorithm_comprehensive {
             // Verify round-trip accuracy
             let max_error = data
                 .iter()
-                .zip(dequantized.iter())
+                .zip(dequantized.to_vec().unwrap().iter())
                 .map(|(orig, deq)| (orig - deq).abs())
                 .fold(0.0f32, f32::max);
 
@@ -270,13 +273,16 @@ mod algorithm_comprehensive {
         for precision in precisions {
             let config = TL2Config {
                 block_size: 64,
-                precision,
-                use_vectorized: true,
+                lookup_table_size: 256,
+                use_avx512: false,
+                use_avx2: true,
+                precision_bits: 2,
+                vectorized_tables: true,
             };
 
             let quantizer = TL2Quantizer::with_config(config);
             let data: Vec<f32> = (0..256).map(|i| (i as f32).sin() * 10.0).collect();
-            let tensor = create_test_tensor(data.clone(, vec![data.clone(.len()]));
+            let tensor = create_test_tensor(data.clone(), vec![data.len()]);
 
             let result = quantizer.quantize_tensor(&tensor);
             assert!(result.is_ok(), "Precision {} failed", precision);
@@ -287,7 +293,7 @@ mod algorithm_comprehensive {
             // Higher precision should give better accuracy
             let mse: f32 = data
                 .iter()
-                .zip(dequantized.iter())
+                .zip(dequantized.to_vec().unwrap().iter())
                 .map(|(orig, deq)| (orig - deq).powi(2))
                 .sum::<f32>()
                 / data.len() as f32;
@@ -306,7 +312,7 @@ mod algorithm_comprehensive {
     #[test]
     fn test_quantization_compression_ratios() {
         let data: Vec<f32> = (0..1024).map(|i| (i as f32 * 0.01).sin()).collect();
-        let tensor = create_test_tensor(data.clone(, vec![data.clone(.len()]));
+        let tensor = create_test_tensor(data.clone(), vec![data.len()]);
 
         let original_size = data.len() * std::mem::size_of::<f32>();
 
@@ -351,7 +357,8 @@ mod performance_tests {
 
         for size in sizes {
             let data: Vec<f32> = (0..size).map(|i| (i as f32 * 0.001).sin()).collect();
-            let tensor = create_test_tensor(data, vec![data.len()]);
+            let len = data.len();
+            let tensor = create_test_tensor(data, vec![len]);
 
             // Test I2S performance
             let quantizer = I2SQuantizer::new();
@@ -375,7 +382,8 @@ mod performance_tests {
     fn test_dequantization_performance() {
         let size = 16384;
         let data: Vec<f32> = (0..size).map(|i| (i as f32 * 0.001).sin()).collect();
-        let tensor = create_test_tensor(data, vec![data.len()]);
+        let len = data.len();
+        let tensor = create_test_tensor(data, vec![len]);
 
         let quantizer = I2SQuantizer::new();
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
@@ -403,7 +411,7 @@ mod performance_tests {
     fn test_memory_usage() {
         let size = 10000;
         let data: Vec<f32> = (0..size).map(|i| i as f32).collect();
-        let tensor = create_test_tensor(data.clone(, vec![data.clone(.len()]));
+        let tensor = create_test_tensor(data.clone(), vec![data.len()]);
 
         let quantizer = I2SQuantizer::new();
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
@@ -434,20 +442,21 @@ mod property_tests {
         fn test_quantization_preserves_shape(
             data in prop::collection::vec(prop::num::f32::NORMAL, 1..1000)
         ) {
-            let tensor = create_test_tensor(data.clone(, vec![data.clone(.len()]));
+            let tensor = create_test_tensor(data.clone(), vec![data.len()]);
             let quantizer = I2SQuantizer::new();
 
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
             let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
 
-            prop_assert_eq!(dequantized.len(), data.len());
+            prop_assert_eq!(dequantized.shape().iter().product::<usize>(), data.len());
         }
 
         #[test]
         fn test_quantization_deterministic(
             data in prop::collection::vec(prop::num::f32::NORMAL, 1..100)
         ) {
-            let tensor = create_test_tensor(data, vec![data.len()]);
+            let len = data.len();
+            let tensor = create_test_tensor(data, vec![len]);
             let quantizer = I2SQuantizer::new();
 
             let result1 = quantizer.quantize_tensor(&tensor).unwrap();
@@ -461,7 +470,7 @@ mod property_tests {
         fn test_quantization_bounded_error(
             data in prop::collection::vec(-100.0f32..100.0f32, 64..256)
         ) {
-            let tensor = create_test_tensor(data.clone(, vec![data.clone(.len()]));
+            let tensor = create_test_tensor(data.clone(), vec![data.len()]);
             let quantizer = I2SQuantizer::new();
 
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
@@ -469,7 +478,7 @@ mod property_tests {
 
             // Calculate maximum absolute error
             let max_error = data.iter()
-                .zip(dequantized.iter())
+                .zip(dequantized.to_vec().unwrap().iter())
                 .map(|(orig, deq)| (orig - deq).abs())
                 .fold(0.0f32, f32::max);
 
@@ -481,7 +490,8 @@ mod property_tests {
         fn test_scale_values_reasonable(
             data in prop::collection::vec(-1000.0f32..1000.0f32, 64..256)
         ) {
-            let tensor = create_test_tensor(data, vec![data.len()]);
+            let len = data.len();
+            let tensor = create_test_tensor(data, vec![len]);
             let quantizer = I2SQuantizer::new();
 
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
@@ -510,13 +520,22 @@ mod integration_tests {
             })
             .collect();
 
-        let tensor = create_test_tensor(model_weights.clone(, vec![model_weights.clone(.len()]));
+        let tensor = create_test_tensor(model_weights.clone(), vec![model_weights.len()]);
 
         // Test all quantization methods
         let methods = vec![
-            ("I2S", Box::new(I2SQuantizer::new()) as Box<dyn Quantize>),
-            ("TL1", Box::new(TL1Quantizer::new()) as Box<dyn Quantize>),
-            ("TL2", Box::new(TL2Quantizer::new()) as Box<dyn Quantize>),
+            (
+                "I2S",
+                Box::new(I2SQuantizer::new()) as Box<dyn QuantizerTrait>,
+            ),
+            (
+                "TL1",
+                Box::new(TL1Quantizer::new()) as Box<dyn QuantizerTrait>,
+            ),
+            (
+                "TL2",
+                Box::new(TL2Quantizer::new()) as Box<dyn QuantizerTrait>,
+            ),
         ];
 
         for (name, quantizer) in methods {
@@ -533,19 +552,22 @@ mod integration_tests {
             let dequantize_time = start.elapsed();
 
             // Verify correctness
-            assert_eq!(dequantized.len(), model_weights.len());
+            assert_eq!(
+                dequantized.shape().iter().product::<usize>(),
+                model_weights.len()
+            );
 
             // Calculate metrics
             let mse: f32 = model_weights
                 .iter()
-                .zip(dequantized.iter())
+                .zip(dequantized.to_vec().unwrap().iter())
                 .map(|(orig, deq)| (orig - deq).powi(2))
                 .sum::<f32>()
                 / model_weights.len() as f32;
 
             let max_error = model_weights
                 .iter()
-                .zip(dequantized.iter())
+                .zip(dequantized.to_vec().unwrap().iter())
                 .map(|(orig, deq)| (orig - deq).abs())
                 .fold(0.0f32, f32::max);
 
@@ -584,7 +606,7 @@ mod integration_tests {
     #[test]
     fn test_cross_algorithm_compatibility() {
         let data: Vec<f32> = (0..256).map(|i| (i as f32 * 0.1).sin()).collect();
-        let tensor = create_test_tensor(data.clone(, vec![data.clone(.len()]));
+        let tensor = create_test_tensor(data.clone(), vec![data.len()]);
 
         // Test that different algorithms can handle the same data
         let i2s_quantizer = I2SQuantizer::new();
@@ -600,26 +622,26 @@ mod integration_tests {
         let tl2_deq = tl2_quantizer.dequantize_tensor(&tl2_result).unwrap();
 
         // All should produce valid results
-        assert_eq!(i2s_deq.len(), data.len());
-        assert_eq!(tl1_deq.len(), data.len());
-        assert_eq!(tl2_deq.len(), data.len());
+        assert_eq!(i2s_deq.shape().iter().product::<usize>(), data.len());
+        assert_eq!(tl1_deq.shape().iter().product::<usize>(), data.len());
+        assert_eq!(tl2_deq.shape().iter().product::<usize>(), data.len());
 
         // Compare accuracy
         let i2s_mse: f32 = data
             .iter()
-            .zip(i2s_deq.iter())
+            .zip(i2s_deq.as_slice::<f32>().unwrap().iter())
             .map(|(a, b)| (a - b).powi(2))
             .sum::<f32>()
             / data.len() as f32;
         let tl1_mse: f32 = data
             .iter()
-            .zip(tl1_deq.iter())
+            .zip(tl1_deq.as_slice::<f32>().unwrap().iter())
             .map(|(a, b)| (a - b).powi(2))
             .sum::<f32>()
             / data.len() as f32;
         let tl2_mse: f32 = data
             .iter()
-            .zip(tl2_deq.iter())
+            .zip(tl2_deq.as_slice::<f32>().unwrap().iter())
             .map(|(a, b)| (a - b).powi(2))
             .sum::<f32>()
             / data.len() as f32;
