@@ -3,14 +3,22 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
     process::Command,
+    sync::{Arc, atomic::{AtomicBool, Ordering}},
+    time::Instant,
 };
 use anyhow::{anyhow, Context, Result};
 use clap::{Parser, Subcommand};
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::Client;
-use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, RANGE};
+use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, RANGE};
+use reqwest::StatusCode;
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
+
+// Centralized defaults to avoid drift
+const DEFAULT_MODEL_ID: &str = "microsoft/bitnet-b1.58-2B-4T-gguf";
+const DEFAULT_MODEL_FILE: &str = "ggml-model-i2_s.gguf";
+const DEFAULT_CPP_TAG: &str = "b1-65-ggml";
 
 #[derive(Parser)]
 #[command(name = "xtask", about = "Developer tasks for BitNet.rs")]
@@ -24,10 +32,10 @@ enum Cmd {
     /// Download a GGUF model from Hugging Face (supports HF_TOKEN)
     DownloadModel {
         /// HF repo id (e.g., microsoft/bitnet-b1.58-2B-4T-gguf)
-        #[arg(long, default_value = "microsoft/bitnet-b1.58-2B-4T-gguf")]
+        #[arg(long, default_value = DEFAULT_MODEL_ID)]
         id: String,
         /// File within repo (e.g., ggml-model-i2_s.gguf)
-        #[arg(long, default_value = "ggml-model-i2_s.gguf")]
+        #[arg(long, default_value = DEFAULT_MODEL_FILE)]
         file: String,
         /// Output directory
         #[arg(long, default_value = "models")]
@@ -43,7 +51,7 @@ enum Cmd {
     /// Fetch & build microsoft/BitNet C++ (pinned tag)
     FetchCpp {
         /// Tag or rev to fetch (default: b1-65-ggml)
-        #[arg(long, default_value = "b1-65-ggml")]
+        #[arg(long, default_value = DEFAULT_CPP_TAG)]
         tag: String,
         /// Force rebuild
         #[arg(long, default_value_t = false)]
@@ -177,6 +185,7 @@ fn download_model_cmd(
         head_req = head_req.header(AUTHORIZATION, format!("Bearer {t}"));
     }
     
+    // Try HEAD first, fallback to Range GET for size
     let size = head_req
         .send()
         .and_then(|r| r.error_for_status())
@@ -188,6 +197,18 @@ fn download_model_cmd(
                 .ok()?
                 .parse::<u64>()
                 .ok()
+        })
+        .or_else(|| {
+            // Fallback: try 1-byte GET to extract total from Content-Range
+            let mut r = client.get(&url);
+            if let Some(t) = &token {
+                r = r.header(AUTHORIZATION, format!("Bearer {t}"));
+            }
+            let r = r.header(RANGE, "bytes=0-0").send().ok()?;
+            r.headers()
+                .get(CONTENT_RANGE)
+                .and_then(|h| h.to_str().ok())
+                .and_then(|s| s.rsplit('/').next()?.parse::<u64>().ok())
         });
 
     let tmp = dest.with_extension("part");
@@ -212,6 +233,14 @@ fn download_model_cmd(
     }
     
     let mut resp = req.send()?.error_for_status()?;
+    
+    // Check if server ignored Range header (must restart from 0)
+    let resumed = start > 0;
+    if resumed && resp.status() == StatusCode::OK {
+        // Server ignored Range -> restart clean
+        println!("   Server ignored resume request, restarting download...");
+        start = 0;
+    }
 
     let pb = if let Some(total) = size {
         let pb = ProgressBar::new(total);
@@ -238,16 +267,48 @@ fn download_model_cmd(
         pb.set_message("resuming");
     }
 
-    let mut file_out = fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .append(start > 0)
-        .open(&tmp)?;
+    let mut file_out = if resumed && resp.status() == StatusCode::OK {
+        // Server ignored Range, need to truncate and restart
+        fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&tmp)?
+    } else {
+        // Normal case: append if resuming, write if new
+        fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .append(start > 0)
+            .open(&tmp)?
+    };
     
-    let mut downloaded = start;
+    // Setup Ctrl-C handler for clean interruption
+    let interrupted = Arc::new(AtomicBool::new(false));
+    {
+        let interrupted = interrupted.clone();
+        ctrlc::set_handler(move || {
+            interrupted.store(true, Ordering::SeqCst);
+        }).ok(); // Ignore error if handler already set
+    }
+    
+    let mut downloaded = if resumed && resp.status() == StatusCode::OK {
+        0 // Server ignored Range, restarting from 0
+    } else {
+        start // Normal resume or new download
+    };
     let mut buf = vec![0u8; 1024 * 256]; // 256KB buffer
+    let start_time = Instant::now();
     
     loop {
+        // Check for interruption
+        if interrupted.load(Ordering::SeqCst) {
+            pb.finish_with_message("interrupted (partial file kept for resume)");
+            println!("   Partial download saved at: {}", tmp.display());
+            println!("   Run the same command again to resume");
+            return Ok(());
+        }
+        
         let n = resp.read(&mut buf)?;
         if n == 0 {
             break;
@@ -258,7 +319,15 @@ fn download_model_cmd(
     }
     
     file_out.flush()?;
-    pb.finish_with_message("download complete");
+    
+    let elapsed = start_time.elapsed();
+    let throughput = if elapsed.as_secs() > 0 {
+        (downloaded - start) as f64 / elapsed.as_secs_f64() / 1_048_576.0
+    } else {
+        0.0
+    };
+    
+    pb.finish_with_message(format!("complete ({:.2} MB/s)", throughput));
 
     fs::rename(&tmp, &dest)?;
 
@@ -272,6 +341,10 @@ fn download_model_cmd(
     println!("✅ Saved: {}", dest.display());
     if let Some(size) = size {
         println!("   Size: {:.2} MB", size as f64 / 1_048_576.0);
+    }
+    println!("   Time: {:.1}s", elapsed.as_secs_f64());
+    if throughput > 0.0 {
+        println!("   Speed: {:.2} MB/s", throughput);
     }
     
     // Print ready-to-use export command
@@ -291,8 +364,10 @@ fn resolve_default_model() -> Result<PathBuf> {
         ));
     }
     
-    // Prefer Microsoft path + filename
-    let preferred = root.join("microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf");
+    // Prefer default model path
+    let preferred = root.join(format!("{}/{}", 
+        DEFAULT_MODEL_ID.replace('/', "-"), 
+        DEFAULT_MODEL_FILE));
     if preferred.exists() {
         return Ok(preferred);
     }
@@ -402,6 +477,10 @@ fn crossval_cmd(
 
     println!("🧪 Running cross-validation tests");
     println!("   Model: {}", model.display());
+    // Echo the absolute path so users know exactly what was picked
+    if let Ok(abs_model) = model.canonicalize() {
+        println!("   Absolute: {}", abs_model.display());
+    }
     println!("   C++ dir: {}", cpp.display());
     println!("   Release: {}", release);
     println!("   Deterministic: yes (single-threaded)");
@@ -439,8 +518,8 @@ fn full_crossval_cmd(force: bool) -> Result<()> {
     // Step 1: Download model
     println!("Step 1/3: Downloading model");
     download_model_cmd(
-        "microsoft/bitnet-b1.58-2B-4T-gguf",
-        "ggml-model-i2_s.gguf",
+        DEFAULT_MODEL_ID,
+        DEFAULT_MODEL_FILE,
         &PathBuf::from("models"),
         None, // Add SHA256 if available
         force,
@@ -450,13 +529,15 @@ fn full_crossval_cmd(force: bool) -> Result<()> {
     
     // Step 2: Fetch C++ implementation
     println!("Step 2/3: Fetching C++ implementation");
-    fetch_cpp_cmd("b1-65-ggml", force, false)?;
+    fetch_cpp_cmd(DEFAULT_CPP_TAG, force, false)?;
     
     println!();
     
     // Step 3: Run tests
     println!("Step 3/3: Running cross-validation tests");
-    let model = PathBuf::from("models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf");
+    let model = PathBuf::from(format!("models/{}/{}",
+        DEFAULT_MODEL_ID.replace('/', "-"),
+        DEFAULT_MODEL_FILE));
     crossval_cmd(&model, None, true, &[])?;
     
     println!();
