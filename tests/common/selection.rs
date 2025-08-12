@@ -393,7 +393,6 @@ impl PriorityRules {
 }
 
 /// Test selection strategy
-#[derive(Debug, Clone)]
 pub enum SelectionStrategy {
     All,
     Fast,

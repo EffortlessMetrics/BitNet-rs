@@ -41,12 +41,12 @@ pub enum TestCategory {
 }
 
 /// Test priorities
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TestPriority {
-    Critical,
-    High,
-    Medium,
-    Low,
+    Critical = 0,
+    High = 1,
+    Medium = 2,
+    Low = 3,
 }
 
 /// Parallel test executor optimized for speed and resource management
@@ -117,7 +117,7 @@ impl ParallelExecutor {
                     error!("Test execution failed: {}", e);
                     failed_count += 1;
                     // Create a failed test result
-                    test_results.push(TestResult::failed(
+                    test_results.push(TestResultData::failed(
                         "unknown".to_string(),
                         e,
                         Duration::default(),
@@ -162,7 +162,7 @@ impl ParallelExecutor {
         test: TestInfo,
         config: TestConfig,
         stats: Arc<RwLock<ExecutionStats>>,
-    ) -> Result<TestResult, TestError> {
+    ) -> Result<TestResultData, TestError> {
         let start_time = Instant::now();
         debug!("Executing test: {}", test.name);
 
@@ -209,7 +209,11 @@ impl ParallelExecutor {
                         test.name,
                         duration.as_secs_f64()
                     );
-                    Ok(TestResult::passed(test.name, Default::default(), duration))
+                    Ok(TestResultData::passed(
+                        test.name,
+                        Default::default(),
+                        duration,
+                    ))
                 } else {
                     warn!(
                         "Test {} failed in {:.2}s",
@@ -221,18 +225,18 @@ impl ParallelExecutor {
                     } else {
                         stdout.to_string()
                     };
-                    Ok(TestResult::failed(
+                    Ok(TestResultData::failed(
                         test.name,
-                        TestError::ExecutionError(error_msg),
+                        TestError::execution(error_msg),
                         duration,
                     ))
                 }
             }
             Ok(Err(e)) => {
                 error!("Failed to execute test {}: {}", test.name, e);
-                Ok(TestResult::failed(
+                Ok(TestResultData::failed(
                     test.name,
-                    TestError::ExecutionError(e.to_string()),
+                    TestError::execution(e.to_string()),
                     duration,
                 ))
             }
@@ -242,7 +246,7 @@ impl ParallelExecutor {
                     test.name,
                     timeout_duration.as_secs_f64()
                 );
-                Ok(TestResult::failed(
+                Ok(TestResultData::failed(
                     test.name,
                     TestError::TimeoutError {
                         timeout: timeout_duration,
@@ -256,7 +260,7 @@ impl ParallelExecutor {
     /// Calculate parallel execution efficiency
     fn calculate_parallel_efficiency(
         &self,
-        results: &[TestResult],
+        results: &[TestResultData],
         total_duration: Duration,
     ) -> f64 {
         if results.is_empty() {

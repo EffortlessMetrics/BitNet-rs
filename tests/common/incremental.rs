@@ -389,7 +389,7 @@ impl DependencyGraph {
         // Check directory matches
         for (pattern_path, tests) in &self.file_to_tests {
             let pattern_str = pattern_path.to_string_lossy();
-            if file_str.starts_with(&pattern_str) {
+            if file_str.starts_with(&*pattern_str) {
                 return tests.clone();
             }
         }
