@@ -280,6 +280,33 @@ We pin to tag `b1-65-ggml` (BitNet v1.0 release) for stability. This version:
 - No manual memory management
 - Fail-fast on missing dependencies
 
+## Troubleshooting
+
+### Disk Space Issues
+The xtask now checks for available disk space before downloading. If you see:
+```
+Not enough disk space: need ~1200 MB, have ~500 MB
+```
+Free up disk space or use a different download directory with `--out`.
+
+### Resume Download Issues
+- Downloads are automatically resumed if interrupted (Ctrl-C friendly)
+- If server doesn't support resume, download restarts automatically
+- Partial files are kept as `.part` for resuming
+
+### Debugging Cross-validation
+Use `--dry-run` to see exact commands without running:
+```bash
+cargo xtask crossval --dry-run
+# Shows environment variables and full cargo test command
+```
+
+### SHA256 Verification
+For reproducible builds, verify downloads with SHA256:
+```bash
+cargo xtask download-model --sha256 abc123def456...
+```
+
 ## References
 
 - [Microsoft BitNet Repository](https://github.com/microsoft/BitNet)

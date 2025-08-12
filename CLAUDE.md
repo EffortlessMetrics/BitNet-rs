@@ -54,6 +54,7 @@ cargo llvm-cov --workspace --features cpu --html
 # Download BitNet GGUF model from Hugging Face (supports resumable downloads)
 cargo xtask download-model  # Downloads default model
 cargo xtask download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf
+cargo xtask download-model --sha256 <hex>  # Verify download with SHA256
 # Supports HF_TOKEN for private repos: HF_TOKEN=xxx cargo xtask download-model
 
 # Fetch and build Microsoft BitNet C++ (for cross-validation)
@@ -63,6 +64,7 @@ cargo xtask fetch-cpp --tag b1-65-ggml --force --clean
 # Run deterministic cross-validation tests
 cargo xtask crossval  # Auto-discovers model, or downloads if missing
 cargo xtask crossval --model path/to/specific.gguf  # Use specific model
+cargo xtask crossval --dry-run  # Print env and command without running
 
 # Full cross-validation workflow (download + fetch + test) - ONE COMMAND!
 cargo xtask full-crossval  # Runs all three steps
