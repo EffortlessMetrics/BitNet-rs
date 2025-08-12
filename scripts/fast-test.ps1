@@ -1,62 +1,94 @@
-# Fast test execution script optimized for <15 minute execution
-# PowerShell version for Windows systems
+# Fast test execution script for Windows (PowerShell)
+# Optimized for <15 minute execution time
 
 param(
-    [int]$TargetTimeMinutes = 15,
-    [int]$MaxParallel = [Environment]::ProcessorCount,
-    [bool]$AggressiveMode = $true,
-    [bool]$SkipSlowTests = $true,
-    [bool]$EnableCaching = $true
+    [int]$TargetMinutes = 15,
+    [string]$Profile = "fast",
+    [int]$MaxParallel = 0,
+    [switch]$Aggressive = $false,
+    [switch]$SkipSlow = $true,
+    [switch]$EnableCaching = $true,
+    [switch]$Verbose = $false,
+    [switch]$NoIncremental = $false,
+    [string[]]$Categories = @(),
+    [switch]$Help = $false
 )
 
-# Configuration from environment or parameters
-$TARGET_TIME_MINUTES = if ($env:BITNET_TARGET_TIME) { [int]$env:BITNET_TARGET_TIME } else { $TargetTimeMinutes }
-$MAX_PARALLEL = if ($env:BITNET_TEST_PARALLEL) { [int]$env:BITNET_TEST_PARALLEL } else { $MaxParallel }
-$AGGRESSIVE_MODE = if ($env:BITNET_AGGRESSIVE_TEST) { [bool]::Parse($env:BITNET_AGGRESSIVE_TEST) } else { $AggressiveMode }
-$SKIP_SLOW_TESTS = if ($env:BITNET_SKIP_SLOW) { [bool]::Parse($env:BITNET_SKIP_SLOW) } else { $SkipSlowTests }
-$ENABLE_CACHING = if ($env:BITNET_TEST_CACHE) { [bool]::Parse($env:BITNET_TEST_CACHE) } else { $EnableCaching }
-
-# Logging functions
-function Write-Info {
-    param([string]$Message)
-    Write-Host "[INFO] $Message" -ForegroundColor Blue
+# Show help if requested
+if ($Help) {
+    Write-Host "BitNet Fast Test Runner (PowerShell)" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "USAGE:" -ForegroundColor Yellow
+    Write-Host "    .\scripts\fast-test.ps1 [OPTIONS]"
+    Write-Host ""
+    Write-Host "OPTIONS:" -ForegroundColor Yellow
+    Write-Host "    -TargetMinutes <INT>     Target execution time in minutes [default: 15]"
+    Write-Host "    -Profile <STRING>        Speed profile: lightning, fast, balanced, thorough [default: fast]"
+    Write-Host "    -MaxParallel <INT>       Number of parallel test threads [default: auto]"
+    Write-Host "    -Aggressive              Enable aggressive optimizations"
+    Write-Host "    -SkipSlow                Skip slow tests [default: true]"
+    Write-Host "    -EnableCaching           Enable test result caching [default: true]"
+    Write-Host "    -Verbose                 Enable verbose output"
+    Write-Host "    -NoIncremental           Disable incremental testing"
+    Write-Host "    -Categories <LIST>       Comma-separated list of test categories"
+    Write-Host "    -Help                    Show this help message"
+    Write-Host ""
+    Write-Host "EXAMPLES:" -ForegroundColor Yellow
+    Write-Host "    .\scripts\fast-test.ps1 -TargetMinutes 10 -Profile lightning"
+    Write-Host "    .\scripts\fast-test.ps1 -MaxParallel 4 -Categories unit,integration"
+    Write-Host "    .\scripts\fast-test.ps1 -Aggressive -Verbose"
+    exit 0
 }
 
-function Write-Warn {
-    param([string]$Message)
-    Write-Host "[WARN] $Message" -ForegroundColor Yellow
+# Configuration
+$ErrorActionPreference = "Stop"
+$StartTime = Get-Date
+
+# Auto-detect parallel threads if not specified
+if ($MaxParallel -eq 0) {
+    $MaxParallel = [Environment]::ProcessorCount
+    if ($MaxParallel -gt 8) { $MaxParallel = 8 }  # Cap at 8 for stability
 }
 
-function Write-Error {
-    param([string]$Message)
-    Write-Host "[ERROR] $Message" -ForegroundColor Red
+# Colors for output
+$Colors = @{
+    Info = "Cyan"
+    Success = "Green"
+    Warning = "Yellow"
+    Error = "Red"
 }
 
-function Write-Success {
-    param([string]$Message)
-    Write-Host "[SUCCESS] $Message" -ForegroundColor Green
+function Write-ColorOutput {
+    param([string]$Message, [string]$Color = "White")
+    Write-Host $Message -ForegroundColor $Colors[$Color]
 }
 
-# Start timer
-$START_TIME = Get-Date
+function Write-Info { param([string]$Message) Write-ColorOutput "ℹ️ $Message" "Info" }
+function Write-Success { param([string]$Message) Write-ColorOutput "✅ $Message" "Success" }
+function Write-Warning { param([string]$Message) Write-ColorOutput "⚠️ $Message" "Warning" }
+function Write-Error { param([string]$Message) Write-ColorOutput "❌ $Message" "Error" }
 
-Write-Info "Starting optimized test execution (target: $TARGET_TIME_MINUTES minutes)"
+Write-Info "Starting optimized test execution (target: $TargetMinutes minutes)"
 Write-Info "Configuration:"
-Write-Info "  - Max parallel: $MAX_PARALLEL"
-Write-Info "  - Aggressive mode: $AGGRESSIVE_MODE"
-Write-Info "  - Skip slow tests: $SKIP_SLOW_TESTS"
-Write-Info "  - Enable caching: $ENABLE_CACHING"
+Write-Info "  - Max parallel: $MaxParallel"
+Write-Info "  - Profile: $Profile"
+Write-Info "  - Aggressive mode: $Aggressive"
+Write-Info "  - Skip slow tests: $SkipSlow"
+Write-Info "  - Enable caching: $EnableCaching"
 
 # Set environment variables for optimization
-$env:BITNET_TEST_PARALLEL = $MAX_PARALLEL
-$env:BITNET_TEST_TIMEOUT = "60"
-$env:BITNET_TEST_LOG_LEVEL = "warn"
+$env:BITNET_TEST_PARALLEL = $MaxParallel
+$env:BITNET_TEST_TIMEOUT = 60
+$env:BITNET_TEST_LOG_LEVEL = if ($Verbose) { "debug" } else { "warn" }
 $env:BITNET_TEST_GENERATE_COVERAGE = "false"
 $env:BITNET_TEST_CACHE_DIR = "tests\cache"
-$env:BITNET_TEST_AUTO_DOWNLOAD = $ENABLE_CACHING.ToString().ToLower()
+$env:BITNET_TEST_AUTO_DOWNLOAD = if ($EnableCaching) { "true" } else { "false" }
+$env:BITNET_TEST_MODE = "fast"
+$env:RUST_BACKTRACE = "0"
+$env:CARGO_TERM_QUIET = if (-not $Verbose) { "true" } else { "false" }
 
 # Create cache directory
-if (!(Test-Path "tests\cache")) {
+if (-not (Test-Path "tests\cache")) {
     New-Item -ItemType Directory -Path "tests\cache" -Force | Out-Null
 }
 
@@ -64,28 +96,46 @@ if (!(Test-Path "tests\cache")) {
 function Invoke-TestsWithTimeout {
     param(
         [string]$TestArgs,
-        [int]$TimeoutSeconds = ($TARGET_TIME_MINUTES * 60)
+        [int]$TimeoutSeconds
     )
     
     Write-Info "Running tests with ${TimeoutSeconds}s timeout: cargo test $TestArgs"
     
     $job = Start-Job -ScriptBlock {
-        param($args)
-        & cargo test @args
-    } -ArgumentList $TestArgs.Split(' ')
+        param($args, $env_vars)
+        
+        # Set environment variables in job
+        foreach ($var in $env_vars.GetEnumerator()) {
+            Set-Item -Path "env:$($var.Key)" -Value $var.Value
+        }
+        
+        # Run cargo test
+        $process = Start-Process -FilePath "cargo" -ArgumentList $args -NoNewWindow -Wait -PassThru
+        return $process.ExitCode
+    } -ArgumentList @($TestArgs -split ' '), @{
+        BITNET_TEST_PARALLEL = $env:BITNET_TEST_PARALLEL
+        BITNET_TEST_TIMEOUT = $env:BITNET_TEST_TIMEOUT
+        BITNET_TEST_LOG_LEVEL = $env:BITNET_TEST_LOG_LEVEL
+        BITNET_TEST_GENERATE_COVERAGE = $env:BITNET_TEST_GENERATE_COVERAGE
+        BITNET_TEST_CACHE_DIR = $env:BITNET_TEST_CACHE_DIR
+        BITNET_TEST_AUTO_DOWNLOAD = $env:BITNET_TEST_AUTO_DOWNLOAD
+        BITNET_TEST_MODE = $env:BITNET_TEST_MODE
+        RUST_BACKTRACE = $env:RUST_BACKTRACE
+        CARGO_TERM_QUIET = $env:CARGO_TERM_QUIET
+    }
     
+    # Wait for job with timeout
     $completed = Wait-Job -Job $job -Timeout $TimeoutSeconds
     
     if ($completed) {
         $result = Receive-Job -Job $job
-        $exitCode = $job.State -eq 'Completed' ? 0 : 1
         Remove-Job -Job $job
-        return $exitCode
+        return $result
     } else {
+        Write-Warning "Tests timed out after $TimeoutSeconds seconds"
         Stop-Job -Job $job
         Remove-Job -Job $job
-        Write-Error "Tests timed out after $TARGET_TIME_MINUTES minutes"
-        return 124
+        return 124  # Timeout exit code
     }
 }
 
@@ -94,78 +144,71 @@ function Get-TestTimeEstimate {
     Write-Info "Analyzing test suite..."
     
     try {
-        # Try to get test list (simplified for PowerShell)
-        $testOutput = & cargo test --workspace --no-run 2>&1
+        # Get list of test executables
+        $testList = cargo test --workspace --no-run --message-format=json 2>$null | 
+                   ConvertFrom-Json | 
+                   Where-Object { $_.reason -eq "compiler-artifact" -and $_.target.kind -contains "test" } |
+                   Select-Object -ExpandProperty executable
         
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warn "Could not analyze test suite, proceeding with default configuration"
-            return $true
+        if ($testList) {
+            $testCount = $testList.Count
+            Write-Info "Found $testCount test executables"
+            
+            # Estimate based on historical data or defaults
+            $estimatedTimePerTest = 5  # seconds
+            $totalEstimatedTime = $testCount * $estimatedTimePerTest
+            $parallelEstimatedTime = [math]::Ceiling($totalEstimatedTime / $MaxParallel)
+            
+            Write-Info "Estimated execution time: ${parallelEstimatedTime}s (${totalEstimatedTime}s sequential)"
+            
+            return $parallelEstimatedTime -le ($TargetMinutes * 60)
         }
-        
-        # Simple estimation based on output
-        $testCount = ($testOutput | Select-String "test result:" | Measure-Object).Count
-        
-        if ($testCount -eq 0) {
-            $testCount = 50  # Default estimate
-        }
-        
-        Write-Info "Estimated $testCount tests"
-        
-        # Estimate based on historical data or defaults
-        $estimatedTimePerTest = 5
-        $totalEstimatedTime = $testCount * $estimatedTimePerTest
-        $parallelEstimatedTime = [math]::Ceiling($totalEstimatedTime / $MAX_PARALLEL)
-        
-        Write-Info "Estimated execution time: ${parallelEstimatedTime}s (${totalEstimatedTime}s sequential)"
-        
-        if ($parallelEstimatedTime -gt ($TARGET_TIME_MINUTES * 60)) {
-            Write-Warn "Estimated time exceeds target, enabling aggressive optimizations"
-            return $false
-        }
-        
-        return $true
+    } catch {
+        Write-Warning "Could not analyze test suite: $($_.Exception.Message)"
     }
-    catch {
-        Write-Warn "Error analyzing test suite: $_"
-        return $true
-    }
+    
+    return $true  # Assume we can run within time if analysis fails
 }
 
-# Function to run optimized tests
+# Function to run optimized test selection
 function Invoke-OptimizedTests {
-    $testArgs = @("--workspace")
+    $testArgs = @("test", "--workspace", "--test-threads=$MaxParallel")
     
-    if ($AGGRESSIVE_MODE) {
+    if ($Aggressive) {
         # Skip documentation tests for speed
-        $testArgs += "--lib", "--bins"
+        $testArgs += @("--lib", "--bins")
         
         # Skip slow integration tests if needed
-        if ($SKIP_SLOW_TESTS) {
+        if ($SkipSlow) {
             $testArgs += "--exclude=crossval"
             Write-Info "Skipping slow cross-validation tests"
         }
     }
     
-    # Add test-specific arguments
-    $testArgs += "--", "--test-threads=$MAX_PARALLEL", "--test-timeout=60"
+    # Add categories filter if specified
+    if ($Categories.Count -gt 0) {
+        foreach ($category in $Categories) {
+            $testArgs += "--package=bitnet-$category"
+        }
+    }
     
-    return Invoke-TestsWithTimeout ($testArgs -join " ")
+    # Add timeout per test
+    $testArgs += @("--", "--test-timeout=60")
+    
+    $timeoutSeconds = $TargetMinutes * 60
+    return Invoke-TestsWithTimeout ($testArgs -join " ") $timeoutSeconds
 }
 
-# Function to run incremental tests
+# Function to run incremental tests (only changed code)
 function Invoke-IncrementalTests {
     Write-Info "Attempting incremental test execution..."
     
     try {
-        # Check if we're in a git repository
-        $gitDir = & git rev-parse --git-dir 2>$null
-        
-        if ($LASTEXITCODE -eq 0) {
-            # Get changed files
-            $changedFiles = & git diff --name-only HEAD~1 2>$null
-            
-            if (!$changedFiles) {
-                $changedFiles = & git diff --name-only --cached 2>$null
+        # Check if we can determine changed files using git
+        if (Get-Command git -ErrorAction SilentlyContinue) {
+            $changedFiles = git diff --name-only HEAD~1 2>$null
+            if (-not $changedFiles) {
+                $changedFiles = git diff --name-only --cached 2>$null
             }
             
             if ($changedFiles) {
@@ -184,20 +227,19 @@ function Invoke-IncrementalTests {
                 }
                 
                 if ($changedCrates.Count -gt 0) {
-                    $crateArgs = $changedCrates | ForEach-Object { "-p $_" }
-                    $testArgs = ($crateArgs + "--test-threads=$MAX_PARALLEL") -join " "
                     Write-Info "Running tests for changed crates: $($changedCrates -join ', ')"
-                    return Invoke-TestsWithTimeout $testArgs
+                    $testArgs = @("test") + ($changedCrates | ForEach-Object { "-p", $_ }) + @("--test-threads=$MaxParallel")
+                    $timeoutSeconds = $TargetMinutes * 60
+                    return Invoke-TestsWithTimeout ($testArgs -join " ") $timeoutSeconds
                 }
             }
         }
-    }
-    catch {
-        Write-Info "Could not determine incremental changes: $_"
+    } catch {
+        Write-Warning "Could not determine incremental changes: $($_.Exception.Message)"
     }
     
     Write-Info "Could not determine incremental changes, running full test suite"
-    return 1
+    return $null
 }
 
 # Function to run fast unit tests only
@@ -205,101 +247,110 @@ function Invoke-FastUnitTests {
     Write-Info "Running fast unit tests only..."
     
     $testArgs = @(
-        "--workspace",
-        "--lib",
+        "test", 
+        "--workspace", 
+        "--lib", 
+        "--test-threads=$MaxParallel",
         "--exclude=crossval",
         "--exclude=bitnet-sys",
         "--",
-        "--test-threads=$MAX_PARALLEL",
         "--test-timeout=30"
     )
     
-    return Invoke-TestsWithTimeout ($testArgs -join " ")
+    $timeoutSeconds = $TargetMinutes * 60
+    return Invoke-TestsWithTimeout ($testArgs -join " ") $timeoutSeconds
 }
 
 # Function to cleanup and report
-function Complete-TestExecution {
+function Write-FinalReport {
     param([int]$ExitCode)
     
     $endTime = Get-Date
-    $duration = $endTime - $START_TIME
+    $duration = $endTime - $StartTime
     $durationMinutes = [math]::Floor($duration.TotalMinutes)
     $durationSeconds = [math]::Floor($duration.TotalSeconds % 60)
     
     Write-Info "Test execution completed in ${durationMinutes}m ${durationSeconds}s"
     
     if ($ExitCode -eq 0) {
-        if ($duration.TotalMinutes -le $TARGET_TIME_MINUTES) {
-            Write-Success "✅ Tests completed successfully within $TARGET_TIME_MINUTES minute target!"
+        if ($duration.TotalMinutes -le $TargetMinutes) {
+            Write-Success "Tests completed successfully within $TargetMinutes minute target!"
         } else {
-            Write-Warn "⚠️  Tests completed successfully but exceeded $TARGET_TIME_MINUTES minute target"
+            Write-Warning "Tests completed successfully but exceeded $TargetMinutes minute target"
         }
     } else {
-        Write-Error "❌ Tests failed with exit code $ExitCode"
+        Write-Error "Tests failed with exit code $ExitCode"
     }
     
     # Generate simple report
     $reportContent = @"
 # Test Execution Report
 
-**Target Time:** $TARGET_TIME_MINUTES minutes
+**Target Time:** $TargetMinutes minutes
 **Actual Time:** ${durationMinutes}m ${durationSeconds}s
 **Status:** $(if ($ExitCode -eq 0) { "PASSED" } else { "FAILED" })
 **Exit Code:** $ExitCode
 
 ## Configuration
-- Max Parallel: $MAX_PARALLEL
-- Aggressive Mode: $AGGRESSIVE_MODE
-- Skip Slow Tests: $SKIP_SLOW_TESTS
-- Enable Caching: $ENABLE_CACHING
+- Max Parallel: $MaxParallel
+- Profile: $Profile
+- Aggressive Mode: $Aggressive
+- Skip Slow Tests: $SkipSlow
+- Enable Caching: $EnableCaching
 
 ## Performance
-- Time Efficiency: $([math]::Round(($TARGET_TIME_MINUTES * 60 * 100) / $duration.TotalSeconds))% of target
-- Parallel Efficiency: Estimated $([math]::Round($MAX_PARALLEL * 100 / ($MAX_PARALLEL + 1)))%
+- Time Efficiency: $([math]::Round(($TargetMinutes * 60 * 100) / $duration.TotalSeconds, 1))% of target
+- Parallel Efficiency: Estimated $([math]::Round($MaxParallel * 100 / ($MaxParallel + 1), 1))%
 
 Generated at: $(Get-Date)
 "@
     
     $reportContent | Out-File -FilePath "test-execution-report.txt" -Encoding UTF8
     Write-Info "Report saved to test-execution-report.txt"
-    
-    exit $ExitCode
 }
 
 # Main execution logic
-function Start-MainExecution {
-    try {
-        # Check if we can estimate test time
-        if (Get-TestTimeEstimate) {
-            Write-Info "Estimated time is within target, running full test suite"
-            $exitCode = Invoke-OptimizedTests
-        } else {
-            Write-Warn "Estimated time exceeds target, trying optimizations..."
-            
-            # Try incremental tests first
-            if ($ENABLE_CACHING -and (Invoke-IncrementalTests) -eq 0) {
-                Write-Success "Incremental tests completed successfully"
-                $exitCode = 0
-            } else {
-                # Fall back to fast unit tests
-                Write-Info "Falling back to fast unit tests only"
-                $exitCode = Invoke-FastUnitTests
-            }
+try {
+    # Check prerequisites
+    if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
+        throw "cargo not found in PATH"
+    }
+    
+    if (-not (Test-Path "Cargo.toml")) {
+        throw "Cargo.toml not found - not in a Rust workspace"
+    }
+    
+    # Determine execution strategy
+    $exitCode = $null
+    
+    if (Get-TestTimeEstimate) {
+        Write-Info "Estimated time is within target, running optimized test suite"
+        $exitCode = Invoke-OptimizedTests
+    } else {
+        Write-Warning "Estimated time exceeds target, trying optimizations..."
+        
+        # Try incremental tests first
+        if ($EnableCaching -and -not $NoIncremental) {
+            $exitCode = Invoke-IncrementalTests
         }
         
-        Complete-TestExecution $exitCode
+        # Fall back to fast unit tests if incremental didn't work
+        if ($null -eq $exitCode) {
+            Write-Info "Falling back to fast unit tests only"
+            $exitCode = Invoke-FastUnitTests
+        }
     }
-    catch {
-        Write-Error "Unexpected error: $_"
-        Complete-TestExecution 1
+    
+    # Handle null exit code (shouldn't happen, but just in case)
+    if ($null -eq $exitCode) {
+        $exitCode = 1
     }
-}
-
-# Check prerequisites
-if (!(Get-Command cargo -ErrorAction SilentlyContinue)) {
-    Write-Error "cargo not found in PATH"
+    
+    Write-FinalReport $exitCode
+    exit $exitCode
+    
+} catch {
+    Write-Error "Script execution failed: $($_.Exception.Message)"
+    Write-FinalReport 1
     exit 1
 }
-
-# Run main logic
-Start-MainExecution
