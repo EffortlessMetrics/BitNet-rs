@@ -11,12 +11,15 @@ pub mod ci_reporting;
 pub mod config;
 pub mod config_validator;
 pub mod errors;
+pub mod execution_optimizer;
+pub mod fast_config;
 pub mod fixtures;
 pub mod github_cache;
 pub mod harness;
 pub mod incremental;
 pub mod logging;
 pub mod logging_example;
+pub mod optimization;
 pub mod parallel;
 pub mod reporting;
 pub mod results;
@@ -24,6 +27,9 @@ pub mod selection;
 pub mod test_utilities;
 pub mod trend_reporting;
 pub mod utils;
+
+// Re-export commonly used functions
+pub use utils::{format_bytes, format_duration, get_memory_usage, get_peak_memory_usage};
 
 // Cross-validation module
 // Cross-validation module

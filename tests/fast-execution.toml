@@ -1,0 +1,327 @@
+# Fast test execution configuration for BitNet.rs
+# This configuration is optimized to complete test execution in <15 minutes
+
+[execution]
+# Target execution time in minutes
+target_duration_minutes = 15
+
+# Maximum execution time before hard timeout
+max_duration_minutes = 20
+
+# Enable aggressive optimizations
+aggressive_mode = true
+
+# Enable incremental testing based on file changes
+incremental_testing = true
+
+# Enable parallel execution
+parallel_execution = true
+
+[parallelism]
+# Maximum number of parallel test threads (0 = auto-detect)
+max_parallel_tests = 0
+
+# Minimum number of parallel test threads
+min_parallel_tests = 1
+
+# Enable dynamic parallelism adjustment based on system load
+dynamic_parallelism = true
+
+# CPU usage threshold for reducing parallelism (0.0 to 1.0)
+cpu_threshold = 0.95
+
+# Memory usage threshold for reducing parallelism (0.0 to 1.0)
+memory_threshold = 0.90
+
+[timeouts]
+# Individual test timeout in seconds
+test_timeout_seconds = 60
+
+# Test suite timeout in seconds
+suite_timeout_seconds = 900 # 15 minutes
+
+# Slow test threshold - tests taking longer than this are deprioritized
+slow_test_threshold_seconds = 30
+
+[optimization]
+# Skip tests that are known to be slow
+skip_slow_tests = true
+
+# Skip documentation tests for speed
+skip_doc_tests = true
+
+# Skip benchmark tests in fast mode
+skip_benchmark_tests = true
+
+# Enable test result caching
+enable_caching = true
+
+# Enable smart test selection based on changes
+smart_selection = true
+
+# Enable load balancing across test workers
+load_balancing = true
+
+[selection]
+# Test selection strategy: "all", "fast", "incremental", "smart"
+strategy = "smart"
+
+# Test categories to prioritize (in execution order)
+priority_categories = [
+    "unit",        # Unit tests (highest priority)
+    "integration", # Integration tests
+    "api",         # API tests
+    "performance", # Performance tests (if time allows)
+    "crossval",    # Cross-validation tests (lowest priority)
+]
+
+# Test patterns to always include (critical tests)
+always_include = [
+    "**/test_core_*",
+    "**/test_basic_*",
+    "**/test_essential_*",
+    "**/smoke_test_*",
+]
+
+# Test patterns to skip in aggressive mode
+skip_in_aggressive_mode = [
+    "**/test_benchmark_*",
+    "**/test_stress_*",
+    "**/test_fuzz_*",
+    "**/test_crossval_*",
+    "**/test_performance_*",
+]
+
+# Test patterns to skip if running out of time
+skip_when_time_limited = [
+    "**/test_slow_*",
+    "**/test_comprehensive_*",
+    "**/test_exhaustive_*",
+]
+
+[caching]
+# Enable test result caching
+enabled = true
+
+# Cache directory relative to workspace root
+cache_dir = "tests/cache"
+
+# Maximum cache size in MB
+max_cache_size_mb = 500
+
+# Cache cleanup interval in hours
+cleanup_interval_hours = 24
+
+# Enable fixture caching
+fixture_caching = true
+
+# Auto-download test fixtures
+auto_download_fixtures = true
+
+[incremental]
+# Enable incremental testing
+enabled = true
+
+# Use git to detect changes
+use_git_changes = true
+
+# File patterns that trigger full test suite
+full_suite_triggers = [
+    "Cargo.toml",
+    "Cargo.lock",
+    "build.rs",
+    ".github/workflows/**",
+]
+
+# Dependency mapping for change propagation
+dependency_mapping = true
+
+# Maximum age for incremental cache in hours
+max_cache_age_hours = 48
+
+[reporting]
+# Generate minimal reports for speed
+minimal_reporting = true
+
+# Report formats to generate
+formats = ["json"] # JSON is fastest
+
+# Include test artifacts in reports
+include_artifacts = false
+
+# Generate coverage reports (disabled for speed)
+generate_coverage = false
+
+# Generate performance reports
+generate_performance = true
+
+# Output directory for reports
+output_dir = "test-reports"
+
+[logging]
+# Log level: "error", "warn", "info", "debug", "trace"
+level = "warn"
+
+# Enable structured logging
+structured = true
+
+# Log to file
+log_to_file = false
+
+# Disable verbose output for speed
+verbose = false
+
+[environment]
+# Environment variables to set during test execution
+variables = [
+    { name = "BITNET_TEST_MODE", value = "fast" },
+    { name = "BITNET_LOG_LEVEL", value = "warn" },
+    { name = "RUST_BACKTRACE", value = "0" },
+    { name = "CARGO_TERM_QUIET", value = "true" },
+    { name = "BITNET_TEST_TIMEOUT", value = "60" },
+    { name = "BITNET_DISABLE_SLOW_TESTS", value = "true" },
+]
+
+# Platform-specific environment variables
+[environment.windows]
+variables = [
+    { name = "BITNET_PLATFORM", value = "windows" },
+    { name = "BITNET_USE_POWERSHELL", value = "true" },
+]
+
+[environment.linux]
+variables = [
+    { name = "BITNET_PLATFORM", value = "linux" },
+    { name = "BITNET_USE_BASH", value = "true" },
+]
+
+[environment.macos]
+variables = [
+    { name = "BITNET_PLATFORM", value = "macos" },
+    { name = "BITNET_USE_BASH", value = "true" },
+]
+
+# CI-specific configuration
+[ci]
+# Enable CI-specific optimizations
+enabled = false # Set to true in CI environment
+
+# More aggressive settings for CI
+target_duration_minutes = 12
+max_parallel_tests = 4
+skip_slow_tests = true
+enable_fail_fast = true
+
+# CI-specific test patterns
+test_patterns = ["**/unit/**", "**/integration/core/**", "**/api/essential/**"]
+
+# Artifact retention
+retain_artifacts = true
+artifact_retention_days = 7
+
+# Development-specific configuration
+[dev]
+# Less aggressive optimizations for development
+target_duration_minutes = 10
+skip_slow_tests = false
+enable_watch_mode = true
+enable_incremental = true
+
+# Development test patterns
+test_patterns = ["**/unit/**", "**/integration/**", "**/api/**"]
+
+# Enable debugging features
+enable_debugging = true
+verbose_output = true
+
+# Performance monitoring
+[monitoring]
+# Enable performance monitoring
+enabled = true
+
+# Monitor system resources during test execution
+monitor_resources = true
+
+# Resource check interval in seconds
+check_interval_seconds = 5
+
+# Performance thresholds
+cpu_warning_threshold = 0.85
+memory_warning_threshold = 0.80
+
+# Enable performance regression detection
+regression_detection = true
+
+# Baseline performance file
+baseline_file = "tests/cache/performance_baseline.json"
+
+# Test categorization for optimization
+[categories]
+# Unit tests - fast, high priority
+[categories.unit]
+priority = 1
+max_duration_seconds = 30
+parallel_safe = true
+patterns = ["**/unit/**", "**/test_*"]
+
+# Integration tests - medium speed, medium priority
+[categories.integration]
+priority = 2
+max_duration_seconds = 120
+parallel_safe = true
+patterns = ["**/integration/**", "**/e2e/**"]
+
+# API tests - medium speed, high priority
+[categories.api]
+priority = 1
+max_duration_seconds = 60
+parallel_safe = true
+patterns = ["**/api/**", "**/interface/**"]
+
+# Performance tests - slow, low priority
+[categories.performance]
+priority = 4
+max_duration_seconds = 300
+parallel_safe = false
+patterns = ["**/performance/**", "**/benchmark/**"]
+
+# Cross-validation tests - very slow, lowest priority
+[categories.crossval]
+priority = 5
+max_duration_seconds = 600
+parallel_safe = false
+patterns = ["**/crossval/**", "**/cross_validation/**"]
+
+# Failure handling
+[failure_handling]
+# Stop execution on first failure (fail-fast)
+fail_fast = false
+
+# Maximum number of failures before stopping
+max_failures = 10
+
+# Retry failed tests
+retry_failed = false
+
+# Number of retries for failed tests
+retry_count = 1
+
+# Retry delay in seconds
+retry_delay_seconds = 5
+
+# Resource limits
+[resources]
+# Maximum memory usage in MB (0 = unlimited)
+max_memory_mb = 0
+
+# Maximum CPU usage percentage (0 = unlimited)
+max_cpu_percent = 0
+
+# Maximum disk space for cache in MB
+max_disk_cache_mb = 1000
+
+# Temporary directory cleanup
+cleanup_temp_dirs = true
+
+# File handle limits
+max_open_files = 1000
