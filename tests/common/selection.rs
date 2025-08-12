@@ -1,691 +1,431 @@
-use super::cache::{CacheKey, TestCache};
-use super::errors::{TestError, TestResult};
-use super::harness::{TestCase, TestSuite};
-use super::incremental::{IncrementalAnalysis, IncrementalTestRunner};
-use serde::{Deserialize, Serialize};
+use super::config::TestConfig;
+use super::errors::TestError;
+use super::parallel::{TestCategory, TestInfo, TestPriority};
 use std::collections::{HashMap, HashSet};
-use std::time::{Duration, SystemTime};
-use tracing::{debug, info};
+use std::path::PathBuf;
+use std::time::Duration;
+use tokio::process::Command;
+use tracing::{debug, info, warn};
 
-/// Smart test selector that prioritizes tests based on various factors
-pub struct SmartTestSelector {
-    config: SelectionConfig,
-    history: TestHistory,
-    cache: TestCache,
+/// Test selector that discovers and prioritizes tests for execution
+pub struct TestSelector {
+    config: TestConfig,
+    test_cache: HashMap<String, Vec<TestInfo>>,
+    priority_rules: PriorityRules,
 }
 
-/// Configuration for smart test selection
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SelectionConfig {
-    /// Enable smart test selection
-    pub enabled: bool,
-    /// Maximum number of tests to run in a single batch
-    pub max_batch_size: usize,
-    /// Prioritize recently failed tests
-    pub prioritize_failures: bool,
-    /// Prioritize slow tests to run them early
-    pub prioritize_slow_tests: bool,
-    /// Prioritize tests with low cache hit rates
-    pub prioritize_cache_misses: bool,
-    /// Weight for failure history in prioritization
-    pub failure_weight: f64,
-    /// Weight for execution time in prioritization
-    pub time_weight: f64,
-    /// Weight for cache miss rate in prioritization
-    pub cache_weight: f64,
-    /// Minimum time threshold for considering a test "slow"
-    pub slow_test_threshold: Duration,
-}
-
-impl Default for SelectionConfig {
-    fn default() -> Self {
+impl TestSelector {
+    pub fn new(config: TestConfig) -> Self {
         Self {
-            enabled: true,
-            max_batch_size: 50,
-            prioritize_failures: true,
-            prioritize_slow_tests: true,
-            prioritize_cache_misses: true,
-            failure_weight: 2.0,
-            time_weight: 1.5,
-            cache_weight: 1.2,
-            slow_test_threshold: Duration::from_secs(10),
-        }
-    }
-}
-
-/// Historical data about test execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestHistory {
-    /// Test execution records
-    pub records: HashMap<String, TestRecord>,
-    /// Last update time
-    pub last_updated: SystemTime,
-}
-
-/// Record of a test's execution history
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestRecord {
-    /// Test name
-    pub name: String,
-    /// Recent execution times
-    pub execution_times: Vec<Duration>,
-    /// Recent failure count
-    pub recent_failures: usize,
-    /// Total runs
-    pub total_runs: usize,
-    /// Cache hit rate
-    pub cache_hit_rate: f64,
-    /// Last execution time
-    pub last_execution: SystemTime,
-    /// Average execution time
-    pub average_time: Duration,
-    /// Failure rate (0.0 to 1.0)
-    pub failure_rate: f64,
-    /// Flakiness score (0.0 to 1.0)
-    pub flakiness_score: f64,
-}
-
-impl Default for TestRecord {
-    fn default() -> Self {
-        Self {
-            name: String::new(),
-            execution_times: Vec::new(),
-            recent_failures: 0,
-            total_runs: 0,
-            cache_hit_rate: 0.0,
-            last_execution: SystemTime::UNIX_EPOCH,
-            average_time: Duration::ZERO,
-            failure_rate: 0.0,
-            flakiness_score: 0.0,
-        }
-    }
-}
-
-/// Test selection result
-#[derive(Debug, Clone)]
-pub struct TestSelection {
-    /// Tests selected to run, in priority order
-    pub selected_tests: Vec<String>,
-    /// Tests that can be skipped (cached)
-    pub skipped_tests: Vec<String>,
-    /// Reason for each test's selection/skipping
-    pub reasons: HashMap<String, String>,
-    /// Priority scores for selected tests
-    pub priorities: HashMap<String, f64>,
-}
-
-/// Test execution plan with batching and optimization
-#[derive(Debug, Clone)]
-pub struct ExecutionPlan {
-    /// Batches of tests to run in parallel
-    pub batches: Vec<TestBatch>,
-    /// Total estimated execution time
-    pub estimated_time: Duration,
-    /// Optimization strategy used
-    pub strategy: OptimizationStrategy,
-}
-
-/// A batch of tests to run together
-#[derive(Debug, Clone)]
-pub struct TestBatch {
-    /// Tests in this batch
-    pub tests: Vec<String>,
-    /// Estimated batch execution time
-    pub estimated_time: Duration,
-    /// Batch priority (higher = run earlier)
-    pub priority: f64,
-}
-
-/// Optimization strategy for test execution
-#[derive(Debug, Clone)]
-pub enum OptimizationStrategy {
-    /// Run tests in priority order
-    Priority,
-    /// Balance load across parallel workers
-    LoadBalancing,
-    /// Minimize total execution time
-    TimeOptimized,
-    /// Maximize early feedback (fail fast)
-    FailFast,
-}
-
-impl SmartTestSelector {
-    /// Create a new smart test selector
-    pub async fn new(config: SelectionConfig, cache: TestCache) -> TestResult<Self> {
-        let history = TestHistory::load().await.unwrap_or_default();
-
-        Ok(Self {
             config,
-            history,
-            cache,
-        })
+            test_cache: HashMap::new(),
+            priority_rules: PriorityRules::default(),
+        }
     }
 
-    /// Select tests to run based on incremental analysis and smart prioritization
-    pub async fn select_tests<T: TestSuite>(
-        &mut self,
-        suite: &T,
-        incremental_analysis: &IncrementalAnalysis,
-    ) -> TestResult<TestSelection> {
-        if !self.config.enabled {
-            // Return all tests if smart selection is disabled
-            let all_tests: Vec<String> = suite
-                .test_cases()
+    /// Discover all available tests in the workspace
+    pub async fn discover_tests(&mut self) -> Result<Vec<TestInfo>, TestError> {
+        info!("Discovering tests in workspace...");
+
+        let mut all_tests = Vec::new();
+
+        // Get list of workspace members
+        let workspace_members = self.get_workspace_members().await?;
+
+        for member in workspace_members {
+            let tests = self.discover_crate_tests(&member).await?;
+            all_tests.extend(tests);
+        }
+
+        // Apply priority rules
+        for test in &mut all_tests {
+            test.priority = self.priority_rules.determine_priority(test);
+        }
+
+        // Cache results
+        let crate_groups: HashMap<String, Vec<TestInfo>> =
+            all_tests
                 .iter()
-                .map(|t| t.name().to_string())
-                .collect();
-            return Ok(TestSelection {
-                selected_tests: all_tests.clone(),
-                skipped_tests: Vec::new(),
-                reasons: all_tests
-                    .iter()
-                    .map(|t| (t.clone(), "Smart selection disabled".to_string()))
-                    .collect(),
-                priorities: HashMap::new(),
-            });
-        }
+                .cloned()
+                .fold(HashMap::new(), |mut acc, test| {
+                    acc.entry(test.crate_name.clone()).or_default().push(test);
+                    acc
+                });
+        self.test_cache = crate_groups;
 
-        info!("Selecting tests with smart prioritization");
+        info!(
+            "Discovered {} tests across {} crates",
+            all_tests.len(),
+            self.test_cache.len()
+        );
 
+        Ok(all_tests)
+    }
+
+    /// Get tests for specific crates only
+    pub async fn get_tests_for_crates(
+        &mut self,
+        crate_names: &[String],
+    ) -> Result<Vec<TestInfo>, TestError> {
         let mut selected_tests = Vec::new();
-        let mut skipped_tests = Vec::new();
-        let mut reasons = HashMap::new();
-        let mut priorities = HashMap::new();
 
-        // Start with affected tests from incremental analysis
-        let mut candidate_tests: HashSet<String> = incremental_analysis.affected_tests.clone();
-
-        // Add cached tests as skipped
-        for test_name in &incremental_analysis.cached_tests {
-            skipped_tests.push(test_name.clone());
-            reasons.insert(
-                test_name.clone(),
-                "Valid cached result available".to_string(),
-            );
+        for crate_name in crate_names {
+            if let Some(cached_tests) = self.test_cache.get(crate_name) {
+                selected_tests.extend(cached_tests.clone());
+            } else {
+                // Discover tests for this crate if not cached
+                let tests = self.discover_crate_tests(crate_name).await?;
+                selected_tests.extend(tests);
+            }
         }
 
-        // If we have too few affected tests, add some additional tests based on history
-        if candidate_tests.len() < self.config.max_batch_size / 2 {
-            let additional_tests = self
-                .select_additional_tests(suite, &candidate_tests)
-                .await?;
-            candidate_tests.extend(additional_tests);
-        }
+        Ok(selected_tests)
+    }
 
-        // Calculate priorities for all candidate tests
-        for test_name in &candidate_tests {
-            let priority = self.calculate_test_priority(test_name).await;
-            priorities.insert(test_name.clone(), priority);
-        }
+    /// Select tests based on changed files (incremental testing)
+    pub async fn select_tests_for_changes(
+        &mut self,
+        changed_files: &[PathBuf],
+    ) -> Result<Vec<TestInfo>, TestError> {
+        let all_tests = self.discover_tests().await?;
+        let mut selected_tests = Vec::new();
 
-        // Sort tests by priority (highest first)
-        let mut prioritized_tests: Vec<_> = candidate_tests.into_iter().collect();
-        prioritized_tests.sort_by(|a, b| {
-            let priority_a = priorities.get(a).unwrap_or(&0.0);
-            let priority_b = priorities.get(b).unwrap_or(&0.0);
-            priority_b
-                .partial_cmp(priority_a)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        // Determine affected crates
+        let affected_crates = self.determine_affected_crates(changed_files);
 
-        // Select up to max_batch_size tests
-        let selected_count = prioritized_tests.len().min(self.config.max_batch_size);
-        selected_tests = prioritized_tests.into_iter().take(selected_count).collect();
-
-        // Generate reasons for selection
-        for test_name in &selected_tests {
-            let priority = priorities.get(test_name).unwrap_or(&0.0);
-            let reason = self.generate_selection_reason(test_name, *priority).await;
-            reasons.insert(test_name.clone(), reason);
+        for test in all_tests {
+            if self.is_test_affected(&test, changed_files, &affected_crates) {
+                selected_tests.push(test);
+            }
         }
 
         info!(
-            "Selected {} tests to run, {} tests cached/skipped",
+            "Selected {} tests affected by {} changed files",
             selected_tests.len(),
-            skipped_tests.len()
+            changed_files.len()
         );
 
-        Ok(TestSelection {
-            selected_tests,
-            skipped_tests,
-            reasons,
-            priorities,
-        })
+        Ok(selected_tests)
     }
 
-    /// Create an optimized execution plan
-    pub async fn create_execution_plan(
-        &self,
-        selection: &TestSelection,
-        max_parallel: usize,
-    ) -> TestResult<ExecutionPlan> {
-        let strategy = self.determine_optimization_strategy(selection).await;
+    /// Select fast tests only (for quick feedback)
+    pub async fn select_fast_tests(&mut self) -> Result<Vec<TestInfo>, TestError> {
+        let all_tests = self.discover_tests().await?;
 
-        match strategy {
-            OptimizationStrategy::Priority => {
-                self.create_priority_plan(selection, max_parallel).await
-            }
-            OptimizationStrategy::LoadBalancing => {
-                self.create_load_balanced_plan(selection, max_parallel)
-                    .await
-            }
-            OptimizationStrategy::TimeOptimized => {
-                self.create_time_optimized_plan(selection, max_parallel)
-                    .await
-            }
-            OptimizationStrategy::FailFast => {
-                self.create_fail_fast_plan(selection, max_parallel).await
-            }
-        }
-    }
-
-    /// Update test history with execution results
-    pub async fn update_history(
-        &mut self,
-        test_name: &str,
-        duration: Duration,
-        success: bool,
-    ) -> TestResult<()> {
-        let record = self
-            .history
-            .records
-            .entry(test_name.to_string())
-            .or_default();
-
-        record.name = test_name.to_string();
-        record.execution_times.push(duration);
-        record.total_runs += 1;
-        record.last_execution = SystemTime::now();
-
-        if !success {
-            record.recent_failures += 1;
-        }
-
-        // Keep only recent execution times (last 10)
-        if record.execution_times.len() > 10 {
-            record.execution_times.remove(0);
-        }
-
-        // Update derived metrics
-        record.average_time = Duration::from_nanos(
-            record
-                .execution_times
-                .iter()
-                .map(|d| d.as_nanos())
-                .sum::<u128>() as u64
-                / record.execution_times.len() as u64,
-        );
-
-        record.failure_rate = record.recent_failures as f64 / record.total_runs as f64;
-
-        // Calculate flakiness score (variance in success/failure)
-        record.flakiness_score = self.calculate_flakiness_score(record);
-
-        self.history.last_updated = SystemTime::now();
-        self.history.save().await?;
-
-        Ok(())
-    }
-
-    /// Select additional tests to run when incremental analysis yields few tests
-    async fn select_additional_tests<T: TestSuite>(
-        &self,
-        suite: &T,
-        existing_tests: &HashSet<String>,
-    ) -> TestResult<Vec<String>> {
-        let mut additional_tests = Vec::new();
-        let all_tests: Vec<_> = suite
-            .test_cases()
-            .iter()
-            .map(|t| t.name().to_string())
+        let fast_tests = all_tests
+            .into_iter()
+            .filter(|test| {
+                matches!(test.category, TestCategory::Unit)
+                    && matches!(test.priority, TestPriority::Critical | TestPriority::High)
+            })
             .collect();
 
-        // Add tests that haven't been run recently
-        for test_name in &all_tests {
-            if existing_tests.contains(test_name) {
-                continue;
-            }
-
-            if let Some(record) = self.history.records.get(test_name) {
-                let age = SystemTime::now()
-                    .duration_since(record.last_execution)
-                    .unwrap_or(Duration::MAX);
-
-                // Add tests that haven't been run in the last 24 hours
-                if age > Duration::from_secs(24 * 60 * 60) {
-                    additional_tests.push(test_name.clone());
-                }
-            } else {
-                // Add tests with no history
-                additional_tests.push(test_name.clone());
-            }
-        }
-
-        // Limit additional tests
-        additional_tests.truncate(self.config.max_batch_size / 4);
-
-        Ok(additional_tests)
+        Ok(fast_tests)
     }
 
-    /// Calculate priority score for a test
-    async fn calculate_test_priority(&self, test_name: &str) -> f64 {
-        let mut priority = 1.0;
+    /// Select tests by category
+    pub async fn select_tests_by_category(
+        &mut self,
+        categories: &[TestCategory],
+    ) -> Result<Vec<TestInfo>, TestError> {
+        let all_tests = self.discover_tests().await?;
 
-        if let Some(record) = self.history.records.get(test_name) {
-            // Factor in failure rate
-            if self.config.prioritize_failures {
-                priority += record.failure_rate * self.config.failure_weight;
-            }
+        let selected_tests = all_tests
+            .into_iter()
+            .filter(|test| categories.contains(&test.category))
+            .collect();
 
-            // Factor in execution time
-            if self.config.prioritize_slow_tests
-                && record.average_time > self.config.slow_test_threshold
-            {
-                let time_factor = record.average_time.as_secs_f64()
-                    / self.config.slow_test_threshold.as_secs_f64();
-                priority += time_factor * self.config.time_weight;
-            }
-
-            // Factor in cache miss rate
-            if self.config.prioritize_cache_misses {
-                let cache_miss_rate = 1.0 - record.cache_hit_rate;
-                priority += cache_miss_rate * self.config.cache_weight;
-            }
-
-            // Factor in flakiness (flaky tests should run more often)
-            priority += record.flakiness_score * 0.5;
-        } else {
-            // New tests get higher priority
-            priority += 1.0;
-        }
-
-        priority
+        Ok(selected_tests)
     }
 
-    /// Generate a human-readable reason for test selection
-    async fn generate_selection_reason(&self, test_name: &str, priority: f64) -> String {
-        let mut reasons = Vec::new();
+    /// Get workspace members from Cargo.toml
+    async fn get_workspace_members(&self) -> Result<Vec<String>, TestError> {
+        let cargo_toml_path = PathBuf::from("Cargo.toml");
 
-        if let Some(record) = self.history.records.get(test_name) {
-            if record.failure_rate > 0.1 {
-                reasons.push("recently failed");
-            }
-            if record.average_time > self.config.slow_test_threshold {
-                reasons.push("slow test");
-            }
-            if record.cache_hit_rate < 0.5 {
-                reasons.push("low cache hit rate");
-            }
-            if record.flakiness_score > 0.3 {
-                reasons.push("flaky test");
-            }
-        } else {
-            reasons.push("new test");
+        if !cargo_toml_path.exists() {
+            return Err(TestError::SetupError("Cargo.toml not found".to_string()));
         }
 
-        if reasons.is_empty() {
-            format!("priority score: {:.2}", priority)
-        } else {
-            format!("{} (priority: {:.2})", reasons.join(", "), priority)
-        }
-    }
-
-    /// Determine the best optimization strategy
-    async fn determine_optimization_strategy(
-        &self,
-        selection: &TestSelection,
-    ) -> OptimizationStrategy {
-        let total_tests = selection.selected_tests.len();
-        let high_priority_tests = selection.priorities.values().filter(|&&p| p > 2.0).count();
-
-        if high_priority_tests > total_tests / 2 {
-            OptimizationStrategy::FailFast
-        } else if total_tests > 20 {
-            OptimizationStrategy::LoadBalancing
-        } else {
-            OptimizationStrategy::Priority
-        }
-    }
-
-    /// Create a priority-based execution plan
-    async fn create_priority_plan(
-        &self,
-        selection: &TestSelection,
-        max_parallel: usize,
-    ) -> TestResult<ExecutionPlan> {
-        let mut batches = Vec::new();
-        let mut current_batch = Vec::new();
-        let mut current_batch_time = Duration::ZERO;
-
-        for test_name in &selection.selected_tests {
-            let estimated_time = self.estimate_test_time(test_name).await;
-
-            if current_batch.len() >= max_parallel {
-                batches.push(TestBatch {
-                    tests: current_batch.clone(),
-                    estimated_time: current_batch_time,
-                    priority: self.calculate_batch_priority(&current_batch, &selection.priorities),
-                });
-                current_batch.clear();
-                current_batch_time = Duration::ZERO;
-            }
-
-            current_batch.push(test_name.clone());
-            current_batch_time = current_batch_time.max(estimated_time);
-        }
-
-        if !current_batch.is_empty() {
-            batches.push(TestBatch {
-                tests: current_batch.clone(),
-                estimated_time: current_batch_time,
-                priority: self.calculate_batch_priority(&current_batch, &selection.priorities),
-            });
-        }
-
-        let estimated_time = batches.iter().map(|b| b.estimated_time).sum();
-
-        Ok(ExecutionPlan {
-            batches,
-            estimated_time,
-            strategy: OptimizationStrategy::Priority,
-        })
-    }
-
-    /// Create a load-balanced execution plan
-    async fn create_load_balanced_plan(
-        &self,
-        selection: &TestSelection,
-        max_parallel: usize,
-    ) -> TestResult<ExecutionPlan> {
-        // Estimate test times
-        let mut test_times = HashMap::new();
-        for test_name in &selection.selected_tests {
-            let time = self.estimate_test_time(test_name).await;
-            test_times.insert(test_name.clone(), time);
-        }
-
-        // Sort tests by estimated time (longest first)
-        let mut sorted_tests = selection.selected_tests.clone();
-        sorted_tests.sort_by(|a, b| {
-            let time_a = test_times.get(a).unwrap_or(&Duration::ZERO);
-            let time_b = test_times.get(b).unwrap_or(&Duration::ZERO);
-            time_b.cmp(time_a)
-        });
-
-        // Distribute tests across batches using a greedy algorithm
-        let mut batches: Vec<TestBatch> = Vec::new();
-        let mut batch_loads: Vec<Duration> = vec![Duration::ZERO; max_parallel];
-
-        for test_name in sorted_tests {
-            let test_time = test_times.get(&test_name).unwrap_or(&Duration::ZERO);
-
-            // Find the batch with the least load
-            let min_batch_idx = batch_loads
-                .iter()
-                .enumerate()
-                .min_by_key(|(_, &load)| load)
-                .map(|(idx, _)| idx)
-                .unwrap_or(0);
-
-            // Add test to the batch with least load
-            if batches.len() <= min_batch_idx {
-                batches.push(TestBatch {
-                    tests: Vec::new(),
-                    estimated_time: Duration::ZERO,
-                    priority: 0.0,
-                });
-            }
-
-            batches[min_batch_idx].tests.push(test_name.clone());
-            batch_loads[min_batch_idx] += *test_time;
-            batches[min_batch_idx].estimated_time = batch_loads[min_batch_idx];
-            batches[min_batch_idx].priority =
-                self.calculate_batch_priority(&batches[min_batch_idx].tests, &selection.priorities);
-        }
-
-        // Remove empty batches
-        batches.retain(|batch| !batch.tests.is_empty());
-
-        let estimated_time = batch_loads.into_iter().max().unwrap_or(Duration::ZERO);
-
-        Ok(ExecutionPlan {
-            batches,
-            estimated_time,
-            strategy: OptimizationStrategy::LoadBalancing,
-        })
-    }
-
-    /// Create a time-optimized execution plan
-    async fn create_time_optimized_plan(
-        &self,
-        selection: &TestSelection,
-        max_parallel: usize,
-    ) -> TestResult<ExecutionPlan> {
-        // This is similar to load balancing but focuses more on minimizing total time
-        self.create_load_balanced_plan(selection, max_parallel)
+        let content = tokio::fs::read_to_string(&cargo_toml_path)
             .await
-    }
+            .map_err(|e| TestError::IoError(e))?;
 
-    /// Create a fail-fast execution plan
-    async fn create_fail_fast_plan(
-        &self,
-        selection: &TestSelection,
-        max_parallel: usize,
-    ) -> TestResult<ExecutionPlan> {
-        // Prioritize tests that are likely to fail early
-        let mut high_risk_tests = Vec::new();
-        let mut normal_tests = Vec::new();
+        let cargo_toml: toml::Value = content
+            .parse()
+            .map_err(|e| TestError::SetupError(format!("Failed to parse Cargo.toml: {}", e)))?;
 
-        for test_name in &selection.selected_tests {
-            if let Some(record) = self.history.records.get(test_name) {
-                if record.failure_rate > 0.2 || record.flakiness_score > 0.3 {
-                    high_risk_tests.push(test_name.clone());
+        let members = cargo_toml
+            .get("workspace")
+            .and_then(|w| w.get("members"))
+            .and_then(|m| m.as_array())
+            .ok_or_else(|| TestError::SetupError("No workspace members found".to_string()))?;
+
+        let member_names = members.iter()
+            .filter_map(|m| m.as_str())
+            .filter(|name| !name.starts_with('.') && *name != "xtask") // Skip hidden and utility crates
+            .map(|name| {
+                // Extract crate name from path
+                if name.contains('/') {
+                    name.split('/').last().unwrap_or(name).to_string()
                 } else {
-                    normal_tests.push(test_name.clone());
+                    name.to_string()
+                }
+            })
+            .collect();
+
+        Ok(member_names)
+    }
+
+    /// Discover tests for a specific crate
+    async fn discover_crate_tests(&self, crate_name: &str) -> Result<Vec<TestInfo>, TestError> {
+        debug!("Discovering tests for crate: {}", crate_name);
+
+        // Use cargo test --list to discover tests
+        let mut cmd = Command::new("cargo");
+        cmd.arg("test")
+            .arg("--package")
+            .arg(crate_name)
+            .arg("--list")
+            .arg("--message-format=json");
+
+        let output = cmd
+            .output()
+            .await
+            .map_err(|e| TestError::ExecutionError(format!("Failed to list tests: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            warn!("Failed to list tests for {}: {}", crate_name, stderr);
+            return Ok(Vec::new()); // Return empty list instead of failing
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let mut tests = Vec::new();
+
+        // Parse test list output
+        for line in stdout.lines() {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
+                if let Some(test_name) = json.get("name").and_then(|n| n.as_str()) {
+                    if test_name.ends_with(": test") {
+                        let clean_name = test_name.trim_end_matches(": test");
+                        let test_info = TestInfo {
+                            name: clean_name.to_string(),
+                            crate_name: crate_name.to_string(),
+                            file_path: self.infer_test_file_path(crate_name, clean_name),
+                            category: self.categorize_test(clean_name, crate_name),
+                            priority: TestPriority::Medium, // Will be updated later
+                        };
+                        tests.push(test_info);
+                    }
                 }
             } else {
-                normal_tests.push(test_name.clone());
+                // Fallback: parse simple text output
+                if line.contains(": test") {
+                    let test_name = line.split(':').next().unwrap_or(line).trim();
+                    let test_info = TestInfo {
+                        name: test_name.to_string(),
+                        crate_name: crate_name.to_string(),
+                        file_path: self.infer_test_file_path(crate_name, test_name),
+                        category: self.categorize_test(test_name, crate_name),
+                        priority: TestPriority::Medium,
+                    };
+                    tests.push(test_info);
+                }
             }
         }
 
-        // Create batches with high-risk tests first
-        let mut all_tests = high_risk_tests;
-        all_tests.extend(normal_tests);
-
-        let selection_with_reordered_tests = TestSelection {
-            selected_tests: all_tests,
-            skipped_tests: selection.skipped_tests.clone(),
-            reasons: selection.reasons.clone(),
-            priorities: selection.priorities.clone(),
-        };
-
-        self.create_priority_plan(&selection_with_reordered_tests, max_parallel)
-            .await
+        debug!("Found {} tests in crate {}", tests.len(), crate_name);
+        Ok(tests)
     }
 
-    /// Estimate execution time for a test
-    async fn estimate_test_time(&self, test_name: &str) -> Duration {
-        if let Some(record) = self.history.records.get(test_name) {
-            if record.average_time > Duration::ZERO {
-                return record.average_time;
+    /// Infer test file path from test name and crate
+    fn infer_test_file_path(&self, crate_name: &str, test_name: &str) -> PathBuf {
+        // Try to infer the file path based on naming conventions
+        if crate_name == "tests" {
+            // Integration tests
+            PathBuf::from(format!("tests/{}.rs", test_name))
+        } else if test_name.contains("integration") {
+            PathBuf::from(format!("crates/{}/tests/integration.rs", crate_name))
+        } else {
+            // Unit tests (likely in lib.rs or specific module)
+            PathBuf::from(format!("crates/{}/src/lib.rs", crate_name))
+        }
+    }
+
+    /// Categorize test based on name and crate
+    fn categorize_test(&self, test_name: &str, crate_name: &str) -> TestCategory {
+        let name_lower = test_name.to_lowercase();
+
+        if name_lower.contains("performance") || name_lower.contains("benchmark") {
+            TestCategory::Performance
+        } else if name_lower.contains("integration") || crate_name == "tests" {
+            TestCategory::Integration
+        } else if name_lower.contains("crossval") || name_lower.contains("cross_validation") {
+            TestCategory::CrossValidation
+        } else {
+            TestCategory::Unit
+        }
+    }
+
+    /// Determine which crates are affected by file changes
+    fn determine_affected_crates(&self, changed_files: &[PathBuf]) -> HashSet<String> {
+        let mut affected_crates = HashSet::new();
+
+        for file in changed_files {
+            let file_str = file.to_string_lossy();
+
+            if file_str.starts_with("crates/") {
+                // Extract crate name from path like "crates/bitnet-common/src/lib.rs"
+                if let Some(crate_name) = file_str.split('/').nth(1) {
+                    affected_crates.insert(crate_name.to_string());
+                }
+            } else if file_str.starts_with("tests/") {
+                // Tests directory affects the tests crate
+                affected_crates.insert("tests".to_string());
+            } else if file_str == "Cargo.toml" || file_str == "Cargo.lock" {
+                // Root changes affect all crates
+                affected_crates.insert("*".to_string());
             }
         }
 
-        // Default estimate for unknown tests
-        Duration::from_secs(5)
+        affected_crates
     }
 
-    /// Calculate priority for a batch of tests
-    fn calculate_batch_priority(&self, tests: &[String], priorities: &HashMap<String, f64>) -> f64 {
-        if tests.is_empty() {
-            return 0.0;
+    /// Check if a test is affected by file changes
+    fn is_test_affected(
+        &self,
+        test: &TestInfo,
+        changed_files: &[PathBuf],
+        affected_crates: &HashSet<String>,
+    ) -> bool {
+        // If all crates are affected
+        if affected_crates.contains("*") {
+            return true;
         }
 
-        let total_priority: f64 = tests
-            .iter()
-            .map(|test| priorities.get(test).unwrap_or(&1.0))
-            .sum();
-
-        total_priority / tests.len() as f64
-    }
-
-    /// Calculate flakiness score for a test record
-    fn calculate_flakiness_score(&self, record: &TestRecord) -> f64 {
-        if record.total_runs < 5 {
-            return 0.0; // Not enough data
+        // If test's crate is directly affected
+        if affected_crates.contains(&test.crate_name) {
+            return true;
         }
 
-        // Simple flakiness calculation based on failure rate variance
-        let failure_rate = record.failure_rate;
+        // Check for dependency relationships (simplified)
+        for file in changed_files {
+            let file_str = file.to_string_lossy();
 
-        // Tests that fail sometimes but not always are considered flaky
-        if failure_rate > 0.1 && failure_rate < 0.9 {
-            // Peak flakiness at 50% failure rate
-            let distance_from_50 = (failure_rate - 0.5).abs();
-            1.0 - (distance_from_50 * 2.0)
-        } else {
-            0.0
-        }
-    }
-}
+            // If a core crate changed, it might affect other crates
+            if file_str.contains("bitnet-common") || file_str.contains("bitnet-models") {
+                return true;
+            }
 
-impl TestHistory {
-    /// Load test history from disk
-    async fn load() -> TestResult<Self> {
-        let history_path = std::env::var("BITNET_TEST_HISTORY")
-            .unwrap_or_else(|_| "tests/cache/history.json".to_string());
-
-        if let Ok(content) = tokio::fs::read_to_string(&history_path).await {
-            serde_json::from_str(&content)
-                .map_err(|e| TestError::cache(format!("Failed to parse test history: {}", e)))
-        } else {
-            Ok(Self::default())
-        }
-    }
-
-    /// Save test history to disk
-    async fn save(&self) -> TestResult<()> {
-        let history_path = std::env::var("BITNET_TEST_HISTORY")
-            .unwrap_or_else(|_| "tests/cache/history.json".to_string());
-
-        // Ensure directory exists
-        if let Some(parent) = std::path::Path::new(&history_path).parent() {
-            tokio::fs::create_dir_all(parent).await?;
+            // If test file path matches changed file
+            if file_str.contains(&test.file_path.to_string_lossy().as_ref()) {
+                return true;
+            }
         }
 
-        let content = serde_json::to_string_pretty(self)
-            .map_err(|e| TestError::cache(format!("Failed to serialize test history: {}", e)))?;
-
-        tokio::fs::write(&history_path, content).await?;
-        Ok(())
+        false
     }
 }
 
-impl Default for TestHistory {
-    fn default() -> Self {
+/// Rules for determining test priorities
+#[derive(Debug, Default)]
+pub struct PriorityRules {
+    critical_patterns: Vec<String>,
+    high_patterns: Vec<String>,
+    low_patterns: Vec<String>,
+}
+
+impl PriorityRules {
+    pub fn new() -> Self {
         Self {
-            records: HashMap::new(),
-            last_updated: SystemTime::now(),
+            critical_patterns: vec![
+                "core".to_string(),
+                "basic".to_string(),
+                "essential".to_string(),
+                "smoke".to_string(),
+            ],
+            high_patterns: vec![
+                "api".to_string(),
+                "public".to_string(),
+                "interface".to_string(),
+            ],
+            low_patterns: vec![
+                "benchmark".to_string(),
+                "performance".to_string(),
+                "stress".to_string(),
+                "fuzz".to_string(),
+            ],
+        }
+    }
+
+    pub fn determine_priority(&self, test: &TestInfo) -> TestPriority {
+        let name_lower = test.name.to_lowercase();
+
+        // Check critical patterns
+        for pattern in &self.critical_patterns {
+            if name_lower.contains(pattern) {
+                return TestPriority::Critical;
+            }
+        }
+
+        // Check low priority patterns
+        for pattern in &self.low_patterns {
+            if name_lower.contains(pattern) {
+                return TestPriority::Low;
+            }
+        }
+
+        // Check high priority patterns
+        for pattern in &self.high_patterns {
+            if name_lower.contains(pattern) {
+                return TestPriority::High;
+            }
+        }
+
+        // Default priority based on category
+        match test.category {
+            TestCategory::Unit => TestPriority::High,
+            TestCategory::Integration => TestPriority::Medium,
+            TestCategory::Performance => TestPriority::Low,
+            TestCategory::CrossValidation => TestPriority::Low,
+        }
+    }
+}
+
+/// Test selection strategy
+#[derive(Debug, Clone)]
+pub enum SelectionStrategy {
+    All,
+    Fast,
+    Incremental(Vec<PathBuf>),
+    Category(Vec<TestCategory>),
+    Priority(TestPriority),
+    Custom(Box<dyn Fn(&TestInfo) -> bool + Send + Sync>),
+}
+
+impl SelectionStrategy {
+    pub async fn apply(&self, selector: &mut TestSelector) -> Result<Vec<TestInfo>, TestError> {
+        match self {
+            SelectionStrategy::All => selector.discover_tests().await,
+            SelectionStrategy::Fast => selector.select_fast_tests().await,
+            SelectionStrategy::Incremental(changed_files) => {
+                selector.select_tests_for_changes(changed_files).await
+            }
+            SelectionStrategy::Category(categories) => {
+                selector.select_tests_by_category(categories).await
+            }
+            SelectionStrategy::Priority(min_priority) => {
+                let all_tests = selector.discover_tests().await?;
+                let filtered = all_tests
+                    .into_iter()
+                    .filter(|test| test.priority as u8 <= *min_priority as u8)
+                    .collect();
+                Ok(filtered)
+            }
+            SelectionStrategy::Custom(_filter) => {
+                // Custom filtering would be implemented here
+                selector.discover_tests().await
+            }
         }
     }
 }
@@ -693,63 +433,66 @@ impl Default for TestHistory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
+    use crate::common::fast_config::fast_config;
 
     #[tokio::test]
-    async fn test_smart_test_selection() {
-        let temp_dir = TempDir::new().unwrap();
-        let cache_dir = temp_dir.path().join("cache");
-        let config = super::super::cache::CacheConfig::default();
-        let cache = TestCache::new(cache_dir, config).await.unwrap();
-
-        let selection_config = SelectionConfig::default();
-        let mut selector = SmartTestSelector::new(selection_config, cache)
-            .await
-            .unwrap();
-
-        // Create mock incremental analysis
-        let mut affected_tests = HashSet::new();
-        affected_tests.insert("test1".to_string());
-        affected_tests.insert("test2".to_string());
-
-        let incremental_analysis = IncrementalAnalysis {
-            affected_tests,
-            cached_tests: HashSet::new(),
-            changes: Vec::new(),
-            run_all: false,
-            reason: "Test analysis".to_string(),
-        };
-
-        // Mock test suite would be needed here for a complete test
-        // For now, we'll test the priority calculation
-        let priority = selector.calculate_test_priority("test1").await;
-        assert!(priority > 0.0);
+    async fn test_test_selector_creation() {
+        let config = fast_config();
+        let selector = TestSelector::new(config);
+        assert!(selector.test_cache.is_empty());
     }
 
     #[test]
-    fn test_flakiness_calculation() {
-        let config = SelectionConfig::default();
-        let cache = TestCache::new(
-            std::path::PathBuf::from("/tmp"),
-            super::super::cache::CacheConfig::default(),
-        )
-        .await
-        .unwrap();
-        let selector = SmartTestSelector::new(config, cache).await.unwrap();
+    fn test_priority_rules() {
+        let rules = PriorityRules::new();
 
-        let mut record = TestRecord::default();
-        record.total_runs = 10;
-        record.failure_rate = 0.5; // 50% failure rate
+        let critical_test = TestInfo {
+            name: "test_core_functionality".to_string(),
+            crate_name: "bitnet-common".to_string(),
+            file_path: PathBuf::from("src/lib.rs"),
+            category: TestCategory::Unit,
+            priority: TestPriority::Medium,
+        };
 
-        let flakiness = selector.calculate_flakiness_score(&record);
-        assert!(flakiness > 0.5); // Should be considered flaky
+        assert_eq!(
+            rules.determine_priority(&critical_test),
+            TestPriority::Critical
+        );
+    }
 
-        record.failure_rate = 0.0; // Never fails
-        let flakiness = selector.calculate_flakiness_score(&record);
-        assert_eq!(flakiness, 0.0); // Not flaky
+    #[test]
+    fn test_categorize_test() {
+        let config = fast_config();
+        let selector = TestSelector::new(config);
 
-        record.failure_rate = 1.0; // Always fails
-        let flakiness = selector.calculate_flakiness_score(&record);
-        assert_eq!(flakiness, 0.0); // Not flaky, just broken
+        assert_eq!(
+            selector.categorize_test("test_performance_benchmark", "bitnet-kernels"),
+            TestCategory::Performance
+        );
+
+        assert_eq!(
+            selector.categorize_test("test_integration_workflow", "tests"),
+            TestCategory::Integration
+        );
+
+        assert_eq!(
+            selector.categorize_test("test_unit_function", "bitnet-common"),
+            TestCategory::Unit
+        );
+    }
+
+    #[test]
+    fn test_affected_crates_detection() {
+        let config = fast_config();
+        let selector = TestSelector::new(config);
+
+        let changed_files = vec![
+            PathBuf::from("crates/bitnet-common/src/lib.rs"),
+            PathBuf::from("tests/integration_tests.rs"),
+        ];
+
+        let affected = selector.determine_affected_crates(&changed_files);
+        assert!(affected.contains("bitnet-common"));
+        assert!(affected.contains("tests"));
     }
 }
