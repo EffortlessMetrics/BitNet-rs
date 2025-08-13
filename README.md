@@ -6,7 +6,7 @@
 [![Build Status](https://github.com/microsoft/BitNet/workflows/CI/badge.svg)](https://github.com/microsoft/BitNet/actions)
 [![MSRV](https://img.shields.io/badge/MSRV-1.70.0-blue.svg)](https://github.com/microsoft/BitNet)
 
-**BitNet.rs is the primary, production-ready implementation of BitNet 1-bit Large Language Model inference.** Built from the ground up in Rust, it delivers superior performance, memory safety, and developer experience compared to the original C++ implementation.
+**BitNet.rs is the production-ready implementation of BitNet 1-bit Large Language Model inference.** Built from the ground up in Rust, it delivers superior performance, memory safety, and developer experience compared to the original C++ implementation.
 
 ## Why BitNet.rs?
 
@@ -47,6 +47,8 @@ Add BitNet.rs to your `Cargo.toml`:
 bitnet = "0.1"
 ```
 
+> **Note:** The `bitnet-sys` native layer is disabled by default. Enable with `--features bitnet-sys/ffi` if you need C++/CUDA bindings for cross-validation.
+
 #### 🖥️ **Command Line Tools**
 
 ```bash
@@ -84,6 +86,19 @@ docker run --rm -it ghcr.io/microsoft/bitnet:latest
 ```
 
 ### Basic Usage
+
+#### Try the Example
+
+```bash
+# Download a model using xtask
+cargo xtask download-model
+
+# Run the inference example
+export BITNET_GGUF=models/ggml-model-i2_s.gguf
+cargo run --example infer
+```
+
+#### Rust API
 
 ```rust
 use bitnet::prelude::*;
@@ -176,7 +191,7 @@ BitNet.rs is organized as a comprehensive Rust workspace with 12 specialized cra
 
 | Crate | Description |
 |-------|-------------|
-| `bitnet-sys` | FFI bindings for C++ comparison |
+| `bitnet-sys` | FFI bindings for C++ comparison (requires `--features ffi`) |
 | `crossval` | Cross-validation framework |
 
 ## Performance Comparison

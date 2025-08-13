@@ -16,7 +16,8 @@ publish = false                                                                 
 
 [features]
 default = []
-crossval = ["dep:bindgen", "dep:cc"]
+ffi = ["dep:bindgen", "dep:cc"]  # Enable native/C++ build only when requested
+crossval = ["ffi"]  # Keep backward compatibility
 
 [dependencies]
 # Only include FFI dependencies when crossval feature is enabled

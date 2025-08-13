@@ -7,11 +7,18 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
+    // If the crate is compiled without `--features bitnet-sys/ffi`,
+    // skip all native build steps so the workspace remains green.
+    if std::env::var("CARGO_FEATURE_FFI").is_err() {
+        println!("cargo:warning=bitnet-sys: 'ffi' feature not enabled; skipping native build");
+        return;
+    }
+
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=BITNET_CPP_DIR");
     println!("cargo:rerun-if-env-changed=BITNET_CPP_PATH"); // Legacy support
     
-    #[cfg(feature = "crossval")]
+    #[cfg(feature = "ffi")]
     {
         // When crossval feature is enabled, we REQUIRE the C++ implementation
         let cpp_dir = env::var("BITNET_CPP_DIR")
