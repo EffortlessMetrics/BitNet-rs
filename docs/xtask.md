@@ -32,6 +32,9 @@ Fetches a GGUF model from Hugging Face (or a mirror) safely.
 | `--no-progress` | Hide progress bar | `false` (auto-detects TTY) |
 | `--verbose` | Debug output | `false` |
 | `--base-url <url>` | Alternative repository URL | `https://huggingface.co` |
+| `--json` | Output JSON events for CI/CD | `false` |
+| `--retries <N>` | Maximum retry attempts | `3` |
+| `--timeout <secs>` | Request timeout in seconds | `1800` |
 
 ### How It Works (Safety Guarantees)
 
@@ -107,4 +110,38 @@ Interactive cleanup with size reporting; removes `target/`, `~/.cache/bitnet_cpp
 
 ```bash
 cargo xtask clean-cache
+```
+
+---
+
+## JSON Output Mode
+
+When using `--json`, events are emitted to stdout for easy parsing:
+
+```bash
+# Track download progress
+cargo xtask download-model --json | jq -r 'select(.phase=="progress") | [.downloaded,.total] | @tsv'
+
+# Extract completion time
+cargo xtask download-model --json | jq -r 'select(.phase=="done") | "Downloaded \(.bytes) bytes in \(.ms)ms"'
+
+# Monitor retries
+cargo xtask download-model --json | jq 'select(.phase=="retry")'
+```
+
+### Event Schema
+
+```json
+{
+  "phase": "start|progress|retry|done",
+  "url": "https://...",           // start event
+  "resume": true,                  // start event
+  "start": 1048576,               // start event (resume point)
+  "downloaded": 10485760,         // progress event
+  "total": 524288000,             // progress event
+  "wait_secs": 8,                 // retry event
+  "msg": "429",                   // retry event
+  "bytes": 524288000,             // done event
+  "ms": 42000                     // done event
+}
 ```

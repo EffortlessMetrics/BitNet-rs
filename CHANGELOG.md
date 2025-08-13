@@ -17,10 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--rev/--ref` flag for reproducible version pinning
   - `--no-progress` and `--verbose` flags for CI/debugging
   - `--base-url` flag for mirror repository support
+  - `--json` flag for structured CI/CD output
+  - `--retries` and `--timeout` flags for customization
   - Conditional full GET when `start==0` (304 optimization)
-  - 429 `Retry-After` handling before `error_for_status()`
+  - 429 `Retry-After` handling with HTTP-date support
+  - 412/416 explicit handling with clean restart
+  - Streamed SHA256 verification (avoids re-read)
+  - File preallocation for early ENOSPC detection
+  - Force identity encoding for correct ranges
   - BufWriter streaming with atomic rename + parent dir fsync
   - Atomic writes for `.etag` / `.lastmod` metadata files
+  - RAII lock guard for automatic cleanup
   - Single-writer `.lock` beside `.part` for concurrency protection
   - Smarter disk space check (remaining bytes with headroom)
 
