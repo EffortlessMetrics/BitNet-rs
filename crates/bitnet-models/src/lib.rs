@@ -7,6 +7,7 @@ pub mod security;
 pub mod transformer;
 pub mod weight_mapper;
 pub mod gguf_simple;
+pub mod minimal;
 
 pub use bitnet::*;
 pub use loader::*;
