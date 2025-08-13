@@ -775,7 +775,24 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
         std::iter::once(script.to_string_lossy().to_string())
             .chain(args)
             .collect(),
-    )
+    )?;
+    
+    // Verify the build succeeded by checking for the binary
+    let cpp_dir = dirs::home_dir()
+        .unwrap()
+        .join(".cache/bitnet_cpp");
+    let binary = cpp_dir.join("bitnet-llama-cli");
+    
+    if !binary.exists() {
+        return Err(anyhow!(
+            "C++ binary not found at {}. Build may have failed.\n\
+             Check the output above for errors.",
+            binary.display()
+        ));
+    }
+    
+    println!("   ✓ C++ binary built successfully: {}", binary.display());
+    Ok(())
 }
 
 fn crossval_cmd(
@@ -874,11 +891,30 @@ fn full_crossval_cmd(force: bool) -> Result<()> {
     
     println!();
     
-    // Step 3: Run tests
+    // Step 3: Run tests with auto-discovery
     println!("Step 3/3: Running cross-validation tests");
-    let model = PathBuf::from(format!("models/{}/{}",
-        DEFAULT_MODEL_ID.replace('/', "-"),
-        DEFAULT_MODEL_FILE));
+    
+    // Try auto-discovery first
+    let model = match resolve_default_model() {
+        Ok(m) => {
+            println!("   Auto-discovered model: {}", m.display());
+            m
+        }
+        Err(_) => {
+            // Fallback to expected path
+            let expected = PathBuf::from(format!("models/{}/{}",
+                DEFAULT_MODEL_ID.replace('/', "-"),
+                DEFAULT_MODEL_FILE));
+            if !expected.exists() {
+                return Err(anyhow!(
+                    "Model not found at expected path: {}\nDownload may have failed.",
+                    expected.display()
+                ));
+            }
+            expected
+        }
+    };
+    
     crossval_cmd(&model, None, true, &[], false)?;
     
     println!();
@@ -889,47 +925,52 @@ fn full_crossval_cmd(force: bool) -> Result<()> {
 
 // Keep existing functionality from original xtask
 fn gen_fixtures(size: &str, output_dir: &Path) -> Result<()> {
+    use serde_json::json;
+    
     println!("🔧 Generating deterministic test model fixtures...");
     println!("  Size: {}", size);
     println!("  Output: {}", output_dir.display());
     
     fs::create_dir_all(output_dir)?;
     
-    // Simple fixture generation (existing logic)
-    let fixture_content = format!(
-        r#"{{
-  "model_type": "bitnet_b1_58",
-  "vocab_size": {},
-  "hidden_size": {},
-  "num_layers": {},
-  "test_metadata": {{
-    "fixture_type": "{}",
-    "deterministic": true,
-    "seed": 42
-  }}
-}}"#,
-        match size {
-            "tiny" => 1000,
-            "small" => 5000,
-            _ => 32000,
-        },
-        match size {
-            "tiny" => 64,
-            "small" => 256,
-            _ => 512,
-        },
-        match size {
-            "tiny" => 2,
-            "small" => 4,
-            _ => 8,
-        },
-        size
-    );
+    // Generate more realistic test data based on size
+    let (vocab_size, hidden_size, num_layers) = match size {
+        "tiny" => (100, 64, 2),
+        "small" => (1000, 128, 4),
+        "medium" => (10000, 256, 8),
+        _ => {
+            eprintln!("⚠️  Unknown size '{}', using 'small'", size);
+            (1000, 128, 4)
+        }
+    };
     
-    let fixture_path = output_dir.join(format!("{}_model.json", size));
-    fs::write(&fixture_path, fixture_content)?;
+    // Create a minimal GGUF-like metadata file
+    let metadata = json!({
+        "general.architecture": "bitnet",
+        "general.name": format!("test_model_{}", size),
+        "bitnet.context_length": 512,
+        "bitnet.embedding_length": hidden_size,
+        "bitnet.block_count": num_layers,
+        "bitnet.feed_forward_length": hidden_size * 4,
+        "bitnet.attention.head_count": 8,
+        "tokenizer.ggml.model": "llama",
+        "tokenizer.ggml.tokens": (0..vocab_size).map(|i| format!("token_{}", i)).collect::<Vec<_>>(),
+        "tokenizer.ggml.scores": vec![0.0f32; vocab_size],
+        "tokenizer.ggml.token_type": vec![0i32; vocab_size],
+    });
     
-    println!("✅ Created: {}", fixture_path.display());
+    let metadata_path = output_dir.join(format!("test_model_{}_metadata.json", size));
+    fs::write(&metadata_path, serde_json::to_string_pretty(&metadata)?)?;
+    
+    // Generate weight tensors (dummy data)
+    let weights_path = output_dir.join(format!("test_model_{}_weights.bin", size));
+    let num_params = vocab_size * hidden_size + hidden_size * hidden_size * num_layers;
+    let weight_data = vec![0u8; (num_params / 8).max(1024)]; // 1-bit quantized
+    fs::write(&weights_path, weight_data)?;
+    
+    println!("  Created metadata: {}", metadata_path.display());
+    println!("  Created weights: {} ({} bytes)", weights_path.display(), num_params / 8);
+    println!("✅ Test fixtures generated for '{}' model", size);
     Ok(())
 }
 
@@ -962,23 +1003,62 @@ fn clean_cache() -> Result<()> {
     println!("🧹 Cleaning all caches and temporary files...");
     
     let cache_dirs = [
-        PathBuf::from("target/"),
-        dirs::home_dir().unwrap().join(".cache/bitnet_cpp/"),
-        PathBuf::from("crossval/fixtures/"),
+        ("Cargo target", PathBuf::from("target/")),
+        ("C++ build", dirs::home_dir().unwrap().join(".cache/bitnet_cpp/")),
+        ("Test fixtures", PathBuf::from("crossval/fixtures/")),
+        ("Models", PathBuf::from("models/")),
     ];
     
-    for dir in &cache_dirs {
+    // Calculate total size
+    let mut total_size = 0u64;
+    let mut existing_dirs = Vec::new();
+    
+    for (name, dir) in &cache_dirs {
         if dir.exists() {
-            println!("  Cleaning: {}", dir.display());
-            fs::remove_dir_all(dir)?;
-            println!("    ✅ Removed");
-        } else {
-            println!("  Skipping: {} (does not exist)", dir.display());
+            let size = dir_size(dir)?;
+            total_size += size;
+            existing_dirs.push((*name, dir.clone(), size));
+            println!("  {} ({:.2} MB): {}", name, size as f64 / 1_048_576.0, dir.display());
         }
     }
     
-    println!("✅ Cache cleanup complete!");
+    if existing_dirs.is_empty() {
+        println!("✅ No caches to clean");
+        return Ok(());
+    }
+    
+    println!("\n  Total: {:.2} MB", total_size as f64 / 1_048_576.0);
+    println!("\n⚠️  This will delete the directories listed above.");
+    print!("  Continue? [y/N]: ");
+    std::io::stdout().flush()?;
+    
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+    
+    if !input.trim().eq_ignore_ascii_case("y") {
+        println!("Cancelled.");
+        return Ok(());
+    }
+    
+    for (name, dir, _) in existing_dirs {
+        print!("  Removing {}... ", name);
+        std::io::stdout().flush()?;
+        fs::remove_dir_all(&dir)?;
+        println!("✓");
+    }
+    
+    println!("\n✅ Freed {:.2} MB", total_size as f64 / 1_048_576.0);
     Ok(())
+}
+
+fn dir_size(path: &Path) -> Result<u64> {
+    let mut size = 0u64;
+    for entry in WalkDir::new(path).into_iter().filter_map(Result::ok) {
+        if let Ok(metadata) = entry.metadata() {
+            size += metadata.len();
+        }
+    }
+    Ok(size)
 }
 
 fn check_features() -> Result<()> {
