@@ -12,7 +12,7 @@ use fs2::available_space;
 use clap::{Parser, Subcommand};
 use indicatif::{ProgressBar, ProgressStyle, ProgressDrawTarget};
 use reqwest::blocking::Client;
-use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, RANGE, ETAG, IF_NONE_MATCH, LAST_MODIFIED, IF_MODIFIED_SINCE, IF_RANGE, ACCEPT_RANGES, ACCEPT_ENCODING};
+use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, RANGE, ETAG, IF_NONE_MATCH, LAST_MODIFIED, IF_MODIFIED_SINCE, IF_RANGE, ACCEPT_RANGES, ACCEPT_ENCODING, RETRY_AFTER};
 use reqwest::StatusCode;
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
@@ -21,6 +21,14 @@ use fs2::FileExt;
 // Global interrupt flag and setup
 static CTRL_ONCE: Once = Once::new();
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+
+// Safe exponential backoff helper
+#[inline]
+fn exp_backoff_ms(attempt: u32) -> u64 {
+    // 200ms, 400ms, 800ms… capped at 10s
+    let shift = attempt.saturating_sub(1).min(20);
+    (200u64).saturating_mul(1u64 << shift).min(10_000)
+}
 
 // Centralized defaults to avoid drift
 const DEFAULT_MODEL_ID: &str = "microsoft/bitnet-b1.58-2B-4T-gguf";
@@ -388,8 +396,8 @@ fn download_model_cmd(
         }
     }
     
-    // Single-writer lock to prevent concurrent downloads
-    let lock_path = dest.with_extension("lock");
+    // Single-writer lock to prevent concurrent downloads (alongside the .part file)
+    let lock_path = tmp.with_extension("lock");
     let lock_file = std::fs::File::create(&lock_path)
         .with_context(|| format!("failed to create lock file for {}", dest.display()))?;
     lock_file.try_lock_exclusive()
@@ -425,27 +433,37 @@ fn download_model_cmd(
             } else if let Ok(lm) = fs::read_to_string(&lastmod_path) {
                 rb = rb.header(IF_RANGE, lm.trim());
             }
+        } else if start == 0 {
+            // Conditional GET when starting from 0
+            if let Ok(etag) = fs::read_to_string(&etag_path) {
+                rb = rb.header(IF_NONE_MATCH, etag.trim());
+            }
+            if let Ok(lm) = fs::read_to_string(&lastmod_path) {
+                rb = rb.header(IF_MODIFIED_SINCE, lm.trim());
+            }
         }
 
-        let r = rb.send();
-
-        let r = match r {
-            Ok(r) => r,
-            Err(e) if attempt < max_attempts => {
-                // Handle 429 rate limiting
-                if let Some(status) = e.status() {
-                    if status == StatusCode::TOO_MANY_REQUESTS {
-                        eprintln!("   Rate limited (429). Waiting 5s before retry...");
-                        thread::sleep(Duration::from_secs(5));
-                        attempt += 1;
-                        continue;
-                    }
+        let r = match rb.send() {
+            Ok(resp) => {
+                // Handle 429 Retry-After before error_for_status()
+                if resp.status() == StatusCode::TOO_MANY_REQUESTS && attempt < max_attempts {
+                    let wait = resp.headers()
+                        .get(RETRY_AFTER)
+                        .and_then(|v| v.to_str().ok())
+                        .and_then(|s| s.parse::<u64>().ok())
+                        .unwrap_or(5);
+                    eprintln!("   429 rate limited. Waiting {wait}s before retry...");
+                    thread::sleep(Duration::from_secs(wait));
+                    attempt += 1;
+                    continue;
                 }
-                
+                resp // fall through; handle Content-Range + error_for_status below
+            }
+            Err(e) if attempt < max_attempts => {
                 attempt += 1;
-                let backoff = Duration::from_millis(200 * (1 << (attempt - 1)));
-                println!("   transient error: {e}; retrying in {} ms", backoff.as_millis());
-                thread::sleep(backoff);
+                let backoff = exp_backoff_ms(attempt);
+                eprintln!("   transient error: {e}; retrying in {backoff} ms");
+                thread::sleep(Duration::from_millis(backoff));
                 continue;
             }
             Err(e) => {
@@ -484,17 +502,18 @@ fn download_model_cmd(
                                       .and_then(|s| s.parse::<u64>().ok()) {
                     if begin != start {
                         // Misaligned resume point - must restart the request
-                        eprintln!("   Server resumed at {} (expected {}); restarting from 0", begin, start);
+                        eprintln!("   Server resumed at {begin} (expected {start}); restarting from 0");
                         drop(resp);  // Drop current response before retry
                         start = 0;
                         
+                        attempt += 1;  // Increment attempt before backoff
                         if attempt > max_attempts {
                             drop(lock_file);
                             let _ = fs::remove_file(&lock_path);
-                            bail!("failed to download after {} attempts due to misaligned resume", max_attempts);
+                            bail!("failed to download after {max_attempts} attempts due to misaligned resume");
                         }
-                        // Small backoff before retry
-                        thread::sleep(Duration::from_millis(200 << (attempt - 1)));
+                        // Safe exponential backoff
+                        thread::sleep(Duration::from_millis(exp_backoff_ms(attempt)));
                         continue;  // Continue the outer loop with a fresh GET (no Range)
                     }
                 }
@@ -583,6 +602,12 @@ fn download_model_cmd(
             pb.finish_with_message("interrupted (partial file kept for resume)");
             println!("   Partial download saved at: {}", tmp.display());
             println!("   Run the same command again to resume");
+            
+            // Close file handle, release & remove lock
+            drop(file_out);
+            drop(lock_file);
+            let _ = fs::remove_file(&lock_path);
+            
             return Ok(());
         }
         
