@@ -10,6 +10,7 @@ pub mod cache;
 pub mod config;
 pub mod backends;
 pub mod parity;
+pub mod simple_forward;
 
 pub use engine::{InferenceEngine, InferenceResult};
 pub use streaming::{GenerationStream, StreamingConfig};
