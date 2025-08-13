@@ -3,7 +3,7 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
     process::Command,
-    sync::{Arc, Once, atomic::{AtomicBool, Ordering}},
+    sync::{Once, atomic::{AtomicBool, Ordering}},
     thread,
     time::{Duration, Instant},
 };
@@ -176,7 +176,7 @@ fn download_model_cmd(
     let lastmod_path = dest.with_extension("lastmod");
     
     if dest.exists() && !force {
-        // Check with conditional headers if we need to re-download
+        let mut up_to_date = false;
         let saved_etag = fs::read_to_string(&etag_path).ok();
         let saved_lastmod = fs::read_to_string(&lastmod_path).ok();
         
@@ -194,23 +194,42 @@ fn download_model_cmd(
             }
             
             if let Ok(resp) = head_req.send() {
-                if resp.status() == StatusCode::NOT_MODIFIED {
-                    eprintln!("✓ File is up to date: {} (304 Not Modified)", dest.display());
-                    if let Some(want) = sha256_hex {
-                        verify_sha256(&dest, want)?;
-                        println!("✓ SHA256 verified");
+                // Add friendlier auth message on HEAD
+                if matches!(resp.status(), StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN) {
+                    bail!("HTTP {} from Hugging Face during metadata check. If the repo is private, set HF_TOKEN, e.g.\n\
+                           HF_TOKEN=*** cargo xtask download-model --id {} --file {}", 
+                          resp.status().as_u16(), id, file);
+                }
+                
+                match resp.status() {
+                    StatusCode::NOT_MODIFIED => {
+                        up_to_date = true;
                     }
-                    return Ok(());
+                    // Some servers reply 200 with a new ETag/Last-Modified.
+                    // In that case we should *download* again.
+                    StatusCode::OK => { /* remote likely changed; do not return */ }
+                    // If HEAD is not allowed, fall through to download path.
+                    StatusCode::METHOD_NOT_ALLOWED => { /* fall through */ }
+                    _ => { /* fall through; we'll attempt download */ }
                 }
             }
         }
         
-        eprintln!("✓ File exists: {} (use --force to overwrite)", dest.display());
-        if let Some(want) = sha256_hex {
-            verify_sha256(&dest, want)?;
-            println!("✓ SHA256 verified");
+        if up_to_date {
+            println!("✓ File is up to date: {}", dest.display());
+            if let Some(want) = sha256_hex {
+                if let Err(e) = verify_sha256(&dest, want) {
+                    // Remove bad file and cache files
+                    let _ = fs::remove_file(&dest);
+                    let _ = fs::remove_file(&etag_path);
+                    let _ = fs::remove_file(&lastmod_path);
+                    return Err(e);
+                }
+                println!("✓ SHA256 verified");
+            }
+            return Ok(());
         }
-        return Ok(());
+        // else: remote changed or HEAD inconclusive → continue into download path
     }
 
     println!("📥 Downloading from Hugging Face:");
@@ -253,6 +272,12 @@ fn download_model_cmd(
                 .and_then(|s| s.rsplit('/').next()?.parse::<u64>().ok())
         });
 
+    // Ensure directory exists before checking disk space
+    if !dest_dir.exists() {
+        fs::create_dir_all(&dest_dir)
+            .with_context(|| format!("failed to create {}", dest_dir.display()))?;
+    }
+    
     // Check disk space before downloading
     if let Some(total) = size {
         let avail = available_space(&dest_dir)
@@ -386,14 +411,11 @@ fn download_model_cmd(
     
     // Setup Ctrl-C handler for clean interruption (once per process)
     static CTRL_ONCE: Once = Once::new();
-    let interrupted = Arc::new(AtomicBool::new(false));
-    CTRL_ONCE.call_once({
-        let interrupted = interrupted.clone();
-        move || {
-            let _ = ctrlc::set_handler(move || {
-                interrupted.store(true, Ordering::SeqCst);
-            });
-        }
+    static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+    CTRL_ONCE.call_once(|| {
+        let _ = ctrlc::set_handler(|| {
+            INTERRUPTED.store(true, Ordering::SeqCst);
+        });
     });
     
     let mut downloaded = if resumed && resp.status() == StatusCode::OK {
@@ -406,7 +428,7 @@ fn download_model_cmd(
     
     loop {
         // Check for interruption
-        if interrupted.load(Ordering::SeqCst) {
+        if INTERRUPTED.load(Ordering::SeqCst) {
             pb.finish_with_message("interrupted (partial file kept for resume)");
             println!("   Partial download saved at: {}", tmp.display());
             println!("   Run the same command again to resume");
@@ -452,7 +474,13 @@ fn download_model_cmd(
     if let Some(want) = sha256_hex {
         print!("🔒 Verifying SHA256... ");
         std::io::stdout().flush()?;
-        verify_sha256(&dest, want)?;
+        if let Err(e) = verify_sha256(&dest, want) {
+            // Remove bad file and cache files
+            let _ = fs::remove_file(&dest);
+            let _ = fs::remove_file(&etag_path);
+            let _ = fs::remove_file(&lastmod_path);
+            return Err(e);
+        }
         println!("✓ OK");
     }
     
@@ -461,9 +489,7 @@ fn download_model_cmd(
         println!("   Size: {:.2} MB", size as f64 / 1_048_576.0);
     }
     println!("   Time: {:.1}s", elapsed.as_secs_f64());
-    if throughput > 0.0 {
-        println!("   Speed: {:.2} MB/s", throughput);
-    }
+    println!("   Speed: {:.2} MB/s", throughput);
     
     // Print ready-to-use export command
     let abs_path = dest.canonicalize().unwrap_or(dest.clone());
