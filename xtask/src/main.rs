@@ -12,7 +12,7 @@ use fs2::available_space;
 use clap::{Parser, Subcommand};
 use indicatif::{ProgressBar, ProgressStyle, ProgressDrawTarget};
 use reqwest::blocking::Client;
-use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, RANGE, ETAG, IF_NONE_MATCH, LAST_MODIFIED, IF_MODIFIED_SINCE};
+use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, RANGE, ETAG, IF_NONE_MATCH, LAST_MODIFIED, IF_MODIFIED_SINCE, IF_RANGE, ACCEPT_RANGES, ACCEPT_ENCODING};
 use reqwest::StatusCode;
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
@@ -24,6 +24,7 @@ static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 // Centralized defaults to avoid drift
 const DEFAULT_MODEL_ID: &str = "microsoft/bitnet-b1.58-2B-4T-gguf";
 const DEFAULT_MODEL_FILE: &str = "ggml-model-i2_s.gguf";
+const USER_AGENT_STRING: &str = "bitnet-xtask/0.1 (+https://github.com/microsoft/BitNet-rs)";
 const DEFAULT_CPP_TAG: &str = "b1-65-ggml";
 
 #[derive(Parser)]
@@ -161,9 +162,15 @@ fn download_model_cmd(
     force: bool,
 ) -> Result<()> {
     fs::create_dir_all(out_dir)?;
+    
+    // Guard against path traversal
+    let safe_file = Path::new(file)
+        .file_name()
+        .ok_or_else(|| anyhow!("invalid file name: {}", file))?;
+    
     let dest_dir = out_dir.join(id.replace('/', "-"));
     fs::create_dir_all(&dest_dir)?;
-    let dest = dest_dir.join(file);
+    let dest = dest_dir.join(safe_file);
 
     let url = format!("https://huggingface.co/{id}/resolve/main/{file}");
     let token = std::env::var("HF_TOKEN").ok();
@@ -172,7 +179,7 @@ fn download_model_cmd(
     let client = Client::builder()
         .connect_timeout(Duration::from_secs(15))
         .timeout(Duration::from_secs(30 * 60)) // 30 min for big models
-        .user_agent("bitnet-xtask/0.1 (+https://github.com/EffortlessSteven/BitNet-rs)")
+        .user_agent(USER_AGENT_STRING)
         .build()?;
 
     // Check if file exists and possibly skip download via ETag/Last-Modified
@@ -190,6 +197,7 @@ fn download_model_cmd(
             if let Some(t) = &token {
                 head_req = head_req.header(AUTHORIZATION, format!("Bearer {t}"));
             }
+            head_req = head_req.header(ACCEPT_ENCODING, "identity");
             if let Some(etag) = &saved_etag {
                 head_req = head_req.header(IF_NONE_MATCH, etag.trim());
             }
@@ -209,9 +217,9 @@ fn download_model_cmd(
                     StatusCode::NOT_MODIFIED => {
                         up_to_date = true;
                     }
-                    // Some servers reply 200 with a new ETag/Last-Modified.
-                    // In that case we should *download* again.
-                    StatusCode::OK => { /* remote likely changed; do not return */ }
+                    StatusCode::OK => {
+                        // remote likely changed; do not return
+                    }
                     // If HEAD is not allowed, fall through to download path.
                     StatusCode::METHOD_NOT_ALLOWED => { /* fall through */ }
                     _ => { /* fall through; we'll attempt download */ }
@@ -244,32 +252,43 @@ fn download_model_cmd(
         println!("   Using HF_TOKEN for authentication");
     }
     
-    // HEAD request to get file size
+    // HEAD request to get file size and check resumability
     let mut head_req = client.head(&url);
     if let Some(t) = &token {
         head_req = head_req.header(AUTHORIZATION, format!("Bearer {t}"));
     }
+    head_req = head_req.header(ACCEPT_ENCODING, "identity");
     
     // Try HEAD first, fallback to Range GET for size
-    let size = head_req
+    let (size, resumable) = head_req
         .send()
         .and_then(|r| r.error_for_status())
         .ok()
         .and_then(|r| {
-            r.headers()
+            // Check if server supports range requests
+            let resumable = r.headers()
+                .get(ACCEPT_RANGES)
+                .and_then(|h| h.to_str().ok())
+                .map(|v| v.eq_ignore_ascii_case("bytes"))
+                .unwrap_or(true);
+            
+            let sz = r.headers()
                 .get(CONTENT_LENGTH)?
                 .to_str()
                 .ok()?
                 .parse::<u64>()
-                .ok()
+                .ok()?;
+            Some((sz, resumable))
         })
+        .map(|(sz, res)| (Some(sz), res))
         .or_else(|| {
             // Fallback: try 1-byte GET to extract total from Content-Range (with cache headers)
             let mut probe = client.get(&url);
             if let Some(t) = &token {
                 probe = probe.header(AUTHORIZATION, format!("Bearer {t}"));
             }
-            probe = probe.header(RANGE, "bytes=0-0");
+            probe = probe.header(RANGE, "bytes=0-0")
+                  .header(ACCEPT_ENCODING, "identity");
             
             // Add conditional headers for cache checking on fallback
             if dest.exists() && !force {
@@ -287,12 +306,15 @@ fn download_model_cmd(
                     // Can't early return from a closure, will handle after
                     return None;
                 }
-                r.headers()
+                let sz = r.headers()
                     .get(CONTENT_RANGE)
                     .and_then(|h| h.to_str().ok())
-                    .and_then(|s| s.rsplit('/').next()?.parse::<u64>().ok())
+                    .and_then(|s| s.rsplit('/').next()?.parse::<u64>().ok())?;
+                Some(sz)
             })
-        });
+            .map(|sz| (Some(sz), true))
+        })
+        .unwrap_or((None, true));
     
     // If we got a 304 on the fallback probe and file exists, we're done
     if size.is_none() && dest.exists() && !force {
@@ -331,22 +353,6 @@ fn download_model_cmd(
             .with_context(|| format!("failed to create {}", dest_dir.display()))?;
     }
     
-    // Check disk space before downloading
-    if let Some(total) = size {
-        let avail = available_space(&dest_dir)
-            .with_context(|| format!("failed to query free space in {}", dest_dir.display()))?;
-        // Leave 50MB headroom
-        let need = total + 50 * 1024 * 1024;
-        if avail < need {
-            bail!(
-                "Not enough disk space in {}: need ~{:.2} MB, have ~{:.2} MB",
-                dest_dir.display(),
-                need as f64 / 1_048_576.0,
-                avail as f64 / 1_048_576.0
-            );
-        }
-    }
-
     let tmp = dest.with_extension("part");
     let mut start = 0u64;
     
@@ -357,6 +363,23 @@ fn download_model_cmd(
             println!("   Resuming from {:.2} MB / {:.2} MB", 
                 start as f64 / 1_048_576.0,
                 total as f64 / 1_048_576.0);
+        }
+    }
+    
+    // Check disk space before downloading (calculate only remaining bytes)
+    if let Some(total) = size {
+        let remaining = total.saturating_sub(start);
+        let avail = available_space(&dest_dir)
+            .with_context(|| format!("failed to query free space in {}", dest_dir.display()))?;
+        // Leave 50MB headroom
+        let need = remaining + 50 * 1024 * 1024;
+        if avail < need {
+            bail!(
+                "Not enough disk space in {}: need ~{:.2} MB, have ~{:.2} MB",
+                dest_dir.display(),
+                need as f64 / 1_048_576.0,
+                avail as f64 / 1_048_576.0
+            );
         }
     }
     
@@ -375,7 +398,22 @@ fn download_model_cmd(
 
         let mut rb = client.get(&url);
         if let Some(t) = &token { rb = rb.header(AUTHORIZATION, format!("Bearer {t}")); }
-        if start > 0 { rb = rb.header(RANGE, format!("bytes={start}-")); }
+        rb = rb.header(ACCEPT_ENCODING, "identity");
+        
+        // Only request range if resumable and we have bytes to skip
+        if resumable && start > 0 {
+            rb = rb.header(RANGE, format!("bytes={start}-"));
+            
+            // Add If-Range for safe resumption (prefer strong ETag)
+            if let Ok(etag) = fs::read_to_string(&etag_path) {
+                let etag = etag.trim();
+                if !etag.starts_with("W/") {
+                    rb = rb.header(IF_RANGE, etag);
+                }
+            } else if let Ok(lm) = fs::read_to_string(&lastmod_path) {
+                rb = rb.header(IF_RANGE, lm.trim());
+            }
+        }
 
         let r = rb.send();
 
@@ -429,7 +467,7 @@ fn download_model_cmd(
     }
     
     // Check if server ignored Range header (must restart from 0)
-    let resumed = start > 0;
+    let resumed = resumable && start > 0;
     if resumed && resp.status() == StatusCode::OK {
         // Server ignored Range -> restart clean
         println!("   Server ignored resume request, restarting download...");
@@ -454,7 +492,7 @@ fn download_model_cmd(
                     "{spinner:.green} downloading {bytes} {msg}"
                 )?
             );
-            pb.enable_steady_tick(std::time::Duration::from_millis(120));
+            pb.enable_steady_tick(std::time::Duration::from_millis(100));
             pb
         }
     } else {
@@ -520,7 +558,7 @@ fn download_model_cmd(
     }
     
     file_out.flush()?;
-    // Close the file handle before rename (Windows compatibility)
+    file_out.sync_all()?;  // Ensure data is on disk before rename
     drop(file_out);
     
     let elapsed = start_time.elapsed();
