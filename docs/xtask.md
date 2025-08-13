@@ -48,7 +48,7 @@ Fetches a GGUF model from Hugging Face (or a mirror) safely.
 - **Locks**: creates `file.lock` next to `file.part` (single writer).
 - **Ctrl-C**: leaves `.part` for resume and removes `.lock`.
 - **Security**: path traversal is blocked (we only use the leaf filename).
-- **Proxies**: respects `HTTP[S]_PROXY` automatically via `reqwest`.
+- **Proxies**: automatically respects `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables.
 
 ### File Layout
 

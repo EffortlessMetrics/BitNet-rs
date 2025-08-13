@@ -19,6 +19,28 @@ use walkdir::WalkDir;
 use fs2::FileExt;
 use httpdate::parse_http_date;
 
+// RAII guard for lock file cleanup
+struct LockGuard {
+    file: Option<std::fs::File>,
+    path: PathBuf,
+}
+
+impl LockGuard {
+    fn new(path: PathBuf, file: std::fs::File) -> Self {
+        LockGuard { file: Some(file), path }
+    }
+}
+
+impl Drop for LockGuard {
+    fn drop(&mut self) {
+        if let Some(file) = self.file.take() {
+            let _ = FileExt::unlock(&file);
+            drop(file);
+        }
+        let _ = fs::remove_file(&self.path);
+    }
+}
+
 // Global interrupt flag and setup
 static CTRL_ONCE: Once = Once::new();
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);
@@ -32,12 +54,15 @@ const EXIT_HASH_MISMATCH: i32 = 13;
 const EXIT_NETWORK: i32 = 14;
 const EXIT_INTERRUPTED: i32 = 130;
 
-// Safe exponential backoff helper
+// Safe exponential backoff helper with jitter
 #[inline]
 fn exp_backoff_ms(attempt: u32) -> u64 {
     // 200ms, 400ms, 800ms… capped at 10s
     let shift = attempt.saturating_sub(1).min(20);
-    (200u64).saturating_mul(1u64 << shift).min(10_000)
+    let base = (200u64).saturating_mul(1u64 << shift).min(10_000);
+    // Add deterministic jitter: +0..199ms based on attempt
+    let jitter = (attempt as u64 * 37) % 200;
+    base.saturating_add(jitter)
 }
 
 // Parse Retry-After header (supports both seconds and HTTP-date)
@@ -143,6 +168,18 @@ enum Cmd {
         /// Alternative base URL (for mirrors)
         #[arg(long, default_value = "https://huggingface.co")]
         base_url: String,
+        
+        /// Output JSON events for CI/CD pipelines
+        #[arg(long)]
+        json: bool,
+        
+        /// Maximum retry attempts
+        #[arg(long, default_value_t = 3)]
+        retries: u32,
+        
+        /// Request timeout in seconds
+        #[arg(long, default_value_t = 1800)]
+        timeout: u64,
     },
 
     /// Fetch & build microsoft/BitNet C++ for cross-validation
@@ -283,7 +320,10 @@ fn real_main() -> Result<()> {
             no_progress,
             verbose,
             base_url,
-        } => download_model_cmd(&id, &file, &out, sha256.as_deref(), force, rev.as_deref(), no_progress, verbose, &base_url),
+            json,
+            retries,
+            timeout,
+        } => download_model_cmd(&id, &file, &out, sha256.as_deref(), force, rev.as_deref(), no_progress, verbose, &base_url, json, retries, timeout),
         Cmd::FetchCpp { tag, force, clean } => fetch_cpp_cmd(&tag, force, clean),
         Cmd::Crossval {
             model,
@@ -307,6 +347,52 @@ fn real_main() -> Result<()> {
     }
 }
 
+// JSON event structure for CI/CD pipelines
+#[derive(serde::Serialize)]
+struct Event<'a> {
+    phase: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    url: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    downloaded: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    total: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    wait_secs: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    msg: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    resume: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    start: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bytes: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ms: Option<u64>,
+}
+
+// Macro for emitting JSON events
+macro_rules! ev {
+    ($json:expr, $phase:expr, { $($key:ident: $value:expr),* $(,)? }) => {
+        if $json {
+            let mut event = Event {
+                phase: $phase,
+                url: None,
+                downloaded: None,
+                total: None,
+                wait_secs: None,
+                msg: None,
+                resume: None,
+                start: None,
+                bytes: None,
+                ms: None,
+            };
+            $(event.$key = Some($value);)*
+            let _ = println!("{}", serde_json::to_string(&event).unwrap());
+        }
+    };
+}
+
 fn download_model_cmd(
     id: &str,
     file: &str,
@@ -317,6 +403,9 @@ fn download_model_cmd(
     no_progress: bool,
     verbose: bool,
     base_url: &str,
+    json: bool,
+    retries: u32,
+    timeout: u64,
 ) -> Result<()> {
     fs::create_dir_all(out_dir)?;
     
@@ -339,13 +428,23 @@ fn download_model_cmd(
     }
 
     // Build client first (needed for conditional checks)
-    let client_builder = Client::builder()
+    let mut client_builder = Client::builder()
         .connect_timeout(Duration::from_secs(15))
-        .timeout(Duration::from_secs(30 * 60)) // 30 min for big models
+        .timeout(Duration::from_secs(timeout))
         .user_agent(USER_AGENT_STRING);
     
-    // Respect HTTP[S]_PROXY environment variables automatically via system settings
-    // reqwest will automatically check http_proxy/https_proxy env vars
+    // Use system proxies (respects HTTP_PROXY, HTTPS_PROXY, NO_PROXY env vars)
+    // Try to use environment proxy settings
+    if let Some(proxy_url) = std::env::var("https_proxy")
+        .or_else(|_| std::env::var("HTTPS_PROXY"))
+        .or_else(|_| std::env::var("http_proxy"))
+        .or_else(|_| std::env::var("HTTP_PROXY"))
+        .ok()
+    {
+        if let Ok(proxy) = reqwest::Proxy::all(&proxy_url) {
+            client_builder = client_builder.proxy(proxy);
+        }
+    }
     
     let client = client_builder.build()?;
 
@@ -432,12 +531,12 @@ fn download_model_cmd(
         .and_then(|r| r.error_for_status())
         .ok()
         .and_then(|r| {
-            // Check if server supports range requests
+            // Check if server supports range requests (default to false if missing)
             let resumable = r.headers()
                 .get(ACCEPT_RANGES)
                 .and_then(|h| h.to_str().ok())
                 .map(|v| v.eq_ignore_ascii_case("bytes"))
-                .unwrap_or(true);
+                .unwrap_or(false);
             
             let sz = r.headers()
                 .get(CONTENT_LENGTH)?
@@ -481,7 +580,7 @@ fn download_model_cmd(
             })
             .map(|sz| (Some(sz), true))
         })
-        .unwrap_or((None, true));
+        .unwrap_or((None, false)); // Default to non-resumable if we can't determine
     
     // If we got a 304 on the fallback probe and file exists, we're done
     if size.is_none() && dest.exists() && !force {
@@ -561,9 +660,15 @@ fn download_model_cmd(
     lock_file.try_lock_exclusive()
         .with_context(|| format!("another download appears to be running for {}", dest.display()))?;
     
+    // Use RAII guard for automatic cleanup (transfers ownership)
+    let _lock_guard = LockGuard::new(lock_path, lock_file);
+    
     // Request with retry logic and proper range handling
     let mut attempt = 0;
-    let max_attempts = 3;
+    let max_attempts = retries;
+    
+    // Emit JSON start event
+    ev!(json, "start", { url: &url, resume: start > 0, start: start });
     let mut resp = loop {
         // If tmp larger than remote size, restart clean
         if let Some(total) = size {
@@ -619,13 +724,9 @@ fn download_model_cmd(
                             let _ = fs::remove_file(&dest);
                             let _ = fs::remove_file(&etag_path);
                             let _ = fs::remove_file(&lastmod_path);
-                            drop(lock_file);
-                            let _ = fs::remove_file(&lock_path);
                             return Err(e);
                         }
                     }
-                    drop(lock_file);
-                    let _ = fs::remove_file(&lock_path);
                     return Ok(());
                 }
                 resp // fall through; handle Content-Range + error_for_status below
@@ -638,8 +739,6 @@ fn download_model_cmd(
                 continue;
             }
             Err(e) => {
-                drop(lock_file);
-                let _ = fs::remove_file(&lock_path);
                 return Err(e).context("download request failed");
             }
         };
@@ -684,8 +783,6 @@ fn download_model_cmd(
                 if let Some(total) = size {
                     let available = fs2::available_space(&dest.parent().unwrap_or(Path::new(".")))?;
                     if available < total {
-                        drop(lock_file);
-                        let _ = fs::remove_file(&lock_path);
                         bail!("insufficient disk space: need {} MB, have {} MB",
                             total / 1_048_576, available / 1_048_576);
                     }
@@ -693,8 +790,6 @@ fn download_model_cmd(
                 
                 attempt += 1;
                 if attempt > max_attempts {
-                    drop(lock_file);
-                    let _ = fs::remove_file(&lock_path);
                     bail!("failed after {} attempts due to invalid 206 response", max_attempts);
                 }
                 thread::sleep(Duration::from_millis(exp_backoff_ms(attempt)));
@@ -798,8 +893,6 @@ fn download_model_cmd(
             // Flush buffer, close file handle, release & remove lock
             file_out.flush().ok();
             drop(file_out);
-            drop(lock_file);
-            let _ = fs::remove_file(&lock_path);
             
             process::exit(EXIT_INTERRUPTED);
         }
@@ -860,8 +953,6 @@ fn download_model_cmd(
     }
 
     // Clean up lock file
-    drop(lock_file);
-    let _ = fs::remove_file(&lock_path);
     
     if let Some(want) = sha256_hex {
         print!("🔒 Verifying SHA256... ");
@@ -1091,6 +1182,9 @@ fn full_crossval_cmd(force: bool) -> Result<()> {
         false, // no_progress
         false, // verbose
         "https://huggingface.co", // base_url
+        false, // json
+        3, // retries
+        1800, // timeout
     )?;
     
     println!();
@@ -1411,17 +1505,18 @@ mod tests {
     
     #[test]
     fn test_exp_backoff() {
-        assert_eq!(exp_backoff_ms(1), 200);
-        assert_eq!(exp_backoff_ms(2), 400);
-        assert_eq!(exp_backoff_ms(3), 800);
-        assert_eq!(exp_backoff_ms(10), 10_000); // Capped at 10s
+        // Test with jitter: base + (attempt * 37) % 200
+        assert_eq!(exp_backoff_ms(1), 200 + 37); // 200 + 37 = 237
+        assert_eq!(exp_backoff_ms(2), 400 + 74); // 400 + 74 = 474
+        assert_eq!(exp_backoff_ms(3), 800 + 111); // 800 + 111 = 911
+        assert_eq!(exp_backoff_ms(10), 10_000 + 170); // Capped at 10s + jitter
     }
     
     // Integration test for download edge cases
     #[test]
     #[ignore] // Run with: cargo test --features test-download -- --ignored
     fn test_download_206_misaligned() {
-        let server = TestServer::new(|rq| {
+        let _server = TestServer::new(|rq| {
             use tiny_http::{Response, StatusCode, Header};
             
             if rq.method() == &tiny_http::Method::Get {
