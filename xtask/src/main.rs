@@ -1,8 +1,8 @@
 use std::{
     fs,
-    io::{Read, Write},
+    io::{BufWriter, Read, Write, Seek, SeekFrom},
     path::{Path, PathBuf},
-    process::Command,
+    process::{self, Command},
     sync::{Once, atomic::{AtomicBool, Ordering}},
     thread,
     time::{Duration, Instant},
@@ -22,12 +22,49 @@ use fs2::FileExt;
 static CTRL_ONCE: Once = Once::new();
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
+// Exit codes for structured errors
+#[allow(dead_code)]
+const EXIT_SUCCESS: i32 = 0;
+#[allow(dead_code)]
+const EXIT_NO_SPACE: i32 = 10;
+#[allow(dead_code)]
+const EXIT_AUTH: i32 = 11;
+#[allow(dead_code)]
+const EXIT_RATE_LIMIT: i32 = 12;
+#[allow(dead_code)]
+const EXIT_HASH_MISMATCH: i32 = 13;
+#[allow(dead_code)]
+const EXIT_NETWORK: i32 = 14;
+const EXIT_INTERRUPTED: i32 = 130;
+
 // Safe exponential backoff helper
 #[inline]
 fn exp_backoff_ms(attempt: u32) -> u64 {
     // 200ms, 400ms, 800ms… capped at 10s
     let shift = attempt.saturating_sub(1).min(20);
     (200u64).saturating_mul(1u64 << shift).min(10_000)
+}
+
+// Atomic write helper for metadata files
+fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
+    let tmp = path.with_extension("tmp");
+    fs::write(&tmp, bytes)?;
+    #[cfg(unix)]
+    {
+        if let Ok(f) = std::fs::File::open(&tmp) {
+            f.sync_all()?;
+        }
+    }
+    fs::rename(&tmp, path)?;
+    #[cfg(unix)]
+    {
+        if let Some(parent) = path.parent() {
+            if let Ok(dir) = std::fs::File::open(parent) {
+                let _ = dir.sync_all();
+            }
+        }
+    }
+    Ok(())
 }
 
 // Centralized defaults to avoid drift
@@ -62,6 +99,22 @@ enum Cmd {
         /// Force download even if file exists
         #[arg(long, default_value_t = false)]
         force: bool,
+        
+        /// Pin to a specific branch/tag/commit
+        #[arg(long, alias = "ref")]
+        rev: Option<String>,
+        
+        /// Disable progress bar (same as redirecting stderr)
+        #[arg(long, alias = "quiet")]
+        no_progress: bool,
+        
+        /// Verbose output for debugging
+        #[arg(short, long)]
+        verbose: bool,
+        
+        /// Alternative base URL (for mirrors)
+        #[arg(long, default_value = "https://huggingface.co")]
+        base_url: String,
     },
 
     /// Fetch & build microsoft/BitNet C++ (pinned tag)
@@ -139,7 +192,11 @@ fn main() -> Result<()> {
             out,
             sha256,
             force,
-        } => download_model_cmd(&id, &file, &out, sha256.as_deref(), force),
+            rev,
+            no_progress,
+            verbose,
+            base_url,
+        } => download_model_cmd(&id, &file, &out, sha256.as_deref(), force, rev.as_deref(), no_progress, verbose, &base_url),
         Cmd::FetchCpp { tag, force, clean } => fetch_cpp_cmd(&tag, force, clean),
         Cmd::Crossval {
             model,
@@ -169,6 +226,10 @@ fn download_model_cmd(
     out_dir: &Path,
     sha256_hex: Option<&str>,
     force: bool,
+    rev: Option<&str>,
+    no_progress: bool,
+    verbose: bool,
+    base_url: &str,
 ) -> Result<()> {
     fs::create_dir_all(out_dir)?;
     
@@ -181,15 +242,25 @@ fn download_model_cmd(
     fs::create_dir_all(&dest_dir)?;
     let dest = dest_dir.join(safe_file);
 
-    let url = format!("https://huggingface.co/{id}/resolve/main/{file}");
+    let revision = rev.unwrap_or("main");
+    let url = format!("{base_url}/{id}/resolve/{revision}/{file}");
     let token = std::env::var("HF_TOKEN").ok();
+    
+    if verbose {
+        eprintln!("[VERBOSE] URL: {}", url);
+        eprintln!("[VERBOSE] Revision: {}", revision);
+    }
 
     // Build client first (needed for conditional checks)
-    let client = Client::builder()
+    let client_builder = Client::builder()
         .connect_timeout(Duration::from_secs(15))
         .timeout(Duration::from_secs(30 * 60)) // 30 min for big models
-        .user_agent(USER_AGENT_STRING)
-        .build()?;
+        .user_agent(USER_AGENT_STRING);
+    
+    // Respect HTTP[S]_PROXY environment variables automatically via system settings
+    // reqwest will automatically check http_proxy/https_proxy env vars
+    
+    let client = client_builder.build()?;
 
     // Check if file exists and possibly skip download via ETag/Last-Modified
     let etag_path = dest.with_extension("etag");
@@ -457,6 +528,23 @@ fn download_model_cmd(
                     attempt += 1;
                     continue;
                 }
+                // Check for 304 Not Modified on full GET
+                if start == 0 && resp.status() == StatusCode::NOT_MODIFIED {
+                    println!("✓ File is up to date: {}", dest.display());
+                    if let Some(want) = sha256_hex {
+                        if let Err(e) = verify_sha256(&dest, want) {
+                            let _ = fs::remove_file(&dest);
+                            let _ = fs::remove_file(&etag_path);
+                            let _ = fs::remove_file(&lastmod_path);
+                            drop(lock_file);
+                            let _ = fs::remove_file(&lock_path);
+                            return Err(e);
+                        }
+                    }
+                    drop(lock_file);
+                    let _ = fs::remove_file(&lock_path);
+                    return Ok(());
+                }
                 resp // fall through; handle Content-Range + error_for_status below
             }
             Err(e) if attempt < max_attempts => {
@@ -496,27 +584,38 @@ fn download_model_cmd(
         
         // Verify Content-Range alignment on resume
         if start > 0 && resp.status() == StatusCode::PARTIAL_CONTENT {
-            if let Some(cr) = resp.headers().get(CONTENT_RANGE).and_then(|h| h.to_str().ok()) {
-                if let Some(begin) = cr.strip_prefix("bytes ")
-                                      .and_then(|s| s.split('-').next())
-                                      .and_then(|s| s.parse::<u64>().ok()) {
-                    if begin != start {
-                        // Misaligned resume point - must restart the request
-                        eprintln!("   Server resumed at {begin} (expected {start}); restarting from 0");
-                        drop(resp);  // Drop current response before retry
-                        start = 0;
-                        
-                        attempt += 1;  // Increment attempt before backoff
-                        if attempt > max_attempts {
-                            drop(lock_file);
-                            let _ = fs::remove_file(&lock_path);
-                            bail!("failed to download after {max_attempts} attempts due to misaligned resume");
-                        }
-                        // Safe exponential backoff
-                        thread::sleep(Duration::from_millis(exp_backoff_ms(attempt)));
-                        continue;  // Continue the outer loop with a fresh GET (no Range)
+            // Check if Content-Range is present and valid
+            let valid_range = resp.headers()
+                .get(CONTENT_RANGE)
+                .and_then(|h| h.to_str().ok())
+                .map(|v| v.starts_with(&format!("bytes {start}-")))
+                .unwrap_or(false);
+            
+            if !valid_range {
+                // 206 without valid Content-Range - unsafe resume
+                eprintln!("   Server sent 206 but Content-Range invalid/missing; restarting from 0");
+                drop(resp);
+                start = 0;
+                
+                // Re-check disk space when restarting
+                if let Some(total) = size {
+                    let available = fs2::available_space(&dest.parent().unwrap_or(Path::new(".")))?;
+                    if available < total {
+                        drop(lock_file);
+                        let _ = fs::remove_file(&lock_path);
+                        bail!("insufficient disk space: need {} MB, have {} MB",
+                            total / 1_048_576, available / 1_048_576);
                     }
                 }
+                
+                attempt += 1;
+                if attempt > max_attempts {
+                    drop(lock_file);
+                    let _ = fs::remove_file(&lock_path);
+                    bail!("failed after {} attempts due to invalid 206 response", max_attempts);
+                }
+                thread::sleep(Duration::from_millis(exp_backoff_ms(attempt)));
+                continue;
             }
         }
 
@@ -531,8 +630,8 @@ fn download_model_cmd(
         start = 0;
     }
 
-    // Setup progress bar (hide if not a TTY)
-    let pb = if atty::is(atty::Stream::Stderr) {
+    // Setup progress bar (hide if not a TTY or if --no-progress)
+    let pb = if !no_progress && atty::is(atty::Stream::Stderr) {
         if let Some(total) = size {
             let pb = ProgressBar::new(total);
             pb.set_style(
@@ -564,21 +663,30 @@ fn download_model_cmd(
         pb.set_message("resuming");
     }
 
-    let mut file_out = if resumed && resp.status() == StatusCode::OK {
+    let file_handle = if resumed && resp.status() == StatusCode::OK {
         // Server ignored Range, need to truncate and restart
-        fs::OpenOptions::new()
+        let mut f = fs::OpenOptions::new()
             .create(true)
             .write(true)
             .truncate(true)
-            .open(&tmp)?
+            .open(&tmp)?;
+        f.seek(SeekFrom::Start(0))?;
+        f
     } else {
-        // Normal case: append if resuming, write if new
-        fs::OpenOptions::new()
+        // Normal case: seek to resume point if needed
+        let mut f = fs::OpenOptions::new()
             .create(true)
             .write(true)
-            .append(start > 0)
-            .open(&tmp)?
+            .truncate(start == 0)
+            .open(&tmp)?;
+        if start > 0 {
+            f.seek(SeekFrom::Start(start))?;
+        }
+        f
     };
+    
+    // Use BufWriter for better I/O performance (1 MiB buffer)
+    let mut file_out = BufWriter::with_capacity(1024 * 1024, file_handle);
     
     // Reset interrupt flag and setup Ctrl-C handler (once per process)
     INTERRUPTED.store(false, Ordering::SeqCst);
@@ -603,12 +711,13 @@ fn download_model_cmd(
             println!("   Partial download saved at: {}", tmp.display());
             println!("   Run the same command again to resume");
             
-            // Close file handle, release & remove lock
+            // Flush buffer, close file handle, release & remove lock
+            file_out.flush().ok();
             drop(file_out);
             drop(lock_file);
             let _ = fs::remove_file(&lock_path);
             
-            return Ok(());
+            process::exit(EXIT_INTERRUPTED);
         }
         
         let n = resp.read(&mut buf)?;
@@ -618,10 +727,15 @@ fn download_model_cmd(
         file_out.write_all(&buf[..n])?;
         downloaded += n as u64;
         pb.set_position(downloaded);
+        
+        if verbose && downloaded % (10 * 1024 * 1024) == 0 {
+            eprintln!("[VERBOSE] Downloaded {} MB", downloaded / 1_048_576);
+        }
     }
     
+    // Durability: flush buffer and fsync before rename  
     file_out.flush()?;
-    file_out.sync_all()?;  // Ensure data is on disk before rename
+    file_out.get_ref().sync_all()?;
     drop(file_out);
     
     let elapsed = start_time.elapsed();
@@ -633,16 +747,22 @@ fn download_model_cmd(
     // Atomic rename BEFORE persisting metadata
     fs::rename(&tmp, &dest)?;
     
-    // Persist ETag and Last-Modified AFTER successful rename
-    if let Some(etag) = resp.headers().get(ETAG) {
-        if let Ok(etag_str) = etag.to_str() {
-            let _ = fs::write(&etag_path, etag_str);
+    // fsync parent directory for journaling
+    #[cfg(unix)]
+    {
+        if let Some(parent) = dest.parent() {
+            if let Ok(dir) = std::fs::File::open(parent) {
+                let _ = dir.sync_all();
+            }
         }
     }
-    if let Some(lm) = resp.headers().get(LAST_MODIFIED) {
-        if let Ok(lm_str) = lm.to_str() {
-            let _ = fs::write(&lastmod_path, lm_str);
-        }
+    
+    // Save etag/last-modified atomically for future conditional requests
+    if let Some(etag) = resp.headers().get(ETAG).and_then(|v| v.to_str().ok()) {
+        atomic_write(&etag_path, etag.as_bytes()).ok();
+    }
+    if let Some(lm) = resp.headers().get(LAST_MODIFIED).and_then(|v| v.to_str().ok()) {
+        atomic_write(&lastmod_path, lm.as_bytes()).ok();
     }
     
     // Verify final size if known
@@ -881,6 +1001,10 @@ fn full_crossval_cmd(force: bool) -> Result<()> {
         &PathBuf::from("models"),
         None, // Add SHA256 if available
         force,
+        None, // rev
+        false, // no_progress
+        false, // verbose
+        "https://huggingface.co", // base_url
     )?;
     
     println!();
