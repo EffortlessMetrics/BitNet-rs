@@ -16,6 +16,7 @@ use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, RANGE, ETAG,
 use reqwest::StatusCode;
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
+use fs2::FileExt;
 
 // Global interrupt flag and setup
 static CTRL_ONCE: Once = Once::new();
@@ -356,8 +357,12 @@ fn download_model_cmd(
     let tmp = dest.with_extension("part");
     let mut start = 0u64;
     
-    // Check for partial download
-    if tmp.exists() {
+    // Force mode clears partial download
+    if force && tmp.exists() {
+        let _ = fs::remove_file(&tmp);
+        start = 0;
+    } else if tmp.exists() {
+        // Check for partial download
         start = fs::metadata(&tmp)?.len();
         if let Some(total) = size {
             println!("   Resuming from {:.2} MB / {:.2} MB", 
@@ -382,6 +387,13 @@ fn download_model_cmd(
             );
         }
     }
+    
+    // Single-writer lock to prevent concurrent downloads
+    let lock_path = dest.with_extension("lock");
+    let lock_file = std::fs::File::create(&lock_path)
+        .with_context(|| format!("failed to create lock file for {}", dest.display()))?;
+    lock_file.try_lock_exclusive()
+        .with_context(|| format!("another download appears to be running for {}", dest.display()))?;
     
     // Request with retry logic and proper range handling
     let mut attempt = 0;
@@ -420,13 +432,27 @@ fn download_model_cmd(
         let r = match r {
             Ok(r) => r,
             Err(e) if attempt < max_attempts => {
+                // Handle 429 rate limiting
+                if let Some(status) = e.status() {
+                    if status == StatusCode::TOO_MANY_REQUESTS {
+                        eprintln!("   Rate limited (429). Waiting 5s before retry...");
+                        thread::sleep(Duration::from_secs(5));
+                        attempt += 1;
+                        continue;
+                    }
+                }
+                
                 attempt += 1;
                 let backoff = Duration::from_millis(200 * (1 << (attempt - 1)));
                 println!("   transient error: {e}; retrying in {} ms", backoff.as_millis());
                 thread::sleep(backoff);
                 continue;
             }
-            Err(e) => return Err(e).context("download request failed"),
+            Err(e) => {
+                drop(lock_file);
+                let _ = fs::remove_file(&lock_path);
+                return Err(e).context("download request failed");
+            }
         };
 
         // If server says the Range was invalid, restart from 0
@@ -447,24 +473,36 @@ fn download_model_cmd(
                 status.as_u16(), id, file
             );
         }
-
-        break r.error_for_status()?;
-    };
-    
-    // Verify Content-Range alignment on resume
-    if start > 0 && resp.status() == StatusCode::PARTIAL_CONTENT {
-        if let Some(cr) = resp.headers().get(CONTENT_RANGE).and_then(|h| h.to_str().ok()) {
-            if let Some(begin) = cr.strip_prefix("bytes ")
-                                  .and_then(|s| s.split('-').next())
-                                  .and_then(|s| s.parse::<u64>().ok()) {
-                if begin != start {
-                    println!("   Server resumed at {} (expected {}); restarting from 0", begin, start);
-                    start = 0;
-                    // Server gave us wrong offset, restart download from beginning
+        
+        let resp = r.error_for_status()?;
+        
+        // Verify Content-Range alignment on resume
+        if start > 0 && resp.status() == StatusCode::PARTIAL_CONTENT {
+            if let Some(cr) = resp.headers().get(CONTENT_RANGE).and_then(|h| h.to_str().ok()) {
+                if let Some(begin) = cr.strip_prefix("bytes ")
+                                      .and_then(|s| s.split('-').next())
+                                      .and_then(|s| s.parse::<u64>().ok()) {
+                    if begin != start {
+                        // Misaligned resume point - must restart the request
+                        eprintln!("   Server resumed at {} (expected {}); restarting from 0", begin, start);
+                        drop(resp);  // Drop current response before retry
+                        start = 0;
+                        
+                        if attempt > max_attempts {
+                            drop(lock_file);
+                            let _ = fs::remove_file(&lock_path);
+                            bail!("failed to download after {} attempts due to misaligned resume", max_attempts);
+                        }
+                        // Small backoff before retry
+                        thread::sleep(Duration::from_millis(200 << (attempt - 1)));
+                        continue;  // Continue the outer loop with a fresh GET (no Range)
+                    }
                 }
             }
         }
-    }
+
+        break resp;
+    };
     
     // Check if server ignored Range header (must restart from 0)
     let resumed = resumable && start > 0;
@@ -590,6 +628,10 @@ fn download_model_cmd(
         }
     }
 
+    // Clean up lock file
+    drop(lock_file);
+    let _ = fs::remove_file(&lock_path);
+    
     if let Some(want) = sha256_hex {
         print!("🔒 Verifying SHA256... ");
         std::io::stdout().flush()?;
