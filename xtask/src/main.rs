@@ -82,7 +82,20 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
-    /// Download a GGUF model from Hugging Face (supports HF_TOKEN)
+    /// Download a GGUF model from Hugging Face with production-ready features
+    /// 
+    /// Features:
+    /// - Resumable downloads with Content-Range validation
+    /// - 429 rate limiting with Retry-After support
+    /// - ETag/Last-Modified caching for 304 optimization
+    /// - Concurrent download protection via file locking
+    /// - SHA256 verification with automatic retry on mismatch
+    /// - Disk space validation before download
+    /// - Ctrl-C graceful handling with resume support
+    /// 
+    /// Environment:
+    /// - HF_TOKEN: Authentication token for private repositories
+    /// - HTTP[S]_PROXY: Automatically respected for proxy connections
     DownloadModel {
         /// HF repo id (e.g., microsoft/bitnet-b1.58-2B-4T-gguf)
         #[arg(long, default_value = DEFAULT_MODEL_ID)]
@@ -117,7 +130,9 @@ enum Cmd {
         base_url: String,
     },
 
-    /// Fetch & build microsoft/BitNet C++ (pinned tag)
+    /// Fetch & build microsoft/BitNet C++ for cross-validation
+    /// 
+    /// Validates that the C++ binary was successfully built after compilation
     FetchCpp {
         /// Tag or rev to fetch (default: b1-65-ggml)
         #[arg(long, default_value = DEFAULT_CPP_TAG)]
@@ -130,7 +145,10 @@ enum Cmd {
         clean: bool,
     },
 
-    /// Run deterministic cross-validation tests
+    /// Run deterministic cross-validation tests against C++ implementation
+    /// 
+    /// Auto-discovers GGUF models in the models/ directory if not specified.
+    /// Requires the C++ implementation to be built first (use fetch-cpp).
     Crossval {
         /// Path to GGUF model (auto-discovers if not specified)
         #[arg(long)]
@@ -150,13 +168,23 @@ enum Cmd {
     },
 
     /// Run full cross-validation workflow (download + fetch + test)
+    /// 
+    /// One-command workflow that:
+    /// 1. Downloads the default model (or skips if exists)
+    /// 2. Fetches and builds the C++ implementation
+    /// 3. Runs cross-validation tests with auto-discovery
+    /// 
+    /// Perfect for CI/CD pipelines and initial setup
     FullCrossval {
         /// Force redownload/rebuild
         #[arg(long, default_value_t = false)]
         force: bool,
     },
 
-    /// Generate test fixtures (keeping existing functionality)
+    /// Generate realistic test fixtures for unit testing
+    /// 
+    /// Creates GGUF-like metadata JSON and binary weight files
+    /// with deterministic content for reproducible testing
     GenFixtures {
         /// Size of fixture (tiny, small, medium)
         #[arg(long, default_value = "small")]
@@ -169,7 +197,10 @@ enum Cmd {
     /// Setup cross-validation environment
     SetupCrossval,
 
-    /// Clean all caches
+    /// Clean all caches with interactive confirmation
+    /// 
+    /// Shows size of each cache directory and asks for confirmation.
+    /// Cleans: target/, ~/.cache/bitnet_cpp/, crossval/fixtures/, models/
     CleanCache,
 
     /// Check feature flag consistency

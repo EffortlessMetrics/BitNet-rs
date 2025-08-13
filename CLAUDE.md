@@ -50,34 +50,67 @@ cargo llvm-cov --workspace --features cpu --html
 ```
 
 ### Development Tools (xtask)
-```bash
-# Download BitNet GGUF model from Hugging Face (supports resumable downloads)
-cargo xtask download-model  # Downloads default model
-cargo xtask download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf
-cargo xtask download-model --sha256 <hex>  # Verify download with SHA256
-# Supports HF_TOKEN for private repos: HF_TOKEN=xxx cargo xtask download-model
 
+#### Download Model - Production-Ready with Advanced Features
+```bash
+# Download BitNet GGUF model from Hugging Face
+cargo xtask download-model  # Downloads default model
+
+# Advanced options
+cargo xtask download-model \
+  --id microsoft/bitnet-b1.58-2B-4T-gguf \
+  --file ggml-model-i2_s.gguf \
+  --sha256 <hex> \               # Verify with SHA256
+  --rev main \                   # Pin to branch/tag/commit
+  --no-progress \                # Disable progress bar (CI-friendly)
+  --verbose \                    # Debug output
+  --base-url https://mirror.com # Use alternative repository
+
+# Features:
+# ✅ Resumable downloads with smart Content-Range validation
+# ✅ 429 rate limiting with Retry-After header support
+# ✅ 304 Not Modified optimization via ETag/Last-Modified
+# ✅ Concurrent download protection (file locking)
+# ✅ Disk space validation with helpful errors
+# ✅ Path traversal protection
+# ✅ Atomic writes with fsync guarantees
+# ✅ Ctrl-C graceful handling with resume support
+# ✅ Automatic proxy support (respects HTTP[S]_PROXY)
+
+# Private repos: HF_TOKEN=xxx cargo xtask download-model
+
+```
+
+#### Other xtask Commands
+```bash
 # Fetch and build Microsoft BitNet C++ (for cross-validation)
 cargo xtask fetch-cpp  # Uses default tag b1-65-ggml
 cargo xtask fetch-cpp --tag b1-65-ggml --force --clean
+# ✅ Now validates that C++ binary was built successfully
 
 # Run deterministic cross-validation tests
-cargo xtask crossval  # Auto-discovers model, or downloads if missing
+cargo xtask crossval  # Auto-discovers model in models/ directory
 cargo xtask crossval --model path/to/specific.gguf  # Use specific model
 cargo xtask crossval --dry-run  # Print env and command without running
 
 # Full cross-validation workflow (download + fetch + test) - ONE COMMAND!
-cargo xtask full-crossval  # Runs all three steps
+cargo xtask full-crossval  # Runs all three steps sequentially
 cargo xtask full-crossval --force  # Force redownload/rebuild
+# ✅ Improved with better model auto-discovery and error handling
 
 # Generate test fixtures
-cargo xtask gen-fixtures --size small --output crossval/fixtures/
+cargo xtask gen-fixtures --size tiny --output test-fixtures/
+cargo xtask gen-fixtures --size small --output test-fixtures/
+cargo xtask gen-fixtures --size medium --output test-fixtures/
+# ✅ Now generates realistic GGUF-like metadata and weight files
 
 # Setup cross-validation environment
 cargo xtask setup-crossval
 
-# Clean all caches
+# Clean all caches (interactive with size reporting)
 cargo xtask clean-cache
+# ✅ Shows directory sizes and asks for confirmation
+# ✅ Cleans: target/, ~/.cache/bitnet_cpp/, crossval/fixtures/, models/
 
 # Check feature flag consistency
 cargo xtask check-features
