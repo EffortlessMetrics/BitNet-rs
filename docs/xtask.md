@@ -3,21 +3,35 @@
 `xtask` collects reliable, reproducible workflows for this repo. It's designed
 to be **idempotent**, **cache-aware**, and **CI-friendly**.
 
+## Exit Codes
+
+| Code | Meaning              | Common Causes |
+|-----:|---------------------|---------------|
+| 0    | Success             | All operations completed |
+| 10   | No space            | Disk full, insufficient space |
+| 11   | Auth error          | 401/403, invalid HF_TOKEN |
+| 12   | Rate limited        | 429, too many requests |
+| 13   | Hash mismatch       | SHA256 verification failed |
+| 14   | Network error       | Connection issues, 404, timeouts |
+| 130  | Interrupted         | Ctrl-C during operation |
+
 ## `download-model`
 
 Fetches a GGUF model from Hugging Face (or a mirror) safely.
 
-### Flags
+### Flags Summary
 
-- `--id <org/repo>`: HF repo id (default: BitNet model)
-- `--file <path>`: artifact path within the repo (default: ggml-model-i2_s.gguf)
-- `--out <dir>`: output folder (default: `models/`)
-- `--rev <ref>` (alias: `--ref`): pin to branch/tag/commit (`resolve/<rev>`)
-- `--sha256 <HEX>`: verify integrity after download
-- `--force`: redownload (also clears `.part` if present)
-- `--no-progress` / `--quiet`: hide progress (TTY is auto-detected)
-- `--verbose`: print decisions, statuses, and retry reasons
-- `--base-url <url>`: override base, e.g. a corporate mirror
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--id <org/repo>` | HF repository identifier | `microsoft/bitnet-b1.58-2B-4T-gguf` |
+| `--file <path>` | File path within repository | `ggml-model-i2_s.gguf` |
+| `--out <dir>` | Output directory | `models/` |
+| `--rev <ref>` | Pin to branch/tag/commit | `main` |
+| `--sha256 <HEX>` | Verify SHA256 after download | None |
+| `--force` | Force redownload | `false` |
+| `--no-progress` | Hide progress bar | `false` (auto-detects TTY) |
+| `--verbose` | Debug output | `false` |
+| `--base-url <url>` | Alternative repository URL | `https://huggingface.co` |
 
 ### How It Works (Safety Guarantees)
 
@@ -94,17 +108,3 @@ Interactive cleanup with size reporting; removes `target/`, `~/.cache/bitnet_cpp
 ```bash
 cargo xtask clean-cache
 ```
-
----
-
-## Exit Codes
-
-| Code | Meaning                 |
-|-----:|-------------------------|
-| 0    | success                 |
-| 10   | no space                |
-| 11   | auth error              |
-| 12   | rate limited            |
-| 13   | hash mismatch           |
-| 14   | network error           |
-| 130  | interrupted (Ctrl-C)    |

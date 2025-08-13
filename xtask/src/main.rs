@@ -5,7 +5,7 @@ use std::{
     process::{self, Command},
     sync::{Once, atomic::{AtomicBool, Ordering}},
     thread,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime},
 };
 use anyhow::{anyhow, bail, Context, Result};
 use fs2::available_space;
@@ -17,23 +17,18 @@ use reqwest::StatusCode;
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
 use fs2::FileExt;
+use httpdate::parse_http_date;
 
 // Global interrupt flag and setup
 static CTRL_ONCE: Once = Once::new();
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
 // Exit codes for structured errors
-#[allow(dead_code)]
 const EXIT_SUCCESS: i32 = 0;
-#[allow(dead_code)]
 const EXIT_NO_SPACE: i32 = 10;
-#[allow(dead_code)]
 const EXIT_AUTH: i32 = 11;
-#[allow(dead_code)]
 const EXIT_RATE_LIMIT: i32 = 12;
-#[allow(dead_code)]
 const EXIT_HASH_MISMATCH: i32 = 13;
-#[allow(dead_code)]
 const EXIT_NETWORK: i32 = 14;
 const EXIT_INTERRUPTED: i32 = 130;
 
@@ -43,6 +38,26 @@ fn exp_backoff_ms(attempt: u32) -> u64 {
     // 200ms, 400ms, 800ms… capped at 10s
     let shift = attempt.saturating_sub(1).min(20);
     (200u64).saturating_mul(1u64 << shift).min(10_000)
+}
+
+// Parse Retry-After header (supports both seconds and HTTP-date)
+fn retry_after_secs(headers: &reqwest::header::HeaderMap) -> u64 {
+    let raw = match headers.get(RETRY_AFTER).and_then(|v| v.to_str().ok()) {
+        Some(s) => s,
+        None => return 5, // Default to 5 seconds
+    };
+    
+    // Try parsing as integer seconds first
+    if let Ok(s) = raw.parse::<u64>() {
+        return s.min(3600); // Cap at 1 hour
+    }
+    
+    // Try parsing as HTTP-date
+    parse_http_date(raw)
+        .ok()
+        .and_then(|when| when.duration_since(SystemTime::now()).ok())
+        .map(|d| d.as_secs().clamp(1, 3600))
+        .unwrap_or(5) // Default to 5 seconds if parsing fails
 }
 
 // Atomic write helper for metadata files
@@ -214,7 +229,48 @@ enum Cmd {
     },
 }
 
-fn main() -> Result<()> {
+fn main() {
+    let code = match real_main() {
+        Ok(()) => EXIT_SUCCESS,
+        Err(e) => {
+            eprintln!("error: {e:#}");
+            classify_exit(&e)
+        }
+    };
+    process::exit(code);
+}
+
+fn classify_exit(e: &anyhow::Error) -> i32 {
+    // Check for reqwest errors
+    if let Some(req) = e.downcast_ref::<reqwest::Error>() {
+        if let Some(s) = req.status() {
+            return match s.as_u16() {
+                401 | 403 => EXIT_AUTH,
+                429 => EXIT_RATE_LIMIT,
+                404 => EXIT_NETWORK,
+                _ => EXIT_NETWORK,
+            };
+        }
+        return EXIT_NETWORK;
+    }
+    
+    // Check error message for specific patterns
+    let msg = e.to_string().to_ascii_lowercase();
+    if msg.contains("not enough disk") || msg.contains("insufficient disk space") {
+        return EXIT_NO_SPACE;
+    }
+    if msg.contains("sha") && msg.contains("mismatch") {
+        return EXIT_HASH_MISMATCH;
+    }
+    if msg.contains("interrupted") {
+        return EXIT_INTERRUPTED;
+    }
+    
+    // Default to network error
+    EXIT_NETWORK
+}
+
+fn real_main() -> Result<()> {
     let cli = Cli::parse();
     match cli.cmd {
         Cmd::DownloadModel {
@@ -549,11 +605,7 @@ fn download_model_cmd(
             Ok(resp) => {
                 // Handle 429 Retry-After before error_for_status()
                 if resp.status() == StatusCode::TOO_MANY_REQUESTS && attempt < max_attempts {
-                    let wait = resp.headers()
-                        .get(RETRY_AFTER)
-                        .and_then(|v| v.to_str().ok())
-                        .and_then(|s| s.parse::<u64>().ok())
-                        .unwrap_or(5);
+                    let wait = retry_after_secs(resp.headers());
                     eprintln!("   429 rate limited. Waiting {wait}s before retry...");
                     thread::sleep(Duration::from_secs(wait));
                     attempt += 1;
@@ -732,6 +784,7 @@ fn download_model_cmd(
     } else {
         start // Normal resume or new download
     };
+    let mut last_log = downloaded; // Track last verbose log position
     let mut buf = vec![0u8; 1024 * 256]; // 256KB buffer
     let start_time = Instant::now();
     
@@ -759,8 +812,10 @@ fn download_model_cmd(
         downloaded += n as u64;
         pb.set_position(downloaded);
         
-        if verbose && downloaded % (10 * 1024 * 1024) == 0 {
+        // Log progress every 10 MiB (tracks actual delta)
+        if verbose && downloaded - last_log >= 10 * 1024 * 1024 {
             eprintln!("[VERBOSE] Downloaded {} MB", downloaded / 1_048_576);
+            last_log = downloaded;
         }
     }
     
@@ -1265,4 +1320,148 @@ fn run_cmd(cmd: &mut Command) -> Result<()> {
     }
     
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::TcpListener;
+    use std::thread;
+    use std::sync::{Arc, Mutex};
+    
+    struct TestServer {
+        port: u16,
+        requests: Arc<Mutex<Vec<String>>>,
+    }
+    
+    impl TestServer {
+        fn new<F>(handler: F) -> Self 
+        where 
+            F: Fn(&tiny_http::Request) -> tiny_http::Response<std::io::Cursor<Vec<u8>>> + Send + 'static
+        {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            let port = listener.local_addr().unwrap().port();
+            drop(listener);
+            
+            let server = tiny_http::Server::http(format!("127.0.0.1:{}", port)).unwrap();
+            let requests = Arc::new(Mutex::new(Vec::new()));
+            let requests_clone = requests.clone();
+            
+            thread::spawn(move || {
+                for rq in server.incoming_requests() {
+                    let path = rq.url().to_string();
+                    requests_clone.lock().unwrap().push(path.clone());
+                    let response = handler(&rq);
+                    let _ = rq.respond(response);
+                }
+            });
+            
+            TestServer { port, requests }
+        }
+        
+        fn url(&self, path: &str) -> String {
+            format!("http://127.0.0.1:{}{}", self.port, path)
+        }
+    }
+    
+    #[test]
+    fn test_retry_after_seconds() {
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(RETRY_AFTER, "10".parse().unwrap());
+        assert_eq!(retry_after_secs(&headers), 10);
+    }
+    
+    #[test]
+    fn test_retry_after_http_date() {
+        use std::time::{SystemTime, Duration};
+        let mut headers = reqwest::header::HeaderMap::new();
+        
+        // Future date (5 seconds from now)
+        let future = SystemTime::now() + Duration::from_secs(5);
+        let date_str = httpdate::fmt_http_date(future);
+        headers.insert(RETRY_AFTER, date_str.parse().unwrap());
+        
+        let wait = retry_after_secs(&headers);
+        assert!(wait >= 4 && wait <= 6); // Allow for timing variance
+    }
+    
+    #[test]
+    fn test_retry_after_past_date() {
+        use std::time::{SystemTime, Duration};
+        let mut headers = reqwest::header::HeaderMap::new();
+        
+        // Past date returns 5 (default fallback) since duration_since would fail
+        let past = SystemTime::now() - Duration::from_secs(10);
+        let date_str = httpdate::fmt_http_date(past);
+        headers.insert(RETRY_AFTER, date_str.parse().unwrap());
+        
+        assert_eq!(retry_after_secs(&headers), 5); // Default fallback
+    }
+    
+    #[test]
+    fn test_classify_exit_codes() {
+        // Test disk space error
+        let err = anyhow::anyhow!("insufficient disk space: need 100MB");
+        assert_eq!(classify_exit(&err), EXIT_NO_SPACE);
+        
+        // Test SHA mismatch
+        let err = anyhow::anyhow!("SHA256 mismatch: expected abc, got def");
+        assert_eq!(classify_exit(&err), EXIT_HASH_MISMATCH);
+    }
+    
+    #[test]
+    fn test_exp_backoff() {
+        assert_eq!(exp_backoff_ms(1), 200);
+        assert_eq!(exp_backoff_ms(2), 400);
+        assert_eq!(exp_backoff_ms(3), 800);
+        assert_eq!(exp_backoff_ms(10), 10_000); // Capped at 10s
+    }
+    
+    // Integration test for download edge cases
+    #[test]
+    #[ignore] // Run with: cargo test --features test-download -- --ignored
+    fn test_download_206_misaligned() {
+        let server = TestServer::new(|rq| {
+            use tiny_http::{Response, StatusCode, Header};
+            
+            if rq.method() == &tiny_http::Method::Get {
+                // Return 206 with wrong Content-Range
+                let mut resp = Response::from_string("test data")
+                    .with_status_code(StatusCode(206));
+                resp.add_header(Header::from_bytes(&b"Content-Range"[..], &b"bytes 999-1000/2000"[..]).unwrap());
+                return resp;
+            }
+            Response::from_string("").with_status_code(StatusCode(405))
+        });
+        
+        // Would test download_model_cmd with server.url("/test.bin")
+        // and verify it restarts from 0
+    }
+    
+    #[test]
+    #[ignore]
+    fn test_download_429_retry_after() {
+        let counter = Arc::new(Mutex::new(0));
+        let counter_clone = counter.clone();
+        
+        let server = TestServer::new(move |_rq| {
+            use tiny_http::{Response, StatusCode, Header};
+            
+            let mut count = counter_clone.lock().unwrap();
+            *count += 1;
+            
+            if *count == 1 {
+                // First request: 429 with Retry-After
+                let mut resp = Response::from_string("")
+                    .with_status_code(StatusCode(429));
+                resp.add_header(Header::from_bytes(&b"Retry-After"[..], &b"2"[..]).unwrap());
+                return resp;
+            }
+            
+            // Second request: success
+            Response::from_string("success")
+        });
+        
+        // Would test that download retries after 2 seconds
+    }
 }
