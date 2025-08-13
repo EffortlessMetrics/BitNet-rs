@@ -3,7 +3,7 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
     process::Command,
-    sync::{Arc, atomic::{AtomicBool, Ordering}},
+    sync::{Arc, Once, atomic::{AtomicBool, Ordering}},
     thread,
     time::{Duration, Instant},
 };
@@ -12,7 +12,7 @@ use fs2::available_space;
 use clap::{Parser, Subcommand};
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::Client;
-use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, RANGE};
+use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, RANGE, ETAG, IF_NONE_MATCH, LAST_MODIFIED, IF_MODIFIED_SINCE};
 use reqwest::StatusCode;
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
@@ -164,7 +164,47 @@ fn download_model_cmd(
     let url = format!("https://huggingface.co/{id}/resolve/main/{file}");
     let token = std::env::var("HF_TOKEN").ok();
 
+    // Build client first (needed for conditional checks)
+    let client = Client::builder()
+        .connect_timeout(Duration::from_secs(15))
+        .timeout(Duration::from_secs(30 * 60)) // 30 min for big models
+        .user_agent("bitnet-xtask/0.1 (+https://github.com/EffortlessSteven/BitNet-rs)")
+        .build()?;
+
+    // Check if file exists and possibly skip download via ETag/Last-Modified
+    let etag_path = dest.with_extension("etag");
+    let lastmod_path = dest.with_extension("lastmod");
+    
     if dest.exists() && !force {
+        // Check with conditional headers if we need to re-download
+        let saved_etag = fs::read_to_string(&etag_path).ok();
+        let saved_lastmod = fs::read_to_string(&lastmod_path).ok();
+        
+        if saved_etag.is_some() || saved_lastmod.is_some() {
+            // Check if the file is still current
+            let mut head_req = client.head(&url);
+            if let Some(t) = &token {
+                head_req = head_req.header(AUTHORIZATION, format!("Bearer {t}"));
+            }
+            if let Some(etag) = &saved_etag {
+                head_req = head_req.header(IF_NONE_MATCH, etag.trim());
+            }
+            if let Some(lm) = &saved_lastmod {
+                head_req = head_req.header(IF_MODIFIED_SINCE, lm.trim());
+            }
+            
+            if let Ok(resp) = head_req.send() {
+                if resp.status() == StatusCode::NOT_MODIFIED {
+                    eprintln!("✓ File is up to date: {} (304 Not Modified)", dest.display());
+                    if let Some(want) = sha256_hex {
+                        verify_sha256(&dest, want)?;
+                        println!("✓ SHA256 verified");
+                    }
+                    return Ok(());
+                }
+            }
+        }
+        
         eprintln!("✓ File exists: {} (use --force to overwrite)", dest.display());
         if let Some(want) = sha256_hex {
             verify_sha256(&dest, want)?;
@@ -180,10 +220,6 @@ fn download_model_cmd(
     if token.is_some() {
         println!("   Using HF_TOKEN for authentication");
     }
-
-    let client = Client::builder()
-        .timeout(None)
-        .build()?;
     
     // HEAD request to get file size
     let mut head_req = client.head(&url);
@@ -286,6 +322,16 @@ fn download_model_cmd(
             continue;
         }
 
+        // Friendlier auth errors
+        let status = r.status();
+        if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
+            bail!(
+                "HTTP {} from Hugging Face. If the repo is private, set HF_TOKEN, e.g.\n\
+                 HF_TOKEN=*** cargo xtask download-model --id {} --file {}",
+                status.as_u16(), id, file
+            );
+        }
+
         break r.error_for_status()?;
     };
     
@@ -338,14 +384,17 @@ fn download_model_cmd(
             .open(&tmp)?
     };
     
-    // Setup Ctrl-C handler for clean interruption
+    // Setup Ctrl-C handler for clean interruption (once per process)
+    static CTRL_ONCE: Once = Once::new();
     let interrupted = Arc::new(AtomicBool::new(false));
-    {
+    CTRL_ONCE.call_once({
         let interrupted = interrupted.clone();
-        ctrlc::set_handler(move || {
-            interrupted.store(true, Ordering::SeqCst);
-        }).ok(); // Ignore error if handler already set
-    }
+        move || {
+            let _ = ctrlc::set_handler(move || {
+                interrupted.store(true, Ordering::SeqCst);
+            });
+        }
+    });
     
     let mut downloaded = if resumed && resp.status() == StatusCode::OK {
         0 // Server ignored Range, restarting from 0
@@ -374,6 +423,8 @@ fn download_model_cmd(
     }
     
     file_out.flush()?;
+    // Close the file handle before rename (Windows compatibility)
+    drop(file_out);
     
     let elapsed = start_time.elapsed();
     let throughput = if elapsed.as_secs() > 0 {
@@ -383,6 +434,18 @@ fn download_model_cmd(
     };
     
     pb.finish_with_message(format!("complete ({:.2} MB/s)", throughput));
+
+    // Save ETag and Last-Modified for future conditional requests
+    if let Some(etag) = resp.headers().get(ETAG) {
+        if let Ok(etag_str) = etag.to_str() {
+            let _ = fs::write(&etag_path, etag_str);
+        }
+    }
+    if let Some(lm) = resp.headers().get(LAST_MODIFIED) {
+        if let Ok(lm_str) = lm.to_str() {
+            let _ = fs::write(&lastmod_path, lm_str);
+        }
+    }
 
     fs::rename(&tmp, &dest)?;
 
