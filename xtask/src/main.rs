@@ -10,12 +10,16 @@ use std::{
 use anyhow::{anyhow, bail, Context, Result};
 use fs2::available_space;
 use clap::{Parser, Subcommand};
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle, ProgressDrawTarget};
 use reqwest::blocking::Client;
 use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, RANGE, ETAG, IF_NONE_MATCH, LAST_MODIFIED, IF_MODIFIED_SINCE};
 use reqwest::StatusCode;
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
+
+// Global interrupt flag and setup
+static CTRL_ONCE: Once = Once::new();
+static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
 // Centralized defaults to avoid drift
 const DEFAULT_MODEL_ID: &str = "microsoft/bitnet-b1.58-2B-4T-gguf";
@@ -260,17 +264,66 @@ fn download_model_cmd(
                 .ok()
         })
         .or_else(|| {
-            // Fallback: try 1-byte GET to extract total from Content-Range
-            let mut r = client.get(&url);
+            // Fallback: try 1-byte GET to extract total from Content-Range (with cache headers)
+            let mut probe = client.get(&url);
             if let Some(t) = &token {
-                r = r.header(AUTHORIZATION, format!("Bearer {t}"));
+                probe = probe.header(AUTHORIZATION, format!("Bearer {t}"));
             }
-            let r = r.header(RANGE, "bytes=0-0").send().ok()?;
-            r.headers()
-                .get(CONTENT_RANGE)
-                .and_then(|h| h.to_str().ok())
-                .and_then(|s| s.rsplit('/').next()?.parse::<u64>().ok())
+            probe = probe.header(RANGE, "bytes=0-0");
+            
+            // Add conditional headers for cache checking on fallback
+            if dest.exists() && !force {
+                if let Ok(etag) = fs::read_to_string(&etag_path) {
+                    probe = probe.header(IF_NONE_MATCH, etag.trim());
+                }
+                if let Ok(lastmod) = fs::read_to_string(&lastmod_path) {
+                    probe = probe.header(IF_MODIFIED_SINCE, lastmod.trim());
+                }
+            }
+            
+            probe.send().ok().and_then(|r| {
+                // Check for 304 on the 1-byte probe - means file is current
+                if r.status() == StatusCode::NOT_MODIFIED && dest.exists() && !force {
+                    // Can't early return from a closure, will handle after
+                    return None;
+                }
+                r.headers()
+                    .get(CONTENT_RANGE)
+                    .and_then(|h| h.to_str().ok())
+                    .and_then(|s| s.rsplit('/').next()?.parse::<u64>().ok())
+            })
         });
+    
+    // If we got a 304 on the fallback probe and file exists, we're done
+    if size.is_none() && dest.exists() && !force {
+        // Do another quick check to see if it was a 304
+        let mut probe = client.get(&url);
+        if let Some(t) = &token {
+            probe = probe.header(AUTHORIZATION, format!("Bearer {t}"));
+        }
+        probe = probe.header(RANGE, "bytes=0-0");
+        if let Ok(etag) = fs::read_to_string(&etag_path) {
+            probe = probe.header(IF_NONE_MATCH, etag.trim());
+        }
+        if let Ok(lastmod) = fs::read_to_string(&lastmod_path) {
+            probe = probe.header(IF_MODIFIED_SINCE, lastmod.trim());
+        }
+        if let Ok(r) = probe.send() {
+            if r.status() == StatusCode::NOT_MODIFIED {
+                println!("✓ File is up to date: {}", dest.display());
+                if let Some(want) = sha256_hex {
+                    if let Err(e) = verify_sha256(&dest, want) {
+                        let _ = fs::remove_file(&dest);
+                        let _ = fs::remove_file(&etag_path);
+                        let _ = fs::remove_file(&lastmod_path);
+                        return Err(e);
+                    }
+                    println!("✓ SHA256 verified");
+                }
+                return Ok(());
+            }
+        }
+    }
 
     // Ensure directory exists before checking disk space
     if !dest_dir.exists() {
@@ -360,6 +413,21 @@ fn download_model_cmd(
         break r.error_for_status()?;
     };
     
+    // Verify Content-Range alignment on resume
+    if start > 0 && resp.status() == StatusCode::PARTIAL_CONTENT {
+        if let Some(cr) = resp.headers().get(CONTENT_RANGE).and_then(|h| h.to_str().ok()) {
+            if let Some(begin) = cr.strip_prefix("bytes ")
+                                  .and_then(|s| s.split('-').next())
+                                  .and_then(|s| s.parse::<u64>().ok()) {
+                if begin != start {
+                    println!("   Server resumed at {} (expected {}); restarting from 0", begin, start);
+                    start = 0;
+                    // Server gave us wrong offset, restart download from beginning
+                }
+            }
+        }
+    }
+    
     // Check if server ignored Range header (must restart from 0)
     let resumed = start > 0;
     if resumed && resp.status() == StatusCode::OK {
@@ -368,23 +436,31 @@ fn download_model_cmd(
         start = 0;
     }
 
-    let pb = if let Some(total) = size {
-        let pb = ProgressBar::new(total);
-        pb.set_style(
-            ProgressStyle::with_template(
-                "{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta}) {msg}"
-            )?
-            .progress_chars("##-")
-        );
-        pb
+    // Setup progress bar (hide if not a TTY)
+    let pb = if atty::is(atty::Stream::Stderr) {
+        if let Some(total) = size {
+            let pb = ProgressBar::new(total);
+            pb.set_style(
+                ProgressStyle::with_template(
+                    "{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta}) {msg}"
+                )?
+                .progress_chars("##-")
+            );
+            pb
+        } else {
+            let pb = ProgressBar::new_spinner();
+            pb.set_style(
+                ProgressStyle::with_template(
+                    "{spinner:.green} downloading {bytes} {msg}"
+                )?
+            );
+            pb.enable_steady_tick(std::time::Duration::from_millis(120));
+            pb
+        }
     } else {
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(
-            ProgressStyle::with_template(
-                "{spinner:.green} downloading {bytes} {msg}"
-            )?
-        );
-        pb.enable_steady_tick(std::time::Duration::from_millis(120));
+        // Hide spinner in CI/non-TTY environments
+        let pb = ProgressBar::hidden();
+        pb.set_draw_target(ProgressDrawTarget::stderr_with_hz(1));
         pb
     };
     
@@ -409,9 +485,8 @@ fn download_model_cmd(
             .open(&tmp)?
     };
     
-    // Setup Ctrl-C handler for clean interruption (once per process)
-    static CTRL_ONCE: Once = Once::new();
-    static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+    // Reset interrupt flag and setup Ctrl-C handler (once per process)
+    INTERRUPTED.store(false, Ordering::SeqCst);
     CTRL_ONCE.call_once(|| {
         let _ = ctrlc::set_handler(|| {
             INTERRUPTED.store(true, Ordering::SeqCst);
@@ -449,15 +524,15 @@ fn download_model_cmd(
     drop(file_out);
     
     let elapsed = start_time.elapsed();
-    let throughput = if elapsed.as_secs() > 0 {
-        (downloaded - start) as f64 / elapsed.as_secs_f64() / 1_048_576.0
-    } else {
-        0.0
-    };
+    let secs = elapsed.as_secs_f64().max(0.001); // Avoid division by zero
+    let throughput = (downloaded - start) as f64 / secs / 1_048_576.0;
     
     pb.finish_with_message(format!("complete ({:.2} MB/s)", throughput));
 
-    // Save ETag and Last-Modified for future conditional requests
+    // Atomic rename BEFORE persisting metadata
+    fs::rename(&tmp, &dest)?;
+    
+    // Persist ETag and Last-Modified AFTER successful rename
     if let Some(etag) = resp.headers().get(ETAG) {
         if let Ok(etag_str) = etag.to_str() {
             let _ = fs::write(&etag_path, etag_str);
@@ -468,8 +543,14 @@ fn download_model_cmd(
             let _ = fs::write(&lastmod_path, lm_str);
         }
     }
-
-    fs::rename(&tmp, &dest)?;
+    
+    // Verify final size if known
+    if let Some(total) = size {
+        let actual = fs::metadata(&dest)?.len();
+        if actual != total {
+            bail!("download truncated: got {} bytes, expected {}", actual, total);
+        }
+    }
 
     if let Some(want) = sha256_hex {
         print!("🔒 Verifying SHA256... ");
