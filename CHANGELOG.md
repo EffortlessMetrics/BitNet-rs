@@ -13,12 +13,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Version management system for external C++ dependency
 - Comprehensive migration documentation and guides
 - API compatibility matrix for legacy implementations
+- **`xtask download-model` enhancements**:
+  - `--rev/--ref` flag for reproducible version pinning
+  - `--no-progress` and `--verbose` flags for CI/debugging
+  - `--base-url` flag for mirror repository support
+  - Conditional full GET when `start==0` (304 optimization)
+  - 429 `Retry-After` handling before `error_for_status()`
+  - BufWriter streaming with atomic rename + parent dir fsync
+  - Atomic writes for `.etag` / `.lastmod` metadata files
+  - Single-writer `.lock` beside `.part` for concurrency protection
+  - Smarter disk space check (remaining bytes with headroom)
 
 ### Changed
 - Repository structure now clearly establishes BitNet.rs as primary implementation
 - Documentation rewritten to focus on Rust implementation
 - Legacy C++ implementation moved to external dependency system
 - Build system optimized for Rust-first development
+
+### Improved
+- **`fetch-cpp`**: Now verifies built binary exists after compilation
+- **`full-crossval`**: Better model auto-discovery with helpful errors
+- **`clean-cache`**: Interactive mode with size reporting
+- **`gen-fixtures`**: Generates realistic GGUF-like metadata + weights
 
 ## [0.2.0] - Repository Restructure (Major Milestone)
 
