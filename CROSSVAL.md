@@ -307,6 +307,35 @@ For reproducible builds, verify downloads with SHA256:
 cargo xtask download-model --sha256 abc123def456...
 ```
 
+### CI/CD Caching (GitHub Actions)
+Keep CI runs fast by caching models and the C++ build:
+
+```yaml
+- name: Cache BitNet C++ checkout
+  uses: actions/cache@v4
+  with:
+    path: ~/.cache/bitnet_cpp
+    key: cpp-${{ runner.os }}-${{ hashFiles('xtask/src/main.rs') }}
+
+- name: Cache model
+  uses: actions/cache@v4
+  with:
+    path: models
+    key: model-${{ runner.os }}-${{ inputs.model-id || 'microsoft/bitnet-b1.58-2B-4T-gguf' }}-${{ inputs.sha256 || 'v1' }}
+
+- name: Download model (idempotent with ETag cache)
+  run: |
+    cargo xtask download-model \
+      --id "${{ inputs.model-id || 'microsoft/bitnet-b1.58-2B-4T-gguf' }}" \
+      --file "${{ inputs.file || 'ggml-model-i2_s.gguf' }}" \
+      ${{ inputs.sha256 && format('--sha256 {0}', inputs.sha256) || '' }}
+
+- name: Run cross-validation
+  run: cargo xtask crossval
+```
+
+The download command now uses ETag/Last-Modified caching, so it will automatically skip downloads when the cached file is up-to-date (returns 304 Not Modified).
+
 ## References
 
 - [Microsoft BitNet Repository](https://github.com/microsoft/BitNet)
