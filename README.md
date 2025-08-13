@@ -270,6 +270,54 @@ cargo test --workspace --features crossval
 cargo xtask --help
 ```
 
+## Developer Tooling: `xtask`
+
+We ship a robust `xtask` CLI for repeatable dev workflows.
+
+### Download a Model (Production-Ready)
+
+```bash
+# Default BitNet model (resumable, cache-aware, CI-friendly)
+cargo xtask download-model
+
+# Advanced usage
+cargo xtask download-model \
+  --id microsoft/bitnet-b1.58-2B-4T-gguf \
+  --file ggml-model-i2_s.gguf \
+  --rev main \                     # pin branch/tag/commit
+  --sha256 <HEX> \                 # verify file integrity
+  --no-progress \                  # silence progress (good for CI)
+  --verbose \                      # debug logging
+  --base-url https://huggingface.co  # use a mirror if needed
+```
+
+**Behavior Highlights**
+
+* Resumable downloads with strict `Content-Range` validation
+* 304/ETag cache support, 429 handling via `Retry-After`
+* Atomic writes + fsyncs (no torn files on power loss)
+* Exclusive `.lock` guard next to the `.part` file
+* Safe path handling; CI-friendly quiet output
+
+**Environment**
+
+* `HF_TOKEN` — auth token for private repos
+* `HTTP_PROXY` / `HTTPS_PROXY` — respected automatically by `reqwest`
+
+**Exit Codes (for CI)**
+
+* `0` success · `10` no space · `11` auth · `12` rate limit · `13` SHA mismatch · `14` network · `130` interrupted (Ctrl-C)
+
+### Other Handy Tasks
+
+```bash
+cargo xtask fetch-cpp                # builds C++ impl; verifies binary exists
+cargo xtask crossval [--model PATH]  # runs deterministic cross-validation
+cargo xtask full-crossval            # download + fetch-cpp + crossval
+cargo xtask gen-fixtures --size tiny|small|medium --output test-fixtures/
+cargo xtask clean-cache              # interactive; shows sizes and frees space
+```
+
 ### Code Quality
 
 ```bash
