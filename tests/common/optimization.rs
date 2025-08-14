@@ -1,7 +1,7 @@
 use super::config::TestConfig;
 use super::errors::{TestError, TestResult};
-use super::parallel::{ParallelConfig, ParallelTestExecutor};
-use super::selection::{ExecutionPlan, SmartTestSelector};
+use super::execution_optimizer::ExecutionPlan;
+use super::parallel::ParallelExecutor;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 

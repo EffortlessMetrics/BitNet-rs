@@ -7,7 +7,13 @@ use super::performance_viz::{
     create_performance_comparison, PerformanceComparison, PerformanceVisualizer,
     VisualizationConfig,
 };
-// use crate::data::performance::BenchmarkResult;
+// Temporary stub for BenchmarkResult
+#[derive(Debug, Clone)]
+pub struct BenchmarkResult {
+    pub name: String,
+    pub duration: std::time::Duration,
+    pub throughput: f64,
+}
 use crate::results::{TestResult, TestSuiteResult};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
