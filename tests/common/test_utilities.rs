@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use tokio::fs;
 use tokio::time::timeout;
 
-use super::errors::TestError;
+use super::errors::{TestError, TestOpResult as TestResultCompat};
 
 /// Utility functions for common test operations
 pub struct TestUtilities;
@@ -22,7 +22,7 @@ impl TestUtilities {
     }
 
     /// Clean up a temporary directory
-    pub async fn cleanup_temp_dir(dir: &Path) -> TestResult<()> {
+    pub async fn cleanup_temp_dir(dir: &Path) -> TestResultCompat<()> {
         if dir.exists() {
             fs::remove_dir_all(dir).await?;
             tracing::debug!("Cleaned up temporary directory: {:?}", dir);
@@ -31,7 +31,7 @@ impl TestUtilities {
     }
 
     /// Write test data to a file
-    pub async fn write_test_file<P: AsRef<Path>>(path: P, content: &[u8]) -> TestResult<()> {
+    pub async fn write_test_file<P: AsRef<Path>>(path: P, content: &[u8]) -> TestResultCompat<()> {
         let path = path.as_ref();
 
         // Create parent directories if they don't exist
@@ -45,7 +45,7 @@ impl TestUtilities {
     }
 
     /// Read test data from a file
-    pub async fn read_test_file<P: AsRef<Path>>(path: P) -> TestResult<Vec<u8>> {
+    pub async fn read_test_file<P: AsRef<Path>>(path: P) -> TestResultCompat<Vec<u8>> {
         let path = path.as_ref();
         let content = fs::read(path).await?;
         tracing::trace!("Read {} bytes from {:?}", content.len(), path);
@@ -56,7 +56,7 @@ impl TestUtilities {
     pub async fn verify_file<P: AsRef<Path>>(
         path: P,
         expected_size: Option<u64>,
-    ) -> TestResult<bool> {
+    ) -> TestResultCompat<bool> {
         let path = path.as_ref();
 
         if !path.exists() {
@@ -84,7 +84,7 @@ impl TestUtilities {
         condition: F,
         timeout_duration: Duration,
         check_interval: Duration,
-    ) -> TestResult<()>
+    ) -> TestResultCompat<()>
     where
         F: Fn() -> Fut,
         Fut: std::future::Future<Output = bool>,
@@ -106,10 +106,10 @@ impl TestUtilities {
     pub async fn run_with_timeout<F, Fut, T>(
         operation: F,
         timeout_duration: Duration,
-    ) -> TestResult<T>
+    ) -> TestResultCompat<T>
     where
         F: FnOnce() -> Fut,
-        Fut: std::future::Future<Output = TestResult<T>>,
+        Fut: std::future::Future<Output = TestResultCompat<T>>,
     {
         match timeout(timeout_duration, operation()).await {
             Ok(result) => result,
@@ -123,10 +123,10 @@ impl TestUtilities {
         max_attempts: usize,
         initial_delay: Duration,
         max_delay: Duration,
-    ) -> TestResult<T>
+    ) -> TestResultCompat<T>
     where
         F: FnMut() -> Fut,
-        Fut: std::future::Future<Output = TestResult<T>>,
+        Fut: std::future::Future<Output = TestResultCompat<T>>,
     {
         let mut delay = initial_delay;
         let mut last_error = None;
@@ -254,7 +254,7 @@ impl TestUtilities {
     /// Create a test report summary
     pub fn create_test_summary(
         test_name: &str,
-        results: &[TestResult<()>],
+        results: &[TestResultCompat<()>],
         duration: Duration,
     ) -> TestSummary {
         let total = results.len();

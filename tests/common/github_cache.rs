@@ -1,5 +1,5 @@
 use super::cache::{CacheConfig, TestCache};
-use super::errors::TestError;
+use super::errors::{TestError, TestOpResult as TestResultCompat};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::collections::HashMap;
@@ -89,7 +89,7 @@ impl GitHubCacheManager {
     }
 
     /// Generate cache key for test data
-    pub async fn generate_test_cache_key(&self) -> TestResult<CacheKeyInfo> {
+    pub async fn generate_test_cache_key(&self) -> TestResultCompat<CacheKeyInfo> {
         let mut key_components = vec![self.config.key_prefix.clone(), self.config.version.clone()];
 
         // Add environment variables to key
@@ -128,7 +128,7 @@ impl GitHubCacheManager {
     }
 
     /// Generate cache key for test fixtures
-    pub async fn generate_fixture_cache_key(&self) -> TestResult<CacheKeyInfo> {
+    pub async fn generate_fixture_cache_key(&self) -> TestResultCompat<CacheKeyInfo> {
         let mut key_components = vec![
             self.config.key_prefix.clone(),
             "fixtures".to_string(),
@@ -157,7 +157,7 @@ impl GitHubCacheManager {
     }
 
     /// Restore cache from GitHub Actions
-    pub async fn restore_cache(&self, key_info: &CacheKeyInfo) -> TestResult<CacheResult> {
+    pub async fn restore_cache(&self, key_info: &CacheKeyInfo) -> TestResultCompat<CacheResult> {
         if !self.config.enabled || !self.is_github_actions() {
             return Ok(CacheResult {
                 cache_hit: false,
@@ -218,7 +218,7 @@ impl GitHubCacheManager {
     }
 
     /// Save cache to GitHub Actions
-    pub async fn save_cache(&self, key_info: &CacheKeyInfo) -> TestResult<CacheResult> {
+    pub async fn save_cache(&self, key_info: &CacheKeyInfo) -> TestResultCompat<CacheResult> {
         if !self.config.enabled || !self.is_github_actions() {
             return Ok(CacheResult {
                 cache_hit: false,
@@ -293,7 +293,7 @@ impl GitHubCacheManager {
     }
 
     /// Setup cache for test execution
-    pub async fn setup_test_cache(&self) -> TestResult<TestCache> {
+    pub async fn setup_test_cache(&self) -> TestResultCompat<TestCache> {
         // Generate cache key for test data
         let key_info = self.generate_test_cache_key().await?;
 
@@ -314,7 +314,7 @@ impl GitHubCacheManager {
     }
 
     /// Cleanup and save cache after test execution
-    pub async fn cleanup_test_cache(&self, cache: &mut TestCache) -> TestResult<()> {
+    pub async fn cleanup_test_cache(&self, cache: &mut TestCache) -> TestResultCompat<()> {
         // Perform cache cleanup
         cache.cleanup_if_needed().await?;
 
@@ -334,7 +334,7 @@ impl GitHubCacheManager {
     }
 
     /// Setup fixture cache
-    pub async fn setup_fixture_cache(&self) -> TestResult<()> {
+    pub async fn setup_fixture_cache(&self) -> TestResultCompat<()> {
         let key_info = self.generate_fixture_cache_key().await?;
         let restore_result = self.restore_cache(&key_info).await?;
 
@@ -348,7 +348,7 @@ impl GitHubCacheManager {
     }
 
     /// Save fixture cache
-    pub async fn save_fixture_cache(&self) -> TestResult<()> {
+    pub async fn save_fixture_cache(&self) -> TestResultCompat<()> {
         let key_info = self.generate_fixture_cache_key().await?;
         let save_result = self.save_cache(&key_info).await?;
 
@@ -365,7 +365,7 @@ impl GitHubCacheManager {
     }
 
     /// Calculate total size of cache paths
-    async fn calculate_cache_size(&self, paths: &[PathBuf]) -> TestResult<u64> {
+    async fn calculate_cache_size(&self, paths: &[PathBuf]) -> TestResultCompat<u64> {
         let mut total_size = 0u64;
 
         for path in paths {
@@ -381,7 +381,7 @@ impl GitHubCacheManager {
     fn calculate_directory_size<'a>(
         &'a self,
         path: &'a Path,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = TestResult<u64>> + Send + '_>> {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = TestResultCompat<u64>> + Send + '_>> {
         Box::pin(async move {
             let mut total_size = 0u64;
 
@@ -403,7 +403,7 @@ impl GitHubCacheManager {
     }
 
     /// Hash a file for cache key generation
-    async fn hash_file(&self, file_path: &str) -> TestResult<String> {
+    async fn hash_file(&self, file_path: &str) -> TestResultCompat<String> {
         let path = self.workspace_root.join(file_path);
 
         if !path.exists() {
@@ -416,7 +416,7 @@ impl GitHubCacheManager {
     }
 
     /// Hash fixture configuration for cache key
-    async fn hash_fixture_config(&self) -> TestResult<String> {
+    async fn hash_fixture_config(&self) -> TestResultCompat<String> {
         use sha2::{Digest, Sha256};
 
         let mut hasher = Sha256::new();
@@ -462,7 +462,7 @@ pub mod github_actions {
     /// Set up GitHub Actions cache for test execution
     pub async fn setup_cache(
         workspace_root: PathBuf,
-    ) -> TestResult<(GitHubCacheManager, TestCache)> {
+    ) -> TestResultCompat<(GitHubCacheManager, TestCache)> {
         let config = GitHubCacheConfig::default();
         let cache_manager = GitHubCacheManager::new(config, workspace_root);
 
@@ -479,7 +479,7 @@ pub mod github_actions {
     pub async fn cleanup_cache(
         cache_manager: &GitHubCacheManager,
         test_cache: &mut TestCache,
-    ) -> TestResult<()> {
+    ) -> TestResultCompat<()> {
         // Save test cache
         cache_manager.cleanup_test_cache(test_cache).await?;
 
