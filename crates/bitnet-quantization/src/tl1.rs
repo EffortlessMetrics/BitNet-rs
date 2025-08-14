@@ -110,7 +110,7 @@ impl LookupTable {
 /// TL1 quantization implementation optimized for ARM NEON
 pub struct TL1Quantizer {
     config: TL1Config,
-    lookup_tables: HashMap<String, LookupTable>,
+    _lookup_tables: HashMap<String, LookupTable>,
     use_neon: bool,
 }
 
@@ -119,14 +119,14 @@ impl TL1Quantizer {
     pub fn new() -> Self {
         Self {
             config: TL1Config::default(),
-            lookup_tables: HashMap::new(),
+            _lookup_tables: HashMap::new(),
             use_neon: cfg!(target_arch = "aarch64"),
         }
     }
 
     /// Create a new TL1 quantizer with custom configuration
     pub fn with_config(config: TL1Config) -> Self {
-        Self { config, lookup_tables: HashMap::new(), use_neon: cfg!(target_arch = "aarch64") }
+        Self { config, _lookup_tables: HashMap::new(), use_neon: cfg!(target_arch = "aarch64") }
     }
 
     /// Load configuration from .ini file for compatibility

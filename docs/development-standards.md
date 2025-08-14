@@ -4,6 +4,25 @@ This document outlines the development standards, CI/CD pipeline, and quality en
 
 ## Quick Setup
 
+### Features
+- `cpu` (default): pure-Rust, no native deps. Use for local dev and CI.
+- `ffi`: enables native backends (C/C++). Use `--features ffi` for smoke builds / perf comparison.
+- `gpu`: enables CUDA support for GPU acceleration.
+- `crossval`: enables cross-validation against C++ implementation (downloads & builds C++ code).
+
+### Common Development Commands
+```bash
+# CPU-only quick test compile
+cargo qg
+
+# CPU-only benches
+cargo bench -p bitnet-quantization --features cpu
+
+# Build with specific features
+cargo build --workspace --no-default-features --features cpu
+cargo build --workspace --features ffi
+```
+
 ### Install Git Hooks (Recommended)
 ```bash
 # Install pre-commit (Python-based)
