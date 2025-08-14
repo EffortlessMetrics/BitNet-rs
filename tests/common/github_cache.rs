@@ -1,6 +1,7 @@
 use super::cache::{CacheConfig, TestCache};
 use super::errors::{TestError, TestResult};
 use serde::{Deserialize, Serialize};
+use sha2::Digest;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -377,7 +378,10 @@ impl GitHubCacheManager {
     }
 
     /// Calculate size of a directory recursively
-    fn calculate_directory_size(&self, path: &Path) -> std::pin::Pin<Box<dyn std::future::Future<Output = TestResult<u64>> + Send + '_>> {
+    fn calculate_directory_size<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = TestResult<u64>> + Send + '_>> {
         Box::pin(async move {
             let mut total_size = 0u64;
 
