@@ -43,7 +43,7 @@ fn main() {
 
     // Configure C++ compilation
     let mut build = cc::Build::new();
-    
+
     build
         .cpp(true)
         .std("c++17")
@@ -54,13 +54,13 @@ fn main() {
 
     // Platform-specific optimizations
     if cfg!(target_arch = "x86_64") {
-        build
-            .flag("-mavx2")
-            .flag("-mfma")
-            .flag("-mf16c");
-        
+        build.flag("-mavx2").flag("-mfma").flag("-mf16c");
+
         // Enable AVX-512 if available
-        if env::var("CARGO_CFG_TARGET_FEATURE").unwrap_or_default().contains("avx512f") {
+        if env::var("CARGO_CFG_TARGET_FEATURE")
+            .unwrap_or_default()
+            .contains("avx512f")
+        {
             build.flag("-mavx512f");
         }
     } else if cfg!(target_arch = "aarch64") {
@@ -70,15 +70,9 @@ fn main() {
 
     // Debug/Release configuration
     if env::var("PROFILE").unwrap() == "release" {
-        build
-            .opt_level(3)
-            .flag("-DNDEBUG")
-            .flag("-ffast-math");
+        build.opt_level(3).flag("-DNDEBUG").flag("-ffast-math");
     } else {
-        build
-            .opt_level(0)
-            .debug(true)
-            .flag("-DDEBUG");
+        build.opt_level(0).debug(true).flag("-DDEBUG");
     }
 
     // Compile the C++ code

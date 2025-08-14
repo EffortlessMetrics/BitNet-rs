@@ -16,12 +16,15 @@ use super::MonitoringConfig;
 pub async fn init_opentelemetry(config: &MonitoringConfig) -> Result<()> {
     // Initialize tracing
     init_tracing(config).await?;
-    
+
     // Initialize metrics
     init_metrics(config).await?;
 
     tracing::info!(
-        endpoint = config.opentelemetry_endpoint.as_deref().unwrap_or("default"),
+        endpoint = config
+            .opentelemetry_endpoint
+            .as_deref()
+            .unwrap_or("default"),
         "OpenTelemetry initialized"
     );
 
@@ -38,7 +41,7 @@ async fn init_tracing(config: &MonitoringConfig) -> Result<()> {
                 opentelemetry_otlp::new_exporter()
                     .tonic()
                     .with_endpoint(endpoint)
-                    .with_timeout(Duration::from_secs(3))
+                    .with_timeout(Duration::from_secs(3)),
             )
             .with_trace_config(
                 opentelemetry::sdk::trace::config()
@@ -47,20 +50,19 @@ async fn init_tracing(config: &MonitoringConfig) -> Result<()> {
                         KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
                         KeyValue::new("service.namespace", "ml-inference"),
                     ]))
-                    .with_sampler(opentelemetry::sdk::trace::Sampler::TraceIdRatioBased(1.0))
+                    .with_sampler(opentelemetry::sdk::trace::Sampler::TraceIdRatioBased(1.0)),
             )
             .install_batch(opentelemetry::runtime::Tokio)?
     } else {
         // Stdout exporter for development
         opentelemetry::sdk::trace::TracerProvider::builder()
             .with_simple_exporter(opentelemetry_stdout::SpanExporter::default())
-            .with_config(
-                opentelemetry::sdk::trace::config()
-                    .with_resource(opentelemetry::sdk::Resource::new(vec![
-                        KeyValue::new("service.name", "bitnet-server"),
-                        KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
-                    ]))
-            )
+            .with_config(opentelemetry::sdk::trace::config().with_resource(
+                opentelemetry::sdk::Resource::new(vec![
+                    KeyValue::new("service.name", "bitnet-server"),
+                    KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
+                ]),
+            ))
             .build()
             .tracer("bitnet-server")
     };
@@ -102,7 +104,7 @@ pub mod tracing_utils {
 
     // Note: OpenTelemetry 0.29 has breaking changes with Span trait
     // For now, we'll provide simplified tracing utilities that work with the current API
-    
+
     /// Record inference metrics (simplified version)
     pub fn record_inference_metrics(
         model_name: &str,
@@ -117,7 +119,9 @@ pub mod tracing_utils {
             duration_ms = duration.as_millis(),
             tokens_per_second = if duration.as_millis() > 0 {
                 (tokens_generated as f64 * 1000.0) / duration.as_millis() as f64
-            } else { 0.0 },
+            } else {
+                0.0
+            },
             "Inference completed"
         );
     }
@@ -219,11 +223,7 @@ pub mod metrics_utils {
 
     /// Record model load (simplified)
     pub fn record_model_load(model: &str, format: &str) {
-        tracing::debug!(
-            model = model,
-            format = format,
-            "Model load recorded"
-        );
+        tracing::debug!(model = model, format = format, "Model load recorded");
     }
 
     /// Record model load duration (simplified)

@@ -31,10 +31,7 @@ impl PrometheusExporter {
             "Prometheus metrics exporter initialized"
         );
 
-        Ok(Self {
-            registry,
-            encoder,
-        })
+        Ok(Self { registry, encoder })
     }
 
     /// Export metrics in Prometheus format
@@ -93,7 +90,10 @@ async fn metrics_handler(
         Ok(metrics) => {
             let response = Response::builder()
                 .status(StatusCode::OK)
-                .header(header::CONTENT_TYPE, "text/plain; version=0.0.4; charset=utf-8")
+                .header(
+                    header::CONTENT_TYPE,
+                    "text/plain; version=0.0.4; charset=utf-8",
+                )
                 .body(metrics)
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             Ok(response)
@@ -108,9 +108,9 @@ async fn metrics_handler(
 /// Standard ML inference metrics for Prometheus
 pub mod standard_metrics {
     use prometheus::{
-        Counter, CounterVec, Gauge, GaugeVec, Histogram, HistogramVec,
         register_counter, register_counter_vec, register_gauge, register_gauge_vec,
-        register_histogram, register_histogram_vec,
+        register_histogram, register_histogram_vec, Counter, CounterVec, Gauge, GaugeVec,
+        Histogram, HistogramVec,
     };
     use std::sync::OnceLock;
 
@@ -139,78 +139,102 @@ pub mod standard_metrics {
     /// Initialize all Prometheus metrics
     pub fn init_metrics() -> Result<(), prometheus::Error> {
         // Request metrics
-        REQUESTS_TOTAL.set(register_counter_vec!(
-            "bitnet_requests_total",
-            "Total number of inference requests",
-            &["method", "endpoint", "status"]
-        )?).map_err(|_| prometheus::Error::AlreadyReg)?;
+        REQUESTS_TOTAL
+            .set(register_counter_vec!(
+                "bitnet_requests_total",
+                "Total number of inference requests",
+                &["method", "endpoint", "status"]
+            )?)
+            .map_err(|_| prometheus::Error::AlreadyReg)?;
 
-        REQUESTS_DURATION.set(register_histogram_vec!(
-            "bitnet_request_duration_seconds",
-            "Request duration in seconds",
-            &["method", "endpoint"],
-            vec![0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
-        )?).map_err(|_| prometheus::Error::AlreadyReg)?;
+        REQUESTS_DURATION
+            .set(register_histogram_vec!(
+                "bitnet_request_duration_seconds",
+                "Request duration in seconds",
+                &["method", "endpoint"],
+                vec![0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+            )?)
+            .map_err(|_| prometheus::Error::AlreadyReg)?;
 
-        REQUESTS_ACTIVE.set(register_gauge!(
-            "bitnet_requests_active",
-            "Number of active inference requests"
-        )?).map_err(|_| prometheus::Error::AlreadyReg)?;
+        REQUESTS_ACTIVE
+            .set(register_gauge!(
+                "bitnet_requests_active",
+                "Number of active inference requests"
+            )?)
+            .map_err(|_| prometheus::Error::AlreadyReg)?;
 
         // Inference metrics
-        TOKENS_GENERATED_TOTAL.set(register_counter!(
-            "bitnet_tokens_generated_total",
-            "Total number of tokens generated"
-        )?).map_err(|_| prometheus::Error::AlreadyReg)?;
+        TOKENS_GENERATED_TOTAL
+            .set(register_counter!(
+                "bitnet_tokens_generated_total",
+                "Total number of tokens generated"
+            )?)
+            .map_err(|_| prometheus::Error::AlreadyReg)?;
 
-        TOKENS_PER_SECOND.set(register_gauge!(
-            "bitnet_tokens_per_second",
-            "Current tokens generated per second"
-        )?).map_err(|_| prometheus::Error::AlreadyReg)?;
+        TOKENS_PER_SECOND
+            .set(register_gauge!(
+                "bitnet_tokens_per_second",
+                "Current tokens generated per second"
+            )?)
+            .map_err(|_| prometheus::Error::AlreadyReg)?;
 
-        INFERENCE_DURATION.set(register_histogram_vec!(
-            "bitnet_inference_duration_seconds",
-            "Inference duration in seconds",
-            &["model", "quantization"],
-            vec![0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 25.0, 60.0]
-        )?).map_err(|_| prometheus::Error::AlreadyReg)?;
+        INFERENCE_DURATION
+            .set(register_histogram_vec!(
+                "bitnet_inference_duration_seconds",
+                "Inference duration in seconds",
+                &["model", "quantization"],
+                vec![0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 25.0, 60.0]
+            )?)
+            .map_err(|_| prometheus::Error::AlreadyReg)?;
 
         // Model metrics
-        MODEL_LOAD_DURATION.set(register_histogram_vec!(
-            "bitnet_model_load_duration_seconds",
-            "Model loading duration in seconds",
-            &["model", "format"],
-            vec![0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0]
-        )?).map_err(|_| prometheus::Error::AlreadyReg)?;
+        MODEL_LOAD_DURATION
+            .set(register_histogram_vec!(
+                "bitnet_model_load_duration_seconds",
+                "Model loading duration in seconds",
+                &["model", "format"],
+                vec![0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0]
+            )?)
+            .map_err(|_| prometheus::Error::AlreadyReg)?;
 
-        MODEL_MEMORY_USAGE.set(register_gauge_vec!(
-            "bitnet_model_memory_usage_bytes",
-            "Model memory usage in bytes",
-            &["model", "component"]
-        )?).map_err(|_| prometheus::Error::AlreadyReg)?;
+        MODEL_MEMORY_USAGE
+            .set(register_gauge_vec!(
+                "bitnet_model_memory_usage_bytes",
+                "Model memory usage in bytes",
+                &["model", "component"]
+            )?)
+            .map_err(|_| prometheus::Error::AlreadyReg)?;
 
         // System metrics
-        MEMORY_USAGE_BYTES.set(register_gauge!(
-            "bitnet_memory_usage_bytes",
-            "Process memory usage in bytes"
-        )?).map_err(|_| prometheus::Error::AlreadyReg)?;
+        MEMORY_USAGE_BYTES
+            .set(register_gauge!(
+                "bitnet_memory_usage_bytes",
+                "Process memory usage in bytes"
+            )?)
+            .map_err(|_| prometheus::Error::AlreadyReg)?;
 
-        CPU_USAGE_PERCENT.set(register_gauge!(
-            "bitnet_cpu_usage_percent",
-            "CPU usage percentage"
-        )?).map_err(|_| prometheus::Error::AlreadyReg)?;
+        CPU_USAGE_PERCENT
+            .set(register_gauge!(
+                "bitnet_cpu_usage_percent",
+                "CPU usage percentage"
+            )?)
+            .map_err(|_| prometheus::Error::AlreadyReg)?;
 
-        GPU_MEMORY_USAGE_BYTES.set(register_gauge!(
-            "bitnet_gpu_memory_usage_bytes",
-            "GPU memory usage in bytes"
-        )?).map_err(|_| prometheus::Error::AlreadyReg)?;
+        GPU_MEMORY_USAGE_BYTES
+            .set(register_gauge!(
+                "bitnet_gpu_memory_usage_bytes",
+                "GPU memory usage in bytes"
+            )?)
+            .map_err(|_| prometheus::Error::AlreadyReg)?;
 
         // Error metrics
-        ERRORS_TOTAL.set(register_counter_vec!(
-            "bitnet_errors_total",
-            "Total number of errors",
-            &["type", "component"]
-        )?).map_err(|_| prometheus::Error::AlreadyReg)?;
+        ERRORS_TOTAL
+            .set(register_counter_vec!(
+                "bitnet_errors_total",
+                "Total number of errors",
+                &["type", "component"]
+            )?)
+            .map_err(|_| prometheus::Error::AlreadyReg)?;
 
         Ok(())
     }
@@ -232,7 +256,9 @@ pub mod standard_metrics {
 
     /// Get tokens generated total counter
     pub fn tokens_generated_total() -> &'static Counter {
-        TOKENS_GENERATED_TOTAL.get().expect("Metrics not initialized")
+        TOKENS_GENERATED_TOTAL
+            .get()
+            .expect("Metrics not initialized")
     }
 
     /// Get tokens per second gauge
@@ -267,7 +293,9 @@ pub mod standard_metrics {
 
     /// Get GPU memory usage gauge
     pub fn gpu_memory_usage_bytes() -> &'static Gauge {
-        GPU_MEMORY_USAGE_BYTES.get().expect("Metrics not initialized")
+        GPU_MEMORY_USAGE_BYTES
+            .get()
+            .expect("Metrics not initialized")
     }
 
     /// Get errors total counter

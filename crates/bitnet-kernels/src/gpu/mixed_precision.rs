@@ -25,7 +25,7 @@ impl MixedPrecisionKernel {
     /// Create a new mixed precision kernel provider
     pub fn new(device_id: usize) -> Result<Self> {
         log::info!("Creating mixed precision kernel for device {}", device_id);
-        
+
         Ok(Self {
             device_id,
             precision_mode: PrecisionMode::Auto,
@@ -65,9 +65,10 @@ impl MixedPrecisionKernel {
         _n: usize,
         _k: usize,
     ) -> Result<()> {
-        Err(KernelError::GpuError { 
-            reason: "FP16 implementation not yet complete - API fixes in progress".to_string() 
-        }.into())
+        Err(KernelError::GpuError {
+            reason: "FP16 implementation not yet complete - API fixes in progress".to_string(),
+        }
+        .into())
     }
 
     /// Matrix multiplication with BF16 precision (simplified)
@@ -80,9 +81,10 @@ impl MixedPrecisionKernel {
         _n: usize,
         _k: usize,
     ) -> Result<()> {
-        Err(KernelError::GpuError { 
-            reason: "BF16 implementation not yet complete - API fixes in progress".to_string() 
-        }.into())
+        Err(KernelError::GpuError {
+            reason: "BF16 implementation not yet complete - API fixes in progress".to_string(),
+        }
+        .into())
     }
 }
 
@@ -94,10 +96,10 @@ mod tests {
     fn test_mixed_precision_creation() {
         let kernel = MixedPrecisionKernel::new(0);
         assert!(kernel.is_ok());
-        
+
         if let Ok(mut kernel) = kernel {
             assert_eq!(kernel.precision_mode(), PrecisionMode::Auto);
-            
+
             kernel.set_precision_mode(PrecisionMode::FP16);
             assert_eq!(kernel.precision_mode(), PrecisionMode::FP16);
         }
@@ -106,7 +108,7 @@ mod tests {
     #[test]
     fn test_precision_support() {
         let kernel = MixedPrecisionKernel::new(0).unwrap();
-        
+
         // These will return false until API is fixed
         assert!(!kernel.supports_fp16());
         assert!(!kernel.supports_bf16());

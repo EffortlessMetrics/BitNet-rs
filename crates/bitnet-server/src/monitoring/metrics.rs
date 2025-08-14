@@ -95,7 +95,7 @@ impl RequestTracker {
     pub fn new(request_id: String, metrics: Arc<InferenceMetrics>) -> Self {
         metrics.requests_active.increment(1.0);
         metrics.requests_total.increment(1);
-        
+
         Self {
             start_time: Instant::now(),
             request_id,
@@ -105,7 +105,7 @@ impl RequestTracker {
 
     pub fn record_tokens(&self, token_count: u64) {
         self.metrics.tokens_generated_total.increment(token_count);
-        
+
         let duration = self.start_time.elapsed();
         if duration.as_secs() > 0 {
             let tokens_per_sec = token_count as f64 / duration.as_secs_f64();
@@ -128,7 +128,7 @@ impl Drop for RequestTracker {
         let duration = self.start_time.elapsed();
         self.metrics.request_duration.record(duration.as_secs_f64());
         self.metrics.requests_active.decrement(1.0);
-        
+
         tracing::info!(
             request_id = %self.request_id,
             duration_ms = duration.as_millis(),
@@ -173,11 +173,10 @@ impl MetricsCollector {
 
     /// Record model loading time
     pub fn record_model_load_time(&self, duration: Duration) {
-        self.inference.model_load_duration.record(duration.as_secs_f64());
-        tracing::info!(
-            duration_ms = duration.as_millis(),
-            "Model loaded"
-        );
+        self.inference
+            .model_load_duration
+            .record(duration.as_secs_f64());
+        tracing::info!(duration_ms = duration.as_millis(), "Model loaded");
     }
 
     /// Update queue depth
@@ -198,8 +197,12 @@ impl MetricsCollector {
 
         // Collect memory usage
         if let Ok(memory_info) = self.get_memory_info().await {
-            self.inference.memory_usage_bytes.set(memory_info.used_bytes as f64);
-            self.system.memory_usage_percent.set(memory_info.usage_percent);
+            self.inference
+                .memory_usage_bytes
+                .set(memory_info.used_bytes as f64);
+            self.system
+                .memory_usage_percent
+                .set(memory_info.usage_percent);
         }
 
         // Collect CPU usage (simplified - in production you'd use a proper system monitoring crate)
@@ -218,7 +221,7 @@ impl MetricsCollector {
 
         let mut history = self.performance_history.write().await;
         history.push(snapshot);
-        
+
         // Keep only last 1000 snapshots
         if history.len() > 1000 {
             history.remove(0);
@@ -237,32 +240,40 @@ impl MetricsCollector {
         }
 
         // Check for significant performance degradation
-        let recent_avg = history.iter()
+        let recent_avg = history
+            .iter()
             .rev()
             .take(5)
             .map(|s| s.tokens_per_second)
-            .sum::<f64>() / 5.0;
+            .sum::<f64>()
+            / 5.0;
 
-        let baseline_avg = history.iter()
+        let baseline_avg = history
+            .iter()
             .rev()
             .skip(5)
             .take(5)
             .map(|s| s.tokens_per_second)
-            .sum::<f64>() / 5.0;
+            .sum::<f64>()
+            / 5.0;
 
         if baseline_avg > 0.0 && recent_avg < baseline_avg * 0.95 {
             alerts.push(format!(
                 "Performance regression detected: {:.2} -> {:.2} tokens/sec ({:.1}% decrease)",
-                baseline_avg, recent_avg, (1.0 - recent_avg / baseline_avg) * 100.0
+                baseline_avg,
+                recent_avg,
+                (1.0 - recent_avg / baseline_avg) * 100.0
             ));
         }
 
         // Check for high error rate
-        let recent_error_rate = history.iter()
+        let recent_error_rate = history
+            .iter()
             .rev()
             .take(5)
             .map(|s| s.error_rate)
-            .sum::<f64>() / 5.0;
+            .sum::<f64>()
+            / 5.0;
 
         if recent_error_rate > 0.05 {
             alerts.push(format!(

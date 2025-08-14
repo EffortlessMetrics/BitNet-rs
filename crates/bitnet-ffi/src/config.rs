@@ -5,8 +5,8 @@
 
 use crate::BitNetCError;
 use bitnet_common::{BitNetConfig, ModelFormat, QuantizationType};
-use std::os::raw::{c_char, c_int, c_uint, c_float, c_ulong};
 use std::ffi::CStr;
+use std::os::raw::{c_char, c_float, c_int, c_uint, c_ulong};
 
 /// C API model configuration structure
 #[repr(C)]
@@ -59,7 +59,7 @@ impl Default for BitNetCConfig {
             block_size: 64,
             precision: 1e-4,
             num_threads: 0, // Auto-detect
-            use_gpu: 0, // False
+            use_gpu: 0,     // False
             batch_size: 1,
             memory_limit: 0, // No limit
         }
@@ -73,18 +73,24 @@ impl BitNetCConfig {
             0 => ModelFormat::Gguf,
             1 => ModelFormat::SafeTensors,
             2 => ModelFormat::HuggingFace,
-            _ => return Err(BitNetCError::InvalidArgument(
-                format!("Invalid model format: {}", self.model_format)
-            )),
+            _ => {
+                return Err(BitNetCError::InvalidArgument(format!(
+                    "Invalid model format: {}",
+                    self.model_format
+                )))
+            }
         };
 
         let quantization_type = match self.quantization_type {
             0 => QuantizationType::I2S,
             1 => QuantizationType::TL1,
             2 => QuantizationType::TL2,
-            _ => return Err(BitNetCError::InvalidArgument(
-                format!("Invalid quantization type: {}", self.quantization_type)
-            )),
+            _ => {
+                return Err(BitNetCError::InvalidArgument(format!(
+                    "Invalid quantization type: {}",
+                    self.quantization_type
+                )))
+            }
         };
 
         let model_path = if self.model_path.is_null() {
@@ -92,9 +98,9 @@ impl BitNetCConfig {
         } else {
             let path_str = unsafe { CStr::from_ptr(self.model_path) }
                 .to_str()
-                .map_err(|e| BitNetCError::InvalidArgument(
-                    format!("Invalid UTF-8 in model path: {}", e)
-                ))?;
+                .map_err(|e| {
+                    BitNetCError::InvalidArgument(format!("Invalid UTF-8 in model path: {}", e))
+                })?;
             Some(std::path::PathBuf::from(path_str))
         };
 
@@ -223,43 +229,43 @@ impl BitNetCInferenceConfig {
     pub fn validate(&self) -> Result<(), BitNetCError> {
         if self.max_length == 0 {
             return Err(BitNetCError::InvalidArgument(
-                "max_length must be greater than 0".to_string()
+                "max_length must be greater than 0".to_string(),
             ));
         }
 
         if self.max_new_tokens == 0 {
             return Err(BitNetCError::InvalidArgument(
-                "max_new_tokens must be greater than 0".to_string()
+                "max_new_tokens must be greater than 0".to_string(),
             ));
         }
 
         if self.temperature <= 0.0 {
             return Err(BitNetCError::InvalidArgument(
-                "temperature must be greater than 0".to_string()
+                "temperature must be greater than 0".to_string(),
             ));
         }
 
         if self.top_p < 0.0 || self.top_p > 1.0 {
             return Err(BitNetCError::InvalidArgument(
-                "top_p must be between 0.0 and 1.0".to_string()
+                "top_p must be between 0.0 and 1.0".to_string(),
             ));
         }
 
         if self.repetition_penalty <= 0.0 {
             return Err(BitNetCError::InvalidArgument(
-                "repetition_penalty must be greater than 0".to_string()
+                "repetition_penalty must be greater than 0".to_string(),
             ));
         }
 
         if self.backend_preference > 2 {
             return Err(BitNetCError::InvalidArgument(
-                "backend_preference must be 0 (auto), 1 (cpu), or 2 (gpu)".to_string()
+                "backend_preference must be 0 (auto), 1 (cpu), or 2 (gpu)".to_string(),
             ));
         }
 
         if self.stream_buffer_size == 0 {
             return Err(BitNetCError::InvalidArgument(
-                "stream_buffer_size must be greater than 0".to_string()
+                "stream_buffer_size must be greater than 0".to_string(),
             ));
         }
 
@@ -271,11 +277,23 @@ impl BitNetCInferenceConfig {
         bitnet_common::GenerationConfig {
             max_new_tokens: self.max_new_tokens as usize,
             temperature: self.temperature,
-            top_k: if self.top_k == 0 { None } else { Some(self.top_k as usize) },
-            top_p: if self.top_p == 0.0 { None } else { Some(self.top_p) },
+            top_k: if self.top_k == 0 {
+                None
+            } else {
+                Some(self.top_k as usize)
+            },
+            top_p: if self.top_p == 0.0 {
+                None
+            } else {
+                Some(self.top_p)
+            },
             repetition_penalty: self.repetition_penalty,
             do_sample: self.do_sample != 0,
-            seed: if self.seed == 0 { None } else { Some(self.seed as u64) },
+            seed: if self.seed == 0 {
+                None
+            } else {
+                Some(self.seed as u64)
+            },
         }
     }
 }
@@ -327,17 +345,15 @@ impl BitNetCPerformanceMetrics {
             gpu_utilization: metrics.gpu_utilization.unwrap_or(-1.0) as c_float,
             total_inference_time_ms: metrics.latency_ms as c_float,
             time_to_first_token_ms: 0.0, // Not available in base metrics
-            tokens_generated: 0, // Not available in base metrics
-            prompt_tokens: 0, // Not available in base metrics
+            tokens_generated: 0,         // Not available in base metrics
+            prompt_tokens: 0,            // Not available in base metrics
         }
     }
 }
 
 /// C API streaming callback function type
-pub type BitNetCStreamCallback = Option<extern "C" fn(
-    token: *const c_char,
-    user_data: *mut std::ffi::c_void,
-) -> c_int>;
+pub type BitNetCStreamCallback =
+    Option<extern "C" fn(token: *const c_char, user_data: *mut std::ffi::c_void) -> c_int>;
 
 /// C API streaming configuration
 #[repr(C)]
@@ -378,10 +394,13 @@ mod tests {
     fn test_config_conversion() {
         let c_config = BitNetCConfig::default();
         let rust_config = c_config.to_bitnet_config().unwrap();
-        
+
         assert_eq!(rust_config.model.vocab_size, 32000);
         assert_eq!(rust_config.model.hidden_size, 4096);
-        assert_eq!(rust_config.quantization.quantization_type, QuantizationType::I2S);
+        assert_eq!(
+            rust_config.quantization.quantization_type,
+            QuantizationType::I2S
+        );
     }
 
     #[test]

@@ -24,15 +24,17 @@ impl StreamingManager {
     /// Store a streaming session and return its ID
     pub fn store_session(&self, session: StreamingSession) -> Result<u32, BitNetCError> {
         let session_id = {
-            let mut next_id = self.next_id.lock()
-                .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire next ID lock".to_string()))?;
+            let mut next_id = self.next_id.lock().map_err(|_| {
+                BitNetCError::ThreadSafety("Failed to acquire next ID lock".to_string())
+            })?;
             let id = *next_id;
             *next_id += 1;
             id
         };
 
-        let mut sessions = self.sessions.lock()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire sessions lock".to_string()))?;
+        let mut sessions = self.sessions.lock().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire sessions lock".to_string())
+        })?;
         sessions.insert(session_id, session);
 
         Ok(session_id)
@@ -40,49 +42,60 @@ impl StreamingManager {
 
     /// Remove a streaming session
     pub fn remove_session(&self, session_id: u32) -> Result<(), BitNetCError> {
-        let mut sessions = self.sessions.lock()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire sessions lock".to_string()))?;
-        
+        let mut sessions = self.sessions.lock().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire sessions lock".to_string())
+        })?;
+
         match sessions.remove(&session_id) {
             Some(_) => Ok(()),
-            None => Err(BitNetCError::InvalidArgument(format!("Stream ID {} not found", session_id))),
+            None => Err(BitNetCError::InvalidArgument(format!(
+                "Stream ID {} not found",
+                session_id
+            ))),
         }
     }
 
     /// Get the next token from a streaming session
     pub fn get_next_token(&self, session_id: u32) -> Result<Option<String>, BitNetCError> {
-        let mut sessions = self.sessions.lock()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire sessions lock".to_string()))?;
-        
+        let mut sessions = self.sessions.lock().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire sessions lock".to_string())
+        })?;
+
         match sessions.get_mut(&session_id) {
             Some(session) => session.next_token(),
-            None => Err(BitNetCError::InvalidArgument(format!("Stream ID {} not found", session_id))),
+            None => Err(BitNetCError::InvalidArgument(format!(
+                "Stream ID {} not found",
+                session_id
+            ))),
         }
     }
 
     /// Check if a streaming session exists
     pub fn has_session(&self, session_id: u32) -> Result<bool, BitNetCError> {
-        let sessions = self.sessions.lock()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire sessions lock".to_string()))?;
+        let sessions = self.sessions.lock().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire sessions lock".to_string())
+        })?;
         Ok(sessions.contains_key(&session_id))
     }
 
     /// Get the number of active streaming sessions
     pub fn active_session_count(&self) -> Result<usize, BitNetCError> {
-        let sessions = self.sessions.lock()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire sessions lock".to_string()))?;
+        let sessions = self.sessions.lock().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire sessions lock".to_string())
+        })?;
         Ok(sessions.len())
     }
 
     /// Clean up finished sessions
     pub fn cleanup_finished_sessions(&self) -> Result<usize, BitNetCError> {
-        let mut sessions = self.sessions.lock()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire sessions lock".to_string()))?;
-        
+        let mut sessions = self.sessions.lock().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire sessions lock".to_string())
+        })?;
+
         let initial_count = sessions.len();
         sessions.retain(|_, session| !session.is_finished());
         let final_count = sessions.len();
-        
+
         Ok(initial_count - final_count)
     }
 }
@@ -115,7 +128,9 @@ pub fn get_next_token(session_id: u32) -> Result<Option<String>, BitNetCError> {
 
 /// Check if a streaming session exists
 pub fn has_streaming_session(session_id: u32) -> bool {
-    get_streaming_manager().has_session(session_id).unwrap_or(false)
+    get_streaming_manager()
+        .has_session(session_id)
+        .unwrap_or(false)
 }
 
 /// Get the number of active streaming sessions
@@ -125,7 +140,9 @@ pub fn get_active_session_count() -> usize {
 
 /// Clean up finished streaming sessions
 pub fn cleanup_finished_sessions() -> usize {
-    get_streaming_manager().cleanup_finished_sessions().unwrap_or(0)
+    get_streaming_manager()
+        .cleanup_finished_sessions()
+        .unwrap_or(0)
 }
 
 /// Streaming callback wrapper for C callbacks
@@ -148,13 +165,16 @@ impl CallbackWrapper {
     /// Call the C callback with a token
     pub fn call(&self, token: &str) -> Result<bool, BitNetCError> {
         if let Some(callback_fn) = self.callback {
-            let token_cstr = std::ffi::CString::new(token)
-                .map_err(|_| BitNetCError::Internal("Failed to create C string for token".to_string()))?;
-            
+            let token_cstr = std::ffi::CString::new(token).map_err(|_| {
+                BitNetCError::Internal("Failed to create C string for token".to_string())
+            })?;
+
             let result = callback_fn(token_cstr.as_ptr(), self.user_data);
             Ok(result == 0) // 0 means continue, non-zero means stop
         } else {
-            Err(BitNetCError::InvalidArgument("Callback function is null".to_string()))
+            Err(BitNetCError::InvalidArgument(
+                "Callback function is null".to_string(),
+            ))
         }
     }
 }
@@ -169,11 +189,11 @@ mod tests {
     #[test]
     fn test_streaming_manager() {
         let manager = StreamingManager::new();
-        
+
         // Test initial state
         assert_eq!(manager.active_session_count().unwrap(), 0);
         assert!(!manager.has_session(0).unwrap());
-        
+
         // Test session storage would require a real StreamingSession
         // This is a placeholder test
         assert_eq!(manager.active_session_count().unwrap(), 0);

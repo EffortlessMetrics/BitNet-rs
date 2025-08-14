@@ -1,16 +1,16 @@
 //! GPU kernel implementations
 
-pub mod cuda;
-pub mod mixed_precision;
-pub mod memory_optimization;
-pub mod validation;
 pub mod benchmark;
+pub mod cuda;
+pub mod memory_optimization;
+pub mod mixed_precision;
+pub mod validation;
 
 #[cfg(test)]
 mod tests;
 
-pub use cuda::*;
-pub use mixed_precision::*;
-pub use memory_optimization::*;
-pub use validation::*;
 pub use benchmark::*;
+pub use cuda::*;
+pub use memory_optimization::*;
+pub use mixed_precision::*;
+pub use validation::*;

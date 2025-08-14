@@ -1,9 +1,9 @@
 //! Utility functions and types for WebAssembly bindings
 
+use js_sys::{Array, Object, Reflect, Uint8Array};
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
-use js_sys::{Object, Reflect, Array, Uint8Array};
 use web_sys::{console, Performance, Window};
-use serde::{Serialize, Deserialize};
 
 /// JavaScript-friendly error type
 #[wasm_bindgen]
@@ -93,7 +93,7 @@ impl PerformanceMonitor {
     pub fn new() -> PerformanceMonitor {
         let start_time = get_current_time();
         console::log_1(&format!("Performance monitor started at {:.2}ms", start_time).into());
-        
+
         PerformanceMonitor {
             start_time,
             marks: Vec::new(),
@@ -106,7 +106,7 @@ impl PerformanceMonitor {
         let time = get_current_time();
         let elapsed = time - self.start_time;
         self.marks.push((name.to_string(), elapsed));
-        
+
         console::log_1(&format!("Performance mark '{}': {:.2}ms", name, elapsed).into());
     }
 
@@ -245,10 +245,10 @@ pub fn validate_config<T: Serialize + for<'de> Deserialize<'de>>(
     // Serialize and deserialize to validate structure
     let json = serde_json::to_string(config)
         .map_err(|e| JsError::with_name("ConfigValidationError", &e.to_string()))?;
-    
+
     let _: T = serde_json::from_str(&json)
         .map_err(|e| JsError::with_name("ConfigValidationError", &e.to_string()))?;
-    
+
     Ok(())
 }
 
@@ -263,10 +263,7 @@ impl AsyncUtils {
     pub fn delay(ms: i32) -> js_sys::Promise {
         js_sys::Promise::new(&mut |resolve, _reject| {
             if let Some(window) = web_sys::window() {
-                let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
-                    &resolve,
-                    ms,
-                );
+                let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms);
             }
         })
     }
@@ -315,14 +312,16 @@ impl MemoryUtils {
     #[wasm_bindgen]
     pub fn parse_bytes(input: &str) -> Result<usize, JsError> {
         let input = input.trim().to_uppercase();
-        
+
         let (number_part, unit_part) = if let Some(pos) = input.find(char::is_alphabetic) {
             (&input[..pos], &input[pos..])
         } else {
             (input.as_str(), "B")
         };
 
-        let number: f64 = number_part.trim().parse()
+        let number: f64 = number_part
+            .trim()
+            .parse()
             .map_err(|_| JsError::new("Invalid number format"))?;
 
         let multiplier = match unit_part.trim() {
@@ -374,8 +373,16 @@ impl FeatureDetection {
     pub fn get_feature_support() -> JsValue {
         let obj = Object::new();
         let _ = Reflect::set(&obj, &"simd".into(), &Self::supports_wasm_simd().into());
-        let _ = Reflect::set(&obj, &"threads".into(), &Self::supports_wasm_threads().into());
-        let _ = Reflect::set(&obj, &"bulkMemory".into(), &Self::supports_wasm_bulk_memory().into());
+        let _ = Reflect::set(
+            &obj,
+            &"threads".into(),
+            &Self::supports_wasm_threads().into(),
+        );
+        let _ = Reflect::set(
+            &obj,
+            &"bulkMemory".into(),
+            &Self::supports_wasm_bulk_memory().into(),
+        );
         obj.into()
     }
 }

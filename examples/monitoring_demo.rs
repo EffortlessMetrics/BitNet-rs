@@ -1,8 +1,8 @@
 //! Demonstration of BitNet server monitoring capabilities
 
 use anyhow::Result;
-use bitnet_server::{BitNetServer, ServerConfig};
 use bitnet_server::monitoring::MonitoringConfig;
+use bitnet_server::{BitNetServer, ServerConfig};
 use reqwest;
 use serde_json::json;
 use std::time::Duration;
@@ -11,12 +11,10 @@ use tokio::time::sleep;
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize tracing for the demo
-    tracing_subscriber::fmt()
-        .with_env_filter("info")
-        .init();
+    tracing_subscriber::fmt().with_env_filter("info").init();
 
     println!("🚀 Starting BitNet Server Monitoring Demo");
-    
+
     // Create server configuration with monitoring enabled
     let config = ServerConfig {
         host: "127.0.0.1".to_string(),
@@ -52,7 +50,7 @@ async fn main() -> Result<()> {
 
     // Demonstrate monitoring endpoints
     println!("\n📊 Testing Monitoring Endpoints:");
-    
+
     // 1. Health check
     println!("1. Health Check:");
     match client.get(&format!("{}/health", base_url)).send().await {
@@ -67,7 +65,11 @@ async fn main() -> Result<()> {
 
     // 2. Liveness probe
     println!("\n2. Liveness Probe:");
-    match client.get(&format!("{}/health/live", base_url)).send().await {
+    match client
+        .get(&format!("{}/health/live", base_url))
+        .send()
+        .await
+    {
         Ok(response) => {
             println!("   Status: {}", response.status());
         }
@@ -76,7 +78,11 @@ async fn main() -> Result<()> {
 
     // 3. Readiness probe
     println!("\n3. Readiness Probe:");
-    match client.get(&format!("{}/health/ready", base_url)).send().await {
+    match client
+        .get(&format!("{}/health/ready", base_url))
+        .send()
+        .await
+    {
         Ok(response) => {
             println!("   Status: {}", response.status());
         }
@@ -106,7 +112,7 @@ async fn main() -> Result<()> {
     println!("\n🔄 Generating Load for Metrics Demo:");
     for i in 1..=5 {
         println!("   Request {}/5", i);
-        
+
         let request_body = json!({
             "prompt": format!("Test prompt number {}", i),
             "max_tokens": 20 + i * 10,
@@ -161,11 +167,23 @@ async fn main() -> Result<()> {
         Ok(response) => {
             if let Ok(body) = response.text().await {
                 if let Ok(health) = serde_json::from_str::<serde_json::Value>(&body) {
-                    println!("   Overall Status: {}", health.get("status").unwrap_or(&json!("unknown")));
-                    println!("   Uptime: {} seconds", health.get("uptime_seconds").unwrap_or(&json!(0)));
+                    println!(
+                        "   Overall Status: {}",
+                        health.get("status").unwrap_or(&json!("unknown"))
+                    );
+                    println!(
+                        "   Uptime: {} seconds",
+                        health.get("uptime_seconds").unwrap_or(&json!(0))
+                    );
                     if let Some(metrics) = health.get("metrics") {
-                        println!("   Active Requests: {}", metrics.get("active_requests").unwrap_or(&json!(0)));
-                        println!("   Total Requests: {}", metrics.get("total_requests").unwrap_or(&json!(0)));
+                        println!(
+                            "   Active Requests: {}",
+                            metrics.get("active_requests").unwrap_or(&json!(0))
+                        );
+                        println!(
+                            "   Total Requests: {}",
+                            metrics.get("total_requests").unwrap_or(&json!(0))
+                        );
                     }
                 }
             }
@@ -180,7 +198,7 @@ async fn main() -> Result<()> {
     println!("   ✅ Request tracking and performance metrics");
     println!("   ✅ Structured logging with request correlation");
     println!("   ✅ Real-time metrics collection during inference");
-    
+
     println!("\n🔧 Production Features Available:");
     println!("   • OpenTelemetry distributed tracing");
     println!("   • Automatic performance regression detection");

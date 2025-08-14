@@ -374,15 +374,18 @@ mod tests {
         let gen_config = GenerationConfig::default();
         let serialized = serde_json::to_string(&gen_config).unwrap();
         let deserialized: GenerationConfig = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(gen_config.max_new_tokens, deserialized.max_new_tokens);
         assert_eq!(gen_config.temperature, deserialized.temperature);
 
         let inf_config = InferenceConfig::default();
         let serialized = serde_json::to_string(&inf_config).unwrap();
         let deserialized: InferenceConfig = serde_json::from_str(&serialized).unwrap();
-        
-        assert_eq!(inf_config.max_context_length, deserialized.max_context_length);
+
+        assert_eq!(
+            inf_config.max_context_length,
+            deserialized.max_context_length
+        );
         assert_eq!(inf_config.num_threads, deserialized.num_threads);
     }
 }

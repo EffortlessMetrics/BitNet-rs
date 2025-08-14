@@ -3,22 +3,24 @@
 //! High-performance inference engine for BitNet models with streaming support,
 //! CPU/GPU backends, and comprehensive sampling strategies.
 
-pub mod engine;
-pub mod streaming;
-pub mod sampling;
+pub mod backends;
 pub mod cache;
 pub mod config;
-pub mod backends;
+pub mod engine;
 pub mod parity;
+pub mod sampling;
 pub mod simple_forward;
+pub mod streaming;
 
-pub use engine::{InferenceEngine, InferenceResult};
-pub use streaming::{GenerationStream, StreamingConfig};
-pub use sampling::{SamplingStrategy, SamplingConfig};
-pub use cache::{KVCache, CacheConfig};
-pub use config::{InferenceConfig, GenerationConfig};
 pub use backends::{Backend, CpuBackend, GpuBackend};
-pub use parity::{eval_logits_once, eval_logits_incremental, get_model_vocab_size, get_model_config};
+pub use cache::{CacheConfig, KVCache};
+pub use config::{GenerationConfig, InferenceConfig};
+pub use engine::{InferenceEngine, InferenceResult};
+pub use parity::{
+    eval_logits_incremental, eval_logits_once, get_model_config, get_model_vocab_size,
+};
+pub use sampling::{SamplingConfig, SamplingStrategy};
+pub use streaming::{GenerationStream, StreamingConfig};
 
 use anyhow::Result;
 use bitnet_common::{BitNetConfig, Device, Tensor};
@@ -29,9 +31,9 @@ use std::sync::Arc;
 /// Re-export commonly used types
 pub mod prelude {
     pub use super::{
-        InferenceEngine, InferenceResult, GenerationStream, StreamingConfig,
-        SamplingStrategy, SamplingConfig, KVCache, CacheConfig,
-        InferenceConfig, GenerationConfig, Backend, CpuBackend, GpuBackend,
+        Backend, CacheConfig, CpuBackend, GenerationConfig, GenerationStream, GpuBackend,
+        InferenceConfig, InferenceEngine, InferenceResult, KVCache, SamplingConfig,
+        SamplingStrategy, StreamingConfig,
     };
     pub use anyhow::Result;
     pub use futures_util::{Stream, StreamExt};

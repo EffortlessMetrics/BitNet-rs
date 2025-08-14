@@ -5,8 +5,8 @@
 //! the existing C++ API error handling patterns.
 
 use bitnet_common::BitNetError;
-use std::sync::Mutex;
 use std::fmt;
+use std::sync::Mutex;
 
 /// C API error types
 #[derive(Debug, Clone)]
@@ -43,7 +43,9 @@ impl fmt::Display for BitNetCError {
             BitNetCError::OutOfMemory(msg) => write!(f, "Out of memory: {}", msg),
             BitNetCError::ThreadSafety(msg) => write!(f, "Thread safety violation: {}", msg),
             BitNetCError::InvalidModelId(msg) => write!(f, "Invalid model ID: {}", msg),
-            BitNetCError::ContextLengthExceeded(msg) => write!(f, "Context length exceeded: {}", msg),
+            BitNetCError::ContextLengthExceeded(msg) => {
+                write!(f, "Context length exceeded: {}", msg)
+            }
             BitNetCError::UnsupportedOperation(msg) => write!(f, "Unsupported operation: {}", msg),
             BitNetCError::Internal(msg) => write!(f, "Internal error: {}", msg),
         }
@@ -53,60 +55,58 @@ impl fmt::Display for BitNetCError {
 impl From<BitNetError> for BitNetCError {
     fn from(error: BitNetError) -> Self {
         match error {
-            BitNetError::Model(model_error) => {
-                match model_error {
-                    bitnet_common::ModelError::NotFound { path } => {
-                        BitNetCError::ModelNotFound(format!("Model file not found: {}", path))
-                    }
-                    bitnet_common::ModelError::InvalidFormat { format } => {
-                        BitNetCError::ModelLoadFailed(format!("Invalid model format: {}", format))
-                    }
-                    bitnet_common::ModelError::LoadingFailed { reason } => {
-                        BitNetCError::ModelLoadFailed(reason)
-                    }
-                    bitnet_common::ModelError::UnsupportedVersion { version } => {
-                        BitNetCError::ModelLoadFailed(format!("Unsupported model version: {}", version))
-                    }
+            BitNetError::Model(model_error) => match model_error {
+                bitnet_common::ModelError::NotFound { path } => {
+                    BitNetCError::ModelNotFound(format!("Model file not found: {}", path))
                 }
-            }
+                bitnet_common::ModelError::InvalidFormat { format } => {
+                    BitNetCError::ModelLoadFailed(format!("Invalid model format: {}", format))
+                }
+                bitnet_common::ModelError::LoadingFailed { reason } => {
+                    BitNetCError::ModelLoadFailed(reason)
+                }
+                bitnet_common::ModelError::UnsupportedVersion { version } => {
+                    BitNetCError::ModelLoadFailed(format!("Unsupported model version: {}", version))
+                }
+            },
             BitNetError::Quantization(quant_error) => {
                 BitNetCError::ModelLoadFailed(format!("Quantization error: {}", quant_error))
             }
-            BitNetError::Kernel(kernel_error) => {
-                match kernel_error {
-                    bitnet_common::KernelError::NoProvider => {
-                        BitNetCError::UnsupportedOperation("No kernel provider available".to_string())
-                    }
-                    bitnet_common::KernelError::ExecutionFailed { reason } => {
-                        BitNetCError::InferenceFailed(format!("Kernel execution failed: {}", reason))
-                    }
-                    bitnet_common::KernelError::UnsupportedArchitecture { arch } => {
-                        BitNetCError::UnsupportedOperation(format!("Unsupported architecture: {}", arch))
-                    }
-                    bitnet_common::KernelError::GpuError { reason } => {
-                        BitNetCError::InferenceFailed(format!("GPU error: {}", reason))
-                    }
+            BitNetError::Kernel(kernel_error) => match kernel_error {
+                bitnet_common::KernelError::NoProvider => {
+                    BitNetCError::UnsupportedOperation("No kernel provider available".to_string())
                 }
-            }
-            BitNetError::Inference(inference_error) => {
-                match inference_error {
-                    bitnet_common::InferenceError::GenerationFailed { reason } => {
-                        BitNetCError::InferenceFailed(reason)
-                    }
-                    bitnet_common::InferenceError::InvalidInput { reason } => {
-                        BitNetCError::InvalidArgument(reason)
-                    }
-                    bitnet_common::InferenceError::ContextLengthExceeded { length } => {
-                        BitNetCError::ContextLengthExceeded(format!("Context length {} exceeded maximum", length))
-                    }
-                    bitnet_common::InferenceError::TokenizationFailed { reason } => {
-                        BitNetCError::InferenceFailed(format!("Tokenization failed: {}", reason))
-                    }
+                bitnet_common::KernelError::ExecutionFailed { reason } => {
+                    BitNetCError::InferenceFailed(format!("Kernel execution failed: {}", reason))
                 }
-            }
-            BitNetError::Io(io_error) => {
-                BitNetCError::Internal(format!("IO error: {}", io_error))
-            }
+                bitnet_common::KernelError::UnsupportedArchitecture { arch } => {
+                    BitNetCError::UnsupportedOperation(format!(
+                        "Unsupported architecture: {}",
+                        arch
+                    ))
+                }
+                bitnet_common::KernelError::GpuError { reason } => {
+                    BitNetCError::InferenceFailed(format!("GPU error: {}", reason))
+                }
+            },
+            BitNetError::Inference(inference_error) => match inference_error {
+                bitnet_common::InferenceError::GenerationFailed { reason } => {
+                    BitNetCError::InferenceFailed(reason)
+                }
+                bitnet_common::InferenceError::InvalidInput { reason } => {
+                    BitNetCError::InvalidArgument(reason)
+                }
+                bitnet_common::InferenceError::ContextLengthExceeded { length } => {
+                    BitNetCError::ContextLengthExceeded(format!(
+                        "Context length {} exceeded maximum",
+                        length
+                    ))
+                }
+                bitnet_common::InferenceError::TokenizationFailed { reason } => {
+                    BitNetCError::InferenceFailed(format!("Tokenization failed: {}", reason))
+                }
+            },
+            BitNetError::Io(io_error) => BitNetCError::Internal(format!("IO error: {}", io_error)),
             BitNetError::Candle(candle_error) => {
                 BitNetCError::Internal(format!("Candle error: {}", candle_error))
             }
@@ -159,12 +159,17 @@ where
 macro_rules! safe_cstr {
     ($ptr:expr) => {
         if $ptr.is_null() {
-            return Err(BitNetCError::InvalidArgument("String pointer is null".to_string()));
+            return Err(BitNetCError::InvalidArgument(
+                "String pointer is null".to_string(),
+            ));
         }
         match unsafe { std::ffi::CStr::from_ptr($ptr) }.to_str() {
             Ok(s) => s,
             Err(e) => {
-                return Err(BitNetCError::InvalidArgument(format!("Invalid UTF-8 string: {}", e)));
+                return Err(BitNetCError::InvalidArgument(format!(
+                    "Invalid UTF-8 string: {}",
+                    e
+                )));
             }
         }
     };
@@ -175,7 +180,10 @@ macro_rules! safe_cstr {
 macro_rules! validate_ptr {
     ($ptr:expr, $name:expr) => {
         if $ptr.is_null() {
-            return Err(BitNetCError::InvalidArgument(format!("{} cannot be null", $name)));
+            return Err(BitNetCError::InvalidArgument(format!(
+                "{} cannot be null",
+                $name
+            )));
         }
     };
 }
@@ -185,7 +193,9 @@ macro_rules! validate_ptr {
 macro_rules! validate_model_id {
     ($id:expr) => {
         if $id < 0 {
-            return Err(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
+            return Err(BitNetCError::InvalidArgument(
+                "model_id must be non-negative".to_string(),
+            ));
         }
     };
 }
@@ -193,7 +203,7 @@ macro_rules! validate_model_id {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bitnet_common::{ModelError, InferenceError};
+    use bitnet_common::{InferenceError, ModelError};
 
     #[test]
     fn test_error_conversion() {
@@ -201,7 +211,7 @@ mod tests {
             path: "test.gguf".to_string(),
         });
         let c_error: BitNetCError = model_error.into();
-        
+
         match c_error {
             BitNetCError::ModelNotFound(msg) => {
                 assert!(msg.contains("test.gguf"));
@@ -214,13 +224,13 @@ mod tests {
     fn test_error_state_management() {
         clear_last_error();
         assert!(get_last_error().is_none());
-        
+
         let error = BitNetCError::InvalidArgument("test error".to_string());
         set_last_error(error.clone());
-        
+
         let retrieved_error = get_last_error();
         assert!(retrieved_error.is_some());
-        
+
         clear_last_error();
         assert!(get_last_error().is_none());
     }

@@ -41,19 +41,19 @@ pub fn load_minimal(mode: LoadMode) -> Result<MinimalWeights> {
         LoadMode::Dummy { vocab, dim } => {
             // Use deterministic RNG for reproducible results
             let mut rng = ChaCha8Rng::from_seed(*b"bitnet-mini-weights!bitnet-mini!");
-            
+
             // Initialize embeddings with small random values
             let mut tok = vec![0f32; vocab * dim];
             for x in &mut tok {
                 *x = rng.gen::<f32>() * 0.02 - 0.01;
             }
-            
+
             // Initialize lm_head with small random values
             let mut head = vec![0f32; dim * vocab];
             for x in &mut head {
                 *x = rng.gen::<f32>() * 0.02 - 0.01;
             }
-            
+
             Ok(MinimalWeights {
                 tok_embeddings: tok,
                 lm_head: head,
@@ -82,21 +82,29 @@ mod tests {
     #[test]
     fn test_dummy_weights_deterministic() {
         // Test that dummy weights are deterministic
-        let w1 = load_minimal(LoadMode::Dummy { vocab: 100, dim: 64 }).unwrap();
-        let w2 = load_minimal(LoadMode::Dummy { vocab: 100, dim: 64 }).unwrap();
-        
+        let w1 = load_minimal(LoadMode::Dummy {
+            vocab: 100,
+            dim: 64,
+        })
+        .unwrap();
+        let w2 = load_minimal(LoadMode::Dummy {
+            vocab: 100,
+            dim: 64,
+        })
+        .unwrap();
+
         // Check dimensions
         assert_eq!(w1.vocab, 100);
         assert_eq!(w1.dim, 64);
         assert_eq!(w1.tok_embeddings.len(), 100 * 64);
         assert_eq!(w1.lm_head.len(), 64 * 100);
-        
+
         // Check determinism - first few values should be identical
         for i in 0..10 {
             assert_eq!(w1.tok_embeddings[i], w2.tok_embeddings[i]);
             assert_eq!(w1.lm_head[i], w2.lm_head[i]);
         }
-        
+
         // Check values are in expected range
         for &val in &w1.tok_embeddings[..10] {
             assert!(val.abs() <= 0.01);

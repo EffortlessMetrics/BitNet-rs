@@ -141,7 +141,7 @@ impl PerformanceVisualizer {
     /// Add performance comparison data
     pub fn add_comparison_data(&mut self, comparison: PerformanceComparison) {
         self.historical_data.push(comparison);
-        
+
         // Keep only the last N data points based on trend window size
         if self.historical_data.len() > self.config.trend_window_size * 2 {
             self.historical_data.drain(0..self.config.trend_window_size);
@@ -154,12 +154,12 @@ impl PerformanceVisualizer {
         output_path: &Path,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let html_content = self.generate_dashboard_html().await?;
-        
+
         // Ensure output directory exists
         if let Some(parent) = output_path.parent() {
             fs::create_dir_all(parent).await?;
         }
-        
+
         fs::write(output_path, html_content).await?;
         Ok(())
     }
@@ -167,54 +167,57 @@ impl PerformanceVisualizer {
     /// Generate the complete dashboard HTML
     async fn generate_dashboard_html(&self) -> Result<String, Box<dyn std::error::Error>> {
         let mut html = String::new();
-        
+
         // HTML document structure
         html.push_str("<!DOCTYPE html>\n");
         html.push_str("<html lang=\"en\">\n");
         html.push_str("<head>\n");
         html.push_str("    <meta charset=\"UTF-8\">\n");
-        html.push_str("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
+        html.push_str(
+            "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n",
+        );
         html.push_str("    <title>BitNet.rs Performance Dashboard</title>\n");
         html.push_str(&self.generate_dashboard_css());
-        
+
         if self.config.include_interactive_charts {
             html.push_str("    <script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>\n");
             html.push_str("    <script src=\"https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js\"></script>\n");
         }
-        
+
         html.push_str("</head>\n");
         html.push_str("<body>\n");
-        
+
         // Dashboard header
         html.push_str(&self.generate_dashboard_header());
-        
+
         // Performance summary cards
         html.push_str(&self.generate_summary_cards());
-        
+
         // Performance comparison charts
         html.push_str(&self.generate_comparison_charts());
-        
+
         // Trend analysis section
         html.push_str(&self.generate_trend_analysis());
-        
+
         // Regression detection section
         html.push_str(&self.generate_regression_analysis());
-        
+
         // Interactive controls (if enabled)
         if self.config.include_interactive_charts {
             html.push_str(&self.generate_interactive_controls());
             html.push_str(&self.generate_dashboard_javascript());
         }
-        
+
         html.push_str("</body>\n");
         html.push_str("</html>\n");
-        
+
         Ok(html)
     }
-    
+
     /// Generate CSS styles for the dashboard
     fn generate_dashboard_css(&self) -> String {
-        format!(r#"
+        format!(
+            r#"
     <style>
         * {{
             margin: 0;
@@ -486,13 +489,14 @@ impl PerformanceVisualizer {
             chart_height = self.config.chart_height
         )
     }
-    
+
     /// Generate dashboard header
     fn generate_dashboard_header(&self) -> String {
         let latest_comparison = self.historical_data.last();
         let data_points = self.historical_data.len();
-        
-        format!(r#"
+
+        format!(
+            r#"
     <div class="container">
         <div class="dashboard-header">
             <h1>BitNet.rs Performance Dashboard</h1>
@@ -504,8 +508,10 @@ impl PerformanceVisualizer {
 "#,
             data_points,
             if let Some(comparison) = latest_comparison {
-                format!("| Last updated: {}", 
-                    comparison.timestamp
+                format!(
+                    "| Last updated: {}",
+                    comparison
+                        .timestamp
                         .duration_since(SystemTime::UNIX_EPOCH)
                         .unwrap_or_default()
                         .as_secs()
@@ -526,27 +532,29 @@ impl PerformanceVisualizer {
                 <p class="metric-label">Performance data not available</p>
             </div>
         </div>
-"#.to_string();
+"#
+            .to_string();
         }
 
         let latest = self.historical_data.last().unwrap();
         let performance_change = if self.historical_data.len() > 1 {
             let previous = &self.historical_data[self.historical_data.len() - 2];
-            latest.comparison_results.performance_improvement - 
-            previous.comparison_results.performance_improvement
+            latest.comparison_results.performance_improvement
+                - previous.comparison_results.performance_improvement
         } else {
             0.0
         };
 
         let memory_change = if self.historical_data.len() > 1 {
             let previous = &self.historical_data[self.historical_data.len() - 2];
-            latest.comparison_results.memory_improvement - 
-            previous.comparison_results.memory_improvement
+            latest.comparison_results.memory_improvement
+                - previous.comparison_results.memory_improvement
         } else {
             0.0
         };
 
-        format!(r#"
+        format!(
+            r#"
         <div class="summary-cards">
             <div class="summary-card {}">
                 <h3>{:.1}%</h3>
@@ -578,32 +586,62 @@ impl PerformanceVisualizer {
             </div>
         </div>
 "#,
-            if latest.comparison_results.performance_improvement > 0.0 { "improvement" } else { "regression" },
+            if latest.comparison_results.performance_improvement > 0.0 {
+                "improvement"
+            } else {
+                "regression"
+            },
             latest.comparison_results.performance_improvement,
-            if performance_change >= 0.0 { "positive" } else { "negative" },
-            if performance_change >= 0.0 { "↑" } else { "↓" },
+            if performance_change >= 0.0 {
+                "positive"
+            } else {
+                "negative"
+            },
+            if performance_change >= 0.0 {
+                "↑"
+            } else {
+                "↓"
+            },
             performance_change.abs(),
-            
-            if latest.comparison_results.memory_improvement > 0.0 { "improvement" } else { "regression" },
+            if latest.comparison_results.memory_improvement > 0.0 {
+                "improvement"
+            } else {
+                "regression"
+            },
             latest.comparison_results.memory_improvement,
-            if memory_change >= 0.0 { "positive" } else { "negative" },
+            if memory_change >= 0.0 {
+                "positive"
+            } else {
+                "negative"
+            },
             if memory_change >= 0.0 { "↑" } else { "↓" },
             memory_change.abs(),
-            
             "neutral",
             latest.comparison_results.throughput_ratio,
-            
-            if latest.comparison_results.regression_detected { "regression" } else { "improvement" },
-            if latest.comparison_results.regression_detected { "DETECTED" } else { "CLEAR" },
-            if latest.comparison_results.regression_detected { "negative" } else { "positive" },
+            if latest.comparison_results.regression_detected {
+                "regression"
+            } else {
+                "improvement"
+            },
+            if latest.comparison_results.regression_detected {
+                "DETECTED"
+            } else {
+                "CLEAR"
+            },
+            if latest.comparison_results.regression_detected {
+                "negative"
+            } else {
+                "positive"
+            },
             self.config.regression_threshold
         )
-    }   
- /// Generate performance comparison charts
+    }
+    /// Generate performance comparison charts
     fn generate_comparison_charts(&self) -> String {
         let mut html = String::new();
-        
-        html.push_str(r#"
+
+        html.push_str(
+            r#"
         <div class="chart-section">
             <h2>Performance Comparison Charts</h2>
             <div class="chart-grid">
@@ -633,27 +671,33 @@ impl PerformanceVisualizer {
                 </div>
             </div>
         </div>
-"#);
-        
+"#,
+        );
+
         html
     }
 
     /// Generate trend analysis section
     fn generate_trend_analysis(&self) -> String {
         let trends = self.analyze_performance_trends();
-        
+
         let mut html = String::new();
-        html.push_str(r#"
+        html.push_str(
+            r#"
         <div class="chart-section">
             <h2>Performance Trend Analysis</h2>
-"#);
+"#,
+        );
 
         if trends.is_empty() {
-            html.push_str(r#"
+            html.push_str(
+                r#"
             <p>Insufficient data for trend analysis. Need at least 5 data points.</p>
-"#);
+"#,
+            );
         } else {
-            html.push_str(r#"
+            html.push_str(
+                r#"
             <div class="performance-table-container">
                 <table class="performance-table">
                     <thead>
@@ -665,7 +709,8 @@ impl PerformanceVisualizer {
                         </tr>
                     </thead>
                     <tbody>
-"#);
+"#,
+            );
 
             for trend in &trends {
                 let trend_class = match trend.trend_direction {
@@ -675,7 +720,8 @@ impl PerformanceVisualizer {
                     TrendDirection::Volatile => "volatile",
                 };
 
-                html.push_str(&format!(r#"
+                html.push_str(&format!(
+                    r#"
                         <tr>
                             <td>{}</td>
                             <td>
@@ -701,37 +747,44 @@ impl PerformanceVisualizer {
                 ));
             }
 
-            html.push_str(r#"
+            html.push_str(
+                r#"
                     </tbody>
                 </table>
             </div>
-"#);
+"#,
+            );
         }
 
         html.push_str("        </div>\n");
         html
     }
-    
+
     /// Generate regression analysis section
     fn generate_regression_analysis(&self) -> String {
         let regressions = self.detect_regressions();
-        
+
         let mut html = String::new();
-        html.push_str(r#"
+        html.push_str(
+            r#"
         <div class="chart-section">
             <h2>Regression Detection</h2>
-"#);
+"#,
+        );
 
         if regressions.is_empty() {
-            html.push_str(r#"
+            html.push_str(
+                r#"
             <div class="alert alert-success">
                 <h4>✅ No Performance Regressions Detected</h4>
                 <p>All performance metrics are within acceptable thresholds.</p>
             </div>
-"#);
+"#,
+            );
         } else {
             for regression in &regressions {
-                html.push_str(&format!(r#"
+                html.push_str(&format!(
+                    r#"
             <div class="regression-alert">
                 <h4>⚠️ Performance Regression Detected</h4>
                 <p><strong>Metric:</strong> {}</p>
@@ -786,12 +839,13 @@ impl PerformanceVisualizer {
         </div>
 "#.to_string()
     }
-    
+
     /// Generate JavaScript for interactive features
     fn generate_dashboard_javascript(&self) -> String {
         let chart_data = self.generate_chart_data_json();
-        
-        format!(r#"
+
+        format!(
+            r#"
     <script>
         // Performance data
         const performanceData = {};
@@ -1032,14 +1086,15 @@ impl PerformanceVisualizer {
             self.config.color_scheme.regression_color
         )
     }
-    
+
     /// Generate chart data as JSON
     fn generate_chart_data_json(&self) -> String {
         if self.historical_data.is_empty() {
             return "{}".to_string();
         }
 
-        let timestamps: Vec<String> = self.historical_data
+        let timestamps: Vec<String> = self
+            .historical_data
             .iter()
             .map(|d| {
                 d.timestamp
@@ -1050,12 +1105,14 @@ impl PerformanceVisualizer {
             })
             .collect();
 
-        let rust_throughput: Vec<f64> = self.historical_data
+        let rust_throughput: Vec<f64> = self
+            .historical_data
             .iter()
             .map(|d| d.rust_metrics.throughput_ops_per_sec)
             .collect();
 
-        let cpp_throughput: Vec<f64> = self.historical_data
+        let cpp_throughput: Vec<f64> = self
+            .historical_data
             .iter()
             .map(|d| d.cpp_metrics.throughput_ops_per_sec)
             .collect();
@@ -1070,22 +1127,26 @@ impl PerformanceVisualizer {
             .map(|d| d.cpp_metrics.memory_peak as f64 / 1024.0 / 1024.0) // Convert to MB
             .collect();
 
-        let rust_duration: Vec<f64> = self.historical_data
+        let rust_duration: Vec<f64> = self
+            .historical_data
             .iter()
             .map(|d| d.rust_metrics.average_duration.as_millis() as f64)
             .collect();
 
-        let cpp_duration: Vec<f64> = self.historical_data
+        let cpp_duration: Vec<f64> = self
+            .historical_data
             .iter()
             .map(|d| d.cpp_metrics.average_duration.as_millis() as f64)
             .collect();
 
-        let performance_improvement: Vec<f64> = self.historical_data
+        let performance_improvement: Vec<f64> = self
+            .historical_data
             .iter()
             .map(|d| d.comparison_results.performance_improvement)
             .collect();
 
-        format!(r#"{{
+        format!(
+            r#"{{
     "timestamps": {:?},
     "rust_throughput": {:?},
     "cpp_throughput": {:?},
@@ -1105,7 +1166,7 @@ impl PerformanceVisualizer {
             performance_improvement
         )
     }
-    
+
     /// Analyze performance trends
     fn analyze_performance_trends(&self) -> Vec<PerformanceTrend> {
         if self.historical_data.len() < 5 {
@@ -1115,7 +1176,8 @@ impl PerformanceVisualizer {
         let mut trends = Vec::new();
 
         // Analyze throughput trend
-        let throughput_data: Vec<TrendDataPoint> = self.historical_data
+        let throughput_data: Vec<TrendDataPoint> = self
+            .historical_data
             .iter()
             .enumerate()
             .flat_map(|(i, d)| {
@@ -1144,7 +1206,8 @@ impl PerformanceVisualizer {
         });
 
         // Analyze memory trend
-        let memory_data: Vec<TrendDataPoint> = self.historical_data
+        let memory_data: Vec<TrendDataPoint> = self
+            .historical_data
             .iter()
             .enumerate()
             .flat_map(|(i, d)| {
@@ -1183,33 +1246,29 @@ impl PerformanceVisualizer {
 
         let values: Vec<f64> = data_points.iter().map(|p| p.value).collect();
         let n = values.len() as f64;
-        
+
         // Calculate linear regression slope
         let x_mean = (0..values.len()).map(|i| i as f64).sum::<f64>() / n;
         let y_mean = values.iter().sum::<f64>() / n;
-        
+
         let numerator: f64 = (0..values.len())
             .map(|i| (i as f64 - x_mean) * (values[i] - y_mean))
             .sum();
-        
-        let denominator: f64 = (0..values.len())
-            .map(|i| (i as f64 - x_mean).powi(2))
-            .sum();
-        
+
+        let denominator: f64 = (0..values.len()).map(|i| (i as f64 - x_mean).powi(2)).sum();
+
         if denominator == 0.0 {
             return TrendDirection::Stable;
         }
-        
+
         let slope = numerator / denominator;
-        
+
         // Calculate variance to determine volatility
-        let variance = values.iter()
-            .map(|v| (v - y_mean).powi(2))
-            .sum::<f64>() / n;
-        
+        let variance = values.iter().map(|v| (v - y_mean).powi(2)).sum::<f64>() / n;
+
         let std_dev = variance.sqrt();
         let coefficient_of_variation = std_dev / y_mean.abs();
-        
+
         // Determine trend direction
         if coefficient_of_variation > 0.3 {
             TrendDirection::Volatile
@@ -1225,38 +1284,38 @@ impl PerformanceVisualizer {
     /// Find regression points in the data
     fn find_regression_points(&self, data_points: &[TrendDataPoint]) -> Vec<usize> {
         let mut regression_points = Vec::new();
-        
+
         if data_points.len() < 3 {
             return regression_points;
         }
-        
+
         for i in 1..data_points.len() - 1 {
             let prev_value = data_points[i - 1].value;
             let curr_value = data_points[i].value;
             let next_value = data_points[i + 1].value;
-            
+
             // Check for significant drop in performance
             let drop_percentage = ((prev_value - curr_value) / prev_value) * 100.0;
             let recovery_percentage = ((next_value - curr_value) / curr_value) * 100.0;
-            
+
             if drop_percentage > self.config.regression_threshold && recovery_percentage < 5.0 {
                 regression_points.push(i);
             }
         }
-        
+
         regression_points
     }
 
     /// Detect performance regressions
     fn detect_regressions(&self) -> Vec<RegressionAlert> {
         let mut regressions = Vec::new();
-        
+
         if self.historical_data.len() < 2 {
             return regressions;
         }
-        
+
         let latest = self.historical_data.last().unwrap();
-        
+
         if latest.comparison_results.regression_detected {
             regressions.push(RegressionAlert {
                 metric_name: "Overall Performance".to_string(),
@@ -1265,7 +1324,7 @@ impl PerformanceVisualizer {
                 timestamp: latest.timestamp,
             });
         }
-        
+
         if latest.comparison_results.memory_improvement < -self.config.regression_threshold {
             regressions.push(RegressionAlert {
                 metric_name: "Memory Efficiency".to_string(),
@@ -1274,7 +1333,7 @@ impl PerformanceVisualizer {
                 timestamp: latest.timestamp,
             });
         }
-        
+
         regressions
     }
 }
@@ -1302,7 +1361,9 @@ pub fn create_performance_comparison(
         memory_peak: rust_benchmark.summary.peak_memory_usage as u64,
         memory_average: rust_benchmark.summary.avg_memory_usage as u64,
         throughput_ops_per_sec: rust_benchmark.ops_per_second(),
-        custom_metrics: rust_benchmark.summary.custom_metrics
+        custom_metrics: rust_benchmark
+            .summary
+            .custom_metrics
             .iter()
             .map(|(k, v)| (k.clone(), *v))
             .collect(),
@@ -1316,7 +1377,9 @@ pub fn create_performance_comparison(
         memory_peak: cpp_benchmark.summary.peak_memory_usage as u64,
         memory_average: cpp_benchmark.summary.avg_memory_usage as u64,
         throughput_ops_per_sec: cpp_benchmark.ops_per_second(),
-        custom_metrics: cpp_benchmark.summary.custom_metrics
+        custom_metrics: cpp_benchmark
+            .summary
+            .custom_metrics
             .iter()
             .map(|(k, v)| (k.clone(), *v))
             .collect(),
@@ -1368,9 +1431,13 @@ mod tests {
     use super::*;
     use std::time::Duration;
 
-    fn create_test_benchmark_result(name: &str, ops_per_sec: f64, memory_mb: u64) -> BenchmarkResult {
-        use crate::data::performance::{PerformanceSummary, MetricSummary};
-        
+    fn create_test_benchmark_result(
+        name: &str,
+        ops_per_sec: f64,
+        memory_mb: u64,
+    ) -> BenchmarkResult {
+        use crate::data::performance::{MetricSummary, PerformanceSummary};
+
         BenchmarkResult {
             name: name.to_string(),
             iterations: 10,
@@ -1392,9 +1459,9 @@ mod tests {
     fn test_performance_comparison_creation() {
         let rust_benchmark = create_test_benchmark_result("rust_test", 100.0, 512);
         let cpp_benchmark = create_test_benchmark_result("cpp_test", 80.0, 600);
-        
+
         let comparison = create_performance_comparison(&rust_benchmark, &cpp_benchmark, 5.0);
-        
+
         assert_eq!(comparison.rust_metrics.implementation_name, "BitNet.rs");
         assert_eq!(comparison.cpp_metrics.implementation_name, "BitNet.cpp");
         assert!(comparison.comparison_results.throughput_ratio > 1.0);
@@ -1406,9 +1473,9 @@ mod tests {
     fn test_regression_detection() {
         let rust_benchmark = create_test_benchmark_result("rust_test", 70.0, 700);
         let cpp_benchmark = create_test_benchmark_result("cpp_test", 100.0, 500);
-        
+
         let comparison = create_performance_comparison(&rust_benchmark, &cpp_benchmark, 5.0);
-        
+
         assert!(comparison.comparison_results.throughput_ratio < 1.0);
         assert!(comparison.comparison_results.performance_improvement < 0.0);
         assert!(comparison.comparison_results.regression_detected);
@@ -1418,7 +1485,7 @@ mod tests {
     async fn test_visualizer_creation() {
         let config = VisualizationConfig::default();
         let visualizer = PerformanceVisualizer::new(config);
-        
+
         assert_eq!(visualizer.historical_data.len(), 0);
         assert_eq!(visualizer.config.regression_threshold, 5.0);
     }
@@ -1427,7 +1494,7 @@ mod tests {
     fn test_trend_direction_calculation() {
         let config = VisualizationConfig::default();
         let visualizer = PerformanceVisualizer::new(config);
-        
+
         // Test improving trend
         let improving_data = vec![
             TrendDataPoint {
@@ -1449,7 +1516,7 @@ mod tests {
                 test_name: "test".to_string(),
             },
         ];
-        
+
         let trend = visualizer.calculate_trend_direction(&improving_data);
         assert!(matches!(trend, TrendDirection::Improving));
     }

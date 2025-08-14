@@ -19,11 +19,11 @@ impl crate::KernelProvider for FfiKernel {
     fn name(&self) -> &'static str {
         "ffi"
     }
-    
+
     fn is_available(&self) -> bool {
         false
     }
-    
+
     fn matmul_i2s(
         &self,
         _a: &[i8],
@@ -36,10 +36,10 @@ impl crate::KernelProvider for FfiKernel {
         Err(bitnet_common::BitNetError::Kernel(
             bitnet_common::KernelError::UnsupportedArchitecture {
                 arch: "FFI bridge not enabled".to_string(),
-            }
+            },
         ))
     }
-    
+
     fn quantize(
         &self,
         _input: &[f32],
@@ -50,7 +50,7 @@ impl crate::KernelProvider for FfiKernel {
         Err(bitnet_common::BitNetError::Kernel(
             bitnet_common::KernelError::UnsupportedArchitecture {
                 arch: "FFI bridge not enabled".to_string(),
-            }
+            },
         ))
     }
 }

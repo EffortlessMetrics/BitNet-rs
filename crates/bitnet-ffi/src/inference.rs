@@ -3,11 +3,13 @@
 //! This module provides thread-safe inference operations, streaming support,
 //! and performance monitoring for the C API.
 
-use crate::{BitNetCError, BitNetCInferenceConfig, BitNetCPerformanceMetrics, get_model_manager};
+use crate::{get_model_manager, BitNetCError, BitNetCInferenceConfig, BitNetCPerformanceMetrics};
 // use bitnet_common::PerformanceMetrics;
-use bitnet_inference::{InferenceEngine, BitNetInferenceEngine, InferenceConfig, BackendPreference};
+use bitnet_inference::{
+    BackendPreference, BitNetInferenceEngine, InferenceConfig, InferenceEngine,
+};
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
 // use std::ffi::{CStr, CString};
 // use std::os::raw::{c_char, c_uint};
@@ -59,10 +61,12 @@ impl InferenceManager {
         // Perform inference
         let _start_time = Instant::now();
         let result = {
-            let mut engine_guard = engine.lock()
-                .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string()))?;
-            
-            engine_guard.generate(prompt, &generation_config)
+            let mut engine_guard = engine.lock().map_err(|_| {
+                BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
+            })?;
+
+            engine_guard
+                .generate(prompt, &generation_config)
                 .map_err(|e| BitNetCError::InferenceFailed(format!("Generation failed: {}", e)))?
         };
 
@@ -94,11 +98,15 @@ impl InferenceManager {
 
         // Perform token generation
         let result = {
-            let mut engine_guard = engine.lock()
-                .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string()))?;
-            
-            engine_guard.generate_tokens(input_tokens, &generation_config)
-                .map_err(|e| BitNetCError::InferenceFailed(format!("Token generation failed: {}", e)))?
+            let mut engine_guard = engine.lock().map_err(|_| {
+                BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
+            })?;
+
+            engine_guard
+                .generate_tokens(input_tokens, &generation_config)
+                .map_err(|e| {
+                    BitNetCError::InferenceFailed(format!("Token generation failed: {}", e))
+                })?
         };
 
         Ok(result)
@@ -122,11 +130,15 @@ impl InferenceManager {
 
         // Start streaming
         let stream = {
-            let mut engine_guard = engine.lock()
-                .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string()))?;
-            
-            engine_guard.generate_stream(prompt, &generation_config)
-                .map_err(|e| BitNetCError::InferenceFailed(format!("Failed to start streaming: {}", e)))?
+            let mut engine_guard = engine.lock().map_err(|_| {
+                BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
+            })?;
+
+            engine_guard
+                .generate_stream(prompt, &generation_config)
+                .map_err(|e| {
+                    BitNetCError::InferenceFailed(format!("Failed to start streaming: {}", e))
+                })?
         };
 
         Ok(StreamingSession::new(stream))
@@ -134,51 +146,64 @@ impl InferenceManager {
 
     /// Get performance metrics for a model
     pub fn get_metrics(&self, model_id: u32) -> Result<BitNetCPerformanceMetrics, BitNetCError> {
-        let engines = self.engines.read()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire engines read lock".to_string()))?;
+        let engines = self.engines.read().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire engines read lock".to_string())
+        })?;
 
         match engines.get(&model_id) {
             Some(engine) => {
-                let engine_guard = engine.lock()
-                    .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string()))?;
-                
+                let engine_guard = engine.lock().map_err(|_| {
+                    BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
+                })?;
+
                 let metrics = engine_guard.metrics();
                 Ok(BitNetCPerformanceMetrics::from_performance_metrics(metrics))
             }
-            None => Err(BitNetCError::InvalidModelId(format!("Model ID {} not found", model_id))),
+            None => Err(BitNetCError::InvalidModelId(format!(
+                "Model ID {} not found",
+                model_id
+            ))),
         }
     }
 
     /// Reset inference state for a model
     pub fn reset_model(&self, model_id: u32) -> Result<(), BitNetCError> {
-        let engines = self.engines.read()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire engines read lock".to_string()))?;
+        let engines = self.engines.read().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire engines read lock".to_string())
+        })?;
 
         match engines.get(&model_id) {
             Some(engine) => {
-                let mut engine_guard = engine.lock()
-                    .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string()))?;
-                
-                engine_guard.reset()
-                    .map_err(|e| BitNetCError::InferenceFailed(format!("Failed to reset engine: {}", e)))?;
-                
+                let mut engine_guard = engine.lock().map_err(|_| {
+                    BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
+                })?;
+
+                engine_guard.reset().map_err(|e| {
+                    BitNetCError::InferenceFailed(format!("Failed to reset engine: {}", e))
+                })?;
+
                 Ok(())
             }
-            None => Err(BitNetCError::InvalidModelId(format!("Model ID {} not found", model_id))),
+            None => Err(BitNetCError::InvalidModelId(format!(
+                "Model ID {} not found",
+                model_id
+            ))),
         }
     }
 
     /// Enable or disable GPU acceleration
     pub fn set_gpu_enabled(&self, enabled: bool) -> Result<(), BitNetCError> {
-        let mut gpu_enabled = self.gpu_enabled.write()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire GPU enabled write lock".to_string()))?;
-        
+        let mut gpu_enabled = self.gpu_enabled.write().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire GPU enabled write lock".to_string())
+        })?;
+
         *gpu_enabled = enabled;
-        
+
         // Update default configuration
-        let mut default_config = self.default_config.write()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire default config write lock".to_string()))?;
-        
+        let mut default_config = self.default_config.write().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire default config write lock".to_string())
+        })?;
+
         default_config.backend_preference = if enabled {
             BackendPreference::Gpu
         } else {
@@ -203,12 +228,16 @@ impl InferenceManager {
     }
 
     /// Get or create inference engine for a model
-    fn get_or_create_engine(&self, model_id: u32) -> Result<Arc<Mutex<BitNetInferenceEngine>>, BitNetCError> {
+    fn get_or_create_engine(
+        &self,
+        model_id: u32,
+    ) -> Result<Arc<Mutex<BitNetInferenceEngine>>, BitNetCError> {
         // First try to get existing engine
         {
-            let engines = self.engines.read()
-                .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire engines read lock".to_string()))?;
-            
+            let engines = self.engines.read().map_err(|_| {
+                BitNetCError::ThreadSafety("Failed to acquire engines read lock".to_string())
+            })?;
+
             if let Some(engine) = engines.get(&model_id) {
                 return Ok(Arc::clone(engine));
             }
@@ -216,10 +245,11 @@ impl InferenceManager {
 
         // Create new engine
         let _model = get_model_manager().get_model(model_id)?;
-        
+
         let inference_config = {
-            let default_config = self.default_config.read()
-                .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire default config read lock".to_string()))?;
+            let default_config = self.default_config.read().map_err(|_| {
+                BitNetCError::ThreadSafety("Failed to acquire default config read lock".to_string())
+            })?;
             default_config.clone()
         };
 
@@ -228,14 +258,18 @@ impl InferenceManager {
             // the Arc<dyn Model> to Box<dyn Model>
             Box::new(MockInferenceModel::new()),
             inference_config,
-        ).map_err(|e| BitNetCError::InferenceFailed(format!("Failed to create inference engine: {}", e)))?;
+        )
+        .map_err(|e| {
+            BitNetCError::InferenceFailed(format!("Failed to create inference engine: {}", e))
+        })?;
 
         let engine_arc = Arc::new(Mutex::new(engine));
 
         // Store the engine
         {
-            let mut engines = self.engines.write()
-                .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire engines write lock".to_string()))?;
+            let mut engines = self.engines.write().map_err(|_| {
+                BitNetCError::ThreadSafety("Failed to acquire engines write lock".to_string())
+            })?;
             engines.insert(model_id, Arc::clone(&engine_arc));
         }
 
@@ -273,7 +307,10 @@ impl StreamingSession {
                 self.is_finished = true;
                 Ok(None)
             }
-            Err(e) => Err(BitNetCError::InferenceFailed(format!("Streaming error: {}", e))),
+            Err(e) => Err(BitNetCError::InferenceFailed(format!(
+                "Streaming error: {}",
+                e
+            ))),
         }
     }
 
@@ -308,11 +345,15 @@ impl bitnet_models::Model for MockInferenceModel {
     type Config = bitnet_common::BitNetConfig;
 
     fn config(&self) -> &Self::Config {
-        static CONFIG: std::sync::OnceLock<bitnet_common::BitNetConfig> = std::sync::OnceLock::new();
+        static CONFIG: std::sync::OnceLock<bitnet_common::BitNetConfig> =
+            std::sync::OnceLock::new();
         CONFIG.get_or_init(|| bitnet_common::BitNetConfig::default())
     }
 
-    fn forward(&self, _input: &bitnet_common::BitNetTensor) -> bitnet_common::Result<bitnet_common::BitNetTensor> {
+    fn forward(
+        &self,
+        _input: &bitnet_common::BitNetTensor,
+    ) -> bitnet_common::Result<bitnet_common::BitNetTensor> {
         // Mock implementation - create a dummy tensor
         use candle_core::Device;
         let device = Device::Cpu;

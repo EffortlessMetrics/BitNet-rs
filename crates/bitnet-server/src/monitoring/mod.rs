@@ -1,10 +1,10 @@
 //! Monitoring and observability infrastructure for BitNet server
 
-pub mod metrics;
-pub mod tracing;
-pub mod health;
-pub mod prometheus;
 pub mod config;
+pub mod health;
+pub mod metrics;
+pub mod prometheus;
+pub mod tracing;
 
 #[cfg(feature = "opentelemetry")]
 pub mod opentelemetry;
@@ -116,7 +116,7 @@ impl MonitoringSystem {
     /// Shutdown the monitoring system gracefully
     pub async fn shutdown(&self) -> Result<()> {
         println!("Shutting down monitoring system");
-        
+
         #[cfg(feature = "opentelemetry")]
         if self.config.opentelemetry_enabled {
             opentelemetry::shutdown().await?;

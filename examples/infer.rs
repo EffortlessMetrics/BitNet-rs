@@ -21,7 +21,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             match bitnet_models::minimal::load_minimal(bitnet_models::minimal::LoadMode::Gguf(&p)) {
                 Ok(w) => w,
                 Err(e) => {
-                    eprintln!("[info] GGUF not ready yet ({}). Falling back to dummy weights.", e);
+                    eprintln!(
+                        "[info] GGUF not ready yet ({}). Falling back to dummy weights.",
+                        e
+                    );
                     bitnet_models::minimal::load_minimal(bitnet_models::minimal::LoadMode::Dummy {
                         vocab: 32000,
                         dim: 1024,
@@ -48,15 +51,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Compute logits
     let logits = bitnet_inference::simple_forward::logits_for_token(&w, token_id);
-    
+
     // Print first 8 logits for verification
     println!("logits[0..8]={:?}", &logits[..8.min(logits.len())]);
-    
+
     // Also print some statistics
     let max_logit = logits.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
     let min_logit = logits.iter().fold(f32::INFINITY, |a, &b| a.min(b));
     println!("token_id={}, vocab={}, dim={}", token_id, mw.vocab, mw.dim);
     println!("max_logit={:.4}, min_logit={:.4}", max_logit, min_logit);
-    
+
     Ok(())
 }

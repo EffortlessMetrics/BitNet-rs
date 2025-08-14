@@ -9,9 +9,7 @@ static RUNTIME: OnceLock<Runtime> = OnceLock::new();
 
 /// Get or create the global async runtime
 pub fn get_runtime() -> &'static Runtime {
-    RUNTIME.get_or_init(|| {
-        Runtime::new().expect("Failed to create async runtime")
-    })
+    RUNTIME.get_or_init(|| Runtime::new().expect("Failed to create async runtime"))
 }
 
 /// Execute a future on the global runtime

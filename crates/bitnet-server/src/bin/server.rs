@@ -1,8 +1,8 @@
 //! BitNet server binary with comprehensive monitoring
 
 use anyhow::Result;
-use bitnet_server::{BitNetServer, ServerConfig};
 use bitnet_server::monitoring::MonitoringConfig;
+use bitnet_server::{BitNetServer, ServerConfig};
 use clap::Parser;
 use tracing::info;
 
@@ -74,7 +74,7 @@ async fn main() -> Result<()> {
 
     // Create and start server
     let server = BitNetServer::new(config).await?;
-    
+
     // Set up graceful shutdown
     let server_handle = tokio::spawn(async move {
         if let Err(e) = server.start().await {
@@ -84,10 +84,10 @@ async fn main() -> Result<()> {
 
     // Wait for shutdown signal
     wait_for_shutdown().await;
-    
+
     info!("Shutdown signal received, stopping server...");
     server_handle.abort();
-    
+
     info!("Server stopped");
     Ok(())
 }

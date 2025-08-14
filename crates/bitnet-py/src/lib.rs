@@ -3,26 +3,26 @@
 //! Python bindings for BitNet.rs providing a seamless migration path from
 //! existing Python implementations with identical API compatibility.
 
+use pyo3::exceptions::{PyIOError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyString};
-use pyo3::exceptions::{PyRuntimeError, PyValueError, PyIOError};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+mod async_runtime;
+mod config;
+mod inference;
 mod model;
 mod tokenizer;
-mod inference;
-mod config;
 mod utils;
-mod async_runtime;
 
+pub use async_runtime::*;
+pub use config::*;
+pub use inference::*;
 pub use model::*;
 pub use tokenizer::*;
-pub use inference::*;
-pub use config::*;
 pub use utils::*;
-pub use async_runtime::*;
 
 /// BitNet Python module
 #[pymodule]
@@ -30,7 +30,10 @@ fn bitnet_py(py: Python<'_>, m: &PyModule) -> PyResult<()> {
     // Add version information
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add("__author__", "BitNet.rs Team")?;
-    m.add("__description__", "High-performance BitNet inference in Rust with Python bindings")?;
+    m.add(
+        "__description__",
+        "High-performance BitNet inference in Rust with Python bindings",
+    )?;
 
     // Add main classes
     m.add_class::<PyBitNetModel>()?;
@@ -64,7 +67,9 @@ fn bitnet_py(py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add("QuantizationType", quantization_types)?;
 
     // Add example usage in docstring
-    m.add("__doc__", r#"
+    m.add(
+        "__doc__",
+        r#"
 BitNet.rs Python Bindings
 
 High-performance BitNet inference library with Python bindings.
@@ -87,7 +92,8 @@ Example usage:
         print(token, end="", flush=True)
 
 For more examples, see the documentation at https://github.com/microsoft/BitNet
-"#)?;
+"#,
+    )?;
 
     Ok(())
 }
@@ -102,16 +108,18 @@ fn load_model(
     kwargs: Option<&PyDict>,
 ) -> PyResult<PyBitNetModel> {
     py.allow_threads(|| {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| PyRuntimeError::new_err(format!("Failed to create async runtime: {}", e)))?;
-        
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            PyRuntimeError::new_err(format!("Failed to create async runtime: {}", e))
+        })?;
+
         rt.block_on(async {
             let device = parse_device(device)?;
             let loader = bitnet_models::loader::ModelLoader::new(device);
-            
-            let model = loader.load(path)
+
+            let model = loader
+                .load(path)
                 .map_err(|e| PyIOError::new_err(format!("Failed to load model: {}", e)))?;
-            
+
             Ok(PyBitNetModel::new(model))
         })
     })
@@ -122,17 +130,20 @@ fn load_model(
 fn list_available_models(path: &str) -> PyResult<Vec<String>> {
     let path = std::path::Path::new(path);
     let mut models = Vec::new();
-    
+
     if path.is_dir() {
         let entries = std::fs::read_dir(path)
             .map_err(|e| PyIOError::new_err(format!("Failed to read directory: {}", e)))?;
-        
+
         for entry in entries {
             let entry = entry.map_err(|e| PyIOError::new_err(e.to_string()))?;
             let path = entry.path();
-            
+
             if let Some(ext) = path.extension() {
-                if matches!(ext.to_str(), Some("gguf") | Some("safetensors") | Some("bin")) {
+                if matches!(
+                    ext.to_str(),
+                    Some("gguf") | Some("safetensors") | Some("bin")
+                ) {
                     if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                         models.push(name.to_string());
                     }
@@ -140,7 +151,7 @@ fn list_available_models(path: &str) -> PyResult<Vec<String>> {
             }
         }
     }
-    
+
     models.sort();
     Ok(models)
 }
@@ -149,20 +160,20 @@ fn list_available_models(path: &str) -> PyResult<Vec<String>> {
 #[pyfunction]
 fn get_device_info(py: Python<'_>) -> PyResult<PyObject> {
     let info = PyDict::new(py);
-    
+
     // CPU information
     let cpu_info = PyDict::new(py);
     cpu_info.set_item("cores", num_cpus::get())?;
     cpu_info.set_item("available", true)?;
     info.set_item("cpu", cpu_info)?;
-    
+
     // GPU information
     let gpu_info = PyDict::new(py);
     gpu_info.set_item("cuda_available", is_cuda_available())?;
     gpu_info.set_item("metal_available", is_metal_available())?;
     gpu_info.set_item("cuda_devices", get_cuda_device_count())?;
     info.set_item("gpu", gpu_info)?;
-    
+
     Ok(info.into())
 }
 
@@ -203,11 +214,15 @@ fn parse_device(device_str: &str) -> PyResult<bitnet_common::Device> {
         "cuda" | "cuda:0" => Ok(bitnet_common::Device::Cuda(0)),
         "metal" => Ok(bitnet_common::Device::Metal),
         device if device.starts_with("cuda:") => {
-            let device_id = device[5..].parse::<usize>()
-                .map_err(|_| PyValueError::new_err(format!("Invalid CUDA device ID: {}", device)))?;
+            let device_id = device[5..].parse::<usize>().map_err(|_| {
+                PyValueError::new_err(format!("Invalid CUDA device ID: {}", device))
+            })?;
             Ok(bitnet_common::Device::Cuda(device_id))
         }
-        _ => Err(PyValueError::new_err(format!("Unsupported device: {}", device_str))),
+        _ => Err(PyValueError::new_err(format!(
+            "Unsupported device: {}",
+            device_str
+        ))),
     }
 }
 
@@ -231,10 +246,22 @@ mod tests {
 
     #[test]
     fn test_parse_device() {
-        assert!(matches!(parse_device("cpu").unwrap(), bitnet_common::Device::Cpu));
-        assert!(matches!(parse_device("cuda").unwrap(), bitnet_common::Device::Cuda(0)));
-        assert!(matches!(parse_device("cuda:1").unwrap(), bitnet_common::Device::Cuda(1)));
-        assert!(matches!(parse_device("metal").unwrap(), bitnet_common::Device::Metal));
+        assert!(matches!(
+            parse_device("cpu").unwrap(),
+            bitnet_common::Device::Cpu
+        ));
+        assert!(matches!(
+            parse_device("cuda").unwrap(),
+            bitnet_common::Device::Cuda(0)
+        ));
+        assert!(matches!(
+            parse_device("cuda:1").unwrap(),
+            bitnet_common::Device::Cuda(1)
+        ));
+        assert!(matches!(
+            parse_device("metal").unwrap(),
+            bitnet_common::Device::Metal
+        ));
         assert!(parse_device("invalid").is_err());
     }
 

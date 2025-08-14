@@ -72,15 +72,27 @@ jobs:
       if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
       run: cargo fmt --all -- --check
 
-    - name: Run clippy
+    - name: Run clippy with strict checks
       if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-      run: cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings
+      run: RUSTFLAGS="-Dwarnings" cargo clippy --workspace --all-features --all-targets -- -D warnings -D clippy::ptr_arg
+
+    - name: Check banned patterns
+      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+      run: bash scripts/hooks/banned-patterns.sh
+
+    - name: Check tests compile
+      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+      run: RUSTFLAGS="-Dwarnings" cargo check --workspace --tests
 
     - name: Build (CPU features only)
       run: cargo build --workspace --no-default-features --features cpu
 
     - name: Run tests (CPU features only)
       run: cargo test --workspace --no-default-features --features cpu
+
+    - name: Test build without running
+      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+      run: cargo test --workspace --all-features --no-run
 
     - name: Build with all features (except crossval)
       if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
@@ -103,7 +115,7 @@ jobs:
     - name: Install cargo-deny
       run: cargo install cargo-deny
     - name: Run cargo-deny
-      run: cargo deny check
+      run: cargo deny check --hide-inclusion-graph
 
   benchmark:
     name: Performance Benchmarks (Rust)

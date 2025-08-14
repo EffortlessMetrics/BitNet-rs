@@ -1,12 +1,6 @@
 //! Health check endpoints for load balancer integration
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Json,
-    routing::get,
-    Router,
-};
+use axum::{extract::State, http::StatusCode, response::Json, routing::get, Router};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -76,16 +70,10 @@ impl HealthChecker {
         let mut components = HashMap::new();
 
         // Check model availability
-        components.insert(
-            "model".to_string(),
-            self.check_model_health().await,
-        );
+        components.insert("model".to_string(), self.check_model_health().await);
 
         // Check memory usage
-        components.insert(
-            "memory".to_string(),
-            self.check_memory_health().await,
-        );
+        components.insert("memory".to_string(), self.check_memory_health().await);
 
         // Check inference engine
         components.insert(
@@ -95,10 +83,7 @@ impl HealthChecker {
 
         // Check GPU availability (if enabled)
         #[cfg(feature = "cuda")]
-        components.insert(
-            "gpu".to_string(),
-            self.check_gpu_health().await,
-        );
+        components.insert("gpu".to_string(), self.check_gpu_health().await);
 
         // Determine overall status
         let overall_status = self.determine_overall_status(&components);
@@ -138,10 +123,16 @@ impl HealthChecker {
         let inference_health = self.check_inference_engine_health().await;
 
         let critical_components = vec![&model_health, &memory_health, &inference_health];
-        
-        if critical_components.iter().any(|c| c.status == HealthStatus::Unhealthy) {
+
+        if critical_components
+            .iter()
+            .any(|c| c.status == HealthStatus::Unhealthy)
+        {
             HealthStatus::Unhealthy
-        } else if critical_components.iter().any(|c| c.status == HealthStatus::Degraded) {
+        } else if critical_components
+            .iter()
+            .any(|c| c.status == HealthStatus::Degraded)
+        {
             HealthStatus::Degraded
         } else {
             HealthStatus::Healthy
@@ -150,11 +141,11 @@ impl HealthChecker {
 
     async fn check_model_health(&self) -> ComponentHealth {
         let start = Instant::now();
-        
+
         // In a real implementation, this would check if models are loaded and accessible
         let status = HealthStatus::Healthy;
         let message = "Model loaded and ready".to_string();
-        
+
         ComponentHealth {
             status,
             message,
@@ -165,16 +156,25 @@ impl HealthChecker {
 
     async fn check_memory_health(&self) -> ComponentHealth {
         let start = Instant::now();
-        
+
         // Check memory usage - in production, use actual system metrics
         let memory_usage_percent = 45.0; // Placeholder
-        
+
         let (status, message) = if memory_usage_percent > 90.0 {
-            (HealthStatus::Unhealthy, format!("High memory usage: {:.1}%", memory_usage_percent))
+            (
+                HealthStatus::Unhealthy,
+                format!("High memory usage: {:.1}%", memory_usage_percent),
+            )
         } else if memory_usage_percent > 80.0 {
-            (HealthStatus::Degraded, format!("Elevated memory usage: {:.1}%", memory_usage_percent))
+            (
+                HealthStatus::Degraded,
+                format!("Elevated memory usage: {:.1}%", memory_usage_percent),
+            )
         } else {
-            (HealthStatus::Healthy, format!("Memory usage normal: {:.1}%", memory_usage_percent))
+            (
+                HealthStatus::Healthy,
+                format!("Memory usage normal: {:.1}%", memory_usage_percent),
+            )
         };
 
         ComponentHealth {
@@ -187,7 +187,7 @@ impl HealthChecker {
 
     async fn check_inference_engine_health(&self) -> ComponentHealth {
         let start = Instant::now();
-        
+
         // Check if inference engine is responsive
         // In production, this might perform a lightweight inference test
         let status = HealthStatus::Healthy;
@@ -204,17 +204,14 @@ impl HealthChecker {
     #[cfg(feature = "cuda")]
     async fn check_gpu_health(&self) -> ComponentHealth {
         let start = Instant::now();
-        
+
         // Check GPU availability and memory
         let (status, message) = match self.check_gpu_status().await {
             Ok(gpu_info) => (
                 HealthStatus::Healthy,
-                format!("GPU available: {}", gpu_info)
+                format!("GPU available: {}", gpu_info),
             ),
-            Err(e) => (
-                HealthStatus::Degraded,
-                format!("GPU check failed: {}", e)
-            ),
+            Err(e) => (HealthStatus::Degraded, format!("GPU check failed: {}", e)),
         };
 
         ComponentHealth {
@@ -233,14 +230,17 @@ impl HealthChecker {
 
     async fn check_basic_functionality(&self) -> Result<(), String> {
         // Perform basic functionality checks
-        // This could include checking if we can access configuration, 
+        // This could include checking if we can access configuration,
         // create basic objects, etc.
         Ok(())
     }
 
-    fn determine_overall_status(&self, components: &HashMap<String, ComponentHealth>) -> HealthStatus {
+    fn determine_overall_status(
+        &self,
+        components: &HashMap<String, ComponentHealth>,
+    ) -> HealthStatus {
         let critical_components = ["model", "memory", "inference_engine"];
-        
+
         // Check critical components first
         for component_name in &critical_components {
             if let Some(component) = components.get(*component_name) {
@@ -260,11 +260,13 @@ impl HealthChecker {
         }
 
         // Check non-critical components
-        let unhealthy_count = components.values()
+        let unhealthy_count = components
+            .values()
             .filter(|c| c.status == HealthStatus::Unhealthy)
             .count();
 
-        let degraded_count = components.values()
+        let degraded_count = components
+            .values()
             .filter(|c| c.status == HealthStatus::Degraded)
             .count();
 
@@ -304,7 +306,7 @@ async fn health_handler(
     State(health_checker): State<Arc<HealthChecker>>,
 ) -> Result<Json<HealthResponse>, StatusCode> {
     let health = health_checker.check_health().await;
-    
+
     let status_code = match health.status {
         HealthStatus::Healthy => StatusCode::OK,
         HealthStatus::Degraded => StatusCode::OK, // Still serving traffic
@@ -315,9 +317,7 @@ async fn health_handler(
 }
 
 /// Liveness probe endpoint (Kubernetes)
-async fn liveness_handler(
-    State(health_checker): State<Arc<HealthChecker>>,
-) -> StatusCode {
+async fn liveness_handler(State(health_checker): State<Arc<HealthChecker>>) -> StatusCode {
     match health_checker.check_liveness().await {
         HealthStatus::Healthy | HealthStatus::Degraded => StatusCode::OK,
         HealthStatus::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,
@@ -325,9 +325,7 @@ async fn liveness_handler(
 }
 
 /// Readiness probe endpoint (Kubernetes)
-async fn readiness_handler(
-    State(health_checker): State<Arc<HealthChecker>>,
-) -> StatusCode {
+async fn readiness_handler(State(health_checker): State<Arc<HealthChecker>>) -> StatusCode {
     match health_checker.check_readiness().await {
         HealthStatus::Healthy => StatusCode::OK,
         HealthStatus::Degraded | HealthStatus::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,

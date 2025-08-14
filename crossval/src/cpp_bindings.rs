@@ -53,42 +53,48 @@ impl CppModel {
             .as_ref()
             .to_str()
             .ok_or_else(|| CrossvalError::ModelLoadError("Invalid path encoding".to_string()))?;
-        
+
         let c_path = CString::new(path_str)
             .map_err(|_| CrossvalError::ModelLoadError("Path contains null bytes".to_string()))?;
-        
+
         let handle = unsafe { bitnet_cpp_create_model(c_path.as_ptr()) };
-        
+
         if handle.is_null() {
             return Err(CrossvalError::ModelLoadError(format!(
                 "Failed to load C++ model from: {}",
                 path_str
             )));
         }
-        
+
         Ok(CppModel { handle })
     }
-    
+
     /// Generate tokens using the C++ implementation
     pub fn generate(&self, prompt: &str, max_tokens: usize) -> Result<Vec<u32>> {
         if self.handle.is_null() {
-            return Err(CrossvalError::InferenceError("Model handle is null".to_string()));
+            return Err(CrossvalError::InferenceError(
+                "Model handle is null".to_string(),
+            ));
         }
-        
+
         if max_tokens == 0 {
-            return Err(CrossvalError::InferenceError("max_tokens must be greater than 0".to_string()));
+            return Err(CrossvalError::InferenceError(
+                "max_tokens must be greater than 0".to_string(),
+            ));
         }
-        
+
         if max_tokens > 10000 {
-            return Err(CrossvalError::InferenceError("max_tokens too large (limit: 10000)".to_string()));
+            return Err(CrossvalError::InferenceError(
+                "max_tokens too large (limit: 10000)".to_string(),
+            ));
         }
-        
+
         let c_prompt = CString::new(prompt)
             .map_err(|_| CrossvalError::InferenceError("Prompt contains null bytes".to_string()))?;
-        
+
         let mut tokens = vec![0u32; max_tokens];
         let mut actual_count: c_int = 0;
-        
+
         let result = unsafe {
             bitnet_cpp_generate(
                 self.handle,
@@ -98,7 +104,7 @@ impl CppModel {
                 &mut actual_count,
             )
         };
-        
+
         if result != 0 {
             return Err(CrossvalError::InferenceError(format!(
                 "C++ generation failed with code: {} ({})",
@@ -106,24 +112,24 @@ impl CppModel {
                 self.error_code_to_string(result)
             )));
         }
-        
+
         if actual_count < 0 {
             return Err(CrossvalError::InferenceError(
                 "Invalid token count from C++".to_string(),
             ));
         }
-        
+
         if actual_count as usize > max_tokens {
             return Err(CrossvalError::InferenceError(format!(
                 "C++ returned more tokens than requested: {} > {}",
                 actual_count, max_tokens
             )));
         }
-        
+
         tokens.truncate(actual_count as usize);
         Ok(tokens)
     }
-    
+
     /// Convert C++ error codes to human-readable strings
     fn error_code_to_string(&self, code: c_int) -> &'static str {
         match code {
@@ -136,13 +142,15 @@ impl CppModel {
             _ => "Unknown error",
         }
     }
-    
+
     /// Get model information
     pub fn model_info(&self) -> Result<ModelInfo> {
         if self.handle.is_null() {
-            return Err(CrossvalError::ModelLoadError("Model handle is null".to_string()));
+            return Err(CrossvalError::ModelLoadError(
+                "Model handle is null".to_string(),
+            ));
         }
-        
+
         // Placeholder implementation - in real code this would call C++ functions
         Ok(ModelInfo {
             name: "BitNet C++ Model".to_string(),
@@ -151,7 +159,7 @@ impl CppModel {
             quantization: "1-bit".to_string(),
         })
     }
-    
+
     /// Check if model is ready for inference
     pub fn is_ready(&self) -> bool {
         !self.handle.is_null()
@@ -175,8 +183,8 @@ pub struct CppResourceGuard {
 }
 
 impl CppResourceGuard {
-    pub fn new<F>(cleanup_fn: F) -> Self 
-    where 
+    pub fn new<F>(cleanup_fn: F) -> Self
+    where
         F: FnOnce() + 'static,
     {
         Self {

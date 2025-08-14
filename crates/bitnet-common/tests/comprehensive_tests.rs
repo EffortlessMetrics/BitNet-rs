@@ -5,8 +5,8 @@ use bitnet_common::*;
 use candle_core::DType;
 use std::env;
 use std::fs;
-use tempfile::{NamedTempFile, TempDir};
 use std::io::Write;
+use tempfile::{NamedTempFile, TempDir};
 
 /// Test comprehensive configuration scenarios
 mod config_comprehensive {
@@ -79,7 +79,7 @@ mod config_comprehensive {
         let mut temp_file = NamedTempFile::with_suffix(".toml").unwrap();
         temp_file.write_all(b"invalid toml content [[[").unwrap();
         temp_file.flush().unwrap();
-        
+
         let result = BitNetConfig::from_file(temp_file.path());
         assert!(result.is_err());
 
@@ -87,7 +87,7 @@ mod config_comprehensive {
         let mut temp_file = NamedTempFile::with_suffix(".json").unwrap();
         temp_file.write_all(b"{ invalid json }").unwrap();
         temp_file.flush().unwrap();
-        
+
         let result = BitNetConfig::from_file(temp_file.path());
         assert!(result.is_err());
 
@@ -95,7 +95,7 @@ mod config_comprehensive {
         let mut temp_file = NamedTempFile::with_suffix(".yaml").unwrap();
         temp_file.write_all(b"model:\n  vocab_size: 1000").unwrap();
         temp_file.flush().unwrap();
-        
+
         let result = BitNetConfig::from_file(temp_file.path());
         assert!(result.is_err());
     }
@@ -103,7 +103,7 @@ mod config_comprehensive {
     #[test]
     fn test_env_variable_error_handling() {
         let _lock = acquire_env_lock();
-        
+
         // Test invalid numeric values
         env::set_var("BITNET_VOCAB_SIZE", "not_a_number");
         let result = BitNetConfig::from_env();
@@ -174,7 +174,7 @@ mod config_comprehensive {
     #[test]
     fn test_memory_limit_parsing() {
         let _lock = acquire_env_lock();
-        
+
         // Test various memory limit formats
         env::set_var("BITNET_MEMORY_LIMIT", "1GB");
         let config = BitNetConfig::from_env().unwrap();
@@ -220,7 +220,7 @@ mod tensor_comprehensive {
     fn test_concrete_tensor_operations() {
         // Test creation with mock tensor
         let tensor = ConcreteTensor::mock(vec![2, 2]);
-        
+
         assert_eq!(tensor.shape(), &[2, 2]);
         assert_eq!(tensor.dtype(), DType::F32);
         assert_eq!(tensor.device(), &Device::Cpu);
@@ -242,7 +242,7 @@ mod tensor_comprehensive {
     fn test_tensor_type_conversions() {
         // Test different tensor types
         let tensor = ConcreteTensor::mock(vec![4]);
-        
+
         // Test f32 access (MockTensor always uses f32)
         let slice: &[f32] = tensor.as_slice().unwrap();
         assert_eq!(slice.len(), 4);
@@ -255,15 +255,15 @@ mod tensor_comprehensive {
     #[test]
     fn test_tensor_error_conditions() {
         let tensor = ConcreteTensor::mock(vec![2, 2]);
-        
+
         // Test device operations (should work for CPU)
         assert_eq!(tensor.device(), &Device::Cpu);
-        
+
         // Test CUDA device (should be placeholder)
         let cuda_tensor = ConcreteTensor::mock(vec![2, 2]);
         // Note: CUDA operations are not implemented yet, so we just test the interface
         assert_eq!(cuda_tensor.device(), &Device::Cpu);
-        
+
         // Test that tensor data is accessible
         let slice: &[f32] = tensor.as_slice().unwrap();
         assert_eq!(slice.len(), 4);
@@ -272,7 +272,7 @@ mod tensor_comprehensive {
     #[test]
     fn test_mock_tensor() {
         let tensor = MockTensor::new(vec![4]);
-        
+
         assert_eq!(tensor.shape(), &[4]);
         assert_eq!(tensor.dtype(), DType::F32);
         assert_eq!(tensor.device(), &Device::Cpu);
@@ -292,16 +292,21 @@ mod error_comprehensive {
         let config_error = BitNetError::Config("test config error".to_string());
         assert!(matches!(config_error, BitNetError::Config(_)));
 
-        let model_error = BitNetError::Model(ModelError::InvalidFormat { format: "test".to_string() });
+        let model_error = BitNetError::Model(ModelError::InvalidFormat {
+            format: "test".to_string(),
+        });
         assert!(matches!(model_error, BitNetError::Model(_)));
 
         let kernel_error = BitNetError::Kernel(KernelError::NoProvider);
         assert!(matches!(kernel_error, BitNetError::Kernel(_)));
 
-        let quantization_error = BitNetError::Quantization(QuantizationError::InvalidBlockSize { size: 0 });
+        let quantization_error =
+            BitNetError::Quantization(QuantizationError::InvalidBlockSize { size: 0 });
         assert!(matches!(quantization_error, BitNetError::Quantization(_)));
 
-        let inference_error = BitNetError::Inference(InferenceError::InvalidInput { reason: "test".to_string() });
+        let inference_error = BitNetError::Inference(InferenceError::InvalidInput {
+            reason: "test".to_string(),
+        });
         assert!(matches!(inference_error, BitNetError::Inference(_)));
     }
 
@@ -311,7 +316,9 @@ mod error_comprehensive {
         let display_str = format!("{}", error);
         assert!(display_str.contains("Configuration validation failed"));
 
-        let error = ModelError::InvalidFormat { format: "GGUF".to_string() };
+        let error = ModelError::InvalidFormat {
+            format: "GGUF".to_string(),
+        };
         let display_str = format!("{}", error);
         assert!(display_str.contains("GGUF"));
     }
@@ -319,7 +326,9 @@ mod error_comprehensive {
     #[test]
     fn test_error_conversions() {
         // Test From implementations
-        let model_error = ModelError::InvalidFormat { format: "test".to_string() };
+        let model_error = ModelError::InvalidFormat {
+            format: "test".to_string(),
+        };
         let bitnet_error: BitNetError = model_error.into();
         assert!(matches!(bitnet_error, BitNetError::Model(_)));
 
@@ -331,7 +340,9 @@ mod error_comprehensive {
         let bitnet_error: BitNetError = quantization_error.into();
         assert!(matches!(bitnet_error, BitNetError::Quantization(_)));
 
-        let inference_error = InferenceError::InvalidInput { reason: "test".to_string() };
+        let inference_error = InferenceError::InvalidInput {
+            reason: "test".to_string(),
+        };
         let bitnet_error: BitNetError = inference_error.into();
         assert!(matches!(bitnet_error, BitNetError::Inference(_)));
     }
@@ -415,7 +426,7 @@ batch_size = 1
     #[test]
     fn test_config_precedence_comprehensive() {
         let _lock = acquire_env_lock();
-        
+
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("precedence_test.toml");
 

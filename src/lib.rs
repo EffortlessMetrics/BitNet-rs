@@ -98,13 +98,15 @@ pub use bitnet_kernels as kernels;
 
 /// Convenient prelude for common imports
 pub mod prelude {
-    pub use crate::common::{BitNetConfig, BitNetError, Device, QuantizationType, GenerationConfig};
+    pub use crate::common::{
+        BitNetConfig, BitNetError, Device, GenerationConfig, QuantizationType,
+    };
     pub use crate::models::{BitNetModel, ModelLoader};
     pub use crate::quantization::Quantize;
-    
+
     #[cfg(feature = "inference")]
     pub use crate::inference::InferenceEngine;
-    
+
     #[cfg(feature = "tokenizers")]
     pub use crate::tokenizers::Tokenizer;
 }
@@ -122,19 +124,19 @@ pub mod build_info {
         Some(hash) => hash,
         None => "unknown",
     };
-    
+
     /// Build timestamp
     pub const BUILD_TIMESTAMP: &str = match option_env!("VERGEN_BUILD_TIMESTAMP") {
         Some(timestamp) => timestamp,
         None => "unknown",
     };
-    
+
     /// Target triple
     pub const TARGET: &str = match option_env!("VERGEN_CARGO_TARGET_TRIPLE") {
         Some(target) => target,
         None => "unknown",
     };
-    
+
     /// Rust version used for build
     pub const RUSTC_VERSION: &str = match option_env!("VERGEN_RUSTC_SEMVER") {
         Some(version) => version,

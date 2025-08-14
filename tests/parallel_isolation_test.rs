@@ -5,9 +5,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
+use tempfile;
 use tokio::sync::{RwLock, Semaphore};
 use tokio::time::timeout;
-use tempfile;
 
 /// Test result structure
 #[derive(Debug, Clone)]
@@ -37,7 +37,12 @@ impl TestResult {
         }
     }
 
-    pub fn failed(test_name: String, duration: Duration, error: String, parallel_slot: usize) -> Self {
+    pub fn failed(
+        test_name: String,
+        duration: Duration,
+        error: String,
+        parallel_slot: usize,
+    ) -> Self {
         let now = SystemTime::now();
         Self {
             test_name,
@@ -62,21 +67,24 @@ struct IsolatedEnvironment {
 }
 
 impl IsolatedEnvironment {
-    fn new(test_name: &str, parallel_slot: usize) -> Result<(Self, tempfile::TempDir), Box<dyn std::error::Error + Send + Sync>> {
+    fn new(
+        test_name: &str,
+        parallel_slot: usize,
+    ) -> Result<(Self, tempfile::TempDir), Box<dyn std::error::Error + Send + Sync>> {
         let temp_dir = tempfile::tempdir()?;
         let temp_dir_path = temp_dir.path().to_path_buf();
-        
+
         // Create unique subdirectory for this test
         let test_subdir = temp_dir_path.join(format!("{}_{}", test_name, parallel_slot));
         std::fs::create_dir_all(&test_subdir)?;
-        
+
         let env = Self {
             test_name: test_name.to_string(),
             temp_dir_path,
             parallel_slot,
             test_subdir,
         };
-        
+
         Ok((env, temp_dir))
     }
 
@@ -113,7 +121,12 @@ pub struct IsolationTestCase {
 }
 
 impl IsolationTestCase {
-    pub fn new(name: &str, work_duration: Duration, should_fail: bool, memory_operations: usize) -> Self {
+    pub fn new(
+        name: &str,
+        work_duration: Duration,
+        should_fail: bool,
+        memory_operations: usize,
+    ) -> Self {
         Self {
             name: name.to_string(),
             work_duration,
@@ -138,7 +151,10 @@ impl TestCase for IsolationTestCase {
 
         // Verify environment isolation
         if test_name != self.name {
-            return Err(format!("Test name mismatch: expected '{}', got '{}'", self.name, test_name));
+            return Err(format!(
+                "Test name mismatch: expected '{}', got '{}'",
+                self.name, test_name
+            ));
         }
 
         if !temp_dir.exists() {
@@ -166,22 +182,38 @@ impl TestCase for IsolationTestCase {
 
         // Verify isolation is still intact after work - check environment hasn't changed
         if env.get_test_name() != self.name {
-            return Err(format!("Isolation broken during execution: expected '{}', got '{}'", self.name, env.get_test_name()));
+            return Err(format!(
+                "Isolation broken during execution: expected '{}', got '{}'",
+                self.name,
+                env.get_test_name()
+            ));
         }
 
         if env.get_parallel_slot() != parallel_slot {
-            return Err(format!("Parallel slot changed during execution: expected '{}', got '{}'", parallel_slot, env.get_parallel_slot()));
+            return Err(format!(
+                "Parallel slot changed during execution: expected '{}', got '{}'",
+                parallel_slot,
+                env.get_parallel_slot()
+            ));
         }
 
         // Verify our unique file still exists and has correct content
-        let actual_content = std::fs::read_to_string(&unique_file).map_err(|e| format!("Failed to read file: {}", e))?;
+        let actual_content = std::fs::read_to_string(&unique_file)
+            .map_err(|e| format!("Failed to read file: {}", e))?;
         if actual_content != file_content {
-            return Err(format!("File interference detected: expected '{}', got '{}'", file_content, actual_content));
+            return Err(format!(
+                "File interference detected: expected '{}', got '{}'",
+                file_content, actual_content
+            ));
         }
 
         // Verify memory operations completed correctly
         if data.len() != self.memory_operations {
-            return Err(format!("Memory operations failed: expected {}, got {}", self.memory_operations, data.len()));
+            return Err(format!(
+                "Memory operations failed: expected {}, got {}",
+                self.memory_operations,
+                data.len()
+            ));
         }
 
         // Verify temp directory is still accessible
@@ -239,7 +271,14 @@ impl ParallelTestHarness {
             let timeout_duration = self.test_timeout;
 
             let handle = tokio::spawn(async move {
-                Self::run_single_test_isolated(test_case, semaphore, stats, slot_tracker, timeout_duration).await
+                Self::run_single_test_isolated(
+                    test_case,
+                    semaphore,
+                    stats,
+                    slot_tracker,
+                    timeout_duration,
+                )
+                .await
             });
 
             handles.push(handle);
@@ -334,12 +373,14 @@ impl ParallelTestHarness {
         };
 
         // Execute test with timeout in blocking context
-        let execute_result = timeout(timeout_duration, tokio::task::spawn_blocking({
-            let env_clone = isolated_env.clone();
-            move || {
-                test_case.run_sync(&env_clone)
-            }
-        })).await;
+        let execute_result = timeout(
+            timeout_duration,
+            tokio::task::spawn_blocking({
+                let env_clone = isolated_env.clone();
+                move || test_case.run_sync(&env_clone)
+            }),
+        )
+        .await;
 
         let duration = start_time.elapsed();
 
@@ -417,7 +458,7 @@ mod tests {
     #[tokio::test]
     async fn test_parallel_execution_with_proper_isolation() {
         println!("🚀 Testing parallel execution with proper isolation...");
-        
+
         // Create test harness with 4 parallel slots
         let harness = ParallelTestHarness::new(4, Duration::from_secs(10));
 
@@ -443,10 +484,18 @@ mod tests {
         // Print detailed results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
-            let isolation = if result.isolation_verified { "🔒 ISOLATED" } else { "⚠️  LEAKED" };
+            let status = if result.passed {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            };
+            let isolation = if result.isolation_verified {
+                "🔒 ISOLATED"
+            } else {
+                "⚠️  LEAKED"
+            };
             println!(
-                "  {} {} {} (slot: {}, {:?})", 
+                "  {} {} {} (slot: {}, {:?})",
                 status, result.test_name, isolation, result.parallel_slot, result.duration
             );
             if let Some(error) = &result.error {
@@ -464,19 +513,27 @@ mod tests {
         assert_eq!(failed_count, 1, "Should have 1 failed test (intentional)");
 
         // Verify no isolation violations (except for the intentionally failing test)
-        let isolation_violations = results.iter()
-            .filter(|r| !r.passed && r.error.as_ref().map_or(false, |e| 
-                e.contains("interference") || e.contains("isolation broken")))
+        let isolation_violations = results
+            .iter()
+            .filter(|r| {
+                !r.passed
+                    && r.error.as_ref().map_or(false, |e| {
+                        e.contains("interference") || e.contains("isolation broken")
+                    })
+            })
             .count();
-        assert_eq!(isolation_violations, 0, "Should have no isolation violations");
+        assert_eq!(
+            isolation_violations, 0,
+            "Should have no isolation violations"
+        );
 
         // Verify parallel execution efficiency
         let sequential_time = Duration::from_millis(100 + 150 + 300 + 250 + 500 + 400 + 200 + 100); // 2000ms
-        
+
         println!("⏱️  Performance Analysis:");
         println!("  Total execution time: {:?}", total_duration);
         println!("  Sequential time would be: {:?}", sequential_time);
-        
+
         // Verify that parallel execution was significantly faster than sequential
         assert!(total_duration < sequential_time, 
             "Parallel execution should be faster than sequential. Got {:?}, expected less than {:?}", 
@@ -489,9 +546,16 @@ mod tests {
             total_duration, efficiency_threshold);
 
         // Verify parallel slots were used correctly
-        let used_slots: std::collections::HashSet<_> = results.iter().map(|r| r.parallel_slot).collect();
-        assert!(used_slots.len() > 1, "Multiple parallel slots should have been used");
-        assert!(used_slots.iter().all(|&slot| slot < 4), "All slots should be within bounds");
+        let used_slots: std::collections::HashSet<_> =
+            results.iter().map(|r| r.parallel_slot).collect();
+        assert!(
+            used_slots.len() > 1,
+            "Multiple parallel slots should have been used"
+        );
+        assert!(
+            used_slots.iter().all(|&slot| slot < 4),
+            "All slots should be within bounds"
+        );
 
         // Verify stats
         let stats = harness.get_stats().await;
@@ -502,7 +566,10 @@ mod tests {
 
         let efficiency = stats.parallel_efficiency;
         println!("  Parallel efficiency: {:.2}x", efficiency);
-        assert!(efficiency > 1.5, "Should achieve at least 1.5x efficiency with 4 parallel slots");
+        assert!(
+            efficiency > 1.5,
+            "Should achieve at least 1.5x efficiency with 4 parallel slots"
+        );
 
         println!("✅ Parallel execution with proper isolation test passed!");
         println!("   - All tests executed with proper isolation");
@@ -516,7 +583,7 @@ mod tests {
     #[tokio::test]
     async fn test_semaphore_limits_parallelism() {
         println!("🚀 Testing semaphore limits parallelism...");
-        
+
         // Create test harness with only 1 parallel slot (sequential execution)
         let harness = ParallelTestHarness::new(1, Duration::from_secs(10));
 
@@ -537,32 +604,52 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
-            println!("  {} {} (slot: {}, {:?})", status, result.test_name, result.parallel_slot, result.duration);
+            let status = if result.passed {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            };
+            println!(
+                "  {} {} (slot: {}, {:?})",
+                status, result.test_name, result.parallel_slot, result.duration
+            );
         }
 
         // Verify results
         assert_eq!(results.len(), 3, "Should have 3 test results");
-        assert_eq!(results.iter().filter(|r| r.passed).count(), 3, "All tests should pass");
+        assert_eq!(
+            results.iter().filter(|r| r.passed).count(),
+            3,
+            "All tests should pass"
+        );
 
         // With max_parallel = 1, all tests should use slot 0
-        assert!(results.iter().all(|r| r.parallel_slot == 0), "All tests should use slot 0");
+        assert!(
+            results.iter().all(|r| r.parallel_slot == 0),
+            "All tests should use slot 0"
+        );
 
         // With max_parallel = 1, execution should be close to sequential
         let expected_min_time = Duration::from_millis(600); // 3 * 200ms
-        assert!(total_duration >= expected_min_time.mul_f64(0.8), 
-            "Sequential execution should take at least ~{:?}, got {:?}", 
-            expected_min_time, total_duration);
+        assert!(
+            total_duration >= expected_min_time.mul_f64(0.8),
+            "Sequential execution should take at least ~{:?}, got {:?}",
+            expected_min_time,
+            total_duration
+        );
 
         println!("⏱️  Performance Analysis:");
-        println!("  Execution time: {:?} (expected ~{:?})", total_duration, expected_min_time);
+        println!(
+            "  Execution time: {:?} (expected ~{:?})",
+            total_duration, expected_min_time
+        );
         println!("✅ Semaphore limiting test passed!");
     }
 
     #[tokio::test]
     async fn test_isolation_prevents_interference() {
         println!("🚀 Testing isolation prevents interference...");
-        
+
         // Create test harness with 3 parallel slots
         let harness = ParallelTestHarness::new(3, Duration::from_secs(10));
 
@@ -597,11 +684,17 @@ mod tests {
                 let test_subdir = env.get_test_subdir();
 
                 if test_name != self.name {
-                    return Err(format!("Wrong test environment: expected '{}', got '{}'", self.name, test_name));
+                    return Err(format!(
+                        "Wrong test environment: expected '{}', got '{}'",
+                        self.name, test_name
+                    ));
                 }
 
                 // Create a file in temp directory with slot-specific name
-                let test_file = test_subdir.join(format!("{}_{}_slot_{}.txt", self.name, self.env_key, parallel_slot));
+                let test_file = test_subdir.join(format!(
+                    "{}_{}_slot_{}.txt",
+                    self.name, self.env_key, parallel_slot
+                ));
                 let expected_content = format!("{}_slot_{}", self.env_value, parallel_slot);
                 std::fs::write(&test_file, &expected_content)
                     .map_err(|e| format!("Failed to write file: {}", e))?;
@@ -610,18 +703,30 @@ mod tests {
                 std::thread::sleep(self.work_duration);
 
                 // Verify our file still exists and has correct content
-                let file_content = std::fs::read_to_string(&test_file).map_err(|e| format!("Failed to read file: {}", e))?;
+                let file_content = std::fs::read_to_string(&test_file)
+                    .map_err(|e| format!("Failed to read file: {}", e))?;
                 if file_content != expected_content {
-                    return Err(format!("File interference detected: expected '{}', got '{}'", expected_content, file_content));
+                    return Err(format!(
+                        "File interference detected: expected '{}', got '{}'",
+                        expected_content, file_content
+                    ));
                 }
 
                 // Verify we're still in the correct test environment
                 if env.get_test_name() != self.name {
-                    return Err(format!("Test environment changed: expected '{}', got '{}'", self.name, env.get_test_name()));
+                    return Err(format!(
+                        "Test environment changed: expected '{}', got '{}'",
+                        self.name,
+                        env.get_test_name()
+                    ));
                 }
 
                 if env.get_parallel_slot() != parallel_slot {
-                    return Err(format!("Parallel slot changed: expected '{}', got '{}'", parallel_slot, env.get_parallel_slot()));
+                    return Err(format!(
+                        "Parallel slot changed: expected '{}', got '{}'",
+                        parallel_slot,
+                        env.get_parallel_slot()
+                    ));
                 }
 
                 Ok(())
@@ -632,9 +737,19 @@ mod tests {
         let test_cases = vec![
             InterferenceTestCase::new("test_a", "TEST_VAR", "value_a", Duration::from_millis(200)),
             InterferenceTestCase::new("test_b", "TEST_VAR", "value_b", Duration::from_millis(250)),
-            InterferenceTestCase::new("test_c", "ANOTHER_VAR", "value_c", Duration::from_millis(150)),
+            InterferenceTestCase::new(
+                "test_c",
+                "ANOTHER_VAR",
+                "value_c",
+                Duration::from_millis(150),
+            ),
             InterferenceTestCase::new("test_d", "TEST_VAR", "value_d", Duration::from_millis(300)),
-            InterferenceTestCase::new("test_e", "SHARED_VAR", "value_e", Duration::from_millis(180)),
+            InterferenceTestCase::new(
+                "test_e",
+                "SHARED_VAR",
+                "value_e",
+                Duration::from_millis(180),
+            ),
         ];
 
         // Run tests
@@ -643,8 +758,15 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
-            println!("  {} {} (slot: {}, {:?})", status, result.test_name, result.parallel_slot, result.duration);
+            let status = if result.passed {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            };
+            println!(
+                "  {} {} (slot: {}, {:?})",
+                status, result.test_name, result.parallel_slot, result.duration
+            );
             if let Some(error) = &result.error {
                 println!("    Error: {}", error);
             }
@@ -652,16 +774,24 @@ mod tests {
 
         // Verify all tests passed (no interference)
         assert_eq!(results.len(), 5, "Should have 5 test results");
-        
+
         for result in &results {
             if !result.passed {
-                panic!("Test '{}' failed: {}", result.test_name, result.error.as_deref().unwrap_or("Unknown error"));
+                panic!(
+                    "Test '{}' failed: {}",
+                    result.test_name,
+                    result.error.as_deref().unwrap_or("Unknown error")
+                );
             }
         }
 
         // Verify multiple slots were used
-        let used_slots: std::collections::HashSet<_> = results.iter().map(|r| r.parallel_slot).collect();
-        assert!(used_slots.len() > 1, "Multiple parallel slots should have been used");
+        let used_slots: std::collections::HashSet<_> =
+            results.iter().map(|r| r.parallel_slot).collect();
+        assert!(
+            used_slots.len() > 1,
+            "Multiple parallel slots should have been used"
+        );
 
         println!("✅ Isolation prevents interference test passed!");
         println!("   - All tests ran without interfering with each other");
@@ -673,7 +803,7 @@ mod tests {
     #[tokio::test]
     async fn test_timeout_handling_with_isolation() {
         println!("🚀 Testing timeout handling with isolation...");
-        
+
         // Create test harness with short timeout
         let harness = ParallelTestHarness::new(2, Duration::from_millis(500));
 
@@ -702,19 +832,30 @@ mod tests {
                 let parallel_slot = env.get_parallel_slot();
 
                 if test_name != self.name {
-                    return Err(format!("Wrong test environment: expected '{}', got '{}'", self.name, test_name));
+                    return Err(format!(
+                        "Wrong test environment: expected '{}', got '{}'",
+                        self.name, test_name
+                    ));
                 }
 
                 // Sleep for the specified duration
                 std::thread::sleep(self.work_duration);
-                
+
                 // Verify isolation is still intact
                 if env.get_test_name() != self.name {
-                    return Err(format!("Test environment changed during execution: expected '{}', got '{}'", self.name, env.get_test_name()));
+                    return Err(format!(
+                        "Test environment changed during execution: expected '{}', got '{}'",
+                        self.name,
+                        env.get_test_name()
+                    ));
                 }
 
                 if env.get_parallel_slot() != parallel_slot {
-                    return Err(format!("Parallel slot changed during execution: expected '{}', got '{}'", parallel_slot, env.get_parallel_slot()));
+                    return Err(format!(
+                        "Parallel slot changed during execution: expected '{}', got '{}'",
+                        parallel_slot,
+                        env.get_parallel_slot()
+                    ));
                 }
 
                 Ok(())
@@ -731,22 +872,32 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
-            println!("  {} {} (slot: {}, {:?})", status, result.test_name, result.parallel_slot, result.duration);
+            let status = if result.passed {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            };
+            println!(
+                "  {} {} (slot: {}, {:?})",
+                status, result.test_name, result.parallel_slot, result.duration
+            );
             if let Some(error) = &result.error {
                 println!("    Error: {}", error);
             }
         }
 
         assert_eq!(results.len(), 2, "Should have 2 test results");
-        
+
         // Find the fast and slow test results
         let fast_result = results.iter().find(|r| r.test_name == "fast_test").unwrap();
         let slow_result = results.iter().find(|r| r.test_name == "slow_test").unwrap();
 
         assert!(fast_result.passed, "Fast test should pass");
         assert!(!slow_result.passed, "Slow test should fail due to timeout");
-        assert!(slow_result.error.as_ref().unwrap().contains("timed out"), "Slow test should have timeout error");
+        assert!(
+            slow_result.error.as_ref().unwrap().contains("timed out"),
+            "Slow test should have timeout error"
+        );
 
         println!("✅ Timeout handling with isolation test passed!");
         println!("   - Fast test completed successfully with proper isolation");

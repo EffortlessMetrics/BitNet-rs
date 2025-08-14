@@ -279,16 +279,17 @@ impl BitNetConfig {
             self.model.path = Some(PathBuf::from(path));
         }
         if let Ok(format) = env::var("BITNET_MODEL_FORMAT") {
-            self.model.format =
-                match format.to_lowercase().as_str() {
-                    "gguf" => ModelFormat::Gguf,
-                    "safetensors" => ModelFormat::SafeTensors,
-                    "huggingface" => ModelFormat::HuggingFace,
-                    _ => return Err(BitNetError::Config(format!(
+            self.model.format = match format.to_lowercase().as_str() {
+                "gguf" => ModelFormat::Gguf,
+                "safetensors" => ModelFormat::SafeTensors,
+                "huggingface" => ModelFormat::HuggingFace,
+                _ => {
+                    return Err(BitNetError::Config(format!(
                         "Invalid model format '{}'. Use 'gguf', 'safetensors', or 'huggingface'",
                         format
-                    ))),
-                };
+                    )))
+                }
+            };
         }
         if let Ok(vocab_size) = env::var("BITNET_VOCAB_SIZE") {
             self.model.vocab_size = vocab_size.parse().map_err(|_| {

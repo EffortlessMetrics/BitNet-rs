@@ -1,7 +1,7 @@
 //! WebAssembly-optimized CPU kernels for BitNet inference
 
-use wasm_bindgen::prelude::*;
 use std::arch::wasm32::*;
+use wasm_bindgen::prelude::*;
 
 use bitnet_common::BitNetError;
 use bitnet_quantization::QuantizationType;
@@ -17,11 +17,14 @@ impl WasmKernelProvider {
     pub fn new() -> Self {
         let simd_supported = Self::detect_simd_support();
         let bulk_memory_supported = Self::detect_bulk_memory_support();
-        
-        web_sys::console::log_1(&format!(
-            "WASM kernels initialized - SIMD: {}, Bulk Memory: {}",
-            simd_supported, bulk_memory_supported
-        ).into());
+
+        web_sys::console::log_1(
+            &format!(
+                "WASM kernels initialized - SIMD: {}, Bulk Memory: {}",
+                simd_supported, bulk_memory_supported
+            )
+            .into(),
+        );
 
         WasmKernelProvider {
             simd_supported,
@@ -46,7 +49,7 @@ impl WasmKernelProvider {
     pub fn matmul_i2s(
         &self,
         a: &[i8],
-        b: &[u8], 
+        b: &[u8],
         c: &mut [f32],
         m: usize,
         n: usize,
@@ -77,19 +80,19 @@ impl WasmKernelProvider {
         for i in 0..m {
             for j in (0..n).step_by(4) {
                 let mut acc = f32x4_splat(0.0);
-                
+
                 for l in (0..k).step_by(16) {
                     if l + 16 <= k && j + 4 <= n {
                         // Load 16 i8 values from matrix A
                         let a_base = i * k + l;
                         let a_vec = v128_load(&a[a_base] as *const i8 as *const v128);
-                        
+
                         // Load and process 4 columns from matrix B
                         for col in 0..4 {
                             if j + col < n {
                                 let b_base = l * n + j + col;
                                 let b_vec = v128_load(&b[b_base] as *const u8 as *const v128);
-                                
+
                                 // Convert and multiply (simplified)
                                 let prod = self.simd_multiply_i8_u8(a_vec, b_vec);
                                 acc = f32x4_add(acc, prod);
@@ -110,7 +113,7 @@ impl WasmKernelProvider {
                         }
                     }
                 }
-                
+
                 // Store results
                 if j + 4 <= n {
                     v128_store(&mut c[i * n + j] as *mut f32 as *mut v128, acc);
@@ -130,7 +133,7 @@ impl WasmKernelProvider {
                 }
             }
         }
-        
+
         Ok(())
     }
 
@@ -148,31 +151,31 @@ impl WasmKernelProvider {
         for i in 0..m {
             for j in 0..n {
                 let mut sum = 0.0f32;
-                
+
                 // Unroll inner loop for better performance
                 let mut l = 0;
                 while l + 4 <= k {
                     let a_base = i * k + l;
                     let b_base = l * n + j;
-                    
+
                     sum += (a[a_base] as f32) * (b[b_base] as f32);
                     sum += (a[a_base + 1] as f32) * (b[b_base + n] as f32);
                     sum += (a[a_base + 2] as f32) * (b[b_base + 2 * n] as f32);
                     sum += (a[a_base + 3] as f32) * (b[b_base + 3 * n] as f32);
-                    
+
                     l += 4;
                 }
-                
+
                 // Handle remaining elements
                 while l < k {
                     sum += (a[i * k + l] as f32) * (b[l * n + j] as f32);
                     l += 1;
                 }
-                
+
                 c[i * n + j] = sum;
             }
         }
-        
+
         Ok(())
     }
 
@@ -181,13 +184,19 @@ impl WasmKernelProvider {
         // Convert i8 to i16, then to i32, then to f32
         let a_low = i16x8_extend_low_i8x16(a);
         let a_high = i16x8_extend_high_i8x16(a);
-        
-        // Convert u8 to u16, then to u32, then to f32  
+
+        // Convert u8 to u16, then to u32, then to f32
         let b_low = u16x8_extend_low_u8x16(b);
         let b_high = u16x8_extend_high_u8x16(b);
-        
+
         // Multiply and accumulate (simplified - real implementation would be more complex)
-        let prod_low = i32x4_extend_low_i16x8(i16x8_mul(a_low, i16x8_narrow_i32x4(i32x4_extend_low_u16x8(b_low), i32x4_extend_high_u16x8(b_low))));
+        let prod_low = i32x4_extend_low_i16x8(i16x8_mul(
+            a_low,
+            i16x8_narrow_i32x4(
+                i32x4_extend_low_u16x8(b_low),
+                i32x4_extend_high_u16x8(b_low),
+            ),
+        ));
         f32x4_convert_i32x4(prod_low)
     }
 
@@ -216,46 +225,48 @@ impl WasmKernelProvider {
         block_size: usize,
     ) -> Result<(), BitNetError> {
         let num_blocks = (input.len() + block_size - 1) / block_size;
-        
+
         if scales.len() < num_blocks {
-            return Err(BitNetError::Quantization("Insufficient scale buffer".into()));
+            return Err(BitNetError::Quantization(
+                "Insufficient scale buffer".into(),
+            ));
         }
 
         for block_idx in 0..num_blocks {
             let start = block_idx * block_size;
             let end = (start + block_size).min(input.len());
             let block = &input[start..end];
-            
+
             // Find scale (maximum absolute value)
             let mut scale = 0.0f32;
             for &val in block {
                 scale = scale.max(val.abs());
             }
-            
+
             if scale == 0.0 {
                 scale = 1.0; // Avoid division by zero
             }
-            
+
             scales[block_idx] = scale;
             let inv_scale = 1.0 / scale;
-            
+
             // Quantize to 2-bit signed values and pack
             let output_start = block_idx * (block_size / 4); // 4 values per byte
             for (i, chunk) in block.chunks(4).enumerate() {
                 let mut packed = 0u8;
-                
+
                 for (j, &val) in chunk.iter().enumerate() {
                     let quantized = ((val * inv_scale).clamp(-1.0, 1.0) * 1.5 + 1.5) as u8;
                     let quantized_2bit = quantized.min(3);
                     packed |= quantized_2bit << (j * 2);
                 }
-                
+
                 if output_start + i < output.len() {
                     output[output_start + i] = packed;
                 }
             }
         }
-        
+
         Ok(())
     }
 
@@ -301,7 +312,7 @@ impl WasmKernelProvider {
     /// SIMD tensor addition
     fn tensor_add_simd(&self, a: &mut [f32], b: &[f32]) -> Result<(), BitNetError> {
         let mut i = 0;
-        
+
         // Process 4 elements at a time with SIMD
         while i + 4 <= a.len() {
             let a_vec = v128_load(&a[i] as *const f32 as *const v128);
@@ -310,13 +321,13 @@ impl WasmKernelProvider {
             v128_store(&mut a[i] as *mut f32 as *mut v128, result);
             i += 4;
         }
-        
+
         // Handle remaining elements
         while i < a.len() {
             a[i] += b[i];
             i += 1;
         }
-        
+
         Ok(())
     }
 
@@ -418,10 +429,13 @@ impl WasmBenchmark {
         let total_ops = ops_per_iteration * iterations as f64;
         let gflops = (total_ops / 1e9) / (elapsed_ms / 1000.0);
 
-        web_sys::console::log_1(&format!(
-            "Matrix multiplication benchmark: {:.2} GFLOPS ({} iterations, {:.2}ms total)",
-            gflops, iterations, elapsed_ms
-        ).into());
+        web_sys::console::log_1(
+            &format!(
+                "Matrix multiplication benchmark: {:.2} GFLOPS ({} iterations, {:.2}ms total)",
+                gflops, iterations, elapsed_ms
+            )
+            .into(),
+        );
 
         gflops
     }
@@ -457,10 +471,13 @@ impl WasmBenchmark {
         let elements_per_second = (size * iterations) as f64 / (elapsed_ms / 1000.0);
         let throughput_gbps = (elements_per_second * 4.0) / 1e9; // 4 bytes per f32
 
-        web_sys::console::log_1(&format!(
-            "Quantization benchmark: {:.2} GB/s ({} iterations, {:.2}ms total)",
-            throughput_gbps, iterations, elapsed_ms
-        ).into());
+        web_sys::console::log_1(
+            &format!(
+                "Quantization benchmark: {:.2} GB/s ({} iterations, {:.2}ms total)",
+                throughput_gbps, iterations, elapsed_ms
+            )
+            .into(),
+        );
 
         throughput_gbps
     }

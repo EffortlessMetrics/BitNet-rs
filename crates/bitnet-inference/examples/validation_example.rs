@@ -1,17 +1,17 @@
 //! Example of end-to-end validation against Python baseline
 
-use bitnet_inference::{
-    CpuBackend, CpuInferenceEngine, CpuInferenceConfig, EndToEndValidator,
-    ValidationConfig, ValidationTolerance, PerformanceThresholds
-};
 use bitnet_common::{BitNetConfig, GenerationConfig};
+use bitnet_inference::{
+    CpuBackend, CpuInferenceConfig, CpuInferenceEngine, EndToEndValidator, PerformanceThresholds,
+    ValidationConfig, ValidationTolerance,
+};
 use bitnet_models::BitNetModel;
 use candle_core::Device;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("BitNet Rust Validation Example");
-    
+
     // Create validation configuration
     let validation_config = ValidationConfig {
         python_script_path: "python/baseline_inference.py".to_string(),
@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "Write a short story about a robot.".to_string(),
         ],
         tolerance: ValidationTolerance {
-            token_accuracy: 0.90,      // 90% token accuracy
+            token_accuracy: 0.90, // 90% token accuracy
             numerical_precision: 1e-6,
             performance_regression: 0.10, // Allow 10% regression
         },
@@ -35,43 +35,59 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         output_dir: "validation_output".to_string(),
     };
-    
+
     // Create output directory
     std::fs::create_dir_all(&validation_config.output_dir)?;
-    
+
     // Create Rust inference engine
     let model_config = BitNetConfig::default();
     let device = Device::Cpu;
     let model = BitNetModel::new(model_config, device);
-    
+
     let cpu_backend = CpuBackend::new()?;
     let cpu_config = CpuInferenceConfig::default();
-    let mut cpu_engine = CpuInferenceEngine::new(
-        Box::new(model),
-        cpu_backend,
-        cpu_config,
-    )?;
-    
+    let mut cpu_engine = CpuInferenceEngine::new(Box::new(model), cpu_backend, cpu_config)?;
+
     // Create validator
     let validator = EndToEndValidator::new(validation_config);
-    
+
     // Run comprehensive validation
     println!("Starting comprehensive validation...");
     let results = validator.validate_comprehensive(&mut cpu_engine).await?;
-    
+
     // Print results
     println!("\n=== Validation Results ===");
-    println!("Overall Result: {}", if results.overall_passed { "PASSED" } else { "FAILED" });
-    println!("Tests Passed: {}/{}", results.summary.passed_tests, results.summary.total_tests);
-    println!("Average Token Accuracy: {:.2}%", results.accuracy_metrics.average_token_accuracy * 100.0);
-    println!("Speedup Factor: {:.2}x", results.performance_comparison.speedup_factor);
-    println!("Memory Efficiency: {:.2}x", results.performance_comparison.memory_efficiency);
-    
+    println!(
+        "Overall Result: {}",
+        if results.overall_passed {
+            "PASSED"
+        } else {
+            "FAILED"
+        }
+    );
+    println!(
+        "Tests Passed: {}/{}",
+        results.summary.passed_tests, results.summary.total_tests
+    );
+    println!(
+        "Average Token Accuracy: {:.2}%",
+        results.accuracy_metrics.average_token_accuracy * 100.0
+    );
+    println!(
+        "Speedup Factor: {:.2}x",
+        results.performance_comparison.speedup_factor
+    );
+    println!(
+        "Memory Efficiency: {:.2}x",
+        results.performance_comparison.memory_efficiency
+    );
+
     // Print individual test results
     println!("\n=== Individual Test Results ===");
     for test in &results.test_results {
-        println!("Test: {} - {} (Accuracy: {:.2}%)", 
-            test.test_name, 
+        println!(
+            "Test: {} - {} (Accuracy: {:.2}%)",
+            test.test_name,
             if test.passed { "PASSED" } else { "FAILED" },
             test.token_accuracy * 100.0
         );
@@ -79,7 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  Errors: {:?}", test.errors);
         }
     }
-    
+
     // Print recommendations
     if !results.summary.recommendations.is_empty() {
         println!("\n=== Recommendations ===");
@@ -87,13 +103,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("- {}", rec);
         }
     }
-    
+
     // Save results
     validator.save_results(&results)?;
     validator.generate_html_report(&results)?;
-    
+
     println!("\nValidation complete! Check the output directory for detailed results.");
-    
+
     Ok(())
 }
 
@@ -101,7 +117,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[allow(dead_code)]
 async fn run_stress_tests() -> Result<(), Box<dyn std::error::Error>> {
     println!("Running stress tests...");
-    
+
     // Create a simple validation config for stress testing
     let config = ValidationConfig {
         python_script_path: "python/baseline_inference.py".to_string(),
@@ -111,26 +127,23 @@ async fn run_stress_tests() -> Result<(), Box<dyn std::error::Error>> {
         performance_thresholds: PerformanceThresholds::default(),
         output_dir: "stress_test_output".to_string(),
     };
-    
+
     let stress_tester = bitnet_inference::StressTester::new(config);
-    
+
     // Create a dummy engine for testing
     let model_config = BitNetConfig::default();
     let device = Device::Cpu;
     let model = BitNetModel::new(model_config, device);
     let cpu_backend = CpuBackend::new()?;
     let cpu_config = CpuInferenceConfig::default();
-    let mut cpu_engine = CpuInferenceEngine::new(
-        Box::new(model),
-        cpu_backend,
-        cpu_config,
-    )?;
-    
+    let mut cpu_engine = CpuInferenceEngine::new(Box::new(model), cpu_backend, cpu_config)?;
+
     let stress_results = stress_tester.run_stress_tests(&mut cpu_engine).await?;
-    
+
     println!("Stress test results:");
     for result in &stress_results.results {
-        println!("- {}: {} ({:?})", 
+        println!(
+            "- {}: {} ({:?})",
             result.test_name,
             if result.success { "PASSED" } else { "FAILED" },
             result.duration
@@ -139,7 +152,7 @@ async fn run_stress_tests() -> Result<(), Box<dyn std::error::Error>> {
             println!("  Error: {}", error);
         }
     }
-    
+
     Ok(())
 }
 

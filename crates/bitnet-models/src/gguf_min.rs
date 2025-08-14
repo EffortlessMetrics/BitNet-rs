@@ -6,21 +6,26 @@
 //!
 //! This is deliberately small: robust error messages, no full schema.
 
+use crate::formats::gguf::GgufTensorType;
 use anyhow::{bail, ensure, Context, Result};
+use bitnet_common::QuantizationType;
+use bitnet_quantization::{I2SLayout, I2SQuantizer, QuantizedTensor};
 use half::f16;
 use memmap2::Mmap;
-use std::{borrow::Cow, fs::File, io::{self, Read, Seek}, path::Path};
-use bitnet_quantization::{I2SQuantizer, I2SLayout, QuantizedTensor};
-use bitnet_common::QuantizationType;
-use crate::formats::gguf::GgufTensorType;
+use std::{
+    borrow::Cow,
+    fs::File,
+    io::{self, Read, Seek},
+    path::Path,
+};
 
 #[derive(Debug, Clone)]
 struct TensorInfo {
     name: String,
     n_dims: u32,
     dims: Vec<u64>,
-    ty: u32,      // ggml_type
-    offset: u64,  // from start of data section (not file start)
+    ty: u32,     // ggml_type
+    offset: u64, // from start of data section (not file start)
 }
 
 // Helper functions for type checking
@@ -39,9 +44,9 @@ fn is_2d(dims: &[u64]) -> bool {
 
 // Helper for shape-driven tensor selection
 fn looks_like_embeddings(info: &TensorInfo) -> bool {
-    is_2d(&info.dims) && 
-    is_supported_ty(info.ty) &&
-    (info.name.contains("emb") || info.name.contains("wte") || info.name.contains("embed"))
+    is_2d(&info.dims)
+        && is_supported_ty(info.ty)
+        && (info.name.contains("emb") || info.name.contains("wte") || info.name.contains("embed"))
 }
 
 fn looks_like_output_matrix(info: &TensorInfo) -> bool {
@@ -75,8 +80,8 @@ pub fn load_two<P: AsRef<Path>>(path: P) -> Result<TwoTensors> {
     let mut cursor = std::io::Cursor::new(&mmap[..]);
 
     let parsed = parse_header(&mut cursor).with_context(|| "parse GGUF header")?;
-    let (tok_info, head_info) = pick_tensors(&parsed)
-        .with_context(|| "locate tok_embeddings/output tensors")?;
+    let (tok_info, head_info) =
+        pick_tensors(&parsed).with_context(|| "locate tok_embeddings/output tensors")?;
 
     // Materialize as f32 (copy if needed).
     let tok = tensor_as_f32(&mmap, parsed.data_offset, &tok_info)?;
@@ -84,20 +89,24 @@ pub fn load_two<P: AsRef<Path>>(path: P) -> Result<TwoTensors> {
 
     // Shapes can vary; deduce (vocab, dim) consistently.
     if tok_info.dims.len() != 2 || head_info.dims.len() != 2 {
-        bail!("expected 2D tensors; got tok {:?}, head {:?}", tok_info.dims, head_info.dims);
+        bail!(
+            "expected 2D tensors; got tok {:?}, head {:?}",
+            tok_info.dims,
+            head_info.dims
+        );
     }
 
     let (ta, tb) = (tok_info.dims[0] as usize, tok_info.dims[1] as usize);
     let (ha, hb) = (head_info.dims[0] as usize, head_info.dims[1] as usize);
-    
+
     // Check if we're using tied weights (same tensor for both)
     let using_tied_weights = tok_info.name == head_info.name;
-    
+
     let (vocab, dim, tok_embeddings, lm_head) = if using_tied_weights {
         // BitNet models have embeddings as [dim, vocab]
         // We need: tok_embeddings [vocab, dim] and lm_head [dim, vocab]
         let (dim, vocab) = (ta, tb);
-        
+
         // Transpose tok to get [vocab, dim]
         let mut tok_transposed = vec![0f32; vocab * dim];
         for i in 0..dim {
@@ -105,7 +114,7 @@ pub fn load_two<P: AsRef<Path>>(path: P) -> Result<TwoTensors> {
                 tok_transposed[j * dim + i] = tok[i * vocab + j];
             }
         }
-        
+
         // lm_head stays as [dim, vocab]
         (vocab, dim, tok_transposed, head.into_owned())
     } else if ta == hb && tb == ha {
@@ -115,7 +124,7 @@ pub fn load_two<P: AsRef<Path>>(path: P) -> Result<TwoTensors> {
         // Both same shape - need to determine which is which
         // Assume tok is [vocab, dim] if vocab > dim (common case)
         let (vocab, dim) = if ta > tb { (ta, tb) } else { (tb, ta) };
-        
+
         // May need to transpose head
         if ta > tb {
             // tok is [vocab, dim], need to transpose head from [vocab, dim] to [dim, vocab]
@@ -137,7 +146,11 @@ pub fn load_two<P: AsRef<Path>>(path: P) -> Result<TwoTensors> {
             (vocab, dim, tok_transposed, head.into_owned())
         }
     } else {
-        bail!("incompatible tensor shapes: tok={:?}, head={:?}", tok_info.dims, head_info.dims);
+        bail!(
+            "incompatible tensor shapes: tok={:?}, head={:?}",
+            tok_info.dims,
+            head_info.dims
+        );
     };
 
     Ok(TwoTensors {
@@ -175,8 +188,7 @@ fn parse_header<R: Read + Seek>(r: &mut R) -> Result<Parsed> {
         let ty = read_u32(r)?;
         // We only care about general.alignment (uint64). Skip others.
         if key == "general.alignment" {
-            alignment = read_gguf_value_uint64(r, ty)
-                .with_context(|| "parse general.alignment")?;
+            alignment = read_gguf_value_uint64(r, ty).with_context(|| "parse general.alignment")?;
         } else {
             skip_gguf_value_seek(r, ty)?;
         }
@@ -193,14 +205,24 @@ fn parse_header<R: Read + Seek>(r: &mut R) -> Result<Parsed> {
         }
         let ty = read_u32(r)?;
         let offset = read_u64(r)?;
-        tensors.push(TensorInfo { name, n_dims, dims, ty, offset });
+        tensors.push(TensorInfo {
+            name,
+            n_dims,
+            dims,
+            ty,
+            offset,
+        });
     }
 
     // data section begins aligned after the tensor header table
     let here = r.stream_position()?;
     let data_offset = align_up(here, alignment);
 
-    Ok(Parsed { alignment, tensors, data_offset })
+    Ok(Parsed {
+        alignment,
+        tensors,
+        data_offset,
+    })
 }
 
 fn pick_tensors(parsed: &Parsed) -> Result<(TensorInfo, TensorInfo)> {
@@ -221,30 +243,40 @@ fn pick_tensors(parsed: &Parsed) -> Result<(TensorInfo, TensorInfo)> {
     ];
 
     let find = |names: &[&str]| {
-        parsed.tensors.iter()
+        parsed
+            .tensors
+            .iter()
             .find(|t| names.iter().any(|n| t.name == *n) && is_supported_ty(t.ty))
             .cloned()
     };
 
     // Find embeddings tensor - prefer by name first, then shape
     let tok = find(TOK_NAMES)
-        .or_else(|| parsed.tensors.iter().find(|t| looks_like_embeddings(t)).cloned())
+        .or_else(|| {
+            parsed
+                .tensors
+                .iter()
+                .find(|t| looks_like_embeddings(t))
+                .cloned()
+        })
         .ok_or_else(|| anyhow::anyhow!("could not find token embeddings tensor"))?;
 
     // Extract dimensions from the chosen embeddings tensor
     let (dim, vocab) = if tok.dims[0] > tok.dims[1] {
-        (tok.dims[0], tok.dims[1])  // [vocab, dim] layout
+        (tok.dims[0], tok.dims[1]) // [vocab, dim] layout
     } else {
-        (tok.dims[1], tok.dims[0])  // [dim, vocab] layout
+        (tok.dims[1], tok.dims[0]) // [dim, vocab] layout
     };
 
     // Helper to check if a tensor matches the expected output shape
     let looks_like_output_with_shape = |t: &TensorInfo| -> bool {
-        is_2d(&t.dims) &&
-        is_supported_ty(t.ty) &&
-        ((t.dims[0] == dim && t.dims[1] == vocab) || 
-         (t.dims[0] == vocab && t.dims[1] == dim)) &&
-        !(t.name.contains("attn_output") || t.name.contains("blk") || t.name.contains("norm"))
+        is_2d(&t.dims)
+            && is_supported_ty(t.ty)
+            && ((t.dims[0] == dim && t.dims[1] == vocab)
+                || (t.dims[0] == vocab && t.dims[1] == dim))
+            && !(t.name.contains("attn_output")
+                || t.name.contains("blk")
+                || t.name.contains("norm"))
     };
 
     // Find output tensor - shape-verified with name hints
@@ -266,61 +298,71 @@ fn pick_tensors(parsed: &Parsed) -> Result<(TensorInfo, TensorInfo)> {
 
 fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Result<Cow<'a, [f32]>> {
     use crate::formats::gguf::GgufTensorType;
-    
-    let nelems: usize = info.dims.iter().try_fold(1u64, |acc, &d| acc.checked_mul(d))
+
+    let nelems: usize = info
+        .dims
+        .iter()
+        .try_fold(1u64, |acc, &d| acc.checked_mul(d))
         .ok_or_else(|| anyhow::anyhow!("tensor size overflow"))?
         .try_into()
         .map_err(|_| anyhow::anyhow!("tensor too large"))?;
     let offset = (data_base + info.offset) as usize;
 
     match GgufTensorType::from_u32(info.ty)? {
-        GgufTensorType::F32 => { // f32
+        GgufTensorType::F32 => {
+            // f32
             let need = nelems * 4;
-            if offset + need > mmap.len() { bail!("f32 tensor out of bounds"); }
+            if offset + need > mmap.len() {
+                bail!("f32 tensor out of bounds");
+            }
             // Safety: GGUF stores little-endian f32; copy to owned Vec to be safe/aligned.
             let mut out = vec![0f32; nelems];
-            let bytes = &mmap[offset .. offset + need];
+            let bytes = &mmap[offset..offset + need];
             for (i, chunk) in bytes.chunks_exact(4).enumerate() {
                 out[i] = f32::from_le_bytes(chunk.try_into().unwrap());
             }
             Ok(Cow::Owned(out))
         }
-        GgufTensorType::F16 => { // f16
+        GgufTensorType::F16 => {
+            // f16
             let need = nelems * 2;
-            if offset + need > mmap.len() { bail!("f16 tensor out of bounds"); }
+            if offset + need > mmap.len() {
+                bail!("f16 tensor out of bounds");
+            }
             let mut out = vec![0f32; nelems];
-            let bytes = &mmap[offset .. offset + need];
+            let bytes = &mmap[offset..offset + need];
             for (i, chunk) in bytes.chunks_exact(2).enumerate() {
                 let bits = u16::from_le_bytes([chunk[0], chunk[1]]);
                 out[i] = f16::from_bits(bits).to_f32();
             }
             Ok(Cow::Owned(out))
         }
-        GgufTensorType::I2_S => { // I2_S - BitNet 2-bit quantization
+        GgufTensorType::I2_S => {
+            // I2_S - BitNet 2-bit quantization
             let layout = I2SLayout::default();
             let num_blocks = (nelems + layout.block_size - 1) / layout.block_size;
             let need = num_blocks * layout.bytes_per_block;
-            
+
             ensure!(offset + need <= mmap.len(), "I2_S tensor out of bounds");
-            
+
             // Verify shape/blocks consistency
             ensure!(
-                num_blocks * layout.block_size >= nelems && 
-                num_blocks * layout.block_size - nelems < layout.block_size,
+                num_blocks * layout.block_size >= nelems
+                    && num_blocks * layout.block_size - nelems < layout.block_size,
                 "I2_S blocks/shape mismatch: nelems={nelems} blocks={num_blocks} block_size={}",
                 layout.block_size
             );
-            
+
             // Extract quantized data and scales
-            let tensor_bytes = &mmap[offset .. offset + need];
+            let tensor_bytes = &mmap[offset..offset + need];
             let mut scales = Vec::with_capacity(num_blocks);
             let mut packed_data = Vec::with_capacity(num_blocks * layout.data_bytes_per_block);
-            
+
             for block_idx in 0..num_blocks {
                 let block_offset = block_idx * layout.bytes_per_block;
                 // Copy packed data
                 packed_data.extend_from_slice(
-                    &tensor_bytes[block_offset..block_offset + layout.data_bytes_per_block]
+                    &tensor_bytes[block_offset..block_offset + layout.data_bytes_per_block],
                 );
                 // Read scale (f16)
                 let scale_start = block_offset + layout.data_bytes_per_block;
@@ -329,7 +371,7 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
                 let scale_bits = u16::from_le_bytes([scale_bytes[0], scale_bytes[1]]);
                 scales.push(f16::from_bits(scale_bits).to_f32());
             }
-            
+
             // Create quantized tensor
             let quantized = QuantizedTensor::new_with_params(
                 packed_data,
@@ -339,25 +381,32 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
                 QuantizationType::I2S,
                 layout.block_size,
             );
-            
+
             // Dequantize using our existing infrastructure
             let quantizer = I2SQuantizer::with_block_size(layout.block_size);
-            let tensor = quantizer.dequantize_tensor(&quantized)
+            let tensor = quantizer
+                .dequantize_tensor(&quantized)
                 .with_context(|| format!("Failed to dequantize I2_S tensor {}", info.name))?;
-            
+
             // Extract f32 data from BitNetTensor
-            let data = tensor.to_vec()
+            let data = tensor
+                .to_vec()
                 .with_context(|| "Failed to extract tensor data")?;
-            
+
             Ok(Cow::Owned(data))
         }
-        other => bail!("unsupported ggml tensor type {:?} (only f32/f16/I2_S supported)", other),
+        other => bail!(
+            "unsupported ggml tensor type {:?} (only f32/f16/I2_S supported)",
+            other
+        ),
     }
 }
 
 // ---------- helpers ----------
 
-fn align_up(x: u64, a: u64) -> u64 { ((x + a - 1) / a) * a }
+fn align_up(x: u64, a: u64) -> u64 {
+    ((x + a - 1) / a) * a
+}
 
 fn read_u32<R: Read>(r: &mut R) -> Result<u32> {
     let mut b = [0u8; 4];
@@ -406,22 +455,24 @@ fn skip_n_seek<R: Read + Seek>(r: &mut R, n: u64) -> Result<()> {
 fn skip_gguf_value<R: Read>(r: &mut R, ty: u32) -> Result<()> {
     // GGUF scalar sizes (see llama.cpp)
     match ty {
-        0 | 1 => skip_n(r, 1)?,                  // uint8 | int8
-        2 | 3 => skip_n(r, 2)?,                  // uint16 | int16
-        4 | 5 | 6 => skip_n(r, 4)?,              // uint32 | int32 | float32
-        7 => skip_n(r, 1)?,                      // bool
-        8 => {                                   // string: u64 len + bytes
+        0 | 1 => skip_n(r, 1)?,     // uint8 | int8
+        2 | 3 => skip_n(r, 2)?,     // uint16 | int16
+        4 | 5 | 6 => skip_n(r, 4)?, // uint32 | int32 | float32
+        7 => skip_n(r, 1)?,         // bool
+        8 => {
+            // string: u64 len + bytes
             let n = read_u64(r)?;
             skip_n(r, n)?;
         }
-        9 => {                                   // array: elem_ty + count + values
+        9 => {
+            // array: elem_ty + count + values
             let elem_ty = read_u32(r)?;
             let count = read_u64(r)?;
             for _ in 0..count {
                 skip_gguf_value(r, elem_ty)?;
             }
         }
-        10 | 11 | 12 => skip_n(r, 8)?,           // uint64 | int64 | float64
+        10 | 11 | 12 => skip_n(r, 8)?, // uint64 | int64 | float64
         _ => bail!("unknown GGUF kv type id {ty}"),
     }
     Ok(())
@@ -431,22 +482,24 @@ fn skip_gguf_value<R: Read>(r: &mut R, ty: u32) -> Result<()> {
 fn skip_gguf_value_seek<R: Read + Seek>(r: &mut R, ty: u32) -> Result<()> {
     // GGUF scalar sizes (see llama.cpp)
     match ty {
-        0 | 1 => skip_n_seek(r, 1)?,                  // uint8 | int8
-        2 | 3 => skip_n_seek(r, 2)?,                  // uint16 | int16
-        4 | 5 | 6 => skip_n_seek(r, 4)?,              // uint32 | int32 | float32
-        7 => skip_n_seek(r, 1)?,                      // bool
-        8 => {                                        // string: u64 len + bytes
+        0 | 1 => skip_n_seek(r, 1)?,     // uint8 | int8
+        2 | 3 => skip_n_seek(r, 2)?,     // uint16 | int16
+        4 | 5 | 6 => skip_n_seek(r, 4)?, // uint32 | int32 | float32
+        7 => skip_n_seek(r, 1)?,         // bool
+        8 => {
+            // string: u64 len + bytes
             let n = read_u64(r)?;
             skip_n_seek(r, n)?;
         }
-        9 => {                                        // array: elem_ty + count + values
+        9 => {
+            // array: elem_ty + count + values
             let elem_ty = read_u32(r)?;
             let count = read_u64(r)?;
             for _ in 0..count {
                 skip_gguf_value_seek(r, elem_ty)?;
             }
         }
-        10 | 11 | 12 => skip_n_seek(r, 8)?,           // uint64 | int64 | float64
+        10 | 11 | 12 => skip_n_seek(r, 8)?, // uint64 | int64 | float64
         _ => bail!("unknown GGUF kv type id {ty}"),
     }
     Ok(())
@@ -456,7 +509,7 @@ fn skip_gguf_value_seek<R: Read + Seek>(r: &mut R, ty: u32) -> Result<()> {
 mod tests {
     use super::*;
     use std::io::Cursor;
-    
+
     #[test]
     #[ignore] // set BITNET_GGUF to a real path to run
     fn loads_two_tensors() {
@@ -466,12 +519,12 @@ mod tests {
         assert_eq!(two.tok_embeddings.len(), two.vocab * two.dim);
         assert_eq!(two.lm_head.len(), two.dim * two.vocab);
     }
-    
+
     #[test]
     fn test_transpose_roundtrip() {
         let vocab = 100;
         let dim = 50;
-        
+
         // Create test matrix [vocab, dim]
         let mut original = vec![0f32; vocab * dim];
         for i in 0..vocab {
@@ -479,7 +532,7 @@ mod tests {
                 original[i * dim + j] = (i * 1000 + j) as f32;
             }
         }
-        
+
         // Transpose to [dim, vocab]
         let mut transposed = vec![0f32; vocab * dim];
         for i in 0..vocab {
@@ -487,7 +540,7 @@ mod tests {
                 transposed[j * vocab + i] = original[i * dim + j];
             }
         }
-        
+
         // Transpose back to [vocab, dim]
         let mut roundtrip = vec![0f32; vocab * dim];
         for i in 0..dim {
@@ -495,105 +548,113 @@ mod tests {
                 roundtrip[j * dim + i] = transposed[i * vocab + j];
             }
         }
-        
+
         // Verify roundtrip
         assert_eq!(original, roundtrip);
     }
-    
+
     #[test]
     fn test_skip_gguf_value_coverage() {
         use std::io::Cursor;
-        
+
         // Build a buffer with: [type=8 string "hi"] [type=4 u32] [type=9 array<int8>(3)]
         let mut buf = Vec::new();
-        
+
         // String type=8, value="hi"
         buf.extend_from_slice(&8u32.to_le_bytes());
-        buf.extend_from_slice(&2u64.to_le_bytes());  // string length
+        buf.extend_from_slice(&2u64.to_le_bytes()); // string length
         buf.extend_from_slice(b"hi");
-        
+
         // U32 type=4, value=0xAABBCCDD
         buf.extend_from_slice(&4u32.to_le_bytes());
         buf.extend_from_slice(&0xAABBCCDDu32.to_le_bytes());
-        
+
         // Array<int8> type=9
         buf.extend_from_slice(&9u32.to_le_bytes());
-        buf.extend_from_slice(&1u32.to_le_bytes());  // element type: int8
-        buf.extend_from_slice(&3u64.to_le_bytes());  // count
+        buf.extend_from_slice(&1u32.to_le_bytes()); // element type: int8
+        buf.extend_from_slice(&3u64.to_le_bytes()); // count
         buf.extend_from_slice(&[10u8, 11u8, 12u8]);
-        
+
         // Test skipping through all values
         let mut cur = Cursor::new(&buf[..]);
-        
+
         let t0 = read_u32(&mut cur).unwrap();
         skip_gguf_value(&mut cur, t0).unwrap();
-        
+
         let t1 = read_u32(&mut cur).unwrap();
         skip_gguf_value(&mut cur, t1).unwrap();
-        
+
         let t2 = read_u32(&mut cur).unwrap();
         skip_gguf_value(&mut cur, t2).unwrap();
-        
+
         // Should have consumed entire buffer
         assert_eq!(cur.position() as usize, buf.len());
     }
-    
+
     #[test]
     fn test_skip_gguf_value_seek() {
         // Same test but using seek version
         let mut buf = Vec::new();
-        
+
         // String type=8, value="hello"
         buf.extend_from_slice(&8u32.to_le_bytes());
         buf.extend_from_slice(&5u64.to_le_bytes());
         buf.extend_from_slice(b"hello");
-        
+
         // Float64 type=12
         buf.extend_from_slice(&12u32.to_le_bytes());
         buf.extend_from_slice(&3.14159f64.to_le_bytes());
-        
+
         let mut cur = Cursor::new(&buf[..]);
-        
+
         let t0 = read_u32(&mut cur).unwrap();
         skip_gguf_value_seek(&mut cur, t0).unwrap();
-        
+
         let t1 = read_u32(&mut cur).unwrap();
         skip_gguf_value_seek(&mut cur, t1).unwrap();
-        
+
         assert_eq!(cur.position() as usize, buf.len());
     }
-    
+
     #[test]
     fn test_i2s_layout_geometry() {
         let layout = I2SLayout::default();
-        
+
         // Test basic properties
         assert_eq!(layout.block_size, 32);
         // bits_per_elem is implicitly 2 for I2S (2 bits per element)
-        assert_eq!(layout.data_bytes_per_block, 8);  // 32 * 2 / 8
-        assert_eq!(layout.scale_bytes_per_block, 2);  // f16
-        assert_eq!(layout.bytes_per_block, 10);  // 8 + 2
-        
+        assert_eq!(layout.data_bytes_per_block, 8); // 32 * 2 / 8
+        assert_eq!(layout.scale_bytes_per_block, 2); // f16
+        assert_eq!(layout.bytes_per_block, 10); // 8 + 2
+
         // Test block calculations for various element counts
         let test_cases = vec![
-            (1, 1),      // 1 element -> 1 block
-            (32, 1),     // exactly 1 block
-            (33, 2),     // just over 1 block -> 2 blocks
-            (64, 2),     // exactly 2 blocks
-            (100, 4),    // 100 elements -> 4 blocks (96 + 4 padding)
+            (1, 1),   // 1 element -> 1 block
+            (32, 1),  // exactly 1 block
+            (33, 2),  // just over 1 block -> 2 blocks
+            (64, 2),  // exactly 2 blocks
+            (100, 4), // 100 elements -> 4 blocks (96 + 4 padding)
         ];
-        
+
         for (nelems, expected_blocks) in test_cases {
             let num_blocks = (nelems + layout.block_size - 1) / layout.block_size;
-            assert_eq!(num_blocks, expected_blocks, 
-                      "nelems={} should need {} blocks", nelems, expected_blocks);
-            
+            assert_eq!(
+                num_blocks, expected_blocks,
+                "nelems={} should need {} blocks",
+                nelems, expected_blocks
+            );
+
             let total_bytes = num_blocks * layout.bytes_per_block;
-            assert_eq!(total_bytes, expected_blocks * 10,
-                      "nelems={} should need {} bytes", nelems, expected_blocks * 10);
+            assert_eq!(
+                total_bytes,
+                expected_blocks * 10,
+                "nelems={} should need {} bytes",
+                nelems,
+                expected_blocks * 10
+            );
         }
     }
-    
+
     #[test]
     fn test_align_up() {
         assert_eq!(align_up(0, 32), 0);

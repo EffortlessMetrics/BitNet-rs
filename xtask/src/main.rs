@@ -1,23 +1,29 @@
+use anyhow::{anyhow, bail, Context, Result};
+use clap::{Parser, Subcommand};
+use fs2::available_space;
+use fs2::FileExt;
+use httpdate::parse_http_date;
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use reqwest::blocking::Client;
+use reqwest::header::{
+    ACCEPT_ENCODING, ACCEPT_RANGES, AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, ETAG,
+    IF_MODIFIED_SINCE, IF_NONE_MATCH, IF_RANGE, LAST_MODIFIED, RANGE, RETRY_AFTER,
+};
+use reqwest::StatusCode;
+use sha2::{Digest, Sha256};
 use std::{
     fs,
-    io::{BufWriter, Read, Write, Seek, SeekFrom},
+    io::{BufWriter, Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
     process::{self, Command},
-    sync::{Once, atomic::{AtomicBool, Ordering}},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Once,
+    },
     thread,
     time::{Duration, Instant, SystemTime},
 };
-use anyhow::{anyhow, bail, Context, Result};
-use fs2::available_space;
-use clap::{Parser, Subcommand};
-use indicatif::{ProgressBar, ProgressStyle, ProgressDrawTarget};
-use reqwest::blocking::Client;
-use reqwest::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, RANGE, ETAG, IF_NONE_MATCH, LAST_MODIFIED, IF_MODIFIED_SINCE, IF_RANGE, ACCEPT_RANGES, ACCEPT_ENCODING, RETRY_AFTER};
-use reqwest::StatusCode;
-use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
-use fs2::FileExt;
-use httpdate::parse_http_date;
 
 // RAII guard for lock file cleanup
 struct LockGuard {
@@ -27,7 +33,10 @@ struct LockGuard {
 
 impl LockGuard {
     fn new(path: PathBuf, file: std::fs::File) -> Self {
-        LockGuard { file: Some(file), path }
+        LockGuard {
+            file: Some(file),
+            path,
+        }
     }
 }
 
@@ -71,12 +80,12 @@ fn retry_after_secs(headers: &reqwest::header::HeaderMap) -> u64 {
         Some(s) => s,
         None => return 5, // Default to 5 seconds
     };
-    
+
     // Try parsing as integer seconds first
     if let Ok(s) = raw.parse::<u64>() {
         return s.min(3600); // Cap at 1 hour
     }
-    
+
     // Try parsing as HTTP-date
     parse_http_date(raw)
         .ok()
@@ -123,7 +132,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Cmd {
     /// Download a GGUF model from Hugging Face with production-ready features
-    /// 
+    ///
     /// Features:
     /// - Resumable downloads with Content-Range validation
     /// - 429 rate limiting with Retry-After support
@@ -132,7 +141,7 @@ enum Cmd {
     /// - SHA256 verification with automatic retry on mismatch
     /// - Disk space validation before download
     /// - Ctrl-C graceful handling with resume support
-    /// 
+    ///
     /// Environment:
     /// - HF_TOKEN: Authentication token for private repositories
     /// - HTTP[S]_PROXY: Automatically respected for proxy connections
@@ -152,38 +161,38 @@ enum Cmd {
         /// Force download even if file exists
         #[arg(long, default_value_t = false)]
         force: bool,
-        
+
         /// Pin to a specific branch/tag/commit
         #[arg(long, alias = "ref")]
         rev: Option<String>,
-        
+
         /// Disable progress bar (same as redirecting stderr)
         #[arg(long, alias = "quiet")]
         no_progress: bool,
-        
+
         /// Verbose output for debugging
         #[arg(short, long)]
         verbose: bool,
-        
+
         /// Alternative base URL (for mirrors)
         #[arg(long, default_value = "https://huggingface.co")]
         base_url: String,
-        
+
         /// Output JSON events for CI/CD pipelines
         #[arg(long)]
         json: bool,
-        
+
         /// Maximum retry attempts
         #[arg(long, default_value_t = 3)]
         retries: u32,
-        
+
         /// Request timeout in seconds
         #[arg(long, default_value_t = 1800)]
         timeout: u64,
     },
 
     /// Fetch & build microsoft/BitNet C++ for cross-validation
-    /// 
+    ///
     /// Validates that the C++ binary was successfully built after compilation
     FetchCpp {
         /// Tag or rev to fetch (default: b1-65-ggml)
@@ -198,7 +207,7 @@ enum Cmd {
     },
 
     /// Run deterministic cross-validation tests against C++ implementation
-    /// 
+    ///
     /// Auto-discovers GGUF models in the models/ directory if not specified.
     /// Requires the C++ implementation to be built first (use fetch-cpp).
     Crossval {
@@ -220,12 +229,12 @@ enum Cmd {
     },
 
     /// Run full cross-validation workflow (download + fetch + test)
-    /// 
+    ///
     /// One-command workflow that:
     /// 1. Downloads the default model (or skips if exists)
     /// 2. Fetches and builds the C++ implementation
     /// 3. Runs cross-validation tests with auto-discovery
-    /// 
+    ///
     /// Perfect for CI/CD pipelines and initial setup
     FullCrossval {
         /// Force redownload/rebuild
@@ -234,7 +243,7 @@ enum Cmd {
     },
 
     /// Generate realistic test fixtures for unit testing
-    /// 
+    ///
     /// Creates GGUF-like metadata JSON and binary weight files
     /// with deterministic content for reproducible testing
     GenFixtures {
@@ -250,7 +259,7 @@ enum Cmd {
     SetupCrossval,
 
     /// Clean all caches with interactive confirmation
-    /// 
+    ///
     /// Shows size of each cache directory and asks for confirmation.
     /// Cleans: target/, ~/.cache/bitnet_cpp/, crossval/fixtures/, models/
     CleanCache,
@@ -290,7 +299,7 @@ fn classify_exit(e: &anyhow::Error) -> i32 {
         }
         return EXIT_NETWORK;
     }
-    
+
     // Check error message for specific patterns
     let msg = e.to_string().to_ascii_lowercase();
     if msg.contains("not enough disk") || msg.contains("insufficient disk space") {
@@ -302,7 +311,7 @@ fn classify_exit(e: &anyhow::Error) -> i32 {
     if msg.contains("interrupted") {
         return EXIT_INTERRUPTED;
     }
-    
+
     // Default to network error
     EXIT_NETWORK
 }
@@ -323,7 +332,20 @@ fn real_main() -> Result<()> {
             json,
             retries,
             timeout,
-        } => download_model_cmd(&id, &file, &out, sha256.as_deref(), force, rev.as_deref(), no_progress, verbose, &base_url, json, retries, timeout),
+        } => download_model_cmd(
+            &id,
+            &file,
+            &out,
+            sha256.as_deref(),
+            force,
+            rev.as_deref(),
+            no_progress,
+            verbose,
+            &base_url,
+            json,
+            retries,
+            timeout,
+        ),
         Cmd::FetchCpp { tag, force, clean } => fetch_cpp_cmd(&tag, force, clean),
         Cmd::Crossval {
             model,
@@ -408,12 +430,12 @@ fn download_model_cmd(
     timeout: u64,
 ) -> Result<()> {
     fs::create_dir_all(out_dir)?;
-    
+
     // Guard against path traversal
     let safe_file = Path::new(file)
         .file_name()
         .ok_or_else(|| anyhow!("invalid file name: {}", file))?;
-    
+
     let dest_dir = out_dir.join(id.replace('/', "-"));
     fs::create_dir_all(&dest_dir)?;
     let dest = dest_dir.join(safe_file);
@@ -421,7 +443,7 @@ fn download_model_cmd(
     let revision = rev.unwrap_or("main");
     let url = format!("{base_url}/{id}/resolve/{revision}/{file}");
     let token = std::env::var("HF_TOKEN").ok();
-    
+
     if verbose {
         eprintln!("[VERBOSE] URL: {}", url);
         eprintln!("[VERBOSE] Revision: {}", revision);
@@ -440,12 +462,12 @@ fn download_model_cmd(
     // Check if file exists and possibly skip download via ETag/Last-Modified
     let etag_path = dest.with_extension("etag");
     let lastmod_path = dest.with_extension("lastmod");
-    
+
     if dest.exists() && !force {
         let mut up_to_date = false;
         let saved_etag = fs::read_to_string(&etag_path).ok();
         let saved_lastmod = fs::read_to_string(&lastmod_path).ok();
-        
+
         if saved_etag.is_some() || saved_lastmod.is_some() {
             // Check if the file is still current
             let mut head_req = client.head(&url);
@@ -459,15 +481,18 @@ fn download_model_cmd(
             if let Some(lm) = &saved_lastmod {
                 head_req = head_req.header(IF_MODIFIED_SINCE, lm.trim());
             }
-            
+
             if let Ok(resp) = head_req.send() {
                 // Add friendlier auth message on HEAD
-                if matches!(resp.status(), StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN) {
+                if matches!(
+                    resp.status(),
+                    StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
+                ) {
                     bail!("HTTP {} from Hugging Face during metadata check. If the repo is private, set HF_TOKEN, e.g.\n\
                            HF_TOKEN=*** cargo xtask download-model --id {} --file {}", 
                           resp.status().as_u16(), id, file);
                 }
-                
+
                 match resp.status() {
                     StatusCode::NOT_MODIFIED => {
                         up_to_date = true;
@@ -481,7 +506,7 @@ fn download_model_cmd(
                 }
             }
         }
-        
+
         if up_to_date {
             println!("✓ File is up to date: {}", dest.display());
             if let Some(want) = sha256_hex {
@@ -506,14 +531,14 @@ fn download_model_cmd(
     if token.is_some() {
         println!("   Using HF_TOKEN for authentication");
     }
-    
+
     // HEAD request to get file size and check resumability
     let mut head_req = client.head(&url);
     if let Some(t) = &token {
         head_req = head_req.header(AUTHORIZATION, format!("Bearer {t}"));
     }
     head_req = head_req.header(ACCEPT_ENCODING, "identity");
-    
+
     // Try HEAD first, fallback to Range GET for size
     let (size, resumable) = head_req
         .send()
@@ -521,13 +546,15 @@ fn download_model_cmd(
         .ok()
         .and_then(|r| {
             // Check if server supports range requests (default to false if missing)
-            let resumable = r.headers()
+            let resumable = r
+                .headers()
                 .get(ACCEPT_RANGES)
                 .and_then(|h| h.to_str().ok())
                 .map(|v| v.eq_ignore_ascii_case("bytes"))
                 .unwrap_or(false);
-            
-            let sz = r.headers()
+
+            let sz = r
+                .headers()
                 .get(CONTENT_LENGTH)?
                 .to_str()
                 .ok()?
@@ -542,9 +569,10 @@ fn download_model_cmd(
             if let Some(t) = &token {
                 probe = probe.header(AUTHORIZATION, format!("Bearer {t}"));
             }
-            probe = probe.header(RANGE, "bytes=0-0")
-                  .header(ACCEPT_ENCODING, "identity");
-            
+            probe = probe
+                .header(RANGE, "bytes=0-0")
+                .header(ACCEPT_ENCODING, "identity");
+
             // Add conditional headers for cache checking on fallback
             if dest.exists() && !force {
                 if let Ok(etag) = fs::read_to_string(&etag_path) {
@@ -554,23 +582,27 @@ fn download_model_cmd(
                     probe = probe.header(IF_MODIFIED_SINCE, lastmod.trim());
                 }
             }
-            
-            probe.send().ok().and_then(|r| {
-                // Check for 304 on the 1-byte probe - means file is current
-                if r.status() == StatusCode::NOT_MODIFIED && dest.exists() && !force {
-                    // Can't early return from a closure, will handle after
-                    return None;
-                }
-                let sz = r.headers()
-                    .get(CONTENT_RANGE)
-                    .and_then(|h| h.to_str().ok())
-                    .and_then(|s| s.rsplit('/').next()?.parse::<u64>().ok())?;
-                Some(sz)
-            })
-            .map(|sz| (Some(sz), true))
+
+            probe
+                .send()
+                .ok()
+                .and_then(|r| {
+                    // Check for 304 on the 1-byte probe - means file is current
+                    if r.status() == StatusCode::NOT_MODIFIED && dest.exists() && !force {
+                        // Can't early return from a closure, will handle after
+                        return None;
+                    }
+                    let sz = r
+                        .headers()
+                        .get(CONTENT_RANGE)
+                        .and_then(|h| h.to_str().ok())
+                        .and_then(|s| s.rsplit('/').next()?.parse::<u64>().ok())?;
+                    Some(sz)
+                })
+                .map(|sz| (Some(sz), true))
         })
         .unwrap_or((None, false)); // Default to non-resumable if we can't determine
-    
+
     // If we got a 304 on the fallback probe and file exists, we're done
     if size.is_none() && dest.exists() && !force {
         // Do another quick check to see if it was a 304
@@ -607,10 +639,10 @@ fn download_model_cmd(
         fs::create_dir_all(&dest_dir)
             .with_context(|| format!("failed to create {}", dest_dir.display()))?;
     }
-    
+
     let tmp = dest.with_extension("part");
     let mut start = 0u64;
-    
+
     // Force mode clears partial download
     if force && tmp.exists() {
         let _ = fs::remove_file(&tmp);
@@ -619,12 +651,14 @@ fn download_model_cmd(
         // Check for partial download
         start = fs::metadata(&tmp)?.len();
         if let Some(total) = size {
-            println!("   Resuming from {:.2} MB / {:.2} MB", 
+            println!(
+                "   Resuming from {:.2} MB / {:.2} MB",
                 start as f64 / 1_048_576.0,
-                total as f64 / 1_048_576.0);
+                total as f64 / 1_048_576.0
+            );
         }
     }
-    
+
     // Check disk space before downloading (calculate only remaining bytes)
     if let Some(total) = size {
         let remaining = total.saturating_sub(start);
@@ -641,17 +675,21 @@ fn download_model_cmd(
             );
         }
     }
-    
+
     // Single-writer lock to prevent concurrent downloads (alongside the .part file)
     let lock_path = tmp.with_extension("lock");
     let lock_file = std::fs::File::create(&lock_path)
         .with_context(|| format!("failed to create lock file for {}", dest.display()))?;
-    lock_file.try_lock_exclusive()
-        .with_context(|| format!("another download appears to be running for {}", dest.display()))?;
-    
+    lock_file.try_lock_exclusive().with_context(|| {
+        format!(
+            "another download appears to be running for {}",
+            dest.display()
+        )
+    })?;
+
     // Use RAII guard for automatic cleanup (transfers ownership)
     let _lock_guard = LockGuard::new(lock_path, lock_file);
-    
+
     // Setup SHA256 hasher if verification requested
     let verify = sha256_hex.is_some();
     let mut hasher = if verify {
@@ -662,7 +700,9 @@ fn download_model_cmd(
             let mut seed_buf = vec![0u8; 1024 * 256];
             loop {
                 let n = std::io::Read::read(&mut seed, &mut seed_buf)?;
-                if n == 0 { break; }
+                if n == 0 {
+                    break;
+                }
                 h.update(&seed_buf[..n]);
             }
         }
@@ -670,31 +710,36 @@ fn download_model_cmd(
     } else {
         None
     };
-    
+
     // Request with retry logic and proper range handling
     let mut attempt = 0;
     let max_attempts = retries;
-    
+
     // Emit JSON start event
     ev!(json, "start", { url: &url, resume: start > 0, start: start });
     let mut resp = loop {
         // If tmp larger than remote size, restart clean
         if let Some(total) = size {
             if start > total {
-                println!("   Local partial ({:.2} MB) exceeds remote size ({:.2} MB); restarting",
-                         start as f64 / 1_048_576.0, total as f64 / 1_048_576.0);
+                println!(
+                    "   Local partial ({:.2} MB) exceeds remote size ({:.2} MB); restarting",
+                    start as f64 / 1_048_576.0,
+                    total as f64 / 1_048_576.0
+                );
                 start = 0;
             }
         }
 
         let mut rb = client.get(&url);
-        if let Some(t) = &token { rb = rb.header(AUTHORIZATION, format!("Bearer {t}")); }
+        if let Some(t) = &token {
+            rb = rb.header(AUTHORIZATION, format!("Bearer {t}"));
+        }
         rb = rb.header(ACCEPT_ENCODING, "identity");
-        
+
         // Only request range if resumable and we have bytes to skip
         if resumable && start > 0 {
             rb = rb.header(RANGE, format!("bytes={start}-"));
-            
+
             // Add If-Range for safe resumption (prefer strong ETag)
             if let Ok(etag) = fs::read_to_string(&etag_path) {
                 let etag = etag.trim();
@@ -728,12 +773,20 @@ fn download_model_cmd(
                     }
                     StatusCode::PRECONDITION_FAILED | StatusCode::RANGE_NOT_SATISFIABLE => {
                         // 412 or 416: server rejected resume, restart from 0
-                        if verbose { eprintln!("   server rejected resume ({}); restarting from 0", resp.status()); }
+                        if verbose {
+                            eprintln!(
+                                "   server rejected resume ({}); restarting from 0",
+                                resp.status()
+                            );
+                        }
                         let _ = fs::remove_file(&tmp);
                         start = 0; // Will restart from beginning
                         attempt += 1;
                         if attempt > max_attempts {
-                            bail!("failed after {} attempts due to resume rejection", max_attempts);
+                            bail!(
+                                "failed after {} attempts due to resume rejection",
+                                max_attempts
+                            );
                         }
                         continue;
                     }
@@ -771,7 +824,9 @@ fn download_model_cmd(
             println!("   Server rejected resume; restarting from 0");
             start = 0;
             attempt += 1;
-            if attempt > max_attempts { bail!("persistent 416 Range errors"); }
+            if attempt > max_attempts {
+                bail!("persistent 416 Range errors");
+            }
             continue;
         }
 
@@ -781,39 +836,50 @@ fn download_model_cmd(
             bail!(
                 "HTTP {} from Hugging Face. If the repo is private, set HF_TOKEN, e.g.\n\
                  HF_TOKEN=*** cargo xtask download-model --id {} --file {}",
-                status.as_u16(), id, file
+                status.as_u16(),
+                id,
+                file
             );
         }
-        
+
         let resp = r.error_for_status()?;
-        
+
         // Verify Content-Range alignment on resume
         if start > 0 && resp.status() == StatusCode::PARTIAL_CONTENT {
             // Check if Content-Range is present and valid
-            let valid_range = resp.headers()
+            let valid_range = resp
+                .headers()
                 .get(CONTENT_RANGE)
                 .and_then(|h| h.to_str().ok())
                 .map(|v| v.starts_with(&format!("bytes {start}-")))
                 .unwrap_or(false);
-            
+
             if !valid_range {
                 // 206 without valid Content-Range - unsafe resume
-                eprintln!("   Server sent 206 but Content-Range invalid/missing; restarting from 0");
+                eprintln!(
+                    "   Server sent 206 but Content-Range invalid/missing; restarting from 0"
+                );
                 drop(resp);
                 start = 0;
-                
+
                 // Re-check disk space when restarting
                 if let Some(total) = size {
                     let available = fs2::available_space(&dest.parent().unwrap_or(Path::new(".")))?;
                     if available < total {
-                        bail!("insufficient disk space: need {} MB, have {} MB",
-                            total / 1_048_576, available / 1_048_576);
+                        bail!(
+                            "insufficient disk space: need {} MB, have {} MB",
+                            total / 1_048_576,
+                            available / 1_048_576
+                        );
                     }
                 }
-                
+
                 attempt += 1;
                 if attempt > max_attempts {
-                    bail!("failed after {} attempts due to invalid 206 response", max_attempts);
+                    bail!(
+                        "failed after {} attempts due to invalid 206 response",
+                        max_attempts
+                    );
                 }
                 thread::sleep(Duration::from_millis(exp_backoff_ms(attempt)));
                 continue;
@@ -822,7 +888,7 @@ fn download_model_cmd(
 
         break resp;
     };
-    
+
     // Check if server ignored Range header (must restart from 0)
     let resumed = resumable && start > 0;
     if resumed && resp.status() == StatusCode::OK {
@@ -837,18 +903,16 @@ fn download_model_cmd(
             let pb = ProgressBar::new(total);
             pb.set_style(
                 ProgressStyle::with_template(
-                    "{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta}) {msg}"
+                    "{spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta}) {msg}",
                 )?
-                .progress_chars("##-")
+                .progress_chars("##-"),
             );
             pb
         } else {
             let pb = ProgressBar::new_spinner();
-            pb.set_style(
-                ProgressStyle::with_template(
-                    "{spinner:.green} downloading {bytes} {msg}"
-                )?
-            );
+            pb.set_style(ProgressStyle::with_template(
+                "{spinner:.green} downloading {bytes} {msg}",
+            )?);
             pb.enable_steady_tick(std::time::Duration::from_millis(100));
             pb
         }
@@ -858,7 +922,7 @@ fn download_model_cmd(
         pb.set_draw_target(ProgressDrawTarget::stderr_with_hz(1));
         pb
     };
-    
+
     if start > 0 {
         pb.set_position(start);
         pb.set_message("resuming");
@@ -888,10 +952,10 @@ fn download_model_cmd(
         }
         f
     };
-    
+
     // Use BufWriter for better I/O performance (1 MiB buffer)
     let mut file_out = BufWriter::with_capacity(1024 * 1024, file_handle);
-    
+
     // Reset interrupt flag and setup Ctrl-C handler (once per process)
     INTERRUPTED.store(false, Ordering::SeqCst);
     CTRL_ONCE.call_once(|| {
@@ -899,7 +963,7 @@ fn download_model_cmd(
             INTERRUPTED.store(true, Ordering::SeqCst);
         });
     });
-    
+
     let mut downloaded = if resumed && resp.status() == StatusCode::OK {
         0 // Server ignored Range, restarting from 0
     } else {
@@ -908,21 +972,21 @@ fn download_model_cmd(
     let mut last_log = downloaded; // Track last verbose log position
     let mut buf = vec![0u8; 1024 * 256]; // 256KB buffer
     let start_time = Instant::now();
-    
+
     loop {
         // Check for interruption
         if INTERRUPTED.load(Ordering::SeqCst) {
             pb.finish_with_message("interrupted (partial file kept for resume)");
             println!("   Partial download saved at: {}", tmp.display());
             println!("   Run the same command again to resume");
-            
+
             // Flush buffer, close file handle, release & remove lock
             file_out.flush().ok();
             drop(file_out);
-            
+
             process::exit(EXIT_INTERRUPTED);
         }
-        
+
         let n = resp.read(&mut buf)?;
         if n == 0 {
             break;
@@ -933,28 +997,28 @@ fn download_model_cmd(
         }
         downloaded += n as u64;
         pb.set_position(downloaded);
-        
+
         // Log progress every 10 MiB (tracks actual delta)
         if verbose && downloaded - last_log >= 10 * 1024 * 1024 {
             eprintln!("[VERBOSE] Downloaded {} MB", downloaded / 1_048_576);
             last_log = downloaded;
         }
     }
-    
-    // Durability: flush buffer and fsync before rename  
+
+    // Durability: flush buffer and fsync before rename
     file_out.flush()?;
     file_out.get_ref().sync_all()?;
     drop(file_out);
-    
+
     let elapsed = start_time.elapsed();
     let secs = elapsed.as_secs_f64().max(0.001); // Avoid division by zero
     let throughput = (downloaded - start) as f64 / secs / 1_048_576.0;
-    
+
     pb.finish_with_message(format!("complete ({:.2} MB/s)", throughput));
 
     // Atomic rename BEFORE persisting metadata
     fs::rename(&tmp, &dest)?;
-    
+
     // fsync parent directory for journaling
     #[cfg(unix)]
     {
@@ -964,20 +1028,28 @@ fn download_model_cmd(
             }
         }
     }
-    
+
     // Save etag/last-modified atomically for future conditional requests
     if let Some(etag) = resp.headers().get(ETAG).and_then(|v| v.to_str().ok()) {
         atomic_write(&etag_path, etag.as_bytes()).ok();
     }
-    if let Some(lm) = resp.headers().get(LAST_MODIFIED).and_then(|v| v.to_str().ok()) {
+    if let Some(lm) = resp
+        .headers()
+        .get(LAST_MODIFIED)
+        .and_then(|v| v.to_str().ok())
+    {
         atomic_write(&lastmod_path, lm.as_bytes()).ok();
     }
-    
+
     // Verify final size if known
     if let Some(total) = size {
         let actual = fs::metadata(&dest)?.len();
         if actual != total {
-            bail!("download truncated: got {} bytes, expected {}", actual, total);
+            bail!(
+                "download truncated: got {} bytes, expected {}",
+                actual,
+                total
+            );
         }
     }
 
@@ -994,10 +1066,10 @@ fn download_model_cmd(
             println!("✓ SHA256 verified");
         }
     }
-    
+
     // Emit JSON completion event
     ev!(json, "done", { bytes: downloaded, ms: elapsed.as_millis() as u64 });
-    
+
     if !json {
         eprintln!("✅ Saved: {}", dest.display());
         if let Some(size) = size {
@@ -1006,7 +1078,7 @@ fn download_model_cmd(
         eprintln!("   Time: {:.1}s", elapsed.as_secs_f64());
         eprintln!("   Speed: {:.2} MB/s", throughput);
     }
-    
+
     // Print ready-to-use export command (to stderr for non-JSON)
     if !json {
         let abs_path = dest.canonicalize().unwrap_or(dest.clone());
@@ -1014,7 +1086,7 @@ fn download_model_cmd(
         eprintln!("To use this model for cross-validation:");
         eprintln!("  export CROSSVAL_GGUF=\"{}\"", abs_path.display());
     }
-    
+
     Ok(())
 }
 
@@ -1025,15 +1097,17 @@ fn resolve_default_model() -> Result<PathBuf> {
             "No models directory found. Run `cargo xtask download-model` first."
         ));
     }
-    
+
     // Prefer default model path
-    let preferred = root.join(format!("{}/{}", 
-        DEFAULT_MODEL_ID.replace('/', "-"), 
-        DEFAULT_MODEL_FILE));
+    let preferred = root.join(format!(
+        "{}/{}",
+        DEFAULT_MODEL_ID.replace('/', "-"),
+        DEFAULT_MODEL_FILE
+    ));
     if preferred.exists() {
         return Ok(preferred);
     }
-    
+
     // Fallback: scan for first *.gguf file
     for entry in WalkDir::new(&root).into_iter().filter_map(Result::ok) {
         if entry.file_type().is_file() {
@@ -1044,7 +1118,7 @@ fn resolve_default_model() -> Result<PathBuf> {
             }
         }
     }
-    
+
     Err(anyhow!(
         "No GGUF model found under ./models.\nTip: Run `cargo xtask download-model` or pass --model <path/to/model.gguf>"
     ))
@@ -1054,7 +1128,7 @@ fn verify_sha256(path: &Path, expected_hex: &str) -> Result<()> {
     let mut f = fs::File::open(path)?;
     let mut hasher = Sha256::new();
     let mut buf = vec![0u8; 1024 * 1024]; // 1MB buffer
-    
+
     loop {
         let n = f.read(&mut buf)?;
         if n == 0 {
@@ -1062,7 +1136,7 @@ fn verify_sha256(path: &Path, expected_hex: &str) -> Result<()> {
         }
         hasher.update(&buf[..n]);
     }
-    
+
     let got = hex::encode(hasher.finalize());
     if got != expected_hex.to_lowercase() {
         return Err(anyhow!(
@@ -1072,7 +1146,7 @@ fn verify_sha256(path: &Path, expected_hex: &str) -> Result<()> {
             got
         ));
     }
-    
+
     Ok(())
 }
 
@@ -1084,16 +1158,16 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
             script.display()
         ));
     }
-    
+
     if cfg!(windows) {
         eprintln!("⚠️  Note: On Windows, run this command under WSL or Git Bash");
     }
-    
+
     println!("🔧 Fetching Microsoft BitNet C++ implementation");
     println!("   Tag: {}", tag);
     println!("   Force: {}", force);
     println!("   Clean: {}", clean);
-    
+
     let mut args = vec!["--tag".to_string(), tag.to_string()];
     if force {
         args.push("--force".to_string());
@@ -1101,20 +1175,18 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
     if clean {
         args.push("--clean".to_string());
     }
-    
+
     run(
         "bash",
         std::iter::once(script.to_string_lossy().to_string())
             .chain(args)
             .collect(),
     )?;
-    
+
     // Verify the build succeeded by checking for the binary
-    let cpp_dir = dirs::home_dir()
-        .unwrap()
-        .join(".cache/bitnet_cpp");
+    let cpp_dir = dirs::home_dir().unwrap().join(".cache/bitnet_cpp");
     let binary = cpp_dir.join("bitnet-llama-cli");
-    
+
     if !binary.exists() {
         return Err(anyhow!(
             "C++ binary not found at {}. Build may have failed.\n\
@@ -1122,7 +1194,7 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
             binary.display()
         ));
     }
-    
+
     println!("   ✓ C++ binary built successfully: {}", binary.display());
     Ok(())
 }
@@ -1140,15 +1212,11 @@ fn crossval_cmd(
             model.display()
         ));
     }
-    
+
     let cpp = cpp_dir
         .map(|p| p.to_path_buf())
         .or_else(|| std::env::var_os("BITNET_CPP_DIR").map(PathBuf::from))
-        .unwrap_or_else(|| {
-            dirs::home_dir()
-                .unwrap()
-                .join(".cache/bitnet_cpp")
-        });
+        .unwrap_or_else(|| dirs::home_dir().unwrap().join(".cache/bitnet_cpp"));
 
     if !cpp.exists() {
         eprintln!("⚠️  Warning: BITNET_CPP_DIR not found at {}", cpp.display());
@@ -1169,11 +1237,11 @@ fn crossval_cmd(
     let mut cmd = Command::new("cargo");
     cmd.arg("test")
         .args(["-p", "bitnet-crossval", "--features", "crossval"]);
-    
+
     if release {
         cmd.arg("--release");
     }
-    
+
     // Set environment for determinism
     cmd.env("BITNET_CPP_DIR", &cpp)
         .env("CROSSVAL_GGUF", model)
@@ -1182,7 +1250,7 @@ fn crossval_cmd(
         .env("MKL_NUM_THREADS", "1")
         .env("OPENBLAS_NUM_THREADS", "1")
         .env("RUST_BACKTRACE", "1");
-    
+
     // Add test runner args
     cmd.arg("--")
         .args(["--nocapture", "--test-threads=1"])
@@ -1204,7 +1272,7 @@ fn crossval_cmd(
 fn full_crossval_cmd(force: bool) -> Result<()> {
     println!("🚀 Running full cross-validation workflow");
     println!();
-    
+
     // Step 1: Download model
     println!("Step 1/3: Downloading model");
     download_model_cmd(
@@ -1213,26 +1281,26 @@ fn full_crossval_cmd(force: bool) -> Result<()> {
         &PathBuf::from("models"),
         None, // Add SHA256 if available
         force,
-        None, // rev
-        false, // no_progress
-        false, // verbose
+        None,                     // rev
+        false,                    // no_progress
+        false,                    // verbose
         "https://huggingface.co", // base_url
-        false, // json
-        3, // retries
-        1800, // timeout
+        false,                    // json
+        3,                        // retries
+        1800,                     // timeout
     )?;
-    
+
     println!();
-    
+
     // Step 2: Fetch C++ implementation
     println!("Step 2/3: Fetching C++ implementation");
     fetch_cpp_cmd(DEFAULT_CPP_TAG, force, false)?;
-    
+
     println!();
-    
+
     // Step 3: Run tests with auto-discovery
     println!("Step 3/3: Running cross-validation tests");
-    
+
     // Try auto-discovery first
     let model = match resolve_default_model() {
         Ok(m) => {
@@ -1241,9 +1309,11 @@ fn full_crossval_cmd(force: bool) -> Result<()> {
         }
         Err(_) => {
             // Fallback to expected path
-            let expected = PathBuf::from(format!("models/{}/{}",
+            let expected = PathBuf::from(format!(
+                "models/{}/{}",
                 DEFAULT_MODEL_ID.replace('/', "-"),
-                DEFAULT_MODEL_FILE));
+                DEFAULT_MODEL_FILE
+            ));
             if !expected.exists() {
                 return Err(anyhow!(
                     "Model not found at expected path: {}\nDownload may have failed.",
@@ -1253,25 +1323,25 @@ fn full_crossval_cmd(force: bool) -> Result<()> {
             expected
         }
     };
-    
+
     crossval_cmd(&model, None, true, &[], false)?;
-    
+
     println!();
     println!("✅ Full cross-validation workflow complete!");
-    
+
     Ok(())
 }
 
 // Keep existing functionality from original xtask
 fn gen_fixtures(size: &str, output_dir: &Path) -> Result<()> {
     use serde_json::json;
-    
+
     println!("🔧 Generating deterministic test model fixtures...");
     println!("  Size: {}", size);
     println!("  Output: {}", output_dir.display());
-    
+
     fs::create_dir_all(output_dir)?;
-    
+
     // Generate more realistic test data based on size
     let (vocab_size, hidden_size, num_layers) = match size {
         "tiny" => (100, 64, 2),
@@ -1282,7 +1352,7 @@ fn gen_fixtures(size: &str, output_dir: &Path) -> Result<()> {
             (1000, 128, 4)
         }
     };
-    
+
     // Create a minimal GGUF-like metadata file
     let metadata = json!({
         "general.architecture": "bitnet",
@@ -1297,95 +1367,107 @@ fn gen_fixtures(size: &str, output_dir: &Path) -> Result<()> {
         "tokenizer.ggml.scores": vec![0.0f32; vocab_size],
         "tokenizer.ggml.token_type": vec![0i32; vocab_size],
     });
-    
+
     let metadata_path = output_dir.join(format!("test_model_{}_metadata.json", size));
     fs::write(&metadata_path, serde_json::to_string_pretty(&metadata)?)?;
-    
+
     // Generate weight tensors (dummy data)
     let weights_path = output_dir.join(format!("test_model_{}_weights.bin", size));
     let num_params = vocab_size * hidden_size + hidden_size * hidden_size * num_layers;
     let weight_data = vec![0u8; (num_params / 8).max(1024)]; // 1-bit quantized
     fs::write(&weights_path, weight_data)?;
-    
+
     println!("  Created metadata: {}", metadata_path.display());
-    println!("  Created weights: {} ({} bytes)", weights_path.display(), num_params / 8);
+    println!(
+        "  Created weights: {} ({} bytes)",
+        weights_path.display(),
+        num_params / 8
+    );
     println!("✅ Test fixtures generated for '{}' model", size);
     Ok(())
 }
 
 fn setup_crossval() -> Result<()> {
     println!("🔧 Setting up cross-validation environment...");
-    
+
     // Generate test fixtures
     println!("  Generating test fixtures...");
     gen_fixtures("small", &PathBuf::from("crossval/fixtures/"))?;
-    
+
     // Build with crossval features
     println!("  Building with cross-validation features...");
     let status = Command::new("cargo")
         .args(&["build", "--features", "crossval"])
         .status()?;
-    
+
     if !status.success() {
         return Err(anyhow!("Failed to build with crossval features"));
     }
-    
+
     println!("✅ Cross-validation environment setup complete!");
     println!();
     println!("You can now run:");
     println!("  cargo test -p bitnet-crossval --features crossval");
-    
+
     Ok(())
 }
 
 fn clean_cache() -> Result<()> {
     println!("🧹 Cleaning all caches and temporary files...");
-    
+
     let cache_dirs = [
         ("Cargo target", PathBuf::from("target/")),
-        ("C++ build", dirs::home_dir().unwrap().join(".cache/bitnet_cpp/")),
+        (
+            "C++ build",
+            dirs::home_dir().unwrap().join(".cache/bitnet_cpp/"),
+        ),
         ("Test fixtures", PathBuf::from("crossval/fixtures/")),
         ("Models", PathBuf::from("models/")),
     ];
-    
+
     // Calculate total size
     let mut total_size = 0u64;
     let mut existing_dirs = Vec::new();
-    
+
     for (name, dir) in &cache_dirs {
         if dir.exists() {
             let size = dir_size(dir)?;
             total_size += size;
             existing_dirs.push((*name, dir.clone(), size));
-            println!("  {} ({:.2} MB): {}", name, size as f64 / 1_048_576.0, dir.display());
+            println!(
+                "  {} ({:.2} MB): {}",
+                name,
+                size as f64 / 1_048_576.0,
+                dir.display()
+            );
         }
     }
-    
+
     if existing_dirs.is_empty() {
         println!("✅ No caches to clean");
         return Ok(());
     }
-    
+
     println!("\n  Total: {:.2} MB", total_size as f64 / 1_048_576.0);
     println!("\n⚠️  This will delete the directories listed above.");
     print!("  Continue? [y/N]: ");
     std::io::stdout().flush()?;
-    
+
     let mut input = String::new();
     std::io::stdin().read_line(&mut input)?;
-    
+
     if !input.trim().eq_ignore_ascii_case("y") {
         println!("Cancelled.");
         return Ok(());
     }
-    
+
     for (name, dir, _) in existing_dirs {
         print!("  Removing {}... ", name);
         std::io::stdout().flush()?;
         fs::remove_dir_all(&dir)?;
         println!("✓");
     }
-    
+
     println!("\n✅ Freed {:.2} MB", total_size as f64 / 1_048_576.0);
     Ok(())
 }
@@ -1402,33 +1484,33 @@ fn dir_size(path: &Path) -> Result<u64> {
 
 fn check_features() -> Result<()> {
     println!("🔍 Checking feature flag consistency...");
-    
+
     let cargo_toml = fs::read_to_string("Cargo.toml")?;
-    
+
     if cargo_toml.contains("default = [") && cargo_toml.contains("\"crossval\"") {
         return Err(anyhow!(
             "crossval feature is enabled by default! This will slow down builds."
         ));
     }
-    
+
     println!("  ✅ crossval feature is not in default features");
     println!("✅ Feature flag consistency check passed!");
-    
+
     Ok(())
 }
 
 fn run_benchmark(platform: &str) -> Result<()> {
     println!("🚀 Running performance benchmarks...");
     println!("  Platform: {}", platform);
-    
+
     let status = Command::new("cargo")
         .args(&["bench", "--workspace", "--features", "cpu"])
         .status()?;
-    
+
     if !status.success() {
         return Err(anyhow!("Benchmarks failed"));
     }
-    
+
     println!("✅ Benchmarks completed successfully!");
     Ok(())
 }
@@ -1443,11 +1525,11 @@ fn run_cmd(cmd: &mut Command) -> Result<()> {
     let status = cmd
         .status()
         .with_context(|| format!("Failed to spawn: {:?}", cmd))?;
-    
+
     if !status.success() {
         return Err(anyhow!("Command failed with status: {:?}", status));
     }
-    
+
     Ok(())
 }
 
@@ -1455,27 +1537,29 @@ fn run_cmd(cmd: &mut Command) -> Result<()> {
 mod tests {
     use super::*;
     use std::net::TcpListener;
-    use std::thread;
     use std::sync::{Arc, Mutex};
-    
+    use std::thread;
+
     struct TestServer {
         port: u16,
         requests: Arc<Mutex<Vec<String>>>,
     }
-    
+
     impl TestServer {
-        fn new<F>(handler: F) -> Self 
-        where 
-            F: Fn(&tiny_http::Request) -> tiny_http::Response<std::io::Cursor<Vec<u8>>> + Send + 'static
+        fn new<F>(handler: F) -> Self
+        where
+            F: Fn(&tiny_http::Request) -> tiny_http::Response<std::io::Cursor<Vec<u8>>>
+                + Send
+                + 'static,
         {
             let listener = TcpListener::bind("127.0.0.1:0").unwrap();
             let port = listener.local_addr().unwrap().port();
             drop(listener);
-            
+
             let server = tiny_http::Server::http(format!("127.0.0.1:{}", port)).unwrap();
             let requests = Arc::new(Mutex::new(Vec::new()));
             let requests_clone = requests.clone();
-            
+
             thread::spawn(move || {
                 for rq in server.incoming_requests() {
                     let path = rq.url().to_string();
@@ -1484,60 +1568,60 @@ mod tests {
                     let _ = rq.respond(response);
                 }
             });
-            
+
             TestServer { port, requests }
         }
-        
+
         fn url(&self, path: &str) -> String {
             format!("http://127.0.0.1:{}{}", self.port, path)
         }
     }
-    
+
     #[test]
     fn test_retry_after_seconds() {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert(RETRY_AFTER, "10".parse().unwrap());
         assert_eq!(retry_after_secs(&headers), 10);
     }
-    
+
     #[test]
     fn test_retry_after_http_date() {
-        use std::time::{SystemTime, Duration};
+        use std::time::{Duration, SystemTime};
         let mut headers = reqwest::header::HeaderMap::new();
-        
+
         // Future date (5 seconds from now)
         let future = SystemTime::now() + Duration::from_secs(5);
         let date_str = httpdate::fmt_http_date(future);
         headers.insert(RETRY_AFTER, date_str.parse().unwrap());
-        
+
         let wait = retry_after_secs(&headers);
         assert!(wait >= 4 && wait <= 6); // Allow for timing variance
     }
-    
+
     #[test]
     fn test_retry_after_past_date() {
-        use std::time::{SystemTime, Duration};
+        use std::time::{Duration, SystemTime};
         let mut headers = reqwest::header::HeaderMap::new();
-        
+
         // Past date returns 5 (default fallback) since duration_since would fail
         let past = SystemTime::now() - Duration::from_secs(10);
         let date_str = httpdate::fmt_http_date(past);
         headers.insert(RETRY_AFTER, date_str.parse().unwrap());
-        
+
         assert_eq!(retry_after_secs(&headers), 5); // Default fallback
     }
-    
+
     #[test]
     fn test_classify_exit_codes() {
         // Test disk space error
         let err = anyhow::anyhow!("insufficient disk space: need 100MB");
         assert_eq!(classify_exit(&err), EXIT_NO_SPACE);
-        
+
         // Test SHA mismatch
         let err = anyhow::anyhow!("SHA256 mismatch: expected abc, got def");
         assert_eq!(classify_exit(&err), EXIT_HASH_MISMATCH);
     }
-    
+
     #[test]
     fn test_exp_backoff() {
         // Test with jitter: base + (attempt * 37) % 200
@@ -1546,42 +1630,46 @@ mod tests {
         assert_eq!(exp_backoff_ms(3), 800 + 111); // 800 + 111 = 911
         assert_eq!(exp_backoff_ms(10), 10_000 + 170); // Capped at 10s + jitter
     }
-    
+
     // Happy-path test: aligned 206 response
     #[test]
     fn test_aligned_206_download() {
-        use std::sync::Arc;
         use std::sync::atomic::{AtomicUsize, Ordering};
-        
+        use std::sync::Arc;
+
         let bytes_sent = Arc::new(AtomicUsize::new(0));
         let bytes_sent_clone = bytes_sent.clone();
-        
+
         let _server = TestServer::new(move |rq| {
-            use tiny_http::{Response, StatusCode, Header};
-            
+            use tiny_http::{Header, Response, StatusCode};
+
             if rq.method() == &tiny_http::Method::Get {
-                let range_header = rq.headers()
+                let range_header = rq
+                    .headers()
                     .iter()
                     .find(|h| h.field.as_str() == "Range")
                     .and_then(|h| h.value.as_str().strip_prefix("bytes="))
                     .and_then(|s| s.strip_suffix("-"))
                     .and_then(|s| s.parse::<usize>().ok());
-                
+
                 if let Some(start) = range_header {
                     // Return aligned 206 with correct Content-Range
                     let data = b"Hello, World! This is test data.";
                     let chunk = &data[start.min(data.len())..];
                     bytes_sent_clone.fetch_add(chunk.len(), Ordering::SeqCst);
-                    
-                    let mut resp = Response::from_data(chunk)
-                        .with_status_code(StatusCode(206));
-                    resp.add_header(Header::from_bytes(
-                        &b"Content-Range"[..],
-                        format!("bytes {}-{}/{}", start, start + chunk.len() - 1, data.len()).as_bytes()
-                    ).unwrap());
+
+                    let mut resp = Response::from_data(chunk).with_status_code(StatusCode(206));
+                    resp.add_header(
+                        Header::from_bytes(
+                            &b"Content-Range"[..],
+                            format!("bytes {}-{}/{}", start, start + chunk.len() - 1, data.len())
+                                .as_bytes(),
+                        )
+                        .unwrap(),
+                    );
                     return resp;
                 }
-                
+
                 // Full response
                 let data = b"Hello, World! This is test data.";
                 bytes_sent_clone.fetch_add(data.len(), Ordering::SeqCst);
@@ -1590,88 +1678,89 @@ mod tests {
                 Response::from_string("").with_status_code(StatusCode(405))
             }
         });
-        
+
         // Would test that download succeeds and final size matches
         // assert_eq!(bytes_sent.load(Ordering::SeqCst), 32);
     }
-    
+
     // Happy-path test: 304 conditional GET
     #[test]
     fn test_304_conditional_get() {
         let _server = TestServer::new(|rq| {
             use tiny_http::{Response, StatusCode};
-            
+
             // HEAD returns 405
             if rq.method() == &tiny_http::Method::Head {
                 return Response::from_string("").with_status_code(StatusCode(405));
             }
-            
+
             // GET with If-None-Match returns 304
             if rq.method() == &tiny_http::Method::Get {
-                let has_etag = rq.headers()
+                let has_etag = rq
+                    .headers()
                     .iter()
                     .any(|h| h.field.as_str() == "If-None-Match");
-                
+
                 if has_etag {
                     return Response::from_string("").with_status_code(StatusCode(304));
                 }
             }
-            
+
             // Default: return data
             Response::from_string("test data")
         });
-        
+
         // Would test that:
         // 1. File is not re-downloaded
         // 2. .lock file is cleaned up
         // 3. Early exit occurs
     }
-    
+
     // Integration test for download edge cases
     #[test]
     #[ignore] // Run with: cargo test --features test-download -- --ignored
     fn test_download_206_misaligned() {
         let _server = TestServer::new(|rq| {
-            use tiny_http::{Response, StatusCode, Header};
-            
+            use tiny_http::{Header, Response, StatusCode};
+
             if rq.method() == &tiny_http::Method::Get {
                 // Return 206 with wrong Content-Range
-                let mut resp = Response::from_string("test data")
-                    .with_status_code(StatusCode(206));
-                resp.add_header(Header::from_bytes(&b"Content-Range"[..], &b"bytes 999-1000/2000"[..]).unwrap());
+                let mut resp = Response::from_string("test data").with_status_code(StatusCode(206));
+                resp.add_header(
+                    Header::from_bytes(&b"Content-Range"[..], &b"bytes 999-1000/2000"[..]).unwrap(),
+                );
                 return resp;
             }
             Response::from_string("").with_status_code(StatusCode(405))
         });
-        
+
         // Would test download_model_cmd with server.url("/test.bin")
         // and verify it restarts from 0
     }
-    
+
     #[test]
     #[ignore]
     fn test_download_429_retry_after() {
         let counter = Arc::new(Mutex::new(0));
         let counter_clone = counter.clone();
-        
+
         let server = TestServer::new(move |_rq| {
-            use tiny_http::{Response, StatusCode, Header};
-            
+            use tiny_http::{Header, Response, StatusCode};
+
             let mut count = counter_clone.lock().unwrap();
             *count += 1;
-            
+
             if *count == 1 {
                 // First request: 429 with Retry-After
-                let mut resp = Response::from_string("")
-                    .with_status_code(StatusCode(429));
+                let mut resp = Response::from_string("").with_status_code(StatusCode(429));
                 resp.add_header(Header::from_bytes(&b"Retry-After"[..], &b"2"[..]).unwrap());
                 return resp;
             }
-            
+
             // Second request: success
             Response::from_string("success")
         });
-        
+
         // Would test that download retries after 2 seconds
     }
 }

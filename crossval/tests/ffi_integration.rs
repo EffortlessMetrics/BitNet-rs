@@ -6,7 +6,7 @@
 #![cfg(feature = "crossval")]
 
 use bitnet_crossval::{
-    cpp_bindings::{CppModel, is_available},
+    cpp_bindings::{is_available, CppModel},
     fixtures::TestFixture,
     CrossvalError,
 };
@@ -17,7 +17,7 @@ fn test_cpp_availability() {
     // Test that we can detect C++ implementation availability
     let available = is_available();
     println!("C++ implementation available: {}", available);
-    
+
     // This test should pass regardless of availability
     // The important thing is that it doesn't crash
 }
@@ -26,7 +26,7 @@ fn test_cpp_availability() {
 fn test_model_loading_error_handling() {
     // Test loading a non-existent model
     let result = CppModel::load("non_existent_model.gguf");
-    
+
     match result {
         Ok(_) => panic!("Expected error when loading non-existent model"),
         Err(CrossvalError::ModelLoadError(_)) => {
@@ -44,7 +44,7 @@ fn test_model_lifecycle() {
         eprintln!("Skipping test: fixture not found at {:?}", fixture_path);
         return;
     }
-    
+
     // Test model loading and cleanup
     let model = match CppModel::load(fixture_path) {
         Ok(model) => model,
@@ -53,22 +53,28 @@ fn test_model_lifecycle() {
             return; // Skip test if model loading fails
         }
     };
-    
+
     // Test that model is ready
     assert!(model.is_ready(), "Model should be ready after loading");
-    
+
     // Test model info
     match model.model_info() {
         Ok(info) => {
             assert!(!info.name.is_empty(), "Model name should not be empty");
-            assert!(!info.version.is_empty(), "Model version should not be empty");
-            assert!(info.parameter_count > 0, "Parameter count should be positive");
+            assert!(
+                !info.version.is_empty(),
+                "Model version should not be empty"
+            );
+            assert!(
+                info.parameter_count > 0,
+                "Parameter count should be positive"
+            );
         }
         Err(e) => {
             eprintln!("Failed to get model info: {}", e);
         }
     }
-    
+
     // Model will be automatically cleaned up when dropped
 }
 
@@ -79,7 +85,7 @@ fn test_generation_error_handling() {
         eprintln!("Skipping test: fixture not found");
         return;
     }
-    
+
     let model = match CppModel::load(fixture_path) {
         Ok(model) => model,
         Err(_) => {
@@ -87,14 +93,14 @@ fn test_generation_error_handling() {
             return;
         }
     };
-    
+
     // Test invalid parameters
     let result = model.generate("test", 0);
     assert!(result.is_err(), "Should fail with max_tokens = 0");
-    
+
     let result = model.generate("test", 20000);
     assert!(result.is_err(), "Should fail with excessive max_tokens");
-    
+
     // Test prompt with null bytes
     let result = model.generate("test\0prompt", 10);
     assert!(result.is_err(), "Should fail with null bytes in prompt");
@@ -107,7 +113,7 @@ fn test_basic_generation() {
         eprintln!("Skipping test: fixture not found");
         return;
     }
-    
+
     let model = match CppModel::load(fixture_path) {
         Ok(model) => model,
         Err(_) => {
@@ -115,7 +121,7 @@ fn test_basic_generation() {
             return;
         }
     };
-    
+
     // Test basic generation
     match model.generate("Hello, world!", 10) {
         Ok(tokens) => {
@@ -136,7 +142,7 @@ fn test_concurrent_access() {
         eprintln!("Skipping test: fixture not found");
         return;
     }
-    
+
     let model = match CppModel::load(fixture_path) {
         Ok(model) => model,
         Err(_) => {
@@ -144,7 +150,7 @@ fn test_concurrent_access() {
             return;
         }
     };
-    
+
     // Test that we can use the model from multiple threads
     // Note: This assumes the C++ implementation is thread-safe
     let handles: Vec<_> = (0..3)
@@ -157,7 +163,7 @@ fn test_concurrent_access() {
             })
         })
         .collect();
-    
+
     for handle in handles {
         match handle.join() {
             Ok(Some(tokens)) => {
@@ -180,7 +186,7 @@ fn test_memory_safety() {
         eprintln!("Skipping test: fixture not found");
         return;
     }
-    
+
     // Test that we can create and destroy many models without leaking memory
     for i in 0..10 {
         let model = match CppModel::load(fixture_path) {
@@ -190,13 +196,13 @@ fn test_memory_safety() {
                 continue;
             }
         };
-        
+
         // Use the model briefly
         let _ = model.generate("test", 5);
-        
+
         // Model will be automatically cleaned up
     }
-    
+
     println!("Memory safety test completed");
 }
 
@@ -208,26 +214,26 @@ fn test_fixture_compatibility() {
         eprintln!("Skipping test: fixtures directory not found");
         return;
     }
-    
+
     let fixture_names = ["minimal_test", "standard_prompts", "performance_test"];
-    
+
     for fixture_name in &fixture_names {
         let fixture_path = fixtures_dir.join(format!("{}.json", fixture_name));
         if !fixture_path.exists() {
             eprintln!("Skipping fixture: {}", fixture_name);
             continue;
         }
-        
+
         match TestFixture::load(fixture_name) {
             Ok(fixture) => {
                 println!("Loaded fixture: {}", fixture.name);
-                
+
                 // Try to load the model
                 if fixture.model_path.exists() {
                     match CppModel::load(&fixture.model_path) {
                         Ok(model) => {
                             println!("  Model loaded successfully");
-                            
+
                             // Try one test prompt
                             if let Some(prompt) = fixture.test_prompts.first() {
                                 match model.generate(prompt, 5) {

@@ -18,33 +18,53 @@ impl GgufHeader {
                 format: "Insufficient data for GGUF header".to_string(),
             }));
         }
-        
-        let magic = [data[*offset], data[*offset + 1], data[*offset + 2], data[*offset + 3]];
+
+        let magic = [
+            data[*offset],
+            data[*offset + 1],
+            data[*offset + 2],
+            data[*offset + 3],
+        ];
         *offset += 4;
-        
+
         if &magic != b"GGUF" {
             return Err(BitNetError::Model(ModelError::InvalidFormat {
                 format: "Invalid GGUF magic number".to_string(),
             }));
         }
-        
+
         let version = u32::from_le_bytes([
-            data[*offset], data[*offset + 1], data[*offset + 2], data[*offset + 3]
+            data[*offset],
+            data[*offset + 1],
+            data[*offset + 2],
+            data[*offset + 3],
         ]);
         *offset += 4;
-        
+
         let tensor_count = u64::from_le_bytes([
-            data[*offset], data[*offset + 1], data[*offset + 2], data[*offset + 3],
-            data[*offset + 4], data[*offset + 5], data[*offset + 6], data[*offset + 7],
+            data[*offset],
+            data[*offset + 1],
+            data[*offset + 2],
+            data[*offset + 3],
+            data[*offset + 4],
+            data[*offset + 5],
+            data[*offset + 6],
+            data[*offset + 7],
         ]);
         *offset += 8;
-        
+
         let metadata_kv_count = u64::from_le_bytes([
-            data[*offset], data[*offset + 1], data[*offset + 2], data[*offset + 3],
-            data[*offset + 4], data[*offset + 5], data[*offset + 6], data[*offset + 7],
+            data[*offset],
+            data[*offset + 1],
+            data[*offset + 2],
+            data[*offset + 3],
+            data[*offset + 4],
+            data[*offset + 5],
+            data[*offset + 6],
+            data[*offset + 7],
         ]);
         *offset += 8;
-        
+
         Ok(Self {
             magic,
             version,
@@ -91,10 +111,10 @@ impl GgufValue {
                 format: "Unexpected end of data while reading GGUF value".to_string(),
             }));
         }
-        
+
         let value_type = data[*offset];
         *offset += 1;
-        
+
         match value_type {
             0 => Ok(GgufValue::U8(read_u8(data, offset)?)),
             1 => Ok(GgufValue::I8(read_i8(data, offset)?)),
@@ -110,14 +130,14 @@ impl GgufValue {
                 let array_type = data[*offset];
                 *offset += 1;
                 let array_len = read_u64(data, offset)? as usize;
-                
+
                 let mut array = Vec::with_capacity(array_len);
                 for _ in 0..array_len {
                     // Create a temporary buffer with the array type byte
                     let mut temp_data = vec![array_type];
                     temp_data.extend_from_slice(&data[*offset..]);
                     let mut temp_offset = 0;
-                    
+
                     array.push(GgufValue::read(&temp_data, &mut temp_offset)?);
                     *offset += temp_offset - 1; // Adjust for the type byte we added
                 }
@@ -143,21 +163,21 @@ pub struct TensorInfo {
 impl TensorInfo {
     pub fn read(data: &[u8], offset: &mut usize) -> Result<Self> {
         let name = read_string(data, offset)?;
-        
+
         let n_dims = read_u32(data, offset)? as usize;
         let mut shape = Vec::with_capacity(n_dims);
         for _ in 0..n_dims {
             shape.push(read_u64(data, offset)? as usize);
         }
-        
+
         let tensor_type = GgufTensorType::from_u32(read_u32(data, offset)?)?;
         let tensor_offset = read_u64(data, offset)?;
-        
+
         // Calculate tensor size
         let element_size = tensor_type.element_size();
         let total_elements: usize = shape.iter().product();
         let size = (total_elements * element_size) as u64;
-        
+
         Ok(Self {
             name,
             shape,
@@ -186,7 +206,7 @@ pub enum GgufTensorType {
     Q5_K,
     Q6_K,
     Q8_K,
-    I2_S,  // BitNet 2-bit signed quantization (type 36)
+    I2_S, // BitNet 2-bit signed quantization (type 36)
 }
 
 impl GgufTensorType {
@@ -206,13 +226,13 @@ impl GgufTensorType {
             13 => Ok(Self::Q5_K),
             14 => Ok(Self::Q6_K),
             15 => Ok(Self::Q8_K),
-            36 => Ok(Self::I2_S),  // BitNet I2_S format
+            36 => Ok(Self::I2_S), // BitNet I2_S format
             _ => Err(BitNetError::Model(ModelError::InvalidFormat {
                 format: format!("Unknown tensor type: {}", value),
             })),
         }
     }
-    
+
     pub fn element_size(&self) -> usize {
         match self {
             Self::F32 => 4,
@@ -236,12 +256,12 @@ impl GgufTensorType {
             }
         }
     }
-    
+
     /// Check if this tensor type represents quantized data
     pub fn is_quantized(&self) -> bool {
         !matches!(self, Self::F32 | Self::F16)
     }
-    
+
     /// Get the block size for quantized types
     pub fn block_size(&self) -> usize {
         match self {
@@ -305,7 +325,10 @@ pub fn read_u32(data: &[u8], offset: &mut usize) -> Result<u32> {
         }));
     }
     let value = u32::from_le_bytes([
-        data[*offset], data[*offset + 1], data[*offset + 2], data[*offset + 3]
+        data[*offset],
+        data[*offset + 1],
+        data[*offset + 2],
+        data[*offset + 3],
     ]);
     *offset += 4;
     Ok(value)
@@ -322,8 +345,14 @@ pub fn read_u64(data: &[u8], offset: &mut usize) -> Result<u64> {
         }));
     }
     let value = u64::from_le_bytes([
-        data[*offset], data[*offset + 1], data[*offset + 2], data[*offset + 3],
-        data[*offset + 4], data[*offset + 5], data[*offset + 6], data[*offset + 7],
+        data[*offset],
+        data[*offset + 1],
+        data[*offset + 2],
+        data[*offset + 3],
+        data[*offset + 4],
+        data[*offset + 5],
+        data[*offset + 6],
+        data[*offset + 7],
     ]);
     *offset += 8;
     Ok(value)
@@ -331,7 +360,10 @@ pub fn read_u64(data: &[u8], offset: &mut usize) -> Result<u64> {
 
 pub fn read_f32(data: &[u8], offset: &mut usize) -> Result<f32> {
     let bytes = [
-        data[*offset], data[*offset + 1], data[*offset + 2], data[*offset + 3]
+        data[*offset],
+        data[*offset + 1],
+        data[*offset + 2],
+        data[*offset + 3],
     ];
     *offset += 4;
     Ok(f32::from_le_bytes(bytes))
@@ -348,12 +380,13 @@ pub fn read_string(data: &[u8], offset: &mut usize) -> Result<String> {
             format: "String extends beyond data bounds".to_string(),
         }));
     }
-    
+
     let string_data = &data[*offset..*offset + len];
     *offset += len;
-    
-    String::from_utf8(string_data.to_vec())
-        .map_err(|_| BitNetError::Model(ModelError::InvalidFormat {
+
+    String::from_utf8(string_data.to_vec()).map_err(|_| {
+        BitNetError::Model(ModelError::InvalidFormat {
             format: "Invalid UTF-8 in string".to_string(),
-        }))
+        })
+    })
 }

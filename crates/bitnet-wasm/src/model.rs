@@ -1,18 +1,18 @@
 //! WebAssembly model wrapper for BitNet inference
 
-use wasm_bindgen::prelude::*;
-use js_sys::{Promise, Uint8Array, Object, Reflect};
-use web_sys::console;
+use js_sys::{Object, Promise, Reflect, Uint8Array};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use wasm_bindgen::prelude::*;
+use web_sys::console;
 
 use bitnet_common::{BitNetConfig, BitNetError};
-use bitnet_models::{Model, ModelLoader};
 use bitnet_inference::InferenceEngine;
+use bitnet_models::{Model, ModelLoader};
 use bitnet_tokenizers::TokenizerBuilder;
 
-use crate::utils::{JsError, to_js_error};
 use crate::memory::MemoryManager;
+use crate::utils::{to_js_error, JsError};
 
 /// Configuration for WASM model loading
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,14 +127,19 @@ impl WasmBitNetModel {
 
     /// Load model from byte array (async)
     #[wasm_bindgen]
-    pub fn load_from_bytes(&mut self, model_bytes: &Uint8Array, tokenizer_bytes: Option<Uint8Array>) -> Promise {
+    pub fn load_from_bytes(
+        &mut self,
+        model_bytes: &Uint8Array,
+        tokenizer_bytes: Option<Uint8Array>,
+    ) -> Promise {
         let model_data = model_bytes.to_vec();
         let tokenizer_data = tokenizer_bytes.map(|bytes| bytes.to_vec());
         let config = self.config.clone();
         let max_memory = self.memory_manager.max_memory_bytes();
 
         wasm_bindgen_futures::future_to_promise(async move {
-            Self::load_model_async(model_data, tokenizer_data, config, max_memory).await
+            Self::load_model_async(model_data, tokenizer_data, config, max_memory)
+                .await
                 .map(|result| JsValue::from_serde(&result).unwrap_or(JsValue::NULL))
                 .map_err(to_js_error)
         })
@@ -202,17 +207,20 @@ impl WasmBitNetModel {
         // Check memory constraints
         if let Some(max_mem) = max_memory {
             if model_data.len() > max_mem {
-                return Err(BitNetError::Model(format!(
-                    "Model size ({} bytes) exceeds memory limit ({} bytes)",
-                    model_data.len(),
-                    max_mem
-                ).into()));
+                return Err(BitNetError::Model(
+                    format!(
+                        "Model size ({} bytes) exceeds memory limit ({} bytes)",
+                        model_data.len(),
+                        max_mem
+                    )
+                    .into(),
+                ));
             }
         }
 
         // Create temporary file-like interface for model loading
         let model_path = Self::create_virtual_file(&model_data, &config.format_hint)?;
-        
+
         // Load model using the standard model loader
         let device = bitnet_common::Device::Cpu; // WASM only supports CPU
         let loader = ModelLoader::new(device);
@@ -248,7 +256,7 @@ impl WasmBitNetModel {
             "safetensors" => ".safetensors",
             _ => ".bin",
         };
-        
+
         // Store data in a way that can be accessed by the model loader
         // This is a simplified implementation - in practice, you'd need
         // a more sophisticated virtual file system

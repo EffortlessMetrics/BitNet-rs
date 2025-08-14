@@ -77,7 +77,7 @@ impl OptimizedMemoryPool {
     /// Create a new optimized memory pool
     pub fn new(device_id: usize, config: MemoryPoolConfig) -> Self {
         log::info!("Creating optimized memory pool for device {}", device_id);
-        
+
         Self {
             device_id,
             config,
@@ -102,7 +102,7 @@ impl OptimizedMemoryPool {
 
         // Allocate new buffer (simplified - just use Vec<u8>)
         let buffer = vec![0u8; size];
-        
+
         self.track_allocation(&buffer, size)?;
         Ok(buffer)
     }
@@ -160,7 +160,10 @@ impl OptimizedMemoryPool {
         // Check for memory usage warnings
         let usage_ratio = self.stats.current_usage as f32 / self.config.max_pool_size as f32;
         if usage_ratio > 0.8 {
-            log::warn!("High memory usage: {:.1}% of pool capacity", usage_ratio * 100.0);
+            log::warn!(
+                "High memory usage: {:.1}% of pool capacity",
+                usage_ratio * 100.0
+            );
         }
 
         Ok(())
@@ -169,14 +172,15 @@ impl OptimizedMemoryPool {
     /// Check if cleanup should be performed
     fn should_cleanup(&self) -> bool {
         self.last_cleanup.elapsed() > Duration::from_secs(30) || // Periodic cleanup
-        self.stats.current_usage as f32 / self.config.max_pool_size as f32 > 0.7 // High usage
+        self.stats.current_usage as f32 / self.config.max_pool_size as f32 > 0.7
+        // High usage
     }
 
     /// Cleanup expired buffers
     fn cleanup_expired_buffers(&mut self) {
         let _expire_time = Duration::from_secs(300); // 5 minutes
         let now = Instant::now();
-        
+
         let mut total_freed = 0;
         for buffers in self.free_buffers.values_mut() {
             let original_len = buffers.len();
@@ -220,13 +224,14 @@ impl OptimizedMemoryPool {
     pub fn check_leaks(&self) -> Vec<String> {
         let mut leaks = Vec::new();
         let now = Instant::now();
-        
+
         for (ptr, info) in &self.allocated_buffers {
-            if now.duration_since(info.timestamp) > Duration::from_secs(3600) { // 1 hour
+            if now.duration_since(info.timestamp) > Duration::from_secs(3600) {
+                // 1 hour
                 leaks.push(format!("Potential leak: {} bytes at {:p}", info.size, ptr));
             }
         }
-        
+
         leaks
     }
 }
@@ -257,7 +262,7 @@ impl MemoryLayoutOptimizer {
     pub fn calculate_alignment(size: usize) -> usize {
         // CUDA prefers 256-byte alignment for optimal performance
         let base_alignment = 256;
-        
+
         // For very small allocations, use smaller alignment
         if size < 1024 {
             32
@@ -277,7 +282,7 @@ impl MemoryLayoutOptimizer {
         // Check if access is sequential
         let mut is_sequential = true;
         for i in 1..access_indices.len() {
-            if access_indices[i] != access_indices[i-1] + 1 {
+            if access_indices[i] != access_indices[i - 1] + 1 {
                 is_sequential = false;
                 break;
             }
@@ -291,14 +296,14 @@ impl MemoryLayoutOptimizer {
         if access_indices.len() >= 3 {
             let stride = access_indices[1] - access_indices[0];
             let mut is_strided = true;
-            
+
             for i in 2..access_indices.len() {
-                if access_indices[i] - access_indices[i-1] != stride {
+                if access_indices[i] - access_indices[i - 1] != stride {
                     is_strided = false;
                     break;
                 }
             }
-            
+
             if is_strided {
                 return AccessPattern::Strided { stride };
             }
@@ -316,7 +321,7 @@ mod tests {
     fn test_memory_pool_creation() {
         let config = MemoryPoolConfig::default();
         let pool = OptimizedMemoryPool::new(0, config);
-        
+
         assert_eq!(pool.device_id, 0);
         assert_eq!(pool.stats.current_usage, 0);
     }
@@ -325,10 +330,10 @@ mod tests {
     fn test_memory_allocation() {
         let config = MemoryPoolConfig::default();
         let mut pool = OptimizedMemoryPool::new(0, config);
-        
+
         let buffer = pool.allocate(1024);
         assert!(buffer.is_ok());
-        
+
         if let Ok(buffer) = buffer {
             assert_eq!(buffer.len(), 1024);
             pool.deallocate(buffer);
@@ -341,7 +346,7 @@ mod tests {
         let sequential = vec![0, 1, 2, 3, 4];
         let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&sequential);
         assert_eq!(pattern, AccessPattern::Sequential);
-        
+
         // Strided access
         let strided = vec![0, 2, 4, 6, 8];
         let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&strided);
@@ -350,7 +355,7 @@ mod tests {
         } else {
             panic!("Expected strided pattern");
         }
-        
+
         // Random access
         let random = vec![5, 1, 8, 3, 9];
         let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&random);

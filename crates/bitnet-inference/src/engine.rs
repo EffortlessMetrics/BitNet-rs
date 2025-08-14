@@ -3,20 +3,20 @@
 //! Core inference engine with CPU and GPU backend support, streaming generation,
 //! and comprehensive configuration options.
 
-use anyhow::{Result, Context};
-use bitnet_common::{BitNetConfig, Device, Tensor, ConcreteTensor};
+use anyhow::{Context, Result};
+use bitnet_common::{BitNetConfig, ConcreteTensor, Device, Tensor};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use candle_core::{DType, IndexOp};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, debug, warn, instrument};
+use tracing::{debug, info, instrument, warn};
 
 use crate::{
     backends::{Backend, CpuBackend, GpuBackend},
-    cache::{KVCache, CacheConfig},
-    config::{InferenceConfig, GenerationConfig},
-    sampling::{SamplingStrategy, SamplingConfig},
+    cache::{CacheConfig, KVCache},
+    config::{GenerationConfig, InferenceConfig},
+    sampling::{SamplingConfig, SamplingStrategy},
     streaming::{GenerationStream, StreamingConfig},
 };
 
@@ -47,11 +47,11 @@ impl InferenceEngine {
         device: Device,
     ) -> Result<Self> {
         info!("Creating inference engine with device: {:?}", device);
-        
+
         let config = InferenceConfig::default();
         let cache_config = CacheConfig::default();
         let cache = Arc::new(RwLock::new(KVCache::new(cache_config)?));
-        
+
         let backend: Box<dyn Backend> = match device {
             Device::Cpu => {
                 debug!("Using CPU backend");
@@ -66,7 +66,7 @@ impl InferenceEngine {
                 Box::new(GpuBackend::new(model.clone(), device)?)
             }
         };
-        
+
         Ok(Self {
             model,
             tokenizer,
@@ -103,33 +103,42 @@ impl InferenceEngine {
         config: &GenerationConfig,
     ) -> Result<String> {
         let start_time = std::time::Instant::now();
-        
-        debug!("Generating text for prompt: {:?}", &prompt[..50.min(prompt.len())]);
-        
+
+        debug!(
+            "Generating text for prompt: {:?}",
+            &prompt[..50.min(prompt.len())]
+        );
+
         // Tokenize input
-        let input_tokens = self.tokenizer.encode(prompt, true)
+        let input_tokens = self
+            .tokenizer
+            .encode(prompt, true)
             .context("Failed to tokenize input prompt")?;
-        
+
         debug!("Input tokens: {} tokens", input_tokens.len());
-        
+
         // Generate tokens
-        let generated_tokens = self.generate_tokens(&input_tokens, config).await
+        let generated_tokens = self
+            .generate_tokens(&input_tokens, config)
+            .await
             .context("Failed to generate tokens")?;
-        
+
         // Decode output
-        let generated_text = self.tokenizer.decode(&generated_tokens, true)
+        let generated_text = self
+            .tokenizer
+            .decode(&generated_tokens, true)
             .context("Failed to decode generated tokens")?;
-        
+
         let duration = start_time.elapsed();
         let tokens_per_second = generated_tokens.len() as f64 / duration.as_secs_f64();
-        
+
         info!(
             "Generated {} tokens in {:?} ({:.2} tokens/sec)",
             generated_tokens.len(),
             duration,
             tokens_per_second
         );
-        
+
         Ok(generated_text)
     }
 
@@ -149,7 +158,7 @@ impl InferenceEngine {
             buffer_size: 10,
             flush_interval_ms: 50,
         };
-        
+
         GenerationStream::new(
             self.model.clone(),
             self.tokenizer.clone(),
@@ -169,7 +178,7 @@ impl InferenceEngine {
     ) -> Result<Vec<u32>> {
         let mut generated_tokens = Vec::new();
         let mut current_tokens = input_tokens.to_vec();
-        
+
         let sampling_config = SamplingConfig {
             temperature: config.temperature,
             top_k: config.top_k,
@@ -177,31 +186,31 @@ impl InferenceEngine {
             repetition_penalty: config.repetition_penalty,
             seed: config.seed,
         };
-        
+
         let mut sampling_strategy = SamplingStrategy::new(sampling_config);
-        
+
         for _ in 0..config.max_new_tokens {
             // Forward pass through model
             let logits = self.forward_pass(&current_tokens).await?;
-            
+
             // Sample next token
             let next_token = sampling_strategy.sample(&logits, &current_tokens)?;
-            
+
             // Check for stop conditions
             if self.should_stop(next_token, &generated_tokens, config) {
                 break;
             }
-            
+
             generated_tokens.push(next_token);
             current_tokens.push(next_token);
-            
+
             // Limit context length
             if current_tokens.len() > self.config.max_context_length {
                 let keep_length = self.config.max_context_length / 2;
                 current_tokens = current_tokens[current_tokens.len() - keep_length..].to_vec();
             }
         }
-        
+
         Ok(generated_tokens)
     }
 
@@ -209,13 +218,13 @@ impl InferenceEngine {
     async fn forward_pass(&self, tokens: &[u32]) -> Result<Vec<f32>> {
         // Convert tokens to tensor
         let input_tensor = self.tokens_to_tensor(tokens)?;
-        
+
         // Get cache for this sequence
         let mut cache = self.cache.write().await;
-        
+
         // Forward pass through backend
         let output_tensor = self.backend.forward(&input_tensor, &mut *cache).await?;
-        
+
         // Extract logits from output tensor
         self.tensor_to_logits(&output_tensor)
     }
@@ -229,21 +238,21 @@ impl InferenceEngine {
     /// Extract logits from output tensor
     fn tensor_to_logits(&self, tensor: &ConcreteTensor) -> Result<Vec<f32>> {
         use bitnet_common::BitNetError;
-        
+
         // Use the model's logits method to get vocabulary predictions
         let logits_tensor = self.model.logits(tensor)?; // [B,T,V]
-        
+
         // Extract shape
         let shape = logits_tensor.shape();
         if shape.len() != 3 {
             return Err(BitNetError::Validation("Expected 3D logits tensor [B,T,V]".into()).into());
         }
         let (batch, seq_len, _vocab) = (shape[0], shape[1], shape[2]);
-        
+
         if batch != 1 {
             return Err(BitNetError::Validation("Only batch=1 supported".into()).into());
         }
-        
+
         // Get the underlying Candle tensor and extract last timestep
         match &logits_tensor {
             ConcreteTensor::BitNet(t) => {
@@ -252,8 +261,12 @@ impl InferenceEngine {
                 let last = candle
                     .narrow(1, seq_len - 1, 1)?  // [B, 1, V]
                     .squeeze(1)?                  // [B, V]
-                    .i(0)?;                        // [V]
-                let last = if last.dtype() != DType::F32 { last.to_dtype(DType::F32)? } else { last };
+                    .i(0)?; // [V]
+                let last = if last.dtype() != DType::F32 {
+                    last.to_dtype(DType::F32)?
+                } else {
+                    last
+                };
                 Ok(last.to_vec1::<f32>()?)
             }
             ConcreteTensor::Mock(_) => {
@@ -265,29 +278,27 @@ impl InferenceEngine {
     }
 
     /// Check if generation should stop
-    fn should_stop(
-        &self,
-        token: u32,
-        generated_tokens: &[u32],
-        config: &GenerationConfig,
-    ) -> bool {
+    fn should_stop(&self, token: u32, generated_tokens: &[u32], config: &GenerationConfig) -> bool {
         // Check for EOS token
         if let Some(eos_token) = self.tokenizer.eos_token_id() {
             if token == eos_token {
                 return true;
             }
         }
-        
+
         // Check for stop sequences
         if !config.stop_sequences.is_empty() {
-            let current_text = self.tokenizer.decode(generated_tokens, true).unwrap_or_default();
+            let current_text = self
+                .tokenizer
+                .decode(generated_tokens, true)
+                .unwrap_or_default();
             for stop_seq in &config.stop_sequences {
                 if current_text.ends_with(stop_seq) {
                     return true;
                 }
             }
         }
-        
+
         false
     }
 
@@ -352,12 +363,15 @@ mod tests {
         ) -> std::result::Result<ConcreteTensor, BitNetError> {
             Ok(ConcreteTensor::mock(vec![1, 50257]))
         }
-        
+
         fn embed(&self, _tokens: &[u32]) -> std::result::Result<ConcreteTensor, BitNetError> {
             Ok(ConcreteTensor::mock(vec![1, 10, 768]))
         }
-        
-        fn logits(&self, _hidden: &ConcreteTensor) -> std::result::Result<ConcreteTensor, BitNetError> {
+
+        fn logits(
+            &self,
+            _hidden: &ConcreteTensor,
+        ) -> std::result::Result<ConcreteTensor, BitNetError> {
             Ok(ConcreteTensor::mock(vec![1, 10, 50257]))
         }
     }
@@ -365,11 +379,19 @@ mod tests {
     struct MockTokenizer;
 
     impl Tokenizer for MockTokenizer {
-        fn encode(&self, _text: &str, _add_special_tokens: bool) -> std::result::Result<Vec<u32>, BitNetError> {
+        fn encode(
+            &self,
+            _text: &str,
+            _add_special_tokens: bool,
+        ) -> std::result::Result<Vec<u32>, BitNetError> {
             Ok(vec![1, 2, 3])
         }
 
-        fn decode(&self, _tokens: &[u32], _skip_special_tokens: bool) -> std::result::Result<String, BitNetError> {
+        fn decode(
+            &self,
+            _tokens: &[u32],
+            _skip_special_tokens: bool,
+        ) -> std::result::Result<String, BitNetError> {
             Ok("mock generated text".to_string())
         }
 
@@ -404,7 +426,7 @@ mod tests {
 
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
         let result = engine.generate("Hello, world!").await;
-        
+
         assert!(result.is_ok());
         let generated_text = result.unwrap();
         assert!(!generated_text.is_empty());

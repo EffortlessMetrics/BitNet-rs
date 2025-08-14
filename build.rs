@@ -8,6 +8,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .rustc_semver()
         .cargo_target_triple()
         .emit()?;
-    
+
     Ok(())
 }

@@ -1,11 +1,11 @@
 //! Comprehensive benchmarking suite for WebAssembly performance
 
+use js_sys::{Array, Date, Object, Reflect};
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
-use js_sys::{Object, Reflect, Array, Date};
 use web_sys::{console, Performance};
-use serde::{Serialize, Deserialize};
 
-use crate::kernels::{WasmKernelProvider, WasmBenchmark};
+use crate::kernels::{WasmBenchmark, WasmKernelProvider};
 use crate::memory::MemoryManager;
 use crate::progressive::ProgressiveLoader;
 use crate::utils::{JsError, PerformanceMonitor};
@@ -37,7 +37,7 @@ impl WasmBenchmarkSuite {
     pub fn run_all_benchmarks(&mut self) -> js_sys::Promise {
         wasm_bindgen_futures::future_to_promise(async move {
             let mut monitor = PerformanceMonitor::new();
-            
+
             console::log_1(&"Starting comprehensive WASM benchmark suite".into());
             monitor.mark("benchmark_start");
 
@@ -66,10 +66,7 @@ impl WasmBenchmarkSuite {
                 recommendations: self.generate_recommendations(),
             };
 
-            console::log_1(&format!(
-                "Benchmark suite completed in {:.2}ms",
-                total_time
-            ).into());
+            console::log_1(&format!("Benchmark suite completed in {:.2}ms", total_time).into());
 
             Ok(JsValue::from_serde(&summary)?)
         })
@@ -79,10 +76,10 @@ impl WasmBenchmarkSuite {
     #[wasm_bindgen]
     pub fn benchmark_kernels(&self) -> js_sys::Promise {
         let kernel_provider = self.kernel_provider.clone();
-        
+
         wasm_bindgen_futures::future_to_promise(async move {
             console::log_1(&"Benchmarking kernel performance".into());
-            
+
             let benchmark = WasmBenchmark::new();
             let mut results = KernelBenchmarkResults::default();
 
@@ -108,7 +105,7 @@ impl WasmBenchmarkSuite {
     pub fn benchmark_memory(&self) -> js_sys::Promise {
         wasm_bindgen_futures::future_to_promise(async move {
             console::log_1(&"Benchmarking memory management".into());
-            
+
             let mut results = MemoryBenchmarkResults::default();
             let mut memory_manager = MemoryManager::new(Some(256 * 1024 * 1024))?; // 256MB
 
@@ -137,7 +134,7 @@ impl WasmBenchmarkSuite {
     pub fn benchmark_loading(&self) -> js_sys::Promise {
         wasm_bindgen_futures::future_to_promise(async move {
             console::log_1(&"Benchmarking progressive loading".into());
-            
+
             let mut results = LoadingBenchmarkResults::default();
 
             // Simulate loading different sized models
@@ -157,7 +154,7 @@ impl WasmBenchmarkSuite {
     pub fn benchmark_inference(&self) -> js_sys::Promise {
         wasm_bindgen_futures::future_to_promise(async move {
             console::log_1(&"Benchmarking inference performance".into());
-            
+
             let mut results = InferenceBenchmarkResults::default();
 
             // Simulate different inference scenarios
@@ -208,15 +205,22 @@ impl WasmBenchmarkSuite {
         let performance_info = self.kernel_provider.get_performance_info();
 
         if !performance_info.simd_supported() {
-            recommendations.push("Consider using a browser with WASM SIMD support for better performance".to_string());
+            recommendations.push(
+                "Consider using a browser with WASM SIMD support for better performance"
+                    .to_string(),
+            );
         }
 
         if !performance_info.bulk_memory_supported() {
-            recommendations.push("Bulk memory operations not supported - consider browser upgrade".to_string());
+            recommendations.push(
+                "Bulk memory operations not supported - consider browser upgrade".to_string(),
+            );
         }
 
         if performance_info.estimated_gflops() < 1.0 {
-            recommendations.push("Low computational performance detected - consider reducing model size".to_string());
+            recommendations.push(
+                "Low computational performance detected - consider reducing model size".to_string(),
+            );
         }
 
         let memory_gb = web_sys::window()
@@ -224,11 +228,15 @@ impl WasmBenchmarkSuite {
             .unwrap_or(0.0);
 
         if memory_gb < 4.0 {
-            recommendations.push("Limited device memory - enable progressive loading and reduce memory limits".to_string());
+            recommendations.push(
+                "Limited device memory - enable progressive loading and reduce memory limits"
+                    .to_string(),
+            );
         }
 
         if recommendations.is_empty() {
-            recommendations.push("Platform appears well-suited for BitNet WASM inference".to_string());
+            recommendations
+                .push("Platform appears well-suited for BitNet WASM inference".to_string());
         }
 
         recommendations
@@ -249,7 +257,7 @@ impl WasmBenchmarkSuite {
         let mut dest = vec![0u8; size];
 
         let start_time = Self::get_time();
-        
+
         // Simulate memory copy operations
         for _ in 0..10 {
             dest.copy_from_slice(&data);
@@ -284,15 +292,15 @@ impl WasmBenchmarkSuite {
     /// Simulate model loading time
     async fn simulate_model_load(size_bytes: usize) -> f64 {
         let start_time = Self::get_time();
-        
+
         // Simulate chunked loading
         let chunk_size = 1024 * 1024; // 1MB chunks
         let chunks = (size_bytes + chunk_size - 1) / chunk_size;
-        
+
         for i in 0..chunks {
             // Simulate processing time per chunk
             Self::delay(5).await;
-            
+
             if i % 10 == 0 {
                 console::log_1(&format!("Loading chunk {}/{}", i + 1, chunks).into());
             }
@@ -305,9 +313,9 @@ impl WasmBenchmarkSuite {
     async fn benchmark_chunk_processing() -> f64 {
         let chunk_size = 1024 * 1024; // 1MB
         let num_chunks = 64; // 64MB total
-        
+
         let start_time = Self::get_time();
-        
+
         for _ in 0..num_chunks {
             // Simulate chunk processing
             let _data = vec![0u8; chunk_size];
@@ -324,7 +332,7 @@ impl WasmBenchmarkSuite {
     /// Simulate token generation time
     async fn simulate_token_generation(num_tokens: usize) -> f64 {
         let start_time = Self::get_time();
-        
+
         for _ in 0..num_tokens {
             // Simulate inference computation
             Self::delay(10).await; // 10ms per token
@@ -337,11 +345,11 @@ impl WasmBenchmarkSuite {
     async fn benchmark_streaming() -> f64 {
         let num_tokens = 100;
         let start_time = Self::get_time();
-        
+
         for i in 0..num_tokens {
             // Simulate streaming token generation
             Self::delay(8).await; // 8ms per token for streaming
-            
+
             if i % 20 == 0 {
                 console::log_1(&format!("Streaming token {}/{}", i + 1, num_tokens).into());
             }
@@ -359,7 +367,7 @@ impl WasmBenchmarkSuite {
         let base_memory = 50.0; // 50MB base model
         let context_memory = 10.0; // 10MB for context
         let computation_memory = 20.0; // 20MB for computation buffers
-        
+
         base_memory + context_memory + computation_memory
     }
 
@@ -367,10 +375,7 @@ impl WasmBenchmarkSuite {
     async fn delay(ms: i32) {
         let promise = js_sys::Promise::new(&mut |resolve, _reject| {
             if let Some(window) = web_sys::window() {
-                let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
-                    &resolve,
-                    ms,
-                );
+                let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms);
             }
         });
         let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
