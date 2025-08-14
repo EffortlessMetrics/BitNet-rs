@@ -1,9 +1,18 @@
 use super::config::TestConfig;
-use super::errors::{TestError, TestOpResult};
+use super::errors::{TestError, TestOpResult as TestResultCompat};
 use super::execution_optimizer::ExecutionPlan;
 use super::parallel::ParallelExecutor;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+
+/// Configuration for parallel test execution
+#[derive(Debug, Clone)]
+pub struct ParallelConfig {
+    /// Maximum number of parallel workers
+    pub max_workers: usize,
+    /// Timeout for individual tests
+    pub test_timeout: Duration,
+}
 
 /// Test execution optimizer focused on achieving <15 minute execution time
 pub struct TestExecutionOptimizer {
@@ -126,7 +135,7 @@ impl TestExecutionOptimizer {
     pub async fn optimize_execution_plan(
         &mut self,
         all_tests: Vec<String>,
-    ) -> TestResult<OptimizationStrategy> {
+    ) -> TestResultCompat<OptimizationStrategy> {
         let start_time = Instant::now();
         let mut optimization_notes = Vec::new();
 
@@ -200,7 +209,7 @@ impl TestExecutionOptimizer {
         mut all_tests: Vec<String>,
         test_estimates: &HashMap<String, Duration>,
         notes: &mut Vec<String>,
-    ) -> TestResult<(Vec<String>, Vec<String>)> {
+    ) -> TestResultCompat<(Vec<String>, Vec<String>)> {
         let mut skipped_tests = Vec::new();
 
         // 1. Skip extremely slow tests if enabled
