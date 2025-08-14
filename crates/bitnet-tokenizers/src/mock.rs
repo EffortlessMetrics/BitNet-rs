@@ -12,6 +12,12 @@ impl MockTokenizer {
     }
 }
 
+impl Default for MockTokenizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Tokenizer for MockTokenizer {
     fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>> {
         // Simple character-based encoding for testing

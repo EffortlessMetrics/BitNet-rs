@@ -154,7 +154,7 @@ pub fn validate_shapes(shape1: &[usize], shape2: &[usize]) -> Result<()> {
 pub fn calculate_optimal_block_size(tensor_size: usize, target_blocks: usize) -> usize {
     let block_size = (tensor_size + target_blocks - 1) / target_blocks;
     // Round to nearest power of 2 for better memory alignment
-    block_size.next_power_of_two().min(1024).max(16)
+    block_size.next_power_of_two().clamp(16, 1024)
 }
 
 #[cfg(test)]

@@ -173,7 +173,7 @@ fn test_best_quantization_for_arch() {
     assert!(quantizer.is_available());
 }
 
-/// Property-based test for quantization round-trip accuracy
+// Property-based test for quantization round-trip accuracy
 proptest! {
     #[test]
     fn prop_quantization_round_trip(
@@ -206,7 +206,7 @@ proptest! {
     }
 }
 
-/// Property-based test for quantization format conversion
+// Property-based test for quantization format conversion
 proptest! {
     #[test]
     fn prop_format_conversion(
@@ -241,7 +241,7 @@ proptest! {
     }
 }
 
-/// Property-based test for quantization with different block sizes
+// Property-based test for quantization with different block sizes
 proptest! {
     #[test]
     fn prop_different_block_sizes(

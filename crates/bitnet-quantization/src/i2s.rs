@@ -23,8 +23,8 @@ pub struct I2SLayout {
     pub scale_bytes_per_block: usize, // 2 bytes for f16 scale
 }
 
-impl I2SLayout {
-    pub fn default() -> Self {
+impl Default for I2SLayout {
+    fn default() -> Self {
         Self {
             block_size: 32,
             bytes_per_block: 10,
@@ -32,6 +32,9 @@ impl I2SLayout {
             scale_bytes_per_block: 2,
         }
     }
+}
+
+impl I2SLayout {
 
     pub fn with_block_size(block_size: usize) -> Self {
         // For I2_S: 2 bits per element
