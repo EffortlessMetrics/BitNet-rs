@@ -119,7 +119,7 @@ pub type ImplementationResult<T> = Result<T, ImplementationError>;
 
 /// Error severity levels for prioritizing debugging efforts
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
 pub enum ErrorSeverity {
     Low,
