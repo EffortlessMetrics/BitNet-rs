@@ -2,7 +2,10 @@ use super::config::TestConfig;
 use super::errors::TestError;
 use super::fast_config::{FastConfigBuilder, SpeedProfile};
 use super::incremental::IncrementalTester;
-use super::parallel::ParallelExecutor;
+use super::parallel::{
+    ParallelExecutor, TestInfo as ParTestInfo, TestGroup as ParTestGroup,
+    TestCategory as ParTestCategory, TestPriority as ParTestPriority
+};
 use super::selection::TestSelector;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -135,7 +138,7 @@ impl ExecutionOptimizer {
 
         // Step 2: Select tests based on priority and time constraints
         let available_tests = self.selector.discover_tests().await?;
-        let estimated_total_time = self.estimate_total_time(&available_tests);
+        let estimated_total_time = self.estimate_total_time(available_tests.as_slice());
 
         info!(
             "Discovered {} tests, estimated total time: {}s",
@@ -149,7 +152,7 @@ impl ExecutionOptimizer {
         } else {
             // Need to optimize test selection
             let selected_tests =
-                self.select_tests_for_time_budget(&available_tests, &changed_files)?;
+                self.select_tests_for_time_budget(available_tests.as_slice(), &changed_files)?;
             plan.groups = self.create_test_groups(selected_tests, GroupingStrategy::FastFirst)?;
             plan.optimizations_applied
                 .push("test_selection".to_string());
@@ -474,47 +477,11 @@ pub struct ExecutionPlan {
     pub tests_skipped: usize,
 }
 
-/// Test group for parallel execution
-#[derive(Debug, Clone, Default)]
-pub struct TestGroup {
-    pub id: usize,
-    pub tests: Vec<TestInfo>,
-    pub estimated_time: Duration,
-}
-
-impl TestGroup {
-    pub fn estimated_duration(&self) -> Duration {
-        self.estimated_time
-    }
-}
-
-/// Test information
-#[derive(Debug, Clone)]
-pub struct TestInfo {
-    pub name: String,
-    pub crate_name: String,
-    pub file_path: PathBuf,
-    pub category: TestCategory,
-    pub priority: TestPriority,
-}
-
-/// Test categories for optimization
-#[derive(Debug, Clone, PartialEq)]
-pub enum TestCategory {
-    Unit,
-    Integration,
-    Performance,
-    CrossValidation,
-}
-
-/// Test priorities
-#[derive(Debug, Clone, PartialEq)]
-pub enum TestPriority {
-    Critical,
-    High,
-    Medium,
-    Low,
-}
+// Re-export the canonical types from `parallel` to avoid mismatches
+pub type TestInfo = ParTestInfo;
+pub type TestGroup = ParTestGroup;
+pub type TestCategory = ParTestCategory;
+pub type TestPriority = ParTestPriority;
 
 /// Grouping strategies
 #[derive(Debug, Clone)]
