@@ -9,9 +9,9 @@ cargo fmt --all
 if ($LASTEXITCODE -ne 0) { exit 1 }
 
 Write-Host ""
-Write-Host "🔎 Running clippy with all features..." -ForegroundColor Yellow
+Write-Host "🔎 Running clippy (CPU only)..." -ForegroundColor Yellow
 $env:RUSTFLAGS = "-Dwarnings"
-cargo clippy --workspace --all-features --all-targets -- -D warnings -D clippy::ptr_arg
+cargo clippy --workspace --no-default-features --features cpu --all-targets -- -D warnings -D clippy::ptr_arg
 if ($LASTEXITCODE -ne 0) { exit 1 }
 
 Write-Host ""

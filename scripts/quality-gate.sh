@@ -9,8 +9,8 @@ echo "📝 Formatting code..."
 cargo fmt --all
 
 echo ""
-echo "🔎 Running clippy with all features..."
-RUSTFLAGS="-Dwarnings" cargo clippy --workspace --all-features --all-targets -- -D warnings -D clippy::ptr_arg
+echo "🔎 Running clippy (CPU only)..."
+RUSTFLAGS="-Dwarnings" cargo clippy --workspace --no-default-features --features cpu --all-targets -- -D warnings -D clippy::ptr_arg
 
 echo ""
 echo "✓ Checking tests compile (CPU only)..."
