@@ -348,7 +348,7 @@ impl BitNetImplementation for RustImplementation {
     async fn inference(
         &self,
         tokens: &[u32],
-        config: &InferenceConfig,
+        _config: &InferenceConfig,
     ) -> ImplementationResult<InferenceResult> {
         let start_time = Instant::now();
         let start_memory = self.get_memory_usage();

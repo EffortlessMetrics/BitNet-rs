@@ -3,6 +3,8 @@
 //! This test suite validates the correctness of all kernel implementations
 //! and provides performance benchmarking capabilities for regression detection.
 
+#![cfg(any(feature = "ffi-bridge", feature = "cpu-fallback"))]
+
 use bitnet_common::{QuantizationType, Result};
 use bitnet_kernels::{KernelManager, KernelProvider};
 use std::time::Instant;

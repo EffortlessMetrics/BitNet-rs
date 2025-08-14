@@ -30,3 +30,7 @@ simd = []
 [[bench]]
 name = "quantization"
 harness = false
+
+[[bench]]
+name = "i2s_dequant"
+harness = false

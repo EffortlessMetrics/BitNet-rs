@@ -1,6 +1,6 @@
 use super::config::TestConfig;
 use super::errors::TestError;
-use super::results::{TestResult, TestStatus};
+use super::results::{TestResult as TestRecord, TestStatus};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::process::Command;
@@ -155,7 +155,7 @@ impl ParallelExecutor {
         test: TestInfo,
         config: TestConfig,
         stats: Arc<RwLock<ExecutionStats>>,
-    ) -> Result<TestResult, TestError> {
+    ) -> Result<TestRecord, TestError> {
         let start_time = Instant::now();
         debug!("Executing test: {}", test.name);
 
@@ -224,7 +224,7 @@ impl ParallelExecutor {
     /// Calculate parallel execution efficiency
     fn calculate_parallel_efficiency(
         &self,
-        results: &[TestResult],
+        results: &[TestRecord],
         total_duration: Duration,
     ) -> f64 {
         if results.is_empty() {
