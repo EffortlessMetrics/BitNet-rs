@@ -1,7 +1,8 @@
 //! Minimal GGUF reader: just enough to fetch tok_embeddings + output/lm_head.
 //! - Supports GGUF v2/v3
-//! - Tensors: f32 / f16 -> f32
+//! - Tensors: f32 / f16 / I2_S -> f32
 //! - Uses memmap for zero-copy reads where possible
+//! - Integrates with BitNet quantization for I2_S support
 //!
 //! This is deliberately small: robust error messages, no full schema.
 
@@ -9,13 +10,15 @@ use anyhow::{bail, Context, Result};
 use half::f16;
 use memmap2::Mmap;
 use std::{borrow::Cow, fs::File, io::{Read, Seek}, path::Path};
+use bitnet_quantization::{I2SQuantizer, QuantizedTensor};
+use bitnet_common::QuantizationType;
 
 #[derive(Debug, Clone)]
 struct TensorInfo {
     name: String,
     n_dims: u32,
     dims: Vec<u64>,
-    ty: u32,      // ggml_type (0=f32, 1=f16, others unsupported here)
+    ty: u32,      // ggml_type (0=f32, 1=f16, 36=I2_S)
     offset: u64,  // from start of data section (not file start)
 }
 
@@ -36,8 +39,7 @@ pub struct TwoTensors {
 }
 
 /// Public entry: load the two tensors or fail with a helpful error.
-/// Note: This minimal loader only supports f32/f16 tensors.
-/// BitNet models with quantized weights will return an error.
+/// Supports f32/f16 tensors directly and I2_S quantized tensors via dequantization.
 pub fn load_two<P: AsRef<Path>>(path: P) -> Result<TwoTensors> {
     let file = File::open(&path).with_context(|| format!("open {}", path.as_ref().display()))?;
     let mmap = unsafe { Mmap::map(&file) }.with_context(|| "mmap gguf file")?;
@@ -58,33 +60,56 @@ pub fn load_two<P: AsRef<Path>>(path: P) -> Result<TwoTensors> {
 
     let (ta, tb) = (tok_info.dims[0] as usize, tok_info.dims[1] as usize);
     let (ha, hb) = (head_info.dims[0] as usize, head_info.dims[1] as usize);
-
-    // Common case:
-    //   tok:  [vocab, dim]
-    //   head: [dim, vocab]
-    let (vocab, dim, tok_is_vd) = if ta == hb && tb == ha {
-        (ta, tb, true)
-    } else if tb == hb && ta == ha {
-        // or tok might be [dim, vocab] (rare) and head [dim, vocab]
-        // prefer the consistent pairing where one is transposed of the other
-        // If both are the same shape, we try to infer by names below.
-        bail!("ambiguous/unsupported tensor shapes: tok={:?}, head={:?}", tok_info.dims, head_info.dims);
+    
+    // Check if we're using tied weights (same tensor for both)
+    let using_tied_weights = tok_info.name == head_info.name;
+    
+    let (vocab, dim, tok_embeddings, lm_head) = if using_tied_weights {
+        // BitNet models have embeddings as [dim, vocab]
+        // We need: tok_embeddings [vocab, dim] and lm_head [dim, vocab]
+        let (dim, vocab) = (ta, tb);
+        
+        // Transpose tok to get [vocab, dim]
+        let mut tok_transposed = vec![0f32; vocab * dim];
+        for i in 0..dim {
+            for j in 0..vocab {
+                tok_transposed[j * dim + i] = tok[i * vocab + j];
+            }
+        }
+        
+        // lm_head stays as [dim, vocab]
+        (vocab, dim, tok_transposed, head.into_owned())
+    } else if ta == hb && tb == ha {
+        // Standard case: tok [vocab, dim], head [dim, vocab]
+        (ta, tb, tok.into_owned(), head.into_owned())
+    } else if ta == ha && tb == hb {
+        // Both same shape - need to determine which is which
+        // Assume tok is [vocab, dim] if vocab > dim (common case)
+        let (vocab, dim) = if ta > tb { (ta, tb) } else { (tb, ta) };
+        
+        // May need to transpose head
+        if ta > tb {
+            // tok is [vocab, dim], need to transpose head from [vocab, dim] to [dim, vocab]
+            let mut head_transposed = vec![0f32; dim * vocab];
+            for i in 0..vocab {
+                for j in 0..dim {
+                    head_transposed[j * vocab + i] = head[i * dim + j];
+                }
+            }
+            (vocab, dim, tok.into_owned(), head_transposed)
+        } else {
+            // tok is [dim, vocab], need to transpose it
+            let mut tok_transposed = vec![0f32; vocab * dim];
+            for i in 0..dim {
+                for j in 0..vocab {
+                    tok_transposed[j * dim + i] = tok[i * vocab + j];
+                }
+            }
+            (vocab, dim, tok_transposed, head.into_owned())
+        }
     } else {
-        // handle alternate naming/layout: try to infer
-        // If tok dims [vocab, dim] and head [vocab, dim] -> unsupported without transpose
-        bail!("mismatched tensor shapes: tok={:?}, head={:?}", tok_info.dims, head_info.dims);
+        bail!("incompatible tensor shapes: tok={:?}, head={:?}", tok_info.dims, head_info.dims);
     };
-
-    // Ensure we have row-major contiguous data in the expected layout.
-    // tok_embeddings: [vocab, dim]
-    let tok_embeddings = if tok_is_vd {
-        tok.into_owned()
-    } else {
-        bail!("unexpected tok layout; add a transpose if you hit this path");
-    };
-
-    // lm_head: [dim, vocab] expected — already in that order from check above.
-    let lm_head = head.into_owned();
 
     Ok(TwoTensors {
         tok_embeddings,
@@ -161,7 +186,6 @@ fn pick_tensors(parsed: &Parsed) -> Result<(TensorInfo, TensorInfo)> {
     // output head
     const HEAD_NAMES: &[&str] = &[
         "output.weight",
-        "output_norm.weight",  // BitNet specific
         "lm_head.weight",
         "model.lm_head.weight",
         "transformer.lm_head.weight",
@@ -169,19 +193,23 @@ fn pick_tensors(parsed: &Parsed) -> Result<(TensorInfo, TensorInfo)> {
 
     let find = |names: &[&str]| {
         parsed.tensors.iter()
-            .find(|t| names.iter().any(|n| t.name == *n) && (t.ty == 0 || t.ty == 1))
+            .find(|t| names.iter().any(|n| t.name == *n) && (t.ty == 0 || t.ty == 1 || t.ty == 36))
             .cloned()
     };
 
     let tok = find(TOK_NAMES)
-        .or_else(|| parsed.tensors.iter().find(|t| t.name.contains("emb") && (t.ty == 0 || t.ty == 1)) .cloned())
-        .ok_or_else(|| anyhow::anyhow!("could not find f32/f16 token embeddings tensor. Available tensors: {:?}", 
-            parsed.tensors.iter().filter(|t| t.ty == 0 || t.ty == 1).map(|t| (&t.name, t.ty)).take(20).collect::<Vec<_>>()))?;
+        .or_else(|| parsed.tensors.iter().find(|t| t.name.contains("emb") && (t.ty == 0 || t.ty == 1 || t.ty == 36)) .cloned())
+        .ok_or_else(|| anyhow::anyhow!("could not find token embeddings tensor"))?;
 
+    // First try to find a proper 2D output tensor
     let head = find(HEAD_NAMES)
-        .or_else(|| parsed.tensors.iter().find(|t| (t.name.contains("lm_head") || t.name.contains("output")) && (t.ty == 0 || t.ty == 1)) .cloned())
-        .ok_or_else(|| anyhow::anyhow!("could not find f32/f16 output/lm_head tensor. Available tensors: {:?}", 
-            parsed.tensors.iter().filter(|t| t.ty == 0 || t.ty == 1).map(|t| (&t.name, t.ty)).take(20).collect::<Vec<_>>()))?;
+        .or_else(|| parsed.tensors.iter().find(|t| 
+            t.dims.len() == 2 && // Must be 2D
+            (t.name.contains("lm_head") || 
+             (t.name.contains("output") && !t.name.contains("attn_output") && !t.name.contains("blk") && !t.name.contains("norm"))) && 
+            (t.ty == 0 || t.ty == 1 || t.ty == 36)) .cloned())
+        // If no output head found, BitNet models often use tied embeddings
+        .unwrap_or_else(|| tok.clone());
 
     Ok((tok, head))
 }
@@ -218,7 +246,54 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
             }
             Ok(Cow::Owned(out))
         }
-        other => bail!("unsupported ggml tensor type {other} (only f32/f16 supported here)"),
+        36 => { // I2_S - BitNet 2-bit quantization
+            // I2_S format: blocks of 32 elements, each block has:
+            // - 8 bytes of packed 2-bit values (32 * 2 bits = 64 bits = 8 bytes)
+            // - 2 bytes for f16 scale
+            let block_size = 32;
+            let bytes_per_block = 10; // 8 bytes data + 2 bytes scale
+            let num_blocks = (nelems + block_size - 1) / block_size;
+            let need = num_blocks * bytes_per_block;
+            
+            if offset + need > mmap.len() { bail!("I2_S tensor out of bounds"); }
+            
+            // Extract quantized data and scales
+            let tensor_bytes = &mmap[offset .. offset + need];
+            let mut scales = Vec::with_capacity(num_blocks);
+            let mut packed_data = Vec::with_capacity(num_blocks * 8);
+            
+            for block_idx in 0..num_blocks {
+                let block_offset = block_idx * bytes_per_block;
+                // Copy packed data (8 bytes)
+                packed_data.extend_from_slice(&tensor_bytes[block_offset..block_offset + 8]);
+                // Read scale (2 bytes, f16)
+                let scale_bytes = &tensor_bytes[block_offset + 8..block_offset + 10];
+                let scale_bits = u16::from_le_bytes([scale_bytes[0], scale_bytes[1]]);
+                scales.push(f16::from_bits(scale_bits).to_f32());
+            }
+            
+            // Create quantized tensor
+            let quantized = QuantizedTensor::new_with_params(
+                packed_data,
+                scales,
+                None,
+                info.dims.iter().map(|&d| d as usize).collect(),
+                QuantizationType::I2S,
+                block_size,
+            );
+            
+            // Dequantize using our existing infrastructure
+            let quantizer = I2SQuantizer::with_block_size(block_size);
+            let tensor = quantizer.dequantize_tensor(&quantized)
+                .with_context(|| format!("Failed to dequantize I2_S tensor {}", info.name))?;
+            
+            // Extract f32 data from BitNetTensor
+            let data = tensor.to_vec()
+                .with_context(|| "Failed to extract tensor data")?;
+            
+            Ok(Cow::Owned(data))
+        }
+        other => bail!("unsupported ggml tensor type {other} (only f32/f16/I2_S supported)"),
     }
 }
 

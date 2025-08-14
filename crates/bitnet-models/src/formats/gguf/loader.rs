@@ -252,7 +252,8 @@ impl GgufLoader {
             GgufTensorType::Q8_0 | GgufTensorType::Q8_1 |
             GgufTensorType::Q2_K | GgufTensorType::Q3_K |
             GgufTensorType::Q4_K | GgufTensorType::Q5_K |
-            GgufTensorType::Q6_K | GgufTensorType::Q8_K => DType::U8, // Quantized types stored as bytes
+            GgufTensorType::Q6_K | GgufTensorType::Q8_K |
+            GgufTensorType::I2_S => DType::U8, // Quantized types stored as bytes
         };
         
         let candle_device = Self::device_to_candle(device)?;

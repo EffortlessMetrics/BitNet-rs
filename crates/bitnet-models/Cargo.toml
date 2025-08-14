@@ -12,6 +12,7 @@ description = "Model definitions and loading for BitNet inference"
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common" }
+bitnet-quantization = { path = "../bitnet-quantization" }
 anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true
