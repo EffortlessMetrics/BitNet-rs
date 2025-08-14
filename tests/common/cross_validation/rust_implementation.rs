@@ -14,11 +14,11 @@ use bitnet_inference::{GenerationConfig, InferenceEngine};
 use bitnet_models::loader::ModelLoader;
 use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tokio::sync::RwLock;
-use tracing::{debug, info, instrument, warn};
+use tracing::{debug, info, instrument};
 
 /// Rust implementation wrapper for BitNet.rs
 pub struct RustImplementation {

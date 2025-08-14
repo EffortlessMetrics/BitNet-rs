@@ -10,8 +10,7 @@ use super::selection::TestSelector;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
-use tokio::process::Command;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 /// Test execution optimizer that ensures tests complete within target time
 pub struct ExecutionOptimizer {

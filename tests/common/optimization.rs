@@ -1,7 +1,5 @@
 use super::config::TestConfig;
-use super::errors::{TestError, TestOpResult as TestResultCompat};
-use super::execution_optimizer::ExecutionPlan;
-use super::parallel::ParallelExecutor;
+use super::errors::TestOpResult as TestResultCompat;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 

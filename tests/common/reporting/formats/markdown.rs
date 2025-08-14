@@ -1,7 +1,7 @@
 //! Markdown report format implementation for documentation
 
 use crate::reporting::{ReportError, ReportFormat, ReportResult, TestReporter};
-use crate::results::{TestResult, TestStatus, TestSuiteResult};
+use crate::results::{TestStatus, TestSuiteResult};
 use async_trait::async_trait;
 use std::path::Path;
 use std::time::Instant;

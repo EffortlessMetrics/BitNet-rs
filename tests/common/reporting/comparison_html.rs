@@ -4,11 +4,10 @@
 //! analysis results, including interactive charts and detailed visualizations.
 
 use super::comparison_analysis::{
-    AccuracyAnalysisReport, AccuracySeverity, ExecutiveSummaryReport, PerformanceAnalysisReport,
-    PerformanceCategory, RegressionAnalysisReport, StatusLevel, TestCaseAccuracy,
+    AccuracyAnalysisReport, ExecutiveSummaryReport, PerformanceAnalysisReport, RegressionAnalysisReport, StatusLevel, TestCaseAccuracy,
     TestCasePerformance,
 };
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// HTML report generator for comparison analysis
 pub struct ComparisonHtmlReporter {

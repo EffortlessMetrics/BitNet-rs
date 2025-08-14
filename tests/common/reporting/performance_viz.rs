@@ -7,8 +7,7 @@
 //! - Performance regression detection
 //! - Interactive performance dashboards
 
-use crate::results::{TestResult, TestSuiteResult};
-use super::dashboard::{BenchmarkResult, PerformanceSummary};
+use super::dashboard::BenchmarkResult;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;

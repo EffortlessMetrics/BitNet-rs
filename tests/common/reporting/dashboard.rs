@@ -80,7 +80,6 @@ impl Default for PerformanceSummary {
     }
 }
 
-use crate::results::{TestResult, TestSuiteResult};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;

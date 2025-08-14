@@ -21,10 +21,8 @@ pub use formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter};
 pub use performance_viz::{PerformanceComparison, PerformanceVisualizer, VisualizationConfig};
 pub use reporter::{ReportingManager, TestReporter};
 
-use crate::results::{TestResult, TestSuiteResult};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use thiserror::Error;
 
 /// Configuration for test reporting
 #[derive(Debug, Clone, Serialize, Deserialize)]
