@@ -13,11 +13,11 @@ use tracing_subscriber::{
 
 use super::{
     config::TestConfig,
-    errors::{TestError, TestResult},
+    errors::{TestError, TestOpResult},
 };
 
 /// Initialize logging for the test framework
-pub fn init_logging(config: &TestConfig) -> TestResult<()> {
+pub fn init_logging(config: &TestConfig) -> TestOpResult<()> {
     let log_level = parse_log_level(&config.log_level)?;
 
     // Create environment filter for console
@@ -86,7 +86,7 @@ pub fn init_logging(config: &TestConfig) -> TestResult<()> {
 }
 
 /// Parse log level string into tracing Level
-fn parse_log_level(level_str: &str) -> TestResult<Level> {
+fn parse_log_level(level_str: &str) -> TestOpResult<Level> {
     match level_str.to_lowercase().as_str() {
         "trace" => Ok(Level::TRACE),
         "debug" => Ok(Level::DEBUG),
@@ -400,7 +400,7 @@ impl DebugArtifact {
     }
 
     /// Create a JSON artifact
-    pub fn json<S: Into<String>, T: serde::Serialize>(name: S, data: &T) -> TestResult<Self> {
+    pub fn json<S: Into<String>, T: serde::Serialize>(name: S, data: &T) -> TestOpResult<Self> {
         let content = serde_json::to_string_pretty(data)?;
         Ok(Self {
             name: name.into(),
@@ -509,7 +509,7 @@ impl FailureArtifactCollector {
         test_name: &str,
         error: &TestError,
         debug_context: &DebugContext,
-    ) -> TestResult<()> {
+    ) -> TestOpResult<()> {
         if !self.enabled {
             return Ok(());
         }
@@ -1062,7 +1062,7 @@ pub struct LoggingManager {
 
 impl LoggingManager {
     /// Create a new logging manager
-    pub fn new(config: TestConfig) -> TestResult<Self> {
+    pub fn new(config: TestConfig) -> TestOpResult<Self> {
         // Initialize logging first
         init_logging(&config)?;
 
@@ -1121,7 +1121,7 @@ impl LoggingManager {
         test_name: &str,
         error: &TestError,
         debug_context: &DebugContext,
-    ) -> TestResult<()> {
+    ) -> TestOpResult<()> {
         // Log the failure
         tracing::error!("Test '{}' failed: {}", test_name, error);
 
@@ -1155,7 +1155,7 @@ impl LoggingManager {
     pub async fn generate_test_report(
         &self,
         test_results: &[super::results::TestResult],
-    ) -> TestResult<TestReport> {
+    ) -> TestOpResult<TestReport> {
         let performance_summary = self.get_performance_summary().await;
         let metrics_summary = self.get_metrics_summary().await;
         let all_traces = self.tracer.get_all_traces().await;
@@ -1191,7 +1191,7 @@ pub struct TestReport {
 
 impl TestReport {
     /// Save report to file
-    pub async fn save_to_file(&self, path: &std::path::Path) -> TestResult<()> {
+    pub async fn save_to_file(&self, path: &std::path::Path) -> TestOpResult<()> {
         let json = serde_json::to_string_pretty(self)?;
         tokio::fs::write(path, json).await?;
         Ok(())
