@@ -34,6 +34,17 @@
 - **Excellent documentation** and examples
 - **Easy deployment** with single binary distribution
 
+### 🐛 **Enhanced Debugging Experience**
+- **Actionable error messages** with context-aware recovery suggestions
+- **Step-by-step troubleshooting guides** with time estimates and required tools
+- **Intelligent error analysis** with pattern recognition and root cause detection
+- **Comprehensive error reporting** with environment-specific debugging information
+
+Try the enhanced error handling demo:
+```bash
+cargo run --example enhanced_error_demo
+```
+
 ## Quick Start
 
 ### Installation
