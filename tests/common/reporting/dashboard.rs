@@ -28,6 +28,23 @@ impl BenchmarkResult {
             0.0
         }
     }
+    
+    /// Builder-style helper (lets tests omit future fields safely)
+    pub fn with_summary(
+        name: String,
+        iterations: u32,
+        duration: Duration,
+        summary: PerformanceSummary,
+    ) -> Self {
+        Self { 
+            name,
+            iterations, 
+            duration, 
+            summary,
+            throughput: 0.0,
+            warmup_iterations: 0,
+        }
+    }
 }
 
 // Performance summary with extended metrics
@@ -45,6 +62,24 @@ pub struct PerformanceSummary {
     pub avg_memory_usage: f64,
     pub custom_metrics: HashMap<String, f64>,
 }
+
+impl Default for PerformanceSummary {
+    fn default() -> Self {
+        Self {
+            mean: 0.0,
+            std_dev: 0.0,
+            min: 0.0,
+            max: 0.0,
+            avg_duration: Duration::ZERO,
+            min_duration: Duration::ZERO,
+            max_duration: Duration::ZERO,
+            peak_memory_usage: 0.0,
+            avg_memory_usage: 0.0,
+            custom_metrics: HashMap::new(),
+        }
+    }
+}
+
 use crate::results::{TestResult, TestSuiteResult};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
