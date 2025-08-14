@@ -8,9 +8,9 @@ use tokio::time::timeout;
 
 use super::{
     config::TestConfig,
-    errors::{TestError, TestOpResult},
+    errors::{TestError, TestOpResult as TestResultCompat},
     fixtures::FixtureManager,
-    results::{TestMetrics, TestResult, TestResultCompat, TestStatus, TestSuiteResult},
+    results::{TestMetrics, TestResult as TestRecord, TestStatus, TestSuiteResult},
 };
 
 /// Core test harness for executing tests with parallel support and proper isolation
@@ -146,7 +146,7 @@ impl TestHarness {
     }
 
     /// Run a single test case with proper isolation
-    async fn run_single_test_isolated(&self, test_case: Box<dyn TestCase>) -> TestResultData {
+    async fn run_single_test_isolated(&self, test_case: Box<dyn TestCase>) -> TestRecord {
         let test_name = test_case.name().to_string();
         let start_time = Instant::now();
         let start_system_time = SystemTime::now();
@@ -158,7 +158,7 @@ impl TestHarness {
             Ok(permit) => permit,
             Err(e) => {
                 eprintln!("Failed to acquire semaphore permit: {}", e);
-                return TestResultData::failed(
+                return TestRecord::failed(
                     test_name,
                     TestError::execution(format!("Semaphore error: {}", e)),
                     Duration::ZERO,
@@ -177,7 +177,7 @@ impl TestHarness {
         {
             eprintln!("Test setup failed for '{}': {}", test_name, e);
             self.cleanup_isolated_environment(isolated_env).await;
-            return TestResultData::failed(test_name, e, start_time.elapsed());
+            return TestRecord::failed(test_name, e, start_time.elapsed());
         }
 
         // Execute phase with timeout and isolation
@@ -206,18 +206,18 @@ impl TestHarness {
         let mut result = match execute_result {
             Ok(Ok(metrics)) => {
                 println!("Test '{}' passed in {:?}", test_name, duration);
-                TestResult::passed(test_name, metrics, duration)
+                TestRecord::passed(test_name, metrics, duration)
             }
             Ok(Err(e)) => {
                 eprintln!("Test '{}' failed: {}", test_name, e);
-                TestResult::failed(test_name, e, duration)
+                TestRecord::failed(test_name, e, duration)
             }
             Err(_) => {
                 eprintln!(
                     "Test '{}' timed out after {:?}",
                     test_name, self.config.test_timeout
                 );
-                TestResultData::timeout(test_name, self.config.test_timeout)
+                TestRecord::timeout(test_name, self.config.test_timeout)
             }
         };
 
@@ -257,7 +257,7 @@ impl TestHarness {
         &self,
         test_case: &Box<dyn TestCase>,
         env: &IsolatedEnvironment,
-    ) -> TestResult<()> {
+    ) -> TestResultCompat<()> {
         // Set isolated environment variables
         for (key, value) in &env.isolated_env_vars {
             std::env::set_var(key, value);
@@ -277,7 +277,7 @@ impl TestHarness {
         &self,
         test_case: &Box<dyn TestCase>,
         _env: &IsolatedEnvironment,
-    ) -> TestResult<TestMetrics> {
+    ) -> TestResultCompat<TestMetrics> {
         // Execute the test in the isolated environment
         test_case.execute().await
     }
@@ -287,7 +287,7 @@ impl TestHarness {
         &self,
         test_case: &Box<dyn TestCase>,
         _env: &IsolatedEnvironment,
-    ) -> TestResult<()> {
+    ) -> TestResultCompat<()> {
         // Call the test's cleanup method
         test_case.cleanup().await
     }
@@ -331,7 +331,7 @@ struct TestHarnessClone {
 }
 
 impl TestHarnessClone {
-    async fn run_single_test_isolated(&self, test_case: Box<dyn TestCase>) -> TestResultData {
+    async fn run_single_test_isolated(&self, test_case: Box<dyn TestCase>) -> TestRecord {
         let test_name = test_case.name().to_string();
         let start_time = Instant::now();
         let start_system_time = SystemTime::now();
@@ -340,7 +340,7 @@ impl TestHarnessClone {
         let _permit = match self.semaphore.acquire().await {
             Ok(permit) => permit,
             Err(e) => {
-                return TestResultData::failed(
+                return TestRecord::failed(
                     test_name,
                     TestError::execution(format!("Semaphore error: {}", e)),
                     Duration::ZERO,
@@ -357,7 +357,7 @@ impl TestHarnessClone {
             .await
         {
             self.cleanup_isolated_environment(isolated_env).await;
-            return TestResultData::failed(test_name, e, start_time.elapsed());
+            return TestRecord::failed(test_name, e, start_time.elapsed());
         }
 
         // Execute phase with timeout and isolation
@@ -377,9 +377,9 @@ impl TestHarnessClone {
 
         // Process result
         let mut result = match execute_result {
-            Ok(Ok(metrics)) => TestResult::passed(test_name, metrics, duration),
-            Ok(Err(e)) => TestResult::failed(test_name, e, duration),
-            Err(_) => TestResult::timeout(test_name, self.config.test_timeout),
+            Ok(Ok(metrics)) => TestRecord::passed(test_name, metrics, duration),
+            Ok(Err(e)) => TestRecord::failed(test_name, e, duration),
+            Err(_) => TestRecord::timeout(test_name, self.config.test_timeout),
         };
 
         result.start_time = start_system_time;
@@ -408,7 +408,7 @@ impl TestHarnessClone {
         &self,
         test_case: &Box<dyn TestCase>,
         env: &IsolatedEnvironment,
-    ) -> TestResult<()> {
+    ) -> TestResultCompat<()> {
         // Set isolated environment variables
         for (key, value) in &env.isolated_env_vars {
             std::env::set_var(key, value);
@@ -428,7 +428,7 @@ impl TestHarnessClone {
         &self,
         test_case: &Box<dyn TestCase>,
         _env: &IsolatedEnvironment,
-    ) -> TestResult<TestMetrics> {
+    ) -> TestResultCompat<TestMetrics> {
         // Execute the test in the isolated environment
         test_case.execute().await
     }
@@ -438,7 +438,7 @@ impl TestHarnessClone {
         &self,
         test_case: &Box<dyn TestCase>,
         _env: &IsolatedEnvironment,
-    ) -> TestResult<()> {
+    ) -> TestResultCompat<()> {
         // Call the test's cleanup method
         test_case.cleanup().await
     }
@@ -467,13 +467,13 @@ pub trait TestCase: Send + Sync {
     fn name(&self) -> &str;
 
     /// Set up the test case (called before execute)
-    async fn setup(&self, fixtures: &FixtureManager) -> TestResult<()>;
+    async fn setup(&self, fixtures: &FixtureManager) -> TestResultCompat<()>;
 
     /// Execute the test case
-    async fn execute(&self) -> TestResult<TestMetrics>;
+    async fn execute(&self) -> TestResultCompat<TestMetrics>;
 
     /// Clean up after the test case (always called, even if execute fails)
-    async fn cleanup(&self) -> TestResult<()>;
+    async fn cleanup(&self) -> TestResultCompat<()>;
 
     /// Get test metadata (optional)
     fn metadata(&self) -> HashMap<String, String> {
@@ -507,7 +507,7 @@ pub trait TestReporter: Send + Sync {
     async fn on_suite_start(&self, suite_name: &str);
 
     /// Called when an individual test completes
-    async fn on_test_complete(&self, result: &TestResultData);
+    async fn on_test_complete(&self, result: &TestRecord);
 
     /// Called when a test suite completes
     async fn on_suite_complete(&self, result: &TestSuiteResult);
@@ -563,7 +563,7 @@ impl TestReporter for ConsoleReporter {
         println!("Running test suite: {}", suite_name);
     }
 
-    async fn on_test_complete(&self, result: &TestResultData) {
+    async fn on_test_complete(&self, result: &TestRecord) {
         if self.verbose || result.is_failure() {
             let status_symbol = match result.status {
                 TestStatus::Passed => "✓",
