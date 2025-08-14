@@ -3,7 +3,7 @@
 //! This module provides a thin loader that can either load real weights
 //! from GGUF files or generate deterministic dummy weights for testing.
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::path::Path;
@@ -62,14 +62,20 @@ pub fn load_minimal(mode: LoadMode) -> Result<MinimalWeights> {
             })
         }
         LoadMode::Gguf(path) => {
-            let two = crate::gguf_min::load_two(path)
-                .with_context(|| format!("load minimal tensors from {}", path.display()))?;
-            Ok(MinimalWeights {
-                tok_embeddings: two.tok_embeddings,
-                lm_head: two.lm_head,
-                vocab: two.vocab,
-                dim: two.dim,
-            })
+            // Try to load f32/f16 tensors from GGUF
+            // Note: BitNet models typically have quantized weights which this minimal loader doesn't support
+            match crate::gguf_min::load_two(path) {
+                Ok(two) => Ok(MinimalWeights {
+                    tok_embeddings: two.tok_embeddings,
+                    lm_head: two.lm_head,
+                    vocab: two.vocab,
+                    dim: two.dim,
+                }),
+                Err(e) => {
+                    // BitNet models have quantized weights - not supported by minimal loader
+                    bail!("GGUF loader error ({}). Note: BitNet models with quantized weights require the full loader, not the minimal test loader", e);
+                }
+            }
         }
     }
 }

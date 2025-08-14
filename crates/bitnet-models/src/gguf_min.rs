@@ -36,6 +36,8 @@ pub struct TwoTensors {
 }
 
 /// Public entry: load the two tensors or fail with a helpful error.
+/// Note: This minimal loader only supports f32/f16 tensors.
+/// BitNet models with quantized weights will return an error.
 pub fn load_two<P: AsRef<Path>>(path: P) -> Result<TwoTensors> {
     let file = File::open(&path).with_context(|| format!("open {}", path.as_ref().display()))?;
     let mmap = unsafe { Mmap::map(&file) }.with_context(|| "mmap gguf file")?;
@@ -159,23 +161,27 @@ fn pick_tensors(parsed: &Parsed) -> Result<(TensorInfo, TensorInfo)> {
     // output head
     const HEAD_NAMES: &[&str] = &[
         "output.weight",
+        "output_norm.weight",  // BitNet specific
         "lm_head.weight",
         "model.lm_head.weight",
         "transformer.lm_head.weight",
     ];
 
     let find = |names: &[&str]| {
-        parsed.tensors.iter().find(|t| names.iter().any(|n| t.name == *n))
+        parsed.tensors.iter()
+            .find(|t| names.iter().any(|n| t.name == *n) && (t.ty == 0 || t.ty == 1))
             .cloned()
     };
 
     let tok = find(TOK_NAMES)
-        .or_else(|| parsed.tensors.iter().find(|t| t.name.contains("emb")) .cloned())
-        .ok_or_else(|| anyhow::anyhow!("could not find token embeddings tensor"))?;
+        .or_else(|| parsed.tensors.iter().find(|t| t.name.contains("emb") && (t.ty == 0 || t.ty == 1)) .cloned())
+        .ok_or_else(|| anyhow::anyhow!("could not find f32/f16 token embeddings tensor. Available tensors: {:?}", 
+            parsed.tensors.iter().filter(|t| t.ty == 0 || t.ty == 1).map(|t| (&t.name, t.ty)).take(20).collect::<Vec<_>>()))?;
 
     let head = find(HEAD_NAMES)
-        .or_else(|| parsed.tensors.iter().find(|t| t.name.contains("lm_head") || t.name.contains("output")) .cloned())
-        .ok_or_else(|| anyhow::anyhow!("could not find output/lm_head tensor"))?;
+        .or_else(|| parsed.tensors.iter().find(|t| (t.name.contains("lm_head") || t.name.contains("output")) && (t.ty == 0 || t.ty == 1)) .cloned())
+        .ok_or_else(|| anyhow::anyhow!("could not find f32/f16 output/lm_head tensor. Available tensors: {:?}", 
+            parsed.tensors.iter().filter(|t| t.ty == 0 || t.ty == 1).map(|t| (&t.name, t.ty)).take(20).collect::<Vec<_>>()))?;
 
     Ok((tok, head))
 }
