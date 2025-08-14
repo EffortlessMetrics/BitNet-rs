@@ -1,5 +1,5 @@
 use super::config::TestConfig;
-use super::errors::{TestError, TestResult};
+use super::errors::TestError;
 use super::fast_config::{FastConfigBuilder, SpeedProfile};
 use super::incremental::IncrementalTester;
 use super::parallel::ParallelExecutor;

@@ -4,14 +4,14 @@ use std::time::{Duration, Instant};
 use tokio::fs;
 use tokio::time::timeout;
 
-use super::errors::{TestError, TestResult};
+use super::errors::TestError;
 
 /// Utility functions for common test operations
 pub struct TestUtilities;
 
 impl TestUtilities {
     /// Create a temporary directory for test data
-    pub async fn create_temp_dir(prefix: &str) -> TestResult<PathBuf> {
+    pub async fn create_temp_dir(prefix: &str) -> Result<PathBuf, TestError> {
         let temp_dir = std::env::temp_dir();
         let test_dir = temp_dir.join(format!("bitnet_test_{}_{}", prefix, generate_unique_id()));
 
