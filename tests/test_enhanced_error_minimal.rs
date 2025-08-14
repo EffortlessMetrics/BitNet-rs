@@ -96,7 +96,7 @@ fn test_test_result_compatibility() {
     use std::time::Duration;
 
     // Test that we can create TestResult structs
-    let test_result = TestResult::passed(
+    let test_result = TestRecord::passed(
         "test_example",
         TestMetrics::with_duration(Duration::from_millis(100)),
         Duration::from_millis(100),

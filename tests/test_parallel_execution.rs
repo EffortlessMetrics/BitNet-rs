@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use bitnet_tests::common::{
     config::TestConfig,
-    errors::{TestError, TestResult},
+    errors::{TestError, TestOpResult as TestResult},
     fixtures::FixtureManager,
     harness::{TestCase, TestHarness, TestSuite},
     results::TestMetrics,

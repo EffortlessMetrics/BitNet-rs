@@ -59,19 +59,19 @@ fn main() {
             .expect("Failed to generate FFI bindings from Microsoft BitNet headers");
     }
 
-    #[cfg(not(feature = "crossval"))]
+    #[cfg(not(feature = "ffi"))]
     {
-        // When crossval is disabled, create minimal bindings
+        // When ffi is disabled, create minimal bindings
         let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
         std::fs::write(
             out_path.join("bindings.rs"),
-            "// Bindings disabled - crossval feature not enabled\n",
+            "// Bindings disabled - ffi feature not enabled\n",
         )
         .unwrap();
     }
 }
 
-#[cfg(feature = "crossval")]
+#[cfg(feature = "ffi")]
 fn link_cpp_implementation(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let build_dir = cpp_dir.join("build");
 
@@ -145,7 +145,7 @@ fn link_cpp_implementation(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
-#[cfg(feature = "crossval")]
+#[cfg(feature = "ffi")]
 fn generate_bindings(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     // We'll generate bindings from llama.h which is the main C API
     let mut llama_h = cpp_dir.join("3rdparty/llama.cpp/include/llama.h");

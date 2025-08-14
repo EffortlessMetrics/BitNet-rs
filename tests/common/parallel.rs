@@ -113,7 +113,7 @@ impl ParallelExecutor {
                     error!("Test execution failed: {}", e);
                     failed_count += 1;
                     // Create a failed test result
-                    test_results.push(TestResult::failed(
+                    test_results.push(TestRecord::failed(
                         "unknown".to_string(),
                         e,
                         Duration::default(),
@@ -198,21 +198,21 @@ impl ParallelExecutor {
 
                 if success {
                     debug!("Test {} passed in {:.2}s", test.name, duration.as_secs_f64());
-                    Ok(TestResult::passed(test.name, Default::default(), duration))
+                    Ok(TestRecord::passed(test.name, Default::default(), duration))
                 } else {
                     warn!("Test {} failed in {:.2}s", test.name, duration.as_secs_f64());
                     let error_msg =
                         if !stderr.is_empty() { stderr.to_string() } else { stdout.to_string() };
-                    Ok(TestResult::failed(test.name, TestError::execution(error_msg), duration))
+                    Ok(TestRecord::failed(test.name, TestError::execution(error_msg), duration))
                 }
             }
             Ok(Err(e)) => {
                 error!("Failed to execute test {}: {}", test.name, e);
-                Ok(TestResult::failed(test.name, TestError::execution(e.to_string()), duration))
+                Ok(TestRecord::failed(test.name, TestError::execution(e.to_string()), duration))
             }
             Err(_) => {
                 warn!("Test {} timed out after {:.2}s", test.name, timeout_duration.as_secs_f64());
-                Ok(TestResult::failed(
+                Ok(TestRecord::failed(
                     test.name,
                     TestError::TimeoutError { timeout: timeout_duration },
                     timeout_duration,

@@ -526,7 +526,7 @@ mod tests {
         assert!(cache.get(&key).await.unwrap().is_none());
 
         // Create a test result to cache
-        let test_result = TestResult::passed(
+        let test_result = TestRecord::passed(
             "test_example".to_string(),
             Default::default(),
             Duration::from_millis(100),
@@ -567,7 +567,7 @@ mod tests {
             source_hash: "source456".to_string(),
         };
 
-        let test_result = TestResult::passed(
+        let test_result = TestRecord::passed(
             "test_expiry".to_string(),
             Default::default(),
             Duration::from_millis(100),

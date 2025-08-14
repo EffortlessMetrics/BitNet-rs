@@ -29,7 +29,7 @@ async fn test_enhanced_error_handling_basic() {
 
     // Test that TestResult struct works
     let test_result =
-        TestResult::passed("test_example", Default::default(), Duration::from_millis(100));
+        TestRecord::passed("test_example", Default::default(), Duration::from_millis(100));
 
     println!("✅ Test result passed: {}", test_result.passed());
     println!("✅ Test result is_success: {}", test_result.is_success());
