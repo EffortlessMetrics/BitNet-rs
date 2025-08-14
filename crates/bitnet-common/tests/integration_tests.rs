@@ -2,7 +2,6 @@
 
 use bitnet_common::*;
 use candle_core::DType;
-use serde_json;
 use std::env;
 use std::fs;
 use std::sync::Mutex;
@@ -126,7 +125,7 @@ use_gpu = false
     assert_eq!(config.model.vocab_size, 32000);
     assert_eq!(config.inference.temperature, 0.8);
     assert_eq!(config.quantization.quantization_type, QuantizationType::I2S);
-    assert_eq!(config.performance.use_gpu, false);
+    assert!(!config.performance.use_gpu);
 
     env::set_var("BITNET_TEMPERATURE", "0.9");
     env::set_var("BITNET_USE_GPU", "true");
@@ -134,7 +133,7 @@ use_gpu = false
     let config_with_env = BitNetConfig::from_file_with_env(&config_path).unwrap();
 
     assert_eq!(config_with_env.inference.temperature, 0.9);
-    assert_eq!(config_with_env.performance.use_gpu, true);
+    assert!(config_with_env.performance.use_gpu);
     assert_eq!(config_with_env.model.vocab_size, 32000);
     assert_eq!(config_with_env.inference.seed, Some(123));
 
@@ -175,7 +174,7 @@ fn test_performance_metrics_with_config() {
     };
 
     assert_eq!(config.performance.batch_size, 4);
-    assert_eq!(config.performance.use_gpu, true);
+    assert!(config.performance.use_gpu);
     assert_eq!(config.performance.num_threads, Some(8));
     assert!(metrics.gpu_utilization.is_some());
 

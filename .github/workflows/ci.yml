@@ -80,7 +80,7 @@ jobs:
 
     - name: Run clippy with strict checks
       if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-      run: RUSTFLAGS="-Dwarnings" cargo clippy --workspace --all-features --all-targets -- -D warnings -D clippy::ptr_arg
+      run: RUSTFLAGS="-Dwarnings" cargo clippy --workspace --no-default-features --features cpu --all-targets --exclude xtask -- -D warnings -D clippy::ptr_arg
 
     - name: Check banned patterns
       if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'

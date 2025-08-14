@@ -2,7 +2,6 @@
 
 use bitnet_common::*;
 use proptest::prelude::*;
-use serde_json;
 
 #[test]
 fn test_quantization_type_variants() {
@@ -100,7 +99,7 @@ fn test_generation_config_default() {
     assert_eq!(config.top_k, Some(50));
     assert_eq!(config.top_p, Some(0.9));
     assert_eq!(config.repetition_penalty, 1.1);
-    assert_eq!(config.do_sample, true);
+    assert!(config.do_sample);
     assert_eq!(config.seed, None);
 }
 

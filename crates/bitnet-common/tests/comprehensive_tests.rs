@@ -160,7 +160,7 @@ mod config_comprehensive {
         assert_eq!(config.inference.top_k, Some(40));
         assert_eq!(config.inference.top_p, Some(0.95));
         assert_eq!(config.quantization.quantization_type, QuantizationType::TL2);
-        assert_eq!(config.performance.use_gpu, true);
+        assert!(config.performance.use_gpu);
         assert_eq!(config.performance.num_threads, Some(8));
         assert_eq!(config.performance.batch_size, 4);
 
@@ -409,7 +409,7 @@ batch_size = 1
 
         let config = BitNetConfig::from_file_with_env(&config_path).unwrap();
         assert_eq!(config.inference.temperature, 0.9);
-        assert_eq!(config.performance.use_gpu, true);
+        assert!(config.performance.use_gpu);
 
         env::remove_var("BITNET_TEMPERATURE");
         env::remove_var("BITNET_USE_GPU");
@@ -448,7 +448,7 @@ batch_size = 2
         // Environment should override file
         assert_eq!(config.model.vocab_size, 40000);
         assert_eq!(config.inference.temperature, 0.9);
-        assert_eq!(config.performance.use_gpu, true);
+        assert!(config.performance.use_gpu);
 
         // File should override defaults
         assert_eq!(config.inference.max_length, 1024);

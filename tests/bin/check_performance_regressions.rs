@@ -8,7 +8,7 @@ use bitnet_tests::results::TestSuiteResult;
 use bitnet_tests::trend_reporting::{TrendConfig, TrendReporter};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::{info, warn};
 
@@ -121,7 +121,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn load_current_results(path: &PathBuf) -> Result<Vec<TestSuiteResult>> {
+async fn load_current_results(path: &Path) -> Result<Vec<TestSuiteResult>> {
     let content = fs::read_to_string(path).await.context("Failed to read current results file")?;
 
     let results: Vec<TestSuiteResult> =

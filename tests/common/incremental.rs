@@ -1,6 +1,6 @@
 use super::errors::TestError;
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime};
 use tokio::fs;
@@ -142,7 +142,7 @@ impl IncrementalTester {
     }
 
     /// Check if a file is relevant for testing
-    fn is_relevant_file(&self, path: &PathBuf) -> bool {
+    fn is_relevant_file(&self, path: &Path) -> bool {
         let path_str = path.to_string_lossy();
 
         // Include Rust source files
@@ -219,7 +219,7 @@ impl IncrementalTester {
     }
 
     /// Check if a file was modified after the given time
-    async fn is_file_modified(&self, path: &PathBuf, since: SystemTime) -> Result<bool, TestError> {
+    async fn is_file_modified(&self, path: &Path, since: SystemTime) -> Result<bool, TestError> {
         let metadata = fs::metadata(path).await.map_err(|e| TestError::IoError(e))?;
 
         let modified = metadata.modified().map_err(|e| TestError::IoError(e))?;
@@ -343,7 +343,7 @@ impl DependencyGraph {
     }
 
     /// Get test patterns affected by a file change
-    pub fn get_affected_tests(&self, file: &PathBuf) -> Vec<String> {
+    pub fn get_affected_tests(&self, file: &Path) -> Vec<String> {
         let file_str = file.to_string_lossy();
 
         // Check exact matches first
