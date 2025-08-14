@@ -70,3 +70,23 @@ pub const DEFAULT_TEST_TIMEOUT_SECS: u64 = 300;
 
 /// Default maximum parallel tests
 pub const DEFAULT_MAX_PARALLEL_TESTS: usize = 4;
+
+/// Prelude module for tests - re-exports common types for convenience
+pub mod prelude {
+    // Fallible result alias + common error
+    pub use super::errors::{TestError, TestOpResult as TestResultCompat};
+    
+    // Structured record (test outcome)
+    pub use super::results::TestResult as TestRecord;
+    
+    // Canonical parallel types
+    pub use super::parallel::{
+        ParallelExecutor, TestCategory, TestGroup, TestInfo, TestPriority,
+    };
+    
+    // Common utilities people expect in test code
+    pub use super::config::TestConfig;
+    pub use super::fixtures::FixtureManager;
+    pub use super::optimization::ParallelConfig;
+    pub use super::reporting::dashboard::{BenchmarkResult, PerformanceSummary};
+}
