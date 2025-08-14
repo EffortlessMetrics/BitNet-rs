@@ -8,7 +8,7 @@ use tracing::{debug, info, warn};
 
 use crate::{
     config::FixtureConfig,
-    errors::{FixtureError, FixtureResult, TestResult},
+    errors::{FixtureError, FixtureResult, TestOpResult},
     utils::format_bytes,
 };
 

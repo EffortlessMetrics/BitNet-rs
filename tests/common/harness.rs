@@ -8,7 +8,7 @@ use tokio::time::timeout;
 
 use super::{
     config::TestConfig,
-    errors::{TestError, TestResult},
+    errors::{TestError, TestOpResult},
     fixtures::FixtureManager,
     results::{TestMetrics, TestResult as TestResultData, TestStatus, TestSuiteResult},
 };
