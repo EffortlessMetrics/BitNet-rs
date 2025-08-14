@@ -50,6 +50,8 @@ fn looks_like_embeddings(info: &TensorInfo) -> bool {
 }
 
 fn looks_like_output_matrix(info: &TensorInfo) -> bool {
+    // Must be 2D tensor - never accept 1D norm vectors
+    info.dims.len() == 2 &&
     is_2d(&info.dims) &&
     is_supported_ty(info.ty) &&
     // de-prefer obvious non-heads
@@ -310,14 +312,18 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
             let num_blocks = (nelems + layout.block_size - 1) / layout.block_size;
             let need = num_blocks * layout.bytes_per_block;
 
-            ensure!(offset + need <= mmap.len(), "I2_S tensor out of bounds");
+            ensure!(
+                offset + need <= mmap.len(), 
+                "I2_S tensor '{}' out of bounds: offset={}, size={}, mmap_len={}, shape={:?}",
+                info.name, offset, need, mmap.len(), info.dims
+            );
 
             // Verify shape/blocks consistency
             ensure!(
                 num_blocks * layout.block_size >= nelems
                     && num_blocks * layout.block_size - nelems < layout.block_size,
-                "I2_S blocks/shape mismatch: nelems={nelems} blocks={num_blocks} block_size={}",
-                layout.block_size
+                "I2_S blocks/shape mismatch for tensor '{}': nelems={}, blocks={}, block_size={}, shape={:?}",
+                info.name, nelems, num_blocks, layout.block_size, info.dims
             );
 
             // Extract quantized data and scales
@@ -655,5 +661,36 @@ mod tests {
         for &val in &out {
             assert!((val - 0.0).abs() < 1e-6, "Expected zero, got {}", val);
         }
+    }
+
+    #[test]
+    fn tied_weights_transpose_roundtrip() {
+        // Simulate tok = [dim, vocab] and use it as both embeddings and head
+        let dim = 16usize;
+        let vocab = 32usize;
+        let mut tok = vec![0f32; dim * vocab];
+        for r in 0..dim {
+            for c in 0..vocab {
+                tok[r * vocab + c] = (r * 1_000 + c) as f32;
+            }
+        }
+
+        // Transpose to [vocab, dim] (what loader does for tied weights)
+        let mut tok_t = vec![0f32; vocab * dim];
+        for r in 0..dim {
+            for c in 0..vocab {
+                tok_t[c * dim + r] = tok[r * vocab + c];
+            }
+        }
+        
+        // Transpose back
+        let mut back = vec![0f32; dim * vocab];
+        for r in 0..vocab {
+            for c in 0..dim {
+                back[c * vocab + r] = tok_t[r * dim + c];
+            }
+        }
+        
+        assert_eq!(tok, back);
     }
 }
