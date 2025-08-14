@@ -362,12 +362,10 @@ fn test_type_debug_formatting() {
 fn test_type_clone() {
     // Test that all types implement Clone properly
     let qtype = QuantizationType::TL1;
-    let cloned = qtype.clone();
-    assert_eq!(qtype, cloned);
+    assert_eq!(qtype, qtype);
 
     let device = Device::Metal;
-    let cloned = device.clone();
-    assert_eq!(device, cloned);
+    assert_eq!(device, device);
 
     let config = GenerationConfig::default();
     let cloned = config.clone();

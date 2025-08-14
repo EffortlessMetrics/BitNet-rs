@@ -1,11 +1,11 @@
 //! Comprehensive tests for bitnet-quantization
 //! Covers edge cases, error conditions, and end-to-end scenarios
 
-use bitnet_common::{BitNetTensor, ConcreteTensor, MockTensor, QuantizationType, Tensor};
+use bitnet_common::{BitNetTensor, MockTensor, Tensor};
 use bitnet_quantization::tl1::TL1Config;
 use bitnet_quantization::tl2::TL2Config;
 use bitnet_quantization::*;
-use candle_core::{DType, Device as CandleDevice, Tensor as CandleTensor};
+use candle_core::{Device as CandleDevice, Tensor as CandleTensor};
 use proptest::prelude::*;
 
 /// Helper function to create test tensors
@@ -98,7 +98,7 @@ mod error_handling {
         let tensor = create_test_tensor(vec![1.0f32; 10], vec![10]); // Simple valid tensor
 
         // This should succeed
-        let result = quantizer.quantize_tensor(&tensor);
+        let _result = quantizer.quantize_tensor(&tensor);
         // Depending on implementation, this might succeed or fail
         // The important thing is it doesn't panic
     }
@@ -128,7 +128,7 @@ mod error_handling {
         let inf_values = vec![f32::INFINITY, f32::NEG_INFINITY, 1.0, -1.0];
         let len = inf_values.len();
         let tensor = create_test_tensor(inf_values, vec![len]);
-        let result = quantizer.quantize_tensor(&tensor);
+        let _result = quantizer.quantize_tensor(&tensor);
         // Should handle infinity gracefully (might clamp or error)
         // The important thing is it doesn't panic
     }
@@ -140,7 +140,7 @@ mod error_handling {
         let nan_values = vec![f32::NAN, 1.0, 2.0, 3.0];
         let len = nan_values.len();
         let tensor = create_test_tensor(nan_values, vec![len]);
-        let result = quantizer.quantize_tensor(&tensor);
+        let _result = quantizer.quantize_tensor(&tensor);
 
         // NaN handling should be well-defined
         // Either error or handle gracefully, but no panic

@@ -64,17 +64,17 @@ impl LookupTable {
         };
 
         // Build reverse lookup table
-        for i in 0..num_levels {
+        for (i, rev) in reverse.iter_mut().enumerate().take(num_levels) {
             let quantized = if use_asymmetric {
                 i as i32 - zero_point
             } else {
                 i as i32 - (num_levels / 2) as i32
             };
-            reverse[i] = quantized as f32 * scale;
+            *rev = quantized as f32 * scale;
         }
 
         // Build forward lookup table
-        for i in 0..256 {
+        for (i, fwd) in forward.iter_mut().enumerate().take(256) {
             let float_val = (i as f32 - 128.0) * scale; // Map [0,255] to float range
             let quantized = if use_asymmetric {
                 ((float_val / scale + zero_point as f32).round() as i32)
@@ -84,7 +84,7 @@ impl LookupTable {
                     .saturating_add((num_levels / 2) as i32)
                     .clamp(0, (num_levels - 1) as i32) as i8
             };
-            forward[i] = quantized;
+            *fwd = quantized;
         }
 
         Self { forward, reverse, scale, zero_point }
@@ -507,9 +507,9 @@ mod tests {
         let q_pos = table.quantize(2.0);
         let q_neg = table.quantize(-2.0);
 
-        assert!(q0 >= 0 && q0 < 4); // 2-bit range [0,3]
-        assert!(q_pos >= 0 && q_pos < 4);
-        assert!(q_neg >= 0 && q_neg < 4);
+        assert!((0..4).contains(&q0)); // 2-bit range [0,3]
+        assert!((0..4).contains(&q_pos));
+        assert!((0..4).contains(&q_neg));
 
         // Test dequantization - should be reasonable values
         let dq0 = table.dequantize(q0);

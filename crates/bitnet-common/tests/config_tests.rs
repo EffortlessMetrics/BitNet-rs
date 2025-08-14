@@ -2,7 +2,6 @@
 
 use bitnet_common::*;
 use proptest::prelude::*;
-use serde_json;
 use std::env;
 use std::fs;
 use std::io::Write;
