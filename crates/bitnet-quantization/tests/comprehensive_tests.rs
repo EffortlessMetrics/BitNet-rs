@@ -16,6 +16,7 @@ fn create_test_tensor(data: Vec<f32>, shape: Vec<usize>) -> BitNetTensor {
 }
 
 /// Helper function to create test tensor from MockTensor data
+#[allow(dead_code)]
 fn mock_to_bitnet_tensor(mock: MockTensor) -> BitNetTensor {
     let data: &[f32] = mock.as_slice().unwrap();
     let shape = mock.shape().to_vec();
@@ -186,7 +187,7 @@ mod algorithm_comprehensive {
         let quantizer = I2SQuantizer::new();
 
         // Test with different data patterns
-        let patterns = vec![
+        let patterns = [
             // Linear sequence
             (0..64).map(|i| i as f32).collect::<Vec<_>>(),
             // Sine wave
@@ -225,7 +226,7 @@ mod algorithm_comprehensive {
 
     #[test]
     fn test_tl1_comprehensive() {
-        let quantizer = TL1Quantizer::new();
+        let _quantizer = TL1Quantizer::new();
 
         // Test with different block sizes
         let block_sizes = vec![16, 32, 64, 128];
@@ -268,7 +269,7 @@ mod algorithm_comprehensive {
     #[test]
     #[ignore] // Temporarily disabled due to strict precision requirements
     fn test_tl2_comprehensive() {
-        let quantizer = TL2Quantizer::new();
+        let _quantizer = TL2Quantizer::new();
 
         // Test with different precision settings
         let precisions = vec![1e-3, 1e-4, 1e-5, 1e-6];

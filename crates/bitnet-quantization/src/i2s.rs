@@ -35,7 +35,6 @@ impl Default for I2SLayout {
 }
 
 impl I2SLayout {
-
     pub fn with_block_size(block_size: usize) -> Self {
         // For I2_S: 2 bits per element
         let data_bytes = (block_size * 2 + 7) / 8; // Round up bits to bytes
