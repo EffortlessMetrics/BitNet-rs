@@ -12,7 +12,7 @@ use memmap2::Mmap;
 use std::{borrow::Cow, fs::File, io::{self, Read, Seek}, path::Path};
 use bitnet_quantization::{I2SQuantizer, I2SLayout, QuantizedTensor};
 use bitnet_common::QuantizationType;
-use crate::formats::gguf::types::GgufTensorType;
+use crate::formats::gguf::GgufTensorType;
 
 #[derive(Debug, Clone)]
 struct TensorInfo {
@@ -316,11 +316,11 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
                 None,
                 info.dims.iter().map(|&d| d as usize).collect(),
                 QuantizationType::I2S,
-                block_size,
+                layout.block_size,
             );
             
             // Dequantize using our existing infrastructure
-            let quantizer = I2SQuantizer::with_block_size(block_size);
+            let quantizer = I2SQuantizer::with_block_size(layout.block_size);
             let tensor = quantizer.dequantize_tensor(&quantized)
                 .with_context(|| format!("Failed to dequantize I2_S tensor {}", info.name))?;
             

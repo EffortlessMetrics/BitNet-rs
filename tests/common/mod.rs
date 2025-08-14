@@ -10,6 +10,8 @@ pub mod cache;
 pub mod ci_reporting;
 pub mod config;
 pub mod config_validator;
+pub mod enhanced_error_handler;
+pub mod error_analysis;
 pub mod errors;
 pub mod execution_optimizer;
 pub mod fast_config;
@@ -45,7 +47,9 @@ pub mod cross_validation;
 
 // Re-export commonly used types
 pub use config::TestConfig;
-pub use errors::{TestError, TestResult};
+pub use enhanced_error_handler::{EnhancedErrorHandler, ErrorHandlerConfig, ErrorHandlingResult};
+pub use error_analysis::{ActionableRecommendation, ErrorAnalysis, ErrorAnalyzer, ErrorContext};
+pub use errors::{ErrorReport, ErrorSeverity, TestError, TestResult};
 pub use fixtures::FixtureManager;
 pub use harness::{TestCase, TestHarness, TestSuite};
 pub use logging::init_logging;
