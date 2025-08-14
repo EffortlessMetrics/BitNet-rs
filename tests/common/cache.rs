@@ -1,4 +1,4 @@
-use super::errors::TestError;
+use super::errors::{TestError, TestOpResult as TestResultCompat};
 use super::results::TestResult;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
