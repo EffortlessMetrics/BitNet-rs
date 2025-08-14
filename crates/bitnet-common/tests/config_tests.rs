@@ -597,7 +597,8 @@ temperature = 0.85
 
     let inline_config = BitNetConfig::builder().use_gpu(true).batch_size(4).build().unwrap();
 
-    let sources = vec![ConfigSource::File(config_path), ConfigSource::Inline(inline_config)];
+    let sources =
+        vec![ConfigSource::File(config_path), ConfigSource::Inline(Box::new(inline_config))];
 
     let config = ConfigLoader::load_from_sources(&sources).unwrap();
 

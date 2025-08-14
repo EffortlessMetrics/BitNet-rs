@@ -4,7 +4,7 @@
 //! crossval feature is enabled.
 
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
@@ -60,7 +60,7 @@ fn main() {
 }
 
 #[cfg(feature = "crossval")]
-fn generate_bindings(cpp_path: &PathBuf) {
+fn generate_bindings(cpp_path: &Path) {
     let header_path = cpp_path.join("include").join("bitnet.h");
 
     if !header_path.exists() {
@@ -98,6 +98,6 @@ fn has_clang() -> bool {
 
 #[cfg(not(feature = "crossval"))]
 #[allow(dead_code)]
-fn generate_bindings(_cpp_path: &PathBuf) {
+fn generate_bindings(_cpp_path: &Path) {
     // No-op when crossval feature is disabled
 }
