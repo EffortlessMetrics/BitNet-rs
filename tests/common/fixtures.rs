@@ -295,7 +295,7 @@ impl FixtureManager {
 
         debug!("Cache size limit exceeded, cleaning up oldest files");
 
-        // Collect files with their modification times
+        // Collect files with their modification times, excluding currently used fixtures
         let mut files_with_times = Vec::new();
         let mut entries = fs::read_dir(&self.cache_dir).await?;
 
@@ -303,6 +303,16 @@ impl FixtureManager {
             if entry.file_type().await?.is_file() {
                 let metadata = entry.metadata().await?;
                 if let Ok(modified) = metadata.modified() {
+                    // Skip files that are currently being used (accessed recently)
+                    if let Ok(accessed) = metadata.accessed() {
+                        let now = SystemTime::now();
+                        if let Ok(duration_since_access) = now.duration_since(accessed) {
+                            // Don't remove files accessed in the last 5 minutes
+                            if duration_since_access < Duration::from_secs(300) {
+                                continue;
+                            }
+                        }
+                    }
                     files_with_times.push((entry.path(), modified, metadata.len()));
                 }
             }
@@ -319,6 +329,12 @@ impl FixtureManager {
         for (path, _, size) in files_with_times {
             if current_size <= target_size {
                 break;
+            }
+
+            // Double-check the file isn't locked or in use
+            if self.is_file_in_use(&path).await {
+                debug!("Skipping file in use: {:?}", path);
+                continue;
             }
 
             match fs::remove_file(&path).await {
@@ -435,7 +451,30 @@ impl FixtureManager {
             .cache_dir
             .join(format!("{}.tmp", &download_info.filename));
 
-        info!("Downloading fixture '{}' from {}", name, download_info.url);
+        // Check if we already have a partial download
+        let resume_from = if temp_path.exists() {
+            match fs::metadata(&temp_path).await {
+                Ok(metadata) => Some(metadata.len()),
+                Err(_) => {
+                    // Remove corrupted temp file
+                    let _ = fs::remove_file(&temp_path).await;
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        info!(
+            "Downloading fixture '{}' from {} {}",
+            name,
+            download_info.url,
+            if resume_from.is_some() {
+                "(resuming)"
+            } else {
+                ""
+            }
+        );
 
         // Create HTTP client with timeout and retry logic
         let client = reqwest::Client::builder()
@@ -444,11 +483,11 @@ impl FixtureManager {
             .build()
             .map_err(|e| FixtureError::download(&download_info.url, e.to_string()))?;
 
-        // Retry download up to 3 times
+        // Retry download up to 5 times with exponential backoff
         let mut last_error = None;
-        for attempt in 1..=3 {
+        for attempt in 1..=5 {
             match self
-                .attempt_download(&client, download_info, &temp_path)
+                .attempt_download(&client, download_info, &temp_path, resume_from)
                 .await
             {
                 Ok(bytes) => {
@@ -473,8 +512,11 @@ impl FixtureManager {
                     })?;
 
                     info!(
-                        "Successfully downloaded fixture '{}' to {:?} (attempt {})",
-                        name, target_path, attempt
+                        "Successfully downloaded fixture '{}' to {:?} (attempt {}, {} bytes)",
+                        name,
+                        target_path,
+                        attempt,
+                        format_bytes(bytes.len() as u64)
                     );
 
                     return Ok(target_path);
@@ -483,17 +525,32 @@ impl FixtureManager {
                     warn!("Download attempt {} failed for '{}': {}", attempt, name, e);
                     last_error = Some(e);
 
-                    // Clean up temp file if it exists
-                    let _ = fs::remove_file(&temp_path).await;
+                    // For certain errors, don't retry
+                    if let FixtureError::DownloadError { reason, .. } =
+                        &last_error.as_ref().unwrap()
+                    {
+                        if reason.contains("404")
+                            || reason.contains("403")
+                            || reason.contains("401")
+                        {
+                            break; // Don't retry on client errors
+                        }
+                    }
 
-                    if attempt < 3 {
-                        // Wait before retry with exponential backoff
-                        let delay = Duration::from_secs(2_u64.pow(attempt - 1));
+                    if attempt < 5 {
+                        // Wait before retry with exponential backoff + jitter
+                        let base_delay = 2_u64.pow(attempt - 1);
+                        let jitter = fastrand::u64(0..=base_delay);
+                        let delay = Duration::from_secs(base_delay + jitter);
+                        debug!("Waiting {:?} before retry", delay);
                         tokio::time::sleep(delay).await;
                     }
                 }
             }
         }
+
+        // Clean up temp file on final failure
+        let _ = fs::remove_file(&temp_path).await;
 
         Err(last_error.unwrap_or_else(|| {
             FixtureError::download(
@@ -509,14 +566,30 @@ impl FixtureManager {
         client: &reqwest::Client,
         download_info: &DownloadInfo,
         temp_path: &Path,
+        resume_from: Option<u64>,
     ) -> FixtureResult<Vec<u8>> {
-        let response = client
-            .get(&download_info.url)
+        let mut request = client.get(&download_info.url);
+
+        // Add range header for resume if needed
+        if let Some(offset) = resume_from {
+            request = request.header("Range", format!("bytes={}-", offset));
+            debug!("Resuming download from byte {}", offset);
+        }
+
+        let response = request
             .send()
             .await
             .map_err(|e| FixtureError::download(&download_info.url, e.to_string()))?;
 
-        if !response.status().is_success() {
+        // Check response status
+        let is_success = if resume_from.is_some() {
+            response.status().as_u16() == 206 // Partial Content
+                || response.status().is_success()
+        } else {
+            response.status().is_success()
+        };
+
+        if !is_success {
             return Err(FixtureError::download(
                 &download_info.url,
                 format!("HTTP {}", response.status()),
@@ -528,12 +601,29 @@ impl FixtureManager {
             .await
             .map_err(|e| FixtureError::download(&download_info.url, e.to_string()))?;
 
-        // Write to temp file first
-        fs::write(temp_path, &bytes)
+        // Handle resume vs fresh download
+        let final_bytes = if let Some(offset) = resume_from {
+            // Read existing partial file and append new data
+            match fs::read(temp_path).await {
+                Ok(mut existing_bytes) => {
+                    existing_bytes.extend_from_slice(&bytes);
+                    existing_bytes
+                }
+                Err(_) => {
+                    // Partial file is corrupted, start fresh
+                    bytes.to_vec()
+                }
+            }
+        } else {
+            bytes.to_vec()
+        };
+
+        // Write complete data to temp file
+        fs::write(temp_path, &final_bytes)
             .await
             .map_err(|e| FixtureError::cache(format!("Failed to write temp file: {}", e)))?;
 
-        Ok(bytes.to_vec())
+        Ok(final_bytes)
     }
 
     /// Verify file checksum
@@ -670,6 +760,66 @@ impl FixtureManager {
 
         Ok(())
     }
+
+    /// Check if a file is currently in use (basic heuristic)
+    async fn is_file_in_use(&self, path: &std::path::Path) -> bool {
+        // Try to open the file exclusively to see if it's in use
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .truncate(false)
+            .open(path)
+        {
+            Ok(_) => false, // File is not in use
+            Err(_) => true, // File might be in use or we don't have permissions
+        }
+    }
+
+    /// Perform automatic cleanup based on configuration
+    pub async fn auto_cleanup(&self) -> FixtureResult<(CleanupStats, CleanupStats)> {
+        debug!("Performing automatic cleanup");
+
+        // First, clean up old fixtures
+        let age_cleanup = self.cleanup_old_fixtures().await?;
+
+        // Then, clean up by size if needed
+        let size_cleanup = self.cleanup_by_size().await?;
+
+        // Remove any invalid fixtures
+        let _invalid_cleanup = self.remove_invalid_fixtures().await?;
+
+        info!(
+            "Auto cleanup completed: {} old files removed ({}), {} size-based removals ({})",
+            age_cleanup.removed_count,
+            format_bytes(age_cleanup.removed_size),
+            size_cleanup.removed_count,
+            format_bytes(size_cleanup.removed_size)
+        );
+
+        Ok((age_cleanup, size_cleanup))
+    }
+
+    /// Schedule periodic cleanup (for long-running test processes)
+    pub fn schedule_periodic_cleanup(&self) -> tokio::task::JoinHandle<()> {
+        let cleanup_interval = self.config.cleanup_interval;
+        let cache_dir = self.cache_dir.clone();
+        let config = self.config.clone();
+
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(cleanup_interval);
+            loop {
+                interval.tick().await;
+
+                // Create a temporary fixture manager for cleanup
+                if let Ok(temp_manager) = FixtureManager::new(&config).await {
+                    if let Err(e) = temp_manager.auto_cleanup().await {
+                        warn!("Periodic cleanup failed: {}", e);
+                    }
+                } else {
+                    warn!("Failed to create fixture manager for periodic cleanup");
+                }
+            }
+        })
+    }
 }
 
 /// Information about a test fixture
@@ -779,6 +929,17 @@ impl SharedFixture {
     }
 }
 
+impl Drop for SharedFixture {
+    fn drop(&mut self) {
+        let remaining_refs = self.release();
+        if remaining_refs == 0 {
+            debug!("Last reference to shared fixture '{}' dropped", self.name);
+            // Note: We don't delete the file here as it might be used by other processes
+            // The periodic cleanup will handle removing unused files
+        }
+    }
+}
+
 /// Statistics about fixture validation
 #[derive(Debug, Clone)]
 pub struct ValidationStats {
@@ -859,7 +1020,137 @@ mod tests {
         let (manager, temp_dir) = create_test_fixture_manager().await;
 
         // Create an old test file
-        let old_file = temp_dir.path().join("old.txt");
+        let old_file = temp_dir.path().join("old_fixture.bin");
+        fs::write(&old_file, b"old content").await.unwrap();
+
+        // Modify the file's timestamp to make it old
+        let old_time = SystemTime::now() - Duration::from_secs(48 * 60 * 60); // 48 hours ago
+        if let Ok(file) = std::fs::File::open(&old_file) {
+            let _ = file.set_times(filetime::FileTime::from_system_time(old_time));
+        }
+
+        let cleanup_stats = manager.cleanup_old_fixtures().await.unwrap();
+        assert_eq!(cleanup_stats.removed_count, 1);
+        assert_eq!(cleanup_stats.removed_size, 11); // "old content" is 11 bytes
+        assert!(!old_file.exists());
+    }
+
+    #[tokio::test]
+    async fn test_auto_cleanup() {
+        let (manager, temp_dir) = create_test_fixture_manager().await;
+
+        // Create test files
+        let old_file = temp_dir.path().join("old.bin");
+        let new_file = temp_dir.path().join("new.bin");
+        
+        fs::write(&old_file, b"old").await.unwrap();
+        fs::write(&new_file, b"new").await.unwrap();
+
+        // Make one file old
+        let old_time = SystemTime::now() - Duration::from_secs(48 * 60 * 60);
+        if let Ok(file) = std::fs::File::open(&old_file) {
+            let _ = file.set_times(filetime::FileTime::from_system_time(old_time));
+        }
+
+        let (age_cleanup, size_cleanup) = manager.auto_cleanup().await.unwrap();
+        assert_eq!(age_cleanup.removed_count, 1);
+        assert_eq!(size_cleanup.removed_count, 0); // No size limit exceeded
+    }
+
+    #[tokio::test]
+    async fn test_shared_fixture_lifecycle() {
+        let (mut manager, _temp_dir) = create_test_fixture_manager().await;
+
+        // Register a shared fixture
+        manager
+            .register_shared_fixture("shared-test", "https://example.com/test.bin", "abcd1234")
+            .await
+            .unwrap();
+
+        // Get shared fixture (this would normally download, but we have auto_download disabled)
+        let result = manager.get_shared_fixture("shared-test").await;
+        assert!(result.is_err()); // Should fail because auto_download is disabled
+
+        // Test fixture info is still available
+        let info = manager.get_fixture_info("shared-test");
+        assert!(info.is_some());
+        assert_eq!(info.unwrap().name, "shared-test");
+    }
+
+    #[tokio::test]
+    async fn test_fixture_validation_and_cleanup() {
+        let (manager, temp_dir) = create_test_fixture_manager().await;
+
+        // Create a file with wrong checksum
+        let bad_file = temp_dir.path().join("bad-fixture.bin");
+        fs::write(&bad_file, b"wrong content").await.unwrap();
+
+        // Manually add it to the manager's fixture list for testing
+        // (In real usage, this would be a cached file with wrong checksum)
+        
+        let validation = manager.validate_cache().await.unwrap();
+        // Since we don't have any real cached fixtures, all should be missing
+        assert_eq!(validation.valid_count, 0);
+        assert_eq!(validation.missing_count, 3); // 3 built-in fixtures
+
+        let removal_stats = manager.remove_invalid_fixtures().await.unwrap();
+        assert_eq!(removal_stats.removed_count, 0); // No invalid fixtures to remove
+    }
+
+    #[tokio::test]
+    async fn test_cache_size_management() {
+        let (manager, temp_dir) = create_test_fixture_manager().await;
+
+        // Create multiple test files
+        for i in 0..5 {
+            let file = temp_dir.path().join(format!("test_{}.bin", i));
+            let content = vec![b'x'; 1024]; // 1KB each
+            fs::write(&file, content).await.unwrap();
+        }
+
+        let stats = manager.get_cache_stats().await.unwrap();
+        assert_eq!(stats.file_count, 5);
+        assert_eq!(stats.total_size, 5 * 1024);
+
+        // Test size-based cleanup (won't trigger with default config)
+        let cleanup_stats = manager.cleanup_by_size().await.unwrap();
+        assert_eq!(cleanup_stats.removed_count, 0); // No size limit exceeded
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_fixture_access() {
+        let (manager, _temp_dir) = create_test_fixture_manager().await;
+
+        // Test concurrent access to fixture info
+        let handles: Vec<_> = (0..10)
+            .map(|_| {
+                let manager_ref = &manager;
+                tokio::spawn(async move {
+                    let info = manager_ref.get_fixture_info("tiny-model");
+                    assert!(info.is_some());
+                    let cached = manager_ref.is_cached("tiny-model").await;
+                    assert!(!cached); // Should not be cached initially
+                })
+            })
+            .collect();
+
+        // Wait for all tasks to complete
+        for handle in handles {
+            handle.await.unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_fixture_preloading() {
+        let (manager, _temp_dir) = create_test_fixture_manager().await;
+
+        // Test preloading (should fail because auto_download is disabled)
+        let result = manager.preload_fixtures(&["tiny-model", "small-model"]).await;
+        assert!(result.is_err()); // Should fail because fixtures aren't available
+    }
+
+    #[tokio::test]
+    async fn test_dir.path().join("old.txt");
         fs::write(&old_file, b"old content").await.unwrap();
 
         // Set file time to be old (this is platform-specific and might not work in all test environments)
