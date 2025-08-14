@@ -71,7 +71,7 @@ impl GitHubReporter {
         );
 
         let payload = StatusCheckPayload {
-            state,
+            state: state.clone(),
             target_url: target_url.map(|s| s.to_string()),
             description: description.to_string(),
             context: context.to_string(),
@@ -87,11 +87,12 @@ impl GitHubReporter {
             .await
             .context("Failed to send status check request")?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(anyhow::anyhow!(
                 "GitHub API error: {} - {}",
-                response.status(),
+                status,
                 error_text
             ));
         }
@@ -150,11 +151,12 @@ impl GitHubReporter {
             .await
             .context("Failed to send comment request")?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(anyhow::anyhow!(
                 "GitHub API error: {} - {}",
-                response.status(),
+                status,
                 error_text
             ));
         }
@@ -344,7 +346,7 @@ impl CINotificationManager {
             .collect();
 
         if failed_tests.is_empty() {
-            return Ok();
+            return Ok(());
         }
 
         info!(
@@ -629,7 +631,7 @@ struct StatusCheckPayload {
     context: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "lowercase")]
 enum StatusState {
     Pending,

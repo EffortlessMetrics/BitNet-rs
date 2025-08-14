@@ -1,5 +1,5 @@
 use super::config::{ReportFormat, TestConfig};
-use super::errors::{TestError, TestResult};
+use super::errors::TestError;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;

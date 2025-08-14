@@ -1,3 +1,4 @@
+use super::test_cases::ModelSize;
 use crate::cross_validation::test_cases::{
     test_suites, ComparisonTestCaseRegistry, TestCaseCategory,
 };
@@ -5,7 +6,24 @@ use crate::cross_validation::{
     ComparisonTestCase, ComparisonTolerance, CppImplementation, CrossValidationResult,
     CrossValidationSuite, RustImplementation,
 };
-// use crate::data::models::{ModelSize, TestModelRegistry};
+
+// Temporary stub for TestModelRegistry
+#[derive(Debug)]
+pub struct TestModelRegistry {
+    models: Vec<String>,
+}
+
+impl TestModelRegistry {
+    pub async fn new() -> Result<Self, TestError> {
+        Ok(Self {
+            models: vec!["tiny-model".to_string(), "small-model".to_string()],
+        })
+    }
+
+    pub fn by_size(&self, _size: ModelSize) -> Vec<&str> {
+        self.models.iter().map(|s| s.as_str()).collect()
+    }
+}
 use crate::errors::{TestError, TestResult};
 use std::path::Path;
 use std::time::Instant;

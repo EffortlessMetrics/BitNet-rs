@@ -7,7 +7,26 @@ use super::performance_viz::{
     create_performance_comparison, PerformanceComparison, PerformanceVisualizer,
     VisualizationConfig,
 };
-// use crate::data::performance::BenchmarkResult;
+// Temporary stub for BenchmarkResult
+#[derive(Debug, Clone)]
+pub struct BenchmarkResult {
+    pub name: String,
+    pub duration: std::time::Duration,
+    pub throughput: f64,
+    // Temporary fields for test compatibility
+    pub iterations: u32,
+    pub warmup_iterations: u32,
+    pub summary: PerformanceSummary,
+}
+
+// Temporary stub for PerformanceSummary
+#[derive(Debug, Clone)]
+pub struct PerformanceSummary {
+    pub mean: f64,
+    pub std_dev: f64,
+    pub min: f64,
+    pub max: f64,
+}
 use crate::results::{TestResult, TestSuiteResult};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -373,6 +392,8 @@ mod tests {
 
         BenchmarkResult {
             name: name.to_string(),
+            duration: Duration::from_millis((1000.0 / ops_per_sec) as u64),
+            throughput: ops_per_sec,
             iterations: 10,
             warmup_iterations: 3,
             summary: PerformanceSummary {

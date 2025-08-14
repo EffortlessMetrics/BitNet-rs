@@ -1,7 +1,7 @@
 use super::config::TestConfig;
-use super::errors::{TestError, TestResult};
-use super::parallel::{ParallelConfig, ParallelTestExecutor};
-use super::selection::{ExecutionPlan, SmartTestSelector};
+use super::errors::{TestError, TestOpResult};
+use super::execution_optimizer::ExecutionPlan;
+use super::parallel::ParallelExecutor;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -330,7 +330,8 @@ impl TestExecutionOptimizer {
         let mut batch_times: Vec<Duration> = vec![Duration::ZERO; self.config.max_parallel];
 
         for test in tests {
-            let test_duration = estimates.get(&test).unwrap_or(&Duration::from_secs(5));
+            let default_duration = Duration::from_secs(5);
+            let test_duration = estimates.get(&test).unwrap_or(&default_duration);
 
             // Find the batch with the least current time
             let min_batch_idx = batch_times

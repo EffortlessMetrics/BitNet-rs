@@ -8,7 +8,7 @@ use tracing::{debug, info, warn};
 
 use crate::{
     config::FixtureConfig,
-    errors::{FixtureError, FixtureResult, TestResult},
+    errors::{FixtureError, FixtureResult, TestOpResult},
     utils::format_bytes,
 };
 
@@ -602,7 +602,7 @@ impl FixtureManager {
             .map_err(|e| FixtureError::download(&download_info.url, e.to_string()))?;
 
         // Handle resume vs fresh download
-        let final_bytes = if let Some(offset) = resume_from {
+        let final_bytes = if let Some(_offset) = resume_from {
             // Read existing partial file and append new data
             match fs::read(temp_path).await {
                 Ok(mut existing_bytes) => {
@@ -801,7 +801,7 @@ impl FixtureManager {
     /// Schedule periodic cleanup (for long-running test processes)
     pub fn schedule_periodic_cleanup(&self) -> tokio::task::JoinHandle<()> {
         let cleanup_interval = self.config.cleanup_interval;
-        let cache_dir = self.cache_dir.clone();
+        let _cache_dir = self.cache_dir.clone();
         let config = self.config.clone();
 
         tokio::spawn(async move {
@@ -1042,7 +1042,7 @@ mod tests {
         // Create test files
         let old_file = temp_dir.path().join("old.bin");
         let new_file = temp_dir.path().join("new.bin");
-        
+
         fs::write(&old_file, b"old").await.unwrap();
         fs::write(&new_file, b"new").await.unwrap();
 
@@ -1087,7 +1087,7 @@ mod tests {
 
         // Manually add it to the manager's fixture list for testing
         // (In real usage, this would be a cached file with wrong checksum)
-        
+
         let validation = manager.validate_cache().await.unwrap();
         // Since we don't have any real cached fixtures, all should be missing
         assert_eq!(validation.valid_count, 0);
@@ -1145,12 +1145,17 @@ mod tests {
         let (manager, _temp_dir) = create_test_fixture_manager().await;
 
         // Test preloading (should fail because auto_download is disabled)
-        let result = manager.preload_fixtures(&["tiny-model", "small-model"]).await;
+        let result = manager
+            .preload_fixtures(&["tiny-model", "small-model"])
+            .await;
         assert!(result.is_err()); // Should fail because fixtures aren't available
     }
 
     #[tokio::test]
-    async fn test_dir.path().join("old.txt");
+    async fn test_cleanup_with_file_timestamps() {
+        let (manager, temp_dir) = create_test_fixture_manager().await;
+
+        let old_file = temp_dir.path().join("old.txt");
         fs::write(&old_file, b"old content").await.unwrap();
 
         // Set file time to be old (this is platform-specific and might not work in all test environments)
