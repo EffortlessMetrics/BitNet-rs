@@ -11,7 +11,7 @@ use tempfile::TempDir;
 mod common;
 mod performance_benchmarks;
 
-use common::{TestError, TestResult};
+use common::{TestError, TestOpResult as TestResult};
 use performance_benchmarks::{BenchmarkConfig, PerformanceBenchmarkSuite};
 
 /// Main test function demonstrating 2x+ performance improvement

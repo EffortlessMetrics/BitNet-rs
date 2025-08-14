@@ -286,7 +286,7 @@ impl ParallelTestHarness {
                 Ok(result) => results.push(result),
                 Err(e) => {
                     eprintln!("Task join error: {}", e);
-                    results.push(TestResult::failed(
+                    results.push(TestRecord::failed(
                         "unknown".to_string(),
                         Duration::ZERO,
                         format!("Task join error: {}", e),
@@ -329,7 +329,7 @@ impl ParallelTestHarness {
         let _permit = match semaphore.acquire().await {
             Ok(permit) => permit,
             Err(e) => {
-                return TestResult::failed(
+                return TestRecord::failed(
                     test_name,
                     Duration::ZERO,
                     format!("Failed to acquire semaphore: {}", e),
@@ -359,7 +359,7 @@ impl ParallelTestHarness {
                         slots[parallel_slot] = false;
                     }
                 }
-                return TestResult::failed(
+                return TestRecord::failed(
                     test_name,
                     start_time.elapsed(),
                     format!("Failed to create isolated environment: {}", e),
@@ -403,7 +403,7 @@ impl ParallelTestHarness {
                     let mut stats_guard = stats.write().await;
                     stats_guard.passed_tests += 1;
                 }
-                TestResult::passed(test_name, duration, parallel_slot)
+                TestRecord::passed(test_name, duration, parallel_slot)
             }
             Ok(Ok(Err(e))) => {
                 {
@@ -413,14 +413,14 @@ impl ParallelTestHarness {
                         stats_guard.isolation_violations += 1;
                     }
                 }
-                TestResult::failed(test_name, duration, e, parallel_slot)
+                TestRecord::failed(test_name, duration, e, parallel_slot)
             }
             Ok(Err(e)) => {
                 {
                     let mut stats_guard = stats.write().await;
                     stats_guard.failed_tests += 1;
                 }
-                TestResult::failed(
+                TestRecord::failed(
                     test_name,
                     duration,
                     format!("Task execution failed: {}", e),
@@ -432,7 +432,7 @@ impl ParallelTestHarness {
                     let mut stats_guard = stats.write().await;
                     stats_guard.failed_tests += 1;
                 }
-                TestResult::failed(
+                TestRecord::failed(
                     test_name,
                     timeout_duration,
                     format!("Test timed out after {:?}", timeout_duration),

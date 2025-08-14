@@ -626,4 +626,34 @@ mod tests {
         assert_eq!(align_up(33, 32), 64);
         assert_eq!(align_up(100, 32), 128);
     }
+
+    #[test]
+    fn test_i2s_roundtrip_dequant() {
+        use bitnet_quantization::{I2SLayout, I2SQuantizer, QuantizedTensor};
+        
+        let layout = I2SLayout::default();
+        // Create two blocks of zero data w/ scale=1.0 -> expect zeros out
+        let blocks = 2usize;
+        let packed = vec![0u8; blocks * layout.data_bytes_per_block];
+        let scales = vec![1.0f32; blocks];
+        
+        let qt = QuantizedTensor::new_with_params(
+            packed,
+            scales,
+            None,
+            vec![layout.block_size * blocks],
+            QuantizationType::I2S,
+            layout.block_size,
+        );
+        
+        let quantizer = I2SQuantizer::with_block_size(layout.block_size);
+        let tensor = quantizer.dequantize_tensor(&qt).unwrap();
+        let out = tensor.to_vec().unwrap();
+        
+        assert_eq!(out.len(), layout.block_size * blocks);
+        // All zeros since we used zero quantized data
+        for &val in &out {
+            assert!((val - 0.0).abs() < 1e-6, "Expected zero, got {}", val);
+        }
+    }
 }

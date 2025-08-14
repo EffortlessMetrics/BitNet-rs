@@ -238,7 +238,7 @@ impl SimpleParallelHarness {
                 Ok(result) => results.push(result),
                 Err(e) => {
                     eprintln!("Task join error: {}", e);
-                    results.push(SimpleTestResult::failed(
+                    results.push(SimpleTestRecord::failed(
                         "unknown".to_string(),
                         Duration::ZERO,
                         format!("Task join error: {}", e),
@@ -263,7 +263,7 @@ impl SimpleParallelHarness {
         let _permit = match semaphore.acquire().await {
             Ok(permit) => permit,
             Err(e) => {
-                return SimpleTestResult::failed(
+                return SimpleTestRecord::failed(
                     test_name,
                     Duration::ZERO,
                     format!("Failed to acquire semaphore: {}", e),
@@ -275,7 +275,7 @@ impl SimpleParallelHarness {
         let isolated_env = match IsolatedEnvironment::new(&test_name) {
             Ok(env) => env,
             Err(e) => {
-                return SimpleTestResult::failed(
+                return SimpleTestRecord::failed(
                     test_name,
                     start_time.elapsed(),
                     format!("Failed to create isolated environment: {}", e),
@@ -307,21 +307,21 @@ impl SimpleParallelHarness {
                     let mut stats_guard = stats.write().await;
                     stats_guard.passed_tests += 1;
                 }
-                SimpleTestResult::passed(test_name, duration)
+                SimpleTestRecord::passed(test_name, duration)
             }
             Ok(Err(e)) => {
                 {
                     let mut stats_guard = stats.write().await;
                     stats_guard.failed_tests += 1;
                 }
-                SimpleTestResult::failed(test_name, duration, e)
+                SimpleTestRecord::failed(test_name, duration, e)
             }
             Err(_) => {
                 {
                     let mut stats_guard = stats.write().await;
                     stats_guard.failed_tests += 1;
                 }
-                SimpleTestResult::failed(
+                SimpleTestRecord::failed(
                     test_name,
                     timeout_duration,
                     format!("Test timed out after {:?}", timeout_duration),
