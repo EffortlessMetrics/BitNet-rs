@@ -4,7 +4,7 @@
 //! the crossval feature is enabled. It fails fast if dependencies are missing.
 
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn main() {
     // If the crate is compiled without `--features bitnet-sys/ffi`,
@@ -72,7 +72,7 @@ fn main() {
 }
 
 #[cfg(feature = "ffi")]
-fn link_cpp_implementation(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+fn link_cpp_implementation(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let build_dir = cpp_dir.join("build");
 
     // Library search paths - order matters!
@@ -146,7 +146,7 @@ fn link_cpp_implementation(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::
 }
 
 #[cfg(feature = "ffi")]
-fn generate_bindings(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // We'll generate bindings from llama.h which is the main C API
     let mut llama_h = cpp_dir.join("3rdparty/llama.cpp/include/llama.h");
     if !llama_h.exists() {

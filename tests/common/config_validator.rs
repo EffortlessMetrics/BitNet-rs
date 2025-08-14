@@ -1,6 +1,6 @@
 use crate::config::{load_test_config, validate_config, TestConfig};
 use crate::errors::{TestError, TestOpResult as TestResultCompat};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Configuration validation utility
 pub struct ConfigValidator {
@@ -15,7 +15,7 @@ impl ConfigValidator {
     }
 
     /// Create a validator with a specific configuration file
-    pub fn from_file(path: &PathBuf) -> TestResultCompat<Self> {
+    pub fn from_file(path: &Path) -> TestResultCompat<Self> {
         let contents = std::fs::read_to_string(path).map_err(|e| {
             TestError::config(format!("Failed to read config file {:?}: {}", path, e))
         })?;
@@ -288,7 +288,7 @@ impl ValidationInfo {
 
 // Helper functions
 
-fn get_available_disk_space(_path: &PathBuf) -> Option<u64> {
+fn get_available_disk_space(_path: &Path) -> Option<u64> {
     // Platform-specific disk space checking
     #[cfg(unix)]
     {
@@ -329,7 +329,7 @@ fn check_internet_connectivity() -> bool {
         .unwrap_or(false)
 }
 
-fn is_executable(path: &PathBuf) -> bool {
+fn is_executable(path: &Path) -> bool {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;

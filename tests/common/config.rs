@@ -1,7 +1,7 @@
 use super::errors::{TestError, TestOpResult as TestResultCompat};
 use super::utils::get_optimal_parallel_tests;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 /// Main configuration for the testing framework
@@ -202,7 +202,7 @@ pub fn load_test_config() -> TestResultCompat<TestConfig> {
 }
 
 /// Load configuration from a TOML file
-pub fn load_config_from_file(path: &PathBuf) -> TestResultCompat<TestConfig> {
+pub fn load_config_from_file(path: &Path) -> TestResultCompat<TestConfig> {
     let contents = std::fs::read_to_string(path)
         .map_err(|e| TestError::config(format!("Failed to read config file {:?}: {}", path, e)))?;
 
@@ -554,7 +554,7 @@ pub fn merge_configs(base: TestConfig, override_config: TestConfig) -> TestConfi
 }
 
 /// Save configuration to a TOML file
-pub fn save_config_to_file(config: &TestConfig, path: &PathBuf) -> TestResultCompat<()> {
+pub fn save_config_to_file(config: &TestConfig, path: &Path) -> TestResultCompat<()> {
     let toml_string = toml::to_string_pretty(config)
         .map_err(|e| TestError::config(format!("Failed to serialize config: {}", e)))?;
 

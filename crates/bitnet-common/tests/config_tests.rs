@@ -69,7 +69,7 @@ fn test_config_defaults() {
 
     // Performance defaults
     assert_eq!(config.performance.num_threads, None);
-    assert_eq!(config.performance.use_gpu, false);
+    assert!(!config.performance.use_gpu);
     assert_eq!(config.performance.batch_size, 1);
     assert_eq!(config.performance.memory_limit, None);
 }
@@ -227,7 +227,7 @@ fn test_config_builder_comprehensive() {
     assert_eq!(config.inference.top_k, Some(40));
     assert_eq!(config.inference.top_p, Some(0.95));
     assert_eq!(config.quantization.quantization_type, QuantizationType::TL2);
-    assert_eq!(config.performance.use_gpu, true);
+    assert!(config.performance.use_gpu);
     assert_eq!(config.performance.num_threads, Some(16));
     assert_eq!(config.performance.batch_size, 8);
 }
@@ -295,7 +295,7 @@ memory_limit = 2048
     assert_eq!(config.quantization.block_size, 128);
     assert_eq!(config.quantization.precision, 1e-5);
 
-    assert_eq!(config.performance.use_gpu, true);
+    assert!(config.performance.use_gpu);
     assert_eq!(config.performance.batch_size, 4);
     assert_eq!(config.performance.num_threads, Some(8));
     assert_eq!(config.performance.memory_limit, Some(2048));
@@ -354,7 +354,7 @@ fn test_json_config_loading() {
     assert_eq!(config.quantization.quantization_type, QuantizationType::TL2);
     assert_eq!(config.quantization.block_size, 256);
 
-    assert_eq!(config.performance.use_gpu, false);
+    assert!(!config.performance.use_gpu);
     assert_eq!(config.performance.num_threads, None);
     assert_eq!(config.performance.memory_limit, None);
 }
@@ -443,7 +443,7 @@ fn test_env_variable_overrides() {
 
     assert_eq!(config.model.vocab_size, 60000);
     assert_eq!(config.inference.temperature, 0.7);
-    assert_eq!(config.performance.use_gpu, true);
+    assert!(config.performance.use_gpu);
     assert_eq!(config.quantization.quantization_type, QuantizationType::TL2);
     assert_eq!(config.performance.memory_limit, Some(2 * 1024 * 1024 * 1024));
     assert_eq!(config.model.format, ModelFormat::SafeTensors);
@@ -539,7 +539,7 @@ fn test_config_merging() {
 
     // Overridden values
     assert_eq!(base_config.model.vocab_size, 50000);
-    assert_eq!(base_config.performance.use_gpu, true);
+    assert!(base_config.performance.use_gpu);
     assert_eq!(base_config.quantization.quantization_type, QuantizationType::TL2);
 
     // Preserved values
@@ -607,7 +607,7 @@ temperature = 0.85
     assert_eq!(config.inference.temperature, 0.85);
 
     // From inline
-    assert_eq!(config.performance.use_gpu, true);
+    assert!(config.performance.use_gpu);
     assert_eq!(config.performance.batch_size, 4);
 }
 

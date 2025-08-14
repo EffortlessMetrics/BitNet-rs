@@ -10,7 +10,7 @@ use bitnet_tests::trend_reporting::{TestRunMetadata, TrendConfig, TrendReporter}
 use clap::Parser;
 use serde_json;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::fs;
 use tracing::{error, info, warn};
@@ -114,7 +114,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn load_test_results(results_dir: &PathBuf) -> Result<Vec<TestSuiteResult>> {
+async fn load_test_results(results_dir: &Path) -> Result<Vec<TestSuiteResult>> {
     let mut test_results = Vec::new();
 
     if !results_dir.exists() {
@@ -150,14 +150,14 @@ async fn load_test_results(results_dir: &PathBuf) -> Result<Vec<TestSuiteResult>
     Ok(test_results)
 }
 
-async fn load_json_test_results(path: &PathBuf) -> Result<Vec<TestSuiteResult>> {
+async fn load_json_test_results(path: &Path) -> Result<Vec<TestSuiteResult>> {
     let content = fs::read_to_string(path).await?;
     let results: Vec<TestSuiteResult> =
         serde_json::from_str(&content).context("Failed to parse JSON test results")?;
     Ok(results)
 }
 
-async fn load_junit_test_results(path: &PathBuf) -> Result<TestSuiteResult> {
+async fn load_junit_test_results(path: &Path) -> Result<TestSuiteResult> {
     // Simple JUnit XML parsing - in a real implementation, you'd use a proper XML parser
     let content = fs::read_to_string(path).await?;
 
