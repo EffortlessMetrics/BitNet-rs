@@ -167,6 +167,13 @@ impl TestError {
         Self::TimeoutError { timeout }
     }
 
+    /// Create a cache error (alias for config error for backward compatibility)
+    pub fn cache<S: Into<String>>(message: S) -> Self {
+        Self::ConfigError {
+            message: message.into(),
+        }
+    }
+
     /// Check if this error is recoverable
     pub fn is_recoverable(&self) -> bool {
         match self {
