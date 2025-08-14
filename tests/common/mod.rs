@@ -54,7 +54,7 @@ pub use fixtures::FixtureManager;
 pub use harness::{TestCase, TestHarness, TestSuite};
 pub use logging::init_logging;
 pub use results::TestMetrics;
-pub use utils::{format_bytes, format_duration};
+pub use utils::format_bytes;
 
 // Re-export cross-validation types
 pub use cross_validation::{

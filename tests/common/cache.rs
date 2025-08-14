@@ -1,5 +1,5 @@
 use super::errors::{TestError, TestResult};
-use super::results::{TestResult as TestResultData, TestSuiteResult};
+use super::results::TestResult;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
