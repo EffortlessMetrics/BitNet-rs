@@ -5,14 +5,12 @@
 //! performance comparisons, regression detection, and executive summaries.
 
 use crate::cross_validation::{
-    AccuracyResult, ComparisonSummary, CrossValidationResult, PerformanceComparison,
-    SingleComparisonResult, TokenMismatch,
+    CrossValidationResult, TokenMismatch,
 };
-use crate::results::{TestResult, TestSuiteResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::path::PathBuf;
+use std::time::Duration;
 
 /// Configuration for comparison analysis reporting
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -997,7 +995,7 @@ impl ComparisonAnalysisReporter {
 
     fn analyze_bottlenecks(&self, performance: &[TestCasePerformance]) -> BottleneckAnalysis {
         let mut bottlenecks = Vec::new();
-        let mut hotspots = Vec::new();
+        let hotspots = Vec::new();
         let mut opportunities = Vec::new();
 
         // Identify primary bottlenecks

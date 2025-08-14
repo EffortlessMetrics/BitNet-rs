@@ -1,7 +1,4 @@
 use super::config::{ReportFormat, TestConfig};
-use super::errors::TestError;
-use std::collections::HashMap;
-use std::path::PathBuf;
 use std::time::Duration;
 
 /// Fast configuration presets for different testing scenarios

@@ -1,7 +1,6 @@
 use super::config::TestConfig;
 use super::errors::TestError;
 use super::results::{TestResult, TestStatus};
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::process::Command;

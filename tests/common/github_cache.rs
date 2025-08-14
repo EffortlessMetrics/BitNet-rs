@@ -2,7 +2,6 @@ use super::cache::{CacheConfig, TestCache};
 use super::errors::{TestError, TestOpResult as TestResultCompat};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tokio::fs;

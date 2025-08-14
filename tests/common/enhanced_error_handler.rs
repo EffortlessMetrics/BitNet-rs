@@ -13,7 +13,6 @@ use super::{
     error_analysis::{ErrorAnalysis, ErrorAnalyzer, ErrorContext, SystemResourceSnapshot},
     errors::{ErrorReport, ErrorSeverity, TestError},
     logging::{DebugContext, LoggingManager},
-    results::TestResult,
 };
 
 /// Enhanced error handler that provides actionable debugging information

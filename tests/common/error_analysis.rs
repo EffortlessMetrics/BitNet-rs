@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
 
-use super::errors::{ErrorReport, ErrorSeverity, TestError, TroubleshootingStep};
+use super::errors::{ErrorSeverity, TestError};
 
 /// Error analyzer that provides actionable debugging information
 pub struct ErrorAnalyzer {

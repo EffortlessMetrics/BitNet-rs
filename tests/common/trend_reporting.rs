@@ -3,8 +3,8 @@
 //! This module provides functionality to track test results over time,
 //! analyze trends, and generate historical reports.
 
-use crate::results::{TestResult, TestSuiteResult};
-use anyhow::{Context, Result};
+use crate::results::TestSuiteResult;
+use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

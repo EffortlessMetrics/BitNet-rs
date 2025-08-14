@@ -3,7 +3,6 @@ use super::errors::TestError;
 use super::parallel::{TestCategory, TestInfo, TestPriority};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::time::Duration;
 use tokio::process::Command;
 use tracing::{debug, info, warn};
 

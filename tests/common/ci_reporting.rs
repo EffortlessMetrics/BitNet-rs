@@ -5,14 +5,14 @@
 
 use crate::results::{TestResult, TestSuiteResult};
 use anyhow::{Context, Result};
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::fs;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 /// GitHub API client for CI reporting
 pub struct GitHubReporter {
