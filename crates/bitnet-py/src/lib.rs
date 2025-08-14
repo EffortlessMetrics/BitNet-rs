@@ -30,10 +30,7 @@ fn bitnet_py(py: Python<'_>, m: &PyModule) -> PyResult<()> {
     // Add version information
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add("__author__", "BitNet.rs Team")?;
-    m.add(
-        "__description__",
-        "High-performance BitNet inference in Rust with Python bindings",
-    )?;
+    m.add("__description__", "High-performance BitNet inference in Rust with Python bindings")?;
 
     // Add main classes
     m.add_class::<PyBitNetModel>()?;
@@ -140,10 +137,7 @@ fn list_available_models(path: &str) -> PyResult<Vec<String>> {
             let path = entry.path();
 
             if let Some(ext) = path.extension() {
-                if matches!(
-                    ext.to_str(),
-                    Some("gguf") | Some("safetensors") | Some("bin")
-                ) {
+                if matches!(ext.to_str(), Some("gguf") | Some("safetensors") | Some("bin")) {
                     if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                         models.push(name.to_string());
                     }
@@ -219,10 +213,7 @@ fn parse_device(device_str: &str) -> PyResult<bitnet_common::Device> {
             })?;
             Ok(bitnet_common::Device::Cuda(device_id))
         }
-        _ => Err(PyValueError::new_err(format!(
-            "Unsupported device: {}",
-            device_str
-        ))),
+        _ => Err(PyValueError::new_err(format!("Unsupported device: {}", device_str))),
     }
 }
 
@@ -246,22 +237,10 @@ mod tests {
 
     #[test]
     fn test_parse_device() {
-        assert!(matches!(
-            parse_device("cpu").unwrap(),
-            bitnet_common::Device::Cpu
-        ));
-        assert!(matches!(
-            parse_device("cuda").unwrap(),
-            bitnet_common::Device::Cuda(0)
-        ));
-        assert!(matches!(
-            parse_device("cuda:1").unwrap(),
-            bitnet_common::Device::Cuda(1)
-        ));
-        assert!(matches!(
-            parse_device("metal").unwrap(),
-            bitnet_common::Device::Metal
-        ));
+        assert!(matches!(parse_device("cpu").unwrap(), bitnet_common::Device::Cpu));
+        assert!(matches!(parse_device("cuda").unwrap(), bitnet_common::Device::Cuda(0)));
+        assert!(matches!(parse_device("cuda:1").unwrap(), bitnet_common::Device::Cuda(1)));
+        assert!(matches!(parse_device("metal").unwrap(), bitnet_common::Device::Metal));
         assert!(parse_device("invalid").is_err());
     }
 

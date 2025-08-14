@@ -25,10 +25,7 @@ pub struct PyInferenceEngine {
 
 impl PyInferenceEngine {
     pub fn new(engine: InferenceEngine, device: Device) -> Self {
-        Self {
-            inner: Arc::new(RwLock::new(engine)),
-            device,
-        }
+        Self { inner: Arc::new(RwLock::new(engine)), device }
     }
 }
 
@@ -208,12 +205,7 @@ pub struct PyStreamingGenerator {
 
 impl PyStreamingGenerator {
     fn new(engine: Arc<RwLock<InferenceEngine>>, prompt: String, config: GenerationConfig) -> Self {
-        Self {
-            engine,
-            prompt,
-            config,
-            started: false,
-        }
+        Self { engine, prompt, config, started: false }
     }
 }
 

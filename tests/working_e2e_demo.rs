@@ -27,23 +27,16 @@ fn test_complete_quantization_pipeline() {
 
     // Verify tensor properties
     let recovered = dequantized.unwrap();
-    assert_eq!(
-        recovered.shape(),
-        tensor.shape(),
-        "Shape should be preserved"
-    );
+    assert_eq!(recovered.shape(), tensor.shape(), "Shape should be preserved");
 
     // Test round-trip with data validation
     let original_data = tensor.as_slice::<f32>().unwrap();
     let recovered_data = recovered.as_slice::<f32>().unwrap();
 
     // Calculate mean squared error
-    let mse = original_data
-        .iter()
-        .zip(recovered_data.iter())
-        .map(|(a, b)| (a - b).powi(2))
-        .sum::<f32>()
-        / original_data.len() as f32;
+    let mse =
+        original_data.iter().zip(recovered_data.iter()).map(|(a, b)| (a - b).powi(2)).sum::<f32>()
+            / original_data.len() as f32;
 
     println!("I2S Round-trip MSE: {:.6}", mse);
     assert!(mse < 1.0, "Round-trip error should be reasonable");
@@ -55,18 +48,9 @@ fn test_multi_quantizer_comparison() {
 
     // Test all quantization methods
     let quantizers = vec![
-        (
-            "I2S",
-            Box::new(I2SQuantizer::new()) as Box<dyn TestQuantizer>,
-        ),
-        (
-            "TL1",
-            Box::new(TL1Quantizer::new()) as Box<dyn TestQuantizer>,
-        ),
-        (
-            "TL2",
-            Box::new(TL2Quantizer::new()) as Box<dyn TestQuantizer>,
-        ),
+        ("I2S", Box::new(I2SQuantizer::new()) as Box<dyn TestQuantizer>),
+        ("TL1", Box::new(TL1Quantizer::new()) as Box<dyn TestQuantizer>),
+        ("TL2", Box::new(TL2Quantizer::new()) as Box<dyn TestQuantizer>),
     ];
 
     for (name, quantizer) in quantizers {
@@ -76,19 +60,10 @@ fn test_multi_quantizer_comparison() {
         assert!(quantized.is_ok(), "{} quantization should succeed", name);
 
         let dequantized = quantizer.test_dequantize(&quantized.unwrap());
-        assert!(
-            dequantized.is_ok(),
-            "{} dequantization should succeed",
-            name
-        );
+        assert!(dequantized.is_ok(), "{} dequantization should succeed", name);
 
         let recovered = dequantized.unwrap();
-        assert_eq!(
-            recovered.shape(),
-            tensor.shape(),
-            "{} should preserve tensor shape",
-            name
-        );
+        assert_eq!(recovered.shape(), tensor.shape(), "{} should preserve tensor shape", name);
     }
 }
 
@@ -96,10 +71,7 @@ fn test_multi_quantizer_comparison() {
 fn test_kernel_provider_selection() {
     // Test automatic kernel provider selection
     let provider = select_best_provider();
-    assert!(
-        provider.is_available(),
-        "Selected provider should be available"
-    );
+    assert!(provider.is_available(), "Selected provider should be available");
 
     println!("Selected provider: {}", provider.name());
 
@@ -113,17 +85,10 @@ fn test_kernel_provider_selection() {
 
     // Test matrix multiplication kernel
     let matmul_result = provider.matmul_i2s(&tensor_a, &tensor_b);
-    assert!(
-        matmul_result.is_ok(),
-        "Matrix multiplication kernel should work"
-    );
+    assert!(matmul_result.is_ok(), "Matrix multiplication kernel should work");
 
     let output = matmul_result.unwrap();
-    assert_eq!(
-        output.shape(),
-        vec![16, 16],
-        "Output shape should be correct"
-    );
+    assert_eq!(output.shape(), vec![16, 16], "Output shape should be correct");
 }
 
 #[test]
@@ -177,17 +142,11 @@ fn test_error_handling_workflow() {
     invalid_config.model.vocab_size = 0; // Invalid
 
     let validation_result = invalid_config.validate();
-    assert!(
-        validation_result.is_err(),
-        "Invalid config should fail validation"
-    );
+    assert!(validation_result.is_err(), "Invalid config should fail validation");
 
     let error = validation_result.unwrap_err();
     println!("Validation error (expected): {}", error);
-    assert!(
-        !format!("{}", error).is_empty(),
-        "Error should have message"
-    );
+    assert!(!format!("{}", error).is_empty(), "Error should have message");
 
     // Test file loading errors
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
@@ -221,10 +180,7 @@ fn test_device_compatibility() {
 
         // Test basic operations
         assert_eq!(tensor.shape(), &[32, 32], "Tensor shape should be correct");
-        assert!(
-            tensor.as_slice::<f32>().is_ok(),
-            "Should be able to access data"
-        );
+        assert!(tensor.as_slice::<f32>().is_ok(), "Should be able to access data");
 
         // Test quantization on this device
         let quantizer = I2SQuantizer::new();
@@ -260,19 +216,11 @@ fn test_memory_management() {
 
     for (i, tensor) in tensors.iter().enumerate() {
         let result = quantizer.quantize_tensor(tensor);
-        assert!(
-            result.is_ok(),
-            "Quantization of tensor {} should succeed",
-            i
-        );
+        assert!(result.is_ok(), "Quantization of tensor {} should succeed", i);
 
         if let Ok(quantized) = result {
             let deq_result = quantizer.dequantize_tensor(&quantized);
-            assert!(
-                deq_result.is_ok(),
-                "Dequantization of tensor {} should succeed",
-                i
-            );
+            assert!(deq_result.is_ok(), "Dequantization of tensor {} should succeed", i);
         }
     }
 
@@ -296,16 +244,14 @@ impl TestQuantizer for I2SQuantizer {
         &self,
         tensor: &MockTensor,
     ) -> Result<bitnet_quantization::QuantizedTensor, Box<dyn std::error::Error>> {
-        self.quantize_tensor(tensor)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+        self.quantize_tensor(tensor).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
     }
 
     fn test_dequantize(
         &self,
         quantized: &bitnet_quantization::QuantizedTensor,
     ) -> Result<bitnet_common::BitNetTensor, Box<dyn std::error::Error>> {
-        self.dequantize_tensor(quantized)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+        self.dequantize_tensor(quantized).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
     }
 }
 
@@ -314,16 +260,14 @@ impl TestQuantizer for TL1Quantizer {
         &self,
         tensor: &MockTensor,
     ) -> Result<bitnet_quantization::QuantizedTensor, Box<dyn std::error::Error>> {
-        self.quantize_tensor(tensor)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+        self.quantize_tensor(tensor).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
     }
 
     fn test_dequantize(
         &self,
         quantized: &bitnet_quantization::QuantizedTensor,
     ) -> Result<bitnet_common::BitNetTensor, Box<dyn std::error::Error>> {
-        self.dequantize_tensor(quantized)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+        self.dequantize_tensor(quantized).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
     }
 }
 
@@ -332,15 +276,13 @@ impl TestQuantizer for TL2Quantizer {
         &self,
         tensor: &MockTensor,
     ) -> Result<bitnet_quantization::QuantizedTensor, Box<dyn std::error::Error>> {
-        self.quantize_tensor(tensor)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+        self.quantize_tensor(tensor).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
     }
 
     fn test_dequantize(
         &self,
         quantized: &bitnet_quantization::QuantizedTensor,
     ) -> Result<bitnet_common::BitNetTensor, Box<dyn std::error::Error>> {
-        self.dequantize_tensor(quantized)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+        self.dequantize_tensor(quantized).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
     }
 }

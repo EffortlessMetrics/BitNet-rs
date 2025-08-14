@@ -108,21 +108,9 @@ impl TestCase for BasicBatchProcessingTest {
         // Test batch processing with different configurations
         debug!("Testing batch with different configurations");
         let batch_configs = vec![
-            GenerationConfig {
-                max_new_tokens: 3,
-                temperature: 0.0,
-                ..Default::default()
-            },
-            GenerationConfig {
-                max_new_tokens: 5,
-                temperature: 0.5,
-                ..Default::default()
-            },
-            GenerationConfig {
-                max_new_tokens: 7,
-                temperature: 1.0,
-                ..Default::default()
-            },
+            GenerationConfig { max_new_tokens: 3, temperature: 0.0, ..Default::default() },
+            GenerationConfig { max_new_tokens: 5, temperature: 0.5, ..Default::default() },
+            GenerationConfig { max_new_tokens: 7, temperature: 1.0, ..Default::default() },
         ];
 
         let config_prompt = "Configuration batch test";
@@ -138,12 +126,9 @@ impl TestCase for BasicBatchProcessingTest {
             );
 
             let config_start = Instant::now();
-            let result = engine
-                .generate_with_config(config_prompt, config)
-                .await
-                .map_err(|e| {
-                    TestError::execution(format!("Config batch item {} failed: {}", i + 1, e))
-                })?;
+            let result = engine.generate_with_config(config_prompt, config).await.map_err(|e| {
+                TestError::execution(format!("Config batch item {} failed: {}", i + 1, e))
+            })?;
             let config_time = config_start.elapsed();
 
             config_results.push(result);
@@ -167,21 +152,13 @@ impl TestCase for BasicBatchProcessingTest {
         let mut mixed_token_counts = Vec::new();
 
         for (i, prompt) in mixed_prompts.iter().enumerate() {
-            debug!(
-                "Processing mixed batch item {}: {} chars",
-                i + 1,
-                prompt.len()
-            );
+            debug!("Processing mixed batch item {}: {} chars", i + 1, prompt.len());
 
             let mixed_start = Instant::now();
 
             // Get token count for analysis
             let tokens = tokenizer.encode(prompt, true).map_err(|e| {
-                TestError::execution(format!(
-                    "Tokenization failed for mixed item {}: {}",
-                    i + 1,
-                    e
-                ))
+                TestError::execution(format!("Tokenization failed for mixed item {}: {}", i + 1, e))
             })?;
             mixed_token_counts.push(tokens.len());
 
@@ -235,36 +212,15 @@ impl TestCase for BasicBatchProcessingTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "sequential_batch_size".to_string(),
-                    batch_prompts.len() as f64,
-                ),
-                (
-                    "sequential_total_time_ms".to_string(),
-                    sequential_total_time.as_millis() as f64,
-                ),
-                (
-                    "avg_sequential_time_ms".to_string(),
-                    avg_sequential_time.as_millis() as f64,
-                ),
-                (
-                    "max_sequential_time_ms".to_string(),
-                    max_sequential_time.as_millis() as f64,
-                ),
-                (
-                    "min_sequential_time_ms".to_string(),
-                    min_sequential_time.as_millis() as f64,
-                ),
+                ("sequential_batch_size".to_string(), batch_prompts.len() as f64),
+                ("sequential_total_time_ms".to_string(), sequential_total_time.as_millis() as f64),
+                ("avg_sequential_time_ms".to_string(), avg_sequential_time.as_millis() as f64),
+                ("max_sequential_time_ms".to_string(), max_sequential_time.as_millis() as f64),
+                ("min_sequential_time_ms".to_string(), min_sequential_time.as_millis() as f64),
                 ("config_batch_size".to_string(), batch_configs.len() as f64),
-                (
-                    "avg_config_time_ms".to_string(),
-                    avg_config_time.as_millis() as f64,
-                ),
+                ("avg_config_time_ms".to_string(), avg_config_time.as_millis() as f64),
                 ("mixed_batch_size".to_string(), mixed_prompts.len() as f64),
-                (
-                    "avg_mixed_time_ms".to_string(),
-                    avg_mixed_time.as_millis() as f64,
-                ),
+                ("avg_mixed_time_ms".to_string(), avg_mixed_time.as_millis() as f64),
                 ("avg_token_count".to_string(), avg_token_count),
                 ("max_token_count".to_string(), *max_token_count as f64),
                 ("min_token_count".to_string(), *min_token_count as f64),
@@ -342,12 +298,7 @@ impl TestCase for ParallelBatchProcessingTest {
         for (i, handle) in concurrent_handles {
             match handle.await {
                 Ok(Ok((result, duration))) => {
-                    debug!(
-                        "Concurrent task {} completed in {:?}: '{}'",
-                        i + 1,
-                        duration,
-                        result
-                    );
+                    debug!("Concurrent task {} completed in {:?}: '{}'", i + 1, duration, result);
                     concurrent_results.push(result);
                     concurrent_times.push(duration);
                     successful_concurrent += 1;
@@ -435,10 +386,8 @@ impl TestCase for ParallelBatchProcessingTest {
 
         let batch_prompts = vec!["Batch future 1", "Batch future 2", "Batch future 3"];
 
-        let batch_futures: Vec<_> = batch_prompts
-            .iter()
-            .map(|prompt| batch_engine.generate(prompt))
-            .collect();
+        let batch_futures: Vec<_> =
+            batch_prompts.iter().map(|prompt| batch_engine.generate(prompt)).collect();
 
         let batch_start = Instant::now();
         let batch_results = join_all(batch_futures).await;
@@ -472,9 +421,7 @@ impl TestCase for ParallelBatchProcessingTest {
 
             let handle = tokio::spawn(async move {
                 let engine = InferenceEngine::new(model_clone, tokenizer_clone, device)?;
-                let result = engine
-                    .generate(&format!("Contention test {}", i + 1))
-                    .await?;
+                let result = engine.generate(&format!("Contention test {}", i + 1)).await?;
                 Ok::<String, anyhow::Error>(result)
             });
 
@@ -520,53 +467,23 @@ impl TestCase for ParallelBatchProcessingTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "concurrent_tasks".to_string(),
-                    concurrent_prompts.len() as f64,
-                ),
-                (
-                    "successful_concurrent".to_string(),
-                    successful_concurrent as f64,
-                ),
+                ("concurrent_tasks".to_string(), concurrent_prompts.len() as f64),
+                ("successful_concurrent".to_string(), successful_concurrent as f64),
                 ("failed_concurrent".to_string(), failed_concurrent as f64),
-                (
-                    "concurrent_total_time_ms".to_string(),
-                    concurrent_total_time.as_millis() as f64,
-                ),
-                (
-                    "avg_concurrent_time_ms".to_string(),
-                    avg_concurrent_time.as_millis() as f64,
-                ),
+                ("concurrent_total_time_ms".to_string(), concurrent_total_time.as_millis() as f64),
+                ("avg_concurrent_time_ms".to_string(), avg_concurrent_time.as_millis() as f64),
                 ("shared_tasks".to_string(), shared_prompts.len() as f64),
                 ("successful_shared".to_string(), successful_shared as f64),
-                (
-                    "shared_total_time_ms".to_string(),
-                    shared_total_time.as_millis() as f64,
-                ),
-                (
-                    "avg_shared_time_ms".to_string(),
-                    avg_shared_time.as_millis() as f64,
-                ),
+                ("shared_total_time_ms".to_string(), shared_total_time.as_millis() as f64),
+                ("avg_shared_time_ms".to_string(), avg_shared_time.as_millis() as f64),
                 ("batch_tasks".to_string(), batch_prompts.len() as f64),
                 ("successful_batch".to_string(), successful_batch as f64),
                 ("failed_batch".to_string(), failed_batch as f64),
-                (
-                    "batch_total_time_ms".to_string(),
-                    batch_total_time.as_millis() as f64,
-                ),
+                ("batch_total_time_ms".to_string(), batch_total_time.as_millis() as f64),
                 ("contention_tasks".to_string(), contention_count as f64),
-                (
-                    "contention_successes".to_string(),
-                    contention_successes as f64,
-                ),
-                (
-                    "contention_failures".to_string(),
-                    contention_failures as f64,
-                ),
-                (
-                    "contention_total_time_ms".to_string(),
-                    contention_total_time.as_millis() as f64,
-                ),
+                ("contention_successes".to_string(), contention_successes as f64),
+                ("contention_failures".to_string(), contention_failures as f64),
+                ("contention_total_time_ms".to_string(), contention_total_time.as_millis() as f64),
             ]
             .into_iter()
             .collect(),
@@ -608,10 +525,7 @@ impl TestCase for BatchSizeOptimizationTest {
             debug!("Testing batch size: {}", batch_size);
 
             // Create inference config with specific batch size
-            let config = InferenceConfig {
-                batch_size,
-                ..Default::default()
-            };
+            let config = InferenceConfig { batch_size, ..Default::default() };
 
             let engine =
                 InferenceEngine::with_config(model.clone(), tokenizer.clone(), device, config)
@@ -671,10 +585,8 @@ impl TestCase for BatchSizeOptimizationTest {
         let mut memory_measurements = Vec::new();
 
         for batch_size in [1, 4, 8] {
-            let memory_config = InferenceConfig {
-                batch_size,
-                ..InferenceConfig::memory_efficient()
-            };
+            let memory_config =
+                InferenceConfig { batch_size, ..InferenceConfig::memory_efficient() };
 
             let memory_engine = InferenceEngine::with_config(
                 model.clone(),
@@ -719,12 +631,8 @@ impl TestCase for BatchSizeOptimizationTest {
             })?;
 
         // Simulate varying load
-        let load_patterns = vec![
-            ("Low load", 2),
-            ("Medium load", 5),
-            ("High load", 10),
-            ("Peak load", 15),
-        ];
+        let load_patterns =
+            vec![("Low load", 2), ("Medium load", 5), ("High load", 10), ("Peak load", 15)];
 
         let mut adaptive_results = Vec::new();
 
@@ -744,9 +652,7 @@ impl TestCase for BatchSizeOptimizationTest {
                 })?;
 
                 let handle = tokio::spawn(async move {
-                    engine_clone
-                        .generate(&format!("{} request {}", load_name, i + 1))
-                        .await
+                    engine_clone.generate(&format!("{} request {}", load_name, i + 1)).await
                 });
 
                 adaptive_handles.push(handle);
@@ -789,11 +695,9 @@ impl TestCase for BatchSizeOptimizationTest {
             .map(|(_, _, _, throughput)| *throughput)
             .fold(0.0f64, |a, b| a.max(b));
 
-        let avg_throughput = batch_size_results
-            .iter()
-            .map(|(_, _, _, throughput)| *throughput)
-            .sum::<f64>()
-            / batch_size_results.len() as f64;
+        let avg_throughput =
+            batch_size_results.iter().map(|(_, _, _, throughput)| *throughput).sum::<f64>()
+                / batch_size_results.len() as f64;
 
         let total_adaptive_requests: usize =
             adaptive_results.iter().map(|(reqs, _, _, _)| *reqs).sum();
@@ -810,34 +714,16 @@ impl TestCase for BatchSizeOptimizationTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "batch_sizes_tested".to_string(),
-                    batch_size_results.len() as f64,
-                ),
+                ("batch_sizes_tested".to_string(), batch_size_results.len() as f64),
                 ("optimal_batch_size".to_string(), optimal_batch_size as f64),
                 ("max_throughput".to_string(), max_throughput),
                 ("avg_throughput".to_string(), avg_throughput),
-                (
-                    "memory_configs_tested".to_string(),
-                    memory_measurements.len() as f64,
-                ),
-                (
-                    "load_patterns_tested".to_string(),
-                    load_patterns.len() as f64,
-                ),
-                (
-                    "total_adaptive_requests".to_string(),
-                    total_adaptive_requests as f64,
-                ),
-                (
-                    "total_adaptive_successful".to_string(),
-                    total_adaptive_successful as f64,
-                ),
+                ("memory_configs_tested".to_string(), memory_measurements.len() as f64),
+                ("load_patterns_tested".to_string(), load_patterns.len() as f64),
+                ("total_adaptive_requests".to_string(), total_adaptive_requests as f64),
+                ("total_adaptive_successful".to_string(), total_adaptive_successful as f64),
                 ("adaptive_success_rate".to_string(), adaptive_success_rate),
-                (
-                    "model_forward_calls".to_string(),
-                    model.forward_call_count() as f64,
-                ),
+                ("model_forward_calls".to_string(), model.forward_call_count() as f64),
             ]
             .into_iter()
             .collect(),
@@ -900,11 +786,7 @@ impl TestCase for BatchResourceManagementTest {
             let batch_stats = memory_engine.get_stats().await;
             memory_progression.push(batch_stats.cache_usage);
 
-            debug!(
-                "After batch {}: cache_usage={:.2}%",
-                batch_i + 1,
-                batch_stats.cache_usage
-            );
+            debug!("After batch {}: cache_usage={:.2}%", batch_i + 1, batch_stats.cache_usage);
         }
 
         // Test cache cleanup during batch processing
@@ -912,10 +794,7 @@ impl TestCase for BatchResourceManagementTest {
         memory_engine.clear_cache().await;
 
         let after_cleanup_stats = memory_engine.get_stats().await;
-        debug!(
-            "After cleanup: cache_usage={:.2}%",
-            after_cleanup_stats.cache_usage
-        );
+        debug!("After cleanup: cache_usage={:.2}%", after_cleanup_stats.cache_usage);
 
         if after_cleanup_stats.cache_usage > initial_stats.cache_usage + 10.0 {
             warn!("Cache usage didn't decrease significantly after cleanup");
@@ -935,9 +814,8 @@ impl TestCase for BatchResourceManagementTest {
                 })?;
 
         // Try to exceed resource limits
-        let stress_prompts = (0..20)
-            .map(|i| format!("Resource stress test {}", i + 1))
-            .collect::<Vec<_>>();
+        let stress_prompts =
+            (0..20).map(|i| format!("Resource stress test {}", i + 1)).collect::<Vec<_>>();
 
         let mut stress_successes = 0;
         let mut stress_failures = 0;
@@ -1015,9 +893,7 @@ impl TestCase for BatchResourceManagementTest {
 
         // Process a batch
         for i in 0..5 {
-            let _ = cleanup_engine
-                .generate(&format!("Cleanup test {}", i + 1))
-                .await;
+            let _ = cleanup_engine.generate(&format!("Cleanup test {}", i + 1)).await;
         }
 
         let before_cleanup = cleanup_engine.get_stats().await;
@@ -1061,32 +937,14 @@ impl TestCase for BatchResourceManagementTest {
                 ("max_memory_usage_percent".to_string(), max_memory_usage),
                 ("memory_growth_percent".to_string(), memory_growth),
                 ("initial_cache_usage".to_string(), initial_stats.cache_usage),
-                (
-                    "after_cleanup_cache_usage".to_string(),
-                    after_cleanup_stats.cache_usage,
-                ),
+                ("after_cleanup_cache_usage".to_string(), after_cleanup_stats.cache_usage),
                 ("stress_successes".to_string(), stress_successes as f64),
                 ("stress_failures".to_string(), stress_failures as f64),
-                (
-                    "concurrent_engines_tested".to_string(),
-                    concurrent_engines as f64,
-                ),
-                (
-                    "successful_concurrent_engines".to_string(),
-                    successful_concurrent_engines as f64,
-                ),
-                (
-                    "avg_concurrent_cache_usage".to_string(),
-                    avg_concurrent_cache_usage,
-                ),
-                (
-                    "before_batch_cleanup_usage".to_string(),
-                    before_cleanup.cache_usage,
-                ),
-                (
-                    "after_batch_cleanup_usage".to_string(),
-                    after_batch_cleanup.cache_usage,
-                ),
+                ("concurrent_engines_tested".to_string(), concurrent_engines as f64),
+                ("successful_concurrent_engines".to_string(), successful_concurrent_engines as f64),
+                ("avg_concurrent_cache_usage".to_string(), avg_concurrent_cache_usage),
+                ("before_batch_cleanup_usage".to_string(), before_cleanup.cache_usage),
+                ("after_batch_cleanup_usage".to_string(), after_batch_cleanup.cache_usage),
             ]
             .into_iter()
             .collect(),
@@ -1188,9 +1046,7 @@ impl TestCase for BatchErrorHandlingTest {
         }
 
         if recovery_successes == 0 {
-            return Err(TestError::assertion(
-                "Should have at least some successful recovery",
-            ));
+            return Err(TestError::assertion("Should have at least some successful recovery"));
         }
 
         // Test concurrent error handling
@@ -1234,11 +1090,7 @@ impl TestCase for BatchErrorHandlingTest {
                     concurrent_error_failures += 1;
                 }
                 Ok(Err(e)) => {
-                    debug!(
-                        "Concurrent error test {} engine creation failed: {}",
-                        i + 1,
-                        e
-                    );
+                    debug!("Concurrent error test {} engine creation failed: {}", i + 1, e);
                     concurrent_error_failures += 1;
                 }
                 Err(e) => {
@@ -1318,39 +1170,18 @@ impl TestCase for BatchErrorHandlingTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "mixed_prompts_tested".to_string(),
-                    mixed_prompts.len() as f64,
-                ),
+                ("mixed_prompts_tested".to_string(), mixed_prompts.len() as f64),
                 ("partial_successes".to_string(), partial_successes as f64),
                 ("partial_failures".to_string(), partial_failures as f64),
                 ("partial_success_rate".to_string(), partial_success_rate),
-                (
-                    "recovery_prompts_tested".to_string(),
-                    recovery_prompts.len() as f64,
-                ),
+                ("recovery_prompts_tested".to_string(), recovery_prompts.len() as f64),
                 ("recovery_successes".to_string(), recovery_successes as f64),
                 ("recovery_success_rate".to_string(), recovery_success_rate),
-                (
-                    "concurrent_error_prompts".to_string(),
-                    concurrent_error_prompts.len() as f64,
-                ),
-                (
-                    "concurrent_error_successes".to_string(),
-                    concurrent_error_successes as f64,
-                ),
-                (
-                    "concurrent_error_failures".to_string(),
-                    concurrent_error_failures as f64,
-                ),
-                (
-                    "concurrent_success_rate".to_string(),
-                    concurrent_success_rate,
-                ),
-                (
-                    "timeout_prompts_tested".to_string(),
-                    timeout_prompts.len() as f64,
-                ),
+                ("concurrent_error_prompts".to_string(), concurrent_error_prompts.len() as f64),
+                ("concurrent_error_successes".to_string(), concurrent_error_successes as f64),
+                ("concurrent_error_failures".to_string(), concurrent_error_failures as f64),
+                ("concurrent_success_rate".to_string(), concurrent_success_rate),
+                ("timeout_prompts_tested".to_string(), timeout_prompts.len() as f64),
                 ("timeout_successes".to_string(), timeout_successes as f64),
                 ("timeout_success_rate".to_string(), timeout_success_rate),
                 ("error_isolation_successful".to_string(), 1.0),

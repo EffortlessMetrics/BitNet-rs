@@ -198,9 +198,7 @@ pub struct ImplementationRegistry {
 
 impl ImplementationRegistry {
     pub fn new() -> Self {
-        Self {
-            implementations: HashMap::new(),
-        }
+        Self { implementations: HashMap::new() }
     }
 
     pub fn register<F>(&mut self, name: String, factory: F)
@@ -214,12 +212,10 @@ impl ImplementationRegistry {
         &self,
         name: &str,
     ) -> ImplementationResult<Box<dyn BitNetImplementation>> {
-        let factory =
-            self.implementations
-                .get(name)
-                .ok_or_else(|| ImplementationError::NotAvailable {
-                    name: name.to_string(),
-                })?;
+        let factory = self
+            .implementations
+            .get(name)
+            .ok_or_else(|| ImplementationError::NotAvailable { name: name.to_string() })?;
 
         factory.create().await
     }
@@ -269,10 +265,7 @@ pub struct ResourceLimits {
 
 impl ResourceManager {
     pub fn new(limits: ResourceLimits) -> Self {
-        Self {
-            active_implementations: HashMap::new(),
-            resource_limits: limits,
-        }
+        Self { active_implementations: HashMap::new(), resource_limits: limits }
     }
 
     pub async fn add_implementation(
@@ -470,12 +463,7 @@ pub mod utils {
         let end_memory = get_memory_usage();
         let peak_memory = get_peak_memory_usage();
 
-        (
-            result,
-            duration,
-            end_memory.saturating_sub(start_memory),
-            peak_memory,
-        )
+        (result, duration, end_memory.saturating_sub(start_memory), peak_memory)
     }
 }
 

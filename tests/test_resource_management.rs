@@ -13,9 +13,7 @@ async fn test_resource_management_suite() {
     let config = TestConfig::default();
 
     // Create test harness
-    let mut harness = TestHarness::new(config)
-        .await
-        .expect("Failed to create test harness");
+    let mut harness = TestHarness::new(config).await.expect("Failed to create test harness");
     harness.add_reporter(Box::new(ConsoleReporter::new(true)));
 
     // Create and run resource management test suite
@@ -52,9 +50,8 @@ async fn test_memory_leak_detection() {
     let _ = tracing_subscriber::fmt::try_init();
 
     let fixture_config = FixtureConfig::default();
-    let fixtures = FixtureManager::new(&fixture_config)
-        .await
-        .expect("Failed to create fixture manager");
+    let fixtures =
+        FixtureManager::new(&fixture_config).await.expect("Failed to create fixture manager");
 
     let test = MemoryLeakDetectionTest::new();
 
@@ -92,9 +89,8 @@ async fn test_file_handle_management() {
     let _ = tracing_subscriber::fmt::try_init();
 
     let fixture_config = FixtureConfig::default();
-    let fixtures = FixtureManager::new(&fixture_config)
-        .await
-        .expect("Failed to create fixture manager");
+    let fixtures =
+        FixtureManager::new(&fixture_config).await.expect("Failed to create fixture manager");
 
     let test = FileHandleLeakTest::new();
 
@@ -117,10 +113,7 @@ async fn test_file_handle_management() {
             assert!(metrics.custom_metrics.contains_key("remaining_handles"));
 
             // Verify no handles leaked
-            let remaining = metrics
-                .custom_metrics
-                .get("remaining_handles")
-                .unwrap_or(&1.0);
+            let remaining = metrics.custom_metrics.get("remaining_handles").unwrap_or(&1.0);
             assert_eq!(*remaining, 0.0, "File handles leaked: {}", remaining);
         }
         Err(e) => {

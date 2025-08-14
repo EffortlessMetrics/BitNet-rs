@@ -86,10 +86,7 @@ pub struct ConfigValidator {
 
 impl ConfigValidator {
     pub fn new() -> Self {
-        Self {
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        }
+        Self { errors: Vec::new(), warnings: Vec::new() }
     }
 
     /// Validate a configuration and return detailed results
@@ -132,10 +129,8 @@ impl ConfigValidator {
             && settings.host != "127.0.0.1"
             && settings.host != "localhost"
         {
-            self.warnings.push(format!(
-                "Port {} requires root privileges on most systems",
-                settings.port
-            ));
+            self.warnings
+                .push(format!("Port {} requires root privileges on most systems", settings.port));
         }
 
         // Validate workers
@@ -167,8 +162,7 @@ impl ConfigValidator {
         if settings.request_timeout_seconds == 0 {
             self.errors.push("Request timeout cannot be 0".to_string());
         } else if settings.request_timeout_seconds > 3600 {
-            self.warnings
-                .push("Request timeout > 1 hour may cause resource issues".to_string());
+            self.warnings.push("Request timeout > 1 hour may cause resource issues".to_string());
         }
 
         if settings.graceful_shutdown_timeout_seconds > 300 {
@@ -181,12 +175,10 @@ impl ConfigValidator {
         // Validate Prometheus settings
         if settings.prometheus_enabled {
             if !settings.prometheus_path.starts_with('/') {
-                self.errors
-                    .push("Prometheus path must start with '/'".to_string());
+                self.errors.push("Prometheus path must start with '/'".to_string());
             }
             if settings.prometheus_path.contains("..") {
-                self.errors
-                    .push("Prometheus path cannot contain '..'".to_string());
+                self.errors.push("Prometheus path cannot contain '..'".to_string());
             }
         }
 
@@ -206,16 +198,14 @@ impl ConfigValidator {
 
         // Validate health check settings
         if !settings.health_path.starts_with('/') {
-            self.errors
-                .push("Health path must start with '/'".to_string());
+            self.errors.push("Health path must start with '/'".to_string());
         }
 
         // Validate metrics interval
         if settings.metrics_interval == 0 {
             self.errors.push("Metrics interval cannot be 0".to_string());
         } else if settings.metrics_interval < 5 {
-            self.warnings
-                .push("Metrics interval < 5 seconds may cause high CPU usage".to_string());
+            self.warnings.push("Metrics interval < 5 seconds may cause high CPU usage".to_string());
         }
 
         // Validate log settings
@@ -241,23 +231,19 @@ impl ConfigValidator {
     fn validate_inference_settings(&mut self, settings: &InferenceSettings) {
         // Validate model name
         if settings.default_model.is_empty() {
-            self.errors
-                .push("Default model name cannot be empty".to_string());
+            self.errors.push("Default model name cannot be empty".to_string());
         }
 
         // Validate token limits
         if settings.max_tokens_per_request == 0 {
-            self.errors
-                .push("Max tokens per request cannot be 0".to_string());
+            self.errors.push("Max tokens per request cannot be 0".to_string());
         } else if settings.max_tokens_per_request > 32768 {
-            self.warnings
-                .push("Max tokens per request > 32K may cause memory issues".to_string());
+            self.warnings.push("Max tokens per request > 32K may cause memory issues".to_string());
         }
 
         // Validate concurrency
         if settings.max_concurrent_requests == 0 {
-            self.errors
-                .push("Max concurrent requests cannot be 0".to_string());
+            self.errors.push("Max concurrent requests cannot be 0".to_string());
         } else if settings.max_concurrent_requests > 1000 {
             self.warnings
                 .push("Max concurrent requests > 1000 may overwhelm the system".to_string());
@@ -268,17 +254,14 @@ impl ConfigValidator {
             self.warnings
                 .push("Model cache size is 0, models will be reloaded frequently".to_string());
         } else if settings.model_cache_size > 10 {
-            self.warnings
-                .push("Large model cache may consume significant memory".to_string());
+            self.warnings.push("Large model cache may consume significant memory".to_string());
         }
 
         // Validate batching settings
         if settings.enable_batching && settings.batch_timeout_ms == 0 {
-            self.errors
-                .push("Batch timeout cannot be 0 when batching is enabled".to_string());
+            self.errors.push("Batch timeout cannot be 0 when batching is enabled".to_string());
         } else if settings.batch_timeout_ms > 1000 {
-            self.warnings
-                .push("Batch timeout > 1s may increase latency".to_string());
+            self.warnings.push("Batch timeout > 1s may increase latency".to_string());
         }
     }
 
@@ -316,15 +299,13 @@ impl ConfigValidator {
         if settings.memory_warning_threshold_percent <= 0.0
             || settings.memory_warning_threshold_percent > 100.0
         {
-            self.errors
-                .push("Memory warning threshold must be between 0 and 100".to_string());
+            self.errors.push("Memory warning threshold must be between 0 and 100".to_string());
         }
 
         if settings.memory_critical_threshold_percent <= 0.0
             || settings.memory_critical_threshold_percent > 100.0
         {
-            self.errors
-                .push("Memory critical threshold must be between 0 and 100".to_string());
+            self.errors.push("Memory critical threshold must be between 0 and 100".to_string());
         }
 
         if settings.memory_warning_threshold_percent >= settings.memory_critical_threshold_percent {
@@ -335,10 +316,8 @@ impl ConfigValidator {
 
     fn cross_validate(&mut self, config: &ValidatedConfig) {
         // Check if monitoring endpoints conflict with server endpoints
-        let monitoring_paths = vec![
-            &config.monitoring.prometheus_path,
-            &config.monitoring.health_path,
-        ];
+        let monitoring_paths =
+            vec![&config.monitoring.prometheus_path, &config.monitoring.health_path];
 
         let mut path_counts = HashMap::new();
         for path in monitoring_paths {
@@ -347,16 +326,14 @@ impl ConfigValidator {
 
         for (path, count) in path_counts {
             if count > 1 {
-                self.errors
-                    .push(format!("Duplicate endpoint path: {}", path));
+                self.errors.push(format!("Duplicate endpoint path: {}", path));
             }
         }
 
         // Check resource allocation consistency
-        if let (Some(max_mem), Some(max_concurrent)) = (
-            config.resources.max_memory_mb,
-            Some(config.inference.max_concurrent_requests),
-        ) {
+        if let (Some(max_mem), Some(max_concurrent)) =
+            (config.resources.max_memory_mb, Some(config.inference.max_concurrent_requests))
+        {
             let estimated_memory_per_request = 100; // MB, rough estimate
             let total_estimated = max_concurrent * estimated_memory_per_request;
 
@@ -417,11 +394,7 @@ pub fn load_and_validate_config<P: AsRef<Path>>(path: P) -> Result<ValidatedConf
         Some("json") => {
             serde_json::from_str(&content).with_context(|| "Failed to parse JSON configuration")?
         }
-        _ => {
-            return Err(anyhow::anyhow!(
-                "Unsupported config file format, use .toml or .json"
-            ))
-        }
+        _ => return Err(anyhow::anyhow!("Unsupported config file format, use .toml or .json")),
     };
 
     let mut validator = ConfigValidator::new();

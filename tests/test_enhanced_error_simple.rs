@@ -24,18 +24,12 @@ async fn test_enhanced_error_handling_basic() {
     let steps = timeout_error.troubleshooting_steps();
     println!("✅ Troubleshooting steps count: {}", steps.len());
     for step in &steps {
-        println!(
-            "  Step {}: {} ({})",
-            step.step_number, step.title, step.estimated_time
-        );
+        println!("  Step {}: {} ({})", step.step_number, step.title, step.estimated_time);
     }
 
     // Test that TestResult struct works
-    let test_result = TestResult::passed(
-        "test_example",
-        Default::default(),
-        Duration::from_millis(100),
-    );
+    let test_result =
+        TestResult::passed("test_example", Default::default(), Duration::from_millis(100));
 
     println!("✅ Test result passed: {}", test_result.passed());
     println!("✅ Test result is_success: {}", test_result.is_success());

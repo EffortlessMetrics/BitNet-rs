@@ -35,10 +35,7 @@ pub struct ConfigurationTestSuite {
 
 impl ConfigurationTestSuite {
     pub fn new() -> Self {
-        Self {
-            temp_dirs: Vec::new(),
-            original_env: HashMap::new(),
-        }
+        Self { temp_dirs: Vec::new(), original_env: HashMap::new() }
     }
 
     /// Save current environment variables for restoration
@@ -119,50 +116,23 @@ impl TestCase for DefaultConfigurationTest {
         let config = TestConfig::default();
 
         // Validate default values
-        assert!(
-            config.max_parallel_tests > 0,
-            "Default parallel tests should be > 0"
-        );
-        assert!(
-            config.test_timeout.as_secs() > 0,
-            "Default timeout should be > 0"
-        );
-        assert!(
-            !config.cache_dir.as_os_str().is_empty(),
-            "Default cache dir should not be empty"
-        );
-        assert!(
-            !config.log_level.is_empty(),
-            "Default log level should not be empty"
-        );
+        assert!(config.max_parallel_tests > 0, "Default parallel tests should be > 0");
+        assert!(config.test_timeout.as_secs() > 0, "Default timeout should be > 0");
+        assert!(!config.cache_dir.as_os_str().is_empty(), "Default cache dir should not be empty");
+        assert!(!config.log_level.is_empty(), "Default log level should not be empty");
         assert!(
             config.coverage_threshold >= 0.0 && config.coverage_threshold <= 1.0,
             "Default coverage threshold should be between 0.0 and 1.0"
         );
 
         // Validate fixture configuration defaults
-        assert!(
-            config.fixtures.auto_download,
-            "Auto download should be enabled by default"
-        );
-        assert!(
-            config.fixtures.max_cache_size > 0,
-            "Max cache size should be > 0"
-        );
-        assert!(
-            config.fixtures.cleanup_interval.as_secs() > 0,
-            "Cleanup interval should be > 0"
-        );
-        assert!(
-            config.fixtures.download_timeout.as_secs() > 0,
-            "Download timeout should be > 0"
-        );
+        assert!(config.fixtures.auto_download, "Auto download should be enabled by default");
+        assert!(config.fixtures.max_cache_size > 0, "Max cache size should be > 0");
+        assert!(config.fixtures.cleanup_interval.as_secs() > 0, "Cleanup interval should be > 0");
+        assert!(config.fixtures.download_timeout.as_secs() > 0, "Download timeout should be > 0");
 
         // Validate cross-validation configuration defaults
-        assert!(
-            !config.crossval.enabled,
-            "Cross-validation should be disabled by default"
-        );
+        assert!(!config.crossval.enabled, "Cross-validation should be disabled by default");
         assert!(
             config.crossval.tolerance.min_token_accuracy > 0.0,
             "Min token accuracy should be > 0"
@@ -173,10 +143,7 @@ impl TestCase for DefaultConfigurationTest {
         );
 
         // Validate reporting configuration defaults
-        assert!(
-            !config.reporting.formats.is_empty(),
-            "Should have at least one report format"
-        );
+        assert!(!config.reporting.formats.is_empty(), "Should have at least one report format");
         assert!(
             config.reporting.generate_coverage,
             "Coverage generation should be enabled by default"
@@ -216,61 +183,34 @@ impl TestCase for PredefinedConfigurationsTest {
 
         // Test CI configuration
         let ci_cfg = ci_config();
-        assert!(
-            ci_cfg.reporting.generate_coverage,
-            "CI config should generate coverage"
-        );
+        assert!(ci_cfg.reporting.generate_coverage, "CI config should generate coverage");
         assert!(
             ci_cfg.reporting.formats.contains(&ReportFormat::Junit),
             "CI config should include JUnit format"
         );
-        assert_eq!(
-            ci_cfg.log_level, "debug",
-            "CI config should use debug logging"
-        );
+        assert_eq!(ci_cfg.log_level, "debug", "CI config should use debug logging");
         validate_config(&ci_cfg)
             .map_err(|e| TestError::assertion(format!("CI config validation failed: {}", e)))?;
 
         // Test dev configuration
         let dev_cfg = dev_config();
-        assert!(
-            !dev_cfg.reporting.generate_coverage,
-            "Dev config should skip coverage for speed"
-        );
+        assert!(!dev_cfg.reporting.generate_coverage, "Dev config should skip coverage for speed");
         assert_eq!(
             dev_cfg.reporting.formats,
             vec![ReportFormat::Html],
             "Dev config should only use HTML format"
         );
-        assert_eq!(
-            dev_cfg.log_level, "info",
-            "Dev config should use info logging"
-        );
+        assert_eq!(dev_cfg.log_level, "info", "Dev config should use info logging");
         validate_config(&dev_cfg)
             .map_err(|e| TestError::assertion(format!("Dev config validation failed: {}", e)))?;
 
         // Test minimal configuration
         let minimal_cfg = minimal_config();
-        assert_eq!(
-            minimal_cfg.max_parallel_tests, 1,
-            "Minimal config should use 1 parallel test"
-        );
-        assert!(
-            !minimal_cfg.reporting.generate_coverage,
-            "Minimal config should skip coverage"
-        );
-        assert!(
-            !minimal_cfg.crossval.enabled,
-            "Minimal config should disable cross-validation"
-        );
-        assert!(
-            !minimal_cfg.fixtures.auto_download,
-            "Minimal config should disable auto-download"
-        );
-        assert_eq!(
-            minimal_cfg.log_level, "warn",
-            "Minimal config should use warn logging"
-        );
+        assert_eq!(minimal_cfg.max_parallel_tests, 1, "Minimal config should use 1 parallel test");
+        assert!(!minimal_cfg.reporting.generate_coverage, "Minimal config should skip coverage");
+        assert!(!minimal_cfg.crossval.enabled, "Minimal config should disable cross-validation");
+        assert!(!minimal_cfg.fixtures.auto_download, "Minimal config should disable auto-download");
+        assert_eq!(minimal_cfg.log_level, "warn", "Minimal config should use warn logging");
         validate_config(&minimal_cfg).map_err(|e| {
             TestError::assertion(format!("Minimal config validation failed: {}", e))
         })?;
@@ -318,10 +258,7 @@ impl TestCase for ConfigurationCombinationsTest {
         memory_constrained_config.fixtures.max_cache_size = 100 * 1024 * 1024; // 100MB
         memory_constrained_config.reporting.include_artifacts = false;
         validate_config(&memory_constrained_config).map_err(|e| {
-            TestError::assertion(format!(
-                "Memory-constrained config validation failed: {}",
-                e
-            ))
+            TestError::assertion(format!("Memory-constrained config validation failed: {}", e))
         })?;
 
         // Test comprehensive testing configuration
@@ -401,10 +338,7 @@ impl TestCase for EnvironmentOverrideTest {
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
             .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;
-        assert_eq!(
-            config.max_parallel_tests, 8,
-            "Environment override for parallel tests failed"
-        );
+        assert_eq!(config.max_parallel_tests, 8, "Environment override for parallel tests failed");
 
         // Test timeout override
         env::set_var("BITNET_TEST_TIMEOUT", "120");
@@ -422,10 +356,7 @@ impl TestCase for EnvironmentOverrideTest {
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
             .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;
-        assert_eq!(
-            config.log_level, "trace",
-            "Environment override for log level failed"
-        );
+        assert_eq!(config.log_level, "trace", "Environment override for log level failed");
 
         // Test coverage threshold override
         env::set_var("BITNET_TEST_COVERAGE_THRESHOLD", "0.85");
@@ -443,14 +374,8 @@ impl TestCase for EnvironmentOverrideTest {
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
             .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;
-        assert!(
-            config.crossval.enabled,
-            "Environment override for crossval enabled failed"
-        );
-        assert!(
-            !config.fixtures.auto_download,
-            "Environment override for auto download failed"
-        );
+        assert!(config.crossval.enabled, "Environment override for crossval enabled failed");
+        assert!(!config.fixtures.auto_download, "Environment override for auto download failed");
 
         // Test report formats override
         env::set_var("BITNET_TEST_REPORT_FORMATS", "json,junit");
@@ -500,10 +425,7 @@ impl TestCase for ConfigurationValidationTest {
 
         // Test valid configuration
         let valid_config = TestConfig::default();
-        assert!(
-            validate_config(&valid_config).is_ok(),
-            "Valid config should pass validation"
-        );
+        assert!(validate_config(&valid_config).is_ok(), "Valid config should pass validation");
 
         // Test invalid parallel tests (zero)
         let mut invalid_config = TestConfig::default();
@@ -524,10 +446,7 @@ impl TestCase for ConfigurationValidationTest {
         // Test invalid timeout (zero)
         let mut invalid_config = TestConfig::default();
         invalid_config.test_timeout = Duration::from_secs(0);
-        assert!(
-            validate_config(&invalid_config).is_err(),
-            "Zero timeout should fail validation"
-        );
+        assert!(validate_config(&invalid_config).is_err(), "Zero timeout should fail validation");
 
         // Test invalid timeout (too high)
         let mut invalid_config = TestConfig::default();
@@ -650,27 +569,12 @@ impl TestCase for ConfigurationMergingTest {
         let merged = merge_configs(base_config.clone(), override_config.clone());
 
         // Verify override values took precedence
-        assert_eq!(
-            merged.max_parallel_tests, 16,
-            "Parallel tests should be overridden"
-        );
+        assert_eq!(merged.max_parallel_tests, 16, "Parallel tests should be overridden");
         assert_eq!(merged.log_level, "trace", "Log level should be overridden");
-        assert_eq!(
-            merged.coverage_threshold, 0.95,
-            "Coverage threshold should be overridden"
-        );
-        assert!(
-            !merged.fixtures.auto_download,
-            "Auto download should be overridden"
-        );
-        assert!(
-            merged.crossval.enabled,
-            "Cross-validation should be overridden"
-        );
-        assert!(
-            !merged.reporting.generate_coverage,
-            "Coverage generation should be overridden"
-        );
+        assert_eq!(merged.coverage_threshold, 0.95, "Coverage threshold should be overridden");
+        assert!(!merged.fixtures.auto_download, "Auto download should be overridden");
+        assert!(merged.crossval.enabled, "Cross-validation should be overridden");
+        assert!(!merged.reporting.generate_coverage, "Coverage generation should be overridden");
 
         // Verify base values are preserved where not overridden
         assert_eq!(
@@ -684,26 +588,20 @@ impl TestCase for ConfigurationMergingTest {
 
         // Test merging with empty collections
         let mut base_with_fixtures = TestConfig::default();
-        base_with_fixtures
-            .fixtures
-            .custom_fixtures
-            .push(CustomFixture {
-                name: "base-fixture".to_string(),
-                url: "https://example.com/base.bin".to_string(),
-                checksum: "abc123".to_string(),
-                description: None,
-            });
+        base_with_fixtures.fixtures.custom_fixtures.push(CustomFixture {
+            name: "base-fixture".to_string(),
+            url: "https://example.com/base.bin".to_string(),
+            checksum: "abc123".to_string(),
+            description: None,
+        });
 
         let mut override_with_fixtures = TestConfig::default();
-        override_with_fixtures
-            .fixtures
-            .custom_fixtures
-            .push(CustomFixture {
-                name: "override-fixture".to_string(),
-                url: "https://example.com/override.bin".to_string(),
-                checksum: "def456".to_string(),
-                description: None,
-            });
+        override_with_fixtures.fixtures.custom_fixtures.push(CustomFixture {
+            name: "override-fixture".to_string(),
+            url: "https://example.com/override.bin".to_string(),
+            checksum: "def456".to_string(),
+            description: None,
+        });
 
         let merged_fixtures = merge_configs(base_with_fixtures, override_with_fixtures);
         assert_eq!(
@@ -769,14 +667,8 @@ impl TestCase for ConfigurationSerializationTest {
             loaded_config.test_timeout, original_config.test_timeout,
             "Timeout should match"
         );
-        assert_eq!(
-            loaded_config.cache_dir, original_config.cache_dir,
-            "Cache dir should match"
-        );
-        assert_eq!(
-            loaded_config.log_level, original_config.log_level,
-            "Log level should match"
-        );
+        assert_eq!(loaded_config.cache_dir, original_config.cache_dir, "Cache dir should match");
+        assert_eq!(loaded_config.log_level, original_config.log_level, "Log level should match");
         assert_eq!(
             loaded_config.coverage_threshold, original_config.coverage_threshold,
             "Coverage threshold should match"
@@ -800,15 +692,12 @@ impl TestCase for ConfigurationSerializationTest {
 
         // Test configuration with custom fixtures
         let mut config_with_fixtures = TestConfig::default();
-        config_with_fixtures
-            .fixtures
-            .custom_fixtures
-            .push(CustomFixture {
-                name: "test-model".to_string(),
-                url: "https://example.com/test.bin".to_string(),
-                checksum: "abcdef123456".to_string(),
-                description: Some("Test model for serialization".to_string()),
-            });
+        config_with_fixtures.fixtures.custom_fixtures.push(CustomFixture {
+            name: "test-model".to_string(),
+            url: "https://example.com/test.bin".to_string(),
+            checksum: "abcdef123456".to_string(),
+            description: Some("Test model for serialization".to_string()),
+        });
 
         let fixtures_path = temp_dir.path().join("fixtures_config.toml");
         save_config_to_file(&config_with_fixtures, &fixtures_path)
@@ -1045,10 +934,7 @@ impl TestCase for PlatformSpecificConfigurationTest {
             ci_optimized_config.max_parallel_tests = std::cmp::min(num_cpus::get(), 4); // Conservative in CI
             ci_optimized_config.test_timeout = Duration::from_secs(300); // Longer timeout in CI
             ci_optimized_config.reporting.generate_coverage = true;
-            ci_optimized_config
-                .reporting
-                .formats
-                .push(ReportFormat::Junit);
+            ci_optimized_config.reporting.formats.push(ReportFormat::Junit);
             validate_config(&ci_optimized_config).map_err(|e| {
                 TestError::assertion(format!("CI-optimized config validation failed: {}", e))
             })?;
@@ -1111,10 +997,7 @@ impl TestCase for ConfigurationMigrationTest {
 
         // Create a new config with defaults and override with legacy values
         let mut migrated_config = TestConfig::default();
-        if let Some(parallel) = legacy_value
-            .get("max_parallel_tests")
-            .and_then(|v| v.as_u64())
-        {
+        if let Some(parallel) = legacy_value.get("max_parallel_tests").and_then(|v| v.as_u64()) {
             migrated_config.max_parallel_tests = parallel as usize;
         }
         if let Some(timeout_obj) = legacy_value.get("test_timeout") {
@@ -1128,10 +1011,7 @@ impl TestCase for ConfigurationMigrationTest {
         if let Some(log_level) = legacy_value.get("log_level").and_then(|v| v.as_str()) {
             migrated_config.log_level = log_level.to_string();
         }
-        if let Some(threshold) = legacy_value
-            .get("coverage_threshold")
-            .and_then(|v| v.as_f64())
-        {
+        if let Some(threshold) = legacy_value.get("coverage_threshold").and_then(|v| v.as_f64()) {
             migrated_config.coverage_threshold = threshold;
         }
 
@@ -1150,24 +1030,15 @@ impl TestCase for ConfigurationMigrationTest {
             PathBuf::from("tests/cache"),
             "Legacy cache dir should be migrated"
         );
-        assert_eq!(
-            migrated_config.log_level, "info",
-            "Legacy log level should be migrated"
-        );
+        assert_eq!(migrated_config.log_level, "info", "Legacy log level should be migrated");
         assert_eq!(
             migrated_config.coverage_threshold, 0.9,
             "Legacy coverage threshold should be migrated"
         );
 
         // Verify new fields have defaults
-        assert!(
-            migrated_config.fixtures.auto_download,
-            "New fixture fields should have defaults"
-        );
-        assert!(
-            !migrated_config.crossval.enabled,
-            "New crossval fields should have defaults"
-        );
+        assert!(migrated_config.fixtures.auto_download, "New fixture fields should have defaults");
+        assert!(!migrated_config.crossval.enabled, "New crossval fields should have defaults");
         assert!(
             !migrated_config.reporting.formats.is_empty(),
             "New reporting fields should have defaults"
@@ -1233,10 +1104,7 @@ impl TestCase for ConfigurationMigrationTest {
             Duration::from_secs(600),
             "Future config timeout should be parsed"
         );
-        assert_eq!(
-            future_config.log_level, "debug",
-            "Future config log level should be parsed"
-        );
+        assert_eq!(future_config.log_level, "debug", "Future config log level should be parsed");
 
         validate_config(&future_config)
             .map_err(|e| TestError::assertion(format!("Future config validation failed: {}", e)))?;
@@ -1355,17 +1223,11 @@ impl TestCase for ConfigurationCompatibilityTest {
             "All report formats should be preserved"
         );
         assert!(
-            enum_deserialized
-                .reporting
-                .formats
-                .contains(&ReportFormat::Html),
+            enum_deserialized.reporting.formats.contains(&ReportFormat::Html),
             "HTML format should be preserved"
         );
         assert!(
-            enum_deserialized
-                .reporting
-                .formats
-                .contains(&ReportFormat::Csv),
+            enum_deserialized.reporting.formats.contains(&ReportFormat::Csv),
             "CSV format should be preserved"
         );
 
@@ -1435,29 +1297,20 @@ impl TestCase for ConfigurationErrorHandlingTest {
         // Test missing configuration file
         let missing_config_path = temp_dir.path().join("missing.toml");
         let missing_result = load_config_from_file(&missing_config_path);
-        assert!(
-            missing_result.is_err(),
-            "Loading missing config file should fail"
-        );
+        assert!(missing_result.is_err(), "Loading missing config file should fail");
 
         // Test invalid environment variable values
-        let original_env: HashMap<String, Option<String>> = [
-            "BITNET_TEST_PARALLEL",
-            "BITNET_TEST_TIMEOUT",
-            "BITNET_TEST_COVERAGE_THRESHOLD",
-        ]
-        .iter()
-        .map(|&key| (key.to_string(), env::var(key).ok()))
-        .collect();
+        let original_env: HashMap<String, Option<String>> =
+            ["BITNET_TEST_PARALLEL", "BITNET_TEST_TIMEOUT", "BITNET_TEST_COVERAGE_THRESHOLD"]
+                .iter()
+                .map(|&key| (key.to_string(), env::var(key).ok()))
+                .collect();
 
         // Test invalid parallel tests value
         env::set_var("BITNET_TEST_PARALLEL", "invalid");
         let mut config = TestConfig::default();
         let env_result = load_config_from_env(&mut config);
-        assert!(
-            env_result.is_err(),
-            "Invalid parallel tests env var should fail"
-        );
+        assert!(env_result.is_err(), "Invalid parallel tests env var should fail");
 
         // Test invalid timeout value
         env::set_var("BITNET_TEST_TIMEOUT", "not_a_number");
@@ -1469,10 +1322,7 @@ impl TestCase for ConfigurationErrorHandlingTest {
         env::set_var("BITNET_TEST_COVERAGE_THRESHOLD", "invalid_float");
         let mut config = TestConfig::default();
         let env_result = load_config_from_env(&mut config);
-        assert!(
-            env_result.is_err(),
-            "Invalid coverage threshold env var should fail"
-        );
+        assert!(env_result.is_err(), "Invalid coverage threshold env var should fail");
 
         // Test invalid report formats
         env::set_var("BITNET_TEST_REPORT_FORMATS", "invalid_format,html");
@@ -1502,10 +1352,7 @@ impl TestCase for ConfigurationErrorHandlingTest {
 
         // This should still serialize, but might cause issues in practice
         let serialize_result = serde_json::to_string(&extreme_config);
-        assert!(
-            serialize_result.is_ok(),
-            "Even extreme values should serialize"
-        );
+        assert!(serialize_result.is_ok(), "Even extreme values should serialize");
 
         // Test configuration with circular references in paths
         // This is more of a logical error than a serialization error
@@ -1561,10 +1408,7 @@ impl TestCase for ConfigurationPerformanceTest {
             let _ = validate_config(&config);
         }
         let validate_duration = validate_start.elapsed();
-        assert!(
-            validate_duration.as_millis() < 50,
-            "Validating 1000 configs should take < 50ms"
-        );
+        assert!(validate_duration.as_millis() < 50, "Validating 1000 configs should take < 50ms");
 
         // Test configuration serialization performance
         let serialize_start = std::time::Instant::now();
@@ -1603,10 +1447,7 @@ impl TestCase for ConfigurationPerformanceTest {
             let _ = merge_configs(base_config.clone(), override_config.clone());
         }
         let merge_duration = merge_start.elapsed();
-        assert!(
-            merge_duration.as_millis() < 50,
-            "Merging 1000 configs should take < 50ms"
-        );
+        assert!(merge_duration.as_millis() < 50, "Merging 1000 configs should take < 50ms");
 
         // Test large configuration handling
         let mut large_config = TestConfig::default();
@@ -1650,18 +1491,9 @@ impl TestCase for ConfigurationPerformanceTest {
 
         // Add performance metrics
         metrics.add_metric("config_load_time_ms", load_duration.as_millis() as f64);
-        metrics.add_metric(
-            "config_validate_time_ms",
-            validate_duration.as_millis() as f64,
-        );
-        metrics.add_metric(
-            "config_serialize_time_ms",
-            serialize_duration.as_millis() as f64,
-        );
-        metrics.add_metric(
-            "config_deserialize_time_ms",
-            deserialize_duration.as_millis() as f64,
-        );
+        metrics.add_metric("config_validate_time_ms", validate_duration.as_millis() as f64);
+        metrics.add_metric("config_serialize_time_ms", serialize_duration.as_millis() as f64);
+        metrics.add_metric("config_deserialize_time_ms", deserialize_duration.as_millis() as f64);
         metrics.add_metric("config_merge_time_ms", merge_duration.as_millis() as f64);
         metrics.add_metric(
             "large_config_validate_time_ms",
@@ -1708,29 +1540,19 @@ impl TestCase for ConfigurationValidatorTest {
             .map_err(|e| TestError::execution(format!("Failed to create validator: {}", e)))?;
 
         let validation_result = validator.validate();
-        assert!(
-            validation_result.is_valid(),
-            "Default config should be valid"
-        );
-        assert_eq!(
-            validation_result.errors.len(),
-            0,
-            "Default config should have no errors"
-        );
+        assert!(validation_result.is_valid(), "Default config should be valid");
+        assert_eq!(validation_result.errors.len(), 0, "Default config should have no errors");
 
         // Test validator with problematic configuration
         let mut problematic_config = TestConfig::default();
         problematic_config.max_parallel_tests = num_cpus::get() * 4; // Too many
         problematic_config.test_timeout = Duration::from_secs(10); // Too short
-        problematic_config
-            .fixtures
-            .custom_fixtures
-            .push(CustomFixture {
-                name: "test".to_string(),
-                url: "http://example.com/insecure.bin".to_string(), // HTTP instead of HTTPS
-                checksum: "abc".to_string(),                        // Too short
-                description: None,
-            });
+        problematic_config.fixtures.custom_fixtures.push(CustomFixture {
+            name: "test".to_string(),
+            url: "http://example.com/insecure.bin".to_string(), // HTTP instead of HTTPS
+            checksum: "abc".to_string(),                        // Too short
+            description: None,
+        });
 
         let problematic_path = temp_dir.path().join("problematic_config.toml");
         save_config_to_file(&problematic_config, &problematic_path)
@@ -1745,51 +1567,31 @@ impl TestCase for ConfigurationValidatorTest {
             problematic_result.is_valid(),
             "Problematic config should still be valid (warnings only)"
         );
-        assert!(
-            problematic_result.has_warnings(),
-            "Problematic config should have warnings"
-        );
-        assert!(
-            problematic_result.warnings.len() > 0,
-            "Should have at least one warning"
-        );
+        assert!(problematic_result.has_warnings(), "Problematic config should have warnings");
+        assert!(problematic_result.warnings.len() > 0, "Should have at least one warning");
 
         // Check for specific warnings
-        let warning_messages: Vec<String> = problematic_result
-            .warnings
-            .iter()
-            .map(|w| w.message.clone())
-            .collect();
+        let warning_messages: Vec<String> =
+            problematic_result.warnings.iter().map(|w| w.message.clone()).collect();
 
-        let has_parallel_warning = warning_messages
-            .iter()
-            .any(|msg| msg.contains("much higher than CPU cores"));
-        assert!(
-            has_parallel_warning,
-            "Should warn about too many parallel tests"
-        );
+        let has_parallel_warning =
+            warning_messages.iter().any(|msg| msg.contains("much higher than CPU cores"));
+        assert!(has_parallel_warning, "Should warn about too many parallel tests");
 
-        let has_timeout_warning = warning_messages
-            .iter()
-            .any(|msg| msg.contains("Very short timeout"));
+        let has_timeout_warning =
+            warning_messages.iter().any(|msg| msg.contains("Very short timeout"));
         assert!(has_timeout_warning, "Should warn about short timeout");
 
-        let has_http_warning = warning_messages
-            .iter()
-            .any(|msg| msg.contains("insecure HTTP URL"));
+        let has_http_warning = warning_messages.iter().any(|msg| msg.contains("insecure HTTP URL"));
         assert!(has_http_warning, "Should warn about HTTP URL");
 
-        let has_checksum_warning = warning_messages
-            .iter()
-            .any(|msg| msg.contains("too short for security"));
+        let has_checksum_warning =
+            warning_messages.iter().any(|msg| msg.contains("too short for security"));
         assert!(has_checksum_warning, "Should warn about short checksum");
 
         // Test validator summary
         let summary = problematic_result.summary();
-        assert!(
-            summary.contains("warnings"),
-            "Summary should mention warnings"
-        );
+        assert!(summary.contains("warnings"), "Summary should mention warnings");
         assert!(summary.contains("0 errors"), "Summary should show 0 errors");
 
         // Test validator with invalid configuration
@@ -1806,21 +1608,12 @@ impl TestCase for ConfigurationValidatorTest {
         })?;
 
         let invalid_result = invalid_validator.validate();
-        assert!(
-            !invalid_result.is_valid(),
-            "Invalid config should not be valid"
-        );
-        assert!(
-            invalid_result.errors.len() > 0,
-            "Invalid config should have errors"
-        );
+        assert!(!invalid_result.is_valid(), "Invalid config should not be valid");
+        assert!(invalid_result.errors.len() > 0, "Invalid config should have errors");
 
         // Check for specific errors
-        let error_messages: Vec<String> = invalid_result
-            .errors
-            .iter()
-            .map(|e| e.message.clone())
-            .collect();
+        let error_messages: Vec<String> =
+            invalid_result.errors.iter().map(|e| e.message.clone()).collect();
 
         let has_parallel_error = error_messages
             .iter()
@@ -1830,10 +1623,7 @@ impl TestCase for ConfigurationValidatorTest {
         let has_threshold_error = error_messages
             .iter()
             .any(|msg| msg.contains("coverage_threshold must be between 0.0 and 1.0"));
-        assert!(
-            has_threshold_error,
-            "Should error on invalid coverage threshold"
-        );
+        assert!(has_threshold_error, "Should error on invalid coverage threshold");
 
         metrics.wall_time = start_time.elapsed();
         metrics.add_assertion();
@@ -1861,10 +1651,7 @@ mod tests {
         let result = harness.run_test_suite(suite).await.unwrap();
 
         // All tests should pass
-        assert!(
-            result.summary.failed == 0,
-            "All configuration tests should pass"
-        );
+        assert!(result.summary.failed == 0, "All configuration tests should pass");
         assert!(result.summary.passed > 0, "Should have passing tests");
     }
 

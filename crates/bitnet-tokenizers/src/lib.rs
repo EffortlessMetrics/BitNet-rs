@@ -40,11 +40,7 @@ impl BasicTokenizer {
         eos_token_id: Option<u32>,
         pad_token_id: Option<u32>,
     ) -> Self {
-        Self {
-            vocab_size,
-            eos_token_id,
-            pad_token_id,
-        }
+        Self { vocab_size, eos_token_id, pad_token_id }
     }
 }
 
@@ -97,10 +93,7 @@ impl Tokenizer for BasicTokenizer {
         }
 
         // Simple placeholder implementation - in real tokenizer this would map back to text
-        Ok(format!(
-            "Generated text from {} tokens",
-            filtered_tokens.len()
-        ))
+        Ok(format!("Generated text from {} tokens", filtered_tokens.len()))
     }
 
     fn vocab_size(&self) -> usize {
@@ -134,21 +127,9 @@ impl TokenizerBuilder {
 
         // Return different configurations based on model name for testing
         match name {
-            "gpt2" => Ok(Arc::new(BasicTokenizer::with_config(
-                50257,
-                Some(50256),
-                None,
-            ))),
-            "bert" => Ok(Arc::new(BasicTokenizer::with_config(
-                30522,
-                Some(102),
-                Some(0),
-            ))),
-            "tiny" => Ok(Arc::new(BasicTokenizer::with_config(
-                1000,
-                Some(999),
-                Some(0),
-            ))),
+            "gpt2" => Ok(Arc::new(BasicTokenizer::with_config(50257, Some(50256), None))),
+            "bert" => Ok(Arc::new(BasicTokenizer::with_config(30522, Some(102), Some(0)))),
+            "tiny" => Ok(Arc::new(BasicTokenizer::with_config(1000, Some(999), Some(0)))),
             _ => Ok(Arc::new(BasicTokenizer::new())),
         }
     }

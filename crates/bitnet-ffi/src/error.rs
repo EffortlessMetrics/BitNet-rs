@@ -159,17 +159,12 @@ where
 macro_rules! safe_cstr {
     ($ptr:expr) => {
         if $ptr.is_null() {
-            return Err(BitNetCError::InvalidArgument(
-                "String pointer is null".to_string(),
-            ));
+            return Err(BitNetCError::InvalidArgument("String pointer is null".to_string()));
         }
         match unsafe { std::ffi::CStr::from_ptr($ptr) }.to_str() {
             Ok(s) => s,
             Err(e) => {
-                return Err(BitNetCError::InvalidArgument(format!(
-                    "Invalid UTF-8 string: {}",
-                    e
-                )));
+                return Err(BitNetCError::InvalidArgument(format!("Invalid UTF-8 string: {}", e)));
             }
         }
     };
@@ -180,10 +175,7 @@ macro_rules! safe_cstr {
 macro_rules! validate_ptr {
     ($ptr:expr, $name:expr) => {
         if $ptr.is_null() {
-            return Err(BitNetCError::InvalidArgument(format!(
-                "{} cannot be null",
-                $name
-            )));
+            return Err(BitNetCError::InvalidArgument(format!("{} cannot be null", $name)));
         }
     };
 }
@@ -193,9 +185,7 @@ macro_rules! validate_ptr {
 macro_rules! validate_model_id {
     ($id:expr) => {
         if $id < 0 {
-            return Err(BitNetCError::InvalidArgument(
-                "model_id must be non-negative".to_string(),
-            ));
+            return Err(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
         }
     };
 }
@@ -207,9 +197,8 @@ mod tests {
 
     #[test]
     fn test_error_conversion() {
-        let model_error = BitNetError::Model(ModelError::NotFound {
-            path: "test.gguf".to_string(),
-        });
+        let model_error =
+            BitNetError::Model(ModelError::NotFound { path: "test.gguf".to_string() });
         let c_error: BitNetCError = model_error.into();
 
         match c_error {

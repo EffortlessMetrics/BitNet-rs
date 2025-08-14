@@ -75,11 +75,8 @@ struct PerformanceMetrics {
 
 impl PerformanceMetrics {
     fn new(kernel_name: &str, operation: &str, time_ns: u64, ops: u64) -> Self {
-        let throughput_ops_per_sec = if time_ns > 0 {
-            (ops as f64) / (time_ns as f64 / 1_000_000_000.0)
-        } else {
-            0.0
-        };
+        let throughput_ops_per_sec =
+            if time_ns > 0 { (ops as f64) / (time_ns as f64 / 1_000_000_000.0) } else { 0.0 };
 
         Self {
             kernel_name: kernel_name.to_string(),
@@ -132,10 +129,7 @@ fn test_matmul_correctness(kernel: &dyn KernelProvider) -> Result<()> {
         kernel.matmul_i2s(&a, &b, &mut c, m, n, k)?;
 
         // Verify result is not all zeros (basic sanity check)
-        assert!(
-            c.iter().any(|&x| x != 0.0),
-            "Matrix multiplication result is all zeros"
-        );
+        assert!(c.iter().any(|&x| x != 0.0), "Matrix multiplication result is all zeros");
 
         // Verify dimensions are correct
         assert_eq!(c.len(), m * n, "Output matrix has wrong dimensions");
@@ -146,11 +140,7 @@ fn test_matmul_correctness(kernel: &dyn KernelProvider) -> Result<()> {
 
 /// Test quantization correctness
 fn test_quantization_correctness(kernel: &dyn KernelProvider) -> Result<()> {
-    let qtypes = vec![
-        QuantizationType::I2S,
-        QuantizationType::TL1,
-        QuantizationType::TL2,
-    ];
+    let qtypes = vec![QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2];
 
     for qtype in qtypes {
         let input = TestDataGenerator::generate_quantization_input(128, 54321);
@@ -160,18 +150,10 @@ fn test_quantization_correctness(kernel: &dyn KernelProvider) -> Result<()> {
         kernel.quantize(&input, &mut output, &mut scales, qtype)?;
 
         // Verify scales are reasonable
-        assert!(
-            scales.iter().all(|&s| s > 0.0 && s.is_finite()),
-            "Invalid scales for {:?}",
-            qtype
-        );
+        assert!(scales.iter().all(|&s| s > 0.0 && s.is_finite()), "Invalid scales for {:?}", qtype);
 
         // Verify output is not all zeros
-        assert!(
-            output.iter().any(|&x| x != 0),
-            "Quantization output is all zeros for {:?}",
-            qtype
-        );
+        assert!(output.iter().any(|&x| x != 0), "Quantization output is all zeros for {:?}", qtype);
     }
 
     Ok(())
@@ -201,12 +183,7 @@ fn benchmark_kernel(kernel: &dyn KernelProvider) -> Result<Vec<PerformanceMetric
 fn benchmark_matmul(kernel: &dyn KernelProvider) -> Result<Vec<PerformanceMetrics>> {
     let mut metrics = Vec::new();
 
-    let test_sizes = vec![
-        (64, 64, 64),
-        (128, 128, 128),
-        (256, 256, 256),
-        (512, 512, 512),
-    ];
+    let test_sizes = vec![(64, 64, 64), (128, 128, 128), (256, 256, 256), (512, 512, 512)];
 
     for (m, n, k) in test_sizes {
         let a = TestDataGenerator::generate_matrix_a(m, k, 11111);
@@ -256,11 +233,7 @@ fn benchmark_matmul(kernel: &dyn KernelProvider) -> Result<Vec<PerformanceMetric
 fn benchmark_quantization(kernel: &dyn KernelProvider) -> Result<Vec<PerformanceMetrics>> {
     let mut metrics = Vec::new();
 
-    let qtypes = vec![
-        QuantizationType::I2S,
-        QuantizationType::TL1,
-        QuantizationType::TL2,
-    ];
+    let qtypes = vec![QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2];
 
     let test_sizes = vec![1024, 4096, 16384, 65536];
 
@@ -323,10 +296,7 @@ fn compare_kernel_performance(metrics: &[Vec<PerformanceMetrics>]) {
     let mut operations = std::collections::HashMap::new();
     for kernel_metrics in metrics {
         for metric in kernel_metrics {
-            operations
-                .entry(metric.operation.clone())
-                .or_insert_with(Vec::new)
-                .push(metric);
+            operations.entry(metric.operation.clone()).or_insert_with(Vec::new).push(metric);
         }
     }
 
@@ -340,19 +310,14 @@ fn compare_kernel_performance(metrics: &[Vec<PerformanceMetrics>]) {
         // Sort by performance (descending)
         let mut sorted_metrics = op_metrics;
         sorted_metrics.sort_by(|a, b| {
-            b.throughput_ops_per_sec
-                .partial_cmp(&a.throughput_ops_per_sec)
-                .unwrap()
+            b.throughput_ops_per_sec.partial_cmp(&a.throughput_ops_per_sec).unwrap()
         });
 
         let best_perf = sorted_metrics[0].throughput_ops_per_sec;
 
         for metric in sorted_metrics {
             let relative_perf = metric.throughput_ops_per_sec / best_perf;
-            println!(
-                "  {} - {:.2}x relative performance",
-                metric.kernel_name, relative_perf
-            );
+            println!("  {} - {:.2}x relative performance", metric.kernel_name, relative_perf);
         }
     }
 }
@@ -362,18 +327,13 @@ fn test_kernel_manager() {
     let manager = KernelManager::new();
 
     // Test that we can select a kernel
-    let kernel = manager
-        .select_best()
-        .expect("Should have at least fallback kernel");
+    let kernel = manager.select_best().expect("Should have at least fallback kernel");
     println!("Selected kernel: {}", kernel.name());
 
     // Test available providers
     let available = manager.list_available_providers();
     println!("Available providers: {:?}", available);
-    assert!(
-        !available.is_empty(),
-        "Should have at least one available provider"
-    );
+    assert!(!available.is_empty(), "Should have at least one available provider");
 }
 
 #[test]
@@ -404,10 +364,7 @@ fn test_performance_benchmarks() {
     // Check that we have reasonable performance numbers
     for metric in &metrics {
         assert!(metric.time_ns > 0, "Should have positive execution time");
-        assert!(
-            metric.throughput_ops_per_sec > 0.0,
-            "Should have positive throughput"
-        );
+        assert!(metric.throughput_ops_per_sec > 0.0, "Should have positive throughput");
     }
 }
 
@@ -500,10 +457,7 @@ fn test_performance_comparison_with_ffi() {
                 "  Performance improvement: {:.2}%",
                 comparison.performance_improvement() * 100.0
             );
-            println!(
-                "  Migration recommended: {}",
-                comparison.migration_recommended()
-            );
+            println!("  Migration recommended: {}", comparison.migration_recommended());
         }
         Err(e) => {
             println!("Performance comparison failed: {}", e);

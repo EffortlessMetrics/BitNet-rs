@@ -99,18 +99,12 @@ pub extern "C" fn bitnet_cleanup() -> c_int {
 
     // Cleanup in reverse order of initialization
     if let Err(e) = crate::threading::cleanup_thread_pool() {
-        set_last_error(BitNetCError::Internal(format!(
-            "Failed to cleanup thread pool: {}",
-            e
-        )));
+        set_last_error(BitNetCError::Internal(format!("Failed to cleanup thread pool: {}", e)));
         return BITNET_ERROR_INTERNAL;
     }
 
     if let Err(e) = crate::memory::cleanup_memory_manager() {
-        set_last_error(BitNetCError::Internal(format!(
-            "Failed to cleanup memory manager: {}",
-            e
-        )));
+        set_last_error(BitNetCError::Internal(format!("Failed to cleanup memory manager: {}", e)));
         return BITNET_ERROR_INTERNAL;
     }
 
@@ -132,19 +126,14 @@ pub extern "C" fn bitnet_model_load(path: *const c_char) -> c_int {
     clear_last_error();
 
     if path.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "path cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("path cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     let path_str = match unsafe { CStr::from_ptr(path) }.to_str() {
         Ok(s) => s,
         Err(e) => {
-            set_last_error(BitNetCError::InvalidArgument(format!(
-                "Invalid UTF-8 in path: {}",
-                e
-            )));
+            set_last_error(BitNetCError::InvalidArgument(format!("Invalid UTF-8 in path: {}", e)));
             return BITNET_ERROR_INVALID_ARGUMENT;
         }
     };
@@ -182,26 +171,19 @@ pub extern "C" fn bitnet_model_load_with_config(
     clear_last_error();
 
     if path.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "path cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("path cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if config.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "config cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("config cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     let path_str = match unsafe { CStr::from_ptr(path) }.to_str() {
         Ok(s) => s,
         Err(e) => {
-            set_last_error(BitNetCError::InvalidArgument(format!(
-                "Invalid UTF-8 in path: {}",
-                e
-            )));
+            set_last_error(BitNetCError::InvalidArgument(format!("Invalid UTF-8 in path: {}", e)));
             return BITNET_ERROR_INVALID_ARGUMENT;
         }
     };
@@ -237,9 +219,7 @@ pub extern "C" fn bitnet_model_free(model_id: c_int) -> c_int {
     clear_last_error();
 
     if model_id < 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "model_id must be non-negative".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
@@ -278,30 +258,22 @@ pub extern "C" fn bitnet_inference(
     clear_last_error();
 
     if model_id < 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "model_id must be non-negative".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if prompt.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "prompt cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("prompt cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if output.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "output cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("output cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if max_len == 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "max_len must be greater than 0".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("max_len must be greater than 0".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
@@ -365,37 +337,27 @@ pub extern "C" fn bitnet_inference_with_config(
     clear_last_error();
 
     if model_id < 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "model_id must be non-negative".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if prompt.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "prompt cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("prompt cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if config.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "config cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("config cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if output.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "output cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("output cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if max_len == 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "max_len must be greater than 0".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("max_len must be greater than 0".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
@@ -493,9 +455,7 @@ pub extern "C" fn bitnet_model_is_loaded(model_id: c_int) -> c_int {
     clear_last_error();
 
     if model_id < 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "model_id must be non-negative".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
@@ -529,16 +489,12 @@ pub extern "C" fn bitnet_model_get_info(model_id: c_int, info: *mut BitNetCModel
     clear_last_error();
 
     if model_id < 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "model_id must be non-negative".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if info.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "info cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("info cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
@@ -665,37 +621,27 @@ pub extern "C" fn bitnet_batch_inference(
     clear_last_error();
 
     if model_id < 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "model_id must be non-negative".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if prompts.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "prompts cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("prompts cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if outputs.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "outputs cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("outputs cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if max_lens.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "max_lens cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("max_lens cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if config.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "config cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("config cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
@@ -721,18 +667,12 @@ pub extern "C" fn bitnet_batch_inference(
         let max_len = unsafe { *max_lens.add(i) };
 
         if prompt_ptr.is_null() {
-            set_last_error(BitNetCError::InvalidArgument(format!(
-                "prompt[{}] cannot be null",
-                i
-            )));
+            set_last_error(BitNetCError::InvalidArgument(format!("prompt[{}] cannot be null", i)));
             return BITNET_ERROR_INVALID_ARGUMENT;
         }
 
         if output_ptr.is_null() {
-            set_last_error(BitNetCError::InvalidArgument(format!(
-                "output[{}] cannot be null",
-                i
-            )));
+            set_last_error(BitNetCError::InvalidArgument(format!("output[{}] cannot be null", i)));
             return BITNET_ERROR_INVALID_ARGUMENT;
         }
 
@@ -802,30 +742,22 @@ pub extern "C" fn bitnet_start_streaming(
     clear_last_error();
 
     if model_id < 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "model_id must be non-negative".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if prompt.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "prompt cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("prompt cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if config.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "config cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("config cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if stream_config.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "stream_config cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("stream_config cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
@@ -881,9 +813,7 @@ pub extern "C" fn bitnet_stop_streaming(stream_id: c_int) -> c_int {
     clear_last_error();
 
     if stream_id < 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "stream_id must be non-negative".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("stream_id must be non-negative".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
@@ -917,23 +847,17 @@ pub extern "C" fn bitnet_stream_next_token(
     clear_last_error();
 
     if stream_id < 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "stream_id must be non-negative".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("stream_id must be non-negative".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if token.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "token cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("token cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if max_len == 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "max_len must be greater than 0".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("max_len must be greater than 0".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
@@ -972,16 +896,12 @@ pub extern "C" fn bitnet_get_performance_metrics(
     clear_last_error();
 
     if model_id < 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "model_id must be non-negative".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
     if metrics.is_null() {
-        set_last_error(BitNetCError::InvalidArgument(
-            "metrics cannot be null".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("metrics cannot be null".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
@@ -1016,9 +936,7 @@ pub extern "C" fn bitnet_reset_performance_metrics(model_id: c_int) -> c_int {
     clear_last_error();
 
     if model_id < 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "model_id must be non-negative".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
@@ -1047,11 +965,7 @@ pub extern "C" fn bitnet_reset_performance_metrics(model_id: c_int) -> c_int {
 pub extern "C" fn bitnet_set_memory_limit(limit_bytes: u64) -> c_int {
     clear_last_error();
 
-    let limit = if limit_bytes == 0 {
-        None
-    } else {
-        Some(limit_bytes as usize)
-    };
+    let limit = if limit_bytes == 0 { None } else { Some(limit_bytes as usize) };
 
     match crate::memory::get_memory_manager().set_memory_limit(limit) {
         Ok(_) => BITNET_SUCCESS,
@@ -1113,9 +1027,7 @@ pub extern "C" fn bitnet_switch_model_backend(
     clear_last_error();
 
     if model_id < 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "model_id must be non-negative".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
@@ -1145,9 +1057,7 @@ pub extern "C" fn bitnet_switch_model_backend(
             if get_inference_manager().is_gpu_available() {
                 BITNET_SUCCESS
             } else {
-                set_last_error(BitNetCError::UnsupportedOperation(
-                    "GPU not available".to_string(),
-                ));
+                set_last_error(BitNetCError::UnsupportedOperation("GPU not available".to_string()));
                 BITNET_ERROR_UNSUPPORTED_OPERATION
             }
         }
@@ -1169,9 +1079,7 @@ pub extern "C" fn bitnet_get_model_loading_progress(model_id: c_int) -> c_int {
     clear_last_error();
 
     if model_id < 0 {
-        set_last_error(BitNetCError::InvalidArgument(
-            "model_id must be non-negative".to_string(),
-        ));
+        set_last_error(BitNetCError::InvalidArgument("model_id must be non-negative".to_string()));
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 

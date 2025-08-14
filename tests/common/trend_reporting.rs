@@ -21,10 +21,7 @@ pub struct TrendReporter {
 
 impl TrendReporter {
     pub fn new(storage_path: PathBuf, config: TrendConfig) -> Self {
-        Self {
-            storage_path,
-            config,
-        }
+        Self { storage_path, config }
     }
 
     /// Record test results for trend analysis
@@ -50,10 +47,7 @@ impl TrendReporter {
         };
 
         // Save to file
-        let filename = format!(
-            "trend_{}.json",
-            trend_entry.timestamp.format("%Y%m%d_%H%M%S")
-        );
+        let filename = format!("trend_{}.json", trend_entry.timestamp.format("%Y%m%d_%H%M%S"));
         let file_path = self.storage_path.join(filename);
 
         let json_data = serde_json::to_string_pretty(&trend_entry)?;
@@ -146,9 +140,8 @@ impl TrendReporter {
             for test in &suite.test_results {
                 if let Some(baseline) = baselines.get(&test.test_name) {
                     let current_duration = test.duration;
-                    let regression_threshold = baseline
-                        .average_duration
-                        .mul_f64(self.config.regression_threshold);
+                    let regression_threshold =
+                        baseline.average_duration.mul_f64(self.config.regression_threshold);
 
                     if current_duration > regression_threshold {
                         let regression_percent = (current_duration.as_secs_f64()
@@ -230,9 +223,8 @@ impl TrendReporter {
         for entry in entries {
             for suite in &entry.results {
                 // Suite-level trends
-                let suite_stats = suite_trends
-                    .entry(suite.suite_name.clone())
-                    .or_insert_with(Vec::new);
+                let suite_stats =
+                    suite_trends.entry(suite.suite_name.clone()).or_insert_with(Vec::new);
 
                 suite_stats.push(SuiteDataPoint {
                     timestamp: entry.timestamp,
@@ -245,9 +237,8 @@ impl TrendReporter {
 
                 // Test-level trends
                 for test in &suite.test_results {
-                    let test_stats = test_trends
-                        .entry(test.test_name.clone())
-                        .or_insert_with(Vec::new);
+                    let test_stats =
+                        test_trends.entry(test.test_name.clone()).or_insert_with(Vec::new);
 
                     test_stats.push(TestDataPoint {
                         timestamp: entry.timestamp,
@@ -285,10 +276,7 @@ impl TrendReporter {
             return Ok(TestTrend::default());
         }
 
-        let durations: Vec<f64> = data_points
-            .iter()
-            .map(|dp| dp.duration.as_secs_f64())
-            .collect();
+        let durations: Vec<f64> = data_points.iter().map(|dp| dp.duration.as_secs_f64()).collect();
 
         let success_count = data_points
             .iter()
@@ -330,10 +318,7 @@ impl TrendReporter {
 
         let success_rates: Vec<f64> = data_points.iter().map(|dp| dp.success_rate).collect();
 
-        let durations: Vec<f64> = data_points
-            .iter()
-            .map(|dp| dp.duration.as_secs_f64())
-            .collect();
+        let durations: Vec<f64> = data_points.iter().map(|dp| dp.duration.as_secs_f64()).collect();
 
         let avg_success_rate = success_rates.iter().sum::<f64>() / success_rates.len() as f64;
         let avg_duration =
@@ -424,10 +409,7 @@ impl TrendReporter {
         for entry in entries {
             for suite in &entry.results {
                 for test in &suite.test_results {
-                    test_durations
-                        .entry(test.test_name.clone())
-                        .or_default()
-                        .push(test.duration);
+                    test_durations.entry(test.test_name.clone()).or_default().push(test.duration);
                 }
             }
         }

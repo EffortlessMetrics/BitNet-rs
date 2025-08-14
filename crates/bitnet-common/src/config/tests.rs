@@ -193,10 +193,7 @@ fn test_env_overrides() {
     assert_eq!(config.inference.temperature, 0.7);
     assert!(config.performance.use_gpu);
     assert_eq!(config.quantization.quantization_type, QuantizationType::TL2);
-    assert_eq!(
-        config.performance.memory_limit,
-        Some(2 * 1024 * 1024 * 1024)
-    );
+    assert_eq!(config.performance.memory_limit, Some(2 * 1024 * 1024 * 1024));
 
     // Clean up
     for var in &env_vars {
@@ -210,11 +207,7 @@ fn test_config_merging() {
     base_config.model.vocab_size = 30000;
     base_config.inference.temperature = 0.8;
 
-    let override_config = BitNetConfig::builder()
-        .vocab_size(50000)
-        .use_gpu(true)
-        .build()
-        .unwrap();
+    let override_config = BitNetConfig::builder().vocab_size(50000).use_gpu(true).build().unwrap();
 
     base_config.merge_with(override_config);
 

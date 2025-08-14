@@ -33,10 +33,7 @@ struct LockGuard {
 
 impl LockGuard {
     fn new(path: PathBuf, file: std::fs::File) -> Self {
-        LockGuard {
-            file: Some(file),
-            path,
-        }
+        LockGuard { file: Some(file), path }
     }
 }
 
@@ -347,13 +344,7 @@ fn real_main() -> Result<()> {
             timeout,
         ),
         Cmd::FetchCpp { tag, force, clean } => fetch_cpp_cmd(&tag, force, clean),
-        Cmd::Crossval {
-            model,
-            cpp_dir,
-            release,
-            dry_run,
-            extra,
-        } => {
+        Cmd::Crossval { model, cpp_dir, release, dry_run, extra } => {
             let model_path = match model {
                 Some(p) => p,
                 None => resolve_default_model()?,
@@ -432,9 +423,8 @@ fn download_model_cmd(
     fs::create_dir_all(out_dir)?;
 
     // Guard against path traversal
-    let safe_file = Path::new(file)
-        .file_name()
-        .ok_or_else(|| anyhow!("invalid file name: {}", file))?;
+    let safe_file =
+        Path::new(file).file_name().ok_or_else(|| anyhow!("invalid file name: {}", file))?;
 
     let dest_dir = out_dir.join(id.replace('/', "-"));
     fs::create_dir_all(&dest_dir)?;
@@ -484,10 +474,7 @@ fn download_model_cmd(
 
             if let Ok(resp) = head_req.send() {
                 // Add friendlier auth message on HEAD
-                if matches!(
-                    resp.status(),
-                    StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
-                ) {
+                if matches!(resp.status(), StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN) {
                     bail!("HTTP {} from Hugging Face during metadata check. If the repo is private, set HF_TOKEN, e.g.\n\
                            HF_TOKEN=*** cargo xtask download-model --id {} --file {}", 
                           resp.status().as_u16(), id, file);
@@ -553,13 +540,7 @@ fn download_model_cmd(
                 .map(|v| v.eq_ignore_ascii_case("bytes"))
                 .unwrap_or(false);
 
-            let sz = r
-                .headers()
-                .get(CONTENT_LENGTH)?
-                .to_str()
-                .ok()?
-                .parse::<u64>()
-                .ok()?;
+            let sz = r.headers().get(CONTENT_LENGTH)?.to_str().ok()?.parse::<u64>().ok()?;
             Some((sz, resumable))
         })
         .map(|(sz, res)| (Some(sz), res))
@@ -569,9 +550,7 @@ fn download_model_cmd(
             if let Some(t) = &token {
                 probe = probe.header(AUTHORIZATION, format!("Bearer {t}"));
             }
-            probe = probe
-                .header(RANGE, "bytes=0-0")
-                .header(ACCEPT_ENCODING, "identity");
+            probe = probe.header(RANGE, "bytes=0-0").header(ACCEPT_ENCODING, "identity");
 
             // Add conditional headers for cache checking on fallback
             if dest.exists() && !force {
@@ -681,10 +660,7 @@ fn download_model_cmd(
     let lock_file = std::fs::File::create(&lock_path)
         .with_context(|| format!("failed to create lock file for {}", dest.display()))?;
     lock_file.try_lock_exclusive().with_context(|| {
-        format!(
-            "another download appears to be running for {}",
-            dest.display()
-        )
+        format!("another download appears to be running for {}", dest.display())
     })?;
 
     // Use RAII guard for automatic cleanup (transfers ownership)
@@ -783,10 +759,7 @@ fn download_model_cmd(
                         start = 0; // Will restart from beginning
                         attempt += 1;
                         if attempt > max_attempts {
-                            bail!(
-                                "failed after {} attempts due to resume rejection",
-                                max_attempts
-                            );
+                            bail!("failed after {} attempts due to resume rejection", max_attempts);
                         }
                         continue;
                     }
@@ -876,10 +849,7 @@ fn download_model_cmd(
 
                 attempt += 1;
                 if attempt > max_attempts {
-                    bail!(
-                        "failed after {} attempts due to invalid 206 response",
-                        max_attempts
-                    );
+                    bail!("failed after {} attempts due to invalid 206 response", max_attempts);
                 }
                 thread::sleep(Duration::from_millis(exp_backoff_ms(attempt)));
                 continue;
@@ -930,20 +900,13 @@ fn download_model_cmd(
 
     let file_handle = if resumed && resp.status() == StatusCode::OK {
         // Server ignored Range, need to truncate and restart
-        let mut f = fs::OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&tmp)?;
+        let mut f = fs::OpenOptions::new().create(true).write(true).truncate(true).open(&tmp)?;
         f.seek(SeekFrom::Start(0))?;
         f
     } else {
         // Normal case: seek to resume point if needed
-        let mut f = fs::OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(start == 0)
-            .open(&tmp)?;
+        let mut f =
+            fs::OpenOptions::new().create(true).write(true).truncate(start == 0).open(&tmp)?;
         if start > 0 {
             f.seek(SeekFrom::Start(start))?;
         } else if let Some(total) = size {
@@ -1033,11 +996,7 @@ fn download_model_cmd(
     if let Some(etag) = resp.headers().get(ETAG).and_then(|v| v.to_str().ok()) {
         atomic_write(&etag_path, etag.as_bytes()).ok();
     }
-    if let Some(lm) = resp
-        .headers()
-        .get(LAST_MODIFIED)
-        .and_then(|v| v.to_str().ok())
-    {
+    if let Some(lm) = resp.headers().get(LAST_MODIFIED).and_then(|v| v.to_str().ok()) {
         atomic_write(&lastmod_path, lm.as_bytes()).ok();
     }
 
@@ -1045,11 +1004,7 @@ fn download_model_cmd(
     if let Some(total) = size {
         let actual = fs::metadata(&dest)?.len();
         if actual != total {
-            bail!(
-                "download truncated: got {} bytes, expected {}",
-                actual,
-                total
-            );
+            bail!("download truncated: got {} bytes, expected {}", actual, total);
         }
     }
 
@@ -1093,17 +1048,12 @@ fn download_model_cmd(
 fn resolve_default_model() -> Result<PathBuf> {
     let root = PathBuf::from("models");
     if !root.exists() {
-        return Err(anyhow!(
-            "No models directory found. Run `cargo xtask download-model` first."
-        ));
+        return Err(anyhow!("No models directory found. Run `cargo xtask download-model` first."));
     }
 
     // Prefer default model path
-    let preferred = root.join(format!(
-        "{}/{}",
-        DEFAULT_MODEL_ID.replace('/', "-"),
-        DEFAULT_MODEL_FILE
-    ));
+    let preferred =
+        root.join(format!("{}/{}", DEFAULT_MODEL_ID.replace('/', "-"), DEFAULT_MODEL_FILE));
     if preferred.exists() {
         return Ok(preferred);
     }
@@ -1176,12 +1126,7 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
         args.push("--clean".to_string());
     }
 
-    run(
-        "bash",
-        std::iter::once(script.to_string_lossy().to_string())
-            .chain(args)
-            .collect(),
-    )?;
+    run("bash", std::iter::once(script.to_string_lossy().to_string()).chain(args).collect())?;
 
     // Verify the build succeeded by checking for the binary
     let cpp_dir = dirs::home_dir().unwrap().join(".cache/bitnet_cpp");
@@ -1235,8 +1180,7 @@ fn crossval_cmd(
 
     // Build the cargo test command
     let mut cmd = Command::new("cargo");
-    cmd.arg("test")
-        .args(["-p", "bitnet-crossval", "--features", "crossval"]);
+    cmd.arg("test").args(["-p", "bitnet-crossval", "--features", "crossval"]);
 
     if release {
         cmd.arg("--release");
@@ -1252,9 +1196,7 @@ fn crossval_cmd(
         .env("RUST_BACKTRACE", "1");
 
     // Add test runner args
-    cmd.arg("--")
-        .args(["--nocapture", "--test-threads=1"])
-        .args(extra);
+    cmd.arg("--").args(["--nocapture", "--test-threads=1"]).args(extra);
 
     if dry_run {
         println!("\n[DRY RUN] Env + command:");
@@ -1378,11 +1320,7 @@ fn gen_fixtures(size: &str, output_dir: &Path) -> Result<()> {
     fs::write(&weights_path, weight_data)?;
 
     println!("  Created metadata: {}", metadata_path.display());
-    println!(
-        "  Created weights: {} ({} bytes)",
-        weights_path.display(),
-        num_params / 8
-    );
+    println!("  Created weights: {} ({} bytes)", weights_path.display(), num_params / 8);
     println!("✅ Test fixtures generated for '{}' model", size);
     Ok(())
 }
@@ -1396,9 +1334,7 @@ fn setup_crossval() -> Result<()> {
 
     // Build with crossval features
     println!("  Building with cross-validation features...");
-    let status = Command::new("cargo")
-        .args(&["build", "--features", "crossval"])
-        .status()?;
+    let status = Command::new("cargo").args(&["build", "--features", "crossval"]).status()?;
 
     if !status.success() {
         return Err(anyhow!("Failed to build with crossval features"));
@@ -1417,10 +1353,7 @@ fn clean_cache() -> Result<()> {
 
     let cache_dirs = [
         ("Cargo target", PathBuf::from("target/")),
-        (
-            "C++ build",
-            dirs::home_dir().unwrap().join(".cache/bitnet_cpp/"),
-        ),
+        ("C++ build", dirs::home_dir().unwrap().join(".cache/bitnet_cpp/")),
         ("Test fixtures", PathBuf::from("crossval/fixtures/")),
         ("Models", PathBuf::from("models/")),
     ];
@@ -1434,12 +1367,7 @@ fn clean_cache() -> Result<()> {
             let size = dir_size(dir)?;
             total_size += size;
             existing_dirs.push((*name, dir.clone(), size));
-            println!(
-                "  {} ({:.2} MB): {}",
-                name,
-                size as f64 / 1_048_576.0,
-                dir.display()
-            );
+            println!("  {} ({:.2} MB): {}", name, size as f64 / 1_048_576.0, dir.display());
         }
     }
 
@@ -1488,9 +1416,7 @@ fn check_features() -> Result<()> {
     let cargo_toml = fs::read_to_string("Cargo.toml")?;
 
     if cargo_toml.contains("default = [") && cargo_toml.contains("\"crossval\"") {
-        return Err(anyhow!(
-            "crossval feature is enabled by default! This will slow down builds."
-        ));
+        return Err(anyhow!("crossval feature is enabled by default! This will slow down builds."));
     }
 
     println!("  ✅ crossval feature is not in default features");
@@ -1503,9 +1429,8 @@ fn run_benchmark(platform: &str) -> Result<()> {
     println!("🚀 Running performance benchmarks...");
     println!("  Platform: {}", platform);
 
-    let status = Command::new("cargo")
-        .args(&["bench", "--workspace", "--features", "cpu"])
-        .status()?;
+    let status =
+        Command::new("cargo").args(&["bench", "--workspace", "--features", "cpu"]).status()?;
 
     if !status.success() {
         return Err(anyhow!("Benchmarks failed"));
@@ -1522,9 +1447,7 @@ fn run(bin: &str, args: Vec<String>) -> Result<()> {
 }
 
 fn run_cmd(cmd: &mut Command) -> Result<()> {
-    let status = cmd
-        .status()
-        .with_context(|| format!("Failed to spawn: {:?}", cmd))?;
+    let status = cmd.status().with_context(|| format!("Failed to spawn: {:?}", cmd))?;
 
     if !status.success() {
         return Err(anyhow!("Command failed with status: {:?}", status));
@@ -1696,10 +1619,7 @@ mod tests {
 
             // GET with If-None-Match returns 304
             if rq.method() == &tiny_http::Method::Get {
-                let has_etag = rq
-                    .headers()
-                    .iter()
-                    .any(|h| h.field.as_str() == "If-None-Match");
+                let has_etag = rq.headers().iter().any(|h| h.field.as_str() == "If-None-Match");
 
                 if has_etag {
                     return Response::from_string("").with_status_code(StatusCode(304));

@@ -45,10 +45,7 @@ impl TestFixture {
             )));
         }
 
-        Ok(TestFixture {
-            model_path,
-            ..fixture
-        })
+        Ok(TestFixture { model_path, ..fixture })
     }
 
     /// Get all available fixture names

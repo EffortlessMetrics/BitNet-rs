@@ -16,18 +16,12 @@ pub struct MarkdownReporter {
 impl MarkdownReporter {
     /// Create a new Markdown reporter with full details
     pub fn new() -> Self {
-        Self {
-            include_details: true,
-            include_metrics: true,
-        }
+        Self { include_details: true, include_metrics: true }
     }
 
     /// Create a new Markdown reporter with summary only
     pub fn new_summary_only() -> Self {
-        Self {
-            include_details: false,
-            include_metrics: false,
-        }
+        Self { include_details: false, include_metrics: false }
     }
 
     /// Generate the complete Markdown report
@@ -74,11 +68,8 @@ impl MarkdownReporter {
         let total_skipped: usize = results.iter().map(|r| r.summary.skipped).sum();
         let total_duration: f64 = results.iter().map(|r| r.total_duration.as_secs_f64()).sum();
 
-        let success_rate = if total_tests > 0 {
-            (total_passed as f64 / total_tests as f64) * 100.0
-        } else {
-            0.0
-        };
+        let success_rate =
+            if total_tests > 0 { (total_passed as f64 / total_tests as f64) * 100.0 } else { 0.0 };
 
         let status_emoji = if success_rate >= 95.0 {
             "✅"
@@ -215,11 +206,8 @@ impl MarkdownReporter {
         }
 
         // Skipped tests (if any)
-        let skipped_tests: Vec<_> = suite
-            .test_results
-            .iter()
-            .filter(|t| matches!(t.status, TestStatus::Skipped))
-            .collect();
+        let skipped_tests: Vec<_> =
+            suite.test_results.iter().filter(|t| matches!(t.status, TestStatus::Skipped)).collect();
 
         if !skipped_tests.is_empty() {
             markdown.push_str("#### ⚠️ Skipped Tests\n\n");
@@ -274,11 +262,8 @@ impl MarkdownReporter {
         let total_tests: usize = results.iter().map(|r| r.summary.total_tests).sum();
         let total_duration: f64 = results.iter().map(|r| r.total_duration.as_secs_f64()).sum();
 
-        let avg_test_duration = if total_tests > 0 {
-            total_duration / total_tests as f64
-        } else {
-            0.0
-        };
+        let avg_test_duration =
+            if total_tests > 0 { total_duration / total_tests as f64 } else { 0.0 };
 
         // Memory usage statistics
         let memory_peaks: Vec<u64> = results
@@ -296,20 +281,11 @@ impl MarkdownReporter {
         };
 
         markdown.push_str("### Timing Metrics\n\n");
-        markdown.push_str(&format!(
-            "- **Total Execution Time:** {:.2}s\n",
-            total_duration
-        ));
-        markdown.push_str(&format!(
-            "- **Average Test Duration:** {:.3}s\n",
-            avg_test_duration
-        ));
+        markdown.push_str(&format!("- **Total Execution Time:** {:.2}s\n", total_duration));
+        markdown.push_str(&format!("- **Average Test Duration:** {:.3}s\n", avg_test_duration));
 
         // Find slowest tests
-        let mut all_tests: Vec<_> = results
-            .iter()
-            .flat_map(|suite| &suite.test_results)
-            .collect();
+        let mut all_tests: Vec<_> = results.iter().flat_map(|suite| &suite.test_results).collect();
         all_tests.sort_by(|a, b| b.duration.cmp(&a.duration));
 
         if !all_tests.is_empty() {
@@ -325,10 +301,8 @@ impl MarkdownReporter {
 
         markdown.push_str("\n### Memory Metrics\n\n");
         if !memory_peaks.is_empty() {
-            markdown.push_str(&format!(
-                "- **Average Peak Memory:** {:.1} KB\n",
-                avg_memory / 1024.0
-            ));
+            markdown
+                .push_str(&format!("- **Average Peak Memory:** {:.1} KB\n", avg_memory / 1024.0));
             markdown.push_str(&format!(
                 "- **Maximum Peak Memory:** {:.1} KB\n",
                 max_memory as f64 / 1024.0
@@ -494,10 +468,7 @@ mod tests {
         let reporter = MarkdownReporter::new();
         let results = vec![create_test_suite_result()];
 
-        let report_result = reporter
-            .generate_report(&results, &output_path)
-            .await
-            .unwrap();
+        let report_result = reporter.generate_report(&results, &output_path).await.unwrap();
 
         assert_eq!(report_result.format, ReportFormat::Markdown);
         assert!(output_path.exists());
@@ -527,10 +498,7 @@ mod tests {
         let reporter = MarkdownReporter::new_summary_only();
         let results = vec![create_test_suite_result()];
 
-        reporter
-            .generate_report(&results, &output_path)
-            .await
-            .unwrap();
+        reporter.generate_report(&results, &output_path).await.unwrap();
 
         let content = fs::read_to_string(&output_path).await.unwrap();
         // Summary only should not include detailed results or metrics

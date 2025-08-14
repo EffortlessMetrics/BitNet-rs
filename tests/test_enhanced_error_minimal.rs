@@ -13,10 +13,7 @@ fn test_enhanced_error_handling_minimal() {
     // Test severity assessment
     let severity = timeout_error.severity();
     println!("✅ Timeout error severity: {:?}", severity);
-    assert_eq!(
-        severity,
-        bitnet_tests::common::errors::ErrorSeverity::Medium
-    );
+    assert_eq!(severity, bitnet_tests::common::errors::ErrorSeverity::Medium);
 
     // Test recovery suggestions
     let suggestions = timeout_error.recovery_suggestions();
@@ -45,18 +42,12 @@ fn test_enhanced_error_handling_minimal() {
 
     // Test debug info
     let debug_info = timeout_error.debug_info();
-    println!(
-        "✅ Debug info keys: {:?}",
-        debug_info.keys().collect::<Vec<_>>()
-    );
+    println!("✅ Debug info keys: {:?}", debug_info.keys().collect::<Vec<_>>());
 
     // Test error report generation
     let report = timeout_error.create_error_report();
     let summary = report.generate_summary();
-    println!(
-        "✅ Error report summary generated (length: {})",
-        summary.len()
-    );
+    println!("✅ Error report summary generated (length: {})", summary.len());
 
     println!("=== Enhanced Error Handling Test Complete ===");
 }
@@ -120,9 +111,8 @@ fn test_test_result_compatibility() {
     assert!(compat_result.is_ok());
     println!("✅ TestResultCompat works: {:?}", compat_result);
 
-    let error_result: TestResultCompat<String> = Err(
-        bitnet_tests::common::errors::TestError::setup("Test setup failed".to_string()),
-    );
+    let error_result: TestResultCompat<String> =
+        Err(bitnet_tests::common::errors::TestError::setup("Test setup failed".to_string()));
     assert!(error_result.is_err());
     println!("✅ TestResultCompat error handling works");
 

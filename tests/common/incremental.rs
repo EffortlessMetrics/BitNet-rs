@@ -18,11 +18,7 @@ impl IncrementalTester {
         let cache_dir = PathBuf::from("tests/cache/incremental");
         let last_run_file = cache_dir.join("last_run.json");
 
-        Self {
-            cache_dir,
-            last_run_file,
-            dependency_graph: DependencyGraph::new(),
-        }
+        Self { cache_dir, last_run_file, dependency_graph: DependencyGraph::new() }
     }
 
     /// Detect changed files since last test run
@@ -30,9 +26,7 @@ impl IncrementalTester {
         info!("Detecting changes for incremental testing...");
 
         // Ensure cache directory exists
-        fs::create_dir_all(&self.cache_dir)
-            .await
-            .map_err(|e| TestError::IoError(e))?;
+        fs::create_dir_all(&self.cache_dir).await.map_err(|e| TestError::IoError(e))?;
 
         let changed_files = if self.is_git_repository().await {
             self.detect_git_changes().await?
@@ -64,10 +58,7 @@ impl IncrementalTester {
         debug!("Using git to detect changes");
 
         // Get the last commit hash from our cache
-        let last_commit = self
-            .get_last_commit_hash()
-            .await
-            .unwrap_or_else(|| "HEAD~1".to_string());
+        let last_commit = self.get_last_commit_hash().await.unwrap_or_else(|| "HEAD~1".to_string());
 
         // Get changed files since last commit
         let output = Command::new("git")
@@ -96,12 +87,9 @@ impl IncrementalTester {
         }
 
         // Also check for unstaged changes
-        let unstaged_output = Command::new("git")
-            .arg("diff")
-            .arg("--name-only")
-            .output()
-            .map_err(|e| TestError::ExecutionError {
-                message: format!("Git diff unstaged failed: {}", e),
+        let unstaged_output =
+            Command::new("git").arg("diff").arg("--name-only").output().map_err(|e| {
+                TestError::ExecutionError { message: format!("Git diff unstaged failed: {}", e) }
             })?;
 
         if unstaged_output.status.success() {
@@ -197,20 +185,14 @@ impl IncrementalTester {
 
     /// Save current commit hash to cache
     async fn save_current_commit_hash(&self) -> Result<(), TestError> {
-        let output = Command::new("git")
-            .arg("rev-parse")
-            .arg("HEAD")
-            .output()
-            .map_err(|e| TestError::ExecutionError {
-                message: format!("Git rev-parse failed: {}", e),
-            })?;
+        let output = Command::new("git").arg("rev-parse").arg("HEAD").output().map_err(|e| {
+            TestError::ExecutionError { message: format!("Git rev-parse failed: {}", e) }
+        })?;
 
         if output.status.success() {
             let commit_hash = String::from_utf8_lossy(&output.stdout).trim().to_string();
             let commit_file = self.cache_dir.join("last_commit.txt");
-            fs::write(commit_file, commit_hash)
-                .await
-                .map_err(|e| TestError::IoError(e))?;
+            fs::write(commit_file, commit_hash).await.map_err(|e| TestError::IoError(e))?;
         }
 
         Ok(())
@@ -227,10 +209,7 @@ impl IncrementalTester {
 
     /// Save current time as last run time
     async fn save_last_run_time(&self) -> Result<(), TestError> {
-        let timestamp = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+        let timestamp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
 
         fs::write(&self.last_run_file, timestamp.to_string())
             .await
@@ -241,9 +220,7 @@ impl IncrementalTester {
 
     /// Check if a file was modified after the given time
     async fn is_file_modified(&self, path: &PathBuf, since: SystemTime) -> Result<bool, TestError> {
-        let metadata = fs::metadata(path)
-            .await
-            .map_err(|e| TestError::IoError(e))?;
+        let metadata = fs::metadata(path).await.map_err(|e| TestError::IoError(e))?;
 
         let modified = metadata.modified().map_err(|e| TestError::IoError(e))?;
 
@@ -262,11 +239,7 @@ impl IncrementalTester {
             let mut modified_files = Vec::new();
             let mut entries = fs::read_dir(dir).await.map_err(|e| TestError::IoError(e))?;
 
-            while let Some(entry) = entries
-                .next_entry()
-                .await
-                .map_err(|e| TestError::IoError(e))?
-            {
+            while let Some(entry) = entries.next_entry().await.map_err(|e| TestError::IoError(e))? {
                 let path = entry.path();
 
                 if path.is_file() && self.is_relevant_file(&path) {
@@ -274,11 +247,7 @@ impl IncrementalTester {
                         modified_files.push(path);
                     }
                 } else if path.is_dir()
-                    && !path
-                        .file_name()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .starts_with('.')
+                    && !path.file_name().unwrap_or_default().to_string_lossy().starts_with('.')
                 {
                     let mut subdir_files = self.find_modified_files_in_dir(&path, since).await?;
                     modified_files.append(&mut subdir_files);
@@ -322,10 +291,8 @@ impl IncrementalTester {
             return false;
         }
 
-        let affected_patterns = self
-            .get_affected_test_patterns(&changed_files)
-            .await
-            .unwrap_or_default();
+        let affected_patterns =
+            self.get_affected_test_patterns(&changed_files).await.unwrap_or_default();
         let estimated_affected_tests = affected_patterns.len() * 10; // Rough estimate
 
         estimated_affected_tests < total_tests / 2
@@ -349,10 +316,8 @@ impl DependencyGraph {
     /// Build default file-to-test mappings
     fn build_default_mappings(&mut self) {
         // Core files affect all tests
-        self.file_to_tests
-            .insert(PathBuf::from("Cargo.toml"), vec!["*".to_string()]);
-        self.file_to_tests
-            .insert(PathBuf::from("Cargo.lock"), vec!["*".to_string()]);
+        self.file_to_tests.insert(PathBuf::from("Cargo.toml"), vec!["*".to_string()]);
+        self.file_to_tests.insert(PathBuf::from("Cargo.lock"), vec!["*".to_string()]);
 
         // Common crate affects many tests
         self.file_to_tests.insert(
@@ -363,28 +328,18 @@ impl DependencyGraph {
         // Models crate affects model-related tests
         self.file_to_tests.insert(
             PathBuf::from("crates/bitnet-models"),
-            vec![
-                "bitnet-models".to_string(),
-                "model".to_string(),
-                "loading".to_string(),
-            ],
+            vec!["bitnet-models".to_string(), "model".to_string(), "loading".to_string()],
         );
 
         // Kernels crate affects performance tests
         self.file_to_tests.insert(
             PathBuf::from("crates/bitnet-kernels"),
-            vec![
-                "bitnet-kernels".to_string(),
-                "performance".to_string(),
-                "simd".to_string(),
-            ],
+            vec!["bitnet-kernels".to_string(), "performance".to_string(), "simd".to_string()],
         );
 
         // Test files affect themselves
-        self.file_to_tests.insert(
-            PathBuf::from("tests/"),
-            vec!["integration".to_string(), "e2e".to_string()],
-        );
+        self.file_to_tests
+            .insert(PathBuf::from("tests/"), vec!["integration".to_string(), "e2e".to_string()]);
     }
 
     /// Get test patterns affected by a file change

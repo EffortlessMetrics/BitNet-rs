@@ -97,11 +97,7 @@ pub struct OptimizationStrategy {
 impl TestExecutionOptimizer {
     /// Create a new test execution optimizer
     pub fn new(config: OptimizationConfig) -> Self {
-        Self {
-            target_duration: config.target_duration,
-            config,
-            historical_data: HashMap::new(),
-        }
+        Self { target_duration: config.target_duration, config, historical_data: HashMap::new() }
     }
 
     /// Create an optimized test configuration for fast execution
@@ -194,9 +190,8 @@ impl TestExecutionOptimizer {
         }
 
         // Apply optimizations to meet target
-        let (selected_tests, skipped_tests) = self
-            .apply_optimizations(all_tests, &test_estimates, &mut optimization_notes)
-            .await?;
+        let (selected_tests, skipped_tests) =
+            self.apply_optimizations(all_tests, &test_estimates, &mut optimization_notes).await?;
 
         let selected_estimates: HashMap<String, Duration> = selected_tests
             .iter()
@@ -249,9 +244,8 @@ impl TestExecutionOptimizer {
         all_tests = self.prioritize_tests(all_tests, test_estimates);
 
         // 3. Select tests that fit within time budget
-        let selected_tests = self
-            .select_tests_for_time_budget(all_tests.clone(), test_estimates, notes)
-            .await?;
+        let selected_tests =
+            self.select_tests_for_time_budget(all_tests.clone(), test_estimates, notes).await?;
 
         // 4. Add remaining tests to skipped list
         let selected_set: std::collections::HashSet<_> = selected_tests.iter().collect();
@@ -297,9 +291,7 @@ impl TestExecutionOptimizer {
             let priority_b = self.calculate_test_priority(b, estimates);
 
             // Higher priority first
-            priority_b
-                .partial_cmp(&priority_a)
-                .unwrap_or(std::cmp::Ordering::Equal)
+            priority_b.partial_cmp(&priority_a).unwrap_or(std::cmp::Ordering::Equal)
         });
 
         tests
@@ -450,12 +442,7 @@ impl TestExecutionOptimizer {
         let mock_data = vec![
             ("unit_test_basic", Duration::from_secs(1), 0.98, 0.9),
             ("unit_test_advanced", Duration::from_secs(3), 0.95, 0.8),
-            (
-                "integration_test_workflow",
-                Duration::from_secs(12),
-                0.90,
-                0.7,
-            ),
+            ("integration_test_workflow", Duration::from_secs(12), 0.90, 0.7),
             ("performance_benchmark", Duration::from_secs(25), 0.85, 0.6),
             ("crossval_comparison", Duration::from_secs(45), 0.80, 0.5),
         ];
@@ -489,17 +476,16 @@ impl TestExecutionOptimizer {
         success: bool,
         cache_hit: bool,
     ) {
-        let entry = self
-            .historical_data
-            .entry(test_name.to_string())
-            .or_insert_with(|| TestPerformanceData {
+        let entry = self.historical_data.entry(test_name.to_string()).or_insert_with(|| {
+            TestPerformanceData {
                 name: test_name.to_string(),
                 average_duration: duration,
                 success_rate: if success { 1.0 } else { 0.0 },
                 cache_hit_rate: if cache_hit { 1.0 } else { 0.0 },
                 last_run: Some(Instant::now()),
                 priority_score: 1.0,
-            });
+            }
+        });
 
         // Update with exponential moving average
         let alpha = 0.3; // Learning rate
@@ -527,15 +513,9 @@ impl TestExecutionOptimizer {
 
         report.push_str("# Test Execution Optimization Report\n\n");
 
-        report.push_str(&format!(
-            "**Target Duration:** {:?}\n",
-            self.target_duration
-        ));
+        report.push_str(&format!("**Target Duration:** {:?}\n", self.target_duration));
 
-        report.push_str(&format!(
-            "**Estimated Duration:** {:?}\n",
-            strategy.estimated_duration
-        ));
+        report.push_str(&format!("**Estimated Duration:** {:?}\n", strategy.estimated_duration));
 
         let efficiency = if self.target_duration > Duration::ZERO {
             strategy.estimated_duration.as_secs_f64() / self.target_duration.as_secs_f64() * 100.0
@@ -543,20 +523,11 @@ impl TestExecutionOptimizer {
             0.0
         };
 
-        report.push_str(&format!(
-            "**Time Efficiency:** {:.1}% of target\n\n",
-            efficiency
-        ));
+        report.push_str(&format!("**Time Efficiency:** {:.1}% of target\n\n", efficiency));
 
-        report.push_str(&format!(
-            "**Selected Tests:** {}\n",
-            strategy.test_selection.len()
-        ));
+        report.push_str(&format!("**Selected Tests:** {}\n", strategy.test_selection.len()));
 
-        report.push_str(&format!(
-            "**Skipped Tests:** {}\n\n",
-            strategy.skipped_tests.len()
-        ));
+        report.push_str(&format!("**Skipped Tests:** {}\n\n", strategy.skipped_tests.len()));
 
         report.push_str("## Optimization Notes\n\n");
         for note in &strategy.optimization_notes {
@@ -564,10 +535,8 @@ impl TestExecutionOptimizer {
         }
 
         report.push_str("\n## Parallel Configuration\n\n");
-        report.push_str(&format!(
-            "- **Max Parallel:** {}\n",
-            strategy.parallel_config.max_parallel
-        ));
+        report
+            .push_str(&format!("- **Max Parallel:** {}\n", strategy.parallel_config.max_parallel));
         report.push_str(&format!(
             "- **Dynamic Parallelism:** {}\n",
             strategy.parallel_config.dynamic_parallelism
@@ -685,10 +654,7 @@ mod tests {
 
     #[test]
     fn test_parallel_time_calculation() {
-        let config = OptimizationConfig {
-            max_parallel: 2,
-            ..OptimizationConfig::default()
-        };
+        let config = OptimizationConfig { max_parallel: 2, ..OptimizationConfig::default() };
         let optimizer = TestExecutionOptimizer::new(config);
 
         let mut estimates = HashMap::new();

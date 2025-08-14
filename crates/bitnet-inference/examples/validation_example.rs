@@ -57,30 +57,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Print results
     println!("\n=== Validation Results ===");
-    println!(
-        "Overall Result: {}",
-        if results.overall_passed {
-            "PASSED"
-        } else {
-            "FAILED"
-        }
-    );
-    println!(
-        "Tests Passed: {}/{}",
-        results.summary.passed_tests, results.summary.total_tests
-    );
+    println!("Overall Result: {}", if results.overall_passed { "PASSED" } else { "FAILED" });
+    println!("Tests Passed: {}/{}", results.summary.passed_tests, results.summary.total_tests);
     println!(
         "Average Token Accuracy: {:.2}%",
         results.accuracy_metrics.average_token_accuracy * 100.0
     );
-    println!(
-        "Speedup Factor: {:.2}x",
-        results.performance_comparison.speedup_factor
-    );
-    println!(
-        "Memory Efficiency: {:.2}x",
-        results.performance_comparison.memory_efficiency
-    );
+    println!("Speedup Factor: {:.2}x", results.performance_comparison.speedup_factor);
+    println!("Memory Efficiency: {:.2}x", results.performance_comparison.memory_efficiency);
 
     // Print individual test results
     println!("\n=== Individual Test Results ===");

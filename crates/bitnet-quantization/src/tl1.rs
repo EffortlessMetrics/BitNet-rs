@@ -21,12 +21,7 @@ pub struct TL1Config {
 
 impl Default for TL1Config {
     fn default() -> Self {
-        Self {
-            block_size: 64,
-            lookup_table_size: 256,
-            use_asymmetric: false,
-            precision_bits: 2,
-        }
+        Self { block_size: 64, lookup_table_size: 256, use_asymmetric: false, precision_bits: 2 }
     }
 }
 
@@ -56,11 +51,7 @@ impl LookupTable {
             } else {
                 (max_val - min_val) / (num_levels - 1) as f32
             };
-            let zero_point = if scale == 0.0 {
-                0
-            } else {
-                (-min_val / scale).round() as i32
-            };
+            let zero_point = if scale == 0.0 { 0 } else { (-min_val / scale).round() as i32 };
             (scale, zero_point)
         } else {
             let abs_max = max_val.abs().max(min_val.abs());
@@ -96,12 +87,7 @@ impl LookupTable {
             forward[i] = quantized;
         }
 
-        Self {
-            forward,
-            reverse,
-            scale,
-            zero_point,
-        }
+        Self { forward, reverse, scale, zero_point }
     }
 
     /// Quantize a value using the lookup table
@@ -140,11 +126,7 @@ impl TL1Quantizer {
 
     /// Create a new TL1 quantizer with custom configuration
     pub fn with_config(config: TL1Config) -> Self {
-        Self {
-            config,
-            lookup_tables: HashMap::new(),
-            use_neon: cfg!(target_arch = "aarch64"),
-        }
+        Self { config, lookup_tables: HashMap::new(), use_neon: cfg!(target_arch = "aarch64") }
     }
 
     /// Load configuration from .ini file for compatibility
@@ -182,9 +164,8 @@ impl TL1Quantizer {
         let shape = tensor.shape().to_vec();
 
         // Calculate statistics for lookup table generation
-        let (min_val, max_val) = data
-            .iter()
-            .fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &val| {
+        let (min_val, max_val) =
+            data.iter().fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &val| {
                 (min.min(val), max.max(val))
             });
 
@@ -229,10 +210,9 @@ impl TL1Quantizer {
     /// Dequantize tensor from TL1 format
     pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::TL1 {
-            return Err(QuantizationError::UnsupportedType {
-                qtype: tensor.qtype.to_string(),
-            }
-            .into());
+            return Err(
+                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
+            );
         }
 
         // Unpack quantized values
@@ -270,9 +250,7 @@ impl TL1Quantizer {
             .for_each(|((quant_block, data_block), &_scale)| {
                 // Create block-specific lookup table
                 let block_min = data_block.iter().fold(f32::INFINITY, |acc, &x| acc.min(x));
-                let block_max = data_block
-                    .iter()
-                    .fold(f32::NEG_INFINITY, |acc, &x| acc.max(x));
+                let block_max = data_block.iter().fold(f32::NEG_INFINITY, |acc, &x| acc.max(x));
                 let block_table = LookupTable::new(
                     block_min,
                     block_max,
@@ -360,11 +338,9 @@ impl TL1Quantizer {
             .zip(quantized.par_chunks(self.config.block_size))
             .zip(scales.par_iter())
             .zip(zero_points.par_iter())
-            .for_each(
-                |(((dequant_block, quant_block), &scale), &zero_point)| unsafe {
-                    self.dequantize_neon_block(quant_block, dequant_block, scale, zero_point);
-                },
-            );
+            .for_each(|(((dequant_block, quant_block), &scale), &zero_point)| unsafe {
+                self.dequantize_neon_block(quant_block, dequant_block, scale, zero_point);
+            });
 
         Ok(dequantized)
     }
@@ -475,11 +451,8 @@ impl TL1Quantizer {
         // Handle remainder with scalar code
         for (i, &value) in remainder.iter().enumerate() {
             let idx = quantized.len() - remainder.len() + i;
-            let adjusted = if self.config.use_asymmetric {
-                value as i32 - zero_point
-            } else {
-                value as i32
-            };
+            let adjusted =
+                if self.config.use_asymmetric { value as i32 - zero_point } else { value as i32 };
             output[idx] = adjusted as f32 * scale;
         }
     }
@@ -587,10 +560,7 @@ mod tests {
 
         let tensor = create_tensor_from_f32(data, &shape, &device).unwrap();
 
-        let config = TL1Config {
-            use_asymmetric: true,
-            ..Default::default()
-        };
+        let config = TL1Config { use_asymmetric: true, ..Default::default() };
         let quantizer = TL1Quantizer::with_config(config);
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();

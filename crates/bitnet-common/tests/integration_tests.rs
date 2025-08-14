@@ -11,19 +11,13 @@ use tempfile::TempDir;
 static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 fn acquire_env_lock() -> std::sync::MutexGuard<'static, ()> {
-    ENV_LOCK
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
+    ENV_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 #[test]
 fn test_config_with_tensor_operations() {
-    let config = BitNetConfig::builder()
-        .vocab_size(32000)
-        .hidden_size(4096)
-        .use_gpu(false)
-        .build()
-        .unwrap();
+    let config =
+        BitNetConfig::builder().vocab_size(32000).hidden_size(4096).use_gpu(false).build().unwrap();
 
     let vocab_tensor =
         ConcreteTensor::mock(vec![config.model.vocab_size, config.model.hidden_size]);
@@ -91,14 +85,8 @@ fn test_serialization_with_all_types() {
 
     assert_eq!(config.model.vocab_size, deserialized.model.vocab_size);
     assert_eq!(config.model.format, deserialized.model.format);
-    assert_eq!(
-        config.inference.temperature,
-        deserialized.inference.temperature
-    );
-    assert_eq!(
-        config.quantization.quantization_type,
-        deserialized.quantization.quantization_type
-    );
+    assert_eq!(config.inference.temperature, deserialized.inference.temperature);
+    assert_eq!(config.quantization.quantization_type, deserialized.quantization.quantization_type);
     assert_eq!(config.performance.use_gpu, deserialized.performance.use_gpu);
 
     assert!(deserialized.validate().is_ok());
@@ -161,9 +149,7 @@ fn test_error_handling_integration() {
     let config_error = config.validate().unwrap_err();
     assert!(matches!(config_error, BitNetError::Config(_)));
 
-    let model_error = ModelError::NotFound {
-        path: "missing.gguf".to_string(),
-    };
+    let model_error = ModelError::NotFound { path: "missing.gguf".to_string() };
     let bitnet_error: BitNetError = model_error.into();
     assert!(matches!(bitnet_error, BitNetError::Model(_)));
 
@@ -178,22 +164,14 @@ fn test_error_handling_integration() {
 
 #[test]
 fn test_performance_metrics_with_config() {
-    let config = BitNetConfig::builder()
-        .batch_size(4)
-        .use_gpu(true)
-        .num_threads(Some(8))
-        .build()
-        .unwrap();
+    let config =
+        BitNetConfig::builder().batch_size(4).use_gpu(true).num_threads(Some(8)).build().unwrap();
 
     let metrics = PerformanceMetrics {
         tokens_per_second: 150.0,
         latency_ms: 6.67,
         memory_usage_mb: 2048.0,
-        gpu_utilization: if config.performance.use_gpu {
-            Some(85.0)
-        } else {
-            None
-        },
+        gpu_utilization: if config.performance.use_gpu { Some(85.0) } else { None },
     };
 
     assert_eq!(config.performance.batch_size, 4);

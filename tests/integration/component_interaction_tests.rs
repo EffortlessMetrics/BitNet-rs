@@ -77,10 +77,7 @@ impl TestCase for CrossCrateDataFlowTest {
         debug!("Tokenizer data flow: {:?}", tokenizer_data_flow);
 
         // Verify tokenizer received input text
-        if !tokenizer_data_flow
-            .inputs_received
-            .contains(&test_input.to_string())
-        {
+        if !tokenizer_data_flow.inputs_received.contains(&test_input.to_string()) {
             return Err(TestError::AssertionError {
                 message: "Tokenizer should have received input text".to_string(),
             });
@@ -108,18 +105,9 @@ impl TestCase for CrossCrateDataFlowTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "tokenizer_encode_calls".to_string(),
-                    tokenizer_data_flow.encode_calls as f64,
-                ),
-                (
-                    "tokenizer_decode_calls".to_string(),
-                    tokenizer_data_flow.decode_calls as f64,
-                ),
-                (
-                    "model_forward_calls".to_string(),
-                    model_data_flow.forward_calls as f64,
-                ),
+                ("tokenizer_encode_calls".to_string(), tokenizer_data_flow.encode_calls as f64),
+                ("tokenizer_decode_calls".to_string(), tokenizer_data_flow.decode_calls as f64),
+                ("model_forward_calls".to_string(), model_data_flow.forward_calls as f64),
                 ("generated_text_length".to_string(), result.len() as f64),
             ]
             .into_iter()
@@ -233,22 +221,10 @@ impl TestCase for ConfigurationPropagationTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "model_vocab_size".to_string(),
-                    model_config.model.vocab_size as f64,
-                ),
-                (
-                    "model_hidden_size".to_string(),
-                    model_config.model.hidden_size as f64,
-                ),
-                (
-                    "inference_max_context".to_string(),
-                    inference_config.max_context_length as f64,
-                ),
-                (
-                    "generation_max_tokens".to_string(),
-                    generation_config.max_new_tokens as f64,
-                ),
+                ("model_vocab_size".to_string(), model_config.model.vocab_size as f64),
+                ("model_hidden_size".to_string(), model_config.model.hidden_size as f64),
+                ("inference_max_context".to_string(), inference_config.max_context_length as f64),
+                ("generation_max_tokens".to_string(), generation_config.max_new_tokens as f64),
                 ("configurations_tested".to_string(), 3.0),
             ]
             .into_iter()
@@ -390,14 +366,8 @@ impl TestCase for ErrorHandlingAndRecoveryTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "error_scenarios_tested".to_string(),
-                    error_scenarios_tested as f64,
-                ),
-                (
-                    "recovery_scenarios_successful".to_string(),
-                    recovery_scenarios_successful as f64,
-                ),
+                ("error_scenarios_tested".to_string(), error_scenarios_tested as f64),
+                ("recovery_scenarios_successful".to_string(), recovery_scenarios_successful as f64),
                 (
                     "recovery_success_rate".to_string(),
                     if error_scenarios_tested > 0 {
@@ -490,14 +460,8 @@ impl TestCase for ResourceSharingTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "shared_model_accesses".to_string(),
-                    model_usage.total_accesses as f64,
-                ),
-                (
-                    "shared_model_concurrent".to_string(),
-                    model_usage.concurrent_accesses as f64,
-                ),
+                ("shared_model_accesses".to_string(), model_usage.total_accesses as f64),
+                ("shared_model_concurrent".to_string(), model_usage.concurrent_accesses as f64),
                 ("resource_sharing_scenarios".to_string(), 2.0),
             ]
             .into_iter()
@@ -563,10 +527,7 @@ impl Model for InstrumentedModel {
         guard.forward_calls += 1;
         drop(guard);
 
-        Ok(bitnet_common::MockTensor::new(vec![
-            1,
-            self.config.model.vocab_size,
-        ]))
+        Ok(bitnet_common::MockTensor::new(vec![1, self.config.model.vocab_size]))
     }
 }
 
@@ -649,10 +610,7 @@ impl Model for ConfigurableModel {
         _input: &bitnet_common::ConcreteTensor,
         _cache: &mut dyn std::any::Any,
     ) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
-        Ok(bitnet_common::MockTensor::new(vec![
-            1,
-            self.config.model.vocab_size,
-        ]))
+        Ok(bitnet_common::MockTensor::new(vec![1, self.config.model.vocab_size]))
     }
 }
 
@@ -695,10 +653,7 @@ struct ErrorInjectingModel {
 
 impl ErrorInjectingModel {
     fn new() -> Self {
-        Self {
-            config: BitNetConfig::default(),
-            should_fail: Arc::new(Mutex::new(false)),
-        }
+        Self { config: BitNetConfig::default(), should_fail: Arc::new(Mutex::new(false)) }
     }
 
     fn set_should_fail(&self, should_fail: bool) {
@@ -717,14 +672,9 @@ impl Model for ErrorInjectingModel {
         _cache: &mut dyn std::any::Any,
     ) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
         if *self.should_fail.lock().unwrap() {
-            return Err(BitNetError::ModelError(
-                "Injected model error for testing".to_string(),
-            ));
+            return Err(BitNetError::ModelError("Injected model error for testing".to_string()));
         }
-        Ok(bitnet_common::MockTensor::new(vec![
-            1,
-            self.config.model.vocab_size,
-        ]))
+        Ok(bitnet_common::MockTensor::new(vec![1, self.config.model.vocab_size]))
     }
 }
 
@@ -777,10 +727,7 @@ impl Model for ResourceTrackingModel {
         stats.concurrent_accesses -= 1;
         drop(stats);
 
-        Ok(bitnet_common::MockTensor::new(vec![
-            1,
-            self.config.model.vocab_size,
-        ]))
+        Ok(bitnet_common::MockTensor::new(vec![1, self.config.model.vocab_size]))
     }
 }
 #[cfg(test)]

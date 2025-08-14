@@ -93,10 +93,7 @@ fn parse_log_level(level_str: &str) -> TestOpResult<Level> {
         "info" => Ok(Level::INFO),
         "warn" => Ok(Level::WARN),
         "error" => Ok(Level::ERROR),
-        _ => Err(TestError::config(format!(
-            "Invalid log level: {}",
-            level_str
-        ))),
+        _ => Err(TestError::config(format!("Invalid log level: {}", level_str))),
     }
 }
 
@@ -109,10 +106,7 @@ pub struct TestTracer {
 impl TestTracer {
     /// Create a new test tracer
     pub fn new(enabled: bool) -> Self {
-        Self {
-            traces: Arc::new(RwLock::new(HashMap::new())),
-            enabled,
-        }
+        Self { traces: Arc::new(RwLock::new(HashMap::new())), enabled }
     }
 
     /// Start tracing for a test
@@ -262,12 +256,8 @@ impl DebugContext {
         message: String,
         metadata: HashMap<String, String>,
     ) {
-        let event = TraceEvent {
-            timestamp: std::time::SystemTime::now(),
-            event_type,
-            message,
-            metadata,
-        };
+        let event =
+            TraceEvent { timestamp: std::time::SystemTime::now(), event_type, message, metadata };
         self.tracer.trace_event(&self.test_name, event).await;
     }
 
@@ -301,11 +291,7 @@ impl DebugContext {
         error_contexts.push(error_ctx);
 
         // Also log as trace event
-        self.trace(
-            TraceEventType::Error,
-            format!("Error: {} - Context: {}", error, context),
-        )
-        .await;
+        self.trace(TraceEventType::Error, format!("Error: {} - Context: {}", error, context)).await;
     }
 
     /// Get all error contexts
@@ -336,11 +322,7 @@ pub struct ScopedDebugContext {
 
 impl ScopedDebugContext {
     fn new(scope_name: String, tracer: Arc<TestTracer>) -> Self {
-        Self {
-            scope_name,
-            tracer,
-            start_time: std::time::Instant::now(),
-        }
+        Self { scope_name, tracer, start_time: std::time::Instant::now() }
     }
 
     /// Log a trace event in this scope
@@ -479,10 +461,7 @@ pub fn capture_stack_trace() -> Option<String> {
     // or other stack trace capture mechanisms
     Some(format!(
         "Stack trace captured at {}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
     ))
 }
 
@@ -496,11 +475,7 @@ pub struct FailureArtifactCollector {
 impl FailureArtifactCollector {
     /// Create a new failure artifact collector
     pub fn new(enabled: bool, output_dir: std::path::PathBuf) -> Self {
-        Self {
-            enabled,
-            output_dir,
-            artifacts: Arc::new(RwLock::new(Vec::new())),
-        }
+        Self { enabled, output_dir, artifacts: Arc::new(RwLock::new(Vec::new())) }
     }
 
     /// Collect artifacts for a failed test
@@ -581,11 +556,7 @@ impl FailureArtifactCollector {
             tokio::fs::write(&system_path, content).await?;
         }
 
-        tracing::info!(
-            "Collected failure artifacts for test '{}' in {:?}",
-            test_name,
-            test_dir
-        );
+        tracing::info!("Collected failure artifacts for test '{}' in {:?}", test_name, test_dir);
         Ok(())
     }
 
@@ -624,10 +595,7 @@ pub struct PerformanceProfiler {
 impl PerformanceProfiler {
     /// Create a new performance profiler
     pub fn new(enabled: bool) -> Self {
-        Self {
-            enabled,
-            samples: Arc::new(RwLock::new(Vec::new())),
-        }
+        Self { enabled, samples: Arc::new(RwLock::new(Vec::new())) }
     }
 
     /// Start profiling an operation
@@ -833,10 +801,7 @@ impl MetricsCollector {
         }
 
         let mut histograms = self.histograms.write().await;
-        histograms
-            .entry(name.to_string())
-            .or_insert_with(Vec::new)
-            .push(value);
+        histograms.entry(name.to_string()).or_insert_with(Vec::new).push(value);
     }
 
     /// Record a custom metric
@@ -961,18 +926,7 @@ fn calculate_histogram_stats(values: &[f64]) -> HistogramStats {
     let variance: f64 = values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / count as f64;
     let std_dev = variance.sqrt();
 
-    HistogramStats {
-        count,
-        sum,
-        min,
-        max,
-        mean,
-        median,
-        p90,
-        p95,
-        p99,
-        std_dev,
-    }
+    HistogramStats { count, sum, min, max, mean, median, p90, p95, p99, std_dev }
 }
 
 impl PerformanceSummary {
@@ -1008,9 +962,7 @@ impl PerformanceSummary {
 
         let mut operations_by_type = HashMap::new();
         for sample in samples {
-            *operations_by_type
-                .entry(sample.operation.clone())
-                .or_insert(0) += 1;
+            *operations_by_type.entry(sample.operation.clone()).or_insert(0) += 1;
         }
 
         // Calculate memory statistics
@@ -1074,13 +1026,7 @@ impl LoggingManager {
             config.reporting.output_dir.clone(),
         ));
 
-        Ok(Self {
-            config,
-            tracer,
-            performance_profiler,
-            metrics_collector,
-            artifact_collector,
-        })
+        Ok(Self { config, tracer, performance_profiler, metrics_collector, artifact_collector })
     }
 
     /// Create a debug context for a test
@@ -1090,9 +1036,7 @@ impl LoggingManager {
 
     /// Start profiling an operation
     pub async fn start_profiling(&self, operation_name: String) -> OperationProfiler {
-        self.performance_profiler
-            .start_operation(operation_name)
-            .await
+        self.performance_profiler.start_operation(operation_name).await
     }
 
     /// Record a metric
@@ -1126,17 +1070,11 @@ impl LoggingManager {
         tracing::error!("Test '{}' failed: {}", test_name, error);
 
         // Collect failure artifacts
-        self.artifact_collector
-            .collect_failure_artifacts(test_name, error, debug_context)
-            .await?;
+        self.artifact_collector.collect_failure_artifacts(test_name, error, debug_context).await?;
 
         // Record failure metrics
         self.increment_counter("test_failures_total", 1).await;
-        self.increment_counter(
-            &format!("test_failures_by_category_{}", error.category()),
-            1,
-        )
-        .await;
+        self.increment_counter(&format!("test_failures_by_category_{}", error.category()), 1).await;
 
         Ok(())
     }
@@ -1280,9 +1218,7 @@ mod tests {
         let tracer = Arc::new(TestTracer::new(true));
         let context = DebugContext::new("test_debug".to_string(), tracer);
 
-        context
-            .trace(TraceEventType::Info, "Debug message".to_string())
-            .await;
+        context.trace(TraceEventType::Info, "Debug message".to_string()).await;
 
         let artifact = DebugArtifact::text("test_output", "Some test output");
         context.add_artifact(artifact).await;
@@ -1336,9 +1272,7 @@ mod tests {
         let context = DebugContext::new("test_error_context".to_string(), tracer);
 
         let error = TestError::execution("Test error message");
-        context
-            .add_error_context(&error, "Additional context".to_string())
-            .await;
+        context.add_error_context(&error, "Additional context".to_string()).await;
 
         let error_contexts = context.get_error_contexts().await;
         assert_eq!(error_contexts.len(), 1);

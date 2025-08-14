@@ -58,10 +58,7 @@ fn test_progress_callback() {
     let progress_values_clone = progress_values.clone();
 
     let callback: ProgressCallback = Arc::new(move |progress, message| {
-        progress_values_clone
-            .lock()
-            .unwrap()
-            .push((progress, message.to_string()));
+        progress_values_clone.lock().unwrap().push((progress, message.to_string()));
     });
 
     // Simulate progress updates

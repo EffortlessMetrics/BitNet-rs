@@ -171,8 +171,7 @@ impl ProgressiveLoader {
         buffer.append(&chunk_data)?;
 
         // Track memory usage
-        self.memory_manager
-            .track_allocation(format!("chunk_{}", chunk_index), chunk_size)?;
+        self.memory_manager.track_allocation(format!("chunk_{}", chunk_index), chunk_size)?;
 
         // Store chunk
         self.chunks.insert(chunk_index, buffer);
@@ -207,9 +206,7 @@ impl ProgressiveLoader {
     /// Get a loaded chunk by index
     #[wasm_bindgen]
     pub fn get_chunk(&self, chunk_index: usize) -> Option<Uint8Array> {
-        self.chunks
-            .get(&chunk_index)
-            .map(|buffer| buffer.to_uint8_array())
+        self.chunks.get(&chunk_index).map(|buffer| buffer.to_uint8_array())
     }
 
     /// Check if a chunk is loaded
@@ -255,10 +252,7 @@ impl ProgressiveLoader {
     /// Check if loading is complete
     #[wasm_bindgen]
     pub fn is_complete(&self) -> bool {
-        self.loading_complete
-            || (self
-                .total_size
-                .map_or(false, |total| self.loaded_size >= total))
+        self.loading_complete || (self.total_size.map_or(false, |total| self.loaded_size >= total))
     }
 
     /// Mark loading as complete
@@ -276,9 +270,7 @@ impl ProgressiveLoader {
             self.loaded_size = self.loaded_size.saturating_sub(size);
 
             // Track memory deallocation
-            let freed = self
-                .memory_manager
-                .track_deallocation(&format!("chunk_{}", chunk_index));
+            let freed = self.memory_manager.track_deallocation(&format!("chunk_{}", chunk_index));
 
             console::log_1(&format!("Unloaded chunk {}: {} bytes", chunk_index, freed).into());
             Ok(freed)
@@ -329,13 +321,11 @@ impl ProgressiveLoader {
 
         // Fetch the response
         let response_promise = window.fetch_with_request(&request);
-        let response = JsFuture::from(response_promise)
-            .await
-            .map_err(|_| JsError::new("Fetch failed"))?;
+        let response =
+            JsFuture::from(response_promise).await.map_err(|_| JsError::new("Fetch failed"))?;
 
-        let response: web_sys::Response = response
-            .dyn_into()
-            .map_err(|_| JsError::new("Invalid response"))?;
+        let response: web_sys::Response =
+            response.dyn_into().map_err(|_| JsError::new("Invalid response"))?;
 
         if !response.ok() {
             return Err(JsError::new(&format!("HTTP error: {}", response.status())));
@@ -350,9 +340,7 @@ impl ProgressiveLoader {
             .and_then(|s| s.parse::<usize>().ok());
 
         // Get response body as stream
-        let body = response
-            .body()
-            .ok_or_else(|| JsError::new("No response body"))?;
+        let body = response.body().ok_or_else(|| JsError::new("No response body"))?;
 
         Self::load_from_stream_impl(body, config).await
     }
@@ -391,9 +379,8 @@ impl ProgressiveLoader {
             let value = Reflect::get(&result, &"value".into())
                 .map_err(|_| JsError::new("Failed to get value property"))?;
 
-            let chunk_array: Uint8Array = value
-                .dyn_into()
-                .map_err(|_| JsError::new("Invalid chunk data"))?;
+            let chunk_array: Uint8Array =
+                value.dyn_into().map_err(|_| JsError::new("Invalid chunk data"))?;
 
             let chunk_size = chunk_array.length() as usize;
             total_loaded += chunk_size;

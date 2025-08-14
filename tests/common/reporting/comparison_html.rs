@@ -565,17 +565,10 @@ impl ComparisonHtmlReporter {
                 </div>
             </div>"#,
             improvement = overview.performance_improvement,
-            improvement_class = if overview.performance_improvement > 0.0 {
-                "positive"
-            } else {
-                "negative"
-            },
+            improvement_class =
+                if overview.performance_improvement > 0.0 { "positive" } else { "negative" },
             memory = overview.memory_efficiency,
-            memory_class = if overview.memory_efficiency > 0.0 {
-                "positive"
-            } else {
-                "negative"
-            },
+            memory_class = if overview.memory_efficiency > 0.0 { "positive" } else { "negative" },
             regressions = overview.regression_count,
         )
     }
@@ -600,11 +593,7 @@ impl ComparisonHtmlReporter {
                     memory = tc.memory_ratio,
                     rust_tps = tc.rust_tokens_per_second,
                     cpp_tps = tc.cpp_tokens_per_second,
-                    regression = if tc.regression {
-                        "⚠️ Yes"
-                    } else {
-                        "✅ No"
-                    },
+                    regression = if tc.regression { "⚠️ Yes" } else { "✅ No" },
                 )
             })
             .collect::<Vec<_>>()

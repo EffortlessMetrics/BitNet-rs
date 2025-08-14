@@ -50,11 +50,8 @@ fn test_trend_config_creation() {
 fn test_trend_config_custom() {
     use bitnet_tests::trend_reporting::TrendConfig;
 
-    let config = TrendConfig {
-        retention_days: 30,
-        min_samples_for_baseline: 3,
-        regression_threshold: 1.5,
-    };
+    let config =
+        TrendConfig { retention_days: 30, min_samples_for_baseline: 3, regression_threshold: 1.5 };
 
     assert_eq!(config.retention_days, 30);
     assert_eq!(config.min_samples_for_baseline, 3);
@@ -83,8 +80,5 @@ fn test_test_run_metadata_creation() {
     assert_eq!(metadata.branch, Some("main".to_string()));
     assert_eq!(metadata.pr_number, Some(42));
     assert_eq!(metadata.environment.get("os"), Some(&"ubuntu".to_string()));
-    assert_eq!(
-        metadata.configuration.get("features"),
-        Some(&"cpu".to_string())
-    );
+    assert_eq!(metadata.configuration.get("features"), Some(&"cpu".to_string()));
 }

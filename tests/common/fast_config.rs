@@ -153,16 +153,12 @@ pub struct FastConfigBuilder {
 impl FastConfigBuilder {
     /// Start with fast configuration
     pub fn new() -> Self {
-        Self {
-            config: fast_config(),
-        }
+        Self { config: fast_config() }
     }
 
     /// Start with a specific speed profile
     pub fn with_profile(profile: SpeedProfile) -> Self {
-        Self {
-            config: profile.to_config(),
-        }
+        Self { config: profile.to_config() }
     }
 
     /// Set maximum parallel tests

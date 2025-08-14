@@ -37,9 +37,8 @@ pub fn validate_device(device: &str) -> PyResult<()> {
                 )))
             }
         }
-        _ => Err(pyo3::exceptions::PyValueError::new_err(format!(
-            "Unsupported device: {}",
-            device
-        ))),
+        _ => {
+            Err(pyo3::exceptions::PyValueError::new_err(format!("Unsupported device: {}", device)))
+        }
     }
 }

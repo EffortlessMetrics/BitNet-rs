@@ -290,17 +290,10 @@ mod performance_tests {
             let duration = start.elapsed();
 
             assert!(result.is_ok());
-            println!(
-                "Matrix multiplication {}x{} took: {:?}",
-                size, size, duration
-            );
+            println!("Matrix multiplication {}x{} took: {:?}", size, size, duration);
 
             // Should complete in reasonable time
-            assert!(
-                duration.as_secs() < 5,
-                "Matrix multiplication took too long: {:?}",
-                duration
-            );
+            assert!(duration.as_secs() < 5, "Matrix multiplication took too long: {:?}", duration);
 
             // Calculate GFLOPS
             let ops = 2.0 * size as f64 * size as f64 * size as f64;
@@ -329,11 +322,7 @@ mod performance_tests {
             println!("Quantization of {} elements took: {:?}", size, duration);
 
             // Should complete quickly
-            assert!(
-                duration.as_millis() < 1000,
-                "Quantization took too long: {:?}",
-                duration
-            );
+            assert!(duration.as_millis() < 1000, "Quantization took too long: {:?}", duration);
 
             // Calculate throughput
             let throughput = size as f64 / duration.as_secs_f64() / 1e6;
@@ -389,14 +378,7 @@ mod performance_tests {
         let start = Instant::now();
         for _ in 0..100 {
             kernel
-                .matmul_i2s(
-                    &a_small,
-                    &b_small,
-                    &mut c_small,
-                    small_size,
-                    small_size,
-                    small_size,
-                )
+                .matmul_i2s(&a_small, &b_small, &mut c_small, small_size, small_size, small_size)
                 .unwrap();
         }
         let small_duration = start.elapsed();
@@ -409,14 +391,7 @@ mod performance_tests {
         let start = Instant::now();
         for _ in 0..10 {
             kernel
-                .matmul_i2s(
-                    &a_large,
-                    &b_large,
-                    &mut c_large,
-                    large_size,
-                    large_size,
-                    large_size,
-                )
+                .matmul_i2s(&a_large, &b_large, &mut c_large, large_size, large_size, large_size)
                 .unwrap();
         }
         let large_duration = start.elapsed();
@@ -434,10 +409,7 @@ mod performance_tests {
         let small_per_op = small_duration.as_nanos() / 100;
         let large_per_op = large_duration.as_nanos() / 10;
 
-        println!(
-            "Small per-op: {} ns, Large per-op: {} ns",
-            small_per_op, large_per_op
-        );
+        println!("Small per-op: {} ns, Large per-op: {} ns", small_per_op, large_per_op);
     }
 }
 
@@ -624,11 +596,7 @@ mod stress_tests {
             let mut c = vec![0.0f32; size * size];
 
             let result = kernel.matmul_i2s(&a, &b, &mut c, size, size, size);
-            assert!(
-                result.is_ok(),
-                "Failed under memory pressure iteration {}",
-                i
-            );
+            assert!(result.is_ok(), "Failed under memory pressure iteration {}", i);
 
             // Keep buffers alive to maintain memory pressure
             large_buffers.push((a, b, c));
@@ -698,14 +666,8 @@ mod integration_tests {
         let mut output = vec![0.0f32; 32];
 
         let start = Instant::now();
-        let result = kernel.matmul_i2s(
-            &input,
-            &quantized_weights[..32 * 32],
-            &mut output,
-            32,
-            32,
-            32,
-        );
+        let result =
+            kernel.matmul_i2s(&input, &quantized_weights[..32 * 32], &mut output, 32, 32, 32);
         let matmul_time = start.elapsed();
 
         assert!(result.is_ok());
@@ -775,14 +737,8 @@ mod integration_tests {
             let fastest_time = timings.iter().min().unwrap();
             let slowest_time = timings.iter().max().unwrap();
 
-            println!(
-                "Performance range: {:?} to {:?}",
-                fastest_time, slowest_time
-            );
-            println!(
-                "Speedup: {:.2}x",
-                slowest_time.as_secs_f64() / fastest_time.as_secs_f64()
-            );
+            println!("Performance range: {:?} to {:?}", fastest_time, slowest_time);
+            println!("Speedup: {:.2}x", slowest_time.as_secs_f64() / fastest_time.as_secs_f64());
         }
     }
 
@@ -810,14 +766,8 @@ mod integration_tests {
 
         // Perform the computation
         let start = Instant::now();
-        let result = kernel.matmul_i2s(
-            &inputs,
-            &weights,
-            &mut outputs,
-            batch_size,
-            output_dim,
-            input_dim,
-        );
+        let result =
+            kernel.matmul_i2s(&inputs, &weights, &mut outputs, batch_size, output_dim, input_dim);
         let duration = start.elapsed();
 
         assert!(result.is_ok());
@@ -836,10 +786,7 @@ mod integration_tests {
         );
         println!("  Time: {:?}", duration);
         println!("  Performance: {:.2} GFLOPS", gflops);
-        println!(
-            "  Throughput: {:.2} samples/sec",
-            batch_size as f64 / duration.as_secs_f64()
-        );
+        println!("  Throughput: {:.2} samples/sec", batch_size as f64 / duration.as_secs_f64());
 
         // Should achieve reasonable performance
         assert!(gflops > 0.1, "Performance too low: {} GFLOPS", gflops);

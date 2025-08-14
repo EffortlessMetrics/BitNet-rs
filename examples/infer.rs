@@ -10,10 +10,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let maybe = env::var_os("BITNET_GGUF").map(PathBuf::from);
 
     // Pick a token id to score (e.g., 'Hello')
-    let token_id: usize = env::var("BITNET_TOKEN_ID")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(1);
+    let token_id: usize =
+        env::var("BITNET_TOKEN_ID").ok().and_then(|s| s.parse().ok()).unwrap_or(1);
 
     // Load minimal weights
     let mw = match maybe {
@@ -21,10 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             match bitnet_models::minimal::load_minimal(bitnet_models::minimal::LoadMode::Gguf(&p)) {
                 Ok(w) => w,
                 Err(e) => {
-                    eprintln!(
-                        "[info] GGUF not ready yet ({}). Falling back to dummy weights.",
-                        e
-                    );
+                    eprintln!("[info] GGUF not ready yet ({}). Falling back to dummy weights.", e);
                     bitnet_models::minimal::load_minimal(bitnet_models::minimal::LoadMode::Dummy {
                         vocab: 32000,
                         dim: 1024,

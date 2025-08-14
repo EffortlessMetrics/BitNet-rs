@@ -26,11 +26,7 @@ fn test_all_quantization_round_trips() {
     let shape = vec![2, 4];
     let tensor = create_test_tensor(data, shape.clone());
 
-    for qtype in [
-        QuantizationType::I2S,
-        QuantizationType::TL1,
-        QuantizationType::TL2,
-    ] {
+    for qtype in [QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2] {
         let quantizer = QuantizerFactory::create(qtype);
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
@@ -89,11 +85,7 @@ fn test_different_tensor_shapes() {
     for (data, shape) in test_cases {
         let tensor = create_test_tensor(data, shape.clone());
 
-        for qtype in [
-            QuantizationType::I2S,
-            QuantizationType::TL1,
-            QuantizationType::TL2,
-        ] {
+        for qtype in [QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2] {
             let quantized = tensor.quantize(qtype).unwrap();
             let dequantized = quantized.dequantize().unwrap();
 
@@ -106,25 +98,11 @@ fn test_different_tensor_shapes() {
 /// Test quantization with extreme values
 #[test]
 fn test_extreme_values() {
-    let extreme_data = vec![
-        f32::MAX,
-        f32::MIN,
-        0.0,
-        1e-10,
-        -1e-10,
-        100.0,
-        -100.0,
-        1e6,
-        -1e6,
-    ];
+    let extreme_data = vec![f32::MAX, f32::MIN, 0.0, 1e-10, -1e-10, 100.0, -100.0, 1e6, -1e6];
     let shape = vec![9];
     let tensor = create_test_tensor(extreme_data, shape);
 
-    for qtype in [
-        QuantizationType::I2S,
-        QuantizationType::TL1,
-        QuantizationType::TL2,
-    ] {
+    for qtype in [QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2] {
         let quantized = tensor.quantize(qtype).unwrap();
         let dequantized = quantized.dequantize().unwrap();
 
@@ -137,17 +115,11 @@ fn test_extreme_values() {
 #[test]
 fn test_quantization_accuracy() {
     // Test with a sine wave pattern
-    let data: Vec<f32> = (0..64)
-        .map(|i| (i as f32 * std::f32::consts::PI / 32.0).sin())
-        .collect();
+    let data: Vec<f32> = (0..64).map(|i| (i as f32 * std::f32::consts::PI / 32.0).sin()).collect();
     let shape = vec![64];
     let tensor = create_test_tensor(data.clone(), shape);
 
-    for qtype in [
-        QuantizationType::I2S,
-        QuantizationType::TL1,
-        QuantizationType::TL2,
-    ] {
+    for qtype in [QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2] {
         let quantized = tensor.quantize(qtype).unwrap();
         let dequantized = quantized.dequantize().unwrap();
 

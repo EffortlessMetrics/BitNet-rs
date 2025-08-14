@@ -22,53 +22,33 @@ pub async fn example_comprehensive_test() -> Result<(), TestError> {
     let debug_context = logging_manager.create_debug_context("example_test".to_string());
 
     // Start tracing
-    debug_context
-        .trace(
-            TraceEventType::TestStart,
-            "Starting example test".to_string(),
-        )
-        .await;
+    debug_context.trace(TraceEventType::TestStart, "Starting example test".to_string()).await;
 
     // Start performance profiling
-    let mut profiler = logging_manager
-        .start_profiling("example_operation".to_string())
-        .await;
+    let mut profiler = logging_manager.start_profiling("example_operation".to_string()).await;
     profiler.add_metadata("operation_type", "example");
     profiler.add_metadata("complexity", "low");
 
     // Record some metrics
-    logging_manager
-        .increment_counter("operations_started", 1)
-        .await;
+    logging_manager.increment_counter("operations_started", 1).await;
     logging_manager.set_gauge("current_memory_mb", 128.5).await;
 
     // Simulate some work with tracing
-    debug_context
-        .trace(
-            TraceEventType::Execution,
-            "Performing main operation".to_string(),
-        )
-        .await;
+    debug_context.trace(TraceEventType::Execution, "Performing main operation".to_string()).await;
 
     // Simulate a sub-operation with scoped context
     {
         let scoped_context = debug_context.scope("sub_operation");
-        scoped_context
-            .trace(TraceEventType::Info, "Starting sub-operation".to_string())
-            .await;
+        scoped_context.trace(TraceEventType::Info, "Starting sub-operation".to_string()).await;
 
         // Simulate work
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
-        scoped_context
-            .trace(TraceEventType::Info, "Sub-operation completed".to_string())
-            .await;
+        scoped_context.trace(TraceEventType::Info, "Sub-operation completed".to_string()).await;
     }
 
     // Record histogram data
-    logging_manager
-        .record_histogram("operation_duration_ms", 50.0)
-        .await;
+    logging_manager.record_histogram("operation_duration_ms", 50.0).await;
 
     // Add some artifacts
     let artifact =
@@ -79,21 +59,13 @@ pub async fn example_comprehensive_test() -> Result<(), TestError> {
     profiler.finish().await;
 
     // Record success metrics
+    logging_manager.increment_counter("operations_completed", 1).await;
     logging_manager
-        .increment_counter("operations_completed", 1)
-        .await;
-    logging_manager
-        .record_metric(
-            "operation_result",
-            MetricValue::String("success".to_string()),
-        )
+        .record_metric("operation_result", MetricValue::String("success".to_string()))
         .await;
 
     debug_context
-        .trace(
-            TraceEventType::TestEnd,
-            "Example test completed successfully".to_string(),
-        )
+        .trace(TraceEventType::TestEnd, "Example test completed successfully".to_string())
         .await;
 
     println!("✅ Example test completed successfully");
@@ -108,23 +80,15 @@ pub async fn example_failure_test() -> Result<(), TestError> {
     let debug_context = logging_manager.create_debug_context("example_failure_test".to_string());
 
     debug_context
-        .trace(
-            TraceEventType::TestStart,
-            "Starting failure example test".to_string(),
-        )
+        .trace(TraceEventType::TestStart, "Starting failure example test".to_string())
         .await;
 
     // Start profiling
-    let profiler = logging_manager
-        .start_profiling("failing_operation".to_string())
-        .await;
+    let profiler = logging_manager.start_profiling("failing_operation".to_string()).await;
 
     // Simulate some work before failure
     debug_context
-        .trace(
-            TraceEventType::Execution,
-            "Performing operation that will fail".to_string(),
-        )
+        .trace(TraceEventType::Execution, "Performing operation that will fail".to_string())
         .await;
 
     tokio::time::sleep(std::time::Duration::from_millis(25)).await;
@@ -134,10 +98,7 @@ pub async fn example_failure_test() -> Result<(), TestError> {
 
     // Add error context
     debug_context
-        .add_error_context(
-            &error,
-            "This is a simulated failure for demonstration".to_string(),
-        )
+        .add_error_context(&error, "This is a simulated failure for demonstration".to_string())
         .await;
 
     // Add failure artifacts
@@ -152,9 +113,7 @@ pub async fn example_failure_test() -> Result<(), TestError> {
     debug_context.add_artifact(error_artifact).await;
 
     // Handle the failure
-    logging_manager
-        .handle_test_failure("example_failure_test", &error, &debug_context)
-        .await?;
+    logging_manager.handle_test_failure("example_failure_test", &error, &debug_context).await?;
 
     profiler.finish().await;
 
@@ -176,19 +135,11 @@ pub async fn example_metrics_demo() -> Result<(), TestError> {
 
     // Record various types of metrics
     for i in 0..10 {
-        logging_manager
-            .increment_counter("demo_operations", 1)
-            .await;
-        logging_manager
-            .set_gauge("demo_progress", i as f64 * 10.0)
-            .await;
-        logging_manager
-            .record_histogram("demo_latency_ms", (i * 5 + 10) as f64)
-            .await;
+        logging_manager.increment_counter("demo_operations", 1).await;
+        logging_manager.set_gauge("demo_progress", i as f64 * 10.0).await;
+        logging_manager.record_histogram("demo_latency_ms", (i * 5 + 10) as f64).await;
 
-        let profiler = logging_manager
-            .start_profiling(format!("demo_operation_{}", i))
-            .await;
+        let profiler = logging_manager.start_profiling(format!("demo_operation_{}", i)).await;
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         profiler.finish().await;
     }
@@ -198,19 +149,10 @@ pub async fn example_metrics_demo() -> Result<(), TestError> {
     let metrics_summary = logging_manager.get_metrics_summary().await;
 
     println!("📊 Performance Summary:");
-    println!(
-        "  Total operations: {}",
-        performance_summary.total_operations
-    );
+    println!("  Total operations: {}", performance_summary.total_operations);
     println!("  Total duration: {:?}", performance_summary.total_duration);
-    println!(
-        "  Average duration: {:?}",
-        performance_summary.average_duration
-    );
-    println!(
-        "  Peak memory: {} bytes",
-        performance_summary.memory_stats.peak_memory_usage
-    );
+    println!("  Average duration: {:?}", performance_summary.average_duration);
+    println!("  Peak memory: {} bytes", performance_summary.memory_stats.peak_memory_usage);
 
     println!("📈 Metrics Summary:");
     println!("  Counters: {:?}", metrics_summary.counters);

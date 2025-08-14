@@ -65,11 +65,7 @@ impl ConvertCommand {
             info!("Verbose mode enabled");
         }
 
-        info!(
-            "Converting model from {} to {}",
-            self.input.display(),
-            self.output.display()
-        );
+        info!("Converting model from {} to {}", self.input.display(), self.output.display());
 
         // Check if output exists and handle overwrite
         if self.output.exists() && !self.force {
@@ -93,11 +89,7 @@ impl ConvertCommand {
         }
 
         let elapsed = start_time.elapsed();
-        println!(
-            "{} Conversion completed in {:.2}s",
-            style("✓").green(),
-            elapsed.as_secs_f64()
-        );
+        println!("{} Conversion completed in {:.2}s", style("✓").green(), elapsed.as_secs_f64());
 
         Ok(())
     }
@@ -147,11 +139,7 @@ impl ConvertCommand {
         config: &CliConfig,
     ) -> Result<Box<dyn bitnet_models::Model<Config = bitnet_common::BitNetConfig>>> {
         let pb = ProgressBar::new_spinner();
-        pb.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.green} {msg}")
-                .unwrap(),
-        );
+        pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}").unwrap());
         pb.set_message("Loading input model...");
         pb.enable_steady_tick(Duration::from_millis(100));
 
@@ -248,10 +236,7 @@ impl ConvertCommand {
         )?;
 
         pb.set_position(100);
-        pb.finish_with_message(format!(
-            "{} Model converted successfully",
-            style("✓").green()
-        ));
+        pb.finish_with_message(format!("{} Model converted successfully", style("✓").green()));
 
         // Show conversion summary
         self.show_conversion_summary(&target_format, &target_quantization)?;
@@ -295,11 +280,7 @@ impl ConvertCommand {
     /// Verify the conversion
     async fn verify_conversion(&self) -> Result<()> {
         let pb = ProgressBar::new_spinner();
-        pb.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.green} {msg}")
-                .unwrap(),
-        );
+        pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}").unwrap());
         pb.set_message("Verifying conversion...");
         pb.enable_steady_tick(Duration::from_millis(100));
 
@@ -323,9 +304,7 @@ impl ConvertCommand {
             info!("  Output file size: {} bytes", metadata.len());
             info!(
                 "  Output file created: {:?}",
-                metadata
-                    .created()
-                    .unwrap_or_else(|_| std::time::SystemTime::now())
+                metadata.created().unwrap_or_else(|_| std::time::SystemTime::now())
             );
         }
 
@@ -354,11 +333,8 @@ impl ConvertCommand {
             if let Ok(output_metadata) = std::fs::metadata(&self.output) {
                 let input_size = input_metadata.len();
                 let output_size = output_metadata.len();
-                let ratio = if input_size > 0 {
-                    output_size as f64 / input_size as f64
-                } else {
-                    0.0
-                };
+                let ratio =
+                    if input_size > 0 { output_size as f64 / input_size as f64 } else { 0.0 };
 
                 println!("  Input size: {} bytes", format_size(input_size));
                 println!("  Output size: {} bytes", format_size(output_size));

@@ -31,10 +31,7 @@ impl GitHubReporter {
 
         let parts: Vec<&str> = repo.split('/').collect();
         if parts.len() != 2 {
-            return Err(anyhow::anyhow!(
-                "Invalid GITHUB_REPOSITORY format: {}",
-                repo
-            ));
+            return Err(anyhow::anyhow!("Invalid GITHUB_REPOSITORY format: {}", repo));
         }
 
         let client = reqwest::Client::builder()
@@ -60,10 +57,8 @@ impl GitHubReporter {
         description: &str,
         target_url: Option<&str>,
     ) -> Result<()> {
-        let token = self
-            .token
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("GITHUB_TOKEN not available"))?;
+        let token =
+            self.token.as_ref().ok_or_else(|| anyhow::anyhow!("GITHUB_TOKEN not available"))?;
 
         let url = format!(
             "{}/repos/{}/{}/statuses/{}",
@@ -90,11 +85,7 @@ impl GitHubReporter {
         let status = response.status();
         if !status.is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(anyhow::anyhow!(
-                "GitHub API error: {} - {}",
-                status,
-                error_text
-            ));
+            return Err(anyhow::anyhow!("GitHub API error: {} - {}", status, error_text));
         }
 
         info!("Created status check: {} - {}", context, state);
@@ -108,10 +99,8 @@ impl GitHubReporter {
         body: &str,
         comment_id: Option<u64>,
     ) -> Result<u64> {
-        let token = self
-            .token
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("GITHUB_TOKEN not available"))?;
+        let token =
+            self.token.as_ref().ok_or_else(|| anyhow::anyhow!("GITHUB_TOKEN not available"))?;
 
         let (url, method) = if let Some(id) = comment_id {
             // Update existing comment
@@ -133,9 +122,7 @@ impl GitHubReporter {
             )
         };
 
-        let payload = CommentPayload {
-            body: body.to_string(),
-        };
+        let payload = CommentPayload { body: body.to_string() };
 
         let request = match method {
             "POST" => self.client.post(&url),
@@ -154,17 +141,11 @@ impl GitHubReporter {
         let status = response.status();
         if !status.is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(anyhow::anyhow!(
-                "GitHub API error: {} - {}",
-                status,
-                error_text
-            ));
+            return Err(anyhow::anyhow!("GitHub API error: {} - {}", status, error_text));
         }
 
-        let comment_response: CommentResponse = response
-            .json()
-            .await
-            .context("Failed to parse comment response")?;
+        let comment_response: CommentResponse =
+            response.json().await.context("Failed to parse comment response")?;
 
         info!("Created/updated PR comment: {}", comment_response.id);
         Ok(comment_response.id)
@@ -176,10 +157,8 @@ impl GitHubReporter {
         pr_number: u64,
         marker: &str,
     ) -> Result<Option<u64>> {
-        let token = self
-            .token
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("GITHUB_TOKEN not available"))?;
+        let token =
+            self.token.as_ref().ok_or_else(|| anyhow::anyhow!("GITHUB_TOKEN not available"))?;
 
         let url = format!(
             "{}/repos/{}/{}/issues/{}/comments",
@@ -199,10 +178,8 @@ impl GitHubReporter {
             return Ok(None);
         }
 
-        let comments: Vec<CommentResponse> = response
-            .json()
-            .await
-            .context("Failed to parse comments response")?;
+        let comments: Vec<CommentResponse> =
+            response.json().await.context("Failed to parse comments response")?;
 
         for comment in comments {
             if comment.body.contains(marker) {
@@ -224,10 +201,7 @@ impl CINotificationManager {
     pub fn new(config: NotificationConfig) -> Result<Self> {
         let github_reporter = GitHubReporter::new()?;
 
-        Ok(Self {
-            github_reporter,
-            config,
-        })
+        Ok(Self { github_reporter, config })
     }
 
     /// Process test results and send appropriate notifications
@@ -248,8 +222,7 @@ impl CINotificationManager {
 
         // Create PR comment if this is a PR
         if let Some(pr_number) = context.pr_number {
-            self.create_pr_test_comment(pr_number, results, &summary)
-                .await?;
+            self.create_pr_test_comment(pr_number, results, &summary).await?;
         }
 
         // Send failure notifications if needed
@@ -267,11 +240,8 @@ impl CINotificationManager {
 
     async fn create_test_status_checks(&self, sha: &str, summary: &TestSummary) -> Result<()> {
         // Overall test status
-        let overall_state = if summary.has_failures {
-            StatusState::Failure
-        } else {
-            StatusState::Success
-        };
+        let overall_state =
+            if summary.has_failures { StatusState::Failure } else { StatusState::Success };
 
         let description = format!(
             "{}/{} tests passed ({:.1}%)",
@@ -290,16 +260,11 @@ impl CINotificationManager {
 
         // Individual suite status checks
         for suite_summary in &summary.suite_summaries {
-            let state = if suite_summary.failed > 0 {
-                StatusState::Failure
-            } else {
-                StatusState::Success
-            };
+            let state =
+                if suite_summary.failed > 0 { StatusState::Failure } else { StatusState::Success };
 
-            let description = format!(
-                "{}/{} tests passed",
-                suite_summary.passed, suite_summary.total
-            );
+            let description =
+                format!("{}/{} tests passed", suite_summary.passed, suite_summary.total);
 
             let context = format!("bitnet-rs/tests/{}", suite_summary.name);
 
@@ -320,16 +285,12 @@ impl CINotificationManager {
         let marker = "<!-- BitNet.rs Test Results -->";
 
         // Check if comment already exists
-        let existing_comment = self
-            .github_reporter
-            .find_comment_by_marker(pr_number, marker)
-            .await?;
+        let existing_comment =
+            self.github_reporter.find_comment_by_marker(pr_number, marker).await?;
 
         let comment_body = self.generate_pr_comment_body(results, summary, marker);
 
-        self.github_reporter
-            .create_pr_comment(pr_number, &comment_body, existing_comment)
-            .await?;
+        self.github_reporter.create_pr_comment(pr_number, &comment_body, existing_comment).await?;
 
         Ok(())
     }
@@ -349,10 +310,7 @@ impl CINotificationManager {
             return Ok(());
         }
 
-        info!(
-            "Sending failure notifications for {} failed tests",
-            failed_tests.len()
-        );
+        info!("Sending failure notifications for {} failed tests", failed_tests.len());
 
         // For now, we'll log the failures. In a real implementation,
         // you might send to Slack, email, or other notification systems
@@ -411,8 +369,7 @@ impl CINotificationManager {
         }
 
         if !regressions.is_empty() {
-            self.send_performance_regression_notification(&regressions, context)
-                .await?;
+            self.send_performance_regression_notification(&regressions, context).await?;
         }
 
         Ok(())
@@ -515,10 +472,7 @@ impl CINotificationManager {
         body.push_str(&format!("| Total Tests | {} |\n", summary.total_tests));
         body.push_str(&format!("| Passed | {} |\n", summary.passed_tests));
         body.push_str(&format!("| Failed | {} |\n", summary.failed_tests));
-        body.push_str(&format!(
-            "| Success Rate | {:.1}% |\n",
-            summary.success_rate
-        ));
+        body.push_str(&format!("| Success Rate | {:.1}% |\n", summary.success_rate));
 
         // Suite breakdown
         if summary.suite_summaries.len() > 1 {
@@ -565,10 +519,7 @@ impl CINotificationManager {
         }
 
         body.push_str("\n---\n");
-        body.push_str(&format!(
-            "*Generated at {}*",
-            Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
-        ));
+        body.push_str(&format!("*Generated at {}*", Utc::now().format("%Y-%m-%d %H:%M:%S UTC")));
 
         body
     }
@@ -612,9 +563,7 @@ impl CIContext {
     pub fn from_env() -> Self {
         Self {
             commit_sha: env::var("GITHUB_SHA").ok(),
-            pr_number: env::var("GITHUB_PR_NUMBER")
-                .ok()
-                .and_then(|s| s.parse().ok()),
+            pr_number: env::var("GITHUB_PR_NUMBER").ok().and_then(|s| s.parse().ok()),
             branch_name: env::var("GITHUB_REF_NAME").ok(),
             workflow_run_id: env::var("GITHUB_RUN_ID").ok(),
             actor: env::var("GITHUB_ACTOR").ok(),

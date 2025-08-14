@@ -48,10 +48,7 @@ impl PyBitNetModel {
                     .load(path)
                     .map_err(|e| PyRuntimeError::new_err(format!("Failed to load model: {}", e)))?;
 
-                Ok(Self {
-                    inner: Arc::from(model),
-                    device,
-                })
+                Ok(Self { inner: Arc::from(model), device })
             })
         })
     }
@@ -68,10 +65,7 @@ impl PyBitNetModel {
         model_config.set_item("hidden_size", config.model.hidden_size)?;
         model_config.set_item("num_layers", config.model.num_layers)?;
         model_config.set_item("num_attention_heads", config.model.num_attention_heads)?;
-        model_config.set_item(
-            "max_position_embeddings",
-            config.model.max_position_embeddings,
-        )?;
+        model_config.set_item("max_position_embeddings", config.model.max_position_embeddings)?;
         py_config.set_item("model", model_config)?;
 
         // Quantization configuration
@@ -201,10 +195,7 @@ impl PyModelLoader {
                     .load(path)
                     .map_err(|e| PyRuntimeError::new_err(format!("Failed to load model: {}", e)))?;
 
-                Ok(PyBitNetModel {
-                    inner: Arc::from(model),
-                    device: self.device.clone(),
-                })
+                Ok(PyBitNetModel { inner: Arc::from(model), device: self.device.clone() })
             })
         })
     }
@@ -235,11 +226,7 @@ impl PyModelLoader {
 
     /// List available formats
     fn available_formats(&self) -> Vec<String> {
-        vec![
-            "GGUF".to_string(),
-            "SafeTensors".to_string(),
-            "HuggingFace".to_string(),
-        ]
+        vec!["GGUF".to_string(), "SafeTensors".to_string(), "HuggingFace".to_string()]
     }
 
     /// Get device

@@ -61,14 +61,8 @@ fn test_model_lifecycle() {
     match model.model_info() {
         Ok(info) => {
             assert!(!info.name.is_empty(), "Model name should not be empty");
-            assert!(
-                !info.version.is_empty(),
-                "Model version should not be empty"
-            );
-            assert!(
-                info.parameter_count > 0,
-                "Parameter count should be positive"
-            );
+            assert!(!info.version.is_empty(), "Model version should not be empty");
+            assert!(info.parameter_count > 0, "Parameter count should be positive");
         }
         Err(e) => {
             eprintln!("Failed to get model info: {}", e);

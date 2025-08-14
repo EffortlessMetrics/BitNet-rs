@@ -21,9 +21,7 @@ impl JsonReporter {
 
     /// Create a new JSON reporter with compact output
     pub fn new_compact() -> Self {
-        Self {
-            pretty_print: false,
-        }
+        Self { pretty_print: false }
     }
 }
 
@@ -68,16 +66,11 @@ impl TestReporter for JsonReporter {
         let total_passed: usize = results.iter().map(|r| r.summary.passed).sum();
         let total_failed: usize = results.iter().map(|r| r.summary.failed).sum();
         let total_skipped: usize = results.iter().map(|r| r.summary.skipped).sum();
-        let total_duration_ms: u64 = results
-            .iter()
-            .map(|r| r.total_duration.as_millis() as u64)
-            .sum();
+        let total_duration_ms: u64 =
+            results.iter().map(|r| r.total_duration.as_millis() as u64).sum();
 
-        let overall_success_rate = if total_tests > 0 {
-            total_passed as f64 / total_tests as f64
-        } else {
-            0.0
-        };
+        let overall_success_rate =
+            if total_tests > 0 { total_passed as f64 / total_tests as f64 } else { 0.0 };
 
         let report = JsonReport {
             metadata: ReportMetadata {
@@ -213,10 +206,7 @@ mod tests {
         let reporter = JsonReporter::new();
         let results = vec![create_test_suite_result()];
 
-        let report_result = reporter
-            .generate_report(&results, &output_path)
-            .await
-            .unwrap();
+        let report_result = reporter.generate_report(&results, &output_path).await.unwrap();
 
         assert_eq!(report_result.format, ReportFormat::Json);
         assert!(output_path.exists());
@@ -241,10 +231,7 @@ mod tests {
         let reporter = JsonReporter::new_compact();
         let results = vec![create_test_suite_result()];
 
-        reporter
-            .generate_report(&results, &output_path)
-            .await
-            .unwrap();
+        reporter.generate_report(&results, &output_path).await.unwrap();
 
         let content = fs::read_to_string(&output_path).await.unwrap();
         // Compact JSON should not have pretty formatting

@@ -47,11 +47,7 @@ pub enum FixtureError {
     DownloadError { url: String, reason: String },
 
     #[error("Checksum mismatch for {filename}: expected {expected}, got {actual}")]
-    ChecksumMismatch {
-        filename: String,
-        expected: String,
-        actual: String,
-    },
+    ChecksumMismatch { filename: String, expected: String, actual: String },
 
     #[error("Cache error: {message}")]
     CacheError { message: String },
@@ -76,11 +72,7 @@ pub enum ComparisonError {
     PerformanceError { message: String },
 
     #[error("Tolerance exceeded: {metric} = {value}, threshold = {threshold}")]
-    ToleranceExceeded {
-        metric: String,
-        value: f64,
-        threshold: f64,
-    },
+    ToleranceExceeded { metric: String, value: f64, threshold: f64 },
 }
 
 /// Errors from BitNet implementations
@@ -235,10 +227,7 @@ impl ErrorReport {
             self.debug_info
                 .troubleshooting_steps
                 .iter()
-                .map(|step| format!(
-                    "{}. {} - {}",
-                    step.step_number, step.title, step.description
-                ))
+                .map(|step| format!("{}. {} - {}", step.step_number, step.title, step.description))
                 .collect::<Vec<_>>()
                 .join("\n"),
             self.debug_info.related_components.join("\n- ")
@@ -273,10 +262,7 @@ pub fn capture_current_stack_trace() -> Option<String> {
     // For now, we'll provide a simple implementation
     Some(format!(
         "Stack trace captured at {}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
     ))
 }
 
@@ -364,39 +350,29 @@ impl From<std::io::Error> for TestError {
 
 impl From<tokio::io::Error> for FixtureError {
     fn from(err: tokio::io::Error) -> Self {
-        Self::CacheError {
-            message: err.to_string(),
-        }
+        Self::CacheError { message: err.to_string() }
     }
 }
 
 impl TestError {
     /// Create a setup error with a message
     pub fn setup<S: Into<String>>(message: S) -> Self {
-        Self::SetupError {
-            message: message.into(),
-        }
+        Self::SetupError { message: message.into() }
     }
 
     /// Create an execution error with a message
     pub fn execution<S: Into<String>>(message: S) -> Self {
-        Self::ExecutionError {
-            message: message.into(),
-        }
+        Self::ExecutionError { message: message.into() }
     }
 
     /// Create an assertion error with a message
     pub fn assertion<S: Into<String>>(message: S) -> Self {
-        Self::AssertionError {
-            message: message.into(),
-        }
+        Self::AssertionError { message: message.into() }
     }
 
     /// Create a configuration error with a message
     pub fn config<S: Into<String>>(message: S) -> Self {
-        Self::ConfigError {
-            message: message.into(),
-        }
+        Self::ConfigError { message: message.into() }
     }
 
     /// Create a timeout error with a duration
@@ -406,9 +382,7 @@ impl TestError {
 
     /// Create a cache error (alias for config error for backward compatibility)
     pub fn cache<S: Into<String>>(message: S) -> Self {
-        Self::ConfigError {
-            message: message.into(),
-        }
+        Self::ConfigError { message: message.into() }
     }
 
     /// Check if this error is recoverable
@@ -573,10 +547,9 @@ impl TestError {
                 "download_system".to_string(),
                 "cache_system".to_string(),
             ],
-            Self::ConfigError { .. } => vec![
-                "config_manager".to_string(),
-                "environment_loader".to_string(),
-            ],
+            Self::ConfigError { .. } => {
+                vec!["config_manager".to_string(), "environment_loader".to_string()]
+            }
             Self::TimeoutError { .. } => {
                 vec!["test_harness".to_string(), "execution_engine".to_string()]
             }
@@ -698,10 +671,7 @@ impl FixtureError {
 
     /// Create a download error
     pub fn download<S1: Into<String>, S2: Into<String>>(url: S1, reason: S2) -> Self {
-        Self::DownloadError {
-            url: url.into(),
-            reason: reason.into(),
-        }
+        Self::DownloadError { url: url.into(), reason: reason.into() }
     }
 
     /// Create a checksum mismatch error
@@ -719,16 +689,12 @@ impl FixtureError {
 
     /// Create a cache error
     pub fn cache<S: Into<String>>(message: S) -> Self {
-        Self::CacheError {
-            message: message.into(),
-        }
+        Self::CacheError { message: message.into() }
     }
 
     /// Create a validation error
     pub fn validation<S: Into<String>>(message: S) -> Self {
-        Self::ValidationError {
-            message: message.into(),
-        }
+        Self::ValidationError { message: message.into() }
     }
 
     /// Create a not found error

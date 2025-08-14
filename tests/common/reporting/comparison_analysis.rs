@@ -459,10 +459,7 @@ pub struct ComparisonAnalysisReporter {
 impl ComparisonAnalysisReporter {
     /// Create a new comparison analysis reporter
     pub fn new(config: ComparisonAnalysisConfig) -> Self {
-        Self {
-            config,
-            historical_data: Vec::new(),
-        }
+        Self { config, historical_data: Vec::new() }
     }
 
     /// Load historical data for trend analysis
@@ -627,10 +624,8 @@ impl ComparisonAnalysisReporter {
         // Compare with historical data if available
         if let Some(previous_result) = self.get_previous_result(&result.model_name) {
             // Analyze accuracy regressions
-            for (current, previous) in result
-                .test_results
-                .iter()
-                .zip(previous_result.test_results.iter())
+            for (current, previous) in
+                result.test_results.iter().zip(previous_result.test_results.iter())
             {
                 if current.accuracy_result.token_accuracy < previous.accuracy_result.token_accuracy
                 {
@@ -753,23 +748,12 @@ impl ComparisonAnalysisReporter {
     }
 
     fn format_mismatch_context(&self, mismatch: &TokenMismatch) -> String {
-        let before = mismatch
-            .context_before
-            .iter()
-            .map(|t| t.to_string())
-            .collect::<Vec<_>>()
-            .join(" ");
-        let after = mismatch
-            .context_after
-            .iter()
-            .map(|t| t.to_string())
-            .collect::<Vec<_>>()
-            .join(" ");
+        let before =
+            mismatch.context_before.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(" ");
+        let after =
+            mismatch.context_after.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(" ");
 
-        format!(
-            "...{} [{}|{}] {}...",
-            before, mismatch.rust_token, mismatch.cpp_token, after
-        )
+        format!("...{} [{}|{}] {}...", before, mismatch.rust_token, mismatch.cpp_token, after)
     }
 
     fn assess_mismatch_impact(&self, _mismatch: &TokenMismatch) -> MismatchImpact {
@@ -866,13 +850,7 @@ impl ComparisonAnalysisReporter {
 
         let histogram = self.create_accuracy_histogram(&sorted_scores);
 
-        AccuracyDistribution {
-            mean,
-            median,
-            std_dev,
-            percentiles,
-            histogram,
-        }
+        AccuracyDistribution { mean, median, std_dev, percentiles, histogram }
     }
 
     fn create_accuracy_histogram(&self, scores: &[f64]) -> Vec<AccuracyBucket> {
@@ -892,12 +870,7 @@ impl ComparisonAnalysisReporter {
                 let range_end = (i + 1) as f64 / bucket_count as f64;
                 let percentage = (count as f64 / scores.len() as f64) * 100.0;
 
-                AccuracyBucket {
-                    range_start,
-                    range_end,
-                    count,
-                    percentage,
-                }
+                AccuracyBucket { range_start, range_end, count, percentage }
             })
             .collect()
     }
@@ -912,12 +885,7 @@ impl ComparisonAnalysisReporter {
         // Check for low accuracy tests
         let low_accuracy_count = accuracies
             .iter()
-            .filter(|a| {
-                matches!(
-                    a.severity,
-                    AccuracySeverity::Critical | AccuracySeverity::High
-                )
-            })
+            .filter(|a| matches!(a.severity, AccuracySeverity::Critical | AccuracySeverity::High))
             .count();
 
         if low_accuracy_count > 0 {
@@ -997,10 +965,7 @@ impl ComparisonAnalysisReporter {
         let mut opportunities = Vec::new();
 
         // Identify primary bottlenecks
-        let slow_tests: Vec<_> = performance
-            .iter()
-            .filter(|p| p.throughput_ratio > 1.5)
-            .collect();
+        let slow_tests: Vec<_> = performance.iter().filter(|p| p.throughput_ratio > 1.5).collect();
 
         if !slow_tests.is_empty() {
             bottlenecks.push(Bottleneck {
@@ -1294,11 +1259,7 @@ impl ComparisonAnalysisReporter {
         let test_coverage = 1.0; // Assuming full coverage
         let result_consistency =
             result.summary.successful_tests as f64 / result.summary.total_tests as f64;
-        let data_quality = if result.test_results.len() > 10 {
-            1.0
-        } else {
-            0.8
-        };
+        let data_quality = if result.test_results.len() > 10 { 1.0 } else { 0.8 };
 
         (test_coverage + result_consistency + data_quality) / 3.0
     }
@@ -1361,26 +1322,11 @@ mod tests {
     fn test_accuracy_severity_classification() {
         let reporter = ComparisonAnalysisReporter::new(ComparisonAnalysisConfig::default());
 
-        assert!(matches!(
-            reporter.classify_accuracy_severity(0.3),
-            AccuracySeverity::Critical
-        ));
-        assert!(matches!(
-            reporter.classify_accuracy_severity(0.7),
-            AccuracySeverity::High
-        ));
-        assert!(matches!(
-            reporter.classify_accuracy_severity(0.9),
-            AccuracySeverity::Medium
-        ));
-        assert!(matches!(
-            reporter.classify_accuracy_severity(0.97),
-            AccuracySeverity::Low
-        ));
-        assert!(matches!(
-            reporter.classify_accuracy_severity(0.995),
-            AccuracySeverity::Minimal
-        ));
+        assert!(matches!(reporter.classify_accuracy_severity(0.3), AccuracySeverity::Critical));
+        assert!(matches!(reporter.classify_accuracy_severity(0.7), AccuracySeverity::High));
+        assert!(matches!(reporter.classify_accuracy_severity(0.9), AccuracySeverity::Medium));
+        assert!(matches!(reporter.classify_accuracy_severity(0.97), AccuracySeverity::Low));
+        assert!(matches!(reporter.classify_accuracy_severity(0.995), AccuracySeverity::Minimal));
     }
 
     #[test]
@@ -1391,10 +1337,7 @@ mod tests {
             reporter.classify_performance_category(0.3),
             PerformanceCategory::Excellent
         ));
-        assert!(matches!(
-            reporter.classify_performance_category(0.7),
-            PerformanceCategory::Good
-        ));
+        assert!(matches!(reporter.classify_performance_category(0.7), PerformanceCategory::Good));
         assert!(matches!(
             reporter.classify_performance_category(1.0),
             PerformanceCategory::Acceptable
@@ -1413,15 +1356,9 @@ mod tests {
     fn test_test_case_categorization() {
         let reporter = ComparisonAnalysisReporter::new(ComparisonAnalysisConfig::default());
 
-        assert_eq!(
-            reporter.categorize_test_case("performance_test"),
-            "Performance"
-        );
+        assert_eq!(reporter.categorize_test_case("performance_test"), "Performance");
         assert_eq!(reporter.categorize_test_case("edge_case_test"), "Edge Case");
-        assert_eq!(
-            reporter.categorize_test_case("basic_functionality"),
-            "Basic Functionality"
-        );
+        assert_eq!(reporter.categorize_test_case("basic_functionality"), "Basic Functionality");
         assert_eq!(reporter.categorize_test_case("random_test"), "General");
     }
 
@@ -1429,48 +1366,21 @@ mod tests {
     fn test_regression_severity_classification() {
         let reporter = ComparisonAnalysisReporter::new(ComparisonAnalysisConfig::default());
 
-        assert!(matches!(
-            reporter.classify_regression_severity(0.3),
-            RegressionSeverity::Critical
-        ));
-        assert!(matches!(
-            reporter.classify_regression_severity(0.15),
-            RegressionSeverity::High
-        ));
-        assert!(matches!(
-            reporter.classify_regression_severity(0.08),
-            RegressionSeverity::Medium
-        ));
-        assert!(matches!(
-            reporter.classify_regression_severity(0.02),
-            RegressionSeverity::Low
-        ));
+        assert!(matches!(reporter.classify_regression_severity(0.3), RegressionSeverity::Critical));
+        assert!(matches!(reporter.classify_regression_severity(0.15), RegressionSeverity::High));
+        assert!(matches!(reporter.classify_regression_severity(0.08), RegressionSeverity::Medium));
+        assert!(matches!(reporter.classify_regression_severity(0.02), RegressionSeverity::Low));
     }
 
     #[test]
     fn test_overall_status_determination() {
         let reporter = ComparisonAnalysisReporter::new(ComparisonAnalysisConfig::default());
 
-        assert!(matches!(
-            reporter.determine_overall_status(0.98, 1.1),
-            StatusLevel::Excellent
-        ));
-        assert!(matches!(
-            reporter.determine_overall_status(0.92, 1.3),
-            StatusLevel::Good
-        ));
-        assert!(matches!(
-            reporter.determine_overall_status(0.85, 1.8),
-            StatusLevel::Acceptable
-        ));
-        assert!(matches!(
-            reporter.determine_overall_status(0.75, 2.5),
-            StatusLevel::Concerning
-        ));
-        assert!(matches!(
-            reporter.determine_overall_status(0.60, 4.0),
-            StatusLevel::Critical
-        ));
+        assert!(matches!(reporter.determine_overall_status(0.98, 1.1), StatusLevel::Excellent));
+        assert!(matches!(reporter.determine_overall_status(0.92, 1.3), StatusLevel::Good));
+        assert!(matches!(reporter.determine_overall_status(0.85, 1.8), StatusLevel::Acceptable));
+        assert!(matches!(reporter.determine_overall_status(0.75, 2.5), StatusLevel::Concerning));
+        assert!(matches!(reporter.determine_overall_status(0.60, 4.0), StatusLevel::Critical));
     }
 
     #[test]
@@ -1538,10 +1448,7 @@ mod tests {
     fn test_config_default() {
         let config = ComparisonAnalysisConfig::default();
 
-        assert_eq!(
-            config.output_dir,
-            PathBuf::from("test-reports/comparison-analysis")
-        );
+        assert_eq!(config.output_dir, PathBuf::from("test-reports/comparison-analysis"));
         assert!(config.include_detailed_mismatches);
         assert!(config.include_performance_charts);
         assert!(config.include_regression_analysis);

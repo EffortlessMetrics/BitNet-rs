@@ -185,11 +185,7 @@ pub fn load_test_config() -> TestResultCompat<TestConfig> {
     }
 
     // Try standard config file locations
-    let config_paths = [
-        "bitnet-test.toml",
-        "tests/config.toml",
-        ".bitnet/test-config.toml",
-    ];
+    let config_paths = ["bitnet-test.toml", "tests/config.toml", ".bitnet/test-config.toml"];
 
     for path in &config_paths {
         let path_buf = PathBuf::from(path);
@@ -308,15 +304,11 @@ pub fn load_config_from_env(config: &mut TestConfig) -> TestResultCompat<()> {
 pub fn validate_config(config: &TestConfig) -> TestResultCompat<()> {
     // Validate parallel test count
     if config.max_parallel_tests == 0 {
-        return Err(TestError::config(
-            "max_parallel_tests must be greater than 0",
-        ));
+        return Err(TestError::config("max_parallel_tests must be greater than 0"));
     }
 
     if config.max_parallel_tests > 100 {
-        return Err(TestError::config(
-            "max_parallel_tests should not exceed 100",
-        ));
+        return Err(TestError::config("max_parallel_tests should not exceed 100"));
     }
 
     // Validate timeout
@@ -330,9 +322,7 @@ pub fn validate_config(config: &TestConfig) -> TestResultCompat<()> {
 
     // Validate coverage threshold
     if config.coverage_threshold < 0.0 || config.coverage_threshold > 1.0 {
-        return Err(TestError::config(
-            "coverage_threshold must be between 0.0 and 1.0",
-        ));
+        return Err(TestError::config("coverage_threshold must be between 0.0 and 1.0"));
     }
 
     // Validate log level
@@ -362,15 +352,11 @@ pub fn validate_config(config: &TestConfig) -> TestResultCompat<()> {
         if config.crossval.tolerance.min_token_accuracy < 0.0
             || config.crossval.tolerance.min_token_accuracy > 1.0
         {
-            return Err(TestError::config(
-                "min_token_accuracy must be between 0.0 and 1.0",
-            ));
+            return Err(TestError::config("min_token_accuracy must be between 0.0 and 1.0"));
         }
 
         if config.crossval.tolerance.max_probability_divergence < 0.0 {
-            return Err(TestError::config(
-                "max_probability_divergence must be non-negative",
-            ));
+            return Err(TestError::config("max_probability_divergence must be non-negative"));
         }
 
         if config.crossval.tolerance.numerical_tolerance <= 0.0 {
@@ -384,9 +370,7 @@ pub fn validate_config(config: &TestConfig) -> TestResultCompat<()> {
     }
 
     if config.fixtures.download_timeout.as_secs() > 3600 {
-        return Err(TestError::config(
-            "download_timeout should not exceed 1 hour",
-        ));
+        return Err(TestError::config("download_timeout should not exceed 1 hour"));
     }
 
     if config.fixtures.cleanup_interval.as_secs() == 0 {
@@ -426,9 +410,7 @@ pub fn validate_config(config: &TestConfig) -> TestResultCompat<()> {
 
     // Validate reporting config
     if config.reporting.formats.is_empty() {
-        return Err(TestError::config(
-            "At least one report format must be specified",
-        ));
+        return Err(TestError::config("At least one report format must be specified"));
     }
 
     // Validate output directory parent exists (only for absolute paths)

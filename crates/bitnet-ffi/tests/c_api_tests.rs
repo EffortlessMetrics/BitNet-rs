@@ -39,10 +39,7 @@ impl CApiTestFixture {
         // Create a dummy model file for testing
         std::fs::write(&model_path, b"dummy model data").expect("Failed to write test model");
 
-        Self {
-            _temp_dir: temp_dir,
-            model_path,
-        }
+        Self { _temp_dir: temp_dir, model_path }
     }
 
     fn model_path_cstr(&self) -> CString {
@@ -76,9 +73,7 @@ fn test_version_and_abi() {
     assert!(!version_ptr.is_null());
 
     let version_str = unsafe { CStr::from_ptr(version_ptr) };
-    let version = version_str
-        .to_str()
-        .expect("Invalid UTF-8 in version string");
+    let version = version_str.to_str().expect("Invalid UTF-8 in version string");
     assert!(!version.is_empty());
     assert!(version.contains('.'), "Version should contain dots");
 
@@ -108,10 +103,7 @@ fn test_error_handling() {
         let error_str = CStr::from_ptr(error_ptr);
         let error_msg = error_str.to_str().expect("Invalid UTF-8 in error message");
         assert!(!error_msg.is_empty());
-        assert!(
-            error_msg.contains("null"),
-            "Error should mention null pointer"
-        );
+        assert!(error_msg.contains("null"), "Error should mention null pointer");
 
         // Test error clearing
         bitnet_clear_last_error();
@@ -197,21 +189,13 @@ fn test_inference_invalid_cases() {
 
         // Test invalid model ID
         let prompt = CString::new("test prompt").unwrap();
-        let result = bitnet_inference(
-            -1,
-            prompt.as_ptr(),
-            output.as_mut_ptr() as *mut c_char,
-            output.len(),
-        );
+        let result =
+            bitnet_inference(-1, prompt.as_ptr(), output.as_mut_ptr() as *mut c_char, output.len());
         assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
         // Test null prompt
-        let result = bitnet_inference(
-            0,
-            ptr::null(),
-            output.as_mut_ptr() as *mut c_char,
-            output.len(),
-        );
+        let result =
+            bitnet_inference(0, ptr::null(), output.as_mut_ptr() as *mut c_char, output.len());
         assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
         // Test null output
@@ -292,17 +276,12 @@ fn test_batch_inference_invalid_cases() {
     unsafe {
         bitnet_init();
 
-        let prompts = [
-            CString::new("prompt 1").unwrap(),
-            CString::new("prompt 2").unwrap(),
-        ];
+        let prompts = [CString::new("prompt 1").unwrap(), CString::new("prompt 2").unwrap()];
         let prompt_ptrs: Vec<*const c_char> = prompts.iter().map(|s| s.as_ptr()).collect();
 
         let mut outputs = [vec![0u8; 512], vec![0u8; 512]];
-        let output_ptrs: Vec<*mut c_char> = outputs
-            .iter_mut()
-            .map(|v| v.as_mut_ptr() as *mut c_char)
-            .collect();
+        let output_ptrs: Vec<*mut c_char> =
+            outputs.iter_mut().map(|v| v.as_mut_ptr() as *mut c_char).collect();
         let max_lens = [512usize, 512usize];
 
         let config = BitNetCInferenceConfig::default();
@@ -481,11 +460,7 @@ fn test_memory_leak_detection() {
         // Memory usage should not have grown significantly
         // Allow for some reasonable growth due to internal structures
         let growth = final_usage.saturating_sub(initial_usage);
-        assert!(
-            growth < 1024 * 1024,
-            "Memory usage grew by {} bytes, possible leak",
-            growth
-        );
+        assert!(growth < 1024 * 1024, "Memory usage grew by {} bytes, possible leak", growth);
 
         bitnet_cleanup();
     }
@@ -580,9 +555,7 @@ fn test_string_handling() {
         assert!(!version_ptr.is_null());
 
         let version_cstr = CStr::from_ptr(version_ptr);
-        let version_str = version_cstr
-            .to_str()
-            .expect("Version should be valid UTF-8");
+        let version_str = version_cstr.to_str().expect("Version should be valid UTF-8");
         assert!(!version_str.is_empty());
 
         // Test error message handling
@@ -591,9 +564,7 @@ fn test_string_handling() {
         assert!(!error_ptr.is_null());
 
         let error_cstr = CStr::from_ptr(error_ptr);
-        let error_str = error_cstr
-            .to_str()
-            .expect("Error message should be valid UTF-8");
+        let error_str = error_cstr.to_str().expect("Error message should be valid UTF-8");
         assert!(!error_str.is_empty());
 
         bitnet_cleanup();

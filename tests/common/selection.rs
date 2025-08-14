@@ -15,11 +15,7 @@ pub struct TestSelector {
 
 impl TestSelector {
     pub fn new(config: TestConfig) -> Self {
-        Self {
-            config,
-            test_cache: HashMap::new(),
-            priority_rules: PriorityRules::default(),
-        }
+        Self { config, test_cache: HashMap::new(), priority_rules: PriorityRules::default() }
     }
 
     /// Discover all available tests in the workspace
@@ -43,20 +39,13 @@ impl TestSelector {
 
         // Cache results
         let crate_groups: HashMap<String, Vec<TestInfo>> =
-            all_tests
-                .iter()
-                .cloned()
-                .fold(HashMap::new(), |mut acc, test| {
-                    acc.entry(test.crate_name.clone()).or_default().push(test);
-                    acc
-                });
+            all_tests.iter().cloned().fold(HashMap::new(), |mut acc, test| {
+                acc.entry(test.crate_name.clone()).or_default().push(test);
+                acc
+            });
         self.test_cache = crate_groups;
 
-        info!(
-            "Discovered {} tests across {} crates",
-            all_tests.len(),
-            self.test_cache.len()
-        );
+        info!("Discovered {} tests across {} crates", all_tests.len(), self.test_cache.len());
 
         Ok(all_tests)
     }
@@ -129,10 +118,8 @@ impl TestSelector {
     ) -> Result<Vec<TestInfo>, TestError> {
         let all_tests = self.discover_tests().await?;
 
-        let selected_tests = all_tests
-            .into_iter()
-            .filter(|test| categories.contains(&test.category))
-            .collect();
+        let selected_tests =
+            all_tests.into_iter().filter(|test| categories.contains(&test.category)).collect();
 
         Ok(selected_tests)
     }
@@ -142,14 +129,11 @@ impl TestSelector {
         let cargo_toml_path = PathBuf::from("Cargo.toml");
 
         if !cargo_toml_path.exists() {
-            return Err(TestError::SetupError {
-                message: "Cargo.toml not found".to_string(),
-            });
+            return Err(TestError::SetupError { message: "Cargo.toml not found".to_string() });
         }
 
-        let content = tokio::fs::read_to_string(&cargo_toml_path)
-            .await
-            .map_err(|e| TestError::IoError(e))?;
+        let content =
+            tokio::fs::read_to_string(&cargo_toml_path).await.map_err(|e| TestError::IoError(e))?;
 
         let cargo_toml: toml::Value = content.parse().map_err(|e| TestError::SetupError {
             message: format!("Failed to parse Cargo.toml: {}", e),
@@ -185,11 +169,7 @@ impl TestSelector {
 
         // Use cargo test --list to discover tests
         let mut cmd = Command::new("cargo");
-        cmd.arg("test")
-            .arg("--package")
-            .arg(crate_name)
-            .arg("--list")
-            .arg("--message-format=json");
+        cmd.arg("test").arg("--package").arg(crate_name).arg("--list").arg("--message-format=json");
 
         let output = cmd.output().await.map_err(|e| TestError::ExecutionError {
             message: format!("Failed to list tests: {}", e),
@@ -346,11 +326,7 @@ impl PriorityRules {
                 "essential".to_string(),
                 "smoke".to_string(),
             ],
-            high_patterns: vec![
-                "api".to_string(),
-                "public".to_string(),
-                "interface".to_string(),
-            ],
+            high_patterns: vec!["api".to_string(), "public".to_string(), "interface".to_string()],
             low_patterns: vec![
                 "benchmark".to_string(),
                 "performance".to_string(),
@@ -455,10 +431,7 @@ mod tests {
             priority: TestPriority::Medium,
         };
 
-        assert_eq!(
-            rules.determine_priority(&critical_test),
-            TestPriority::Critical
-        );
+        assert_eq!(rules.determine_priority(&critical_test), TestPriority::Critical);
     }
 
     #[test]

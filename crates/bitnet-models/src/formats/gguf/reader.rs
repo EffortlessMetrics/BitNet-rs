@@ -52,12 +52,7 @@ impl<'a> GgufReader<'a> {
             }
         }
 
-        Ok(Self {
-            data,
-            header,
-            metadata,
-            tensor_infos,
-        })
+        Ok(Self { data, header, metadata, tensor_infos })
     }
 
     /// Get the GGUF version
@@ -119,65 +114,47 @@ impl<'a> GgufReader<'a> {
 
     /// Get all tensor names
     pub fn tensor_names(&self) -> Vec<&str> {
-        self.tensor_infos
-            .iter()
-            .map(|info| info.name.as_str())
-            .collect()
+        self.tensor_infos.iter().map(|info| info.name.as_str()).collect()
     }
 
     /// Get string metadata by key
     pub fn get_string_metadata(&self, key: &str) -> Option<String> {
-        self.metadata
-            .iter()
-            .find(|m| m.key == key)
-            .and_then(|m| match &m.value {
-                GgufValue::String(s) => Some(s.clone()),
-                _ => None,
-            })
+        self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {
+            GgufValue::String(s) => Some(s.clone()),
+            _ => None,
+        })
     }
 
     /// Get U32 metadata by key
     pub fn get_u32_metadata(&self, key: &str) -> Option<u32> {
-        self.metadata
-            .iter()
-            .find(|m| m.key == key)
-            .and_then(|m| match &m.value {
-                GgufValue::U32(v) => Some(*v),
-                _ => None,
-            })
+        self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {
+            GgufValue::U32(v) => Some(*v),
+            _ => None,
+        })
     }
 
     /// Get I32 metadata by key
     pub fn get_i32_metadata(&self, key: &str) -> Option<i32> {
-        self.metadata
-            .iter()
-            .find(|m| m.key == key)
-            .and_then(|m| match &m.value {
-                GgufValue::I32(v) => Some(*v),
-                _ => None,
-            })
+        self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {
+            GgufValue::I32(v) => Some(*v),
+            _ => None,
+        })
     }
 
     /// Get F32 metadata by key
     pub fn get_f32_metadata(&self, key: &str) -> Option<f32> {
-        self.metadata
-            .iter()
-            .find(|m| m.key == key)
-            .and_then(|m| match &m.value {
-                GgufValue::F32(v) => Some(*v),
-                _ => None,
-            })
+        self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {
+            GgufValue::F32(v) => Some(*v),
+            _ => None,
+        })
     }
 
     /// Get Bool metadata by key
     pub fn get_bool_metadata(&self, key: &str) -> Option<bool> {
-        self.metadata
-            .iter()
-            .find(|m| m.key == key)
-            .and_then(|m| match &m.value {
-                GgufValue::Bool(v) => Some(*v),
-                _ => None,
-            })
+        self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {
+            GgufValue::Bool(v) => Some(*v),
+            _ => None,
+        })
     }
 
     /// Get all metadata keys

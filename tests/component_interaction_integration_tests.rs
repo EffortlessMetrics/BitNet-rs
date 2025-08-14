@@ -10,10 +10,7 @@ use tests::integration::component_interaction_tests::ComponentInteractionTestSui
 #[tokio::test]
 async fn run_component_interaction_tests() {
     // Initialize logging for test debugging
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
+    let _ = env_logger::builder().filter_level(log::LevelFilter::Debug).is_test(true).try_init();
 
     // Create test configuration
     let config = TestConfig {
@@ -25,9 +22,7 @@ async fn run_component_interaction_tests() {
     };
 
     // Create test harness
-    let harness = TestHarness::new(config)
-        .await
-        .expect("Failed to create test harness");
+    let harness = TestHarness::new(config).await.expect("Failed to create test harness");
 
     // Run component interaction test suite
     let suite = ComponentInteractionTestSuite;
@@ -41,21 +36,12 @@ async fn run_component_interaction_tests() {
     println!("  Total tests: {}", result.summary.total_tests);
     println!("  Passed: {}", result.summary.passed);
     println!("  Failed: {}", result.summary.failed);
-    println!(
-        "  Success rate: {:.2}%",
-        result.summary.success_rate * 100.0
-    );
+    println!("  Success rate: {:.2}%", result.summary.success_rate * 100.0);
     println!("  Total duration: {:?}", result.summary.total_duration);
 
     // Assert all tests passed
-    assert_eq!(
-        result.summary.failed, 0,
-        "Some component interaction tests failed"
-    );
-    assert!(
-        result.summary.passed > 0,
-        "No component interaction tests were run"
-    );
+    assert_eq!(result.summary.failed, 0, "Some component interaction tests failed");
+    assert!(result.summary.passed > 0, "No component interaction tests were run");
     assert!(
         result.summary.success_rate >= 0.8,
         "Success rate too low: {:.2}%",
@@ -84,10 +70,7 @@ async fn run_component_interaction_tests() {
 
 #[tokio::test]
 async fn test_cross_crate_data_flow_validation() {
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
+    let _ = env_logger::builder().filter_level(log::LevelFilter::Debug).is_test(true).try_init();
 
     let config = TestConfig::default();
     let harness = TestHarness::new(config).await.unwrap();
@@ -106,10 +89,7 @@ async fn test_cross_crate_data_flow_validation() {
 
 #[tokio::test]
 async fn test_configuration_propagation_validation() {
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
+    let _ = env_logger::builder().filter_level(log::LevelFilter::Debug).is_test(true).try_init();
 
     let config = TestConfig::default();
     let harness = TestHarness::new(config).await.unwrap();
@@ -127,10 +107,7 @@ async fn test_configuration_propagation_validation() {
 
 #[tokio::test]
 async fn test_error_handling_and_recovery_validation() {
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
+    let _ = env_logger::builder().filter_level(log::LevelFilter::Debug).is_test(true).try_init();
 
     let config = TestConfig::default();
     let harness = TestHarness::new(config).await.unwrap();
@@ -148,10 +125,7 @@ async fn test_error_handling_and_recovery_validation() {
 
 #[tokio::test]
 async fn test_resource_sharing_validation() {
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
+    let _ = env_logger::builder().filter_level(log::LevelFilter::Debug).is_test(true).try_init();
 
     let config = TestConfig::default();
     let harness = TestHarness::new(config).await.unwrap();

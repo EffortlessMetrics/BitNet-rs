@@ -96,11 +96,7 @@ impl RequestTracker {
         metrics.requests_active.increment(1.0);
         metrics.requests_total.increment(1);
 
-        Self {
-            start_time: Instant::now(),
-            request_id,
-            metrics,
-        }
+        Self { start_time: Instant::now(), request_id, metrics }
     }
 
     pub fn record_tokens(&self, token_count: u64) {
@@ -173,9 +169,7 @@ impl MetricsCollector {
 
     /// Record model loading time
     pub fn record_model_load_time(&self, duration: Duration) {
-        self.inference
-            .model_load_duration
-            .record(duration.as_secs_f64());
+        self.inference.model_load_duration.record(duration.as_secs_f64());
         tracing::info!(duration_ms = duration.as_millis(), "Model loaded");
     }
 
@@ -197,12 +191,8 @@ impl MetricsCollector {
 
         // Collect memory usage
         if let Ok(memory_info) = self.get_memory_info().await {
-            self.inference
-                .memory_usage_bytes
-                .set(memory_info.used_bytes as f64);
-            self.system
-                .memory_usage_percent
-                .set(memory_info.usage_percent);
+            self.inference.memory_usage_bytes.set(memory_info.used_bytes as f64);
+            self.system.memory_usage_percent.set(memory_info.usage_percent);
         }
 
         // Collect CPU usage (simplified - in production you'd use a proper system monitoring crate)
@@ -240,22 +230,11 @@ impl MetricsCollector {
         }
 
         // Check for significant performance degradation
-        let recent_avg = history
-            .iter()
-            .rev()
-            .take(5)
-            .map(|s| s.tokens_per_second)
-            .sum::<f64>()
-            / 5.0;
+        let recent_avg =
+            history.iter().rev().take(5).map(|s| s.tokens_per_second).sum::<f64>() / 5.0;
 
-        let baseline_avg = history
-            .iter()
-            .rev()
-            .skip(5)
-            .take(5)
-            .map(|s| s.tokens_per_second)
-            .sum::<f64>()
-            / 5.0;
+        let baseline_avg =
+            history.iter().rev().skip(5).take(5).map(|s| s.tokens_per_second).sum::<f64>() / 5.0;
 
         if baseline_avg > 0.0 && recent_avg < baseline_avg * 0.95 {
             alerts.push(format!(
@@ -267,19 +246,11 @@ impl MetricsCollector {
         }
 
         // Check for high error rate
-        let recent_error_rate = history
-            .iter()
-            .rev()
-            .take(5)
-            .map(|s| s.error_rate)
-            .sum::<f64>()
-            / 5.0;
+        let recent_error_rate =
+            history.iter().rev().take(5).map(|s| s.error_rate).sum::<f64>() / 5.0;
 
         if recent_error_rate > 0.05 {
-            alerts.push(format!(
-                "High error rate detected: {:.2}%",
-                recent_error_rate * 100.0
-            ));
+            alerts.push(format!("High error rate detected: {:.2}%", recent_error_rate * 100.0));
         }
 
         Ok(alerts)
@@ -287,11 +258,7 @@ impl MetricsCollector {
 
     async fn get_memory_info(&self) -> Result<MemoryInfo> {
         // Simplified memory info - in production use a proper system monitoring crate
-        Ok(MemoryInfo {
-            used_bytes: 0,
-            total_bytes: 0,
-            usage_percent: 0.0,
-        })
+        Ok(MemoryInfo { used_bytes: 0, total_bytes: 0, usage_percent: 0.0 })
     }
 
     async fn get_cpu_usage(&self) -> Result<f64> {

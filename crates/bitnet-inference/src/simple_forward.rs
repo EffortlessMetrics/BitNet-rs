@@ -31,12 +31,7 @@ pub struct Weights<'a> {
 /// # Returns
 /// Vector of logits of size `vocab`
 pub fn logits_for_token(w: &Weights, token_id: usize) -> Vec<f32> {
-    assert!(
-        token_id < w.vocab,
-        "token_id {} >= vocab {}",
-        token_id,
-        w.vocab
-    );
+    assert!(token_id < w.vocab, "token_id {} >= vocab {}", token_id, w.vocab);
     let mut out = vec![0f32; w.vocab];
 
     // e = tok_embeddings[token_id]  // [dim]
@@ -89,12 +84,7 @@ mod tests {
             0.0, 1.0, 0.5, -0.5, // dim 1
         ];
 
-        let w = Weights {
-            tok_embeddings: &tok_embeddings,
-            lm_head: &lm_head,
-            vocab,
-            dim,
-        };
+        let w = Weights { tok_embeddings: &tok_embeddings, lm_head: &lm_head, vocab, dim };
 
         // Test token 0: [1.0, 0.0] @ [[1.0, 0.0, -1.0, 0.5], [0.0, 1.0, 0.5, -0.5]]
         // Expected: [1.0, 0.0, -1.0, 0.5]

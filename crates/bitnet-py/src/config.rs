@@ -18,9 +18,7 @@ pub struct PyBitNetConfig {
 impl PyBitNetConfig {
     #[new]
     fn new() -> Self {
-        Self {
-            inner: BitNetConfig::default(),
-        }
+        Self { inner: BitNetConfig::default() }
     }
 
     fn __repr__(&self) -> String {

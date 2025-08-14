@@ -70,12 +70,7 @@ impl Default for GenerationConfig {
 impl GenerationConfig {
     /// Create a greedy generation config (deterministic)
     pub fn greedy() -> Self {
-        Self {
-            temperature: 0.0,
-            top_k: 1,
-            top_p: 1.0,
-            ..Default::default()
-        }
+        Self { temperature: 0.0, top_k: 1, top_p: 1.0, ..Default::default() }
     }
 
     /// Create a creative generation config (high randomness)
@@ -382,10 +377,7 @@ mod tests {
         let serialized = serde_json::to_string(&inf_config).unwrap();
         let deserialized: InferenceConfig = serde_json::from_str(&serialized).unwrap();
 
-        assert_eq!(
-            inf_config.max_context_length,
-            deserialized.max_context_length
-        );
+        assert_eq!(inf_config.max_context_length, deserialized.max_context_length);
         assert_eq!(inf_config.num_threads, deserialized.num_threads);
     }
 }

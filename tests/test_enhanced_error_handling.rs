@@ -66,25 +66,13 @@ async fn test_enhanced_error_handling_timeout() -> Result<(), Box<dyn std::error
     assert_eq!(result.analysis.error_category, "timeout");
     assert!(result.should_retry, "Timeout errors should be retryable");
     assert!(result.retry_delay.is_some(), "Should provide retry delay");
-    assert!(
-        !result.recovery_suggestions.is_empty(),
-        "Should provide recovery suggestions"
-    );
-    assert!(
-        !result.troubleshooting_steps.is_empty(),
-        "Should provide troubleshooting steps"
-    );
+    assert!(!result.recovery_suggestions.is_empty(), "Should provide recovery suggestions");
+    assert!(!result.troubleshooting_steps.is_empty(), "Should provide troubleshooting steps");
 
     // Verify debugging guide is comprehensive
     let debugging_guide = &result.debugging_guide;
-    assert!(
-        debugging_guide.contains("DEBUGGING GUIDE"),
-        "Should contain debugging guide header"
-    );
-    assert!(
-        debugging_guide.contains("RECOMMENDED ACTIONS"),
-        "Should contain recommendations"
-    );
+    assert!(debugging_guide.contains("DEBUGGING GUIDE"), "Should contain debugging guide header");
+    assert!(debugging_guide.contains("RECOMMENDED ACTIONS"), "Should contain recommendations");
 
     // Print debugging information for manual verification
     println!("=== ENHANCED ERROR HANDLING DEMONSTRATION ===");
@@ -92,14 +80,8 @@ async fn test_enhanced_error_handling_timeout() -> Result<(), Box<dyn std::error
     println!("\nDebugging Guide:\n{}", debugging_guide);
 
     if let Some(primary_rec) = result.primary_recommendation() {
-        println!(
-            "\nPrimary Recommendation: {} - {}",
-            primary_rec.title, primary_rec.description
-        );
-        println!(
-            "Success Probability: {}%",
-            (primary_rec.success_probability * 100.0) as u32
-        );
+        println!("\nPrimary Recommendation: {} - {}", primary_rec.title, primary_rec.description);
+        println!("Success Probability: {}%", (primary_rec.success_probability * 100.0) as u32);
     }
 
     println!("\nRecovery Suggestions:");
@@ -109,10 +91,7 @@ async fn test_enhanced_error_handling_timeout() -> Result<(), Box<dyn std::error
 
     println!("\nTroubleshooting Steps:");
     for step in &result.troubleshooting_steps {
-        println!(
-            "  {}. {} - {}",
-            step.step_number, step.title, step.description
-        );
+        println!("  {}. {} - {}", step.step_number, step.title, step.description);
     }
 
     Ok(())
@@ -168,10 +147,7 @@ async fn test_enhanced_error_handling_fixture_failure() -> Result<(), Box<dyn st
     );
 
     println!("\n=== FIXTURE ERROR HANDLING DEMONSTRATION ===");
-    println!(
-        "Error Analysis Confidence: {:.1}%",
-        result.analysis.confidence_score * 100.0
-    );
+    println!("Error Analysis Confidence: {:.1}%", result.analysis.confidence_score * 100.0);
     println!("Debugging Priority: {}", result.analysis.debugging_priority);
 
     if let Some(primary_cause) = &result.analysis.root_cause_analysis.primary_cause {
@@ -221,14 +197,8 @@ async fn test_enhanced_error_handling_assertion_failure() -> Result<(), Box<dyn 
 
     // Verify assertion-specific analysis
     assert_eq!(result.analysis.error_category, "assertion");
-    assert!(
-        !result.should_retry,
-        "Assertion errors should not be retryable"
-    );
-    assert!(
-        result.retry_delay.is_none(),
-        "Should not provide retry delay for assertion errors"
-    );
+    assert!(!result.should_retry, "Assertion errors should not be retryable");
+    assert!(result.retry_delay.is_none(), "Should not provide retry delay for assertion errors");
 
     // Check for assertion-specific recommendations
     let has_debug_recommendation = result.analysis.recommendations.iter().any(|rec| {
@@ -292,14 +262,8 @@ async fn test_error_summary_reporting() -> Result<(), Box<dyn std::error::Error>
 
     // Verify summary statistics
     assert_eq!(summary.total_errors, 4, "Should track all handled errors");
-    assert!(
-        summary.errors_by_category.len() > 1,
-        "Should categorize errors"
-    );
-    assert!(
-        !summary.most_common_category.is_empty(),
-        "Should identify most common category"
-    );
+    assert!(summary.errors_by_category.len() > 1, "Should categorize errors");
+    assert!(!summary.most_common_category.is_empty(), "Should identify most common category");
 
     println!("\n=== ERROR SUMMARY REPORT ===");
     println!("{}", summary.generate_summary());
@@ -343,19 +307,11 @@ async fn test_error_pattern_detection() -> Result<(), Box<dyn std::error::Error>
     };
 
     let result = error_handler
-        .handle_test_error(
-            "test_ci_timeout",
-            &timeout_error,
-            &debug_context,
-            execution_context,
-        )
+        .handle_test_error("test_ci_timeout", &timeout_error, &debug_context, execution_context)
         .await?;
 
     // Verify pattern detection
-    assert!(
-        !result.analysis.detected_patterns.is_empty(),
-        "Should detect patterns"
-    );
+    assert!(!result.analysis.detected_patterns.is_empty(), "Should detect patterns");
 
     // Check for CI-specific recommendations
     let has_ci_recommendation = result.analysis.recommendations.iter().any(|rec| {
@@ -363,10 +319,7 @@ async fn test_error_pattern_detection() -> Result<(), Box<dyn std::error::Error>
     });
 
     println!("\n=== PATTERN DETECTION DEMONSTRATION ===");
-    println!(
-        "Detected {} patterns",
-        result.analysis.detected_patterns.len()
-    );
+    println!("Detected {} patterns", result.analysis.detected_patterns.len());
 
     for pattern in &result.analysis.detected_patterns {
         println!(

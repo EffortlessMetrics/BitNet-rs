@@ -192,10 +192,8 @@ impl CppImplementation {
 
         // Add Windows executable extension
         #[cfg(target_os = "windows")]
-        let search_paths: Vec<PathBuf> = search_paths
-            .into_iter()
-            .map(|p| p.with_extension("exe"))
-            .collect();
+        let search_paths: Vec<PathBuf> =
+            search_paths.into_iter().map(|p| p.with_extension("exe")).collect();
 
         for path in search_paths {
             if path.exists() {
@@ -203,10 +201,7 @@ impl CppImplementation {
                 if self.verify_binary(&path).await? {
                     self.binary_path = Some(path);
                     self.is_available = true;
-                    info!(
-                        "Found C++ binary at: {}",
-                        self.binary_path.as_ref().unwrap().display()
-                    );
+                    info!("Found C++ binary at: {}", self.binary_path.as_ref().unwrap().display());
                     return Ok(());
                 }
             }
@@ -228,9 +223,7 @@ impl CppImplementation {
         }
 
         warn!("C++ binary not found in any search paths");
-        Err(ImplementationError::NotAvailable {
-            name: "BitNet.cpp binary not found".to_string(),
-        })
+        Err(ImplementationError::NotAvailable { name: "BitNet.cpp binary not found".to_string() })
     }
 
     /// Verify that a binary is the correct BitNet.cpp implementation
@@ -460,9 +453,7 @@ impl BitNetImplementation for CppImplementation {
 
         // Convert path to C string
         let path_cstr = CString::new(model_path.to_string_lossy().as_bytes()).map_err(|e| {
-            ImplementationError::FfiError {
-                message: format!("Invalid path: {}", e),
-            }
+            ImplementationError::FfiError { message: format!("Invalid path: {}", e) }
         })?;
 
         // Load model via FFI
@@ -516,11 +507,7 @@ impl BitNetImplementation for CppImplementation {
 
     #[instrument(skip(self, text))]
     async fn tokenize(&self, text: &str) -> ImplementationResult<Vec<u32>> {
-        let handle = self
-            .handle
-            .as_ref()
-            .ok_or(ImplementationError::ModelNotLoaded)?
-            .as_ptr();
+        let handle = self.handle.as_ref().ok_or(ImplementationError::ModelNotLoaded)?.as_ptr();
 
         // Convert text to C string
         let text_cstr = CString::new(text).map_err(|e| ImplementationError::TokenizationError {
@@ -532,12 +519,7 @@ impl BitNetImplementation for CppImplementation {
 
         // Tokenize via FFI
         let result = unsafe {
-            bitnet_cpp_tokenize(
-                handle,
-                text_cstr.as_ptr(),
-                &mut tokens_ptr,
-                &mut token_count,
-            )
+            bitnet_cpp_tokenize(handle, text_cstr.as_ptr(), &mut tokens_ptr, &mut token_count)
         };
 
         if result != 0 {
@@ -563,22 +545,14 @@ impl BitNetImplementation for CppImplementation {
             bitnet_cpp_free_tokens(tokens_ptr);
         }
 
-        debug!(
-            "Tokenized {} characters into {} tokens",
-            text.len(),
-            tokens.len()
-        );
+        debug!("Tokenized {} characters into {} tokens", text.len(), tokens.len());
 
         Ok(tokens)
     }
 
     #[instrument(skip(self, tokens))]
     async fn detokenize(&self, tokens: &[u32]) -> ImplementationResult<String> {
-        let handle = self
-            .handle
-            .as_ref()
-            .ok_or(ImplementationError::ModelNotLoaded)?
-            .as_ptr();
+        let handle = self.handle.as_ref().ok_or(ImplementationError::ModelNotLoaded)?.as_ptr();
 
         // Convert tokens to C array
         let c_tokens: Vec<c_uint> = tokens.iter().map(|&t| t as c_uint).collect();
@@ -612,11 +586,7 @@ impl BitNetImplementation for CppImplementation {
             bitnet_cpp_free_string(text_ptr);
         }
 
-        debug!(
-            "Detokenized {} tokens into {} characters",
-            tokens.len(),
-            text.len()
-        );
+        debug!("Detokenized {} tokens into {} characters", tokens.len(), text.len());
 
         Ok(text)
     }
@@ -628,11 +598,7 @@ impl BitNetImplementation for CppImplementation {
         config: &InferenceConfig,
     ) -> ImplementationResult<InferenceResult> {
         let start_time = Instant::now();
-        let handle = self
-            .handle
-            .as_ref()
-            .ok_or(ImplementationError::ModelNotLoaded)?
-            .as_ptr();
+        let handle = self.handle.as_ref().ok_or(ImplementationError::ModelNotLoaded)?.as_ptr();
 
         // Convert tokens and config
         let c_tokens: Vec<c_uint> = tokens.iter().map(|&t| t as c_uint).collect();
@@ -677,11 +643,7 @@ impl BitNetImplementation for CppImplementation {
         let output_text = if cpp_result.text.is_null() {
             String::new()
         } else {
-            unsafe {
-                CStr::from_ptr(cpp_result.text)
-                    .to_string_lossy()
-                    .to_string()
-            }
+            unsafe { CStr::from_ptr(cpp_result.text).to_string_lossy().to_string() }
         };
 
         let duration = start_time.elapsed();
@@ -734,15 +696,12 @@ impl BitNetImplementation for CppImplementation {
     }
 
     fn get_resource_info(&self) -> ResourceInfo {
-        self.resource_info
-            .try_read()
-            .map(|info| info.clone())
-            .unwrap_or(ResourceInfo {
-                memory_usage: self.get_memory_usage(),
-                file_handles: self.get_file_handle_count(),
-                thread_count: self.get_thread_count(),
-                gpu_memory: Some(self.get_gpu_memory_usage()),
-            })
+        self.resource_info.try_read().map(|info| info.clone()).unwrap_or(ResourceInfo {
+            memory_usage: self.get_memory_usage(),
+            file_handles: self.get_file_handle_count(),
+            thread_count: self.get_thread_count(),
+            gpu_memory: Some(self.get_gpu_memory_usage()),
+        })
     }
 
     #[instrument(skip(self))]
@@ -771,12 +730,8 @@ impl BitNetImplementation for CppImplementation {
 
         // Reset resource info
         let mut resource_info = self.resource_info.write().await;
-        *resource_info = ResourceInfo {
-            memory_usage: 0,
-            file_handles: 0,
-            thread_count: 1,
-            gpu_memory: None,
-        };
+        *resource_info =
+            ResourceInfo { memory_usage: 0, file_handles: 0, thread_count: 1, gpu_memory: None };
 
         Ok(())
     }
@@ -798,9 +753,7 @@ impl CppImplementationFactory {
     }
 
     pub fn with_binary_path(binary_path: PathBuf) -> Self {
-        Self {
-            binary_path: Some(binary_path),
-        }
+        Self { binary_path: Some(binary_path) }
     }
 }
 
@@ -1006,10 +959,7 @@ mod tests {
         assert_eq!(model_info.vocabulary_size, Some(50000));
         assert_eq!(model_info.architecture, Some("BitNet".to_string()));
         assert!(model_info.metadata.contains_key("implementation"));
-        assert_eq!(
-            model_info.metadata.get("implementation"),
-            Some(&"BitNet.cpp".to_string())
-        );
+        assert_eq!(model_info.metadata.get("implementation"), Some(&"BitNet.cpp".to_string()));
     }
 
     #[test]

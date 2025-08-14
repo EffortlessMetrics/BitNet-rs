@@ -76,13 +76,7 @@ impl VectorizedLookupTable {
             forward[i] = quantized;
         }
 
-        Self {
-            forward,
-            reverse,
-            scale,
-            zero_point,
-            num_levels,
-        }
+        Self { forward, reverse, scale, zero_point, num_levels }
     }
 
     /// Quantize using vectorized lookup
@@ -169,20 +163,12 @@ impl TL2Quantizer {
             }
         }
 
-        Self {
-            config,
-            lookup_tables: HashMap::new(),
-            cpu_features,
-        }
+        Self { config, lookup_tables: HashMap::new(), cpu_features }
     }
 
     /// Create a new TL2 quantizer with custom configuration
     pub fn with_config(config: TL2Config) -> Self {
-        Self {
-            config,
-            lookup_tables: HashMap::new(),
-            cpu_features: CpuFeatures::detect(),
-        }
+        Self { config, lookup_tables: HashMap::new(), cpu_features: CpuFeatures::detect() }
     }
 
     /// Load configuration from .ini file for compatibility with C++ implementation
@@ -223,9 +209,8 @@ impl TL2Quantizer {
         let shape = tensor.shape().to_vec();
 
         // Calculate statistics for lookup table generation
-        let (min_val, max_val) = data
-            .iter()
-            .fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &val| {
+        let (min_val, max_val) =
+            data.iter().fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &val| {
                 (min.min(val), max.max(val))
             });
 
@@ -263,10 +248,9 @@ impl TL2Quantizer {
     /// Dequantize tensor from TL2 format
     pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::TL2 {
-            return Err(QuantizationError::UnsupportedType {
-                qtype: tensor.qtype.to_string(),
-            }
-            .into());
+            return Err(
+                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
+            );
         }
 
         // Unpack quantized values
@@ -304,9 +288,7 @@ impl TL2Quantizer {
             .for_each(|((quant_block, data_block), &_scale)| {
                 // Create block-specific lookup table
                 let block_min = data_block.iter().fold(f32::INFINITY, |acc, &x| acc.min(x));
-                let block_max = data_block
-                    .iter()
-                    .fold(f32::NEG_INFINITY, |acc, &x| acc.max(x));
+                let block_max = data_block.iter().fold(f32::NEG_INFINITY, |acc, &x| acc.max(x));
                 let block_table =
                     VectorizedLookupTable::new(block_min, block_max, self.config.precision_bits);
 
@@ -617,9 +599,7 @@ mod tests {
     #[test]
     fn test_large_tensor_quantization() {
         let device = Device::Cpu;
-        let data = (0..1024)
-            .map(|i| (i as f32 - 512.0) / 256.0)
-            .collect::<Vec<_>>();
+        let data = (0..1024).map(|i| (i as f32 - 512.0) / 256.0).collect::<Vec<_>>();
         let shape = vec![32, 32];
 
         let tensor = create_tensor_from_f32(data, &shape, &device).unwrap();

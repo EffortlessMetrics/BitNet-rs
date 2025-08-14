@@ -54,12 +54,7 @@ pub fn load_minimal(mode: LoadMode) -> Result<MinimalWeights> {
                 *x = rng.gen::<f32>() * 0.02 - 0.01;
             }
 
-            Ok(MinimalWeights {
-                tok_embeddings: tok,
-                lm_head: head,
-                vocab,
-                dim,
-            })
+            Ok(MinimalWeights { tok_embeddings: tok, lm_head: head, vocab, dim })
         }
         LoadMode::Gguf(path) => {
             // Load tensors from GGUF - now supports I2_S quantized tensors
@@ -82,16 +77,8 @@ mod tests {
     #[test]
     fn test_dummy_weights_deterministic() {
         // Test that dummy weights are deterministic
-        let w1 = load_minimal(LoadMode::Dummy {
-            vocab: 100,
-            dim: 64,
-        })
-        .unwrap();
-        let w2 = load_minimal(LoadMode::Dummy {
-            vocab: 100,
-            dim: 64,
-        })
-        .unwrap();
+        let w1 = load_minimal(LoadMode::Dummy { vocab: 100, dim: 64 }).unwrap();
+        let w2 = load_minimal(LoadMode::Dummy { vocab: 100, dim: 64 }).unwrap();
 
         // Check dimensions
         assert_eq!(w1.vocab, 100);

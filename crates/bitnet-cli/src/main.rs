@@ -277,16 +277,11 @@ fn setup_logging(config: &CliConfig, log_level_override: Option<&str>) -> Result
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(level));
 
-    let subscriber = tracing_subscriber::fmt()
-        .with_env_filter(filter)
-        .with_target(false);
+    let subscriber = tracing_subscriber::fmt().with_env_filter(filter).with_target(false);
 
     match config.logging.format.as_str() {
         "json" => {
-            subscriber
-                .json()
-                .with_timer(tracing_subscriber::fmt::time::uptime())
-                .init();
+            subscriber.json().with_timer(tracing_subscriber::fmt::time::uptime()).init();
         }
         "compact" => {
             subscriber.compact().init();
@@ -317,18 +312,12 @@ async fn handle_config_command(action: ConfigAction, config: &CliConfig) -> Resu
         ConfigAction::Set { key, value } => {
             println!("Setting {} = {}", key, value);
             // In a full implementation, this would update the config file
-            println!(
-                "{}",
-                style("Configuration setting not yet implemented").yellow()
-            );
+            println!("{}", style("Configuration setting not yet implemented").yellow());
         }
         ConfigAction::Reset => {
             println!("Resetting configuration to defaults");
             // In a full implementation, this would reset the config file
-            println!(
-                "{}",
-                style("Configuration reset not yet implemented").yellow()
-            );
+            println!("{}", style("Configuration reset not yet implemented").yellow());
         }
         ConfigAction::Path => {
             let path = CliConfig::default_config_path()
@@ -392,11 +381,7 @@ async fn run_simple_generation(
 
     // Tokenize prompt
     let mut tokens = tokenizer.encode(&prompt, true)?;
-    println!(
-        "Input tokens ({}): {:?}",
-        tokens.len(),
-        &tokens[..10.min(tokens.len())]
-    );
+    println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
 
     // Create KV cache
     let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
@@ -463,11 +448,7 @@ fn extract_logits(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
         ConcreteTensor::BitNet(t) => {
             let candle = t.to_candle()?;
             let last = candle.narrow(1, seq_len - 1, 1)?.squeeze(1)?.i(0)?;
-            let last = if last.dtype() != DType::F32 {
-                last.to_dtype(DType::F32)?
-            } else {
-                last
-            };
+            let last = if last.dtype() != DType::F32 { last.to_dtype(DType::F32)? } else { last };
             Ok(last.to_vec1::<f32>()?)
         }
         ConcreteTensor::Mock(_) => {

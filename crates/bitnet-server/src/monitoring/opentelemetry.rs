@@ -21,10 +21,7 @@ pub async fn init_opentelemetry(config: &MonitoringConfig) -> Result<()> {
     init_metrics(config).await?;
 
     tracing::info!(
-        endpoint = config
-            .opentelemetry_endpoint
-            .as_deref()
-            .unwrap_or("default"),
+        endpoint = config.opentelemetry_endpoint.as_deref().unwrap_or("default"),
         "OpenTelemetry initialized"
     );
 
@@ -186,11 +183,7 @@ pub mod metrics_utils {
 
     /// Record inference request (simplified)
     pub fn record_inference_request(model: &str, quantization: &str) {
-        tracing::debug!(
-            model = model,
-            quantization = quantization,
-            "Inference request recorded"
-        );
+        tracing::debug!(model = model, quantization = quantization, "Inference request recorded");
     }
 
     /// Record inference duration (simplified)
@@ -214,11 +207,7 @@ pub mod metrics_utils {
 
     /// Record tokens generated (simplified)
     pub fn record_tokens_generated(count: u64, model: &str) {
-        tracing::debug!(
-            model = model,
-            tokens_generated = count,
-            "Tokens generated recorded"
-        );
+        tracing::debug!(model = model, tokens_generated = count, "Tokens generated recorded");
     }
 
     /// Record model load (simplified)

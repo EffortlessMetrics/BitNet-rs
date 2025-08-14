@@ -107,9 +107,7 @@ pub struct GpuValidator {
 impl GpuValidator {
     /// Create a new validator with default configuration
     pub fn new() -> Self {
-        Self {
-            config: ValidationConfig::default(),
-        }
+        Self { config: ValidationConfig::default() }
     }
 
     /// Create a new validator with custom configuration
@@ -176,10 +174,7 @@ impl GpuValidator {
             }
         }
 
-        log::info!(
-            "GPU kernel validation completed. Success: {}",
-            results.success
-        );
+        log::info!("GPU kernel validation completed. Success: {}", results.success);
         Ok(results)
     }
 
@@ -238,12 +233,7 @@ impl GpuValidator {
             passed
         );
 
-        Ok(AccuracyResult {
-            dimensions,
-            max_error,
-            rms_error,
-            passed,
-        })
+        Ok(AccuracyResult { dimensions, max_error, rms_error, passed })
     }
 
     /// Benchmark performance against CPU implementation
@@ -314,13 +304,7 @@ impl GpuValidator {
             gflops
         );
 
-        Ok(PerformanceResult {
-            dimensions,
-            cpu_time_ms,
-            gpu_time_ms,
-            speedup,
-            gflops,
-        })
+        Ok(PerformanceResult { dimensions, cpu_time_ms, gpu_time_ms, speedup, gflops })
     }
 
     /// Test memory usage and detect leaks
@@ -331,11 +315,7 @@ impl GpuValidator {
         // This would require CUDA memory management APIs
         // For now, return a placeholder result
 
-        Ok(MemoryResult {
-            peak_gpu_memory: 0,
-            leaks_detected: false,
-            efficiency_score: 1.0,
-        })
+        Ok(MemoryResult { peak_gpu_memory: 0, leaks_detected: false, efficiency_score: 1.0 })
     }
 }
 
@@ -352,11 +332,7 @@ pub fn print_validation_results(results: &ValidationResults) {
     // Accuracy results
     println!("\n📊 Numerical Accuracy Tests:");
     for result in &results.accuracy_results {
-        let status = if result.passed {
-            "✅ PASS"
-        } else {
-            "❌ FAIL"
-        };
+        let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
         println!(
             "  {}x{}x{}: {} (max_error: {:.2e}, rms_error: {:.2e})",
             result.dimensions.0,
@@ -386,11 +362,7 @@ pub fn print_validation_results(results: &ValidationResults) {
     // Memory results
     if let Some(memory) = &results.memory_results {
         println!("\n💾 Memory Usage:");
-        let leak_status = if memory.leaks_detected {
-            "❌ LEAKS DETECTED"
-        } else {
-            "✅ NO LEAKS"
-        };
+        let leak_status = if memory.leaks_detected { "❌ LEAKS DETECTED" } else { "✅ NO LEAKS" };
         println!(
             "  Peak GPU Memory: {} bytes, Efficiency: {:.1}%, {}",
             memory.peak_gpu_memory,
@@ -400,11 +372,7 @@ pub fn print_validation_results(results: &ValidationResults) {
     }
 
     // Overall result
-    let overall_status = if results.success {
-        "✅ SUCCESS"
-    } else {
-        "❌ FAILED"
-    };
+    let overall_status = if results.success { "✅ SUCCESS" } else { "❌ FAILED" };
     println!("\n🎯 Overall Validation: {}", overall_status);
 }
 
@@ -425,10 +393,7 @@ mod tests {
         let validator = GpuValidator::new();
         assert_eq!(validator.config.tolerance, DEFAULT_TOLERANCE);
 
-        let custom_config = ValidationConfig {
-            tolerance: 1e-5,
-            ..Default::default()
-        };
+        let custom_config = ValidationConfig { tolerance: 1e-5, ..Default::default() };
         let custom_validator = GpuValidator::with_config(custom_config);
         assert_eq!(custom_validator.config.tolerance, 1e-5);
     }

@@ -36,14 +36,7 @@ impl BenchmarkResult {
         duration: Duration,
         summary: PerformanceSummary,
     ) -> Self {
-        Self {
-            name,
-            iterations,
-            duration,
-            summary,
-            throughput: 0.0,
-            warmup_iterations: 0,
-        }
+        Self { name, iterations, duration, summary, throughput: 0.0, warmup_iterations: 0 }
     }
 }
 
@@ -130,11 +123,7 @@ impl PerformanceDashboardGenerator {
         let viz_config = VisualizationConfig::default();
         let visualizer = PerformanceVisualizer::new(viz_config);
 
-        Self {
-            visualizer,
-            output_dir,
-            dashboard_config: config,
-        }
+        Self { visualizer, output_dir, dashboard_config: config }
     }
 
     /// Add performance comparison data from benchmark results
@@ -166,9 +155,7 @@ impl PerformanceDashboardGenerator {
 
         // Generate main dashboard HTML
         let dashboard_path = self.output_dir.join("performance_dashboard.html");
-        self.visualizer
-            .generate_performance_dashboard(&dashboard_path)
-            .await?;
+        self.visualizer.generate_performance_dashboard(&dashboard_path).await?;
 
         outputs.push(GeneratedFile {
             path: dashboard_path,
@@ -428,10 +415,7 @@ pub fn create_custom_dashboard(
     output_dir: PathBuf,
     title: String,
 ) -> PerformanceDashboardGenerator {
-    let config = DashboardConfig {
-        title,
-        ..DashboardConfig::default()
-    };
+    let config = DashboardConfig { title, ..DashboardConfig::default() };
     PerformanceDashboardGenerator::new(output_dir, config)
 }
 
@@ -475,10 +459,7 @@ mod tests {
         let generator = PerformanceDashboardGenerator::new(temp_dir.path().to_path_buf(), config);
 
         assert_eq!(generator.output_dir(), temp_dir.path());
-        assert_eq!(
-            generator.dashboard_config.title,
-            "BitNet.rs Performance Dashboard"
-        );
+        assert_eq!(generator.dashboard_config.title, "BitNet.rs Performance Dashboard");
     }
 
     #[tokio::test]
@@ -523,10 +504,7 @@ mod tests {
         let generator = create_performance_dashboard(temp_dir.path().to_path_buf());
         let summary_path = temp_dir.path().join("test_summary.md");
 
-        generator
-            .generate_summary_report(&summary_path)
-            .await
-            .unwrap();
+        generator.generate_summary_report(&summary_path).await.unwrap();
 
         assert!(summary_path.exists());
         let content = fs::read_to_string(&summary_path).await.unwrap();
@@ -540,15 +518,10 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
 
         let default_generator = create_performance_dashboard(temp_dir.path().to_path_buf());
-        assert_eq!(
-            default_generator.dashboard_config.title,
-            "BitNet.rs Performance Dashboard"
-        );
+        assert_eq!(default_generator.dashboard_config.title, "BitNet.rs Performance Dashboard");
 
-        let custom_generator = create_custom_dashboard(
-            temp_dir.path().to_path_buf(),
-            "Custom Dashboard".to_string(),
-        );
+        let custom_generator =
+            create_custom_dashboard(temp_dir.path().to_path_buf(), "Custom Dashboard".to_string());
         assert_eq!(custom_generator.dashboard_config.title, "Custom Dashboard");
     }
 }

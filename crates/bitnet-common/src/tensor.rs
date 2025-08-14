@@ -77,11 +77,7 @@ pub struct MockTensor {
 impl MockTensor {
     pub fn new(shape: Vec<usize>) -> Self {
         let size = shape.iter().product();
-        Self {
-            shape,
-            data: vec![0.1; size],
-            device: Device::Cpu,
-        }
+        Self { shape, data: vec![0.1; size], device: Device::Cpu }
     }
 
     pub fn with_device(mut self, device: Device) -> Self {
@@ -205,9 +201,7 @@ impl Tensor for BitNetTensor {
                 ))),
             }
         } else {
-            Err(BitNetError::Validation(
-                "Only f32 slice access is currently supported".to_string(),
-            ))
+            Err(BitNetError::Validation("Only f32 slice access is currently supported".to_string()))
         }
     }
 

@@ -79,10 +79,7 @@ async fn main() -> Result<()> {
     let notification_manager = CINotificationManager::new(notification_config)?;
 
     // Process test results for notifications
-    if let Err(e) = notification_manager
-        .process_test_results(&test_results, &ci_context)
-        .await
-    {
+    if let Err(e) = notification_manager.process_test_results(&test_results, &ci_context).await {
         error!("Failed to process test results for notifications: {}", e);
     }
 
@@ -109,10 +106,7 @@ async fn main() -> Result<()> {
         configuration: collect_configuration_info(),
     };
 
-    if let Err(e) = trend_reporter
-        .record_test_results(&test_results, &metadata)
-        .await
-    {
+    if let Err(e) = trend_reporter.record_test_results(&test_results, &metadata).await {
         warn!("Failed to record trend data: {}", e);
     }
 
@@ -168,11 +162,7 @@ async fn load_junit_test_results(path: &PathBuf) -> Result<TestSuiteResult> {
     let content = fs::read_to_string(path).await?;
 
     // Extract basic information from JUnit XML
-    let suite_name = path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("unknown")
-        .to_string();
+    let suite_name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown").to_string();
 
     // Parse test count from XML (simplified)
     let total_tests = content.matches("<testcase").count();
@@ -219,11 +209,7 @@ async fn generate_status_checks_file(
     let failed_tests: usize = test_results.iter().map(|s| s.summary.failed).sum();
     let passed_tests = total_tests - failed_tests;
 
-    let overall_state = if failed_tests > 0 {
-        "failure"
-    } else {
-        "success"
-    };
+    let overall_state = if failed_tests > 0 { "failure" } else { "success" };
     let description = format!("{}/{} tests passed", passed_tests, total_tests);
 
     status_checks.push(serde_json::json!({
@@ -235,15 +221,9 @@ async fn generate_status_checks_file(
 
     // Individual suite status checks
     for suite in test_results {
-        let state = if suite.summary.failed > 0 {
-            "failure"
-        } else {
-            "success"
-        };
-        let description = format!(
-            "{}/{} tests passed",
-            suite.summary.passed, suite.summary.total_tests
-        );
+        let state = if suite.summary.failed > 0 { "failure" } else { "success" };
+        let description =
+            format!("{}/{} tests passed", suite.summary.passed, suite.summary.total_tests);
         let context = format!("bitnet-rs/tests/{}", suite.suite_name);
 
         status_checks.push(serde_json::json!({
@@ -273,11 +253,8 @@ async fn generate_pr_comment_file(
     let total_tests: usize = test_results.iter().map(|s| s.summary.total_tests).sum();
     let failed_tests: usize = test_results.iter().map(|s| s.summary.failed).sum();
     let passed_tests = total_tests - failed_tests;
-    let success_rate = if total_tests > 0 {
-        (passed_tests as f64 / total_tests as f64) * 100.0
-    } else {
-        100.0
-    };
+    let success_rate =
+        if total_tests > 0 { (passed_tests as f64 / total_tests as f64) * 100.0 } else { 100.0 };
 
     // Header
     if failed_tests > 0 {
@@ -301,11 +278,7 @@ async fn generate_pr_comment_file(
         comment.push_str("|-------|--------|-------|----------|\n");
 
         for suite in test_results {
-            let status = if suite.summary.failed > 0 {
-                "❌"
-            } else {
-                "✅"
-            };
+            let status = if suite.summary.failed > 0 { "❌" } else { "✅" };
             comment.push_str(&format!(
                 "| {} | {} | {}/{} | {:.2}s |\n",
                 suite.suite_name,

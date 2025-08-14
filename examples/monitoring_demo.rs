@@ -65,11 +65,7 @@ async fn main() -> Result<()> {
 
     // 2. Liveness probe
     println!("\n2. Liveness Probe:");
-    match client
-        .get(&format!("{}/health/live", base_url))
-        .send()
-        .await
-    {
+    match client.get(&format!("{}/health/live", base_url)).send().await {
         Ok(response) => {
             println!("   Status: {}", response.status());
         }
@@ -78,11 +74,7 @@ async fn main() -> Result<()> {
 
     // 3. Readiness probe
     println!("\n3. Readiness Probe:");
-    match client
-        .get(&format!("{}/health/ready", base_url))
-        .send()
-        .await
-    {
+    match client.get(&format!("{}/health/ready", base_url)).send().await {
         Ok(response) => {
             println!("   Status: {}", response.status());
         }
@@ -120,12 +112,7 @@ async fn main() -> Result<()> {
             "temperature": 0.7
         });
 
-        match client
-            .post(&format!("{}/inference", base_url))
-            .json(&request_body)
-            .send()
-            .await
-        {
+        match client.post(&format!("{}/inference", base_url)).json(&request_body).send().await {
             Ok(response) => {
                 println!("     Status: {}", response.status());
                 if let Ok(body) = response.text().await {

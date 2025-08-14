@@ -77,9 +77,7 @@ impl prometheus::core::Collector for BitNetMetricsCollector {
 
 /// Create Prometheus metrics route
 pub fn create_prometheus_routes(exporter: Arc<PrometheusExporter>) -> Router {
-    Router::new()
-        .route("/metrics", get(metrics_handler))
-        .with_state(exporter)
+    Router::new().route("/metrics", get(metrics_handler)).with_state(exporter)
 }
 
 /// Prometheus metrics endpoint handler
@@ -90,10 +88,7 @@ async fn metrics_handler(
         Ok(metrics) => {
             let response = Response::builder()
                 .status(StatusCode::OK)
-                .header(
-                    header::CONTENT_TYPE,
-                    "text/plain; version=0.0.4; charset=utf-8",
-                )
+                .header(header::CONTENT_TYPE, "text/plain; version=0.0.4; charset=utf-8")
                 .body(metrics)
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             Ok(response)
@@ -157,10 +152,7 @@ pub mod standard_metrics {
             .map_err(|_| prometheus::Error::AlreadyReg)?;
 
         REQUESTS_ACTIVE
-            .set(register_gauge!(
-                "bitnet_requests_active",
-                "Number of active inference requests"
-            )?)
+            .set(register_gauge!("bitnet_requests_active", "Number of active inference requests")?)
             .map_err(|_| prometheus::Error::AlreadyReg)?;
 
         // Inference metrics
@@ -207,24 +199,15 @@ pub mod standard_metrics {
 
         // System metrics
         MEMORY_USAGE_BYTES
-            .set(register_gauge!(
-                "bitnet_memory_usage_bytes",
-                "Process memory usage in bytes"
-            )?)
+            .set(register_gauge!("bitnet_memory_usage_bytes", "Process memory usage in bytes")?)
             .map_err(|_| prometheus::Error::AlreadyReg)?;
 
         CPU_USAGE_PERCENT
-            .set(register_gauge!(
-                "bitnet_cpu_usage_percent",
-                "CPU usage percentage"
-            )?)
+            .set(register_gauge!("bitnet_cpu_usage_percent", "CPU usage percentage")?)
             .map_err(|_| prometheus::Error::AlreadyReg)?;
 
         GPU_MEMORY_USAGE_BYTES
-            .set(register_gauge!(
-                "bitnet_gpu_memory_usage_bytes",
-                "GPU memory usage in bytes"
-            )?)
+            .set(register_gauge!("bitnet_gpu_memory_usage_bytes", "GPU memory usage in bytes")?)
             .map_err(|_| prometheus::Error::AlreadyReg)?;
 
         // Error metrics
@@ -256,9 +239,7 @@ pub mod standard_metrics {
 
     /// Get tokens generated total counter
     pub fn tokens_generated_total() -> &'static Counter {
-        TOKENS_GENERATED_TOTAL
-            .get()
-            .expect("Metrics not initialized")
+        TOKENS_GENERATED_TOTAL.get().expect("Metrics not initialized")
     }
 
     /// Get tokens per second gauge
@@ -293,9 +274,7 @@ pub mod standard_metrics {
 
     /// Get GPU memory usage gauge
     pub fn gpu_memory_usage_bytes() -> &'static Gauge {
-        GPU_MEMORY_USAGE_BYTES
-            .get()
-            .expect("Metrics not initialized")
+        GPU_MEMORY_USAGE_BYTES.get().expect("Metrics not initialized")
     }
 
     /// Get errors total counter

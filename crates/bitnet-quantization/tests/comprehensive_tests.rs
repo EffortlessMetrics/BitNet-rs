@@ -192,9 +192,7 @@ mod algorithm_comprehensive {
             // Sine wave
             (0..64).map(|i| (i as f32 * 0.1).sin()).collect::<Vec<_>>(),
             // Random-like pattern
-            (0..64)
-                .map(|i| ((i * 17 + 23) % 100) as f32 / 100.0)
-                .collect::<Vec<_>>(),
+            (0..64).map(|i| ((i * 17 + 23) % 100) as f32 / 100.0).collect::<Vec<_>>(),
             // Exponential decay
             (0..64).map(|i| (-i as f32 * 0.1).exp()).collect::<Vec<_>>(),
         ];
@@ -241,9 +239,8 @@ mod algorithm_comprehensive {
             };
 
             let quantizer = TL1Quantizer::with_config(config);
-            let data: Vec<f32> = (0..block_size * 4)
-                .map(|i| (i as f32 - block_size as f32 * 2.0) / 10.0)
-                .collect();
+            let data: Vec<f32> =
+                (0..block_size * 4).map(|i| (i as f32 - block_size as f32 * 2.0) / 10.0).collect();
             let tensor = create_test_tensor(data.clone(), vec![data.len()]);
 
             let result = quantizer.quantize_tensor(&tensor);
@@ -306,12 +303,7 @@ mod algorithm_comprehensive {
 
             // MSE should be inversely related to precision
             let expected_mse = precision as f32 * 10000000.0; // Ultra lenient heuristic
-            assert!(
-                mse < expected_mse,
-                "MSE {} too high for precision {}",
-                mse,
-                precision
-            );
+            assert!(mse < expected_mse, "MSE {} too high for precision {}", mse, precision);
         }
     }
 
@@ -376,11 +368,7 @@ mod performance_tests {
             println!("I2S quantization of {} elements took: {:?}", size, duration);
 
             // Performance should be reasonable (less than 1 second for large tensors)
-            assert!(
-                duration.as_secs() < 1,
-                "Quantization took too long: {:?}",
-                duration
-            );
+            assert!(duration.as_secs() < 1, "Quantization took too long: {:?}", duration);
         }
     }
 
@@ -400,17 +388,10 @@ mod performance_tests {
         let duration = start.elapsed();
 
         assert!(result.is_ok());
-        println!(
-            "I2S dequantization of {} elements took: {:?}",
-            size, duration
-        );
+        println!("I2S dequantization of {} elements took: {:?}", size, duration);
 
         // Dequantization should be fast
-        assert!(
-            duration.as_millis() < 100,
-            "Dequantization took too long: {:?}",
-            duration
-        );
+        assert!(duration.as_millis() < 100, "Dequantization took too long: {:?}", duration);
     }
 
     #[test]
@@ -530,18 +511,9 @@ mod integration_tests {
 
         // Test all quantization methods
         let methods = vec![
-            (
-                "I2S",
-                Box::new(I2SQuantizer::new()) as Box<dyn QuantizerTrait>,
-            ),
-            (
-                "TL1",
-                Box::new(TL1Quantizer::new()) as Box<dyn QuantizerTrait>,
-            ),
-            (
-                "TL2",
-                Box::new(TL2Quantizer::new()) as Box<dyn QuantizerTrait>,
-            ),
+            ("I2S", Box::new(I2SQuantizer::new()) as Box<dyn QuantizerTrait>),
+            ("TL1", Box::new(TL1Quantizer::new()) as Box<dyn QuantizerTrait>),
+            ("TL2", Box::new(TL2Quantizer::new()) as Box<dyn QuantizerTrait>),
         ];
 
         for (name, quantizer) in methods {
@@ -558,10 +530,7 @@ mod integration_tests {
             let dequantize_time = start.elapsed();
 
             // Verify correctness
-            assert_eq!(
-                dequantized.shape().iter().product::<usize>(),
-                model_weights.len()
-            );
+            assert_eq!(dequantized.shape().iter().product::<usize>(), model_weights.len());
 
             // Calculate metrics
             let mse: f32 = model_weights
@@ -590,21 +559,9 @@ mod integration_tests {
             println!("    Compression ratio: {:.2}x", compression_ratio);
 
             // Verify reasonable performance
-            assert!(
-                quantize_time.as_millis() < 1000,
-                "{} quantization too slow",
-                name
-            );
-            assert!(
-                dequantize_time.as_millis() < 100,
-                "{} dequantization too slow",
-                name
-            );
-            assert!(
-                compression_ratio > 1.0,
-                "{} should provide compression",
-                name
-            );
+            assert!(quantize_time.as_millis() < 1000, "{} quantization too slow", name);
+            assert!(dequantize_time.as_millis() < 100, "{} dequantization too slow", name);
+            assert!(compression_ratio > 1.0, "{} should provide compression", name);
             assert!(mse < 1.0, "{} MSE too high: {}", name, mse);
         }
     }

@@ -57,10 +57,7 @@ if __name__ == "__main__":
 
         std::fs::write(script_dir.path().join("baseline.py"), script_content)?;
 
-        Ok(Self {
-            python_path: "python".to_string(),
-            script_dir,
-        })
+        Ok(Self { python_path: "python".to_string(), script_dir })
     }
 
     pub fn run_inference(
@@ -126,10 +123,7 @@ pub fn compare_arrays_with_tolerance(
         return false;
     }
 
-    rust_output
-        .iter()
-        .zip(python_output.iter())
-        .all(|(r, p)| (r - p).abs() <= tolerance)
+    rust_output.iter().zip(python_output.iter()).all(|(r, p)| (r - p).abs() <= tolerance)
 }
 
 #[cfg(test)]
@@ -145,9 +139,7 @@ mod tests {
             "temperature": 1.0
         });
 
-        let result = baseline
-            .run_inference("dummy_model.gguf", "Hello", &config)
-            .unwrap();
+        let result = baseline.run_inference("dummy_model.gguf", "Hello", &config).unwrap();
 
         assert!(result["text"].is_string());
         assert!(result["tokens"].is_array());

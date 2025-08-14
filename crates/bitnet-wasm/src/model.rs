@@ -117,12 +117,7 @@ impl WasmBitNetModel {
         let config = config.unwrap_or_default();
         let memory_manager = MemoryManager::new(config.max_memory_bytes)?;
 
-        Ok(WasmBitNetModel {
-            engine: None,
-            memory_manager,
-            config,
-            model_info: HashMap::new(),
-        })
+        Ok(WasmBitNetModel { engine: None, memory_manager, config, model_info: HashMap::new() })
     }
 
     /// Load model from byte array (async)

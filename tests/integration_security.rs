@@ -29,10 +29,8 @@ fn test_cargo_audit() {
 /// Test that cargo deny passes
 #[test]
 fn test_cargo_deny() {
-    let output = Command::new("cargo")
-        .args(&["deny", "check"])
-        .output()
-        .expect("Failed to run cargo deny");
+    let output =
+        Command::new("cargo").args(&["deny", "check"]).output().expect("Failed to run cargo deny");
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -54,10 +52,7 @@ fn test_unsafe_code_documentation() {
         std::fs::read_to_string("unsafe_report.md").expect("Failed to read unsafe_report.md");
 
     // Should not be empty
-    assert!(
-        !report.trim().is_empty(),
-        "unsafe_report.md should not be empty"
-    );
+    assert!(!report.trim().is_empty(), "unsafe_report.md should not be empty");
 
     // Should contain safety documentation
     assert!(
@@ -80,10 +75,7 @@ fn test_third_party_licenses() {
         std::fs::read_to_string("THIRD_PARTY.md").expect("Failed to read THIRD_PARTY.md");
 
     // Should not be empty
-    assert!(
-        !licenses.trim().is_empty(),
-        "THIRD_PARTY.md should not be empty"
-    );
+    assert!(!licenses.trim().is_empty(), "THIRD_PARTY.md should not be empty");
 
     // Should contain license information
     assert!(
@@ -95,26 +87,14 @@ fn test_third_party_licenses() {
 /// Test that deny.toml configuration is valid
 #[test]
 fn test_deny_configuration() {
-    assert!(
-        Path::new("deny.toml").exists(),
-        "deny.toml must exist for supply chain security"
-    );
+    assert!(Path::new("deny.toml").exists(), "deny.toml must exist for supply chain security");
 
     let config = std::fs::read_to_string("deny.toml").expect("Failed to read deny.toml");
 
     // Should contain required sections
-    assert!(
-        config.contains("[advisories]"),
-        "deny.toml should contain advisories section"
-    );
-    assert!(
-        config.contains("[licenses]"),
-        "deny.toml should contain licenses section"
-    );
-    assert!(
-        config.contains("[bans]"),
-        "deny.toml should contain bans section"
-    );
+    assert!(config.contains("[advisories]"), "deny.toml should contain advisories section");
+    assert!(config.contains("[licenses]"), "deny.toml should contain licenses section");
+    assert!(config.contains("[bans]"), "deny.toml should contain bans section");
 }
 
 /// Test model security verification
@@ -137,22 +117,15 @@ fn test_model_security_verification() {
     assert_eq!(hash.len(), 64); // SHA256 hex string length
 
     // Test source verification
-    assert!(verifier
-        .verify_source("https://huggingface.co/test")
-        .is_ok());
-    assert!(verifier
-        .verify_source("https://malicious.com/test")
-        .is_err());
+    assert!(verifier.verify_source("https://huggingface.co/test").is_ok());
+    assert!(verifier.verify_source("https://malicious.com/test").is_err());
 }
 
 /// Test that fuzzing infrastructure is set up
 #[test]
 fn test_fuzzing_setup() {
     assert!(Path::new("fuzz").exists(), "fuzz directory should exist");
-    assert!(
-        Path::new("fuzz/Cargo.toml").exists(),
-        "fuzz/Cargo.toml should exist"
-    );
+    assert!(Path::new("fuzz/Cargo.toml").exists(), "fuzz/Cargo.toml should exist");
 
     // Check that fuzz targets exist
     let fuzz_targets = [
@@ -162,11 +135,7 @@ fn test_fuzzing_setup() {
     ];
 
     for target in &fuzz_targets {
-        assert!(
-            Path::new(target).exists(),
-            "Fuzz target {} should exist",
-            target
-        );
+        assert!(Path::new(target).exists(), "Fuzz target {} should exist", target);
     }
 }
 
@@ -196,27 +165,15 @@ fn test_memory_safety() {
 /// Test that security scanning workflow exists
 #[test]
 fn test_security_workflow() {
-    assert!(
-        Path::new(".github/workflows/security.yml").exists(),
-        "Security workflow should exist"
-    );
+    assert!(Path::new(".github/workflows/security.yml").exists(), "Security workflow should exist");
 
     let workflow = std::fs::read_to_string(".github/workflows/security.yml")
         .expect("Failed to read security workflow");
 
     // Should contain required security checks
-    assert!(
-        workflow.contains("cargo audit"),
-        "Workflow should include cargo audit"
-    );
-    assert!(
-        workflow.contains("cargo deny"),
-        "Workflow should include cargo deny"
-    );
-    assert!(
-        workflow.contains("miri"),
-        "Workflow should include miri testing"
-    );
+    assert!(workflow.contains("cargo audit"), "Workflow should include cargo audit");
+    assert!(workflow.contains("cargo deny"), "Workflow should include cargo deny");
+    assert!(workflow.contains("miri"), "Workflow should include miri testing");
 }
 
 /// Test performance regression detection
@@ -236,11 +193,7 @@ fn test_performance_regression_detection() {
     let duration = start.elapsed();
 
     // Should complete within reasonable time (this is a very loose bound)
-    assert!(
-        duration.as_millis() < 1000,
-        "Quantization took too long: {:?}",
-        duration
-    );
+    assert!(duration.as_millis() < 1000, "Quantization took too long: {:?}", duration);
 }
 
 // Mock implementations for testing

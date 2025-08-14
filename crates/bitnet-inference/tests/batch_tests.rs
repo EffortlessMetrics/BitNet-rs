@@ -66,15 +66,11 @@ impl Default for BatchProcessorConfig {
 impl BatchProcessorConfig {
     pub fn validate(&self) -> Result<(), BitNetError> {
         if self.max_batch_size == 0 {
-            return Err(BitNetError::Config(
-                "max_batch_size must be greater than 0".to_string(),
-            ));
+            return Err(BitNetError::Config("max_batch_size must be greater than 0".to_string()));
         }
 
         if self.max_queue_size == 0 {
-            return Err(BitNetError::Config(
-                "max_queue_size must be greater than 0".to_string(),
-            ));
+            return Err(BitNetError::Config("max_queue_size must be greater than 0".to_string()));
         }
 
         if self.max_concurrent_requests == 0 {
@@ -122,10 +118,7 @@ struct MockModel {
 
 impl MockModel {
     fn new() -> Self {
-        Self {
-            config: BitNetConfig::default(),
-            processing_delay: Duration::from_millis(10),
-        }
+        Self { config: BitNetConfig::default(), processing_delay: Duration::from_millis(10) }
     }
 
     fn with_delay(mut self, delay: Duration) -> Self {
@@ -183,19 +176,14 @@ pub struct MockBatchProcessor {
 impl MockBatchProcessor {
     pub fn new(engine: InferenceEngine, config: BatchProcessorConfig) -> Result<Self, BitNetError> {
         config.validate()?;
-        Ok(Self {
-            engine: Arc::new(engine),
-            config,
-        })
+        Ok(Self { engine: Arc::new(engine), config })
     }
 
     pub async fn process_batch(&self, requests: Vec<BatchRequest>) -> Vec<BatchResponse> {
         let mut responses = Vec::new();
 
         // Process requests concurrently up to the limit
-        let semaphore = Arc::new(tokio::sync::Semaphore::new(
-            self.config.max_concurrent_requests,
-        ));
+        let semaphore = Arc::new(tokio::sync::Semaphore::new(self.config.max_concurrent_requests));
         let mut handles = Vec::new();
 
         for request in requests {
@@ -206,9 +194,7 @@ impl MockBatchProcessor {
                 let _permit = permit;
                 let start_time = std::time::Instant::now();
 
-                let result = engine
-                    .generate_with_config(&request.prompt, &request.config)
-                    .await;
+                let result = engine.generate_with_config(&request.prompt, &request.config).await;
                 let processing_time = start_time.elapsed();
 
                 BatchResponse {
@@ -254,20 +240,12 @@ mod batch_config_tests {
         let mut invalid_config = config.clone();
         invalid_config.max_batch_size = 0;
         assert!(invalid_config.validate().is_err());
-        assert!(invalid_config
-            .validate()
-            .unwrap_err()
-            .to_string()
-            .contains("max_batch_size"));
+        assert!(invalid_config.validate().unwrap_err().to_string().contains("max_batch_size"));
 
         let mut invalid_config = config.clone();
         invalid_config.max_queue_size = 0;
         assert!(invalid_config.validate().is_err());
-        assert!(invalid_config
-            .validate()
-            .unwrap_err()
-            .to_string()
-            .contains("max_queue_size"));
+        assert!(invalid_config.validate().unwrap_err().to_string().contains("max_queue_size"));
 
         let mut invalid_config = config;
         invalid_config.max_concurrent_requests = 0;
@@ -318,21 +296,12 @@ mod batch_config_tests {
         assert!(Priority::High > Priority::Normal);
         assert!(Priority::Normal > Priority::Low);
 
-        let mut priorities = vec![
-            Priority::Low,
-            Priority::Critical,
-            Priority::Normal,
-            Priority::High,
-        ];
+        let mut priorities =
+            vec![Priority::Low, Priority::Critical, Priority::Normal, Priority::High];
         priorities.sort();
         assert_eq!(
             priorities,
-            vec![
-                Priority::Low,
-                Priority::Normal,
-                Priority::High,
-                Priority::Critical
-            ]
+            vec![Priority::Low, Priority::Normal, Priority::High, Priority::Critical]
         );
     }
 }
@@ -525,10 +494,7 @@ mod batch_processing_tests {
     #[tokio::test]
     async fn test_batch_processing_performance() {
         let engine = create_test_engine().await;
-        let config = BatchProcessorConfig {
-            max_concurrent_requests: 4,
-            ..Default::default()
-        };
+        let config = BatchProcessorConfig { max_concurrent_requests: 4, ..Default::default() };
         let processor = MockBatchProcessor::new(engine, config).unwrap();
 
         let num_requests = 10;
@@ -551,10 +517,7 @@ mod batch_processing_tests {
         let throughput = responses.len() as f64 / total_time.as_secs_f64();
         assert!(throughput > 0.0);
 
-        println!(
-            "Batch processing throughput: {:.2} requests/second",
-            throughput
-        );
+        println!("Batch processing throughput: {:.2} requests/second", throughput);
 
         // All requests should succeed
         let successful_requests = responses.iter().filter(|r| r.result.is_ok()).count();
@@ -610,11 +573,7 @@ mod batch_processing_tests {
                 id: format!("large-batch-{}", i),
                 prompt: format!("Large batch request {}", i),
                 config: GenerationConfig::default().with_max_tokens(5),
-                priority: if i % 3 == 0 {
-                    Priority::High
-                } else {
-                    Priority::Normal
-                },
+                priority: if i % 3 == 0 { Priority::High } else { Priority::Normal },
             })
             .collect();
 
@@ -638,10 +597,7 @@ mod batch_error_handling_tests {
     #[tokio::test]
     async fn test_batch_processor_invalid_config() {
         let engine = create_test_engine().await;
-        let invalid_config = BatchProcessorConfig {
-            max_batch_size: 0,
-            ..Default::default()
-        };
+        let invalid_config = BatchProcessorConfig { max_batch_size: 0, ..Default::default() };
 
         let processor = MockBatchProcessor::new(engine, invalid_config);
         assert!(processor.is_err());
@@ -744,10 +700,7 @@ mod batch_performance_tests {
         let sequential_time = start_time.elapsed();
 
         // Test batch processing
-        let config = BatchProcessorConfig {
-            max_concurrent_requests: 5,
-            ..Default::default()
-        };
+        let config = BatchProcessorConfig { max_concurrent_requests: 5, ..Default::default() };
         let processor = MockBatchProcessor::new(engine, config).unwrap();
 
         let requests: Vec<_> = (0..5)
@@ -767,10 +720,7 @@ mod batch_performance_tests {
 
         // Batch processing should be faster than sequential
         // (though with our simple mock, the difference might be small)
-        println!(
-            "Sequential time: {:?}, Batch time: {:?}",
-            sequential_time, batch_time
-        );
+        println!("Sequential time: {:?}, Batch time: {:?}", sequential_time, batch_time);
 
         // At minimum, batch processing shouldn't be significantly slower
         assert!(batch_time <= sequential_time + Duration::from_millis(100));
@@ -782,10 +732,8 @@ mod batch_performance_tests {
 
         // Test with different concurrency levels
         for concurrency in [1, 2, 4, 8] {
-            let config = BatchProcessorConfig {
-                max_concurrent_requests: concurrency,
-                ..Default::default()
-            };
+            let config =
+                BatchProcessorConfig { max_concurrent_requests: concurrency, ..Default::default() };
             let processor = MockBatchProcessor::new(engine.clone(), config).unwrap();
 
             let num_requests = 16;
@@ -805,10 +753,7 @@ mod batch_performance_tests {
             assert_eq!(responses.len(), num_requests);
 
             let throughput = responses.len() as f64 / duration.as_secs_f64();
-            println!(
-                "Concurrency {}: {:.2} requests/second",
-                concurrency, throughput
-            );
+            println!("Concurrency {}: {:.2} requests/second", concurrency, throughput);
 
             // Higher concurrency should generally provide better throughput
             // (though there are diminishing returns and overhead)

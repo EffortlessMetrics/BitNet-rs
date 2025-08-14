@@ -13,9 +13,7 @@ use tempfile::{NamedTempFile, TempDir};
 static ENV_TEST_MUTEX: Mutex<()> = Mutex::new(());
 
 fn acquire_env_lock() -> std::sync::MutexGuard<'static, ()> {
-    ENV_TEST_MUTEX
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
+    ENV_TEST_MUTEX.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 #[test]
@@ -32,11 +30,7 @@ fn test_model_format_default() {
 
 #[test]
 fn test_model_format_serialization() {
-    let formats = vec![
-        ModelFormat::Gguf,
-        ModelFormat::SafeTensors,
-        ModelFormat::HuggingFace,
-    ];
+    let formats = vec![ModelFormat::Gguf, ModelFormat::SafeTensors, ModelFormat::HuggingFace];
 
     for format in formats {
         let json = serde_json::to_string(&format).unwrap();
@@ -451,10 +445,7 @@ fn test_env_variable_overrides() {
     assert_eq!(config.inference.temperature, 0.7);
     assert_eq!(config.performance.use_gpu, true);
     assert_eq!(config.quantization.quantization_type, QuantizationType::TL2);
-    assert_eq!(
-        config.performance.memory_limit,
-        Some(2 * 1024 * 1024 * 1024)
-    );
+    assert_eq!(config.performance.memory_limit, Some(2 * 1024 * 1024 * 1024));
     assert_eq!(config.model.format, ModelFormat::SafeTensors);
     assert_eq!(config.model.path, Some("/test/path".into()));
     assert_eq!(config.model.hidden_size, 8192);
@@ -519,11 +510,7 @@ fn test_memory_limit_parsing() {
     for (input, expected) in test_cases {
         env::set_var("BITNET_MEMORY_LIMIT", input);
         let config = BitNetConfig::from_env().unwrap();
-        assert_eq!(
-            config.performance.memory_limit, expected,
-            "Failed for input: {}",
-            input
-        );
+        assert_eq!(config.performance.memory_limit, expected, "Failed for input: {}", input);
     }
 
     // Test invalid memory limit
@@ -553,10 +540,7 @@ fn test_config_merging() {
     // Overridden values
     assert_eq!(base_config.model.vocab_size, 50000);
     assert_eq!(base_config.performance.use_gpu, true);
-    assert_eq!(
-        base_config.quantization.quantization_type,
-        QuantizationType::TL2
-    );
+    assert_eq!(base_config.quantization.quantization_type, QuantizationType::TL2);
 
     // Preserved values
     assert_eq!(base_config.inference.temperature, 0.8);
@@ -611,16 +595,9 @@ temperature = 0.85
 "#;
     fs::write(&config_path, toml_content).unwrap();
 
-    let inline_config = BitNetConfig::builder()
-        .use_gpu(true)
-        .batch_size(4)
-        .build()
-        .unwrap();
+    let inline_config = BitNetConfig::builder().use_gpu(true).batch_size(4).build().unwrap();
 
-    let sources = vec![
-        ConfigSource::File(config_path),
-        ConfigSource::Inline(inline_config),
-    ];
+    let sources = vec![ConfigSource::File(config_path), ConfigSource::Inline(inline_config)];
 
     let config = ConfigLoader::load_from_sources(&sources).unwrap();
 
@@ -720,10 +697,7 @@ fn test_config_clone() {
 
     assert_eq!(config.model.vocab_size, cloned.model.vocab_size);
     assert_eq!(config.inference.temperature, cloned.inference.temperature);
-    assert_eq!(
-        config.quantization.quantization_type,
-        cloned.quantization.quantization_type
-    );
+    assert_eq!(config.quantization.quantization_type, cloned.quantization.quantization_type);
     assert_eq!(config.performance.use_gpu, cloned.performance.use_gpu);
 }
 

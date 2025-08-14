@@ -133,10 +133,7 @@ impl ConfigValidator {
             if fixture.checksum.len() < 32 {
                 result.add_warning(ValidationWarning::new(
                     "fixtures.custom_fixtures",
-                    format!(
-                        "Checksum for '{}' seems too short for security",
-                        fixture.name
-                    ),
+                    format!("Checksum for '{}' seems too short for security", fixture.name),
                 ));
             }
 
@@ -261,10 +258,7 @@ pub struct ValidationError {
 
 impl ValidationError {
     pub fn new(field: &str, message: String) -> Self {
-        Self {
-            field: field.to_string(),
-            message,
-        }
+        Self { field: field.to_string(), message }
     }
 }
 
@@ -276,10 +270,7 @@ pub struct ValidationWarning {
 
 impl ValidationWarning {
     pub fn new(field: &str, message: String) -> Self {
-        Self {
-            field: field.to_string(),
-            message,
-        }
+        Self { field: field.to_string(), message }
     }
 }
 
@@ -291,10 +282,7 @@ pub struct ValidationInfo {
 
 impl ValidationInfo {
     pub fn new(field: &str, message: String) -> Self {
-        Self {
-            field: field.to_string(),
-            message,
-        }
+        Self { field: field.to_string(), message }
     }
 }
 

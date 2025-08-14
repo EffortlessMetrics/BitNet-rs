@@ -12,17 +12,13 @@ async fn test_enhanced_error_handling_works() {
     println!("=== Enhanced Error Handling Demonstration ===");
 
     // Create different types of errors to show enhanced debugging
-    let timeout_error = TestError::TimeoutError {
-        timeout: Duration::from_secs(30),
-    };
+    let timeout_error = TestError::TimeoutError { timeout: Duration::from_secs(30) };
 
-    let fixture_error = TestError::FixtureError {
-        message: "Failed to download test model".to_string(),
-    };
+    let fixture_error =
+        TestError::FixtureError { message: "Failed to download test model".to_string() };
 
-    let assertion_error = TestError::AssertionError {
-        message: "Expected 'hello' but got 'world'".to_string(),
-    };
+    let assertion_error =
+        TestError::AssertionError { message: "Expected 'hello' but got 'world'".to_string() };
 
     // Demonstrate error severity classification
     println!("\n1. Error Severity Classification:");
@@ -39,10 +35,7 @@ async fn test_enhanced_error_handling_works() {
     // Demonstrate troubleshooting steps
     println!("\n3. Troubleshooting Steps for Timeout Error:");
     for step in timeout_error.troubleshooting_steps() {
-        println!(
-            "   Step {}: {} - {}",
-            step.step_number, step.title, step.description
-        );
+        println!("   Step {}: {} - {}", step.step_number, step.title, step.description);
     }
 
     // Demonstrate error analysis
@@ -52,10 +45,7 @@ async fn test_enhanced_error_handling_works() {
     let analysis = analyzer.analyze_error(&timeout_error, context).await;
 
     println!("   Root Cause: {}", analysis.root_cause.description);
-    println!(
-        "   Confidence: {:.1}%",
-        analysis.root_cause.confidence * 100.0
-    );
+    println!("   Confidence: {:.1}%", analysis.root_cause.confidence * 100.0);
 
     // Demonstrate error report generation
     println!("\n5. Error Report Generation:");

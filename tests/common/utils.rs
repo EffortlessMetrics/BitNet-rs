@@ -189,10 +189,8 @@ pub fn generate_test_id() -> String {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
 
     let id = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let timestamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
+    let timestamp =
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
 
     format!("test_{}_{}", timestamp, id)
 }

@@ -9,15 +9,9 @@ use bitnet_tests::errors::{ErrorSeverity, FixtureError, TestError};
 
 #[test]
 fn test_error_severity_levels() {
-    let timeout_error = TestError::TimeoutError {
-        timeout: Duration::from_secs(30),
-    };
-    let assertion_error = TestError::AssertionError {
-        message: "Test failed".to_string(),
-    };
-    let config_error = TestError::ConfigError {
-        message: "Invalid config".to_string(),
-    };
+    let timeout_error = TestError::TimeoutError { timeout: Duration::from_secs(30) };
+    let assertion_error = TestError::AssertionError { message: "Test failed".to_string() };
+    let config_error = TestError::ConfigError { message: "Invalid config".to_string() };
 
     // Test severity levels
     assert_eq!(timeout_error.severity(), ErrorSeverity::Medium);
@@ -29,12 +23,8 @@ fn test_error_severity_levels() {
 
 #[test]
 fn test_error_recoverability() {
-    let timeout_error = TestError::TimeoutError {
-        timeout: Duration::from_secs(30),
-    };
-    let assertion_error = TestError::AssertionError {
-        message: "Test failed".to_string(),
-    };
+    let timeout_error = TestError::TimeoutError { timeout: Duration::from_secs(30) };
+    let assertion_error = TestError::AssertionError { message: "Test failed".to_string() };
     let http_error = TestError::HttpError(reqwest::Error::from(reqwest::ErrorKind::Request));
 
     // Test recoverability
@@ -48,21 +38,11 @@ fn test_error_recoverability() {
 
 #[test]
 fn test_error_categorization() {
-    let timeout_error = TestError::TimeoutError {
-        timeout: Duration::from_secs(30),
-    };
-    let assertion_error = TestError::AssertionError {
-        message: "Test failed".to_string(),
-    };
-    let config_error = TestError::ConfigError {
-        message: "Invalid config".to_string(),
-    };
-    let setup_error = TestError::SetupError {
-        message: "Setup failed".to_string(),
-    };
-    let execution_error = TestError::ExecutionError {
-        message: "Execution failed".to_string(),
-    };
+    let timeout_error = TestError::TimeoutError { timeout: Duration::from_secs(30) };
+    let assertion_error = TestError::AssertionError { message: "Test failed".to_string() };
+    let config_error = TestError::ConfigError { message: "Invalid config".to_string() };
+    let setup_error = TestError::SetupError { message: "Setup failed".to_string() };
+    let execution_error = TestError::ExecutionError { message: "Execution failed".to_string() };
 
     // Test categorization
     assert_eq!(timeout_error.category(), "timeout");
@@ -76,15 +56,10 @@ fn test_error_categorization() {
 
 #[test]
 fn test_recovery_suggestions() {
-    let timeout_error = TestError::TimeoutError {
-        timeout: Duration::from_secs(45),
-    };
+    let timeout_error = TestError::TimeoutError { timeout: Duration::from_secs(45) };
     let suggestions = timeout_error.recovery_suggestions();
 
-    assert!(
-        !suggestions.is_empty(),
-        "Timeout errors should have recovery suggestions"
-    );
+    assert!(!suggestions.is_empty(), "Timeout errors should have recovery suggestions");
 
     // Check that suggestions are relevant to timeout errors
     let has_timeout_suggestion = suggestions.iter().any(|s| {
@@ -92,10 +67,7 @@ fn test_recovery_suggestions() {
             || s.to_lowercase().contains("time")
             || s.to_lowercase().contains("resource")
     });
-    assert!(
-        has_timeout_suggestion,
-        "Should have timeout-related suggestions"
-    );
+    assert!(has_timeout_suggestion, "Should have timeout-related suggestions");
 
     println!("✓ Error recovery suggestions working correctly");
     println!("Sample suggestions for timeout error:");
@@ -106,38 +78,24 @@ fn test_recovery_suggestions() {
 
 #[test]
 fn test_troubleshooting_steps() {
-    let assertion_error = TestError::AssertionError {
-        message: "Expected 42 but got 24".to_string(),
-    };
+    let assertion_error =
+        TestError::AssertionError { message: "Expected 42 but got 24".to_string() };
     let steps = assertion_error.troubleshooting_steps();
 
     assert!(!steps.is_empty(), "Should provide troubleshooting steps");
-    assert!(
-        steps.len() >= 2,
-        "Should have multiple troubleshooting steps"
-    );
+    assert!(steps.len() >= 2, "Should have multiple troubleshooting steps");
 
     // Verify steps are properly structured
     for (i, step) in steps.iter().enumerate() {
-        assert_eq!(
-            step.step_number,
-            (i + 1) as u32,
-            "Steps should be numbered sequentially"
-        );
+        assert_eq!(step.step_number, (i + 1) as u32, "Steps should be numbered sequentially");
         assert!(!step.title.is_empty(), "Each step should have a title");
-        assert!(
-            !step.description.is_empty(),
-            "Each step should have a description"
-        );
+        assert!(!step.description.is_empty(), "Each step should have a description");
     }
 
     println!("✓ Error troubleshooting steps working correctly");
     println!("Sample troubleshooting steps for assertion error:");
     for step in steps.iter().take(3) {
-        println!(
-            "  {}. {} - {}",
-            step.step_number, step.title, step.description
-        );
+        println!("  {}. {} - {}", step.step_number, step.title, step.description);
     }
 }
 
@@ -158,9 +116,7 @@ fn test_error_debug_info() {
     assert!(!debug_info.troubleshooting_steps.is_empty());
 
     // Check that related components make sense
-    assert!(debug_info
-        .related_components
-        .contains(&"fixture_manager".to_string()));
+    assert!(debug_info.related_components.contains(&"fixture_manager".to_string()));
 
     println!("✓ Error debug info working correctly");
     println!("Related components: {:?}", debug_info.related_components);
@@ -168,9 +124,8 @@ fn test_error_debug_info() {
 
 #[test]
 fn test_error_report_generation() {
-    let error = TestError::ExecutionError {
-        message: "Process failed with exit code 1".to_string(),
-    };
+    let error =
+        TestError::ExecutionError { message: "Process failed with exit code 1".to_string() };
     let report = error.create_error_report();
 
     assert_eq!(report.error_category, "execution");
@@ -201,9 +156,7 @@ fn test_fixture_error_types() {
         expected: "expected_hash".to_string(),
         actual: "actual_hash".to_string(),
     };
-    let not_found_error = FixtureError::NotFound {
-        path: "/path/to/model.gguf".to_string(),
-    };
+    let not_found_error = FixtureError::NotFound { path: "/path/to/model.gguf".to_string() };
 
     // Test that they all convert to TestError properly
     let test_errors = vec![
@@ -242,21 +195,11 @@ fn test_error_severity_ordering() {
 fn test_comprehensive_error_analysis() {
     // Test that all error types provide comprehensive analysis
     let errors = vec![
-        TestError::TimeoutError {
-            timeout: Duration::from_secs(30),
-        },
-        TestError::AssertionError {
-            message: "Test failed".to_string(),
-        },
-        TestError::ConfigError {
-            message: "Invalid parameter".to_string(),
-        },
-        TestError::SetupError {
-            message: "Setup failed".to_string(),
-        },
-        TestError::ExecutionError {
-            message: "Execution failed".to_string(),
-        },
+        TestError::TimeoutError { timeout: Duration::from_secs(30) },
+        TestError::AssertionError { message: "Test failed".to_string() },
+        TestError::ConfigError { message: "Invalid parameter".to_string() },
+        TestError::SetupError { message: "Setup failed".to_string() },
+        TestError::ExecutionError { message: "Execution failed".to_string() },
     ];
 
     for error in errors {
@@ -279,17 +222,14 @@ fn test_comprehensive_error_analysis() {
 
 #[test]
 fn test_error_display_formatting() {
-    let timeout_error = TestError::TimeoutError {
-        timeout: Duration::from_secs(45),
-    };
+    let timeout_error = TestError::TimeoutError { timeout: Duration::from_secs(45) };
     let error_string = timeout_error.to_string();
 
     assert!(error_string.contains("timeout"));
     assert!(error_string.contains("45s"));
 
-    let assertion_error = TestError::AssertionError {
-        message: "Expected 'hello' but got 'world'".to_string(),
-    };
+    let assertion_error =
+        TestError::AssertionError { message: "Expected 'hello' but got 'world'".to_string() };
     let assertion_string = assertion_error.to_string();
 
     assert!(assertion_string.contains("Assertion failed"));
@@ -310,10 +250,7 @@ fn test_environment_info_collection() {
     assert!(env_info.system_resources.cpu_cores > 0);
 
     println!("✓ Environment info collection working correctly");
-    println!(
-        "Platform: {} ({})",
-        env_info.platform, env_info.architecture
-    );
+    println!("Platform: {} ({})", env_info.platform, env_info.architecture);
     println!("CPU cores: {}", env_info.system_resources.cpu_cores);
 }
 
@@ -348,16 +285,10 @@ fn test_fixture_error_helper_functions() {
 
     // Verify they create the correct error types
     assert!(matches!(download_error, FixtureError::DownloadError { .. }));
-    assert!(matches!(
-        checksum_error,
-        FixtureError::ChecksumMismatch { .. }
-    ));
+    assert!(matches!(checksum_error, FixtureError::ChecksumMismatch { .. }));
     assert!(matches!(not_found_error, FixtureError::NotFound { .. }));
     assert!(matches!(cache_error, FixtureError::CacheError { .. }));
-    assert!(matches!(
-        validation_error,
-        FixtureError::ValidationError { .. }
-    ));
+    assert!(matches!(validation_error, FixtureError::ValidationError { .. }));
     assert!(matches!(unknown_error, FixtureError::UnknownFixture { .. }));
 
     println!("✓ Fixture error helper functions working correctly");

@@ -49,29 +49,17 @@ impl KernelProvider for Avx2Kernel {
         // Validate input dimensions
         if a.len() != m * k {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!(
-                    "Matrix A dimension mismatch: expected {}, got {}",
-                    m * k,
-                    a.len()
-                ),
+                reason: format!("Matrix A dimension mismatch: expected {}, got {}", m * k, a.len()),
             }));
         }
         if b.len() != k * n {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!(
-                    "Matrix B dimension mismatch: expected {}, got {}",
-                    k * n,
-                    b.len()
-                ),
+                reason: format!("Matrix B dimension mismatch: expected {}, got {}", k * n, b.len()),
             }));
         }
         if c.len() != m * n {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!(
-                    "Matrix C dimension mismatch: expected {}, got {}",
-                    m * n,
-                    c.len()
-                ),
+                reason: format!("Matrix C dimension mismatch: expected {}, got {}", m * n, c.len()),
             }));
         }
 
@@ -270,11 +258,7 @@ impl Avx2Kernel {
                 final_max = final_max.max(val.abs());
             }
 
-            let scale = if final_max > 1e-8 {
-                final_max / 1.5
-            } else {
-                1.0
-            };
+            let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
             scales[block_idx] = scale;
             let scale_vec = _mm256_set1_ps(scale);
 
@@ -411,11 +395,7 @@ impl Avx2Kernel {
                 final_max = final_max.max(val.abs());
             }
 
-            let scale = if final_max > 1e-8 {
-                final_max / 1.5
-            } else {
-                1.0
-            };
+            let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
             scales[block_idx] = scale;
             let scale_vec = _mm256_set1_ps(scale);
 
@@ -639,10 +619,7 @@ mod tests {
 
         // For now, just verify the kernel runs without error
         // TODO: Fix the AVX2 matrix multiplication implementation
-        assert!(
-            c.iter().any(|&x| x != 0.0),
-            "Result should not be all zeros"
-        );
+        assert!(c.iter().any(|&x| x != 0.0), "Result should not be all zeros");
         assert_eq!(c.len(), 4, "Result should have correct dimensions");
     }
 
@@ -659,9 +636,7 @@ mod tests {
         let mut output = vec![0u8; 32]; // 128 values / 4 per byte = 32 bytes
         let mut scales = vec![0.0f32; 1]; // 128 values / 128 per block = 1 block
 
-        kernel
-            .quantize(&input, &mut output, &mut scales, QuantizationType::TL2)
-            .unwrap();
+        kernel.quantize(&input, &mut output, &mut scales, QuantizationType::TL2).unwrap();
 
         assert!(scales[0] > 0.0);
         assert!(output.iter().any(|&x| x != 0));

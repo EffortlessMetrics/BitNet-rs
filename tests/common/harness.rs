@@ -28,10 +28,7 @@ impl TestHarness {
         let max_parallel = config.max_parallel_tests;
         let fixtures = Arc::new(FixtureManager::new(&config.fixtures).await?);
 
-        println!(
-            "Initializing test harness with {} parallel slots",
-            max_parallel
-        );
+        println!("Initializing test harness with {} parallel slots", max_parallel);
 
         Ok(Self {
             config,
@@ -113,10 +110,8 @@ impl TestHarness {
         suite_result.add_environment("test_framework_version", "0.1.0");
 
         // Add configuration information
-        suite_result.add_configuration(
-            "max_parallel_tests",
-            self.config.max_parallel_tests.to_string(),
-        );
+        suite_result
+            .add_configuration("max_parallel_tests", self.config.max_parallel_tests.to_string());
         suite_result.add_configuration("test_timeout", format!("{:?}", self.config.test_timeout));
 
         println!(
@@ -171,10 +166,7 @@ impl TestHarness {
 
         // Setup phase with isolation
         println!("Setting up test: {}", test_name);
-        if let Err(e) = self
-            .setup_test_with_isolation(&test_case, &isolated_env)
-            .await
-        {
+        if let Err(e) = self.setup_test_with_isolation(&test_case, &isolated_env).await {
             eprintln!("Test setup failed for '{}': {}", test_name, e);
             self.cleanup_isolated_environment(isolated_env).await;
             return TestRecord::failed(test_name, e, start_time.elapsed());
@@ -192,10 +184,7 @@ impl TestHarness {
 
         // Cleanup phase (always run, even if test failed)
         println!("Cleaning up test: {}", test_name);
-        if let Err(e) = self
-            .cleanup_test_with_isolation(&test_case, &isolated_env)
-            .await
-        {
+        if let Err(e) = self.cleanup_test_with_isolation(&test_case, &isolated_env).await {
             eprintln!("Test cleanup failed for '{}': {}", test_name, e);
         }
 
@@ -213,10 +202,7 @@ impl TestHarness {
                 TestRecord::failed(test_name, e, duration)
             }
             Err(_) => {
-                eprintln!(
-                    "Test '{}' timed out after {:?}",
-                    test_name, self.config.test_timeout
-                );
+                eprintln!("Test '{}' timed out after {:?}", test_name, self.config.test_timeout);
                 TestRecord::timeout(test_name, self.config.test_timeout)
             }
         };
@@ -352,10 +338,7 @@ impl TestHarnessClone {
         let isolated_env = self.create_isolated_environment(&test_name).await;
 
         // Setup phase with isolation
-        if let Err(e) = self
-            .setup_test_with_isolation(&test_case, &isolated_env)
-            .await
-        {
+        if let Err(e) = self.setup_test_with_isolation(&test_case, &isolated_env).await {
             self.cleanup_isolated_environment(isolated_env).await;
             return TestRecord::failed(test_name, e, start_time.elapsed());
         }
@@ -370,9 +353,7 @@ impl TestHarnessClone {
         let duration = start_time.elapsed();
 
         // Cleanup phase
-        let _ = self
-            .cleanup_test_with_isolation(&test_case, &isolated_env)
-            .await;
+        let _ = self.cleanup_test_with_isolation(&test_case, &isolated_env).await;
         self.cleanup_isolated_environment(isolated_env).await;
 
         // Process result
@@ -573,10 +554,7 @@ impl TestReporter for ConsoleReporter {
                 TestStatus::Running => "⋯",
             };
 
-            println!(
-                "  {} {} ({:?})",
-                status_symbol, result.test_name, result.duration
-            );
+            println!("  {} {} ({:?})", status_symbol, result.test_name, result.duration);
 
             if let Some(error) = &result.error {
                 println!("    Error: {}", error);

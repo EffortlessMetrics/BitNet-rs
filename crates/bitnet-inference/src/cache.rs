@@ -141,10 +141,7 @@ impl KVCache {
         self.cache.insert(entry_key, entry);
         self.access_order.push_back(entry_key);
 
-        debug!(
-            "Stored cache entry for layer {} position {}",
-            layer, position
-        );
+        debug!("Stored cache entry for layer {} position {}", layer, position);
         Ok(())
     }
 
@@ -185,12 +182,8 @@ impl KVCache {
 
     /// Clear cache entries for specific layer
     pub fn clear_layer(&mut self, layer: usize) {
-        let keys_to_remove: Vec<_> = self
-            .cache
-            .keys()
-            .filter(|(l, _)| *l == layer)
-            .cloned()
-            .collect();
+        let keys_to_remove: Vec<_> =
+            self.cache.keys().filter(|(l, _)| *l == layer).cloned().collect();
 
         for key in keys_to_remove {
             if let Some(entry) = self.cache.remove(&key) {
@@ -232,11 +225,9 @@ impl KVCache {
         let entry_to_evict = match self.config.eviction_policy {
             EvictionPolicy::LRU => self.access_order.front().cloned(),
             EvictionPolicy::FIFO => self.access_order.front().cloned(),
-            EvictionPolicy::LFU => self
-                .cache
-                .iter()
-                .min_by_key(|(_, entry)| entry.access_count)
-                .map(|(key, _)| *key),
+            EvictionPolicy::LFU => {
+                self.cache.iter().min_by_key(|(_, entry)| entry.access_count).map(|(key, _)| *key)
+            }
         };
 
         if let Some(key) = entry_to_evict {
@@ -302,11 +293,7 @@ impl MemoryPool {
         let blocks = Vec::with_capacity(num_blocks);
         let free_blocks = (0..num_blocks).collect();
 
-        Ok(Self {
-            block_size,
-            blocks,
-            free_blocks,
-        })
+        Ok(Self { block_size, blocks, free_blocks })
     }
 
     fn allocate(&mut self) -> Option<usize> {

@@ -75,11 +75,7 @@ impl ParallelExecutor {
         group: &TestGroup,
     ) -> Result<ParallelExecutionResult, TestError> {
         let start_time = Instant::now();
-        info!(
-            "Starting parallel execution of {} tests in group {}",
-            group.tests.len(),
-            group.id
-        );
+        info!("Starting parallel execution of {} tests in group {}", group.tests.len(), group.id);
 
         // Start resource monitoring
         let _monitor_handle = self.resource_monitor.start_monitoring().await;
@@ -151,12 +147,7 @@ impl ParallelExecutor {
 
         let parallel_efficiency = self.calculate_parallel_efficiency(&test_results, total_duration);
 
-        Ok(ParallelExecutionResult {
-            test_results,
-            total_duration,
-            success,
-            parallel_efficiency,
-        })
+        Ok(ParallelExecutionResult { test_results, total_duration, success, parallel_efficiency })
     }
 
     /// Execute a single test with timeout and resource monitoring
@@ -206,49 +197,24 @@ impl ParallelExecutor {
                 }
 
                 if success {
-                    debug!(
-                        "Test {} passed in {:.2}s",
-                        test.name,
-                        duration.as_secs_f64()
-                    );
+                    debug!("Test {} passed in {:.2}s", test.name, duration.as_secs_f64());
                     Ok(TestResult::passed(test.name, Default::default(), duration))
                 } else {
-                    warn!(
-                        "Test {} failed in {:.2}s",
-                        test.name,
-                        duration.as_secs_f64()
-                    );
-                    let error_msg = if !stderr.is_empty() {
-                        stderr.to_string()
-                    } else {
-                        stdout.to_string()
-                    };
-                    Ok(TestResult::failed(
-                        test.name,
-                        TestError::execution(error_msg),
-                        duration,
-                    ))
+                    warn!("Test {} failed in {:.2}s", test.name, duration.as_secs_f64());
+                    let error_msg =
+                        if !stderr.is_empty() { stderr.to_string() } else { stdout.to_string() };
+                    Ok(TestResult::failed(test.name, TestError::execution(error_msg), duration))
                 }
             }
             Ok(Err(e)) => {
                 error!("Failed to execute test {}: {}", test.name, e);
-                Ok(TestResult::failed(
-                    test.name,
-                    TestError::execution(e.to_string()),
-                    duration,
-                ))
+                Ok(TestResult::failed(test.name, TestError::execution(e.to_string()), duration))
             }
             Err(_) => {
-                warn!(
-                    "Test {} timed out after {:.2}s",
-                    test.name,
-                    timeout_duration.as_secs_f64()
-                );
+                warn!("Test {} timed out after {:.2}s", test.name, timeout_duration.as_secs_f64());
                 Ok(TestResult::failed(
                     test.name,
-                    TestError::TimeoutError {
-                        timeout: timeout_duration,
-                    },
+                    TestError::TimeoutError { timeout: timeout_duration },
                     timeout_duration,
                 ))
             }
@@ -345,17 +311,11 @@ impl ParallelExecutionResult {
     }
 
     pub fn passed_count(&self) -> usize {
-        self.test_results
-            .iter()
-            .filter(|r| r.status == TestStatus::Passed)
-            .count()
+        self.test_results.iter().filter(|r| r.status == TestStatus::Passed).count()
     }
 
     pub fn failed_count(&self) -> usize {
-        self.test_results
-            .iter()
-            .filter(|r| r.status != TestStatus::Passed)
-            .count()
+        self.test_results.iter().filter(|r| r.status != TestStatus::Passed).count()
     }
 }
 

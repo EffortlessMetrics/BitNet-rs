@@ -77,9 +77,7 @@ mod resource_management_tests {
     #[tokio::test]
     async fn test_file_handle_cleanup() {
         // Create test directory
-        tokio::fs::create_dir_all("tests/temp/file_handles")
-            .await
-            .unwrap();
+        tokio::fs::create_dir_all("tests/temp/file_handles").await.unwrap();
 
         let mut file_handles = Vec::new();
 
@@ -144,10 +142,7 @@ mod resource_management_tests {
         println!("  Expected operations: {}", expected_count);
         println!("  Actual operations: {}", final_count);
 
-        assert_eq!(
-            final_count, expected_count,
-            "Concurrent operations mismatch"
-        );
+        assert_eq!(final_count, expected_count, "Concurrent operations mismatch");
         println!("✓ Concurrent resource access test passed");
     }
 
@@ -196,10 +191,7 @@ mod resource_management_tests {
         println!("  Final memory: {} bytes", final_memory);
 
         // Verify recovery worked
-        assert!(
-            recovery_memory < peak_memory,
-            "Memory should decrease after partial cleanup"
-        );
+        assert!(recovery_memory < peak_memory, "Memory should decrease after partial cleanup");
         println!("✓ Resource exhaustion and recovery test passed");
     }
 
@@ -314,18 +306,11 @@ mod resource_management_tests {
         println!("  Total tasks: {}", num_tasks);
         println!("  Successful acquisitions: {}", successful_acquisitions);
         println!("  Contentions: {}", contentions);
-        println!(
-            "  Contention rate: {:.1}%",
-            (contentions as f64 / num_tasks as f64) * 100.0
-        );
+        println!("  Contention rate: {:.1}%", (contentions as f64 / num_tasks as f64) * 100.0);
 
         // Verify that contention occurred (more tasks than resources)
         assert!(contentions > 0, "Should have resource contention");
-        assert_eq!(
-            successful_acquisitions + contentions,
-            num_tasks,
-            "All tasks should complete"
-        );
+        assert_eq!(successful_acquisitions + contentions, num_tasks, "All tasks should complete");
         println!("✓ Resource contention test passed");
     }
 

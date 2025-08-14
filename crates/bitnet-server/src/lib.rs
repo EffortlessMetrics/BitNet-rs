@@ -48,11 +48,7 @@ pub struct ServerConfig {
 
 impl Default for ServerConfig {
     fn default() -> Self {
-        Self {
-            host: "0.0.0.0".to_string(),
-            port: 8080,
-            monitoring: MonitoringConfig::default(),
-        }
+        Self { host: "0.0.0.0".to_string(), port: 8080, monitoring: MonitoringConfig::default() }
     }
 }
 
@@ -80,12 +76,7 @@ impl BitNetServer {
             None
         };
 
-        Ok(Self {
-            config,
-            monitoring,
-            health_checker,
-            prometheus_exporter,
-        })
+        Ok(Self { config, monitoring, health_checker, prometheus_exporter })
     }
 
     /// Create the application router with all routes and middleware
@@ -93,9 +84,7 @@ impl BitNetServer {
         let mut app = Router::new()
             .route("/inference", post(inference_handler))
             .route("/", get(root_handler))
-            .with_state(AppState {
-                metrics: self.monitoring.metrics(),
-            });
+            .with_state(AppState { metrics: self.monitoring.metrics() });
 
         // Add health check routes
         app = app.merge(create_health_routes(self.health_checker.clone()));

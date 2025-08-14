@@ -42,19 +42,13 @@ mod tests {
 
         if max_diff > LOGIT_TOLERANCE {
             // Get top-5 tokens from each side for debugging
-            let mut rust_top5: Vec<(usize, f32)> = rust_logits
-                .iter()
-                .enumerate()
-                .map(|(i, &v)| (i, v))
-                .collect();
+            let mut rust_top5: Vec<(usize, f32)> =
+                rust_logits.iter().enumerate().map(|(i, &v)| (i, v)).collect();
             rust_top5.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
             rust_top5.truncate(5);
 
-            let mut cpp_top5: Vec<(usize, f32)> = cpp_logits
-                .iter()
-                .enumerate()
-                .map(|(i, &v)| (i, v))
-                .collect();
+            let mut cpp_top5: Vec<(usize, f32)> =
+                cpp_logits.iter().enumerate().map(|(i, &v)| (i, v)).collect();
             cpp_top5.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
             cpp_top5.truncate(5);
 
@@ -258,9 +252,7 @@ mod tests {
             tokens.push(next_token);
 
             // Evaluate new token
-            cpp_session
-                .context
-                .eval(&[next_token], (prompt_len + step) as i32)?;
+            cpp_session.context.eval(&[next_token], (prompt_len + step) as i32)?;
         }
 
         // Decode final text

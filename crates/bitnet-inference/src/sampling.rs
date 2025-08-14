@@ -26,13 +26,7 @@ pub struct SamplingConfig {
 
 impl Default for SamplingConfig {
     fn default() -> Self {
-        Self {
-            temperature: 0.7,
-            top_k: 50,
-            top_p: 0.9,
-            repetition_penalty: 1.0,
-            seed: None,
-        }
+        Self { temperature: 0.7, top_k: 50, top_p: 0.9, repetition_penalty: 1.0, seed: None }
     }
 }
 
@@ -52,11 +46,7 @@ impl SamplingStrategy {
             ChaCha8Rng::from_entropy()
         };
 
-        Self {
-            config,
-            rng,
-            token_counts: HashMap::new(),
-        }
+        Self { config, rng, token_counts: HashMap::new() }
     }
 
     /// Sample the next token from logits
@@ -291,13 +281,8 @@ pub fn temperature_sample(logits: &[f32], temperature: f32, _rng: &mut impl Rng)
         return greedy_sample(logits);
     }
 
-    let config = SamplingConfig {
-        temperature,
-        top_k: 0,
-        top_p: 1.0,
-        repetition_penalty: 1.0,
-        seed: None,
-    };
+    let config =
+        SamplingConfig { temperature, top_k: 0, top_p: 1.0, repetition_penalty: 1.0, seed: None };
 
     let mut strategy = SamplingStrategy::new(config);
     strategy.sample(logits, &[])
@@ -391,10 +376,7 @@ mod tests {
 
     #[test]
     fn test_repetition_penalty() {
-        let config = SamplingConfig {
-            repetition_penalty: 1.2,
-            ..Default::default()
-        };
+        let config = SamplingConfig { repetition_penalty: 1.2, ..Default::default() };
         let strategy = SamplingStrategy::new(config);
 
         let logits = vec![1.0, 1.0, 1.0];
@@ -409,10 +391,7 @@ mod tests {
 
     #[test]
     fn test_deterministic_sampling() {
-        let config = SamplingConfig {
-            seed: Some(42),
-            ..Default::default()
-        };
+        let config = SamplingConfig { seed: Some(42), ..Default::default() };
 
         let mut strategy1 = SamplingStrategy::new(config.clone());
         let mut strategy2 = SamplingStrategy::new(config);

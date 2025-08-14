@@ -9,37 +9,25 @@ fn test_bitnet_error_variants() {
     // Test all BitNetError variants
     let config_error = BitNetError::Config("test config error".to_string());
     assert!(matches!(config_error, BitNetError::Config(_)));
-    assert_eq!(
-        format!("{}", config_error),
-        "Configuration error: test config error"
-    );
+    assert_eq!(format!("{}", config_error), "Configuration error: test config error");
 
     let validation_error = BitNetError::Validation("test validation error".to_string());
     assert!(matches!(validation_error, BitNetError::Validation(_)));
-    assert_eq!(
-        format!("{}", validation_error),
-        "Validation error: test validation error"
-    );
+    assert_eq!(format!("{}", validation_error), "Validation error: test validation error");
 
     // Test nested error types
-    let model_error = BitNetError::Model(ModelError::NotFound {
-        path: "/test/path".to_string(),
-    });
+    let model_error = BitNetError::Model(ModelError::NotFound { path: "/test/path".to_string() });
     assert!(matches!(model_error, BitNetError::Model(_)));
     assert!(format!("{}", model_error).contains("/test/path"));
 
-    let quantization_error = BitNetError::Quantization(QuantizationError::UnsupportedType {
-        qtype: "TEST".to_string(),
-    });
+    let quantization_error =
+        BitNetError::Quantization(QuantizationError::UnsupportedType { qtype: "TEST".to_string() });
     assert!(matches!(quantization_error, BitNetError::Quantization(_)));
     assert!(format!("{}", quantization_error).contains("TEST"));
 
     let kernel_error = BitNetError::Kernel(KernelError::NoProvider);
     assert!(matches!(kernel_error, BitNetError::Kernel(_)));
-    assert_eq!(
-        format!("{}", kernel_error),
-        "Kernel error: No available kernel provider"
-    );
+    assert_eq!(format!("{}", kernel_error), "Kernel error: No available kernel provider");
 
     let inference_error = BitNetError::Inference(InferenceError::GenerationFailed {
         reason: "test reason".to_string(),
@@ -50,56 +38,27 @@ fn test_bitnet_error_variants() {
 
 #[test]
 fn test_model_error_variants() {
-    let not_found = ModelError::NotFound {
-        path: "/nonexistent/model.gguf".to_string(),
-    };
-    assert_eq!(
-        format!("{}", not_found),
-        "Model not found: /nonexistent/model.gguf"
-    );
+    let not_found = ModelError::NotFound { path: "/nonexistent/model.gguf".to_string() };
+    assert_eq!(format!("{}", not_found), "Model not found: /nonexistent/model.gguf");
 
-    let invalid_format = ModelError::InvalidFormat {
-        format: "UNKNOWN".to_string(),
-    };
-    assert_eq!(
-        format!("{}", invalid_format),
-        "Invalid model format: UNKNOWN"
-    );
+    let invalid_format = ModelError::InvalidFormat { format: "UNKNOWN".to_string() };
+    assert_eq!(format!("{}", invalid_format), "Invalid model format: UNKNOWN");
 
-    let loading_failed = ModelError::LoadingFailed {
-        reason: "corrupted file".to_string(),
-    };
-    assert_eq!(
-        format!("{}", loading_failed),
-        "Model loading failed: corrupted file"
-    );
+    let loading_failed = ModelError::LoadingFailed { reason: "corrupted file".to_string() };
+    assert_eq!(format!("{}", loading_failed), "Model loading failed: corrupted file");
 
-    let unsupported_version = ModelError::UnsupportedVersion {
-        version: "v2.0".to_string(),
-    };
-    assert_eq!(
-        format!("{}", unsupported_version),
-        "Unsupported model version: v2.0"
-    );
+    let unsupported_version = ModelError::UnsupportedVersion { version: "v2.0".to_string() };
+    assert_eq!(format!("{}", unsupported_version), "Unsupported model version: v2.0");
 }
 
 #[test]
 fn test_quantization_error_variants() {
-    let unsupported_type = QuantizationError::UnsupportedType {
-        qtype: "INT8".to_string(),
-    };
-    assert_eq!(
-        format!("{}", unsupported_type),
-        "Unsupported quantization type: INT8"
-    );
+    let unsupported_type = QuantizationError::UnsupportedType { qtype: "INT8".to_string() };
+    assert_eq!(format!("{}", unsupported_type), "Unsupported quantization type: INT8");
 
-    let quantization_failed = QuantizationError::QuantizationFailed {
-        reason: "precision loss".to_string(),
-    };
-    assert_eq!(
-        format!("{}", quantization_failed),
-        "Quantization failed: precision loss"
-    );
+    let quantization_failed =
+        QuantizationError::QuantizationFailed { reason: "precision loss".to_string() };
+    assert_eq!(format!("{}", quantization_failed), "Quantization failed: precision loss");
 
     let invalid_block_size = QuantizationError::InvalidBlockSize { size: 0 };
     assert_eq!(format!("{}", invalid_block_size), "Invalid block size: 0");
@@ -110,70 +69,42 @@ fn test_kernel_error_variants() {
     let no_provider = KernelError::NoProvider;
     assert_eq!(format!("{}", no_provider), "No available kernel provider");
 
-    let execution_failed = KernelError::ExecutionFailed {
-        reason: "CUDA out of memory".to_string(),
-    };
-    assert_eq!(
-        format!("{}", execution_failed),
-        "Kernel execution failed: CUDA out of memory"
-    );
+    let execution_failed =
+        KernelError::ExecutionFailed { reason: "CUDA out of memory".to_string() };
+    assert_eq!(format!("{}", execution_failed), "Kernel execution failed: CUDA out of memory");
 
-    let unsupported_arch = KernelError::UnsupportedArchitecture {
-        arch: "ARM64".to_string(),
-    };
-    assert_eq!(
-        format!("{}", unsupported_arch),
-        "Unsupported architecture: ARM64"
-    );
+    let unsupported_arch = KernelError::UnsupportedArchitecture { arch: "ARM64".to_string() };
+    assert_eq!(format!("{}", unsupported_arch), "Unsupported architecture: ARM64");
 
-    let gpu_error = KernelError::GpuError {
-        reason: "device not found".to_string(),
-    };
+    let gpu_error = KernelError::GpuError { reason: "device not found".to_string() };
     assert_eq!(format!("{}", gpu_error), "GPU error: device not found");
 }
 
 #[test]
 fn test_inference_error_variants() {
-    let generation_failed = InferenceError::GenerationFailed {
-        reason: "model crashed".to_string(),
-    };
-    assert_eq!(
-        format!("{}", generation_failed),
-        "Generation failed: model crashed"
-    );
+    let generation_failed =
+        InferenceError::GenerationFailed { reason: "model crashed".to_string() };
+    assert_eq!(format!("{}", generation_failed), "Generation failed: model crashed");
 
-    let invalid_input = InferenceError::InvalidInput {
-        reason: "empty prompt".to_string(),
-    };
+    let invalid_input = InferenceError::InvalidInput { reason: "empty prompt".to_string() };
     assert_eq!(format!("{}", invalid_input), "Invalid input: empty prompt");
 
     let context_exceeded = InferenceError::ContextLengthExceeded { length: 4096 };
-    assert_eq!(
-        format!("{}", context_exceeded),
-        "Context length exceeded: 4096"
-    );
+    assert_eq!(format!("{}", context_exceeded), "Context length exceeded: 4096");
 
-    let tokenization_failed = InferenceError::TokenizationFailed {
-        reason: "unknown token".to_string(),
-    };
-    assert_eq!(
-        format!("{}", tokenization_failed),
-        "Tokenization failed: unknown token"
-    );
+    let tokenization_failed =
+        InferenceError::TokenizationFailed { reason: "unknown token".to_string() };
+    assert_eq!(format!("{}", tokenization_failed), "Tokenization failed: unknown token");
 }
 
 #[test]
 fn test_error_conversions() {
     // Test From implementations for nested errors
-    let model_error = ModelError::NotFound {
-        path: "test".to_string(),
-    };
+    let model_error = ModelError::NotFound { path: "test".to_string() };
     let bitnet_error: BitNetError = model_error.into();
     assert!(matches!(bitnet_error, BitNetError::Model(_)));
 
-    let quantization_error = QuantizationError::UnsupportedType {
-        qtype: "test".to_string(),
-    };
+    let quantization_error = QuantizationError::UnsupportedType { qtype: "test".to_string() };
     let bitnet_error: BitNetError = quantization_error.into();
     assert!(matches!(bitnet_error, BitNetError::Quantization(_)));
 
@@ -181,9 +112,7 @@ fn test_error_conversions() {
     let bitnet_error: BitNetError = kernel_error.into();
     assert!(matches!(bitnet_error, BitNetError::Kernel(_)));
 
-    let inference_error = InferenceError::InvalidInput {
-        reason: "test".to_string(),
-    };
+    let inference_error = InferenceError::InvalidInput { reason: "test".to_string() };
     let bitnet_error: BitNetError = inference_error.into();
     assert!(matches!(bitnet_error, BitNetError::Inference(_)));
 
@@ -215,9 +144,7 @@ fn test_error_debug_formatting() {
     assert!(debug_str.contains("Config"));
     assert!(debug_str.contains("debug test"));
 
-    let model_error = ModelError::NotFound {
-        path: "debug/path".to_string(),
-    };
+    let model_error = ModelError::NotFound { path: "debug/path".to_string() };
     let debug_str = format!("{:?}", model_error);
     assert!(debug_str.contains("NotFound"));
     assert!(debug_str.contains("debug/path"));
@@ -226,9 +153,7 @@ fn test_error_debug_formatting() {
 #[test]
 fn test_error_chain() {
     // Test error chaining with nested errors
-    let model_error = ModelError::LoadingFailed {
-        reason: "inner error".to_string(),
-    };
+    let model_error = ModelError::LoadingFailed { reason: "inner error".to_string() };
     let bitnet_error = BitNetError::Model(model_error);
 
     let error_string = format!("{}", bitnet_error);
@@ -279,9 +204,7 @@ fn test_error_source_chain() {
     // Test that errors properly implement the Error trait's source method
     use std::error::Error;
 
-    let model_error = ModelError::LoadingFailed {
-        reason: "test".to_string(),
-    };
+    let model_error = ModelError::LoadingFailed { reason: "test".to_string() };
     let bitnet_error = BitNetError::Model(model_error);
 
     // The source should be the inner model error

@@ -17,20 +17,12 @@ pub struct JsError {
 impl JsError {
     #[wasm_bindgen(constructor)]
     pub fn new(message: &str) -> JsError {
-        JsError {
-            message: message.to_string(),
-            name: "BitNetError".to_string(),
-            stack: None,
-        }
+        JsError { message: message.to_string(), name: "BitNetError".to_string(), stack: None }
     }
 
     /// Create error with custom name
     pub fn with_name(name: &str, message: &str) -> JsError {
-        JsError {
-            message: message.to_string(),
-            name: name.to_string(),
-            stack: None,
-        }
+        JsError { message: message.to_string(), name: name.to_string(), stack: None }
     }
 
     #[wasm_bindgen(getter)]
@@ -94,10 +86,7 @@ impl PerformanceMonitor {
         let start_time = get_current_time();
         console::log_1(&format!("Performance monitor started at {:.2}ms", start_time).into());
 
-        PerformanceMonitor {
-            start_time,
-            marks: Vec::new(),
-        }
+        PerformanceMonitor { start_time, marks: Vec::new() }
     }
 
     /// Add a performance mark
@@ -204,9 +193,7 @@ impl JsUtils {
     /// Check if running in a Web Worker
     #[wasm_bindgen]
     pub fn is_web_worker() -> bool {
-        js_sys::global()
-            .dyn_into::<web_sys::DedicatedWorkerGlobalScope>()
-            .is_ok()
+        js_sys::global().dyn_into::<web_sys::DedicatedWorkerGlobalScope>().is_ok()
     }
 
     /// Check if running in main thread
@@ -319,10 +306,8 @@ impl MemoryUtils {
             (input.as_str(), "B")
         };
 
-        let number: f64 = number_part
-            .trim()
-            .parse()
-            .map_err(|_| JsError::new("Invalid number format"))?;
+        let number: f64 =
+            number_part.trim().parse().map_err(|_| JsError::new("Invalid number format"))?;
 
         let multiplier = match unit_part.trim() {
             "B" => 1,
@@ -355,9 +340,7 @@ impl FeatureDetection {
     #[wasm_bindgen]
     pub fn supports_wasm_threads() -> bool {
         // Check for SharedArrayBuffer support
-        js_sys::global()
-            .get(&"SharedArrayBuffer".into())
-            .is_function()
+        js_sys::global().get(&"SharedArrayBuffer".into()).is_function()
     }
 
     /// Check if WebAssembly bulk memory operations are supported
@@ -373,16 +356,8 @@ impl FeatureDetection {
     pub fn get_feature_support() -> JsValue {
         let obj = Object::new();
         let _ = Reflect::set(&obj, &"simd".into(), &Self::supports_wasm_simd().into());
-        let _ = Reflect::set(
-            &obj,
-            &"threads".into(),
-            &Self::supports_wasm_threads().into(),
-        );
-        let _ = Reflect::set(
-            &obj,
-            &"bulkMemory".into(),
-            &Self::supports_wasm_bulk_memory().into(),
-        );
+        let _ = Reflect::set(&obj, &"threads".into(), &Self::supports_wasm_threads().into());
+        let _ = Reflect::set(&obj, &"bulkMemory".into(), &Self::supports_wasm_bulk_memory().into());
         obj.into()
     }
 }

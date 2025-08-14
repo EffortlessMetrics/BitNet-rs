@@ -132,10 +132,7 @@ impl Default for VisualizationConfig {
 impl PerformanceVisualizer {
     /// Create a new performance visualizer
     pub fn new(config: VisualizationConfig) -> Self {
-        Self {
-            config,
-            historical_data: Vec::new(),
-        }
+        Self { config, historical_data: Vec::new() }
     }
 
     /// Add performance comparison data
@@ -592,16 +589,8 @@ impl PerformanceVisualizer {
                 "regression"
             },
             latest.comparison_results.performance_improvement,
-            if performance_change >= 0.0 {
-                "positive"
-            } else {
-                "negative"
-            },
-            if performance_change >= 0.0 {
-                "↑"
-            } else {
-                "↓"
-            },
+            if performance_change >= 0.0 { "positive" } else { "negative" },
+            if performance_change >= 0.0 { "↑" } else { "↓" },
             performance_change.abs(),
             if latest.comparison_results.memory_improvement > 0.0 {
                 "improvement"
@@ -609,11 +598,7 @@ impl PerformanceVisualizer {
                 "regression"
             },
             latest.comparison_results.memory_improvement,
-            if memory_change >= 0.0 {
-                "positive"
-            } else {
-                "negative"
-            },
+            if memory_change >= 0.0 { "positive" } else { "negative" },
             if memory_change >= 0.0 { "↑" } else { "↓" },
             memory_change.abs(),
             "neutral",
@@ -623,16 +608,8 @@ impl PerformanceVisualizer {
             } else {
                 "improvement"
             },
-            if latest.comparison_results.regression_detected {
-                "DETECTED"
-            } else {
-                "CLEAR"
-            },
-            if latest.comparison_results.regression_detected {
-                "negative"
-            } else {
-                "positive"
-            },
+            if latest.comparison_results.regression_detected { "DETECTED" } else { "CLEAR" },
+            if latest.comparison_results.regression_detected { "negative" } else { "positive" },
             self.config.regression_threshold
         )
     }
@@ -1105,17 +1082,11 @@ impl PerformanceVisualizer {
             })
             .collect();
 
-        let rust_throughput: Vec<f64> = self
-            .historical_data
-            .iter()
-            .map(|d| d.rust_metrics.throughput_ops_per_sec)
-            .collect();
+        let rust_throughput: Vec<f64> =
+            self.historical_data.iter().map(|d| d.rust_metrics.throughput_ops_per_sec).collect();
 
-        let cpp_throughput: Vec<f64> = self
-            .historical_data
-            .iter()
-            .map(|d| d.cpp_metrics.throughput_ops_per_sec)
-            .collect();
+        let cpp_throughput: Vec<f64> =
+            self.historical_data.iter().map(|d| d.cpp_metrics.throughput_ops_per_sec).collect();
 
         let rust_memory: Vec<f64> = self.historical_data
             .iter()
@@ -1251,9 +1222,8 @@ impl PerformanceVisualizer {
         let x_mean = (0..values.len()).map(|i| i as f64).sum::<f64>() / n;
         let y_mean = values.iter().sum::<f64>() / n;
 
-        let numerator: f64 = (0..values.len())
-            .map(|i| (i as f64 - x_mean) * (values[i] - y_mean))
-            .sum();
+        let numerator: f64 =
+            (0..values.len()).map(|i| (i as f64 - x_mean) * (values[i] - y_mean)).sum();
 
         let denominator: f64 = (0..values.len()).map(|i| (i as f64 - x_mean).powi(2)).sum();
 

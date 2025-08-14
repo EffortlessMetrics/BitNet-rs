@@ -34,11 +34,7 @@ impl std::fmt::Debug for LoadConfig {
 
 impl Default for LoadConfig {
     fn default() -> Self {
-        Self {
-            use_mmap: true,
-            validate_checksums: true,
-            progress_callback: None,
-        }
+        Self { use_mmap: true, validate_checksums: true, progress_callback: None }
     }
 }
 
@@ -141,11 +137,9 @@ impl ModelLoader {
             }
         }
 
-        Err(BitNetError::Model(
-            bitnet_common::ModelError::InvalidFormat {
-                format: format!("Unable to detect format for: {}", path.display()),
-            },
-        ))
+        Err(BitNetError::Model(bitnet_common::ModelError::InvalidFormat {
+            format: format!("Unable to detect format for: {}", path.display()),
+        }))
     }
 
     /// Detect format by file extension
@@ -205,21 +199,16 @@ impl ModelLoader {
 
     /// Find a loader by name
     fn find_loader(&self, name: &str) -> Option<&dyn FormatLoader> {
-        self.loaders
-            .iter()
-            .find(|loader| loader.name() == name)
-            .map(|loader| loader.as_ref())
+        self.loaders.iter().find(|loader| loader.name() == name).map(|loader| loader.as_ref())
     }
 
     /// Validate model compatibility
     fn validate_model_compatibility(&self, metadata: &ModelMetadata) -> Result<()> {
         // Check if the model architecture is supported
         if !self.is_supported_architecture(&metadata.architecture) {
-            return Err(BitNetError::Model(
-                bitnet_common::ModelError::UnsupportedVersion {
-                    version: metadata.architecture.clone(),
-                },
-            ));
+            return Err(BitNetError::Model(bitnet_common::ModelError::UnsupportedVersion {
+                version: metadata.architecture.clone(),
+            }));
         }
 
         // Check vocabulary size limits

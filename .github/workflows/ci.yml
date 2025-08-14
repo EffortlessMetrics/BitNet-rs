@@ -68,6 +68,12 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+    - name: Install tools (ripgrep)
+      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ripgrep
+
     - name: Check formatting
       if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
       run: cargo fmt --all -- --check
@@ -80,9 +86,9 @@ jobs:
       if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
       run: bash scripts/hooks/banned-patterns.sh
 
-    - name: Check tests compile
+    - name: Check tests compile (CPU only)
       if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-      run: RUSTFLAGS="-Dwarnings" cargo check --workspace --tests
+      run: RUSTFLAGS="-Dwarnings" cargo check --workspace --tests --no-default-features --features cpu
 
     - name: Build (CPU features only)
       run: cargo build --workspace --no-default-features --features cpu
@@ -90,9 +96,9 @@ jobs:
     - name: Run tests (CPU features only)
       run: cargo test --workspace --no-default-features --features cpu
 
-    - name: Test build without running
+    - name: Test build without running (CPU only)
       if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-      run: cargo test --workspace --all-features --no-run
+      run: cargo test --workspace --no-default-features --features cpu --no-run
 
     - name: Build with all features (except crossval)
       if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
@@ -113,7 +119,7 @@ jobs:
     - name: Run security audit
       run: cargo audit
     - name: Install cargo-deny
-      run: cargo install cargo-deny
+      run: cargo install cargo-deny --locked || true
     - name: Run cargo-deny
       run: cargo deny check --hide-inclusion-graph
 

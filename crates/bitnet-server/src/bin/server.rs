@@ -95,18 +95,13 @@ async fn main() -> Result<()> {
 /// Wait for shutdown signals
 async fn wait_for_shutdown() {
     let ctrl_c = async {
-        tokio::signal::ctrl_c()
-            .await
-            .expect("Failed to install Ctrl+C handler");
+        tokio::signal::ctrl_c().await.expect("Failed to install Ctrl+C handler");
     };
 
     #[cfg(unix)]
     let terminate = async {
         use tokio::signal::unix::{signal, SignalKind};
-        signal(SignalKind::terminate())
-            .expect("Failed to install signal handler")
-            .recv()
-            .await;
+        signal(SignalKind::terminate()).expect("Failed to install signal handler").recv().await;
     };
 
     #[cfg(not(unix))]

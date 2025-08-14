@@ -13,9 +13,7 @@ struct BenchmarkData;
 
 impl BenchmarkData {
     fn matrix_a(m: usize, k: usize) -> Vec<i8> {
-        (0..m * k)
-            .map(|i| ((i % 256) as i8).wrapping_sub(128))
-            .collect()
+        (0..m * k).map(|i| ((i % 256) as i8).wrapping_sub(128)).collect()
     }
 
     fn matrix_b(k: usize, n: usize) -> Vec<u8> {
@@ -23,9 +21,7 @@ impl BenchmarkData {
     }
 
     fn quantization_input(len: usize) -> Vec<f32> {
-        (0..len)
-            .map(|i| (i as f32 / len as f32) * 4.0 - 2.0)
-            .collect()
+        (0..len).map(|i| (i as f32 / len as f32) * 4.0 - 2.0).collect()
     }
 }
 
@@ -36,13 +32,7 @@ fn bench_matmul(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("matmul");
 
-    let sizes = vec![
-        (32, 32, 32),
-        (64, 64, 64),
-        (128, 128, 128),
-        (256, 256, 256),
-        (512, 512, 512),
-    ];
+    let sizes = vec![(32, 32, 32), (64, 64, 64), (128, 128, 128), (256, 256, 256), (512, 512, 512)];
 
     for (m, n, k) in sizes {
         let a = BenchmarkData::matrix_a(m, k);
@@ -83,11 +73,7 @@ fn bench_quantization(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("quantization");
 
-    let qtypes = vec![
-        QuantizationType::I2S,
-        QuantizationType::TL1,
-        QuantizationType::TL2,
-    ];
+    let qtypes = vec![QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2];
 
     let sizes = vec![1024, 4096, 16384, 65536];
 

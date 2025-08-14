@@ -70,10 +70,8 @@ impl ModelVerifier {
                         computed_hash
                     ));
                 }
-            } else if let Some(known_hash) = self
-                .config
-                .known_hashes
-                .get(path.to_string_lossy().as_ref())
+            } else if let Some(known_hash) =
+                self.config.known_hashes.get(path.to_string_lossy().as_ref())
             {
                 if computed_hash != *known_hash {
                     return Err(anyhow!(
@@ -142,10 +140,7 @@ impl SecureModelDownloader {
             .build()
             .expect("Failed to create HTTP client");
 
-        Self {
-            verifier: ModelVerifier::new(config),
-            client,
-        }
+        Self { verifier: ModelVerifier::new(config), client }
     }
 
     /// Download a model with integrity verification
@@ -163,10 +158,7 @@ impl SecureModelDownloader {
         let response = self.client.get(url).send().await?;
 
         if !response.status().is_success() {
-            return Err(anyhow!(
-                "Failed to download model: HTTP {}",
-                response.status()
-            ));
+            return Err(anyhow!("Failed to download model: HTTP {}", response.status()));
         }
 
         // Check content length
@@ -199,10 +191,7 @@ impl SecureModelDownloader {
         // Move to final destination
         std::fs::rename(&temp_path, destination)?;
 
-        tracing::info!(
-            "Successfully downloaded and verified model: {}",
-            destination.display()
-        );
+        tracing::info!("Successfully downloaded and verified model: {}", destination.display());
         Ok(())
     }
 }
@@ -230,9 +219,7 @@ pub mod audit {
 
     impl ModelAuditor {
         pub fn new(config: ModelSecurity) -> Self {
-            Self {
-                verifier: ModelVerifier::new(config),
-            }
+            Self { verifier: ModelVerifier::new(config) }
         }
 
         /// Audit a single model file
@@ -248,10 +235,8 @@ pub mod audit {
 
             // Check file size
             if metadata.len() > self.verifier.config().max_model_size {
-                security_issues.push(format!(
-                    "File size exceeds maximum: {} bytes",
-                    metadata.len()
-                ));
+                security_issues
+                    .push(format!("File size exceeds maximum: {} bytes", metadata.len()));
             }
 
             // Check if hash verification would fail
@@ -292,10 +277,8 @@ pub mod audit {
                 if path.is_file() {
                     // Check if it looks like a model file
                     if let Some(ext) = path.extension() {
-                        if matches!(
-                            ext.to_str(),
-                            Some("gguf") | Some("safetensors") | Some("bin")
-                        ) {
+                        if matches!(ext.to_str(), Some("gguf") | Some("safetensors") | Some("bin"))
+                        {
                             match self.audit_model(&path) {
                                 Ok(result) => results.push(result),
                                 Err(e) => {
@@ -316,22 +299,14 @@ pub mod audit {
             report.push_str("# Model Security Audit Report\n\n");
 
             let total_models = results.len();
-            let models_with_issues = results
-                .iter()
-                .filter(|r| !r.security_issues.is_empty())
-                .count();
+            let models_with_issues =
+                results.iter().filter(|r| !r.security_issues.is_empty()).count();
             let models_with_known_hashes = results.iter().filter(|r| r.has_known_hash).count();
 
             report.push_str(&format!("## Summary\n\n"));
             report.push_str(&format!("- Total models audited: {}\n", total_models));
-            report.push_str(&format!(
-                "- Models with security issues: {}\n",
-                models_with_issues
-            ));
-            report.push_str(&format!(
-                "- Models with known hashes: {}\n",
-                models_with_known_hashes
-            ));
+            report.push_str(&format!("- Models with security issues: {}\n", models_with_issues));
+            report.push_str(&format!("- Models with known hashes: {}\n", models_with_known_hashes));
             report.push_str(&format!(
                 "- Security coverage: {:.1}%\n\n",
                 (models_with_known_hashes as f64 / total_models as f64) * 100.0
@@ -397,17 +372,11 @@ mod tests {
         let verifier = ModelVerifier::new(ModelSecurity::default());
 
         // Should accept trusted sources
-        assert!(verifier
-            .verify_source("https://huggingface.co/model")
-            .is_ok());
-        assert!(verifier
-            .verify_source("https://github.com/microsoft/BitNet/model")
-            .is_ok());
+        assert!(verifier.verify_source("https://huggingface.co/model").is_ok());
+        assert!(verifier.verify_source("https://github.com/microsoft/BitNet/model").is_ok());
 
         // Should reject untrusted sources
-        assert!(verifier
-            .verify_source("https://malicious.com/model")
-            .is_err());
+        assert!(verifier.verify_source("https://malicious.com/model").is_err());
     }
 
     #[test]

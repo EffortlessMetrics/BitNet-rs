@@ -72,9 +72,7 @@ impl CppModel {
     /// Generate tokens using the C++ implementation
     pub fn generate(&self, prompt: &str, max_tokens: usize) -> Result<Vec<u32>> {
         if self.handle.is_null() {
-            return Err(CrossvalError::InferenceError(
-                "Model handle is null".to_string(),
-            ));
+            return Err(CrossvalError::InferenceError("Model handle is null".to_string()));
         }
 
         if max_tokens == 0 {
@@ -114,9 +112,7 @@ impl CppModel {
         }
 
         if actual_count < 0 {
-            return Err(CrossvalError::InferenceError(
-                "Invalid token count from C++".to_string(),
-            ));
+            return Err(CrossvalError::InferenceError("Invalid token count from C++".to_string()));
         }
 
         if actual_count as usize > max_tokens {
@@ -146,9 +142,7 @@ impl CppModel {
     /// Get model information
     pub fn model_info(&self) -> Result<ModelInfo> {
         if self.handle.is_null() {
-            return Err(CrossvalError::ModelLoadError(
-                "Model handle is null".to_string(),
-            ));
+            return Err(CrossvalError::ModelLoadError("Model handle is null".to_string()));
         }
 
         // Placeholder implementation - in real code this would call C++ functions
@@ -187,9 +181,7 @@ impl CppResourceGuard {
     where
         F: FnOnce() + 'static,
     {
-        Self {
-            cleanup_fn: Box::new(cleanup_fn),
-        }
+        Self { cleanup_fn: Box::new(cleanup_fn) }
     }
 }
 

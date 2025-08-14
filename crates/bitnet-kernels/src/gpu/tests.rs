@@ -107,11 +107,7 @@ mod tests {
         let mut output = vec![0u8; size / 4]; // 2 bits per element
         let mut scales = vec![0.0f32; size / 128]; // Block size of 128
 
-        for qtype in [
-            QuantizationType::I2S,
-            QuantizationType::TL1,
-            QuantizationType::TL2,
-        ] {
+        for qtype in [QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2] {
             match kernel.quantize(&input, &mut output, &mut scales, qtype) {
                 Ok(()) => {
                     println!("GPU quantization {:?} completed successfully", qtype);
@@ -300,9 +296,7 @@ mod tests {
         let mut test_data = Vec::new();
 
         for i in 0..batch_size {
-            let a: Vec<i8> = (0..m * k)
-                .map(|j| ((i * 1000 + j) % 256) as i8 - 128)
-                .collect();
+            let a: Vec<i8> = (0..m * k).map(|j| ((i * 1000 + j) % 256) as i8 - 128).collect();
             let b: Vec<u8> = (0..k * n).map(|j| ((i * 2000 + j) % 4) as u8).collect();
             let mut c = vec![0.0f32; m * n];
 
@@ -320,16 +314,8 @@ mod tests {
 
                 // Verify results
                 for (i, (_, _, c, _, _, _)) in batches.iter().enumerate() {
-                    assert!(
-                        !c.iter().all(|&x| x == 0.0),
-                        "Batch {} has all zero results",
-                        i
-                    );
-                    assert!(
-                        c.iter().all(|&x| x.is_finite()),
-                        "Batch {} has non-finite results",
-                        i
-                    );
+                    assert!(!c.iter().all(|&x| x == 0.0), "Batch {} has all zero results", i);
+                    assert!(c.iter().all(|&x| x.is_finite()), "Batch {} has non-finite results", i);
                 }
             }
             Err(e) => {

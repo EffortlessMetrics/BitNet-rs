@@ -76,10 +76,7 @@ impl TestCase for BasicStreamingTest {
 
                     // Prevent infinite loop in test
                     if chunk_count >= 10 {
-                        debug!(
-                            "Stopping after {} chunks to prevent infinite loop",
-                            chunk_count
-                        );
+                        debug!("Stopping after {} chunks to prevent infinite loop", chunk_count);
                         break;
                     }
                 }
@@ -96,9 +93,7 @@ impl TestCase for BasicStreamingTest {
         }
 
         if total_text.is_empty() {
-            return Err(TestError::assertion(
-                "Total generated text should not be empty",
-            ));
+            return Err(TestError::assertion("Total generated text should not be empty"));
         }
 
         debug!(
@@ -172,17 +167,11 @@ impl TestCase for BasicStreamingTest {
             custom_metrics: [
                 ("chunks_received".to_string(), chunk_count as f64),
                 ("total_characters".to_string(), total_text.len() as f64),
-                (
-                    "stream_duration_ms".to_string(),
-                    stream_duration.as_millis() as f64,
-                ),
+                ("stream_duration_ms".to_string(), stream_duration.as_millis() as f64),
                 ("prompts_tested".to_string(), test_prompts.len() as f64),
                 (
                     "avg_chunks_per_prompt".to_string(),
-                    prompt_results
-                        .iter()
-                        .map(|(chunks, _)| *chunks)
-                        .sum::<usize>() as f64
+                    prompt_results.iter().map(|(chunks, _)| *chunks).sum::<usize>() as f64
                         / test_prompts.len() as f64,
                 ),
                 ("model_forward_calls".to_string(), model_calls as f64),
@@ -387,15 +376,11 @@ impl TestCase for StreamingConfigurationTest {
 
         // Calculate overall statistics
         let total_configs_tested = test_configs.len() + streaming_configs.len();
-        let avg_chunks = config_results
-            .iter()
-            .map(|(chunks, _, _, _)| *chunks)
-            .sum::<usize>() as f64
+        let avg_chunks = config_results.iter().map(|(chunks, _, _, _)| *chunks).sum::<usize>()
+            as f64
             / test_configs.len() as f64;
-        let avg_ttft = config_results
-            .iter()
-            .map(|(_, _, _, ttft)| ttft.as_millis())
-            .sum::<u128>() as f64
+        let avg_ttft = config_results.iter().map(|(_, _, _, ttft)| ttft.as_millis()).sum::<u128>()
+            as f64
             / test_configs.len() as f64;
 
         let duration = start_time.elapsed();
@@ -406,24 +391,12 @@ impl TestCase for StreamingConfigurationTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "generation_configs_tested".to_string(),
-                    test_configs.len() as f64,
-                ),
-                (
-                    "streaming_configs_tested".to_string(),
-                    streaming_configs.len() as f64,
-                ),
-                (
-                    "total_configs_tested".to_string(),
-                    total_configs_tested as f64,
-                ),
+                ("generation_configs_tested".to_string(), test_configs.len() as f64),
+                ("streaming_configs_tested".to_string(), streaming_configs.len() as f64),
+                ("total_configs_tested".to_string(), total_configs_tested as f64),
                 ("avg_chunks_per_config".to_string(), avg_chunks),
                 ("avg_ttft_ms".to_string(), avg_ttft),
-                (
-                    "model_forward_calls".to_string(),
-                    model.forward_call_count() as f64,
-                ),
+                ("model_forward_calls".to_string(), model.forward_call_count() as f64),
             ]
             .into_iter()
             .collect(),
@@ -530,10 +503,7 @@ impl TestCase for StreamingBackpressureTest {
         }
 
         let fast_duration = fast_start.elapsed();
-        debug!(
-            "Fast consumer processed {} chunks in {:?}",
-            fast_consumer_chunks, fast_duration
-        );
+        debug!("Fast consumer processed {} chunks in {:?}", fast_consumer_chunks, fast_duration);
 
         // Test multiple concurrent consumers
         debug!("Testing concurrent consumers");
@@ -583,10 +553,7 @@ impl TestCase for StreamingBackpressureTest {
         }
 
         let total_concurrent_chunks: usize = concurrent_results.iter().sum();
-        debug!(
-            "Concurrent consumers processed {} total chunks",
-            total_concurrent_chunks
-        );
+        debug!("Concurrent consumers processed {} total chunks", total_concurrent_chunks);
 
         // Test buffer overflow scenarios
         debug!("Testing buffer behavior");
@@ -609,11 +576,7 @@ impl TestCase for StreamingBackpressureTest {
         }
 
         let buffer_duration = buffer_start.elapsed();
-        debug!(
-            "Buffered {} chunks in {:?}",
-            buffered_chunks.len(),
-            buffer_duration
-        );
+        debug!("Buffered {} chunks in {:?}", buffered_chunks.len(), buffer_duration);
 
         // Calculate statistics
         let avg_processing_time = if !processing_times.is_empty() {
@@ -632,39 +595,18 @@ impl TestCase for StreamingBackpressureTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "slow_consumer_chunks".to_string(),
-                    slow_consumer_chunks as f64,
-                ),
-                (
-                    "fast_consumer_chunks".to_string(),
-                    fast_consumer_chunks as f64,
-                ),
-                (
-                    "avg_processing_time_ms".to_string(),
-                    avg_processing_time.as_millis() as f64,
-                ),
-                (
-                    "fast_consumer_duration_ms".to_string(),
-                    fast_duration.as_millis() as f64,
-                ),
-                (
-                    "concurrent_consumers".to_string(),
-                    concurrent_consumers as f64,
-                ),
+                ("slow_consumer_chunks".to_string(), slow_consumer_chunks as f64),
+                ("fast_consumer_chunks".to_string(), fast_consumer_chunks as f64),
+                ("avg_processing_time_ms".to_string(), avg_processing_time.as_millis() as f64),
+                ("fast_consumer_duration_ms".to_string(), fast_duration.as_millis() as f64),
+                ("concurrent_consumers".to_string(), concurrent_consumers as f64),
                 (
                     "successful_concurrent_consumers".to_string(),
                     successful_concurrent_consumers as f64,
                 ),
-                (
-                    "total_concurrent_chunks".to_string(),
-                    total_concurrent_chunks as f64,
-                ),
+                ("total_concurrent_chunks".to_string(), total_concurrent_chunks as f64),
                 ("buffered_chunks".to_string(), buffered_chunks.len() as f64),
-                (
-                    "buffer_duration_ms".to_string(),
-                    buffer_duration.as_millis() as f64,
-                ),
+                ("buffer_duration_ms".to_string(), buffer_duration.as_millis() as f64),
             ]
             .into_iter()
             .collect(),
@@ -714,11 +656,7 @@ impl TestCase for StreamingCancellationTest {
         while let Some(result) = stream.next().await {
             match result {
                 Ok(chunk) => {
-                    debug!(
-                        "Early termination chunk {}: '{}'",
-                        early_termination_chunks + 1,
-                        chunk
-                    );
+                    debug!("Early termination chunk {}: '{}'", early_termination_chunks + 1, chunk);
                     early_termination_chunks += 1;
 
                     if early_termination_chunks >= 2 {
@@ -836,23 +774,16 @@ impl TestCase for StreamingCancellationTest {
         );
 
         // Test that engine still works after cancellations
-        let post_cancel_result = cleanup_engine
-            .generate("Post cancellation test")
-            .await
-            .map_err(|e| {
+        let post_cancel_result =
+            cleanup_engine.generate("Post cancellation test").await.map_err(|e| {
                 TestError::execution(format!("Post-cancellation generation failed: {}", e))
             })?;
 
         if post_cancel_result.is_empty() {
-            return Err(TestError::assertion(
-                "Engine should work after stream cancellations",
-            ));
+            return Err(TestError::assertion("Engine should work after stream cancellations"));
         }
 
-        debug!(
-            "Post-cancellation generation successful: '{}'",
-            post_cancel_result
-        );
+        debug!("Post-cancellation generation successful: '{}'", post_cancel_result);
 
         let duration = start_time.elapsed();
 
@@ -862,24 +793,12 @@ impl TestCase for StreamingCancellationTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "early_termination_chunks".to_string(),
-                    early_termination_chunks as f64,
-                ),
+                ("early_termination_chunks".to_string(), early_termination_chunks as f64),
                 ("timeout_chunks".to_string(), timeout_chunks as f64),
                 ("streams_created".to_string(), created_streams as f64),
-                (
-                    "successful_cancellations".to_string(),
-                    successful_cancellations as f64,
-                ),
-                (
-                    "initial_cache_size".to_string(),
-                    initial_stats.cache_size as f64,
-                ),
-                (
-                    "after_cancel_cache_size".to_string(),
-                    after_stats.cache_size as f64,
-                ),
+                ("successful_cancellations".to_string(), successful_cancellations as f64),
+                ("initial_cache_size".to_string(), initial_stats.cache_size as f64),
+                ("after_cancel_cache_size".to_string(), after_stats.cache_size as f64),
                 ("post_cancel_generation_success".to_string(), 1.0),
             ]
             .into_iter()
@@ -960,11 +879,7 @@ impl TestCase for StreamingPerformanceTest {
                     throughput_chunks += 1;
                     throughput_chars += chunk.len();
 
-                    debug!(
-                        "Throughput chunk {}: {} chars",
-                        throughput_chunks,
-                        chunk.len()
-                    );
+                    debug!("Throughput chunk {}: {} chars", throughput_chunks, chunk.len());
 
                     if throughput_chunks >= 10 {
                         break;
@@ -1007,10 +922,7 @@ impl TestCase for StreamingPerformanceTest {
                     if latency_chunks > 0 {
                         // Skip first chunk for inter-chunk measurement
                         inter_chunk_latencies.push(inter_chunk_latency);
-                        debug!(
-                            "Inter-chunk latency {}: {:?}",
-                            latency_chunks, inter_chunk_latency
-                        );
+                        debug!("Inter-chunk latency {}: {:?}", latency_chunks, inter_chunk_latency);
                     }
 
                     latency_chunks += 1;
@@ -1047,11 +959,7 @@ impl TestCase for StreamingPerformanceTest {
                     Ok(_chunk) => {
                         let stats = memory_engine.get_stats().await;
                         memory_measurements.push(stats.cache_usage);
-                        debug!(
-                            "Memory measurement {}: {:.2}% usage",
-                            i + 1,
-                            stats.cache_usage
-                        );
+                        debug!("Memory measurement {}: {:.2}% usage", i + 1, stats.cache_usage);
                     }
                     Err(e) => {
                         warn!("Memory test error: {}", e);
@@ -1068,16 +976,8 @@ impl TestCase for StreamingPerformanceTest {
             std::time::Duration::ZERO
         };
 
-        let min_ttft = ttft_measurements
-            .iter()
-            .min()
-            .cloned()
-            .unwrap_or(std::time::Duration::ZERO);
-        let max_ttft = ttft_measurements
-            .iter()
-            .max()
-            .cloned()
-            .unwrap_or(std::time::Duration::ZERO);
+        let min_ttft = ttft_measurements.iter().min().cloned().unwrap_or(std::time::Duration::ZERO);
+        let max_ttft = ttft_measurements.iter().max().cloned().unwrap_or(std::time::Duration::ZERO);
 
         let avg_inter_chunk_latency = if !inter_chunk_latencies.is_empty() {
             inter_chunk_latencies.iter().sum::<std::time::Duration>()
@@ -1096,32 +996,20 @@ impl TestCase for StreamingPerformanceTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "ttft_measurements".to_string(),
-                    ttft_measurements.len() as f64,
-                ),
+                ("ttft_measurements".to_string(), ttft_measurements.len() as f64),
                 ("avg_ttft_ms".to_string(), avg_ttft.as_millis() as f64),
                 ("min_ttft_ms".to_string(), min_ttft.as_millis() as f64),
                 ("max_ttft_ms".to_string(), max_ttft.as_millis() as f64),
                 ("throughput_chars_per_sec".to_string(), chars_per_second),
                 ("throughput_chunks".to_string(), throughput_chunks as f64),
-                (
-                    "throughput_duration_ms".to_string(),
-                    throughput_duration.as_millis() as f64,
-                ),
+                ("throughput_duration_ms".to_string(), throughput_duration.as_millis() as f64),
                 (
                     "avg_inter_chunk_latency_ms".to_string(),
                     avg_inter_chunk_latency.as_millis() as f64,
                 ),
-                (
-                    "inter_chunk_measurements".to_string(),
-                    inter_chunk_latencies.len() as f64,
-                ),
+                ("inter_chunk_measurements".to_string(), inter_chunk_latencies.len() as f64),
                 ("max_memory_usage_percent".to_string(), max_memory_usage),
-                (
-                    "memory_measurements".to_string(),
-                    memory_measurements.len() as f64,
-                ),
+                ("memory_measurements".to_string(), memory_measurements.len() as f64),
             ]
             .into_iter()
             .collect(),

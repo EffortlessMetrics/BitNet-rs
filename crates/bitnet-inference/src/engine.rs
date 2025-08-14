@@ -67,13 +67,7 @@ impl InferenceEngine {
             }
         };
 
-        Ok(Self {
-            model,
-            tokenizer,
-            backend,
-            cache,
-            config,
-        })
+        Ok(Self { model, tokenizer, backend, cache, config })
     }
 
     /// Create inference engine with custom configuration
@@ -104,16 +98,11 @@ impl InferenceEngine {
     ) -> Result<String> {
         let start_time = std::time::Instant::now();
 
-        debug!(
-            "Generating text for prompt: {:?}",
-            &prompt[..50.min(prompt.len())]
-        );
+        debug!("Generating text for prompt: {:?}", &prompt[..50.min(prompt.len())]);
 
         // Tokenize input
-        let input_tokens = self
-            .tokenizer
-            .encode(prompt, true)
-            .context("Failed to tokenize input prompt")?;
+        let input_tokens =
+            self.tokenizer.encode(prompt, true).context("Failed to tokenize input prompt")?;
 
         debug!("Input tokens: {} tokens", input_tokens.len());
 
@@ -154,10 +143,7 @@ impl InferenceEngine {
         prompt: &str,
         config: &GenerationConfig,
     ) -> GenerationStream {
-        let streaming_config = StreamingConfig {
-            buffer_size: 10,
-            flush_interval_ms: 50,
-        };
+        let streaming_config = StreamingConfig { buffer_size: 10, flush_interval_ms: 50 };
 
         GenerationStream::new(
             self.model.clone(),
@@ -262,11 +248,8 @@ impl InferenceEngine {
                     .narrow(1, seq_len - 1, 1)?  // [B, 1, V]
                     .squeeze(1)?                  // [B, V]
                     .i(0)?; // [V]
-                let last = if last.dtype() != DType::F32 {
-                    last.to_dtype(DType::F32)?
-                } else {
-                    last
-                };
+                let last =
+                    if last.dtype() != DType::F32 { last.to_dtype(DType::F32)? } else { last };
                 Ok(last.to_vec1::<f32>()?)
             }
             ConcreteTensor::Mock(_) => {
@@ -288,10 +271,7 @@ impl InferenceEngine {
 
         // Check for stop sequences
         if !config.stop_sequences.is_empty() {
-            let current_text = self
-                .tokenizer
-                .decode(generated_tokens, true)
-                .unwrap_or_default();
+            let current_text = self.tokenizer.decode(generated_tokens, true).unwrap_or_default();
             for stop_seq in &config.stop_sequences {
                 if current_text.ends_with(stop_seq) {
                     return true;
@@ -345,9 +325,7 @@ mod tests {
 
     impl MockModel {
         fn new() -> Self {
-            Self {
-                config: BitNetConfig::default(),
-            }
+            Self { config: BitNetConfig::default() }
         }
     }
 

@@ -12,14 +12,8 @@ fn benchmark_kernels(c: &mut Criterion) {
 
     c.bench_function("matmul_i2s", |b| {
         b.iter(|| {
-            let result = kernel.matmul_i2s(
-                black_box(&a),
-                black_box(&b),
-                black_box(&mut c_out),
-                32,
-                32,
-                32,
-            );
+            let result =
+                kernel.matmul_i2s(black_box(&a), black_box(&b), black_box(&mut c_out), 32, 32, 32);
             black_box(result)
         })
     });

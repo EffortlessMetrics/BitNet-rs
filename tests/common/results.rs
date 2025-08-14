@@ -78,10 +78,7 @@ impl Default for TestMetrics {
 impl TestMetrics {
     /// Create new metrics with wall time
     pub fn with_duration(duration: Duration) -> Self {
-        Self {
-            wall_time: duration,
-            ..Default::default()
-        }
+        Self { wall_time: duration, ..Default::default() }
     }
 
     /// Add a custom metric
@@ -326,35 +323,17 @@ impl TestSummary {
     /// Calculate summary from test results
     pub fn from_results(results: &[TestResult]) -> Self {
         let total_tests = results.len();
-        let passed = results
-            .iter()
-            .filter(|r| r.status == TestStatus::Passed)
-            .count();
-        let failed = results
-            .iter()
-            .filter(|r| r.status == TestStatus::Failed)
-            .count();
-        let skipped = results
-            .iter()
-            .filter(|r| r.status == TestStatus::Skipped)
-            .count();
-        let timeout = results
-            .iter()
-            .filter(|r| r.status == TestStatus::Timeout)
-            .count();
+        let passed = results.iter().filter(|r| r.status == TestStatus::Passed).count();
+        let failed = results.iter().filter(|r| r.status == TestStatus::Failed).count();
+        let skipped = results.iter().filter(|r| r.status == TestStatus::Skipped).count();
+        let timeout = results.iter().filter(|r| r.status == TestStatus::Timeout).count();
 
-        let success_rate = if total_tests > 0 {
-            (passed as f64 / total_tests as f64) * 100.0
-        } else {
-            0.0
-        };
+        let success_rate =
+            if total_tests > 0 { (passed as f64 / total_tests as f64) * 100.0 } else { 0.0 };
 
         let total_duration = results.iter().map(|r| r.duration).sum();
-        let average_duration = if total_tests > 0 {
-            total_duration / total_tests as u32
-        } else {
-            Duration::ZERO
-        };
+        let average_duration =
+            if total_tests > 0 { total_duration / total_tests as u32 } else { Duration::ZERO };
 
         let peak_memory = results.iter().filter_map(|r| r.metrics.memory_peak).max();
 
@@ -440,18 +419,12 @@ impl TestSuiteResult {
 
     /// Get all failed tests
     pub fn failed_tests(&self) -> Vec<&TestResult> {
-        self.test_results
-            .iter()
-            .filter(|r| r.is_failure())
-            .collect()
+        self.test_results.iter().filter(|r| r.is_failure()).collect()
     }
 
     /// Get all passed tests
     pub fn passed_tests(&self) -> Vec<&TestResult> {
-        self.test_results
-            .iter()
-            .filter(|r| r.is_success())
-            .collect()
+        self.test_results.iter().filter(|r| r.is_success()).collect()
     }
 
     /// Check if the entire suite passed

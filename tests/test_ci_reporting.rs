@@ -88,9 +88,7 @@ async fn test_trend_data_recording() {
     };
 
     // Record test results
-    let result = trend_reporter
-        .record_test_results(&test_results, &metadata)
-        .await;
+    let result = trend_reporter.record_test_results(&test_results, &metadata).await;
 
     match result {
         Ok(()) => {

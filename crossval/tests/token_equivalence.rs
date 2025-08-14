@@ -13,11 +13,7 @@ use bitnet_crossval::{
 
 #[test]
 fn test_token_equivalence_minimal() {
-    let config = CrossvalConfig {
-        tolerance: 1e-6,
-        max_tokens: 100,
-        benchmark: false,
-    };
+    let config = CrossvalConfig { tolerance: 1e-6, max_tokens: 100, benchmark: false };
 
     let validator = CrossValidator::new(config);
 
@@ -31,16 +27,11 @@ fn test_token_equivalence_minimal() {
 
     // This test will be skipped if the fixture doesn't exist
     if !fixture.model_path.exists() {
-        eprintln!(
-            "Skipping test: fixture not found at {:?}",
-            fixture.model_path
-        );
+        eprintln!("Skipping test: fixture not found at {:?}", fixture.model_path);
         return;
     }
 
-    let results = validator
-        .validate_fixture(&fixture)
-        .expect("Cross-validation should succeed");
+    let results = validator.validate_fixture(&fixture).expect("Cross-validation should succeed");
 
     assert!(!results.is_empty(), "Should have at least one result");
 
@@ -49,10 +40,7 @@ fn test_token_equivalence_minimal() {
             panic!("Cross-validation failed: {}", error);
         }
 
-        assert!(
-            result.tokens_match,
-            "Tokens should match between implementations"
-        );
+        assert!(result.tokens_match, "Tokens should match between implementations");
     }
 }
 
@@ -71,16 +59,11 @@ fn test_standard_prompts() {
 
     // Skip if fixture doesn't exist
     if !fixture.model_path.exists() {
-        eprintln!(
-            "Skipping test: fixture not found at {:?}",
-            fixture.model_path
-        );
+        eprintln!("Skipping test: fixture not found at {:?}", fixture.model_path);
         return;
     }
 
-    let results = validator
-        .validate_fixture(&fixture)
-        .expect("Cross-validation should succeed");
+    let results = validator.validate_fixture(&fixture).expect("Cross-validation should succeed");
 
     assert_eq!(results.len(), STANDARD_PROMPTS.len());
 
@@ -92,11 +75,7 @@ fn test_standard_prompts() {
             continue;
         }
 
-        assert!(
-            result.tokens_match,
-            "Tokens should match for prompt: '{}'",
-            result.prompt
-        );
+        assert!(result.tokens_match, "Tokens should match for prompt: '{}'", result.prompt);
     }
 }
 
@@ -114,16 +93,11 @@ fn test_empty_prompt() {
 
     // Skip if fixture doesn't exist
     if !fixture.model_path.exists() {
-        eprintln!(
-            "Skipping test: fixture not found at {:?}",
-            fixture.model_path
-        );
+        eprintln!("Skipping test: fixture not found at {:?}", fixture.model_path);
         return;
     }
 
-    let results = validator
-        .validate_fixture(&fixture)
-        .expect("Cross-validation should succeed");
+    let results = validator.validate_fixture(&fixture).expect("Cross-validation should succeed");
 
     assert_eq!(results.len(), 1);
 
@@ -169,16 +143,10 @@ mod integration_tests {
                     }
                 }
 
-                println!(
-                    "Cross-validation results: {} passed, {} failed",
-                    passed, failed
-                );
+                println!("Cross-validation results: {} passed, {} failed", passed, failed);
 
                 // Allow some failures for now, but ensure we have some successes
-                assert!(
-                    passed > 0,
-                    "At least some cross-validation tests should pass"
-                );
+                assert!(passed > 0, "At least some cross-validation tests should pass");
             }
             Err(e) => {
                 eprintln!("Cross-validation failed: {}", e);

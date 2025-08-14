@@ -25,11 +25,7 @@ impl WasmBenchmarkSuite {
         let kernel_provider = WasmKernelProvider::new();
         let memory_manager = MemoryManager::new(Some(512 * 1024 * 1024))?; // 512MB limit
 
-        Ok(WasmBenchmarkSuite {
-            kernel_provider,
-            memory_manager,
-            results: Vec::new(),
-        })
+        Ok(WasmBenchmarkSuite { kernel_provider, memory_manager, results: Vec::new() })
     }
 
     /// Run all benchmarks and return comprehensive results
@@ -178,9 +174,8 @@ impl WasmBenchmarkSuite {
             .and_then(|w| w.navigator().user_agent().ok())
             .unwrap_or_else(|| "Unknown".to_string());
 
-        let memory_gb = web_sys::window()
-            .and_then(|w| w.navigator().device_memory())
-            .unwrap_or(0.0);
+        let memory_gb =
+            web_sys::window().and_then(|w| w.navigator().device_memory()).unwrap_or(0.0);
 
         let cpu_cores = web_sys::window()
             .and_then(|w| w.navigator().hardware_concurrency())
@@ -223,9 +218,8 @@ impl WasmBenchmarkSuite {
             );
         }
 
-        let memory_gb = web_sys::window()
-            .and_then(|w| w.navigator().device_memory())
-            .unwrap_or(0.0);
+        let memory_gb =
+            web_sys::window().and_then(|w| w.navigator().device_memory()).unwrap_or(0.0);
 
         if memory_gb < 4.0 {
             recommendations.push(

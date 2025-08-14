@@ -72,10 +72,7 @@ impl Model {
         let ptr = unsafe { llama_load_model_from_file(c_path.as_ptr(), params) };
 
         if ptr.is_null() {
-            return Err(CppError::ModelLoadError(format!(
-                "Failed to load model from: {}",
-                path
-            )));
+            return Err(CppError::ModelLoadError(format!("Failed to load model from: {}", path)));
         }
 
         Ok(Model { ptr })
@@ -245,10 +242,7 @@ impl Context {
         }
 
         if result != 0 {
-            return Err(CppError::LlamaError(format!(
-                "Decode failed with code: {}",
-                result
-            )));
+            return Err(CppError::LlamaError(format!("Decode failed with code: {}", result)));
         }
 
         Ok(())

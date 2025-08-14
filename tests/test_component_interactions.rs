@@ -99,9 +99,7 @@ struct ErrorInjectingModel {
 
 impl ErrorInjectingModel {
     fn new() -> Self {
-        Self {
-            should_fail: Arc::new(Mutex::new(false)),
-        }
+        Self { should_fail: Arc::new(Mutex::new(false)) }
     }
 
     fn set_should_fail(&self, should_fail: bool) {
@@ -244,9 +242,7 @@ async fn test_cross_crate_data_flow() {
     println!("Tokenizer data flow: {:?}", tokenizer_data_flow);
 
     // Verify tokenizer received input text
-    assert!(tokenizer_data_flow
-        .inputs_received
-        .contains(&test_input.to_string()));
+    assert!(tokenizer_data_flow.inputs_received.contains(&test_input.to_string()));
 
     // Verify model received forward calls
     assert!(model_data_flow.forward_calls > 0);
@@ -326,10 +322,7 @@ async fn test_configuration_propagation() {
     let engine = MockInferenceEngine::new(model.clone(), tokenizer.clone());
 
     // Test that configuration affects behavior
-    let result = engine
-        .generate("Test configuration propagation")
-        .await
-        .unwrap();
+    let result = engine.generate("Test configuration propagation").await.unwrap();
     assert!(!result.is_empty());
 
     // Verify components were used

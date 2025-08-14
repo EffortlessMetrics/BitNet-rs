@@ -19,9 +19,7 @@ pub struct TracingGuard {
 
 impl TracingGuard {
     fn new(file_guard: Option<non_blocking::WorkerGuard>) -> Self {
-        Self {
-            _file_guard: file_guard,
-        }
+        Self { _file_guard: file_guard }
     }
 }
 
@@ -56,11 +54,7 @@ pub async fn init_tracing(config: &MonitoringConfig) -> Result<TracingGuard> {
         .with_writer(file_writer);
 
     // Build the subscriber
-    tracing_subscriber::registry()
-        .with(env_filter)
-        .with(console_layer)
-        .with(file_layer)
-        .init();
+    tracing_subscriber::registry().with(env_filter).with(console_layer).with(file_layer).init();
 
     tracing::info!(
         log_level = %config.log_level,

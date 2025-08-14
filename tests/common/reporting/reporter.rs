@@ -101,9 +101,7 @@ impl ReportingManager {
                     reporters.push(ReporterType::Junit(super::formats::JunitReporter::new()));
                 }
                 ReportFormat::Markdown => {
-                    reporters.push(ReporterType::Markdown(
-                        super::formats::MarkdownReporter::new(),
-                    ));
+                    reporters.push(ReporterType::Markdown(super::formats::MarkdownReporter::new()));
                 }
             }
         }
@@ -255,10 +253,7 @@ mod tests {
             generation_time: Duration::from_millis(100),
         }];
 
-        manager
-            .generate_summary_report(&report_results)
-            .await
-            .unwrap();
+        manager.generate_summary_report(&report_results).await.unwrap();
 
         let summary_path = temp_dir.path().join("report_summary.md");
         assert!(summary_path.exists());

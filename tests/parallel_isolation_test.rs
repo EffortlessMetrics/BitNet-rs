@@ -78,12 +78,8 @@ impl IsolatedEnvironment {
         let test_subdir = temp_dir_path.join(format!("{}_{}", test_name, parallel_slot));
         std::fs::create_dir_all(&test_subdir)?;
 
-        let env = Self {
-            test_name: test_name.to_string(),
-            temp_dir_path,
-            parallel_slot,
-            test_subdir,
-        };
+        let env =
+            Self { test_name: test_name.to_string(), temp_dir_path, parallel_slot, test_subdir };
 
         Ok((env, temp_dir))
     }
@@ -484,16 +480,9 @@ mod tests {
         // Print detailed results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed {
-                "✅ PASS"
-            } else {
-                "❌ FAIL"
-            };
-            let isolation = if result.isolation_verified {
-                "🔒 ISOLATED"
-            } else {
-                "⚠️  LEAKED"
-            };
+            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
+            let isolation =
+                if result.isolation_verified { "🔒 ISOLATED" } else { "⚠️  LEAKED" };
             println!(
                 "  {} {} {} (slot: {}, {:?})",
                 status, result.test_name, isolation, result.parallel_slot, result.duration
@@ -522,10 +511,7 @@ mod tests {
                     })
             })
             .count();
-        assert_eq!(
-            isolation_violations, 0,
-            "Should have no isolation violations"
-        );
+        assert_eq!(isolation_violations, 0, "Should have no isolation violations");
 
         // Verify parallel execution efficiency
         let sequential_time = Duration::from_millis(100 + 150 + 300 + 250 + 500 + 400 + 200 + 100); // 2000ms
@@ -535,7 +521,7 @@ mod tests {
         println!("  Sequential time would be: {:?}", sequential_time);
 
         // Verify that parallel execution was significantly faster than sequential
-        assert!(total_duration < sequential_time, 
+        assert!(total_duration < sequential_time,
             "Parallel execution should be faster than sequential. Got {:?}, expected less than {:?}", 
             total_duration, sequential_time);
 
@@ -548,14 +534,8 @@ mod tests {
         // Verify parallel slots were used correctly
         let used_slots: std::collections::HashSet<_> =
             results.iter().map(|r| r.parallel_slot).collect();
-        assert!(
-            used_slots.len() > 1,
-            "Multiple parallel slots should have been used"
-        );
-        assert!(
-            used_slots.iter().all(|&slot| slot < 4),
-            "All slots should be within bounds"
-        );
+        assert!(used_slots.len() > 1, "Multiple parallel slots should have been used");
+        assert!(used_slots.iter().all(|&slot| slot < 4), "All slots should be within bounds");
 
         // Verify stats
         let stats = harness.get_stats().await;
@@ -566,10 +546,7 @@ mod tests {
 
         let efficiency = stats.parallel_efficiency;
         println!("  Parallel efficiency: {:.2}x", efficiency);
-        assert!(
-            efficiency > 1.5,
-            "Should achieve at least 1.5x efficiency with 4 parallel slots"
-        );
+        assert!(efficiency > 1.5, "Should achieve at least 1.5x efficiency with 4 parallel slots");
 
         println!("✅ Parallel execution with proper isolation test passed!");
         println!("   - All tests executed with proper isolation");
@@ -604,11 +581,7 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed {
-                "✅ PASS"
-            } else {
-                "❌ FAIL"
-            };
+            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
             println!(
                 "  {} {} (slot: {}, {:?})",
                 status, result.test_name, result.parallel_slot, result.duration
@@ -617,17 +590,10 @@ mod tests {
 
         // Verify results
         assert_eq!(results.len(), 3, "Should have 3 test results");
-        assert_eq!(
-            results.iter().filter(|r| r.passed).count(),
-            3,
-            "All tests should pass"
-        );
+        assert_eq!(results.iter().filter(|r| r.passed).count(), 3, "All tests should pass");
 
         // With max_parallel = 1, all tests should use slot 0
-        assert!(
-            results.iter().all(|r| r.parallel_slot == 0),
-            "All tests should use slot 0"
-        );
+        assert!(results.iter().all(|r| r.parallel_slot == 0), "All tests should use slot 0");
 
         // With max_parallel = 1, execution should be close to sequential
         let expected_min_time = Duration::from_millis(600); // 3 * 200ms
@@ -639,10 +605,7 @@ mod tests {
         );
 
         println!("⏱️  Performance Analysis:");
-        println!(
-            "  Execution time: {:?} (expected ~{:?})",
-            total_duration, expected_min_time
-        );
+        println!("  Execution time: {:?} (expected ~{:?})", total_duration, expected_min_time);
         println!("✅ Semaphore limiting test passed!");
     }
 
@@ -691,10 +654,8 @@ mod tests {
                 }
 
                 // Create a file in temp directory with slot-specific name
-                let test_file = test_subdir.join(format!(
-                    "{}_{}_slot_{}.txt",
-                    self.name, self.env_key, parallel_slot
-                ));
+                let test_file = test_subdir
+                    .join(format!("{}_{}_slot_{}.txt", self.name, self.env_key, parallel_slot));
                 let expected_content = format!("{}_slot_{}", self.env_value, parallel_slot);
                 std::fs::write(&test_file, &expected_content)
                     .map_err(|e| format!("Failed to write file: {}", e))?;
@@ -758,11 +719,7 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed {
-                "✅ PASS"
-            } else {
-                "❌ FAIL"
-            };
+            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
             println!(
                 "  {} {} (slot: {}, {:?})",
                 status, result.test_name, result.parallel_slot, result.duration
@@ -788,10 +745,7 @@ mod tests {
         // Verify multiple slots were used
         let used_slots: std::collections::HashSet<_> =
             results.iter().map(|r| r.parallel_slot).collect();
-        assert!(
-            used_slots.len() > 1,
-            "Multiple parallel slots should have been used"
-        );
+        assert!(used_slots.len() > 1, "Multiple parallel slots should have been used");
 
         println!("✅ Isolation prevents interference test passed!");
         println!("   - All tests ran without interfering with each other");
@@ -814,10 +768,7 @@ mod tests {
 
         impl TimeoutTestCase {
             fn new(name: &str, work_duration: Duration) -> Self {
-                Self {
-                    name: name.to_string(),
-                    work_duration,
-                }
+                Self { name: name.to_string(), work_duration }
             }
         }
 
@@ -872,11 +823,7 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed {
-                "✅ PASS"
-            } else {
-                "❌ FAIL"
-            };
+            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
             println!(
                 "  {} {} (slot: {}, {:?})",
                 status, result.test_name, result.parallel_slot, result.duration

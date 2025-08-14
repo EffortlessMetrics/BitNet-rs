@@ -58,14 +58,10 @@ async fn main() -> Result<()> {
     let trend_reporter = TrendReporter::new(args.trend_data, trend_config);
 
     // Generate trend report
-    let report = trend_reporter
-        .generate_trend_report(args.days_back, args.branch.as_deref())
-        .await?;
+    let report =
+        trend_reporter.generate_trend_report(args.days_back, args.branch.as_deref()).await?;
 
-    info!(
-        "Generated trend report with {} entries",
-        report.total_entries
-    );
+    info!("Generated trend report with {} entries", report.total_entries);
 
     // Generate JSON report
     if args.json {
@@ -78,9 +74,7 @@ async fn main() -> Result<()> {
     // Generate HTML report
     if args.html {
         let html_path = args.output_dir.join("trend-analysis.html");
-        trend_reporter
-            .generate_html_report(&report, &html_path)
-            .await?;
+        trend_reporter.generate_html_report(&report, &html_path).await?;
         info!("Generated HTML report: {:?}", html_path);
     }
 
@@ -92,9 +86,8 @@ async fn main() -> Result<()> {
         "test_memory_usage".to_string(),
     ];
 
-    let performance_trends = trend_reporter
-        .get_performance_trends(&key_tests, args.days_back)
-        .await?;
+    let performance_trends =
+        trend_reporter.get_performance_trends(&key_tests, args.days_back).await?;
 
     // Save performance trends as JSON
     let trends_json = serde_json::to_string_pretty(&performance_trends)?;
@@ -116,10 +109,7 @@ async fn generate_summary_report(
     let mut summary = String::new();
 
     summary.push_str("# BitNet.rs Test Trend Summary\n\n");
-    summary.push_str(&format!(
-        "**Analysis Period:** {} days\n",
-        report.period_days
-    ));
+    summary.push_str(&format!("**Analysis Period:** {} days\n", report.period_days));
     summary.push_str(&format!("**Total Entries:** {}\n", report.total_entries));
     summary.push_str(&format!(
         "**Generated:** {}\n\n",
@@ -136,10 +126,8 @@ async fn generate_summary_report(
         "- **Stability Score:** {:.1}%\n",
         report.analysis.overall_stability * 100.0
     ));
-    summary.push_str(&format!(
-        "- **Performance Trend:** {:?}\n\n",
-        report.analysis.performance_trend
-    ));
+    summary
+        .push_str(&format!("- **Performance Trend:** {:?}\n\n", report.analysis.performance_trend));
 
     // Suite summary
     summary.push_str("## Test Suite Summary\n\n");

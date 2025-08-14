@@ -178,18 +178,11 @@ impl ToleranceValidator {
         let min_length = tokens1.len().min(tokens2.len());
         let max_length = tokens1.len().max(tokens2.len());
 
-        let matching_tokens = tokens1
-            .iter()
-            .zip(tokens2.iter())
-            .take(min_length)
-            .filter(|(t1, t2)| t1 == t2)
-            .count();
+        let matching_tokens =
+            tokens1.iter().zip(tokens2.iter()).take(min_length).filter(|(t1, t2)| t1 == t2).count();
 
-        let token_accuracy = if max_length > 0 {
-            matching_tokens as f64 / max_length as f64
-        } else {
-            1.0
-        };
+        let token_accuracy =
+            if max_length > 0 { matching_tokens as f64 / max_length as f64 } else { 1.0 };
 
         let mut float_comparison_results = Vec::new();
 
@@ -207,9 +200,7 @@ impl ToleranceValidator {
 
         // Overall tolerance check
         let token_passes = token_accuracy >= self.tolerance.min_token_accuracy;
-        let float_passes = float_comparison_results
-            .iter()
-            .all(|comp| comp.passes_tolerance);
+        let float_passes = float_comparison_results.iter().all(|comp| comp.passes_tolerance);
         let passes_tolerance = token_passes && float_passes;
 
         AccuracyResult {
@@ -232,10 +223,7 @@ mod tests {
 
         // Verify that the default tolerance is set to 1e-6
         assert_eq!(tolerance.float_tolerance, 1e-6);
-        println!(
-            "✓ Default tolerance correctly set to 1e-6: {}",
-            tolerance.float_tolerance
-        );
+        println!("✓ Default tolerance correctly set to 1e-6: {}", tolerance.float_tolerance);
     }
 
     #[test]
@@ -248,10 +236,7 @@ mod tests {
         };
 
         assert_eq!(tolerance.float_tolerance, 1e-6);
-        println!(
-            "✓ Custom tolerance correctly set to 1e-6: {}",
-            tolerance.float_tolerance
-        );
+        println!("✓ Custom tolerance correctly set to 1e-6: {}", tolerance.float_tolerance);
     }
 
     #[test]
@@ -338,11 +323,7 @@ mod tests {
         let validator = ToleranceValidator::new(tolerance);
 
         // Test 2D arrays (like logits)
-        let logits1 = vec![
-            vec![0.1, 0.2, 0.3],
-            vec![0.4, 0.5, 0.6],
-            vec![0.7, 0.8, 0.9],
-        ];
+        let logits1 = vec![vec![0.1, 0.2, 0.3], vec![0.4, 0.5, 0.6], vec![0.7, 0.8, 0.9]];
 
         let logits2 = vec![
             vec![0.1 + 5e-7, 0.2 + 5e-7, 0.3 + 5e-7], // Within tolerance
@@ -549,10 +530,7 @@ pub fn demonstrate_1e6_tolerance_validation() {
 
     println!("Configuration:");
     println!("  - Float tolerance: {:.0e}", tolerance.float_tolerance);
-    println!(
-        "  - Min token accuracy: {:.3}",
-        tolerance.min_token_accuracy
-    );
+    println!("  - Min token accuracy: {:.3}", tolerance.min_token_accuracy);
     println!();
 
     // Demonstrate various validation scenarios

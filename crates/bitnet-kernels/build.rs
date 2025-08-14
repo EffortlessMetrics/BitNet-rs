@@ -57,10 +57,7 @@ fn main() {
         build.flag("-mavx2").flag("-mfma").flag("-mf16c");
 
         // Enable AVX-512 if available
-        if env::var("CARGO_CFG_TARGET_FEATURE")
-            .unwrap_or_default()
-            .contains("avx512f")
-        {
+        if env::var("CARGO_CFG_TARGET_FEATURE").unwrap_or_default().contains("avx512f") {
             build.flag("-mavx512f");
         }
     } else if cfg!(target_arch = "aarch64") {
@@ -101,9 +98,7 @@ fn generate_bindings(include_dir: &std::path::Path) {
         .expect("Unable to generate bindings");
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindings
-        .write_to_file(out_path.join("bindings.rs"))
-        .expect("Couldn't write bindings!");
+    bindings.write_to_file(out_path.join("bindings.rs")).expect("Couldn't write bindings!");
 }
 
 #[cfg(not(feature = "ffi-bridge"))]

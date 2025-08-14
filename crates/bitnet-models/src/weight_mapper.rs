@@ -133,23 +133,14 @@ pub fn create_var_builder(
     // Convert tensors to the target dtype if needed
     let mut converted = HashMap::new();
     for (name, tensor) in tensors {
-        let tensor = if tensor.dtype() != dtype {
-            tensor.to_dtype(dtype)?
-        } else {
-            tensor
-        };
+        let tensor = if tensor.dtype() != dtype { tensor.to_dtype(dtype)? } else { tensor };
 
         // Move to target device if needed
-        let tensor = if !tensor.device().same_device(device) {
-            tensor.to_device(device)?
-        } else {
-            tensor
-        };
+        let tensor =
+            if !tensor.device().same_device(device) { tensor.to_device(device)? } else { tensor };
 
         converted.insert(name, tensor);
     }
 
-    Ok(candle_nn::VarBuilder::from_tensors(
-        converted, dtype, device,
-    ))
+    Ok(candle_nn::VarBuilder::from_tensors(converted, dtype, device))
 }

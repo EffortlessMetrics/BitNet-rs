@@ -57,11 +57,7 @@ impl IsolatedEnvironment {
         let temp_dir = tempfile::tempdir()?;
         let env_vars = std::env::vars().collect();
 
-        Ok(Self {
-            test_name: test_name.to_string(),
-            temp_dir,
-            original_env_vars: env_vars,
-        })
+        Ok(Self { test_name: test_name.to_string(), temp_dir, original_env_vars: env_vars })
     }
 
     fn setup(&self) {
@@ -389,11 +385,7 @@ async fn test_parallel_execution_with_proper_isolation() {
     // Print results
     println!("📊 Test Results:");
     for result in &results {
-        let status = if result.passed {
-            "✅ PASS"
-        } else {
-            "❌ FAIL"
-        };
+        let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
         println!("  {} {} ({:?})", status, result.test_name, result.duration);
         if let Some(error) = &result.error {
             println!("    Error: {}", error);
@@ -484,21 +476,13 @@ async fn test_semaphore_limits_parallelism() {
     // Print results
     println!("📊 Test Results:");
     for result in &results {
-        let status = if result.passed {
-            "✅ PASS"
-        } else {
-            "❌ FAIL"
-        };
+        let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
         println!("  {} {} ({:?})", status, result.test_name, result.duration);
     }
 
     // Verify results
     assert_eq!(results.len(), 3, "Should have 3 test results");
-    assert_eq!(
-        results.iter().filter(|r| r.passed).count(),
-        3,
-        "All tests should pass"
-    );
+    assert_eq!(results.iter().filter(|r| r.passed).count(), 3, "All tests should pass");
 
     // With max_parallel = 1, execution should be close to sequential
     let expected_min_time = Duration::from_millis(600); // 3 * 200ms
@@ -510,10 +494,7 @@ async fn test_semaphore_limits_parallelism() {
     );
 
     println!("⏱️  Performance Analysis:");
-    println!(
-        "  Execution time: {:?} (expected ~{:?})",
-        total_duration, expected_min_time
-    );
+    println!("  Execution time: {:?} (expected ~{:?})", total_duration, expected_min_time);
     println!("✅ Semaphore limiting test passed!");
 }
 
@@ -640,11 +621,7 @@ async fn test_isolation_prevents_interference() {
     // Print results
     println!("📊 Test Results:");
     for result in &results {
-        let status = if result.passed {
-            "✅ PASS"
-        } else {
-            "❌ FAIL"
-        };
+        let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
         println!("  {} {} ({:?})", status, result.test_name, result.duration);
         if let Some(error) = &result.error {
             println!("    Error: {}", error);
@@ -684,10 +661,7 @@ async fn test_timeout_handling() {
 
     impl TimeoutTestCase {
         fn new(name: &str, work_duration: Duration) -> Self {
-            Self {
-                name: name.to_string(),
-                work_duration,
-            }
+            Self { name: name.to_string(), work_duration }
         }
     }
 
@@ -714,25 +688,15 @@ async fn test_timeout_handling() {
     }
 
     let mut test_cases: Vec<Box<dyn SimpleTestCase>> = Vec::new();
-    test_cases.push(Box::new(TimeoutTestCase::new(
-        "fast_test",
-        Duration::from_millis(200),
-    ))); // Should pass
-    test_cases.push(Box::new(TimeoutTestCase::new(
-        "slow_test",
-        Duration::from_millis(800),
-    ))); // Should timeout
+    test_cases.push(Box::new(TimeoutTestCase::new("fast_test", Duration::from_millis(200)))); // Should pass
+    test_cases.push(Box::new(TimeoutTestCase::new("slow_test", Duration::from_millis(800)))); // Should timeout
 
     let results = harness.run_tests(test_cases).await;
 
     // Print results
     println!("📊 Test Results:");
     for result in &results {
-        let status = if result.passed {
-            "✅ PASS"
-        } else {
-            "❌ FAIL"
-        };
+        let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
         println!("  {} {} ({:?})", status, result.test_name, result.duration);
         if let Some(error) = &result.error {
             println!("    Error: {}", error);

@@ -233,6 +233,17 @@ strip = true
 [profile.bench]
 debug = true
 
+# Workspace-level lints for code quality
+[workspace.lints.clippy]
+ptr_arg = "deny"
+all = "warn"
+pedantic = "warn"
+nursery = "warn"
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+
 # Workspace-level feature flags for convenience
 [workspace.metadata.docs.rs]
 all-features = true

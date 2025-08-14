@@ -185,10 +185,7 @@ impl ModelManager {
         if model_existed {
             Ok(())
         } else {
-            Err(BitNetCError::InvalidModelId(format!(
-                "Model ID {} not found",
-                model_id
-            )))
+            Err(BitNetCError::InvalidModelId(format!("Model ID {} not found", model_id)))
         }
     }
 
@@ -208,10 +205,7 @@ impl ModelManager {
 
         match info_map.get(&model_id) {
             Some(info) => Ok(info.to_c_model()),
-            None => Err(BitNetCError::InvalidModelId(format!(
-                "Model ID {} not found",
-                model_id
-            ))),
+            None => Err(BitNetCError::InvalidModelId(format!("Model ID {} not found", model_id))),
         }
     }
 
@@ -226,10 +220,7 @@ impl ModelManager {
 
         match models.get(&model_id) {
             Some(model) => Ok(Arc::clone(model)),
-            None => Err(BitNetCError::InvalidModelId(format!(
-                "Model ID {} not found",
-                model_id
-            ))),
+            None => Err(BitNetCError::InvalidModelId(format!("Model ID {} not found", model_id))),
         }
     }
 
@@ -265,10 +256,7 @@ impl ModelManager {
         let path_obj = Path::new(path);
 
         if !path_obj.exists() {
-            return Err(BitNetCError::ModelNotFound(format!(
-                "Model file not found: {}",
-                path
-            )));
+            return Err(BitNetCError::ModelNotFound(format!("Model file not found: {}", path)));
         }
 
         // Detect format based on extension
@@ -301,10 +289,7 @@ impl ModelManager {
         let memory_usage = self.estimate_memory_usage(config);
 
         let name = CString::new(
-            std::path::Path::new(path)
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("unknown"),
+            std::path::Path::new(path).file_stem().and_then(|s| s.to_str()).unwrap_or("unknown"),
         )
         .map_err(|_| BitNetCError::Internal("Failed to create model name string".to_string()))?;
 

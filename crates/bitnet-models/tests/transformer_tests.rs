@@ -41,11 +41,7 @@ fn test_forward_shapes() -> anyhow::Result<()> {
     let hidden_size = config.model.hidden_size;
 
     // Create input tensor
-    let x = Tensor::zeros(
-        &[batch, seq_len, hidden_size],
-        DType::F32,
-        &candle_core::Device::Cpu,
-    )?;
+    let x = Tensor::zeros(&[batch, seq_len, hidden_size], DType::F32, &candle_core::Device::Cpu)?;
 
     // Create KV cache
     let mut kv = KVCache::new(&config, batch, &candle_core::Device::Cpu)?;
@@ -84,11 +80,8 @@ fn test_logits_shapes() -> anyhow::Result<()> {
     let vocab_size = config.model.vocab_size;
 
     // Create hidden state tensor
-    let hidden = Tensor::zeros(
-        &[batch, seq_len, hidden_size],
-        DType::F32,
-        &candle_core::Device::Cpu,
-    )?;
+    let hidden =
+        Tensor::zeros(&[batch, seq_len, hidden_size], DType::F32, &candle_core::Device::Cpu)?;
 
     // Get logits
     let logits = model.logits(&hidden)?;
@@ -140,11 +133,8 @@ fn test_step_vs_full_equivalence() -> anyhow::Result<()> {
     let logits_full = model.logits(&h_full)?;
 
     // Extract last step logits from full pass
-    let last_full = logits_full
-        .narrow(1, tokens.len() - 1, 1)?
-        .squeeze(1)?
-        .i(0)?
-        .to_vec1::<f32>()?;
+    let last_full =
+        logits_full.narrow(1, tokens.len() - 1, 1)?.squeeze(1)?.i(0)?.to_vec1::<f32>()?;
 
     // Incremental forward pass (token by token with KV cache)
     let mut kv = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;

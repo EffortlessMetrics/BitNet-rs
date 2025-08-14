@@ -89,11 +89,7 @@ pub fn load_two<P: AsRef<Path>>(path: P) -> Result<TwoTensors> {
 
     // Shapes can vary; deduce (vocab, dim) consistently.
     if tok_info.dims.len() != 2 || head_info.dims.len() != 2 {
-        bail!(
-            "expected 2D tensors; got tok {:?}, head {:?}",
-            tok_info.dims,
-            head_info.dims
-        );
+        bail!("expected 2D tensors; got tok {:?}, head {:?}", tok_info.dims, head_info.dims);
     }
 
     let (ta, tb) = (tok_info.dims[0] as usize, tok_info.dims[1] as usize);
@@ -146,19 +142,10 @@ pub fn load_two<P: AsRef<Path>>(path: P) -> Result<TwoTensors> {
             (vocab, dim, tok_transposed, head.into_owned())
         }
     } else {
-        bail!(
-            "incompatible tensor shapes: tok={:?}, head={:?}",
-            tok_info.dims,
-            head_info.dims
-        );
+        bail!("incompatible tensor shapes: tok={:?}, head={:?}", tok_info.dims, head_info.dims);
     };
 
-    Ok(TwoTensors {
-        tok_embeddings,
-        lm_head,
-        vocab,
-        dim,
-    })
+    Ok(TwoTensors { tok_embeddings, lm_head, vocab, dim })
 }
 
 // ---------- parsing ----------
@@ -205,24 +192,14 @@ fn parse_header<R: Read + Seek>(r: &mut R) -> Result<Parsed> {
         }
         let ty = read_u32(r)?;
         let offset = read_u64(r)?;
-        tensors.push(TensorInfo {
-            name,
-            n_dims,
-            dims,
-            ty,
-            offset,
-        });
+        tensors.push(TensorInfo { name, n_dims, dims, ty, offset });
     }
 
     // data section begins aligned after the tensor header table
     let here = r.stream_position()?;
     let data_offset = align_up(here, alignment);
 
-    Ok(Parsed {
-        alignment,
-        tensors,
-        data_offset,
-    })
+    Ok(Parsed { alignment, tensors, data_offset })
 }
 
 fn pick_tensors(parsed: &Parsed) -> Result<(TensorInfo, TensorInfo)> {
@@ -235,12 +212,8 @@ fn pick_tensors(parsed: &Parsed) -> Result<(TensorInfo, TensorInfo)> {
         "transformer.wte.weight",
     ];
     // output head
-    const HEAD_NAMES: &[&str] = &[
-        "output.weight",
-        "lm_head.weight",
-        "model.lm_head.weight",
-        "transformer.lm_head.weight",
-    ];
+    const HEAD_NAMES: &[&str] =
+        &["output.weight", "lm_head.weight", "model.lm_head.weight", "transformer.lm_head.weight"];
 
     let find = |names: &[&str]| {
         parsed
@@ -252,13 +225,7 @@ fn pick_tensors(parsed: &Parsed) -> Result<(TensorInfo, TensorInfo)> {
 
     // Find embeddings tensor - prefer by name first, then shape
     let tok = find(TOK_NAMES)
-        .or_else(|| {
-            parsed
-                .tensors
-                .iter()
-                .find(|t| looks_like_embeddings(t))
-                .cloned()
-        })
+        .or_else(|| parsed.tensors.iter().find(|t| looks_like_embeddings(t)).cloned())
         .ok_or_else(|| anyhow::anyhow!("could not find token embeddings tensor"))?;
 
     // Extract dimensions from the chosen embeddings tensor
@@ -282,7 +249,7 @@ fn pick_tensors(parsed: &Parsed) -> Result<(TensorInfo, TensorInfo)> {
     // Find output tensor - shape-verified with name hints
     let head = find(HEAD_NAMES)
         .or_else(|| parsed.tensors.iter()
-            .find(|t| looks_like_output_with_shape(t) && 
+            .find(|t| looks_like_output_with_shape(t) &&
                   (t.name.contains("lm_head") || t.name.contains("output")))
             .cloned())
         .or_else(|| parsed.tensors.iter()
@@ -389,16 +356,11 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
                 .with_context(|| format!("Failed to dequantize I2_S tensor {}", info.name))?;
 
             // Extract f32 data from BitNetTensor
-            let data = tensor
-                .to_vec()
-                .with_context(|| "Failed to extract tensor data")?;
+            let data = tensor.to_vec().with_context(|| "Failed to extract tensor data")?;
 
             Ok(Cow::Owned(data))
         }
-        other => bail!(
-            "unsupported ggml tensor type {:?} (only f32/f16/I2_S supported)",
-            other
-        ),
+        other => bail!("unsupported ggml tensor type {:?} (only f32/f16/I2_S supported)", other),
     }
 }
 

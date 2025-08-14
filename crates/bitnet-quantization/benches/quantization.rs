@@ -12,9 +12,8 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 /// Helper function to create benchmark tensors
 fn create_benchmark_tensor(size: usize) -> BitNetTensor {
     let device = Device::Cpu;
-    let data: Vec<f32> = (0..size)
-        .map(|i| (i as f32 - size as f32 / 2.0) / (size as f32 / 4.0))
-        .collect();
+    let data: Vec<f32> =
+        (0..size).map(|i| (i as f32 - size as f32 / 2.0) / (size as f32 / 4.0)).collect();
     let tensor = CandleTensor::from_vec(data, &[size], &device).unwrap();
     BitNetTensor::new(tensor)
 }
@@ -23,9 +22,8 @@ fn create_benchmark_tensor(size: usize) -> BitNetTensor {
 fn create_2d_benchmark_tensor(rows: usize, cols: usize) -> BitNetTensor {
     let device = Device::Cpu;
     let size = rows * cols;
-    let data: Vec<f32> = (0..size)
-        .map(|i| (i as f32 - size as f32 / 2.0) / (size as f32 / 4.0))
-        .collect();
+    let data: Vec<f32> =
+        (0..size).map(|i| (i as f32 - size as f32 / 2.0) / (size as f32 / 4.0)).collect();
     let tensor = CandleTensor::from_vec(data, &[rows, cols], &device).unwrap();
     BitNetTensor::new(tensor)
 }
@@ -86,33 +84,21 @@ fn bench_dequantization_sizes(c: &mut Criterion) {
         // Benchmark I2_S dequantization
         group.bench_with_input(BenchmarkId::new("I2S_dequantize", size), &size, |b, _| {
             b.iter(|| {
-                black_box(
-                    i2s_quantizer
-                        .dequantize_tensor(black_box(&i2s_quantized))
-                        .unwrap(),
-                )
+                black_box(i2s_quantizer.dequantize_tensor(black_box(&i2s_quantized)).unwrap())
             })
         });
 
         // Benchmark TL1 dequantization
         group.bench_with_input(BenchmarkId::new("TL1_dequantize", size), &size, |b, _| {
             b.iter(|| {
-                black_box(
-                    tl1_quantizer
-                        .dequantize_tensor(black_box(&tl1_quantized))
-                        .unwrap(),
-                )
+                black_box(tl1_quantizer.dequantize_tensor(black_box(&tl1_quantized)).unwrap())
             })
         });
 
         // Benchmark TL2 dequantization
         group.bench_with_input(BenchmarkId::new("TL2_dequantize", size), &size, |b, _| {
             b.iter(|| {
-                black_box(
-                    tl2_quantizer
-                        .dequantize_tensor(black_box(&tl2_quantized))
-                        .unwrap(),
-                )
+                black_box(tl2_quantizer.dequantize_tensor(black_box(&tl2_quantized)).unwrap())
             })
         });
     }
@@ -279,23 +265,19 @@ fn bench_compression_ratios(c: &mut Criterion) {
         let tensor = create_benchmark_tensor(size);
 
         // Measure compression ratios (not timing, but useful for analysis)
-        group.bench_with_input(
-            BenchmarkId::new("compression_analysis", size),
-            &size,
-            |b, _| {
-                b.iter(|| {
-                    let i2s_quantized = tensor.quantize(QuantizationType::I2S).unwrap();
-                    let tl1_quantized = tensor.quantize(QuantizationType::TL1).unwrap();
-                    let tl2_quantized = tensor.quantize(QuantizationType::TL2).unwrap();
+        group.bench_with_input(BenchmarkId::new("compression_analysis", size), &size, |b, _| {
+            b.iter(|| {
+                let i2s_quantized = tensor.quantize(QuantizationType::I2S).unwrap();
+                let tl1_quantized = tensor.quantize(QuantizationType::TL1).unwrap();
+                let tl2_quantized = tensor.quantize(QuantizationType::TL2).unwrap();
 
-                    black_box((
-                        i2s_quantized.compression_ratio(),
-                        tl1_quantized.compression_ratio(),
-                        tl2_quantized.compression_ratio(),
-                    ))
-                })
-            },
-        );
+                black_box((
+                    i2s_quantized.compression_ratio(),
+                    tl1_quantized.compression_ratio(),
+                    tl2_quantized.compression_ratio(),
+                ))
+            })
+        });
     }
 
     group.finish();

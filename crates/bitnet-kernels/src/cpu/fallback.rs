@@ -48,29 +48,17 @@ impl KernelProvider for FallbackKernel {
         // Validate input dimensions
         if a.len() != m * k {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!(
-                    "Matrix A dimension mismatch: expected {}, got {}",
-                    m * k,
-                    a.len()
-                ),
+                reason: format!("Matrix A dimension mismatch: expected {}, got {}", m * k, a.len()),
             }));
         }
         if b.len() != k * n {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!(
-                    "Matrix B dimension mismatch: expected {}, got {}",
-                    k * n,
-                    b.len()
-                ),
+                reason: format!("Matrix B dimension mismatch: expected {}, got {}", k * n, b.len()),
             }));
         }
         if c.len() != m * n {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!(
-                    "Matrix C dimension mismatch: expected {}, got {}",
-                    m * n,
-                    c.len()
-                ),
+                reason: format!("Matrix C dimension mismatch: expected {}, got {}", m * n, c.len()),
             }));
         }
 
@@ -353,9 +341,7 @@ mod tests {
         let mut output = vec![0u8; 2]; // 8 values / 4 per byte = 2 bytes
         let mut scales = vec![0.0f32; 1]; // 8 values / 32 per block = 1 block
 
-        kernel
-            .quantize(&input, &mut output, &mut scales, QuantizationType::I2S)
-            .unwrap();
+        kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S).unwrap();
 
         // Should have computed a scale
         assert!(scales[0] > 0.0);

@@ -50,29 +50,17 @@ impl KernelProvider for NeonKernel {
         // Validate input dimensions
         if a.len() != m * k {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!(
-                    "Matrix A dimension mismatch: expected {}, got {}",
-                    m * k,
-                    a.len()
-                ),
+                reason: format!("Matrix A dimension mismatch: expected {}, got {}", m * k, a.len()),
             }));
         }
         if b.len() != k * n {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!(
-                    "Matrix B dimension mismatch: expected {}, got {}",
-                    k * n,
-                    b.len()
-                ),
+                reason: format!("Matrix B dimension mismatch: expected {}, got {}", k * n, b.len()),
             }));
         }
         if c.len() != m * n {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!(
-                    "Matrix C dimension mismatch: expected {}, got {}",
-                    m * n,
-                    c.len()
-                ),
+                reason: format!("Matrix C dimension mismatch: expected {}, got {}", m * n, c.len()),
             }));
         }
 
@@ -269,11 +257,7 @@ impl NeonKernel {
                 final_max = final_max.max(val.abs());
             }
 
-            let scale = if final_max > 1e-8 {
-                final_max / 1.5
-            } else {
-                1.0
-            };
+            let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
             scales[block_idx] = scale;
             let scale_vec = vdupq_n_f32(scale);
 
@@ -400,11 +384,7 @@ impl NeonKernel {
                 final_max = final_max.max(val.abs());
             }
 
-            let scale = if final_max > 1e-8 {
-                final_max / 1.5
-            } else {
-                1.0
-            };
+            let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
             scales[block_idx] = scale;
             let scale_vec = vdupq_n_f32(scale);
 
@@ -633,9 +613,7 @@ mod tests {
         let mut output = vec![0u8; 16]; // 64 values / 4 per byte = 16 bytes
         let mut scales = vec![0.0f32; 1]; // 64 values / 64 per block = 1 block
 
-        kernel
-            .quantize(&input, &mut output, &mut scales, QuantizationType::TL1)
-            .unwrap();
+        kernel.quantize(&input, &mut output, &mut scales, QuantizationType::TL1).unwrap();
 
         assert!(scales[0] > 0.0);
         assert!(output.iter().any(|&x| x != 0));

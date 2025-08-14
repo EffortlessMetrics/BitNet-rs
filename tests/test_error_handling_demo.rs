@@ -33,10 +33,7 @@ async fn test_enhanced_error_handling_demo() {
     // Demonstrate troubleshooting steps
     println!("\n3. Troubleshooting Steps for Timeout Error:");
     for step in timeout_error.troubleshooting_steps() {
-        println!(
-            "   Step {}: {} - {}",
-            step.step_number, step.title, step.description
-        );
+        println!("   Step {}: {} - {}", step.step_number, step.title, step.description);
     }
 
     // Demonstrate error analysis
@@ -46,10 +43,7 @@ async fn test_enhanced_error_handling_demo() {
     let analysis = analyzer.analyze_error(&timeout_error, context).await;
 
     println!("   Root Cause: {}", analysis.root_cause.description);
-    println!(
-        "   Confidence: {:.1}%",
-        analysis.root_cause.confidence * 100.0
-    );
+    println!("   Confidence: {:.1}%", analysis.root_cause.confidence * 100.0);
 
     println!("\n=== Enhanced Error Handling Demo Complete ===");
     println!("✅ All enhanced error handling features are working correctly!");

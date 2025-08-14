@@ -24,9 +24,7 @@ async fn test_error_severity_and_recovery_suggestions() -> Result<(), Box<dyn st
 
     let assertion_suggestions = assertion_error.recovery_suggestions();
     assert!(!assertion_suggestions.is_empty());
-    assert!(assertion_suggestions
-        .iter()
-        .any(|s| s.contains("expected") || s.contains("actual")));
+    assert!(assertion_suggestions.iter().any(|s| s.contains("expected") || s.contains("actual")));
 
     println!("✓ Error severity and recovery suggestions working correctly");
     Ok(())
@@ -51,9 +49,7 @@ async fn test_error_debug_info() -> Result<(), Box<dyn std::error::Error>> {
     assert!(!debug_info.troubleshooting_steps.is_empty());
 
     // Check that related components make sense for fixture errors
-    assert!(debug_info
-        .related_components
-        .contains(&"fixture_manager".to_string()));
+    assert!(debug_info.related_components.contains(&"fixture_manager".to_string()));
 
     println!("✓ Error debug info generation working correctly");
     Ok(())
@@ -82,10 +78,7 @@ async fn test_troubleshooting_steps() -> Result<(), Box<dyn std::error::Error>> 
             || s.description.to_lowercase().contains("cpu")
             || s.description.to_lowercase().contains("memory")
     });
-    assert!(
-        has_resource_check,
-        "Should include resource monitoring steps for timeout errors"
-    );
+    assert!(has_resource_check, "Should include resource monitoring steps for timeout errors");
 
     println!("✓ Troubleshooting steps generation working correctly");
     Ok(())
@@ -121,36 +114,11 @@ async fn test_error_categorization() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test different error types and their categorization
     let test_cases = vec![
-        (
-            TestError::timeout(Duration::from_secs(30)),
-            "timeout",
-            ErrorSeverity::Medium,
-            true,
-        ),
-        (
-            TestError::assertion("Test failed"),
-            "assertion",
-            ErrorSeverity::High,
-            false,
-        ),
-        (
-            TestError::config("Invalid config"),
-            "config",
-            ErrorSeverity::Low,
-            false,
-        ),
-        (
-            TestError::setup("Setup failed"),
-            "setup",
-            ErrorSeverity::Medium,
-            false,
-        ),
-        (
-            TestError::execution("Execution failed"),
-            "execution",
-            ErrorSeverity::High,
-            false,
-        ),
+        (TestError::timeout(Duration::from_secs(30)), "timeout", ErrorSeverity::Medium, true),
+        (TestError::assertion("Test failed"), "assertion", ErrorSeverity::High, false),
+        (TestError::config("Invalid config"), "config", ErrorSeverity::Low, false),
+        (TestError::setup("Setup failed"), "setup", ErrorSeverity::Medium, false),
+        (TestError::execution("Execution failed"), "execution", ErrorSeverity::High, false),
     ];
 
     for (error, expected_category, expected_severity, expected_recoverable) in test_cases {
@@ -186,15 +154,9 @@ async fn test_environment_info_collection() -> Result<(), Box<dyn std::error::Er
     assert!(env_info.system_resources.cpu_cores > 0);
 
     println!("✓ Environment info collection working correctly");
-    println!(
-        "Platform: {} ({})",
-        env_info.platform, env_info.architecture
-    );
+    println!("Platform: {} ({})", env_info.platform, env_info.architecture);
     println!("CPU cores: {}", env_info.system_resources.cpu_cores);
-    println!(
-        "Collected {} environment variables",
-        env_info.environment_variables.len()
-    );
+    println!("Collected {} environment variables", env_info.environment_variables.len());
     Ok(())
 }
 
