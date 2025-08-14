@@ -180,10 +180,32 @@ pub struct TestResult {
     pub metadata: HashMap<String, String>,
 }
 
+/// Trait for checking test pass status - provides compatibility across different result types
+pub trait PassCheck {
+    fn passed(&self) -> bool;
+}
+
+impl PassCheck for TestResult {
+    fn passed(&self) -> bool {
+        self.status == TestStatus::Passed
+    }
+}
+
+impl<T> PassCheck for TestResultCompat<T> {
+    fn passed(&self) -> bool {
+        self.is_ok()
+    }
+}
+
 impl TestResult {
     /// Check if the test passed (for backward compatibility)
     pub fn is_passed(&self) -> bool {
         self.status == TestStatus::Passed
+    }
+
+    /// Check if the test passed (alternative method name for compatibility)
+    pub fn passed(&self) -> bool {
+        self.is_passed()
     }
 
     /// Create a passed test result

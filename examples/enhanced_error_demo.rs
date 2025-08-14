@@ -3,11 +3,10 @@
 //! This example demonstrates the enhanced error handling capabilities
 //! implemented for the BitNet.rs testing framework.
 
-use rand::{RngCore, SeedableRng};
 use std::time::Duration;
 
 // Import the enhanced error types directly
-use bitnet::testing::errors::{ErrorSeverity, TestError};
+use bitnet::testing::errors::TestError;
 
 fn main() {
     println!("🚀 BitNet.rs Enhanced Error Handling Demo");
@@ -340,7 +339,8 @@ mod mock_testing {
         }
 
         pub fn create_error_report(&self) -> ErrorReport {
-            let mut rng = rand::rngs::StdRng::seed_from_u64(0xB17_NE7);
+            use rand::{RngCore, SeedableRng};
+            let mut rng = rand::rngs::StdRng::seed_from_u64(0xB17_0E7);
             ErrorReport {
                 error_id: format!("ERR-{:08X}", rng.next_u32()),
                 timestamp: "2025-01-14T10:30:00Z".to_string(),

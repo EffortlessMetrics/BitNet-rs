@@ -205,7 +205,11 @@ impl Backend for GpuBackend {
         })
     }
 
-    async fn forward(&self, input: &ConcreteTensor, cache: &mut KVCache) -> Result<ConcreteTensor> {
+    async fn forward(
+        &self,
+        input: &ConcreteTensor,
+        _cache: &mut KVCache,
+    ) -> Result<ConcreteTensor> {
         debug!("GPU forward pass with input shape: {:?}", input.shape());
 
         // Ensure input is on the correct device
