@@ -3,6 +3,13 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
 
+/// Type alias for backward compatibility with existing test code
+/// This allows existing code using TestResult<T> to continue working
+pub type TestResultCompat<T = ()> = Result<T, TestError>;
+
+/// Legacy alias for backward compatibility
+pub type TestResultData = TestResult;
+
 /// Status of a test execution
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TestStatus {
@@ -174,6 +181,11 @@ pub struct TestResult {
 }
 
 impl TestResult {
+    /// Check if the test passed (for backward compatibility)
+    pub fn is_passed(&self) -> bool {
+        self.status == TestStatus::Passed
+    }
+
     /// Create a passed test result
     pub fn passed<S: Into<String>>(test_name: S, metrics: TestMetrics, duration: Duration) -> Self {
         let now = SystemTime::now();

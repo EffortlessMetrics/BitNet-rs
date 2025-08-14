@@ -93,7 +93,7 @@ impl CacheStats {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CachedTestResult {
     /// The actual test result
-    pub result: TestResultData,
+    pub result: TestResult,
     /// Hash of test inputs/configuration
     pub input_hash: String,
     /// Hash of source code that affects this test
@@ -139,7 +139,7 @@ impl CacheKey {
 
 impl TestCache {
     /// Create a new test cache
-    pub async fn new(cache_dir: PathBuf, config: CacheConfig) -> TestResult<Self> {
+    pub async fn new(cache_dir: PathBuf, config: CacheConfig) -> TestResultCompat<Self> {
         fs::create_dir_all(&cache_dir).await?;
 
         let metadata_path = cache_dir.join("metadata.json");
@@ -163,7 +163,7 @@ impl TestCache {
     }
 
     /// Get a cached test result
-    pub async fn get(&mut self, key: &CacheKey) -> TestResult<Option<CachedTestResult>> {
+    pub async fn get(&mut self, key: &CacheKey) -> TestResultCompat<Option<CachedTestResult>> {
         if !self.config.enabled {
             return Ok(None);
         }
@@ -206,7 +206,7 @@ impl TestCache {
     }
 
     /// Store a test result in the cache
-    pub async fn put(&mut self, key: CacheKey, result: CachedTestResult) -> TestResult<()> {
+    pub async fn put(&mut self, key: CacheKey, result: CachedTestResult) -> TestResultCompat<()> {
         if !self.config.enabled {
             return Ok(());
         }
@@ -263,7 +263,7 @@ impl TestCache {
     }
 
     /// Clear all cached results
-    pub async fn clear(&mut self) -> TestResult<()> {
+    pub async fn clear(&mut self) -> TestResultCompat<()> {
         info!("Clearing test cache");
 
         let mut entries = fs::read_dir(&self.cache_dir).await?;
@@ -283,7 +283,7 @@ impl TestCache {
     }
 
     /// Cleanup expired and oversized cache entries
-    pub async fn cleanup_if_needed(&mut self) -> TestResult<()> {
+    pub async fn cleanup_if_needed(&mut self) -> TestResultCompat<()> {
         let now = SystemTime::now();
         let last_cleanup_age = now
             .duration_since(self.metadata.last_cleanup)
@@ -302,7 +302,7 @@ impl TestCache {
     }
 
     /// Perform cache cleanup
-    async fn cleanup(&mut self) -> TestResult<()> {
+    async fn cleanup(&mut self) -> TestResultCompat<()> {
         info!("Performing cache cleanup");
 
         let mut entries = Vec::new();
@@ -385,7 +385,7 @@ impl TestCache {
     }
 
     /// Read a cached result from disk
-    async fn read_cached_result(&self, path: &Path) -> TestResult<CachedTestResult> {
+    async fn read_cached_result(&self, path: &Path) -> TestResultCompat<CachedTestResult> {
         let data = fs::read(path).await?;
 
         // Decompress if needed
@@ -408,7 +408,11 @@ impl TestCache {
     }
 
     /// Write a cached result to disk
-    async fn write_cached_result(&self, path: &Path, result: &CachedTestResult) -> TestResult<()> {
+    async fn write_cached_result(
+        &self,
+        path: &Path,
+        result: &CachedTestResult,
+    ) -> TestResultCompat<()> {
         let serialized = serde_json::to_vec(result)
             .map_err(|e| TestError::cache(format!("Failed to serialize result: {}", e)))?;
 
@@ -435,7 +439,7 @@ impl TestCache {
     }
 
     /// Save cache metadata
-    async fn save_metadata(&self) -> TestResult<()> {
+    async fn save_metadata(&self) -> TestResultCompat<()> {
         let metadata_path = self.cache_dir.join("metadata.json");
         let content = serde_json::to_string_pretty(&self.metadata)
             .map_err(|e| TestError::cache(format!("Failed to serialize metadata: {}", e)))?;
@@ -461,7 +465,7 @@ pub mod cache_keys {
     }
 
     /// Generate a hash for source code dependencies
-    pub async fn hash_source_dependencies(dependencies: &[PathBuf]) -> TestResult<String> {
+    pub async fn hash_source_dependencies(dependencies: &[PathBuf]) -> TestResultCompat<String> {
         let mut hasher = DefaultHasher::new();
 
         for dep in dependencies {
@@ -532,7 +536,7 @@ mod tests {
         assert!(cache.get(&key).await.unwrap().is_none());
 
         // Create a test result to cache
-        let test_result = TestResultData::passed(
+        let test_result = TestResult::passed(
             "test_example".to_string(),
             Default::default(),
             Duration::from_millis(100),
@@ -573,7 +577,7 @@ mod tests {
             source_hash: "source456".to_string(),
         };
 
-        let test_result = TestResultData::passed(
+        let test_result = TestResult::passed(
             "test_expiry".to_string(),
             Default::default(),
             Duration::from_millis(100),

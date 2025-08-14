@@ -22,6 +22,8 @@ pub enum TestCaseCategory {
     Regression,
     /// Model format compatibility tests
     FormatCompatibility,
+    /// Model size-specific tests (temporary for compatibility)
+    ModelSize,
 }
 
 /// Model size categories for testing
