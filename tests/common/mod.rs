@@ -6,6 +6,10 @@
 // - Configuration management for test environments
 // - Error handling and reporting utilities
 
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(dead_code)]
+
 pub mod cache;
 pub mod ci_reporting;
 pub mod config;
