@@ -33,13 +33,15 @@ env_logger = "0.11"
 # ARM-specific dependencies
 
 [features]
-default = ["cpu-fallback"]
+default = ["cpu"]
+cpu = ["cpu-fallback"]
 cpu-fallback = []
 cpu-optimized = ["avx2", "neon"]
 avx2 = []
 avx512 = []
 neon = []
 cuda = ["cudarc", "half"]
+ffi = ["ffi-bridge"]
 ffi-bridge = ["cc", "bindgen"]
 
 [[bench]]

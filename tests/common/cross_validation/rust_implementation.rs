@@ -236,7 +236,7 @@ impl BitNetImplementation for RustImplementation {
         // Since Model trait is not object-safe, we need to work with the concrete type
         // For now, we'll create a mock model for testing purposes
         let mock_model = bitnet_models::BitNetModel::new(model_config.clone(), self.device.clone());
-        let model_arc = Arc::new(mock_model);
+        let _model_arc = Arc::new(mock_model);
 
         // Load tokenizer - try to find tokenizer file alongside model
         let tokenizer_path = model_path.with_extension("tokenizer.json");
@@ -344,7 +344,7 @@ impl BitNetImplementation for RustImplementation {
         Ok(text)
     }
 
-    #[instrument(skip(self, tokens, config))]
+    #[instrument(skip(self, tokens, _config))]
     async fn inference(
         &self,
         tokens: &[u32],

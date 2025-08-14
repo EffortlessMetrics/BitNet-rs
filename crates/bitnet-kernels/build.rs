@@ -81,19 +81,19 @@ fn main() {
     }
 
     // Generate bindings if bindgen is available
-    #[cfg(feature = "bindgen")]
+    #[cfg(feature = "ffi-bridge")]
     generate_bindings(&cpp_include_dir);
 }
 
-#[cfg(all(feature = "ffi-bridge", feature = "bindgen"))]
+#[cfg(feature = "ffi-bridge")]
 fn generate_bindings(include_dir: &std::path::Path) {
     use std::env;
     use std::path::PathBuf;
 
-    let bindings = bindgen::Builder::default()
+    let bindings = ::bindgen::Builder::default()
         .header(include_dir.join("ggml-bitnet.h").to_string_lossy())
         .clang_arg(format!("-I{}", include_dir.display()))
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .parse_callbacks(Box::new(::bindgen::CargoCallbacks::new()))
         .generate()
         .expect("Unable to generate bindings");
 

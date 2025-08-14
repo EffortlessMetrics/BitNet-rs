@@ -4,7 +4,7 @@
 //! including CPU kernels, SIMD optimizations, GPU kernels, and kernel selection.
 //! It achieves >90% code coverage with performance validation.
 
-#![cfg(any(feature = "ffi-bridge", feature = "cpu-fallback"))]
+#![cfg(any(feature = "ffi", feature = "cpu"))]
 //!
 //! Requirements covered:
 //! - 2.1: Validate all public functions and methods

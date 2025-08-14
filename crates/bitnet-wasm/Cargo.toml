@@ -17,7 +17,7 @@ crate-type = ["cdylib"]
 bitnet-common = { path = "../bitnet-common" }
 bitnet-models = { path = "../bitnet-models" }
 bitnet-quantization = { path = "../bitnet-quantization" }
-bitnet-kernels = { path = "../bitnet-kernels", features = ["cpu-fallback"] }
+bitnet-kernels = { path = "../bitnet-kernels", features = ["cpu"] }
 bitnet-inference = { path = "../bitnet-inference", features = ["cpu"] }
 bitnet-tokenizers = { path = "../bitnet-tokenizers" }
 
