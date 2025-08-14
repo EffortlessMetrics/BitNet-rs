@@ -7,13 +7,22 @@
 //! - Performance regression detection
 //! - Interactive performance dashboards
 
-use crate::common::results::{TestResult, TestSuiteResult};
-use crate::data::performance::{BenchmarkResult, PerformanceMeasurement, PerformanceSummary};
+use crate::results::{TestResult, TestSuiteResult};
+use super::dashboard::{BenchmarkResult, PerformanceSummary};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 use tokio::fs;
+
+/// Performance measurement data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceMeasurement {
+    pub name: String,
+    pub value: f64,
+    pub unit: String,
+    pub timestamp: SystemTime,
+}
 
 /// Performance comparison data between implementations
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -202,8 +211,9 @@ impl PerformanceVisualizer {
         html.push_str("</html>\n");
         
         Ok(html)
-    }    /// G
-enerate CSS styles for the dashboard
+    }
+    
+    /// Generate CSS styles for the dashboard
     fn generate_dashboard_css(&self) -> String {
         format!(r#"
     <style>
@@ -476,8 +486,9 @@ enerate CSS styles for the dashboard
             neutral_color = self.config.color_scheme.neutral_color,
             chart_height = self.config.chart_height
         )
-    }    ///
- Generate dashboard header
+    }
+    
+    /// Generate dashboard header
     fn generate_dashboard_header(&self) -> String {
         let latest_comparison = self.historical_data.last();
         let data_points = self.historical_data.len();
@@ -700,8 +711,9 @@ enerate CSS styles for the dashboard
 
         html.push_str("        </div>\n");
         html
-    }    ///
- Generate regression analysis section
+    }
+    
+    /// Generate regression analysis section
     fn generate_regression_analysis(&self) -> String {
         let regressions = self.detect_regressions();
         
@@ -774,8 +786,9 @@ enerate CSS styles for the dashboard
             </div>
         </div>
 "#.to_string()
-    }    /
-// Generate JavaScript for interactive features
+    }
+    
+    /// Generate JavaScript for interactive features
     fn generate_dashboard_javascript(&self) -> String {
         let chart_data = self.generate_chart_data_json();
         
@@ -1019,8 +1032,9 @@ enerate CSS styles for the dashboard
             self.config.color_scheme.improvement_color,
             self.config.color_scheme.regression_color
         )
-    }    ///
- Generate chart data as JSON
+    }
+    
+    /// Generate chart data as JSON
     fn generate_chart_data_json(&self) -> String {
         if self.historical_data.is_empty() {
             return "{}".to_string();
@@ -1091,8 +1105,9 @@ enerate CSS styles for the dashboard
             cpp_duration,
             performance_improvement
         )
-    }  
-  /// Analyze performance trends
+    }
+    
+    /// Analyze performance trends
     fn analyze_performance_trends(&self) -> Vec<PerformanceTrend> {
         if self.historical_data.len() < 5 {
             return Vec::new();
@@ -1272,8 +1287,9 @@ pub struct RegressionAlert {
     pub regression_percentage: f64,
     pub implementation: String,
     pub timestamp: SystemTime,
-}/// Cr
-eate performance comparison from benchmark results
+}
+
+/// Create performance comparison from benchmark results
 pub fn create_performance_comparison(
     rust_benchmark: &BenchmarkResult,
     cpp_benchmark: &BenchmarkResult,
@@ -1281,29 +1297,29 @@ pub fn create_performance_comparison(
 ) -> PerformanceComparison {
     let rust_metrics = PerformanceMetrics {
         implementation_name: "BitNet.rs".to_string(),
-        average_duration: rust_benchmark.summary.avg_duration.unwrap_or_default(),
-        min_duration: rust_benchmark.summary.min_duration.unwrap_or_default(),
-        max_duration: rust_benchmark.summary.max_duration.unwrap_or_default(),
-        memory_peak: rust_benchmark.summary.peak_memory_usage.unwrap_or(0),
-        memory_average: rust_benchmark.summary.avg_memory_usage.unwrap_or(0),
-        throughput_ops_per_sec: rust_benchmark.ops_per_second().unwrap_or(0.0),
+        average_duration: rust_benchmark.summary.avg_duration,
+        min_duration: rust_benchmark.summary.min_duration,
+        max_duration: rust_benchmark.summary.max_duration,
+        memory_peak: rust_benchmark.summary.peak_memory_usage as u64,
+        memory_average: rust_benchmark.summary.avg_memory_usage as u64,
+        throughput_ops_per_sec: rust_benchmark.ops_per_second(),
         custom_metrics: rust_benchmark.summary.custom_metrics
             .iter()
-            .map(|(k, v)| (k.clone(), v.average))
+            .map(|(k, v)| (k.clone(), *v))
             .collect(),
     };
 
     let cpp_metrics = PerformanceMetrics {
         implementation_name: "BitNet.cpp".to_string(),
-        average_duration: cpp_benchmark.summary.avg_duration.unwrap_or_default(),
-        min_duration: cpp_benchmark.summary.min_duration.unwrap_or_default(),
-        max_duration: cpp_benchmark.summary.max_duration.unwrap_or_default(),
-        memory_peak: cpp_benchmark.summary.peak_memory_usage.unwrap_or(0),
-        memory_average: cpp_benchmark.summary.avg_memory_usage.unwrap_or(0),
-        throughput_ops_per_sec: cpp_benchmark.ops_per_second().unwrap_or(0.0),
+        average_duration: cpp_benchmark.summary.avg_duration,
+        min_duration: cpp_benchmark.summary.min_duration,
+        max_duration: cpp_benchmark.summary.max_duration,
+        memory_peak: cpp_benchmark.summary.peak_memory_usage as u64,
+        memory_average: cpp_benchmark.summary.avg_memory_usage as u64,
+        throughput_ops_per_sec: cpp_benchmark.ops_per_second(),
         custom_metrics: cpp_benchmark.summary.custom_metrics
             .iter()
-            .map(|(k, v)| (k.clone(), v.average))
+            .map(|(k, v)| (k.clone(), *v))
             .collect(),
     };
 

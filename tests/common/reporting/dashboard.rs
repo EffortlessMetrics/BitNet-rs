@@ -19,17 +19,36 @@ pub struct BenchmarkResult {
     pub summary: PerformanceSummary,
 }
 
-// Temporary stub for PerformanceSummary
+impl BenchmarkResult {
+    /// Calculate operations per second
+    pub fn ops_per_second(&self) -> f64 {
+        if self.duration.as_secs_f64() > 0.0 {
+            self.iterations as f64 / self.duration.as_secs_f64()
+        } else {
+            0.0
+        }
+    }
+}
+
+// Performance summary with extended metrics
 #[derive(Debug, Clone)]
 pub struct PerformanceSummary {
     pub mean: f64,
     pub std_dev: f64,
     pub min: f64,
     pub max: f64,
+    // Extended fields for visualization
+    pub avg_duration: Duration,
+    pub min_duration: Duration,
+    pub max_duration: Duration,
+    pub peak_memory_usage: f64,
+    pub avg_memory_usage: f64,
+    pub custom_metrics: HashMap<String, f64>,
 }
 use crate::results::{TestResult, TestSuiteResult};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use tokio::fs;
 
 /// Dashboard generator that combines test results with performance visualization
@@ -355,6 +374,12 @@ impl From<std::io::Error> for DashboardError {
 impl From<serde_json::Error> for DashboardError {
     fn from(error: serde_json::Error) -> Self {
         DashboardError::SerializationError(error)
+    }
+}
+
+impl From<Box<dyn std::error::Error>> for DashboardError {
+    fn from(e: Box<dyn std::error::Error>) -> Self {
+        DashboardError::GenerationError(e.to_string())
     }
 }
 
