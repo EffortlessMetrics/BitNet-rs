@@ -3,6 +3,7 @@
 //! This example demonstrates the enhanced error handling capabilities
 //! implemented for the BitNet.rs testing framework.
 
+use rand::{RngCore, SeedableRng};
 use std::time::Duration;
 
 // Import the enhanced error types directly
@@ -313,7 +314,7 @@ mod mock_testing {
                     info.insert("timeout_duration".to_string(), format!("{:?}", duration));
                     info.insert(
                         "suggested_timeout".to_string(),
-                        format!("{:?}", *duration * 2),
+                        format!("{:?}", duration.saturating_mul(2)),
                     );
                 }
                 Self::Assertion { message } => {
@@ -339,8 +340,9 @@ mod mock_testing {
         }
 
         pub fn create_error_report(&self) -> ErrorReport {
+            let mut rng = rand::rngs::StdRng::seed_from_u64(0xB17_NE7);
             ErrorReport {
-                error_id: format!("ERR-{:08X}", crate::rand::random::<u32>()),
+                error_id: format!("ERR-{:08X}", rng.next_u32()),
                 timestamp: "2025-01-14T10:30:00Z".to_string(),
                 severity: self.severity(),
                 summary: format!("Enhanced error analysis for {:?}", self),
@@ -356,21 +358,5 @@ mod bitnet {
         pub mod errors {
             pub use crate::mock_testing::*;
         }
-    }
-}
-
-// Simple random number generator for demo
-mod rand {
-    pub fn random<T>() -> T
-    where
-        T: From<u32>,
-    {
-        // Simple pseudo-random for demo purposes
-        use std::time::{SystemTime, UNIX_EPOCH};
-        let seed = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos() as u32;
-        T::from(seed.wrapping_mul(1103515245).wrapping_add(12345))
     }
 }
