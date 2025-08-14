@@ -196,10 +196,14 @@ impl ErrorAnalyzer {
         // Sort by likelihood
         potential_causes.sort_by(|a, b| b.likelihood.partial_cmp(&a.likelihood).unwrap());
 
+        let analysis_confidence = self.calculate_analysis_confidence(&potential_causes);
+        let primary_cause = potential_causes.first().cloned();
+        let alternative_causes = potential_causes.into_iter().skip(1).take(3).collect();
+
         RootCauseAnalysis {
-            primary_cause: potential_causes.first().cloned(),
-            alternative_causes: potential_causes.into_iter().skip(1).take(3).collect(),
-            analysis_confidence: self.calculate_analysis_confidence(&potential_causes),
+            primary_cause,
+            alternative_causes,
+            analysis_confidence,
         }
     }
 
@@ -654,7 +658,7 @@ impl ErrorAnalysis {
 }
 
 /// Error pattern for detection
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ErrorPattern {
     pub name: String,
     pub description: String,
@@ -692,7 +696,7 @@ impl ErrorPattern {
 }
 
 /// Condition for pattern matching
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum PatternCondition {
     ErrorCategory(String),
     ErrorMessageContains(String),

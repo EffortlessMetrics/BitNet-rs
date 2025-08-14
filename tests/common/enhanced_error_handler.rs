@@ -77,6 +77,12 @@ impl EnhancedErrorHandler {
         // Generate debugging guide
         let debugging_guide = analysis.generate_debugging_guide();
 
+        // Send notifications if configured (before moving analysis)
+        if self.config.send_notifications {
+            self.send_error_notification(test_name, error, &analysis)
+                .await?;
+        }
+
         // Create actionable result
         let result = ErrorHandlingResult {
             error_report,
@@ -92,14 +98,8 @@ impl EnhancedErrorHandler {
         if self.config.log_debugging_guides {
             info!(
                 "Debugging guide for test '{}':\n{}",
-                test_name, debugging_guide
+                test_name, result.debugging_guide
             );
-        }
-
-        // Send notifications if configured
-        if self.config.send_notifications {
-            self.send_error_notification(test_name, error, &analysis)
-                .await?;
         }
 
         Ok(result)
