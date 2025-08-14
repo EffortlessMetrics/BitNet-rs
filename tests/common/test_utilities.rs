@@ -172,32 +172,23 @@ impl TestUtilities {
             };
         }
 
-        let first_difference = expected
-            .iter()
-            .zip(actual.iter())
-            .enumerate()
-            .find(|(_, (e, a))| e != a)
-            .map(|(index, (expected_byte, actual_byte))| ByteDifference {
-                position: index,
-                expected: *expected_byte,
-                actual: *actual_byte,
-            });
+        let first_difference =
+            expected.iter().zip(actual.iter()).enumerate().find(|(_, (e, a))| e != a).map(
+                |(index, (expected_byte, actual_byte))| ByteDifference {
+                    position: index,
+                    expected: *expected_byte,
+                    actual: *actual_byte,
+                },
+            );
 
         // Calculate similarity ratio
         let min_len = expected.len().min(actual.len());
-        let matching_bytes = expected
-            .iter()
-            .zip(actual.iter())
-            .take(min_len)
-            .filter(|(e, a)| e == a)
-            .count();
+        let matching_bytes =
+            expected.iter().zip(actual.iter()).take(min_len).filter(|(e, a)| e == a).count();
 
         let max_len = expected.len().max(actual.len());
-        let similarity_ratio = if max_len == 0 {
-            1.0
-        } else {
-            matching_bytes as f64 / max_len as f64
-        };
+        let similarity_ratio =
+            if max_len == 0 { 1.0 } else { matching_bytes as f64 / max_len as f64 };
 
         ByteComparison {
             is_equal: false,
@@ -213,9 +204,9 @@ impl TestUtilities {
         match pattern {
             DataPattern::Zeros => vec![0u8; size],
             DataPattern::Ones => vec![0xFFu8; size],
-            DataPattern::Alternating => (0..size)
-                .map(|i| if i % 2 == 0 { 0xAA } else { 0x55 })
-                .collect(),
+            DataPattern::Alternating => {
+                (0..size).map(|i| if i % 2 == 0 { 0xAA } else { 0x55 }).collect()
+            }
             DataPattern::Sequential => (0..size).map(|i| (i % 256) as u8).collect(),
             DataPattern::Random(seed) => {
                 use rand::{Rng, SeedableRng};
@@ -260,11 +251,7 @@ impl TestUtilities {
         let total = results.len();
         let passed = results.iter().filter(|r| r.is_ok()).count();
         let failed = total - passed;
-        let success_rate = if total > 0 {
-            passed as f64 / total as f64
-        } else {
-            0.0
-        };
+        let success_rate = if total > 0 { passed as f64 / total as f64 } else { 0.0 };
 
         TestSummary {
             test_name: test_name.to_string(),
@@ -385,10 +372,8 @@ impl TestSummary {
 fn generate_unique_id() -> String {
     static COUNTER: AtomicUsize = AtomicUsize::new(0);
     let id = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let timestamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
+    let timestamp =
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
     format!("{}_{}", timestamp, id)
 }
 
@@ -417,9 +402,7 @@ fn get_available_memory() -> u64 {
 
 /// Get Rust version
 fn get_rust_version() -> String {
-    option_env!("CARGO_PKG_RUST_VERSION")
-        .unwrap_or("unknown")
-        .to_string()
+    option_env!("CARGO_PKG_RUST_VERSION").unwrap_or("unknown").to_string()
 }
 
 #[cfg(test)]
@@ -443,9 +426,7 @@ mod tests {
         let test_data = b"Hello, test world!";
 
         // Write test file
-        TestUtilities::write_test_file(&file_path, test_data)
-            .await
-            .unwrap();
+        TestUtilities::write_test_file(&file_path, test_data).await.unwrap();
         assert!(file_path.exists());
 
         // Read test file
@@ -453,14 +434,11 @@ mod tests {
         assert_eq!(read_data, test_data);
 
         // Verify file
-        let is_valid = TestUtilities::verify_file(&file_path, Some(test_data.len() as u64))
-            .await
-            .unwrap();
+        let is_valid =
+            TestUtilities::verify_file(&file_path, Some(test_data.len() as u64)).await.unwrap();
         assert!(is_valid);
 
-        let is_invalid = TestUtilities::verify_file(&file_path, Some(999))
-            .await
-            .unwrap();
+        let is_invalid = TestUtilities::verify_file(&file_path, Some(999)).await.unwrap();
         assert!(!is_invalid);
     }
 

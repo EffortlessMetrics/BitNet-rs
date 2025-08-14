@@ -19,12 +19,7 @@ impl GgufHeader {
             }));
         }
 
-        let magic = [
-            data[*offset],
-            data[*offset + 1],
-            data[*offset + 2],
-            data[*offset + 3],
-        ];
+        let magic = [data[*offset], data[*offset + 1], data[*offset + 2], data[*offset + 3]];
         *offset += 4;
 
         if &magic != b"GGUF" {
@@ -65,12 +60,7 @@ impl GgufHeader {
         ]);
         *offset += 8;
 
-        Ok(Self {
-            magic,
-            version,
-            tensor_count,
-            metadata_kv_count,
-        })
+        Ok(Self { magic, version, tensor_count, metadata_kv_count })
     }
 }
 
@@ -178,13 +168,7 @@ impl TensorInfo {
         let total_elements: usize = shape.iter().product();
         let size = (total_elements * element_size) as u64;
 
-        Ok(Self {
-            name,
-            shape,
-            tensor_type,
-            offset: tensor_offset,
-            size,
-        })
+        Ok(Self { name, shape, tensor_type, offset: tensor_offset, size })
     }
 }
 
@@ -359,12 +343,7 @@ pub fn read_u64(data: &[u8], offset: &mut usize) -> Result<u64> {
 }
 
 pub fn read_f32(data: &[u8], offset: &mut usize) -> Result<f32> {
-    let bytes = [
-        data[*offset],
-        data[*offset + 1],
-        data[*offset + 2],
-        data[*offset + 3],
-    ];
+    let bytes = [data[*offset], data[*offset + 1], data[*offset + 2], data[*offset + 3]];
     *offset += 4;
     Ok(f32::from_le_bytes(bytes))
 }

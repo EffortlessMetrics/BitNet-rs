@@ -81,9 +81,7 @@ pub struct BenchmarkSummary {
 impl GpuBenchmark {
     /// Create a new benchmark with default configuration
     pub fn new() -> Self {
-        Self {
-            config: BenchmarkConfig::default(),
-        }
+        Self { config: BenchmarkConfig::default() }
     }
 
     /// Create a new benchmark with custom configuration
@@ -99,12 +97,7 @@ impl GpuBenchmark {
         let mut total_operations = 0u64;
 
         for &dimensions in &self.config.test_sizes {
-            log::info!(
-                "Benchmarking {}x{}x{}",
-                dimensions.0,
-                dimensions.1,
-                dimensions.2
-            );
+            log::info!("Benchmarking {}x{}x{}", dimensions.0, dimensions.1, dimensions.2);
 
             let result = self.benchmark_matrix_size(dimensions)?;
             total_operations += 2 * dimensions.0 as u64 * dimensions.1 as u64 * dimensions.2 as u64;
@@ -124,10 +117,7 @@ impl GpuBenchmark {
             total_operations,
         };
 
-        log::info!(
-            "Benchmark completed. Average speedup: {:.2}x",
-            summary.avg_speedup
-        );
+        log::info!("Benchmark completed. Average speedup: {:.2}x", summary.avg_speedup);
 
         Ok(BenchmarkResults { results, summary })
     }
@@ -154,21 +144,11 @@ impl GpuBenchmark {
         let gpu_time_ms = self.benchmark_gpu(&a, &b, m, n, k)?;
 
         // Calculate metrics
-        let speedup = if cpu_time_ms > 0.0 {
-            cpu_time_ms / gpu_time_ms
-        } else {
-            0.0
-        };
+        let speedup = if cpu_time_ms > 0.0 { cpu_time_ms / gpu_time_ms } else { 0.0 };
         let operations = 2.0 * m as f64 * n as f64 * k as f64;
         let gflops = operations / (gpu_time_ms * 1e6);
 
-        Ok(PerformanceResult {
-            dimensions,
-            cpu_time_ms,
-            gpu_time_ms,
-            speedup,
-            gflops,
-        })
+        Ok(PerformanceResult { dimensions, cpu_time_ms, gpu_time_ms, speedup, gflops })
     }
 
     /// Benchmark CPU implementation
@@ -249,10 +229,7 @@ pub fn print_benchmark_results(results: &BenchmarkResults) {
     for result in &results.results {
         println!(
             "{:>12} {:>12.2} {:>12.2} {:>12.2}x {:>12.1}",
-            format!(
-                "{}x{}x{}",
-                result.dimensions.0, result.dimensions.1, result.dimensions.2
-            ),
+            format!("{}x{}x{}", result.dimensions.0, result.dimensions.1, result.dimensions.2),
             result.cpu_time_ms,
             result.gpu_time_ms,
             result.speedup,
@@ -266,10 +243,7 @@ pub fn print_benchmark_results(results: &BenchmarkResults) {
     println!("  Minimum Speedup: {:.2}x", results.summary.min_speedup);
     println!("  Average GFLOPS:  {:.1}", results.summary.avg_gflops);
     println!("  Peak GFLOPS:     {:.1}", results.summary.peak_gflops);
-    println!(
-        "  Total Operations: {:.2e}",
-        results.summary.total_operations as f64
-    );
+    println!("  Total Operations: {:.2e}", results.summary.total_operations as f64);
 
     // Performance analysis
     println!("\n🎯 Performance Analysis:");

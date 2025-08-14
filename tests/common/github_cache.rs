@@ -81,10 +81,7 @@ pub struct CacheResult {
 impl GitHubCacheManager {
     /// Create a new GitHub Actions cache manager
     pub fn new(config: GitHubCacheConfig, workspace_root: PathBuf) -> Self {
-        Self {
-            config,
-            workspace_root,
-        }
+        Self { config, workspace_root }
     }
 
     /// Generate cache key for test data
@@ -119,11 +116,7 @@ impl GitHubCacheManager {
             restore_keys.push(key_components[..i].join("-"));
         }
 
-        Ok(CacheKeyInfo {
-            primary_key,
-            restore_keys,
-            paths: self.config.cache_paths.clone(),
-        })
+        Ok(CacheKeyInfo { primary_key, restore_keys, paths: self.config.cache_paths.clone() })
     }
 
     /// Generate cache key for test fixtures
@@ -141,10 +134,7 @@ impl GitHubCacheManager {
 
         let primary_key = key_components.join("-");
         let restore_keys = vec![
-            format!(
-                "{}-fixtures-{}-",
-                self.config.key_prefix, self.config.version
-            ),
+            format!("{}-fixtures-{}-", self.config.key_prefix, self.config.version),
             format!("{}-fixtures-", self.config.key_prefix),
         ];
 
@@ -268,10 +258,7 @@ impl GitHubCacheManager {
         let duration = start_time.elapsed();
 
         if output.status.success() {
-            info!(
-                "Cache saved successfully in {:?} ({} MB)",
-                duration, size_mb
-            );
+            info!("Cache saved successfully in {:?} ({} MB)", duration, size_mb);
             Ok(CacheResult {
                 cache_hit: true,
                 key: key_info.primary_key.clone(),
@@ -422,11 +409,7 @@ impl GitHubCacheManager {
         let mut hasher = Sha256::new();
 
         // Hash fixture configuration files
-        let config_files = [
-            "tests/fixtures.toml",
-            "tests/config.toml",
-            "bitnet-test.toml",
-        ];
+        let config_files = ["tests/fixtures.toml", "tests/config.toml", "bitnet-test.toml"];
 
         for config_file in &config_files {
             let path = self.workspace_root.join(config_file);
@@ -583,20 +566,13 @@ mod tests {
         fs::create_dir_all(&test_dir).await.unwrap();
 
         // Create some test files
-        fs::write(test_dir.join("file1.txt"), "Hello")
-            .await
-            .unwrap();
-        fs::write(test_dir.join("file2.txt"), "World!")
-            .await
-            .unwrap();
+        fs::write(test_dir.join("file1.txt"), "Hello").await.unwrap();
+        fs::write(test_dir.join("file2.txt"), "World!").await.unwrap();
 
         let config = GitHubCacheConfig::default();
         let cache_manager = GitHubCacheManager::new(config, temp_dir.path().to_path_buf());
 
-        let size = cache_manager
-            .calculate_directory_size(&test_dir)
-            .await
-            .unwrap();
+        let size = cache_manager.calculate_directory_size(&test_dir).await.unwrap();
         assert_eq!(size, 11); // "Hello" (5) + "World!" (6)
     }
 }

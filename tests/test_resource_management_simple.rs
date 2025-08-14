@@ -35,9 +35,7 @@ mod resource_management_tests {
         use tokio::fs::File;
 
         // Create a temporary directory
-        tokio::fs::create_dir_all("tests/temp/simple_test")
-            .await
-            .unwrap();
+        tokio::fs::create_dir_all("tests/temp/simple_test").await.unwrap();
 
         // Test file handle creation and cleanup
         let file_path = "tests/temp/simple_test/test_file.txt";
@@ -49,16 +47,11 @@ mod resource_management_tests {
         } // File handle should be dropped here
 
         // Verify file exists
-        assert!(
-            tokio::fs::metadata(file_path).await.is_ok(),
-            "File should exist"
-        );
+        assert!(tokio::fs::metadata(file_path).await.is_ok(), "File should exist");
 
         // Clean up
         tokio::fs::remove_file(file_path).await.unwrap();
-        tokio::fs::remove_dir("tests/temp/simple_test")
-            .await
-            .unwrap();
+        tokio::fs::remove_dir("tests/temp/simple_test").await.unwrap();
 
         println!("File handle tracking test completed successfully");
     }

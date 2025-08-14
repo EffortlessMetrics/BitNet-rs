@@ -25,10 +25,7 @@ pub struct MockModel {
 
 impl MockModel {
     pub fn new() -> Self {
-        Self {
-            config: BitNetConfig::default(),
-            forward_calls: Arc::new(std::sync::Mutex::new(0)),
-        }
+        Self { config: BitNetConfig::default(), forward_calls: Arc::new(std::sync::Mutex::new(0)) }
     }
 
     pub fn forward_call_count(&self) -> usize {
@@ -129,11 +126,7 @@ impl IntegrationTestData {
             GenerationConfig::greedy(),
             GenerationConfig::balanced(),
             GenerationConfig::creative(),
-            GenerationConfig {
-                max_new_tokens: 5,
-                temperature: 0.5,
-                ..Default::default()
-            },
+            GenerationConfig { max_new_tokens: 5, temperature: 0.5, ..Default::default() },
         ]
     }
 
@@ -142,11 +135,7 @@ impl IntegrationTestData {
         vec![
             InferenceConfig::cpu_optimized(),
             InferenceConfig::memory_efficient(),
-            InferenceConfig {
-                max_context_length: 512,
-                batch_size: 1,
-                ..Default::default()
-            },
+            InferenceConfig { max_context_length: 512, batch_size: 1, ..Default::default() },
         ]
     }
 }

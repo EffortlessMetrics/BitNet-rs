@@ -46,10 +46,7 @@ impl ComprehensiveResourceManagementTestSuite {
         test_cases.push(Box::new(ResourceMonitoringTest::new()));
         test_cases.push(Box::new(ResourceThresholdTest::new()));
 
-        Self {
-            name: "Comprehensive Resource Management Tests".to_string(),
-            test_cases,
-        }
+        Self { name: "Comprehensive Resource Management Tests".to_string(), test_cases }
     }
 }
 
@@ -165,9 +162,7 @@ pub struct MemoryLeakDetectionTest {
 
 impl MemoryLeakDetectionTest {
     pub fn new() -> Self {
-        Self {
-            name: "Memory Leak Detection Test".to_string(),
-        }
+        Self { name: "Memory Leak Detection Test".to_string() }
     }
 }
 
@@ -232,9 +227,7 @@ pub struct MemoryUsageTrackingTest {
 
 impl MemoryUsageTrackingTest {
     pub fn new() -> Self {
-        Self {
-            name: "Memory Usage Tracking Test".to_string(),
-        }
+        Self { name: "Memory Usage Tracking Test".to_string() }
     }
 }
 
@@ -291,9 +284,7 @@ pub struct FileHandleCleanupTest {
 
 impl FileHandleCleanupTest {
     pub fn new() -> Self {
-        Self {
-            name: "File Handle Cleanup Test".to_string(),
-        }
+        Self { name: "File Handle Cleanup Test".to_string() }
     }
 }
 
@@ -346,9 +337,7 @@ pub struct ResourceCleanupValidationTest {
 
 impl ResourceCleanupValidationTest {
     pub fn new() -> Self {
-        Self {
-            name: "Resource Cleanup Validation Test".to_string(),
-        }
+        Self { name: "Resource Cleanup Validation Test".to_string() }
     }
 }
 
@@ -387,10 +376,7 @@ impl TestCase for ResourceCleanupValidationTest {
         let mut metrics = TestMetrics::default();
         metrics.add_metric("total_resources", initial_count as f64);
         metrics.add_metric("cleaned_resources", cleaned_count as f64);
-        metrics.add_metric(
-            "cleanup_success_rate",
-            cleaned_count as f64 / initial_count as f64,
-        );
+        metrics.add_metric("cleanup_success_rate", cleaned_count as f64 / initial_count as f64);
 
         Ok(metrics)
     }
@@ -408,9 +394,7 @@ pub struct ConcurrentResourceAccessTest {
 
 impl ConcurrentResourceAccessTest {
     pub fn new() -> Self {
-        Self {
-            name: "Concurrent Resource Access Test".to_string(),
-        }
+        Self { name: "Concurrent Resource Access Test".to_string() }
     }
 }
 
@@ -464,9 +448,7 @@ impl TestCase for ConcurrentResourceAccessTest {
 
         // Wait for all tasks
         for handle in handles {
-            handle
-                .await
-                .map_err(|e| TestError::execution(format!("Task failed: {}", e)))?;
+            handle.await.map_err(|e| TestError::execution(format!("Task failed: {}", e)))?;
         }
 
         let total_reads = read_count.load(Ordering::Relaxed);
@@ -496,9 +478,7 @@ pub struct ResourceContentionTest {
 
 impl ResourceContentionTest {
     pub fn new() -> Self {
-        Self {
-            name: "Resource Contention Test".to_string(),
-        }
+        Self { name: "Resource Contention Test".to_string() }
     }
 }
 
@@ -545,9 +525,7 @@ impl TestCase for ResourceContentionTest {
 
         // Wait for all tasks
         for handle in handles {
-            handle
-                .await
-                .map_err(|e| TestError::execution(format!("Task failed: {}", e)))?;
+            handle.await.map_err(|e| TestError::execution(format!("Task failed: {}", e)))?;
         }
 
         let successful_acquisitions = acquired_count.load(Ordering::Relaxed);
@@ -574,9 +552,7 @@ pub struct ResourceExhaustionTest {
 
 impl ResourceExhaustionTest {
     pub fn new() -> Self {
-        Self {
-            name: "Resource Exhaustion Test".to_string(),
-        }
+        Self { name: "Resource Exhaustion Test".to_string() }
     }
 }
 
@@ -648,9 +624,7 @@ pub struct ResourceRecoveryTest {
 
 impl ResourceRecoveryTest {
     pub fn new() -> Self {
-        Self {
-            name: "Resource Recovery Test".to_string(),
-        }
+        Self { name: "Resource Recovery Test".to_string() }
     }
 }
 
@@ -713,10 +687,7 @@ impl TestCase for ResourceRecoveryTest {
         let mut metrics = TestMetrics::default();
         metrics.add_metric("initial_memory_bytes", initial_memory as f64);
         metrics.add_metric("pressure_memory_bytes", pressure_memory as f64);
-        metrics.add_metric(
-            "partial_recovery_memory_bytes",
-            partial_recovery_memory as f64,
-        );
+        metrics.add_metric("partial_recovery_memory_bytes", partial_recovery_memory as f64);
         metrics.add_metric("full_recovery_memory_bytes", full_recovery_memory as f64);
         metrics.add_metric("cleaned_resources", cleaned_resources as f64);
         metrics.add_metric("recovery_efficiency", recovery_efficiency);
@@ -737,9 +708,7 @@ pub struct ResourceMonitoringTest {
 
 impl ResourceMonitoringTest {
     pub fn new() -> Self {
-        Self {
-            name: "Resource Monitoring Test".to_string(),
-        }
+        Self { name: "Resource Monitoring Test".to_string() }
     }
 }
 
@@ -820,9 +789,7 @@ pub struct ResourceThresholdTest {
 
 impl ResourceThresholdTest {
     pub fn new() -> Self {
-        Self {
-            name: "Resource Threshold Test".to_string(),
-        }
+        Self { name: "Resource Threshold Test".to_string() }
     }
 }
 
@@ -889,9 +856,7 @@ async fn test_comprehensive_resource_management_suite() {
     let config = TestConfig::default();
 
     // Create test harness
-    let mut harness = TestHarness::new(config)
-        .await
-        .expect("Failed to create test harness");
+    let mut harness = TestHarness::new(config).await.expect("Failed to create test harness");
     harness.add_reporter(Box::new(ConsoleReporter::new(true)));
 
     // Create and run comprehensive resource management test suite

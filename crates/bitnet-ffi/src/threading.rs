@@ -62,12 +62,7 @@ impl ThreadPool {
             workers.push(worker);
         }
 
-        Ok(ThreadPool {
-            workers,
-            sender,
-            config,
-            active_jobs,
-        })
+        Ok(ThreadPool { workers, sender, config, active_jobs })
     }
 
     /// Execute a job on the thread pool
@@ -163,10 +158,7 @@ impl Worker {
                 BitNetCError::ThreadSafety(format!("Failed to spawn worker thread: {}", e))
             })?;
 
-        Ok(Worker {
-            id,
-            thread: Some(thread),
-        })
+        Ok(Worker { id, thread: Some(thread) })
     }
 }
 
@@ -194,18 +186,12 @@ pub struct ThreadSafeRefCounter<T> {
 
 impl<T> ThreadSafeRefCounter<T> {
     pub fn new(data: T) -> Self {
-        Self {
-            data: Arc::new(RwLock::new(data)),
-            ref_count: Arc::new(AtomicUsize::new(1)),
-        }
+        Self { data: Arc::new(RwLock::new(data)), ref_count: Arc::new(AtomicUsize::new(1)) }
     }
 
     pub fn clone_ref(&self) -> Self {
         self.ref_count.fetch_add(1, Ordering::SeqCst);
-        Self {
-            data: Arc::clone(&self.data),
-            ref_count: Arc::clone(&self.ref_count),
-        }
+        Self { data: Arc::clone(&self.data), ref_count: Arc::clone(&self.ref_count) }
     }
 
     pub fn read(&self) -> Result<std::sync::RwLockReadGuard<T>, BitNetCError> {
@@ -246,13 +232,8 @@ pub fn set_thread_local<T: 'static>(key: &str, value: T) {
 
 /// Get thread-local value
 pub fn get_thread_local<T: 'static + Clone>(key: &str) -> Option<T> {
-    THREAD_LOCAL_STATE.with(|state| {
-        state
-            .borrow()
-            .get(key)
-            .and_then(|any| any.downcast_ref::<T>())
-            .cloned()
-    })
+    THREAD_LOCAL_STATE
+        .with(|state| state.borrow().get(key).and_then(|any| any.downcast_ref::<T>()).cloned())
 }
 
 /// Clear thread-local storage
@@ -270,10 +251,7 @@ pub struct ThreadManager {
 
 impl ThreadManager {
     pub fn new() -> Self {
-        Self {
-            thread_pool: RwLock::new(None),
-            num_threads: AtomicUsize::new(num_cpus::get()),
-        }
+        Self { thread_pool: RwLock::new(None), num_threads: AtomicUsize::new(num_cpus::get()) }
     }
 
     /// Initialize the thread pool
@@ -308,10 +286,7 @@ impl ThreadManager {
             BitNetCError::ThreadSafety("Failed to acquire thread pool write lock".to_string())
         })?;
 
-        let config = ThreadPoolConfig {
-            num_threads,
-            ..ThreadPoolConfig::default()
-        };
+        let config = ThreadPoolConfig { num_threads, ..ThreadPoolConfig::default() };
         *pool = Some(ThreadPool::with_config(config)?);
 
         Ok(())
@@ -333,9 +308,7 @@ impl ThreadManager {
 
         match pool.as_ref() {
             Some(pool) => pool.execute(job),
-            None => Err(BitNetCError::ThreadSafety(
-                "Thread pool not initialized".to_string(),
-            )),
+            None => Err(BitNetCError::ThreadSafety("Thread pool not initialized".to_string())),
         }
     }
 
@@ -347,9 +320,7 @@ impl ThreadManager {
 
         match pool.as_ref() {
             Some(pool) => Ok(pool.get_stats()),
-            None => Err(BitNetCError::ThreadSafety(
-                "Thread pool not initialized".to_string(),
-            )),
+            None => Err(BitNetCError::ThreadSafety("Thread pool not initialized".to_string())),
         }
     }
 

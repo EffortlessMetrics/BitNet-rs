@@ -49,10 +49,7 @@ fn main() {
         }
 
         println!("cargo:warning=bitnet-sys: Building with cross-validation support");
-        println!(
-            "cargo:warning=bitnet-sys: Using BitNet C++ from: {}",
-            cpp_dir.display()
-        );
+        println!("cargo:warning=bitnet-sys: Using BitNet C++ from: {}", cpp_dir.display());
 
         // Link against the C++ implementation - fail on error
         link_cpp_implementation(&cpp_dir).expect("Failed to link Microsoft BitNet C++ libraries");
@@ -169,10 +166,7 @@ fn generate_bindings(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>
     let bitnet_h = cpp_dir.join("include/ggml-bitnet.h");
     let use_bitnet = bitnet_h.exists();
 
-    println!(
-        "cargo:warning=bitnet-sys: Generating bindings from {}",
-        llama_h.display()
-    );
+    println!("cargo:warning=bitnet-sys: Generating bindings from {}", llama_h.display());
     if use_bitnet {
         println!(
             "cargo:warning=bitnet-sys: Also including BitNet-specific APIs from {}",
@@ -208,9 +202,7 @@ fn generate_bindings(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>
             .allowlist_function("ggml_preprocessor");
     }
 
-    let bindings = builder
-        .generate()
-        .map_err(|e| format!("bindgen failed: {}", e))?;
+    let bindings = builder.generate().map_err(|e| format!("bindgen failed: {}", e))?;
 
     let out_path = PathBuf::from(env::var("OUT_DIR")?);
     bindings.write_to_file(out_path.join("bindings.rs"))?;

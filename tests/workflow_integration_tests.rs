@@ -33,9 +33,7 @@ async fn test_all_workflow_integrations() {
     };
 
     // Create test harness with console reporter
-    let mut harness = TestHarness::new(config)
-        .await
-        .expect("Failed to create test harness");
+    let mut harness = TestHarness::new(config).await.expect("Failed to create test harness");
 
     harness.add_reporter(Box::new(ConsoleReporter::new(true)));
 
@@ -83,10 +81,7 @@ async fn test_all_workflow_integrations() {
     info!("Total tests: {}", total_tests);
     info!("Passed: {}", total_passed);
     info!("Failed: {}", total_failed);
-    info!(
-        "Success rate: {:.1}%",
-        (total_passed as f64 / total_tests as f64) * 100.0
-    );
+    info!("Success rate: {:.1}%", (total_passed as f64 / total_tests as f64) * 100.0);
 
     // Get execution statistics
     let stats = harness.get_stats().await;
@@ -114,10 +109,7 @@ async fn test_basic_workflow_integration() {
 
     assert!(result.summary.total_tests > 0);
     assert!(result.summary.passed > 0);
-    assert_eq!(
-        result.summary.failed, 0,
-        "Basic workflow tests should not fail"
-    );
+    assert_eq!(result.summary.failed, 0, "Basic workflow tests should not fail");
 }
 
 /// Test model loading integration
@@ -215,22 +207,11 @@ async fn benchmark_workflow_performance() {
     info!("  Tests executed: {}", result.summary.total_tests);
     info!("  Total duration: {:?}", total_duration);
     info!("  Tests per second: {:.2}", tests_per_second);
-    info!(
-        "  Average per test: {:?}",
-        total_duration / result.summary.total_tests as u32
-    );
+    info!("  Average per test: {:?}", total_duration / result.summary.total_tests as u32);
 
     // Performance assertions
-    assert!(
-        tests_per_second > 0.1,
-        "Performance too slow: {} tests/sec",
-        tests_per_second
-    );
-    assert!(
-        total_duration.as_secs() < 300,
-        "Benchmark took too long: {:?}",
-        total_duration
-    );
+    assert!(tests_per_second > 0.1, "Performance too slow: {} tests/sec", tests_per_second);
+    assert!(total_duration.as_secs() < 300, "Benchmark took too long: {:?}", total_duration);
 }
 
 /// Test error handling across workflow integrations
@@ -252,30 +233,18 @@ async fn test_workflow_error_handling() {
     let result = harness.run_test_suite(suite).await;
 
     // Should succeed even if some individual tests have errors
-    assert!(
-        result.is_ok(),
-        "Test framework should handle errors gracefully"
-    );
+    assert!(result.is_ok(), "Test framework should handle errors gracefully");
 
     let suite_result = result.unwrap();
-    assert!(
-        suite_result.summary.total_tests > 0,
-        "Should execute some tests"
-    );
+    assert!(suite_result.summary.total_tests > 0, "Should execute some tests");
 
     // Framework should provide detailed error information
     if suite_result.summary.failed > 0 {
         let failed_tests = suite_result.failed_tests();
-        assert!(
-            !failed_tests.is_empty(),
-            "Should provide failed test details"
-        );
+        assert!(!failed_tests.is_empty(), "Should provide failed test details");
 
         for failed_test in failed_tests {
-            assert!(
-                failed_test.error.is_some(),
-                "Failed tests should have error details"
-            );
+            assert!(failed_test.error.is_some(), "Failed tests should have error details");
         }
     }
 }
@@ -321,10 +290,7 @@ async fn test_complete_testing_framework() {
     assert!(config.validate().is_ok(), "Default config should be valid");
 
     let harness = TestHarness::new(config).await;
-    assert!(
-        harness.is_ok(),
-        "Test harness should initialize successfully"
-    );
+    assert!(harness.is_ok(), "Test harness should initialize successfully");
 
     let mut harness = harness.unwrap();
 
@@ -341,10 +307,7 @@ async fn test_complete_testing_framework() {
         ..Default::default()
     };
 
-    assert!(
-        memory_config.validate().is_ok(),
-        "Memory config should be valid"
-    );
+    assert!(memory_config.validate().is_ok(), "Memory config should be valid");
 
     // Test that framework handles empty test suites
     struct EmptyTestSuite;

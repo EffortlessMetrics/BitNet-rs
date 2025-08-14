@@ -173,11 +173,7 @@ impl InferenceCommand {
         let (engine, tokenizer) = self.load_model_and_tokenizer(config).await?;
 
         // Execute based on mode
-        match (
-            self.interactive,
-            self.input_file.as_ref(),
-            self.prompt.as_ref(),
-        ) {
+        match (self.interactive, self.input_file.as_ref(), self.prompt.as_ref()) {
             (true, _, _) => self.run_interactive_mode(engine, tokenizer).await,
             (false, Some(file), _) => self.run_batch_mode(engine, tokenizer, file).await,
             (false, None, Some(prompt)) => {
@@ -191,11 +187,7 @@ impl InferenceCommand {
 
     /// Setup logging based on configuration
     fn setup_logging(&self, config: &CliConfig) -> Result<()> {
-        let level = if self.verbose {
-            "debug"
-        } else {
-            &config.logging.level
-        };
+        let level = if self.verbose { "debug" } else { &config.logging.level };
 
         let filter = tracing_subscriber::EnvFilter::try_from_default_env()
             .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(level));
@@ -233,10 +225,9 @@ impl InferenceCommand {
         // Validate format
         match self.format.as_str() {
             "text" | "json" | "jsonl" => {}
-            _ => anyhow::bail!(
-                "Invalid format: {}. Must be one of: text, json, jsonl",
-                self.format
-            ),
+            _ => {
+                anyhow::bail!("Invalid format: {}. Must be one of: text, json, jsonl", self.format)
+            }
         }
 
         // Validate temperature
@@ -279,11 +270,7 @@ impl InferenceCommand {
 
         // Show loading progress
         let pb = ProgressBar::new_spinner();
-        pb.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.green} {msg}")
-                .unwrap(),
-        );
+        pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}").unwrap());
         pb.set_message("Loading model...");
         pb.enable_steady_tick(Duration::from_millis(100));
 
@@ -327,10 +314,7 @@ impl InferenceCommand {
                 warn!("CUDA support not yet implemented, falling back to CPU");
                 Ok(Device::Cpu)
             }
-            _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, auto",
-                device_str
-            ),
+            _ => anyhow::bail!("Invalid device: {}. Must be one of: cpu, cuda, auto", device_str),
         }
     }
 
@@ -340,10 +324,8 @@ impl InferenceCommand {
         model_path: &PathBuf,
     ) -> Result<Arc<dyn bitnet_tokenizers::Tokenizer>> {
         // Try to load tokenizer from model directory or use default
-        let tokenizer_path = model_path
-            .parent()
-            .map(|p| p.join("tokenizer.json"))
-            .filter(|p| p.exists());
+        let tokenizer_path =
+            model_path.parent().map(|p| p.join("tokenizer.json")).filter(|p| p.exists());
 
         if let Some(tokenizer_path) = tokenizer_path {
             debug!("Loading tokenizer from: {}", tokenizer_path.display());
@@ -366,12 +348,10 @@ impl InferenceCommand {
         let config = self.create_generation_config()?;
 
         if self.stream {
-            self.run_streaming_inference(&mut engine, prompt, &config)
-                .await?;
+            self.run_streaming_inference(&mut engine, prompt, &config).await?;
         } else {
-            let result = self
-                .run_batch_inference(&mut engine, &[prompt.to_string()], &config)
-                .await?;
+            let result =
+                self.run_batch_inference(&mut engine, &[prompt.to_string()], &config).await?;
             self.output_results(&result).await?;
         }
 
@@ -390,10 +370,7 @@ impl InferenceCommand {
         config: &GenerationConfig,
     ) -> Result<()> {
         // Placeholder implementation - would use actual streaming
-        println!(
-            "{}",
-            style("Streaming inference not yet fully implemented").yellow()
-        );
+        println!("{}", style("Streaming inference not yet fully implemented").yellow());
         // Placeholder implementation - would use actual streaming
         let result =
             "This is a placeholder response. Streaming inference not yet fully implemented."
@@ -454,8 +431,7 @@ impl InferenceCommand {
 
             // Process batch (parallel if workers > 1)
             let batch_results = if let Some(workers) = self.workers {
-                self.process_batch_parallel(engine, batch, config, workers)
-                    .await?
+                self.process_batch_parallel(engine, batch, config, workers).await?
             } else {
                 self.process_batch_sequential(engine, batch, config).await?
             };
@@ -658,15 +634,12 @@ impl InferenceCommand {
         let config = self.create_generation_config()?;
         let start_time = Instant::now();
 
-        let results = self
-            .run_batch_inference(&mut engine, &prompts, &config)
-            .await?;
+        let results = self.run_batch_inference(&mut engine, &prompts, &config).await?;
 
         self.output_results(&results).await?;
 
         if self.metrics {
-            self.show_performance_metrics(start_time, prompts.len())
-                .await?;
+            self.show_performance_metrics(start_time, prompts.len()).await?;
         }
 
         Ok(())
@@ -772,11 +745,7 @@ impl InferenceCommand {
     /// Get model information
     fn get_model_info(&self) -> ModelInfo {
         ModelInfo {
-            path: self
-                .model
-                .as_ref()
-                .map(|p| p.display().to_string())
-                .unwrap_or_default(),
+            path: self.model.as_ref().map(|p| p.display().to_string()).unwrap_or_default(),
             quantization: self.quantization.clone().unwrap_or_default(),
             device: self.device.clone().unwrap_or_default(),
             parameters: None, // Would be extracted from model
@@ -798,10 +767,7 @@ impl InferenceCommand {
         }
 
         for (user_msg, assistant_msg) in history {
-            prompt.push_str(&format!(
-                "User: {}\nAssistant: {}\n\n",
-                user_msg, assistant_msg
-            ));
+            prompt.push_str(&format!("User: {}\nAssistant: {}\n\n", user_msg, assistant_msg));
         }
 
         prompt.push_str(&format!("User: {}\nAssistant:", current_input));

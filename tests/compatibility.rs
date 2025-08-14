@@ -415,16 +415,11 @@ mod performance_compatibility {
         let memory_after = get_memory_usage();
         let memory_used = memory_after - memory_before;
 
-        println!(
-            "    Memory used for model loading: {} MB",
-            memory_used / 1024 / 1024
-        );
+        println!("    Memory used for model loading: {} MB", memory_used / 1024 / 1024);
 
         // Memory usage assertions (placeholder)
-        assert!(
-            memory_used < 10 * 1024 * 1024 * 1024,
-            "Model uses too much memory"
-        ); // 10GB limit
+        assert!(memory_used < 10 * 1024 * 1024 * 1024, "Model uses too much memory");
+        // 10GB limit
     }
 
     fn test_inference_memory() {
@@ -438,16 +433,11 @@ mod performance_compatibility {
         let memory_after = get_memory_usage();
         let memory_used = memory_after - memory_before;
 
-        println!(
-            "    Memory used for inference: {} MB",
-            memory_used / 1024 / 1024
-        );
+        println!("    Memory used for inference: {} MB", memory_used / 1024 / 1024);
 
         // Memory usage should be reasonable
-        assert!(
-            memory_used < 1024 * 1024 * 1024,
-            "Inference uses too much memory"
-        ); // 1GB limit
+        assert!(memory_used < 1024 * 1024 * 1024, "Inference uses too much memory");
+        // 1GB limit
     }
 
     fn test_memory_cleanup() {
@@ -467,16 +457,11 @@ mod performance_compatibility {
         let memory_after = get_memory_usage();
         let memory_diff = (memory_after as i64) - (memory_before as i64);
 
-        println!(
-            "    Memory difference after cleanup: {} MB",
-            memory_diff / 1024 / 1024
-        );
+        println!("    Memory difference after cleanup: {} MB", memory_diff / 1024 / 1024);
 
         // Memory should be mostly cleaned up
-        assert!(
-            memory_diff.abs() < 100 * 1024 * 1024,
-            "Memory not properly cleaned up"
-        ); // 100MB tolerance
+        assert!(memory_diff.abs() < 100 * 1024 * 1024, "Memory not properly cleaned up");
+        // 100MB tolerance
     }
 
     fn test_concurrent_inference() {
@@ -504,21 +489,13 @@ mod performance_compatibility {
         println!("    Concurrent inference completed in: {:?}", duration);
 
         // Should complete in reasonable time
-        assert!(
-            duration < Duration::from_secs(5),
-            "Concurrent inference too slow"
-        );
+        assert!(duration < Duration::from_secs(5), "Concurrent inference too slow");
     }
 
     fn test_batch_processing() {
         println!("  Testing batch processing");
 
-        let prompts = vec![
-            "First prompt",
-            "Second prompt",
-            "Third prompt",
-            "Fourth prompt",
-        ];
+        let prompts = vec!["First prompt", "Second prompt", "Third prompt", "Fourth prompt"];
 
         let start = Instant::now();
 
@@ -530,10 +507,7 @@ mod performance_compatibility {
         println!("    Batch processing completed in: {:?}", duration);
 
         // Batch should be more efficient than individual calls
-        assert!(
-            duration < Duration::from_secs(2),
-            "Batch processing too slow"
-        );
+        assert!(duration < Duration::from_secs(2), "Batch processing too slow");
     }
 
     fn get_memory_usage() -> usize {
@@ -616,10 +590,7 @@ mod cross_validation {
         println!("    Speedup: {:.2}x", speedup);
 
         // Rust should be faster or at least comparable
-        assert!(
-            speedup >= 0.8,
-            "Rust implementation significantly slower than C++"
-        );
+        assert!(speedup >= 0.8, "Rust implementation significantly slower than C++");
 
         if speedup > 1.0 {
             println!("    ✅ Rust is {:.2}x faster than C++", speedup);
@@ -817,18 +788,9 @@ fn create_minimal_safetensors_fixture() {
 fn create_test_configs() {
     // Create test configuration files
     let configs = vec![
-        (
-            "test_config.json",
-            r#"{"model_path": "test_model.gguf", "max_tokens": 100}"#,
-        ),
-        (
-            "test_config.yaml",
-            "model_path: test_model.gguf\nmax_tokens: 100\n",
-        ),
-        (
-            "test_config.toml",
-            "model_path = \"test_model.gguf\"\nmax_tokens = 100\n",
-        ),
+        ("test_config.json", r#"{"model_path": "test_model.gguf", "max_tokens": 100}"#),
+        ("test_config.yaml", "model_path: test_model.gguf\nmax_tokens: 100\n"),
+        ("test_config.toml", "model_path = \"test_model.gguf\"\nmax_tokens = 100\n"),
     ];
 
     for (filename, content) in configs {

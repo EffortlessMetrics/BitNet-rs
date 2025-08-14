@@ -150,10 +150,7 @@ async fn test_config_serialization() {
     let serialized = serde_json::to_string(&inf_config).unwrap();
     let deserialized: InferenceConfig = serde_json::from_str(&serialized).unwrap();
 
-    assert_eq!(
-        inf_config.max_context_length,
-        deserialized.max_context_length
-    );
+    assert_eq!(inf_config.max_context_length, deserialized.max_context_length);
     assert_eq!(inf_config.num_threads, deserialized.num_threads);
 }
 
@@ -195,10 +192,7 @@ async fn test_streaming_config() {
     assert!(config.buffer_size > 0);
     assert!(config.flush_interval_ms > 0);
 
-    let custom_config = StreamingConfig {
-        buffer_size: 5,
-        flush_interval_ms: 100,
-    };
+    let custom_config = StreamingConfig { buffer_size: 5, flush_interval_ms: 100 };
     assert_eq!(custom_config.buffer_size, 5);
     assert_eq!(custom_config.flush_interval_ms, 100);
 }
@@ -453,10 +447,8 @@ async fn test_concurrent_config_access() {
 #[tokio::test]
 async fn test_config_edge_cases() {
     // Test with extreme values
-    let config = InferenceConfig::default()
-        .with_threads(1)
-        .with_batch_size(1)
-        .with_memory_pool_size(1024); // Very small
+    let config =
+        InferenceConfig::default().with_threads(1).with_batch_size(1).with_memory_pool_size(1024); // Very small
 
     assert!(config.validate().is_ok());
 

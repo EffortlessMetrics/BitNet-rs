@@ -76,21 +76,15 @@ impl TestCase for BasicInferenceWorkflowTest {
         let decode_calls = tokenizer.decode_call_count();
 
         if model_calls == 0 {
-            return Err(TestError::assertion(
-                "Model forward should have been called",
-            ));
+            return Err(TestError::assertion("Model forward should have been called"));
         }
 
         if encode_calls == 0 {
-            return Err(TestError::assertion(
-                "Tokenizer encode should have been called",
-            ));
+            return Err(TestError::assertion("Tokenizer encode should have been called"));
         }
 
         if decode_calls == 0 {
-            return Err(TestError::assertion(
-                "Tokenizer decode should have been called",
-            ));
+            return Err(TestError::assertion("Tokenizer decode should have been called"));
         }
 
         let duration = start_time.elapsed();
@@ -195,10 +189,7 @@ impl TestCase for MultiPromptWorkflowTest {
             cpu_time: Some(duration),
             custom_metrics: [
                 ("prompts_processed".to_string(), test_prompts.len() as f64),
-                (
-                    "total_generated_length".to_string(),
-                    total_generated_length as f64,
-                ),
+                ("total_generated_length".to_string(), total_generated_length as f64),
                 (
                     "average_generated_length".to_string(),
                     total_generated_length as f64 / test_prompts.len() as f64,
@@ -253,12 +244,9 @@ impl TestCase for ConfigurationVariationTest {
                     TestError::execution(format!("Failed to create inference engine: {}", e))
                 })?;
 
-            let result = engine
-                .generate_with_config(prompt, config)
-                .await
-                .map_err(|e| {
-                    TestError::execution(format!("Generation failed for config {}: {}", i + 1, e))
-                })?;
+            let result = engine.generate_with_config(prompt, config).await.map_err(|e| {
+                TestError::execution(format!("Generation failed for config {}: {}", i + 1, e))
+            })?;
 
             if result.is_empty() {
                 return Err(TestError::assertion(format!(
@@ -289,15 +277,9 @@ impl TestCase for ConfigurationVariationTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "configurations_tested".to_string(),
-                    test_configs.len() as f64,
-                ),
+                ("configurations_tested".to_string(), test_configs.len() as f64),
                 ("unique_results".to_string(), unique_results.len() as f64),
-                (
-                    "model_forward_calls".to_string(),
-                    model.forward_call_count() as f64,
-                ),
+                ("model_forward_calls".to_string(), model.forward_call_count() as f64),
             ]
             .into_iter()
             .collect(),
@@ -357,10 +339,7 @@ impl TestCase for ErrorHandlingWorkflowTest {
 
         match long_result {
             Ok(text) => {
-                debug!(
-                    "Long prompt handled successfully, generated {} chars",
-                    text.len()
-                );
+                debug!("Long prompt handled successfully, generated {} chars", text.len());
             }
             Err(e) => {
                 debug!("Long prompt failed cleanly: {}", e);
@@ -376,14 +355,9 @@ impl TestCase for ErrorHandlingWorkflowTest {
 
         // Validate configuration first
         if let Err(validation_error) = invalid_config.validate() {
-            debug!(
-                "Configuration validation correctly failed: {}",
-                validation_error
-            );
+            debug!("Configuration validation correctly failed: {}", validation_error);
         } else {
-            return Err(TestError::assertion(
-                "Invalid configuration should fail validation",
-            ));
+            return Err(TestError::assertion("Invalid configuration should fail validation"));
         }
 
         let duration = start_time.elapsed();
@@ -395,10 +369,7 @@ impl TestCase for ErrorHandlingWorkflowTest {
             cpu_time: Some(duration),
             custom_metrics: [
                 ("error_scenarios_tested".to_string(), 3.0),
-                (
-                    "model_forward_calls".to_string(),
-                    model.forward_call_count() as f64,
-                ),
+                ("model_forward_calls".to_string(), model.forward_call_count() as f64),
             ]
             .into_iter()
             .collect(),
@@ -474,9 +445,7 @@ impl TestCase for ResourceCleanupWorkflowTest {
 
         // Verify cache was cleared (usage should be lower)
         if after_cleanup_stats.cache_usage > after_ops_stats.cache_usage {
-            return Err(TestError::assertion(
-                "Cache usage should decrease after cleanup",
-            ));
+            return Err(TestError::assertion("Cache usage should decrease after cleanup"));
         }
 
         // Test that engine still works after cleanup
@@ -498,27 +467,12 @@ impl TestCase for ResourceCleanupWorkflowTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "initial_cache_size".to_string(),
-                    initial_stats.cache_size as f64,
-                ),
+                ("initial_cache_size".to_string(), initial_stats.cache_size as f64),
                 ("initial_cache_usage".to_string(), initial_stats.cache_usage),
-                (
-                    "after_ops_cache_size".to_string(),
-                    after_ops_stats.cache_size as f64,
-                ),
-                (
-                    "after_ops_cache_usage".to_string(),
-                    after_ops_stats.cache_usage,
-                ),
-                (
-                    "after_cleanup_cache_size".to_string(),
-                    after_cleanup_stats.cache_size as f64,
-                ),
-                (
-                    "after_cleanup_cache_usage".to_string(),
-                    after_cleanup_stats.cache_usage,
-                ),
+                ("after_ops_cache_size".to_string(), after_ops_stats.cache_size as f64),
+                ("after_ops_cache_usage".to_string(), after_ops_stats.cache_usage),
+                ("after_cleanup_cache_size".to_string(), after_cleanup_stats.cache_size as f64),
+                ("after_cleanup_cache_usage".to_string(), after_cleanup_stats.cache_usage),
                 ("prompts_processed".to_string(), prompts.len() as f64),
             ]
             .into_iter()

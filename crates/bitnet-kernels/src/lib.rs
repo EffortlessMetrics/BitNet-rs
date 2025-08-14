@@ -65,11 +65,7 @@ impl KernelManager {
         #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
         {
             if is_x86_feature_detected!("avx2") {
-                let insert_pos = if providers.len() > 1 {
-                    providers.len() - 1
-                } else {
-                    0
-                };
+                let insert_pos = if providers.len() > 1 { providers.len() - 1 } else { 0 };
                 providers.insert(insert_pos, Box::new(cpu::Avx2Kernel));
             }
         }
@@ -77,11 +73,7 @@ impl KernelManager {
         #[cfg(all(target_arch = "aarch64", feature = "neon"))]
         {
             if std::arch::is_aarch64_feature_detected!("neon") {
-                let insert_pos = if providers.len() > 1 {
-                    providers.len() - 1
-                } else {
-                    0
-                };
+                let insert_pos = if providers.len() > 1 { providers.len() - 1 } else { 0 };
                 providers.insert(insert_pos, Box::new(cpu::NeonKernel));
             }
         }
@@ -96,10 +88,7 @@ impl KernelManager {
             }
         }
 
-        Self {
-            providers,
-            selected: OnceLock::new(),
-        }
+        Self { providers, selected: OnceLock::new() }
     }
 
     /// Select the best available kernel provider with caching
@@ -120,18 +109,13 @@ impl KernelManager {
         if *selected_idx < self.providers.len() {
             Ok(self.providers[*selected_idx].as_ref())
         } else {
-            Err(bitnet_common::BitNetError::Kernel(
-                bitnet_common::KernelError::NoProvider,
-            ))
+            Err(bitnet_common::BitNetError::Kernel(bitnet_common::KernelError::NoProvider))
         }
     }
 
     /// Get the name of the currently selected kernel provider
     pub fn selected_provider_name(&self) -> Option<&'static str> {
-        self.selected
-            .get()
-            .and_then(|&idx| self.providers.get(idx))
-            .map(|provider| provider.name())
+        self.selected.get().and_then(|&idx| self.providers.get(idx)).map(|provider| provider.name())
     }
 
     /// List all available kernel providers
@@ -180,9 +164,7 @@ pub fn select_cpu_kernel() -> Result<Box<dyn KernelProvider>> {
         }
     }
 
-    Err(bitnet_common::BitNetError::Kernel(
-        bitnet_common::KernelError::NoProvider,
-    ))
+    Err(bitnet_common::BitNetError::Kernel(bitnet_common::KernelError::NoProvider))
 }
 
 /// Select the best GPU kernel provider
@@ -192,17 +174,13 @@ pub fn select_gpu_kernel(device_id: usize) -> Result<Box<dyn KernelProvider>> {
     if cuda_kernel.is_available() {
         Ok(Box::new(cuda_kernel))
     } else {
-        Err(bitnet_common::BitNetError::Kernel(
-            bitnet_common::KernelError::NoProvider,
-        ))
+        Err(bitnet_common::BitNetError::Kernel(bitnet_common::KernelError::NoProvider))
     }
 }
 
 #[cfg(not(feature = "cuda"))]
 pub fn select_gpu_kernel(_device_id: usize) -> Result<Box<dyn KernelProvider>> {
-    Err(bitnet_common::BitNetError::Kernel(
-        bitnet_common::KernelError::NoProvider,
-    ))
+    Err(bitnet_common::BitNetError::Kernel(bitnet_common::KernelError::NoProvider))
 }
 
 // Re-export commonly used types

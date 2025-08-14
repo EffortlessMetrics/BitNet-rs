@@ -29,10 +29,7 @@ async fn test_fixture_reliability_and_cleanup() -> TestResult<()> {
     // Test 1: Verify built-in fixtures are loaded
     let fixtures = manager.list_fixtures();
     assert!(!fixtures.is_empty(), "Should have built-in fixtures");
-    assert!(
-        fixtures.len() >= 3,
-        "Should have at least 3 built-in fixtures"
-    );
+    assert!(fixtures.len() >= 3, "Should have at least 3 built-in fixtures");
 
     // Test 2: Test cache statistics on empty cache
     let stats = manager.get_cache_stats().await?;
@@ -54,14 +51,8 @@ async fn test_fixture_reliability_and_cleanup() -> TestResult<()> {
     // Test 4: Verify cache statistics after adding files
     let stats = manager.get_cache_stats().await?;
     assert_eq!(stats.file_count, 3, "Should have 3 files in cache");
-    let expected_size = test_files
-        .iter()
-        .map(|(_, content)| content.len())
-        .sum::<usize>() as u64;
-    assert_eq!(
-        stats.total_size, expected_size,
-        "Cache size should match file contents"
-    );
+    let expected_size = test_files.iter().map(|(_, content)| content.len()).sum::<usize>() as u64;
+    assert_eq!(stats.total_size, expected_size, "Cache size should match file contents");
 
     // Test 5: Test size-based cleanup (should trigger because we exceed 10KB limit)
     let cleanup_stats = manager.cleanup_by_size().await?;
@@ -84,27 +75,14 @@ async fn test_fixture_reliability_and_cleanup() -> TestResult<()> {
 
     // Test 7: Test fixture validation
     let validation = manager.validate_cache().await?;
-    assert_eq!(
-        validation.valid_count, 0,
-        "No valid fixtures expected (no real fixtures cached)"
-    );
-    assert_eq!(
-        validation.missing_count, 3,
-        "All built-in fixtures should be missing"
-    );
-    assert!(
-        validation.invalid_files.is_empty(),
-        "No invalid files expected"
-    );
+    assert_eq!(validation.valid_count, 0, "No valid fixtures expected (no real fixtures cached)");
+    assert_eq!(validation.missing_count, 3, "All built-in fixtures should be missing");
+    assert!(validation.invalid_files.is_empty(), "No invalid files expected");
 
     // Test 8: Test shared fixture registration
     let mut manager_mut = manager;
     manager_mut
-        .register_shared_fixture(
-            "test-shared",
-            "https://example.com/test.bin",
-            "abcd1234567890",
-        )
+        .register_shared_fixture("test-shared", "https://example.com/test.bin", "abcd1234567890")
         .await?;
 
     let shared_info = manager_mut.get_fixture_info("test-shared");
@@ -117,22 +95,14 @@ async fn test_fixture_reliability_and_cleanup() -> TestResult<()> {
 
     match result.unwrap_err() {
         FixtureError::UnknownFixture { name } => {
-            assert!(
-                name.contains("nonexistent"),
-                "Error should mention the fixture name"
-            );
+            assert!(name.contains("nonexistent"), "Error should mention the fixture name");
         }
         _ => panic!("Expected UnknownFixture error"),
     }
 
     // Test 10: Test fixture preloading (should fail gracefully)
-    let preload_result = manager_mut
-        .preload_fixtures(&["tiny-model", "small-model"])
-        .await;
-    assert!(
-        preload_result.is_err(),
-        "Preloading should fail when auto_download is disabled"
-    );
+    let preload_result = manager_mut.preload_fixtures(&["tiny-model", "small-model"]).await;
+    assert!(preload_result.is_err(), "Preloading should fail when auto_download is disabled");
 
     println!("✅ All fixture reliability and cleanup tests passed!");
     Ok(())

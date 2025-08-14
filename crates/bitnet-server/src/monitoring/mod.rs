@@ -77,11 +77,7 @@ impl MonitoringSystem {
             opentelemetry::init_opentelemetry(&config).await?;
         }
 
-        Ok(Self {
-            config,
-            metrics,
-            _tracing_guard: tracing_guard,
-        })
+        Ok(Self { config, metrics, _tracing_guard: tracing_guard })
     }
 
     /// Get the metrics collector

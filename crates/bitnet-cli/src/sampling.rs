@@ -30,14 +30,7 @@ impl Sampler {
             ChaCha20Rng::from_entropy()
         };
 
-        Self {
-            rng,
-            temperature,
-            top_k,
-            top_p,
-            repetition_penalty,
-            token_counts: HashMap::new(),
-        }
+        Self { rng, temperature, top_k, top_p, repetition_penalty, token_counts: HashMap::new() }
     }
 
     /// Sample next token from logits

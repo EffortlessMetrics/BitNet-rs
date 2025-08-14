@@ -85,10 +85,7 @@ impl Backend for CpuBackend {
     }
 
     fn clone_backend(&self) -> Box<dyn Backend> {
-        Box::new(Self {
-            model: self.model.clone(),
-            num_threads: self.num_threads,
-        })
+        Box::new(Self { model: self.model.clone(), num_threads: self.num_threads })
     }
 
     async fn forward(
@@ -158,11 +155,7 @@ impl GpuBackend {
         match device {
             Device::Cuda(_) => {
                 info!("Created GPU backend with device: {:?}", device);
-                Ok(Self {
-                    model,
-                    device,
-                    mixed_precision: false,
-                })
+                Ok(Self { model, device, mixed_precision: false })
             }
             _ => Err(anyhow::anyhow!("GPU backend requires CUDA device")),
         }
@@ -312,9 +305,7 @@ mod tests {
 
     impl MockModel {
         fn new() -> Self {
-            Self {
-                config: bitnet_common::BitNetConfig::default(),
-            }
+            Self { config: bitnet_common::BitNetConfig::default() }
         }
     }
 

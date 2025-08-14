@@ -17,10 +17,7 @@ struct ExampleTestCase {
 
 impl ExampleTestCase {
     fn new(name: &str, should_pass: bool) -> Self {
-        Self {
-            name: name.to_string(),
-            should_pass,
-        }
+        Self { name: name.to_string(), should_pass }
     }
 }
 
@@ -89,10 +86,7 @@ impl ExampleTestSuite {
             Box::new(ExampleTestCase::new("test_memory_usage", true)),
         ];
 
-        Self {
-            name: "Example Test Suite".to_string(),
-            test_cases,
-        }
+        Self { name: "Example Test Suite".to_string(), test_cases }
     }
 }
 
@@ -122,10 +116,7 @@ struct TracedTestCase {
 
 impl TracedTestCase {
     fn new(name: &str, tracer: Arc<TestTracer>) -> Self {
-        Self {
-            name: name.to_string(),
-            tracer,
-        }
+        Self { name: name.to_string(), tracer }
     }
 }
 
@@ -138,21 +129,15 @@ impl TestCase for TracedTestCase {
     async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
         let debug_ctx = DebugContext::new(self.name.clone(), Arc::clone(&self.tracer));
 
-        debug_ctx
-            .trace(TraceEventType::Setup, "Starting test setup".to_string())
-            .await;
+        debug_ctx.trace(TraceEventType::Setup, "Starting test setup".to_string()).await;
 
         // Simulate setup with tracing
         let setup_scope = debug_ctx.scope("setup");
-        setup_scope
-            .trace(TraceEventType::Info, "Initializing test data".to_string())
-            .await;
+        setup_scope.trace(TraceEventType::Info, "Initializing test data".to_string()).await;
 
         tokio::time::sleep(Duration::from_millis(20)).await;
 
-        setup_scope
-            .trace(TraceEventType::Info, "Setup completed".to_string())
-            .await;
+        setup_scope.trace(TraceEventType::Info, "Setup completed".to_string()).await;
 
         Ok(())
     }
@@ -160,21 +145,14 @@ impl TestCase for TracedTestCase {
     async fn execute(&self) -> TestResult<TestMetrics> {
         let debug_ctx = DebugContext::new(self.name.clone(), Arc::clone(&self.tracer));
 
-        debug_ctx
-            .trace(
-                TraceEventType::Execution,
-                "Starting test execution".to_string(),
-            )
-            .await;
+        debug_ctx.trace(TraceEventType::Execution, "Starting test execution".to_string()).await;
 
         let start_time = std::time::Instant::now();
 
         // Simulate some work with detailed tracing
         for i in 1..=3 {
             let step_scope = debug_ctx.scope(&format!("step_{}", i));
-            step_scope
-                .trace(TraceEventType::Info, format!("Executing step {}", i))
-                .await;
+            step_scope.trace(TraceEventType::Info, format!("Executing step {}", i)).await;
 
             tokio::time::sleep(Duration::from_millis(30)).await;
 
@@ -188,10 +166,7 @@ impl TestCase for TracedTestCase {
 
         let duration = start_time.elapsed();
         debug_ctx
-            .trace(
-                TraceEventType::Performance,
-                format!("Total execution time: {:?}", duration),
-            )
+            .trace(TraceEventType::Performance, format!("Total execution time: {:?}", duration))
             .await;
 
         let mut metrics = TestMetrics::with_duration(duration);
@@ -199,10 +174,7 @@ impl TestCase for TracedTestCase {
         metrics.add_assertion();
 
         debug_ctx
-            .trace(
-                TraceEventType::TestEnd,
-                "Test execution completed successfully".to_string(),
-            )
+            .trace(TraceEventType::TestEnd, "Test execution completed successfully".to_string())
             .await;
 
         Ok(metrics)
@@ -210,9 +182,7 @@ impl TestCase for TracedTestCase {
 
     async fn cleanup(&self) -> TestResult<()> {
         let debug_ctx = DebugContext::new(self.name.clone(), Arc::clone(&self.tracer));
-        debug_ctx
-            .trace(TraceEventType::Cleanup, "Performing cleanup".to_string())
-            .await;
+        debug_ctx.trace(TraceEventType::Cleanup, "Performing cleanup".to_string()).await;
 
         tokio::time::sleep(Duration::from_millis(10)).await;
 
@@ -263,21 +233,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         fn test_cases(&self) -> Vec<Box<dyn TestCase>> {
             vec![
-                Box::new(TracedTestCase::new(
-                    "traced_test_1",
-                    Arc::clone(&self.tracer),
-                )),
-                Box::new(TracedTestCase::new(
-                    "traced_test_2",
-                    Arc::clone(&self.tracer),
-                )),
+                Box::new(TracedTestCase::new("traced_test_1", Arc::clone(&self.tracer))),
+                Box::new(TracedTestCase::new("traced_test_2", Arc::clone(&self.tracer))),
             ]
         }
     }
 
-    let traced_suite = TracedTestSuite {
-        tracer: Arc::clone(&tracer),
-    };
+    let traced_suite = TracedTestSuite { tracer: Arc::clone(&tracer) };
     let traced_result = harness.run_test_suite(traced_suite).await?;
 
     println!("\nTraced suite results:");

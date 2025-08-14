@@ -42,10 +42,7 @@ impl IntegrationTestModel {
     }
 
     fn add_generation(&self, text: &str) {
-        self.generation_history
-            .lock()
-            .unwrap()
-            .push(text.to_string());
+        self.generation_history.lock().unwrap().push(text.to_string());
     }
 }
 
@@ -67,9 +64,7 @@ impl Model for IntegrationTestModel {
         let seq_len = input.shape()[1];
         let vocab_size = self.config.model.vocab_size;
 
-        Ok(ConcreteTensor::Mock(MockTensor::new(vec![
-            batch_size, seq_len, vocab_size,
-        ])))
+        Ok(ConcreteTensor::Mock(MockTensor::new(vec![batch_size, seq_len, vocab_size])))
     }
 
     fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor, BitNetError> {
@@ -77,11 +72,7 @@ impl Model for IntegrationTestModel {
         let seq_len = tokens.len();
         let hidden_size = self.config.model.hidden_size;
 
-        Ok(ConcreteTensor::Mock(MockTensor::new(vec![
-            batch_size,
-            seq_len,
-            hidden_size,
-        ])))
+        Ok(ConcreteTensor::Mock(MockTensor::new(vec![batch_size, seq_len, hidden_size])))
     }
 
     fn logits(&self, hidden_states: &ConcreteTensor) -> Result<ConcreteTensor, BitNetError> {
@@ -90,9 +81,7 @@ impl Model for IntegrationTestModel {
         let seq_len = shape[1];
         let vocab_size = self.config.model.vocab_size;
 
-        Ok(ConcreteTensor::Mock(MockTensor::new(vec![
-            batch_size, seq_len, vocab_size,
-        ])))
+        Ok(ConcreteTensor::Mock(MockTensor::new(vec![batch_size, seq_len, vocab_size])))
     }
 }
 
@@ -131,10 +120,7 @@ impl IntegrationTestTokenizer {
 impl Tokenizer for IntegrationTestTokenizer {
     fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>, BitNetError> {
         *self.encode_calls.lock().unwrap() += 1;
-        self.tokenization_history
-            .lock()
-            .unwrap()
-            .push(format!("encode: {}", text));
+        self.tokenization_history.lock().unwrap().push(format!("encode: {}", text));
 
         // Simple mock encoding: convert text to token IDs based on character codes
         let tokens: Vec<u32> = text
@@ -192,10 +178,7 @@ async fn test_complete_inference_workflow() {
     println!("Testing with prompt: '{}'", prompt);
 
     let start_time = Instant::now();
-    let result = engine
-        .generate(prompt)
-        .await
-        .expect("Generation should succeed");
+    let result = engine.generate(prompt).await.expect("Generation should succeed");
     let generation_time = start_time.elapsed();
 
     println!("Generated result: '{}'", result);
@@ -224,20 +207,13 @@ async fn test_complete_inference_workflow() {
 
     // Validate tokenization history
     let tokenization_history = tokenizer.get_tokenization_history();
+    assert!(!tokenization_history.is_empty(), "Tokenization history should not be empty");
     assert!(
-        !tokenization_history.is_empty(),
-        "Tokenization history should not be empty"
-    );
-    assert!(
-        tokenization_history
-            .iter()
-            .any(|entry| entry.contains("encode")),
+        tokenization_history.iter().any(|entry| entry.contains("encode")),
         "Should have encode operations in history"
     );
     assert!(
-        tokenization_history
-            .iter()
-            .any(|entry| entry.contains("decode")),
+        tokenization_history.iter().any(|entry| entry.contains("decode")),
         "Should have decode operations in history"
     );
 
@@ -286,11 +262,7 @@ async fn test_model_loading_workflow() {
 
         // Test engine creation with different configurations
         let engine_result = InferenceEngine::new(model.clone(), tokenizer.clone(), Device::Cpu);
-        assert!(
-            engine_result.is_ok(),
-            "Engine creation should succeed for config {}",
-            i + 1
-        );
+        assert!(engine_result.is_ok(), "Engine creation should succeed for config {}", i + 1);
 
         let engine = engine_result.unwrap();
 
@@ -298,11 +270,7 @@ async fn test_model_loading_workflow() {
         let test_prompt = format!("Test prompt for configuration {}", i + 1);
         let result = engine.generate(&test_prompt).await;
 
-        assert!(
-            result.is_ok(),
-            "Generation should succeed for config {}",
-            i + 1
-        );
+        assert!(result.is_ok(), "Generation should succeed for config {}", i + 1);
 
         let generated_text = result.unwrap();
         assert!(
@@ -356,10 +324,7 @@ async fn test_tokenization_pipeline_workflow() {
 
                 // Validate output characteristics
                 if !input.trim().is_empty() {
-                    assert!(
-                        !output.is_empty(),
-                        "Non-empty input should produce non-empty output"
-                    );
+                    assert!(!output.is_empty(), "Non-empty input should produce non-empty output");
                 }
 
                 assert!(
@@ -386,10 +351,7 @@ async fn test_tokenization_pipeline_workflow() {
     println!("  Tokenization operations: {}", tokenization_history.len());
 
     assert!(encode_calls > 0, "Should have made encode calls");
-    assert!(
-        tokenization_history.len() > 0,
-        "Should have tokenization history"
-    );
+    assert!(tokenization_history.len() > 0, "Should have tokenization history");
 
     println!("✓ Tokenization pipeline workflow test passed");
 }
@@ -406,21 +368,9 @@ async fn test_streaming_workflow() {
 
     // Test streaming generation with different configurations
     let streaming_configs = vec![
-        GenerationConfig {
-            max_new_tokens: 5,
-            temperature: 0.7,
-            ..Default::default()
-        },
-        GenerationConfig {
-            max_new_tokens: 10,
-            temperature: 0.5,
-            ..Default::default()
-        },
-        GenerationConfig {
-            max_new_tokens: 3,
-            temperature: 1.0,
-            ..Default::default()
-        },
+        GenerationConfig { max_new_tokens: 5, temperature: 0.7, ..Default::default() },
+        GenerationConfig { max_new_tokens: 10, temperature: 0.5, ..Default::default() },
+        GenerationConfig { max_new_tokens: 3, temperature: 1.0, ..Default::default() },
     ];
 
     for (i, config) in streaming_configs.iter().enumerate() {
@@ -512,35 +462,22 @@ async fn test_batch_processing_workflow() {
     let total_batch_time = batch_start_time.elapsed();
 
     // Validate batch processing results
-    assert_eq!(
-        batch_results.len(),
-        batch_prompts.len(),
-        "Should have result for each prompt"
-    );
+    assert_eq!(batch_results.len(), batch_prompts.len(), "Should have result for each prompt");
 
-    let successful_results = batch_results
-        .iter()
-        .filter(|r| !r.starts_with("ERROR:"))
-        .count();
+    let successful_results = batch_results.iter().filter(|r| !r.starts_with("ERROR:")).count();
 
     println!("Batch processing statistics:");
     println!("  Total prompts: {}", batch_prompts.len());
     println!("  Successful results: {}", successful_results);
     println!("  Total batch time: {:?}", total_batch_time);
-    println!(
-        "  Average time per item: {:?}",
-        total_batch_time / batch_prompts.len() as u32
-    );
+    println!("  Average time per item: {:?}", total_batch_time / batch_prompts.len() as u32);
 
     // Print individual times
     for (i, time) in individual_times.iter().enumerate() {
         println!("  Item {} time: {:?}", i + 1, time);
     }
 
-    assert!(
-        successful_results > 0,
-        "At least some batch items should succeed"
-    );
+    assert!(successful_results > 0, "At least some batch items should succeed");
     assert!(
         total_batch_time < Duration::from_secs(30),
         "Batch processing should complete within reasonable time"
@@ -560,10 +497,7 @@ async fn test_batch_processing_workflow() {
         model_calls >= successful_results,
         "Should have at least one model call per successful result"
     );
-    assert!(
-        encode_calls >= batch_prompts.len(),
-        "Should have at least one encode call per prompt"
-    );
+    assert!(encode_calls >= batch_prompts.len(), "Should have at least one encode call per prompt");
 
     println!("✓ Batch processing workflow test passed");
 }
@@ -624,10 +558,7 @@ async fn test_workflow_error_handling() {
     println!("Error handling statistics:");
     println!("  Error scenarios tested: {}", error_test_cases.len());
     println!("  Error scenarios handled: {}", error_handled_count);
-    println!(
-        "  Recovery attempts successful: {}",
-        recovery_successful_count
-    );
+    println!("  Recovery attempts successful: {}", recovery_successful_count);
 
     assert_eq!(
         error_handled_count,
@@ -635,10 +566,7 @@ async fn test_workflow_error_handling() {
         "All error scenarios should be handled (either succeed or fail gracefully)"
     );
 
-    assert!(
-        recovery_successful_count > 0,
-        "At least some recovery attempts should succeed"
-    );
+    assert!(recovery_successful_count > 0, "At least some recovery attempts should succeed");
 
     println!("✓ Workflow error handling test passed");
 }
@@ -695,15 +623,9 @@ async fn test_workflow_resource_management() {
 
     println!("Resource management statistics:");
     println!("  Engines created: {}", num_engines);
-    println!(
-        "  Successful concurrent operations: {}",
-        successful_concurrent
-    );
+    println!("  Successful concurrent operations: {}", successful_concurrent);
 
-    assert!(
-        successful_concurrent > 0,
-        "At least some concurrent operations should succeed"
-    );
+    assert!(successful_concurrent > 0, "At least some concurrent operations should succeed");
 
     // Test cleanup by creating and dropping engines
     for i in 0..5 {
@@ -742,8 +664,5 @@ async fn test_integration_framework_validation() {
     println!("Framework validation time: {:?}", total_time);
     println!("Integration testing framework is working correctly!");
 
-    assert!(
-        total_time < Duration::from_secs(10),
-        "Framework validation should complete quickly"
-    );
+    assert!(total_time < Duration::from_secs(10), "Framework validation should complete quickly");
 }

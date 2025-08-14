@@ -17,14 +17,8 @@ fn test_basic_error_functionality() {
     assert_eq!(config_error.category(), "config");
 
     // Test severity levels
-    assert_eq!(
-        timeout_error.severity(),
-        bitnet_tests::ErrorSeverity::Medium
-    );
-    assert_eq!(
-        assertion_error.severity(),
-        bitnet_tests::ErrorSeverity::High
-    );
+    assert_eq!(timeout_error.severity(), bitnet_tests::ErrorSeverity::Medium);
+    assert_eq!(assertion_error.severity(), bitnet_tests::ErrorSeverity::High);
     assert_eq!(config_error.severity(), bitnet_tests::ErrorSeverity::Low);
 
     // Test recoverability
@@ -40,10 +34,7 @@ fn test_error_recovery_suggestions() {
     let timeout_error = bitnet_tests::TestError::timeout(Duration::from_secs(45));
     let suggestions = timeout_error.recovery_suggestions();
 
-    assert!(
-        !suggestions.is_empty(),
-        "Timeout errors should have recovery suggestions"
-    );
+    assert!(!suggestions.is_empty(), "Timeout errors should have recovery suggestions");
 
     // Check that suggestions are relevant to timeout errors
     let has_timeout_suggestion = suggestions.iter().any(|s| {
@@ -51,10 +42,7 @@ fn test_error_recovery_suggestions() {
             || s.to_lowercase().contains("time")
             || s.to_lowercase().contains("resource")
     });
-    assert!(
-        has_timeout_suggestion,
-        "Should have timeout-related suggestions"
-    );
+    assert!(has_timeout_suggestion, "Should have timeout-related suggestions");
 
     println!("✓ Error recovery suggestions working correctly");
     println!("Sample suggestions for timeout error:");
@@ -69,32 +57,19 @@ fn test_error_troubleshooting_steps() {
     let steps = error.troubleshooting_steps();
 
     assert!(!steps.is_empty(), "Should provide troubleshooting steps");
-    assert!(
-        steps.len() >= 2,
-        "Should have multiple troubleshooting steps"
-    );
+    assert!(steps.len() >= 2, "Should have multiple troubleshooting steps");
 
     // Verify steps are properly structured
     for (i, step) in steps.iter().enumerate() {
-        assert_eq!(
-            step.step_number,
-            (i + 1) as u32,
-            "Steps should be numbered sequentially"
-        );
+        assert_eq!(step.step_number, (i + 1) as u32, "Steps should be numbered sequentially");
         assert!(!step.title.is_empty(), "Each step should have a title");
-        assert!(
-            !step.description.is_empty(),
-            "Each step should have a description"
-        );
+        assert!(!step.description.is_empty(), "Each step should have a description");
     }
 
     println!("✓ Error troubleshooting steps working correctly");
     println!("Sample troubleshooting steps for assertion error:");
     for step in steps.iter().take(3) {
-        println!(
-            "  {}. {} - {}",
-            step.step_number, step.title, step.description
-        );
+        println!("  {}. {} - {}", step.step_number, step.title, step.description);
     }
 }
 
@@ -114,9 +89,7 @@ fn test_error_debug_info() {
     assert!(!debug_info.troubleshooting_steps.is_empty());
 
     // Check that related components make sense
-    assert!(debug_info
-        .related_components
-        .contains(&"fixture_manager".to_string()));
+    assert!(debug_info.related_components.contains(&"fixture_manager".to_string()));
 
     println!("✓ Error debug info working correctly");
     println!("Related components: {:?}", debug_info.related_components);
@@ -151,10 +124,7 @@ fn test_environment_info_collection() {
     assert!(env_info.system_resources.cpu_cores > 0);
 
     println!("✓ Environment info collection working correctly");
-    println!(
-        "Platform: {} ({})",
-        env_info.platform, env_info.architecture
-    );
+    println!("Platform: {} ({})", env_info.platform, env_info.architecture);
     println!("CPU cores: {}", env_info.system_resources.cpu_cores);
 }
 

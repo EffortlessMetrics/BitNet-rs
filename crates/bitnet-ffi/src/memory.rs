@@ -60,10 +60,7 @@ pub struct TrackingAllocator {
 
 impl TrackingAllocator {
     pub fn new() -> Self {
-        Self {
-            inner: System,
-            stats: Arc::new(Mutex::new(MemoryStats::default())),
-        }
+        Self { inner: System, stats: Arc::new(Mutex::new(MemoryStats::default())) }
     }
 
     pub fn get_stats(&self) -> Result<MemoryStats, BitNetCError> {
@@ -118,10 +115,7 @@ pub struct MemoryPool {
 
 impl MemoryPool {
     pub fn new(max_pool_size: usize) -> Self {
-        Self {
-            max_pool_size,
-            stats: Arc::new(Mutex::new(MemoryStats::default())),
-        }
+        Self { max_pool_size, stats: Arc::new(Mutex::new(MemoryStats::default())) }
     }
 
     /// Allocate memory from system
@@ -132,10 +126,7 @@ impl MemoryPool {
 
         let ptr = unsafe { System.alloc(layout) };
         if ptr.is_null() {
-            return Err(BitNetCError::OutOfMemory(format!(
-                "Failed to allocate {} bytes",
-                size
-            )));
+            return Err(BitNetCError::OutOfMemory(format!("Failed to allocate {} bytes", size)));
         }
 
         // Update stats
@@ -339,10 +330,7 @@ impl<T> AutoCleanup<T> {
     where
         F: FnOnce(T) + Send + 'static,
     {
-        Self {
-            data: Some(data),
-            cleanup_fn: Box::new(cleanup_fn),
-        }
+        Self { data: Some(data), cleanup_fn: Box::new(cleanup_fn) }
     }
 
     pub fn get(&self) -> Option<&T> {

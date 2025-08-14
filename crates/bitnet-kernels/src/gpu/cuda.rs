@@ -56,10 +56,7 @@ impl CudaKernel {
 
         // Create CUDA context for the specified device
         let ctx = CudaContext::new(device_id).map_err(|e| KernelError::GpuError {
-            reason: format!(
-                "Failed to create CUDA context for device {}: {:?}",
-                device_id, e
-            ),
+            reason: format!("Failed to create CUDA context for device {}: {:?}", device_id, e),
         })?;
 
         // Get default stream
@@ -67,9 +64,7 @@ impl CudaKernel {
 
         // Compile PTX kernel
         let ptx = compile_ptx(include_str!("kernels/bitnet_matmul.cu")).map_err(|e| {
-            KernelError::GpuError {
-                reason: format!("Failed to compile PTX: {:?}", e),
-            }
+            KernelError::GpuError { reason: format!("Failed to compile PTX: {:?}", e) }
         })?;
 
         // Load module
@@ -78,24 +73,15 @@ impl CudaKernel {
         })?;
 
         // Load function
-        let matmul_function =
-            module
-                .load_function("bitnet_matmul_i2s")
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Failed to load matmul function: {:?}", e),
-                })?;
+        let matmul_function = module.load_function("bitnet_matmul_i2s").map_err(|e| {
+            KernelError::GpuError { reason: format!("Failed to load matmul function: {:?}", e) }
+        })?;
 
         // Get device information
         let device_info = Self::get_device_info(device_id)?;
         log::info!("CUDA device info: {:?}", device_info);
 
-        Ok(Self {
-            ctx,
-            stream,
-            module,
-            matmul_function,
-            device_info,
-        })
+        Ok(Self { ctx, stream, module, matmul_function, device_info })
     }
 
     /// Get detailed device information and capabilities
@@ -139,26 +125,17 @@ impl CudaKernel {
         log::debug!("Launching CUDA matmul: {}x{}x{}", m, n, k);
 
         // Transfer data to device using cudarc 0.17 API
-        let a_dev = self
-            .stream
-            .memcpy_stod(a)
-            .map_err(|e| KernelError::GpuError {
-                reason: format!("Failed to transfer A to device: {:?}", e),
-            })?;
+        let a_dev = self.stream.memcpy_stod(a).map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to transfer A to device: {:?}", e),
+        })?;
 
-        let b_dev = self
-            .stream
-            .memcpy_stod(b)
-            .map_err(|e| KernelError::GpuError {
-                reason: format!("Failed to transfer B to device: {:?}", e),
-            })?;
+        let b_dev = self.stream.memcpy_stod(b).map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to transfer B to device: {:?}", e),
+        })?;
 
-        let mut c_dev: CudaSlice<f32> =
-            self.stream
-                .alloc_zeros(m * n)
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Failed to allocate C on device: {:?}", e),
-                })?;
+        let mut c_dev: CudaSlice<f32> = self.stream.alloc_zeros(m * n).map_err(|e| {
+            KernelError::GpuError { reason: format!("Failed to allocate C on device: {:?}", e) }
+        })?;
 
         // Configure launch parameters
         const BLOCK_SIZE: u32 = 16;
@@ -188,12 +165,9 @@ impl CudaKernel {
         })?;
 
         // Transfer result back to host
-        let c_host: Vec<f32> =
-            self.stream
-                .memcpy_dtov(&c_dev)
-                .map_err(|e| KernelError::GpuError {
-                    reason: format!("Failed to transfer result back: {:?}", e),
-                })?;
+        let c_host: Vec<f32> = self.stream.memcpy_dtov(&c_dev).map_err(|e| {
+            KernelError::GpuError { reason: format!("Failed to transfer result back: {:?}", e) }
+        })?;
 
         c.copy_from_slice(&c_host);
         Ok(())
@@ -253,12 +227,7 @@ impl CudaKernel {
         let grid_x = (m + block_size - 1) / block_size;
         let grid_y = (n + block_size - 1) / block_size;
 
-        log::debug!(
-            "Optimal launch params: block_size={}, grid={}x{}",
-            block_size,
-            grid_x,
-            grid_y
-        );
+        log::debug!("Optimal launch params: block_size={}, grid={}x{}", block_size, grid_x, grid_y);
         (block_size, grid_x, grid_y)
     }
 
@@ -420,10 +389,7 @@ mod tests {
                 }
             }
             Err(e) => {
-                println!(
-                    "Failed to create CUDA kernel (CUDA may not be available): {}",
-                    e
-                );
+                println!("Failed to create CUDA kernel (CUDA may not be available): {}", e);
             }
         }
     }
@@ -456,17 +422,11 @@ mod tests {
                 }
 
                 // Verify we got performance results
-                assert!(
-                    !results.performance_results.is_empty(),
-                    "No performance results"
-                );
+                assert!(!results.performance_results.is_empty(), "No performance results");
 
                 // Verify GPU shows some speedup (even if small)
                 for result in &results.performance_results {
-                    println!(
-                        "Speedup for {:?}: {:.2}x",
-                        result.dimensions, result.speedup
-                    );
+                    println!("Speedup for {:?}: {:.2}x", result.dimensions, result.speedup);
                 }
 
                 assert!(results.success, "Overall validation failed");

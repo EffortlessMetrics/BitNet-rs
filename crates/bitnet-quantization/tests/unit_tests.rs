@@ -31,20 +31,13 @@ fn extract_tensor_data(tensor: &BitNetTensor) -> Vec<f32> {
 /// Calculate mean squared error between two vectors
 fn calculate_mse(a: &[f32], b: &[f32]) -> f32 {
     assert_eq!(a.len(), b.len());
-    a.iter()
-        .zip(b.iter())
-        .map(|(x, y)| (x - y).powi(2))
-        .sum::<f32>()
-        / a.len() as f32
+    a.iter().zip(b.iter()).map(|(x, y)| (x - y).powi(2)).sum::<f32>() / a.len() as f32
 }
 
 /// Calculate maximum absolute error
 fn calculate_max_error(a: &[f32], b: &[f32]) -> f32 {
     assert_eq!(a.len(), b.len());
-    a.iter()
-        .zip(b.iter())
-        .map(|(x, y)| (x - y).abs())
-        .fold(0.0f32, f32::max)
+    a.iter().zip(b.iter()).map(|(x, y)| (x - y).abs()).fold(0.0f32, f32::max)
 }
 
 #[cfg(test)]
@@ -129,9 +122,8 @@ mod quantization_algorithms {
     #[test]
     fn test_quantization_accuracy_comparison() {
         // Test with a sine wave pattern for consistent results
-        let data: Vec<f32> = (0..64)
-            .map(|i| (i as f32 * std::f32::consts::PI / 32.0).sin())
-            .collect();
+        let data: Vec<f32> =
+            (0..64).map(|i| (i as f32 * std::f32::consts::PI / 32.0).sin()).collect();
         let shape = vec![64];
         let tensor = create_test_tensor(data.clone(), shape);
 
@@ -153,12 +145,7 @@ mod quantization_algorithms {
 
             // All quantizers should have reasonable accuracy for 2-bit quantization
             assert!(mse < 5.0, "{} MSE too high: {}", name, mse);
-            assert!(
-                max_error < 5.0,
-                "{} max error too high: {}",
-                name,
-                max_error
-            );
+            assert!(max_error < 5.0, "{} max error too high: {}", name, max_error);
         }
     }
 
@@ -185,19 +172,11 @@ mod quantization_algorithms {
             println!("{} compression ratio: {:.2}x", name, ratio);
 
             // Should achieve significant compression
-            assert!(
-                ratio > 4.0,
-                "{} compression ratio too low: {:.2}x",
-                name,
-                ratio
-            );
+            assert!(ratio > 4.0, "{} compression ratio too low: {:.2}x", name, ratio);
 
             // Test the built-in compression ratio method
             let builtin_ratio = quantized.compression_ratio();
-            assert!(
-                (ratio - builtin_ratio).abs() < 0.1,
-                "Compression ratio mismatch"
-            );
+            assert!((ratio - builtin_ratio).abs() < 0.1, "Compression ratio mismatch");
         }
     }
 }
@@ -262,10 +241,7 @@ mod parameter_validation {
             assert_eq!(quantized.block_size, config.block_size);
 
             if config.use_asymmetric {
-                assert!(
-                    quantized.zero_points.is_some(),
-                    "Should have zero points for asymmetric"
-                );
+                assert!(quantized.zero_points.is_some(), "Should have zero points for asymmetric");
             }
 
             // Should be able to dequantize
@@ -386,32 +362,15 @@ mod edge_cases {
 
         // All same values should have low variance after quantization
         let mean = dequant_data.iter().sum::<f32>() / dequant_data.len() as f32;
-        let variance = dequant_data
-            .iter()
-            .map(|&x| (x - mean).powi(2))
-            .sum::<f32>()
+        let variance = dequant_data.iter().map(|&x| (x - mean).powi(2)).sum::<f32>()
             / dequant_data.len() as f32;
 
-        assert!(
-            variance < 1.0,
-            "Variance too high for constant input: {}",
-            variance
-        );
+        assert!(variance < 1.0, "Variance too high for constant input: {}", variance);
     }
 
     #[test]
     fn test_extreme_values() {
-        let data = vec![
-            f32::MAX,
-            f32::MIN,
-            0.0,
-            1e-10,
-            -1e-10,
-            100.0,
-            -100.0,
-            1e6,
-            -1e6,
-        ];
+        let data = vec![f32::MAX, f32::MIN, 0.0, 1e-10, -1e-10, 100.0, -100.0, 1e6, -1e6];
         let shape = vec![9];
         let tensor = create_test_tensor(data, shape.clone());
 
@@ -512,10 +471,7 @@ mod performance_tests {
                 let duration = start.elapsed();
 
                 assert!(result.is_ok(), "{} quantization failed", name);
-                println!(
-                    "{} quantization of {} elements took: {:?}",
-                    name, size, duration
-                );
+                println!("{} quantization of {} elements took: {:?}", name, size, duration);
 
                 // Performance should be reasonable (less than 1 second for large tensors)
                 assert!(
@@ -549,10 +505,7 @@ mod performance_tests {
             let duration = start.elapsed();
 
             assert!(result.is_ok(), "{} dequantization failed", name);
-            println!(
-                "{} dequantization of {} elements took: {:?}",
-                name, size, duration
-            );
+            println!("{} dequantization of {} elements took: {:?}", name, size, duration);
 
             // Dequantization should be fast
             assert!(
@@ -592,17 +545,8 @@ mod performance_tests {
             );
 
             // Should use significantly less memory
-            assert!(
-                quantized_bytes < original_bytes,
-                "{} should compress data",
-                name
-            );
-            assert!(
-                ratio > 2.0,
-                "{} compression ratio too low: {:.2}x",
-                name,
-                ratio
-            );
+            assert!(quantized_bytes < original_bytes, "{} should compress data", name);
+            assert!(ratio > 2.0, "{} compression ratio too low: {:.2}x", name, ratio);
         }
     }
 }
@@ -645,11 +589,7 @@ mod format_compatibility {
         let shape = vec![4];
         let tensor = create_test_tensor(data, shape);
 
-        for qtype in [
-            QuantizationType::I2S,
-            QuantizationType::TL1,
-            QuantizationType::TL2,
-        ] {
+        for qtype in [QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2] {
             let quantizer = QuantizerFactory::create(qtype);
 
             assert_eq!(quantizer.quantization_type(), qtype);
@@ -685,17 +625,9 @@ mod format_compatibility {
         let shape = vec![6];
         let tensor = create_test_tensor(data, shape);
 
-        for qtype in [
-            QuantizationType::I2S,
-            QuantizationType::TL1,
-            QuantizationType::TL2,
-        ] {
+        for qtype in [QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2] {
             let result = validate_round_trip(&tensor, qtype, 1e-3);
-            assert!(
-                result.is_ok(),
-                "Round-trip validation failed for {:?}",
-                qtype
-            );
+            assert!(result.is_ok(), "Round-trip validation failed for {:?}", qtype);
         }
     }
 }
@@ -859,21 +791,9 @@ mod integration_tests {
             println!("    Compression ratio: {:.2}x", compression_ratio);
 
             // Verify reasonable performance
-            assert!(
-                quantize_time.as_millis() < 2000,
-                "{} quantization too slow",
-                name
-            );
-            assert!(
-                dequantize_time.as_millis() < 500,
-                "{} dequantization too slow",
-                name
-            );
-            assert!(
-                compression_ratio > 2.0,
-                "{} should provide compression",
-                name
-            );
+            assert!(quantize_time.as_millis() < 2000, "{} quantization too slow", name);
+            assert!(dequantize_time.as_millis() < 500, "{} dequantization too slow", name);
+            assert!(compression_ratio > 2.0, "{} should provide compression", name);
             assert!(mse < 5.0, "{} MSE too high: {}", name, mse);
         }
     }

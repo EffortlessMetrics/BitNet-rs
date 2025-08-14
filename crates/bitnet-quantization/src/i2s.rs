@@ -93,10 +93,9 @@ impl I2SQuantizer {
     /// Dequantize tensor from I2_S format
     pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::I2S {
-            return Err(QuantizationError::UnsupportedType {
-                qtype: tensor.qtype.to_string(),
-            }
-            .into());
+            return Err(
+                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
+            );
         }
 
         // Unpack 2-bit values

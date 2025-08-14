@@ -174,15 +174,10 @@ impl WasmInference {
     #[wasm_bindgen(constructor)]
     pub fn new(model: WasmBitNetModel) -> Result<WasmInference, JsError> {
         if !model.is_loaded() {
-            return Err(JsError::new(
-                "Model must be loaded before creating inference wrapper",
-            ));
+            return Err(JsError::new("Model must be loaded before creating inference wrapper"));
         }
 
-        Ok(WasmInference {
-            model,
-            generation_stats: HashMap::new(),
-        })
+        Ok(WasmInference { model, generation_stats: HashMap::new() })
     }
 
     /// Generate text synchronously (blocking)
@@ -208,12 +203,9 @@ impl WasmInference {
         );
 
         // Update generation stats
-        self.generation_stats
-            .insert("last_prompt_length".to_string(), prompt.len() as f64);
-        self.generation_stats
-            .insert("last_response_length".to_string(), response.len() as f64);
-        self.generation_stats
-            .insert("last_temperature".to_string(), config.temperature as f64);
+        self.generation_stats.insert("last_prompt_length".to_string(), prompt.len() as f64);
+        self.generation_stats.insert("last_response_length".to_string(), response.len() as f64);
+        self.generation_stats.insert("last_temperature".to_string(), config.temperature as f64);
 
         Ok(response)
     }
@@ -257,9 +249,7 @@ impl WasmInference {
         }
 
         if !config.streaming {
-            return Err(JsError::new(
-                "Streaming must be enabled in generation config",
-            ));
+            return Err(JsError::new("Streaming must be enabled in generation config"));
         }
 
         WasmGenerationStream::new(prompt.to_string(), config)

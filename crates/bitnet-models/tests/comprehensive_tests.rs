@@ -309,10 +309,7 @@ mod progress_tests {
         let progress_values_clone = progress_values.clone();
 
         let callback: ProgressCallback = Arc::new(move |progress, message| {
-            progress_values_clone
-                .lock()
-                .unwrap()
-                .push((progress, message.to_string()));
+            progress_values_clone.lock().unwrap().push((progress, message.to_string()));
         });
 
         // Simulate a loading sequence
@@ -327,10 +324,7 @@ mod progress_tests {
 
         // Check progress is monotonically increasing
         for i in 1..values.len() {
-            assert!(
-                values[i].0 >= values[i - 1].0,
-                "Progress should be monotonic"
-            );
+            assert!(values[i].0 >= values[i - 1].0, "Progress should be monotonic");
         }
 
         assert_eq!(values[0].0, 0.0);
@@ -341,10 +335,7 @@ mod progress_tests {
     fn test_progress_callback_error_handling() {
         // Test callback with invalid progress values
         let callback: ProgressCallback = Arc::new(|progress, _message| {
-            assert!(
-                progress >= 0.0 && progress <= 1.0,
-                "Progress should be in [0, 1] range"
-            );
+            assert!(progress >= 0.0 && progress <= 1.0, "Progress should be in [0, 1] range");
         });
 
         // These should not panic
@@ -370,10 +361,7 @@ mod progress_tests {
         let progress_values_clone = progress_values.clone();
 
         let callback: ProgressCallback = Arc::new(move |progress, message| {
-            progress_values_clone
-                .lock()
-                .unwrap()
-                .push((progress, message.to_string()));
+            progress_values_clone.lock().unwrap().push((progress, message.to_string()));
         });
 
         let config = LoadConfig {
@@ -424,12 +412,8 @@ mod security_tests {
         };
         let verifier = ModelVerifier::new(security);
 
-        assert!(verifier
-            .verify_source("https://huggingface.co/model/file.gguf")
-            .is_ok());
-        assert!(verifier
-            .verify_source("https://untrusted.com/model.gguf")
-            .is_err());
+        assert!(verifier.verify_source("https://huggingface.co/model/file.gguf").is_ok());
+        assert!(verifier.verify_source("https://untrusted.com/model.gguf").is_err());
     }
 
     #[test]
@@ -468,15 +452,11 @@ mod security_tests {
         let expected_hash = verifier.compute_file_hash(temp_file.path()).unwrap();
 
         // Test validation with correct checksum
-        assert!(verifier
-            .verify_model(temp_file.path(), Some(&expected_hash))
-            .is_ok());
+        assert!(verifier.verify_model(temp_file.path(), Some(&expected_hash)).is_ok());
 
         // Test validation with incorrect checksum
         let wrong_hash = "wrong_hash_value";
-        assert!(verifier
-            .verify_model(temp_file.path(), Some(wrong_hash))
-            .is_err());
+        assert!(verifier.verify_model(temp_file.path(), Some(wrong_hash)).is_err());
     }
 }
 
@@ -674,10 +654,7 @@ mod integration_tests {
         let progress_values_clone = progress_values.clone();
 
         let callback: ProgressCallback = Arc::new(move |progress, message| {
-            progress_values_clone
-                .lock()
-                .unwrap()
-                .push((progress, message.to_string()));
+            progress_values_clone.lock().unwrap().push((progress, message.to_string()));
         });
 
         let config = LoadConfig {
@@ -751,18 +728,12 @@ mod integration_tests {
         let loader = ModelLoader::new(device);
 
         // Test with mmap enabled
-        let config_mmap = LoadConfig {
-            use_mmap: true,
-            validate_checksums: false,
-            progress_callback: None,
-        };
+        let config_mmap =
+            LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
 
         // Test with mmap disabled
-        let config_no_mmap = LoadConfig {
-            use_mmap: false,
-            validate_checksums: false,
-            progress_callback: None,
-        };
+        let config_no_mmap =
+            LoadConfig { use_mmap: false, validate_checksums: false, progress_callback: None };
 
         // Create test file
         let mut temp_file = NamedTempFile::with_suffix(".gguf").unwrap();

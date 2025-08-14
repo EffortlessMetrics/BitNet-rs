@@ -61,10 +61,6 @@ pub struct CrossvalConfig {
 
 impl Default for CrossvalConfig {
     fn default() -> Self {
-        Self {
-            tolerance: 1e-6,
-            max_tokens: 1000,
-            benchmark: false,
-        }
+        Self { tolerance: 1e-6, max_tokens: 1000, benchmark: false }
     }
 }

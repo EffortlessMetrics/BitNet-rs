@@ -81,22 +81,10 @@ async fn test_default_configuration() -> TestResult<()> {
     let config = TestConfig::default();
 
     // Validate default values
-    assert!(
-        config.max_parallel_tests > 0,
-        "Default parallel tests should be > 0"
-    );
-    assert!(
-        config.test_timeout.as_secs() > 0,
-        "Default timeout should be > 0"
-    );
-    assert!(
-        !config.cache_dir.as_os_str().is_empty(),
-        "Default cache dir should not be empty"
-    );
-    assert!(
-        !config.log_level.is_empty(),
-        "Default log level should not be empty"
-    );
+    assert!(config.max_parallel_tests > 0, "Default parallel tests should be > 0");
+    assert!(config.test_timeout.as_secs() > 0, "Default timeout should be > 0");
+    assert!(!config.cache_dir.as_os_str().is_empty(), "Default cache dir should not be empty");
+    assert!(!config.log_level.is_empty(), "Default log level should not be empty");
     assert!(
         config.coverage_threshold >= 0.0 && config.coverage_threshold <= 1.0,
         "Default coverage threshold should be between 0.0 and 1.0"
@@ -112,61 +100,34 @@ async fn test_default_configuration() -> TestResult<()> {
 async fn test_predefined_configurations() -> TestResult<()> {
     // Test CI configuration
     let ci_cfg = ci_config();
-    assert!(
-        ci_cfg.reporting.generate_coverage,
-        "CI config should generate coverage"
-    );
+    assert!(ci_cfg.reporting.generate_coverage, "CI config should generate coverage");
     assert!(
         ci_cfg.reporting.formats.contains(&ReportFormat::Junit),
         "CI config should include JUnit format"
     );
-    assert_eq!(
-        ci_cfg.log_level, "debug",
-        "CI config should use debug logging"
-    );
+    assert_eq!(ci_cfg.log_level, "debug", "CI config should use debug logging");
     validate_config(&ci_cfg)
         .map_err(|e| TestError::assertion(format!("CI config validation failed: {}", e)))?;
 
     // Test dev configuration
     let dev_cfg = dev_config();
-    assert!(
-        !dev_cfg.reporting.generate_coverage,
-        "Dev config should skip coverage for speed"
-    );
+    assert!(!dev_cfg.reporting.generate_coverage, "Dev config should skip coverage for speed");
     assert_eq!(
         dev_cfg.reporting.formats,
         vec![ReportFormat::Html],
         "Dev config should only use HTML format"
     );
-    assert_eq!(
-        dev_cfg.log_level, "info",
-        "Dev config should use info logging"
-    );
+    assert_eq!(dev_cfg.log_level, "info", "Dev config should use info logging");
     validate_config(&dev_cfg)
         .map_err(|e| TestError::assertion(format!("Dev config validation failed: {}", e)))?;
 
     // Test minimal configuration
     let minimal_cfg = minimal_config();
-    assert_eq!(
-        minimal_cfg.max_parallel_tests, 1,
-        "Minimal config should use 1 parallel test"
-    );
-    assert!(
-        !minimal_cfg.reporting.generate_coverage,
-        "Minimal config should skip coverage"
-    );
-    assert!(
-        !minimal_cfg.crossval.enabled,
-        "Minimal config should disable cross-validation"
-    );
-    assert!(
-        !minimal_cfg.fixtures.auto_download,
-        "Minimal config should disable auto-download"
-    );
-    assert_eq!(
-        minimal_cfg.log_level, "warn",
-        "Minimal config should use warn logging"
-    );
+    assert_eq!(minimal_cfg.max_parallel_tests, 1, "Minimal config should use 1 parallel test");
+    assert!(!minimal_cfg.reporting.generate_coverage, "Minimal config should skip coverage");
+    assert!(!minimal_cfg.crossval.enabled, "Minimal config should disable cross-validation");
+    assert!(!minimal_cfg.fixtures.auto_download, "Minimal config should disable auto-download");
+    assert_eq!(minimal_cfg.log_level, "warn", "Minimal config should use warn logging");
     validate_config(&minimal_cfg)
         .map_err(|e| TestError::assertion(format!("Minimal config validation failed: {}", e)))?;
 
@@ -176,10 +137,7 @@ async fn test_predefined_configurations() -> TestResult<()> {
 async fn test_configuration_validation() -> TestResult<()> {
     // Test valid configuration
     let valid_config = TestConfig::default();
-    assert!(
-        validate_config(&valid_config).is_ok(),
-        "Valid config should pass validation"
-    );
+    assert!(validate_config(&valid_config).is_ok(), "Valid config should pass validation");
 
     // Test invalid parallel tests (zero)
     let mut invalid_config = TestConfig::default();
@@ -200,10 +158,7 @@ async fn test_configuration_validation() -> TestResult<()> {
     // Test invalid log level
     let mut invalid_config = TestConfig::default();
     invalid_config.log_level = "invalid_level".to_string();
-    assert!(
-        validate_config(&invalid_config).is_err(),
-        "Invalid log level should fail validation"
-    );
+    assert!(validate_config(&invalid_config).is_err(), "Invalid log level should fail validation");
 
     Ok(())
 }
@@ -221,21 +176,12 @@ async fn test_configuration_merging() -> TestResult<()> {
     let merged = merge_configs(base_config.clone(), override_config.clone());
 
     // Verify override values took precedence
-    assert_eq!(
-        merged.max_parallel_tests, 16,
-        "Parallel tests should be overridden"
-    );
+    assert_eq!(merged.max_parallel_tests, 16, "Parallel tests should be overridden");
     assert_eq!(merged.log_level, "trace", "Log level should be overridden");
-    assert_eq!(
-        merged.coverage_threshold, 0.95,
-        "Coverage threshold should be overridden"
-    );
+    assert_eq!(merged.coverage_threshold, 0.95, "Coverage threshold should be overridden");
 
     // Verify base values are preserved where not overridden
-    assert_eq!(
-        merged.cache_dir, base_config.cache_dir,
-        "Cache dir should be preserved from base"
-    );
+    assert_eq!(merged.cache_dir, base_config.cache_dir, "Cache dir should be preserved from base");
     assert_eq!(
         merged.test_timeout, base_config.test_timeout,
         "Timeout should be preserved from base"
@@ -266,14 +212,8 @@ async fn test_configuration_serialization() -> TestResult<()> {
         loaded_config.max_parallel_tests, original_config.max_parallel_tests,
         "Parallel tests should match"
     );
-    assert_eq!(
-        loaded_config.test_timeout, original_config.test_timeout,
-        "Timeout should match"
-    );
-    assert_eq!(
-        loaded_config.log_level, original_config.log_level,
-        "Log level should match"
-    );
+    assert_eq!(loaded_config.test_timeout, original_config.test_timeout, "Timeout should match");
+    assert_eq!(loaded_config.log_level, original_config.log_level, "Log level should match");
 
     // Test JSON serialization
     let json_str = serde_json::to_string_pretty(&original_config)
@@ -292,24 +232,18 @@ async fn test_configuration_serialization() -> TestResult<()> {
 
 async fn test_environment_override() -> TestResult<()> {
     // Save original environment
-    let original_env: HashMap<String, Option<String>> = [
-        "BITNET_TEST_PARALLEL",
-        "BITNET_TEST_TIMEOUT",
-        "BITNET_TEST_LOG_LEVEL",
-    ]
-    .iter()
-    .map(|&key| (key.to_string(), env::var(key).ok()))
-    .collect();
+    let original_env: HashMap<String, Option<String>> =
+        ["BITNET_TEST_PARALLEL", "BITNET_TEST_TIMEOUT", "BITNET_TEST_LOG_LEVEL"]
+            .iter()
+            .map(|&key| (key.to_string(), env::var(key).ok()))
+            .collect();
 
     // Test parallel tests override
     env::set_var("BITNET_TEST_PARALLEL", "8");
     let mut config = TestConfig::default();
     load_config_from_env(&mut config)
         .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;
-    assert_eq!(
-        config.max_parallel_tests, 8,
-        "Environment override for parallel tests failed"
-    );
+    assert_eq!(config.max_parallel_tests, 8, "Environment override for parallel tests failed");
 
     // Test timeout override
     env::set_var("BITNET_TEST_TIMEOUT", "120");
@@ -327,10 +261,7 @@ async fn test_environment_override() -> TestResult<()> {
     let mut config = TestConfig::default();
     load_config_from_env(&mut config)
         .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;
-    assert_eq!(
-        config.log_level, "trace",
-        "Environment override for log level failed"
-    );
+    assert_eq!(config.log_level, "trace", "Environment override for log level failed");
 
     // Restore original environment
     for (key, value) in original_env {
@@ -422,10 +353,7 @@ async fn test_configuration_error_handling() -> TestResult<()> {
     // Test missing configuration file
     let missing_config_path = temp_dir.path().join("missing.toml");
     let missing_result = load_config_from_file(&missing_config_path);
-    assert!(
-        missing_result.is_err(),
-        "Loading missing config file should fail"
-    );
+    assert!(missing_result.is_err(), "Loading missing config file should fail");
 
     Ok(())
 }
@@ -443,15 +371,8 @@ async fn test_configuration_validator() -> TestResult<()> {
         .map_err(|e| TestError::execution(format!("Failed to create validator: {}", e)))?;
 
     let validation_result = validator.validate();
-    assert!(
-        validation_result.is_valid(),
-        "Default config should be valid"
-    );
-    assert_eq!(
-        validation_result.errors.len(),
-        0,
-        "Default config should have no errors"
-    );
+    assert!(validation_result.is_valid(), "Default config should be valid");
+    assert_eq!(validation_result.errors.len(), 0, "Default config should have no errors");
 
     Ok(())
 }

@@ -31,11 +31,7 @@ impl FormatLoader for HuggingFaceLoader {
 
         // TODO: Parse config.json to extract metadata
         let metadata = ModelMetadata {
-            name: path
-                .file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or("unknown")
-                .to_string(),
+            name: path.file_name().and_then(|s| s.to_str()).unwrap_or("unknown").to_string(),
             version: "unknown".to_string(),
             architecture: "bitnet".to_string(),
             vocab_size: 32000,

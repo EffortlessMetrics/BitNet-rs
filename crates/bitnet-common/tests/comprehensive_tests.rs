@@ -292,9 +292,8 @@ mod error_comprehensive {
         let config_error = BitNetError::Config("test config error".to_string());
         assert!(matches!(config_error, BitNetError::Config(_)));
 
-        let model_error = BitNetError::Model(ModelError::InvalidFormat {
-            format: "test".to_string(),
-        });
+        let model_error =
+            BitNetError::Model(ModelError::InvalidFormat { format: "test".to_string() });
         assert!(matches!(model_error, BitNetError::Model(_)));
 
         let kernel_error = BitNetError::Kernel(KernelError::NoProvider);
@@ -304,9 +303,8 @@ mod error_comprehensive {
             BitNetError::Quantization(QuantizationError::InvalidBlockSize { size: 0 });
         assert!(matches!(quantization_error, BitNetError::Quantization(_)));
 
-        let inference_error = BitNetError::Inference(InferenceError::InvalidInput {
-            reason: "test".to_string(),
-        });
+        let inference_error =
+            BitNetError::Inference(InferenceError::InvalidInput { reason: "test".to_string() });
         assert!(matches!(inference_error, BitNetError::Inference(_)));
     }
 
@@ -316,9 +314,7 @@ mod error_comprehensive {
         let display_str = format!("{}", error);
         assert!(display_str.contains("Configuration validation failed"));
 
-        let error = ModelError::InvalidFormat {
-            format: "GGUF".to_string(),
-        };
+        let error = ModelError::InvalidFormat { format: "GGUF".to_string() };
         let display_str = format!("{}", error);
         assert!(display_str.contains("GGUF"));
     }
@@ -326,9 +322,7 @@ mod error_comprehensive {
     #[test]
     fn test_error_conversions() {
         // Test From implementations
-        let model_error = ModelError::InvalidFormat {
-            format: "test".to_string(),
-        };
+        let model_error = ModelError::InvalidFormat { format: "test".to_string() };
         let bitnet_error: BitNetError = model_error.into();
         assert!(matches!(bitnet_error, BitNetError::Model(_)));
 
@@ -340,9 +334,7 @@ mod error_comprehensive {
         let bitnet_error: BitNetError = quantization_error.into();
         assert!(matches!(bitnet_error, BitNetError::Quantization(_)));
 
-        let inference_error = InferenceError::InvalidInput {
-            reason: "test".to_string(),
-        };
+        let inference_error = InferenceError::InvalidInput { reason: "test".to_string() };
         let bitnet_error: BitNetError = inference_error.into();
         assert!(matches!(bitnet_error, BitNetError::Inference(_)));
     }

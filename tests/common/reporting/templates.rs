@@ -10,15 +10,12 @@ pub struct TemplateEngine {
 impl TemplateEngine {
     /// Create a new template engine
     pub fn new() -> Self {
-        Self {
-            templates: HashMap::new(),
-        }
+        Self { templates: HashMap::new() }
     }
 
     /// Register a template with the given name
     pub fn register_template(&mut self, name: &str, template: &str) {
-        self.templates
-            .insert(name.to_string(), template.to_string());
+        self.templates.insert(name.to_string(), template.to_string());
     }
 
     /// Render a template with the given variables
@@ -44,14 +41,8 @@ impl TemplateEngine {
     /// Load default templates for HTML reports
     pub fn load_default_html_templates(&mut self) {
         self.register_template("html_base", include_str!("templates/html_base.html"));
-        self.register_template(
-            "test_suite_row",
-            include_str!("templates/test_suite_row.html"),
-        );
-        self.register_template(
-            "test_case_row",
-            include_str!("templates/test_case_row.html"),
-        );
+        self.register_template("test_suite_row", include_str!("templates/test_suite_row.html"));
+        self.register_template("test_case_row", include_str!("templates/test_case_row.html"));
     }
 }
 
@@ -87,8 +78,6 @@ mod tests {
 
         let result = engine.render("nonexistent", &variables);
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("Template 'nonexistent' not found"));
+        assert!(result.unwrap_err().contains("Template 'nonexistent' not found"));
     }
 }

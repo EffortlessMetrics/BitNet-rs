@@ -45,9 +45,7 @@ mod ci_reporting_test {
         pub fn from_env() -> Self {
             Self {
                 commit_sha: std::env::var("GITHUB_SHA").ok(),
-                pr_number: std::env::var("GITHUB_PR_NUMBER")
-                    .ok()
-                    .and_then(|s| s.parse().ok()),
+                pr_number: std::env::var("GITHUB_PR_NUMBER").ok().and_then(|s| s.parse().ok()),
                 branch_name: std::env::var("GITHUB_REF_NAME").ok(),
                 workflow_run_id: std::env::var("GITHUB_RUN_ID").ok(),
                 actor: std::env::var("GITHUB_ACTOR").ok(),
@@ -64,11 +62,7 @@ mod ci_reporting_test {
 
     impl Default for TrendConfig {
         fn default() -> Self {
-            Self {
-                retention_days: 90,
-                min_samples_for_baseline: 5,
-                regression_threshold: 1.2,
-            }
+            Self { retention_days: 90, min_samples_for_baseline: 5, regression_threshold: 1.2 }
         }
     }
 
@@ -178,18 +172,9 @@ mod ci_reporting_test {
         assert_eq!(metadata.branch, Some("main".to_string()));
         assert_eq!(metadata.pr_number, Some(42));
         assert_eq!(metadata.environment.get("os"), Some(&"ubuntu".to_string()));
-        assert_eq!(
-            metadata.environment.get("arch"),
-            Some(&"x86_64".to_string())
-        );
-        assert_eq!(
-            metadata.configuration.get("features"),
-            Some(&"cpu".to_string())
-        );
-        assert_eq!(
-            metadata.configuration.get("profile"),
-            Some(&"release".to_string())
-        );
+        assert_eq!(metadata.environment.get("arch"), Some(&"x86_64".to_string()));
+        assert_eq!(metadata.configuration.get("features"), Some(&"cpu".to_string()));
+        assert_eq!(metadata.configuration.get("profile"), Some(&"release".to_string()));
     }
 
     pub fn test_environment_collection() {
@@ -210,14 +195,8 @@ mod ci_reporting_test {
         config.insert("CARGO_BUILD_FEATURES".to_string(), "cpu,gpu".to_string());
         config.insert("CARGO_BUILD_PROFILE".to_string(), "release".to_string());
 
-        assert_eq!(
-            config.get("CARGO_BUILD_FEATURES"),
-            Some(&"cpu,gpu".to_string())
-        );
-        assert_eq!(
-            config.get("CARGO_BUILD_PROFILE"),
-            Some(&"release".to_string())
-        );
+        assert_eq!(config.get("CARGO_BUILD_FEATURES"), Some(&"cpu,gpu".to_string()));
+        assert_eq!(config.get("CARGO_BUILD_PROFILE"), Some(&"release".to_string()));
     }
 }
 

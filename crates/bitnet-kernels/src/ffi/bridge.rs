@@ -78,29 +78,17 @@ impl KernelProvider for FfiKernel {
         // Validate input dimensions
         if a.len() != m * k {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!(
-                    "Matrix A dimension mismatch: expected {}, got {}",
-                    m * k,
-                    a.len()
-                ),
+                reason: format!("Matrix A dimension mismatch: expected {}, got {}", m * k, a.len()),
             }));
         }
         if b.len() != k * n {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!(
-                    "Matrix B dimension mismatch: expected {}, got {}",
-                    k * n,
-                    b.len()
-                ),
+                reason: format!("Matrix B dimension mismatch: expected {}, got {}", k * n, b.len()),
             }));
         }
         if c.len() != m * n {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!(
-                    "Matrix C dimension mismatch: expected {}, got {}",
-                    m * n,
-                    c.len()
-                ),
+                reason: format!("Matrix C dimension mismatch: expected {}, got {}", m * n, c.len()),
             }));
         }
 
@@ -281,12 +269,7 @@ impl PerformanceComparison {
             }
         }
 
-        Ok(Self {
-            rust_time_ns,
-            cpp_time_ns,
-            accuracy_match,
-            max_error,
-        })
+        Ok(Self { rust_time_ns, cpp_time_ns, accuracy_match, max_error })
     }
 
     /// Compare quantization performance
@@ -327,12 +310,7 @@ impl PerformanceComparison {
             }
         }
 
-        Ok(Self {
-            rust_time_ns,
-            cpp_time_ns,
-            accuracy_match,
-            max_error,
-        })
+        Ok(Self { rust_time_ns, cpp_time_ns, accuracy_match, max_error })
     }
 
     /// Get performance improvement ratio (positive means Rust is faster)

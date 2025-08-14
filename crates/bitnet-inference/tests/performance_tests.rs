@@ -69,9 +69,7 @@ struct MockTokenizer {
 
 impl MockTokenizer {
     fn new() -> Self {
-        Self {
-            processing_delay: Duration::from_micros(100),
-        }
+        Self { processing_delay: Duration::from_micros(100) }
     }
 
     fn with_delay(mut self, delay: Duration) -> Self {
@@ -115,12 +113,7 @@ struct PerformanceMetrics {
 
 impl PerformanceMetrics {
     fn new() -> Self {
-        Self {
-            latency: Duration::from_millis(0),
-            throughput: 0.0,
-            memory_peak: 0,
-            cpu_usage: 0.0,
-        }
+        Self { latency: Duration::from_millis(0), throughput: 0.0, memory_peak: 0, cpu_usage: 0.0 }
     }
 }
 
@@ -131,10 +124,7 @@ struct PerformanceMeasurer {
 
 impl PerformanceMeasurer {
     fn new() -> Self {
-        Self {
-            start_time: Instant::now(),
-            request_count: 0,
-        }
+        Self { start_time: Instant::now(), request_count: 0 }
     }
 
     fn record_request(&mut self) {
@@ -378,10 +368,7 @@ mod throughput_tests {
         let total_time = start_time.elapsed();
         let tokens_per_second = token_count as f64 / total_time.as_secs_f64();
 
-        println!(
-            "Streaming throughput: {:.2} tokens/second",
-            tokens_per_second
-        );
+        println!("Streaming throughput: {:.2} tokens/second", tokens_per_second);
         assert!(token_count > 0);
         assert!(tokens_per_second > 0.0);
     }
@@ -421,10 +408,7 @@ mod throughput_tests {
             let total_time = start_time.elapsed();
             let throughput = successful_requests as f64 / total_time.as_secs_f64();
 
-            println!(
-                "Concurrency {}: {:.2} requests/second",
-                concurrency, throughput
-            );
+            println!("Concurrency {}: {:.2} requests/second", concurrency, throughput);
             assert_eq!(successful_requests, base_requests);
         }
     }
@@ -533,10 +517,7 @@ mod memory_tests {
             assert!(result.is_ok());
 
             let stats = engine.get_stats().await;
-            println!(
-                "Context length {}: Memory usage {:.2}%",
-                context_length, stats.cache_usage
-            );
+            println!("Context length {}: Memory usage {:.2}%", context_length, stats.cache_usage);
 
             assert!(stats.cache_usage >= 0.0);
             assert!(stats.cache_usage <= 100.0);
@@ -675,10 +656,7 @@ mod cache_performance_tests {
             let total_time = start_time.elapsed();
 
             let throughput = 10.0 / total_time.as_secs_f64();
-            println!(
-                "Cache size {}: {:.2} requests/second",
-                cache_size, throughput
-            );
+            println!("Cache size {}: {:.2} requests/second", cache_size, throughput);
 
             assert!(throughput > 0.0);
         }
@@ -774,10 +752,7 @@ mod backend_performance_tests {
         let gpu_time = start_time.elapsed();
         assert!(result.is_ok());
 
-        println!(
-            "CPU backend time: {:?}, GPU backend time: {:?}",
-            cpu_time, gpu_time
-        );
+        println!("CPU backend time: {:?}, GPU backend time: {:?}", cpu_time, gpu_time);
 
         // Both should complete successfully
         assert!(cpu_time > Duration::from_millis(0));
@@ -804,10 +779,7 @@ mod backend_performance_tests {
         let warmed_up_time = start_time.elapsed();
         assert!(result2.is_ok());
 
-        println!(
-            "Cold start: {:?}, Warmed up: {:?}",
-            cold_start_time, warmed_up_time
-        );
+        println!("Cold start: {:?}, Warmed up: {:?}", cold_start_time, warmed_up_time);
 
         // Both should complete, warmed up might be faster
         assert!(cold_start_time > Duration::from_millis(0));
@@ -932,10 +904,7 @@ mod stress_tests {
 
         // Generate many requests to stress memory usage
         for i in 0..num_requests {
-            let prompt = format!(
-                "Memory stress test {} with longer prompt to use more memory",
-                i
-            );
+            let prompt = format!("Memory stress test {} with longer prompt to use more memory", i);
             let result = engine.generate(&prompt).await;
             assert!(result.is_ok());
 

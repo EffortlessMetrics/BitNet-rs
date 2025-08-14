@@ -77,12 +77,7 @@ impl TestCase for BasicTokenizationPipelineTest {
             })?;
             let encode_time = encode_start.elapsed();
 
-            debug!(
-                "Input '{}' tokenized to {} tokens: {:?}",
-                input,
-                tokens.len(),
-                tokens
-            );
+            debug!("Input '{}' tokenized to {} tokens: {:?}", input, tokens.len(), tokens);
 
             if tokens.is_empty() {
                 return Err(TestError::assertion(format!(
@@ -126,9 +121,7 @@ impl TestCase for BasicTokenizationPipelineTest {
 
         // Verify all inputs were processed
         if pipeline_results.len() != test_inputs.len() {
-            return Err(TestError::assertion(
-                "Not all inputs were processed through pipeline",
-            ));
+            return Err(TestError::assertion("Not all inputs were processed through pipeline"));
         }
 
         // Verify tokenizer was called appropriately
@@ -146,26 +139,21 @@ impl TestCase for BasicTokenizationPipelineTest {
         }
 
         // Calculate statistics
-        let avg_tokens = tokenization_stats
-            .iter()
-            .map(|(tokens, _, _, _)| *tokens)
-            .sum::<usize>() as f64
+        let avg_tokens = tokenization_stats.iter().map(|(tokens, _, _, _)| *tokens).sum::<usize>()
+            as f64
             / test_inputs.len() as f64;
-        let avg_encode_time = tokenization_stats
-            .iter()
-            .map(|(_, encode, _, _)| encode.as_micros())
-            .sum::<u128>() as f64
-            / test_inputs.len() as f64;
-        let avg_decode_time = tokenization_stats
-            .iter()
-            .map(|(_, _, decode, _)| decode.as_micros())
-            .sum::<u128>() as f64
-            / test_inputs.len() as f64;
-        let avg_pipeline_time = tokenization_stats
-            .iter()
-            .map(|(_, _, _, pipeline)| pipeline.as_millis())
-            .sum::<u128>() as f64
-            / test_inputs.len() as f64;
+        let avg_encode_time =
+            tokenization_stats.iter().map(|(_, encode, _, _)| encode.as_micros()).sum::<u128>()
+                as f64
+                / test_inputs.len() as f64;
+        let avg_decode_time =
+            tokenization_stats.iter().map(|(_, _, decode, _)| decode.as_micros()).sum::<u128>()
+                as f64
+                / test_inputs.len() as f64;
+        let avg_pipeline_time =
+            tokenization_stats.iter().map(|(_, _, _, pipeline)| pipeline.as_millis()).sum::<u128>()
+                as f64
+                / test_inputs.len() as f64;
 
         let duration = start_time.elapsed();
 
@@ -182,10 +170,7 @@ impl TestCase for BasicTokenizationPipelineTest {
                 ("avg_pipeline_time_ms".to_string(), avg_pipeline_time),
                 ("tokenizer_encode_calls".to_string(), encode_calls as f64),
                 ("tokenizer_decode_calls".to_string(), decode_calls as f64),
-                (
-                    "model_forward_calls".to_string(),
-                    model.forward_call_count() as f64,
-                ),
+                ("model_forward_calls".to_string(), model.forward_call_count() as f64),
             ]
             .into_iter()
             .collect(),
@@ -259,29 +244,18 @@ impl TestCase for TokenizationAccuracyTest {
             debug!("Round-trip test {}: '{}'", i + 1, input);
 
             let tokens = tokenizer.encode(input, true).map_err(|e| {
-                TestError::execution(format!(
-                    "Encode failed for round-trip test {}: {}",
-                    i + 1,
-                    e
-                ))
+                TestError::execution(format!("Encode failed for round-trip test {}: {}", i + 1, e))
             })?;
 
             let decoded = tokenizer.decode(&tokens, true).map_err(|e| {
-                TestError::execution(format!(
-                    "Decode failed for round-trip test {}: {}",
-                    i + 1,
-                    e
-                ))
+                TestError::execution(format!("Decode failed for round-trip test {}: {}", i + 1, e))
             })?;
 
             debug!("Original: '{}' -> Decoded: '{}'", input, decoded);
 
             // For mock tokenizer, we expect specific format
             if !decoded.starts_with("generated_text_") {
-                warn!(
-                    "Round-trip result doesn't match expected mock format: '{}'",
-                    decoded
-                );
+                warn!("Round-trip result doesn't match expected mock format: '{}'", decoded);
             }
 
             round_trip_results.push((input.to_string(), decoded));
@@ -300,10 +274,7 @@ impl TestCase for TokenizationAccuracyTest {
         })?;
 
         debug!("With special tokens: {} tokens", tokens_with_special.len());
-        debug!(
-            "Without special tokens: {} tokens",
-            tokens_without_special.len()
-        );
+        debug!("Without special tokens: {} tokens", tokens_without_special.len());
 
         // Test vocabulary boundaries
         debug!("Testing vocabulary boundaries");
@@ -324,17 +295,13 @@ impl TestCase for TokenizationAccuracyTest {
 
         if let Some(eos_id) = eos_token {
             if eos_id >= vocab_size as u32 {
-                return Err(TestError::assertion(
-                    "EOS token ID should be within vocabulary",
-                ));
+                return Err(TestError::assertion("EOS token ID should be within vocabulary"));
             }
         }
 
         if let Some(pad_id) = pad_token {
             if pad_id >= vocab_size as u32 {
-                return Err(TestError::assertion(
-                    "PAD token ID should be within vocabulary",
-                ));
+                return Err(TestError::assertion("PAD token ID should be within vocabulary"));
             }
         }
 
@@ -347,27 +314,12 @@ impl TestCase for TokenizationAccuracyTest {
             cpu_time: Some(duration),
             custom_metrics: [
                 ("consistency_tests".to_string(), token_sets.len() as f64),
-                (
-                    "round_trip_tests".to_string(),
-                    round_trip_results.len() as f64,
-                ),
+                ("round_trip_tests".to_string(), round_trip_results.len() as f64),
                 ("vocab_size".to_string(), vocab_size as f64),
-                (
-                    "has_eos_token".to_string(),
-                    if eos_token.is_some() { 1.0 } else { 0.0 },
-                ),
-                (
-                    "has_pad_token".to_string(),
-                    if pad_token.is_some() { 1.0 } else { 0.0 },
-                ),
-                (
-                    "tokenizer_encode_calls".to_string(),
-                    tokenizer.encode_call_count() as f64,
-                ),
-                (
-                    "tokenizer_decode_calls".to_string(),
-                    tokenizer.decode_call_count() as f64,
-                ),
+                ("has_eos_token".to_string(), if eos_token.is_some() { 1.0 } else { 0.0 }),
+                ("has_pad_token".to_string(), if pad_token.is_some() { 1.0 } else { 0.0 }),
+                ("tokenizer_encode_calls".to_string(), tokenizer.encode_call_count() as f64),
+                ("tokenizer_decode_calls".to_string(), tokenizer.decode_call_count() as f64),
             ]
             .into_iter()
             .collect(),
@@ -415,12 +367,10 @@ impl TestCase for SpecialTokenHandlingTest {
         };
 
         let stop_test_prompt = "Generate text until STOP";
-        let stop_result = engine
-            .generate_with_config(stop_test_prompt, &config_with_stop)
-            .await
-            .map_err(|e| {
-                TestError::execution(format!("Generation with stop sequences failed: {}", e))
-            })?;
+        let stop_result =
+            engine.generate_with_config(stop_test_prompt, &config_with_stop).await.map_err(
+                |e| TestError::execution(format!("Generation with stop sequences failed: {}", e)),
+            )?;
 
         debug!("Generated with stop sequences: '{}'", stop_result);
 
@@ -514,31 +464,13 @@ impl TestCase for SpecialTokenHandlingTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "stop_sequences_tested".to_string(),
-                    config_with_stop.stop_sequences.len() as f64,
-                ),
-                (
-                    "has_eos_token".to_string(),
-                    if eos_token_id.is_some() { 1.0 } else { 0.0 },
-                ),
-                (
-                    "has_pad_token".to_string(),
-                    if pad_token_id.is_some() { 1.0 } else { 0.0 },
-                ),
+                ("stop_sequences_tested".to_string(), config_with_stop.stop_sequences.len() as f64),
+                ("has_eos_token".to_string(), if eos_token_id.is_some() { 1.0 } else { 0.0 }),
+                ("has_pad_token".to_string(), if pad_token_id.is_some() { 1.0 } else { 0.0 }),
                 ("edge_cases_tested".to_string(), edge_cases.len() as f64),
-                (
-                    "successful_edge_cases".to_string(),
-                    successful_edge_cases as f64,
-                ),
-                (
-                    "tokenizer_encode_calls".to_string(),
-                    tokenizer.encode_call_count() as f64,
-                ),
-                (
-                    "tokenizer_decode_calls".to_string(),
-                    tokenizer.decode_call_count() as f64,
-                ),
+                ("successful_edge_cases".to_string(), successful_edge_cases as f64),
+                ("tokenizer_encode_calls".to_string(), tokenizer.encode_call_count() as f64),
+                ("tokenizer_decode_calls".to_string(), tokenizer.decode_call_count() as f64),
             ]
             .into_iter()
             .collect(),
@@ -620,10 +552,7 @@ impl TestCase for LongSequenceTokenizationTest {
                     }
                 }
                 Err(e) => {
-                    warn!(
-                        "Long sequence generation failed for length {}: {}",
-                        length, e
-                    );
+                    warn!("Long sequence generation failed for length {}: {}", length, e);
                     // Don't fail the test, as very long sequences might legitimately fail
                 }
             }
@@ -690,32 +619,14 @@ impl TestCase for LongSequenceTokenizationTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "sequence_lengths_tested".to_string(),
-                    sequence_lengths.len() as f64,
-                ),
-                (
-                    "avg_processing_time_ms".to_string(),
-                    avg_processing_time.as_millis() as f64,
-                ),
-                (
-                    "max_processing_time_ms".to_string(),
-                    max_processing_time.as_millis() as f64,
-                ),
+                ("sequence_lengths_tested".to_string(), sequence_lengths.len() as f64),
+                ("avg_processing_time_ms".to_string(), avg_processing_time.as_millis() as f64),
+                ("max_processing_time_ms".to_string(), max_processing_time.as_millis() as f64),
                 ("avg_tokens_per_sequence".to_string(), avg_tokens),
                 ("max_tokens_in_sequence".to_string(), *max_tokens as f64),
-                (
-                    "context_test_time_ms".to_string(),
-                    context_test_time.as_millis() as f64,
-                ),
-                (
-                    "tokenizer_encode_calls".to_string(),
-                    tokenizer.encode_call_count() as f64,
-                ),
-                (
-                    "model_forward_calls".to_string(),
-                    model.forward_call_count() as f64,
-                ),
+                ("context_test_time_ms".to_string(), context_test_time.as_millis() as f64),
+                ("tokenizer_encode_calls".to_string(), tokenizer.encode_call_count() as f64),
+                ("model_forward_calls".to_string(), model.forward_call_count() as f64),
             ]
             .into_iter()
             .collect(),
@@ -793,11 +704,7 @@ impl TestCase for TokenizationErrorHandlingTest {
                     }
                 }
                 Err(e) => {
-                    debug!(
-                        "Problematic input {} tokenization failed as expected: {}",
-                        i + 1,
-                        e
-                    );
+                    debug!("Problematic input {} tokenization failed as expected: {}", i + 1, e);
                     failed_tokenizations += 1;
                 }
             }
@@ -805,11 +712,7 @@ impl TestCase for TokenizationErrorHandlingTest {
             // Test full pipeline
             match engine.generate(input).await {
                 Ok(generated) => {
-                    debug!(
-                        "Problematic input {} pipeline succeeded: '{}'",
-                        i + 1,
-                        generated
-                    );
+                    debug!("Problematic input {} pipeline succeeded: '{}'", i + 1, generated);
                     error_handling_results.push(true);
                 }
                 Err(e) => {
@@ -901,38 +804,17 @@ impl TestCase for TokenizationErrorHandlingTest {
             memory_average: None,
             cpu_time: Some(duration),
             custom_metrics: [
-                (
-                    "problematic_inputs_tested".to_string(),
-                    problematic_inputs.len() as f64,
-                ),
-                (
-                    "successful_tokenizations".to_string(),
-                    successful_tokenizations as f64,
-                ),
-                (
-                    "failed_tokenizations".to_string(),
-                    failed_tokenizations as f64,
-                ),
-                (
-                    "successful_error_handling".to_string(),
-                    successful_error_handling as f64,
-                ),
+                ("problematic_inputs_tested".to_string(), problematic_inputs.len() as f64),
+                ("successful_tokenizations".to_string(), successful_tokenizations as f64),
+                ("failed_tokenizations".to_string(), failed_tokenizations as f64),
+                ("successful_error_handling".to_string(), successful_error_handling as f64),
                 (
                     "invalid_token_sequences_tested".to_string(),
                     invalid_token_sequences.len() as f64,
                 ),
-                (
-                    "successful_invalid_decodes".to_string(),
-                    successful_invalid_decodes as f64,
-                ),
-                (
-                    "concurrent_successes".to_string(),
-                    concurrent_successes as f64,
-                ),
-                (
-                    "concurrent_failures".to_string(),
-                    concurrent_failures as f64,
-                ),
+                ("successful_invalid_decodes".to_string(), successful_invalid_decodes as f64),
+                ("concurrent_successes".to_string(), concurrent_successes as f64),
+                ("concurrent_failures".to_string(), concurrent_failures as f64),
                 ("recovery_successful".to_string(), 1.0),
             ]
             .into_iter()

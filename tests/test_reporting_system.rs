@@ -14,11 +14,7 @@ async fn test_reporting_system_basic() {
     // Create test configuration
     let config = ReportConfig {
         output_dir: temp_dir.path().to_path_buf(),
-        formats: vec![
-            ReportFormat::Json,
-            ReportFormat::Html,
-            ReportFormat::Markdown,
-        ],
+        formats: vec![ReportFormat::Json, ReportFormat::Html, ReportFormat::Markdown],
         include_artifacts: false,
         generate_coverage: false,
         interactive_html: true,

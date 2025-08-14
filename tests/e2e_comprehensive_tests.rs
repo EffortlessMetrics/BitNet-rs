@@ -95,11 +95,7 @@ mod happy_path_e2e {
             .sum::<f32>()
             / original_data.len() as f32;
 
-        assert!(
-            mse < 0.1,
-            "Round-trip error should be low, got MSE: {}",
-            mse
-        );
+        assert!(mse < 0.1, "Round-trip error should be low, got MSE: {}", mse);
     }
 
     #[test]
@@ -116,12 +112,9 @@ mod happy_path_e2e {
         let mut results = Vec::new();
 
         for quantizer in quantizers {
-            let quantized = quantizer
-                .quantize(&tensor)
-                .expect("Quantization should succeed");
-            let dequantized = quantizer
-                .dequantize(&quantized)
-                .expect("Dequantization should succeed");
+            let quantized = quantizer.quantize(&tensor).expect("Quantization should succeed");
+            let dequantized =
+                quantizer.dequantize(&quantized).expect("Dequantization should succeed");
 
             // Calculate compression ratio and accuracy
             let original_size = tensor.numel() * 4; // f32 = 4 bytes
@@ -136,16 +129,8 @@ mod happy_path_e2e {
 
         // Verify compression ratios are reasonable
         for (ratio, _) in &results {
-            assert!(
-                *ratio > 1.0,
-                "Compression ratio should be > 1.0, got {}",
-                ratio
-            );
-            assert!(
-                *ratio < 10.0,
-                "Compression ratio should be reasonable, got {}",
-                ratio
-            );
+            assert!(*ratio > 1.0, "Compression ratio should be > 1.0, got {}", ratio);
+            assert!(*ratio < 10.0, "Compression ratio should be reasonable, got {}", ratio);
         }
     }
 
@@ -154,10 +139,7 @@ mod happy_path_e2e {
         // Test automatic kernel selection and execution
         let provider = select_best_provider();
 
-        assert!(
-            provider.is_available(),
-            "Selected provider should be available"
-        );
+        assert!(provider.is_available(), "Selected provider should be available");
 
         // Test basic operations
         let tensor_a = TestDataGenerator::create_large_tensor(vec![128, 128]);
@@ -168,11 +150,7 @@ mod happy_path_e2e {
         assert!(result.is_ok(), "Matrix multiplication should succeed");
 
         let output = result.unwrap();
-        assert_eq!(
-            output.shape(),
-            vec![128, 128],
-            "Output shape should be correct"
-        );
+        assert_eq!(output.shape(), vec![128, 128], "Output shape should be correct");
     }
 
     #[test]
@@ -230,10 +208,7 @@ mod unhappy_path_e2e {
         let tensor_b = MockTensor::new(vec![32, 64]); // Wrong dimensions for matmul
 
         let result = provider.matmul_i2s(&tensor_a, &tensor_b);
-        assert!(
-            result.is_err(),
-            "Matrix multiplication with wrong dimensions should fail"
-        );
+        assert!(result.is_err(), "Matrix multiplication with wrong dimensions should fail");
     }
 
     #[test]
@@ -265,10 +240,7 @@ mod unhappy_path_e2e {
 
             // Error should have meaningful message
             let error = validation_result.unwrap_err();
-            assert!(
-                !format!("{}", error).is_empty(),
-                "Error message should not be empty"
-            );
+            assert!(!format!("{}", error).is_empty(), "Error message should not be empty");
         }
     }
 
@@ -310,25 +282,17 @@ mod integration_tests {
         let provider = select_best_provider();
 
         // Step 1: Quantize
-        let quantized = quantizer
-            .quantize(&tensor)
-            .expect("Quantization should succeed");
+        let quantized = quantizer.quantize(&tensor).expect("Quantization should succeed");
 
         // Step 2: Perform kernel operation
         let kernel_result = provider.quantize_i2s(&tensor);
         assert!(kernel_result.is_ok(), "Kernel operation should succeed");
 
         // Step 3: Dequantize
-        let dequantized = quantizer
-            .dequantize(&quantized)
-            .expect("Dequantization should succeed");
+        let dequantized = quantizer.dequantize(&quantized).expect("Dequantization should succeed");
 
         // Verify pipeline integrity
-        assert_eq!(
-            dequantized.shape(),
-            tensor.shape(),
-            "Shape should be preserved"
-        );
+        assert_eq!(dequantized.shape(), tensor.shape(), "Shape should be preserved");
     }
 
     #[test]
@@ -341,11 +305,7 @@ mod integration_tests {
             let quantizer = I2SQuantizer::with_block_size(block_size);
 
             let result = quantizer.quantize(&tensor);
-            assert!(
-                result.is_ok(),
-                "Quantization with block size {} should succeed",
-                block_size
-            );
+            assert!(result.is_ok(), "Quantization with block size {} should succeed", block_size);
         }
     }
 
@@ -363,9 +323,6 @@ mod integration_tests {
         let success_result = quantizer.quantize(&valid_tensor);
 
         // Should succeed after error
-        assert!(
-            success_result.is_ok(),
-            "System should recover from previous error"
-        );
+        assert!(success_result.is_ok(), "System should recover from previous error");
     }
 }

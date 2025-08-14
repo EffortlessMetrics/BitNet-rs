@@ -30,9 +30,7 @@ fn main() {
 #[cfg(feature = "cuda")]
 fn run_gpu_validation() {
     // Initialize logging
-    env_logger::Builder::from_default_env()
-        .filter_level(log::LevelFilter::Info)
-        .init();
+    env_logger::Builder::from_default_env().filter_level(log::LevelFilter::Info).init();
 
     println!("🚀 BitNet GPU Kernel Validation and Benchmarking Tool");
     println!("====================================================");

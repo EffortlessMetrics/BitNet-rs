@@ -33,13 +33,7 @@ impl WasmGenerationStream {
         // In a real implementation, this would be done incrementally
         let tokens = Self::simulate_token_generation(&prompt, &config);
 
-        Ok(WasmGenerationStream {
-            prompt,
-            config,
-            position: 0,
-            finished: false,
-            tokens,
-        })
+        Ok(WasmGenerationStream { prompt, config, position: 0, finished: false, tokens })
     }
 
     /// Get the next token (async)
@@ -136,11 +130,7 @@ impl WasmGenerationStream {
         // Make it an async iterator
         let symbol_async_iterator = js_sys::Symbol::async_iterator();
         let self_fn = Closure::wrap(Box::new(move || iterator.clone()) as Box<dyn Fn() -> Object>);
-        Reflect::set(
-            &iterator,
-            &symbol_async_iterator,
-            self_fn.as_ref().unchecked_ref(),
-        )?;
+        Reflect::set(&iterator, &symbol_async_iterator, self_fn.as_ref().unchecked_ref())?;
         self_fn.forget();
 
         Ok(iterator.into())
@@ -152,39 +142,31 @@ impl WasmGenerationStream {
         let tokens = self.tokens.clone();
         let max_tokens = self.config.max_new_tokens;
 
-        let start_fn = Closure::wrap(
-            Box::new(move |controller: ReadableStreamDefaultController| {
-                let tokens = tokens.clone();
-                spawn_local(async move {
-                    for (i, token) in tokens.iter().enumerate() {
-                        if i >= max_tokens {
-                            break;
-                        }
-
-                        // Simulate processing delay
-                        Self::sleep(50).await;
-
-                        let chunk = js_sys::Uint8Array::from(token.as_bytes());
-                        if controller.enqueue_with_chunk(&chunk).is_err() {
-                            break;
-                        }
+        let start_fn = Closure::wrap(Box::new(move |controller: ReadableStreamDefaultController| {
+            let tokens = tokens.clone();
+            spawn_local(async move {
+                for (i, token) in tokens.iter().enumerate() {
+                    if i >= max_tokens {
+                        break;
                     }
-                    let _ = controller.close();
-                });
-            }) as Box<dyn FnMut(ReadableStreamDefaultController)>,
-        );
+
+                    // Simulate processing delay
+                    Self::sleep(50).await;
+
+                    let chunk = js_sys::Uint8Array::from(token.as_bytes());
+                    if controller.enqueue_with_chunk(&chunk).is_err() {
+                        break;
+                    }
+                }
+                let _ = controller.close();
+            });
+        }) as Box<dyn FnMut(ReadableStreamDefaultController)>);
 
         let underlying_source = Object::new();
-        Reflect::set(
-            &underlying_source,
-            &"start".into(),
-            start_fn.as_ref().unchecked_ref(),
-        )?;
+        Reflect::set(&underlying_source, &"start".into(), start_fn.as_ref().unchecked_ref())?;
         start_fn.forget();
 
-        Ok(ReadableStream::new_with_underlying_source(
-            &underlying_source,
-        )?)
+        Ok(ReadableStream::new_with_underlying_source(&underlying_source)?)
     }
 }
 
@@ -291,12 +273,7 @@ impl StreamToken {
     #[wasm_bindgen(constructor)]
     pub fn new(text: String, position: usize, is_final: bool) -> StreamToken {
         let timestamp = js_sys::Date::now();
-        StreamToken {
-            text,
-            position,
-            is_final,
-            timestamp,
-        }
+        StreamToken { text, position, is_final, timestamp }
     }
 
     #[wasm_bindgen(getter)]

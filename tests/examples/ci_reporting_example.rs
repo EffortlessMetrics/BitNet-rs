@@ -24,10 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create sample test results
     let test_results = create_sample_test_results();
-    println!(
-        "📊 Created {} test suites with sample results",
-        test_results.len()
-    );
+    println!("📊 Created {} test suites with sample results", test_results.len());
 
     // Example 1: Basic CI Notification Processing
     println!("\n1️⃣ Processing CI Notifications");
@@ -57,22 +54,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("✅ Created CI notification manager");
 
             // Process test results (this would normally send to GitHub)
-            match notification_manager
-                .process_test_results(&test_results, &ci_context)
-                .await
-            {
+            match notification_manager.process_test_results(&test_results, &ci_context).await {
                 Ok(()) => println!("✅ Processed test results for CI notifications"),
-                Err(e) => println!(
-                    "⚠️  CI notification processing failed (expected in test env): {}",
-                    e
-                ),
+                Err(e) => {
+                    println!("⚠️  CI notification processing failed (expected in test env): {}", e)
+                }
             }
         }
         Err(e) => {
-            println!(
-                "⚠️  Could not create CI notification manager (expected in test env): {}",
-                e
-            );
+            println!("⚠️  Could not create CI notification manager (expected in test env): {}", e);
             println!("   This is normal when GITHUB_TOKEN is not available");
         }
     }
@@ -94,10 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         configuration: create_sample_configuration(),
     };
 
-    match trend_reporter
-        .record_test_results(&test_results, &metadata)
-        .await
-    {
+    match trend_reporter.record_test_results(&test_results, &metadata).await {
         Ok(()) => println!("✅ Recorded test results for trend analysis"),
         Err(e) => println!("❌ Failed to record trend data: {}", e),
     }
@@ -108,14 +95,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("✅ Generated trend report:");
             println!("   - Period: {} days", report.period_days);
             println!("   - Total entries: {}", report.total_entries);
-            println!(
-                "   - Overall stability: {:.1}%",
-                report.analysis.overall_stability * 100.0
-            );
-            println!(
-                "   - Performance trend: {:?}",
-                report.analysis.performance_trend
-            );
+            println!("   - Overall stability: {:.1}%", report.analysis.overall_stability * 100.0);
+            println!("   - Performance trend: {:?}", report.analysis.performance_trend);
         }
         Err(e) => println!("❌ Failed to generate trend report: {}", e),
     }
@@ -129,10 +110,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if regressions.is_empty() {
                 println!("✅ No performance regressions detected");
             } else {
-                println!(
-                    "⚠️  Detected {} performance regressions:",
-                    regressions.len()
-                );
+                println!("⚠️  Detected {} performance regressions:", regressions.len());
                 for regression in &regressions {
                     println!(
                         "   - {}: {:.1}% slower",
@@ -236,11 +214,7 @@ fn create_test_suite(name: &str, total: usize, passed: usize, failed: usize) -> 
     }
 
     let total_duration: Duration = test_results.iter().map(|t| t.duration).sum();
-    let success_rate = if total > 0 {
-        (passed as f64 / total as f64) * 100.0
-    } else {
-        100.0
-    };
+    let success_rate = if total > 0 { (passed as f64 / total as f64) * 100.0 } else { 100.0 };
 
     TestSuiteResult {
         suite_name: name.to_string(),

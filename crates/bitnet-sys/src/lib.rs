@@ -150,9 +150,7 @@ pub mod safe {
         let c_prompt = CString::new(prompt)?;
 
         if max_tokens == 0 {
-            return Err(SysError::InvalidParameter(
-                "max_tokens must be > 0".to_string(),
-            ));
+            return Err(SysError::InvalidParameter("max_tokens must be > 0".to_string()));
         }
 
         let mut tokens = vec![0u32; max_tokens];
@@ -175,9 +173,7 @@ pub mod safe {
         }
 
         if actual_count < 0 {
-            return Err(SysError::InvalidParameter(
-                "Invalid token count".to_string(),
-            ));
+            return Err(SysError::InvalidParameter("Invalid token count".to_string()));
         }
 
         tokens.truncate(actual_count as usize);

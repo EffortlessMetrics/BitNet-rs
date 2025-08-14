@@ -73,14 +73,7 @@ impl QuantizedTensor {
         qtype: QuantizationType,
         block_size: usize,
     ) -> Self {
-        Self {
-            data,
-            scales,
-            zero_points,
-            shape,
-            qtype,
-            block_size,
-        }
+        Self { data, scales, zero_points, shape, qtype, block_size }
     }
 
     /// Get the number of elements in the original tensor

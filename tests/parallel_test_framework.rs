@@ -57,11 +57,7 @@ impl IsolatedEnvironment {
         let temp_dir = tempfile::tempdir()?;
         let env_vars = std::env::vars().collect();
 
-        Ok(Self {
-            test_name: test_name.to_string(),
-            temp_dir,
-            original_env_vars: env_vars,
-        })
+        Ok(Self { test_name: test_name.to_string(), temp_dir, original_env_vars: env_vars })
     }
 
     fn setup(&self) {
@@ -399,11 +395,7 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed {
-                "✅ PASS"
-            } else {
-                "❌ FAIL"
-            };
+            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
             println!("  {} {} ({:?})", status, result.test_name, result.duration);
             if let Some(error) = &result.error {
                 println!("    Error: {}", error);
@@ -427,7 +419,7 @@ mod tests {
         println!("  Sequential time would be: {:?}", sequential_time);
 
         // Verify that parallel execution was faster than sequential
-        assert!(total_duration < sequential_time, 
+        assert!(total_duration < sequential_time,
             "Parallel execution should be faster than sequential. Got {:?}, expected less than {:?}", 
             total_duration, sequential_time);
 
@@ -478,21 +470,13 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed {
-                "✅ PASS"
-            } else {
-                "❌ FAIL"
-            };
+            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
             println!("  {} {} ({:?})", status, result.test_name, result.duration);
         }
 
         // Verify results
         assert_eq!(results.len(), 3, "Should have 3 test results");
-        assert_eq!(
-            results.iter().filter(|r| r.passed).count(),
-            3,
-            "All tests should pass"
-        );
+        assert_eq!(results.iter().filter(|r| r.passed).count(), 3, "All tests should pass");
 
         // With max_parallel = 1, execution should be close to sequential
         let expected_min_time = Duration::from_millis(600); // 3 * 200ms
@@ -504,10 +488,7 @@ mod tests {
         );
 
         println!("⏱️  Performance Analysis:");
-        println!(
-            "  Execution time: {:?} (expected ~{:?})",
-            total_duration, expected_min_time
-        );
+        println!("  Execution time: {:?} (expected ~{:?})", total_duration, expected_min_time);
         println!("✅ Semaphore limiting test passed!");
     }
 
@@ -620,11 +601,7 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed {
-                "✅ PASS"
-            } else {
-                "❌ FAIL"
-            };
+            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
             println!("  {} {} ({:?})", status, result.test_name, result.duration);
             if let Some(error) = &result.error {
                 println!("    Error: {}", error);
@@ -664,10 +641,7 @@ mod tests {
 
         impl TimeoutTestCase {
             fn new(name: &str, work_duration: Duration) -> Self {
-                Self {
-                    name: name.to_string(),
-                    work_duration,
-                }
+                Self { name: name.to_string(), work_duration }
             }
         }
 
@@ -703,11 +677,7 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed {
-                "✅ PASS"
-            } else {
-                "❌ FAIL"
-            };
+            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
             println!("  {} {} ({:?})", status, result.test_name, result.duration);
             if let Some(error) = &result.error {
                 println!("    Error: {}", error);

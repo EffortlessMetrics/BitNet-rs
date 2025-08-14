@@ -89,12 +89,7 @@ pub fn calculate_mse(a: &[f32], b: &[f32]) -> Result<f32> {
         .into());
     }
 
-    let mse = a
-        .iter()
-        .zip(b.iter())
-        .map(|(&x, &y)| (x - y).powi(2))
-        .sum::<f32>()
-        / a.len() as f32;
+    let mse = a.iter().zip(b.iter()).map(|(&x, &y)| (x - y).powi(2)).sum::<f32>() / a.len() as f32;
 
     Ok(mse)
 }

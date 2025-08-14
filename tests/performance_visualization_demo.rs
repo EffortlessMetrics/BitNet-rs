@@ -116,10 +116,7 @@ async fn test_performance_visualization_basic() {
 
     // Generate performance dashboard
     let dashboard_path = temp_dir.path().join("performance_dashboard.html");
-    visualizer
-        .generate_performance_dashboard(&dashboard_path)
-        .await
-        .unwrap();
+    visualizer.generate_performance_dashboard(&dashboard_path).await.unwrap();
 
     // Verify dashboard was created
     assert!(dashboard_path.exists());
@@ -235,10 +232,7 @@ async fn test_regression_detection() {
 
     // Generate dashboard with regression detection
     let dashboard_path = temp_dir.path().join("regression_dashboard.html");
-    visualizer
-        .generate_performance_dashboard(&dashboard_path)
-        .await
-        .unwrap();
+    visualizer.generate_performance_dashboard(&dashboard_path).await.unwrap();
 
     // Verify regression detection in dashboard
     let content = tokio::fs::read_to_string(&dashboard_path).await.unwrap();
@@ -246,10 +240,7 @@ async fn test_regression_detection() {
 
     // The regression should be detected since Rust performance dropped from 25% better to 12.5% worse
     println!("✅ Regression detection test passed");
-    println!(
-        "⚠️  Regression dashboard generated at: {}",
-        dashboard_path.display()
-    );
+    println!("⚠️  Regression dashboard generated at: {}", dashboard_path.display());
 }
 
 #[tokio::test]
@@ -280,10 +271,7 @@ async fn test_trend_analysis() {
 
     // Generate dashboard with trend analysis
     let dashboard_path = temp_dir.path().join("trend_dashboard.html");
-    visualizer
-        .generate_performance_dashboard(&dashboard_path)
-        .await
-        .unwrap();
+    visualizer.generate_performance_dashboard(&dashboard_path).await.unwrap();
 
     // Verify trend analysis in dashboard
     let content = tokio::fs::read_to_string(&dashboard_path).await.unwrap();
@@ -291,10 +279,7 @@ async fn test_trend_analysis() {
     assert!(content.contains("Trend Direction"));
 
     println!("✅ Trend analysis test passed");
-    println!(
-        "📈 Trend dashboard generated at: {}",
-        dashboard_path.display()
-    );
+    println!("📈 Trend dashboard generated at: {}", dashboard_path.display());
 }
 
 #[tokio::test]
@@ -313,10 +298,7 @@ async fn test_interactive_dashboard_features() {
 
     // Generate interactive dashboard
     let dashboard_path = temp_dir.path().join("interactive_dashboard.html");
-    visualizer
-        .generate_performance_dashboard(&dashboard_path)
-        .await
-        .unwrap();
+    visualizer.generate_performance_dashboard(&dashboard_path).await.unwrap();
 
     // Verify interactive features
     let content = tokio::fs::read_to_string(&dashboard_path).await.unwrap();
@@ -327,10 +309,7 @@ async fn test_interactive_dashboard_features() {
     assert!(content.contains("Export Data")); // Export functionality
 
     println!("✅ Interactive dashboard features test passed");
-    println!(
-        "🎛️  Interactive dashboard generated at: {}",
-        dashboard_path.display()
-    );
+    println!("🎛️  Interactive dashboard generated at: {}", dashboard_path.display());
 }
 
 #[tokio::test]
@@ -391,9 +370,7 @@ async fn test_comprehensive_performance_analysis() {
     assert!(output.generated_files.len() >= 3); // HTML, JSON, CSV, Summary
 
     // Verify dashboard content includes all scenarios
-    let dashboard_content = tokio::fs::read_to_string(&output.dashboard_url)
-        .await
-        .unwrap();
+    let dashboard_content = tokio::fs::read_to_string(&output.dashboard_url).await.unwrap();
     assert!(dashboard_content.contains("Comprehensive BitNet.rs Performance Analysis"));
     assert!(dashboard_content.contains("Performance Comparison Charts"));
     assert!(dashboard_content.contains("Regression Detection"));
@@ -406,14 +383,8 @@ async fn test_comprehensive_performance_analysis() {
 
     println!("✅ Comprehensive performance analysis test passed");
     println!("📊 Analyzed {} performance scenarios", test_scenarios.len());
-    println!(
-        "📁 Generated comprehensive dashboard with {} files",
-        output.generated_files.len()
-    );
-    println!(
-        "🎯 Dashboard available at: {}",
-        output.dashboard_url.display()
-    );
+    println!("📁 Generated comprehensive dashboard with {} files", output.generated_files.len());
+    println!("🎯 Dashboard available at: {}", output.dashboard_url.display());
 }
 
 /// Integration test that demonstrates the complete performance visualization workflow
@@ -465,9 +436,7 @@ async fn test_complete_performance_visualization_workflow() {
 
     // Verify main dashboard
     assert!(output.dashboard_url.exists());
-    let dashboard_content = tokio::fs::read_to_string(&output.dashboard_url)
-        .await
-        .unwrap();
+    let dashboard_content = tokio::fs::read_to_string(&output.dashboard_url).await.unwrap();
     assert!(dashboard_content.contains("Performance Comparison Charts"));
     assert!(dashboard_content.contains("Trend Analysis"));
     assert!(dashboard_content.contains("Regression Detection"));
@@ -503,14 +472,7 @@ async fn test_complete_performance_visualization_workflow() {
     println!("  • Comprehensive summary reporting");
     println!("\n📁 Generated Files:");
     for file in &output.generated_files {
-        println!(
-            "  • {} - {}",
-            file.path.file_name().unwrap().to_string_lossy(),
-            file.description
-        );
+        println!("  • {} - {}", file.path.file_name().unwrap().to_string_lossy(), file.description);
     }
-    println!(
-        "\n🌐 Open the dashboard: {}",
-        output.dashboard_url.display()
-    );
+    println!("\n🌐 Open the dashboard: {}", output.dashboard_url.display());
 }

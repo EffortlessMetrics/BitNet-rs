@@ -57,11 +57,7 @@ pub struct MockImplementation {
 
 impl MockImplementation {
     pub fn new(name: String, version: String) -> Self {
-        Self {
-            name,
-            version,
-            results: HashMap::new(),
-        }
+        Self { name, version, results: HashMap::new() }
     }
 
     pub fn add_mock_result(&mut self, input: String, result: InferenceResult) {
@@ -86,10 +82,7 @@ impl MockImplementation {
         tokens: &[u32],
         _config: &InferenceConfig,
     ) -> Result<InferenceResult, String> {
-        let input_text = tokens
-            .iter()
-            .map(|&t| char::from(t as u8))
-            .collect::<String>();
+        let input_text = tokens.iter().map(|&t| char::from(t as u8)).collect::<String>();
 
         if let Some(result) = self.results.get(&input_text) {
             Ok(result.clone())
@@ -117,10 +110,7 @@ pub struct InferenceConfig {
 
 impl Default for InferenceConfig {
     fn default() -> Self {
-        Self {
-            max_tokens: 100,
-            temperature: 0.7,
-        }
+        Self { max_tokens: 100, temperature: 0.7 }
     }
 }
 
@@ -174,11 +164,8 @@ impl CrossValidationSuite {
             .filter(|(r, c)| r == c)
             .count();
 
-        let token_accuracy = if max_length > 0 {
-            matching_tokens as f64 / max_length as f64
-        } else {
-            1.0
-        };
+        let token_accuracy =
+            if max_length > 0 { matching_tokens as f64 / max_length as f64 } else { 1.0 };
 
         // Compare probability distributions with 1e-6 tolerance
         let (probability_similarity, prob_comparison) = if let (Some(rust_probs), Some(cpp_probs)) =
@@ -211,12 +198,9 @@ impl CrossValidationSuite {
         }
 
         let passes_tolerance = token_accuracy >= self.tolerance.min_token_accuracy
-            && probability_similarity.map_or(true, |sim| {
-                sim >= (1.0 - self.tolerance.max_probability_divergence)
-            })
-            && float_comparison_results
-                .iter()
-                .all(|comp| comp.passes_tolerance);
+            && probability_similarity
+                .map_or(true, |sim| sim >= (1.0 - self.tolerance.max_probability_divergence))
+            && float_comparison_results.iter().all(|comp| comp.passes_tolerance);
 
         AccuracyResult {
             token_accuracy,
@@ -367,10 +351,7 @@ mod tests {
 
         // Verify that the default tolerance is set to 1e-6
         assert_eq!(tolerance.float_tolerance, 1e-6);
-        println!(
-            "✓ Default tolerance correctly set to 1e-6: {}",
-            tolerance.float_tolerance
-        );
+        println!("✓ Default tolerance correctly set to 1e-6: {}", tolerance.float_tolerance);
     }
 
     #[test]
@@ -383,10 +364,7 @@ mod tests {
         };
 
         assert_eq!(tolerance.float_tolerance, 1e-6);
-        println!(
-            "✓ Custom tolerance correctly set to 1e-6: {}",
-            tolerance.float_tolerance
-        );
+        println!("✓ Custom tolerance correctly set to 1e-6: {}", tolerance.float_tolerance);
     }
 
     #[tokio::test]
@@ -411,10 +389,7 @@ mod tests {
 
         assert!(accuracy.passes_tolerance);
         assert_eq!(accuracy.token_accuracy, 1.0);
-        assert!(accuracy
-            .float_comparison_results
-            .iter()
-            .all(|comp| comp.passes_tolerance));
+        assert!(accuracy.float_comparison_results.iter().all(|comp| comp.passes_tolerance));
 
         println!("✓ Exact match passes 1e-6 tolerance");
         for comp in &accuracy.float_comparison_results {
@@ -445,10 +420,7 @@ mod tests {
             tokens: vec![1, 2, 3],
             text: "test".to_string(),
             probabilities: Some(vec![0.1 + 5e-7, 0.2 + 5e-7, 0.3 + 5e-7]), // 5e-7 < 1e-6
-            logits: Some(vec![
-                vec![0.1 + 5e-7, 0.2 + 5e-7],
-                vec![0.3 + 5e-7, 0.4 + 5e-7],
-            ]),
+            logits: Some(vec![vec![0.1 + 5e-7, 0.2 + 5e-7], vec![0.3 + 5e-7, 0.4 + 5e-7]]),
             duration: Duration::from_millis(100),
             memory_usage: 1024,
             token_count: 3,
@@ -489,10 +461,7 @@ mod tests {
             tokens: vec![1, 2, 3],
             text: "test".to_string(),
             probabilities: Some(vec![0.1 + 2e-6, 0.2 + 2e-6, 0.3 + 2e-6]), // 2e-6 > 1e-6
-            logits: Some(vec![
-                vec![0.1 + 2e-6, 0.2 + 2e-6],
-                vec![0.3 + 2e-6, 0.4 + 2e-6],
-            ]),
+            logits: Some(vec![vec![0.1 + 2e-6, 0.2 + 2e-6], vec![0.3 + 2e-6, 0.4 + 2e-6]]),
             duration: Duration::from_millis(100),
             memory_usage: 1024,
             token_count: 3,
@@ -615,10 +584,7 @@ mod tests {
             };
 
             assert_eq!(tolerance.float_tolerance, tolerance_value);
-            println!(
-                "✓ Tolerance configuration validated: {:.0e}",
-                tolerance_value
-            );
+            println!("✓ Tolerance configuration validated: {:.0e}", tolerance_value);
         }
     }
 
@@ -641,13 +607,7 @@ mod tests {
         let cpp_result = InferenceResult {
             tokens: vec![72, 101, 108, 108, 111], // "Hello"
             text: "Hello".to_string(),
-            probabilities: Some(vec![
-                0.1 + 5e-7,
-                0.2 + 5e-7,
-                0.3 + 5e-7,
-                0.4 + 5e-7,
-                0.5 + 5e-7,
-            ]),
+            probabilities: Some(vec![0.1 + 5e-7, 0.2 + 5e-7, 0.3 + 5e-7, 0.4 + 5e-7, 0.5 + 5e-7]),
             logits: Some(vec![vec![0.1 + 5e-7, 0.2 + 5e-7]; 5]),
             duration: Duration::from_millis(105),
             memory_usage: 1024,
@@ -670,9 +630,7 @@ mod tests {
         // Test comparison with 1e-6 tolerance
         let tolerance = ComparisonTolerance::default();
         let suite = CrossValidationSuite::new(tolerance);
-        let accuracy = suite
-            .compare_accuracy(&rust_inference, &cpp_inference)
-            .await;
+        let accuracy = suite.compare_accuracy(&rust_inference, &cpp_inference).await;
 
         assert!(accuracy.passes_tolerance);
         println!("✓ Mock implementation integration test passes 1e-6 tolerance");

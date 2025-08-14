@@ -184,11 +184,7 @@ async fn test_2x_performance_improvement_over_cpp_baseline() {
     let mut passed_count = 0;
 
     for result in &results {
-        let status = if result.meets_requirement {
-            "✅ PASS"
-        } else {
-            "❌ FAIL"
-        };
+        let status = if result.meets_requirement { "✅ PASS" } else { "❌ FAIL" };
 
         println!(
             "{:<25} {:<12.1} {:<12.1} {:<10.2}x {:<8}",
@@ -217,25 +213,15 @@ async fn test_2x_performance_improvement_over_cpp_baseline() {
     // Calculate and validate overall metrics
     let average_speedup = total_speedup / results.len() as f64;
     let success_rate = (passed_count as f64 / results.len() as f64) * 100.0;
-    let max_speedup = results
-        .iter()
-        .map(|r| r.speedup)
-        .fold(0.0_f64, |a, b| a.max(b));
-    let min_speedup = results
-        .iter()
-        .map(|r| r.speedup)
-        .fold(f64::INFINITY, |a, b| a.min(b));
+    let max_speedup = results.iter().map(|r| r.speedup).fold(0.0_f64, |a, b| a.max(b));
+    let min_speedup = results.iter().map(|r| r.speedup).fold(f64::INFINITY, |a, b| a.min(b));
 
     println!("\n🎯 Overall Performance Summary:");
     println!("  • Average Speedup:     {:.2}x", average_speedup);
     println!("  • Maximum Speedup:     {:.2}x", max_speedup);
     println!("  • Minimum Speedup:     {:.2}x", min_speedup);
     println!("  • Success Rate:        {:.1}%", success_rate);
-    println!(
-        "  • Scenarios Passed:    {}/{}",
-        passed_count,
-        results.len()
-    );
+    println!("  • Scenarios Passed:    {}/{}", passed_count, results.len());
 
     // Assert overall performance requirements
     assert!(
@@ -252,11 +238,7 @@ async fn test_2x_performance_improvement_over_cpp_baseline() {
         results.len()
     );
 
-    assert_eq!(
-        success_rate, 100.0,
-        "❌ Success rate {:.1}% is not 100%",
-        success_rate
-    );
+    assert_eq!(success_rate, 100.0, "❌ Success rate {:.1}% is not 100%", success_rate);
 
     // Generate and save performance report
     let temp_dir = TempDir::new().unwrap();
@@ -264,35 +246,20 @@ async fn test_2x_performance_improvement_over_cpp_baseline() {
 
     let mut report = String::new();
     report.push_str("# BitNet.rs Performance Benchmark Report\n\n");
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     report.push_str(&format!("**Generated:** {} (Unix timestamp)\n", timestamp));
     report.push_str(&format!("**Scenarios:** {}\n", results.len()));
     report.push_str(&format!("**Average Speedup:** {:.2}x\n", average_speedup));
     report.push_str(&format!("**Success Rate:** {:.1}%\n", success_rate));
 
     std::fs::write(&report_path, report).unwrap();
-    println!(
-        "\n📄 Performance report saved to: {}",
-        report_path.display()
-    );
+    println!("\n📄 Performance report saved to: {}", report_path.display());
 
     // Final success message
     println!("\n🎉 SUCCESS: 2x+ Performance Improvement Validated!");
-    println!(
-        "✅ All {} scenarios demonstrate required performance improvements",
-        results.len()
-    );
-    println!(
-        "✅ Average speedup of {:.2}x exceeds 2x requirement",
-        average_speedup
-    );
-    println!(
-        "✅ Maximum speedup of {:.2}x demonstrates excellent optimization",
-        max_speedup
-    );
+    println!("✅ All {} scenarios demonstrate required performance improvements", results.len());
+    println!("✅ Average speedup of {:.2}x exceeds 2x requirement", average_speedup);
+    println!("✅ Maximum speedup of {:.2}x demonstrates excellent optimization", max_speedup);
 
     println!("\n{}", "=".repeat(60));
     println!("🏁 2x+ Performance Improvement Test COMPLETED SUCCESSFULLY");

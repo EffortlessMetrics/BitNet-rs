@@ -43,10 +43,7 @@ fn demonstrate_timeout_error() {
 
     println!("\nTroubleshooting Steps:");
     for step in error.troubleshooting_steps() {
-        println!(
-            "  Step {}: {} ({})",
-            step.step_number, step.title, step.estimated_time
-        );
+        println!("  Step {}: {} ({})", step.step_number, step.title, step.estimated_time);
         println!("    → {}", step.description);
     }
 
@@ -87,10 +84,7 @@ fn demonstrate_fixture_error() {
     println!("\nTroubleshooting Steps:");
     for step in error.troubleshooting_steps() {
         println!("  Step {}: {}", step.step_number, step.title);
-        println!(
-            "    Time: {} | Tools: {:?}",
-            step.estimated_time, step.required_tools
-        );
+        println!("    Time: {} | Tools: {:?}", step.estimated_time, step.required_tools);
         println!("    → {}", step.description);
     }
 
@@ -172,21 +166,15 @@ mod mock_testing {
         }
 
         pub fn assertion<S: Into<String>>(message: S) -> Self {
-            Self::Assertion {
-                message: message.into(),
-            }
+            Self::Assertion { message: message.into() }
         }
 
         pub fn setup<S: Into<String>>(message: S) -> Self {
-            Self::Setup {
-                message: message.into(),
-            }
+            Self::Setup { message: message.into() }
         }
 
         pub fn config<S: Into<String>>(message: S) -> Self {
-            Self::Config {
-                message: message.into(),
-            }
+            Self::Config { message: message.into() }
         }
 
         pub fn severity(&self) -> ErrorSeverity {

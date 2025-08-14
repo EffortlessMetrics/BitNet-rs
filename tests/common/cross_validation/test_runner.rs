@@ -15,9 +15,7 @@ pub struct TestModelRegistry {
 
 impl TestModelRegistry {
     pub async fn new() -> Result<Self, TestError> {
-        Ok(Self {
-            models: vec!["tiny-model".to_string(), "small-model".to_string()],
-        })
+        Ok(Self { models: vec!["tiny-model".to_string(), "small-model".to_string()] })
     }
 
     pub fn by_size(&self, _size: ModelSize) -> Vec<&str> {
@@ -46,12 +44,7 @@ impl ComparisonTestRunner {
         let test_registry = ComparisonTestCaseRegistry::new();
         let model_registry = TestModelRegistry::new().await?;
 
-        Ok(Self {
-            suite,
-            test_registry,
-            model_registry,
-            results: Vec::new(),
-        })
+        Ok(Self { suite, test_registry, model_registry, results: Vec::new() })
     }
 
     /// Create a new test runner with custom tolerance
@@ -62,12 +55,7 @@ impl ComparisonTestRunner {
         let test_registry = ComparisonTestCaseRegistry::new();
         let model_registry = TestModelRegistry::new().await?;
 
-        Ok(Self {
-            suite,
-            test_registry,
-            model_registry,
-            results: Vec::new(),
-        })
+        Ok(Self { suite, test_registry, model_registry, results: Vec::new() })
     }
 
     /// Run basic functionality tests
@@ -76,8 +64,7 @@ impl ComparisonTestRunner {
         model_path: &Path,
     ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_basic_suite();
-        self.run_test_suite("Basic Functionality", test_cases, model_path)
-            .await
+        self.run_test_suite("Basic Functionality", test_cases, model_path).await
     }
 
     /// Run edge case tests
@@ -86,8 +73,7 @@ impl ComparisonTestRunner {
         model_path: &Path,
     ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_edge_case_suite();
-        self.run_test_suite("Edge Cases", test_cases, model_path)
-            .await
+        self.run_test_suite("Edge Cases", test_cases, model_path).await
     }
 
     /// Run performance benchmark tests
@@ -96,8 +82,7 @@ impl ComparisonTestRunner {
         model_path: &Path,
     ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_performance_suite();
-        self.run_test_suite("Performance Benchmarks", test_cases, model_path)
-            .await
+        self.run_test_suite("Performance Benchmarks", test_cases, model_path).await
     }
 
     /// Run regression tests
@@ -106,8 +91,7 @@ impl ComparisonTestRunner {
         model_path: &Path,
     ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_regression_suite();
-        self.run_test_suite("Regression Tests", test_cases, model_path)
-            .await
+        self.run_test_suite("Regression Tests", test_cases, model_path).await
     }
 
     /// Run format compatibility tests
@@ -116,8 +100,7 @@ impl ComparisonTestRunner {
         model_path: &Path,
     ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_format_compatibility_suite();
-        self.run_test_suite("Format Compatibility", test_cases, model_path)
-            .await
+        self.run_test_suite("Format Compatibility", test_cases, model_path).await
     }
 
     /// Run model size variation tests
@@ -126,8 +109,7 @@ impl ComparisonTestRunner {
         model_path: &Path,
     ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_model_size_suite();
-        self.run_test_suite("Model Size Variations", test_cases, model_path)
-            .await
+        self.run_test_suite("Model Size Variations", test_cases, model_path).await
     }
 
     /// Run smoke tests (quick validation)
@@ -136,8 +118,7 @@ impl ComparisonTestRunner {
         model_path: &Path,
     ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_smoke_test_suite();
-        self.run_test_suite("Smoke Tests", test_cases, model_path)
-            .await
+        self.run_test_suite("Smoke Tests", test_cases, model_path).await
     }
 
     /// Run comprehensive test suite (all categories)
@@ -146,8 +127,7 @@ impl ComparisonTestRunner {
         model_path: &Path,
     ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_comprehensive_suite();
-        self.run_test_suite("Comprehensive Tests", test_cases, model_path)
-            .await
+        self.run_test_suite("Comprehensive Tests", test_cases, model_path).await
     }
 
     /// Run tests for a specific model size
@@ -158,8 +138,7 @@ impl ComparisonTestRunner {
     ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_suite_for_model_size(model_size);
         let suite_name = format!("Tests for {:?} Models", model_size);
-        self.run_test_suite(&suite_name, test_cases, model_path)
-            .await
+        self.run_test_suite(&suite_name, test_cases, model_path).await
     }
 
     /// Run tests by category
@@ -170,12 +149,8 @@ impl ComparisonTestRunner {
     ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = self.test_registry.by_category(category);
         let suite_name = format!("{:?} Tests", category);
-        self.run_test_suite(
-            &suite_name,
-            test_cases.into_iter().cloned().collect(),
-            model_path,
-        )
-        .await
+        self.run_test_suite(&suite_name, test_cases.into_iter().cloned().collect(), model_path)
+            .await
     }
 
     /// Run a custom test suite
@@ -185,8 +160,7 @@ impl ComparisonTestRunner {
         test_cases: Vec<ComparisonTestCase>,
         model_path: &Path,
     ) -> TestResultCompat<CrossValidationResult> {
-        self.run_test_suite(suite_name, test_cases, model_path)
-            .await
+        self.run_test_suite(suite_name, test_cases, model_path).await
     }
 
     /// Internal method to run a test suite
@@ -196,11 +170,7 @@ impl ComparisonTestRunner {
         test_cases: Vec<ComparisonTestCase>,
         model_path: &Path,
     ) -> TestResultCompat<CrossValidationResult> {
-        println!(
-            "Running {} with {} test cases...",
-            suite_name,
-            test_cases.len()
-        );
+        println!("Running {} with {} test cases...", suite_name, test_cases.len());
 
         let start_time = Instant::now();
 
@@ -209,13 +179,9 @@ impl ComparisonTestRunner {
         self.suite.add_test_cases(test_cases);
 
         // Run the comparison
-        let result =
-            self.suite
-                .run_comparison(model_path)
-                .await
-                .map_err(|e| TestError::ExecutionError {
-                    message: format!("Comparison failed: {}", e),
-                })?;
+        let result = self.suite.run_comparison(model_path).await.map_err(|e| {
+            TestError::ExecutionError { message: format!("Comparison failed: {}", e) }
+        })?;
 
         let duration = start_time.elapsed();
         println!("Completed {} in {:?}", suite_name, duration);
@@ -295,10 +261,7 @@ impl ComparisonTestRunner {
         &mut self,
         model_path: &Path,
     ) -> TestResultCompat<CompleteValidationResult> {
-        println!(
-            "Starting complete validation workflow for model: {:?}",
-            model_path
-        );
+        println!("Starting complete validation workflow for model: {:?}", model_path);
 
         let start_time = Instant::now();
         let mut validation_results = Vec::new();
@@ -472,9 +435,7 @@ mod tests {
         // Test that we can access different test categories
         let basic_tests = runner.test_registry.by_category(TestCaseCategory::Basic);
         let edge_tests = runner.test_registry.by_category(TestCaseCategory::EdgeCase);
-        let perf_tests = runner
-            .test_registry
-            .by_category(TestCaseCategory::Performance);
+        let perf_tests = runner.test_registry.by_category(TestCaseCategory::Performance);
 
         assert!(!basic_tests.is_empty());
         assert!(!edge_tests.is_empty());

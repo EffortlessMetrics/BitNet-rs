@@ -168,11 +168,7 @@ impl RustImplementation {
         metadata_map.insert("version".to_string(), self.version.clone());
 
         ModelInfo {
-            name: model_path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("unknown")
-                .to_string(),
+            name: model_path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown").to_string(),
             path: model_path.to_path_buf(),
             format,
             size_bytes,
@@ -211,10 +207,7 @@ impl BitNetImplementation for RustImplementation {
 
     #[instrument(skip(self, config))]
     async fn initialize(&mut self, config: Option<&str>) -> ImplementationResult<()> {
-        info!(
-            "Initializing Rust implementation with device: {:?}",
-            self.device
-        );
+        info!("Initializing Rust implementation with device: {:?}", self.device);
 
         if let Some(config_str) = config {
             debug!("Using configuration: {}", config_str);
@@ -235,11 +228,9 @@ impl BitNetImplementation for RustImplementation {
 
         // Load model using BitNet.rs model loader
         let loader = ModelLoader::new(self.device.clone());
-        let model = loader
-            .load(model_path)
-            .map_err(|e| ImplementationError::ModelLoadError {
-                message: format!("Failed to load model: {}", e),
-            })?;
+        let model = loader.load(model_path).map_err(|e| ImplementationError::ModelLoadError {
+            message: format!("Failed to load model: {}", e),
+        })?;
 
         let model_config = model.config().clone();
         // Since Model trait is not object-safe, we need to work with the concrete type
@@ -257,10 +248,7 @@ impl BitNetImplementation for RustImplementation {
             })?
         } else {
             // Use a default tokenizer based on model name/type
-            let model_name = model_path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("gpt2");
+            let model_name = model_path.file_stem().and_then(|s| s.to_str()).unwrap_or("gpt2");
 
             TokenizerBuilder::from_pretrained(model_name).map_err(|e| {
                 ImplementationError::ModelLoadError {
@@ -319,17 +307,12 @@ impl BitNetImplementation for RustImplementation {
     async fn tokenize(&self, text: &str) -> ImplementationResult<Vec<u32>> {
         let start_time = Instant::now();
 
-        let tokenizer = self
-            .tokenizer
-            .as_ref()
-            .ok_or(ImplementationError::ModelNotLoaded)?;
+        let tokenizer = self.tokenizer.as_ref().ok_or(ImplementationError::ModelNotLoaded)?;
 
         let tokens =
-            tokenizer
-                .encode(text, true)
-                .map_err(|e| ImplementationError::TokenizationError {
-                    message: format!("Tokenization failed: {}", e),
-                })?;
+            tokenizer.encode(text, true).map_err(|e| ImplementationError::TokenizationError {
+                message: format!("Tokenization failed: {}", e),
+            })?;
 
         // Update metrics
         let tokenization_time = start_time.elapsed();
@@ -349,23 +332,14 @@ impl BitNetImplementation for RustImplementation {
 
     #[instrument(skip(self, tokens))]
     async fn detokenize(&self, tokens: &[u32]) -> ImplementationResult<String> {
-        let tokenizer = self
-            .tokenizer
-            .as_ref()
-            .ok_or(ImplementationError::ModelNotLoaded)?;
+        let tokenizer = self.tokenizer.as_ref().ok_or(ImplementationError::ModelNotLoaded)?;
 
         let text =
-            tokenizer
-                .decode(tokens, true)
-                .map_err(|e| ImplementationError::TokenizationError {
-                    message: format!("Detokenization failed: {}", e),
-                })?;
+            tokenizer.decode(tokens, true).map_err(|e| ImplementationError::TokenizationError {
+                message: format!("Detokenization failed: {}", e),
+            })?;
 
-        debug!(
-            "Detokenized {} tokens into {} characters",
-            tokens.len(),
-            text.len()
-        );
+        debug!("Detokenized {} tokens into {} characters", tokens.len(), text.len());
 
         Ok(text)
     }
@@ -379,27 +353,20 @@ impl BitNetImplementation for RustImplementation {
         let start_time = Instant::now();
         let start_memory = self.get_memory_usage();
 
-        let tokenizer = self
-            .tokenizer
-            .as_ref()
-            .ok_or(ImplementationError::ModelNotLoaded)?;
+        let tokenizer = self.tokenizer.as_ref().ok_or(ImplementationError::ModelNotLoaded)?;
 
         // For now, implement a simple mock inference since we can't use InferenceEngine
         // In a real implementation, this would use the loaded model for actual inference
 
         // Convert input tokens to text
         let input_text =
-            tokenizer
-                .decode(tokens, true)
-                .map_err(|e| ImplementationError::InferenceError {
-                    message: format!("Failed to decode input tokens: {}", e),
-                })?;
+            tokenizer.decode(tokens, true).map_err(|e| ImplementationError::InferenceError {
+                message: format!("Failed to decode input tokens: {}", e),
+            })?;
 
         // Mock generation - in reality this would use the model
-        let generated_text = format!(
-            "Generated response to: {}",
-            input_text.chars().take(50).collect::<String>()
-        );
+        let generated_text =
+            format!("Generated response to: {}", input_text.chars().take(50).collect::<String>());
 
         // Tokenize the generated text to get output tokens
         let generated_tokens = tokenizer.encode(&generated_text, false).map_err(|e| {
@@ -431,11 +398,7 @@ impl BitNetImplementation for RustImplementation {
             token_count,
         };
 
-        info!(
-            "Inference completed: {} tokens generated in {:?}",
-            result.tokens.len(),
-            duration
-        );
+        info!("Inference completed: {} tokens generated in {:?}", result.tokens.len(), duration);
 
         Ok(result)
     }
@@ -444,10 +407,7 @@ impl BitNetImplementation for RustImplementation {
         // This is a blocking call, but we need to handle the async RwLock
         // In a real implementation, we might want to use a different approach
         // For now, we'll use try_read and return default if locked
-        self.metrics
-            .try_read()
-            .map(|metrics| metrics.clone())
-            .unwrap_or_default()
+        self.metrics.try_read().map(|metrics| metrics.clone()).unwrap_or_default()
     }
 
     fn reset_metrics(&mut self) {
@@ -459,15 +419,12 @@ impl BitNetImplementation for RustImplementation {
 
     fn get_resource_info(&self) -> ResourceInfo {
         // Similar issue with async RwLock in sync context
-        self.resource_info
-            .try_read()
-            .map(|info| info.clone())
-            .unwrap_or(ResourceInfo {
-                memory_usage: self.get_memory_usage(),
-                file_handles: self.get_file_handle_count(),
-                thread_count: self.get_thread_count(),
-                gpu_memory: None,
-            })
+        self.resource_info.try_read().map(|info| info.clone()).unwrap_or(ResourceInfo {
+            memory_usage: self.get_memory_usage(),
+            file_handles: self.get_file_handle_count(),
+            thread_count: self.get_thread_count(),
+            gpu_memory: None,
+        })
     }
 
     #[instrument(skip(self))]
@@ -489,12 +446,8 @@ impl BitNetImplementation for RustImplementation {
         *metrics = PerformanceMetrics::new();
 
         let mut resource_info = self.resource_info.write().await;
-        *resource_info = ResourceInfo {
-            memory_usage: 0,
-            file_handles: 0,
-            thread_count: 1,
-            gpu_memory: None,
-        };
+        *resource_info =
+            ResourceInfo { memory_usage: 0, file_handles: 0, thread_count: 1, gpu_memory: None };
 
         Ok(())
     }
@@ -511,9 +464,7 @@ pub struct RustImplementationFactory {
 
 impl RustImplementationFactory {
     pub fn new() -> Self {
-        Self {
-            device: Device::Cpu,
-        }
+        Self { device: Device::Cpu }
     }
 
     pub fn with_device(device: Device) -> Self {
@@ -572,9 +523,7 @@ mod tests {
         assert!(capabilities.supports_batching);
         assert!(capabilities.supports_quantization);
         assert!(capabilities.supported_formats.contains(&ModelFormat::GGUF));
-        assert!(capabilities
-            .supported_formats
-            .contains(&ModelFormat::SafeTensors));
+        assert!(capabilities.supported_formats.contains(&ModelFormat::SafeTensors));
     }
 
     #[tokio::test]
@@ -639,24 +588,14 @@ mod tests {
 
         // These should fail because no model is loaded
         let tokenize_result = implementation.tokenize("test").await;
-        assert!(matches!(
-            tokenize_result,
-            Err(ImplementationError::ModelNotLoaded)
-        ));
+        assert!(matches!(tokenize_result, Err(ImplementationError::ModelNotLoaded)));
 
         let detokenize_result = implementation.detokenize(&[1, 2, 3]).await;
-        assert!(matches!(
-            detokenize_result,
-            Err(ImplementationError::ModelNotLoaded)
-        ));
+        assert!(matches!(detokenize_result, Err(ImplementationError::ModelNotLoaded)));
 
-        let inference_result = implementation
-            .inference(&[1, 2, 3], &InferenceConfig::default())
-            .await;
-        assert!(matches!(
-            inference_result,
-            Err(ImplementationError::ModelNotLoaded)
-        ));
+        let inference_result =
+            implementation.inference(&[1, 2, 3], &InferenceConfig::default()).await;
+        assert!(matches!(inference_result, Err(ImplementationError::ModelNotLoaded)));
     }
 
     #[tokio::test]
@@ -698,10 +637,7 @@ mod tests {
         assert_eq!(model_info.format, ModelFormat::GGUF);
         assert_eq!(model_info.size_bytes, 16); // Length of "dummy model data"
         assert!(model_info.metadata.contains_key("implementation"));
-        assert_eq!(
-            model_info.metadata.get("implementation"),
-            Some(&"BitNet.rs".to_string())
-        );
+        assert_eq!(model_info.metadata.get("implementation"), Some(&"BitNet.rs".to_string()));
     }
 
     #[tokio::test]

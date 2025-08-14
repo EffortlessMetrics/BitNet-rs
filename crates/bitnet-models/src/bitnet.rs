@@ -31,12 +31,7 @@ pub struct BitNetModel {
 
 impl BitNetModel {
     pub fn new(config: BitNetConfig, device: Device) -> Self {
-        Self {
-            config,
-            device,
-            tensors: HashMap::new(),
-            transformer: None,
-        }
+        Self { config, device, tensors: HashMap::new(), transformer: None }
     }
 
     /// Create a BitNet model from GGUF tensors
@@ -60,12 +55,7 @@ impl BitNetModel {
         // Try to build transformer model if we have weights
         let transformer = Self::build_transformer(&config, &tensors, &device).ok();
 
-        Ok(Self {
-            config,
-            device,
-            tensors,
-            transformer,
-        })
+        Ok(Self { config, device, tensors, transformer })
     }
 
     /// Build transformer model from loaded tensors
@@ -81,9 +71,7 @@ impl BitNetModel {
             Device::Cpu => candle_core::Device::Cpu,
             Device::Cuda(id) => candle_core::Device::new_cuda(*id)?,
             Device::Metal => {
-                return Err(BitNetError::Validation(
-                    "Metal not yet supported".to_string(),
-                ))
+                return Err(BitNetError::Validation("Metal not yet supported".to_string()))
             }
         };
 
@@ -122,9 +110,7 @@ impl BitNetModel {
                     Device::Cpu => candle_core::Device::Cpu,
                     Device::Cuda(id) => candle_core::Device::new_cuda(id)?,
                     Device::Metal => {
-                        return Err(BitNetError::Validation(
-                            "Metal not yet supported".to_string(),
-                        ))
+                        return Err(BitNetError::Validation("Metal not yet supported".to_string()))
                     }
                 };
                 Ok(CandleTensor::zeros(shape, DType::F32, &device)?)

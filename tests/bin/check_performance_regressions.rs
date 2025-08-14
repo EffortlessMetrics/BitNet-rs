@@ -65,10 +65,7 @@ async fn main() -> Result<()> {
 
     // Load current test results
     let current_results = load_current_results(&args.current_results).await?;
-    info!(
-        "Loaded {} test suites from current results",
-        current_results.len()
-    );
+    info!("Loaded {} test suites from current results", current_results.len());
 
     // Create trend reporter
     let trend_config = TrendConfig {
@@ -79,9 +76,8 @@ async fn main() -> Result<()> {
     let trend_reporter = TrendReporter::new(args.trend_data, trend_config);
 
     // Detect regressions
-    let regressions = trend_reporter
-        .detect_regressions(&current_results, args.lookback_days)
-        .await?;
+    let regressions =
+        trend_reporter.detect_regressions(&current_results, args.lookback_days).await?;
 
     info!("Detected {} potential regressions", regressions.len());
 
@@ -126,9 +122,7 @@ async fn main() -> Result<()> {
 }
 
 async fn load_current_results(path: &PathBuf) -> Result<Vec<TestSuiteResult>> {
-    let content = fs::read_to_string(path)
-        .await
-        .context("Failed to read current results file")?;
+    let content = fs::read_to_string(path).await.context("Failed to read current results file")?;
 
     let results: Vec<TestSuiteResult> =
         serde_json::from_str(&content).context("Failed to parse current results JSON")?;

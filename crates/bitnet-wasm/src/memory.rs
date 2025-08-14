@@ -26,11 +26,7 @@ impl MemoryManager {
         };
 
         console::log_1(
-            &format!(
-                "Memory manager initialized with limit: {:?} bytes",
-                max_memory_bytes
-            )
-            .into(),
+            &format!("Memory manager initialized with limit: {:?} bytes", max_memory_bytes).into(),
         );
 
         Ok(manager)
@@ -118,11 +114,7 @@ impl MemoryManager {
         let before = self.current_usage();
 
         console::log_1(
-            &format!(
-                "Starting garbage collection, current usage: {} bytes",
-                before
-            )
-            .into(),
+            &format!("Starting garbage collection, current usage: {} bytes", before).into(),
         );
 
         // Clear tracked allocations (in a real implementation, this would

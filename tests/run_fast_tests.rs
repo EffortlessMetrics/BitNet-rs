@@ -13,9 +13,7 @@ fn get_optimal_thread_count() -> usize {
     }
 
     // Use available parallelism or fallback to 4
-    thread::available_parallelism()
-        .map(|n| n.get().min(8).max(1))
-        .unwrap_or(4)
+    thread::available_parallelism().map(|n| n.get().min(8).max(1)).unwrap_or(4)
 }
 
 /// Simple fast test runner to validate <15 minute execution target
@@ -34,10 +32,7 @@ fn main() {
     env::set_var("CARGO_TERM_QUIET", "true");
 
     println!("⚙️ Configuration:");
-    println!(
-        "   - Target time: {} minutes",
-        target_duration.as_secs() / 60
-    );
+    println!("   - Target time: {} minutes", target_duration.as_secs() / 60);
     println!("   - Parallel threads: {}", get_optimal_thread_count());
     println!("   - Test mode: fast");
     println!("   - Log level: warn");
@@ -53,16 +48,9 @@ fn main() {
     println!("   - Target time: {:.1}s", target_duration.as_secs_f64());
     println!(
         "   - Within target: {}",
-        if actual_duration <= target_duration {
-            "✅ YES"
-        } else {
-            "❌ NO"
-        }
+        if actual_duration <= target_duration { "✅ YES" } else { "❌ NO" }
     );
-    println!(
-        "   - Tests passed: {}",
-        if result.is_ok() { "✅ YES" } else { "❌ NO" }
-    );
+    println!("   - Tests passed: {}", if result.is_ok() { "✅ YES" } else { "❌ NO" });
 
     if success {
         println!("\n🎉 SUCCESS: Fast test execution completed within target time!");

@@ -67,11 +67,8 @@ struct PerformanceMetrics {
 
 impl PerformanceMetrics {
     fn new(kernel_name: &str, operation: &str, time_ns: u64, ops: u64) -> Self {
-        let throughput_ops_per_sec = if time_ns > 0 {
-            (ops as f64) / (time_ns as f64 / 1_000_000_000.0)
-        } else {
-            0.0
-        };
+        let throughput_ops_per_sec =
+            if time_ns > 0 { (ops as f64) / (time_ns as f64 / 1_000_000_000.0) } else { 0.0 };
 
         Self {
             kernel_name: kernel_name.to_string(),
@@ -128,19 +125,10 @@ mod cpu_kernel_tests {
             let mut c = vec![0.0f32; m * n];
 
             let result = kernel.matmul_i2s(&a, &b, &mut c, m, n, k);
-            assert!(
-                result.is_ok(),
-                "Fallback kernel failed for size {}x{}x{}",
-                m,
-                n,
-                k
-            );
+            assert!(result.is_ok(), "Fallback kernel failed for size {}x{}x{}", m, n, k);
 
             // Verify output is reasonable
-            assert!(
-                c.iter().all(|&x| x.is_finite()),
-                "Non-finite values in output"
-            );
+            assert!(c.iter().all(|&x| x.is_finite()), "Non-finite values in output");
 
             // For identity-like matrices, verify basic correctness
             if m == n && k == n && m <= 4 {
@@ -151,9 +139,7 @@ mod cpu_kernel_tests {
                 }
                 let mut c_identity = vec![0.0f32; m * n];
 
-                kernel
-                    .matmul_i2s(&a, &b_identity, &mut c_identity, m, n, k)
-                    .unwrap();
+                kernel.matmul_i2s(&a, &b_identity, &mut c_identity, m, n, k).unwrap();
 
                 // Result should be approximately A (with type conversion)
                 for i in 0..m {
@@ -179,11 +165,7 @@ mod cpu_kernel_tests {
         let kernel = FallbackKernel;
         let mut data_gen = TestDataGenerator::new(54321);
 
-        let qtypes = vec![
-            QuantizationType::I2S,
-            QuantizationType::TL1,
-            QuantizationType::TL2,
-        ];
+        let qtypes = vec![QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2];
 
         let test_sizes = vec![32, 64, 128, 256, 512];
 
@@ -200,12 +182,7 @@ mod cpu_kernel_tests {
                 let mut scales = vec![0.0f32; num_blocks];
 
                 let result = kernel.quantize(&input, &mut output, &mut scales, qtype);
-                assert!(
-                    result.is_ok(),
-                    "Quantization failed for {:?} size {}",
-                    qtype,
-                    size
-                );
+                assert!(result.is_ok(), "Quantization failed for {:?} size {}", qtype, size);
 
                 // Verify scales are reasonable
                 assert!(
@@ -222,11 +199,7 @@ mod cpu_kernel_tests {
                 );
 
                 // Verify output has some content (u8 is always valid)
-                assert!(
-                    !output.is_empty(),
-                    "Output should not be empty for {:?}",
-                    qtype
-                );
+                assert!(!output.is_empty(), "Output should not be empty for {:?}", qtype);
             }
         }
     }
@@ -260,26 +233,15 @@ mod cpu_kernel_tests {
             let mut c = vec![0.0f32; m * n];
 
             let result = kernel.matmul_i2s(&a, &b, &mut c, m, n, k);
-            assert!(
-                result.is_ok(),
-                "AVX2 kernel failed for size {}x{}x{}",
-                m,
-                n,
-                k
-            );
+            assert!(result.is_ok(), "AVX2 kernel failed for size {}x{}x{}", m, n, k);
 
             // Verify output is reasonable
-            assert!(
-                c.iter().all(|&x| x.is_finite()),
-                "Non-finite values in AVX2 output"
-            );
+            assert!(c.iter().all(|&x| x.is_finite()), "Non-finite values in AVX2 output");
 
             // Compare with fallback kernel for correctness
             let fallback = FallbackKernel;
             let mut c_fallback = vec![0.0f32; m * n];
-            fallback
-                .matmul_i2s(&a, &b, &mut c_fallback, m, n, k)
-                .unwrap();
+            fallback.matmul_i2s(&a, &b, &mut c_fallback, m, n, k).unwrap();
 
             // Results should be similar (allowing for floating point differences)
             for i in 0..c.len() {
@@ -325,26 +287,15 @@ mod cpu_kernel_tests {
             let mut c = vec![0.0f32; m * n];
 
             let result = kernel.matmul_i2s(&a, &b, &mut c, m, n, k);
-            assert!(
-                result.is_ok(),
-                "NEON kernel failed for size {}x{}x{}",
-                m,
-                n,
-                k
-            );
+            assert!(result.is_ok(), "NEON kernel failed for size {}x{}x{}", m, n, k);
 
             // Verify output is reasonable
-            assert!(
-                c.iter().all(|&x| x.is_finite()),
-                "Non-finite values in NEON output"
-            );
+            assert!(c.iter().all(|&x| x.is_finite()), "Non-finite values in NEON output");
 
             // Compare with fallback kernel for correctness
             let fallback = FallbackKernel;
             let mut c_fallback = vec![0.0f32; m * n];
-            fallback
-                .matmul_i2s(&a, &b, &mut c_fallback, m, n, k)
-                .unwrap();
+            fallback.matmul_i2s(&a, &b, &mut c_fallback, m, n, k).unwrap();
 
             // Results should be similar
             for i in 0..c.len() {
@@ -384,10 +335,7 @@ mod gpu_kernel_tests {
 
                 println!("CUDA device: {}", device_info.name);
                 println!("Compute capability: {:?}", device_info.compute_capability);
-                println!(
-                    "Memory: {} GB",
-                    device_info.total_memory / (1024 * 1024 * 1024)
-                );
+                println!("Memory: {} GB", device_info.total_memory / (1024 * 1024 * 1024));
             }
             Err(_) => {
                 println!("CUDA not available, skipping GPU tests");
@@ -415,19 +363,10 @@ mod gpu_kernel_tests {
             let mut c = vec![0.0f32; m * n];
 
             let result = kernel.matmul_i2s(&a, &b, &mut c, m, n, k);
-            assert!(
-                result.is_ok(),
-                "CUDA kernel failed for size {}x{}x{}",
-                m,
-                n,
-                k
-            );
+            assert!(result.is_ok(), "CUDA kernel failed for size {}x{}x{}", m, n, k);
 
             // Verify output is reasonable
-            assert!(
-                c.iter().all(|&x| x.is_finite()),
-                "Non-finite values in CUDA output"
-            );
+            assert!(c.iter().all(|&x| x.is_finite()), "Non-finite values in CUDA output");
 
             // Compare with CPU fallback for correctness
             let fallback = cpu::FallbackKernel;
@@ -484,9 +423,7 @@ mod gpu_kernel_tests {
             // Benchmark GPU
             let start = Instant::now();
             for _ in 0..5 {
-                kernel
-                    .matmul_i2s(&a, &b, &mut c_gpu, size, size, size)
-                    .unwrap();
+                kernel.matmul_i2s(&a, &b, &mut c_gpu, size, size, size).unwrap();
             }
             let gpu_time = start.elapsed().as_nanos() as u64 / 5;
             gpu_times.push(gpu_time);
@@ -494,9 +431,7 @@ mod gpu_kernel_tests {
             // Benchmark CPU
             let start = Instant::now();
             for _ in 0..5 {
-                fallback
-                    .matmul_i2s(&a, &b, &mut c_cpu, size, size, size)
-                    .unwrap();
+                fallback.matmul_i2s(&a, &b, &mut c_cpu, size, size, size).unwrap();
             }
             let cpu_time = start.elapsed().as_nanos() as u64 / 5;
             cpu_times.push(cpu_time);
@@ -538,10 +473,7 @@ mod gpu_kernel_tests {
             // Check memory stats periodically
             if i % 5 == 0 {
                 let (used, total) = kernel.memory_stats();
-                println!(
-                    "Iteration {}: GPU memory used: {} / {} bytes",
-                    i, used, total
-                );
+                println!("Iteration {}: GPU memory used: {} / {} bytes", i, used, total);
             }
         }
 
@@ -563,10 +495,7 @@ mod kernel_selection_tests {
         // Should always have at least the fallback kernel
         let available = manager.list_available_providers();
         assert!(!available.is_empty(), "No kernel providers available");
-        assert!(
-            available.contains(&"fallback"),
-            "Fallback kernel should always be available"
-        );
+        assert!(available.contains(&"fallback"), "Fallback kernel should always be available");
 
         // Test kernel selection
         let kernel = manager.select_best().expect("Should select a kernel");
@@ -578,26 +507,17 @@ mod kernel_selection_tests {
         // Verify selection priority
         #[cfg(feature = "cuda")]
         if available.contains(&"CUDA") {
-            assert_eq!(
-                selected_name, "CUDA",
-                "CUDA should be preferred when available"
-            );
+            assert_eq!(selected_name, "CUDA", "CUDA should be preferred when available");
         }
 
         #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
         if available.contains(&"avx2") && !available.contains(&"CUDA") {
-            assert_eq!(
-                selected_name, "avx2",
-                "AVX2 should be preferred over fallback"
-            );
+            assert_eq!(selected_name, "avx2", "AVX2 should be preferred over fallback");
         }
 
         #[cfg(all(target_arch = "aarch64", feature = "neon"))]
         if available.contains(&"neon") && !available.contains(&"CUDA") {
-            assert_eq!(
-                selected_name, "neon",
-                "NEON should be preferred over fallback"
-            );
+            assert_eq!(selected_name, "neon", "NEON should be preferred over fallback");
         }
     }
 
@@ -609,11 +529,7 @@ mod kernel_selection_tests {
         let kernel1 = manager.select_best().unwrap();
         let kernel2 = manager.select_best().unwrap();
 
-        assert_eq!(
-            kernel1.name(),
-            kernel2.name(),
-            "Kernel selection should be consistent"
-        );
+        assert_eq!(kernel1.name(), kernel2.name(), "Kernel selection should be consistent");
 
         // Selected provider name should be consistent
         let name1 = manager.selected_provider_name();
@@ -659,14 +575,8 @@ mod kernel_selection_tests {
     fn test_cpu_kernel_selection() {
         let cpu_kernel = select_cpu_kernel().unwrap();
 
-        assert!(
-            cpu_kernel.is_available(),
-            "Selected CPU kernel should be available"
-        );
-        assert!(
-            !cpu_kernel.name().is_empty(),
-            "CPU kernel should have a name"
-        );
+        assert!(cpu_kernel.is_available(), "Selected CPU kernel should be available");
+        assert!(!cpu_kernel.name().is_empty(), "CPU kernel should have a name");
 
         // Should be one of the known CPU kernels
         let known_kernels = vec!["fallback", "avx2", "neon"];
@@ -685,10 +595,7 @@ mod kernel_selection_tests {
 
         match result {
             Ok(gpu_kernel) => {
-                assert!(
-                    gpu_kernel.is_available(),
-                    "Selected GPU kernel should be available"
-                );
+                assert!(gpu_kernel.is_available(), "Selected GPU kernel should be available");
                 println!("Selected GPU kernel: {}", gpu_kernel.name());
             }
             Err(_) => {
@@ -718,16 +625,12 @@ mod kernel_selection_tests {
         // Get reference result from fallback kernel
         let fallback = cpu::FallbackKernel;
         let mut c_reference = vec![0.0f32; test_size * test_size];
-        fallback
-            .matmul_i2s(&a, &b, &mut c_reference, test_size, test_size, test_size)
-            .unwrap();
+        fallback.matmul_i2s(&a, &b, &mut c_reference, test_size, test_size, test_size).unwrap();
 
         // Test selected kernel against reference
         let kernel = manager.select_best().unwrap();
         let mut c_test = vec![0.0f32; test_size * test_size];
-        kernel
-            .matmul_i2s(&a, &b, &mut c_test, test_size, test_size, test_size)
-            .unwrap();
+        kernel.matmul_i2s(&a, &b, &mut c_test, test_size, test_size, test_size).unwrap();
 
         // Compare results
         let mut max_diff = 0.0f32;
@@ -736,11 +639,7 @@ mod kernel_selection_tests {
             max_diff = max_diff.max(diff);
         }
 
-        println!(
-            "Cross-validation: {} vs fallback, max_diff = {}",
-            kernel.name(),
-            max_diff
-        );
+        println!("Cross-validation: {} vs fallback, max_diff = {}", kernel.name(), max_diff);
         assert!(
             max_diff < 1e-2,
             "Kernel {} differs too much from reference: {}",
@@ -805,10 +704,7 @@ mod performance_tests {
 
             // Performance should be reasonable
             assert!(avg_time > 0, "Execution time should be positive");
-            assert!(
-                metrics.throughput_ops_per_sec > 0.0,
-                "Throughput should be positive"
-            );
+            assert!(metrics.throughput_ops_per_sec > 0.0, "Throughput should be positive");
         }
     }
 
@@ -818,17 +714,10 @@ mod performance_tests {
         let kernel = manager.select_best().unwrap();
 
         let sizes = vec![1024, 4096, 16384];
-        let qtypes = vec![
-            QuantizationType::I2S,
-            QuantizationType::TL1,
-            QuantizationType::TL2,
-        ];
+        let qtypes = vec![QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2];
         let mut data_gen = TestDataGenerator::new(77777);
 
-        println!(
-            "Quantization performance test for kernel: {}",
-            kernel.name()
-        );
+        println!("Quantization performance test for kernel: {}", kernel.name());
 
         for qtype in qtypes {
             for size in &sizes {
@@ -852,9 +741,7 @@ mod performance_tests {
                 let start = Instant::now();
 
                 for _ in 0..iterations {
-                    kernel
-                        .quantize(&input, &mut output, &mut scales, qtype)
-                        .unwrap();
+                    kernel.quantize(&input, &mut output, &mut scales, qtype).unwrap();
                 }
 
                 let elapsed = start.elapsed().as_nanos() as u64;
@@ -935,11 +822,7 @@ mod performance_tests {
             );
 
             // All shapes should complete in reasonable time
-            assert!(
-                duration.as_millis() < 1000,
-                "Operation took too long: {:?}",
-                duration
-            );
+            assert!(duration.as_millis() < 1000, "Operation took too long: {:?}", duration);
         }
     }
 }
@@ -1001,10 +884,7 @@ mod error_handling_tests {
         let mut scales = vec![0.0f32; 1]; // Too small for 64 elements
 
         let result = kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
-        assert!(
-            result.is_err(),
-            "Should fail with insufficient scale buffer"
-        );
+        assert!(result.is_err(), "Should fail with insufficient scale buffer");
     }
 
     #[test]
@@ -1054,10 +934,7 @@ mod error_handling_tests {
         // Should handle NaN gracefully (either error or replace with valid values)
         match result {
             Ok(_) => {
-                assert!(
-                    scales[0].is_finite(),
-                    "Scale should be finite even with NaN input"
-                );
+                assert!(scales[0].is_finite(), "Scale should be finite even with NaN input");
             }
             Err(_) => {
                 println!("Kernel rejected NaN values (acceptable)");
@@ -1070,10 +947,7 @@ mod error_handling_tests {
         // Should handle infinity gracefully
         match result {
             Ok(_) => {
-                assert!(
-                    scales[0].is_finite(),
-                    "Scale should be finite even with infinity input"
-                );
+                assert!(scales[0].is_finite(), "Scale should be finite even with infinity input");
             }
             Err(_) => {
                 println!("Kernel rejected infinity values (acceptable)");
@@ -1101,26 +975,17 @@ mod error_handling_tests {
         let duration = start.elapsed();
 
         assert!(result.is_ok(), "Large matrix multiplication should succeed");
-        assert!(
-            duration.as_secs() < 30,
-            "Large matrix should complete in reasonable time"
-        );
+        assert!(duration.as_secs() < 30, "Large matrix should complete in reasonable time");
 
         // Verify all results are finite
-        assert!(
-            c.iter().all(|&x| x.is_finite()),
-            "All results should be finite"
-        );
+        assert!(c.iter().all(|&x| x.is_finite()), "All results should be finite");
 
         // Verify some variation in results (not all zeros or all same value)
         let min_val = c.iter().fold(f32::INFINITY, |a, &b| a.min(b));
         let max_val = c.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
         assert!(max_val > min_val, "Results should have some variation");
 
-        println!(
-            "Large matrix ({}x{}x{}) completed in {:?}",
-            m, n, k, duration
-        );
+        println!("Large matrix ({}x{}x{}) completed in {:?}", m, n, k, duration);
     }
 }
 // ============================================================================
@@ -1135,10 +1000,7 @@ mod integration_tests {
         let manager = KernelManager::new();
         let kernel = manager.select_best().unwrap();
 
-        println!(
-            "End-to-end inference simulation with kernel: {}",
-            kernel.name()
-        );
+        println!("End-to-end inference simulation with kernel: {}", kernel.name());
 
         // Simulate a neural network layer
         let batch_size = 4;
@@ -1178,12 +1040,7 @@ mod integration_tests {
         let weights_u8: Vec<u8> = quantized_weights
             .iter()
             .flat_map(|&byte| {
-                vec![
-                    byte & 0x3,
-                    (byte >> 2) & 0x3,
-                    (byte >> 4) & 0x3,
-                    (byte >> 6) & 0x3,
-                ]
+                vec![byte & 0x3, (byte >> 2) & 0x3, (byte >> 4) & 0x3, (byte >> 6) & 0x3]
             })
             .take(input_dim * output_dim)
             .collect();
@@ -1203,10 +1060,7 @@ mod integration_tests {
         println!("  Inference: {:?}", inference_time);
 
         // Step 4: Verify results
-        assert!(
-            outputs.iter().all(|&x| x.is_finite()),
-            "All outputs should be finite"
-        );
+        assert!(outputs.iter().all(|&x| x.is_finite()), "All outputs should be finite");
 
         // Calculate performance metrics
         let total_time = quantize_time + inference_time;
@@ -1220,11 +1074,7 @@ mod integration_tests {
 
         // Performance should be reasonable
         assert!(gflops > 0.1, "Should achieve reasonable GFLOPS: {}", gflops);
-        assert!(
-            throughput > 1.0,
-            "Should process at least 1 sample/sec: {}",
-            throughput
-        );
+        assert!(throughput > 1.0, "Should process at least 1 sample/sec: {}", throughput);
     }
 
     #[test]
@@ -1232,10 +1082,7 @@ mod integration_tests {
         let manager = KernelManager::new();
         let kernel = manager.select_best().unwrap();
 
-        println!(
-            "Stress test with repeated operations for kernel: {}",
-            kernel.name()
-        );
+        println!("Stress test with repeated operations for kernel: {}", kernel.name());
 
         let mut data_gen = TestDataGenerator::new(56565);
         let test_size = 32;
@@ -1256,16 +1103,8 @@ mod integration_tests {
             let result = kernel.matmul_i2s(&a, &b, &mut c, test_size, test_size, test_size);
             total_matmul_time += start.elapsed();
 
-            assert!(
-                result.is_ok(),
-                "Matrix multiplication failed on iteration {}",
-                i
-            );
-            assert!(
-                c.iter().all(|&x| x.is_finite()),
-                "Non-finite result on iteration {}",
-                i
-            );
+            assert!(result.is_ok(), "Matrix multiplication failed on iteration {}", i);
+            assert!(c.iter().all(|&x| x.is_finite()), "Non-finite result on iteration {}", i);
 
             // Quantization (if supported)
             let mut output = vec![0u8; test_size / 4];
@@ -1292,17 +1131,11 @@ mod integration_tests {
         let avg_matmul_time = total_matmul_time / iterations as u32;
         let avg_quant_time = total_quant_time / iterations as u32;
 
-        println!(
-            "  Average matrix multiplication time: {:?}",
-            avg_matmul_time
-        );
+        println!("  Average matrix multiplication time: {:?}", avg_matmul_time);
         println!("  Average quantization time: {:?}", avg_quant_time);
 
         // Performance should be consistent
-        assert!(
-            avg_matmul_time.as_millis() < 100,
-            "Matrix multiplication too slow"
-        );
+        assert!(avg_matmul_time.as_millis() < 100, "Matrix multiplication too slow");
         println!("Stress test completed successfully");
     }
 }
@@ -1369,9 +1202,7 @@ mod ffi_kernel_tests {
         // Benchmark Rust kernel
         let mut c_rust = vec![0.0f32; test_size * test_size];
         let start = Instant::now();
-        rust_kernel
-            .matmul_i2s(&a, &b, &mut c_rust, test_size, test_size, test_size)
-            .unwrap();
+        rust_kernel.matmul_i2s(&a, &b, &mut c_rust, test_size, test_size, test_size).unwrap();
         let rust_time = start.elapsed();
 
         // Benchmark FFI kernel
@@ -1397,11 +1228,7 @@ mod ffi_kernel_tests {
             println!("  Max accuracy difference: {:.2e}", max_diff);
 
             // Results should be reasonably similar
-            assert!(
-                max_diff < 1e-2,
-                "FFI and Rust results differ too much: {}",
-                max_diff
-            );
+            assert!(max_diff < 1e-2, "FFI and Rust results differ too much: {}", max_diff);
         } else {
             println!("FFI kernel operation failed: {:?}", ffi_result);
         }

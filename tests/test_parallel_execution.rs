@@ -19,11 +19,7 @@ struct IsolatedTestCase {
 
 impl IsolatedTestCase {
     fn new(name: &str, work_duration: Duration, should_fail: bool) -> Self {
-        Self {
-            name: name.to_string(),
-            work_duration,
-            should_fail,
-        }
+        Self { name: name.to_string(), work_duration, should_fail }
     }
 }
 
@@ -210,9 +206,7 @@ async fn test_parallel_execution_with_isolation() {
     };
 
     // Create test harness
-    let mut harness = TestHarness::new(config)
-        .await
-        .expect("Failed to create test harness");
+    let mut harness = TestHarness::new(config).await.expect("Failed to create test harness");
 
     // Add console reporter
     harness.add_reporter(bitnet_tests::common::harness::ConsoleReporter::new(true));
@@ -224,10 +218,7 @@ async fn test_parallel_execution_with_isolation() {
     let start_time = Instant::now();
 
     // Run the test suite
-    let result = harness
-        .run_test_suite(&suite)
-        .await
-        .expect("Test suite execution failed");
+    let result = harness.run_test_suite(&suite).await.expect("Test suite execution failed");
 
     let total_duration = start_time.elapsed();
 
@@ -235,16 +226,8 @@ async fn test_parallel_execution_with_isolation() {
     assert_eq!(result.test_results.len(), 6, "Should have 6 test results");
 
     // Count passed and failed tests
-    let passed_count = result
-        .test_results
-        .iter()
-        .filter(|r| r.is_success())
-        .count();
-    let failed_count = result
-        .test_results
-        .iter()
-        .filter(|r| r.is_failure())
-        .count();
+    let passed_count = result.test_results.iter().filter(|r| r.is_success()).count();
+    let failed_count = result.test_results.iter().filter(|r| r.is_failure()).count();
 
     assert_eq!(passed_count, 5, "Should have 5 passed tests");
     assert_eq!(failed_count, 1, "Should have 1 failed test");
@@ -296,9 +279,7 @@ async fn test_semaphore_limits_parallelism() {
     };
 
     // Create test harness
-    let mut harness = TestHarness::new(config)
-        .await
-        .expect("Failed to create test harness");
+    let mut harness = TestHarness::new(config).await.expect("Failed to create test harness");
 
     // Add console reporter
     harness.add_reporter(bitnet_tests::common::harness::ConsoleReporter::new(false));
@@ -332,21 +313,9 @@ async fn test_semaphore_limits_parallelism() {
 
         fn test_cases(&self) -> Vec<Box<dyn TestCase>> {
             vec![
-                Box::new(IsolatedTestCase::new(
-                    "sequential_1",
-                    Duration::from_millis(200),
-                    false,
-                )),
-                Box::new(IsolatedTestCase::new(
-                    "sequential_2",
-                    Duration::from_millis(200),
-                    false,
-                )),
-                Box::new(IsolatedTestCase::new(
-                    "sequential_3",
-                    Duration::from_millis(200),
-                    false,
-                )),
+                Box::new(IsolatedTestCase::new("sequential_1", Duration::from_millis(200), false)),
+                Box::new(IsolatedTestCase::new("sequential_2", Duration::from_millis(200), false)),
+                Box::new(IsolatedTestCase::new("sequential_3", Duration::from_millis(200), false)),
             ]
         }
     }
@@ -357,10 +326,7 @@ async fn test_semaphore_limits_parallelism() {
     let start_time = Instant::now();
 
     // Run the test suite
-    let result = harness
-        .run_test_suite(&suite)
-        .await
-        .expect("Test suite execution failed");
+    let result = harness.run_test_suite(&suite).await.expect("Test suite execution failed");
 
     let total_duration = start_time.elapsed();
 
@@ -378,8 +344,5 @@ async fn test_semaphore_limits_parallelism() {
     );
 
     println!("✅ Semaphore limiting test passed!");
-    println!(
-        "   - Execution time: {:?} (expected ~{:?})",
-        total_duration, expected_min_time
-    );
+    println!("   - Execution time: {:?} (expected ~{:?})", total_duration, expected_min_time);
 }

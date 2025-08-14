@@ -17,26 +17,18 @@ pub struct JunitReporter {
 impl JunitReporter {
     /// Create a new JUnit reporter
     pub fn new() -> Self {
-        Self {
-            include_system_out: true,
-            include_system_err: true,
-        }
+        Self { include_system_out: true, include_system_err: true }
     }
 
     /// Create a new JUnit reporter with minimal output
     pub fn new_minimal() -> Self {
-        Self {
-            include_system_out: false,
-            include_system_err: false,
-        }
+        Self { include_system_out: false, include_system_err: false }
     }
 
     /// Generate XML content for test results
     fn generate_xml_content(&self, results: &[TestSuiteResult]) -> Result<String, ReportError> {
         let mut output = Vec::new();
-        let mut writer = EmitterConfig::new()
-            .perform_indent(true)
-            .create_writer(&mut output);
+        let mut writer = EmitterConfig::new().perform_indent(true).create_writer(&mut output);
 
         // Write XML declaration
         writer
@@ -74,9 +66,7 @@ impl JunitReporter {
         }
 
         // End testsuites element
-        writer
-            .write(XmlEvent::end_element())
-            .map_err(|e| ReportError::XmlError(e.to_string()))?;
+        writer.write(XmlEvent::end_element()).map_err(|e| ReportError::XmlError(e.to_string()))?;
 
         String::from_utf8(output).map_err(|e| ReportError::XmlError(e.to_string()))
     }
@@ -96,10 +86,7 @@ impl JunitReporter {
                     .attr("failures", &suite.summary.failed.to_string())
                     .attr("errors", "0")
                     .attr("skipped", &suite.summary.skipped.to_string())
-                    .attr(
-                        "time",
-                        &format!("{:.3}", suite.total_duration.as_secs_f64()),
-                    )
+                    .attr("time", &format!("{:.3}", suite.total_duration.as_secs_f64()))
                     .attr("timestamp", &chrono::Utc::now().to_rfc3339()),
             )
             .map_err(|e| ReportError::XmlError(e.to_string()))?;
@@ -116,9 +103,7 @@ impl JunitReporter {
                     .attr("value", &format!("{:.2}", suite.summary.success_rate)),
             )
             .map_err(|e| ReportError::XmlError(e.to_string()))?;
-        writer
-            .write(XmlEvent::end_element())
-            .map_err(|e| ReportError::XmlError(e.to_string()))?;
+        writer.write(XmlEvent::end_element()).map_err(|e| ReportError::XmlError(e.to_string()))?;
 
         writer
             .write(XmlEvent::end_element()) // properties
@@ -151,18 +136,14 @@ impl JunitReporter {
             writer
                 .write(XmlEvent::start_element("system-err"))
                 .map_err(|e| ReportError::XmlError(e.to_string()))?;
-            writer
-                .write(XmlEvent::cdata(""))
-                .map_err(|e| ReportError::XmlError(e.to_string()))?;
+            writer.write(XmlEvent::cdata("")).map_err(|e| ReportError::XmlError(e.to_string()))?;
             writer
                 .write(XmlEvent::end_element())
                 .map_err(|e| ReportError::XmlError(e.to_string()))?;
         }
 
         // End testsuite element
-        writer
-            .write(XmlEvent::end_element())
-            .map_err(|e| ReportError::XmlError(e.to_string()))?;
+        writer.write(XmlEvent::end_element()).map_err(|e| ReportError::XmlError(e.to_string()))?;
 
         Ok(())
     }
@@ -252,9 +233,7 @@ impl JunitReporter {
         }
 
         // End testcase element
-        writer
-            .write(XmlEvent::end_element())
-            .map_err(|e| ReportError::XmlError(e.to_string()))?;
+        writer.write(XmlEvent::end_element()).map_err(|e| ReportError::XmlError(e.to_string()))?;
 
         Ok(())
     }
@@ -400,10 +379,7 @@ mod tests {
         let reporter = JunitReporter::new();
         let results = vec![create_test_suite_result()];
 
-        let report_result = reporter
-            .generate_report(&results, &output_path)
-            .await
-            .unwrap();
+        let report_result = reporter.generate_report(&results, &output_path).await.unwrap();
 
         assert_eq!(report_result.format, ReportFormat::Junit);
         assert!(output_path.exists());
@@ -429,10 +405,7 @@ mod tests {
         let reporter = JunitReporter::new_minimal();
         let results = vec![create_test_suite_result()];
 
-        reporter
-            .generate_report(&results, &output_path)
-            .await
-            .unwrap();
+        reporter.generate_report(&results, &output_path).await.unwrap();
 
         let content = fs::read_to_string(&output_path).await.unwrap();
         // Minimal output should not include system-out/system-err with content

@@ -25,10 +25,7 @@ struct MockModel {
 
 impl MockModel {
     fn new() -> Self {
-        Self {
-            config: BitNetConfig::default(),
-            should_fail: false,
-        }
+        Self { config: BitNetConfig::default(), should_fail: false }
     }
 
     fn with_failure(mut self) -> Self {
@@ -63,10 +60,7 @@ struct MockTokenizer {
 
 impl MockTokenizer {
     fn new() -> Self {
-        Self {
-            vocab_size: 50257,
-            should_fail: false,
-        }
+        Self { vocab_size: 50257, should_fail: false }
     }
 
     fn with_failure(mut self) -> Self {
@@ -199,9 +193,8 @@ mod engine_tests {
 
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
 
-        let config = GenerationConfig::default()
-            .with_stop_sequence("</s>".to_string())
-            .with_max_tokens(100);
+        let config =
+            GenerationConfig::default().with_stop_sequence("</s>".to_string()).with_max_tokens(100);
 
         let result = engine.generate_with_config("Test prompt", &config).await;
         assert!(result.is_ok());
@@ -315,9 +308,7 @@ mod streaming_tests {
 
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
 
-        let config = GenerationConfig::default()
-            .with_max_tokens(10)
-            .with_temperature(0.5);
+        let config = GenerationConfig::default().with_max_tokens(10).with_temperature(0.5);
 
         let mut stream = engine.generate_stream_with_config("Test prompt", &config);
 
@@ -359,10 +350,7 @@ mod streaming_tests {
 
     #[tokio::test]
     async fn test_streaming_config_validation() {
-        let config = StreamingConfig {
-            buffer_size: 5,
-            flush_interval_ms: 100,
-        };
+        let config = StreamingConfig { buffer_size: 5, flush_interval_ms: 100 };
 
         assert_eq!(config.buffer_size, 5);
         assert_eq!(config.flush_interval_ms, 100);
@@ -513,10 +501,7 @@ mod config_tests {
         let serialized = serde_json::to_string(&inf_config).unwrap();
         let deserialized: InferenceConfig = serde_json::from_str(&serialized).unwrap();
 
-        assert_eq!(
-            inf_config.max_context_length,
-            deserialized.max_context_length
-        );
+        assert_eq!(inf_config.max_context_length, deserialized.max_context_length);
         assert_eq!(inf_config.num_threads, deserialized.num_threads);
     }
 }
@@ -836,9 +821,7 @@ mod edge_case_tests {
 
         // Generate with a config that might exceed context length
         let gen_config = GenerationConfig::default().with_max_tokens(1000);
-        let result = engine
-            .generate_with_config("Test prompt", &gen_config)
-            .await;
+        let result = engine.generate_with_config("Test prompt", &gen_config).await;
 
         // Should handle context length limits gracefully
         assert!(result.is_ok());

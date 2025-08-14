@@ -86,11 +86,7 @@ impl PerformanceBenchmarkSuite {
 
         let scenarios = Self::create_benchmark_scenarios(&config)?;
 
-        Ok(Self {
-            config,
-            scenarios,
-            temp_dir,
-        })
+        Ok(Self { config, scenarios, temp_dir })
     }
 
     /// Create standard benchmark scenarios
@@ -296,10 +292,8 @@ impl PerformanceBenchmarkSuite {
         rust_result: &BenchmarkResult,
     ) -> BenchmarkResult {
         // Create a synthetic C++ baseline that's slower than Rust to demonstrate 2x+ improvement
-        let rust_avg_duration = rust_result
-            .summary
-            .avg_duration
-            .unwrap_or(Duration::from_millis(100));
+        let rust_avg_duration =
+            rust_result.summary.avg_duration.unwrap_or(Duration::from_millis(100));
 
         // Make C++ baseline 2.5x slower on average to demonstrate improvement
         let cpp_duration = rust_avg_duration.mul_f64(2.5);
@@ -329,23 +323,16 @@ impl PerformanceBenchmarkSuite {
         rust_result: &BenchmarkResult,
         cpp_result: &BenchmarkResult,
     ) -> (f64, f64, PerformanceCategory) {
-        let rust_duration = rust_result
-            .summary
-            .avg_duration
-            .unwrap_or(Duration::from_millis(100));
-        let cpp_duration = cpp_result
-            .summary
-            .avg_duration
-            .unwrap_or(Duration::from_millis(100));
+        let rust_duration = rust_result.summary.avg_duration.unwrap_or(Duration::from_millis(100));
+        let cpp_duration = cpp_result.summary.avg_duration.unwrap_or(Duration::from_millis(100));
 
         // Calculate speedup (higher is better)
         let speedup = cpp_duration.as_secs_f64() / rust_duration.as_secs_f64();
 
         // Calculate memory improvement (positive means Rust uses less memory)
-        let memory_improvement = if let (Some(rust_mem), Some(cpp_mem)) = (
-            rust_result.summary.peak_memory_usage,
-            cpp_result.summary.peak_memory_usage,
-        ) {
+        let memory_improvement = if let (Some(rust_mem), Some(cpp_mem)) =
+            (rust_result.summary.peak_memory_usage, cpp_result.summary.peak_memory_usage)
+        {
             ((cpp_mem as f64 - rust_mem as f64) / cpp_mem as f64) * 100.0
         } else {
             0.0
@@ -431,10 +418,7 @@ impl PerformanceBenchmarkSuite {
         let average_speedup: f64 =
             results.iter().map(|r| r.speedup).sum::<f64>() / results.len() as f64;
         let max_speedup = results.iter().map(|r| r.speedup).fold(0.0, f64::max);
-        let min_speedup = results
-            .iter()
-            .map(|r| r.speedup)
-            .fold(f64::INFINITY, f64::min);
+        let min_speedup = results.iter().map(|r| r.speedup).fold(f64::INFINITY, f64::min);
         let passed_scenarios = results.iter().filter(|r| r.meets_requirement).count();
 
         report.push_str("## Executive Summary\n\n");
@@ -457,9 +441,7 @@ impl PerformanceBenchmarkSuite {
         // Performance Categories
         let mut category_counts = HashMap::new();
         for result in results {
-            *category_counts
-                .entry(&result.performance_category)
-                .or_insert(0) += 1;
+            *category_counts.entry(&result.performance_category).or_insert(0) += 1;
         }
 
         report.push_str("## Performance Categories\n\n");
@@ -474,11 +456,7 @@ impl PerformanceBenchmarkSuite {
         report.push_str("|----------|---------|-------------------|----------|--------|\n");
 
         for result in results {
-            let status = if result.meets_requirement {
-                "✅ PASS"
-            } else {
-                "❌ FAIL"
-            };
+            let status = if result.meets_requirement { "✅ PASS" } else { "❌ FAIL" };
             report.push_str(&format!(
                 "| {} | {:.2}x | {:.1}% | {:?} | {} |\n",
                 result.scenario.name,
@@ -585,10 +563,7 @@ mod tests {
         // Verify average performance
         let average_speedup: f64 =
             results.iter().map(|r| r.speedup).sum::<f64>() / results.len() as f64;
-        assert!(
-            average_speedup >= 2.0,
-            "Average speedup should be at least 2x"
-        );
+        assert!(average_speedup >= 2.0, "Average speedup should be at least 2x");
 
         println!("✅ All performance benchmarks passed!");
         println!("📊 Average speedup: {:.2}x", average_speedup);
@@ -700,21 +675,11 @@ mod tests {
         let rust_duration = rust_result.summary.avg_duration.unwrap();
         let cpp_duration = cpp_baseline.summary.avg_duration.unwrap();
 
-        assert!(
-            cpp_duration > rust_duration,
-            "C++ baseline should be slower than Rust"
-        );
+        assert!(cpp_duration > rust_duration, "C++ baseline should be slower than Rust");
 
         let speedup = cpp_duration.as_secs_f64() / rust_duration.as_secs_f64();
-        assert!(
-            speedup >= 2.0,
-            "Speedup should be at least 2x, got {:.2}x",
-            speedup
-        );
+        assert!(speedup >= 2.0, "Speedup should be at least 2x, got {:.2}x", speedup);
 
-        println!(
-            "✅ Synthetic C++ baseline test passed! Speedup: {:.2}x",
-            speedup
-        );
+        println!("✅ Synthetic C++ baseline test passed! Speedup: {:.2}x", speedup);
     }
 }

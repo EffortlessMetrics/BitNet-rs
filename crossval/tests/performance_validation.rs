@@ -104,10 +104,7 @@ mod performance_tests {
         let platform = "linux-x86_64";
         let baseline = baselines.get(platform).expect("Baseline not found");
 
-        println!(
-            "Baseline throughput: {:.1} tokens/sec",
-            baseline.throughput_tokens_per_second
-        );
+        println!("Baseline throughput: {:.1} tokens/sec", baseline.throughput_tokens_per_second);
         println!(
             "Current throughput: {:.1} tokens/sec",
             current_metrics.throughput_tokens_per_second
@@ -116,35 +113,19 @@ mod performance_tests {
         // Throughput should be at least 95% of baseline
         let throughput_ratio =
             current_metrics.throughput_tokens_per_second / baseline.throughput_tokens_per_second;
-        assert!(
-            throughput_ratio >= 0.95,
-            "Throughput regression: {:.3} < 0.95",
-            throughput_ratio
-        );
+        assert!(throughput_ratio >= 0.95, "Throughput regression: {:.3} < 0.95", throughput_ratio);
 
         // Latency should not be more than 110% of baseline
         let latency_ratio = current_metrics.latency_p95_ms / baseline.latency_p95_ms;
-        assert!(
-            latency_ratio <= 1.10,
-            "Latency regression: {:.3} > 1.10",
-            latency_ratio
-        );
+        assert!(latency_ratio <= 1.10, "Latency regression: {:.3} > 1.10", latency_ratio);
 
         // Memory usage should not be more than 115% of baseline
         let memory_ratio = current_metrics.memory_usage_mb / baseline.memory_usage_mb;
-        assert!(
-            memory_ratio <= 1.15,
-            "Memory regression: {:.3} > 1.15",
-            memory_ratio
-        );
+        assert!(memory_ratio <= 1.15, "Memory regression: {:.3} > 1.15", memory_ratio);
 
         // Accuracy should not decrease by more than 0.001
         let accuracy_diff = baseline.accuracy_score - current_metrics.accuracy_score;
-        assert!(
-            accuracy_diff <= 0.001,
-            "Accuracy regression: {:.6} > 0.001",
-            accuracy_diff
-        );
+        assert!(accuracy_diff <= 0.001, "Accuracy regression: {:.6} > 0.001", accuracy_diff);
 
         println!("✅ Rust implementation meets all baseline requirements");
     }
@@ -161,10 +142,7 @@ mod performance_tests {
             - cpp_metrics.throughput_tokens_per_second)
             / cpp_metrics.throughput_tokens_per_second;
 
-        println!(
-            "Throughput improvement: {:.1}%",
-            throughput_improvement * 100.0
-        );
+        println!("Throughput improvement: {:.1}%", throughput_improvement * 100.0);
         assert!(
             throughput_improvement >= 0.15,
             "Throughput improvement {:.1}% < 15%",
@@ -197,10 +175,7 @@ mod performance_tests {
             - rust_metrics.model_load_time_ms)
             / cpp_metrics.model_load_time_ms;
 
-        println!(
-            "Load time improvement: {:.1}%",
-            load_time_improvement * 100.0
-        );
+        println!("Load time improvement: {:.1}%", load_time_improvement * 100.0);
         assert!(
             load_time_improvement >= 0.30,
             "Load time improvement {:.1}% < 30%",
@@ -210,11 +185,7 @@ mod performance_tests {
         // Claim 4: Rust should maintain accuracy parity (within 0.001)
         let accuracy_diff = (rust_metrics.accuracy_score - cpp_metrics.accuracy_score).abs();
         println!("Accuracy difference: {:.6}", accuracy_diff);
-        assert!(
-            accuracy_diff <= 0.001,
-            "Accuracy difference {:.6} > 0.001",
-            accuracy_diff
-        );
+        assert!(accuracy_diff <= 0.001, "Accuracy difference {:.6} > 0.001", accuracy_diff);
 
         println!("✅ All Rust vs C++ performance claims validated");
     }
@@ -237,35 +208,23 @@ mod performance_tests {
 
         // Calculate coefficient of variation (CV) for consistency
         let throughput_mean = throughput_measurements.iter().sum::<f64>() / num_runs as f64;
-        let throughput_variance = throughput_measurements
-            .iter()
-            .map(|x| (x - throughput_mean).powi(2))
-            .sum::<f64>()
-            / (num_runs - 1) as f64;
+        let throughput_variance =
+            throughput_measurements.iter().map(|x| (x - throughput_mean).powi(2)).sum::<f64>()
+                / (num_runs - 1) as f64;
         let throughput_cv = throughput_variance.sqrt() / throughput_mean;
 
         let latency_mean = latency_measurements.iter().sum::<f64>() / num_runs as f64;
-        let latency_variance = latency_measurements
-            .iter()
-            .map(|x| (x - latency_mean).powi(2))
-            .sum::<f64>()
-            / (num_runs - 1) as f64;
+        let latency_variance =
+            latency_measurements.iter().map(|x| (x - latency_mean).powi(2)).sum::<f64>()
+                / (num_runs - 1) as f64;
         let latency_cv = latency_variance.sqrt() / latency_mean;
 
         println!("Throughput CV: {:.3}", throughput_cv);
         println!("Latency CV: {:.3}", latency_cv);
 
         // Performance should be consistent (CV < 0.1 = 10%)
-        assert!(
-            throughput_cv < 0.1,
-            "Throughput too inconsistent: CV {:.3} > 0.1",
-            throughput_cv
-        );
-        assert!(
-            latency_cv < 0.1,
-            "Latency too inconsistent: CV {:.3} > 0.1",
-            latency_cv
-        );
+        assert!(throughput_cv < 0.1, "Throughput too inconsistent: CV {:.3} > 0.1", throughput_cv);
+        assert!(latency_cv < 0.1, "Latency too inconsistent: CV {:.3} > 0.1", latency_cv);
 
         println!("✅ Performance consistency validated");
     }
@@ -302,11 +261,7 @@ mod performance_tests {
         println!("Scalability factor: {:.2}x", scalability_factor);
 
         // Should see at least 2x improvement with batching
-        assert!(
-            scalability_factor >= 2.0,
-            "Poor scalability: {:.2}x < 2.0x",
-            scalability_factor
-        );
+        assert!(scalability_factor >= 2.0, "Poor scalability: {:.2}x < 2.0x", scalability_factor);
 
         println!("✅ Scalability characteristics validated");
     }
@@ -320,10 +275,7 @@ mod performance_tests {
         let current_memory = 1010.0; // MB (slightly better)
 
         let memory_efficiency = (baseline_memory - current_memory) / baseline_memory;
-        println!(
-            "Memory efficiency improvement: {:.1}%",
-            memory_efficiency * 100.0
-        );
+        println!("Memory efficiency improvement: {:.1}%", memory_efficiency * 100.0);
 
         // Should use less memory than baseline
         assert!(
@@ -347,10 +299,7 @@ mod performance_tests {
         let memory_growth_rate = (memory_usage.last().unwrap() - memory_usage.first().unwrap())
             / (load_levels.last().unwrap() - load_levels.first().unwrap()) as f64;
 
-        println!(
-            "Memory growth rate: {:.1} MB per load unit",
-            memory_growth_rate
-        );
+        println!("Memory growth rate: {:.1} MB per load unit", memory_growth_rate);
 
         // Growth should be reasonable (< 100 MB per load unit)
         assert!(
@@ -438,10 +387,7 @@ mod performance_tests {
         }
 
         let success_rate = successful_runs as f64 / num_validation_runs as f64;
-        println!(
-            "Cross-validation success rate: {:.1}%",
-            success_rate * 100.0
-        );
+        println!("Cross-validation success rate: {:.1}%", success_rate * 100.0);
 
         // Should have high success rate (>90%)
         assert!(
@@ -453,11 +399,9 @@ mod performance_tests {
         // Accuracy should be consistent across runs
         if !accuracy_scores.is_empty() {
             let accuracy_mean = accuracy_scores.iter().sum::<f64>() / accuracy_scores.len() as f64;
-            let accuracy_variance = accuracy_scores
-                .iter()
-                .map(|x| (x - accuracy_mean).powi(2))
-                .sum::<f64>()
-                / (accuracy_scores.len() - 1) as f64;
+            let accuracy_variance =
+                accuracy_scores.iter().map(|x| (x - accuracy_mean).powi(2)).sum::<f64>()
+                    / (accuracy_scores.len() - 1) as f64;
             let accuracy_std = accuracy_variance.sqrt();
 
             println!("Accuracy std dev: {:.6}", accuracy_std);
@@ -559,11 +503,7 @@ mod rand {
         T: 'static,
     {
         let mut hasher = DefaultHasher::new();
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-            .hash(&mut hasher);
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos().hash(&mut hasher);
         std::any::TypeId::of::<T>().hash(&mut hasher);
 
         let hash = hasher.finish();

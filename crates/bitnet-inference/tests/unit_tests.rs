@@ -21,9 +21,7 @@ struct MockModel {
 
 impl MockModel {
     fn new() -> Self {
-        Self {
-            config: BitNetConfig::default(),
-        }
+        Self { config: BitNetConfig::default() }
     }
 }
 
@@ -124,10 +122,7 @@ mod config_unit_tests {
         // Test invalid max_context_length
         config.max_context_length = 0;
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
-            .contains("max_context_length"));
+        assert!(config.validate().unwrap_err().contains("max_context_length"));
 
         // Test invalid num_threads
         config.max_context_length = 2048;
@@ -212,10 +207,7 @@ mod config_unit_tests {
         config.top_p = 0.9;
         config.repetition_penalty = 0.0;
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
-            .contains("repetition_penalty"));
+        assert!(config.validate().unwrap_err().contains("repetition_penalty"));
     }
 
     #[test]
@@ -239,24 +231,17 @@ mod config_unit_tests {
 
     #[test]
     fn test_config_serialization_deserialization() {
-        let original_gen_config = GenerationConfig::default()
-            .with_seed(42)
-            .with_temperature(0.8)
-            .with_max_tokens(150);
+        let original_gen_config =
+            GenerationConfig::default().with_seed(42).with_temperature(0.8).with_max_tokens(150);
 
         let serialized = serde_json::to_string(&original_gen_config).unwrap();
         let deserialized: GenerationConfig = serde_json::from_str(&serialized).unwrap();
 
         assert_eq!(original_gen_config.seed, deserialized.seed);
         assert_eq!(original_gen_config.temperature, deserialized.temperature);
-        assert_eq!(
-            original_gen_config.max_new_tokens,
-            deserialized.max_new_tokens
-        );
+        assert_eq!(original_gen_config.max_new_tokens, deserialized.max_new_tokens);
 
-        let original_inf_config = InferenceConfig::default()
-            .with_threads(8)
-            .with_batch_size(4);
+        let original_inf_config = InferenceConfig::default().with_threads(8).with_batch_size(4);
 
         let serialized = serde_json::to_string(&original_inf_config).unwrap();
         let deserialized: InferenceConfig = serde_json::from_str(&serialized).unwrap();
@@ -713,10 +698,7 @@ mod streaming_unit_tests {
 
     #[test]
     fn test_streaming_config_creation() {
-        let config = StreamingConfig {
-            buffer_size: 10,
-            flush_interval_ms: 50,
-        };
+        let config = StreamingConfig { buffer_size: 10, flush_interval_ms: 50 };
 
         assert_eq!(config.buffer_size, 10);
         assert_eq!(config.flush_interval_ms, 50);
@@ -732,17 +714,11 @@ mod streaming_unit_tests {
     #[test]
     fn test_streaming_config_validation() {
         // Test various buffer sizes
-        let config = StreamingConfig {
-            buffer_size: 1,
-            flush_interval_ms: 1,
-        };
+        let config = StreamingConfig { buffer_size: 1, flush_interval_ms: 1 };
         assert_eq!(config.buffer_size, 1);
         assert_eq!(config.flush_interval_ms, 1);
 
-        let config = StreamingConfig {
-            buffer_size: 1000,
-            flush_interval_ms: 1000,
-        };
+        let config = StreamingConfig { buffer_size: 1000, flush_interval_ms: 1000 };
         assert_eq!(config.buffer_size, 1000);
         assert_eq!(config.flush_interval_ms, 1000);
     }

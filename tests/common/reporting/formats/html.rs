@@ -16,18 +16,12 @@ pub struct HtmlReporter {
 impl HtmlReporter {
     /// Create a new HTML reporter with interactive features
     pub fn new(interactive: bool) -> Self {
-        Self {
-            interactive,
-            include_charts: true,
-        }
+        Self { interactive, include_charts: true }
     }
 
     /// Create a new HTML reporter with minimal features
     pub fn new_minimal() -> Self {
-        Self {
-            interactive: false,
-            include_charts: false,
-        }
+        Self { interactive: false, include_charts: false }
     }
 
     /// Generate the complete HTML report
@@ -388,11 +382,8 @@ impl HtmlReporter {
         let total_failed: usize = results.iter().map(|r| r.summary.failed).sum();
         let total_skipped: usize = results.iter().map(|r| r.summary.skipped).sum();
 
-        let success_rate = if total_tests > 0 {
-            (total_passed as f64 / total_tests as f64) * 100.0
-        } else {
-            0.0
-        };
+        let success_rate =
+            if total_tests > 0 { (total_passed as f64 / total_tests as f64) * 100.0 } else { 0.0 };
 
         format!(
             r#"
@@ -676,10 +667,7 @@ mod tests {
         let reporter = HtmlReporter::new(true);
         let results = vec![create_test_suite_result()];
 
-        let report_result = reporter
-            .generate_report(&results, &output_path)
-            .await
-            .unwrap();
+        let report_result = reporter.generate_report(&results, &output_path).await.unwrap();
 
         assert_eq!(report_result.format, ReportFormat::Html);
         assert!(output_path.exists());
@@ -704,10 +692,7 @@ mod tests {
         let reporter = HtmlReporter::new_minimal();
         let results = vec![create_test_suite_result()];
 
-        reporter
-            .generate_report(&results, &output_path)
-            .await
-            .unwrap();
+        reporter.generate_report(&results, &output_path).await.unwrap();
 
         let content = fs::read_to_string(&output_path).await.unwrap();
         // Minimal output should not include JavaScript

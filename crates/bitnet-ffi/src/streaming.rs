@@ -15,10 +15,7 @@ pub struct StreamingManager {
 
 impl StreamingManager {
     pub fn new() -> Self {
-        Self {
-            sessions: Mutex::new(HashMap::new()),
-            next_id: Mutex::new(0),
-        }
+        Self { sessions: Mutex::new(HashMap::new()), next_id: Mutex::new(0) }
     }
 
     /// Store a streaming session and return its ID
@@ -48,10 +45,9 @@ impl StreamingManager {
 
         match sessions.remove(&session_id) {
             Some(_) => Ok(()),
-            None => Err(BitNetCError::InvalidArgument(format!(
-                "Stream ID {} not found",
-                session_id
-            ))),
+            None => {
+                Err(BitNetCError::InvalidArgument(format!("Stream ID {} not found", session_id)))
+            }
         }
     }
 
@@ -63,10 +59,9 @@ impl StreamingManager {
 
         match sessions.get_mut(&session_id) {
             Some(session) => session.next_token(),
-            None => Err(BitNetCError::InvalidArgument(format!(
-                "Stream ID {} not found",
-                session_id
-            ))),
+            None => {
+                Err(BitNetCError::InvalidArgument(format!("Stream ID {} not found", session_id)))
+            }
         }
     }
 
@@ -128,9 +123,7 @@ pub fn get_next_token(session_id: u32) -> Result<Option<String>, BitNetCError> {
 
 /// Check if a streaming session exists
 pub fn has_streaming_session(session_id: u32) -> bool {
-    get_streaming_manager()
-        .has_session(session_id)
-        .unwrap_or(false)
+    get_streaming_manager().has_session(session_id).unwrap_or(false)
 }
 
 /// Get the number of active streaming sessions
@@ -140,9 +133,7 @@ pub fn get_active_session_count() -> usize {
 
 /// Clean up finished streaming sessions
 pub fn cleanup_finished_sessions() -> usize {
-    get_streaming_manager()
-        .cleanup_finished_sessions()
-        .unwrap_or(0)
+    get_streaming_manager().cleanup_finished_sessions().unwrap_or(0)
 }
 
 /// Streaming callback wrapper for C callbacks
@@ -156,10 +147,7 @@ impl CallbackWrapper {
         callback: crate::config::BitNetCStreamCallback,
         user_data: *mut std::ffi::c_void,
     ) -> Self {
-        Self {
-            callback,
-            user_data,
-        }
+        Self { callback, user_data }
     }
 
     /// Call the C callback with a token
@@ -172,9 +160,7 @@ impl CallbackWrapper {
             let result = callback_fn(token_cstr.as_ptr(), self.user_data);
             Ok(result == 0) // 0 means continue, non-zero means stop
         } else {
-            Err(BitNetCError::InvalidArgument(
-                "Callback function is null".to_string(),
-            ))
+            Err(BitNetCError::InvalidArgument("Callback function is null".to_string()))
         }
     }
 }

@@ -39,12 +39,7 @@ mod cuda_tests {
         println!("\n2️⃣ Running numerical accuracy validation...");
         let validation_config = ValidationConfig {
             tolerance: 1e-6,
-            test_sizes: vec![
-                (64, 64, 64),
-                (128, 128, 128),
-                (256, 256, 256),
-                (512, 512, 512),
-            ],
+            test_sizes: vec![(64, 64, 64), (128, 128, 128), (256, 256, 256), (512, 512, 512)],
             benchmark_iterations: 50,
             check_memory_leaks: true,
             test_mixed_precision: false,
@@ -64,10 +59,7 @@ mod cuda_tests {
             );
         }
 
-        assert!(
-            validation_results.success,
-            "Overall validation should succeed"
-        );
+        assert!(validation_results.success, "Overall validation should succeed");
         println!("✅ Numerical accuracy validation passed");
 
         // Test 3: Performance benchmarking
@@ -150,10 +142,7 @@ mod cuda_tests {
             }
             Err(e) => {
                 // If it fails, that's also fine - proper error handling
-                println!(
-                    "   Kernel properly reported error for mismatched dimensions: {}",
-                    e
-                );
+                println!("   Kernel properly reported error for mismatched dimensions: {}", e);
             }
         }
 

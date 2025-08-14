@@ -15,10 +15,7 @@ impl MockTokenizer {
 impl Tokenizer for MockTokenizer {
     fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>> {
         // Simple character-based encoding for testing
-        Ok(text
-            .chars()
-            .map(|c| c as u32 % self.vocab_size as u32)
-            .collect())
+        Ok(text.chars().map(|c| c as u32 % self.vocab_size as u32).collect())
     }
 
     fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String> {

@@ -96,25 +96,17 @@ impl BitNetCConfig {
         let model_path = if self.model_path.is_null() {
             None
         } else {
-            let path_str = unsafe { CStr::from_ptr(self.model_path) }
-                .to_str()
-                .map_err(|e| {
-                    BitNetCError::InvalidArgument(format!("Invalid UTF-8 in model path: {}", e))
-                })?;
+            let path_str = unsafe { CStr::from_ptr(self.model_path) }.to_str().map_err(|e| {
+                BitNetCError::InvalidArgument(format!("Invalid UTF-8 in model path: {}", e))
+            })?;
             Some(std::path::PathBuf::from(path_str))
         };
 
-        let num_threads = if self.num_threads == 0 {
-            None
-        } else {
-            Some(self.num_threads as usize)
-        };
+        let num_threads =
+            if self.num_threads == 0 { None } else { Some(self.num_threads as usize) };
 
-        let memory_limit = if self.memory_limit == 0 {
-            None
-        } else {
-            Some(self.memory_limit as usize)
-        };
+        let memory_limit =
+            if self.memory_limit == 0 { None } else { Some(self.memory_limit as usize) };
 
         Ok(BitNetConfig {
             model: bitnet_common::ModelConfig {
@@ -277,23 +269,11 @@ impl BitNetCInferenceConfig {
         bitnet_common::GenerationConfig {
             max_new_tokens: self.max_new_tokens as usize,
             temperature: self.temperature,
-            top_k: if self.top_k == 0 {
-                None
-            } else {
-                Some(self.top_k as usize)
-            },
-            top_p: if self.top_p == 0.0 {
-                None
-            } else {
-                Some(self.top_p)
-            },
+            top_k: if self.top_k == 0 { None } else { Some(self.top_k as usize) },
+            top_p: if self.top_p == 0.0 { None } else { Some(self.top_p) },
             repetition_penalty: self.repetition_penalty,
             do_sample: self.do_sample != 0,
-            seed: if self.seed == 0 {
-                None
-            } else {
-                Some(self.seed as u64)
-            },
+            seed: if self.seed == 0 { None } else { Some(self.seed as u64) },
         }
     }
 }
@@ -397,10 +377,7 @@ mod tests {
 
         assert_eq!(rust_config.model.vocab_size, 32000);
         assert_eq!(rust_config.model.hidden_size, 4096);
-        assert_eq!(
-            rust_config.quantization.quantization_type,
-            QuantizationType::I2S
-        );
+        assert_eq!(rust_config.quantization.quantization_type, QuantizationType::I2S);
     }
 
     #[test]

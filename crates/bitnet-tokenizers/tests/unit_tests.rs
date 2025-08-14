@@ -386,11 +386,7 @@ mod performance_tests {
         let duration = start.elapsed();
 
         // Should complete 1000 encodings in less than 100ms
-        assert!(
-            duration.as_millis() < 100,
-            "Encoding too slow: {:?}",
-            duration
-        );
+        assert!(duration.as_millis() < 100, "Encoding too slow: {:?}", duration);
     }
 
     #[test]
@@ -405,11 +401,7 @@ mod performance_tests {
         let duration = start.elapsed();
 
         // Should complete 1000 decodings in less than 100ms
-        assert!(
-            duration.as_millis() < 100,
-            "Decoding too slow: {:?}",
-            duration
-        );
+        assert!(duration.as_millis() < 100, "Decoding too slow: {:?}", duration);
     }
 
     #[test]
@@ -593,13 +585,7 @@ mod linguistic_validation_tests {
             let tokens = tokenizer.encode(text, false).unwrap();
             let decoded = tokenizer.decode(&tokens, false).unwrap();
 
-            assert_eq!(
-                tokens.len(),
-                expected_tokens,
-                "Failed for {} text: '{}'",
-                language,
-                text
-            );
+            assert_eq!(tokens.len(), expected_tokens, "Failed for {} text: '{}'", language, text);
             assert!(decoded.contains(&format!("{} tokens", expected_tokens)));
         }
     }
@@ -729,10 +715,8 @@ mod linguistic_validation_tests {
         ];
 
         for group in pattern_groups {
-            let token_counts: Vec<usize> = group
-                .iter()
-                .map(|text| tokenizer.encode(text, false).unwrap().len())
-                .collect();
+            let token_counts: Vec<usize> =
+                group.iter().map(|text| tokenizer.encode(text, false).unwrap().len()).collect();
 
             // All items in a group should have the same token count
             let first_count = token_counts[0];
@@ -1056,10 +1040,7 @@ mod benchmark_tests {
             let duration = start.elapsed();
 
             let per_op = duration / iterations;
-            println!(
-                "Encoding '{}': {:?} per operation ({} iterations)",
-                text, per_op, iterations
-            );
+            println!("Encoding '{}': {:?} per operation ({} iterations)", text, per_op, iterations);
 
             // Reasonable performance threshold
             assert!(

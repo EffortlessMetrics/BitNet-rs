@@ -120,16 +120,10 @@ impl ComparisonTestCaseRegistry {
         model_size: ModelSize,
     ) {
         // Add to category index
-        self.by_category
-            .entry(category)
-            .or_insert_with(Vec::new)
-            .push(test_case.name.clone());
+        self.by_category.entry(category).or_insert_with(Vec::new).push(test_case.name.clone());
 
         // Add to model size index
-        self.by_model_size
-            .entry(model_size)
-            .or_insert_with(Vec::new)
-            .push(test_case.name.clone());
+        self.by_model_size.entry(model_size).or_insert_with(Vec::new).push(test_case.name.clone());
 
         // Add to main registry
         self.test_cases.insert(test_case.name.clone(), test_case);
@@ -149,12 +143,7 @@ impl ComparisonTestCaseRegistry {
     pub fn by_category(&self, category: TestCaseCategory) -> Vec<&ComparisonTestCase> {
         self.by_category
             .get(&category)
-            .map(|names| {
-                names
-                    .iter()
-                    .filter_map(|name| self.test_cases.get(name))
-                    .collect()
-            })
+            .map(|names| names.iter().filter_map(|name| self.test_cases.get(name)).collect())
             .unwrap_or_default()
     }
 
@@ -162,12 +151,7 @@ impl ComparisonTestCaseRegistry {
     pub fn by_model_size(&self, size: ModelSize) -> Vec<&ComparisonTestCase> {
         self.by_model_size
             .get(&size)
-            .map(|names| {
-                names
-                    .iter()
-                    .filter_map(|name| self.test_cases.get(name))
-                    .collect()
-            })
+            .map(|names| names.iter().filter_map(|name| self.test_cases.get(name)).collect())
             .unwrap_or_default()
     }
 
@@ -438,10 +422,7 @@ impl ComparisonTestCaseRegistry {
         // Memory stress test
         let memory_stress = ComparisonTestCase::new(
             "perf_memory_stress",
-            &format!(
-                "Context: {}Question: What was mentioned?",
-                "word ".repeat(1000)
-            ),
+            &format!("Context: {}Question: What was mentioned?", "word ".repeat(1000)),
             InferenceConfig {
                 max_tokens: 20,
                 temperature: 0.0,
@@ -452,11 +433,7 @@ impl ComparisonTestCaseRegistry {
         .with_token_range(5, 20)
         .with_description("Memory usage stress test");
 
-        self.register(
-            memory_stress,
-            TestCaseCategory::Performance,
-            ModelSize::Medium,
-        );
+        self.register(memory_stress, TestCaseCategory::Performance, ModelSize::Medium);
 
         // High temperature creativity
         let creativity = ComparisonTestCase::new(
@@ -492,11 +469,7 @@ impl ComparisonTestCaseRegistry {
         .with_token_range(3, 10)
         .with_description("Regression test for tokenization consistency");
 
-        self.register(
-            tokenization_regression,
-            TestCaseCategory::Regression,
-            ModelSize::Tiny,
-        );
+        self.register(tokenization_regression, TestCaseCategory::Regression, ModelSize::Tiny);
 
         // Test for memory leak issue
         let memory_leak = ComparisonTestCase::new(
@@ -528,19 +501,12 @@ impl ComparisonTestCaseRegistry {
         .with_token_range(1, 5)
         .with_description("Regression test for floating point precision");
 
-        self.register(
-            float_precision,
-            TestCaseCategory::Regression,
-            ModelSize::Tiny,
-        );
+        self.register(float_precision, TestCaseCategory::Regression, ModelSize::Tiny);
 
         // Test for context window handling
         let context_window = ComparisonTestCase::new(
             "regression_context_window",
-            &format!(
-                "Context: {}What is the context about?",
-                "sentence ".repeat(100)
-            ),
+            &format!("Context: {}What is the context about?", "sentence ".repeat(100)),
             InferenceConfig {
                 max_tokens: 10,
                 temperature: 0.0,
@@ -551,11 +517,7 @@ impl ComparisonTestCaseRegistry {
         .with_token_range(3, 10)
         .with_description("Regression test for context window handling");
 
-        self.register(
-            context_window,
-            TestCaseCategory::Regression,
-            ModelSize::Medium,
-        );
+        self.register(context_window, TestCaseCategory::Regression, ModelSize::Medium);
 
         // Test for stop token handling
         let stop_tokens = ComparisonTestCase::new(
@@ -591,11 +553,7 @@ impl ComparisonTestCaseRegistry {
         .with_token_range(5, 15)
         .with_description("GGUF format compatibility test");
 
-        self.register(
-            gguf_test,
-            TestCaseCategory::FormatCompatibility,
-            ModelSize::Small,
-        );
+        self.register(gguf_test, TestCaseCategory::FormatCompatibility, ModelSize::Small);
 
         // SafeTensors format test
         let safetensors_test = ComparisonTestCase::new(
@@ -611,11 +569,7 @@ impl ComparisonTestCaseRegistry {
         .with_token_range(5, 15)
         .with_description("SafeTensors format compatibility test");
 
-        self.register(
-            safetensors_test,
-            TestCaseCategory::FormatCompatibility,
-            ModelSize::Small,
-        );
+        self.register(safetensors_test, TestCaseCategory::FormatCompatibility, ModelSize::Small);
 
         // Quantization compatibility
         let quantization_test = ComparisonTestCase::new(
@@ -631,11 +585,7 @@ impl ComparisonTestCaseRegistry {
         .with_token_range(5, 20)
         .with_description("Quantization format compatibility test");
 
-        self.register(
-            quantization_test,
-            TestCaseCategory::FormatCompatibility,
-            ModelSize::Medium,
-        );
+        self.register(quantization_test, TestCaseCategory::FormatCompatibility, ModelSize::Medium);
     }
 
     /// Load model size variation test cases
@@ -654,11 +604,7 @@ impl ComparisonTestCaseRegistry {
         .with_token_range(3, 10)
         .with_description("Tiny model size limitations test");
 
-        self.register(
-            tiny_model_test,
-            TestCaseCategory::ModelSize,
-            ModelSize::Tiny,
-        );
+        self.register(tiny_model_test, TestCaseCategory::ModelSize, ModelSize::Tiny);
 
         // Small model scaling
         let small_model_test = ComparisonTestCase::new(
@@ -674,11 +620,7 @@ impl ComparisonTestCaseRegistry {
         .with_token_range(10, 30)
         .with_description("Small model scaling characteristics");
 
-        self.register(
-            small_model_test,
-            TestCaseCategory::ModelSize,
-            ModelSize::Small,
-        );
+        self.register(small_model_test, TestCaseCategory::ModelSize, ModelSize::Small);
 
         // Medium model capabilities
         let medium_model_test = ComparisonTestCase::new(
@@ -694,11 +636,7 @@ impl ComparisonTestCaseRegistry {
         .with_token_range(30, 100)
         .with_description("Medium model advanced capabilities");
 
-        self.register(
-            medium_model_test,
-            TestCaseCategory::ModelSize,
-            ModelSize::Medium,
-        );
+        self.register(medium_model_test, TestCaseCategory::ModelSize, ModelSize::Medium);
 
         // Large model stress test
         let large_model_test = ComparisonTestCase::new(
@@ -714,11 +652,7 @@ impl ComparisonTestCaseRegistry {
         .with_token_range(100, 500)
         .with_description("Large model stress and capability test");
 
-        self.register(
-            large_model_test,
-            TestCaseCategory::ModelSize,
-            ModelSize::Large,
-        );
+        self.register(large_model_test, TestCaseCategory::ModelSize, ModelSize::Large);
     }
 }
 
@@ -729,61 +663,37 @@ pub mod test_suites {
     /// Create a comprehensive test suite for basic functionality
     pub fn create_basic_suite() -> Vec<ComparisonTestCase> {
         let registry = ComparisonTestCaseRegistry::new();
-        registry
-            .by_category(TestCaseCategory::Basic)
-            .into_iter()
-            .cloned()
-            .collect()
+        registry.by_category(TestCaseCategory::Basic).into_iter().cloned().collect()
     }
 
     /// Create a comprehensive edge case test suite
     pub fn create_edge_case_suite() -> Vec<ComparisonTestCase> {
         let registry = ComparisonTestCaseRegistry::new();
-        registry
-            .by_category(TestCaseCategory::EdgeCase)
-            .into_iter()
-            .cloned()
-            .collect()
+        registry.by_category(TestCaseCategory::EdgeCase).into_iter().cloned().collect()
     }
 
     /// Create a performance benchmark test suite
     pub fn create_performance_suite() -> Vec<ComparisonTestCase> {
         let registry = ComparisonTestCaseRegistry::new();
-        registry
-            .by_category(TestCaseCategory::Performance)
-            .into_iter()
-            .cloned()
-            .collect()
+        registry.by_category(TestCaseCategory::Performance).into_iter().cloned().collect()
     }
 
     /// Create a regression test suite
     pub fn create_regression_suite() -> Vec<ComparisonTestCase> {
         let registry = ComparisonTestCaseRegistry::new();
-        registry
-            .by_category(TestCaseCategory::Regression)
-            .into_iter()
-            .cloned()
-            .collect()
+        registry.by_category(TestCaseCategory::Regression).into_iter().cloned().collect()
     }
 
     /// Create a format compatibility test suite
     pub fn create_format_compatibility_suite() -> Vec<ComparisonTestCase> {
         let registry = ComparisonTestCaseRegistry::new();
-        registry
-            .by_category(TestCaseCategory::FormatCompatibility)
-            .into_iter()
-            .cloned()
-            .collect()
+        registry.by_category(TestCaseCategory::FormatCompatibility).into_iter().cloned().collect()
     }
 
     /// Create a model size variation test suite
     pub fn create_model_size_suite() -> Vec<ComparisonTestCase> {
         let registry = ComparisonTestCaseRegistry::new();
-        registry
-            .by_category(TestCaseCategory::ModelSize)
-            .into_iter()
-            .cloned()
-            .collect()
+        registry.by_category(TestCaseCategory::ModelSize).into_iter().cloned().collect()
     }
 
     /// Create a comprehensive test suite for a specific model size
@@ -819,15 +729,9 @@ mod tests {
         // Should have test cases in all categories
         assert!(!registry.by_category(TestCaseCategory::Basic).is_empty());
         assert!(!registry.by_category(TestCaseCategory::EdgeCase).is_empty());
-        assert!(!registry
-            .by_category(TestCaseCategory::Performance)
-            .is_empty());
-        assert!(!registry
-            .by_category(TestCaseCategory::Regression)
-            .is_empty());
-        assert!(!registry
-            .by_category(TestCaseCategory::FormatCompatibility)
-            .is_empty());
+        assert!(!registry.by_category(TestCaseCategory::Performance).is_empty());
+        assert!(!registry.by_category(TestCaseCategory::Regression).is_empty());
+        assert!(!registry.by_category(TestCaseCategory::FormatCompatibility).is_empty());
         assert!(!registry.by_category(TestCaseCategory::ModelSize).is_empty());
 
         println!("✓ Test case registry validation passed");
@@ -848,9 +752,7 @@ mod tests {
         // Verify specific test cases exist
         assert!(tiny_tests.iter().any(|tc| tc.name == "basic_greeting"));
         assert!(small_tests.iter().any(|tc| tc.name == "basic_code"));
-        assert!(medium_tests
-            .iter()
-            .any(|tc| tc.name == "perf_long_generation"));
+        assert!(medium_tests.iter().any(|tc| tc.name == "perf_long_generation"));
 
         println!("✓ Model size filtering validation passed");
     }
@@ -941,9 +843,7 @@ mod tests {
         let edge_count = registry.by_category(TestCaseCategory::EdgeCase).len();
         let perf_count = registry.by_category(TestCaseCategory::Performance).len();
         let regression_count = registry.by_category(TestCaseCategory::Regression).len();
-        let format_count = registry
-            .by_category(TestCaseCategory::FormatCompatibility)
-            .len();
+        let format_count = registry.by_category(TestCaseCategory::FormatCompatibility).len();
         let size_count = registry.by_category(TestCaseCategory::ModelSize).len();
 
         println!("Test Coverage Summary:");
@@ -963,16 +863,10 @@ mod tests {
         assert!(edge_count >= 6, "Need at least 6 edge case tests");
         assert!(perf_count >= 4, "Need at least 4 performance tests");
         assert!(regression_count >= 4, "Need at least 4 regression tests");
-        assert!(
-            format_count >= 3,
-            "Need at least 3 format compatibility tests"
-        );
+        assert!(format_count >= 3, "Need at least 3 format compatibility tests");
         assert!(size_count >= 4, "Need at least 4 model size tests");
 
-        assert!(
-            total_tests >= 26,
-            "Need at least 26 total tests for comprehensive coverage"
-        );
+        assert!(total_tests >= 26, "Need at least 26 total tests for comprehensive coverage");
 
         println!("✓ Complete test coverage validation passed");
     }
@@ -983,10 +877,7 @@ mod tests {
 
         // Task requirement: Define standard comparison test scenarios ✓
         let basic_tests = registry.by_category(TestCaseCategory::Basic);
-        assert!(
-            basic_tests.len() >= 5,
-            "Should have standard comparison scenarios"
-        );
+        assert!(basic_tests.len() >= 5, "Should have standard comparison scenarios");
         assert!(basic_tests.iter().any(|t| t.name.contains("greeting")));
         assert!(basic_tests.iter().any(|t| t.name.contains("completion")));
         assert!(basic_tests.iter().any(|t| t.name.contains("qa")));
@@ -1008,10 +899,7 @@ mod tests {
 
         // Task requirement: Create edge case prompts and inputs ✓
         let edge_tests = registry.by_category(TestCaseCategory::EdgeCase);
-        assert!(
-            edge_tests.len() >= 6,
-            "Should have comprehensive edge cases"
-        );
+        assert!(edge_tests.len() >= 6, "Should have comprehensive edge cases");
         assert!(edge_tests.iter().any(|t| t.name.contains("empty")));
         assert!(edge_tests.iter().any(|t| t.name.contains("special_chars")));
         assert!(edge_tests.iter().any(|t| t.name.contains("multilingual")));
@@ -1021,27 +909,17 @@ mod tests {
         let perf_tests = registry.by_category(TestCaseCategory::Performance);
         assert!(perf_tests.len() >= 4, "Should have performance benchmarks");
         assert!(perf_tests.iter().any(|t| t.name.contains("throughput")));
-        assert!(perf_tests
-            .iter()
-            .any(|t| t.name.contains("long_generation")));
+        assert!(perf_tests.iter().any(|t| t.name.contains("long_generation")));
         assert!(perf_tests.iter().any(|t| t.name.contains("memory_stress")));
         assert!(perf_tests.iter().any(|t| t.name.contains("creativity")));
 
         // Task requirement: Add regression test cases for known issues ✓
         let regression_tests = registry.by_category(TestCaseCategory::Regression);
         assert!(regression_tests.len() >= 4, "Should have regression tests");
-        assert!(regression_tests
-            .iter()
-            .any(|t| t.name.contains("tokenization")));
-        assert!(regression_tests
-            .iter()
-            .any(|t| t.name.contains("memory_management")));
-        assert!(regression_tests
-            .iter()
-            .any(|t| t.name.contains("float_precision")));
-        assert!(regression_tests
-            .iter()
-            .any(|t| t.name.contains("stop_tokens")));
+        assert!(regression_tests.iter().any(|t| t.name.contains("tokenization")));
+        assert!(regression_tests.iter().any(|t| t.name.contains("memory_management")));
+        assert!(regression_tests.iter().any(|t| t.name.contains("float_precision")));
+        assert!(regression_tests.iter().any(|t| t.name.contains("stop_tokens")));
 
         println!("✓ All task requirements fulfilled successfully");
     }
@@ -1058,23 +936,12 @@ fn main() {
         "  Basic functionality: {} tests",
         registry.by_category(TestCaseCategory::Basic).len()
     );
-    println!(
-        "  Edge cases: {} tests",
-        registry.by_category(TestCaseCategory::EdgeCase).len()
-    );
-    println!(
-        "  Performance: {} tests",
-        registry.by_category(TestCaseCategory::Performance).len()
-    );
-    println!(
-        "  Regression: {} tests",
-        registry.by_category(TestCaseCategory::Regression).len()
-    );
+    println!("  Edge cases: {} tests", registry.by_category(TestCaseCategory::EdgeCase).len());
+    println!("  Performance: {} tests", registry.by_category(TestCaseCategory::Performance).len());
+    println!("  Regression: {} tests", registry.by_category(TestCaseCategory::Regression).len());
     println!(
         "  Format compatibility: {} tests",
-        registry
-            .by_category(TestCaseCategory::FormatCompatibility)
-            .len()
+        registry.by_category(TestCaseCategory::FormatCompatibility).len()
     );
     println!(
         "  Model size variations: {} tests",
@@ -1083,56 +950,23 @@ fn main() {
     println!("  Total: {} tests", registry.all().len());
 
     println!("\n🎯 Model Size Distribution:");
-    println!(
-        "  Tiny models: {} tests",
-        registry.by_model_size(ModelSize::Tiny).len()
-    );
-    println!(
-        "  Small models: {} tests",
-        registry.by_model_size(ModelSize::Small).len()
-    );
-    println!(
-        "  Medium models: {} tests",
-        registry.by_model_size(ModelSize::Medium).len()
-    );
-    println!(
-        "  Large models: {} tests",
-        registry.by_model_size(ModelSize::Large).len()
-    );
+    println!("  Tiny models: {} tests", registry.by_model_size(ModelSize::Tiny).len());
+    println!("  Small models: {} tests", registry.by_model_size(ModelSize::Small).len());
+    println!("  Medium models: {} tests", registry.by_model_size(ModelSize::Medium).len());
+    println!("  Large models: {} tests", registry.by_model_size(ModelSize::Large).len());
 
     println!("\n🚀 Available Test Suites:");
-    println!(
-        "  Basic suite: {} tests",
-        test_suites::create_basic_suite().len()
-    );
-    println!(
-        "  Edge case suite: {} tests",
-        test_suites::create_edge_case_suite().len()
-    );
-    println!(
-        "  Performance suite: {} tests",
-        test_suites::create_performance_suite().len()
-    );
-    println!(
-        "  Regression suite: {} tests",
-        test_suites::create_regression_suite().len()
-    );
+    println!("  Basic suite: {} tests", test_suites::create_basic_suite().len());
+    println!("  Edge case suite: {} tests", test_suites::create_edge_case_suite().len());
+    println!("  Performance suite: {} tests", test_suites::create_performance_suite().len());
+    println!("  Regression suite: {} tests", test_suites::create_regression_suite().len());
     println!(
         "  Format compatibility suite: {} tests",
         test_suites::create_format_compatibility_suite().len()
     );
-    println!(
-        "  Model size suite: {} tests",
-        test_suites::create_model_size_suite().len()
-    );
-    println!(
-        "  Smoke test suite: {} tests",
-        test_suites::create_smoke_test_suite().len()
-    );
-    println!(
-        "  Comprehensive suite: {} tests",
-        test_suites::create_comprehensive_suite().len()
-    );
+    println!("  Model size suite: {} tests", test_suites::create_model_size_suite().len());
+    println!("  Smoke test suite: {} tests", test_suites::create_smoke_test_suite().len());
+    println!("  Comprehensive suite: {} tests", test_suites::create_comprehensive_suite().len());
 
     println!("\n✅ Task 16 Implementation Complete!");
     println!("All requirements have been successfully implemented:");

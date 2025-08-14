@@ -74,18 +74,9 @@ fn test_gguf_value_types() {
 
 #[test]
 fn test_tensor_type_conversion() {
-    assert!(matches!(
-        GgufTensorType::from_u32(0).unwrap(),
-        GgufTensorType::F32
-    ));
-    assert!(matches!(
-        GgufTensorType::from_u32(1).unwrap(),
-        GgufTensorType::F16
-    ));
-    assert!(matches!(
-        GgufTensorType::from_u32(2).unwrap(),
-        GgufTensorType::Q4_0
-    ));
+    assert!(matches!(GgufTensorType::from_u32(0).unwrap(), GgufTensorType::F32));
+    assert!(matches!(GgufTensorType::from_u32(1).unwrap(), GgufTensorType::F16));
+    assert!(matches!(GgufTensorType::from_u32(2).unwrap(), GgufTensorType::Q4_0));
 
     assert!(GgufTensorType::from_u32(999).is_err());
 }

@@ -150,11 +150,7 @@ impl TestCache {
             CacheMetadata::default()
         };
 
-        let mut cache = Self {
-            cache_dir,
-            config,
-            metadata,
-        };
+        let mut cache = Self { cache_dir, config, metadata };
 
         // Perform initial cleanup if needed
         cache.cleanup_if_needed().await?;
@@ -178,9 +174,7 @@ impl TestCache {
 
         // Check if cache entry is expired
         let metadata = fs::metadata(&path).await?;
-        let age = SystemTime::now()
-            .duration_since(metadata.modified()?)
-            .unwrap_or(Duration::ZERO);
+        let age = SystemTime::now().duration_since(metadata.modified()?).unwrap_or(Duration::ZERO);
 
         if age.as_secs() > self.config.max_age_seconds {
             debug!("Cache entry expired: {}", filename);
@@ -285,9 +279,8 @@ impl TestCache {
     /// Cleanup expired and oversized cache entries
     pub async fn cleanup_if_needed(&mut self) -> TestResultCompat<()> {
         let now = SystemTime::now();
-        let last_cleanup_age = now
-            .duration_since(self.metadata.last_cleanup)
-            .unwrap_or(Duration::ZERO);
+        let last_cleanup_age =
+            now.duration_since(self.metadata.last_cleanup).unwrap_or(Duration::ZERO);
 
         // Only cleanup every hour
         if last_cleanup_age.as_secs() < 3600 {
@@ -374,11 +367,8 @@ impl TestCache {
             self.metadata.stats.evictions += removed_count;
             self.metadata.stats.size_bytes =
                 self.metadata.stats.size_bytes.saturating_sub(removed_size);
-            self.metadata.stats.entry_count = self
-                .metadata
-                .stats
-                .entry_count
-                .saturating_sub(removed_count as usize);
+            self.metadata.stats.entry_count =
+                self.metadata.stats.entry_count.saturating_sub(removed_count as usize);
         }
 
         Ok(())

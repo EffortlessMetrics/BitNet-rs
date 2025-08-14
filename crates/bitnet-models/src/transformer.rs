@@ -122,15 +122,7 @@ impl MultiHeadAttention {
         )
         .ok();
 
-        Ok(Self {
-            n_heads,
-            head_dim,
-            q_proj,
-            k_proj,
-            v_proj,
-            o_proj,
-            rope,
-        })
+        Ok(Self { n_heads, head_dim, q_proj, k_proj, v_proj, o_proj, rope })
     }
 
     pub fn forward(&self, x: &Tensor, kv_cache: Option<&mut LayerKVCache>) -> Result<Tensor> {
@@ -291,23 +283,10 @@ impl LayerKVCache {
         head_dim: usize,
         device: &Device,
     ) -> Result<Self> {
-        let k = Tensor::zeros(
-            &[batch_size, n_heads, max_seq_len, head_dim],
-            DType::F32,
-            device,
-        )?;
-        let v = Tensor::zeros(
-            &[batch_size, n_heads, max_seq_len, head_dim],
-            DType::F32,
-            device,
-        )?;
+        let k = Tensor::zeros(&[batch_size, n_heads, max_seq_len, head_dim], DType::F32, device)?;
+        let v = Tensor::zeros(&[batch_size, n_heads, max_seq_len, head_dim], DType::F32, device)?;
 
-        Ok(Self {
-            k,
-            v,
-            seq_len: 0,
-            max_seq_len,
-        })
+        Ok(Self { k, v, seq_len: 0, max_seq_len })
     }
 
     pub fn append(&mut self, k_new: &Tensor, v_new: &Tensor) -> Result<()> {
@@ -352,13 +331,7 @@ impl KVCache {
 
         let mut layers = Vec::with_capacity(n_layers);
         for _ in 0..n_layers {
-            layers.push(LayerKVCache::new(
-                batch_size,
-                n_heads,
-                max_seq_len,
-                head_dim,
-                device,
-            )?);
+            layers.push(LayerKVCache::new(batch_size, n_heads, max_seq_len, head_dim, device)?);
         }
 
         Ok(Self { layers })
@@ -396,23 +369,13 @@ impl TransformerModel {
 
         let mut layers = Vec::with_capacity(n_layers);
         for i in 0..n_layers {
-            layers.push(TransformerBlock::new(
-                &config,
-                vb.pp(&format!("layers.{}", i)),
-            )?);
+            layers.push(TransformerBlock::new(&config, vb.pp(&format!("layers.{}", i)))?);
         }
 
         let norm = candle_nn::layer_norm(hidden_size, 1e-5, vb.pp("norm"))?;
         let lm_head = candle_nn::linear(hidden_size, vocab_size, vb.pp("lm_head"))?;
 
-        Ok(Self {
-            config,
-            embed_tokens,
-            layers,
-            norm,
-            lm_head,
-            device,
-        })
+        Ok(Self { config, embed_tokens, layers, norm, lm_head, device })
     }
 
     pub fn embed(&self, tokens: &[u32]) -> Result<Tensor> {

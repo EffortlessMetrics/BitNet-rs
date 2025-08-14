@@ -69,25 +69,14 @@ fn main() {
         println!("  • Test timeout: {:?}", config.test_timeout);
         println!("  • Cache directory: {:?}", config.cache_dir);
         println!("  • Log level: {}", config.log_level);
-        println!(
-            "  • Coverage threshold: {:.1}%",
-            config.coverage_threshold * 100.0
-        );
+        println!("  • Coverage threshold: {:.1}%", config.coverage_threshold * 100.0);
         println!(
             "  • Cross-validation: {}",
-            if config.crossval.enabled {
-                "enabled"
-            } else {
-                "disabled"
-            }
+            if config.crossval.enabled { "enabled" } else { "disabled" }
         );
         println!(
             "  • Auto-download fixtures: {}",
-            if config.fixtures.auto_download {
-                "enabled"
-            } else {
-                "disabled"
-            }
+            if config.fixtures.auto_download { "enabled" } else { "disabled" }
         );
 
         process::exit(0);

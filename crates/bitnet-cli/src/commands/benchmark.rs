@@ -192,10 +192,7 @@ impl BenchmarkCommand {
         // Validate format
         match self.format.as_str() {
             "text" | "json" | "csv" => {}
-            _ => anyhow::bail!(
-                "Invalid format: {}. Must be one of: text, json, csv",
-                self.format
-            ),
+            _ => anyhow::bail!("Invalid format: {}. Must be one of: text, json, csv", self.format),
         }
 
         // Validate iterations
@@ -224,16 +221,9 @@ impl BenchmarkCommand {
     async fn load_model_and_tokenizer(
         &self,
         config: &CliConfig,
-    ) -> Result<(
-        BitNetInferenceEngine,
-        std::sync::Arc<dyn bitnet_tokenizers::Tokenizer>,
-    )> {
+    ) -> Result<(BitNetInferenceEngine, std::sync::Arc<dyn bitnet_tokenizers::Tokenizer>)> {
         let pb = ProgressBar::new_spinner();
-        pb.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.green} {msg}")
-                .unwrap(),
-        );
+        pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}").unwrap());
         pb.set_message("Loading model for benchmarking...");
         pb.enable_steady_tick(Duration::from_millis(100));
 
@@ -256,10 +246,7 @@ impl BenchmarkCommand {
         let engine = BitNetInferenceEngine::with_auto_backend(model, inference_config)
             .context("Failed to create inference engine")?;
 
-        pb.finish_with_message(format!(
-            "{} Model loaded for benchmarking",
-            style("✓").green()
-        ));
+        pb.finish_with_message(format!("{} Model loaded for benchmarking", style("✓").green()));
 
         Ok((engine, tokenizer))
     }
@@ -277,10 +264,7 @@ impl BenchmarkCommand {
                 warn!("CUDA support not yet implemented, falling back to CPU");
                 Ok(Device::Cpu)
             }
-            _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, auto",
-                device_str
-            ),
+            _ => anyhow::bail!("Invalid device: {}. Must be one of: cpu, cuda, auto", device_str),
         }
     }
 
@@ -311,9 +295,7 @@ impl BenchmarkCommand {
                 let test_name = format!("batch_{}_seq_{}", batch_size, seq_len);
                 pb.set_message(format!("Running {}", test_name));
 
-                let result = self
-                    .run_single_benchmark(&test_name, batch_size, seq_len)
-                    .await?;
+                let result = self.run_single_benchmark(&test_name, batch_size, seq_len).await?;
                 all_results.push(result);
 
                 pb.inc(1);
@@ -353,15 +335,12 @@ impl BenchmarkCommand {
         // Warmup iterations
         for i in 0..self.warmup {
             debug!("Warmup iteration {} for {}", i + 1, test_name);
-            self.run_single_iteration(i, batch_size, seq_len, true)
-                .await?;
+            self.run_single_iteration(i, batch_size, seq_len, true).await?;
         }
 
         // Actual benchmark iterations
         for i in 0..self.iterations {
-            let result = self
-                .run_single_iteration(i, batch_size, seq_len, false)
-                .await?;
+            let result = self.run_single_iteration(i, batch_size, seq_len, false).await?;
             iterations.push(result);
         }
 
@@ -434,19 +413,13 @@ impl BenchmarkCommand {
         let mean_throughput = throughputs.iter().sum::<f64>() / throughputs.len() as f64;
 
         let std_latency = {
-            let variance = latencies
-                .iter()
-                .map(|&x| (x - mean_latency).powi(2))
-                .sum::<f64>()
+            let variance = latencies.iter().map(|&x| (x - mean_latency).powi(2)).sum::<f64>()
                 / latencies.len() as f64;
             variance.sqrt()
         };
 
         let std_throughput = {
-            let variance = throughputs
-                .iter()
-                .map(|&x| (x - mean_throughput).powi(2))
-                .sum::<f64>()
+            let variance = throughputs.iter().map(|&x| (x - mean_throughput).powi(2)).sum::<f64>()
                 / throughputs.len() as f64;
             variance.sqrt()
         };
@@ -458,10 +431,7 @@ impl BenchmarkCommand {
         let p95 = percentile(&sorted_latencies, 95.0);
         let p99 = percentile(&sorted_latencies, 99.0);
 
-        let peak_memory = iterations
-            .iter()
-            .filter_map(|r| r.peak_memory_mb)
-            .fold(0.0f64, f64::max);
+        let peak_memory = iterations.iter().filter_map(|r| r.peak_memory_mb).fold(0.0f64, f64::max);
 
         Statistics {
             mean_latency_ms: mean_latency,
@@ -473,11 +443,7 @@ impl BenchmarkCommand {
             p99_latency_ms: p99,
             mean_tokens_per_second: mean_throughput,
             std_tokens_per_second: std_throughput,
-            peak_memory_mb: if peak_memory > 0.0 {
-                Some(peak_memory)
-            } else {
-                None
-            },
+            peak_memory_mb: if peak_memory > 0.0 { Some(peak_memory) } else { None },
         }
     }
 
@@ -510,10 +476,8 @@ impl BenchmarkCommand {
         let mut recommendations = Vec::new();
 
         if best.batch_size > 1 {
-            recommendations.push(format!(
-                "Best performance achieved with batch size {}",
-                best.batch_size
-            ));
+            recommendations
+                .push(format!("Best performance achieved with batch size {}", best.batch_size));
         }
 
         if best.statistics.mean_tokens_per_second > 100.0 {
@@ -558,16 +522,10 @@ impl BenchmarkCommand {
         info!("Generating flamegraph...");
 
         // Placeholder implementation
-        println!(
-            "{} Flamegraph generation not yet implemented",
-            style("⚠").yellow()
-        );
+        println!("{} Flamegraph generation not yet implemented", style("⚠").yellow());
         println!("  To generate flamegraphs, use:");
         println!("  cargo install flamegraph");
-        println!(
-            "  sudo flamegraph -- bitnet benchmark --model {}",
-            self.model.display()
-        );
+        println!("  sudo flamegraph -- bitnet benchmark --model {}", self.model.display());
 
         Ok(())
     }
@@ -577,10 +535,7 @@ impl BenchmarkCommand {
         info!("Comparing with Python baseline...");
 
         // Placeholder implementation
-        println!(
-            "{} Python comparison not yet implemented",
-            style("⚠").yellow()
-        );
+        println!("{} Python comparison not yet implemented", style("⚠").yellow());
         println!("  To compare with Python:");
         println!("  1. Run the original Python implementation");
         println!("  2. Compare the results manually");
@@ -619,11 +574,7 @@ impl BenchmarkCommand {
         mut output: Box<dyn Write>,
         results: &BenchmarkResults,
     ) -> Result<()> {
-        writeln!(
-            output,
-            "\n{}",
-            style("BitNet Benchmark Results").bold().cyan()
-        )?;
+        writeln!(output, "\n{}", style("BitNet Benchmark Results").bold().cyan())?;
         writeln!(output, "================================")?;
         writeln!(output)?;
 
@@ -631,54 +582,26 @@ impl BenchmarkCommand {
         writeln!(output, "{}", style("System Information:").bold())?;
         writeln!(output, "  Model: {}", results.model_path)?;
         writeln!(output, "  Device: {}", results.device)?;
-        writeln!(
-            output,
-            "  OS: {} ({})",
-            results.system_info.os, results.system_info.arch
-        )?;
+        writeln!(output, "  OS: {} ({})", results.system_info.os, results.system_info.arch)?;
         writeln!(output, "  CPU Cores: {}", results.system_info.cpu_cores)?;
         writeln!(output, "  Timestamp: {}", results.timestamp)?;
         writeln!(output)?;
 
         // Benchmark config
         writeln!(output, "{}", style("Benchmark Configuration:").bold())?;
-        writeln!(
-            output,
-            "  Iterations: {}",
-            results.benchmark_config.iterations
-        )?;
+        writeln!(output, "  Iterations: {}", results.benchmark_config.iterations)?;
         writeln!(output, "  Warmup: {}", results.benchmark_config.warmup)?;
-        writeln!(
-            output,
-            "  Prompt Length: {}",
-            results.benchmark_config.prompt_length
-        )?;
-        writeln!(
-            output,
-            "  Generation Length: {}",
-            results.benchmark_config.generation_length
-        )?;
+        writeln!(output, "  Prompt Length: {}", results.benchmark_config.prompt_length)?;
+        writeln!(output, "  Generation Length: {}", results.benchmark_config.generation_length)?;
         writeln!(output)?;
 
         // Results
         writeln!(output, "{}", style("Results:").bold())?;
         for result in &results.results {
             writeln!(output, "  {}:", style(&result.test_name).bold())?;
-            writeln!(
-                output,
-                "    Mean Latency: {:.2} ms",
-                result.statistics.mean_latency_ms
-            )?;
-            writeln!(
-                output,
-                "    Std Latency: {:.2} ms",
-                result.statistics.std_latency_ms
-            )?;
-            writeln!(
-                output,
-                "    P95 Latency: {:.2} ms",
-                result.statistics.p95_latency_ms
-            )?;
+            writeln!(output, "    Mean Latency: {:.2} ms", result.statistics.mean_latency_ms)?;
+            writeln!(output, "    Std Latency: {:.2} ms", result.statistics.std_latency_ms)?;
+            writeln!(output, "    P95 Latency: {:.2} ms", result.statistics.p95_latency_ms)?;
             writeln!(
                 output,
                 "    Mean Throughput: {:.2} tokens/sec",
@@ -693,11 +616,7 @@ impl BenchmarkCommand {
         // Summary
         writeln!(output, "{}", style("Summary:").bold())?;
         writeln!(output, "  Total Tests: {}", results.summary.total_tests)?;
-        writeln!(
-            output,
-            "  Total Duration: {:.2}s",
-            results.summary.total_duration_s
-        )?;
+        writeln!(output, "  Total Duration: {:.2}s", results.summary.total_duration_s)?;
         writeln!(
             output,
             "  Best Performance: {} ({:.2} tokens/sec)",

@@ -43,9 +43,7 @@ impl EnhancedErrorHandler {
         execution_context: TestExecutionContext,
     ) -> Result<ErrorHandlingResult, TestError> {
         // Create error context for analysis
-        let error_context = self
-            .create_error_context(test_name, &execution_context)
-            .await;
+        let error_context = self.create_error_context(test_name, &execution_context).await;
 
         // Perform comprehensive error analysis
         let mut analyzer = self.analyzer.write().await;
@@ -64,9 +62,7 @@ impl EnhancedErrorHandler {
         self.log_error_details(test_name, error, &analysis).await;
 
         // Handle failure artifacts collection
-        self.logging_manager
-            .handle_test_failure(test_name, error, debug_context)
-            .await?;
+        self.logging_manager.handle_test_failure(test_name, error, debug_context).await?;
 
         // Save detailed analysis if configured
         if self.config.save_analysis_reports {
@@ -78,8 +74,7 @@ impl EnhancedErrorHandler {
 
         // Send notifications if configured (before moving analysis)
         if self.config.send_notifications {
-            self.send_error_notification(test_name, error, &analysis)
-                .await?;
+            self.send_error_notification(test_name, error, &analysis).await?;
         }
 
         // Create actionable result
@@ -95,10 +90,7 @@ impl EnhancedErrorHandler {
 
         // Log debugging guide if configured
         if self.config.log_debugging_guides {
-            info!(
-                "Debugging guide for test '{}':\n{}",
-                test_name, result.debugging_guide
-            );
+            info!("Debugging guide for test '{}':\n{}", test_name, result.debugging_guide);
         }
 
         Ok(result)
@@ -168,10 +160,7 @@ impl EnhancedErrorHandler {
         let output_dir = &self.config.analysis_output_dir;
         tokio::fs::create_dir_all(output_dir).await?;
 
-        let timestamp = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+        let timestamp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
 
         let filename = format!("error_analysis_{}_{}.json", test_name, timestamp);
         let file_path = output_dir.join(filename);
@@ -335,9 +324,7 @@ impl EnhancedErrorHandler {
         let mut by_severity = HashMap::new();
 
         for report in reports.iter() {
-            *by_category
-                .entry(report.error_category.clone())
-                .or_insert(0) += 1;
+            *by_category.entry(report.error_category.clone()).or_insert(0) += 1;
             *by_severity.entry(report.severity).or_insert(0) += 1;
         }
 
@@ -354,10 +341,7 @@ impl EnhancedErrorHandler {
                 .iter()
                 .map(|r| &r.error_category)
                 .max_by_key(|category| {
-                    reports
-                        .iter()
-                        .filter(|r| &r.error_category == *category)
-                        .count()
+                    reports.iter().filter(|r| &r.error_category == *category).count()
                 })
                 .cloned()
                 .unwrap_or_default(),
@@ -414,14 +398,12 @@ pub struct ErrorHandlingResult {
 impl ErrorHandlingResult {
     /// Check if this error should block the test suite
     pub fn should_block_suite(&self) -> bool {
-        matches!(
-            self.analysis.severity,
-            ErrorSeverity::Critical | ErrorSeverity::High
-        ) && matches!(
-            self.analysis.debugging_priority,
-            super::error_analysis::DebuggingPriority::Critical
-                | super::error_analysis::DebuggingPriority::High
-        )
+        matches!(self.analysis.severity, ErrorSeverity::Critical | ErrorSeverity::High)
+            && matches!(
+                self.analysis.debugging_priority,
+                super::error_analysis::DebuggingPriority::Critical
+                    | super::error_analysis::DebuggingPriority::High
+            )
     }
 
     /// Get the most important recommendation

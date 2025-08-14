@@ -102,11 +102,9 @@ impl InferenceManager {
                 BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
             })?;
 
-            engine_guard
-                .generate_tokens(input_tokens, &generation_config)
-                .map_err(|e| {
-                    BitNetCError::InferenceFailed(format!("Token generation failed: {}", e))
-                })?
+            engine_guard.generate_tokens(input_tokens, &generation_config).map_err(|e| {
+                BitNetCError::InferenceFailed(format!("Token generation failed: {}", e))
+            })?
         };
 
         Ok(result)
@@ -134,11 +132,9 @@ impl InferenceManager {
                 BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
             })?;
 
-            engine_guard
-                .generate_stream(prompt, &generation_config)
-                .map_err(|e| {
-                    BitNetCError::InferenceFailed(format!("Failed to start streaming: {}", e))
-                })?
+            engine_guard.generate_stream(prompt, &generation_config).map_err(|e| {
+                BitNetCError::InferenceFailed(format!("Failed to start streaming: {}", e))
+            })?
         };
 
         Ok(StreamingSession::new(stream))
@@ -159,10 +155,7 @@ impl InferenceManager {
                 let metrics = engine_guard.metrics();
                 Ok(BitNetCPerformanceMetrics::from_performance_metrics(metrics))
             }
-            None => Err(BitNetCError::InvalidModelId(format!(
-                "Model ID {} not found",
-                model_id
-            ))),
+            None => Err(BitNetCError::InvalidModelId(format!("Model ID {} not found", model_id))),
         }
     }
 
@@ -184,10 +177,7 @@ impl InferenceManager {
 
                 Ok(())
             }
-            None => Err(BitNetCError::InvalidModelId(format!(
-                "Model ID {} not found",
-                model_id
-            ))),
+            None => Err(BitNetCError::InvalidModelId(format!("Model ID {} not found", model_id))),
         }
     }
 
@@ -204,11 +194,8 @@ impl InferenceManager {
             BitNetCError::ThreadSafety("Failed to acquire default config write lock".to_string())
         })?;
 
-        default_config.backend_preference = if enabled {
-            BackendPreference::Gpu
-        } else {
-            BackendPreference::Cpu
-        };
+        default_config.backend_preference =
+            if enabled { BackendPreference::Gpu } else { BackendPreference::Cpu };
 
         Ok(())
     }
@@ -286,11 +273,7 @@ pub struct StreamingSession {
 
 impl StreamingSession {
     fn new(stream: Box<dyn bitnet_inference::GenerationStream>) -> Self {
-        Self {
-            stream,
-            buffer: Vec::new(),
-            is_finished: false,
-        }
+        Self { stream, buffer: Vec::new(), is_finished: false }
     }
 
     /// Get the next token from the stream
@@ -307,10 +290,7 @@ impl StreamingSession {
                 self.is_finished = true;
                 Ok(None)
             }
-            Err(e) => Err(BitNetCError::InferenceFailed(format!(
-                "Streaming error: {}",
-                e
-            ))),
+            Err(e) => Err(BitNetCError::InferenceFailed(format!("Streaming error: {}", e))),
         }
     }
 

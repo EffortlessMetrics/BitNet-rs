@@ -62,10 +62,7 @@ impl TestCase for BasicModelLoadingTest {
 
         // Verify configuration is valid
         if let Err(e) = config.validate() {
-            return Err(TestError::execution(format!(
-                "Model configuration is invalid: {}",
-                e
-            )));
+            return Err(TestError::execution(format!("Model configuration is invalid: {}", e)));
         }
 
         // Test model loading with different devices
@@ -107,10 +104,7 @@ impl TestCase for BasicModelLoadingTest {
             custom_metrics: [
                 ("successful_loads".to_string(), successful_loads as f64),
                 ("devices_tested".to_string(), 1.0),
-                (
-                    "vocab_size".to_string(),
-                    model.config().model.vocab_size as f64,
-                ),
+                ("vocab_size".to_string(), model.config().model.vocab_size as f64),
             ]
             .into_iter()
             .collect(),
@@ -304,9 +298,7 @@ impl TestCase for MultipleModelLoadingTest {
         }
 
         if engines.len() != num_models {
-            return Err(TestError::assertion(
-                "Not all models were loaded successfully",
-            ));
+            return Err(TestError::assertion("Not all models were loaded successfully"));
         }
 
         // Test that all engines work independently
@@ -354,18 +346,9 @@ impl TestCase for MultipleModelLoadingTest {
             custom_metrics: [
                 ("models_loaded".to_string(), engines.len() as f64),
                 ("successful_generations".to_string(), results.len() as f64),
-                (
-                    "avg_loading_time_ms".to_string(),
-                    avg_loading_time.as_millis() as f64,
-                ),
-                (
-                    "max_loading_time_ms".to_string(),
-                    max_loading_time.as_millis() as f64,
-                ),
-                (
-                    "min_loading_time_ms".to_string(),
-                    min_loading_time.as_millis() as f64,
-                ),
+                ("avg_loading_time_ms".to_string(), avg_loading_time.as_millis() as f64),
+                ("max_loading_time_ms".to_string(), max_loading_time.as_millis() as f64),
+                ("min_loading_time_ms".to_string(), min_loading_time.as_millis() as f64),
             ]
             .into_iter()
             .collect(),
@@ -438,9 +421,7 @@ impl TestCase for ModelInitializationErrorTest {
             .map_err(|e| TestError::execution(format!("Recovery generation failed: {}", e)))?;
 
         if recovery_result.is_empty() {
-            return Err(TestError::assertion(
-                "Recovery generation should produce output",
-            ));
+            return Err(TestError::assertion("Recovery generation should produce output"));
         }
 
         let duration = start_time.elapsed();
@@ -535,17 +516,12 @@ impl TestCase for ModelMemoryManagementTest {
                 |e| TestError::execution(format!("Memory-efficient engine creation failed: {}", e)),
             )?;
 
-        let memory_result = memory_engine
-            .generate("memory efficient test")
-            .await
-            .map_err(|e| {
-                TestError::execution(format!("Memory-efficient generation failed: {}", e))
-            })?;
+        let memory_result = memory_engine.generate("memory efficient test").await.map_err(|e| {
+            TestError::execution(format!("Memory-efficient generation failed: {}", e))
+        })?;
 
         if memory_result.is_empty() {
-            return Err(TestError::assertion(
-                "Memory-efficient engine should produce output",
-            ));
+            return Err(TestError::assertion("Memory-efficient engine should produce output"));
         }
 
         let final_stats = memory_engine.get_stats().await;
@@ -567,10 +543,7 @@ impl TestCase for ModelMemoryManagementTest {
                     "max_cache_size".to_string(),
                     peak_memory_estimates.iter().max().unwrap_or(&0) as &usize as f64,
                 ),
-                (
-                    "final_cache_size".to_string(),
-                    final_stats.cache_size as f64,
-                ),
+                ("final_cache_size".to_string(), final_stats.cache_size as f64),
                 ("final_cache_usage".to_string(), final_stats.cache_usage),
             ]
             .into_iter()
@@ -605,10 +578,7 @@ impl Model for MockModelWithConfig {
         _input: &dyn Tensor,
         _cache: &mut dyn std::any::Any,
     ) -> Result<Box<dyn Tensor>> {
-        Ok(Box::new(MockTensor::new(vec![
-            1,
-            self.config.model.vocab_size,
-        ])))
+        Ok(Box::new(MockTensor::new(vec![1, self.config.model.vocab_size])))
     }
 }
 
@@ -619,9 +589,7 @@ struct FailingMockModel {
 
 impl FailingMockModel {
     fn new() -> Self {
-        Self {
-            config: BitNetConfig::default(),
-        }
+        Self { config: BitNetConfig::default() }
     }
 }
 

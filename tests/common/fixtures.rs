@@ -31,10 +31,7 @@ impl FixtureManager {
         // Create cache directory if it doesn't exist
         fs::create_dir_all(&cache_dir).await?;
 
-        info!(
-            "Initializing fixture manager with cache dir: {:?}",
-            cache_dir
-        );
+        info!("Initializing fixture manager with cache dir: {:?}", cache_dir);
 
         let mut manager = Self {
             config: config.clone(),
@@ -108,10 +105,7 @@ impl FixtureManager {
         if let Some(fixture) = self.fixtures.get(name) {
             let path = self.cache_dir.join(&fixture.filename);
             if path.exists() {
-                return self
-                    .verify_checksum(&path, &fixture.checksum)
-                    .await
-                    .unwrap_or(false);
+                return self.verify_checksum(&path, &fixture.checksum).await.unwrap_or(false);
             }
         }
         false
@@ -121,10 +115,7 @@ impl FixtureManager {
     /// This method ensures the fixture is available and returns a reference that can be shared
     pub async fn get_shared_fixture(&self, name: &str) -> FixtureResult<SharedFixture> {
         let path = self.get_model_fixture(name).await?;
-        let info = self
-            .fixtures
-            .get(name)
-            .ok_or_else(|| FixtureError::unknown(name))?;
+        let info = self.fixtures.get(name).ok_or_else(|| FixtureError::unknown(name))?;
 
         Ok(SharedFixture {
             name: name.to_string(),
@@ -153,11 +144,8 @@ impl FixtureManager {
             format: ModelFormat::Unknown,
         };
 
-        let download_info = DownloadInfo {
-            url: url.to_string(),
-            filename,
-            checksum: checksum.to_string(),
-        };
+        let download_info =
+            DownloadInfo { url: url.to_string(), filename, checksum: checksum.to_string() };
 
         self.fixtures.insert(name.to_string(), fixture_info);
         self.downloads.insert(name.to_string(), download_info);
@@ -236,10 +224,7 @@ impl FixtureManager {
         let mut removed_count = 0usize;
         let mut removed_size = 0u64;
 
-        debug!(
-            "Cleaning up fixtures older than {:?}",
-            self.config.cleanup_interval
-        );
+        debug!("Cleaning up fixtures older than {:?}", self.config.cleanup_interval);
 
         let mut entries = fs::read_dir(&self.cache_dir).await?;
         while let Some(entry) = entries.next_entry().await? {
@@ -271,27 +256,18 @@ impl FixtureManager {
             );
         }
 
-        Ok(CleanupStats {
-            removed_count,
-            removed_size,
-        })
+        Ok(CleanupStats { removed_count, removed_size })
     }
 
     /// Clean up fixtures based on cache size limit
     pub async fn cleanup_by_size(&self) -> FixtureResult<CleanupStats> {
         if self.config.max_cache_size == 0 {
-            return Ok(CleanupStats {
-                removed_count: 0,
-                removed_size: 0,
-            });
+            return Ok(CleanupStats { removed_count: 0, removed_size: 0 });
         }
 
         let stats = self.get_cache_stats().await?;
         if !stats.is_over_limit(self.config.max_cache_size) {
-            return Ok(CleanupStats {
-                removed_count: 0,
-                removed_size: 0,
-            });
+            return Ok(CleanupStats { removed_count: 0, removed_size: 0 });
         }
 
         debug!("Cache size limit exceeded, cleaning up oldest files");
@@ -359,10 +335,7 @@ impl FixtureManager {
             );
         }
 
-        Ok(CleanupStats {
-            removed_count,
-            removed_size,
-        })
+        Ok(CleanupStats { removed_count, removed_size })
     }
 
     /// Validate all cached fixtures
@@ -397,12 +370,7 @@ impl FixtureManager {
             }
         }
 
-        Ok(ValidationStats {
-            valid_count,
-            invalid_count,
-            missing_count,
-            invalid_files,
-        })
+        Ok(ValidationStats { valid_count, invalid_count, missing_count, invalid_files })
     }
 
     /// Remove invalid fixtures from cache
@@ -434,23 +402,15 @@ impl FixtureManager {
             }
         }
 
-        Ok(CleanupStats {
-            removed_count,
-            removed_size,
-        })
+        Ok(CleanupStats { removed_count, removed_size })
     }
 
     /// Download a fixture from its configured source
     async fn download_fixture(&self, name: &str) -> FixtureResult<PathBuf> {
-        let download_info = self
-            .downloads
-            .get(name)
-            .ok_or_else(|| FixtureError::unknown(name))?;
+        let download_info = self.downloads.get(name).ok_or_else(|| FixtureError::unknown(name))?;
 
         let target_path = self.cache_dir.join(&download_info.filename);
-        let temp_path = self
-            .cache_dir
-            .join(format!("{}.tmp", &download_info.filename));
+        let temp_path = self.cache_dir.join(format!("{}.tmp", &download_info.filename));
 
         // Check if we already have a partial download
         let resume_from = if temp_path.exists() {
@@ -470,11 +430,7 @@ impl FixtureManager {
             "Downloading fixture '{}' from {} {}",
             name,
             download_info.url,
-            if resume_from.is_some() {
-                "(resuming)"
-            } else {
-                ""
-            }
+            if resume_from.is_some() { "(resuming)" } else { "" }
         );
 
         // Create HTTP client with timeout and retry logic
@@ -487,10 +443,7 @@ impl FixtureManager {
         // Retry download up to 5 times with exponential backoff
         let mut last_error = None;
         for attempt in 1..=5 {
-            match self
-                .attempt_download(&client, download_info, &temp_path, resume_from)
-                .await
-            {
+            match self.attempt_download(&client, download_info, &temp_path, resume_from).await {
                 Ok(bytes) => {
                     // Verify checksum
                     let mut hasher = Sha256::new();
@@ -554,10 +507,7 @@ impl FixtureManager {
         let _ = fs::remove_file(&temp_path).await;
 
         Err(last_error.unwrap_or_else(|| {
-            FixtureError::download(
-                &download_info.url,
-                "All download attempts failed".to_string(),
-            )
+            FixtureError::download(&download_info.url, "All download attempts failed".to_string())
         }))
     }
 
@@ -746,17 +696,12 @@ impl FixtureManager {
                 checksum: custom_fixture.checksum.clone(),
             };
 
-            self.fixtures
-                .insert(custom_fixture.name.clone(), fixture_info);
-            self.downloads
-                .insert(custom_fixture.name.clone(), download_info);
+            self.fixtures.insert(custom_fixture.name.clone(), fixture_info);
+            self.downloads.insert(custom_fixture.name.clone(), download_info);
         }
 
         if !self.config.custom_fixtures.is_empty() {
-            debug!(
-                "Loaded {} custom fixtures",
-                self.config.custom_fixtures.len()
-            );
+            debug!("Loaded {} custom fixtures", self.config.custom_fixtures.len());
         }
 
         Ok(())
@@ -765,11 +710,7 @@ impl FixtureManager {
     /// Check if a file is currently in use (basic heuristic)
     async fn is_file_in_use(&self, path: &std::path::Path) -> bool {
         // Try to open the file exclusively to see if it's in use
-        match std::fs::OpenOptions::new()
-            .write(true)
-            .truncate(false)
-            .open(path)
-        {
+        match std::fs::OpenOptions::new().write(true).truncate(false).open(path) {
             Ok(_) => false, // File is not in use
             Err(_) => true, // File might be in use or we don't have permissions
         }
@@ -907,21 +848,17 @@ pub struct SharedFixture {
 impl SharedFixture {
     /// Increment reference count
     pub fn add_ref(&self) {
-        self.reference_count
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.reference_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
 
     /// Decrement reference count and return current count
     pub fn release(&self) -> usize {
-        self.reference_count
-            .fetch_sub(1, std::sync::atomic::Ordering::Relaxed)
-            - 1
+        self.reference_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed) - 1
     }
 
     /// Get current reference count
     pub fn ref_count(&self) -> usize {
-        self.reference_count
-            .load(std::sync::atomic::Ordering::Relaxed)
+        self.reference_count.load(std::sync::atomic::Ordering::Relaxed)
     }
 
     /// Check if this is the last reference
@@ -1146,9 +1083,7 @@ mod tests {
         let (manager, _temp_dir) = create_test_fixture_manager().await;
 
         // Test preloading (should fail because auto_download is disabled)
-        let result = manager
-            .preload_fixtures(&["tiny-model", "small-model"])
-            .await;
+        let result = manager.preload_fixtures(&["tiny-model", "small-model"]).await;
         assert!(result.is_err()); // Should fail because fixtures aren't available
     }
 

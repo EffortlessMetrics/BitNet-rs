@@ -33,16 +33,8 @@ struct PerformanceBaseline {
 
 impl PerformanceBaseline {
     fn new(rust_tps: f64, cpp_tps: f64, rust_mem: f64, cpp_mem: f64) -> Self {
-        let speedup_ratio = if cpp_tps > 0.0 {
-            rust_tps / cpp_tps
-        } else {
-            0.0
-        };
-        let memory_reduction = if cpp_mem > 0.0 {
-            (cpp_mem - rust_mem) / cpp_mem
-        } else {
-            0.0
-        };
+        let speedup_ratio = if cpp_tps > 0.0 { rust_tps / cpp_tps } else { 0.0 };
+        let memory_reduction = if cpp_mem > 0.0 { (cpp_mem - rust_mem) / cpp_mem } else { 0.0 };
 
         Self {
             rust_tokens_per_second: rust_tps,
@@ -118,10 +110,7 @@ fn benchmark_rust_inference(c: &mut Criterion) {
 
     // Skip benchmarks if fixture doesn't exist
     if !fixture.model_path.exists() {
-        eprintln!(
-            "Skipping Rust benchmarks: fixture not found at {:?}",
-            fixture.model_path
-        );
+        eprintln!("Skipping Rust benchmarks: fixture not found at {:?}", fixture.model_path);
         return;
     }
 
@@ -129,18 +118,14 @@ fn benchmark_rust_inference(c: &mut Criterion) {
         let token_count = prompt.len() / 4 + 10; // Estimate token count
         group.throughput(Throughput::Elements(token_count as u64));
 
-        group.bench_with_input(
-            BenchmarkId::new("generate", prompt.len()),
-            prompt,
-            |b, prompt| {
-                b.iter(|| {
-                    // Placeholder for Rust implementation
-                    // In real code, this would call bitnet-inference
-                    let tokens = generate_rust_tokens(black_box(prompt));
-                    black_box(tokens)
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("generate", prompt.len()), prompt, |b, prompt| {
+            b.iter(|| {
+                // Placeholder for Rust implementation
+                // In real code, this would call bitnet-inference
+                let tokens = generate_rust_tokens(black_box(prompt));
+                black_box(tokens)
+            });
+        });
     }
 
     group.finish();
@@ -162,10 +147,7 @@ fn benchmark_cpp_inference(c: &mut Criterion) {
 
     // Skip benchmarks if fixture doesn't exist
     if !fixture.model_path.exists() {
-        eprintln!(
-            "Skipping C++ benchmarks: fixture not found at {:?}",
-            fixture.model_path
-        );
+        eprintln!("Skipping C++ benchmarks: fixture not found at {:?}", fixture.model_path);
         return;
     }
 
@@ -182,18 +164,14 @@ fn benchmark_cpp_inference(c: &mut Criterion) {
         let token_count = prompt.len() / 4 + 10; // Estimate token count
         group.throughput(Throughput::Elements(token_count as u64));
 
-        group.bench_with_input(
-            BenchmarkId::new("generate", prompt.len()),
-            prompt,
-            |b, prompt| {
-                b.iter(|| {
-                    let tokens = cpp_model
-                        .generate(black_box(prompt), 100)
-                        .expect("C++ generation should succeed");
-                    black_box(tokens)
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("generate", prompt.len()), prompt, |b, prompt| {
+            b.iter(|| {
+                let tokens = cpp_model
+                    .generate(black_box(prompt), 100)
+                    .expect("C++ generation should succeed");
+                black_box(tokens)
+            });
+        });
     }
 
     group.finish();
@@ -243,9 +221,8 @@ fn benchmark_comparison(c: &mut Criterion) {
     group.bench_function("cpp_only", |b| {
         b.iter(|| {
             let start = std::time::Instant::now();
-            let tokens = cpp_model
-                .generate(black_box(prompt), 100)
-                .expect("C++ generation should succeed");
+            let tokens =
+                cpp_model.generate(black_box(prompt), 100).expect("C++ generation should succeed");
             let duration = start.elapsed();
             cpp_times.push(duration.as_secs_f64());
             black_box(tokens)
@@ -256,9 +233,8 @@ fn benchmark_comparison(c: &mut Criterion) {
         b.iter(|| {
             // Generate with both implementations
             let rust_tokens = generate_rust_tokens(black_box(prompt));
-            let cpp_tokens = cpp_model
-                .generate(black_box(prompt), 100)
-                .expect("C++ generation should succeed");
+            let cpp_tokens =
+                cpp_model.generate(black_box(prompt), 100).expect("C++ generation should succeed");
 
             // Compare tokens (this is what we're actually benchmarking)
             let config = CrossvalConfig::default();
@@ -277,11 +253,7 @@ fn benchmark_comparison(c: &mut Criterion) {
         let rust_tps = 100.0 / rust_avg; // Assuming 100 tokens generated
         let cpp_tps = 100.0 / cpp_avg;
 
-        let speedup = if cpp_avg > 0.0 {
-            rust_tps / cpp_tps
-        } else {
-            0.0
-        };
+        let speedup = if cpp_avg > 0.0 { rust_tps / cpp_tps } else { 0.0 };
 
         println!("\n📊 Performance Comparison Results:");
         println!("   Rust: {:.1} tokens/sec", rust_tps);

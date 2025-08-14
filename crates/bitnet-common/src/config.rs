@@ -122,11 +122,7 @@ pub struct QuantizationConfig {
 
 impl Default for QuantizationConfig {
     fn default() -> Self {
-        Self {
-            quantization_type: QuantizationType::I2S,
-            block_size: 64,
-            precision: 1e-4,
-        }
+        Self { quantization_type: QuantizationType::I2S, block_size: 64, precision: 1e-4 }
     }
 }
 
@@ -142,12 +138,7 @@ pub struct PerformanceConfig {
 
 impl Default for PerformanceConfig {
     fn default() -> Self {
-        Self {
-            num_threads: None,
-            use_gpu: false,
-            batch_size: 1,
-            memory_limit: None,
-        }
+        Self { num_threads: None, use_gpu: false, batch_size: 1, memory_limit: None }
     }
 }
 
@@ -157,11 +148,7 @@ impl BitNetConfig {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, BitNetError> {
         let path = path.as_ref();
         let content = fs::read_to_string(path).map_err(|e| {
-            BitNetError::Config(format!(
-                "Failed to read config file {}: {}",
-                path.display(),
-                e
-            ))
+            BitNetError::Config(format!("Failed to read config file {}: {}", path.display(), e))
         })?;
 
         let config = match path.extension().and_then(|s| s.to_str()) {
@@ -298,10 +285,7 @@ impl BitNetConfig {
         }
         if let Ok(hidden_size) = env::var("BITNET_HIDDEN_SIZE") {
             self.model.hidden_size = hidden_size.parse().map_err(|_| {
-                BitNetError::Config(format!(
-                    "Invalid BITNET_HIDDEN_SIZE value: '{}'",
-                    hidden_size
-                ))
+                BitNetError::Config(format!("Invalid BITNET_HIDDEN_SIZE value: '{}'", hidden_size))
             })?;
         }
         if let Ok(num_layers) = env::var("BITNET_NUM_LAYERS") {
@@ -331,10 +315,7 @@ impl BitNetConfig {
         }
         if let Ok(temperature) = env::var("BITNET_TEMPERATURE") {
             self.inference.temperature = temperature.parse().map_err(|_| {
-                BitNetError::Config(format!(
-                    "Invalid BITNET_TEMPERATURE value: '{}'",
-                    temperature
-                ))
+                BitNetError::Config(format!("Invalid BITNET_TEMPERATURE value: '{}'", temperature))
             })?;
         }
         if let Ok(top_k) = env::var("BITNET_TOP_K") {
@@ -558,9 +539,7 @@ pub struct ConfigBuilder {
 
 impl ConfigBuilder {
     pub fn new() -> Self {
-        Self {
-            config: BitNetConfig::default(),
-        }
+        Self { config: BitNetConfig::default() }
     }
 
     pub fn model_path<P: Into<PathBuf>>(mut self, path: P) -> Self {

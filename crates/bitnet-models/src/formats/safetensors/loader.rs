@@ -123,10 +123,7 @@ impl FormatLoader for SafeTensorsLoader {
             .or_else(|| header_metadata.get("model_name"))
             .map(|s| s.to_string())
             .unwrap_or_else(|| {
-                path.file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("unknown")
-                    .to_string()
+                path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown").to_string()
             });
 
         let version = header_metadata
@@ -160,11 +157,7 @@ impl FormatLoader for SafeTensorsLoader {
     fn load(&self, path: &Path, device: &Device, config: &LoadConfig) -> Result<Box<dyn Model>> {
         info!("Loading SafeTensors model from: {}", path.display());
 
-        let mmap = if config.use_mmap {
-            Some(MmapFile::open(path)?)
-        } else {
-            None
-        };
+        let mmap = if config.use_mmap { Some(MmapFile::open(path)?) } else { None };
 
         let data = if let Some(ref mmap) = mmap {
             mmap.as_slice()
@@ -278,10 +271,7 @@ impl SafeTensorsLoader {
         for (i, tensor_name) in tensor_names.iter().enumerate() {
             if let Some(callback) = &config.progress_callback {
                 let progress = 0.5 + (i as f32 / tensor_count as f32) * 0.4;
-                callback(
-                    progress,
-                    &format!("Loading tensor {}/{}", i + 1, tensor_count),
-                );
+                callback(progress, &format!("Loading tensor {}/{}", i + 1, tensor_count));
             }
 
             let tensor_view = safetensors.tensor(tensor_name).map_err(|e| {
@@ -302,10 +292,7 @@ impl SafeTensorsLoader {
             tensors.insert(tensor_name.to_string(), candle_tensor);
         }
 
-        info!(
-            "Successfully loaded {} tensors from SafeTensors",
-            tensors.len()
-        );
+        info!("Successfully loaded {} tensors from SafeTensors", tensors.len());
         Ok(tensors)
     }
 
@@ -326,19 +313,15 @@ impl SafeTensorsLoader {
             }
             SafeDtype::F16 => {
                 let half_data = bytemuck::cast_slice::<u8, u16>(data);
-                let float_data: Vec<f32> = half_data
-                    .iter()
-                    .map(|&h| half::f16::from_bits(h).to_f32())
-                    .collect();
+                let float_data: Vec<f32> =
+                    half_data.iter().map(|&h| half::f16::from_bits(h).to_f32()).collect();
                 Tensor::from_slice(&float_data, shape, &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?
             }
             SafeDtype::BF16 => {
                 let bf16_data = bytemuck::cast_slice::<u8, u16>(data);
-                let float_data: Vec<f32> = bf16_data
-                    .iter()
-                    .map(|&h| half::bf16::from_bits(h).to_f32())
-                    .collect();
+                let float_data: Vec<f32> =
+                    bf16_data.iter().map(|&h| half::bf16::from_bits(h).to_f32()).collect();
                 Tensor::from_slice(&float_data, shape, &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?
             }

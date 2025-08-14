@@ -84,13 +84,7 @@ pub mod perf {
             0.0
         };
 
-        (
-            PerfMeasurement {
-                duration,
-                tokens_per_second,
-            },
-            token_count,
-        )
+        (PerfMeasurement { duration, tokens_per_second }, token_count)
     }
 }
 
@@ -107,11 +101,7 @@ pub mod logging {
 
     /// Log performance comparison
     pub fn log_performance(test_name: &str, rust_tps: f64, cpp_tps: f64) {
-        let speedup = if cpp_tps > 0.0 {
-            rust_tps / cpp_tps
-        } else {
-            0.0
-        };
+        let speedup = if cpp_tps > 0.0 { rust_tps / cpp_tps } else { 0.0 };
         println!(
             "[PERF] {}: Rust={:.1} tok/s, C++={:.1} tok/s, speedup={:.2}x",
             test_name, rust_tps, cpp_tps, speedup

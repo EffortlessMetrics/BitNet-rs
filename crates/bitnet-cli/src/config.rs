@@ -57,21 +57,13 @@ impl Default for CliConfig {
 
 impl Default for LoggingConfig {
     fn default() -> Self {
-        Self {
-            level: "info".to_string(),
-            format: "pretty".to_string(),
-            timestamps: true,
-        }
+        Self { level: "info".to_string(), format: "pretty".to_string(), timestamps: true }
     }
 }
 
 impl Default for PerformanceConfig {
     fn default() -> Self {
-        Self {
-            cpu_threads: None,
-            batch_size: 1,
-            memory_optimization: true,
-        }
+        Self { cpu_threads: None, batch_size: 1, memory_optimization: true }
     }
 }
 
@@ -184,15 +176,11 @@ pub struct ConfigBuilder {
 
 impl ConfigBuilder {
     pub fn new() -> Self {
-        Self {
-            config: CliConfig::default(),
-        }
+        Self { config: CliConfig::default() }
     }
 
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        Ok(Self {
-            config: CliConfig::load_from_file(path)?,
-        })
+        Ok(Self { config: CliConfig::load_from_file(path)? })
     }
 
     pub fn device(mut self, device: Option<String>) -> Self {

@@ -321,11 +321,7 @@ mod huggingface_comprehensive_tests {
         // Create directory with config.json
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("config.json");
-        fs::write(
-            &config_path,
-            r#"{"model_type": "bitnet", "vocab_size": 50000}"#,
-        )
-        .unwrap();
+        fs::write(&config_path, r#"{"model_type": "bitnet", "vocab_size": 50000}"#).unwrap();
 
         let result = loader.extract_metadata(temp_dir.path());
         assert!(result.is_ok());
@@ -403,10 +399,7 @@ mod loader_integration_tests {
         let progress_values_clone = progress_values.clone();
 
         let callback: ProgressCallback = Arc::new(move |progress, message| {
-            progress_values_clone
-                .lock()
-                .unwrap()
-                .push((progress, message.to_string()));
+            progress_values_clone.lock().unwrap().push((progress, message.to_string()));
         });
 
         let config = LoadConfig {
@@ -459,9 +452,7 @@ mod loader_integration_tests {
         st_file.write_all(&header_len.to_le_bytes()).unwrap();
         st_file.write_all(header.as_bytes()).unwrap();
         let tensor_data: [f32; 2] = [1.0, 2.0];
-        st_file
-            .write_all(bytemuck::cast_slice(&tensor_data))
-            .unwrap();
+        st_file.write_all(bytemuck::cast_slice(&tensor_data)).unwrap();
         st_file.flush().unwrap();
 
         let _st_result = loader.extract_metadata(st_file.path());
@@ -513,18 +504,12 @@ mod loader_integration_tests {
         let loader = ModelLoader::new(device);
 
         // Test with mmap disabled
-        let config_no_mmap = LoadConfig {
-            use_mmap: false,
-            validate_checksums: false,
-            progress_callback: None,
-        };
+        let config_no_mmap =
+            LoadConfig { use_mmap: false, validate_checksums: false, progress_callback: None };
 
         // Test with checksums enabled
-        let config_checksums = LoadConfig {
-            use_mmap: true,
-            validate_checksums: true,
-            progress_callback: None,
-        };
+        let config_checksums =
+            LoadConfig { use_mmap: true, validate_checksums: true, progress_callback: None };
 
         // Create a simple HuggingFace model
         let temp_dir = TempDir::new().unwrap();

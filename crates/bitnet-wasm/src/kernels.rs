@@ -26,10 +26,7 @@ impl WasmKernelProvider {
             .into(),
         );
 
-        WasmKernelProvider {
-            simd_supported,
-            bulk_memory_supported,
-        }
+        WasmKernelProvider { simd_supported, bulk_memory_supported }
     }
 
     /// Detect WASM SIMD support
@@ -192,10 +189,7 @@ impl WasmKernelProvider {
         // Multiply and accumulate (simplified - real implementation would be more complex)
         let prod_low = i32x4_extend_low_i16x8(i16x8_mul(
             a_low,
-            i16x8_narrow_i32x4(
-                i32x4_extend_low_u16x8(b_low),
-                i32x4_extend_high_u16x8(b_low),
-            ),
+            i16x8_narrow_i32x4(i32x4_extend_low_u16x8(b_low), i32x4_extend_high_u16x8(b_low)),
         ));
         f32x4_convert_i32x4(prod_low)
     }
@@ -227,9 +221,7 @@ impl WasmKernelProvider {
         let num_blocks = (input.len() + block_size - 1) / block_size;
 
         if scales.len() < num_blocks {
-            return Err(BitNetError::Quantization(
-                "Insufficient scale buffer".into(),
-            ));
+            return Err(BitNetError::Quantization("Insufficient scale buffer".into()));
         }
 
         for block_idx in 0..num_blocks {
@@ -398,9 +390,7 @@ pub struct WasmBenchmark {
 impl WasmBenchmark {
     #[wasm_bindgen(constructor)]
     pub fn new() -> WasmBenchmark {
-        WasmBenchmark {
-            kernel_provider: WasmKernelProvider::new(),
-        }
+        WasmBenchmark { kernel_provider: WasmKernelProvider::new() }
     }
 
     /// Benchmark matrix multiplication performance

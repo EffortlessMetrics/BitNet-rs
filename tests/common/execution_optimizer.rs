@@ -49,17 +49,11 @@ impl ExecutionOptimizer {
     /// Execute tests with optimization to meet target duration
     pub async fn execute_optimized(&mut self) -> Result<OptimizedExecutionResult, TestError> {
         let start_time = Instant::now();
-        info!(
-            "Starting optimized test execution with {}s target",
-            self.target_duration.as_secs()
-        );
+        info!("Starting optimized test execution with {}s target", self.target_duration.as_secs());
 
         // Phase 1: Analyze and select tests
         let test_plan = self.create_execution_plan().await?;
-        info!(
-            "Created execution plan with {} test groups",
-            test_plan.groups.len()
-        );
+        info!("Created execution plan with {} test groups", test_plan.groups.len());
 
         // Phase 2: Execute with dynamic optimization
         let mut results = Vec::new();
@@ -106,8 +100,7 @@ impl ExecutionOptimizer {
         let success = total_duration <= self.target_duration;
 
         // Update execution history
-        self.execution_history
-            .record_execution(&test_plan, &results, total_duration);
+        self.execution_history.record_execution(&test_plan, &results, total_duration);
         self.execution_history.save();
 
         Ok(OptimizedExecutionResult {
@@ -128,10 +121,7 @@ impl ExecutionOptimizer {
         // Step 1: Detect changes for incremental testing
         let changed_files = self.incremental.detect_changes().await?;
         if !changed_files.is_empty() {
-            info!(
-                "Detected {} changed files, enabling incremental testing",
-                changed_files.len()
-            );
+            info!("Detected {} changed files, enabling incremental testing", changed_files.len());
             plan.optimizations_applied.push("incremental".to_string());
         }
 
@@ -153,22 +143,19 @@ impl ExecutionOptimizer {
             let selected_tests =
                 self.select_tests_for_time_budget(available_tests.as_slice(), &changed_files)?;
             plan.groups = self.create_test_groups(selected_tests, GroupingStrategy::FastFirst)?;
-            plan.optimizations_applied
-                .push("test_selection".to_string());
+            plan.optimizations_applied.push("test_selection".to_string());
             plan.tests_skipped =
                 available_tests.len() - plan.groups.iter().map(|g| g.tests.len()).sum::<usize>();
         }
 
         // Step 3: Apply parallel execution optimization
         if self.config.max_parallel_tests > 1 {
-            plan.optimizations_applied
-                .push("parallel_execution".to_string());
+            plan.optimizations_applied.push("parallel_execution".to_string());
         }
 
         // Step 4: Apply timeout optimizations
         if self.config.test_timeout < Duration::from_secs(120) {
-            plan.optimizations_applied
-                .push("reduced_timeouts".to_string());
+            plan.optimizations_applied.push("reduced_timeouts".to_string());
         }
 
         Ok(plan)
@@ -367,30 +354,20 @@ impl ExecutionOptimizer {
         let mut optimized = group.clone();
 
         // Remove slow tests first
-        optimized
-            .tests
-            .retain(|test| self.estimate_test_time(test) <= Duration::from_secs(60));
+        optimized.tests.retain(|test| self.estimate_test_time(test) <= Duration::from_secs(60));
 
         // If still too slow, keep only critical tests
         if optimized.estimated_duration() > remaining_time {
-            optimized
-                .tests
-                .retain(|test| test.priority == TestPriority::Critical);
+            optimized.tests.retain(|test| test.priority == TestPriority::Critical);
         }
 
         // If still too slow, keep only unit tests
         if optimized.estimated_duration() > remaining_time {
-            optimized
-                .tests
-                .retain(|test| test.category == TestCategory::Unit);
+            optimized.tests.retain(|test| test.category == TestCategory::Unit);
         }
 
         // Update estimated time
-        optimized.estimated_time = optimized
-            .tests
-            .iter()
-            .map(|t| self.estimate_test_time(t))
-            .sum();
+        optimized.estimated_time = optimized.tests.iter().map(|t| self.estimate_test_time(t)).sum();
 
         info!(
             "Optimized group {} from {} to {} tests ({}s -> {}s)",
@@ -448,10 +425,7 @@ impl ExecutionOptimizer {
         // Simple heuristic: check if test path overlaps with changed files
         changed_files.iter().any(|file| {
             file.to_string_lossy().contains(&test.crate_name)
-                || test
-                    .file_path
-                    .to_string_lossy()
-                    .contains(&*file.to_string_lossy())
+                || test.file_path.to_string_lossy().contains(&*file.to_string_lossy())
         })
     }
 
@@ -543,10 +517,7 @@ impl ExecutionHistory {
             HashMap::new()
         };
 
-        Self {
-            test_times,
-            history_file,
-        }
+        Self { test_times, history_file }
     }
 
     pub fn save(&self) {
@@ -554,11 +525,8 @@ impl ExecutionHistory {
             let _ = std::fs::create_dir_all(parent);
         }
 
-        let serialized: HashMap<String, u64> = self
-            .test_times
-            .iter()
-            .map(|(k, v)| (k.clone(), v.as_millis() as u64))
-            .collect();
+        let serialized: HashMap<String, u64> =
+            self.test_times.iter().map(|(k, v)| (k.clone(), v.as_millis() as u64)).collect();
 
         if let Ok(content) = serde_json::to_string_pretty(&serialized) {
             let _ = std::fs::write(&self.history_file, content);
@@ -577,8 +545,7 @@ impl ExecutionHistory {
     ) {
         for group_result in results {
             for test_result in &group_result.test_results {
-                self.test_times
-                    .insert(test_result.test_name.clone(), test_result.duration);
+                self.test_times.insert(test_result.test_name.clone(), test_result.duration);
             }
         }
     }

@@ -20,9 +20,8 @@ fn main() {
 
     // Check if we have access to the C++ implementation
     // Support both BITNET_CPP_DIR and BITNET_CPP_PATH for consistency
-    let cpp_path = env::var("BITNET_CPP_DIR")
-        .or_else(|_| env::var("BITNET_CPP_PATH"))
-        .unwrap_or_else(|_| {
+    let cpp_path =
+        env::var("BITNET_CPP_DIR").or_else(|_| env::var("BITNET_CPP_PATH")).unwrap_or_else(|_| {
             // Default path where ci/fetch_bitnet_cpp.sh places the code
             let home = env::var("HOME")
                 .or_else(|_| env::var("USERPROFILE"))
@@ -33,10 +32,7 @@ fn main() {
     let cpp_path = PathBuf::from(cpp_path);
 
     if !cpp_path.exists() {
-        println!(
-            "cargo:warning=BitNet C++ implementation not found at {:?}",
-            cpp_path
-        );
+        println!("cargo:warning=BitNet C++ implementation not found at {:?}", cpp_path);
         println!("cargo:warning=Run ci/fetch_bitnet_cpp.sh to download it");
         println!("cargo:warning=Cross-validation will be disabled");
         return;
@@ -54,10 +50,7 @@ fn main() {
         println!("cargo:rustc-link-search=native={}", lib_path.display());
         println!("cargo:rustc-link-lib=static=bitnet");
     } else {
-        println!(
-            "cargo:warning=BitNet C++ library not found at {:?}",
-            lib_path
-        );
+        println!("cargo:warning=BitNet C++ library not found at {:?}", lib_path);
         println!("cargo:warning=Make sure to build the C++ implementation first");
     }
 
@@ -93,19 +86,14 @@ fn generate_bindings(cpp_path: &PathBuf) {
         .expect("Unable to generate bindings");
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindings
-        .write_to_file(out_path.join("bindings.rs"))
-        .expect("Couldn't write bindings!");
+    bindings.write_to_file(out_path.join("bindings.rs")).expect("Couldn't write bindings!");
 
     println!("cargo:warning=Generated C++ bindings successfully");
 }
 
 #[cfg(feature = "crossval")]
 fn has_clang() -> bool {
-    std::process::Command::new("clang")
-        .arg("--version")
-        .output()
-        .is_ok()
+    std::process::Command::new("clang").arg("--version").output().is_ok()
 }
 
 #[cfg(not(feature = "crossval"))]

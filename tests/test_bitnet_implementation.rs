@@ -76,23 +76,11 @@ async fn test_resource_manager() {
     let mut manager = ResourceManager::new(limits);
 
     // Add implementations
-    let impl1 = Box::new(MockImplementation::new(
-        "test1".to_string(),
-        "1.0".to_string(),
-    ));
-    let impl2 = Box::new(MockImplementation::new(
-        "test2".to_string(),
-        "1.0".to_string(),
-    ));
+    let impl1 = Box::new(MockImplementation::new("test1".to_string(), "1.0".to_string()));
+    let impl2 = Box::new(MockImplementation::new("test2".to_string(), "1.0".to_string()));
 
-    manager
-        .add_implementation("impl1".to_string(), impl1)
-        .await
-        .unwrap();
-    manager
-        .add_implementation("impl2".to_string(), impl2)
-        .await
-        .unwrap();
+    manager.add_implementation("impl1".to_string(), impl1).await.unwrap();
+    manager.add_implementation("impl2".to_string(), impl2).await.unwrap();
 
     // Test resource tracking
     let summary = manager.get_resource_summary();

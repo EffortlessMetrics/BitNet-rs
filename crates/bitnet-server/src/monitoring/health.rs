@@ -76,10 +76,8 @@ impl HealthChecker {
         components.insert("memory".to_string(), self.check_memory_health().await);
 
         // Check inference engine
-        components.insert(
-            "inference_engine".to_string(),
-            self.check_inference_engine_health().await,
-        );
+        components
+            .insert("inference_engine".to_string(), self.check_inference_engine_health().await);
 
         // Check GPU availability (if enabled)
         #[cfg(feature = "cuda")]
@@ -124,15 +122,9 @@ impl HealthChecker {
 
         let critical_components = vec![&model_health, &memory_health, &inference_health];
 
-        if critical_components
-            .iter()
-            .any(|c| c.status == HealthStatus::Unhealthy)
-        {
+        if critical_components.iter().any(|c| c.status == HealthStatus::Unhealthy) {
             HealthStatus::Unhealthy
-        } else if critical_components
-            .iter()
-            .any(|c| c.status == HealthStatus::Degraded)
-        {
+        } else if critical_components.iter().any(|c| c.status == HealthStatus::Degraded) {
             HealthStatus::Degraded
         } else {
             HealthStatus::Healthy
@@ -161,20 +153,11 @@ impl HealthChecker {
         let memory_usage_percent = 45.0; // Placeholder
 
         let (status, message) = if memory_usage_percent > 90.0 {
-            (
-                HealthStatus::Unhealthy,
-                format!("High memory usage: {:.1}%", memory_usage_percent),
-            )
+            (HealthStatus::Unhealthy, format!("High memory usage: {:.1}%", memory_usage_percent))
         } else if memory_usage_percent > 80.0 {
-            (
-                HealthStatus::Degraded,
-                format!("Elevated memory usage: {:.1}%", memory_usage_percent),
-            )
+            (HealthStatus::Degraded, format!("Elevated memory usage: {:.1}%", memory_usage_percent))
         } else {
-            (
-                HealthStatus::Healthy,
-                format!("Memory usage normal: {:.1}%", memory_usage_percent),
-            )
+            (HealthStatus::Healthy, format!("Memory usage normal: {:.1}%", memory_usage_percent))
         };
 
         ComponentHealth {
@@ -207,10 +190,7 @@ impl HealthChecker {
 
         // Check GPU availability and memory
         let (status, message) = match self.check_gpu_status().await {
-            Ok(gpu_info) => (
-                HealthStatus::Healthy,
-                format!("GPU available: {}", gpu_info),
-            ),
+            Ok(gpu_info) => (HealthStatus::Healthy, format!("GPU available: {}", gpu_info)),
             Err(e) => (HealthStatus::Degraded, format!("GPU check failed: {}", e)),
         };
 
@@ -260,15 +240,11 @@ impl HealthChecker {
         }
 
         // Check non-critical components
-        let unhealthy_count = components
-            .values()
-            .filter(|c| c.status == HealthStatus::Unhealthy)
-            .count();
+        let unhealthy_count =
+            components.values().filter(|c| c.status == HealthStatus::Unhealthy).count();
 
-        let degraded_count = components
-            .values()
-            .filter(|c| c.status == HealthStatus::Degraded)
-            .count();
+        let degraded_count =
+            components.values().filter(|c| c.status == HealthStatus::Degraded).count();
 
         if unhealthy_count > 0 {
             HealthStatus::Degraded

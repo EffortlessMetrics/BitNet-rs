@@ -88,14 +88,9 @@ impl FormatLoader for GgufLoader {
         reader.validate()?;
 
         let metadata = ModelMetadata {
-            name: reader
-                .get_string_metadata("general.name")
-                .unwrap_or_else(|| {
-                    path.file_stem()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or("unknown")
-                        .to_string()
-                }),
+            name: reader.get_string_metadata("general.name").unwrap_or_else(|| {
+                path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown").to_string()
+            }),
             version: reader
                 .get_string_metadata("general.version")
                 .unwrap_or_else(|| format!("gguf-v{}", reader.version())),
@@ -120,11 +115,7 @@ impl FormatLoader for GgufLoader {
     fn load(&self, path: &Path, device: &Device, config: &LoadConfig) -> Result<Box<dyn Model>> {
         info!("Loading GGUF model from: {}", path.display());
 
-        let mmap = if config.use_mmap {
-            Some(MmapFile::open(path)?)
-        } else {
-            None
-        };
+        let mmap = if config.use_mmap { Some(MmapFile::open(path)?) } else { None };
 
         let data = if let Some(ref mmap) = mmap {
             mmap.as_slice()
@@ -224,10 +215,7 @@ impl GgufLoader {
         for i in 0..tensor_count {
             if let Some(callback) = &config.progress_callback {
                 let progress = 0.5 + (i as f32 / tensor_count as f32) * 0.4;
-                callback(
-                    progress,
-                    &format!("Loading tensor {}/{}", i + 1, tensor_count),
-                );
+                callback(progress, &format!("Loading tensor {}/{}", i + 1, tensor_count));
             }
 
             let tensor_info = reader.get_tensor_info(i)?;
@@ -290,10 +278,8 @@ impl GgufLoader {
                 DType::F16 => {
                     // For now, convert F16 data to F32 for compatibility
                     let half_data = bytemuck::cast_slice::<u8, u16>(data);
-                    let float_data: Vec<f32> = half_data
-                        .iter()
-                        .map(|&h| half::f16::from_bits(h).to_f32())
-                        .collect();
+                    let float_data: Vec<f32> =
+                        half_data.iter().map(|&h| half::f16::from_bits(h).to_f32()).collect();
                     Tensor::from_slice(&float_data, info.shape.as_slice(), &candle_device)
                         .map_err(|e| BitNetError::Validation(e.to_string()))
                 }

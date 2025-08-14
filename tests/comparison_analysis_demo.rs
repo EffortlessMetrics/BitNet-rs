@@ -40,10 +40,7 @@ async fn test_comparison_analysis_report_generation() {
             println!("✅ Analysis report generated successfully!");
             println!("Overall accuracy: {:.2}%", report.overall_accuracy * 100.0);
             println!("Test cases analyzed: {}", report.test_case_accuracies.len());
-            println!(
-                "Total mismatches: {}",
-                report.mismatch_analysis.total_mismatches
-            );
+            println!("Total mismatches: {}", report.mismatch_analysis.total_mismatches);
             println!("Recommendations: {}", report.recommendations.len());
 
             // Verify report structure
@@ -89,10 +86,7 @@ async fn test_accuracy_analysis_with_mismatches() {
                 "Mismatch patterns found: {}",
                 report.mismatch_analysis.mismatch_patterns.len()
             );
-            println!(
-                "Common positions: {:?}",
-                report.mismatch_analysis.common_mismatch_positions
-            );
+            println!("Common positions: {:?}", report.mismatch_analysis.common_mismatch_positions);
 
             // Verify mismatch analysis
             assert!(report.mismatch_analysis.total_mismatches > 0);
@@ -138,10 +132,7 @@ async fn test_performance_regression_analysis() {
                 .count();
 
             assert!(performance_issues > 0, "Should detect performance issues");
-            println!(
-                "Performance-related recommendations: {}",
-                performance_issues
-            );
+            println!("Performance-related recommendations: {}", performance_issues);
         }
         Err(e) => {
             eprintln!("❌ Performance analysis failed: {}", e);
@@ -232,10 +223,7 @@ fn create_sample_cross_validation_result() -> CrossValidationResult {
             .iter()
             .filter(|t| t.accuracy_result.passes_tolerance)
             .count(),
-        first_failure: test_cases
-            .iter()
-            .find(|t| !t.success)
-            .map(|t| t.test_case.name.clone()),
+        first_failure: test_cases.iter().find(|t| !t.success).map(|t| t.test_case.name.clone()),
     };
 
     CrossValidationResult {

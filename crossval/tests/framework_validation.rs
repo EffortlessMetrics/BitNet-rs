@@ -73,11 +73,8 @@ mod crossval_tests {
         );
 
         // Find the first mismatch
-        let mismatch_pos = rust_result
-            .tokens
-            .iter()
-            .zip(cpp_result.tokens.iter())
-            .position(|(a, b)| a != b);
+        let mismatch_pos =
+            rust_result.tokens.iter().zip(cpp_result.tokens.iter()).position(|(a, b)| a != b);
 
         assert!(mismatch_pos.is_some(), "Mismatch position should be found");
         println!("Mismatch detected at position: {:?}", mismatch_pos);
@@ -94,11 +91,8 @@ mod crossval_tests {
 
         let tolerance = 1e-3; // 0.001 tolerance
 
-        for (i, (rust_logit, cpp_logit)) in rust_result
-            .logits
-            .iter()
-            .zip(cpp_result.logits.iter())
-            .enumerate()
+        for (i, (rust_logit, cpp_logit)) in
+            rust_result.logits.iter().zip(cpp_result.logits.iter()).enumerate()
         {
             let diff = (rust_logit - cpp_logit).abs();
             assert!(
@@ -196,10 +190,7 @@ mod crossval_tests {
 
         // Verify timing consistency (should be around 10ms ± some variance)
         assert!(avg_time >= Duration::from_millis(8), "Average time too low");
-        assert!(
-            avg_time <= Duration::from_millis(15),
-            "Average time too high"
-        );
+        assert!(avg_time <= Duration::from_millis(15), "Average time too high");
 
         println!("✅ Benchmark timing accuracy test passed");
     }
@@ -220,17 +211,12 @@ mod crossval_tests {
         println!("C++ mean: {:.2}ms", cpp_mean);
 
         // Calculate standard deviations
-        let rust_variance = rust_timings
-            .iter()
-            .map(|&x| (x as f64 - rust_mean).powi(2))
-            .sum::<f64>()
-            / (rust_timings.len() - 1) as f64;
+        let rust_variance =
+            rust_timings.iter().map(|&x| (x as f64 - rust_mean).powi(2)).sum::<f64>()
+                / (rust_timings.len() - 1) as f64;
         let rust_std = rust_variance.sqrt();
 
-        let cpp_variance = cpp_timings
-            .iter()
-            .map(|&x| (x as f64 - cpp_mean).powi(2))
-            .sum::<f64>()
+        let cpp_variance = cpp_timings.iter().map(|&x| (x as f64 - cpp_mean).powi(2)).sum::<f64>()
             / (cpp_timings.len() - 1) as f64;
         let cpp_std = cpp_variance.sqrt();
 
@@ -245,10 +231,7 @@ mod crossval_tests {
         println!("T-statistic: {:.3}", t_stat);
 
         // With this sample size and difference, should be statistically significant
-        assert!(
-            t_stat > 2.0,
-            "Difference should be statistically significant"
-        );
+        assert!(t_stat > 2.0, "Difference should be statistically significant");
 
         println!("✅ Statistical significance test passed");
     }
@@ -374,29 +357,19 @@ while providing performance improvements.
         let mut alerts = Vec::new();
 
         if throughput_change < critical_throughput_threshold {
-            alerts.push(format!(
-                "CRITICAL: Throughput decreased by {:.1}%",
-                throughput_change.abs()
-            ));
+            alerts
+                .push(format!("CRITICAL: Throughput decreased by {:.1}%", throughput_change.abs()));
         } else if throughput_change < warning_throughput_threshold {
-            alerts.push(format!(
-                "WARNING: Throughput decreased by {:.1}%",
-                throughput_change.abs()
-            ));
+            alerts
+                .push(format!("WARNING: Throughput decreased by {:.1}%", throughput_change.abs()));
         }
 
         if latency_change > warning_latency_threshold {
-            alerts.push(format!(
-                "WARNING: Latency increased by {:.1}%",
-                latency_change
-            ));
+            alerts.push(format!("WARNING: Latency increased by {:.1}%", latency_change));
         }
 
         if memory_change > warning_memory_threshold {
-            alerts.push(format!(
-                "WARNING: Memory usage increased by {:.1}%",
-                memory_change
-            ));
+            alerts.push(format!("WARNING: Memory usage increased by {:.1}%", memory_change));
         }
 
         println!("Detected alerts: {:?}", alerts);
@@ -432,10 +405,7 @@ while providing performance improvements.
         // Test handling of timeout scenarios
         let max_timeout = Duration::from_secs(30);
         let actual_time = Duration::from_millis(100);
-        assert!(
-            actual_time < max_timeout,
-            "Operations should complete within timeout"
-        );
+        assert!(actual_time < max_timeout, "Operations should complete within timeout");
 
         println!("✅ Framework error handling test passed");
     }
@@ -457,10 +427,7 @@ while providing performance improvements.
         // Step 3: Compare tokens
         println!("3. Comparing token outputs...");
         let tokens_match = rust_result.tokens == cpp_result.tokens;
-        println!(
-            "   Token equivalence: {}",
-            if tokens_match { "PASS" } else { "FAIL" }
-        );
+        println!("   Token equivalence: {}", if tokens_match { "PASS" } else { "FAIL" });
 
         // Step 4: Check numerical accuracy
         println!("4. Checking numerical accuracy...");
@@ -477,10 +444,7 @@ while providing performance improvements.
         }
 
         println!("   Max logit difference: {:.6}", max_diff);
-        println!(
-            "   Numerical accuracy: {}",
-            if accuracy_pass { "PASS" } else { "FAIL" }
-        );
+        println!("   Numerical accuracy: {}", if accuracy_pass { "PASS" } else { "FAIL" });
 
         // Step 5: Performance comparison
         println!("5. Comparing performance...");
@@ -494,17 +458,11 @@ while providing performance improvements.
         println!("6. Generating final report...");
         let overall_pass = tokens_match && accuracy_pass;
 
-        println!(
-            "   Overall result: {}",
-            if overall_pass { "PASS" } else { "FAIL" }
-        );
+        println!("   Overall result: {}", if overall_pass { "PASS" } else { "FAIL" });
 
         // Assertions for the complete workflow
         assert!(tokens_match, "Complete workflow requires token equivalence");
-        assert!(
-            accuracy_pass,
-            "Complete workflow requires numerical accuracy"
-        );
+        assert!(accuracy_pass, "Complete workflow requires numerical accuracy");
         assert!(overall_pass, "Complete workflow should pass all checks");
 
         println!("✅ Complete cross-validation workflow test passed");

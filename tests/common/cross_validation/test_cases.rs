@@ -60,16 +60,10 @@ impl ComparisonTestCaseRegistry {
         model_size: ModelSize,
     ) {
         // Add to category index
-        self.by_category
-            .entry(category)
-            .or_insert_with(Vec::new)
-            .push(test_case.name.clone());
+        self.by_category.entry(category).or_insert_with(Vec::new).push(test_case.name.clone());
 
         // Add to model size index
-        self.by_model_size
-            .entry(model_size)
-            .or_insert_with(Vec::new)
-            .push(test_case.name.clone());
+        self.by_model_size.entry(model_size).or_insert_with(Vec::new).push(test_case.name.clone());
 
         // Add to main registry
         self.test_cases.insert(test_case.name.clone(), test_case);
@@ -89,12 +83,7 @@ impl ComparisonTestCaseRegistry {
     pub fn by_category(&self, category: TestCaseCategory) -> Vec<&ComparisonTestCase> {
         self.by_category
             .get(&category)
-            .map(|names| {
-                names
-                    .iter()
-                    .filter_map(|name| self.test_cases.get(name))
-                    .collect()
-            })
+            .map(|names| names.iter().filter_map(|name| self.test_cases.get(name)).collect())
             .unwrap_or_default()
     }
 
@@ -102,12 +91,7 @@ impl ComparisonTestCaseRegistry {
     pub fn by_model_size(&self, size: ModelSize) -> Vec<&ComparisonTestCase> {
         self.by_model_size
             .get(&size)
-            .map(|names| {
-                names
-                    .iter()
-                    .filter_map(|name| self.test_cases.get(name))
-                    .collect()
-            })
+            .map(|names| names.iter().filter_map(|name| self.test_cases.get(name)).collect())
             .unwrap_or_default()
     }
 
@@ -145,12 +129,7 @@ impl ComparisonTestCaseRegistry {
         let completion = ComparisonTestCase::new(
             "basic_completion",
             "The quick brown fox",
-            InferenceConfig {
-                max_tokens: 10,
-                temperature: 0.0,
-                top_p: 1.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 10, temperature: 0.0, top_p: 1.0, ..Default::default() },
         )
         .with_token_range(3, 10)
         .with_description("Classic text completion test");
@@ -161,11 +140,7 @@ impl ComparisonTestCaseRegistry {
         let qa = ComparisonTestCase::new(
             "basic_qa",
             "What is the capital of France?",
-            InferenceConfig {
-                max_tokens: 5,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 5, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(1, 5)
         .with_description("Simple factual question answering");
@@ -176,11 +151,7 @@ impl ComparisonTestCaseRegistry {
         let code = ComparisonTestCase::new(
             "basic_code",
             "def hello_world():",
-            InferenceConfig {
-                max_tokens: 15,
-                temperature: 0.1,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 15, temperature: 0.1, ..Default::default() },
         )
         .with_token_range(5, 15)
         .with_description("Basic code completion test");
@@ -191,11 +162,7 @@ impl ComparisonTestCaseRegistry {
         let math = ComparisonTestCase::new(
             "basic_math",
             "What is 15 + 27?",
-            InferenceConfig {
-                max_tokens: 5,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 5, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(1, 5)
         .with_description("Simple arithmetic test");
@@ -209,11 +176,7 @@ impl ComparisonTestCaseRegistry {
         let empty = ComparisonTestCase::new(
             "edge_empty_input",
             "",
-            InferenceConfig {
-                max_tokens: 10,
-                temperature: 0.5,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 10, temperature: 0.5, ..Default::default() },
         )
         .with_token_range(0, 10)
         .with_description("Empty input edge case");
@@ -224,11 +187,7 @@ impl ComparisonTestCaseRegistry {
         let single_char = ComparisonTestCase::new(
             "edge_single_char",
             "A",
-            InferenceConfig {
-                max_tokens: 5,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 5, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(1, 5)
         .with_description("Single character input");
@@ -239,11 +198,7 @@ impl ComparisonTestCaseRegistry {
         let special_chars = ComparisonTestCase::new(
             "edge_special_chars",
             "Test with émojis 🚀🎉 and spëcial chars: @#$%^&*()",
-            InferenceConfig {
-                max_tokens: 20,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 20, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(5, 20)
         .with_description("Special characters, emojis, and symbols");
@@ -269,11 +224,7 @@ impl ComparisonTestCaseRegistry {
         let multilingual = ComparisonTestCase::new(
             "edge_multilingual",
             "Hello, Bonjour, Hola, こんにちは, 你好, مرحبا",
-            InferenceConfig {
-                max_tokens: 15,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 15, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(5, 15)
         .with_description("Multilingual text handling");
@@ -300,11 +251,7 @@ impl ComparisonTestCaseRegistry {
         let numbers = ComparisonTestCase::new(
             "edge_numbers_formatting",
             "Price: $123.45, Date: 2024-01-15, Time: 14:30:00",
-            InferenceConfig {
-                max_tokens: 15,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 15, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(5, 15)
         .with_description("Numbers and structured formatting");
@@ -318,11 +265,7 @@ impl ComparisonTestCaseRegistry {
         let throughput = ComparisonTestCase::new(
             "perf_throughput",
             "Generate a list of 20 random words:",
-            InferenceConfig {
-                max_tokens: 50,
-                temperature: 0.7,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 50, temperature: 0.7, ..Default::default() },
         )
         .with_token_range(20, 50)
         .with_description("Throughput performance test");
@@ -333,11 +276,7 @@ impl ComparisonTestCaseRegistry {
         let long_gen = ComparisonTestCase::new(
             "perf_long_generation",
             "Write a comprehensive essay about artificial intelligence:",
-            InferenceConfig {
-                max_tokens: 500,
-                temperature: 0.3,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 500, temperature: 0.3, ..Default::default() },
         )
         .with_token_range(100, 500)
         .with_description("Long text generation performance");
@@ -348,11 +287,7 @@ impl ComparisonTestCaseRegistry {
         let batch = ComparisonTestCase::new(
             "perf_batch_simulation",
             "Translate to French: Hello world",
-            InferenceConfig {
-                max_tokens: 10,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 10, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(3, 10)
         .with_description("Batch processing simulation");
@@ -362,35 +297,19 @@ impl ComparisonTestCaseRegistry {
         // Memory stress test
         let memory_stress = ComparisonTestCase::new(
             "perf_memory_stress",
-            &format!(
-                "Context: {}Question: What was mentioned?",
-                "word ".repeat(1000)
-            ),
-            InferenceConfig {
-                max_tokens: 20,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            &format!("Context: {}Question: What was mentioned?", "word ".repeat(1000)),
+            InferenceConfig { max_tokens: 20, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(5, 20)
         .with_description("Memory usage stress test");
 
-        self.register(
-            memory_stress,
-            TestCaseCategory::Performance,
-            ModelSize::Medium,
-        );
+        self.register(memory_stress, TestCaseCategory::Performance, ModelSize::Medium);
 
         // High temperature creativity
         let creativity = ComparisonTestCase::new(
             "perf_high_temp_creativity",
             "Write a creative story about time travel:",
-            InferenceConfig {
-                max_tokens: 200,
-                temperature: 0.9,
-                top_p: 0.9,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 200, temperature: 0.9, top_p: 0.9, ..Default::default() },
         )
         .with_token_range(50, 200)
         .with_description("High temperature creative generation");
@@ -404,30 +323,18 @@ impl ComparisonTestCaseRegistry {
         let tokenization_regression = ComparisonTestCase::new(
             "regression_tokenization_consistency",
             "This sentence has specific tokenization requirements.",
-            InferenceConfig {
-                max_tokens: 10,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 10, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(3, 10)
         .with_description("Regression test for tokenization consistency");
 
-        self.register(
-            tokenization_regression,
-            TestCaseCategory::Regression,
-            ModelSize::Tiny,
-        );
+        self.register(tokenization_regression, TestCaseCategory::Regression, ModelSize::Tiny);
 
         // Test for memory leak issue
         let memory_leak = ComparisonTestCase::new(
             "regression_memory_management",
             "Test memory management with repeated inference calls",
-            InferenceConfig {
-                max_tokens: 15,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 15, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(5, 15)
         .with_description("Regression test for memory management");
@@ -438,42 +345,23 @@ impl ComparisonTestCaseRegistry {
         let float_precision = ComparisonTestCase::new(
             "regression_float_precision",
             "Calculate: 0.1 + 0.2 =",
-            InferenceConfig {
-                max_tokens: 5,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 5, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(1, 5)
         .with_description("Regression test for floating point precision");
 
-        self.register(
-            float_precision,
-            TestCaseCategory::Regression,
-            ModelSize::Tiny,
-        );
+        self.register(float_precision, TestCaseCategory::Regression, ModelSize::Tiny);
 
         // Test for context window handling
         let context_window = ComparisonTestCase::new(
             "regression_context_window",
-            &format!(
-                "Context: {}What is the context about?",
-                "sentence ".repeat(100)
-            ),
-            InferenceConfig {
-                max_tokens: 10,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            &format!("Context: {}What is the context about?", "sentence ".repeat(100)),
+            InferenceConfig { max_tokens: 10, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(3, 10)
         .with_description("Regression test for context window handling");
 
-        self.register(
-            context_window,
-            TestCaseCategory::Regression,
-            ModelSize::Medium,
-        );
+        self.register(context_window, TestCaseCategory::Regression, ModelSize::Medium);
 
         // Test for stop token handling
         let stop_tokens = ComparisonTestCase::new(
@@ -498,58 +386,34 @@ impl ComparisonTestCaseRegistry {
         let gguf_test = ComparisonTestCase::new(
             "format_gguf_compatibility",
             "Test GGUF format loading and inference",
-            InferenceConfig {
-                max_tokens: 15,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 15, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(5, 15)
         .with_description("GGUF format compatibility test");
 
-        self.register(
-            gguf_test,
-            TestCaseCategory::FormatCompatibility,
-            ModelSize::Small,
-        );
+        self.register(gguf_test, TestCaseCategory::FormatCompatibility, ModelSize::Small);
 
         // SafeTensors format test
         let safetensors_test = ComparisonTestCase::new(
             "format_safetensors_compatibility",
             "Test SafeTensors format loading and inference",
-            InferenceConfig {
-                max_tokens: 15,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 15, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(5, 15)
         .with_description("SafeTensors format compatibility test");
 
-        self.register(
-            safetensors_test,
-            TestCaseCategory::FormatCompatibility,
-            ModelSize::Small,
-        );
+        self.register(safetensors_test, TestCaseCategory::FormatCompatibility, ModelSize::Small);
 
         // Quantization compatibility
         let quantization_test = ComparisonTestCase::new(
             "format_quantization_compatibility",
             "Test quantized model inference accuracy",
-            InferenceConfig {
-                max_tokens: 20,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 20, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(5, 20)
         .with_description("Quantization format compatibility test");
 
-        self.register(
-            quantization_test,
-            TestCaseCategory::FormatCompatibility,
-            ModelSize::Medium,
-        );
+        self.register(quantization_test, TestCaseCategory::FormatCompatibility, ModelSize::Medium);
     }
 
     /// Load model size variation test cases
@@ -558,77 +422,45 @@ impl ComparisonTestCaseRegistry {
         let tiny_model_test = ComparisonTestCase::new(
             "size_tiny_model_limits",
             "Test tiny model capabilities and limitations",
-            InferenceConfig {
-                max_tokens: 10,
-                temperature: 0.0,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 10, temperature: 0.0, ..Default::default() },
         )
         .with_token_range(3, 10)
         .with_description("Tiny model size limitations test");
 
-        self.register(
-            tiny_model_test,
-            TestCaseCategory::ModelSize,
-            ModelSize::Tiny,
-        );
+        self.register(tiny_model_test, TestCaseCategory::ModelSize, ModelSize::Tiny);
 
         // Small model scaling
         let small_model_test = ComparisonTestCase::new(
             "size_small_model_scaling",
             "Test small model performance and accuracy scaling",
-            InferenceConfig {
-                max_tokens: 30,
-                temperature: 0.2,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 30, temperature: 0.2, ..Default::default() },
         )
         .with_token_range(10, 30)
         .with_description("Small model scaling characteristics");
 
-        self.register(
-            small_model_test,
-            TestCaseCategory::ModelSize,
-            ModelSize::Small,
-        );
+        self.register(small_model_test, TestCaseCategory::ModelSize, ModelSize::Small);
 
         // Medium model capabilities
         let medium_model_test = ComparisonTestCase::new(
             "size_medium_model_capabilities",
             "Test medium model advanced reasoning and generation capabilities",
-            InferenceConfig {
-                max_tokens: 100,
-                temperature: 0.3,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 100, temperature: 0.3, ..Default::default() },
         )
         .with_token_range(30, 100)
         .with_description("Medium model advanced capabilities");
 
-        self.register(
-            medium_model_test,
-            TestCaseCategory::ModelSize,
-            ModelSize::Medium,
-        );
+        self.register(medium_model_test, TestCaseCategory::ModelSize, ModelSize::Medium);
 
         // Large model stress test
         let large_model_test = ComparisonTestCase::new(
             "size_large_model_stress",
             "Test large model under maximum load and complex reasoning tasks",
-            InferenceConfig {
-                max_tokens: 500,
-                temperature: 0.4,
-                ..Default::default()
-            },
+            InferenceConfig { max_tokens: 500, temperature: 0.4, ..Default::default() },
         )
         .with_token_range(100, 500)
         .with_description("Large model stress and capability test");
 
-        self.register(
-            large_model_test,
-            TestCaseCategory::ModelSize,
-            ModelSize::Large,
-        );
+        self.register(large_model_test, TestCaseCategory::ModelSize, ModelSize::Large);
     }
 }
 
@@ -639,61 +471,37 @@ pub mod test_suites {
     /// Create a comprehensive test suite for basic functionality
     pub fn create_basic_suite() -> Vec<ComparisonTestCase> {
         let registry = ComparisonTestCaseRegistry::new();
-        registry
-            .by_category(TestCaseCategory::Basic)
-            .into_iter()
-            .cloned()
-            .collect()
+        registry.by_category(TestCaseCategory::Basic).into_iter().cloned().collect()
     }
 
     /// Create a comprehensive edge case test suite
     pub fn create_edge_case_suite() -> Vec<ComparisonTestCase> {
         let registry = ComparisonTestCaseRegistry::new();
-        registry
-            .by_category(TestCaseCategory::EdgeCase)
-            .into_iter()
-            .cloned()
-            .collect()
+        registry.by_category(TestCaseCategory::EdgeCase).into_iter().cloned().collect()
     }
 
     /// Create a performance benchmark test suite
     pub fn create_performance_suite() -> Vec<ComparisonTestCase> {
         let registry = ComparisonTestCaseRegistry::new();
-        registry
-            .by_category(TestCaseCategory::Performance)
-            .into_iter()
-            .cloned()
-            .collect()
+        registry.by_category(TestCaseCategory::Performance).into_iter().cloned().collect()
     }
 
     /// Create a regression test suite
     pub fn create_regression_suite() -> Vec<ComparisonTestCase> {
         let registry = ComparisonTestCaseRegistry::new();
-        registry
-            .by_category(TestCaseCategory::Regression)
-            .into_iter()
-            .cloned()
-            .collect()
+        registry.by_category(TestCaseCategory::Regression).into_iter().cloned().collect()
     }
 
     /// Create a format compatibility test suite
     pub fn create_format_compatibility_suite() -> Vec<ComparisonTestCase> {
         let registry = ComparisonTestCaseRegistry::new();
-        registry
-            .by_category(TestCaseCategory::FormatCompatibility)
-            .into_iter()
-            .cloned()
-            .collect()
+        registry.by_category(TestCaseCategory::FormatCompatibility).into_iter().cloned().collect()
     }
 
     /// Create a model size variation test suite
     pub fn create_model_size_suite() -> Vec<ComparisonTestCase> {
         let registry = ComparisonTestCaseRegistry::new();
-        registry
-            .by_category(TestCaseCategory::ModelSize)
-            .into_iter()
-            .cloned()
-            .collect()
+        registry.by_category(TestCaseCategory::ModelSize).into_iter().cloned().collect()
     }
 
     /// Create a comprehensive test suite for a specific model size
@@ -729,15 +537,9 @@ mod tests {
         // Should have test cases in all categories
         assert!(!registry.by_category(TestCaseCategory::Basic).is_empty());
         assert!(!registry.by_category(TestCaseCategory::EdgeCase).is_empty());
-        assert!(!registry
-            .by_category(TestCaseCategory::Performance)
-            .is_empty());
-        assert!(!registry
-            .by_category(TestCaseCategory::Regression)
-            .is_empty());
-        assert!(!registry
-            .by_category(TestCaseCategory::FormatCompatibility)
-            .is_empty());
+        assert!(!registry.by_category(TestCaseCategory::Performance).is_empty());
+        assert!(!registry.by_category(TestCaseCategory::Regression).is_empty());
+        assert!(!registry.by_category(TestCaseCategory::FormatCompatibility).is_empty());
         assert!(!registry.by_category(TestCaseCategory::ModelSize).is_empty());
     }
 
@@ -756,9 +558,7 @@ mod tests {
         // Verify specific test cases exist
         assert!(tiny_tests.iter().any(|tc| tc.name == "basic_greeting"));
         assert!(small_tests.iter().any(|tc| tc.name == "basic_code"));
-        assert!(medium_tests
-            .iter()
-            .any(|tc| tc.name == "perf_long_generation"));
+        assert!(medium_tests.iter().any(|tc| tc.name == "perf_long_generation"));
     }
 
     #[test]

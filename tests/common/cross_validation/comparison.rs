@@ -198,11 +198,8 @@ impl CrossValidationSuite {
         model_path: &Path,
     ) -> ComparisonResult<CrossValidationResult> {
         let start_time = Instant::now();
-        let model_name = model_path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("unknown")
-            .to_string();
+        let model_name =
+            model_path.file_name().and_then(|n| n.to_str()).unwrap_or("unknown").to_string();
 
         // Initialize both implementations
         self.rust_impl
@@ -323,14 +320,8 @@ impl CrossValidationSuite {
         result.tokenization_match = rust_tokens == cpp_tokens;
 
         // Run inference in both implementations
-        let rust_inference_result = self
-            .rust_impl
-            .inference(&rust_tokens, &test_case.config)
-            .await;
-        let cpp_inference_result = self
-            .cpp_impl
-            .inference(&cpp_tokens, &test_case.config)
-            .await;
+        let rust_inference_result = self.rust_impl.inference(&rust_tokens, &test_case.config).await;
+        let cpp_inference_result = self.cpp_impl.inference(&cpp_tokens, &test_case.config).await;
 
         let (rust_inference, cpp_inference) = match (rust_inference_result, cpp_inference_result) {
             (Ok(rust), Ok(cpp)) => (rust, cpp),
@@ -380,11 +371,8 @@ impl CrossValidationSuite {
             .filter(|(r, c)| r == c)
             .count();
 
-        let token_accuracy = if max_length > 0 {
-            matching_tokens as f64 / max_length as f64
-        } else {
-            1.0
-        };
+        let token_accuracy =
+            if max_length > 0 { matching_tokens as f64 / max_length as f64 } else { 1.0 };
 
         // Find first mismatch
         let first_mismatch = self.find_first_mismatch(rust_tokens, cpp_tokens).await;
@@ -411,9 +399,8 @@ impl CrossValidationSuite {
         };
 
         let passes_tolerance = token_accuracy >= self.tolerance.min_token_accuracy
-            && probability_similarity.map_or(true, |sim| {
-                sim >= (1.0 - self.tolerance.max_probability_divergence)
-            });
+            && probability_similarity
+                .map_or(true, |sim| sim >= (1.0 - self.tolerance.max_probability_divergence));
 
         AccuracyResult {
             token_accuracy,
@@ -463,11 +450,8 @@ impl CrossValidationSuite {
         if rust_tokens.len() != cpp_tokens.len() {
             let min_len = rust_tokens.len().min(cpp_tokens.len());
             let context_start = min_len.saturating_sub(self.context_window);
-            let context_before = if min_len > 0 {
-                rust_tokens[context_start..min_len].to_vec()
-            } else {
-                Vec::new()
-            };
+            let context_before =
+                if min_len > 0 { rust_tokens[context_start..min_len].to_vec() } else { Vec::new() };
 
             return Some(TokenMismatch {
                 position: min_len,
@@ -566,16 +550,9 @@ impl CrossValidationSuite {
                     .map(|(r, c)| (*r as f64) * (*c as f64))
                     .sum();
 
-                let rust_norm: f64 = rust_seq
-                    .iter()
-                    .map(|x| (*x as f64).powi(2))
-                    .sum::<f64>()
-                    .sqrt();
-                let cpp_norm: f64 = cpp_seq
-                    .iter()
-                    .map(|x| (*x as f64).powi(2))
-                    .sum::<f64>()
-                    .sqrt();
+                let rust_norm: f64 =
+                    rust_seq.iter().map(|x| (*x as f64).powi(2)).sum::<f64>().sqrt();
+                let cpp_norm: f64 = cpp_seq.iter().map(|x| (*x as f64).powi(2)).sum::<f64>().sqrt();
 
                 if rust_norm > 0.0 && cpp_norm > 0.0 {
                     total_similarity += dot_product / (rust_norm * cpp_norm);
@@ -643,44 +620,30 @@ impl CrossValidationSuite {
         let failed_tests = total_tests - successful_tests;
 
         let average_token_accuracy = if total_tests > 0 {
-            results
-                .iter()
-                .map(|r| r.accuracy_result.token_accuracy)
-                .sum::<f64>()
+            results.iter().map(|r| r.accuracy_result.token_accuracy).sum::<f64>()
                 / total_tests as f64
         } else {
             0.0
         };
 
         let average_throughput_ratio = if total_tests > 0 {
-            results
-                .iter()
-                .map(|r| r.performance_comparison.throughput_ratio)
-                .sum::<f64>()
+            results.iter().map(|r| r.performance_comparison.throughput_ratio).sum::<f64>()
                 / total_tests as f64
         } else {
             0.0
         };
 
         let average_memory_ratio = if total_tests > 0 {
-            results
-                .iter()
-                .map(|r| r.performance_comparison.memory_ratio)
-                .sum::<f64>()
+            results.iter().map(|r| r.performance_comparison.memory_ratio).sum::<f64>()
                 / total_tests as f64
         } else {
             0.0
         };
 
-        let tests_passing_tolerance = results
-            .iter()
-            .filter(|r| r.accuracy_result.passes_tolerance)
-            .count();
+        let tests_passing_tolerance =
+            results.iter().filter(|r| r.accuracy_result.passes_tolerance).count();
 
-        let first_failure = results
-            .iter()
-            .find(|r| !r.success)
-            .map(|r| r.test_case.name.clone());
+        let first_failure = results.iter().find(|r| !r.success).map(|r| r.test_case.name.clone());
 
         ComparisonSummary {
             total_tests,
@@ -721,30 +684,19 @@ pub mod test_cases {
             ComparisonTestCase::new(
                 "creative_writing",
                 "Once upon a time in a distant galaxy",
-                InferenceConfig {
-                    max_tokens: 50,
-                    temperature: 0.7,
-                    ..Default::default()
-                },
+                InferenceConfig { max_tokens: 50, temperature: 0.7, ..Default::default() },
             )
             .with_description("Creative writing prompt"),
             ComparisonTestCase::new(
                 "code_completion",
                 "def fibonacci(n):",
-                InferenceConfig {
-                    max_tokens: 30,
-                    temperature: 0.1,
-                    ..Default::default()
-                },
+                InferenceConfig { max_tokens: 30, temperature: 0.1, ..Default::default() },
             )
             .with_description("Code completion test"),
             ComparisonTestCase::new(
                 "empty_input",
                 "",
-                InferenceConfig {
-                    max_tokens: 5,
-                    ..Default::default()
-                },
+                InferenceConfig { max_tokens: 5, ..Default::default() },
             )
             .with_description("Empty input edge case"),
         ]
@@ -756,21 +708,13 @@ pub mod test_cases {
             ComparisonTestCase::new(
                 "long_generation",
                 "Write a detailed explanation of quantum computing:",
-                InferenceConfig {
-                    max_tokens: 200,
-                    temperature: 0.3,
-                    ..Default::default()
-                },
+                InferenceConfig { max_tokens: 200, temperature: 0.3, ..Default::default() },
             )
             .with_description("Long text generation for performance testing"),
             ComparisonTestCase::new(
                 "batch_processing",
                 "Translate the following to French: Hello world",
-                InferenceConfig {
-                    max_tokens: 20,
-                    temperature: 0.0,
-                    ..Default::default()
-                },
+                InferenceConfig { max_tokens: 20, temperature: 0.0, ..Default::default() },
             )
             .with_description("Batch processing simulation"),
         ]
@@ -782,28 +726,19 @@ pub mod test_cases {
             ComparisonTestCase::new(
                 "special_characters",
                 "Test with émojis 🚀 and spëcial chars: @#$%",
-                InferenceConfig {
-                    max_tokens: 15,
-                    ..Default::default()
-                },
+                InferenceConfig { max_tokens: 15, ..Default::default() },
             )
             .with_description("Special characters and emojis"),
             ComparisonTestCase::new(
                 "very_long_input",
                 &"This is a very long input sentence that repeats itself. ".repeat(20),
-                InferenceConfig {
-                    max_tokens: 10,
-                    ..Default::default()
-                },
+                InferenceConfig { max_tokens: 10, ..Default::default() },
             )
             .with_description("Very long input text"),
             ComparisonTestCase::new(
                 "single_token",
                 "A",
-                InferenceConfig {
-                    max_tokens: 1,
-                    ..Default::default()
-                },
+                InferenceConfig { max_tokens: 1, ..Default::default() },
             )
             .with_description("Single token input"),
         ]
@@ -849,14 +784,8 @@ mod tests {
         use crate::cross_validation::test_implementation::MockImplementation;
 
         let suite = CrossValidationSuite {
-            rust_impl: Box::new(MockImplementation::new(
-                "rust".to_string(),
-                "1.0".to_string(),
-            )),
-            cpp_impl: Box::new(MockImplementation::new(
-                "cpp".to_string(),
-                "1.0".to_string(),
-            )),
+            rust_impl: Box::new(MockImplementation::new("rust".to_string(), "1.0".to_string())),
+            cpp_impl: Box::new(MockImplementation::new("cpp".to_string(), "1.0".to_string())),
             tolerance: ComparisonTolerance::default(),
             test_cases: Vec::new(),
             context_window: 5,

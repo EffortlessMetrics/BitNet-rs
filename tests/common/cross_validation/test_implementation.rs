@@ -160,11 +160,7 @@ pub struct MockImplementationFactory {
 
 impl MockImplementationFactory {
     pub fn new(name: String, version: String, available: bool) -> Self {
-        Self {
-            name,
-            version,
-            available,
-        }
+        Self { name, version, available }
     }
 }
 
@@ -282,14 +278,8 @@ mod tests {
         let mut manager = ResourceManager::new(limits);
 
         // Add implementation
-        let impl1 = Box::new(MockImplementation::new(
-            "test1".to_string(),
-            "1.0".to_string(),
-        ));
-        manager
-            .add_implementation("impl1".to_string(), impl1)
-            .await
-            .unwrap();
+        let impl1 = Box::new(MockImplementation::new("test1".to_string(), "1.0".to_string()));
+        manager.add_implementation("impl1".to_string(), impl1).await.unwrap();
 
         assert_eq!(manager.get_total_memory_usage(), 1024 * 1024); // 1MB
 

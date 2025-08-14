@@ -32,10 +32,7 @@ pub struct StreamingConfig {
 
 impl Default for StreamingConfig {
     fn default() -> Self {
-        Self {
-            buffer_size: 10,
-            flush_interval_ms: 50,
-        }
+        Self { buffer_size: 10, flush_interval_ms: 50 }
     }
 }
 
@@ -77,10 +74,7 @@ impl GenerationStream {
             }
         });
 
-        Self {
-            receiver,
-            _handle: handle,
-        }
+        Self { receiver, _handle: handle }
     }
 
     /// Internal streaming generation implementation
@@ -97,9 +91,8 @@ impl GenerationStream {
         debug!("Starting streaming generation for prompt");
 
         // Tokenize input
-        let input_tokens = tokenizer
-            .encode(&prompt, true)
-            .context("Failed to tokenize input prompt")?;
+        let input_tokens =
+            tokenizer.encode(&prompt, true).context("Failed to tokenize input prompt")?;
 
         let mut current_tokens = input_tokens.clone();
         let mut generated_count = 0;
@@ -135,9 +128,8 @@ impl GenerationStream {
             }
 
             // Decode token to text
-            let token_text = tokenizer
-                .decode(&[next_token], true)
-                .context("Failed to decode token")?;
+            let token_text =
+                tokenizer.decode(&[next_token], true).context("Failed to decode token")?;
 
             token_buffer.push(token_text);
             current_tokens.push(next_token);
@@ -256,9 +248,7 @@ mod tests {
 
     impl MockModel {
         fn new() -> Self {
-            Self {
-                config: bitnet_common::BitNetConfig::default(),
-            }
+            Self { config: bitnet_common::BitNetConfig::default() }
         }
     }
 
@@ -327,10 +317,7 @@ mod tests {
         let backend = Box::new(MockBackend);
         let cache = Arc::new(RwLock::new(KVCache::new(Default::default()).unwrap()));
 
-        let config = GenerationConfig {
-            max_new_tokens: 5,
-            ..Default::default()
-        };
+        let config = GenerationConfig { max_new_tokens: 5, ..Default::default() };
 
         let streaming_config = StreamingConfig::default();
 
@@ -367,10 +354,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_streaming_config() {
-        let config = StreamingConfig {
-            buffer_size: 5,
-            flush_interval_ms: 100,
-        };
+        let config = StreamingConfig { buffer_size: 5, flush_interval_ms: 100 };
 
         assert_eq!(config.buffer_size, 5);
         assert_eq!(config.flush_interval_ms, 100);

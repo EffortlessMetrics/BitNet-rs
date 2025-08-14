@@ -135,13 +135,7 @@ mod cpu_kernel_tests {
             let mut c = vec![0.0f32; m * n];
 
             let result = kernel.matmul_i2s(&a, &b, &mut c, m, n, k);
-            assert!(
-                result.is_ok(),
-                "Fallback kernel failed for size {}x{}x{}",
-                m,
-                n,
-                k
-            );
+            assert!(result.is_ok(), "Fallback kernel failed for size {}x{}x{}", m, n, k);
 
             // Verify output is reasonable
             assert!(
@@ -533,10 +527,7 @@ mod gpu_kernel_tests {
 
                 println!("CUDA device: {}", device_info.name);
                 println!("Compute capability: {:?}", device_info.compute_capability);
-                println!(
-                    "Memory: {} GB",
-                    device_info.total_memory / (1024 * 1024 * 1024)
-                );
+                println!("Memory: {} GB", device_info.total_memory / (1024 * 1024 * 1024));
             }
             Err(_) => {
                 println!("CUDA not available, skipping GPU tests");
@@ -584,23 +575,11 @@ mod gpu_kernel_tests {
             let mut c = vec![0.0f32; m * n];
 
             let result = kernel.matmul_i2s(&a, &b, &mut c, m, n, k);
-            assert!(
-                result.is_ok(),
-                "CUDA kernel failed for size {}x{}x{}",
-                m,
-                n,
-                k
-            );
+            assert!(result.is_ok(), "CUDA kernel failed for size {}x{}x{}", m, n, k);
 
             // Verify output is reasonable
-            assert!(
-                c.iter().all(|&x| x.is_finite()),
-                "Non-finite values in CUDA output"
-            );
-            assert!(
-                c.iter().any(|&x| x != 0.0),
-                "CUDA output should not be all zeros"
-            );
+            assert!(c.iter().all(|&x| x.is_finite()), "Non-finite values in CUDA output");
+            assert!(c.iter().any(|&x| x != 0.0), "CUDA output should not be all zeros");
         }
     }
 
@@ -614,11 +593,7 @@ mod gpu_kernel_tests {
             }
         };
 
-        let qtypes = vec![
-            QuantizationType::I2S,
-            QuantizationType::TL1,
-            QuantizationType::TL2,
-        ];
+        let qtypes = vec![QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2];
 
         let mut data_gen = TestDataGenerator::new(22222);
 
@@ -668,10 +643,7 @@ mod gpu_kernel_tests {
             // Check memory stats periodically
             if i % 5 == 0 {
                 let (used, total) = kernel.memory_stats();
-                println!(
-                    "Iteration {}: GPU memory used: {} / {} bytes",
-                    i, used, total
-                );
+                println!("Iteration {}: GPU memory used: {} / {} bytes", i, used, total);
                 assert!(used <= total, "Used memory should not exceed total");
             }
         }
@@ -719,10 +691,7 @@ mod kernel_selection_tests {
         // Should always have at least the fallback kernel
         let available = manager.list_available_providers();
         assert!(!available.is_empty(), "No kernel providers available");
-        assert!(
-            available.contains(&"fallback"),
-            "Fallback kernel should always be available"
-        );
+        assert!(available.contains(&"fallback"), "Fallback kernel should always be available");
     }
 
     #[test]
@@ -739,26 +708,17 @@ mod kernel_selection_tests {
         // Verify selection priority
         #[cfg(feature = "cuda")]
         if available.contains(&"CUDA") {
-            assert_eq!(
-                selected_name, "CUDA",
-                "CUDA should be preferred when available"
-            );
+            assert_eq!(selected_name, "CUDA", "CUDA should be preferred when available");
         }
 
         #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
         if available.contains(&"avx2") && !available.contains(&"CUDA") {
-            assert_eq!(
-                selected_name, "avx2",
-                "AVX2 should be preferred over fallback"
-            );
+            assert_eq!(selected_name, "avx2", "AVX2 should be preferred over fallback");
         }
 
         #[cfg(all(target_arch = "aarch64", feature = "neon"))]
         if available.contains(&"neon") && !available.contains(&"CUDA") {
-            assert_eq!(
-                selected_name, "neon",
-                "NEON should be preferred over fallback"
-            );
+            assert_eq!(selected_name, "neon", "NEON should be preferred over fallback");
         }
 
         // Fallback should be selected if no optimized kernels are available
@@ -778,11 +738,7 @@ mod kernel_selection_tests {
         let kernel1 = manager.select_best().unwrap();
         let kernel2 = manager.select_best().unwrap();
 
-        assert_eq!(
-            kernel1.name(),
-            kernel2.name(),
-            "Kernel selection should be consistent"
-        );
+        assert_eq!(kernel1.name(), kernel2.name(), "Kernel selection should be consistent");
 
         // Selected provider name should be consistent
         let name1 = manager.selected_provider_name();
@@ -831,14 +787,8 @@ mod kernel_selection_tests {
     fn test_select_cpu_kernel() {
         let cpu_kernel = select_cpu_kernel().unwrap();
 
-        assert!(
-            cpu_kernel.is_available(),
-            "Selected CPU kernel should be available"
-        );
-        assert!(
-            !cpu_kernel.name().is_empty(),
-            "CPU kernel should have a name"
-        );
+        assert!(cpu_kernel.is_available(), "Selected CPU kernel should be available");
+        assert!(!cpu_kernel.name().is_empty(), "CPU kernel should have a name");
 
         // Should be one of the known CPU kernels
         let known_kernels = vec!["fallback", "avx2", "neon"];
@@ -857,10 +807,7 @@ mod kernel_selection_tests {
 
         match result {
             Ok(gpu_kernel) => {
-                assert!(
-                    gpu_kernel.is_available(),
-                    "Selected GPU kernel should be available"
-                );
+                assert!(gpu_kernel.is_available(), "Selected GPU kernel should be available");
                 println!("Selected GPU kernel: {}", gpu_kernel.name());
             }
             Err(_) => {
@@ -890,16 +837,12 @@ mod kernel_selection_tests {
         // Get reference result from fallback kernel
         let fallback = FallbackKernel;
         let mut c_reference = vec![0.0f32; test_size * test_size];
-        fallback
-            .matmul_i2s(&a, &b, &mut c_reference, test_size, test_size, test_size)
-            .unwrap();
+        fallback.matmul_i2s(&a, &b, &mut c_reference, test_size, test_size, test_size).unwrap();
 
         // Test selected kernel against reference
         let kernel = manager.select_best().unwrap();
         let mut c_test = vec![0.0f32; test_size * test_size];
-        kernel
-            .matmul_i2s(&a, &b, &mut c_test, test_size, test_size, test_size)
-            .unwrap();
+        kernel.matmul_i2s(&a, &b, &mut c_test, test_size, test_size, test_size).unwrap();
 
         // Compare results
         let mut max_diff = 0.0f32;
@@ -908,11 +851,7 @@ mod kernel_selection_tests {
             max_diff = max_diff.max(diff);
         }
 
-        println!(
-            "Cross-validation: {} vs fallback, max_diff = {}",
-            kernel.name(),
-            max_diff
-        );
+        println!("Cross-validation: {} vs fallback, max_diff = {}", kernel.name(), max_diff);
         assert!(
             max_diff < 1e-2,
             "Kernel {} differs too much from reference: {}",
@@ -1062,17 +1001,10 @@ mod performance_tests {
         let kernel = manager.select_best().unwrap();
 
         let sizes = vec![1024, 4096];
-        let qtypes = vec![
-            QuantizationType::I2S,
-            QuantizationType::TL1,
-            QuantizationType::TL2,
-        ];
+        let qtypes = vec![QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2];
         let mut data_gen = TestDataGenerator::new(77777);
 
-        println!(
-            "Quantization performance test for kernel: {}",
-            kernel.name()
-        );
+        println!("Quantization performance test for kernel: {}", kernel.name());
 
         for qtype in qtypes {
             for size in &sizes {
@@ -1096,9 +1028,7 @@ mod performance_tests {
                 let start = Instant::now();
 
                 for _ in 0..iterations {
-                    kernel
-                        .quantize(&input, &mut output, &mut scales, qtype)
-                        .unwrap();
+                    kernel.quantize(&input, &mut output, &mut scales, qtype).unwrap();
                 }
 
                 let elapsed = start.elapsed().as_nanos() as u64;
@@ -1158,12 +1088,8 @@ mod performance_tests {
         let kernel = manager.select_best().unwrap();
 
         // Test with extreme values (excluding infinity which may not be handled consistently)
-        let extreme_cases = vec![
-            vec![f32::MAX; 32],
-            vec![f32::MIN; 32],
-            vec![1e-10; 32],
-            vec![-1e-10; 32],
-        ];
+        let extreme_cases =
+            vec![vec![f32::MAX; 32], vec![f32::MIN; 32], vec![1e-10; 32], vec![-1e-10; 32]];
 
         for (i, input) in extreme_cases.iter().enumerate() {
             let mut output = vec![0u8; 8];
@@ -1238,18 +1164,14 @@ mod integration_tests {
         // Get fallback result as reference
         let fallback = FallbackKernel;
         let mut c_fallback = vec![0.0f32; size * size];
-        fallback
-            .matmul_i2s(&a, &b, &mut c_fallback, size, size, size)
-            .unwrap();
+        fallback.matmul_i2s(&a, &b, &mut c_fallback, size, size, size).unwrap();
         results.push(("fallback", c_fallback));
 
         // Test selected kernel
         let kernel = manager.select_best().unwrap();
         if kernel.name() != "fallback" {
             let mut c_selected = vec![0.0f32; size * size];
-            kernel
-                .matmul_i2s(&a, &b, &mut c_selected, size, size, size)
-                .unwrap();
+            kernel.matmul_i2s(&a, &b, &mut c_selected, size, size, size).unwrap();
             results.push((kernel.name(), c_selected));
         }
 
@@ -1264,10 +1186,7 @@ mod integration_tests {
                 max_diff = max_diff.max(diff);
             }
 
-            println!(
-                "Interoperability: {} vs {}, max_diff = {}",
-                name1, name2, max_diff
-            );
+            println!("Interoperability: {} vs {}, max_diff = {}", name1, name2, max_diff);
             assert!(
                 max_diff < 1e-2,
                 "Kernels {} and {} differ too much: {}",
@@ -1301,11 +1220,7 @@ mod integration_tests {
 
             // Results should be identical
             for j in 0..c.len() {
-                assert_eq!(
-                    c[j], c2[j],
-                    "Results should be identical for operation {}",
-                    i
-                );
+                assert_eq!(c[j], c2[j], "Results should be identical for operation {}", i);
             }
         }
     }

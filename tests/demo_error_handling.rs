@@ -13,15 +13,9 @@ fn main() {
     // Demo 1: Error Severity and Categorization
     println!("1. Error Severity and Categorization:");
     let errors = vec![
-        TestError::TimeoutError {
-            timeout: Duration::from_secs(30),
-        },
-        TestError::AssertionError {
-            message: "Expected 42 but got 24".to_string(),
-        },
-        TestError::ConfigError {
-            message: "Invalid configuration parameter".to_string(),
-        },
+        TestError::TimeoutError { timeout: Duration::from_secs(30) },
+        TestError::AssertionError { message: "Expected 42 but got 24".to_string() },
+        TestError::ConfigError { message: "Invalid configuration parameter".to_string() },
         TestError::FixtureError(FixtureError::DownloadError {
             url: "https://example.com/model.gguf".to_string(),
             reason: "Network timeout".to_string(),
@@ -53,10 +47,7 @@ fn main() {
     let assertion_error = &errors[1];
     let steps = assertion_error.troubleshooting_steps();
     for step in steps.iter().take(3) {
-        println!(
-            "  Step {}: {} - {}",
-            step.step_number, step.title, step.description
-        );
+        println!("  Step {}: {} - {}", step.step_number, step.title, step.description);
     }
     println!();
 
@@ -81,10 +72,7 @@ fn main() {
     // Demo 6: Environment Information
     println!("6. Environment Information:");
     let env_info = bitnet_tests::errors::collect_environment_info();
-    println!(
-        "  Platform: {} ({})",
-        env_info.platform, env_info.architecture
-    );
+    println!("  Platform: {} ({})", env_info.platform, env_info.architecture);
     println!("  CPU Cores: {}", env_info.system_resources.cpu_cores);
     println!("  Working Directory: {}", env_info.working_directory);
     println!();

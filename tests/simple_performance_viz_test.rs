@@ -87,10 +87,7 @@ pub struct SimplePerformanceDashboard {
 
 impl SimplePerformanceDashboard {
     pub fn new(title: String) -> Self {
-        Self {
-            comparisons: Vec::new(),
-            title,
-        }
+        Self { comparisons: Vec::new(), title }
     }
 
     pub fn add_comparison(&mut self, comparison: SimplePerformanceComparison) {
@@ -322,25 +319,14 @@ impl SimplePerformanceDashboard {
         }
 
         let latest = self.comparisons.last().unwrap();
-        let avg_performance = self
-            .comparisons
-            .iter()
-            .map(|c| c.performance_improvement)
-            .sum::<f64>()
+        let avg_performance =
+            self.comparisons.iter().map(|c| c.performance_improvement).sum::<f64>()
+                / self.comparisons.len() as f64;
+
+        let avg_memory = self.comparisons.iter().map(|c| c.memory_improvement).sum::<f64>()
             / self.comparisons.len() as f64;
 
-        let avg_memory = self
-            .comparisons
-            .iter()
-            .map(|c| c.memory_improvement)
-            .sum::<f64>()
-            / self.comparisons.len() as f64;
-
-        let regressions = self
-            .comparisons
-            .iter()
-            .filter(|c| c.regression_detected)
-            .count();
+        let regressions = self.comparisons.iter().filter(|c| c.regression_detected).count();
 
         format!(
             r#"
@@ -363,29 +349,13 @@ impl SimplePerformanceDashboard {
             </div>
         </div>
 "#,
-            if latest.performance_improvement > 0.0 {
-                "improvement"
-            } else {
-                "regression"
-            },
+            if latest.performance_improvement > 0.0 { "improvement" } else { "regression" },
             latest.performance_improvement,
-            if avg_performance > 0.0 {
-                "improvement"
-            } else {
-                "regression"
-            },
+            if avg_performance > 0.0 { "improvement" } else { "regression" },
             avg_performance,
-            if avg_memory > 0.0 {
-                "improvement"
-            } else {
-                "regression"
-            },
+            if avg_memory > 0.0 { "improvement" } else { "regression" },
             avg_memory,
-            if regressions > 0 {
-                "regression"
-            } else {
-                "improvement"
-            },
+            if regressions > 0 { "regression" } else { "improvement" },
             regressions
         )
     }
@@ -476,11 +446,7 @@ impl SimplePerformanceDashboard {
                 comparison.cpp_memory_mb,
                 comparison.performance_improvement,
                 comparison.memory_improvement,
-                if comparison.regression_detected {
-                    "⚠️ Yes"
-                } else {
-                    "✅ No"
-                }
+                if comparison.regression_detected { "⚠️ Yes" } else { "✅ No" }
             ));
         }
 
@@ -647,15 +613,11 @@ impl SimplePerformanceDashboard {
             return "{}".to_string();
         }
 
-        let labels: Vec<String> = (0..self.comparisons.len())
-            .map(|i| format!("Run {}", i + 1))
-            .collect();
+        let labels: Vec<String> =
+            (0..self.comparisons.len()).map(|i| format!("Run {}", i + 1)).collect();
 
-        let rust_throughput: Vec<f64> = self
-            .comparisons
-            .iter()
-            .map(|c| c.rust_ops_per_sec)
-            .collect();
+        let rust_throughput: Vec<f64> =
+            self.comparisons.iter().map(|c| c.rust_ops_per_sec).collect();
 
         let cpp_throughput: Vec<f64> = self.comparisons.iter().map(|c| c.cpp_ops_per_sec).collect();
 
@@ -663,19 +625,12 @@ impl SimplePerformanceDashboard {
 
         let cpp_memory: Vec<u64> = self.comparisons.iter().map(|c| c.cpp_memory_mb).collect();
 
-        let rust_duration: Vec<u64> = self
-            .comparisons
-            .iter()
-            .map(|c| c.rust_duration_ms)
-            .collect();
+        let rust_duration: Vec<u64> = self.comparisons.iter().map(|c| c.rust_duration_ms).collect();
 
         let cpp_duration: Vec<u64> = self.comparisons.iter().map(|c| c.cpp_duration_ms).collect();
 
-        let performance_improvement: Vec<f64> = self
-            .comparisons
-            .iter()
-            .map(|c| c.performance_improvement)
-            .collect();
+        let performance_improvement: Vec<f64> =
+            self.comparisons.iter().map(|c| c.performance_improvement).collect();
 
         format!(
             r#"{{
@@ -754,10 +709,7 @@ async fn test_simple_performance_visualization() {
 
     println!("✅ Simple performance visualization test passed");
     println!("📊 Dashboard generated at: {}", dashboard_path.display());
-    println!(
-        "🎯 Dashboard contains {} performance comparisons",
-        dashboard.comparisons.len()
-    );
+    println!("🎯 Dashboard contains {} performance comparisons", dashboard.comparisons.len());
 }
 
 #[tokio::test]
@@ -829,11 +781,8 @@ async fn test_performance_improvement_tracking() {
     assert!(content.contains("Performance Improvement Over Time"));
 
     // Check that improvements are tracked correctly
-    let improvements: Vec<f64> = dashboard
-        .comparisons
-        .iter()
-        .map(|c| c.performance_improvement)
-        .collect();
+    let improvements: Vec<f64> =
+        dashboard.comparisons.iter().map(|c| c.performance_improvement).collect();
 
     // Should show improving trend
     assert!(improvements[0] < improvements[1]); // First improvement
@@ -842,10 +791,7 @@ async fn test_performance_improvement_tracking() {
     assert!(improvements[5] > 25.0); // Final strong performance
 
     println!("✅ Performance improvement tracking test passed");
-    println!(
-        "📈 Tracked improvement from {:.1}% to {:.1}%",
-        improvements[0], improvements[5]
-    );
+    println!("📈 Tracked improvement from {:.1}% to {:.1}%", improvements[0], improvements[5]);
 }
 
 #[tokio::test]
@@ -912,21 +858,15 @@ async fn test_comprehensive_dashboard_features() {
     assert!(content.contains("150.0")); // streaming rust ops
 
     // Verify performance calculations
-    let avg_improvement: f64 = dashboard
-        .comparisons
-        .iter()
-        .map(|c| c.performance_improvement)
-        .sum::<f64>()
-        / dashboard.comparisons.len() as f64;
+    let avg_improvement: f64 =
+        dashboard.comparisons.iter().map(|c| c.performance_improvement).sum::<f64>()
+            / dashboard.comparisons.len() as f64;
 
     assert!(avg_improvement > 0.0); // Overall Rust should be better
 
     println!("✅ Comprehensive dashboard features test passed");
     println!("📊 Generated dashboard with {} scenarios", scenarios.len());
-    println!(
-        "📈 Average performance improvement: {:.1}%",
-        avg_improvement
-    );
+    println!("📈 Average performance improvement: {:.1}%", avg_improvement);
     println!("🌐 Dashboard available at: {}", dashboard_path.display());
 }
 
@@ -1013,11 +953,7 @@ async fn test_complete_performance_visualization_workflow() {
     let last_improvement = dashboard.comparisons[9].performance_improvement;
     let improvement_delta = last_improvement - first_improvement;
 
-    let regressions = dashboard
-        .comparisons
-        .iter()
-        .filter(|c| c.regression_detected)
-        .count();
+    let regressions = dashboard.comparisons.iter().filter(|c| c.regression_detected).count();
 
     println!("  📊 First run performance: {:.1}%", first_improvement);
     println!("  📊 Last run performance: {:.1}%", last_improvement);

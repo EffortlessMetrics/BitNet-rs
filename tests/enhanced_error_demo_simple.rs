@@ -46,14 +46,8 @@ fn main() {
     // Demonstrate troubleshooting steps
     println!("🔧 Troubleshooting Steps for Timeout Error:");
     for step in timeout_error.troubleshooting_steps() {
-        println!(
-            "  {}. {} - {}",
-            step.step_number, step.title, step.description
-        );
-        println!(
-            "     Estimated effort: {} minutes",
-            step.estimated_effort_minutes
-        );
+        println!("  {}. {} - {}", step.step_number, step.title, step.description);
+        println!("     Estimated effort: {} minutes", step.estimated_effort_minutes);
     }
     println!();
 
@@ -71,11 +65,7 @@ fn main() {
 
     println!("Root cause analysis:");
     for cause in &analysis.root_causes {
-        println!(
-            "  - {} (confidence: {:.1}%)",
-            cause.description,
-            cause.confidence * 100.0
-        );
+        println!("  - {} (confidence: {:.1}%)", cause.description, cause.confidence * 100.0);
     }
     println!();
 

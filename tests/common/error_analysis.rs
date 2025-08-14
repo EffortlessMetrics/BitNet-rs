@@ -157,10 +157,7 @@ impl ErrorAnalyzer {
                 potential_causes.push(PotentialCause {
                     cause: "Network connectivity issues".to_string(),
                     likelihood: 0.6,
-                    evidence: vec![
-                        "Fixture operation failed".to_string(),
-                        fixture_err.to_string(),
-                    ],
+                    evidence: vec!["Fixture operation failed".to_string(), fixture_err.to_string()],
                     investigation_steps: vec![
                         "Test network connectivity".to_string(),
                         "Check proxy and firewall settings".to_string(),
@@ -200,11 +197,7 @@ impl ErrorAnalyzer {
         let primary_cause = potential_causes.first().cloned();
         let alternative_causes = potential_causes.into_iter().skip(1).take(3).collect();
 
-        RootCauseAnalysis {
-            primary_cause,
-            alternative_causes,
-            analysis_confidence,
-        }
+        RootCauseAnalysis { primary_cause, alternative_causes, analysis_confidence }
     }
 
     /// Generate actionable recommendations
@@ -261,11 +254,9 @@ impl ErrorAnalyzer {
 
         // Sort by priority and success probability
         recommendations.sort_by(|a, b| {
-            b.priority.cmp(&a.priority).then_with(|| {
-                b.success_probability
-                    .partial_cmp(&a.success_probability)
-                    .unwrap()
-            })
+            b.priority
+                .cmp(&a.priority)
+                .then_with(|| b.success_probability.partial_cmp(&a.success_probability).unwrap())
         });
 
         recommendations
@@ -354,11 +345,7 @@ impl ErrorAnalyzer {
         }
 
         if context.is_ci_environment == entry.context.is_ci_environment {
-            let env = if context.is_ci_environment {
-                "CI"
-            } else {
-                "local"
-            };
+            let env = if context.is_ci_environment { "CI" } else { "local" };
             similarities.push(format!("Same environment: {}", env));
         }
 
@@ -382,10 +369,7 @@ impl ErrorAnalyzer {
 
         // Increase confidence based on similar errors
         if !similar_errors.is_empty() {
-            let resolved_similar = similar_errors
-                .iter()
-                .filter(|e| e.error_entry.resolved)
-                .count();
+            let resolved_similar = similar_errors.iter().filter(|e| e.error_entry.resolved).count();
             if resolved_similar > 0 {
                 confidence += (resolved_similar as f64 / similar_errors.len() as f64) * 0.2;
             }
@@ -416,11 +400,8 @@ impl ErrorAnalyzer {
         }
 
         // Frequent failures increase priority
-        let similar_count = self
-            .error_history
-            .iter()
-            .filter(|e| e.error_category == error.category())
-            .count();
+        let similar_count =
+            self.error_history.iter().filter(|e| e.error_category == error.category()).count();
         if similar_count > 3 {
             score += 2;
         }
@@ -589,20 +570,14 @@ impl ErrorAnalysis {
     pub fn generate_debugging_guide(&self) -> String {
         let mut guide = String::new();
 
-        guide.push_str(&format!(
-            "DEBUGGING GUIDE - {} Priority\n",
-            self.debugging_priority
-        ));
+        guide.push_str(&format!("DEBUGGING GUIDE - {} Priority\n", self.debugging_priority));
         guide.push_str("=".repeat(50).as_str());
         guide.push('\n');
 
         guide.push_str(&format!("Error: {}\n", self.error_summary));
         guide.push_str(&format!("Category: {}\n", self.error_category));
         guide.push_str(&format!("Severity: {}\n", self.severity));
-        guide.push_str(&format!(
-            "Confidence: {:.1}%\n\n",
-            self.confidence_score * 100.0
-        ));
+        guide.push_str(&format!("Confidence: {:.1}%\n\n", self.confidence_score * 100.0));
 
         if let Some(primary_cause) = &self.root_cause_analysis.primary_cause {
             guide.push_str("PRIMARY CAUSE:\n");
@@ -670,9 +645,7 @@ pub struct ErrorPattern {
 impl ErrorPattern {
     /// Check if this pattern matches the given error and context
     pub fn matches(&self, error: &TestError, context: &ErrorContext) -> bool {
-        self.conditions
-            .iter()
-            .all(|condition| condition.matches(error, context))
+        self.conditions.iter().all(|condition| condition.matches(error, context))
     }
 
     /// Calculate confidence for this pattern match

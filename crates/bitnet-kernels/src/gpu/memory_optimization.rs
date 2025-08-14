@@ -160,10 +160,7 @@ impl OptimizedMemoryPool {
         // Check for memory usage warnings
         let usage_ratio = self.stats.current_usage as f32 / self.config.max_pool_size as f32;
         if usage_ratio > 0.8 {
-            log::warn!(
-                "High memory usage: {:.1}% of pool capacity",
-                usage_ratio * 100.0
-            );
+            log::warn!("High memory usage: {:.1}% of pool capacity", usage_ratio * 100.0);
         }
 
         Ok(())

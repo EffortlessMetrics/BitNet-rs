@@ -50,11 +50,7 @@ async fn test_2x_performance_improvement_over_cpp_baseline() {
     let mut passed_count = 0;
 
     for result in &results {
-        let status = if result.meets_requirement {
-            "✅ PASS"
-        } else {
-            "❌ FAIL"
-        };
+        let status = if result.meets_requirement { "✅ PASS" } else { "❌ FAIL" };
         let category = format!("{:?}", result.performance_category);
 
         println!(
@@ -81,21 +77,14 @@ async fn test_2x_performance_improvement_over_cpp_baseline() {
     let average_speedup = total_speedup / results.len() as f64;
     let success_rate = (passed_count as f64 / results.len() as f64) * 100.0;
     let max_speedup = results.iter().map(|r| r.speedup).fold(0.0, f64::max);
-    let min_speedup = results
-        .iter()
-        .map(|r| r.speedup)
-        .fold(f64::INFINITY, f64::min);
+    let min_speedup = results.iter().map(|r| r.speedup).fold(f64::INFINITY, f64::min);
 
     println!("\n🎯 Overall Performance Summary:");
     println!("  • Average Speedup:     {:.2}x", average_speedup);
     println!("  • Maximum Speedup:     {:.2}x", max_speedup);
     println!("  • Minimum Speedup:     {:.2}x", min_speedup);
     println!("  • Success Rate:        {:.1}%", success_rate);
-    println!(
-        "  • Scenarios Passed:    {}/{}",
-        passed_count,
-        results.len()
-    );
+    println!("  • Scenarios Passed:    {}/{}", passed_count, results.len());
 
     // Assert overall performance requirements
     assert!(
@@ -112,29 +101,20 @@ async fn test_2x_performance_improvement_over_cpp_baseline() {
         results.len()
     );
 
-    assert_eq!(
-        success_rate, 100.0,
-        "❌ Success rate {:.1}% is not 100%",
-        success_rate
-    );
+    assert_eq!(success_rate, 100.0, "❌ Success rate {:.1}% is not 100%", success_rate);
 
     // Validate specific performance categories
     let excellent_count = results
         .iter()
         .filter(|r| {
-            matches!(
-                r.performance_category,
-                performance_benchmarks::PerformanceCategory::Excellent
-            )
+            matches!(r.performance_category, performance_benchmarks::PerformanceCategory::Excellent)
         })
         .count();
 
     println!("\n🏆 Performance Categories:");
     let mut category_counts = HashMap::new();
     for result in &results {
-        *category_counts
-            .entry(format!("{:?}", result.performance_category))
-            .or_insert(0) += 1;
+        *category_counts.entry(format!("{:?}", result.performance_category)).or_insert(0) += 1;
     }
 
     for (category, count) in &category_counts {
@@ -153,28 +133,16 @@ async fn test_2x_performance_improvement_over_cpp_baseline() {
     let report_path = temp_dir.path().join("performance_report.md");
     suite.save_report(&results, &report_path).await.unwrap();
 
-    println!(
-        "\n📄 Performance report saved to: {}",
-        report_path.display()
-    );
+    println!("\n📄 Performance report saved to: {}", report_path.display());
 
     // Validate specific performance improvements for key scenarios
     validate_key_scenario_performance(&results);
 
     // Final success message
     println!("\n🎉 SUCCESS: 2x+ Performance Improvement Validated!");
-    println!(
-        "✅ All {} scenarios demonstrate required performance improvements",
-        results.len()
-    );
-    println!(
-        "✅ Average speedup of {:.2}x exceeds 2x requirement",
-        average_speedup
-    );
-    println!(
-        "✅ Maximum speedup of {:.2}x demonstrates excellent optimization",
-        max_speedup
-    );
+    println!("✅ All {} scenarios demonstrate required performance improvements", results.len());
+    println!("✅ Average speedup of {:.2}x exceeds 2x requirement", average_speedup);
+    println!("✅ Maximum speedup of {:.2}x demonstrates excellent optimization", max_speedup);
     println!("✅ Performance report generated successfully");
 
     println!("\n" + "=".repeat(60));
@@ -204,11 +172,7 @@ fn validate_key_scenario_performance(
                 scenario_name,
                 result.speedup,
                 min_speedup,
-                if result.speedup >= *min_speedup {
-                    "✅"
-                } else {
-                    "❌"
-                }
+                if result.speedup >= *min_speedup { "✅" } else { "❌" }
             );
 
             assert!(
@@ -245,15 +209,10 @@ async fn test_performance_scaling_across_model_sizes() {
     let results = suite.run_all_benchmarks().await.unwrap();
 
     // Find model size scenarios
-    let model_scenarios: Vec<_> = results
-        .iter()
-        .filter(|r| r.scenario.name.contains("model_inference"))
-        .collect();
+    let model_scenarios: Vec<_> =
+        results.iter().filter(|r| r.scenario.name.contains("model_inference")).collect();
 
-    assert!(
-        model_scenarios.len() >= 3,
-        "Expected at least 3 model size scenarios"
-    );
+    assert!(model_scenarios.len() >= 3, "Expected at least 3 model size scenarios");
 
     println!("\n📈 Model Size Performance Scaling:");
     for result in &model_scenarios {
@@ -312,10 +271,7 @@ async fn test_memory_efficiency_improvements() {
     let average_memory_improvement = total_memory_improvement / results.len() as f64;
 
     println!("\n📊 Memory Efficiency Summary:");
-    println!(
-        "  • Average Memory Improvement: {:.1}%",
-        average_memory_improvement
-    );
+    println!("  • Average Memory Improvement: {:.1}%", average_memory_improvement);
     println!(
         "  • Scenarios with Positive Improvement: {}/{}",
         positive_improvements,
@@ -413,43 +369,26 @@ async fn integration_test_complete_2x_performance_validation() {
     // 1. Validate overall 2x+ improvement
     let average_speedup: f64 =
         results.iter().map(|r| r.speedup).sum::<f64>() / results.len() as f64;
-    assert!(
-        average_speedup >= 2.0,
-        "Overall average speedup must be >= 2.0x"
-    );
+    assert!(average_speedup >= 2.0, "Overall average speedup must be >= 2.0x");
 
     // 2. Validate all scenarios meet their individual requirements
     for result in &results {
-        assert!(
-            result.meets_requirement,
-            "All scenarios must meet their requirements"
-        );
+        assert!(result.meets_requirement, "All scenarios must meet their requirements");
     }
 
     // 3. Validate performance categories
     let excellent_count = results
         .iter()
         .filter(|r| {
-            matches!(
-                r.performance_category,
-                performance_benchmarks::PerformanceCategory::Excellent
-            )
+            matches!(r.performance_category, performance_benchmarks::PerformanceCategory::Excellent)
         })
         .count();
-    assert!(
-        excellent_count > 0,
-        "At least one scenario must achieve excellent performance"
-    );
+    assert!(excellent_count > 0, "At least one scenario must achieve excellent performance");
 
     // 4. Validate memory improvements
-    let positive_memory_improvements = results
-        .iter()
-        .filter(|r| r.memory_improvement > 0.0)
-        .count();
-    assert!(
-        positive_memory_improvements > 0,
-        "At least one scenario must show memory improvement"
-    );
+    let positive_memory_improvements =
+        results.iter().filter(|r| r.memory_improvement > 0.0).count();
+    assert!(positive_memory_improvements > 0, "At least one scenario must show memory improvement");
 
     // 5. Generate comprehensive report
     let report_path = temp_dir.path().join("integration_performance_report.md");
@@ -459,22 +398,10 @@ async fn integration_test_complete_2x_performance_validation() {
     assert!(report_path.exists(), "Performance report must be generated");
 
     println!("\n🏆 Integration Test Results:");
-    println!(
-        "  ✅ Average speedup: {:.2}x (>= 2.0x required)",
-        average_speedup
-    );
-    println!(
-        "  ✅ All {} scenarios passed their requirements",
-        results.len()
-    );
-    println!(
-        "  ✅ {} scenarios achieved excellent performance",
-        excellent_count
-    );
-    println!(
-        "  ✅ {} scenarios showed memory improvements",
-        positive_memory_improvements
-    );
+    println!("  ✅ Average speedup: {:.2}x (>= 2.0x required)", average_speedup);
+    println!("  ✅ All {} scenarios passed their requirements", results.len());
+    println!("  ✅ {} scenarios achieved excellent performance", excellent_count);
+    println!("  ✅ {} scenarios showed memory improvements", positive_memory_improvements);
     println!("  ✅ Comprehensive report generated");
 
     println!("\n🎉 INTEGRATION TEST PASSED: 2x+ Performance Improvement Validated!");

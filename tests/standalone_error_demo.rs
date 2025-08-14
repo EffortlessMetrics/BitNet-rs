@@ -130,17 +130,13 @@ async fn test_enhanced_error_handling_standalone() {
     println!("=== Standalone Enhanced Error Handling Demo ===");
 
     // Create different types of errors
-    let timeout_error = TestError::TimeoutError {
-        timeout: Duration::from_secs(30),
-    };
+    let timeout_error = TestError::TimeoutError { timeout: Duration::from_secs(30) };
 
-    let fixture_error = TestError::FixtureError {
-        message: "Failed to download test model".to_string(),
-    };
+    let fixture_error =
+        TestError::FixtureError { message: "Failed to download test model".to_string() };
 
-    let assertion_error = TestError::AssertionError {
-        message: "Expected 'hello' but got 'world'".to_string(),
-    };
+    let assertion_error =
+        TestError::AssertionError { message: "Expected 'hello' but got 'world'".to_string() };
 
     // Test severity classification
     println!("\n1. Error Severity Classification:");
