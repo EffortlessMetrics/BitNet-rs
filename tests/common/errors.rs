@@ -105,8 +105,8 @@ pub enum ImplementationError {
     FfiError { message: String },
 }
 
-/// Result type for test operations
-pub type TestResult<T> = Result<T, TestError>;
+/// Result type for test operations (using different name to avoid conflict with results::TestResult)
+pub type TestOpResult<T> = Result<T, TestError>;
 
 /// Result type for fixture operations
 pub type FixtureResult<T> = Result<T, FixtureError>;

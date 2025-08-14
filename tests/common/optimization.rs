@@ -1,5 +1,5 @@
 use super::config::TestConfig;
-use super::errors::{TestError, TestResult};
+use super::errors::{TestError, TestOpResult};
 use super::execution_optimizer::ExecutionPlan;
 use super::parallel::ParallelExecutor;
 use std::collections::HashMap;

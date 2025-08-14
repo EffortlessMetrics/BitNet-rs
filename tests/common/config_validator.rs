@@ -1,5 +1,5 @@
 use crate::config::{load_test_config, validate_config, TestConfig};
-use crate::errors::{TestError, TestResult};
+use crate::errors::TestError;
 use std::path::PathBuf;
 
 /// Configuration validation utility

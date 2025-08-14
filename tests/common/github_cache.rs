@@ -1,5 +1,5 @@
 use super::cache::{CacheConfig, TestCache};
-use super::errors::{TestError, TestResult};
+use super::errors::TestError;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::collections::HashMap;

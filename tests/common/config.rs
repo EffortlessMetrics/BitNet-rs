@@ -1,4 +1,4 @@
-use super::errors::{TestError, TestResult};
+use super::errors::TestError;
 use super::utils::get_optimal_parallel_tests;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
