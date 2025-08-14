@@ -193,7 +193,7 @@ impl Tensor for BitNetTensor {
                     // This is unsafe but necessary for the current test setup
                     // In production, we'd need a better approach to lifetime management
                     let leaked: &'static [f32] = Box::leak(vec.into_boxed_slice());
-                    Ok(unsafe { std::mem::transmute(leaked) })
+                    Ok(unsafe { std::mem::transmute::<&'static [f32], &'static [T]>(leaked) })
                 }
                 Err(e) => Err(BitNetError::Validation(format!(
                     "Failed to convert tensor to slice: {}",

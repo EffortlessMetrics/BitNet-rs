@@ -10,24 +10,13 @@ use std::path::{Path, PathBuf};
 mod tests;
 
 /// Main BitNet configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct BitNetConfig {
     pub model: ModelConfig,
     pub inference: InferenceConfig,
     pub quantization: QuantizationConfig,
     pub performance: PerformanceConfig,
-}
-
-impl Default for BitNetConfig {
-    fn default() -> Self {
-        Self {
-            model: ModelConfig::default(),
-            inference: InferenceConfig::default(),
-            quantization: QuantizationConfig::default(),
-            performance: PerformanceConfig::default(),
-        }
-    }
 }
 
 /// Model configuration
@@ -657,7 +646,7 @@ impl ConfigLoader {
                     config.apply_env_overrides()?;
                 }
                 ConfigSource::Inline(inline_config) => {
-                    config.merge_with(inline_config.clone());
+                    config.merge_with((**inline_config).clone());
                 }
             }
         }
@@ -672,5 +661,5 @@ impl ConfigLoader {
 pub enum ConfigSource {
     File(PathBuf),
     Environment,
-    Inline(BitNetConfig),
+    Inline(Box<BitNetConfig>),
 }
