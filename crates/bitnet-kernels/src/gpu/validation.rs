@@ -1,13 +1,13 @@
 //! GPU kernel validation and testing utilities
-//! 
+//!
 //! This module provides comprehensive validation for CUDA kernels including:
 //! - Numerical accuracy validation against CPU implementations
 //! - Performance benchmarking and speedup measurement
 //! - Memory usage profiling and leak detection
 //! - Mixed precision validation
 
-use crate::{KernelProvider, cpu::x86::Avx2Kernel, cpu::fallback::FallbackKernel};
 use crate::gpu::cuda::CudaKernel;
+use crate::{cpu::fallback::FallbackKernel, cpu::x86::Avx2Kernel, KernelProvider};
 use bitnet_common::Result;
 
 use std::time::Instant;
@@ -36,10 +36,10 @@ impl Default for ValidationConfig {
             tolerance: DEFAULT_TOLERANCE,
             benchmark_iterations: 100,
             test_sizes: vec![
-                (64, 64, 64),     // Small
-                (256, 256, 256),  // Medium
+                (64, 64, 64),       // Small
+                (256, 256, 256),    // Medium
                 (1024, 1024, 1024), // Large
-                (2048, 1024, 512), // Rectangular
+                (2048, 1024, 512),  // Rectangular
             ],
             check_memory_leaks: true,
             test_mixed_precision: false, // Disabled until implemented
@@ -120,7 +120,7 @@ impl GpuValidator {
     /// Run comprehensive validation tests
     pub fn validate(&self) -> Result<ValidationResults> {
         log::info!("Starting comprehensive GPU kernel validation");
-        
+
         let mut results = ValidationResults {
             accuracy_results: Vec::new(),
             performance_results: Vec::new(),
@@ -176,7 +176,10 @@ impl GpuValidator {
             }
         }
 
-        log::info!("GPU kernel validation completed. Success: {}", results.success);
+        log::info!(
+            "GPU kernel validation completed. Success: {}",
+            results.success
+        );
         Ok(results)
     }
 
@@ -186,8 +189,8 @@ impl GpuValidator {
         log::debug!("Testing accuracy for {}x{}x{}", m, n, k);
 
         // Create test data
-        let a: Vec<i8> = (0..m*k).map(|i| ((i % 3) as i8) - 1).collect(); // -1, 0, 1
-        let b: Vec<u8> = (0..k*n).map(|i| (i % 2) as u8).collect(); // 0, 1
+        let a: Vec<i8> = (0..m * k).map(|i| ((i % 3) as i8) - 1).collect(); // -1, 0, 1
+        let b: Vec<u8> = (0..k * n).map(|i| (i % 2) as u8).collect(); // 0, 1
 
         // CPU reference implementation
         let mut cpu_result = vec![0.0f32; m * n];
@@ -227,7 +230,12 @@ impl GpuValidator {
 
         log::debug!(
             "Accuracy test {}x{}x{}: max_error={:.2e}, rms_error={:.2e}, passed={}",
-            m, n, k, max_error, rms_error, passed
+            m,
+            n,
+            k,
+            max_error,
+            rms_error,
+            passed
         );
 
         Ok(AccuracyResult {
@@ -239,13 +247,16 @@ impl GpuValidator {
     }
 
     /// Benchmark performance against CPU implementation
-    fn benchmark_performance(&self, dimensions: (usize, usize, usize)) -> Result<PerformanceResult> {
+    fn benchmark_performance(
+        &self,
+        dimensions: (usize, usize, usize),
+    ) -> Result<PerformanceResult> {
         let (m, n, k) = dimensions;
         log::debug!("Benchmarking performance for {}x{}x{}", m, n, k);
 
         // Create test data
-        let a: Vec<i8> = (0..m*k).map(|i| ((i % 3) as i8) - 1).collect();
-        let b: Vec<u8> = (0..k*n).map(|i| (i % 2) as u8).collect();
+        let a: Vec<i8> = (0..m * k).map(|i| ((i % 3) as i8) - 1).collect();
+        let b: Vec<u8> = (0..k * n).map(|i| (i % 2) as u8).collect();
 
         // Benchmark CPU
         let mut cpu_result = vec![0.0f32; m * n];
@@ -268,7 +279,8 @@ impl GpuValidator {
         for _ in 0..self.config.benchmark_iterations {
             cpu_kernel.matmul_i2s(&a, &b, &mut cpu_result, m, n, k)?;
         }
-        let cpu_time_ms = cpu_start.elapsed().as_secs_f64() * 1000.0 / self.config.benchmark_iterations as f64;
+        let cpu_time_ms =
+            cpu_start.elapsed().as_secs_f64() * 1000.0 / self.config.benchmark_iterations as f64;
 
         // Benchmark GPU
         let mut gpu_result = vec![0.0f32; m * n];
@@ -283,7 +295,8 @@ impl GpuValidator {
         for _ in 0..self.config.benchmark_iterations {
             gpu_kernel.matmul_i2s(&a, &b, &mut gpu_result, m, n, k)?;
         }
-        let gpu_time_ms = gpu_start.elapsed().as_secs_f64() * 1000.0 / self.config.benchmark_iterations as f64;
+        let gpu_time_ms =
+            gpu_start.elapsed().as_secs_f64() * 1000.0 / self.config.benchmark_iterations as f64;
 
         // Calculate metrics
         let speedup = cpu_time_ms / gpu_time_ms;
@@ -292,7 +305,13 @@ impl GpuValidator {
 
         log::debug!(
             "Performance test {}x{}x{}: CPU={:.2}ms, GPU={:.2}ms, speedup={:.2}x, GFLOPS={:.2}",
-            m, n, k, cpu_time_ms, gpu_time_ms, speedup, gflops
+            m,
+            n,
+            k,
+            cpu_time_ms,
+            gpu_time_ms,
+            speedup,
+            gflops
         );
 
         Ok(PerformanceResult {
@@ -329,15 +348,23 @@ impl Default for GpuValidator {
 /// Print validation results in a human-readable format
 pub fn print_validation_results(results: &ValidationResults) {
     println!("\n=== GPU Kernel Validation Results ===");
-    
+
     // Accuracy results
     println!("\n📊 Numerical Accuracy Tests:");
     for result in &results.accuracy_results {
-        let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
+        let status = if result.passed {
+            "✅ PASS"
+        } else {
+            "❌ FAIL"
+        };
         println!(
             "  {}x{}x{}: {} (max_error: {:.2e}, rms_error: {:.2e})",
-            result.dimensions.0, result.dimensions.1, result.dimensions.2,
-            status, result.max_error, result.rms_error
+            result.dimensions.0,
+            result.dimensions.1,
+            result.dimensions.2,
+            status,
+            result.max_error,
+            result.rms_error
         );
     }
 
@@ -346,23 +373,38 @@ pub fn print_validation_results(results: &ValidationResults) {
     for result in &results.performance_results {
         println!(
             "  {}x{}x{}: {:.2}x speedup ({:.2} GFLOPS, CPU: {:.2}ms, GPU: {:.2}ms)",
-            result.dimensions.0, result.dimensions.1, result.dimensions.2,
-            result.speedup, result.gflops, result.cpu_time_ms, result.gpu_time_ms
+            result.dimensions.0,
+            result.dimensions.1,
+            result.dimensions.2,
+            result.speedup,
+            result.gflops,
+            result.cpu_time_ms,
+            result.gpu_time_ms
         );
     }
 
     // Memory results
     if let Some(memory) = &results.memory_results {
         println!("\n💾 Memory Usage:");
-        let leak_status = if memory.leaks_detected { "❌ LEAKS DETECTED" } else { "✅ NO LEAKS" };
+        let leak_status = if memory.leaks_detected {
+            "❌ LEAKS DETECTED"
+        } else {
+            "✅ NO LEAKS"
+        };
         println!(
             "  Peak GPU Memory: {} bytes, Efficiency: {:.1}%, {}",
-            memory.peak_gpu_memory, memory.efficiency_score * 100.0, leak_status
+            memory.peak_gpu_memory,
+            memory.efficiency_score * 100.0,
+            leak_status
         );
     }
 
     // Overall result
-    let overall_status = if results.success { "✅ SUCCESS" } else { "❌ FAILED" };
+    let overall_status = if results.success {
+        "✅ SUCCESS"
+    } else {
+        "❌ FAILED"
+    };
     println!("\n🎯 Overall Validation: {}", overall_status);
 }
 

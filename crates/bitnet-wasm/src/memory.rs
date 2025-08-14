@@ -1,9 +1,9 @@
 //! Memory management optimizations for WebAssembly runtime
 
-use wasm_bindgen::prelude::*;
-use web_sys::console;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use wasm_bindgen::prelude::*;
+use web_sys::console;
 
 use crate::utils::JsError;
 
@@ -25,10 +25,13 @@ impl MemoryManager {
             gc_threshold: 0.8, // 80% of max memory
         };
 
-        console::log_1(&format!(
-            "Memory manager initialized with limit: {:?} bytes",
-            max_memory_bytes
-        ).into());
+        console::log_1(
+            &format!(
+                "Memory manager initialized with limit: {:?} bytes",
+                max_memory_bytes
+            )
+            .into(),
+        );
 
         Ok(manager)
     }
@@ -46,15 +49,18 @@ impl MemoryManager {
     /// Set maximum memory limit
     pub fn set_max_memory(&mut self, bytes: Option<usize>) -> Result<(), JsError> {
         self.max_memory_bytes = bytes;
-        
+
         // Check if current usage exceeds new limit
         if let Some(max_bytes) = bytes {
             let current = self.current_usage();
             if current > max_bytes {
-                console::log_1(&format!(
-                    "Current usage ({} bytes) exceeds new limit ({} bytes), triggering GC",
-                    current, max_bytes
-                ).into());
+                console::log_1(
+                    &format!(
+                        "Current usage ({} bytes) exceeds new limit ({} bytes), triggering GC",
+                        current, max_bytes
+                    )
+                    .into(),
+                );
                 self.gc()?;
             }
         }
@@ -110,8 +116,14 @@ impl MemoryManager {
     /// Force garbage collection
     pub fn gc(&mut self) -> Result<usize, JsError> {
         let before = self.current_usage();
-        
-        console::log_1(&format!("Starting garbage collection, current usage: {} bytes", before).into());
+
+        console::log_1(
+            &format!(
+                "Starting garbage collection, current usage: {} bytes",
+                before
+            )
+            .into(),
+        );
 
         // Clear tracked allocations (in a real implementation, this would
         // actually free the memory)
@@ -130,10 +142,13 @@ impl MemoryManager {
         let after = self.current_usage();
         let freed = before.saturating_sub(after);
 
-        console::log_1(&format!(
-            "Garbage collection completed, freed {} bytes, current usage: {} bytes",
-            freed, after
-        ).into());
+        console::log_1(
+            &format!(
+                "Garbage collection completed, freed {} bytes, current usage: {} bytes",
+                freed, after
+            )
+            .into(),
+        );
 
         Ok(freed)
     }
@@ -314,12 +329,15 @@ impl ProgressiveLoader {
             0.0
         };
 
-        console::log_1(&format!(
-            "Loaded chunk: {} bytes, total: {} bytes, progress: {:.1}%",
-            chunk.len(),
-            self.loaded_size,
-            progress * 100.0
-        ).into());
+        console::log_1(
+            &format!(
+                "Loaded chunk: {} bytes, total: {} bytes, progress: {:.1}%",
+                chunk.len(),
+                self.loaded_size,
+                progress * 100.0
+            )
+            .into(),
+        );
 
         Ok(progress)
     }

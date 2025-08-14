@@ -1,14 +1,14 @@
 //! Streaming generation support for WebAssembly
 
-use wasm_bindgen::prelude::*;
-use js_sys::{Promise, AsyncIterator, Object, Reflect};
-use web_sys::{ReadableStream, ReadableStreamDefaultController, console};
-use wasm_bindgen_futures::spawn_local;
-use std::rc::Rc;
+use js_sys::{AsyncIterator, Object, Promise, Reflect};
 use std::cell::RefCell;
+use std::rc::Rc;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::spawn_local;
+use web_sys::{console, ReadableStream, ReadableStreamDefaultController};
 
 use crate::inference::WasmGenerationConfig;
-use crate::utils::{JsError, to_js_error};
+use crate::utils::{to_js_error, JsError};
 
 /// WebAssembly-compatible streaming generation
 #[wasm_bindgen]
@@ -23,7 +23,10 @@ pub struct WasmGenerationStream {
 #[wasm_bindgen]
 impl WasmGenerationStream {
     /// Create a new generation stream
-    pub fn new(prompt: String, config: WasmGenerationConfig) -> Result<WasmGenerationStream, JsError> {
+    pub fn new(
+        prompt: String,
+        config: WasmGenerationConfig,
+    ) -> Result<WasmGenerationStream, JsError> {
         console::log_1(&format!("Creating generation stream for: {}", prompt).into());
 
         // Pre-generate tokens for demonstration
@@ -63,7 +66,9 @@ impl WasmGenerationStream {
     /// Check if the stream is finished
     #[wasm_bindgen]
     pub fn is_finished(&self) -> bool {
-        self.finished || self.position >= self.tokens.len() || self.position >= self.config.max_new_tokens
+        self.finished
+            || self.position >= self.tokens.len()
+            || self.position >= self.config.max_new_tokens
     }
 
     /// Get current position in the stream
@@ -96,15 +101,18 @@ impl WasmGenerationStream {
         }));
 
         let iterator = Object::new();
-        
+
         // Create the next() method
         let stream_data_clone = stream_data.clone();
         let next_fn = Closure::wrap(Box::new(move || -> Promise {
             let stream_data = stream_data_clone.clone();
             wasm_bindgen_futures::future_to_promise(async move {
                 let mut data = stream_data.borrow_mut();
-                
-                if data.finished || data.position >= data.tokens.len() || data.position >= data.max_tokens {
+
+                if data.finished
+                    || data.position >= data.tokens.len()
+                    || data.position >= data.max_tokens
+                {
                     return Ok(Self::create_iterator_result(None, true));
                 }
 
@@ -128,7 +136,11 @@ impl WasmGenerationStream {
         // Make it an async iterator
         let symbol_async_iterator = js_sys::Symbol::async_iterator();
         let self_fn = Closure::wrap(Box::new(move || iterator.clone()) as Box<dyn Fn() -> Object>);
-        Reflect::set(&iterator, &symbol_async_iterator, self_fn.as_ref().unchecked_ref())?;
+        Reflect::set(
+            &iterator,
+            &symbol_async_iterator,
+            self_fn.as_ref().unchecked_ref(),
+        )?;
         self_fn.forget();
 
         Ok(iterator.into())
@@ -139,32 +151,40 @@ impl WasmGenerationStream {
     pub fn to_readable_stream(&self) -> Result<ReadableStream, JsError> {
         let tokens = self.tokens.clone();
         let max_tokens = self.config.max_new_tokens;
-        
-        let start_fn = Closure::wrap(Box::new(move |controller: ReadableStreamDefaultController| {
-            let tokens = tokens.clone();
-            spawn_local(async move {
-                for (i, token) in tokens.iter().enumerate() {
-                    if i >= max_tokens {
-                        break;
-                    }
 
-                    // Simulate processing delay
-                    Self::sleep(50).await;
+        let start_fn = Closure::wrap(
+            Box::new(move |controller: ReadableStreamDefaultController| {
+                let tokens = tokens.clone();
+                spawn_local(async move {
+                    for (i, token) in tokens.iter().enumerate() {
+                        if i >= max_tokens {
+                            break;
+                        }
 
-                    let chunk = js_sys::Uint8Array::from(token.as_bytes());
-                    if controller.enqueue_with_chunk(&chunk).is_err() {
-                        break;
+                        // Simulate processing delay
+                        Self::sleep(50).await;
+
+                        let chunk = js_sys::Uint8Array::from(token.as_bytes());
+                        if controller.enqueue_with_chunk(&chunk).is_err() {
+                            break;
+                        }
                     }
-                }
-                let _ = controller.close();
-            });
-        }) as Box<dyn FnMut(ReadableStreamDefaultController)>);
+                    let _ = controller.close();
+                });
+            }) as Box<dyn FnMut(ReadableStreamDefaultController)>,
+        );
 
         let underlying_source = Object::new();
-        Reflect::set(&underlying_source, &"start".into(), start_fn.as_ref().unchecked_ref())?;
+        Reflect::set(
+            &underlying_source,
+            &"start".into(),
+            start_fn.as_ref().unchecked_ref(),
+        )?;
         start_fn.forget();
 
-        Ok(ReadableStream::new_with_underlying_source(&underlying_source)?)
+        Ok(ReadableStream::new_with_underlying_source(
+            &underlying_source,
+        )?)
     }
 }
 
@@ -172,9 +192,36 @@ impl WasmGenerationStream {
     /// Simulate token generation for demonstration
     fn simulate_token_generation(prompt: &str, config: &WasmGenerationConfig) -> Vec<String> {
         let base_tokens = vec![
-            " Hello", " there", "!", " This", " is", " a", " generated", " response", " for", " your", " prompt", ":",
-            " \"", prompt, "\".", " The", " temperature", " is", " set", " to", &format!(" {:.1}", config.temperature),
-            " and", " we", " will", " generate", " up", " to", &format!(" {}", config.max_new_tokens), " tokens", "."
+            " Hello",
+            " there",
+            "!",
+            " This",
+            " is",
+            " a",
+            " generated",
+            " response",
+            " for",
+            " your",
+            " prompt",
+            ":",
+            " \"",
+            prompt,
+            "\".",
+            " The",
+            " temperature",
+            " is",
+            " set",
+            " to",
+            &format!(" {:.1}", config.temperature),
+            " and",
+            " we",
+            " will",
+            " generate",
+            " up",
+            " to",
+            &format!(" {}", config.max_new_tokens),
+            " tokens",
+            ".",
         ];
 
         let mut tokens = Vec::new();
@@ -199,13 +246,13 @@ impl WasmGenerationStream {
     /// Create an iterator result object
     fn create_iterator_result(value: Option<String>, done: bool) -> JsValue {
         let result = Object::new();
-        
+
         if let Some(val) = value {
             let _ = Reflect::set(&result, &"value".into(), &JsValue::from_str(&val));
         } else {
             let _ = Reflect::set(&result, &"value".into(), &JsValue::UNDEFINED);
         }
-        
+
         let _ = Reflect::set(&result, &"done".into(), &JsValue::from_bool(done));
         result.into()
     }
@@ -215,10 +262,7 @@ impl WasmGenerationStream {
         let promise = Promise::new(&mut |resolve, _reject| {
             web_sys::window()
                 .unwrap()
-                .set_timeout_with_callback_and_timeout_and_arguments_0(
-                    &resolve,
-                    ms,
-                )
+                .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms)
                 .unwrap();
         });
         let _ = wasm_bindgen_futures::JsFuture::from(promise).await;

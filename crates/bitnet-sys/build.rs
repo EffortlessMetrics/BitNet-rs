@@ -17,7 +17,7 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=BITNET_CPP_DIR");
     println!("cargo:rerun-if-env-changed=BITNET_CPP_PATH"); // Legacy support
-    
+
     #[cfg(feature = "ffi")]
     {
         // When crossval feature is enabled, we REQUIRE the C++ implementation
@@ -29,7 +29,7 @@ fn main() {
                  Run: ./ci/fetch_bitnet_cpp.sh\n\
                  Then: export BITNET_CPP_DIR=$HOME/.cache/bitnet_cpp"
             );
-        
+
         if !cpp_dir.exists() {
             panic!(
                 "bitnet-sys: BITNET_CPP_DIR points to non-existent path: {}\n\
@@ -37,7 +37,7 @@ fn main() {
                 cpp_dir.display()
             );
         }
-        
+
         // Verify the C++ implementation is built
         let build_dir = cpp_dir.join("build");
         if !build_dir.exists() {
@@ -47,19 +47,21 @@ fn main() {
                 build_dir.display()
             );
         }
-        
+
         println!("cargo:warning=bitnet-sys: Building with cross-validation support");
-        println!("cargo:warning=bitnet-sys: Using BitNet C++ from: {}", cpp_dir.display());
-        
+        println!(
+            "cargo:warning=bitnet-sys: Using BitNet C++ from: {}",
+            cpp_dir.display()
+        );
+
         // Link against the C++ implementation - fail on error
-        link_cpp_implementation(&cpp_dir)
-            .expect("Failed to link Microsoft BitNet C++ libraries");
-        
+        link_cpp_implementation(&cpp_dir).expect("Failed to link Microsoft BitNet C++ libraries");
+
         // Generate bindings - fail on error
         generate_bindings(&cpp_dir)
             .expect("Failed to generate FFI bindings from Microsoft BitNet headers");
     }
-    
+
     #[cfg(not(feature = "crossval"))]
     {
         // When crossval is disabled, create minimal bindings
@@ -67,14 +69,15 @@ fn main() {
         std::fs::write(
             out_path.join("bindings.rs"),
             "// Bindings disabled - crossval feature not enabled\n",
-        ).unwrap();
+        )
+        .unwrap();
     }
 }
 
 #[cfg(feature = "crossval")]
 fn link_cpp_implementation(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let build_dir = cpp_dir.join("build");
-    
+
     // Library search paths - order matters!
     let lib_search_paths = [
         build_dir.join("3rdparty/llama.cpp/src"),
@@ -83,28 +86,28 @@ fn link_cpp_implementation(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::
         build_dir.join("lib"),
         build_dir.clone(),
     ];
-    
+
     // Add all existing search paths
     let mut found_any = false;
     for path in &lib_search_paths {
         if path.exists() {
             println!("cargo:rustc-link-search=native={}", path.display());
-            
+
             // Add RPATH for runtime library resolution (Linux/macOS)
             // This eliminates the need for LD_LIBRARY_PATH/DYLD_LIBRARY_PATH
             #[cfg(any(target_os = "linux", target_os = "macos"))]
             {
                 println!("cargo:rustc-link-arg=-Wl,-rpath,{}", path.display());
             }
-            
+
             found_any = true;
         }
     }
-    
+
     if !found_any {
         return Err("No library directories found. Is BitNet C++ built?".into());
     }
-    
+
     // Helper to check if a library exists
     fn lib_present(dir: &std::path::Path, name: &str) -> bool {
         let so = dir.join(format!("lib{}.so", name));
@@ -112,16 +115,16 @@ fn link_cpp_implementation(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::
         let a = dir.join(format!("lib{}.a", name));
         so.exists() || dylib.exists() || a.exists()
     }
-    
+
     // Link the main llama library (required)
     println!("cargo:rustc-link-lib=dylib=llama");
-    
+
     // Only link ggml if it exists as a separate library
     // (it might be statically linked into llama)
     if lib_search_paths.iter().any(|dir| lib_present(dir, "ggml")) {
         println!("cargo:rustc-link-lib=dylib=ggml");
     }
-    
+
     // Platform-specific runtime dependencies
     #[cfg(target_os = "linux")]
     {
@@ -130,18 +133,18 @@ fn link_cpp_implementation(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::
         println!("cargo:rustc-link-lib=dylib=dl");
         println!("cargo:rustc-link-lib=dylib=m");
     }
-    
+
     #[cfg(target_os = "macos")]
     {
         println!("cargo:rustc-link-lib=dylib=c++");
         println!("cargo:rustc-link-lib=framework=Accelerate");
     }
-    
+
     #[cfg(target_os = "windows")]
     {
         println!("cargo:rustc-link-lib=dylib=msvcrt");
     }
-    
+
     Ok(())
 }
 
@@ -157,19 +160,26 @@ fn generate_bindings(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>
                 "llama.h not found. Expected at: {}\n\
                  Is the Microsoft BitNet repository complete?",
                 llama_h.display()
-            ).into());
+            )
+            .into());
         }
     }
-    
+
     // Also check for BitNet-specific headers
     let bitnet_h = cpp_dir.join("include/ggml-bitnet.h");
     let use_bitnet = bitnet_h.exists();
-    
-    println!("cargo:warning=bitnet-sys: Generating bindings from {}", llama_h.display());
+
+    println!(
+        "cargo:warning=bitnet-sys: Generating bindings from {}",
+        llama_h.display()
+    );
     if use_bitnet {
-        println!("cargo:warning=bitnet-sys: Also including BitNet-specific APIs from {}", bitnet_h.display());
+        println!(
+            "cargo:warning=bitnet-sys: Also including BitNet-specific APIs from {}",
+            bitnet_h.display()
+        );
     }
-    
+
     let mut builder = bindgen::Builder::default()
         .header(llama_h.to_string_lossy())
         // Include paths
@@ -188,7 +198,7 @@ fn generate_bindings(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>
         .derive_default(true)
         // Note: derive_copy automatically includes Clone
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()));
-    
+
     // Add BitNet-specific header if available
     if use_bitnet {
         builder = builder
@@ -197,13 +207,14 @@ fn generate_bindings(cpp_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>
             .allowlist_function("ggml_qgemm_lut")
             .allowlist_function("ggml_preprocessor");
     }
-    
-    let bindings = builder.generate()
+
+    let bindings = builder
+        .generate()
         .map_err(|e| format!("bindgen failed: {}", e))?;
-    
+
     let out_path = PathBuf::from(env::var("OUT_DIR")?);
     bindings.write_to_file(out_path.join("bindings.rs"))?;
-    
+
     println!("cargo:warning=bitnet-sys: Generated C++ bindings successfully");
     Ok(())
 }

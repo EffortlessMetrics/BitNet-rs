@@ -4,10 +4,10 @@
 //! and thread pool management for the C API.
 
 use crate::BitNetCError;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::collections::HashMap;
 
 /// Thread pool configuration
 #[derive(Debug, Clone)]
@@ -58,12 +58,7 @@ impl ThreadPool {
         let mut workers = Vec::with_capacity(config.num_threads);
 
         for id in 0..config.num_threads {
-            let worker = Worker::new(
-                id,
-                Arc::clone(&receiver),
-                Arc::clone(&active_jobs),
-                &config,
-            )?;
+            let worker = Worker::new(id, Arc::clone(&receiver), Arc::clone(&active_jobs), &config)?;
             workers.push(worker);
         }
 
@@ -81,10 +76,11 @@ impl ThreadPool {
         F: FnOnce() + Send + 'static,
     {
         let job = Box::new(job);
-        
-        self.sender.send(job)
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to send job to thread pool".to_string()))?;
-        
+
+        self.sender.send(job).map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to send job to thread pool".to_string())
+        })?;
+
         self.active_jobs.fetch_add(1, Ordering::SeqCst);
         Ok(())
     }
@@ -121,7 +117,7 @@ impl Drop for ThreadPool {
     fn drop(&mut self) {
         // Wait for all jobs to complete
         let _ = self.wait_for_completion();
-        
+
         // Workers will automatically stop when the sender is dropped
     }
 }
@@ -139,29 +135,33 @@ impl Worker {
         active_jobs: Arc<AtomicUsize>,
         config: &ThreadPoolConfig,
     ) -> Result<Self, BitNetCError> {
-        let mut builder = thread::Builder::new()
-            .name(format!("{}-{}", config.thread_name_prefix, id));
+        let mut builder =
+            thread::Builder::new().name(format!("{}-{}", config.thread_name_prefix, id));
 
         if let Some(stack_size) = config.stack_size {
             builder = builder.stack_size(stack_size);
         }
 
-        let thread = builder.spawn(move || {
-            loop {
-                let job = match receiver.lock() {
-                    Ok(receiver) => {
-                        match receiver.recv() {
-                            Ok(job) => job,
-                            Err(_) => break, // Channel closed
+        let thread = builder
+            .spawn(move || {
+                loop {
+                    let job = match receiver.lock() {
+                        Ok(receiver) => {
+                            match receiver.recv() {
+                                Ok(job) => job,
+                                Err(_) => break, // Channel closed
+                            }
                         }
-                    }
-                    Err(_) => break, // Mutex poisoned
-                };
+                        Err(_) => break, // Mutex poisoned
+                    };
 
-                job();
-                active_jobs.fetch_sub(1, Ordering::SeqCst);
-            }
-        }).map_err(|e| BitNetCError::ThreadSafety(format!("Failed to spawn worker thread: {}", e)))?;
+                    job();
+                    active_jobs.fetch_sub(1, Ordering::SeqCst);
+                }
+            })
+            .map_err(|e| {
+                BitNetCError::ThreadSafety(format!("Failed to spawn worker thread: {}", e))
+            })?;
 
         Ok(Worker {
             id,
@@ -209,12 +209,14 @@ impl<T> ThreadSafeRefCounter<T> {
     }
 
     pub fn read(&self) -> Result<std::sync::RwLockReadGuard<T>, BitNetCError> {
-        self.data.read()
+        self.data
+            .read()
             .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire read lock".to_string()))
     }
 
     pub fn write(&self) -> Result<std::sync::RwLockWriteGuard<T>, BitNetCError> {
-        self.data.write()
+        self.data
+            .write()
             .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire write lock".to_string()))
     }
 
@@ -231,7 +233,7 @@ impl<T> Drop for ThreadSafeRefCounter<T> {
 
 // Thread-local storage for C API state
 thread_local! {
-    static THREAD_LOCAL_STATE: std::cell::RefCell<HashMap<String, Box<dyn std::any::Any>>> = 
+    static THREAD_LOCAL_STATE: std::cell::RefCell<HashMap<String, Box<dyn std::any::Any>>> =
         std::cell::RefCell::new(HashMap::new());
 }
 
@@ -245,7 +247,8 @@ pub fn set_thread_local<T: 'static>(key: &str, value: T) {
 /// Get thread-local value
 pub fn get_thread_local<T: 'static + Clone>(key: &str) -> Option<T> {
     THREAD_LOCAL_STATE.with(|state| {
-        state.borrow()
+        state
+            .borrow()
             .get(key)
             .and_then(|any| any.downcast_ref::<T>())
             .cloned()
@@ -275,8 +278,9 @@ impl ThreadManager {
 
     /// Initialize the thread pool
     pub fn initialize(&self) -> Result<(), BitNetCError> {
-        let mut pool = self.thread_pool.write()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire thread pool write lock".to_string()))?;
+        let mut pool = self.thread_pool.write().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire thread pool write lock".to_string())
+        })?;
 
         if pool.is_none() {
             let config = ThreadPoolConfig {
@@ -292,14 +296,17 @@ impl ThreadManager {
     /// Set the number of threads
     pub fn set_num_threads(&self, num_threads: usize) -> Result<(), BitNetCError> {
         if num_threads == 0 {
-            return Err(BitNetCError::InvalidArgument("num_threads must be greater than 0".to_string()));
+            return Err(BitNetCError::InvalidArgument(
+                "num_threads must be greater than 0".to_string(),
+            ));
         }
 
         self.num_threads.store(num_threads, Ordering::SeqCst);
 
         // Recreate thread pool with new thread count
-        let mut pool = self.thread_pool.write()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire thread pool write lock".to_string()))?;
+        let mut pool = self.thread_pool.write().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire thread pool write lock".to_string())
+        })?;
 
         let config = ThreadPoolConfig {
             num_threads,
@@ -320,30 +327,37 @@ impl ThreadManager {
     where
         F: FnOnce() + Send + 'static,
     {
-        let pool = self.thread_pool.read()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire thread pool read lock".to_string()))?;
+        let pool = self.thread_pool.read().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire thread pool read lock".to_string())
+        })?;
 
         match pool.as_ref() {
             Some(pool) => pool.execute(job),
-            None => Err(BitNetCError::ThreadSafety("Thread pool not initialized".to_string())),
+            None => Err(BitNetCError::ThreadSafety(
+                "Thread pool not initialized".to_string(),
+            )),
         }
     }
 
     /// Get thread pool statistics
     pub fn get_stats(&self) -> Result<ThreadPoolStats, BitNetCError> {
-        let pool = self.thread_pool.read()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire thread pool read lock".to_string()))?;
+        let pool = self.thread_pool.read().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire thread pool read lock".to_string())
+        })?;
 
         match pool.as_ref() {
             Some(pool) => Ok(pool.get_stats()),
-            None => Err(BitNetCError::ThreadSafety("Thread pool not initialized".to_string())),
+            None => Err(BitNetCError::ThreadSafety(
+                "Thread pool not initialized".to_string(),
+            )),
         }
     }
 
     /// Wait for all active jobs to complete
     pub fn wait_for_completion(&self) -> Result<(), BitNetCError> {
-        let pool = self.thread_pool.read()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire thread pool read lock".to_string()))?;
+        let pool = self.thread_pool.read().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire thread pool read lock".to_string())
+        })?;
 
         match pool.as_ref() {
             Some(pool) => pool.wait_for_completion(),
@@ -353,8 +367,9 @@ impl ThreadManager {
 
     /// Cleanup the thread pool
     pub fn cleanup(&self) -> Result<(), BitNetCError> {
-        let mut pool = self.thread_pool.write()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire thread pool write lock".to_string()))?;
+        let mut pool = self.thread_pool.write().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire thread pool write lock".to_string())
+        })?;
 
         if let Some(pool_instance) = pool.take() {
             pool_instance.wait_for_completion()?;
@@ -427,7 +442,8 @@ mod tests {
 
         pool.execute(move || {
             executed_clone.store(true, Ordering::SeqCst);
-        }).unwrap();
+        })
+        .unwrap();
 
         // Wait a bit for the job to execute
         thread::sleep(Duration::from_millis(100));
@@ -466,21 +482,23 @@ mod tests {
     fn test_thread_manager() {
         let manager = ThreadManager::new();
         assert!(manager.initialize().is_ok());
-        
+
         let _original_threads = manager.get_num_threads();
         assert!(manager.set_num_threads(4).is_ok());
         assert_eq!(manager.get_num_threads(), 4);
-        
+
         let executed = Arc::new(AtomicBool::new(false));
         let executed_clone = Arc::clone(&executed);
-        
-        assert!(manager.execute(move || {
-            executed_clone.store(true, Ordering::SeqCst);
-        }).is_ok());
-        
+
+        assert!(manager
+            .execute(move || {
+                executed_clone.store(true, Ordering::SeqCst);
+            })
+            .is_ok());
+
         thread::sleep(Duration::from_millis(100));
         assert!(executed.load(Ordering::SeqCst));
-        
+
         assert!(manager.cleanup().is_ok());
     }
 

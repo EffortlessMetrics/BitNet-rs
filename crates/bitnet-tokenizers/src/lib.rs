@@ -1,14 +1,14 @@
 //! Tokenization support for BitNet models
 
-mod mock;
 pub mod loader;
+mod mock;
 
 use bitnet_common::Result;
 use std::path::Path;
 use std::sync::Arc;
 
-pub use mock::MockTokenizer;
 pub use loader::load_tokenizer;
+pub use mock::MockTokenizer;
 
 /// Tokenizer trait
 pub trait Tokenizer: Send + Sync {

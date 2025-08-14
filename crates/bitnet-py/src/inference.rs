@@ -3,18 +3,18 @@
 //! Python bindings for the BitNet inference engine with streaming support
 //! and async/await compatibility.
 
+use pyo3::exceptions::{PyRuntimeError, PyStopIteration, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyString, PyIterator};
-use pyo3::exceptions::{PyRuntimeError, PyValueError, PyStopIteration};
+use pyo3::types::{PyDict, PyIterator, PyList, PyString};
 // use pyo3_asyncio_0_21::tokio::future_into_py;
+use futures_util::StreamExt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use futures_util::StreamExt;
 
-use bitnet_inference::{InferenceEngine, GenerationConfig, InferenceConfig};
-use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
+use crate::{parse_device, to_py_result, PyBitNetModel};
 use bitnet_common::Device;
-use crate::{PyBitNetModel, to_py_result, parse_device};
+use bitnet_inference::{GenerationConfig, InferenceConfig, InferenceEngine};
+use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 
 /// Python wrapper for the inference engine
 #[pyclass(name = "InferenceEngine")]
@@ -47,19 +47,22 @@ impl PyInferenceEngine {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
-            
+
             rt.block_on(async {
                 let device = parse_device(device)?;
-                
+
                 // Load tokenizer
                 let tokenizer_name = tokenizer.unwrap_or("gpt2");
-                let tokenizer = TokenizerBuilder::from_pretrained(tokenizer_name)
-                    .map_err(|e| PyRuntimeError::new_err(format!("Failed to load tokenizer: {}", e)))?;
-                
+                let tokenizer = TokenizerBuilder::from_pretrained(tokenizer_name).map_err(|e| {
+                    PyRuntimeError::new_err(format!("Failed to load tokenizer: {}", e))
+                })?;
+
                 // Create inference engine
                 let engine = InferenceEngine::new(model.inner(), tokenizer, device.clone())
-                    .map_err(|e| PyRuntimeError::new_err(format!("Failed to create engine: {}", e)))?;
-                
+                    .map_err(|e| {
+                        PyRuntimeError::new_err(format!("Failed to create engine: {}", e))
+                    })?;
+
                 Ok(Self::new(engine, device))
             })
         })
@@ -80,7 +83,7 @@ impl PyInferenceEngine {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
-            
+
             rt.block_on(async {
                 let config = GenerationConfig {
                     max_new_tokens: max_tokens.unwrap_or(100),
@@ -89,11 +92,13 @@ impl PyInferenceEngine {
                     top_k: top_k.unwrap_or(50),
                     ..Default::default()
                 };
-                
+
                 let mut engine = self.inner.write().await;
-                let result = engine.generate_with_config(prompt, &config).await
+                let result = engine
+                    .generate_with_config(prompt, &config)
+                    .await
                     .map_err(|e| PyRuntimeError::new_err(format!("Generation failed: {}", e)))?;
-                
+
                 Ok(result)
             })
         })
@@ -121,10 +126,10 @@ impl PyInferenceEngine {
             top_k: top_k.unwrap_or(50),
             ..Default::default()
         };
-        
+
         let engine = self.inner.clone();
         let prompt = prompt.to_string();
-        
+
         Ok(PyStreamingGenerator::new(engine, prompt, config))
     }
 
@@ -133,17 +138,17 @@ impl PyInferenceEngine {
     fn model_config(&self, py: Python<'_>) -> PyResult<PyObject> {
         let rt = tokio::runtime::Runtime::new()
             .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
-        
+
         rt.block_on(async {
             let engine = self.inner.read().await;
             let config = engine.model_config();
-            
+
             let py_config = PyDict::new(py);
             py_config.set_item("vocab_size", config.model.vocab_size)?;
             py_config.set_item("hidden_size", config.model.hidden_size)?;
             py_config.set_item("num_layers", config.model.num_layers)?;
             py_config.set_item("num_attention_heads", config.model.num_attention_heads)?;
-            
+
             Ok(py_config.into())
         })
     }
@@ -158,16 +163,16 @@ impl PyInferenceEngine {
     fn get_stats(&self, py: Python<'_>) -> PyResult<PyObject> {
         let rt = tokio::runtime::Runtime::new()
             .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
-        
+
         rt.block_on(async {
             let engine = self.inner.read().await;
             let stats = engine.get_stats().await;
-            
+
             let py_stats = PyDict::new(py);
             py_stats.set_item("cache_size", stats.cache_size)?;
             py_stats.set_item("cache_usage", stats.cache_usage)?;
             py_stats.set_item("backend_type", stats.backend_type)?;
-            
+
             Ok(py_stats.into())
         })
     }
@@ -177,7 +182,7 @@ impl PyInferenceEngine {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
-            
+
             rt.block_on(async {
                 let engine = self.inner.read().await;
                 engine.clear_cache().await;
@@ -202,11 +207,7 @@ pub struct PyStreamingGenerator {
 }
 
 impl PyStreamingGenerator {
-    fn new(
-        engine: Arc<RwLock<InferenceEngine>>,
-        prompt: String,
-        config: GenerationConfig,
-    ) -> Self {
+    fn new(engine: Arc<RwLock<InferenceEngine>>, prompt: String, config: GenerationConfig) -> Self {
         Self {
             engine,
             prompt,
@@ -231,7 +232,7 @@ impl PyStreamingGenerator {
             // For now, return a mock implementation
             return Ok(Some("Hello".to_string()));
         }
-        
+
         // Mock streaming - in practice this would use the actual streaming API
         static mut COUNTER: usize = 0;
         unsafe {
@@ -247,9 +248,11 @@ impl PyStreamingGenerator {
 
     /// String representation
     fn __repr__(&self) -> String {
-        format!("StreamingGenerator(prompt='{}...', max_tokens={})", 
-                &self.prompt[..20.min(self.prompt.len())], 
-                self.config.max_new_tokens)
+        format!(
+            "StreamingGenerator(prompt='{}...', max_tokens={})",
+            &self.prompt[..20.min(self.prompt.len())],
+            self.config.max_new_tokens
+        )
     }
 }
 
@@ -265,18 +268,20 @@ pub fn batch_generate(
     py.allow_threads(|| {
         let rt = tokio::runtime::Runtime::new()
             .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
-        
+
         rt.block_on(async {
             let mut results = Vec::new();
             let config = GenerationConfig::default();
-            
+
             for prompt in prompts {
                 let mut engine_guard = engine.inner.write().await;
-                let result = engine_guard.generate_with_config(&prompt, &config).await
+                let result = engine_guard
+                    .generate_with_config(&prompt, &config)
+                    .await
                     .map_err(|e| PyRuntimeError::new_err(format!("Generation failed: {}", e)))?;
                 results.push(result);
             }
-            
+
             Ok(results)
         })
     })
@@ -296,7 +301,7 @@ mod tests {
             "test prompt".to_string(),
             GenerationConfig::default(),
         );
-        
+
         assert!(!generator.started);
         assert!(generator.prompt == "test prompt");
     }

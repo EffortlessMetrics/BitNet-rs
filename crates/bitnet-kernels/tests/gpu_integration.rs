@@ -1,5 +1,5 @@
 //! Integration tests for GPU kernel validation
-//! 
+//!
 //! These tests validate the complete GPU kernel system including:
 //! - Numerical accuracy against CPU implementations
 //! - Performance benchmarking and speedup measurement
@@ -8,20 +8,20 @@
 
 #[cfg(feature = "cuda")]
 mod cuda_tests {
+    use bitnet_common::QuantizationType;
     use bitnet_kernels::gpu::{
-        CudaKernel, GpuValidator, ValidationConfig, GpuBenchmark, BenchmarkConfig,
-        print_validation_results, print_benchmark_results, quick_benchmark
+        print_benchmark_results, print_validation_results, quick_benchmark, BenchmarkConfig,
+        CudaKernel, GpuBenchmark, GpuValidator, ValidationConfig,
     };
     use bitnet_kernels::KernelProvider;
-    use bitnet_common::QuantizationType;
 
     #[test]
     #[ignore] // Run with: cargo test --features cuda --ignored
     fn test_comprehensive_gpu_validation() {
         env_logger::init();
-        
+
         println!("🚀 Starting comprehensive GPU validation");
-        
+
         // Test 1: Basic CUDA availability
         println!("\n1️⃣ Testing CUDA availability...");
         match CudaKernel::new() {
@@ -51,30 +51,29 @@ mod cuda_tests {
         };
 
         let validator = GpuValidator::with_config(validation_config);
-        let validation_results = validator.validate()
-            .expect("GPU validation should succeed");
+        let validation_results = validator.validate().expect("GPU validation should succeed");
 
         print_validation_results(&validation_results);
-        
+
         // Verify all accuracy tests passed
         for result in &validation_results.accuracy_results {
-            assert!(result.passed, 
+            assert!(
+                result.passed,
                 "Accuracy test failed for {:?}: max_error={:.2e} > tolerance={:.2e}",
                 result.dimensions, result.max_error, 1e-6
             );
         }
 
-        assert!(validation_results.success, "Overall validation should succeed");
+        assert!(
+            validation_results.success,
+            "Overall validation should succeed"
+        );
         println!("✅ Numerical accuracy validation passed");
 
         // Test 3: Performance benchmarking
         println!("\n3️⃣ Running performance benchmarks...");
         let benchmark_config = BenchmarkConfig {
-            test_sizes: vec![
-                (256, 256, 256),
-                (512, 512, 512),
-                (1024, 1024, 1024),
-            ],
+            test_sizes: vec![(256, 256, 256), (512, 512, 512), (1024, 1024, 1024)],
             warmup_iterations: 10,
             benchmark_iterations: 50,
             include_cpu_comparison: true,
@@ -82,16 +81,19 @@ mod cuda_tests {
         };
 
         let benchmark = GpuBenchmark::with_config(benchmark_config);
-        let benchmark_results = benchmark.run()
-            .expect("GPU benchmark should succeed");
+        let benchmark_results = benchmark.run().expect("GPU benchmark should succeed");
 
         print_benchmark_results(&benchmark_results);
 
         // Verify reasonable performance
-        assert!(benchmark_results.summary.avg_speedup > 0.5, 
-            "GPU should not be significantly slower than CPU");
-        assert!(benchmark_results.summary.peak_gflops > 1.0,
-            "GPU should achieve reasonable GFLOPS");
+        assert!(
+            benchmark_results.summary.avg_speedup > 0.5,
+            "GPU should not be significantly slower than CPU"
+        );
+        assert!(
+            benchmark_results.summary.peak_gflops > 1.0,
+            "GPU should achieve reasonable GFLOPS"
+        );
 
         println!("✅ Performance benchmarking completed");
 
@@ -111,18 +113,18 @@ mod cuda_tests {
     fn test_memory_management() {
         // Test multiple kernel creations don't leak memory
         for i in 0..20 {
-            let mut kernel = CudaKernel::new()
-                .expect("Should be able to create CUDA kernel");
+            let mut kernel = CudaKernel::new().expect("Should be able to create CUDA kernel");
 
             // Test with various matrix sizes
             let sizes = [(16, 16, 16), (64, 64, 64), (128, 128, 128)];
-            
+
             for &(m, n, k) in &sizes {
                 let a = vec![1i8; m * k];
                 let b = vec![1u8; k * n];
                 let mut c = vec![0.0f32; m * n];
 
-                kernel.matmul_i2s(&a, &b, &mut c, m, n, k)
+                kernel
+                    .matmul_i2s(&a, &b, &mut c, m, n, k)
                     .expect("Matrix multiplication should succeed");
             }
 
@@ -133,8 +135,7 @@ mod cuda_tests {
     }
 
     fn test_error_handling() {
-        let mut kernel = CudaKernel::new()
-            .expect("Should be able to create CUDA kernel");
+        let mut kernel = CudaKernel::new().expect("Should be able to create CUDA kernel");
 
         // Test invalid matrix dimensions
         let a = vec![1i8; 16];
@@ -149,7 +150,10 @@ mod cuda_tests {
             }
             Err(e) => {
                 // If it fails, that's also fine - proper error handling
-                println!("   Kernel properly reported error for mismatched dimensions: {}", e);
+                println!(
+                    "   Kernel properly reported error for mismatched dimensions: {}",
+                    e
+                );
             }
         }
 
@@ -172,9 +176,9 @@ mod cuda_tests {
     #[ignore] // Run with: cargo test --features cuda --ignored
     fn test_quick_benchmark_integration() {
         env_logger::init();
-        
+
         println!("🏃 Running quick benchmark integration test");
-        
+
         match quick_benchmark() {
             Ok(_) => {
                 println!("✅ Quick benchmark completed successfully");
@@ -189,36 +193,35 @@ mod cuda_tests {
     #[ignore] // Run with: cargo test --features cuda --ignored
     fn test_large_matrix_performance() {
         env_logger::init();
-        
+
         println!("🔢 Testing large matrix performance");
-        
-        let mut kernel = CudaKernel::new()
-            .expect("Should be able to create CUDA kernel");
+
+        let mut kernel = CudaKernel::new().expect("Should be able to create CUDA kernel");
 
         // Test progressively larger matrices
-        let sizes = [
-            (512, 512, 512),
-            (1024, 1024, 1024),
-            (2048, 1024, 512),
-        ];
+        let sizes = [(512, 512, 512), (1024, 1024, 1024), (2048, 1024, 512)];
 
         for &(m, n, k) in &sizes {
             println!("   Testing {}x{}x{} matrix...", m, n, k);
-            
-            let a: Vec<i8> = (0..m*k).map(|i| ((i % 3) as i8) - 1).collect();
-            let b: Vec<u8> = (0..k*n).map(|i| (i % 2) as u8).collect();
+
+            let a: Vec<i8> = (0..m * k).map(|i| ((i % 3) as i8) - 1).collect();
+            let b: Vec<u8> = (0..k * n).map(|i| (i % 2) as u8).collect();
             let mut c = vec![0.0f32; m * n];
 
             let start = std::time::Instant::now();
-            kernel.matmul_i2s(&a, &b, &mut c, m, n, k)
+            kernel
+                .matmul_i2s(&a, &b, &mut c, m, n, k)
                 .expect("Large matrix multiplication should succeed");
             let elapsed = start.elapsed();
 
             let operations = 2.0 * m as f64 * n as f64 * k as f64;
             let gflops = operations / elapsed.as_secs_f64() / 1e9;
 
-            println!("     Completed in {:.2}ms ({:.1} GFLOPS)", 
-                elapsed.as_secs_f64() * 1000.0, gflops);
+            println!(
+                "     Completed in {:.2}ms ({:.1} GFLOPS)",
+                elapsed.as_secs_f64() * 1000.0,
+                gflops
+            );
 
             // Verify result is not all zeros
             let nonzero_count = c.iter().filter(|&&x| x != 0.0).count();
@@ -229,26 +232,26 @@ mod cuda_tests {
     }
 
     #[test]
-    #[ignore] // Run with: cargo test --features cuda --ignored  
+    #[ignore] // Run with: cargo test --features cuda --ignored
     fn test_concurrent_kernel_usage() {
         env_logger::init();
-        
+
         println!("🔄 Testing concurrent kernel usage");
-        
-        use std::thread;
+
         use std::sync::Arc;
-        
+        use std::thread;
+
         // Note: CUDA contexts are not thread-safe by default
         // This test verifies proper error handling for concurrent access
-        
-        let handles: Vec<_> = (0..4).map(|i| {
-            thread::spawn(move || {
-                match CudaKernel::new() {
+
+        let handles: Vec<_> = (0..4)
+            .map(|i| {
+                thread::spawn(move || match CudaKernel::new() {
                     Ok(mut kernel) => {
                         let a = vec![1i8; 64];
                         let b = vec![1u8; 64];
                         let mut c = vec![0.0f32; 64];
-                        
+
                         match kernel.matmul_i2s(&a, &b, &mut c, 8, 8, 8) {
                             Ok(_) => {
                                 println!("   Thread {} completed successfully", i);
@@ -264,22 +267,20 @@ mod cuda_tests {
                         println!("   Thread {} failed to create kernel: {}", i, e);
                         false
                     }
-                }
+                })
             })
-        }).collect();
-
-        let results: Vec<bool> = handles.into_iter()
-            .map(|h| h.join().unwrap())
             .collect();
+
+        let results: Vec<bool> = handles.into_iter().map(|h| h.join().unwrap()).collect();
 
         // At least some threads should succeed
         let success_count = results.iter().filter(|&&x| x).count();
         println!("   {}/{} threads succeeded", success_count, results.len());
-        
+
         // We don't require all to succeed since CUDA may have limitations
         // but at least one should work
         assert!(success_count > 0, "At least one thread should succeed");
-        
+
         println!("✅ Concurrent kernel usage test completed");
     }
 }

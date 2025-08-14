@@ -4,9 +4,9 @@ use bitnet_common::{QuantizationType, Result};
 use std::sync::OnceLock;
 
 pub mod cpu;
+pub mod ffi;
 #[cfg(feature = "cuda")]
 pub mod gpu;
-pub mod ffi;
 
 /// Kernel provider trait
 pub trait KernelProvider: Send + Sync {
@@ -38,10 +38,8 @@ pub struct KernelManager {
 
 impl KernelManager {
     pub fn new() -> Self {
-        let mut providers: Vec<Box<dyn KernelProvider>> = vec![
-            Box::new(cpu::FallbackKernel),
-        ];
-        
+        let mut providers: Vec<Box<dyn KernelProvider>> = vec![Box::new(cpu::FallbackKernel)];
+
         // Add GPU kernels first (highest priority)
         #[cfg(feature = "cuda")]
         {
@@ -54,7 +52,7 @@ impl KernelManager {
                 log::debug!("CUDA kernel not available");
             }
         }
-        
+
         // Add optimized CPU kernels in order of preference (best first)
         // Note: AVX-512 is disabled due to unstable Rust features
         // #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -63,23 +61,31 @@ impl KernelManager {
         //         providers.insert(-1, Box::new(cpu::Avx512Kernel));
         //     }
         // }
-        
+
         #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
         {
             if is_x86_feature_detected!("avx2") {
-                let insert_pos = if providers.len() > 1 { providers.len() - 1 } else { 0 };
+                let insert_pos = if providers.len() > 1 {
+                    providers.len() - 1
+                } else {
+                    0
+                };
                 providers.insert(insert_pos, Box::new(cpu::Avx2Kernel));
             }
         }
-        
+
         #[cfg(all(target_arch = "aarch64", feature = "neon"))]
         {
             if std::arch::is_aarch64_feature_detected!("neon") {
-                let insert_pos = if providers.len() > 1 { providers.len() - 1 } else { 0 };
+                let insert_pos = if providers.len() > 1 {
+                    providers.len() - 1
+                } else {
+                    0
+                };
                 providers.insert(insert_pos, Box::new(cpu::NeonKernel));
             }
         }
-        
+
         // Add FFI kernel as a fallback option (lower priority than optimized kernels)
         #[cfg(feature = "ffi-bridge")]
         {
@@ -89,13 +95,13 @@ impl KernelManager {
                 }
             }
         }
-        
+
         Self {
             providers,
             selected: OnceLock::new(),
         }
     }
-    
+
     /// Select the best available kernel provider with caching
     pub fn select_best(&self) -> Result<&dyn KernelProvider> {
         let selected_idx = self.selected.get_or_init(|| {
@@ -110,7 +116,7 @@ impl KernelManager {
             // Return fallback kernel index (should always be last and available)
             self.providers.len() - 1
         });
-        
+
         if *selected_idx < self.providers.len() {
             Ok(self.providers[*selected_idx].as_ref())
         } else {
@@ -119,22 +125,24 @@ impl KernelManager {
             ))
         }
     }
-    
+
     /// Get the name of the currently selected kernel provider
     pub fn selected_provider_name(&self) -> Option<&'static str> {
-        self.selected.get()
+        self.selected
+            .get()
             .and_then(|&idx| self.providers.get(idx))
             .map(|provider| provider.name())
     }
-    
+
     /// List all available kernel providers
     pub fn list_available_providers(&self) -> Vec<&'static str> {
-        self.providers.iter()
+        self.providers
+            .iter()
             .filter(|provider| provider.is_available())
             .map(|provider| provider.name())
             .collect()
     }
-    
+
     /// Force reselection of kernel provider (for testing)
     #[cfg(test)]
     pub fn reset_selection(&mut self) {
@@ -150,30 +158,28 @@ impl Default for KernelManager {
 
 /// Select the best CPU kernel provider
 pub fn select_cpu_kernel() -> Result<Box<dyn KernelProvider>> {
-    let mut providers: Vec<Box<dyn KernelProvider>> = vec![
-        Box::new(cpu::FallbackKernel),
-    ];
-    
+    let mut providers: Vec<Box<dyn KernelProvider>> = vec![Box::new(cpu::FallbackKernel)];
+
     #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
     {
         if is_x86_feature_detected!("avx2") {
             providers.insert(0, Box::new(cpu::Avx2Kernel));
         }
     }
-    
+
     #[cfg(all(target_arch = "aarch64", feature = "neon"))]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
             providers.insert(0, Box::new(cpu::NeonKernel));
         }
     }
-    
+
     for provider in providers {
         if provider.is_available() {
             return Ok(provider);
         }
     }
-    
+
     Err(bitnet_common::BitNetError::Kernel(
         bitnet_common::KernelError::NoProvider,
     ))
@@ -200,9 +206,9 @@ pub fn select_gpu_kernel(_device_id: usize) -> Result<Box<dyn KernelProvider>> {
 }
 
 // Re-export commonly used types
-pub use cpu::FallbackKernel;
 #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
 pub use cpu::Avx2Kernel;
+pub use cpu::FallbackKernel;
 #[cfg(all(target_arch = "aarch64", feature = "neon"))]
 pub use cpu::NeonKernel;
 #[cfg(feature = "cuda")]

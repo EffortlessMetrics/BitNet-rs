@@ -54,13 +54,13 @@ pub mod safe {
     pub enum SysError {
         #[error("Null pointer returned from C++")]
         NullPointer,
-        
+
         #[error("Invalid string encoding: {0}")]
         InvalidString(#[from] std::ffi::NulError),
-        
+
         #[error("C++ function returned error code: {0}")]
         CppError(i32),
-        
+
         #[error("Invalid parameter: {0}")]
         InvalidParameter(String),
     }
@@ -101,9 +101,9 @@ pub mod safe {
 
     impl ModelHandle {
         /// Create a new model handle from a raw pointer
-        /// 
+        ///
         /// # Safety
-        /// 
+        ///
         /// The pointer must be valid and point to a valid C++ model object
         pub unsafe fn from_raw(ptr: *mut c_void) -> Option<Self> {
             if ptr.is_null() {
@@ -114,9 +114,9 @@ pub mod safe {
         }
 
         /// Get the raw pointer
-        /// 
+        ///
         /// # Safety
-        /// 
+        ///
         /// The returned pointer is only valid as long as this handle exists
         pub unsafe fn as_raw(&self) -> *mut c_void {
             self.0
@@ -137,32 +137,27 @@ pub mod safe {
     /// Load a model from file
     pub fn load_model(path: &str) -> Result<ModelHandle> {
         let c_path = CString::new(path)?;
-        
+
         // Placeholder implementation
         // In real code, this would call bitnet_cpp_load_model(c_path.as_ptr())
         let raw_ptr = ptr::null_mut(); // Placeholder
-        
-        unsafe {
-            ModelHandle::from_raw(raw_ptr)
-                .ok_or(SysError::NullPointer)
-        }
+
+        unsafe { ModelHandle::from_raw(raw_ptr).ok_or(SysError::NullPointer) }
     }
 
     /// Generate tokens using a loaded model
-    pub fn generate(
-        model: &ModelHandle,
-        prompt: &str,
-        max_tokens: usize,
-    ) -> Result<Vec<u32>> {
+    pub fn generate(model: &ModelHandle, prompt: &str, max_tokens: usize) -> Result<Vec<u32>> {
         let c_prompt = CString::new(prompt)?;
-        
+
         if max_tokens == 0 {
-            return Err(SysError::InvalidParameter("max_tokens must be > 0".to_string()));
+            return Err(SysError::InvalidParameter(
+                "max_tokens must be > 0".to_string(),
+            ));
         }
-        
+
         let mut tokens = vec![0u32; max_tokens];
         let mut actual_count: c_int = 0;
-        
+
         // Placeholder implementation
         // In real code, this would call:
         // let result = bitnet_cpp_generate(
@@ -172,17 +167,19 @@ pub mod safe {
         //     tokens.as_mut_ptr(),
         //     &mut actual_count,
         // );
-        
+
         let result = 0; // Placeholder success
-        
+
         if result != 0 {
             return Err(SysError::CppError(result));
         }
-        
+
         if actual_count < 0 {
-            return Err(SysError::InvalidParameter("Invalid token count".to_string()));
+            return Err(SysError::InvalidParameter(
+                "Invalid token count".to_string(),
+            ));
         }
-        
+
         tokens.truncate(actual_count as usize);
         Ok(tokens)
     }

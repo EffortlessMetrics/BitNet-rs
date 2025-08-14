@@ -1,12 +1,12 @@
 //! GPU kernel benchmarking utilities
-//! 
+//!
 //! This module provides comprehensive benchmarking tools for comparing
 //! GPU and CPU kernel performance across different matrix sizes and
 //! configurations.
 
-use crate::{KernelProvider, cpu::x86::Avx2Kernel, cpu::fallback::FallbackKernel};
 use crate::gpu::cuda::CudaKernel;
 use crate::gpu::validation::PerformanceResult;
+use crate::{cpu::fallback::FallbackKernel, cpu::x86::Avx2Kernel, KernelProvider};
 use bitnet_common::Result;
 
 use std::time::Instant;
@@ -94,13 +94,18 @@ impl GpuBenchmark {
     /// Run comprehensive benchmarks
     pub fn run(&self) -> Result<BenchmarkResults> {
         log::info!("Starting comprehensive GPU kernel benchmarks");
-        
+
         let mut results = Vec::new();
         let mut total_operations = 0u64;
 
         for &dimensions in &self.config.test_sizes {
-            log::info!("Benchmarking {}x{}x{}", dimensions.0, dimensions.1, dimensions.2);
-            
+            log::info!(
+                "Benchmarking {}x{}x{}",
+                dimensions.0,
+                dimensions.1,
+                dimensions.2
+            );
+
             let result = self.benchmark_matrix_size(dimensions)?;
             total_operations += 2 * dimensions.0 as u64 * dimensions.1 as u64 * dimensions.2 as u64;
             results.push(result);
@@ -119,18 +124,24 @@ impl GpuBenchmark {
             total_operations,
         };
 
-        log::info!("Benchmark completed. Average speedup: {:.2}x", summary.avg_speedup);
+        log::info!(
+            "Benchmark completed. Average speedup: {:.2}x",
+            summary.avg_speedup
+        );
 
         Ok(BenchmarkResults { results, summary })
     }
 
     /// Benchmark a specific matrix size
-    fn benchmark_matrix_size(&self, dimensions: (usize, usize, usize)) -> Result<PerformanceResult> {
+    fn benchmark_matrix_size(
+        &self,
+        dimensions: (usize, usize, usize),
+    ) -> Result<PerformanceResult> {
         let (m, n, k) = dimensions;
 
         // Create test data
-        let a: Vec<i8> = (0..m*k).map(|i| ((i % 3) as i8) - 1).collect();
-        let b: Vec<u8> = (0..k*n).map(|i| (i % 2) as u8).collect();
+        let a: Vec<i8> = (0..m * k).map(|i| ((i % 3) as i8) - 1).collect();
+        let b: Vec<u8> = (0..k * n).map(|i| (i % 2) as u8).collect();
 
         // Benchmark CPU if requested
         let cpu_time_ms = if self.config.include_cpu_comparison {
@@ -143,7 +154,11 @@ impl GpuBenchmark {
         let gpu_time_ms = self.benchmark_gpu(&a, &b, m, n, k)?;
 
         // Calculate metrics
-        let speedup = if cpu_time_ms > 0.0 { cpu_time_ms / gpu_time_ms } else { 0.0 };
+        let speedup = if cpu_time_ms > 0.0 {
+            cpu_time_ms / gpu_time_ms
+        } else {
+            0.0
+        };
         let operations = 2.0 * m as f64 * n as f64 * k as f64;
         let gflops = operations / (gpu_time_ms * 1e6);
 
@@ -223,15 +238,21 @@ impl Default for GpuBenchmark {
 /// Print benchmark results in a human-readable format
 pub fn print_benchmark_results(results: &BenchmarkResults) {
     println!("\n=== GPU Kernel Benchmark Results ===");
-    
+
     println!("\n📊 Performance by Matrix Size:");
-    println!("{:>12} {:>12} {:>12} {:>12} {:>12}", "Size", "CPU (ms)", "GPU (ms)", "Speedup", "GFLOPS");
+    println!(
+        "{:>12} {:>12} {:>12} {:>12} {:>12}",
+        "Size", "CPU (ms)", "GPU (ms)", "Speedup", "GFLOPS"
+    );
     println!("{:-<65}", "");
-    
+
     for result in &results.results {
         println!(
             "{:>12} {:>12.2} {:>12.2} {:>12.2}x {:>12.1}",
-            format!("{}x{}x{}", result.dimensions.0, result.dimensions.1, result.dimensions.2),
+            format!(
+                "{}x{}x{}",
+                result.dimensions.0, result.dimensions.1, result.dimensions.2
+            ),
             result.cpu_time_ms,
             result.gpu_time_ms,
             result.speedup,
@@ -245,7 +266,10 @@ pub fn print_benchmark_results(results: &BenchmarkResults) {
     println!("  Minimum Speedup: {:.2}x", results.summary.min_speedup);
     println!("  Average GFLOPS:  {:.1}", results.summary.avg_gflops);
     println!("  Peak GFLOPS:     {:.1}", results.summary.peak_gflops);
-    println!("  Total Operations: {:.2e}", results.summary.total_operations as f64);
+    println!(
+        "  Total Operations: {:.2e}",
+        results.summary.total_operations as f64
+    );
 
     // Performance analysis
     println!("\n🎯 Performance Analysis:");

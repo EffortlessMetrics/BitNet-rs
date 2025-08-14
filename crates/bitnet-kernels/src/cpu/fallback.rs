@@ -30,12 +30,12 @@ impl KernelProvider for FallbackKernel {
     fn name(&self) -> &'static str {
         "fallback"
     }
-    
+
     fn is_available(&self) -> bool {
         // Fallback kernel is always available
         true
     }
-    
+
     fn matmul_i2s(
         &self,
         a: &[i8],
@@ -48,17 +48,29 @@ impl KernelProvider for FallbackKernel {
         // Validate input dimensions
         if a.len() != m * k {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!("Matrix A dimension mismatch: expected {}, got {}", m * k, a.len()),
+                reason: format!(
+                    "Matrix A dimension mismatch: expected {}, got {}",
+                    m * k,
+                    a.len()
+                ),
             }));
         }
         if b.len() != k * n {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!("Matrix B dimension mismatch: expected {}, got {}", k * n, b.len()),
+                reason: format!(
+                    "Matrix B dimension mismatch: expected {}, got {}",
+                    k * n,
+                    b.len()
+                ),
             }));
         }
         if c.len() != m * n {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!("Matrix C dimension mismatch: expected {}, got {}", m * n, c.len()),
+                reason: format!(
+                    "Matrix C dimension mismatch: expected {}, got {}",
+                    m * n,
+                    c.len()
+                ),
             }));
         }
 
@@ -81,7 +93,7 @@ impl KernelProvider for FallbackKernel {
 
         Ok(())
     }
-    
+
     fn quantize(
         &self,
         input: &[f32],
@@ -102,18 +114,24 @@ impl FallbackKernel {
     fn quantize_i2s(&self, input: &[f32], output: &mut [u8], scales: &mut [f32]) -> Result<()> {
         const BLOCK_SIZE: usize = 32;
         let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
-        
+
         if output.len() < input.len() / 4 {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!("Output buffer too small for I2_S: expected {}, got {}", 
-                    input.len() / 4, output.len()),
+                reason: format!(
+                    "Output buffer too small for I2_S: expected {}, got {}",
+                    input.len() / 4,
+                    output.len()
+                ),
             }));
         }
-        
+
         if scales.len() < num_blocks {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!("Scales buffer too small: expected {}, got {}", 
-                    num_blocks, scales.len()),
+                reason: format!(
+                    "Scales buffer too small: expected {}, got {}",
+                    num_blocks,
+                    scales.len()
+                ),
             }));
         }
 
@@ -121,56 +139,60 @@ impl FallbackKernel {
             let start = block_idx * BLOCK_SIZE;
             let end = (start + BLOCK_SIZE).min(input.len());
             let block = &input[start..end];
-            
+
             // Find the maximum absolute value for scaling
-            let max_val = block.iter()
-                .map(|x| x.abs())
-                .fold(0.0f32, f32::max);
-            
+            let max_val = block.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
+
             // Avoid division by zero
             let scale = if max_val > 1e-8 { max_val / 1.5 } else { 1.0 };
             scales[block_idx] = scale;
-            
+
             // Quantize block to 2-bit signed values (-1, 0, 1)
             for (i, &val) in block.iter().enumerate() {
                 let normalized = val / scale;
                 let quantized = if normalized > 0.5 {
-                    1i8  // +1
+                    1i8 // +1
                 } else if normalized < -0.5 {
-                    3i8  // -1 (represented as 3 in 2-bit)
+                    3i8 // -1 (represented as 3 in 2-bit)
                 } else {
-                    0i8  // 0
+                    0i8 // 0
                 };
-                
+
                 // Pack 4 values into one byte (2 bits each)
                 let byte_idx = (start + i) / 4;
                 let bit_offset = ((start + i) % 4) * 2;
-                
+
                 if byte_idx < output.len() {
                     output[byte_idx] |= (quantized as u8) << bit_offset;
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// TL1 quantization: Table lookup optimized for ARM
     fn quantize_tl1(&self, input: &[f32], output: &mut [u8], scales: &mut [f32]) -> Result<()> {
         const BLOCK_SIZE: usize = 64;
         let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
-        
+
         if output.len() < input.len() / 4 {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!("Output buffer too small for TL1: expected {}, got {}", 
-                    input.len() / 4, output.len()),
+                reason: format!(
+                    "Output buffer too small for TL1: expected {}, got {}",
+                    input.len() / 4,
+                    output.len()
+                ),
             }));
         }
-        
+
         if scales.len() < num_blocks {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!("Scales buffer too small: expected {}, got {}", 
-                    num_blocks, scales.len()),
+                reason: format!(
+                    "Scales buffer too small: expected {}, got {}",
+                    num_blocks,
+                    scales.len()
+                ),
             }));
         }
 
@@ -178,25 +200,23 @@ impl FallbackKernel {
             let start = block_idx * BLOCK_SIZE;
             let end = (start + BLOCK_SIZE).min(input.len());
             let block = &input[start..end];
-            
+
             // Compute scale for this block
-            let max_val = block.iter()
-                .map(|x| x.abs())
-                .fold(0.0f32, f32::max);
+            let max_val = block.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
             let scale = if max_val > 1e-8 { max_val / 1.5 } else { 1.0 };
             scales[block_idx] = scale;
-            
+
             // Create lookup table for this block (simplified version)
             let lut = [-1.0f32, -0.33, 0.33, 1.0];
-            
+
             // Quantize using lookup table
             for (i, &val) in block.iter().enumerate() {
                 let normalized = val / scale;
-                
+
                 // Find closest value in lookup table
                 let mut best_idx = 0;
                 let mut best_dist = (normalized - lut[0]).abs();
-                
+
                 for (idx, &lut_val) in lut.iter().enumerate().skip(1) {
                     let dist = (normalized - lut_val).abs();
                     if dist < best_dist {
@@ -204,36 +224,42 @@ impl FallbackKernel {
                         best_idx = idx;
                     }
                 }
-                
+
                 // Pack into output (2 bits per value)
                 let byte_idx = (start + i) / 4;
                 let bit_offset = ((start + i) % 4) * 2;
-                
+
                 if byte_idx < output.len() {
                     output[byte_idx] |= (best_idx as u8) << bit_offset;
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// TL2 quantization: Table lookup optimized for x86
     fn quantize_tl2(&self, input: &[f32], output: &mut [u8], scales: &mut [f32]) -> Result<()> {
         const BLOCK_SIZE: usize = 128;
         let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
-        
+
         if output.len() < input.len() / 4 {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!("Output buffer too small for TL2: expected {}, got {}", 
-                    input.len() / 4, output.len()),
+                reason: format!(
+                    "Output buffer too small for TL2: expected {}, got {}",
+                    input.len() / 4,
+                    output.len()
+                ),
             }));
         }
-        
+
         if scales.len() < num_blocks {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!("Scales buffer too small: expected {}, got {}", 
-                    num_blocks, scales.len()),
+                reason: format!(
+                    "Scales buffer too small: expected {}, got {}",
+                    num_blocks,
+                    scales.len()
+                ),
             }));
         }
 
@@ -241,25 +267,23 @@ impl FallbackKernel {
             let start = block_idx * BLOCK_SIZE;
             let end = (start + BLOCK_SIZE).min(input.len());
             let block = &input[start..end];
-            
+
             // Compute scale for this block
-            let max_val = block.iter()
-                .map(|x| x.abs())
-                .fold(0.0f32, f32::max);
+            let max_val = block.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
             let scale = if max_val > 1e-8 { max_val / 1.5 } else { 1.0 };
             scales[block_idx] = scale;
-            
+
             // Create optimized lookup table for x86 (different from TL1)
             let lut = [-1.2f32, -0.4, 0.4, 1.2];
-            
+
             // Quantize using lookup table
             for (i, &val) in block.iter().enumerate() {
                 let normalized = val / scale;
-                
+
                 // Find closest value in lookup table
                 let mut best_idx = 0;
                 let mut best_dist = (normalized - lut[0]).abs();
-                
+
                 for (idx, &lut_val) in lut.iter().enumerate().skip(1) {
                     let dist = (normalized - lut_val).abs();
                     if dist < best_dist {
@@ -267,17 +291,17 @@ impl FallbackKernel {
                         best_idx = idx;
                     }
                 }
-                
+
                 // Pack into output (2 bits per value)
                 let byte_idx = (start + i) / 4;
                 let bit_offset = ((start + i) % 4) * 2;
-                
+
                 if byte_idx < output.len() {
                     output[byte_idx] |= (best_idx as u8) << bit_offset;
                 }
             }
         }
-        
+
         Ok(())
     }
 }
@@ -296,14 +320,14 @@ mod tests {
     #[test]
     fn test_matmul_i2s_basic() {
         let kernel = FallbackKernel;
-        
+
         // Test 2x2 * 2x2 matrix multiplication
-        let a = vec![1i8, 2, 3, 4];  // 2x2 matrix
-        let b = vec![1u8, 0, 0, 1];  // 2x2 identity matrix
+        let a = vec![1i8, 2, 3, 4]; // 2x2 matrix
+        let b = vec![1u8, 0, 0, 1]; // 2x2 identity matrix
         let mut c = vec![0.0f32; 4]; // 2x2 result
-        
+
         kernel.matmul_i2s(&a, &b, &mut c, 2, 2, 2).unwrap();
-        
+
         // Expected result: A * I = A
         assert_eq!(c, vec![1.0, 2.0, 3.0, 4.0]);
     }
@@ -311,11 +335,11 @@ mod tests {
     #[test]
     fn test_matmul_i2s_dimension_validation() {
         let kernel = FallbackKernel;
-        
+
         let a = vec![1i8, 2];
         let b = vec![1u8, 0];
         let mut c = vec![0.0f32; 4];
-        
+
         // Wrong dimensions should fail
         let result = kernel.matmul_i2s(&a, &b, &mut c, 2, 2, 2);
         assert!(result.is_err());
@@ -324,16 +348,18 @@ mod tests {
     #[test]
     fn test_quantize_i2s() {
         let kernel = FallbackKernel;
-        
+
         let input = vec![1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1];
         let mut output = vec![0u8; 2]; // 8 values / 4 per byte = 2 bytes
         let mut scales = vec![0.0f32; 1]; // 8 values / 32 per block = 1 block
-        
-        kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S).unwrap();
-        
+
+        kernel
+            .quantize(&input, &mut output, &mut scales, QuantizationType::I2S)
+            .unwrap();
+
         // Should have computed a scale
         assert!(scales[0] > 0.0);
-        
+
         // Output should be non-zero (some values quantized)
         assert!(output.iter().any(|&x| x != 0));
     }
@@ -341,11 +367,11 @@ mod tests {
     #[test]
     fn test_quantize_buffer_size_validation() {
         let kernel = FallbackKernel;
-        
+
         let input = vec![1.0; 32];
         let mut output = vec![0u8; 1]; // Too small
         let mut scales = vec![0.0f32; 1];
-        
+
         let result = kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
         assert!(result.is_err());
     }

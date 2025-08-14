@@ -4,9 +4,7 @@
 //! cross-implementation comparison results, including accuracy analysis,
 //! performance comparisons, regression detection, and executive summaries.
 
-use crate::cross_validation::{
-    CrossValidationResult, TokenMismatch,
-};
+use crate::cross_validation::{CrossValidationResult, TokenMismatch};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;

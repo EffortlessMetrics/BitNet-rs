@@ -1,10 +1,12 @@
 //! CUDA kernel implementation using cudarc 0.17
 
-use std::sync::Arc;
-use cudarc::driver::{CudaContext, CudaStream, CudaSlice, CudaModule, CudaFunction, LaunchConfig, PushKernelArg};
-use cudarc::nvrtc::compile_ptx;
 use crate::KernelProvider;
 use bitnet_common::{KernelError, QuantizationType, Result};
+use cudarc::driver::{
+    CudaContext, CudaFunction, CudaModule, CudaSlice, CudaStream, LaunchConfig, PushKernelArg,
+};
+use cudarc::nvrtc::compile_ptx;
+use std::sync::Arc;
 
 /// CUDA kernel provider with memory management and stream handling
 pub struct CudaKernel {
@@ -53,31 +55,35 @@ impl CudaKernel {
         log::info!("Initializing CUDA kernel provider on device {}", device_id);
 
         // Create CUDA context for the specified device
-        let ctx = CudaContext::new(device_id)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to create CUDA context for device {}: {:?}", device_id, e) 
-            })?;
+        let ctx = CudaContext::new(device_id).map_err(|e| KernelError::GpuError {
+            reason: format!(
+                "Failed to create CUDA context for device {}: {:?}",
+                device_id, e
+            ),
+        })?;
 
         // Get default stream
         let stream = ctx.default_stream();
 
         // Compile PTX kernel
-        let ptx = compile_ptx(include_str!("kernels/bitnet_matmul.cu"))
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to compile PTX: {:?}", e) 
-            })?;
+        let ptx = compile_ptx(include_str!("kernels/bitnet_matmul.cu")).map_err(|e| {
+            KernelError::GpuError {
+                reason: format!("Failed to compile PTX: {:?}", e),
+            }
+        })?;
 
         // Load module
-        let module = ctx.load_module(ptx)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to load CUDA module: {:?}", e) 
-            })?;
+        let module = ctx.load_module(ptx).map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to load CUDA module: {:?}", e),
+        })?;
 
         // Load function
-        let matmul_function = module.load_function("bitnet_matmul_i2s")
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to load matmul function: {:?}", e) 
-            })?;
+        let matmul_function =
+            module
+                .load_function("bitnet_matmul_i2s")
+                .map_err(|e| KernelError::GpuError {
+                    reason: format!("Failed to load matmul function: {:?}", e),
+                })?;
 
         // Get device information
         let device_info = Self::get_device_info(device_id)?;
@@ -133,20 +139,26 @@ impl CudaKernel {
         log::debug!("Launching CUDA matmul: {}x{}x{}", m, n, k);
 
         // Transfer data to device using cudarc 0.17 API
-        let a_dev = self.stream.memcpy_stod(a)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to transfer A to device: {:?}", e) 
+        let a_dev = self
+            .stream
+            .memcpy_stod(a)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to transfer A to device: {:?}", e),
             })?;
 
-        let b_dev = self.stream.memcpy_stod(b)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to transfer B to device: {:?}", e) 
+        let b_dev = self
+            .stream
+            .memcpy_stod(b)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to transfer B to device: {:?}", e),
             })?;
 
-        let mut c_dev: CudaSlice<f32> = self.stream.alloc_zeros(m * n)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to allocate C on device: {:?}", e) 
-            })?;
+        let mut c_dev: CudaSlice<f32> =
+            self.stream
+                .alloc_zeros(m * n)
+                .map_err(|e| KernelError::GpuError {
+                    reason: format!("Failed to allocate C on device: {:?}", e),
+                })?;
 
         // Configure launch parameters
         const BLOCK_SIZE: u32 = 16;
@@ -170,18 +182,18 @@ impl CudaKernel {
         builder.arg(&m_arg);
         builder.arg(&n_arg);
         builder.arg(&k_arg);
-        
-        unsafe { 
-            builder.launch(cfg)
-        }.map_err(|e| KernelError::GpuError { 
-            reason: format!("Failed to launch kernel: {:?}", e) 
+
+        unsafe { builder.launch(cfg) }.map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to launch kernel: {:?}", e),
         })?;
 
         // Transfer result back to host
-        let c_host: Vec<f32> = self.stream.memcpy_dtov(&c_dev)
-            .map_err(|e| KernelError::GpuError { 
-                reason: format!("Failed to transfer result back: {:?}", e) 
-            })?;
+        let c_host: Vec<f32> =
+            self.stream
+                .memcpy_dtov(&c_dev)
+                .map_err(|e| KernelError::GpuError {
+                    reason: format!("Failed to transfer result back: {:?}", e),
+                })?;
 
         c.copy_from_slice(&c_host);
         Ok(())
@@ -224,7 +236,7 @@ impl CudaKernel {
         // Choose block size based on shared memory constraints
         let max_shared_mem = self.device_info.max_shared_memory_per_block;
         let shared_mem_per_element = 2 * std::mem::size_of::<i8>(); // A and B tiles
-        
+
         // Find largest block size that fits in shared memory
         let mut block_size = 16; // Start with 16x16
         while block_size <= 32 {
@@ -241,7 +253,12 @@ impl CudaKernel {
         let grid_x = (m + block_size - 1) / block_size;
         let grid_y = (n + block_size - 1) / block_size;
 
-        log::debug!("Optimal launch params: block_size={}, grid={}x{}", block_size, grid_x, grid_y);
+        log::debug!(
+            "Optimal launch params: block_size={}, grid={}x{}",
+            block_size,
+            grid_x,
+            grid_y
+        );
         (block_size, grid_x, grid_y)
     }
 
@@ -278,7 +295,7 @@ impl KernelProvider for CudaKernel {
     fn matmul_i2s(
         &self,
         a: &[i8],
-        b: &[u8], 
+        b: &[u8],
         c: &mut [f32],
         m: usize,
         n: usize,
@@ -295,11 +312,12 @@ impl KernelProvider for CudaKernel {
         qtype: QuantizationType,
     ) -> Result<()> {
         log::debug!("CUDA quantize: type: {:?}", qtype);
-        
+
         // TODO: Implement CUDA quantization kernels
-        Err(KernelError::GpuError { 
-            reason: "CUDA quantization implementation pending - matmul working".to_string() 
-        }.into())
+        Err(KernelError::GpuError {
+            reason: "CUDA quantization implementation pending - matmul working".to_string(),
+        }
+        .into())
     }
 }
 
@@ -316,7 +334,8 @@ pub fn is_cuda_available() -> bool {
 pub fn cuda_device_count() -> usize {
     // Try to create contexts for different device IDs to count devices
     let mut count = 0;
-    for device_id in 0..16 { // Check up to 16 devices
+    for device_id in 0..16 {
+        // Check up to 16 devices
         if CudaContext::new(device_id).is_ok() {
             count += 1;
         } else {
@@ -330,7 +349,7 @@ pub fn cuda_device_count() -> usize {
 pub fn list_cuda_devices() -> Result<Vec<CudaDeviceInfo>> {
     let device_count = cuda_device_count();
     let mut devices = Vec::new();
-    
+
     for device_id in 0..device_count {
         match CudaKernel::get_device_info(device_id) {
             Ok(info) => devices.push(info),
@@ -339,7 +358,7 @@ pub fn list_cuda_devices() -> Result<Vec<CudaDeviceInfo>> {
             }
         }
     }
-    
+
     Ok(devices)
 }
 
@@ -352,11 +371,11 @@ mod tests {
         // This test will pass even if CUDA is not available
         let available = is_cuda_available();
         println!("CUDA available: {}", available);
-        
+
         if available {
             let device_count = cuda_device_count();
             println!("CUDA device count: {}", device_count);
-            
+
             if let Ok(devices) = list_cuda_devices() {
                 for device in devices {
                     println!("Device {}: {:?}", device.device_id, device);
@@ -373,16 +392,16 @@ mod tests {
                 println!("CUDA kernel created successfully");
                 println!("Device info: {:?}", kernel.device_info());
                 assert!(kernel.is_available());
-                
+
                 // Test basic functionality with small matrices
                 let m = 4;
-                let n = 4; 
+                let n = 4;
                 let k = 4;
-                
-                let a: Vec<i8> = (0..m*k).map(|i| (i % 3) as i8 - 1).collect(); // -1, 0, 1
-                let b: Vec<u8> = (0..k*n).map(|i| (i % 2) as u8).collect(); // 0, 1
+
+                let a: Vec<i8> = (0..m * k).map(|i| (i % 3) as i8 - 1).collect(); // -1, 0, 1
+                let b: Vec<u8> = (0..k * n).map(|i| (i % 2) as u8).collect(); // 0, 1
                 let mut c = vec![0.0f32; m * n];
-                
+
                 match kernel.matmul_i2s(&a, &b, &mut c, m, n, k) {
                     Ok(_) => {
                         println!("CUDA matmul completed successfully");
@@ -401,7 +420,10 @@ mod tests {
                 }
             }
             Err(e) => {
-                println!("Failed to create CUDA kernel (CUDA may not be available): {}", e);
+                println!(
+                    "Failed to create CUDA kernel (CUDA may not be available): {}",
+                    e
+                );
             }
         }
     }
@@ -410,34 +432,43 @@ mod tests {
     #[ignore] // Only run with --ignored flag when CUDA is available
     fn test_cuda_numerical_accuracy() {
         use crate::gpu::validation::{GpuValidator, ValidationConfig};
-        
+
         let config = ValidationConfig {
             test_sizes: vec![(64, 64, 64), (128, 128, 128)], // Smaller sizes for tests
-            benchmark_iterations: 10, // Fewer iterations for tests
+            benchmark_iterations: 10,                        // Fewer iterations for tests
             ..Default::default()
         };
-        
+
         let validator = GpuValidator::with_config(config);
         match validator.validate() {
             Ok(results) => {
                 crate::gpu::validation::print_validation_results(&results);
-                
+
                 // Verify all accuracy tests passed
                 for result in &results.accuracy_results {
-                    assert!(result.passed, 
+                    assert!(
+                        result.passed,
                         "Accuracy test failed for {:?}: max_error={:.2e} > tolerance={:.2e}",
-                        result.dimensions, result.max_error, crate::gpu::validation::DEFAULT_TOLERANCE
+                        result.dimensions,
+                        result.max_error,
+                        crate::gpu::validation::DEFAULT_TOLERANCE
                     );
                 }
-                
+
                 // Verify we got performance results
-                assert!(!results.performance_results.is_empty(), "No performance results");
-                
+                assert!(
+                    !results.performance_results.is_empty(),
+                    "No performance results"
+                );
+
                 // Verify GPU shows some speedup (even if small)
                 for result in &results.performance_results {
-                    println!("Speedup for {:?}: {:.2}x", result.dimensions, result.speedup);
+                    println!(
+                        "Speedup for {:?}: {:.2}x",
+                        result.dimensions, result.speedup
+                    );
                 }
-                
+
                 assert!(results.success, "Overall validation failed");
             }
             Err(e) => {
@@ -457,7 +488,7 @@ mod tests {
                     let a = vec![1i8; 16];
                     let b = vec![1u8; 16];
                     let mut c = vec![0.0f32; 16];
-                    
+
                     if let Err(e) = kernel.matmul_i2s(&a, &b, &mut c, 4, 4, 4) {
                         println!("Iteration {}: CUDA operation failed: {}", i, e);
                     }

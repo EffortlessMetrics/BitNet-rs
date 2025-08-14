@@ -1,14 +1,14 @@
 //! Structured logging and tracing configuration
 
 use anyhow::Result;
+use std::io;
+use tracing_appender::{non_blocking, rolling};
 use tracing_subscriber::{
     fmt::{self, format::FmtSpan},
     layer::SubscriberExt,
     util::SubscriberInitExt,
     EnvFilter,
 };
-use tracing_appender::{non_blocking, rolling};
-use std::io;
 
 use super::MonitoringConfig;
 
@@ -45,7 +45,7 @@ pub async fn init_tracing(config: &MonitoringConfig) -> Result<TracingGuard> {
     // File output layer with rotation
     let file_appender = rolling::daily("logs", "bitnet-server.log");
     let (file_writer, file_guard) = non_blocking(file_appender);
-    
+
     let file_layer = fmt::layer()
         .with_span_events(FmtSpan::CLOSE)
         .with_thread_ids(true)
@@ -118,14 +118,10 @@ pub mod request_tracing {
     }
 
     /// Record inference completion
-    pub fn record_inference_completion(
-        span: &Span,
-        tokens_generated: u64,
-        inference_time_ms: u64,
-    ) {
+    pub fn record_inference_completion(span: &Span, tokens_generated: u64, inference_time_ms: u64) {
         span.record("tokens_generated", tokens_generated);
         span.record("inference_time_ms", inference_time_ms);
-        
+
         if inference_time_ms > 0 {
             let tokens_per_second = (tokens_generated as f64 * 1000.0) / inference_time_ms as f64;
             span.record("tokens_per_second", tokens_per_second);

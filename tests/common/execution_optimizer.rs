@@ -3,8 +3,8 @@ use super::errors::TestError;
 use super::fast_config::{FastConfigBuilder, SpeedProfile};
 use super::incremental::IncrementalTester;
 use super::parallel::{
-    ParallelExecutor, TestInfo as ParTestInfo, TestGroup as ParTestGroup,
-    TestCategory as ParTestCategory, TestPriority as ParTestPriority
+    ParallelExecutor, TestCategory as ParTestCategory, TestGroup as ParTestGroup,
+    TestInfo as ParTestInfo, TestPriority as ParTestPriority,
 };
 use super::selection::TestSelector;
 use std::collections::HashMap;

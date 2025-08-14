@@ -1,8 +1,8 @@
 //! Python Configuration Bindings
 
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use pyo3::exceptions::{PyValueError, PyRuntimeError};
 
 use bitnet_common::{BitNetConfig, QuantizationType};
 use bitnet_inference::GenerationConfig;
@@ -18,7 +18,9 @@ pub struct PyBitNetConfig {
 impl PyBitNetConfig {
     #[new]
     fn new() -> Self {
-        Self { inner: BitNetConfig::default() }
+        Self {
+            inner: BitNetConfig::default(),
+        }
     }
 
     fn __repr__(&self) -> String {
@@ -59,8 +61,10 @@ impl PyGenerationConfig {
     }
 
     fn __repr__(&self) -> String {
-        format!("GenerationConfig(max_tokens={}, temperature={})", 
-                self.inner.max_new_tokens, self.inner.temperature)
+        format!(
+            "GenerationConfig(max_tokens={}, temperature={})",
+            self.inner.max_new_tokens, self.inner.temperature
+        )
     }
 }
 

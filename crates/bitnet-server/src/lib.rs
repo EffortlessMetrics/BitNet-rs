@@ -13,16 +13,13 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Instant;
-use tower_http::{
-    cors::CorsLayer,
-    trace::TraceLayer,
-};
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
 use monitoring::{
-    MonitoringConfig, MonitoringSystem,
-    health::{HealthChecker, create_health_routes},
-    prometheus::{PrometheusExporter, create_prometheus_routes},
+    health::{create_health_routes, HealthChecker},
     metrics::MetricsCollector,
+    prometheus::{create_prometheus_routes, PrometheusExporter},
+    MonitoringConfig, MonitoringSystem,
 };
 
 #[derive(Deserialize)]
@@ -72,7 +69,7 @@ impl BitNetServer {
     pub async fn new(config: ServerConfig) -> Result<Self> {
         // Initialize monitoring system
         let monitoring = Arc::new(MonitoringSystem::new(config.monitoring.clone()).await?);
-        
+
         // Initialize health checker
         let health_checker = Arc::new(HealthChecker::new(monitoring.metrics()));
 
@@ -124,7 +121,7 @@ impl BitNetServer {
 
         let app = self.create_app();
         let addr = format!("{}:{}", self.config.host, self.config.port);
-        
+
         tracing::info!(
             addr = %addr,
             prometheus_enabled = self.config.monitoring.prometheus_enabled,
@@ -164,7 +161,7 @@ async fn inference_handler(
 ) -> Result<axum::Json<InferenceResponse>, StatusCode> {
     let start_time = Instant::now();
     let request_id = uuid::Uuid::new_v4().to_string();
-    
+
     // Create request tracker for metrics
     let tracker = state.metrics.track_request(request_id.clone());
 
@@ -183,7 +180,7 @@ async fn inference_handler(
         Ok(response) => {
             let duration = start_time.elapsed();
             tracker.record_tokens(response.tokens_generated);
-            
+
             tracing::info!(
                 request_id = %request_id,
                 tokens_generated = response.tokens_generated,
@@ -209,10 +206,10 @@ async fn inference_handler(
 /// Simulate inference (placeholder implementation)
 async fn simulate_inference(request: &InferenceRequest) -> Result<InferenceResponse> {
     let start = Instant::now();
-    
+
     // Simulate processing time
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    
+
     let tokens_generated = request.max_tokens.unwrap_or(50) as u64;
     let duration = start.elapsed();
     let tokens_per_second = if duration.as_millis() > 0 {
@@ -239,7 +236,7 @@ async fn metrics_middleware(
     let path = request.uri().path().to_string();
 
     let response = next.run(request).await;
-    
+
     let duration = start.elapsed();
     let status = response.status().as_u16();
 

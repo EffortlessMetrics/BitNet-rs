@@ -1,13 +1,13 @@
 //! Progressive loading system for large models in WebAssembly
 
-use wasm_bindgen::prelude::*;
-use js_sys::{Promise, Uint8Array, Object, Reflect};
-use web_sys::{console, ReadableStream, ReadableStreamDefaultReader};
-use wasm_bindgen_futures::JsFuture;
+use js_sys::{Object, Promise, Reflect, Uint8Array};
 use std::collections::HashMap;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::JsFuture;
+use web_sys::{console, ReadableStream, ReadableStreamDefaultReader};
 
-use crate::utils::{JsError, to_js_error};
 use crate::memory::{MemoryManager, WasmBuffer};
+use crate::utils::{to_js_error, JsError};
 
 /// Configuration for progressive loading
 #[derive(Debug, Clone)]
@@ -132,7 +132,8 @@ impl ProgressiveLoader {
         let config = self.config.clone();
 
         wasm_bindgen_futures::future_to_promise(async move {
-            Self::load_from_url_impl(url, config).await
+            Self::load_from_url_impl(url, config)
+                .await
                 .map(|result| JsValue::from_serde(&result).unwrap_or(JsValue::NULL))
                 .map_err(to_js_error)
         })
@@ -144,7 +145,8 @@ impl ProgressiveLoader {
         let config = self.config.clone();
 
         wasm_bindgen_futures::future_to_promise(async move {
-            Self::load_from_stream_impl(stream, config).await
+            Self::load_from_stream_impl(stream, config)
+                .await
                 .map(|result| JsValue::from_serde(&result).unwrap_or(JsValue::NULL))
                 .map_err(to_js_error)
         })
@@ -169,10 +171,8 @@ impl ProgressiveLoader {
         buffer.append(&chunk_data)?;
 
         // Track memory usage
-        self.memory_manager.track_allocation(
-            format!("chunk_{}", chunk_index),
-            chunk_size,
-        )?;
+        self.memory_manager
+            .track_allocation(format!("chunk_{}", chunk_index), chunk_size)?;
 
         // Store chunk
         self.chunks.insert(chunk_index, buffer);
@@ -185,13 +185,16 @@ impl ProgressiveLoader {
             0.0
         };
 
-        console::log_1(&format!(
-            "Loaded chunk {}: {} bytes, total: {} bytes, progress: {:.1}%",
-            chunk_index,
-            chunk_size,
-            self.loaded_size,
-            progress * 100.0
-        ).into());
+        console::log_1(
+            &format!(
+                "Loaded chunk {}: {} bytes, total: {} bytes, progress: {:.1}%",
+                chunk_index,
+                chunk_size,
+                self.loaded_size,
+                progress * 100.0
+            )
+            .into(),
+        );
 
         // Trigger GC if memory usage is high
         if self.memory_manager.should_gc() {
@@ -204,7 +207,9 @@ impl ProgressiveLoader {
     /// Get a loaded chunk by index
     #[wasm_bindgen]
     pub fn get_chunk(&self, chunk_index: usize) -> Option<Uint8Array> {
-        self.chunks.get(&chunk_index).map(|buffer| buffer.to_uint8_array())
+        self.chunks
+            .get(&chunk_index)
+            .map(|buffer| buffer.to_uint8_array())
     }
 
     /// Check if a chunk is loaded
@@ -250,9 +255,10 @@ impl ProgressiveLoader {
     /// Check if loading is complete
     #[wasm_bindgen]
     pub fn is_complete(&self) -> bool {
-        self.loading_complete || (
-            self.total_size.map_or(false, |total| self.loaded_size >= total)
-        )
+        self.loading_complete
+            || (self
+                .total_size
+                .map_or(false, |total| self.loaded_size >= total))
     }
 
     /// Mark loading as complete
@@ -268,10 +274,12 @@ impl ProgressiveLoader {
         if let Some(buffer) = self.chunks.remove(&chunk_index) {
             let size = buffer.size();
             self.loaded_size = self.loaded_size.saturating_sub(size);
-            
+
             // Track memory deallocation
-            let freed = self.memory_manager.track_deallocation(&format!("chunk_{}", chunk_index));
-            
+            let freed = self
+                .memory_manager
+                .track_deallocation(&format!("chunk_{}", chunk_index));
+
             console::log_1(&format!("Unloaded chunk {}: {} bytes", chunk_index, freed).into());
             Ok(freed)
         } else {
@@ -286,7 +294,7 @@ impl ProgressiveLoader {
         self.chunks.clear();
         self.loaded_size = 0;
         self.loading_complete = false;
-        
+
         let freed = self.memory_manager.gc()?;
         console::log_1(&format!("Unloaded all chunks: {} bytes", total_freed).into());
         Ok(freed)
@@ -321,10 +329,12 @@ impl ProgressiveLoader {
 
         // Fetch the response
         let response_promise = window.fetch_with_request(&request);
-        let response = JsFuture::from(response_promise).await
+        let response = JsFuture::from(response_promise)
+            .await
             .map_err(|_| JsError::new("Fetch failed"))?;
-        
-        let response: web_sys::Response = response.dyn_into()
+
+        let response: web_sys::Response = response
+            .dyn_into()
             .map_err(|_| JsError::new("Invalid response"))?;
 
         if !response.ok() {
@@ -332,14 +342,18 @@ impl ProgressiveLoader {
         }
 
         // Get content length if available
-        let content_length = response.headers().get("content-length")
+        let content_length = response
+            .headers()
+            .get("content-length")
             .ok()
             .flatten()
             .and_then(|s| s.parse::<usize>().ok());
 
         // Get response body as stream
-        let body = response.body().ok_or_else(|| JsError::new("No response body"))?;
-        
+        let body = response
+            .body()
+            .ok_or_else(|| JsError::new("No response body"))?;
+
         Self::load_from_stream_impl(body, config).await
     }
 
@@ -350,7 +364,9 @@ impl ProgressiveLoader {
     ) -> Result<LoadResult, JsError> {
         console::log_1(&"Starting progressive load from stream".into());
 
-        let reader = stream.get_reader().dyn_into::<ReadableStreamDefaultReader>()
+        let reader = stream
+            .get_reader()
+            .dyn_into::<ReadableStreamDefaultReader>()
             .map_err(|_| JsError::new("Failed to get stream reader"))?;
 
         let mut total_loaded = 0;
@@ -359,7 +375,8 @@ impl ProgressiveLoader {
 
         loop {
             let read_promise = reader.read();
-            let result = JsFuture::from(read_promise).await
+            let result = JsFuture::from(read_promise)
+                .await
                 .map_err(|_| JsError::new("Stream read failed"))?;
 
             let done = Reflect::get(&result, &"done".into())
@@ -374,7 +391,8 @@ impl ProgressiveLoader {
             let value = Reflect::get(&result, &"value".into())
                 .map_err(|_| JsError::new("Failed to get value property"))?;
 
-            let chunk_array: Uint8Array = value.dyn_into()
+            let chunk_array: Uint8Array = value
+                .dyn_into()
                 .map_err(|_| JsError::new("Invalid chunk data"))?;
 
             let chunk_size = chunk_array.length() as usize;
@@ -386,10 +404,13 @@ impl ProgressiveLoader {
                 offset: total_loaded - chunk_size,
             });
 
-            console::log_1(&format!(
-                "Loaded chunk {}: {} bytes (total: {} bytes)",
-                chunk_index, chunk_size, total_loaded
-            ).into());
+            console::log_1(
+                &format!(
+                    "Loaded chunk {}: {} bytes (total: {} bytes)",
+                    chunk_index, chunk_size, total_loaded
+                )
+                .into(),
+            );
 
             chunk_index += 1;
 
@@ -411,10 +432,7 @@ impl ProgressiveLoader {
     async fn delay(ms: i32) {
         let promise = js_sys::Promise::new(&mut |resolve, _reject| {
             if let Some(window) = web_sys::window() {
-                let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
-                    &resolve,
-                    ms,
-                );
+                let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms);
             }
         });
         let _ = JsFuture::from(promise).await;

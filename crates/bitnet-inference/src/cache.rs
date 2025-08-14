@@ -3,7 +3,7 @@
 //! Efficient key-value cache for transformer models with memory pooling,
 //! compression, and eviction policies.
 
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use std::collections::{HashMap, VecDeque};
 use tracing::{debug, warn};
 
@@ -101,7 +101,7 @@ impl KVCache {
     /// Create a new KV cache
     pub fn new(config: CacheConfig) -> Result<Self> {
         let memory_pool = MemoryPool::new(config.block_size, config.max_size_bytes / 4)?;
-        
+
         Ok(Self {
             config,
             cache: HashMap::new(),
@@ -121,43 +121,46 @@ impl KVCache {
     ) -> Result<()> {
         let entry_key = (layer, position);
         let entry_size = (key.len() + value.len()) * std::mem::size_of::<f32>();
-        
+
         // Check if we need to evict entries
         while self.current_size + entry_size > self.config.max_size_bytes {
             self.evict_entry()?;
         }
-        
+
         // Create new entry
         let entry = CacheEntry::new(key, value, position);
-        
+
         // Remove old entry if it exists
         if let Some(old_entry) = self.cache.remove(&entry_key) {
             self.current_size -= old_entry.size_bytes();
             self.access_order.retain(|&x| x != entry_key);
         }
-        
+
         // Add new entry
         self.current_size += entry.size_bytes();
         self.cache.insert(entry_key, entry);
         self.access_order.push_back(entry_key);
-        
-        debug!("Stored cache entry for layer {} position {}", layer, position);
+
+        debug!(
+            "Stored cache entry for layer {} position {}",
+            layer, position
+        );
         Ok(())
     }
 
     /// Retrieve key-value pair from cache
     pub fn get(&mut self, layer: usize, position: usize) -> Option<(&Vec<f32>, &Vec<f32>)> {
         let entry_key = (layer, position);
-        
+
         if let Some(entry) = self.cache.get_mut(&entry_key) {
             entry.access();
-            
+
             // Update access order for LRU
             if matches!(self.config.eviction_policy, EvictionPolicy::LRU) {
                 self.access_order.retain(|&x| x != entry_key);
                 self.access_order.push_back(entry_key);
             }
-            
+
             debug!("Cache hit for layer {} position {}", layer, position);
             Some((&entry.key, &entry.value))
         } else {
@@ -182,28 +185,28 @@ impl KVCache {
 
     /// Clear cache entries for specific layer
     pub fn clear_layer(&mut self, layer: usize) {
-        let keys_to_remove: Vec<_> = self.cache.keys()
+        let keys_to_remove: Vec<_> = self
+            .cache
+            .keys()
             .filter(|(l, _)| *l == layer)
             .cloned()
             .collect();
-        
+
         for key in keys_to_remove {
             if let Some(entry) = self.cache.remove(&key) {
                 self.current_size -= entry.size_bytes();
                 self.access_order.retain(|&x| x != key);
             }
         }
-        
+
         debug!("Cleared cache for layer {}", layer);
     }
 
     /// Get cache statistics
     pub fn stats(&self) -> CacheStats {
         let total_entries = self.cache.len();
-        let compressed_entries = self.cache.values()
-            .filter(|entry| entry.compressed)
-            .count();
-        
+        let compressed_entries = self.cache.values().filter(|entry| entry.compressed).count();
+
         CacheStats {
             total_entries,
             compressed_entries,
@@ -227,19 +230,15 @@ impl KVCache {
     /// Evict an entry based on the configured policy
     fn evict_entry(&mut self) -> Result<()> {
         let entry_to_evict = match self.config.eviction_policy {
-            EvictionPolicy::LRU => {
-                self.access_order.front().cloned()
-            }
-            EvictionPolicy::FIFO => {
-                self.access_order.front().cloned()
-            }
-            EvictionPolicy::LFU => {
-                self.cache.iter()
-                    .min_by_key(|(_, entry)| entry.access_count)
-                    .map(|(key, _)| *key)
-            }
+            EvictionPolicy::LRU => self.access_order.front().cloned(),
+            EvictionPolicy::FIFO => self.access_order.front().cloned(),
+            EvictionPolicy::LFU => self
+                .cache
+                .iter()
+                .min_by_key(|(_, entry)| entry.access_count)
+                .map(|(key, _)| *key),
         };
-        
+
         if let Some(key) = entry_to_evict {
             if let Some(entry) = self.cache.remove(&key) {
                 self.current_size -= entry.size_bytes();
@@ -249,7 +248,7 @@ impl KVCache {
         } else {
             warn!("No entries to evict from cache");
         }
-        
+
         Ok(())
     }
 
@@ -258,10 +257,10 @@ impl KVCache {
         if !self.config.enable_compression {
             return Ok(());
         }
-        
+
         let now = std::time::Instant::now();
         let mut compressed_count = 0;
-        
+
         for entry in self.cache.values_mut() {
             if !entry.compressed && now.duration_since(entry.last_accessed) > age_threshold {
                 // Simple compression: reduce precision (this is a mock implementation)
@@ -270,11 +269,11 @@ impl KVCache {
                 compressed_count += 1;
             }
         }
-        
+
         if compressed_count > 0 {
             debug!("Compressed {} cache entries", compressed_count);
         }
-        
+
         Ok(())
     }
 }
@@ -302,7 +301,7 @@ impl MemoryPool {
         let num_blocks = max_size / (block_size * std::mem::size_of::<f32>());
         let blocks = Vec::with_capacity(num_blocks);
         let free_blocks = (0..num_blocks).collect();
-        
+
         Ok(Self {
             block_size,
             blocks,
@@ -340,15 +339,15 @@ mod tests {
     fn test_cache_store_and_get() {
         let config = CacheConfig::default();
         let mut cache = KVCache::new(config).unwrap();
-        
+
         let key = vec![1.0, 2.0, 3.0];
         let value = vec![4.0, 5.0, 6.0];
-        
+
         cache.store(0, 0, key.clone(), value.clone()).unwrap();
-        
+
         let retrieved = cache.get(0, 0);
         assert!(retrieved.is_some());
-        
+
         let (ret_key, ret_value) = retrieved.unwrap();
         assert_eq!(*ret_key, key);
         assert_eq!(*ret_value, value);
@@ -358,7 +357,7 @@ mod tests {
     fn test_cache_miss() {
         let config = CacheConfig::default();
         let mut cache = KVCache::new(config).unwrap();
-        
+
         let retrieved = cache.get(0, 0);
         assert!(retrieved.is_none());
     }
@@ -367,13 +366,13 @@ mod tests {
     fn test_cache_clear() {
         let config = CacheConfig::default();
         let mut cache = KVCache::new(config).unwrap();
-        
+
         let key = vec![1.0, 2.0, 3.0];
         let value = vec![4.0, 5.0, 6.0];
-        
+
         cache.store(0, 0, key, value).unwrap();
         assert!(cache.contains(0, 0));
-        
+
         cache.clear();
         assert!(!cache.contains(0, 0));
         assert_eq!(cache.size(), 0);
@@ -383,18 +382,18 @@ mod tests {
     fn test_cache_layer_clear() {
         let config = CacheConfig::default();
         let mut cache = KVCache::new(config).unwrap();
-        
+
         let key = vec![1.0, 2.0, 3.0];
         let value = vec![4.0, 5.0, 6.0];
-        
+
         cache.store(0, 0, key.clone(), value.clone()).unwrap();
         cache.store(1, 0, key, value).unwrap();
-        
+
         assert!(cache.contains(0, 0));
         assert!(cache.contains(1, 0));
-        
+
         cache.clear_layer(0);
-        
+
         assert!(!cache.contains(0, 0));
         assert!(cache.contains(1, 0));
     }
@@ -403,12 +402,12 @@ mod tests {
     fn test_cache_stats() {
         let config = CacheConfig::default();
         let mut cache = KVCache::new(config).unwrap();
-        
+
         let key = vec![1.0, 2.0, 3.0];
         let value = vec![4.0, 5.0, 6.0];
-        
+
         cache.store(0, 0, key, value).unwrap();
-        
+
         let stats = cache.stats();
         assert_eq!(stats.total_entries, 1);
         assert!(stats.current_size_bytes > 0);
@@ -421,18 +420,18 @@ mod tests {
             eviction_policy: EvictionPolicy::LRU,
             ..Default::default()
         };
-        
+
         let mut cache = KVCache::new(config).unwrap();
-        
+
         // Add entries that exceed cache size
         let key1 = vec![1.0; 10];
         let value1 = vec![1.0; 10];
         let key2 = vec![2.0; 10];
         let value2 = vec![2.0; 10];
-        
+
         cache.store(0, 0, key1, value1).unwrap();
         cache.store(0, 1, key2, value2).unwrap();
-        
+
         // First entry should be evicted due to size constraints
         assert!(!cache.contains(0, 0) || !cache.contains(0, 1));
     }

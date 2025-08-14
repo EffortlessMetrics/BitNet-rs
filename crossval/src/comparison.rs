@@ -33,27 +33,23 @@ impl CrossValidator {
     pub fn new(config: CrossvalConfig) -> Self {
         Self { config }
     }
-    
+
     /// Run cross-validation on a single test fixture
     pub fn validate_fixture(&self, fixture: &TestFixture) -> Result<Vec<ComparisonResult>> {
         // Load C++ model
         let cpp_model = CppModel::load(&fixture.model_path)?;
-        
+
         let mut results = Vec::new();
-        
+
         for prompt in &fixture.test_prompts {
-            let result = self.compare_single_prompt(
-                &fixture.name,
-                prompt,
-                &cpp_model,
-            );
-            
+            let result = self.compare_single_prompt(&fixture.name, prompt, &cpp_model);
+
             results.push(result);
         }
-        
+
         Ok(results)
     }
-    
+
     /// Compare a single prompt between Rust and C++ implementations
     fn compare_single_prompt(
         &self,
@@ -71,7 +67,7 @@ impl CrossValidator {
             cpp_performance: None,
             error: None,
         };
-        
+
         // Generate with Rust implementation
         let (rust_perf, rust_tokens) = match self.generate_rust(prompt) {
             Ok(tokens) => {
@@ -83,7 +79,7 @@ impl CrossValidator {
                 return result;
             }
         };
-        
+
         // Generate with C++ implementation
         let (cpp_perf, cpp_tokens) = match cpp_model.generate(prompt, self.config.max_tokens) {
             Ok(tokens) => {
@@ -95,7 +91,7 @@ impl CrossValidator {
                 return result;
             }
         };
-        
+
         // Compare tokens
         let tokens_match = match compare_tokens(&rust_tokens, &cpp_tokens, &self.config) {
             Ok(matches) => matches,
@@ -104,23 +100,23 @@ impl CrossValidator {
                 false
             }
         };
-        
+
         // Log results
         logging::log_comparison(test_name, rust_tokens.len(), cpp_tokens.len(), tokens_match);
-        
+
         if let (Some(rust_tps), Some(cpp_tps)) = (rust_perf, cpp_perf) {
             logging::log_performance(test_name, rust_tps, cpp_tps);
         }
-        
+
         result.rust_tokens = rust_tokens;
         result.cpp_tokens = cpp_tokens;
         result.tokens_match = tokens_match;
         result.rust_performance = rust_perf;
         result.cpp_performance = cpp_perf;
-        
+
         result
     }
-    
+
     /// Generate tokens using the Rust implementation
     /// This is a placeholder - in real implementation, this would call into bitnet-inference
     fn generate_rust(&self, prompt: &str) -> Result<Vec<u32>> {
@@ -134,12 +130,12 @@ impl CrossValidator {
 pub fn validate_all_fixtures(config: CrossvalConfig) -> Result<Vec<ComparisonResult>> {
     let validator = CrossValidator::new(config);
     let fixture_names = crate::fixtures::TestFixture::list_available()?;
-    
+
     let mut all_results = Vec::new();
-    
+
     for fixture_name in fixture_names {
         println!("Running cross-validation for fixture: {}", fixture_name);
-        
+
         let fixture = match crate::fixtures::TestFixture::load(&fixture_name) {
             Ok(f) => f,
             Err(e) => {
@@ -147,7 +143,7 @@ pub fn validate_all_fixtures(config: CrossvalConfig) -> Result<Vec<ComparisonRes
                 continue;
             }
         };
-        
+
         match validator.validate_fixture(&fixture) {
             Ok(mut results) => all_results.append(&mut results),
             Err(e) => {
@@ -155,6 +151,6 @@ pub fn validate_all_fixtures(config: CrossvalConfig) -> Result<Vec<ComparisonRes
             }
         }
     }
-    
+
     Ok(all_results)
 }

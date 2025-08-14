@@ -3,13 +3,13 @@
 //! Python bindings for BitNet models with automatic memory management
 //! and thread-safe access patterns.
 
+use crate::{device_to_string, parse_device, to_py_result};
+use bitnet_common::{BitNetConfig, Device};
+use bitnet_models::{loader::ModelLoader, BitNetModel, Model};
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyString};
-use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use std::sync::Arc;
-use bitnet_models::{Model, BitNetModel, loader::ModelLoader};
-use bitnet_common::{Device, BitNetConfig};
-use crate::{to_py_result, device_to_string, parse_device};
 
 /// Python wrapper for BitNet models
 #[pyclass(name = "BitNetModel")]
@@ -36,22 +36,18 @@ impl PyBitNetModel {
     /// Create a new BitNet model from file
     #[new]
     #[pyo3(signature = (path, device = "cpu", **kwargs))]
-    fn new_py(
-        py: Python<'_>,
-        path: &str,
-        device: &str,
-        kwargs: Option<&PyDict>,
-    ) -> PyResult<Self> {
+    fn new_py(py: Python<'_>, path: &str, device: &str, kwargs: Option<&PyDict>) -> PyResult<Self> {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
-            
+
             rt.block_on(async {
                 let device = parse_device(device)?;
                 let loader = ModelLoader::new(device.clone());
-                let model = loader.load(path)
+                let model = loader
+                    .load(path)
                     .map_err(|e| PyRuntimeError::new_err(format!("Failed to load model: {}", e)))?;
-                
+
                 Ok(Self {
                     inner: Arc::from(model),
                     device,
@@ -65,22 +61,25 @@ impl PyBitNetModel {
     fn config(&self, py: Python<'_>) -> PyResult<PyObject> {
         let config = self.inner.config();
         let py_config = PyDict::new(py);
-        
+
         // Model configuration
         let model_config = PyDict::new(py);
         model_config.set_item("vocab_size", config.model.vocab_size)?;
         model_config.set_item("hidden_size", config.model.hidden_size)?;
         model_config.set_item("num_layers", config.model.num_layers)?;
         model_config.set_item("num_attention_heads", config.model.num_attention_heads)?;
-        model_config.set_item("max_position_embeddings", config.model.max_position_embeddings)?;
+        model_config.set_item(
+            "max_position_embeddings",
+            config.model.max_position_embeddings,
+        )?;
         py_config.set_item("model", model_config)?;
-        
+
         // Quantization configuration
         let quant_config = PyDict::new(py);
         quant_config.set_item("qtype", format!("{:?}", config.quantization.qtype))?;
         quant_config.set_item("block_size", config.quantization.block_size)?;
         py_config.set_item("quantization", quant_config)?;
-        
+
         Ok(py_config.into())
     }
 
@@ -98,9 +97,11 @@ impl PyBitNetModel {
         let vocab_size = config.model.vocab_size;
         let hidden_size = config.model.hidden_size;
         let num_layers = config.model.num_layers;
-        
+
         // Rough estimation: embedding + layers + output
-        vocab_size * hidden_size + num_layers * hidden_size * hidden_size * 4 + hidden_size * vocab_size
+        vocab_size * hidden_size
+            + num_layers * hidden_size * hidden_size * 4
+            + hidden_size * vocab_size
     }
 
     /// Get model memory usage in bytes
@@ -109,10 +110,12 @@ impl PyBitNetModel {
         // Rough estimation based on parameter count and quantization
         let params = self.parameter_count();
         let config = self.inner.config();
-        
+
         match config.quantization.qtype {
             bitnet_common::QuantizationType::I2S => params / 4, // 2 bits per parameter
-            bitnet_common::QuantizationType::TL1 | bitnet_common::QuantizationType::TL2 => params / 2, // 4 bits per parameter
+            bitnet_common::QuantizationType::TL1 | bitnet_common::QuantizationType::TL2 => {
+                params / 2
+            } // 4 bits per parameter
         }
     }
 
@@ -138,7 +141,7 @@ impl PyBitNetModel {
     fn info(&self, py: Python<'_>) -> PyResult<PyObject> {
         let info = PyDict::new(py);
         let config = self.inner.config();
-        
+
         info.set_item("architecture", self.architecture())?;
         info.set_item("parameter_count", self.parameter_count())?;
         info.set_item("memory_usage", self.memory_usage())?;
@@ -148,7 +151,7 @@ impl PyBitNetModel {
         info.set_item("hidden_size", config.model.hidden_size)?;
         info.set_item("num_layers", config.model.num_layers)?;
         info.set_item("supports_streaming", self.supports_streaming())?;
-        
+
         Ok(info.into())
     }
 
@@ -191,12 +194,13 @@ impl PyModelLoader {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
-            
+
             rt.block_on(async {
                 let loader = ModelLoader::new(self.device.clone());
-                let model = loader.load(path)
+                let model = loader
+                    .load(path)
                     .map_err(|e| PyRuntimeError::new_err(format!("Failed to load model: {}", e)))?;
-                
+
                 Ok(PyBitNetModel {
                     inner: Arc::from(model),
                     device: self.device.clone(),
@@ -210,19 +214,20 @@ impl PyModelLoader {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
-            
+
             rt.block_on(async {
                 let loader = ModelLoader::new(self.device.clone());
-                let metadata = loader.extract_metadata(path)
-                    .map_err(|e| PyRuntimeError::new_err(format!("Failed to extract metadata: {}", e)))?;
-                
+                let metadata = loader.extract_metadata(path).map_err(|e| {
+                    PyRuntimeError::new_err(format!("Failed to extract metadata: {}", e))
+                })?;
+
                 let py_metadata = PyDict::new(py);
                 py_metadata.set_item("architecture", metadata.architecture)?;
                 py_metadata.set_item("vocab_size", metadata.vocab_size)?;
                 py_metadata.set_item("context_length", metadata.context_length)?;
                 py_metadata.set_item("parameter_count", metadata.parameter_count)?;
                 py_metadata.set_item("quantization", format!("{:?}", metadata.quantization))?;
-                
+
                 Ok(py_metadata.into())
             })
         })
@@ -230,7 +235,11 @@ impl PyModelLoader {
 
     /// List available formats
     fn available_formats(&self) -> Vec<String> {
-        vec!["GGUF".to_string(), "SafeTensors".to_string(), "HuggingFace".to_string()]
+        vec![
+            "GGUF".to_string(),
+            "SafeTensors".to_string(),
+            "HuggingFace".to_string(),
+        ]
     }
 
     /// Get device
@@ -253,7 +262,7 @@ mod tests {
     fn test_model_loader_creation() {
         let loader = PyModelLoader::new("cpu").unwrap();
         assert_eq!(loader.device(), "cpu");
-        
+
         let formats = loader.available_formats();
         assert!(formats.contains(&"GGUF".to_string()));
     }

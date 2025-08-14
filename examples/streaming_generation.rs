@@ -1,5 +1,5 @@
 //! Streaming generation example using BitNet.rs
-//! 
+//!
 //! This example demonstrates how to use streaming generation for real-time text output.
 
 use bitnet::prelude::*;
@@ -92,7 +92,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("--- Generation Statistics ---");
         let stats = engine.get_last_generation_stats()?;
         println!("Tokens generated: {}", stats.tokens_generated);
-        println!("Generation time: {:.2}s", stats.generation_time_ms as f64 / 1000.0);
+        println!(
+            "Generation time: {:.2}s",
+            stats.generation_time_ms as f64 / 1000.0
+        );
         println!("Tokens per second: {:.2}", stats.tokens_per_second);
         println!("Total response length: {} characters", full_response.len());
     }

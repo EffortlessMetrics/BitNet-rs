@@ -8,7 +8,7 @@ use pyo3::types::PyDict;
 /// Convert Python kwargs to Rust HashMap
 pub fn kwargs_to_hashmap(kwargs: Option<&PyDict>) -> std::collections::HashMap<String, String> {
     let mut map = std::collections::HashMap::new();
-    
+
     if let Some(kwargs) = kwargs {
         for (key, value) in kwargs {
             if let (Ok(key_str), Ok(value_str)) = (key.extract::<String>(), value.str()) {
@@ -18,7 +18,7 @@ pub fn kwargs_to_hashmap(kwargs: Option<&PyDict>) -> std::collections::HashMap<S
             }
         }
     }
-    
+
     map
 }
 
@@ -31,13 +31,15 @@ pub fn validate_device(device: &str) -> PyResult<()> {
             if device_id.is_ok() {
                 Ok(())
             } else {
-                Err(pyo3::exceptions::PyValueError::new_err(
-                    format!("Invalid CUDA device ID: {}", device)
-                ))
+                Err(pyo3::exceptions::PyValueError::new_err(format!(
+                    "Invalid CUDA device ID: {}",
+                    device
+                )))
             }
         }
-        _ => Err(pyo3::exceptions::PyValueError::new_err(
-            format!("Unsupported device: {}", device)
-        )),
+        _ => Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "Unsupported device: {}",
+            device
+        ))),
     }
 }

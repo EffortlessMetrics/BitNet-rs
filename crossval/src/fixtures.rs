@@ -20,55 +20,57 @@ impl TestFixture {
     pub fn load(name: &str) -> Result<Self> {
         let fixtures_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("fixtures");
         let fixture_path = fixtures_dir.join(format!("{}.json", name));
-        
+
         if !fixture_path.exists() {
-            return Err(CrossvalError::ModelLoadError(
-                format!("Fixture '{}' not found at {:?}", name, fixture_path)
-            ));
+            return Err(CrossvalError::ModelLoadError(format!(
+                "Fixture '{}' not found at {:?}",
+                name, fixture_path
+            )));
         }
-        
+
         let content = std::fs::read_to_string(&fixture_path)?;
         let fixture: TestFixture = serde_json::from_str(&content)?;
-        
+
         // Validate that model file exists
         let model_path = if fixture.model_path.is_absolute() {
             fixture.model_path.clone()
         } else {
             fixtures_dir.join(&fixture.model_path)
         };
-        
+
         if !model_path.exists() {
-            return Err(CrossvalError::ModelLoadError(
-                format!("Model file not found: {:?}", model_path)
-            ));
+            return Err(CrossvalError::ModelLoadError(format!(
+                "Model file not found: {:?}",
+                model_path
+            )));
         }
-        
+
         Ok(TestFixture {
             model_path,
             ..fixture
         })
     }
-    
+
     /// Get all available fixture names
     pub fn list_available() -> Result<Vec<String>> {
         let fixtures_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("fixtures");
-        
+
         if !fixtures_dir.exists() {
             return Ok(vec![]);
         }
-        
+
         let mut fixtures = Vec::new();
         for entry in std::fs::read_dir(fixtures_dir)? {
             let entry = entry?;
             let path = entry.path();
-            
+
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
                 if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
                     fixtures.push(name.to_string());
                 }
             }
         }
-        
+
         fixtures.sort();
         Ok(fixtures)
     }

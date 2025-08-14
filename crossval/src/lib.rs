@@ -29,19 +29,19 @@ pub mod utils;
 pub enum CrossvalError {
     #[error("C++ implementation not available (compile with --features crossval)")]
     CppNotAvailable,
-    
+
     #[error("Model loading failed: {0}")]
     ModelLoadError(String),
-    
+
     #[error("Inference failed: {0}")]
     InferenceError(String),
-    
+
     #[error("Numerical comparison failed: {0}")]
     ComparisonError(String),
-    
+
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
-    
+
     #[error("Serialization error: {0}")]
     SerializationError(#[from] serde_json::Error),
 }

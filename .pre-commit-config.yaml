@@ -1,0 +1,45 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt (check)
+        entry: bash -c 'cargo fmt --all -- --check'
+        language: system
+        files: '\.rs$'
+        pass_filenames: false
+
+      - id: cargo-clippy
+        name: cargo clippy (deny warnings + no &Vec args)
+        entry: bash -c 'RUSTFLAGS="-Dwarnings" cargo clippy --workspace --all-features --all-targets -- -D warnings -D clippy::ptr_arg'
+        language: system
+        files: '\.rs$'
+        pass_filenames: false
+
+      - id: cargo-check-tests
+        name: cargo check --tests
+        entry: bash -c 'cargo check --workspace --tests --no-default-features --features cpu'
+        language: system
+        files: '\.rs$'
+        pass_filenames: false
+
+      - id: cargo-test-no-run
+        name: cargo test --no-run
+        entry: bash -c 'cargo test --workspace --no-default-features --features cpu --no-run'
+        language: system
+        files: '\.rs$'
+        pass_filenames: false
+
+      - id: banned-patterns
+        name: banned patterns (TestResult misuse, split doc comments)
+        entry: bash scripts/hooks/banned-patterns.sh
+        language: system
+        files: 'tests/.*\.rs$'
+        pass_filenames: false

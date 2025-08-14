@@ -79,15 +79,13 @@ pub const DEFAULT_MAX_PARALLEL_TESTS: usize = 4;
 pub mod prelude {
     // Fallible result alias + common error
     pub use super::errors::{TestError, TestOpResult as TestResultCompat};
-    
+
     // Structured record (test outcome)
     pub use super::results::TestResult as TestRecord;
-    
+
     // Canonical parallel types
-    pub use super::parallel::{
-        ParallelExecutor, TestCategory, TestGroup, TestInfo, TestPriority,
-    };
-    
+    pub use super::parallel::{ParallelExecutor, TestCategory, TestGroup, TestInfo, TestPriority};
+
     // Common utilities people expect in test code
     pub use super::config::TestConfig;
     pub use super::fixtures::FixtureManager;

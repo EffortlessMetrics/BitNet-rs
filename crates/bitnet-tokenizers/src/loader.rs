@@ -1,7 +1,7 @@
 /// Tokenizer loading utilities
 use crate::Tokenizer;
-use std::path::Path;
 use anyhow::Result;
+use std::path::Path;
 
 /// Load a tokenizer from a file path
 pub fn load_tokenizer(_path: &Path) -> Result<Box<dyn Tokenizer>> {

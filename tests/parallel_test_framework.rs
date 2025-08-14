@@ -4,9 +4,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
+use tempfile;
 use tokio::sync::{RwLock, Semaphore};
 use tokio::time::{sleep, timeout};
-use tempfile;
 
 /// Simple test result
 #[derive(Debug, Clone)]
@@ -56,7 +56,7 @@ impl IsolatedEnvironment {
     fn new(test_name: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let temp_dir = tempfile::tempdir()?;
         let env_vars = std::env::vars().collect();
-        
+
         Ok(Self {
             test_name: test_name.to_string(),
             temp_dir,
@@ -111,7 +111,8 @@ impl<T: TestCase> AsyncTestWrapper<T> {
             let name = self.inner.name().to_string();
             let test_result = self.inner.run_sync();
             move || (name, test_result)
-        }).await;
+        })
+        .await;
 
         match result {
             Ok((_, test_result)) => test_result,
@@ -151,11 +152,15 @@ impl TestCase for IsolationTestCase {
     fn run_sync(&self) -> Result<(), String> {
         // Verify isolation setup
         let test_name = std::env::var("BITNET_TEST_NAME").map_err(|_| "Test name not set")?;
-        let isolation_flag = std::env::var("BITNET_TEST_ISOLATION").map_err(|_| "Isolation flag not set")?;
+        let isolation_flag =
+            std::env::var("BITNET_TEST_ISOLATION").map_err(|_| "Isolation flag not set")?;
         let temp_dir = std::env::var("BITNET_TEST_TEMP_DIR").map_err(|_| "Temp dir not set")?;
 
         if test_name != self.name {
-            return Err(format!("Test name mismatch: expected '{}', got '{}'", self.name, test_name));
+            return Err(format!(
+                "Test name mismatch: expected '{}', got '{}'",
+                self.name, test_name
+            ));
         }
 
         if isolation_flag != "true" {
@@ -171,27 +176,40 @@ impl TestCase for IsolationTestCase {
 
         // Create a unique file in the temp directory
         let unique_file = std::path::Path::new(&temp_dir).join(format!("{}.txt", self.name));
-        std::fs::write(&unique_file, &self.unique_value).map_err(|e| format!("Failed to write file: {}", e))?;
+        std::fs::write(&unique_file, &self.unique_value)
+            .map_err(|e| format!("Failed to write file: {}", e))?;
 
         // Simulate work (blocking sleep is fine in spawn_blocking)
         std::thread::sleep(self.work_duration);
 
         // Verify isolation is still intact after work
-        let test_name_after = std::env::var("BITNET_TEST_NAME").map_err(|_| "Test name lost during execution")?;
+        let test_name_after =
+            std::env::var("BITNET_TEST_NAME").map_err(|_| "Test name lost during execution")?;
         if test_name_after != self.name {
-            return Err(format!("Isolation broken during execution: expected '{}', got '{}'", self.name, test_name_after));
+            return Err(format!(
+                "Isolation broken during execution: expected '{}', got '{}'",
+                self.name, test_name_after
+            ));
         }
 
         // Verify our unique environment variable is still correct
-        let unique_var_after = std::env::var("UNIQUE_TEST_VAR").map_err(|_| "Unique var lost during execution")?;
+        let unique_var_after =
+            std::env::var("UNIQUE_TEST_VAR").map_err(|_| "Unique var lost during execution")?;
         if unique_var_after != self.unique_value {
-            return Err(format!("Environment interference detected: expected '{}', got '{}'", self.unique_value, unique_var_after));
+            return Err(format!(
+                "Environment interference detected: expected '{}', got '{}'",
+                self.unique_value, unique_var_after
+            ));
         }
 
         // Verify our unique file still exists and has correct content
-        let file_content = std::fs::read_to_string(&unique_file).map_err(|e| format!("Failed to read file: {}", e))?;
+        let file_content = std::fs::read_to_string(&unique_file)
+            .map_err(|e| format!("Failed to read file: {}", e))?;
         if file_content != self.unique_value {
-            return Err(format!("File interference detected: expected '{}', got '{}'", self.unique_value, file_content));
+            return Err(format!(
+                "File interference detected: expected '{}', got '{}'",
+                self.unique_value, file_content
+            ));
         }
 
         if self.should_fail {
@@ -357,7 +375,7 @@ mod tests {
     #[tokio::test]
     async fn test_parallel_execution_with_proper_isolation() {
         println!("🚀 Testing parallel execution with proper isolation...");
-        
+
         // Create test harness with 3 parallel slots
         let harness = ParallelTestHarness::new(3, Duration::from_secs(10));
 
@@ -381,7 +399,11 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
+            let status = if result.passed {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            };
             println!("  {} {} ({:?})", status, result.test_name, result.duration);
             if let Some(error) = &result.error {
                 println!("    Error: {}", error);
@@ -399,11 +421,11 @@ mod tests {
 
         // Verify parallel execution efficiency
         let sequential_time = Duration::from_millis(100 + 150 + 300 + 250 + 500 + 100); // 1400ms
-        
+
         println!("⏱️  Performance Analysis:");
         println!("  Total execution time: {:?}", total_duration);
         println!("  Sequential time would be: {:?}", sequential_time);
-        
+
         // Verify that parallel execution was faster than sequential
         assert!(total_duration < sequential_time, 
             "Parallel execution should be faster than sequential. Got {:?}, expected less than {:?}", 
@@ -421,7 +443,8 @@ mod tests {
         assert_eq!(stats.passed_tests, 5);
         assert_eq!(stats.failed_tests, 1);
 
-        let efficiency = (sequential_time.as_secs_f64() / total_duration.as_secs_f64() - 1.0) * 100.0;
+        let efficiency =
+            (sequential_time.as_secs_f64() / total_duration.as_secs_f64() - 1.0) * 100.0;
         println!("  Parallel efficiency: {:.1}%", efficiency);
 
         println!("✅ Parallel execution with isolation test passed!");
@@ -434,7 +457,7 @@ mod tests {
     #[tokio::test]
     async fn test_semaphore_limits_parallelism() {
         println!("🚀 Testing semaphore limits parallelism...");
-        
+
         // Create test harness with only 1 parallel slot (sequential execution)
         let harness = ParallelTestHarness::new(1, Duration::from_secs(10));
 
@@ -455,29 +478,43 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
+            let status = if result.passed {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            };
             println!("  {} {} ({:?})", status, result.test_name, result.duration);
         }
 
         // Verify results
         assert_eq!(results.len(), 3, "Should have 3 test results");
-        assert_eq!(results.iter().filter(|r| r.passed).count(), 3, "All tests should pass");
+        assert_eq!(
+            results.iter().filter(|r| r.passed).count(),
+            3,
+            "All tests should pass"
+        );
 
         // With max_parallel = 1, execution should be close to sequential
         let expected_min_time = Duration::from_millis(600); // 3 * 200ms
-        assert!(total_duration >= expected_min_time.mul_f64(0.8), 
-            "Sequential execution should take at least ~{:?}, got {:?}", 
-            expected_min_time, total_duration);
+        assert!(
+            total_duration >= expected_min_time.mul_f64(0.8),
+            "Sequential execution should take at least ~{:?}, got {:?}",
+            expected_min_time,
+            total_duration
+        );
 
         println!("⏱️  Performance Analysis:");
-        println!("  Execution time: {:?} (expected ~{:?})", total_duration, expected_min_time);
+        println!(
+            "  Execution time: {:?} (expected ~{:?})",
+            total_duration, expected_min_time
+        );
         println!("✅ Semaphore limiting test passed!");
     }
 
     #[tokio::test]
     async fn test_isolation_prevents_interference() {
         println!("🚀 Testing isolation prevents interference...");
-        
+
         // Create test harness
         let harness = ParallelTestHarness::new(3, Duration::from_secs(10));
 
@@ -507,38 +544,57 @@ mod tests {
 
             fn run_sync(&self) -> Result<(), String> {
                 // Verify we're in isolated environment
-                let test_name = std::env::var("BITNET_TEST_NAME").map_err(|_| "Not in isolated environment")?;
+                let test_name =
+                    std::env::var("BITNET_TEST_NAME").map_err(|_| "Not in isolated environment")?;
                 if test_name != self.name {
-                    return Err(format!("Wrong test environment: expected '{}', got '{}'", self.name, test_name));
+                    return Err(format!(
+                        "Wrong test environment: expected '{}', got '{}'",
+                        self.name, test_name
+                    ));
                 }
 
                 // Set a test-specific environment variable
                 std::env::set_var(&self.env_key, &self.env_value);
 
                 // Create a file in temp directory
-                let temp_dir = std::env::var("BITNET_TEST_TEMP_DIR").map_err(|_| "Temp dir not available")?;
-                let test_file = std::path::Path::new(&temp_dir).join(format!("{}_{}.txt", self.name, self.env_key));
-                std::fs::write(&test_file, &self.env_value).map_err(|e| format!("Failed to write file: {}", e))?;
+                let temp_dir =
+                    std::env::var("BITNET_TEST_TEMP_DIR").map_err(|_| "Temp dir not available")?;
+                let test_file = std::path::Path::new(&temp_dir)
+                    .join(format!("{}_{}.txt", self.name, self.env_key));
+                std::fs::write(&test_file, &self.env_value)
+                    .map_err(|e| format!("Failed to write file: {}", e))?;
 
                 // Wait a bit to allow other tests to potentially interfere
                 std::thread::sleep(self.work_duration);
 
                 // Verify our environment variable is still correct
-                let actual_value = std::env::var(&self.env_key).map_err(|_| "Environment variable lost")?;
+                let actual_value =
+                    std::env::var(&self.env_key).map_err(|_| "Environment variable lost")?;
                 if actual_value != self.env_value {
-                    return Err(format!("Environment interference detected: expected '{}', got '{}'", self.env_value, actual_value));
+                    return Err(format!(
+                        "Environment interference detected: expected '{}', got '{}'",
+                        self.env_value, actual_value
+                    ));
                 }
 
                 // Verify our file still exists and has correct content
-                let file_content = std::fs::read_to_string(&test_file).map_err(|e| format!("Failed to read file: {}", e))?;
+                let file_content = std::fs::read_to_string(&test_file)
+                    .map_err(|e| format!("Failed to read file: {}", e))?;
                 if file_content != self.env_value {
-                    return Err(format!("File interference detected: expected '{}', got '{}'", self.env_value, file_content));
+                    return Err(format!(
+                        "File interference detected: expected '{}', got '{}'",
+                        self.env_value, file_content
+                    ));
                 }
 
                 // Verify we're still in the correct test environment
-                let test_name_after = std::env::var("BITNET_TEST_NAME").map_err(|_| "Test name lost")?;
+                let test_name_after =
+                    std::env::var("BITNET_TEST_NAME").map_err(|_| "Test name lost")?;
                 if test_name_after != self.name {
-                    return Err(format!("Test environment changed: expected '{}', got '{}'", self.name, test_name_after));
+                    return Err(format!(
+                        "Test environment changed: expected '{}', got '{}'",
+                        self.name, test_name_after
+                    ));
                 }
 
                 Ok(())
@@ -549,7 +605,12 @@ mod tests {
         let test_cases = vec![
             InterferenceTestCase::new("test_a", "TEST_VAR", "value_a", Duration::from_millis(200)),
             InterferenceTestCase::new("test_b", "TEST_VAR", "value_b", Duration::from_millis(250)),
-            InterferenceTestCase::new("test_c", "ANOTHER_VAR", "value_c", Duration::from_millis(150)),
+            InterferenceTestCase::new(
+                "test_c",
+                "ANOTHER_VAR",
+                "value_c",
+                Duration::from_millis(150),
+            ),
             InterferenceTestCase::new("test_d", "TEST_VAR", "value_d", Duration::from_millis(300)),
         ];
 
@@ -559,7 +620,11 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
+            let status = if result.passed {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            };
             println!("  {} {} ({:?})", status, result.test_name, result.duration);
             if let Some(error) = &result.error {
                 println!("    Error: {}", error);
@@ -568,10 +633,14 @@ mod tests {
 
         // Verify all tests passed (no interference)
         assert_eq!(results.len(), 4, "Should have 4 test results");
-        
+
         for result in &results {
             if !result.passed {
-                panic!("Test '{}' failed: {}", result.test_name, result.error.as_deref().unwrap_or("Unknown error"));
+                panic!(
+                    "Test '{}' failed: {}",
+                    result.test_name,
+                    result.error.as_deref().unwrap_or("Unknown error")
+                );
             }
         }
 
@@ -584,7 +653,7 @@ mod tests {
     #[tokio::test]
     async fn test_timeout_handling() {
         println!("🚀 Testing timeout handling...");
-        
+
         // Create test harness with short timeout
         let harness = ParallelTestHarness::new(2, Duration::from_millis(500));
 
@@ -609,9 +678,13 @@ mod tests {
 
             fn run_sync(&self) -> Result<(), String> {
                 // Verify isolation
-                let test_name = std::env::var("BITNET_TEST_NAME").map_err(|_| "Not in isolated environment")?;
+                let test_name =
+                    std::env::var("BITNET_TEST_NAME").map_err(|_| "Not in isolated environment")?;
                 if test_name != self.name {
-                    return Err(format!("Wrong test environment: expected '{}', got '{}'", self.name, test_name));
+                    return Err(format!(
+                        "Wrong test environment: expected '{}', got '{}'",
+                        self.name, test_name
+                    ));
                 }
 
                 // Sleep for the specified duration
@@ -630,7 +703,11 @@ mod tests {
         // Print results
         println!("📊 Test Results:");
         for result in &results {
-            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
+            let status = if result.passed {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            };
             println!("  {} {} ({:?})", status, result.test_name, result.duration);
             if let Some(error) = &result.error {
                 println!("    Error: {}", error);
@@ -638,14 +715,17 @@ mod tests {
         }
 
         assert_eq!(results.len(), 2, "Should have 2 test results");
-        
+
         // Find the fast and slow test results
         let fast_result = results.iter().find(|r| r.test_name == "fast_test").unwrap();
         let slow_result = results.iter().find(|r| r.test_name == "slow_test").unwrap();
 
         assert!(fast_result.passed, "Fast test should pass");
         assert!(!slow_result.passed, "Slow test should fail due to timeout");
-        assert!(slow_result.error.as_ref().unwrap().contains("timed out"), "Slow test should have timeout error");
+        assert!(
+            slow_result.error.as_ref().unwrap().contains("timed out"),
+            "Slow test should have timeout error"
+        );
 
         println!("✅ Timeout handling test passed!");
         println!("   - Fast test completed successfully");

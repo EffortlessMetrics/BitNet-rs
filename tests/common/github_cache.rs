@@ -380,7 +380,8 @@ impl GitHubCacheManager {
     fn calculate_directory_size<'a>(
         &'a self,
         path: &'a Path,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = TestResultCompat<u64>> + Send + '_>> {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = TestResultCompat<u64>> + Send + '_>>
+    {
         Box::pin(async move {
             let mut total_size = 0u64;
 

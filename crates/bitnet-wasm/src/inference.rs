@@ -1,14 +1,14 @@
 //! WebAssembly inference wrapper with streaming support
 
-use wasm_bindgen::prelude::*;
-use js_sys::{Promise, Object, Array};
-use web_sys::console;
+use js_sys::{Array, Object, Promise};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use wasm_bindgen::prelude::*;
+use web_sys::console;
 
 use crate::model::WasmBitNetModel;
-use crate::utils::{JsError, to_js_error};
 use crate::streaming::WasmGenerationStream;
+use crate::utils::{to_js_error, JsError};
 
 /// Configuration for inference generation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -174,7 +174,9 @@ impl WasmInference {
     #[wasm_bindgen(constructor)]
     pub fn new(model: WasmBitNetModel) -> Result<WasmInference, JsError> {
         if !model.is_loaded() {
-            return Err(JsError::new("Model must be loaded before creating inference wrapper"));
+            return Err(JsError::new(
+                "Model must be loaded before creating inference wrapper",
+            ));
         }
 
         Ok(WasmInference {
@@ -185,9 +187,13 @@ impl WasmInference {
 
     /// Generate text synchronously (blocking)
     #[wasm_bindgen]
-    pub fn generate(&mut self, prompt: &str, config: Option<WasmGenerationConfig>) -> Result<String, JsError> {
+    pub fn generate(
+        &mut self,
+        prompt: &str,
+        config: Option<WasmGenerationConfig>,
+    ) -> Result<String, JsError> {
         let config = config.unwrap_or_default();
-        
+
         if !self.model.is_loaded() {
             return Err(JsError::new("Model is not loaded"));
         }
@@ -196,20 +202,29 @@ impl WasmInference {
 
         // For now, return a placeholder response
         // In a full implementation, this would call the actual inference engine
-        let response = format!("Generated response for: {} (max_tokens: {}, temp: {})", 
-                              prompt, config.max_new_tokens, config.temperature);
-        
+        let response = format!(
+            "Generated response for: {} (max_tokens: {}, temp: {})",
+            prompt, config.max_new_tokens, config.temperature
+        );
+
         // Update generation stats
-        self.generation_stats.insert("last_prompt_length".to_string(), prompt.len() as f64);
-        self.generation_stats.insert("last_response_length".to_string(), response.len() as f64);
-        self.generation_stats.insert("last_temperature".to_string(), config.temperature as f64);
+        self.generation_stats
+            .insert("last_prompt_length".to_string(), prompt.len() as f64);
+        self.generation_stats
+            .insert("last_response_length".to_string(), response.len() as f64);
+        self.generation_stats
+            .insert("last_temperature".to_string(), config.temperature as f64);
 
         Ok(response)
     }
 
     /// Generate text asynchronously
     #[wasm_bindgen]
-    pub fn generate_async(&mut self, prompt: &str, config: Option<WasmGenerationConfig>) -> Promise {
+    pub fn generate_async(
+        &mut self,
+        prompt: &str,
+        config: Option<WasmGenerationConfig>,
+    ) -> Promise {
         let prompt = prompt.to_string();
         let config = config.unwrap_or_default();
         let model_loaded = self.model.is_loaded();
@@ -223,22 +238,28 @@ impl WasmInference {
 
             // Simulate async processing
             let response = Self::generate_async_impl(prompt, config).await?;
-            
+
             Ok(JsValue::from_str(&response))
         })
     }
 
     /// Create a streaming generation iterator
     #[wasm_bindgen]
-    pub fn generate_stream(&mut self, prompt: &str, config: Option<WasmGenerationConfig>) -> Result<WasmGenerationStream, JsError> {
+    pub fn generate_stream(
+        &mut self,
+        prompt: &str,
+        config: Option<WasmGenerationConfig>,
+    ) -> Result<WasmGenerationStream, JsError> {
         let config = config.unwrap_or_default();
-        
+
         if !self.model.is_loaded() {
             return Err(JsError::new("Model is not loaded"));
         }
 
         if !config.streaming {
-            return Err(JsError::new("Streaming must be enabled in generation config"));
+            return Err(JsError::new(
+                "Streaming must be enabled in generation config",
+            ));
         }
 
         WasmGenerationStream::new(prompt.to_string(), config)
@@ -283,13 +304,13 @@ impl WasmInference {
     ) -> Result<String, JsError> {
         // Simulate processing time based on max_new_tokens
         let delay_ms = (config.max_new_tokens as f64 * 10.0) as i32;
-        
+
         // Use setTimeout to simulate async processing
         let promise = js_sys::Promise::new(&mut |resolve, _reject| {
             let resolve = resolve.clone();
             let prompt = prompt.clone();
             let config = config.clone();
-            
+
             web_sys::window()
                 .unwrap()
                 .set_timeout_with_callback_and_timeout_and_arguments_0(

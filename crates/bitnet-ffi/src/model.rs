@@ -3,13 +3,13 @@
 //! This module provides thread-safe model loading, management, and information
 //! retrieval functionality for the C API.
 
-use crate::{BitNetCError, BitNetCConfig};
+use crate::{BitNetCConfig, BitNetCError};
 use bitnet_common::{BitNetConfig, ModelFormat, QuantizationType};
 use bitnet_models::Model;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock, Mutex};
-use std::os::raw::{c_char, c_uint, c_ulong};
 use std::ffi::CString;
+use std::os::raw::{c_char, c_uint, c_ulong};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// C API model information structure
 #[repr(C)]
@@ -122,16 +122,22 @@ impl ModelManager {
     }
 
     /// Load a model with configuration
-    pub fn load_model_with_config(&self, path: &str, config: &BitNetCConfig) -> Result<u32, BitNetCError> {
+    pub fn load_model_with_config(
+        &self,
+        path: &str,
+        config: &BitNetCConfig,
+    ) -> Result<u32, BitNetCError> {
         // Convert C config to Rust config
         let rust_config = config.to_bitnet_config()?;
-        
+
         // Load the model using the models crate
         let model = self.load_model_from_path(path, &rust_config)?;
-        
+
         // Get next available ID
         let model_id = {
-            let mut next_id = self.next_id.lock()
+            let mut next_id = self
+                .next_id
+                .lock()
                 .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire ID lock".to_string()))?;
             let id = *next_id;
             *next_id += 1;
@@ -140,16 +146,18 @@ impl ModelManager {
 
         // Store model
         {
-            let mut models = self.models.write()
-                .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire models write lock".to_string()))?;
+            let mut models = self.models.write().map_err(|_| {
+                BitNetCError::ThreadSafety("Failed to acquire models write lock".to_string())
+            })?;
             models.insert(model_id, model);
         }
 
         // Store model info
         let model_info = self.create_model_info(path, &rust_config)?;
         {
-            let mut info_map = self.model_info.write()
-                .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire model info write lock".to_string()))?;
+            let mut info_map = self.model_info.write().map_err(|_| {
+                BitNetCError::ThreadSafety("Failed to acquire model info write lock".to_string())
+            })?;
             info_map.insert(model_id, model_info);
         }
 
@@ -160,81 +168,107 @@ impl ModelManager {
     pub fn free_model(&self, model_id: u32) -> Result<(), BitNetCError> {
         // Remove from models
         let model_existed = {
-            let mut models = self.models.write()
-                .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire models write lock".to_string()))?;
+            let mut models = self.models.write().map_err(|_| {
+                BitNetCError::ThreadSafety("Failed to acquire models write lock".to_string())
+            })?;
             models.remove(&model_id).is_some()
         };
 
         // Remove from model info
         {
-            let mut info_map = self.model_info.write()
-                .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire model info write lock".to_string()))?;
+            let mut info_map = self.model_info.write().map_err(|_| {
+                BitNetCError::ThreadSafety("Failed to acquire model info write lock".to_string())
+            })?;
             info_map.remove(&model_id);
         }
 
         if model_existed {
             Ok(())
         } else {
-            Err(BitNetCError::InvalidModelId(format!("Model ID {} not found", model_id)))
+            Err(BitNetCError::InvalidModelId(format!(
+                "Model ID {} not found",
+                model_id
+            )))
         }
     }
 
     /// Check if a model is loaded
     pub fn is_model_loaded(&self, model_id: u32) -> Result<bool, BitNetCError> {
-        let models = self.models.read()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire models read lock".to_string()))?;
+        let models = self.models.read().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire models read lock".to_string())
+        })?;
         Ok(models.contains_key(&model_id))
     }
 
     /// Get model information
     pub fn get_model_info(&self, model_id: u32) -> Result<BitNetCModel, BitNetCError> {
-        let info_map = self.model_info.read()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire model info read lock".to_string()))?;
-        
+        let info_map = self.model_info.read().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire model info read lock".to_string())
+        })?;
+
         match info_map.get(&model_id) {
             Some(info) => Ok(info.to_c_model()),
-            None => Err(BitNetCError::InvalidModelId(format!("Model ID {} not found", model_id))),
+            None => Err(BitNetCError::InvalidModelId(format!(
+                "Model ID {} not found",
+                model_id
+            ))),
         }
     }
 
     /// Get a reference to a loaded model
-    pub fn get_model(&self, model_id: u32) -> Result<Arc<dyn Model<Config = BitNetConfig>>, BitNetCError> {
-        let models = self.models.read()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire models read lock".to_string()))?;
-        
+    pub fn get_model(
+        &self,
+        model_id: u32,
+    ) -> Result<Arc<dyn Model<Config = BitNetConfig>>, BitNetCError> {
+        let models = self.models.read().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire models read lock".to_string())
+        })?;
+
         match models.get(&model_id) {
             Some(model) => Ok(Arc::clone(model)),
-            None => Err(BitNetCError::InvalidModelId(format!("Model ID {} not found", model_id))),
+            None => Err(BitNetCError::InvalidModelId(format!(
+                "Model ID {} not found",
+                model_id
+            ))),
         }
     }
 
     /// Get list of loaded model IDs
     pub fn get_loaded_models(&self) -> Result<Vec<u32>, BitNetCError> {
-        let models = self.models.read()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire models read lock".to_string()))?;
+        let models = self.models.read().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire models read lock".to_string())
+        })?;
         Ok(models.keys().copied().collect())
     }
 
     /// Get total memory usage of all loaded models
     pub fn get_total_memory_usage(&self) -> Result<u64, BitNetCError> {
-        let info_map = self.model_info.read()
-            .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire model info read lock".to_string()))?;
-        
+        let info_map = self.model_info.read().map_err(|_| {
+            BitNetCError::ThreadSafety("Failed to acquire model info read lock".to_string())
+        })?;
+
         Ok(info_map.values().map(|info| info.memory_usage).sum())
     }
 
     // Private helper methods
 
-    fn load_model_from_path(&self, path: &str, config: &BitNetConfig) -> Result<Arc<dyn Model<Config = BitNetConfig>>, BitNetCError> {
+    fn load_model_from_path(
+        &self,
+        path: &str,
+        config: &BitNetConfig,
+    ) -> Result<Arc<dyn Model<Config = BitNetConfig>>, BitNetCError> {
         // This is a placeholder implementation
         // In the real implementation, this would use the bitnet-models crate
         // to load the actual model based on the file format
-        
+
         use std::path::Path;
         let path_obj = Path::new(path);
-        
+
         if !path_obj.exists() {
-            return Err(BitNetCError::ModelNotFound(format!("Model file not found: {}", path)));
+            return Err(BitNetCError::ModelNotFound(format!(
+                "Model file not found: {}",
+                path
+            )));
         }
 
         // Detect format based on extension
@@ -252,9 +286,13 @@ impl ModelManager {
         Ok(Arc::new(MockModel::new(config.clone())))
     }
 
-    fn create_model_info(&self, path: &str, config: &BitNetConfig) -> Result<ModelInfo, BitNetCError> {
+    fn create_model_info(
+        &self,
+        path: &str,
+        config: &BitNetConfig,
+    ) -> Result<ModelInfo, BitNetCError> {
         use std::fs;
-        
+
         let file_size = fs::metadata(path)
             .map_err(|e| BitNetCError::Internal(format!("Failed to get file metadata: {}", e)))?
             .len();
@@ -266,14 +304,16 @@ impl ModelManager {
             std::path::Path::new(path)
                 .file_stem()
                 .and_then(|s| s.to_str())
-                .unwrap_or("unknown")
-        ).map_err(|_| BitNetCError::Internal("Failed to create model name string".to_string()))?;
+                .unwrap_or("unknown"),
+        )
+        .map_err(|_| BitNetCError::Internal("Failed to create model name string".to_string()))?;
 
         let version = CString::new("1.0.0")
             .map_err(|_| BitNetCError::Internal("Failed to create version string".to_string()))?;
 
-        let architecture = CString::new("BitNet")
-            .map_err(|_| BitNetCError::Internal("Failed to create architecture string".to_string()))?;
+        let architecture = CString::new("BitNet").map_err(|_| {
+            BitNetCError::Internal("Failed to create architecture string".to_string())
+        })?;
 
         Ok(ModelInfo {
             name,
@@ -288,15 +328,15 @@ impl ModelManager {
 
     fn estimate_memory_usage(&self, config: &BitNetConfig) -> u64 {
         // Rough estimation based on model parameters
-        let params = config.model.vocab_size * config.model.hidden_size +
-                    config.model.num_layers * config.model.hidden_size * config.model.hidden_size * 4;
-        
+        let params = config.model.vocab_size * config.model.hidden_size
+            + config.model.num_layers * config.model.hidden_size * config.model.hidden_size * 4;
+
         // Estimate bytes per parameter based on quantization
         let bytes_per_param = match config.quantization.quantization_type {
             QuantizationType::I2S => 0.25, // 2 bits per parameter
             QuantizationType::TL1 | QuantizationType::TL2 => 0.5, // 4 bits per parameter with lookup tables
         };
-        
+
         (params as f64 * bytes_per_param) as u64
     }
 }
@@ -319,7 +359,10 @@ impl Model for MockModel {
         &self.config
     }
 
-    fn forward(&self, _input: &bitnet_common::BitNetTensor) -> bitnet_common::Result<bitnet_common::BitNetTensor> {
+    fn forward(
+        &self,
+        _input: &bitnet_common::BitNetTensor,
+    ) -> bitnet_common::Result<bitnet_common::BitNetTensor> {
         // Mock implementation - create a dummy tensor
         use candle_core::Device;
         let device = Device::Cpu;
@@ -343,8 +386,8 @@ pub fn get_model_manager() -> &'static ModelManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
     use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_model_manager_creation() {

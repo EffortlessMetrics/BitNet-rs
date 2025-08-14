@@ -1,8 +1,8 @@
 //! GPU validation and benchmarking CLI utility
-//! 
+//!
 //! This example provides a command-line interface for running comprehensive
 //! GPU kernel validation and performance benchmarking.
-//! 
+//!
 //! Usage:
 //!   cargo run --example gpu_validation --features cuda
 //!   cargo run --example gpu_validation --features cuda -- --benchmark-only
@@ -10,8 +10,8 @@
 
 #[cfg(feature = "cuda")]
 use bitnet_kernels::gpu::{
-    CudaKernel, GpuValidator, ValidationConfig, GpuBenchmark, BenchmarkConfig,
-    print_validation_results, print_benchmark_results, is_cuda_available, cuda_device_count
+    cuda_device_count, is_cuda_available, print_benchmark_results, print_validation_results,
+    BenchmarkConfig, CudaKernel, GpuBenchmark, GpuValidator, ValidationConfig,
 };
 use std::env;
 
@@ -22,7 +22,7 @@ fn main() {
         println!("Run with: cargo run --example gpu_validation --features cuda");
         std::process::exit(1);
     }
-    
+
     #[cfg(feature = "cuda")]
     run_gpu_validation();
 }
@@ -113,11 +113,11 @@ fn run_validation(quick_mode: bool) {
     };
 
     let validator = GpuValidator::with_config(config);
-    
+
     match validator.validate() {
         Ok(results) => {
             print_validation_results(&results);
-            
+
             if !results.success {
                 println!("\n❌ GPU validation failed!");
                 std::process::exit(1);
@@ -159,35 +159,62 @@ fn run_benchmarks(quick_mode: bool) {
     };
 
     let benchmark = GpuBenchmark::with_config(config);
-    
+
     match benchmark.run() {
         Ok(results) => {
             print_benchmark_results(&results);
-            
+
             // Provide performance analysis
             println!("\n📈 Performance Analysis:");
             if results.summary.avg_speedup > 10.0 {
-                println!("🚀 Excellent GPU acceleration! Average speedup: {:.1}x", results.summary.avg_speedup);
+                println!(
+                    "🚀 Excellent GPU acceleration! Average speedup: {:.1}x",
+                    results.summary.avg_speedup
+                );
             } else if results.summary.avg_speedup > 5.0 {
-                println!("✅ Very good GPU acceleration! Average speedup: {:.1}x", results.summary.avg_speedup);
+                println!(
+                    "✅ Very good GPU acceleration! Average speedup: {:.1}x",
+                    results.summary.avg_speedup
+                );
             } else if results.summary.avg_speedup > 2.0 {
-                println!("✅ Good GPU acceleration! Average speedup: {:.1}x", results.summary.avg_speedup);
+                println!(
+                    "✅ Good GPU acceleration! Average speedup: {:.1}x",
+                    results.summary.avg_speedup
+                );
             } else if results.summary.avg_speedup > 1.0 {
-                println!("⚠️  Modest GPU acceleration. Average speedup: {:.1}x", results.summary.avg_speedup);
+                println!(
+                    "⚠️  Modest GPU acceleration. Average speedup: {:.1}x",
+                    results.summary.avg_speedup
+                );
                 println!("   Consider optimizing GPU kernels or checking GPU utilization");
             } else {
-                println!("❌ GPU is slower than CPU! Average speedup: {:.1}x", results.summary.avg_speedup);
+                println!(
+                    "❌ GPU is slower than CPU! Average speedup: {:.1}x",
+                    results.summary.avg_speedup
+                );
                 println!("   This indicates a problem with the GPU implementation");
             }
 
             if results.summary.peak_gflops > 500.0 {
-                println!("🚀 Excellent computational throughput: {:.0} GFLOPS", results.summary.peak_gflops);
+                println!(
+                    "🚀 Excellent computational throughput: {:.0} GFLOPS",
+                    results.summary.peak_gflops
+                );
             } else if results.summary.peak_gflops > 100.0 {
-                println!("✅ Good computational throughput: {:.0} GFLOPS", results.summary.peak_gflops);
+                println!(
+                    "✅ Good computational throughput: {:.0} GFLOPS",
+                    results.summary.peak_gflops
+                );
             } else if results.summary.peak_gflops > 50.0 {
-                println!("⚠️  Moderate computational throughput: {:.0} GFLOPS", results.summary.peak_gflops);
+                println!(
+                    "⚠️  Moderate computational throughput: {:.0} GFLOPS",
+                    results.summary.peak_gflops
+                );
             } else {
-                println!("❌ Low computational throughput: {:.0} GFLOPS", results.summary.peak_gflops);
+                println!(
+                    "❌ Low computational throughput: {:.0} GFLOPS",
+                    results.summary.peak_gflops
+                );
             }
         }
         Err(e) => {
@@ -196,4 +223,3 @@ fn run_benchmarks(quick_mode: bool) {
         }
     }
 }
-

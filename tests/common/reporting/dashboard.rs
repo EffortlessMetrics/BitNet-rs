@@ -28,7 +28,7 @@ impl BenchmarkResult {
             0.0
         }
     }
-    
+
     /// Builder-style helper (lets tests omit future fields safely)
     pub fn with_summary(
         name: String,
@@ -36,10 +36,10 @@ impl BenchmarkResult {
         duration: Duration,
         summary: PerformanceSummary,
     ) -> Self {
-        Self { 
+        Self {
             name,
-            iterations, 
-            duration, 
+            iterations,
+            duration,
             summary,
             throughput: 0.0,
             warmup_iterations: 0,

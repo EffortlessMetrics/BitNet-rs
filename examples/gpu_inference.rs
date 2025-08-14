@@ -1,5 +1,5 @@
 //! GPU inference example using BitNet.rs with CUDA acceleration
-//! 
+//!
 //! This example demonstrates how to use GPU acceleration for faster inference.
 
 use bitnet::prelude::*;
@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create inference engine with GPU optimization
     let mut engine = InferenceEngine::new(model)?;
-    
+
     // Enable GPU-specific optimizations if available
     if device.is_cuda() {
         engine.enable_gpu_optimizations(true)?;
@@ -69,13 +69,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n--- Batch Inference ---");
     let start_time = std::time::Instant::now();
-    
+
     let responses = engine.generate_batch(&prompts)?;
-    
+
     let elapsed = start_time.elapsed();
     println!("Batch inference completed in: {:?}", elapsed);
-    println!("Throughput: {:.2} tokens/second", 
-             (responses.iter().map(|r| r.len()).sum::<usize>() as f64) / elapsed.as_secs_f64());
+    println!(
+        "Throughput: {:.2} tokens/second",
+        (responses.iter().map(|r| r.len()).sum::<usize>() as f64) / elapsed.as_secs_f64()
+    );
 
     // Display results
     for (prompt, response) in prompts.iter().zip(responses.iter()) {

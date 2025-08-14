@@ -4,8 +4,8 @@
 //! analysis results, including interactive charts and detailed visualizations.
 
 use super::comparison_analysis::{
-    AccuracyAnalysisReport, ExecutiveSummaryReport, PerformanceAnalysisReport, RegressionAnalysisReport, StatusLevel, TestCaseAccuracy,
-    TestCasePerformance,
+    AccuracyAnalysisReport, ExecutiveSummaryReport, PerformanceAnalysisReport,
+    RegressionAnalysisReport, StatusLevel, TestCaseAccuracy, TestCasePerformance,
 };
 use std::path::PathBuf;
 

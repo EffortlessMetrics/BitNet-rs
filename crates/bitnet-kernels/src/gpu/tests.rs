@@ -3,9 +3,11 @@
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gpu::{
+        cuda_device_count, is_cuda_available, BenchmarkConfig, CudaKernel, GpuBenchmark,
+        MemoryPoolConfig, MixedPrecisionKernel, OptimizedMemoryPool, PrecisionMode,
+    };
     use crate::KernelProvider;
-    use crate::gpu::{CudaKernel, is_cuda_available, cuda_device_count, GpuBenchmark, BenchmarkConfig, 
-                     OptimizedMemoryPool, MemoryPoolConfig, MixedPrecisionKernel, PrecisionMode};
     use bitnet_common::QuantizationType;
     use std::sync::Arc;
 
@@ -13,7 +15,7 @@ mod tests {
     fn test_cuda_availability() {
         let available = is_cuda_available();
         println!("CUDA available: {}", available);
-        
+
         if available {
             let device_count = cuda_device_count();
             println!("CUDA device count: {}", device_count);
@@ -63,19 +65,19 @@ mod tests {
         let k = 32;
 
         // Generate test data
-        let a: Vec<i8> = (0..m*k).map(|i| (i % 256) as i8 - 128).collect();
-        let b: Vec<u8> = (0..k*n).map(|i| (i % 4) as u8).collect();
+        let a: Vec<i8> = (0..m * k).map(|i| (i % 256) as i8 - 128).collect();
+        let b: Vec<u8> = (0..k * n).map(|i| (i % 4) as u8).collect();
         let mut c_gpu = vec![0.0f32; m * n];
 
         // Test GPU computation
         match kernel.matmul_i2s(&a, &b, &mut c_gpu, m, n, k) {
             Ok(()) => {
                 println!("GPU matrix multiplication completed successfully");
-                
+
                 // Basic sanity checks
                 assert!(!c_gpu.iter().all(|&x| x == 0.0));
                 assert!(c_gpu.iter().all(|&x| x.is_finite()));
-                
+
                 println!("First few results: {:?}", &c_gpu[..5]);
             }
             Err(e) => {
@@ -105,15 +107,19 @@ mod tests {
         let mut output = vec![0u8; size / 4]; // 2 bits per element
         let mut scales = vec![0.0f32; size / 128]; // Block size of 128
 
-        for qtype in [QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2] {
+        for qtype in [
+            QuantizationType::I2S,
+            QuantizationType::TL1,
+            QuantizationType::TL2,
+        ] {
             match kernel.quantize(&input, &mut output, &mut scales, qtype) {
                 Ok(()) => {
                     println!("GPU quantization {:?} completed successfully", qtype);
-                    
+
                     // Basic sanity checks
                     assert!(scales.iter().any(|&x| x > 0.0));
                     assert!(output.iter().any(|&x| x != 0));
-                    
+
                     println!("First scale: {}", scales[0]);
                 }
                 Err(e) => {
@@ -208,8 +214,8 @@ mod tests {
                 let m = 16;
                 let n = 16;
                 let k = 16;
-                let a: Vec<f32> = (0..m*k).map(|i| (i as f32) / (m*k) as f32).collect();
-                let b: Vec<f32> = (0..k*n).map(|i| (i as f32) / (k*n) as f32).collect();
+                let a: Vec<f32> = (0..m * k).map(|i| (i as f32) / (m * k) as f32).collect();
+                let b: Vec<f32> = (0..k * n).map(|i| (i as f32) / (k * n) as f32).collect();
                 let mut c = vec![0.0f32; m * n];
 
                 match kernel.matmul_mixed_precision(&a, &b, &mut c, m, n, k) {
@@ -243,19 +249,23 @@ mod tests {
         };
 
         let benchmark = GpuBenchmark::new(config);
-        
+
         match benchmark.run_benchmarks() {
             Ok(results) => {
                 benchmark.print_results(&results);
-                
+
                 for result in &results {
                     if result.passed_correctness {
                         assert!(result.speedup > 0.0);
                         assert!(result.gflops_gpu > 0.0);
                         assert!(result.gflops_cpu > 0.0);
-                        println!("Benchmark passed: {}x{}x{} - {:.2}x speedup", 
-                                result.matrix_size.0, result.matrix_size.1, result.matrix_size.2,
-                                result.speedup);
+                        println!(
+                            "Benchmark passed: {}x{}x{} - {:.2}x speedup",
+                            result.matrix_size.0,
+                            result.matrix_size.1,
+                            result.matrix_size.2,
+                            result.speedup
+                        );
                     }
                 }
             }
@@ -290,10 +300,12 @@ mod tests {
         let mut test_data = Vec::new();
 
         for i in 0..batch_size {
-            let a: Vec<i8> = (0..m*k).map(|j| ((i * 1000 + j) % 256) as i8 - 128).collect();
-            let b: Vec<u8> = (0..k*n).map(|j| ((i * 2000 + j) % 4) as u8).collect();
+            let a: Vec<i8> = (0..m * k)
+                .map(|j| ((i * 1000 + j) % 256) as i8 - 128)
+                .collect();
+            let b: Vec<u8> = (0..k * n).map(|j| ((i * 2000 + j) % 4) as u8).collect();
             let mut c = vec![0.0f32; m * n];
-            
+
             test_data.push((a, b, c));
         }
 
@@ -305,11 +317,19 @@ mod tests {
         match kernel.batch_matmul_i2s(&batches) {
             Ok(()) => {
                 println!("Batch matrix multiplication completed successfully");
-                
+
                 // Verify results
                 for (i, (_, _, c, _, _, _)) in batches.iter().enumerate() {
-                    assert!(!c.iter().all(|&x| x == 0.0), "Batch {} has all zero results", i);
-                    assert!(c.iter().all(|&x| x.is_finite()), "Batch {} has non-finite results", i);
+                    assert!(
+                        !c.iter().all(|&x| x == 0.0),
+                        "Batch {} has all zero results",
+                        i
+                    );
+                    assert!(
+                        c.iter().all(|&x| x.is_finite()),
+                        "Batch {} has non-finite results",
+                        i
+                    );
                 }
             }
             Err(e) => {
@@ -340,8 +360,8 @@ mod tests {
         let m = 64;
         let n = 64;
         let k = 64;
-        let a: Vec<i8> = (0..m*k).map(|i| (i % 256) as i8 - 128).collect();
-        let b: Vec<u8> = (0..k*n).map(|i| (i % 4) as u8).collect();
+        let a: Vec<i8> = (0..m * k).map(|i| (i % 256) as i8 - 128).collect();
+        let b: Vec<u8> = (0..k * n).map(|i| (i % 4) as u8).collect();
         let mut c = vec![0.0f32; m * n];
 
         for _ in 0..5 {
@@ -351,7 +371,7 @@ mod tests {
         // Check performance stats
         let stats = kernel.performance_stats();
         println!("Performance stats: {:?}", stats);
-        
+
         if stats.total_kernel_launches > 0 {
             assert!(stats.total_execution_time_ms > 0.0);
             assert!(stats.memory_transfers_host_to_device > 0);
