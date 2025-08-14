@@ -21,6 +21,7 @@ test-all = "test --workspace --all-targets --all-features"
 doc-all = "doc --workspace --all-features --no-deps"
 quality = ["fmt", "--all", "--", "--check"]
 coverage = "llvm-cov --workspace --features cpu --html"
+qg = "check --workspace --tests --no-default-features --features cpu"
 
 # Cross-validation specific aliases
 fetch-cpp = "run --bin fetch_bitnet_cpp"

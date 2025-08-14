@@ -257,6 +257,11 @@ pre-release-replacements = [
     { file = "CHANGELOG.md", search = "## \\[Unreleased\\]", replace = "## [Unreleased]\n\n## [{{version}}] - {{date}}" },
 ]
 
+# Cargo aliases for common tasks
+[alias]
+qg = "check --workspace --tests --no-default-features --features cpu"
+quality = "run --manifest-path xtask/Cargo.toml -- quality-gate"
+
 # Workspace metadata for crates.io publication
 [workspace.metadata.bitnet]
 msrv = "1.70.0"

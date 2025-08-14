@@ -10,8 +10,24 @@ This document outlines the development standards, CI/CD pipeline, and quality en
 pip install pre-commit
 pre-commit install --hook-type pre-commit --hook-type pre-push
 
+# Run pre-commit on all files to verify setup
+pre-commit run --all-files
+
 # OR use the simple bash hooks
 bash scripts/install-hooks.sh
+```
+
+### Quick Quality Gate
+Run all quality checks with one command:
+```bash
+# Unix/Linux/macOS
+bash scripts/quality-gate.sh
+
+# Windows PowerShell
+scripts\quality-gate.ps1
+
+# Or use the cargo alias (after updating Cargo.toml)
+cargo qg  # Quick check for tests (CPU only)
 ```
 
 ### Install Development Tools
