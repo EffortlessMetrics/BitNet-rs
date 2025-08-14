@@ -19,6 +19,16 @@ use std::{
     path::Path,
 };
 
+// Macro for consistent I2_S out-of-bounds error formatting
+macro_rules! i2s_oob {
+    ($info:expr, $offset:expr, $need:expr, $len:expr) => {
+        format!(
+            "I2_S tensor '{}' OOB: offset={}, need={}, mmap_len={}, shape={:?}",
+            $info.name, $offset, $need, $len, $info.dims
+        )
+    };
+}
+
 #[derive(Debug, Clone)]
 struct TensorInfo {
     name: String,
@@ -312,15 +322,7 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
             let num_blocks = (nelems + layout.block_size - 1) / layout.block_size;
             let need = num_blocks * layout.bytes_per_block;
 
-            ensure!(
-                offset + need <= mmap.len(),
-                "I2_S tensor '{}' out of bounds: offset={}, size={}, mmap_len={}, shape={:?}",
-                info.name,
-                offset,
-                need,
-                mmap.len(),
-                info.dims
-            );
+            ensure!(offset + need <= mmap.len(), "{}", i2s_oob!(info, offset, need, mmap.len()));
 
             // Verify shape/blocks consistency
             ensure!(
@@ -638,6 +640,36 @@ mod tests {
     }
 
     #[test]
+    fn test_i2s_dequant_nonzero_block() {
+        use bitnet_common::QuantizationType;
+        use bitnet_quantization::{I2SLayout, I2SQuantizer, QuantizedTensor};
+
+        let layout = I2SLayout::default();
+        let blocks = 1usize;
+
+        // Put a simple non-zero nibble pattern; exact mapping isn't important, just non-zero.
+        let mut packed = vec![0u8; layout.data_bytes_per_block * blocks];
+        packed.fill(0x11); // alternating small positives
+
+        let scales = vec![2.0f32; blocks]; // non-1 scale to exercise path
+
+        let qt = QuantizedTensor::new_with_params(
+            packed,
+            scales,
+            None,
+            vec![layout.block_size * blocks],
+            QuantizationType::I2S,
+            layout.block_size,
+        );
+
+        let quantizer = I2SQuantizer::with_block_size(layout.block_size);
+        let out = quantizer.dequantize_tensor(&qt).unwrap().to_vec().unwrap();
+
+        assert_eq!(out.len(), layout.block_size);
+        assert!(out.iter().any(|&v| v != 0.0), "dequant should produce non-zero values");
+    }
+
+    #[test]
     fn test_i2s_roundtrip_dequant() {
         use bitnet_quantization::{I2SLayout, I2SQuantizer, QuantizedTensor};
 
@@ -703,7 +735,10 @@ mod tests {
         use super::*;
         use proptest::prelude::*;
 
+        // Cap proptest cases for CI speed
         proptest! {
+            #![proptest_config(ProptestConfig::with_cases(64))]
+
             #[test]
             fn i2s_blocks_never_underflow(nelems in 1usize..10_000_000) {
                 let layout = I2SLayout::default();

@@ -133,6 +133,21 @@ jobs:
     - name: Run cargo-deny
       run: cargo deny check --hide-inclusion-graph
 
+  # FFI smoke build to ensure native paths stay healthy
+  ffi-smoke:
+    name: FFI Smoke Build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+    - uses: Swatinem/rust-cache@v2
+    - name: Install native toolchain deps
+      run: sudo apt-get update && sudo apt-get install -y clang make gcc g++
+    - name: Smoke build (ffi only, no tests)
+      run: |
+        cargo build --workspace --no-default-features --features ffi
+        cargo test  --workspace --no-default-features --features ffi --no-run
+
   benchmark:
     name: Performance Benchmarks (Rust)
     runs-on: ubuntu-latest

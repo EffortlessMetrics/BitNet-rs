@@ -44,9 +44,9 @@ pub struct VectorizedLookupTable {
     /// Scale factor
     scale: f32,
     /// Zero point for asymmetric quantization
-    zero_point: i32,
+    _zero_point: i32,
     /// Number of quantization levels
-    num_levels: usize,
+    _num_levels: usize,
 }
 
 impl VectorizedLookupTable {
@@ -76,7 +76,7 @@ impl VectorizedLookupTable {
             forward[i] = quantized;
         }
 
-        Self { forward, reverse, scale, zero_point, num_levels }
+        Self { forward, reverse, scale, _zero_point: zero_point, _num_levels: num_levels }
     }
 
     /// Quantize using vectorized lookup

@@ -97,6 +97,7 @@ fn has_clang() -> bool {
 }
 
 #[cfg(not(feature = "crossval"))]
+#[allow(dead_code)]
 fn generate_bindings(_cpp_path: &PathBuf) {
     // No-op when crossval feature is disabled
 }
