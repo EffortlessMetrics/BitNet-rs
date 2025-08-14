@@ -109,7 +109,7 @@ impl ParallelExecutor {
         for handle in handles {
             match handle.await {
                 Ok(Ok(result)) => {
-                    if !result.passed() {
+                    if !result.is_passed() {
                         failed_count += 1;
                     }
                     test_results.push(result);
@@ -150,11 +150,13 @@ impl ParallelExecutor {
             total_duration.as_secs_f64()
         );
 
+        let parallel_efficiency = self.calculate_parallel_efficiency(&test_results, total_duration);
+
         Ok(ParallelExecutionResult {
             test_results,
             total_duration,
             success,
-            parallel_efficiency: self.calculate_parallel_efficiency(&test_results, total_duration),
+            parallel_efficiency,
         })
     }
 
