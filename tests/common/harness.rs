@@ -8,9 +8,9 @@ use tokio::time::timeout;
 
 use super::{
     config::TestConfig,
-    errors::{TestError, TestResult},
+    errors::{TestError, TestOpResult},
     fixtures::FixtureManager,
-    results::{TestMetrics, TestResult as TestResultData, TestStatus, TestSuiteResult},
+    results::{TestMetrics, TestResult, TestResultCompat, TestStatus, TestSuiteResult},
 };
 
 /// Core test harness for executing tests with parallel support and proper isolation
@@ -24,7 +24,7 @@ pub struct TestHarness {
 
 impl TestHarness {
     /// Create a new test harness with the given configuration
-    pub async fn new(config: TestConfig) -> TestResult<Self> {
+    pub async fn new(config: TestConfig) -> TestResultCompat<Self> {
         let max_parallel = config.max_parallel_tests;
         let fixtures = Arc::new(FixtureManager::new(&config.fixtures).await?);
 
@@ -48,7 +48,7 @@ impl TestHarness {
     }
 
     /// Run a complete test suite with parallel execution and proper isolation
-    pub async fn run_test_suite(&self, suite: &dyn TestSuite) -> TestResult<TestSuiteResult> {
+    pub async fn run_test_suite(&self, suite: &dyn TestSuite) -> TestResultCompat<TestSuiteResult> {
         let suite_name = suite.name().to_string();
         let start_time = Instant::now();
 
@@ -206,11 +206,11 @@ impl TestHarness {
         let mut result = match execute_result {
             Ok(Ok(metrics)) => {
                 println!("Test '{}' passed in {:?}", test_name, duration);
-                TestResultData::passed(test_name, metrics, duration)
+                TestResult::passed(test_name, metrics, duration)
             }
             Ok(Err(e)) => {
                 eprintln!("Test '{}' failed: {}", test_name, e);
-                TestResultData::failed(test_name, e, duration)
+                TestResult::failed(test_name, e, duration)
             }
             Err(_) => {
                 eprintln!(
@@ -377,9 +377,9 @@ impl TestHarnessClone {
 
         // Process result
         let mut result = match execute_result {
-            Ok(Ok(metrics)) => TestResultData::passed(test_name, metrics, duration),
-            Ok(Err(e)) => TestResultData::failed(test_name, e, duration),
-            Err(_) => TestResultData::timeout(test_name, self.config.test_timeout),
+            Ok(Ok(metrics)) => TestResult::passed(test_name, metrics, duration),
+            Ok(Err(e)) => TestResult::failed(test_name, e, duration),
+            Err(_) => TestResult::timeout(test_name, self.config.test_timeout),
         };
 
         result.start_time = start_system_time;

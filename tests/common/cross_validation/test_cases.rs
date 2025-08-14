@@ -22,8 +22,21 @@ pub enum TestCaseCategory {
     Regression,
     /// Model format compatibility tests
     FormatCompatibility,
-    /// Model size variation tests
+    /// Model size-specific tests (temporary for compatibility)
     ModelSize,
+}
+
+/// Model size categories for testing
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ModelSize {
+    /// Tiny models (< 100MB)
+    Tiny,
+    /// Small models (100MB - 1GB)
+    Small,
+    /// Medium models (1GB - 10GB)
+    Medium,
+    /// Large models (> 10GB)
+    Large,
 }
 
 impl ComparisonTestCaseRegistry {

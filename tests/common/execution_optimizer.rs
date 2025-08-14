@@ -1,5 +1,5 @@
 use super::config::TestConfig;
-use super::errors::{TestError, TestResult};
+use super::errors::TestError;
 use super::fast_config::{FastConfigBuilder, SpeedProfile};
 use super::incremental::IncrementalTester;
 use super::parallel::ParallelExecutor;
@@ -554,7 +554,7 @@ pub struct GroupExecutionResult {
     pub group_id: usize,
     pub duration: Duration,
     pub success: bool,
-    pub test_results: Vec<TestResult>,
+    pub test_results: Vec<super::results::TestResult>,
     pub timeout_occurred: bool,
 }
 

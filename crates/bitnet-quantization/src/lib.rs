@@ -8,15 +8,15 @@
 //! All quantization methods support round-trip accuracy validation and
 //! comprehensive benchmarking against reference implementations.
 
-use bitnet_common::{BitNetError, BitNetTensor, QuantizationError, QuantizationType, Result};
-use candle_core::{DType, Device, Tensor as CandleTensor};
+use bitnet_common::{BitNetTensor, QuantizationType, Result};
+// Candle imports removed - not currently used
 
 pub mod i2s;
 pub mod tl1;
 pub mod tl2;
 pub mod utils;
 
-pub use i2s::{I2SQuantizer, I2SLayout};
+pub use i2s::{I2SLayout, I2SQuantizer};
 pub use tl1::TL1Quantizer;
 pub use tl2::TL2Quantizer;
 
@@ -24,7 +24,7 @@ pub use tl2::TL2Quantizer;
 pub trait Quantize {
     /// Quantize a tensor using the specified quantization type
     fn quantize(&self, qtype: QuantizationType) -> Result<QuantizedTensor>;
-    
+
     /// Dequantize back to a full precision tensor
     fn dequantize(&self) -> Result<BitNetTensor>;
 }
@@ -105,7 +105,7 @@ impl Quantize for QuantizedTensor {
         if self.qtype == qtype {
             return Ok(self.clone());
         }
-        
+
         // Convert between quantization formats by dequantizing and re-quantizing
         let dequantized = self.dequantize()?;
         dequantized.quantize(qtype)
@@ -169,13 +169,13 @@ impl QuantizerFactory {
 pub trait QuantizerTrait: Send + Sync {
     /// Quantize a tensor
     fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor>;
-    
+
     /// Dequantize a tensor
     fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor>;
-    
+
     /// Get the quantization type
     fn quantization_type(&self) -> QuantizationType;
-    
+
     /// Check if this quantizer is available on the current platform
     fn is_available(&self) -> bool {
         true
@@ -204,7 +204,7 @@ pub fn validate_round_trip(
 ) -> Result<bool> {
     let quantized = original.quantize(qtype)?;
     let _dequantized = quantized.dequantize()?;
-    
+
     // Compare tensors (simplified - would need proper tensor comparison)
     // This is a placeholder for the actual validation logic
     Ok(true)

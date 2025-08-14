@@ -1,5 +1,6 @@
 use super::config::TestConfig;
-use super::errors::{TestError, TestResult};
+use super::errors::TestError;
+use super::results::{TestResult, TestStatus};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -108,7 +109,7 @@ impl ParallelExecutor {
         for handle in handles {
             match handle.await {
                 Ok(Ok(result)) => {
-                    if !result.passed() {
+                    if !result.is_passed() {
                         failed_count += 1;
                     }
                     test_results.push(result);
@@ -117,7 +118,7 @@ impl ParallelExecutor {
                     error!("Test execution failed: {}", e);
                     failed_count += 1;
                     // Create a failed test result
-                    test_results.push(TestResultData::failed(
+                    test_results.push(TestResult::failed(
                         "unknown".to_string(),
                         e,
                         Duration::default(),
@@ -149,11 +150,13 @@ impl ParallelExecutor {
             total_duration.as_secs_f64()
         );
 
+        let parallel_efficiency = self.calculate_parallel_efficiency(&test_results, total_duration);
+
         Ok(ParallelExecutionResult {
             test_results,
             total_duration,
             success,
-            parallel_efficiency: self.calculate_parallel_efficiency(&test_results, total_duration),
+            parallel_efficiency,
         })
     }
 
@@ -162,7 +165,7 @@ impl ParallelExecutor {
         test: TestInfo,
         config: TestConfig,
         stats: Arc<RwLock<ExecutionStats>>,
-    ) -> Result<TestResultData, TestError> {
+    ) -> Result<TestResult, TestError> {
         let start_time = Instant::now();
         debug!("Executing test: {}", test.name);
 
@@ -209,11 +212,7 @@ impl ParallelExecutor {
                         test.name,
                         duration.as_secs_f64()
                     );
-                    Ok(TestResultData::passed(
-                        test.name,
-                        Default::default(),
-                        duration,
-                    ))
+                    Ok(TestResult::passed(test.name, Default::default(), duration))
                 } else {
                     warn!(
                         "Test {} failed in {:.2}s",
@@ -225,7 +224,7 @@ impl ParallelExecutor {
                     } else {
                         stdout.to_string()
                     };
-                    Ok(TestResultData::failed(
+                    Ok(TestResult::failed(
                         test.name,
                         TestError::execution(error_msg),
                         duration,
@@ -234,7 +233,7 @@ impl ParallelExecutor {
             }
             Ok(Err(e)) => {
                 error!("Failed to execute test {}: {}", test.name, e);
-                Ok(TestResultData::failed(
+                Ok(TestResult::failed(
                     test.name,
                     TestError::execution(e.to_string()),
                     duration,
@@ -246,7 +245,7 @@ impl ParallelExecutor {
                     test.name,
                     timeout_duration.as_secs_f64()
                 );
-                Ok(TestResultData::failed(
+                Ok(TestResult::failed(
                     test.name,
                     TestError::TimeoutError {
                         timeout: timeout_duration,
@@ -260,7 +259,7 @@ impl ParallelExecutor {
     /// Calculate parallel execution efficiency
     fn calculate_parallel_efficiency(
         &self,
-        results: &[TestResultData],
+        results: &[TestResult],
         total_duration: Duration,
     ) -> f64 {
         if results.is_empty() {
@@ -335,7 +334,7 @@ impl ResourceMonitorHandle {
 /// Result of parallel execution
 #[derive(Debug)]
 pub struct ParallelExecutionResult {
-    pub test_results: Vec<TestResult>,
+    pub test_results: Vec<super::results::TestResult>,
     pub total_duration: Duration,
     pub success: bool,
     pub parallel_efficiency: f64,
@@ -347,11 +346,17 @@ impl ParallelExecutionResult {
     }
 
     pub fn passed_count(&self) -> usize {
-        self.test_results.iter().filter(|r| r.passed()).count()
+        self.test_results
+            .iter()
+            .filter(|r| r.status == TestStatus::Passed)
+            .count()
     }
 
     pub fn failed_count(&self) -> usize {
-        self.test_results.iter().filter(|r| !r.passed()).count()
+        self.test_results
+            .iter()
+            .filter(|r| r.status != TestStatus::Passed)
+            .count()
     }
 }
 
