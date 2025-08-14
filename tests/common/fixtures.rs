@@ -3,6 +3,7 @@ use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
+use crate::errors::TestOpResult as TestResultCompat;
 use tokio::fs;
 use tracing::{debug, info, warn};
 
@@ -22,7 +23,7 @@ pub struct FixtureManager {
 
 impl FixtureManager {
     /// Create a new fixture manager with the given configuration
-    pub async fn new(config: &FixtureConfig) -> TestResult<Self> {
+    pub async fn new(config: &FixtureConfig) -> TestResultCompat<Self> {
         let cache_dir = std::env::var("BITNET_TEST_CACHE")
             .map(PathBuf::from)
             .unwrap_or_else(|_| PathBuf::from("tests/cache"));
@@ -640,7 +641,7 @@ impl FixtureManager {
     }
 
     /// Load built-in fixture definitions
-    async fn load_builtin_fixtures(&mut self) -> TestResult<()> {
+    async fn load_builtin_fixtures(&mut self) -> TestResultCompat<()> {
         // Define built-in test fixtures
         let builtin_fixtures = vec![
             FixtureInfo {
@@ -719,7 +720,7 @@ impl FixtureManager {
     }
 
     /// Load custom fixtures from configuration
-    async fn load_custom_fixtures(&mut self) -> TestResult<()> {
+    async fn load_custom_fixtures(&mut self) -> TestResultCompat<()> {
         for custom_fixture in &self.config.custom_fixtures {
             let fixture_info = FixtureInfo {
                 name: custom_fixture.name.clone(),

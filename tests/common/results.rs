@@ -204,7 +204,7 @@ impl TestResult {
     }
 
     /// Check if the test passed (alternative method name for compatibility)
-    pub fn passed(&self) -> bool {
+    pub fn has_passed(&self) -> bool {
         self.is_passed()
     }
 

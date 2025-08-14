@@ -24,7 +24,7 @@ impl TestModelRegistry {
         self.models.iter().map(|s| s.as_str()).collect()
     }
 }
-use crate::errors::{TestError, TestResult};
+use crate::errors::{TestError, TestOpResult as TestResultCompat};
 use std::path::Path;
 use std::time::Instant;
 
@@ -38,7 +38,7 @@ pub struct ComparisonTestRunner {
 
 impl ComparisonTestRunner {
     /// Create a new test runner with default configuration
-    pub async fn new() -> TestResult<Self> {
+    pub async fn new() -> TestResultCompat<Self> {
         let tolerance = ComparisonTolerance::default();
         let rust_impl = Box::new(RustImplementation::new());
         let cpp_impl = Box::new(CppImplementation::new());
@@ -55,7 +55,7 @@ impl ComparisonTestRunner {
     }
 
     /// Create a new test runner with custom tolerance
-    pub async fn with_tolerance(tolerance: ComparisonTolerance) -> TestResult<Self> {
+    pub async fn with_tolerance(tolerance: ComparisonTolerance) -> TestResultCompat<Self> {
         let rust_impl = Box::new(RustImplementation::new());
         let cpp_impl = Box::new(CppImplementation::new());
         let suite = CrossValidationSuite::new(rust_impl, cpp_impl, tolerance);
@@ -74,7 +74,7 @@ impl ComparisonTestRunner {
     pub async fn run_basic_tests(
         &mut self,
         model_path: &Path,
-    ) -> TestResult<CrossValidationResult> {
+    ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_basic_suite();
         self.run_test_suite("Basic Functionality", test_cases, model_path)
             .await
@@ -84,7 +84,7 @@ impl ComparisonTestRunner {
     pub async fn run_edge_case_tests(
         &mut self,
         model_path: &Path,
-    ) -> TestResult<CrossValidationResult> {
+    ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_edge_case_suite();
         self.run_test_suite("Edge Cases", test_cases, model_path)
             .await
@@ -94,7 +94,7 @@ impl ComparisonTestRunner {
     pub async fn run_performance_tests(
         &mut self,
         model_path: &Path,
-    ) -> TestResult<CrossValidationResult> {
+    ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_performance_suite();
         self.run_test_suite("Performance Benchmarks", test_cases, model_path)
             .await
@@ -104,7 +104,7 @@ impl ComparisonTestRunner {
     pub async fn run_regression_tests(
         &mut self,
         model_path: &Path,
-    ) -> TestResult<CrossValidationResult> {
+    ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_regression_suite();
         self.run_test_suite("Regression Tests", test_cases, model_path)
             .await
@@ -114,7 +114,7 @@ impl ComparisonTestRunner {
     pub async fn run_format_compatibility_tests(
         &mut self,
         model_path: &Path,
-    ) -> TestResult<CrossValidationResult> {
+    ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_format_compatibility_suite();
         self.run_test_suite("Format Compatibility", test_cases, model_path)
             .await
@@ -124,7 +124,7 @@ impl ComparisonTestRunner {
     pub async fn run_model_size_tests(
         &mut self,
         model_path: &Path,
-    ) -> TestResult<CrossValidationResult> {
+    ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_model_size_suite();
         self.run_test_suite("Model Size Variations", test_cases, model_path)
             .await
@@ -134,7 +134,7 @@ impl ComparisonTestRunner {
     pub async fn run_smoke_tests(
         &mut self,
         model_path: &Path,
-    ) -> TestResult<CrossValidationResult> {
+    ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_smoke_test_suite();
         self.run_test_suite("Smoke Tests", test_cases, model_path)
             .await
@@ -144,7 +144,7 @@ impl ComparisonTestRunner {
     pub async fn run_comprehensive_tests(
         &mut self,
         model_path: &Path,
-    ) -> TestResult<CrossValidationResult> {
+    ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_comprehensive_suite();
         self.run_test_suite("Comprehensive Tests", test_cases, model_path)
             .await
@@ -155,7 +155,7 @@ impl ComparisonTestRunner {
         &mut self,
         model_size: ModelSize,
         model_path: &Path,
-    ) -> TestResult<CrossValidationResult> {
+    ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = test_suites::create_suite_for_model_size(model_size);
         let suite_name = format!("Tests for {:?} Models", model_size);
         self.run_test_suite(&suite_name, test_cases, model_path)
@@ -167,7 +167,7 @@ impl ComparisonTestRunner {
         &mut self,
         category: TestCaseCategory,
         model_path: &Path,
-    ) -> TestResult<CrossValidationResult> {
+    ) -> TestResultCompat<CrossValidationResult> {
         let test_cases = self.test_registry.by_category(category);
         let suite_name = format!("{:?} Tests", category);
         self.run_test_suite(
@@ -184,7 +184,7 @@ impl ComparisonTestRunner {
         suite_name: &str,
         test_cases: Vec<ComparisonTestCase>,
         model_path: &Path,
-    ) -> TestResult<CrossValidationResult> {
+    ) -> TestResultCompat<CrossValidationResult> {
         self.run_test_suite(suite_name, test_cases, model_path)
             .await
     }
@@ -195,7 +195,7 @@ impl ComparisonTestRunner {
         suite_name: &str,
         test_cases: Vec<ComparisonTestCase>,
         model_path: &Path,
-    ) -> TestResult<CrossValidationResult> {
+    ) -> TestResultCompat<CrossValidationResult> {
         println!(
             "Running {} with {} test cases...",
             suite_name,
@@ -294,7 +294,7 @@ impl ComparisonTestRunner {
     pub async fn run_complete_validation(
         &mut self,
         model_path: &Path,
-    ) -> TestResult<CompleteValidationResult> {
+    ) -> TestResultCompat<CompleteValidationResult> {
         println!(
             "Starting complete validation workflow for model: {:?}",
             model_path

@@ -1,4 +1,4 @@
-use super::errors::TestError;
+use super::errors::{TestError, TestOpResult as TestResultCompat};
 use super::utils::get_optimal_parallel_tests;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -178,7 +178,7 @@ pub enum ReportFormat {
 }
 
 /// Load test configuration from various sources
-pub fn load_test_config() -> TestResult<TestConfig> {
+pub fn load_test_config() -> TestResultCompat<TestConfig> {
     // Try to load from environment-specific config file first
     if let Ok(config_path) = std::env::var("BITNET_TEST_CONFIG") {
         return load_config_from_file(&PathBuf::from(config_path));
@@ -206,7 +206,7 @@ pub fn load_test_config() -> TestResult<TestConfig> {
 }
 
 /// Load configuration from a TOML file
-pub fn load_config_from_file(path: &PathBuf) -> TestResult<TestConfig> {
+pub fn load_config_from_file(path: &PathBuf) -> TestResultCompat<TestConfig> {
     let contents = std::fs::read_to_string(path)
         .map_err(|e| TestError::config(format!("Failed to read config file {:?}: {}", path, e)))?;
 
@@ -220,7 +220,7 @@ pub fn load_config_from_file(path: &PathBuf) -> TestResult<TestConfig> {
 }
 
 /// Load configuration from environment variables
-pub fn load_config_from_env(config: &mut TestConfig) -> TestResult<()> {
+pub fn load_config_from_env(config: &mut TestConfig) -> TestResultCompat<()> {
     if let Ok(val) = std::env::var("BITNET_TEST_PARALLEL") {
         config.max_parallel_tests = val
             .parse()
@@ -305,7 +305,7 @@ pub fn load_config_from_env(config: &mut TestConfig) -> TestResult<()> {
 }
 
 /// Validate configuration settings
-pub fn validate_config(config: &TestConfig) -> TestResult<()> {
+pub fn validate_config(config: &TestConfig) -> TestResultCompat<()> {
     // Validate parallel test count
     if config.max_parallel_tests == 0 {
         return Err(TestError::config(
@@ -572,7 +572,7 @@ pub fn merge_configs(base: TestConfig, override_config: TestConfig) -> TestConfi
 }
 
 /// Save configuration to a TOML file
-pub fn save_config_to_file(config: &TestConfig, path: &PathBuf) -> TestResult<()> {
+pub fn save_config_to_file(config: &TestConfig, path: &PathBuf) -> TestResultCompat<()> {
     let toml_string = toml::to_string_pretty(config)
         .map_err(|e| TestError::config(format!("Failed to serialize config: {}", e)))?;
 

@@ -1,5 +1,5 @@
 use crate::config::{load_test_config, validate_config, TestConfig};
-use crate::errors::TestError;
+use crate::errors::{TestError, TestOpResult as TestResultCompat};
 use std::path::PathBuf;
 
 /// Configuration validation utility
@@ -9,13 +9,13 @@ pub struct ConfigValidator {
 
 impl ConfigValidator {
     /// Create a new validator with the current configuration
-    pub fn new() -> TestResult<Self> {
+    pub fn new() -> TestResultCompat<Self> {
         let config = load_test_config()?;
         Ok(Self { config })
     }
 
     /// Create a validator with a specific configuration file
-    pub fn from_file(path: &PathBuf) -> TestResult<Self> {
+    pub fn from_file(path: &PathBuf) -> TestResultCompat<Self> {
         let contents = std::fs::read_to_string(path).map_err(|e| {
             TestError::config(format!("Failed to read config file {:?}: {}", path, e))
         })?;

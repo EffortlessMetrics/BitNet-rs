@@ -36,3 +36,4 @@ tempfile.workspace = true
 [features]
 default = []
 gpu = ["bitnet-common/gpu", "candle-core/cuda"]
+validation = []

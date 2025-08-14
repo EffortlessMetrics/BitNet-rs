@@ -12,6 +12,24 @@ pub struct ParallelConfig {
     pub max_workers: usize,
     /// Timeout for individual tests
     pub test_timeout: Duration,
+    /// Maximum parallel tests (same as max_workers for compatibility)
+    pub max_parallel: usize,
+    /// Enable dynamic parallelism adjustment
+    pub dynamic_parallelism: bool,
+    /// Enable resource monitoring
+    pub resource_monitoring: bool,
+    /// Enable load balancing
+    pub load_balancing: bool,
+    /// CPU usage threshold (0.0 to 1.0)
+    pub cpu_threshold: f64,
+    /// Memory usage threshold (0.0 to 1.0)
+    pub memory_threshold: f64,
+    /// Minimum parallel tests
+    pub min_parallel: usize,
+    /// Resource check interval in seconds
+    pub resource_check_interval: u64,
+    /// Timeout multiplier for parallel execution
+    pub timeout_multiplier: f64,
 }
 
 /// Test execution optimizer focused on achieving <15 minute execution time
@@ -119,6 +137,8 @@ impl TestExecutionOptimizer {
     /// Create an optimized parallel configuration
     pub fn create_parallel_config(&self) -> ParallelConfig {
         ParallelConfig {
+            max_workers: self.config.max_parallel,
+            test_timeout: self.config.test_timeout,
             max_parallel: self.config.max_parallel,
             dynamic_parallelism: true,
             resource_monitoring: false, // Disable for speed
@@ -333,7 +353,7 @@ impl TestExecutionOptimizer {
         tests: Vec<String>,
         estimates: &HashMap<String, Duration>,
         notes: &mut Vec<String>,
-    ) -> TestResult<Vec<String>> {
+    ) -> TestResultCompat<Vec<String>> {
         let mut selected = Vec::new();
         let mut current_batches: Vec<Vec<String>> = vec![Vec::new(); self.config.max_parallel];
         let mut batch_times: Vec<Duration> = vec![Duration::ZERO; self.config.max_parallel];
@@ -425,7 +445,7 @@ impl TestExecutionOptimizer {
     }
 
     /// Load historical performance data
-    async fn load_historical_data(&mut self) -> TestResult<()> {
+    async fn load_historical_data(&mut self) -> TestResultCompat<()> {
         // In a real implementation, this would load from a persistent store
         // For now, we'll create some mock data
 
