@@ -3,8 +3,8 @@
 //! Provides streaming token generation with async/await support, backpressure handling,
 //! and cancellation support for real-time applications.
 
-use anyhow::{Result, Context};
-use bitnet_common::{Device, Tensor, ConcreteTensor};
+use anyhow::{Context, Result};
+use bitnet_common::ConcreteTensor;
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use futures_util::Stream;
@@ -12,13 +12,13 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context as TaskContext, Poll};
 use tokio::sync::{mpsc, RwLock};
-use tracing::{debug, warn, instrument};
+use tracing::{debug, instrument, warn};
 
 use crate::{
     backends::Backend,
     cache::KVCache,
     config::GenerationConfig,
-    sampling::{SamplingStrategy, SamplingConfig},
+    sampling::{SamplingConfig, SamplingStrategy},
 };
 
 /// Configuration for streaming generation
@@ -58,7 +58,7 @@ impl GenerationStream {
         streaming_config: StreamingConfig,
     ) -> Self {
         let (sender, receiver) = mpsc::channel(streaming_config.buffer_size);
-        
+
         let handle = tokio::spawn(async move {
             if let Err(e) = Self::generate_stream_internal(
                 model,
@@ -69,12 +69,14 @@ impl GenerationStream {
                 generation_config,
                 streaming_config,
                 sender.clone(),
-            ).await {
+            )
+            .await
+            {
                 warn!("Stream generation failed: {}", e);
                 let _ = sender.send(Err(e)).await;
             }
         });
-        
+
         Self {
             receiver,
             _handle: handle,
@@ -83,7 +85,7 @@ impl GenerationStream {
 
     /// Internal streaming generation implementation
     async fn generate_stream_internal(
-        model: Arc<dyn Model>,
+        _model: Arc<dyn Model>,
         tokenizer: Arc<dyn Tokenizer>,
         backend: Box<dyn Backend>,
         cache: Arc<RwLock<KVCache>>,
@@ -93,14 +95,15 @@ impl GenerationStream {
         sender: mpsc::Sender<Result<String>>,
     ) -> Result<()> {
         debug!("Starting streaming generation for prompt");
-        
+
         // Tokenize input
-        let input_tokens = tokenizer.encode(&prompt, true)
+        let input_tokens = tokenizer
+            .encode(&prompt, true)
             .context("Failed to tokenize input prompt")?;
-        
+
         let mut current_tokens = input_tokens.clone();
         let mut generated_count = 0;
-        
+
         let sampling_config = SamplingConfig {
             temperature: config.temperature,
             top_k: config.top_k,
@@ -108,46 +111,42 @@ impl GenerationStream {
             repetition_penalty: config.repetition_penalty,
             seed: config.seed,
         };
-        
+
         let mut sampling_strategy = SamplingStrategy::new(sampling_config);
         let mut token_buffer = Vec::new();
         let mut last_flush = std::time::Instant::now();
-        
+
         for _ in 0..config.max_new_tokens {
             // Check if receiver is closed (client disconnected)
             if sender.is_closed() {
                 debug!("Client disconnected, stopping generation");
                 break;
             }
-            
+
             // Forward pass through model
-            let logits = Self::forward_pass(
-                &*backend,
-                &current_tokens,
-                &cache,
-                &tokenizer,
-            ).await?;
-            
+            let logits = Self::forward_pass(&*backend, &current_tokens, &cache, &tokenizer).await?;
+
             // Sample next token
             let next_token = sampling_strategy.sample(&logits, &current_tokens)?;
-            
+
             // Check for stop conditions
             if Self::should_stop(next_token, &current_tokens, &config, &tokenizer) {
                 break;
             }
-            
+
             // Decode token to text
-            let token_text = tokenizer.decode(&[next_token], true)
+            let token_text = tokenizer
+                .decode(&[next_token], true)
                 .context("Failed to decode token")?;
-            
+
             token_buffer.push(token_text);
             current_tokens.push(next_token);
             generated_count += 1;
-            
+
             // Flush buffer based on size or time
             let should_flush = token_buffer.len() >= streaming_config.buffer_size
                 || last_flush.elapsed().as_millis() >= streaming_config.flush_interval_ms as u128;
-            
+
             if should_flush && !token_buffer.is_empty() {
                 let buffered_text = token_buffer.join("");
                 if sender.send(Ok(buffered_text)).await.is_err() {
@@ -157,20 +156,20 @@ impl GenerationStream {
                 token_buffer.clear();
                 last_flush = std::time::Instant::now();
             }
-            
+
             // Limit context length
             if current_tokens.len() > 2048 {
                 let keep_length = 1024;
                 current_tokens = current_tokens[current_tokens.len() - keep_length..].to_vec();
             }
         }
-        
+
         // Flush remaining tokens
         if !token_buffer.is_empty() {
             let remaining_text = token_buffer.join("");
             let _ = sender.send(Ok(remaining_text)).await;
         }
-        
+
         debug!("Streaming generation completed: {} tokens", generated_count);
         Ok(())
     }
@@ -184,13 +183,13 @@ impl GenerationStream {
     ) -> Result<Vec<f32>> {
         // Convert tokens to tensor
         let input_tensor = Self::tokens_to_tensor(tokens)?;
-        
+
         // Get cache for this sequence
         let mut cache_guard = cache.write().await;
-        
+
         // Forward pass through backend
         let output_tensor = backend.forward(&input_tensor, &mut *cache_guard).await?;
-        
+
         // Extract logits from output tensor
         Self::tensor_to_logits(&output_tensor, tokenizer.vocab_size())
     }
@@ -219,7 +218,7 @@ impl GenerationStream {
                 return true;
             }
         }
-        
+
         // Check for stop sequences
         if !config.stop_sequences.is_empty() {
             if let Ok(current_text) = tokenizer.decode(current_tokens, true) {
@@ -230,7 +229,7 @@ impl GenerationStream {
                 }
             }
         }
-        
+
         false
     }
 }
@@ -238,10 +237,7 @@ impl GenerationStream {
 impl Stream for GenerationStream {
     type Item = Result<String>;
 
-    fn poll_next(
-        mut self: Pin<&mut Self>,
-        cx: &mut TaskContext<'_>,
-    ) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut TaskContext<'_>) -> Poll<Option<Self::Item>> {
         self.receiver.poll_recv(cx)
     }
 }
@@ -330,14 +326,14 @@ mod tests {
         let tokenizer = Arc::new(MockTokenizer);
         let backend = Box::new(MockBackend);
         let cache = Arc::new(RwLock::new(KVCache::new(Default::default()).unwrap()));
-        
+
         let config = GenerationConfig {
             max_new_tokens: 5,
             ..Default::default()
         };
-        
+
         let streaming_config = StreamingConfig::default();
-        
+
         let mut stream = GenerationStream::new(
             model,
             tokenizer,
@@ -347,7 +343,7 @@ mod tests {
             config,
             streaming_config,
         );
-        
+
         let mut token_count = 0;
         while let Some(result) = stream.next().await {
             match result {
@@ -359,13 +355,13 @@ mod tests {
                     panic!("Stream error: {}", e);
                 }
             }
-            
+
             // Prevent infinite loop in test
             if token_count > 10 {
                 break;
             }
         }
-        
+
         assert!(token_count > 0);
     }
 
@@ -375,7 +371,7 @@ mod tests {
             buffer_size: 5,
             flush_interval_ms: 100,
         };
-        
+
         assert_eq!(config.buffer_size, 5);
         assert_eq!(config.flush_interval_ms, 100);
     }

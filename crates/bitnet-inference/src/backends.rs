@@ -3,9 +3,9 @@
 //! CPU and GPU backend implementations for BitNet inference with
 //! automatic backend selection and fallback support.
 
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use async_trait::async_trait;
-use bitnet_common::{Device, Tensor, ConcreteTensor};
+use bitnet_common::{ConcreteTensor, Device, Tensor};
 use bitnet_models::Model;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
@@ -22,11 +22,7 @@ pub trait Backend: Send + Sync {
     fn clone_backend(&self) -> Box<dyn Backend>;
 
     /// Perform forward pass through the model
-    async fn forward(
-        &self,
-        input: &ConcreteTensor,
-        cache: &mut KVCache,
-    ) -> Result<ConcreteTensor>;
+    async fn forward(&self, input: &ConcreteTensor, cache: &mut KVCache) -> Result<ConcreteTensor>;
 
     /// Get backend capabilities
     fn capabilities(&self) -> BackendCapabilities {
@@ -70,21 +66,15 @@ impl CpuBackend {
     pub fn new(model: Arc<dyn Model>) -> Result<Self> {
         let num_threads = num_cpus::get();
         info!("Created CPU backend with {} threads", num_threads);
-        
-        Ok(Self {
-            model,
-            num_threads,
-        })
+
+        Ok(Self { model, num_threads })
     }
 
     /// Create CPU backend with specific thread count
     pub fn with_threads(model: Arc<dyn Model>, num_threads: usize) -> Result<Self> {
         info!("Created CPU backend with {} threads", num_threads);
-        
-        Ok(Self {
-            model,
-            num_threads,
-        })
+
+        Ok(Self { model, num_threads })
     }
 }
 
@@ -104,16 +94,16 @@ impl Backend for CpuBackend {
     async fn forward(
         &self,
         input: &ConcreteTensor,
-        cache: &mut KVCache,
+        _cache: &mut KVCache,
     ) -> Result<ConcreteTensor> {
         debug!("CPU forward pass with input shape: {:?}", input.shape());
-        
+
         // Set thread count for this operation
         rayon::ThreadPoolBuilder::new()
             .num_threads(self.num_threads)
             .build_global()
             .context("Failed to set thread pool")?;
-        
+
         // Forward pass through model
         let output = tokio::task::spawn_blocking({
             let model = self.model.clone();
@@ -123,9 +113,10 @@ impl Backend for CpuBackend {
                 let mut cache_any: Box<dyn std::any::Any> = Box::new(());
                 model.forward(&input_tensor, &mut *cache_any)
             }
-        }).await
+        })
+        .await
         .context("CPU forward pass task failed")??;
-        
+
         debug!("CPU forward pass completed");
         Ok(output)
     }
@@ -141,14 +132,14 @@ impl Backend for CpuBackend {
 
     async fn warmup(&self) -> Result<()> {
         debug!("Warming up CPU backend");
-        
+
         // Create a dummy input for warmup
         let dummy_input = ConcreteTensor::mock(vec![1, 512]);
         let mut dummy_cache = KVCache::new(Default::default())?;
-        
+
         // Perform a dummy forward pass
         let _ = self.forward(&dummy_input, &mut dummy_cache).await?;
-        
+
         info!("CPU backend warmed up successfully");
         Ok(())
     }
@@ -185,11 +176,11 @@ impl GpuBackend {
     ) -> Result<Self> {
         let mut backend = Self::new(model, device)?;
         backend.mixed_precision = mixed_precision;
-        
+
         if mixed_precision {
             info!("GPU backend configured with mixed precision");
         }
-        
+
         Ok(backend)
     }
 
@@ -214,16 +205,12 @@ impl Backend for GpuBackend {
         })
     }
 
-    async fn forward(
-        &self,
-        input: &ConcreteTensor,
-        cache: &mut KVCache,
-    ) -> Result<ConcreteTensor> {
+    async fn forward(&self, input: &ConcreteTensor, cache: &mut KVCache) -> Result<ConcreteTensor> {
         debug!("GPU forward pass with input shape: {:?}", input.shape());
-        
+
         // Ensure input is on the correct device
         let gpu_input = self.ensure_gpu_tensor(input)?;
-        
+
         // Forward pass through model
         let output = tokio::task::spawn_blocking({
             let model = self.model.clone();
@@ -232,9 +219,10 @@ impl Backend for GpuBackend {
                 let mut cache_any: Box<dyn std::any::Any> = Box::new(());
                 model.forward(&input_tensor, &mut *cache_any)
             }
-        }).await
+        })
+        .await
         .context("GPU forward pass task failed")??;
-        
+
         debug!("GPU forward pass completed");
         Ok(output)
     }
@@ -250,19 +238,19 @@ impl Backend for GpuBackend {
 
     async fn warmup(&self) -> Result<()> {
         debug!("Warming up GPU backend");
-        
+
         if !Self::is_available() {
             warn!("CUDA not available, GPU warmup skipped");
             return Ok(());
         }
-        
+
         // Create a dummy input for warmup
         let dummy_input = ConcreteTensor::mock(vec![1, 512]);
         let mut dummy_cache = KVCache::new(Default::default())?;
-        
+
         // Perform a dummy forward pass
         let _ = self.forward(&dummy_input, &mut dummy_cache).await?;
-        
+
         info!("GPU backend warmed up successfully");
         Ok(())
     }
@@ -362,10 +350,10 @@ mod tests {
     async fn test_gpu_backend_creation() {
         let model = Arc::new(MockModel::new());
         let device = Device::Cuda(0);
-        
+
         // This will fail if CUDA is not available, which is expected
         let backend = GpuBackend::new(model, device);
-        
+
         if GpuBackend::is_available() {
             assert!(backend.is_ok());
         } else {
@@ -376,12 +364,12 @@ mod tests {
     #[test]
     fn test_backend_selection() {
         let model = Arc::new(MockModel::new());
-        
+
         // Test CPU selection
         let backend = select_backend(model.clone(), Some(Device::Cpu));
         assert!(backend.is_ok());
         assert_eq!(backend.unwrap().backend_type(), "cpu");
-        
+
         // Test automatic selection
         let backend = select_backend(model, None);
         assert!(backend.is_ok());
@@ -392,15 +380,15 @@ mod tests {
         let model = Arc::new(MockModel::new());
         let cpu_backend = CpuBackend::new(model.clone()).unwrap();
         let cpu_caps = cpu_backend.capabilities();
-        
+
         assert!(!cpu_caps.supports_mixed_precision);
         assert!(cpu_caps.supports_batching);
         assert!(cpu_caps.memory_efficient);
-        
+
         if GpuBackend::is_available() {
             let gpu_backend = GpuBackend::new(model, Device::Cuda(0)).unwrap();
             let gpu_caps = gpu_backend.capabilities();
-            
+
             assert!(gpu_caps.supports_mixed_precision);
             assert!(gpu_caps.supports_batching);
             assert!(!gpu_caps.memory_efficient);
@@ -411,7 +399,7 @@ mod tests {
     async fn test_backend_warmup() {
         let model = Arc::new(MockModel::new());
         let backend = CpuBackend::new(model).unwrap();
-        
+
         let result = backend.warmup().await;
         assert!(result.is_ok());
     }
@@ -422,7 +410,7 @@ mod tests {
         assert_eq!(tensor.shape(), &[2, 3]);
         assert_eq!(tensor.dtype(), candle_core::DType::F32);
         assert_eq!(tensor.device(), &Device::Cpu);
-        
+
         let tensor_gpu = tensor.with_device(Device::Cuda(0));
         assert_eq!(tensor_gpu.device(), &Device::Cuda(0));
     }
