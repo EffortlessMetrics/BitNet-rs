@@ -37,8 +37,8 @@ harness = false
 required-features = ["crossval"]
 
 [build-dependencies]
-cc = { version = "1.0", optional = true }
 bindgen = { version = "0.69", optional = true }
+cc = { version = "1.0", optional = true }
 
 [package.metadata.docs.rs]
 features = ["crossval"]
