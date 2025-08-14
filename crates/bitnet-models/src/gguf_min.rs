@@ -6,20 +6,49 @@
 //!
 //! This is deliberately small: robust error messages, no full schema.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use half::f16;
 use memmap2::Mmap;
-use std::{borrow::Cow, fs::File, io::{Read, Seek}, path::Path};
-use bitnet_quantization::{I2SQuantizer, QuantizedTensor};
+use std::{borrow::Cow, fs::File, io::{self, Read, Seek}, path::Path};
+use bitnet_quantization::{I2SQuantizer, I2SLayout, QuantizedTensor};
 use bitnet_common::QuantizationType;
+use crate::formats::gguf::types::GgufTensorType;
 
 #[derive(Debug, Clone)]
 struct TensorInfo {
     name: String,
     n_dims: u32,
     dims: Vec<u64>,
-    ty: u32,      // ggml_type (0=f32, 1=f16, 36=I2_S)
+    ty: u32,      // ggml_type
     offset: u64,  // from start of data section (not file start)
+}
+
+// Helper functions for type checking
+#[inline]
+fn is_supported_ty(ty: u32) -> bool {
+    matches!(
+        GgufTensorType::from_u32(ty).ok(),
+        Some(GgufTensorType::F32 | GgufTensorType::F16 | GgufTensorType::I2_S)
+    )
+}
+
+#[inline]
+fn is_2d(dims: &[u64]) -> bool {
+    dims.len() == 2
+}
+
+// Helper for shape-driven tensor selection
+fn looks_like_embeddings(info: &TensorInfo) -> bool {
+    is_2d(&info.dims) && 
+    is_supported_ty(info.ty) &&
+    (info.name.contains("emb") || info.name.contains("wte") || info.name.contains("embed"))
+}
+
+fn looks_like_output_matrix(info: &TensorInfo) -> bool {
+    is_2d(&info.dims) &&
+    is_supported_ty(info.ty) &&
+    // de-prefer obvious non-heads
+    !(info.name.contains("attn_output") || info.name.contains("blk") || info.name.contains("norm"))
 }
 
 #[derive(Debug)]
@@ -193,21 +222,21 @@ fn pick_tensors(parsed: &Parsed) -> Result<(TensorInfo, TensorInfo)> {
 
     let find = |names: &[&str]| {
         parsed.tensors.iter()
-            .find(|t| names.iter().any(|n| t.name == *n) && (t.ty == 0 || t.ty == 1 || t.ty == 36))
+            .find(|t| names.iter().any(|n| t.name == *n) && is_supported_ty(t.ty))
             .cloned()
     };
 
+    // Find embeddings tensor - prefer by name first, then shape
     let tok = find(TOK_NAMES)
-        .or_else(|| parsed.tensors.iter().find(|t| t.name.contains("emb") && (t.ty == 0 || t.ty == 1 || t.ty == 36)) .cloned())
+        .or_else(|| parsed.tensors.iter().find(|t| looks_like_embeddings(t)).cloned())
         .ok_or_else(|| anyhow::anyhow!("could not find token embeddings tensor"))?;
 
-    // First try to find a proper 2D output tensor
+    // Find output tensor - shape-driven with name hints
     let head = find(HEAD_NAMES)
-        .or_else(|| parsed.tensors.iter().find(|t| 
-            t.dims.len() == 2 && // Must be 2D
-            (t.name.contains("lm_head") || 
-             (t.name.contains("output") && !t.name.contains("attn_output") && !t.name.contains("blk") && !t.name.contains("norm"))) && 
-            (t.ty == 0 || t.ty == 1 || t.ty == 36)) .cloned())
+        .or_else(|| parsed.tensors.iter()
+            .find(|t| looks_like_output_matrix(t) && 
+                  (t.name.contains("lm_head") || t.name.contains("output")))
+            .cloned())
         // If no output head found, BitNet models often use tied embeddings
         .unwrap_or_else(|| tok.clone());
 
@@ -247,27 +276,35 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
             Ok(Cow::Owned(out))
         }
         36 => { // I2_S - BitNet 2-bit quantization
-            // I2_S format: blocks of 32 elements, each block has:
-            // - 8 bytes of packed 2-bit values (32 * 2 bits = 64 bits = 8 bytes)
-            // - 2 bytes for f16 scale
-            let block_size = 32;
-            let bytes_per_block = 10; // 8 bytes data + 2 bytes scale
-            let num_blocks = (nelems + block_size - 1) / block_size;
-            let need = num_blocks * bytes_per_block;
+            let layout = I2SLayout::default();
+            let num_blocks = (nelems + layout.block_size - 1) / layout.block_size;
+            let need = num_blocks * layout.bytes_per_block;
             
-            if offset + need > mmap.len() { bail!("I2_S tensor out of bounds"); }
+            ensure!(offset + need <= mmap.len(), "I2_S tensor out of bounds");
+            
+            // Verify shape/blocks consistency
+            ensure!(
+                num_blocks * layout.block_size >= nelems && 
+                num_blocks * layout.block_size - nelems < layout.block_size,
+                "I2_S blocks/shape mismatch: nelems={nelems} blocks={num_blocks} block_size={}",
+                layout.block_size
+            );
             
             // Extract quantized data and scales
             let tensor_bytes = &mmap[offset .. offset + need];
             let mut scales = Vec::with_capacity(num_blocks);
-            let mut packed_data = Vec::with_capacity(num_blocks * 8);
+            let mut packed_data = Vec::with_capacity(num_blocks * layout.data_bytes_per_block);
             
             for block_idx in 0..num_blocks {
-                let block_offset = block_idx * bytes_per_block;
-                // Copy packed data (8 bytes)
-                packed_data.extend_from_slice(&tensor_bytes[block_offset..block_offset + 8]);
-                // Read scale (2 bytes, f16)
-                let scale_bytes = &tensor_bytes[block_offset + 8..block_offset + 10];
+                let block_offset = block_idx * layout.bytes_per_block;
+                // Copy packed data
+                packed_data.extend_from_slice(
+                    &tensor_bytes[block_offset..block_offset + layout.data_bytes_per_block]
+                );
+                // Read scale (f16)
+                let scale_start = block_offset + layout.data_bytes_per_block;
+                let scale_end = scale_start + layout.scale_bytes_per_block;
+                let scale_bytes = &tensor_bytes[scale_start..scale_end];
                 let scale_bits = u16::from_le_bytes([scale_bytes[0], scale_bytes[1]]);
                 scales.push(f16::from_bits(scale_bits).to_f32());
             }
@@ -330,31 +367,34 @@ fn read_gguf_value_uint64<R: Read>(r: &mut R, ty: u32) -> Result<u64> {
     }
 }
 
+// Allocation-free skip helper
+#[inline]
+fn skip_n<R: Read>(r: &mut R, n: u64) -> Result<()> {
+    let copied = io::copy(&mut r.by_ref().take(n), &mut io::sink())?;
+    ensure!(copied == n, "unexpected EOF while skipping {n} bytes");
+    Ok(())
+}
+
 fn skip_gguf_value<R: Read>(r: &mut R, ty: u32) -> Result<()> {
-    // GGUF types are documented in llama.cpp; we only need to skip.
+    // GGUF scalar sizes (see llama.cpp)
     match ty {
-        0  /* uint8  */ => { let mut buf = [0u8; 1]; r.read_exact(&mut buf)?; }
-        1  /* int8   */ => { let mut buf = [0u8; 1]; r.read_exact(&mut buf)?; }
-        2  /* uint16 */ => { let mut buf = [0u8; 2]; r.read_exact(&mut buf)?; }
-        3  /* int16  */ => { let mut buf = [0u8; 2]; r.read_exact(&mut buf)?; }
-        4  /* uint32 */ => { let mut buf = [0u8; 4]; r.read_exact(&mut buf)?; }
-        5  /* int32  */ => { let mut buf = [0u8; 4]; r.read_exact(&mut buf)?; }
-        6  /* float32*/ => { let mut buf = [0u8; 4]; r.read_exact(&mut buf)?; }
-        7  /* bool   */ => { let mut buf = [0u8; 1]; r.read_exact(&mut buf)?; }
-        8  /* string */ => { 
-            let n = read_u64(r)? as usize; 
-            let mut buf = vec![0u8; n];
-            r.read_exact(&mut buf)?;
+        0 | 1 => skip_n(r, 1)?,                  // uint8 | int8
+        2 | 3 => skip_n(r, 2)?,                  // uint16 | int16
+        4 | 5 | 6 => skip_n(r, 4)?,              // uint32 | int32 | float32
+        7 => skip_n(r, 1)?,                      // bool
+        8 => {                                   // string: u64 len + bytes
+            let n = read_u64(r)?;
+            skip_n(r, n)?;
         }
-        9  /* array  */ => {
+        9 => {                                   // array: elem_ty + count + values
             let elem_ty = read_u32(r)?;
-            let count = read_u64(r)? as usize;
-            for _ in 0..count { skip_gguf_value(r, elem_ty)?; }
+            let count = read_u64(r)?;
+            for _ in 0..count {
+                skip_gguf_value(r, elem_ty)?;
+            }
         }
-        10 /* uint64 */ => { let mut buf = [0u8; 8]; r.read_exact(&mut buf)?; }
-        11 /* int64  */ => { let mut buf = [0u8; 8]; r.read_exact(&mut buf)?; }
-        12 /* float64*/ => { let mut buf = [0u8; 8]; r.read_exact(&mut buf)?; }
-        _ => bail!("unknown GGUF kv type id {}", ty),
+        10 | 11 | 12 => skip_n(r, 8)?,           // uint64 | int64 | float64
+        _ => bail!("unknown GGUF kv type id {ty}"),
     }
     Ok(())
 }
