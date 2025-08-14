@@ -76,7 +76,9 @@ impl IncrementalTester {
             .arg(&last_commit)
             .arg("HEAD")
             .output()
-            .map_err(|e| TestError::ExecutionError(format!("Git diff failed: {}", e)))?;
+            .map_err(|e| TestError::ExecutionError {
+                message: format!("Git diff failed: {}", e),
+            })?;
 
         if !output.status.success() {
             warn!("Git diff failed, falling back to filesystem detection");
@@ -98,7 +100,9 @@ impl IncrementalTester {
             .arg("diff")
             .arg("--name-only")
             .output()
-            .map_err(|e| TestError::ExecutionError(format!("Git diff unstaged failed: {}", e)))?;
+            .map_err(|e| TestError::ExecutionError {
+                message: format!("Git diff unstaged failed: {}", e),
+            })?;
 
         if unstaged_output.status.success() {
             let unstaged_stdout = String::from_utf8_lossy(&unstaged_output.stdout);
@@ -197,7 +201,9 @@ impl IncrementalTester {
             .arg("rev-parse")
             .arg("HEAD")
             .output()
-            .map_err(|e| TestError::ExecutionError(format!("Git rev-parse failed: {}", e)))?;
+            .map_err(|e| TestError::ExecutionError {
+                message: format!("Git rev-parse failed: {}", e),
+            })?;
 
         if output.status.success() {
             let commit_hash = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -245,38 +251,42 @@ impl IncrementalTester {
     }
 
     /// Find all modified files in a directory
-    async fn find_modified_files_in_dir(
-        &self,
-        dir: &PathBuf,
+    fn find_modified_files_in_dir<'a>(
+        &'a self,
+        dir: &'a PathBuf,
         since: SystemTime,
-    ) -> Result<Vec<PathBuf>, TestError> {
-        let mut modified_files = Vec::new();
-        let mut entries = fs::read_dir(dir).await.map_err(|e| TestError::IoError(e))?;
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Vec<PathBuf>, TestError>> + Send + '_>,
+    > {
+        Box::pin(async move {
+            let mut modified_files = Vec::new();
+            let mut entries = fs::read_dir(dir).await.map_err(|e| TestError::IoError(e))?;
 
-        while let Some(entry) = entries
-            .next_entry()
-            .await
-            .map_err(|e| TestError::IoError(e))?
-        {
-            let path = entry.path();
-
-            if path.is_file() && self.is_relevant_file(&path) {
-                if self.is_file_modified(&path, since).await? {
-                    modified_files.push(path);
-                }
-            } else if path.is_dir()
-                && !path
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .starts_with('.')
+            while let Some(entry) = entries
+                .next_entry()
+                .await
+                .map_err(|e| TestError::IoError(e))?
             {
-                let mut subdir_files = self.find_modified_files_in_dir(&path, since).await?;
-                modified_files.append(&mut subdir_files);
-            }
-        }
+                let path = entry.path();
 
-        Ok(modified_files)
+                if path.is_file() && self.is_relevant_file(&path) {
+                    if self.is_file_modified(&path, since).await? {
+                        modified_files.push(path);
+                    }
+                } else if path.is_dir()
+                    && !path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .starts_with('.')
+                {
+                    let mut subdir_files = self.find_modified_files_in_dir(&path, since).await?;
+                    modified_files.append(&mut subdir_files);
+                }
+            }
+
+            Ok(modified_files)
+        })
     }
 
     /// Determine which tests should run based on changed files

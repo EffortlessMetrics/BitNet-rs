@@ -335,7 +335,7 @@ impl ResourceMonitorHandle {
 /// Result of parallel execution
 #[derive(Debug)]
 pub struct ParallelExecutionResult {
-    pub test_results: Vec<TestResult>,
+    pub test_results: Vec<super::results::TestResult>,
     pub total_duration: Duration,
     pub success: bool,
     pub parallel_efficiency: f64,

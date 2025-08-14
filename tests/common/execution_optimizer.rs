@@ -554,7 +554,7 @@ pub struct GroupExecutionResult {
     pub group_id: usize,
     pub duration: Duration,
     pub success: bool,
-    pub test_results: Vec<TestResult>,
+    pub test_results: Vec<super::results::TestResult>,
     pub timeout_occurred: bool,
 }
 

@@ -143,22 +143,26 @@ impl TestSelector {
         let cargo_toml_path = PathBuf::from("Cargo.toml");
 
         if !cargo_toml_path.exists() {
-            return Err(TestError::SetupError("Cargo.toml not found".to_string()));
+            return Err(TestError::SetupError {
+                message: "Cargo.toml not found".to_string(),
+            });
         }
 
         let content = tokio::fs::read_to_string(&cargo_toml_path)
             .await
             .map_err(|e| TestError::IoError(e))?;
 
-        let cargo_toml: toml::Value = content
-            .parse()
-            .map_err(|e| TestError::SetupError(format!("Failed to parse Cargo.toml: {}", e)))?;
+        let cargo_toml: toml::Value = content.parse().map_err(|e| TestError::SetupError {
+            message: format!("Failed to parse Cargo.toml: {}", e),
+        })?;
 
         let members = cargo_toml
             .get("workspace")
             .and_then(|w| w.get("members"))
             .and_then(|m| m.as_array())
-            .ok_or_else(|| TestError::SetupError("No workspace members found".to_string()))?;
+            .ok_or_else(|| TestError::SetupError {
+                message: "No workspace members found".to_string(),
+            })?;
 
         let member_names = members.iter()
             .filter_map(|m| m.as_str())
@@ -188,10 +192,9 @@ impl TestSelector {
             .arg("--list")
             .arg("--message-format=json");
 
-        let output = cmd
-            .output()
-            .await
-            .map_err(|e| TestError::ExecutionError(format!("Failed to list tests: {}", e)))?;
+        let output = cmd.output().await.map_err(|e| TestError::ExecutionError {
+            message: format!("Failed to list tests: {}", e),
+        })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

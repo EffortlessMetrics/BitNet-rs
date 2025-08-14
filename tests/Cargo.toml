@@ -28,6 +28,10 @@ path = "bin/check_performance_regressions.rs"
 name = "generate_trend_analysis"
 path = "bin/generate_trend_analysis.rs"
 
+[[bin]]
+name = "demo_error_handling"
+path = "demo_error_handling.rs"
+
 [[test]]
 name = "test_logging_infrastructure"
 path = "test_logging_infrastructure.rs"
