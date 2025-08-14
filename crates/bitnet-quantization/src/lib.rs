@@ -16,7 +16,7 @@ pub mod tl1;
 pub mod tl2;
 pub mod utils;
 
-pub use i2s::I2SQuantizer;
+pub use i2s::{I2SQuantizer, I2SLayout};
 pub use tl1::TL1Quantizer;
 pub use tl2::TL2Quantizer;
 
