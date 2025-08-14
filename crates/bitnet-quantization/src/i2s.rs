@@ -15,6 +15,36 @@ pub struct I2SQuantizer {
     use_simd: bool,
 }
 
+/// I2_S block layout constants
+pub struct I2SLayout {
+    pub block_size: usize,         // 32 elements per block
+    pub bytes_per_block: usize,    // 10 = 8 packed + 2 f16 scale
+    pub data_bytes_per_block: usize,  // 8 bytes for packed data
+    pub scale_bytes_per_block: usize, // 2 bytes for f16 scale
+}
+
+impl I2SLayout {
+    pub fn default() -> Self {
+        Self {
+            block_size: 32,
+            bytes_per_block: 10,
+            data_bytes_per_block: 8,
+            scale_bytes_per_block: 2,
+        }
+    }
+    
+    pub fn with_block_size(block_size: usize) -> Self {
+        // For I2_S: 2 bits per element
+        let data_bytes = (block_size * 2 + 7) / 8;  // Round up bits to bytes
+        Self {
+            block_size,
+            bytes_per_block: data_bytes + 2,  // +2 for f16 scale
+            data_bytes_per_block: data_bytes,
+            scale_bytes_per_block: 2,
+        }
+    }
+}
+
 impl I2SQuantizer {
     /// Create a new I2_S quantizer with default settings
     pub fn new() -> Self {
