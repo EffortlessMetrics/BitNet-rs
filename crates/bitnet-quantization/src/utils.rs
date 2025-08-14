@@ -183,7 +183,7 @@ mod tests {
         let quantized = quantize_value(value, scale, 2);
         let dequantized = dequantize_value(quantized, scale);
         // 2-bit quantization has limited precision
-        assert!(quantized >= -2 && quantized <= 1); // 2-bit signed range
+        assert!((-2..=1).contains(&quantized)); // 2-bit signed range
         assert!(dequantized.abs() <= 2.0); // Should be in reasonable range
     }
 }

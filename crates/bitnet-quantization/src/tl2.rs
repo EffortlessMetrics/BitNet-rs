@@ -566,7 +566,7 @@ mod tests {
 
         // Should be reasonably close (2-bit quantization has limited precision)
         assert!(dequantized.abs() < 3.0); // Should be in reasonable range
-        assert!(quantized >= 0 && quantized < 4); // 2-bit range
+        assert!((0..4).contains(&quantized)); // 2-bit range
     }
 
     #[test]
@@ -593,8 +593,8 @@ mod tests {
         // Block size should be adapted based on CPU features
         assert!(quantizer.config.block_size >= 64);
 
-        // Should detect some CPU features
-        assert!(quantizer.cpu_features.has_avx2 || !quantizer.cpu_features.has_avx2);
+        // CPU features detection should not panic (always valid)
+        let _ = quantizer.cpu_features.has_avx2;
     }
 
     #[test]

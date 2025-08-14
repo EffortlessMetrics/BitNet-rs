@@ -4,7 +4,9 @@
 //! the crossval feature is enabled. It fails fast if dependencies are missing.
 
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+#[allow(unused_imports)]
+use std::path::Path;
 
 fn main() {
     // If the crate is compiled without `--features bitnet-sys/ffi`,

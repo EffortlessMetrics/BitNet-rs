@@ -549,7 +549,7 @@ mod tests {
         };
         let quantizer = TL1Quantizer::with_config(config.clone());
         assert_eq!(quantizer.config.block_size, 128);
-        assert_eq!(quantizer.config.use_asymmetric, true);
+        assert!(quantizer.config.use_asymmetric);
     }
 
     #[test]
