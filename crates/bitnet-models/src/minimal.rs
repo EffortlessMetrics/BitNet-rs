@@ -3,7 +3,7 @@
 //! This module provides a thin loader that can either load real weights
 //! from GGUF files or generate deterministic dummy weights for testing.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::path::Path;
@@ -62,12 +62,14 @@ pub fn load_minimal(mode: LoadMode) -> Result<MinimalWeights> {
             })
         }
         LoadMode::Gguf(path) => {
-            // Placeholder: proper GGUF reader will be implemented later
-            // For now, return a clear error message so the example can fallback
-            bail!(
-                "GGUF loader for (tok_embeddings, output) not wired yet: {}",
-                path.display()
-            );
+            let two = crate::gguf_min::load_two(path)
+                .with_context(|| format!("load minimal tensors from {}", path.display()))?;
+            Ok(MinimalWeights {
+                tok_embeddings: two.tok_embeddings,
+                lm_head: two.lm_head,
+                vocab: two.vocab,
+                dim: two.dim,
+            })
         }
     }
 }

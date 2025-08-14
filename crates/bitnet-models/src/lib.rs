@@ -8,6 +8,7 @@ pub mod transformer;
 pub mod weight_mapper;
 pub mod gguf_simple;
 pub mod minimal;
+pub mod gguf_min;
 
 pub use bitnet::*;
 pub use loader::*;
