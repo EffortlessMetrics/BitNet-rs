@@ -229,7 +229,11 @@ impl GgufTensorType {
             Self::Q5_K => 176,
             Self::Q6_K => 210,
             Self::Q8_K => 256,
-            Self::I2_S => 10, // 32 2-bit values (8 bytes) + 2 bytes for scale = 10 bytes per block
+            Self::I2_S => {
+                // Delegate to centralized I2SLayout
+                use bitnet_quantization::I2SLayout;
+                I2SLayout::default().bytes_per_block
+            }
         }
     }
     
@@ -250,7 +254,11 @@ impl GgufTensorType {
             Self::Q5_K => 256,
             Self::Q6_K => 256,
             Self::Q8_K => 256,
-            Self::I2_S => 32,  // BitNet uses 32-element blocks
+            Self::I2_S => {
+                // Delegate to centralized I2SLayout
+                use bitnet_quantization::I2SLayout;
+                I2SLayout::default().block_size
+            }
             _ => 1, // Non-quantized types
         }
     }
