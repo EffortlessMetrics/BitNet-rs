@@ -313,9 +313,13 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
             let need = num_blocks * layout.bytes_per_block;
 
             ensure!(
-                offset + need <= mmap.len(), 
+                offset + need <= mmap.len(),
                 "I2_S tensor '{}' out of bounds: offset={}, size={}, mmap_len={}, shape={:?}",
-                info.name, offset, need, mmap.len(), info.dims
+                info.name,
+                offset,
+                need,
+                mmap.len(),
+                info.dims
             );
 
             // Verify shape/blocks consistency
@@ -636,13 +640,13 @@ mod tests {
     #[test]
     fn test_i2s_roundtrip_dequant() {
         use bitnet_quantization::{I2SLayout, I2SQuantizer, QuantizedTensor};
-        
+
         let layout = I2SLayout::default();
         // Create two blocks of zero data w/ scale=1.0 -> expect zeros out
         let blocks = 2usize;
         let packed = vec![0u8; blocks * layout.data_bytes_per_block];
         let scales = vec![1.0f32; blocks];
-        
+
         let qt = QuantizedTensor::new_with_params(
             packed,
             scales,
@@ -651,11 +655,11 @@ mod tests {
             QuantizationType::I2S,
             layout.block_size,
         );
-        
+
         let quantizer = I2SQuantizer::with_block_size(layout.block_size);
         let tensor = quantizer.dequantize_tensor(&qt).unwrap();
         let out = tensor.to_vec().unwrap();
-        
+
         assert_eq!(out.len(), layout.block_size * blocks);
         // All zeros since we used zero quantized data
         for &val in &out {
@@ -682,7 +686,7 @@ mod tests {
                 tok_t[c * dim + r] = tok[r * vocab + c];
             }
         }
-        
+
         // Transpose back
         let mut back = vec![0f32; dim * vocab];
         for r in 0..vocab {
@@ -690,7 +694,36 @@ mod tests {
                 back[c * vocab + r] = tok_t[r * dim + c];
             }
         }
-        
+
         assert_eq!(tok, back);
+    }
+
+    #[cfg(test)]
+    mod property_tests {
+        use super::*;
+        use proptest::prelude::*;
+
+        proptest! {
+            #[test]
+            fn i2s_blocks_never_underflow(nelems in 1usize..10_000_000) {
+                let layout = I2SLayout::default();
+                let blocks = (nelems + layout.block_size - 1) / layout.block_size;
+                prop_assert!(blocks >= 1);
+                let need = blocks * layout.bytes_per_block;
+                prop_assert!(need >= layout.bytes_per_block);
+                // Verify no integer overflow in calculation
+                prop_assert!(need / layout.bytes_per_block == blocks);
+            }
+
+            #[test]
+            fn i2s_block_alignment_correct(nelems in 1usize..1_000_000) {
+                let layout = I2SLayout::default();
+                let blocks = (nelems + layout.block_size - 1) / layout.block_size;
+                let padded_elems = blocks * layout.block_size;
+                // Elements should be padded to block boundary
+                prop_assert!(padded_elems >= nelems);
+                prop_assert!(padded_elems - nelems < layout.block_size);
+            }
+        }
     }
 }
