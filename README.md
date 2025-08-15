@@ -296,6 +296,37 @@ cargo test --workspace --features crossval
 cargo xtask --help
 ```
 
+### Test Framework Quick Reference
+
+The BitNet test framework provides comprehensive testing infrastructure:
+
+```bash
+# Minimal library build (fast, no heavy dependencies)
+cargo build -p bitnet-tests --lib
+
+# Full framework library with all features
+cargo build -p bitnet-tests --lib --features full-framework
+
+# Build and run test framework binaries (requires full-framework)
+cargo build -p bitnet-tests --features full-framework
+cargo run -p bitnet-tests --bin generate_ci_report --features full-framework
+cargo run -p bitnet-tests --bin generate_trend_analysis --features full-framework
+
+# Run configuration scenario tests (lives in bitnet package)
+cargo test -p bitnet --test test_configuration_scenarios
+
+# Run library tests with different feature sets
+cargo test -p bitnet-tests --lib                    # Minimal
+cargo test -p bitnet-tests --lib --features full-framework  # Full
+```
+
+#### Feature Flags
+- **Default (minimal)**: Core testing functionality without heavy dependencies
+- **`fixtures`**: Test fixture management and caching
+- **`reporting`**: Advanced reporting and metrics collection
+- **`trend`**: Trend analysis and performance tracking
+- **`full-framework`**: Enables all features
+
 ### Test Reporting Example
 
 Generate comprehensive test reports in multiple formats (HTML/JSON/JUnit/Markdown):

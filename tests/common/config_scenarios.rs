@@ -317,11 +317,10 @@ impl ScenarioConfigManager {
                 } else {
                     scenario_config.reporting.formats
                 },
-                output_dir: if !env_config.reporting.output_dir.as_os_str().is_empty() {
-                    env_config.reporting.output_dir
-                } else {
-                    scenario_config.reporting.output_dir
-                },
+                output_dir: super::config::pick_dir(
+                    &env_config.reporting.output_dir,
+                    &scenario_config.reporting.output_dir
+                ),
                 include_artifacts: scenario_config.reporting.include_artifacts || env_config.reporting.include_artifacts,
                 generate_coverage: scenario_config.reporting.generate_coverage || env_config.reporting.generate_coverage,
                 generate_performance: scenario_config.reporting.generate_performance || env_config.reporting.generate_performance,
