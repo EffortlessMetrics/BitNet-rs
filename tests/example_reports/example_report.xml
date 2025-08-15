@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="BitNet.rs Test Suite" tests="2" failures="1" errors="0" skipped="0" time="8.000" timestamp="2025-08-15T02:44:31.740109300+00:00">
+  <testsuite name="example_test_suite" tests="2" failures="1" errors="0" skipped="0" time="8.000" timestamp="2025-08-15T02:44:31.740137200+00:00">
+    <properties>
+      <property name="success_rate" value="50.00" />
+    </properties>
+    <testcase classname="test_successful_operation" name="test_successful_operation" time="3.000" />
+    <testcase classname="test_error_handling" name="test_error_handling" time="5.000">
+      <failure message="Expected error condition was not handled correctly" type="AssertionError"><![CDATA["Expected error condition was not handled correctly"]]></failure>
+    </testcase>
+    <system-out><![CDATA[Test suite: example_test_suite
+Total duration: 8s
+Success rate: 5000.00%]]></system-out>
+    <system-err><![CDATA[]]></system-err>
+  </testsuite>
+</testsuites>

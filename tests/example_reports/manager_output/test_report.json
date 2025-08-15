@@ -1,0 +1,134 @@
+{
+  "metadata": {
+    "generated_at": "2025-08-15T02:44:31.742284100+00:00",
+    "generator": "BitNet.rs Test Framework",
+    "version": "0.1.0",
+    "total_suites": 1,
+    "total_duration_ms": 8000
+  },
+  "test_suites": [
+    {
+      "suite_name": "example_test_suite",
+      "total_duration": {
+        "secs": 8,
+        "nanos": 0
+      },
+      "test_results": [
+        {
+          "test_name": "test_successful_operation",
+          "status": "Passed",
+          "duration": {
+            "secs": 3,
+            "nanos": 0
+          },
+          "metrics": {
+            "memory_peak": 1048576,
+            "memory_average": 524288,
+            "cpu_time": {
+              "secs": 2,
+              "nanos": 0
+            },
+            "wall_time": {
+              "secs": 3,
+              "nanos": 0
+            },
+            "custom_metrics": {
+              "operations_per_second": 1000.0,
+              "accuracy": 0.98
+            },
+            "assertions": 5,
+            "operations": 10
+          },
+          "error": null,
+          "stack_trace": null,
+          "artifacts": [],
+          "start_time": {
+            "secs_since_epoch": 1755225863,
+            "nanos_since_epoch": 737989000
+          },
+          "end_time": {
+            "secs_since_epoch": 1755225866,
+            "nanos_since_epoch": 737989100
+          },
+          "metadata": {}
+        },
+        {
+          "test_name": "test_error_handling",
+          "status": "Failed",
+          "duration": {
+            "secs": 5,
+            "nanos": 0
+          },
+          "metrics": {
+            "memory_peak": 2097152,
+            "memory_average": 1048576,
+            "cpu_time": {
+              "secs": 4,
+              "nanos": 0
+            },
+            "wall_time": {
+              "secs": 5,
+              "nanos": 0
+            },
+            "custom_metrics": {},
+            "assertions": 3,
+            "operations": 5
+          },
+          "error": "Expected error condition was not handled correctly",
+          "stack_trace": "at test_error_handling (example.rs:42)",
+          "artifacts": [],
+          "start_time": {
+            "secs_since_epoch": 1755225866,
+            "nanos_since_epoch": 738002100
+          },
+          "end_time": {
+            "secs_since_epoch": 1755225871,
+            "nanos_since_epoch": 738002200
+          },
+          "metadata": {}
+        }
+      ],
+      "summary": {
+        "total_tests": 2,
+        "passed": 1,
+        "failed": 1,
+        "skipped": 0,
+        "timeout": 0,
+        "success_rate": 50.0,
+        "total_duration": {
+          "secs": 8,
+          "nanos": 0
+        },
+        "average_duration": {
+          "secs": 4,
+          "nanos": 0
+        },
+        "peak_memory": 2097152,
+        "total_assertions": 8
+      },
+      "environment": {
+        "rust_version": "1.75.0",
+        "os": "Windows"
+      },
+      "configuration": {
+        "mode": "example"
+      },
+      "start_time": {
+        "secs_since_epoch": 1755225863,
+        "nanos_since_epoch": 738043400
+      },
+      "end_time": {
+        "secs_since_epoch": 1755225871,
+        "nanos_since_epoch": 738043400
+      }
+    }
+  ],
+  "summary": {
+    "total_tests": 2,
+    "total_passed": 1,
+    "total_failed": 1,
+    "total_skipped": 0,
+    "overall_success_rate": 0.5,
+    "total_duration_ms": 8000
+  }
+}

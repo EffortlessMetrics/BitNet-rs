@@ -29,6 +29,14 @@ name = "generate_trend_analysis"
 path = "bin/generate_trend_analysis.rs"
 
 [[bin]]
+name = "demo_reporting_comprehensive"
+path = "demo_reporting_comprehensive.rs"
+
+[[bin]]
+name = "reporting_example"
+path = "examples/reporting_example.rs"
+
+[[bin]]
 name = "demo_error_handling"
 path = "demo_error_handling.rs"
 
