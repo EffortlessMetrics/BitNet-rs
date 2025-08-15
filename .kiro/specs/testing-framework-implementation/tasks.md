@@ -594,7 +594,9 @@ th end-to-end validation
 
 
 ### Developer Experience
-- [-] Test authoring is straightforward with clear documentation
+- [x] Test authoring is straightforward with clear documentation
+
+
 
 
 

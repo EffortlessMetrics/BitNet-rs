@@ -3,13 +3,29 @@
 //! This example shows how to write integration tests that validate
 //! complete workflows and component interactions in BitNet.rs.
 
-use bitnet_tests::common::{TestError, TestUtilities};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Duration;
 use tokio::fs;
 
+#[derive(Debug)]
+pub enum TestError {
+    Setup(String),
+    Execution(String),
+}
+
+impl TestError {
+    pub fn setup(msg: &str) -> Self {
+        Self::Setup(msg.to_string())
+    }
+
+    pub fn execution(msg: &str) -> Self {
+        Self::Execution(msg.to_string())
+    }
+}
+
 /// Example system that processes data through multiple components
+#[derive(Debug)]
 pub struct DataProcessingSystem {
     loader: DataLoader,
     processor: DataProcessor,
@@ -32,14 +48,17 @@ pub enum ProcessingMode {
     Balanced,
 }
 
+#[derive(Debug)]
 pub struct DataLoader {
     supported_formats: Vec<String>,
 }
 
+#[derive(Debug)]
 pub struct DataProcessor {
     mode: ProcessingMode,
 }
 
+#[derive(Debug)]
 pub struct DataWriter {
     output_format: String,
 }
@@ -108,10 +127,11 @@ impl DataProcessingSystem {
 
         let processing_time = start_time.elapsed();
 
+        let items_count = processed_data.len();
         Ok(ProcessingResult {
             items: processed_data,
             statistics: ProcessingStatistics {
-                items_processed: processed_data.len(),
+                items_processed: items_count,
                 processing_time,
                 errors_encountered: 0,
             },
@@ -367,7 +387,7 @@ mod tests {
 
         // Create test input data
         let test_data = "line 1\nline 2\nline 3\n";
-        TestUtilities::write_test_file(&input_file, test_data.as_bytes()).await.unwrap();
+        tokio::fs::write(&input_file, test_data.as_bytes()).await.unwrap();
 
         // Create and configure system
         let config = create_test_config();
@@ -389,7 +409,7 @@ mod tests {
         assert!(output_file.exists(), "Output file should be created");
 
         // Verify output content
-        let output_content = TestUtilities::read_test_file(&output_file).await.unwrap();
+        let output_content = tokio::fs::read(&output_file).await.unwrap();
         let output_str = String::from_utf8(output_content).unwrap();
 
         assert!(output_str.contains("BALANCED: line 1"), "Output should contain processed content");
@@ -407,7 +427,7 @@ mod tests {
 
         // Create test data with specific content
         let test_content = "hello world\ntest data\nfinal line";
-        TestUtilities::write_test_file(&input_file, test_content.as_bytes()).await.unwrap();
+        tokio::fs::write(&input_file, test_content.as_bytes()).await.unwrap();
 
         let config = SystemConfig {
             input_format: "json".to_string(),
@@ -447,7 +467,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let input_file = temp_dir.path().join("mode_test.json");
         let test_data = "test content";
-        TestUtilities::write_test_file(&input_file, test_data.as_bytes()).await.unwrap();
+        tokio::fs::write(&input_file, test_data.as_bytes()).await.unwrap();
 
         let modes = vec![
             (ProcessingMode::Fast, "FAST: test content"),
@@ -499,7 +519,7 @@ mod tests {
         let input_file = temp_dir.path().join("test.json");
         let output_file = temp_dir.path().join("output.json");
 
-        TestUtilities::write_test_file(&input_file, b"test data").await.unwrap();
+        tokio::fs::write(&input_file, b"test data").await.unwrap();
 
         let config = SystemConfig {
             input_format: "unsupported_format".to_string(),
@@ -554,7 +574,7 @@ mod tests {
         // Create input with more items than the limit
         let large_input =
             "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10";
-        TestUtilities::write_test_file(&input_file, large_input.as_bytes()).await.unwrap();
+        tokio::fs::write(&input_file, large_input.as_bytes()).await.unwrap();
 
         let config = SystemConfig {
             input_format: "json".to_string(),
@@ -579,7 +599,7 @@ mod tests {
 
         // Create CSV input
         let csv_data = "name,age,city\nJohn,30,NYC\nJane,25,LA";
-        TestUtilities::write_test_file(&csv_input, csv_data.as_bytes()).await.unwrap();
+        tokio::fs::write(&csv_input, csv_data.as_bytes()).await.unwrap();
 
         let config = SystemConfig {
             input_format: "csv".to_string(),
@@ -616,7 +636,7 @@ mod tests {
         // Create moderately sized test data
         let test_lines: Vec<String> = (0..50).map(|i| format!("test line {}", i)).collect();
         let test_data = test_lines.join("\n");
-        TestUtilities::write_test_file(&input_file, test_data.as_bytes()).await.unwrap();
+        tokio::fs::write(&input_file, test_data.as_bytes()).await.unwrap();
 
         let config = create_test_config();
         let mut system = DataProcessingSystem::new(config).await.unwrap();
@@ -652,7 +672,7 @@ mod tests {
             let output_file = temp_dir.path().join(format!("output_{}.json", i));
             let test_data = format!("concurrent test data {}", i);
 
-            TestUtilities::write_test_file(&input_file, test_data.as_bytes()).await.unwrap();
+            tokio::fs::write(&input_file, test_data.as_bytes()).await.unwrap();
 
             let handle = tokio::spawn(async move {
                 let config = create_test_config();
@@ -697,7 +717,7 @@ mod tests {
             let output_file = temp_dir.path().join(format!("result_{}.json", i));
             let test_data = format!("test data iteration {}", i);
 
-            TestUtilities::write_test_file(&input_file, test_data.as_bytes()).await.unwrap();
+            tokio::fs::write(&input_file, test_data.as_bytes()).await.unwrap();
 
             let result = system.process_file(&input_file, &output_file).await;
             assert!(result.is_ok(), "Operation {} should succeed", i);
