@@ -293,7 +293,7 @@ mod sampling_unit_tests {
             seed: Some(42),
         };
 
-        let strategy = SamplingStrategy::new(config);
+        let _strategy = SamplingStrategy::new(config);
         // Strategy should be created successfully
         // We can't test much more without exposing internal state
     }
@@ -795,7 +795,7 @@ mod error_handling_unit_tests {
         let invalid_device = Device::Cpu; // CPU device for GPU backend
 
         // This should work since we're using CPU device
-        let backend = GpuBackend::new(model.clone(), invalid_device);
+        let _backend = GpuBackend::new(model.clone(), invalid_device);
         // Actually, this might fail because GPU backend expects CUDA device
         // The behavior depends on implementation
     }
