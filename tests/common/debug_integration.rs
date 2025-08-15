@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 use super::debugging::{DebugConfig, TestDebugger};
-use super::errors::{TestError, TestOpResult};
+use super::errors::TestOpResult;
 use super::harness::{TestCase, TestHarness, TestReporter};
 use super::results::{TestResult, TestSuiteResult};
 
@@ -96,13 +95,13 @@ impl DebugEnabledTestHarness {
 
 /// Debug-aware test case wrapper
 pub struct DebugTestCase {
-    inner: Box<dyn TestCase>,
+    inner: Arc<dyn TestCase>,
     debugger: Arc<TestDebugger>,
     test_name: String,
 }
 
 impl DebugTestCase {
-    pub fn new(inner: Box<dyn TestCase>, debugger: Arc<TestDebugger>) -> Self {
+    pub fn new(inner: Arc<dyn TestCase>, debugger: Arc<TestDebugger>) -> Self {
         let test_name = inner.name().to_string();
         Self { inner, debugger, test_name }
     }
@@ -376,7 +375,7 @@ pub fn wrap_test_with_debug(
     test_case: Box<dyn TestCase>,
     debugger: Arc<TestDebugger>,
 ) -> Box<dyn TestCase> {
-    Box::new(DebugTestCase::new(test_case, debugger))
+    Box::new(DebugTestCase::new(test_case.into(), debugger))
 }
 
 /// Create debug configuration from environment variables
@@ -465,6 +464,8 @@ mod tests {
                 memory_average: Some(512 * 1024), // 512KB
                 cpu_time: Some(Duration::from_millis(50)),
                 custom_metrics: std::collections::HashMap::new(),
+                assertions: 10,
+                operations: 100,
             })
         }
 
@@ -479,7 +480,7 @@ mod tests {
             DebugConfig { enabled: true, verbose_logging: true, ..Default::default() };
 
         let debugger = Arc::new(TestDebugger::new(debug_config).await.unwrap());
-        let mock_test = Box::new(MockTestCase::new("test_debug_wrapper", false));
+        let mock_test = Arc::new(MockTestCase::new("test_debug_wrapper", false));
         let debug_test = DebugTestCase::new(mock_test, debugger.clone());
 
         // Test successful execution
@@ -502,7 +503,7 @@ mod tests {
             DebugConfig { enabled: true, verbose_logging: true, ..Default::default() };
 
         let debugger = Arc::new(TestDebugger::new(debug_config).await.unwrap());
-        let mock_test = Box::new(MockTestCase::new("test_debug_failure", true));
+        let mock_test = Arc::new(MockTestCase::new("test_debug_failure", true));
         let debug_test = DebugTestCase::new(mock_test, debugger.clone());
 
         // Test failure handling

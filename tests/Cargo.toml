@@ -8,33 +8,47 @@ version = "0.1.0"
 name = "bitnet_tests"
 path = "common/mod.rs"
 
+[features]
+default = []
+full-framework = ["reporting", "fixtures", "trend"]
+reporting = []
+fixtures = []
+trend = []
+
 [[bin]]
 name = "validate_config"
 path = "bin/validate_config.rs"
+required-features = ["fixtures"]
 
 [[bin]]
 name = "run_configuration_tests"
 path = "run_configuration_tests.rs"
+required-features = ["fixtures"]
 
 [[bin]]
 name = "generate_ci_report"
 path = "bin/generate_ci_report.rs"
+required-features = ["reporting"]
 
 [[bin]]
 name = "check_performance_regressions"
 path = "bin/check_performance_regressions.rs"
+required-features = ["fixtures"]
 
 [[bin]]
 name = "generate_trend_analysis"
 path = "bin/generate_trend_analysis.rs"
+required-features = ["trend", "reporting"]
 
 [[bin]]
 name = "ci_status_integration"
 path = "bin/ci_status_integration.rs"
+required-features = ["reporting", "fixtures"]
 
 [[bin]]
 name = "demo_reporting_comprehensive"
 path = "demo_reporting_comprehensive.rs"
+required-features = ["reporting"]
 
 
 [[bin]]
@@ -44,10 +58,12 @@ path = "demo_error_handling.rs"
 [[bin]]
 name = "demo_reporting_system"
 path = "demo_reporting_system.rs"
+required-features = ["reporting"]
 
 [[bin]]
 name = "fast_feedback_simple_demo"
 path = "bin/fast_feedback_simple_demo.rs"
+required-features = ["fixtures"]
 
 [[test]]
 name = "test_logging_infrastructure"

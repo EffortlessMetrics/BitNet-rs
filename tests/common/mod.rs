@@ -55,8 +55,17 @@ pub use utils::{format_bytes, format_duration, get_memory_usage, get_peak_memory
 
 // Re-export commonly used types
 pub use config::TestConfig;
-pub use errors::TestError;
+pub use config_scenarios::{ScenarioConfigManager, TestingScenario, EnvironmentType};
+pub use errors::{TestError, TestOpResult as TestResult};
+pub use fixtures::FixtureManager;
 pub use results::TestMetrics;
+
+// Heavy/optional modules
+#[cfg(feature = "trend")]
+pub mod trend_reporting;
+
+#[cfg(feature = "fixtures")]
+pub mod config_validator;
 
 // Cross-validation types temporarily disabled
 // pub use cross_validation::{...};
