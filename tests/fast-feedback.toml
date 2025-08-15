@@ -1,0 +1,138 @@
+# Fast Feedback Configuration for BitNet.rs Testing Framework
+# This configuration optimizes test execution for rapid feedback
+
+[feedback]
+# Target feedback time in seconds (default: 120 seconds = 2 minutes)
+target_feedback_time = 120
+
+# Maximum feedback time before fallback (default: 300 seconds = 5 minutes)
+max_feedback_time = 300
+
+# Minimum coverage threshold to maintain (0.0 to 1.0)
+min_coverage_threshold = 0.80
+
+[execution]
+# Enable incremental testing based on changed files
+enable_incremental = true
+
+# Enable test result caching
+enable_caching = true
+
+# Enable smart test selection based on history
+enable_smart_selection = true
+
+# Enable parallel execution
+enable_parallel = true
+
+# Maximum parallel tests for fast feedback
+max_parallel_fast = 4
+
+# Enable early termination on first failure
+fail_fast = true
+
+# Cache validity duration in seconds
+cache_validity = 3600
+
+[profiles]
+# Speed profile: "Lightning", "Fast", "Balanced", "Thorough"
+speed_profile = "Fast"
+
+[profiles.ci]
+# CI-specific overrides
+fail_fast = true
+max_feedback_time = 180
+max_parallel_fast = 2
+speed_profile = "Lightning"
+target_feedback_time = 90
+
+[profiles.development]
+# Development-specific overrides
+fail_fast = false
+max_feedback_time = 120
+max_parallel_fast = 6
+speed_profile = "Lightning"
+target_feedback_time = 30
+
+[profiles.integration]
+# Integration testing overrides
+fail_fast = false
+max_feedback_time = 600
+max_parallel_fast = 2
+speed_profile = "Balanced"
+target_feedback_time = 300
+
+[optimization]
+# Skip tests that take longer than this threshold (seconds)
+slow_test_threshold = 30
+
+# Enable aggressive optimizations
+aggressive_mode = true
+
+# Test timeout in seconds
+test_timeout = 60
+
+[incremental]
+# Maximum age for incremental cache (seconds)
+max_age = 86400
+
+# Patterns that force full test runs
+force_full_patterns = ["Cargo.toml", "build.rs", ".github/workflows/"]
+
+# Patterns that always use incremental testing
+always_incremental_patterns = ["tests/", "examples/", "docs/"]
+
+[selection]
+# Test categories to prioritize
+priority_categories = ["Unit", "Integration"]
+
+# Test patterns to always include
+always_include_patterns = ["*core*", "*basic*", "*essential*", "*smoke*"]
+
+# Test patterns to exclude in fast mode
+fast_mode_exclude_patterns = ["*benchmark*", "*performance*", "*stress*", "*fuzz*"]
+
+[reporting]
+# Generate minimal reports for speed
+minimal_reporting = true
+
+# Report formats for fast feedback
+formats = ["Json"]
+
+# Include artifacts in reports
+include_artifacts = false
+
+# Generate coverage reports
+generate_coverage = false
+
+# Generate performance reports
+generate_performance = false
+
+[environment]
+# Environment variables that trigger fast feedback
+fast_feedback_vars = ["BITNET_FAST_FEEDBACK", "BITNET_INCREMENTAL", "CI"]
+
+# Environment-specific configurations
+[environment.ci]
+# CI environment settings
+memory_limit_gb = 4
+parallel_limit = 2
+timeout_multiplier = 0.8
+
+[environment.local]
+# Local development settings
+memory_limit_gb = 8
+parallel_limit = 6
+timeout_multiplier = 1.0
+
+[logging]
+# Log level for fast feedback execution
+level = "info"
+
+# Enable performance logging
+performance_logging = true
+
+# Enable timing logs
+timing_logs = true
+
+# Log file for fast feedback runs
+log_file = "tests/logs/fast-feedback.log"

@@ -45,6 +45,10 @@ path = "demo_error_handling.rs"
 name = "demo_reporting_system"
 path = "demo_reporting_system.rs"
 
+[[bin]]
+name = "fast_feedback_simple_demo"
+path = "bin/fast_feedback_simple_demo.rs"
+
 [[test]]
 name = "test_logging_infrastructure"
 path = "test_logging_infrastructure.rs"
