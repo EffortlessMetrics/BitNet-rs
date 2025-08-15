@@ -10,16 +10,18 @@ use super::{
     config::TestConfig,
     errors::{TestError, TestOpResult as TestResultCompat},
     results::{TestMetrics, TestResult as TestRecord, TestStatus, TestSuiteResult},
+    fixtures_facade::Fixtures,
 };
 
-#[cfg(feature = "fixtures")]
-use super::fixtures::FixtureManager;
+
+// Import the stable fixture context type
+mod fixture_ctx;
+pub use fixture_ctx::FixtureCtx;
 
 /// Core test harness for executing tests with parallel support and proper isolation
 pub struct TestHarness {
     config: TestConfig,
-    #[cfg(feature = "fixtures")]
-    fixtures: Arc<FixtureManager>,
+    fixtures: Fixtures,
     reporters: Vec<ConsoleReporter>,
     semaphore: Arc<Semaphore>,
     execution_stats: Arc<RwLock<ExecutionStats>>,
@@ -29,15 +31,12 @@ impl TestHarness {
     /// Create a new test harness with the given configuration
     pub async fn new(config: TestConfig) -> TestResultCompat<Self> {
         let max_parallel = config.max_parallel_tests;
-        
-        #[cfg(feature = "fixtures")]
-        let fixtures = Arc::new(FixtureManager::new(&config.fixtures).await?);
+        let fixtures = Fixtures::new(&config).await?;
 
         println!("Initializing test harness with {} parallel slots", max_parallel);
 
         Ok(Self {
             config,
-            #[cfg(feature = "fixtures")]
             fixtures,
             reporters: Vec::new(),
             semaphore: Arc::new(Semaphore::new(max_parallel)),
@@ -224,8 +223,7 @@ impl TestHarness {
     fn clone_for_test(&self) -> TestHarnessClone {
         TestHarnessClone {
             config: self.config.clone(),
-            #[cfg(feature = "fixtures")]
-            fixtures: Arc::clone(&self.fixtures),
+            fixtures: self.fixtures.clone(),
             semaphore: Arc::clone(&self.semaphore),
         }
     }
@@ -261,12 +259,15 @@ impl TestHarness {
         std::env::set_var("BITNET_TEST_NAME", &env.test_name);
         std::env::set_var("BITNET_TEST_ISOLATION", "true");
 
-        // Call the test's setup method
+        // Call the test's setup method with stable API
         #[cfg(feature = "fixtures")]
-        test_case.setup(&self.fixtures).await?;
+        {
+            use std::ops::Deref;
+            test_case.setup(self.fixtures.deref()).await?;
+        }
         
         #[cfg(not(feature = "fixtures"))]
-        test_case.setup().await?;
+        test_case.setup(()).await?;
         
         Ok(())
     }
@@ -325,8 +326,7 @@ struct IsolatedEnvironment {
 #[derive(Clone)]
 struct TestHarnessClone {
     config: TestConfig,
-    #[cfg(feature = "fixtures")]
-    fixtures: Arc<FixtureManager>,
+    fixtures: Fixtures,
     semaphore: Arc<Semaphore>,
 }
 
@@ -414,12 +414,15 @@ impl TestHarnessClone {
         std::env::set_var("BITNET_TEST_NAME", &env.test_name);
         std::env::set_var("BITNET_TEST_ISOLATION", "true");
 
-        // Call the test's setup method
+        // Call the test's setup method with stable API
         #[cfg(feature = "fixtures")]
-        test_case.setup(&self.fixtures).await?;
+        {
+            use std::ops::Deref;
+            test_case.setup(self.fixtures.deref()).await?;
+        }
         
         #[cfg(not(feature = "fixtures"))]
-        test_case.setup().await?;
+        test_case.setup(()).await?;
         
         Ok(())
     }
@@ -468,17 +471,19 @@ pub trait TestCase: Send + Sync {
     fn name(&self) -> &str;
 
     /// Set up the test case (called before execute)
-    #[cfg(feature = "fixtures")]
-    async fn setup(&self, fixtures: &FixtureManager) -> TestResultCompat<()>;
-    
-    #[cfg(not(feature = "fixtures"))]
-    async fn setup(&self) -> TestResultCompat<()>;
+    /// Uses stable API with FixtureCtx type that adapts based on features
+    async fn setup(&self, fixtures: FixtureCtx<'_>) -> TestResultCompat<()> {
+        let _ = fixtures; // Default no-op implementation
+        Ok(())
+    }
 
     /// Execute the test case
     async fn execute(&self) -> TestResultCompat<TestMetrics>;
 
     /// Clean up after the test case (always called, even if execute fails)
-    async fn cleanup(&self) -> TestResultCompat<()>;
+    async fn cleanup(&self) -> TestResultCompat<()> {
+        Ok(())
+    }
 
     /// Get test metadata (optional)
     fn metadata(&self) -> HashMap<String, String> {

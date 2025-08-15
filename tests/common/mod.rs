@@ -29,6 +29,9 @@ pub mod debugging;
 #[cfg(feature = "fixtures")]
 pub mod fixtures;
 
+// Facade for fixtures to reduce cfg scatter
+pub mod fixtures_facade;
+
 #[cfg(feature = "fixtures")]
 pub mod fast_config;
 

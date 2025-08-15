@@ -1,0 +1,118 @@
+name: Test Framework CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'tests/**'
+      - 'Cargo.toml'
+      - '.github/workflows/test-framework.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'tests/**'
+      - 'Cargo.toml'
+      - '.github/workflows/test-framework.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  build-matrix:
+    name: Build ${{ matrix.profile.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        profile:
+          - name: minimal
+            features: ""
+            desc: "Minimal library build"
+          - name: full
+            features: "--features full-framework"
+            desc: "Full framework with all features"
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      
+      - name: Cache cargo registry
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.profile.name }}
+      
+      - name: Build library (${{ matrix.profile.desc }})
+        run: |
+          cargo build -p bitnet-tests --lib ${{ matrix.profile.features }}
+      
+      - name: Run clippy (${{ matrix.profile.desc }})
+        run: |
+          cargo clippy -p bitnet-tests --lib ${{ matrix.profile.features }} -- -D warnings
+      
+      - name: Check formatting
+        run: |
+          cargo fmt -p bitnet-tests -- --check
+      
+      - name: Build binaries (${{ matrix.profile.desc }})
+        if: matrix.profile.name == 'full'
+        run: |
+          cargo build -p bitnet-tests ${{ matrix.profile.features }}
+  
+  test-scenarios:
+    name: Test Configuration Scenarios
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Cache cargo registry
+        uses: Swatinem/rust-cache@v2
+      
+      - name: Run configuration scenario tests
+        run: |
+          cargo test -p bitnet --test test_configuration_scenarios
+  
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [build-matrix]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Cache cargo registry
+        uses: Swatinem/rust-cache@v2
+      
+      - name: Run library tests (minimal)
+        run: |
+          cargo test -p bitnet-tests --lib
+      
+      - name: Run library tests (full)
+        run: |
+          cargo test -p bitnet-tests --lib --features full-framework
+  
+  doc-check:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Check documentation
+        run: |
+          cargo doc -p bitnet-tests --no-deps --features full-framework
+        env:
+          RUSTDOCFLAGS: "-D warnings"
