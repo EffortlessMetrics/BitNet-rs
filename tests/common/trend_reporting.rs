@@ -583,7 +583,7 @@ pub struct TestRunMetadata {
     pub configuration: HashMap<String, String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize)]
 pub struct TrendReport {
     pub period_days: u32,
     pub branch_filter: Option<String>,
@@ -604,7 +604,7 @@ impl TrendReport {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, serde::Serialize)]
 pub struct TrendAnalysis {
     pub test_trends: HashMap<String, TestTrend>,
     pub suite_trends: HashMap<String, SuiteTrend>,
@@ -612,7 +612,7 @@ pub struct TrendAnalysis {
     pub performance_trend: PerformanceTrend,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, serde::Serialize)]
 pub struct TestTrend {
     pub sample_size: usize,
     pub success_rate: f64,
@@ -621,7 +621,7 @@ pub struct TestTrend {
     pub stability: TestStability,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, serde::Serialize)]
 pub struct SuiteTrend {
     pub sample_size: usize,
     pub average_success_rate: f64,
@@ -629,7 +629,7 @@ pub struct SuiteTrend {
     pub stability: TestStability,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct PerformanceDataPoint {
     pub timestamp: DateTime<Utc>,
     pub duration: Duration,
@@ -674,7 +674,7 @@ struct PerformanceBaseline {
     confidence: f64,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize)]
 pub enum PerformanceTrend {
     Improving,
     #[default]
@@ -682,7 +682,7 @@ pub enum PerformanceTrend {
     Degrading,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize)]
 pub enum TestStability {
     #[default]
     Stable,

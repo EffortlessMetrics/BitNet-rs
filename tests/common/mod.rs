@@ -38,6 +38,9 @@ pub mod fast_feedback_simple;
 #[cfg(feature = "reporting")]
 pub mod reporting;
 
+#[cfg(feature = "reporting")]
+pub mod ci_reporting;
+
 pub mod incremental;
 pub mod optimization;
 pub mod parallel;

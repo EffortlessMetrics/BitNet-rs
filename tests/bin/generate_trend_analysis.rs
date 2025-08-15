@@ -162,7 +162,7 @@ async fn generate_summary_report(
 
     if !unstable_suites.is_empty() {
         summary.push_str("### Unstable Test Suites\n\n");
-        for (suite_name, trend) in unstable_suites {
+        for (suite_name, trend) in &unstable_suites {
             summary.push_str(&format!(
                 "- **{}**: {:.1}% success rate ({:?})\n",
                 suite_name, trend.average_success_rate, trend.stability
@@ -185,7 +185,7 @@ async fn generate_summary_report(
 
     if !degrading_tests.is_empty() {
         summary.push_str("### Performance Degradations\n\n");
-        for (test_name, trend) in degrading_tests {
+        for (test_name, trend) in &degrading_tests {
             summary.push_str(&format!(
                 "- **{}**: Average {:.2}s (degrading trend)\n",
                 test_name,
