@@ -418,9 +418,11 @@ mod security_tests {
 
     #[test]
     fn test_file_size_limits() {
-        let mut security = ModelSecurity::default();
-        security.max_model_size = 1024; // 1KB limit
-        security.require_hash_verification = false; // Disable hash verification for this test
+        let security = ModelSecurity {
+            max_model_size: 1024, // 1KB limit
+            require_hash_verification: false, // Disable hash verification for this test
+            ..Default::default()
+        };
         let verifier = ModelVerifier::new(security);
 
         // Create a small file (should pass)
@@ -685,7 +687,7 @@ mod integration_tests {
 
         // Test that loader can handle multiple failed attempts
         for i in 0..5 {
-            let result = loader.load(&format!("non_existent_file_{}.gguf", i));
+            let result = loader.load(format!("non_existent_file_{}.gguf", i));
             assert!(result.is_err());
         }
 

@@ -5,8 +5,9 @@
 //! performance optimization tracking.
 
 use bitnet_common::QuantizationType;
-use bitnet_kernels::{KernelManager, KernelProvider};
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use bitnet_kernels::KernelManager;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
 
 /// Test data generator for consistent benchmarking
 struct BenchmarkData;
@@ -35,8 +36,8 @@ fn bench_matmul(c: &mut Criterion) {
     let sizes = vec![(32, 32, 32), (64, 64, 64), (128, 128, 128), (256, 256, 256), (512, 512, 512)];
 
     for (m, n, k) in sizes {
-        let a = BenchmarkData::matrix_a(m, k);
-        let b = BenchmarkData::matrix_b(k, n);
+        let a_data = BenchmarkData::matrix_a(m, k);
+        let b_data = BenchmarkData::matrix_b(k, n);
         let mut c_result = vec![0.0f32; m * n];
 
         // Set throughput for GFLOPS calculation
@@ -50,8 +51,8 @@ fn bench_matmul(c: &mut Criterion) {
                 b.iter(|| {
                     kernel
                         .matmul_i2s(
-                            black_box(&a),
-                            black_box(&b),
+                            black_box(&a_data),
+                            black_box(&b_data),
                             black_box(&mut c_result),
                             black_box(m),
                             black_box(n),
@@ -142,20 +143,20 @@ fn bench_memory_bandwidth(c: &mut Criterion) {
     let n = 1024;
     let k = 1024;
 
-    let a = BenchmarkData::matrix_a(m, k);
-    let b = BenchmarkData::matrix_b(k, n);
+    let a_data = BenchmarkData::matrix_a(m, k);
+    let b_data = BenchmarkData::matrix_b(k, n);
     let mut c_result = vec![0.0f32; m * n];
 
     // Calculate total memory accessed
-    let bytes_accessed = (a.len() + b.len() + c_result.len() * 4) as u64;
+    let bytes_accessed = (a_data.len() + b_data.len() + c_result.len() * 4) as u64;
     group.throughput(Throughput::Bytes(bytes_accessed));
 
     group.bench_function(format!("{}_large_matmul", kernel.name()), |b| {
         b.iter(|| {
             kernel
                 .matmul_i2s(
-                    black_box(&a),
-                    black_box(&b),
+                    black_box(&a_data),
+                    black_box(&b_data),
                     black_box(&mut c_result),
                     black_box(m),
                     black_box(n),
@@ -185,8 +186,8 @@ fn bench_kernel_comparison(c: &mut Criterion) {
     let n = 128;
     let k = 128;
 
-    let a = BenchmarkData::matrix_a(m, k);
-    let b = BenchmarkData::matrix_b(k, n);
+    let a_data = BenchmarkData::matrix_a(m, k);
+    let b_data = BenchmarkData::matrix_b(k, n);
 
     let ops = (m * n * k) as u64;
     group.throughput(Throughput::Elements(ops));
@@ -199,8 +200,8 @@ fn bench_kernel_comparison(c: &mut Criterion) {
         b.iter(|| {
             kernel
                 .matmul_i2s(
-                    black_box(&a),
-                    black_box(&b),
+                    black_box(&a_data),
+                    black_box(&b_data),
                     black_box(&mut c_result),
                     black_box(m),
                     black_box(n),
@@ -268,8 +269,8 @@ fn bench_cache_performance(c: &mut Criterion) {
     ];
 
     for (m, n, k) in sizes {
-        let a = BenchmarkData::matrix_a(m, k);
-        let b = BenchmarkData::matrix_b(k, n);
+        let a_data = BenchmarkData::matrix_a(m, k);
+        let b_data = BenchmarkData::matrix_b(k, n);
         let mut c_result = vec![0.0f32; m * n];
 
         let ops = (m * n * k) as u64;
@@ -282,8 +283,8 @@ fn bench_cache_performance(c: &mut Criterion) {
                 b.iter(|| {
                     kernel
                         .matmul_i2s(
-                            black_box(&a),
-                            black_box(&b),
+                            black_box(&a_data),
+                            black_box(&b_data),
                             black_box(&mut c_result),
                             black_box(m),
                             black_box(n),

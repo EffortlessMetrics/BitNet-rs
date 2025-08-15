@@ -292,6 +292,7 @@ impl GgufLoader {
 
     /// Validate tensor data integrity
     #[cfg(any(test, feature = "validation"))]
+    #[allow(dead_code)]
     fn validate_tensor_data(
         &self,
         info: &crate::formats::gguf::TensorInfo,

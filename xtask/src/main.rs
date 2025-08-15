@@ -329,20 +329,20 @@ fn real_main() -> Result<()> {
             json,
             retries,
             timeout,
-        } => download_model_cmd(
-            &id,
-            &file,
-            &out,
-            sha256.as_deref(),
+        } => download_model_cmd(DownloadConfig {
+            id: &id,
+            file: &file,
+            out_dir: &out,
+            sha256_hex: sha256.as_deref(),
             force,
-            rev.as_deref(),
+            rev: rev.as_deref(),
             no_progress,
             verbose,
-            &base_url,
+            base_url: &base_url,
             json,
             retries,
             timeout,
-        ),
+        }),
         Cmd::FetchCpp { tag, force, clean } => fetch_cpp_cmd(&tag, force, clean),
         Cmd::Crossval { model, cpp_dir, release, dry_run, extra } => {
             let model_path = match model {
@@ -384,6 +384,22 @@ struct Event<'a> {
     ms: Option<u64>,
 }
 
+// Download configuration to reduce function arguments
+struct DownloadConfig<'a> {
+    id: &'a str,
+    file: &'a str,
+    out_dir: &'a Path,
+    sha256_hex: Option<&'a str>,
+    force: bool,
+    rev: Option<&'a str>,
+    no_progress: bool,
+    verbose: bool,
+    base_url: &'a str,
+    json: bool,
+    retries: u32,
+    timeout: u64,
+}
+
 // Macro for emitting JSON events
 macro_rules! ev {
     ($json:expr, $phase:expr, { $($key:ident: $value:expr),* $(,)? }) => {
@@ -406,20 +422,21 @@ macro_rules! ev {
     };
 }
 
-fn download_model_cmd(
-    id: &str,
-    file: &str,
-    out_dir: &Path,
-    sha256_hex: Option<&str>,
-    force: bool,
-    rev: Option<&str>,
-    no_progress: bool,
-    verbose: bool,
-    base_url: &str,
-    json: bool,
-    retries: u32,
-    timeout: u64,
-) -> Result<()> {
+fn download_model_cmd(config: DownloadConfig) -> Result<()> {
+    let DownloadConfig {
+        id,
+        file,
+        out_dir,
+        sha256_hex,
+        force,
+        rev,
+        no_progress,
+        verbose,
+        base_url,
+        json,
+        retries,
+        timeout,
+    } = config;
     fs::create_dir_all(out_dir)?;
 
     // Guard against path traversal
@@ -837,7 +854,7 @@ fn download_model_cmd(
 
                 // Re-check disk space when restarting
                 if let Some(total) = size {
-                    let available = fs2::available_space(&dest.parent().unwrap_or(Path::new(".")))?;
+                    let available = fs2::available_space(dest.parent().unwrap_or(Path::new(".")))?;
                     if available < total {
                         bail!(
                             "insufficient disk space: need {} MB, have {} MB",
@@ -1217,20 +1234,20 @@ fn full_crossval_cmd(force: bool) -> Result<()> {
 
     // Step 1: Download model
     println!("Step 1/3: Downloading model");
-    download_model_cmd(
-        DEFAULT_MODEL_ID,
-        DEFAULT_MODEL_FILE,
-        &PathBuf::from("models"),
-        None, // Add SHA256 if available
+    download_model_cmd(DownloadConfig {
+        id: DEFAULT_MODEL_ID,
+        file: DEFAULT_MODEL_FILE,
+        out_dir: &PathBuf::from("models"),
+        sha256_hex: None,
         force,
-        None,                     // rev
-        false,                    // no_progress
-        false,                    // verbose
-        "https://huggingface.co", // base_url
-        false,                    // json
-        3,                        // retries
-        1800,                     // timeout
-    )?;
+        rev: None,
+        no_progress: false,
+        verbose: false,
+        base_url: "https://huggingface.co",
+        json: false,
+        retries: 3,
+        timeout: 1800,
+    })?;
 
     println!();
 
@@ -1334,7 +1351,7 @@ fn setup_crossval() -> Result<()> {
 
     // Build with crossval features
     println!("  Building with cross-validation features...");
-    let status = Command::new("cargo").args(&["build", "--features", "crossval"]).status()?;
+    let status = Command::new("cargo").args(["build", "--features", "crossval"]).status()?;
 
     if !status.success() {
         return Err(anyhow!("Failed to build with crossval features"));
@@ -1430,7 +1447,7 @@ fn run_benchmark(platform: &str) -> Result<()> {
     println!("  Platform: {}", platform);
 
     let status =
-        Command::new("cargo").args(&["bench", "--workspace", "--features", "cpu"]).status()?;
+        Command::new("cargo").args(["bench", "--workspace", "--features", "cpu"]).status()?;
 
     if !status.success() {
         return Err(anyhow!("Benchmarks failed"));
@@ -1464,7 +1481,9 @@ mod tests {
     use std::thread;
 
     struct TestServer {
+        #[allow(dead_code)]
         port: u16,
+        #[allow(dead_code)]
         requests: Arc<Mutex<Vec<String>>>,
     }
 
@@ -1495,6 +1514,7 @@ mod tests {
             TestServer { port, requests }
         }
 
+        #[allow(dead_code)]
         fn url(&self, path: &str) -> String {
             format!("http://127.0.0.1:{}{}", self.port, path)
         }
@@ -1518,7 +1538,7 @@ mod tests {
         headers.insert(RETRY_AFTER, date_str.parse().unwrap());
 
         let wait = retry_after_secs(&headers);
-        assert!(wait >= 4 && wait <= 6); // Allow for timing variance
+        assert!((4..=6).contains(&wait)); // Allow for timing variance
     }
 
     #[test]
@@ -1664,7 +1684,7 @@ mod tests {
         let counter = Arc::new(Mutex::new(0));
         let counter_clone = counter.clone();
 
-        let server = TestServer::new(move |_rq| {
+        let _server = TestServer::new(move |_rq| {
             use tiny_http::{Header, Response, StatusCode};
 
             let mut count = counter_clone.lock().unwrap();

@@ -130,7 +130,7 @@ mod gguf_comprehensive_tests {
         let u8_val = GgufValue::U8(42);
         let _i8_val = GgufValue::I8(-42);
         let _f32_val = GgufValue::F32(std::f32::consts::PI);
-        let bool_val = GgufValue::Bool(true);
+        let _bool_val = GgufValue::Bool(true);
         let string_val = GgufValue::String("test".to_string());
 
         // These should not panic
@@ -423,7 +423,7 @@ mod loader_integration_tests {
             }
             Err(_) => {
                 // Loading may fail, but progress callback should still be called
-                let values = progress_values.lock().unwrap();
+                let _values = progress_values.lock().unwrap();
                 // May or may not have progress updates depending on where it failed
             }
         }
