@@ -141,6 +141,18 @@ impl Model for MockModel {
         std::thread::sleep(self.processing_delay);
         Ok(ConcreteTensor::mock(vec![1, 50257]))
     }
+
+    fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor, BitNetError> {
+        // Create a mock embedding tensor with shape [seq_len, hidden_dim]
+        let seq_len = tokens.len();
+        let hidden_dim = self.config.model.hidden_size;
+        Ok(ConcreteTensor::mock(vec![seq_len, hidden_dim]))
+    }
+
+    fn logits(&self, _hidden: &ConcreteTensor) -> Result<ConcreteTensor, BitNetError> {
+        // Create a mock logits tensor with shape [batch, vocab_size]
+        Ok(ConcreteTensor::mock(vec![1, self.config.model.vocab_size]))
+    }
 }
 
 struct MockTokenizer;
@@ -194,7 +206,10 @@ impl MockBatchProcessor {
                 let _permit = permit;
                 let start_time = std::time::Instant::now();
 
-                let result = engine.generate_with_config(&request.prompt, &request.config).await;
+                let result = engine.generate_with_config(&request.prompt, &request.config).await
+                    .map_err(|e| BitNetError::Inference(InferenceError::GenerationFailed {
+                        reason: e.to_string(),
+                    }));
                 let processing_time = start_time.elapsed();
 
                 BatchResponse {
@@ -347,11 +362,11 @@ mod batch_request_tests {
 mod batch_processing_tests {
     use super::*;
 
-    async fn create_test_engine() -> InferenceEngine {
+    async fn create_test_engine() -> Arc<InferenceEngine> {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer);
         let device = Device::Cpu;
-        InferenceEngine::new(model, tokenizer, device).unwrap()
+        Arc::new(InferenceEngine::new(model, tokenizer, device).unwrap())
     }
 
     #[tokio::test]
@@ -603,11 +618,11 @@ mod batch_error_handling_tests {
         assert!(processor.is_err());
     }
 
-    async fn create_test_engine() -> InferenceEngine {
+    async fn create_test_engine() -> Arc<InferenceEngine> {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer);
         let device = Device::Cpu;
-        InferenceEngine::new(model, tokenizer, device).unwrap()
+        Arc::new(InferenceEngine::new(model, tokenizer, device).unwrap())
     }
 
     #[tokio::test]
@@ -680,11 +695,11 @@ mod batch_error_handling_tests {
 mod batch_performance_tests {
     use super::*;
 
-    async fn create_test_engine() -> InferenceEngine {
+    async fn create_test_engine() -> Arc<InferenceEngine> {
         let model = Arc::new(MockModel::new().with_delay(Duration::from_millis(5)));
         let tokenizer = Arc::new(MockTokenizer);
         let device = Device::Cpu;
-        InferenceEngine::new(model, tokenizer, device).unwrap()
+        Arc::new(InferenceEngine::new(model, tokenizer, device).unwrap())
     }
 
     #[tokio::test]
