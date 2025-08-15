@@ -252,7 +252,7 @@ impl ScenarioConfigManager {
         // CI environment
         let mut ci_config = TestConfig::default();
         ci_config.max_parallel_tests = 4;
-        ci_config.reporting.output_dir = Some("/tmp/test-reports".into());
+        ci_config.reporting.output_dir = "/tmp/test-reports".into();
         ci_config.reporting.formats = vec![ReportFormat::Junit, ReportFormat::Html];
         self.environment_overrides.insert(EnvironmentType::CI, ci_config);
 
@@ -312,7 +312,11 @@ impl ScenarioConfigManager {
                 } else {
                     scenario_config.reporting.formats
                 },
-                output_dir: env_config.reporting.output_dir.or(scenario_config.reporting.output_dir),
+                output_dir: if !env_config.reporting.output_dir.as_os_str().is_empty() {
+                    env_config.reporting.output_dir
+                } else {
+                    scenario_config.reporting.output_dir
+                },
                 include_artifacts: scenario_config.reporting.include_artifacts || env_config.reporting.include_artifacts,
                 generate_coverage: scenario_config.reporting.generate_coverage || env_config.reporting.generate_coverage,
                 generate_performance: scenario_config.reporting.generate_performance || env_config.reporting.generate_performance,
