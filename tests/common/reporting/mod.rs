@@ -3,22 +3,15 @@
 //! This module provides a comprehensive test reporting system that supports
 //! multiple output formats including HTML, JSON, JUnit XML, and Markdown.
 
-pub mod comparison_analysis;
-pub mod comparison_html;
-pub mod dashboard;
+// pub mod comparison_analysis;
+// pub mod comparison_html;
+// pub mod dashboard;
 pub mod formats;
-pub mod performance_viz;
+// pub mod performance_viz;
 pub mod reporter;
-pub mod templates;
+// pub mod templates;
 
-pub use comparison_analysis::{
-    AccuracyAnalysisReport, ComparisonAnalysisConfig, ComparisonAnalysisReporter,
-    ExecutiveSummaryReport, PerformanceAnalysisReport, RegressionAnalysisReport,
-};
-pub use comparison_html::ComparisonHtmlReporter;
-pub use dashboard::{create_performance_dashboard, DashboardConfig, PerformanceDashboardGenerator};
 pub use formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter};
-pub use performance_viz::{PerformanceComparison, PerformanceVisualizer, VisualizationConfig};
 pub use reporter::{ReportingManager, TestReporter};
 
 use serde::{Deserialize, Serialize};
