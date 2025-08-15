@@ -6,7 +6,6 @@
 
 use bitnet_inference::prelude::*;
 use std::time::Duration;
-use tokio::time::timeout;
 
 #[tokio::test]
 async fn test_inference_config_defaults() {

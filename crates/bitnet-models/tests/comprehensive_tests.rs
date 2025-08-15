@@ -335,7 +335,7 @@ mod progress_tests {
     fn test_progress_callback_error_handling() {
         // Test callback with invalid progress values
         let callback: ProgressCallback = Arc::new(|progress, _message| {
-            assert!(progress >= 0.0 && progress <= 1.0, "Progress should be in [0, 1] range");
+            assert!((0.0..=1.0).contains(&progress), "Progress should be in [0, 1] range");
         });
 
         // These should not panic

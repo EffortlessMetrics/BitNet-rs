@@ -129,7 +129,7 @@ mod gguf_comprehensive_tests {
         // Test value type creation
         let u8_val = GgufValue::U8(42);
         let _i8_val = GgufValue::I8(-42);
-        let _f32_val = GgufValue::F32(3.14159);
+        let _f32_val = GgufValue::F32(std::f32::consts::PI);
         let bool_val = GgufValue::Bool(true);
         let string_val = GgufValue::String("test".to_string());
 

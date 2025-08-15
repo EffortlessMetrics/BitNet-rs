@@ -252,7 +252,6 @@ mod config_unit_tests {
 }
 
 mod sampling_unit_tests {
-    use super::*;
     use bitnet_inference::sampling::{SamplingConfig, SamplingStrategy};
 
     #[test]
@@ -450,7 +449,6 @@ mod sampling_unit_tests {
 }
 
 mod cache_unit_tests {
-    use super::*;
     use bitnet_inference::cache::{CacheConfig, KVCache};
 
     #[test]
@@ -693,7 +691,6 @@ mod backend_unit_tests {
 }
 
 mod streaming_unit_tests {
-    use super::*;
     use bitnet_inference::streaming::StreamingConfig;
 
     #[test]
