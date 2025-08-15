@@ -248,7 +248,7 @@ impl PerformanceSummary {
             for (name, value) in &measurement.custom_metrics {
                 metric_values
                     .entry(name.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(*value);
             }
         }

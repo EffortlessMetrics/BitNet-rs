@@ -144,7 +144,7 @@ impl ModelSize {
     /// Check if a file size fits this category
     pub fn fits_size(&self, size: u64) -> bool {
         let (min, max) = self.size_range();
-        size >= min && size <= max
+        (min..=max).contains(&size)
     }
 }
 

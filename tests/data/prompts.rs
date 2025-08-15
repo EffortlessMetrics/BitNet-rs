@@ -235,7 +235,7 @@ impl TestPromptRegistry {
         // Add to category index
         self.by_category
             .entry(prompt.category)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(prompt.id.clone());
 
         // Add to main registry

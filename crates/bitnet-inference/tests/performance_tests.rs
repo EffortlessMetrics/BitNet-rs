@@ -7,7 +7,7 @@
 //! - Cache efficiency and optimization
 //! - Backend performance comparison
 
-use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, MockTensor};
+use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device};
 use bitnet_inference::prelude::*;
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;

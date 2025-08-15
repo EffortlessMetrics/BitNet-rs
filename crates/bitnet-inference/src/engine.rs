@@ -317,7 +317,6 @@ pub struct InferenceStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bitnet_common::{BitNetError, Tensor};
     use std::sync::Arc;
 
     struct MockModel {

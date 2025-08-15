@@ -120,10 +120,10 @@ impl ComparisonTestCaseRegistry {
         model_size: ModelSize,
     ) {
         // Add to category index
-        self.by_category.entry(category).or_insert_with(Vec::new).push(test_case.name.clone());
+        self.by_category.entry(category).or_default().push(test_case.name.clone());
 
         // Add to model size index
-        self.by_model_size.entry(model_size).or_insert_with(Vec::new).push(test_case.name.clone());
+        self.by_model_size.entry(model_size).or_default().push(test_case.name.clone());
 
         // Add to main registry
         self.test_cases.insert(test_case.name.clone(), test_case);

@@ -86,7 +86,7 @@ async fn test_default_configuration() -> TestResult<()> {
     assert!(!config.cache_dir.as_os_str().is_empty(), "Default cache dir should not be empty");
     assert!(!config.log_level.is_empty(), "Default log level should not be empty");
     assert!(
-        config.coverage_threshold >= 0.0 && config.coverage_threshold <= 1.0,
+        (0.0..=1.0).contains(&config.coverage_threshold),
         "Default coverage threshold should be between 0.0 and 1.0"
     );
 
