@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 use tokio::sync::RwLock;
 
-use super::errors::{ErrorReport, TestError, TestOpResult};
+use super::errors::{TestError, TestOpResult};
 use super::results::{TestResult, TestSuiteResult};
 
 /// Comprehensive debugging support for the testing framework
@@ -56,7 +56,7 @@ struct DebugSession {
 }
 
 /// Trace information for a single test
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct TestTrace {
     pub test_name: String,
     pub start_time: SystemTime,
@@ -69,7 +69,7 @@ pub struct TestTrace {
 }
 
 /// Test execution phase
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct TestPhase {
     pub name: String,
     pub start_time: SystemTime,
@@ -79,7 +79,7 @@ pub struct TestPhase {
 }
 
 /// Status of a test phase
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum PhaseStatus {
     Started,
     InProgress,
@@ -89,7 +89,7 @@ pub enum PhaseStatus {
 }
 
 /// Resource usage snapshot
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ResourceSnapshot {
     pub timestamp: SystemTime,
     pub memory_usage: u64,
@@ -99,7 +99,7 @@ pub struct ResourceSnapshot {
 }
 
 /// Stack trace information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct StackTrace {
     pub timestamp: SystemTime,
     pub context: String,
@@ -107,7 +107,7 @@ pub struct StackTrace {
 }
 
 /// Single stack frame
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct StackFrame {
     pub function: String,
     pub file: Option<String>,
@@ -116,7 +116,7 @@ pub struct StackFrame {
 }
 
 /// Debug artifact (file, screenshot, etc.)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DebugArtifact {
     pub name: String,
     pub artifact_type: ArtifactType,
@@ -127,7 +127,7 @@ pub struct DebugArtifact {
 }
 
 /// Type of debug artifact
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum ArtifactType {
     LogFile,
     MemoryDump,
@@ -162,7 +162,7 @@ pub struct SystemSnapshot {
 }
 
 /// Debug log entry
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DebugLogEntry {
     pub timestamp: SystemTime,
     pub level: LogLevel,
@@ -172,7 +172,7 @@ pub struct DebugLogEntry {
 }
 
 /// Log levels for debugging
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub enum LogLevel {
     Trace,
     Debug,
@@ -292,7 +292,7 @@ impl TestDebugger {
             ),
             [
                 ("test_name".to_string(), test_name.to_string()),
-                ("status".to_string(), if result.is_success() { "passed" } else { "failed" }),
+                ("status".to_string(), if result.is_success() { "passed".to_string() } else { "failed".to_string() }),
                 ("duration".to_string(), format!("{:?}", result.duration)),
             ]
             .into(),

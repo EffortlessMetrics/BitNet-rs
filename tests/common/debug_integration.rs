@@ -401,6 +401,7 @@ pub fn debug_config_from_env() -> DebugConfig {
             .map(|v| v.parse().unwrap_or(true))
             .unwrap_or(true),
         max_debug_files: std::env::var("BITNET_DEBUG_MAX_FILES")
+            .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(100),
         debug_output_dir: std::env::var("BITNET_DEBUG_OUTPUT_DIR")
