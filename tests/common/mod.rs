@@ -14,6 +14,9 @@
 // pub mod ci_reporting;
 pub mod config;
 // pub mod config_validator;
+pub mod debug_cli;
+pub mod debug_integration;
+pub mod debugging;
 // pub mod enhanced_error_handler;
 // pub mod error_analysis;
 pub mod errors;
