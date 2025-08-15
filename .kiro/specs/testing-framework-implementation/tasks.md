@@ -594,7 +594,10 @@ th end-to-end validation
 
 
 ### Developer Experience
-- [ ] Test authoring is straightforward with clear documentation
+- [-] Test authoring is straightforward with clear documentation
+
+
+
 - [ ] Test execution provides fast feedback with incremental testing
 - [ ] Debugging support helps identify and resolve issues quickly
 - [ ] Configuration management supports various testing scenarios
