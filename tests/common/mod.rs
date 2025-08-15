@@ -120,18 +120,7 @@ pub mod prelude {
     // Fixtures facade (provides stable API)
     pub use super::fixtures_facade::Fixtures;
 
-    // CI reporting (when available)
+    // CI reporting re-export when available
     #[cfg(feature = "reporting")]
-    pub use super::ci_reporting::{
-        CIReporter,
-        CIFormat,
-    };
-
-    // Trend analysis types (when available)
-    #[cfg(feature = "trend")]
-    pub use super::trend::{
-        TrendAnalyzer,
-        TrendData,
-        TrendReport,
-    };
+    pub use crate::ci_reporting;
 }
