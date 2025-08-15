@@ -374,7 +374,8 @@ th end-to-end validation
   - _Requirements: 1.4, 6.3_
 
 
-- [-] 22. Build coverage reporting
+- [ ] 22. Build coverage reporting
+
 
 
 
