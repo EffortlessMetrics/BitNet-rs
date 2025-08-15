@@ -260,14 +260,7 @@ impl TestHarness {
         std::env::set_var("BITNET_TEST_ISOLATION", "true");
 
         // Call the test's setup method with stable API
-        #[cfg(feature = "fixtures")]
-        {
-            use std::ops::Deref;
-            test_case.setup(self.fixtures.deref()).await?;
-        }
-        
-        #[cfg(not(feature = "fixtures"))]
-        test_case.setup(()).await?;
+        test_case.setup(self.fixtures.ctx()).await?;
         
         Ok(())
     }
@@ -415,14 +408,7 @@ impl TestHarnessClone {
         std::env::set_var("BITNET_TEST_ISOLATION", "true");
 
         // Call the test's setup method with stable API
-        #[cfg(feature = "fixtures")]
-        {
-            use std::ops::Deref;
-            test_case.setup(self.fixtures.deref()).await?;
-        }
-        
-        #[cfg(not(feature = "fixtures"))]
-        test_case.setup(()).await?;
+        test_case.setup(self.fixtures.ctx()).await?;
         
         Ok(())
     }

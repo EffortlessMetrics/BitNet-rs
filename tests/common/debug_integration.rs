@@ -483,14 +483,9 @@ mod tests {
         let debug_test = DebugTestCase::new(mock_test, debugger.clone());
 
         // Test successful execution
-        #[cfg(feature = "fixtures")]
-        {
-            let fixtures = FixtureManager::new(&Default::default()).await.unwrap();
-            assert!(debug_test.setup(&fixtures).await.is_ok());
-        }
-        
-        #[cfg(not(feature = "fixtures"))]
-        assert!(debug_test.setup().await.is_ok());
+        // Use Fixtures facade for consistent API
+        let fixtures = super::fixtures_facade::Fixtures::new(&Default::default()).await.unwrap();
+        assert!(debug_test.setup(fixtures.ctx()).await.is_ok());
         assert!(debug_test.execute().await.is_ok());
         assert!(debug_test.cleanup().await.is_ok());
 
@@ -510,14 +505,9 @@ mod tests {
         let debug_test = DebugTestCase::new(mock_test, debugger.clone());
 
         // Test failure handling
-        #[cfg(feature = "fixtures")]
-        {
-            let fixtures = FixtureManager::new(&Default::default()).await.unwrap();
-            assert!(debug_test.setup(&fixtures).await.is_ok());
-        }
-        
-        #[cfg(not(feature = "fixtures"))]
-        assert!(debug_test.setup().await.is_ok());
+        // Use Fixtures facade for consistent API
+        let fixtures = super::fixtures_facade::Fixtures::new(&Default::default()).await.unwrap();
+        assert!(debug_test.setup(fixtures.ctx()).await.is_ok());
         assert!(debug_test.execute().await.is_err());
         assert!(debug_test.cleanup().await.is_ok());
 
