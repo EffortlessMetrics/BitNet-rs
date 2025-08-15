@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generated_at": "2025-08-15T02:44:31.738401100+00:00",
+    "generated_at": "2025-08-15T03:49:11.769223300+00:00",
     "generator": "BitNet.rs Test Framework",
     "version": "0.1.0",
     "total_suites": 1,
@@ -43,12 +43,12 @@
           "stack_trace": null,
           "artifacts": [],
           "start_time": {
-            "secs_since_epoch": 1755225863,
-            "nanos_since_epoch": 737989000
+            "secs_since_epoch": 1755229743,
+            "nanos_since_epoch": 768862700
           },
           "end_time": {
-            "secs_since_epoch": 1755225866,
-            "nanos_since_epoch": 737989100
+            "secs_since_epoch": 1755229746,
+            "nanos_since_epoch": 768862700
           },
           "metadata": {}
         },
@@ -78,12 +78,12 @@
           "stack_trace": "at test_error_handling (example.rs:42)",
           "artifacts": [],
           "start_time": {
-            "secs_since_epoch": 1755225866,
-            "nanos_since_epoch": 738002100
+            "secs_since_epoch": 1755229746,
+            "nanos_since_epoch": 768887700
           },
           "end_time": {
-            "secs_since_epoch": 1755225871,
-            "nanos_since_epoch": 738002200
+            "secs_since_epoch": 1755229751,
+            "nanos_since_epoch": 768887700
           },
           "metadata": {}
         }
@@ -114,12 +114,12 @@
         "mode": "example"
       },
       "start_time": {
-        "secs_since_epoch": 1755225863,
-        "nanos_since_epoch": 738043400
+        "secs_since_epoch": 1755229743,
+        "nanos_since_epoch": 768930100
       },
       "end_time": {
-        "secs_since_epoch": 1755225871,
-        "nanos_since_epoch": 738043400
+        "secs_since_epoch": 1755229751,
+        "nanos_since_epoch": 768930100
       }
     }
   ],

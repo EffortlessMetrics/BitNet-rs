@@ -296,6 +296,27 @@ cargo test --workspace --features crossval
 cargo xtask --help
 ```
 
+### Test Reporting Example
+
+Generate comprehensive test reports in multiple formats (HTML/JSON/JUnit/Markdown):
+
+```bash
+# From repo root
+cargo run -p bitnet-tests --example reporting_example
+
+# Outputs:
+#   tests/example_reports/
+#     ├─ example_report.html   # open this in your browser
+#     ├─ example_report.json   # machine-readable data
+#     ├─ example_report.xml    # JUnit format for CI
+#     └─ example_report.md     # documentation format
+#   tests/example_reports/manager_output/
+#     ├─ test_report.html/json/xml/md
+#     └─ report_summary.md
+```
+
+The HTML report includes interactive features like collapsible test suites, filtering, and modern styling.
+
 ## Developer Tooling: `xtask`
 
 We ship a robust `xtask` CLI for repeatable dev workflows.
