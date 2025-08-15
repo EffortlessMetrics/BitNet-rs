@@ -105,7 +105,7 @@ impl SamplingStrategy {
         // Apply penalty to repeated tokens
         for (&token, &count) in &token_counts {
             if token < adjusted_logits.len() as u32 {
-                let penalty = self.config.repetition_penalty.powi(count as i32);
+                let penalty = self.config.repetition_penalty.powi(count);
                 if adjusted_logits[token as usize] > 0.0 {
                     adjusted_logits[token as usize] /= penalty;
                 } else {

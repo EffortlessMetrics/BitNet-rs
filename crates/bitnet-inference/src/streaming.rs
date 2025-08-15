@@ -180,7 +180,7 @@ impl GenerationStream {
         let mut cache_guard = cache.write().await;
 
         // Forward pass through backend
-        let output_tensor = backend.forward(&input_tensor, &mut *cache_guard).await?;
+        let output_tensor = backend.forward(&input_tensor, &mut cache_guard).await?;
 
         // Extract logits from output tensor
         Self::tensor_to_logits(&output_tensor, tokenizer.vocab_size())

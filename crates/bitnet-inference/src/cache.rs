@@ -47,6 +47,7 @@ pub enum EvictionPolicy {
 
 /// Key-Value cache entry
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct CacheEntry {
     /// Key tensor data
     key: Vec<f32>,
@@ -281,12 +282,14 @@ pub struct CacheStats {
 }
 
 /// Memory pool for efficient allocation
+#[allow(dead_code)]
 struct MemoryPool {
     block_size: usize,
     blocks: Vec<Vec<f32>>,
     free_blocks: Vec<usize>,
 }
 
+#[allow(dead_code)]
 impl MemoryPool {
     fn new(block_size: usize, max_size: usize) -> Result<Self> {
         let num_blocks = max_size / (block_size * std::mem::size_of::<f32>());
