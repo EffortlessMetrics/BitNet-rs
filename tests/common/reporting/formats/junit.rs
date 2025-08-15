@@ -1,6 +1,6 @@
 //! JUnit XML report format implementation for CI integration
 
-use crate::reporting::{ReportError, ReportFormat, ReportResult, TestReporter};
+use super::super::{ReportError, ReportFormat, ReportResult, TestReporter};
 use crate::results::{TestResult, TestStatus, TestSuiteResult};
 use async_trait::async_trait;
 use std::path::Path;
@@ -247,7 +247,7 @@ impl TestReporter for JunitReporter {
         output_path: &Path,
     ) -> Result<ReportResult, ReportError> {
         let start_time = Instant::now();
-        crate::reporting::reporter::prepare_output_path(output_path).await?;
+        super::super::reporter::prepare_output_path(output_path).await?;
 
         let xml_content = self.generate_xml_content(results)?;
         fs::write(output_path, &xml_content).await?;

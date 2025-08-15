@@ -1,8 +1,8 @@
 [package]
+description = "Comprehensive testing framework for BitNet.rs"
+edition = "2021"
 name = "bitnet-tests"
 version = "0.1.0"
-edition = "2021"
-description = "Comprehensive testing framework for BitNet.rs"
 
 [lib]
 name = "bitnet_tests"
@@ -32,6 +32,10 @@ path = "bin/generate_trend_analysis.rs"
 name = "demo_error_handling"
 path = "demo_error_handling.rs"
 
+[[bin]]
+name = "demo_reporting_system"
+path = "demo_reporting_system.rs"
+
 [[test]]
 name = "test_logging_infrastructure"
 path = "test_logging_infrastructure.rs"
@@ -50,9 +54,9 @@ path = "test_ci_reporting_simple.rs"
 
 [dependencies]
 # Async runtime and utilities
-tokio = { version = "1.0", features = ["full"] }
 async-trait = "0.1"
 futures-util = "0.3"
+tokio = { version = "1.0", features = ["full"] }
 
 # Serialization and configuration
 serde = { version = "1.0", features = ["derive"] }
@@ -64,12 +68,12 @@ toml = "0.8"
 reqwest = { version = "0.12", features = ["json", "stream"] }
 
 # Cryptography for checksums
-sha2 = { version = "0.10", features = ["std"] }
 digest = "0.10"
+sha2 = { version = "0.10", features = ["std"] }
 
 # Error handling
-thiserror = "1.0"
 anyhow = "1.0"
+thiserror = "1.0"
 
 # Logging and tracing
 tracing = "0.1"
@@ -77,16 +81,16 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # System utilities
 num_cpus = "1.0"
-walkdir = "2.0"
 regex = "1.0"
+walkdir = "2.0"
 
 # Testing utilities
-tempfile = "3.0"
 env_logger = "0.10"
+tempfile = "3.0"
 
 # Random number generation
-rand = "0.8"
 fastrand = "2.0"
+rand = "0.8"
 
 # Date and time utilities
 chrono = { version = "0.4", features = ["serde"] }
@@ -111,18 +115,13 @@ cargo_metadata = "0.18"
 
 # BitNet.rs crates for cross-validation
 bitnet-common = { path = "../crates/bitnet-common" }
-bitnet-models = { path = "../crates/bitnet-models" }
 bitnet-inference = { path = "../crates/bitnet-inference" }
+bitnet-models = { path = "../crates/bitnet-models" }
 bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
 
 # Platform-specific dependencies
 [target.'cfg(target_os = "windows")'.dependencies]
-winapi = { version = "0.3", features = [
-    "processthreadsapi",
-    "psapi",
-    "fileapi",
-    "minwindef",
-] }
+winapi = { version = "0.3", features = ["processthreadsapi", "psapi", "fileapi", "minwindef"] }
 
 [dev-dependencies]
 # Additional test dependencies can be added here
