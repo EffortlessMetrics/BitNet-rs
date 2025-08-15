@@ -93,7 +93,7 @@ impl FormatLoader for SafeTensorsLoader {
             {
                 // Try to parse the header as JSON
                 let header_data = &mmap.as_slice()[8..8 + header_len as usize];
-                if let Ok(_) = serde_json::from_slice::<serde_json::Value>(header_data) {
+                if serde_json::from_slice::<serde_json::Value>(header_data).is_ok() {
                     return Ok(true);
                 }
             }
@@ -359,20 +359,19 @@ impl SafeTensorsLoader {
                 let shape = tensor_view.shape();
 
                 // Look for embedding or output layer to infer vocab size
-                if tensor_name.contains("embed")
+                if (tensor_name.contains("embed")
                     || tensor_name.contains("lm_head")
-                    || tensor_name.contains("output")
+                    || tensor_name.contains("output"))
+                    && shape.len() >= 2
                 {
-                    if shape.len() >= 2 {
-                        vocab_size = shape[0].max(shape[1]);
-                    }
+                    vocab_size = shape[0].max(shape[1]);
                 }
 
                 // Look for positional embeddings to infer context length
-                if tensor_name.contains("position") || tensor_name.contains("pos_emb") {
-                    if shape.len() >= 2 {
-                        context_length = shape[0].max(shape[1]);
-                    }
+                if (tensor_name.contains("position") || tensor_name.contains("pos_emb"))
+                    && shape.len() >= 2
+                {
+                    context_length = shape[0].max(shape[1]);
                 }
             }
         }

@@ -121,7 +121,7 @@ impl FormatLoader for GgufLoader {
             mmap.as_slice()
         } else {
             // Read entire file into memory
-            &std::fs::read(path).map_err(|e| BitNetError::Io(e))?
+            &std::fs::read(path).map_err(BitNetError::Io)?
         };
 
         let reader = GgufReader::new(data)?;

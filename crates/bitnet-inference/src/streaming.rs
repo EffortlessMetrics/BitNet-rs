@@ -277,11 +277,19 @@ mod tests {
     struct MockTokenizer;
 
     impl Tokenizer for MockTokenizer {
-        fn encode(&self, _text: &str, _add_special_tokens: bool) -> bitnet_common::Result<Vec<u32>> {
+        fn encode(
+            &self,
+            _text: &str,
+            _add_special_tokens: bool,
+        ) -> bitnet_common::Result<Vec<u32>> {
             Ok(vec![1, 2, 3])
         }
 
-        fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> bitnet_common::Result<String> {
+        fn decode(
+            &self,
+            tokens: &[u32],
+            _skip_special_tokens: bool,
+        ) -> bitnet_common::Result<String> {
             Ok(format!("token_{}", tokens.len()))
         }
 

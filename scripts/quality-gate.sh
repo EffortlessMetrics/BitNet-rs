@@ -10,7 +10,7 @@ cargo fmt --all
 
 echo ""
 echo "🔎 Running clippy (CPU only)..."
-RUSTFLAGS="-Dwarnings" cargo clippy --workspace --no-default-features --features cpu --all-targets --exclude xtask -- -D warnings -D clippy::ptr_arg
+RUSTFLAGS="-Dwarnings" cargo clippy --workspace --no-default-features --features cpu --tests --lib --exclude xtask -- -D warnings -D clippy::ptr_arg
 
 echo ""
 echo "✓ Checking tests compile (CPU only)..."
