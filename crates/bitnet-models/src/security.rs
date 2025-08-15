@@ -199,7 +199,6 @@ impl SecureModelDownloader {
 /// Security audit utilities
 pub mod audit {
     use super::*;
-    use std::collections::HashSet;
 
     /// Audit result for a model file
     #[derive(Debug, Clone, Serialize, Deserialize)]

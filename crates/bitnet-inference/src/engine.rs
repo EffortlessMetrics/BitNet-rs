@@ -317,6 +317,7 @@ pub struct InferenceStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bitnet_common::{BitNetError, Tensor};
     use std::sync::Arc;
 
     struct MockModel {
@@ -338,18 +339,18 @@ mod tests {
             &self,
             _input: &ConcreteTensor,
             _cache: &mut dyn std::any::Any,
-        ) -> std::result::Result<ConcreteTensor, BitNetError> {
+        ) -> bitnet_common::Result<ConcreteTensor> {
             Ok(ConcreteTensor::mock(vec![1, 50257]))
         }
 
-        fn embed(&self, _tokens: &[u32]) -> std::result::Result<ConcreteTensor, BitNetError> {
+        fn embed(&self, _tokens: &[u32]) -> bitnet_common::Result<ConcreteTensor> {
             Ok(ConcreteTensor::mock(vec![1, 10, 768]))
         }
 
         fn logits(
             &self,
             _hidden: &ConcreteTensor,
-        ) -> std::result::Result<ConcreteTensor, BitNetError> {
+        ) -> bitnet_common::Result<ConcreteTensor> {
             Ok(ConcreteTensor::mock(vec![1, 10, 50257]))
         }
     }
@@ -361,7 +362,7 @@ mod tests {
             &self,
             _text: &str,
             _add_special_tokens: bool,
-        ) -> std::result::Result<Vec<u32>, BitNetError> {
+        ) -> bitnet_common::Result<Vec<u32>> {
             Ok(vec![1, 2, 3])
         }
 
@@ -369,7 +370,7 @@ mod tests {
             &self,
             _tokens: &[u32],
             _skip_special_tokens: bool,
-        ) -> std::result::Result<String, BitNetError> {
+        ) -> bitnet_common::Result<String> {
             Ok("mock generated text".to_string())
         }
 

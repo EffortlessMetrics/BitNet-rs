@@ -259,21 +259,29 @@ mod tests {
 
         fn forward(
             &self,
-            _input: &dyn Tensor,
+            _input: &ConcreteTensor,
             _cache: &mut dyn std::any::Any,
-        ) -> Result<Box<dyn Tensor>> {
-            Ok(Box::new(ConcreteTensor::mock(vec![1, 50257])))
+        ) -> bitnet_common::Result<ConcreteTensor> {
+            Ok(ConcreteTensor::mock(vec![1, 50257]))
+        }
+
+        fn embed(&self, _tokens: &[u32]) -> bitnet_common::Result<ConcreteTensor> {
+            Ok(ConcreteTensor::mock(vec![1, 10, 768]))
+        }
+
+        fn logits(&self, _hidden: &ConcreteTensor) -> bitnet_common::Result<ConcreteTensor> {
+            Ok(ConcreteTensor::mock(vec![1, 50257]))
         }
     }
 
     struct MockTokenizer;
 
     impl Tokenizer for MockTokenizer {
-        fn encode(&self, _text: &str, _add_special_tokens: bool) -> Result<Vec<u32>> {
+        fn encode(&self, _text: &str, _add_special_tokens: bool) -> bitnet_common::Result<Vec<u32>> {
             Ok(vec![1, 2, 3])
         }
 
-        fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String> {
+        fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> bitnet_common::Result<String> {
             Ok(format!("token_{}", tokens.len()))
         }
 
@@ -303,10 +311,10 @@ mod tests {
 
         async fn forward(
             &self,
-            _input: &dyn Tensor,
+            _input: &ConcreteTensor,
             _cache: &mut KVCache,
-        ) -> Result<Box<dyn Tensor>> {
-            Ok(Box::new(ConcreteTensor::mock(vec![1, 50257])))
+        ) -> Result<ConcreteTensor> {
+            Ok(ConcreteTensor::mock(vec![1, 50257]))
         }
     }
 

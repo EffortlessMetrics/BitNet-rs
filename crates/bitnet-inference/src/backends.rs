@@ -316,10 +316,18 @@ mod tests {
 
         fn forward(
             &self,
-            _input: &dyn Tensor,
+            _input: &ConcreteTensor,
             _cache: &mut dyn std::any::Any,
-        ) -> Result<Box<dyn Tensor>> {
-            Ok(Box::new(ConcreteTensor::mock(vec![1, 50257])))
+        ) -> bitnet_common::Result<ConcreteTensor> {
+            Ok(ConcreteTensor::mock(vec![1, 50257]))
+        }
+
+        fn embed(&self, _tokens: &[u32]) -> bitnet_common::Result<ConcreteTensor> {
+            Ok(ConcreteTensor::mock(vec![1, 10, 768]))
+        }
+
+        fn logits(&self, _hidden: &ConcreteTensor) -> bitnet_common::Result<ConcreteTensor> {
+            Ok(ConcreteTensor::mock(vec![1, 50257]))
         }
     }
 
