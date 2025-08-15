@@ -171,7 +171,7 @@ async fn load_junit_test_results(path: &Path) -> Result<TestSuiteResult> {
 
     let summary = TestSummary {
         total_tests,
-        passed,
+        passed: passed_tests,
         failed: failed_tests,
         skipped: 0,
         timeout: 0,

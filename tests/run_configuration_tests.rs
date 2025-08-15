@@ -9,7 +9,7 @@ use bitnet_tests::{
         TestConfig,
     },
     config_validator::{ConfigValidator, ValidationResult},
-    errors::{TestError, TestResult},
+    errors::{TestError, TestOpResult},
     FixtureManager,
 };
 use serde_json;
