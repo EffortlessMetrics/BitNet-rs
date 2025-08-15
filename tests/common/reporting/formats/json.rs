@@ -1,7 +1,7 @@
 //! JSON report format implementation
 
-use crate::reporting::{ReportError, ReportFormat, ReportResult, TestReporter};
-use crate::results::TestSuiteResult;
+use super::super::{ReportError, ReportFormat, ReportResult, TestReporter};
+use crate::TestSuiteResult;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -59,7 +59,7 @@ impl TestReporter for JsonReporter {
         output_path: &Path,
     ) -> Result<ReportResult, ReportError> {
         let start_time = Instant::now();
-        crate::reporting::reporter::prepare_output_path(output_path).await?;
+        super::super::reporter::prepare_output_path(output_path).await?;
 
         // Calculate global summary
         let total_tests: usize = results.iter().map(|r| r.summary.total_tests).sum();
@@ -128,7 +128,7 @@ impl Default for JsonReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::results::{TestMetrics, TestResult, TestStatus, TestSummary};
+    use crate::{TestMetrics, TestResult, TestStatus, TestSummary};
     use std::collections::HashMap;
     use std::time::Duration;
     use tempfile::TempDir;
