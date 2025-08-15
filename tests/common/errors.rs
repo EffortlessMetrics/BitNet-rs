@@ -35,6 +35,9 @@ pub enum TestError {
 
     #[error("Join error: {0}")]
     JoinError(#[from] tokio::task::JoinError),
+
+    #[error("Formatting error: {0}")]
+    Fmt(#[from] std::fmt::Error),
 }
 
 /// Errors related to fixture management
@@ -409,6 +412,7 @@ impl TestError {
             Self::SerializationError(_) => "serialization",
             Self::HttpError(_) => "http",
             Self::JoinError(_) => "concurrency",
+            Self::Fmt(_) => "formatting",
         }
     }
 
@@ -425,6 +429,7 @@ impl TestError {
             Self::SerializationError(_) => ErrorSeverity::Low,
             Self::HttpError(_) => ErrorSeverity::Low,
             Self::JoinError(_) => ErrorSeverity::Medium,
+            Self::Fmt(_) => ErrorSeverity::Low,
         }
     }
 
@@ -523,6 +528,11 @@ impl TestError {
                 "Verify serialization schema compatibility".to_string(),
                 "Review data types and field names".to_string(),
             ],
+            Self::Fmt(_) => vec![
+                "Check string formatting operations".to_string(),
+                "Review format string syntax".to_string(),
+                "Verify format arguments match placeholders".to_string(),
+            ],
         }
     }
 
@@ -556,6 +566,7 @@ impl TestError {
             Self::HttpError(_) => vec!["http_client".to_string(), "network_layer".to_string()],
             Self::IoError(_) => vec!["file_system".to_string(), "storage_layer".to_string()],
             Self::JoinError(_) => vec!["parallel_executor".to_string(), "thread_pool".to_string()],
+            Self::Fmt(_) => vec!["formatting_system".to_string(), "output_writer".to_string()],
             _ => vec!["test_framework".to_string()],
         }
     }
