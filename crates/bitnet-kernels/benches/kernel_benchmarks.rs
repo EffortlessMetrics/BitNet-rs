@@ -90,7 +90,7 @@ fn bench_quantization(c: &mut Criterion) {
             group.bench_with_input(
                 BenchmarkId::new(format!("{}-{:?}", kernel.name(), qtype), size),
                 size,
-                |b, &size| {
+                |b, &_size| {
                     b.iter(|| {
                         kernel
                             .quantize(
