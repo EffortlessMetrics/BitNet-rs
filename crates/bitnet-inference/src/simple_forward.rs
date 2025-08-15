@@ -4,8 +4,6 @@
 //! using only embedding and lm_head layers, suitable for testing
 //! and CI validation without full attention mechanisms.
 
-use anyhow::{Context, Result};
-
 /// Minimal weights structure containing only embedding and output layers
 pub struct Weights<'a> {
     /// Token embeddings: [vocab, dim]
@@ -39,7 +37,7 @@ pub fn logits_for_token(w: &Weights, token_id: usize) -> Vec<f32> {
 
     // out = e @ lm_head              // [vocab]
     // lm_head is [dim, vocab] row-major
-    for v in 0..w.vocab {
+    for (v, out_val) in out.iter_mut().enumerate().take(w.vocab) {
         let mut acc = 0f32;
         let mut d = 0;
 
@@ -58,7 +56,7 @@ pub fn logits_for_token(w: &Weights, token_id: usize) -> Vec<f32> {
             d += 1;
         }
 
-        out[v] = acc;
+        *out_val = acc;
     }
 
     out

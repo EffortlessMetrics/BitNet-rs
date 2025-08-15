@@ -209,7 +209,7 @@ impl InferenceEngine {
         let mut cache = self.cache.write().await;
 
         // Forward pass through backend
-        let output_tensor = self.backend.forward(&input_tensor, &mut *cache).await?;
+        let output_tensor = self.backend.forward(&input_tensor, &mut cache).await?;
 
         // Extract logits from output tensor
         self.tensor_to_logits(&output_tensor)
