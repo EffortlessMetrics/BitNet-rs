@@ -3,7 +3,7 @@
 //! Efficient key-value cache for transformer models with memory pooling,
 //! compression, and eviction policies.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::collections::{HashMap, VecDeque};
 use tracing::{debug, warn};
 

@@ -369,7 +369,7 @@ impl TransformerModel {
 
         let mut layers = Vec::with_capacity(n_layers);
         for i in 0..n_layers {
-            layers.push(TransformerBlock::new(&config, vb.pp(&format!("layers.{}", i)))?);
+            layers.push(TransformerBlock::new(&config, vb.pp(format!("layers.{}", i)))?);
         }
 
         let norm = candle_nn::layer_norm(hidden_size, 1e-5, vb.pp("norm"))?;

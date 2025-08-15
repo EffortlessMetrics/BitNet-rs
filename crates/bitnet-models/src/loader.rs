@@ -55,12 +55,12 @@ pub struct ModelLoader {
 
 impl ModelLoader {
     pub fn new(device: Device) -> Self {
-        let mut loaders: Vec<Box<dyn FormatLoader>> = Vec::new();
-
         // Register format loaders
-        loaders.push(Box::new(crate::formats::gguf::GgufLoader));
-        loaders.push(Box::new(crate::formats::safetensors::SafeTensorsLoader));
-        loaders.push(Box::new(crate::formats::huggingface::HuggingFaceLoader));
+        let loaders: Vec<Box<dyn FormatLoader>> = vec![
+            Box::new(crate::formats::gguf::GgufLoader),
+            Box::new(crate::formats::safetensors::SafeTensorsLoader),
+            Box::new(crate::formats::huggingface::HuggingFaceLoader),
+        ];
 
         Self { device, loaders }
     }
@@ -311,14 +311,14 @@ pub mod utils {
         }
 
         // Check if file is readable
-        File::open(path).map_err(|e| BitNetError::Io(e))?;
+        File::open(path).map_err(BitNetError::Io)?;
 
         Ok(())
     }
 
     /// Get file size in bytes
     pub fn get_file_size(path: &Path) -> Result<u64> {
-        let metadata = std::fs::metadata(path).map_err(|e| BitNetError::Io(e))?;
+        let metadata = std::fs::metadata(path).map_err(BitNetError::Io)?;
         Ok(metadata.len())
     }
 }

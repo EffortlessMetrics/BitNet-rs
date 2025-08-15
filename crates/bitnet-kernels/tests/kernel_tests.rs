@@ -67,6 +67,7 @@ impl SimpleRng {
 
 /// Performance metrics for benchmarking
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct PerformanceMetrics {
     kernel_name: String,
     operation: String,
@@ -286,6 +287,7 @@ fn benchmark_quantization(kernel: &dyn KernelProvider) -> Result<Vec<Performance
 }
 
 /// Compare performance between kernels
+#[allow(dead_code)]
 fn compare_kernel_performance(metrics: &[Vec<PerformanceMetrics>]) {
     if metrics.len() < 2 {
         return;

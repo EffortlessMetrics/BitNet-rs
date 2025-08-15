@@ -57,6 +57,7 @@ impl TestDataGenerator {
 
 /// Performance metrics for benchmarking
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct PerformanceMetrics {
     kernel_name: String,
     operation: String,
@@ -95,7 +96,9 @@ impl PerformanceMetrics {
 
 mod cpu_kernel_tests {
     use super::*;
-    use bitnet_kernels::cpu::{Avx2Kernel, FallbackKernel, NeonKernel};
+    #[cfg(target_arch = "aarch64")]
+    use bitnet_kernels::cpu::NeonKernel;
+    use bitnet_kernels::cpu::{Avx2Kernel, FallbackKernel};
 
     #[test]
     fn test_fallback_kernel_comprehensive() {
@@ -579,7 +582,7 @@ mod kernel_selection_tests {
         assert!(!cpu_kernel.name().is_empty(), "CPU kernel should have a name");
 
         // Should be one of the known CPU kernels
-        let known_kernels = vec!["fallback", "avx2", "neon"];
+        let known_kernels = ["fallback", "avx2", "neon"];
         assert!(
             known_kernels.contains(&cpu_kernel.name()),
             "Unknown CPU kernel: {}",

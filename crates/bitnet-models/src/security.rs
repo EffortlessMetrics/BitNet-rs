@@ -302,7 +302,7 @@ pub mod audit {
                 results.iter().filter(|r| !r.security_issues.is_empty()).count();
             let models_with_known_hashes = results.iter().filter(|r| r.has_known_hash).count();
 
-            report.push_str(&format!("## Summary\n\n"));
+            report.push_str("## Summary\n\n");
             report.push_str(&format!("- Total models audited: {}\n", total_models));
             report.push_str(&format!("- Models with security issues: {}\n", models_with_issues));
             report.push_str(&format!("- Models with known hashes: {}\n", models_with_known_hashes));
@@ -318,7 +318,7 @@ pub mod audit {
                     for issue in &result.security_issues {
                         report.push_str(&format!("- {}\n", issue));
                     }
-                    report.push_str("\n");
+                    report.push('\n');
                 }
             }
 
@@ -334,7 +334,7 @@ pub mod audit {
                         report.push_str(&format!("  - {}\n", issue));
                     }
                 }
-                report.push_str("\n");
+                report.push('\n');
             }
 
             report

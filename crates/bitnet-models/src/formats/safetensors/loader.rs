@@ -163,7 +163,7 @@ impl FormatLoader for SafeTensorsLoader {
             mmap.as_slice()
         } else {
             // Read entire file into memory
-            &std::fs::read(path).map_err(|e| BitNetError::Io(e))?
+            &std::fs::read(path).map_err(BitNetError::Io)?
         };
 
         let safetensors = SafeTensors::deserialize(data).map_err(|e| {
