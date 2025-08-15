@@ -29,6 +29,10 @@ name = "generate_trend_analysis"
 path = "bin/generate_trend_analysis.rs"
 
 [[bin]]
+name = "ci_status_integration"
+path = "bin/ci_status_integration.rs"
+
+[[bin]]
 name = "demo_reporting_comprehensive"
 path = "demo_reporting_comprehensive.rs"
 

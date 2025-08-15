@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 env:
   CARGO_TERM_COLOR: always
@@ -37,183 +37,193 @@ jobs:
             target: aarch64-apple-darwin
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: ${{ matrix.rust }}
-        targets: ${{ matrix.target }}
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          targets: ${{ matrix.target }}
 
-    - name: Setup BitNet.cpp Cache (for crossval features)
-      if: contains(github.event.pull_request.labels.*.name, 'crossval') || github.ref == 'refs/heads/main'
-      run: |
-        chmod +x ci/use-bitnet-cpp-cache.sh
-        ./ci/use-bitnet-cpp-cache.sh
-      shell: bash
+      - name: Setup BitNet.cpp Cache (for crossval features)
+        if: contains(github.event.pull_request.labels.*.name, 'crossval') || github.ref == 'refs/heads/main'
+        run: |
+          chmod +x ci/use-bitnet-cpp-cache.sh
+          ./ci/use-bitnet-cpp-cache.sh
+        shell: bash
 
-    - name: Install cross-compilation tools
-      if: matrix.cross
-      run: |
-        cargo install cross --git https://github.com/cross-rs/cross
+      - name: Install cross-compilation tools
+        if: matrix.cross
+        run: |
+          cargo install cross --git https://github.com/cross-rs/cross
 
-    - name: Cache cargo registry
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Install tools (ripgrep)
-      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y ripgrep
+      - name: Install tools (ripgrep)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
 
-    - name: Check formatting
-      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-      run: cargo fmt --all -- --check
+      - name: Check formatting
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: cargo fmt --all -- --check
 
-    - name: Run clippy with strict checks
-      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-      run: RUSTFLAGS="-Dwarnings" cargo clippy --workspace --no-default-features --features cpu --all-targets --exclude xtask -- -D warnings -D clippy::ptr_arg
+      - name: Run clippy with strict checks
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: RUSTFLAGS="-Dwarnings" cargo clippy --workspace --no-default-features --features cpu --all-targets --exclude xtask -- -D warnings -D clippy::ptr_arg
 
-    - name: Check banned patterns
-      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-      run: bash scripts/hooks/banned-patterns.sh
+      - name: Check banned patterns
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: bash scripts/hooks/banned-patterns.sh
 
-    - name: Check tests compile (CPU only)
-      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-      run: RUSTFLAGS="-Dwarnings" cargo check --workspace --tests --no-default-features --features cpu
+      - name: Check tests compile (CPU only)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: RUSTFLAGS="-Dwarnings" cargo check --workspace --tests --no-default-features --features cpu
 
-    - name: Build (CPU features only)
-      run: cargo build --workspace --no-default-features --features cpu
+      - name: Build (CPU features only)
+        run: cargo build --workspace --no-default-features --features cpu
 
-    - name: Run tests (CPU features only)
-      run: cargo test --workspace --no-default-features --features cpu
+      - name: Run tests (CPU features only)
+        run: cargo test --workspace --no-default-features --features cpu
 
-    - name: Test build without running (CPU only)
-      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-      run: cargo test --workspace --no-default-features --features cpu --no-run
+      - name: Test build without running (CPU only)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: cargo test --workspace --no-default-features --features cpu --no-run
 
-    - name: Build with all features (except crossval)
-      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-      run: cargo build --workspace --features "cpu,gpu,avx2,avx512,neon"
+      - name: Build with all features (except crossval)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: cargo build --workspace --features "cpu,gpu,avx2,avx512,neon"
 
-    - name: Cross-compile (ARM64)
-      if: matrix.cross
-      run: cross build --target ${{ matrix.target }} --no-default-features --features cpu
+      - name: Cross-compile (ARM64)
+        if: matrix.cross
+        run: cross build --target ${{ matrix.target }} --no-default-features --features cpu
 
   security:
     name: Security Audit
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: dtolnay/rust-toolchain@stable
-    
-    - name: Cache cargo-deny advisory DB
-      uses: actions/cache@v4
-      with:
-        path: ~/.cargo/advisory-db
-        key: advisory-db-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          advisory-db-${{ runner.os }}-
-          advisory-db-
-    
-    - name: Install cargo-audit
-      run: cargo install cargo-audit
-    - name: Run security audit
-      run: cargo audit
-    - name: Install cargo-deny
-      run: cargo install cargo-deny --locked || true
-    - name: Run cargo-deny
-      run: cargo deny check --hide-inclusion-graph
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo-deny advisory DB
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/advisory-db
+          key: advisory-db-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            advisory-db-${{ runner.os }}-
+            advisory-db-
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - name: Run security audit
+        run: cargo audit
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked || true
+      - name: Run cargo-deny
+        run: cargo deny check --hide-inclusion-graph
 
   # FFI smoke build to ensure native paths stay healthy
   ffi-smoke:
     name: FFI Smoke Build
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: dtolnay/rust-toolchain@stable
-    - uses: Swatinem/rust-cache@v2
-    - name: Install native toolchain deps
-      run: sudo apt-get update && sudo apt-get install -y clang make gcc g++
-    - name: Smoke build (ffi only, no tests)
-      run: |
-        cargo build --workspace --no-default-features --features ffi --exclude bitnet-sys --exclude crossval
-        cargo test  --workspace --no-default-features --features ffi --exclude bitnet-sys --exclude crossval --no-run
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install native toolchain deps
+        run: sudo apt-get update && sudo apt-get install -y clang make gcc g++
+      - name: Smoke build (ffi only, no tests)
+        run: |
+          cargo build --workspace --no-default-features --features ffi --exclude bitnet-sys --exclude crossval
+          cargo test  --workspace --no-default-features --features ffi --exclude bitnet-sys --exclude crossval --no-run
 
   benchmark:
     name: Performance Benchmarks (Rust)
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-    - uses: actions/checkout@v4
-    - uses: dtolnay/rust-toolchain@stable
-    - name: Cache cargo registry
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: Run Rust benchmarks (no crossval)
-      run: cargo bench --workspace --features "cpu,gpu,avx2"
-    - name: Store benchmark results
-      uses: benchmark-action/github-action-benchmark@v1
-      with:
-        tool: 'cargo'
-        output-file-path: target/criterion/report/index.html
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        auto-push: true
-        comment-on-alert: true
-        alert-threshold: '105%'  # Alert if 5% slower
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Run Rust benchmarks (no crossval)
+        run: cargo bench --workspace --features "cpu,gpu,avx2"
+      - name: Store benchmark results
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: "cargo"
+          output-file-path: target/criterion/report/index.html
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          comment-on-alert: true
+          alert-threshold: "105%" # Alert if 5% slower
 
   quality:
     name: Code Quality
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        components: llvm-tools-preview
-    
-    - name: Cache cargo registry
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-quality-${{ hashFiles('**/Cargo.lock') }}
-    
-    - name: Install cargo tools
-      run: |
-        cargo install cargo-llvm-cov cargo-machete cargo-outdated
-    
-    - name: Check for unused dependencies
-      run: cargo machete
-    
-    - name: Check for outdated dependencies
-      run: cargo outdated --exit-code 1
-      continue-on-error: true
-    
-    - name: Generate coverage report
-      run: cargo llvm-cov --workspace --features cpu --lcov --output-path lcov.info
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        files: lcov.info
-        fail_ci_if_error: false  # Don't fail CI on coverage upload issues
-    
-    - name: Check documentation
-      run: cargo doc --workspace --features cpu --no-deps --document-private-items
-      env:
-        RUSTDOCFLAGS: "-D warnings"
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-quality-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install cargo tools
+        run: |
+          cargo install cargo-llvm-cov cargo-machete cargo-outdated
+
+      - name: Check for unused dependencies
+        run: cargo machete
+
+      - name: Check for outdated dependencies
+        run: cargo outdated --exit-code 1
+        continue-on-error: true
+
+      - name: Generate coverage report
+        run: cargo llvm-cov --workspace --features cpu --lcov --output-path lcov.info
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: lcov.info
+          fail_ci_if_error: false # Don't fail CI on coverage upload issues
+
+      - name: Check documentation
+        run: cargo doc --workspace --features cpu --no-deps --document-private-items
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
+  # Testing Framework Integration
+  testing-framework:
+    name: Testing Framework
+    if: contains(github.event.pull_request.labels.*.name, 'testing-framework') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    uses: ./.github/workflows/testing-framework-master.yml
+    with:
+      run_crossval: ${{ contains(github.event.pull_request.labels.*.name, 'crossval') || github.ref == 'refs/heads/main' }}
+      run_performance: ${{ github.ref == 'refs/heads/main' }}
+      coverage_threshold: "90"
