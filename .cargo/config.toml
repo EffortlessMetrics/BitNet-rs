@@ -1,52 +1,14 @@
-# Cargo configuration for BitNet Rust implementation
-# This file configures default behavior for the workspace
-
-[build]
-# Disable crossval feature by default to avoid C++ dependencies
-# Enable explicitly with: cargo build --features crossval
-rustflags = []
-
-[env]
-# Environment variables for cross-validation
-# These are used when crossval feature is enabled
-BITNET_CPP_PATH = { value = "", relative = false }
-
 [alias]
-# Convenient aliases for common tasks
-xtask = ["run", "-q", "--package", "xtask", "--"]
-crossval = "test --features crossval"
-crossval-bench = "bench --features crossval"
-check-all = "check --workspace --all-targets --all-features"
-test-all = "test --workspace --all-targets --all-features"
-doc-all = "doc --workspace --all-features --no-deps"
-quality = ["fmt", "--all", "--", "--check"]
-coverage = "llvm-cov --workspace --features cpu --html"
-qg = "check --workspace --tests --no-default-features --features cpu"
+# Coverage collection aliases
+cov = "tarpaulin --workspace --no-default-features --features cpu --exclude bitnet-sys --exclude crossval --exclude xtask --exclude bitnet-cli --timeout 600 --out Xml --out Lcov --output-dir target/coverage"
+cov-all = "tarpaulin --workspace --no-default-features --features cpu --exclude bitnet-sys --exclude crossval --exclude xtask --exclude bitnet-cli --timeout 600 --out Xml --out Lcov --out Html --output-dir target/coverage"
+cov-html = "tarpaulin --workspace --no-default-features --features cpu --exclude bitnet-sys --exclude crossval --exclude xtask --exclude bitnet-cli --timeout 600 --out Html --output-dir target/coverage"
 
-# Cross-validation specific aliases
-fetch-cpp = "run --bin fetch_bitnet_cpp"
-apply-patches = "run --bin apply_patches"
+# Testing aliases
+test-all = "test --workspace"
+test-integration = "test --workspace --test '*'"
+test-unit = "test --workspace --lib --bins"
 
-[target.'cfg(windows)']
-# Windows-specific configuration
-rustflags = []
-
-[target.'cfg(unix)']
-# Unix-specific configuration  
-rustflags = []
-
-# Profile configurations for cross-validation
-[profile.crossval]
-inherits = "test"
-debug = true
-opt-level = 2  # Optimize for better performance comparison
-
-[profile.crossval-bench]
-inherits = "bench"
-debug = true
-opt-level = 3
-
-# Documentation configuration
-[doc]
-# Always build docs with all features for completeness
-all-features = true
+# Reporting aliases
+report-demo = "run -p bitnet-tests --bin demo_reporting_comprehensive"
+report-example = "run -p bitnet-tests --example reporting_example"

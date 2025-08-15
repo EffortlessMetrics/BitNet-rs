@@ -385,6 +385,17 @@ th end-to-end validation
 
 - [x] 22. Build coverage reporting
 
+  - Integrate with `cargo-tarpaulin` for coverage collection
+  - Add comprehensive CI workflow with multiple coverage types
+  - Generate HTML, LCOV, and XML (Cobertura) reports
+  - Upload coverage artifacts with 30-day retention
+  - Add local development aliases for easy coverage collection
+  - Create detailed coverage documentation at `docs/coverage.md`
+  - Aliases: `cargo cov`, `cargo cov-html`, `cargo cov-all`
+  - _Requirements: 2.6_
+
+
+
 
 
 
