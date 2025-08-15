@@ -51,6 +51,28 @@ impl Model for MockModel {
         }
         Ok(ConcreteTensor::mock(vec![1, 50257]))
     }
+
+    fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor, BitNetError> {
+        if self.should_fail {
+            return Err(BitNetError::Inference(InferenceError::GenerationFailed {
+                reason: "Mock embed failure".to_string(),
+            }));
+        }
+        // Create a mock embedding tensor with shape [seq_len, hidden_dim]
+        let seq_len = tokens.len();
+        let hidden_dim = self.config.model.hidden_size;
+        Ok(ConcreteTensor::mock(vec![seq_len, hidden_dim]))
+    }
+
+    fn logits(&self, _hidden: &ConcreteTensor) -> Result<ConcreteTensor, BitNetError> {
+        if self.should_fail {
+            return Err(BitNetError::Inference(InferenceError::GenerationFailed {
+                reason: "Mock logits failure".to_string(),
+            }));
+        }
+        // Create a mock logits tensor with shape [batch, vocab_size]
+        Ok(ConcreteTensor::mock(vec![1, self.config.model.vocab_size]))
+    }
 }
 
 struct MockTokenizer {
@@ -72,8 +94,8 @@ impl MockTokenizer {
 impl Tokenizer for MockTokenizer {
     fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>, BitNetError> {
         if self.should_fail {
-            return Err(BitNetError::Tokenization(
-                bitnet_common::TokenizationError::EncodingFailed {
+            return Err(BitNetError::Inference(
+                bitnet_common::InferenceError::TokenizationFailed {
                     reason: "Mock tokenizer failure".to_string(),
                 },
             ));
@@ -84,8 +106,8 @@ impl Tokenizer for MockTokenizer {
 
     fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String, BitNetError> {
         if self.should_fail {
-            return Err(BitNetError::Tokenization(
-                bitnet_common::TokenizationError::DecodingFailed {
+            return Err(BitNetError::Inference(
+                bitnet_common::InferenceError::TokenizationFailed {
                     reason: "Mock decode failure".to_string(),
                 },
             ));
@@ -613,14 +635,14 @@ mod performance_tests {
         let tokenizer = Arc::new(MockTokenizer::new());
         let device = Device::Cpu;
 
-        let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
+        let engine = Arc::new(InferenceEngine::new(model, tokenizer, device).unwrap());
 
         let start_time = Instant::now();
         let num_requests = 10;
 
         let mut handles = Vec::new();
         for i in 0..num_requests {
-            let engine_clone = Arc::new(engine);
+            let engine_clone = Arc::clone(&engine);
             let handle = tokio::spawn(async move {
                 let prompt = format!("Throughput test {}", i);
                 engine_clone.generate(&prompt).await

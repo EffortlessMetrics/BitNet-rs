@@ -141,6 +141,18 @@ impl Model for MockModel {
         std::thread::sleep(self.processing_delay);
         Ok(ConcreteTensor::mock(vec![1, 50257]))
     }
+
+    fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor, BitNetError> {
+        // Create a mock embedding tensor with shape [seq_len, hidden_dim]
+        let seq_len = tokens.len();
+        let hidden_dim = self.config.model.hidden_size;
+        Ok(ConcreteTensor::mock(vec![seq_len, hidden_dim]))
+    }
+
+    fn logits(&self, _hidden: &ConcreteTensor) -> Result<ConcreteTensor, BitNetError> {
+        // Create a mock logits tensor with shape [batch, vocab_size]
+        Ok(ConcreteTensor::mock(vec![1, self.config.model.vocab_size]))
+    }
 }
 
 struct MockTokenizer;

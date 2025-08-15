@@ -308,6 +308,7 @@ mod tests {
 
     struct MockBackend;
 
+    #[async_trait::async_trait]
     impl Backend for MockBackend {
         fn backend_type(&self) -> String {
             "mock".to_string()
