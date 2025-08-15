@@ -1,7 +1,7 @@
 //! HTML report format implementation with interactive features
 
 use super::super::{ReportError, ReportFormat, ReportResult, TestReporter};
-use crate::{TestResult, TestStatus, TestSuiteResult};
+use crate::results::{TestResult, TestStatus, TestSuiteResult};
 use async_trait::async_trait;
 use std::path::Path;
 use std::time::Instant;
@@ -589,7 +589,7 @@ impl Default for HtmlReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TestMetrics, TestSummary};
+    use crate::results::{TestMetrics, TestSummary};
     use std::collections::HashMap;
     use std::time::Duration;
     use tempfile::TempDir;

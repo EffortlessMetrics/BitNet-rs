@@ -1,12 +1,12 @@
 //! JUnit XML report format implementation for CI integration
 
 use super::super::{ReportError, ReportFormat, ReportResult, TestReporter};
-use crate::{TestResult, TestStatus, TestSuiteResult};
+use crate::results::{TestResult, TestStatus, TestSuiteResult};
 use async_trait::async_trait;
 use std::path::Path;
 use std::time::Instant;
 use tokio::fs;
-use xml_rs::writer::{EmitterConfig, XmlEvent};
+use xml::writer::{EmitterConfig, XmlEvent};
 
 /// JUnit XML format reporter for CI integration
 pub struct JunitReporter {
@@ -33,7 +33,7 @@ impl JunitReporter {
         // Write XML declaration
         writer
             .write(XmlEvent::StartDocument {
-                version: xml_rs::common::XmlVersion::Version10,
+                version: xml::common::XmlVersion::Version10,
                 encoding: Some("UTF-8"),
                 standalone: None,
             })
@@ -74,7 +74,7 @@ impl JunitReporter {
     /// Write a single test suite to XML
     fn write_test_suite(
         &self,
-        writer: &mut xml_rs::writer::EventWriter<&mut Vec<u8>>,
+        writer: &mut xml::writer::EventWriter<&mut Vec<u8>>,
         suite: &TestSuiteResult,
     ) -> Result<(), ReportError> {
         // Start testsuite element
@@ -151,7 +151,7 @@ impl JunitReporter {
     /// Write a single test case to XML
     fn write_test_case(
         &self,
-        writer: &mut xml_rs::writer::EventWriter<&mut Vec<u8>>,
+        writer: &mut xml::writer::EventWriter<&mut Vec<u8>>,
         test: &TestResult,
     ) -> Result<(), ReportError> {
         let classname = test.test_name.split("::").next().unwrap_or("unknown");
@@ -281,7 +281,7 @@ impl Default for JunitReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TestMetrics, TestSummary};
+    use crate::results::{TestMetrics, TestSummary};
     use std::collections::HashMap;
     use std::time::Duration;
     use tempfile::TempDir;

@@ -1,7 +1,7 @@
 //! JSON report format implementation
 
 use super::super::{ReportError, ReportFormat, ReportResult, TestReporter};
-use crate::TestSuiteResult;
+use crate::results::TestSuiteResult;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -128,7 +128,7 @@ impl Default for JsonReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TestMetrics, TestResult, TestStatus, TestSummary};
+    use crate::results::{TestMetrics, TestResult, TestStatus, TestSummary};
     use std::collections::HashMap;
     use std::time::Duration;
     use tempfile::TempDir;

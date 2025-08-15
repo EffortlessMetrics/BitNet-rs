@@ -11,7 +11,7 @@ pub mod formats;
 pub mod reporter;
 // pub mod templates;
 
-pub use reporter::TestReporter;
+pub use reporter::{ReportingManager, TestReporter};
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
