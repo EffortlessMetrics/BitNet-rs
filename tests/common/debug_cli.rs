@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use super::debugging::{DebugReport, TestDebugSummary};
-use super::errors::{ErrorReport, TestError, TestOpResult};
+use super::debugging::DebugReport;
+use super::errors::{TestError, TestOpResult};
 
 /// Command-line interface for debugging test issues
 pub struct DebugCli {
@@ -27,7 +27,7 @@ impl DebugCli {
         let report: DebugReport = serde_json::from_str(&report_content)
             .map_err(|e| TestError::execution(format!("Failed to parse debug report: {}", e)))?;
 
-        let mut analysis = AnalysisResult {
+        let analysis = AnalysisResult {
             report_summary: self.generate_report_summary(&report),
             critical_issues: self.identify_critical_issues(&report),
             performance_issues: self.identify_performance_issues(&report),

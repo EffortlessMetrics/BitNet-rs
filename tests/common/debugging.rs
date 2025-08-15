@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::fmt::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 
 use super::errors::{TestError, TestOpResult};
-use super::results::{TestResult, TestSuiteResult};
+use super::results::TestResult;
 
 /// Comprehensive debugging support for the testing framework
 pub struct TestDebugger {

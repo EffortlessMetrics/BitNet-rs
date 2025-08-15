@@ -77,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn test_default_configuration() -> TestResult<()> {
+async fn test_default_configuration() -> TestOpResult<()> {
     let config = TestConfig::default();
 
     // Validate default values
@@ -97,7 +97,7 @@ async fn test_default_configuration() -> TestResult<()> {
     Ok(())
 }
 
-async fn test_predefined_configurations() -> TestResult<()> {
+async fn test_predefined_configurations() -> TestOpResult<()> {
     // Test CI configuration
     let ci_cfg = ci_config();
     assert!(ci_cfg.reporting.generate_coverage, "CI config should generate coverage");
@@ -134,7 +134,7 @@ async fn test_predefined_configurations() -> TestResult<()> {
     Ok(())
 }
 
-async fn test_configuration_validation() -> TestResult<()> {
+async fn test_configuration_validation() -> TestOpResult<()> {
     // Test valid configuration
     let valid_config = TestConfig::default();
     assert!(validate_config(&valid_config).is_ok(), "Valid config should pass validation");
@@ -163,7 +163,7 @@ async fn test_configuration_validation() -> TestResult<()> {
     Ok(())
 }
 
-async fn test_configuration_merging() -> TestResult<()> {
+async fn test_configuration_merging() -> TestOpResult<()> {
     let base_config = TestConfig::default();
     let mut override_config = TestConfig::default();
 
@@ -190,7 +190,7 @@ async fn test_configuration_merging() -> TestResult<()> {
     Ok(())
 }
 
-async fn test_configuration_serialization() -> TestResult<()> {
+async fn test_configuration_serialization() -> TestOpResult<()> {
     let temp_dir =
         tempdir().map_err(|e| TestError::setup(format!("Failed to create temp dir: {}", e)))?;
     let config_path = temp_dir.path().join("test_config.toml");
@@ -230,7 +230,7 @@ async fn test_configuration_serialization() -> TestResult<()> {
     Ok(())
 }
 
-async fn test_environment_override() -> TestResult<()> {
+async fn test_environment_override() -> TestOpResult<()> {
     // Save original environment
     let original_env: HashMap<String, Option<String>> =
         ["BITNET_TEST_PARALLEL", "BITNET_TEST_TIMEOUT", "BITNET_TEST_LOG_LEVEL"]
@@ -274,7 +274,7 @@ async fn test_environment_override() -> TestResult<()> {
     Ok(())
 }
 
-async fn test_feature_flag_combinations() -> TestResult<()> {
+async fn test_feature_flag_combinations() -> TestOpResult<()> {
     // Test all coverage features enabled
     let mut coverage_config = TestConfig::default();
     coverage_config.reporting.generate_coverage = true;
@@ -305,7 +305,7 @@ async fn test_feature_flag_combinations() -> TestResult<()> {
     Ok(())
 }
 
-async fn test_platform_specific_configuration() -> TestResult<()> {
+async fn test_platform_specific_configuration() -> TestOpResult<()> {
     let base_config = TestConfig::default();
 
     // Test macOS-specific configuration
@@ -338,7 +338,7 @@ async fn test_platform_specific_configuration() -> TestResult<()> {
     Ok(())
 }
 
-async fn test_configuration_error_handling() -> TestResult<()> {
+async fn test_configuration_error_handling() -> TestOpResult<()> {
     let temp_dir =
         tempdir().map_err(|e| TestError::setup(format!("Failed to create temp dir: {}", e)))?;
 
@@ -358,7 +358,7 @@ async fn test_configuration_error_handling() -> TestResult<()> {
     Ok(())
 }
 
-async fn test_configuration_validator() -> TestResult<()> {
+async fn test_configuration_validator() -> TestOpResult<()> {
     let temp_dir =
         tempdir().map_err(|e| TestError::setup(format!("Failed to create temp dir: {}", e)))?;
     let config_path = temp_dir.path().join("test_config.toml");

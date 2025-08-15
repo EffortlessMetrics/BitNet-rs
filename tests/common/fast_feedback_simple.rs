@@ -1,7 +1,7 @@
 use super::{
     config::TestConfig,
-    errors::{TestError, TestOpResult as TestResultCompat},
-    fast_config::{fast_config, FastConfigBuilder, SpeedProfile},
+    errors::TestOpResult as TestResultCompat,
+    fast_config::{FastConfigBuilder, SpeedProfile},
     results::TestSuiteResult,
 };
 use std::collections::HashMap;

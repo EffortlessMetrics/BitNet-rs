@@ -7,7 +7,7 @@ use tempfile::TempDir;
 // Import only the reporting types we need
 use bitnet_tests::reporting::{ReportConfig, ReportFormat, ReportingManager};
 use bitnet_tests::results::{
-    TestArtifact, TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary,
+    TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary,
 };
 
 #[tokio::test]

@@ -1,7 +1,6 @@
 //! Demonstration of the reporting system functionality
 //! This shows that the core reporting system works correctly
 
-use std::collections::HashMap;
 use std::time::Duration;
 use tempfile::TempDir;
 use tokio::fs;

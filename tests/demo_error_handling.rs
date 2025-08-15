@@ -8,7 +8,7 @@ fn main() {
     println!("=== BitNet.rs Enhanced Error Handling Demo ===\n");
 
     // Import the error types we need
-    use bitnet_tests::errors::{ErrorSeverity, FixtureError, TestError};
+    use bitnet_tests::errors::{FixtureError, TestError};
 
     // Demo 1: Error Severity and Categorization
     println!("1. Error Severity and Categorization:");
