@@ -123,7 +123,7 @@ impl FallbackKernel {
             }));
         }
 
-        for block_idx in 0..num_blocks {
+        for (block_idx, scale) in scales.iter_mut().enumerate().take(num_blocks) {
             let start = block_idx * BLOCK_SIZE;
             let end = (start + BLOCK_SIZE).min(input.len());
             let block = &input[start..end];
@@ -132,12 +132,11 @@ impl FallbackKernel {
             let max_val = block.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
 
             // Avoid division by zero
-            let scale = if max_val > 1e-8 { max_val / 1.5 } else { 1.0 };
-            scales[block_idx] = scale;
+            *scale = if max_val > 1e-8 { max_val / 1.5 } else { 1.0 };
 
             // Quantize block to 2-bit signed values (-1, 0, 1)
             for (i, &val) in block.iter().enumerate() {
-                let normalized = val / scale;
+                let normalized = val / *scale;
                 let quantized = if normalized > 0.5 {
                     1i8 // +1
                 } else if normalized < -0.5 {
@@ -184,22 +183,21 @@ impl FallbackKernel {
             }));
         }
 
-        for block_idx in 0..num_blocks {
+        for (block_idx, scale) in scales.iter_mut().enumerate().take(num_blocks) {
             let start = block_idx * BLOCK_SIZE;
             let end = (start + BLOCK_SIZE).min(input.len());
             let block = &input[start..end];
 
             // Compute scale for this block
             let max_val = block.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
-            let scale = if max_val > 1e-8 { max_val / 1.5 } else { 1.0 };
-            scales[block_idx] = scale;
+            *scale = if max_val > 1e-8 { max_val / 1.5 } else { 1.0 };
 
             // Create lookup table for this block (simplified version)
             let lut = [-1.0f32, -0.33, 0.33, 1.0];
 
             // Quantize using lookup table
             for (i, &val) in block.iter().enumerate() {
-                let normalized = val / scale;
+                let normalized = val / *scale;
 
                 // Find closest value in lookup table
                 let mut best_idx = 0;
@@ -251,22 +249,21 @@ impl FallbackKernel {
             }));
         }
 
-        for block_idx in 0..num_blocks {
+        for (block_idx, scale) in scales.iter_mut().enumerate().take(num_blocks) {
             let start = block_idx * BLOCK_SIZE;
             let end = (start + BLOCK_SIZE).min(input.len());
             let block = &input[start..end];
 
             // Compute scale for this block
             let max_val = block.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
-            let scale = if max_val > 1e-8 { max_val / 1.5 } else { 1.0 };
-            scales[block_idx] = scale;
+            *scale = if max_val > 1e-8 { max_val / 1.5 } else { 1.0 };
 
             // Create optimized lookup table for x86 (different from TL1)
             let lut = [-1.2f32, -0.4, 0.4, 1.2];
 
             // Quantize using lookup table
             for (i, &val) in block.iter().enumerate() {
-                let normalized = val / scale;
+                let normalized = val / *scale;
 
                 // Find closest value in lookup table
                 let mut best_idx = 0;

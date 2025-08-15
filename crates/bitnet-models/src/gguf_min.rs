@@ -32,6 +32,7 @@ macro_rules! i2s_oob {
 #[derive(Debug, Clone)]
 struct TensorInfo {
     name: String,
+    #[allow(dead_code)]
     n_dims: u32,
     dims: Vec<u64>,
     ty: u32,     // ggml_type
@@ -59,6 +60,7 @@ fn looks_like_embeddings(info: &TensorInfo) -> bool {
         && (info.name.contains("emb") || info.name.contains("wte") || info.name.contains("embed"))
 }
 
+#[allow(dead_code)]
 fn looks_like_output_matrix(info: &TensorInfo) -> bool {
     // Must be 2D tensor - never accept 1D norm vectors
     info.dims.len() == 2 &&
@@ -70,6 +72,7 @@ fn looks_like_output_matrix(info: &TensorInfo) -> bool {
 
 #[derive(Debug)]
 struct Parsed {
+    #[allow(dead_code)]
     alignment: u64,
     tensors: Vec<TensorInfo>,
     data_offset: u64, // absolute file offset where tensor data section starts

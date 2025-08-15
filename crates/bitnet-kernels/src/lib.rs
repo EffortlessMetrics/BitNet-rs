@@ -38,6 +38,7 @@ pub struct KernelManager {
 
 impl KernelManager {
     pub fn new() -> Self {
+        #[allow(unused_mut)]
         let mut providers: Vec<Box<dyn KernelProvider>> = vec![Box::new(cpu::FallbackKernel)];
 
         // Add GPU kernels first (highest priority)
@@ -142,6 +143,7 @@ impl Default for KernelManager {
 
 /// Select the best CPU kernel provider
 pub fn select_cpu_kernel() -> Result<Box<dyn KernelProvider>> {
+    #[allow(unused_mut)]
     let mut providers: Vec<Box<dyn KernelProvider>> = vec![Box::new(cpu::FallbackKernel)];
 
     #[cfg(all(target_arch = "x86_64", feature = "avx2"))]

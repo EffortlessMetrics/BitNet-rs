@@ -3,6 +3,7 @@
 //! This module provides high-performance kernel implementations optimized for
 //! x86_64 architectures using AVX2 and AVX-512 SIMD instructions. These kernels
 //! are specifically tuned for TL2 quantization which is optimized for x86 platforms.
+#![allow(clippy::needless_range_loop)]  // Performance-critical loops with explicit indexing
 
 use crate::KernelProvider;
 use bitnet_common::{BitNetError, KernelError, QuantizationType, Result};
