@@ -32,9 +32,6 @@ path = "bin/generate_trend_analysis.rs"
 name = "demo_reporting_comprehensive"
 path = "demo_reporting_comprehensive.rs"
 
-[[bin]]
-name = "reporting_example"
-path = "examples/reporting_example.rs"
 
 [[bin]]
 name = "demo_error_handling"
@@ -59,6 +56,10 @@ path = "test_reporting_minimal.rs"
 [[test]]
 name = "test_ci_reporting_simple"
 path = "test_ci_reporting_simple.rs"
+
+[[example]]
+name = "reporting_example"
+path = "examples/reporting_example.rs"
 
 [dependencies]
 # Async runtime and utilities
