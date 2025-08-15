@@ -380,13 +380,15 @@ mod tests {
 
     #[test]
     fn test_file_size_limits() {
-        let mut config = ModelSecurity::default();
-        config.max_model_size = 100; // Very small limit for testing
+        let config = ModelSecurity {
+            max_model_size: 100, // Very small limit for testing
+            ..Default::default()
+        };
 
         let verifier = ModelVerifier::new(config);
 
         let mut temp_file = NamedTempFile::new().unwrap();
-        temp_file.write_all(&vec![0u8; 200]).unwrap(); // Larger than limit
+        temp_file.write_all(&[0u8; 200]).unwrap(); // Larger than limit
 
         assert!(verifier.verify_model(temp_file.path(), None).is_err());
     }
