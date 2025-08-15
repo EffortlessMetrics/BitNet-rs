@@ -91,6 +91,22 @@ impl Fixtures {
         #[cfg(not(feature = "fixtures"))]
         Ok(CacheStats::default())
     }
+
+    /// Returns the fixture context expected by TestCase::setup().
+    /// This provides a stable API that works across all feature configurations.
+    #[inline]
+    pub fn ctx(&self) -> crate::harness::FixtureCtx<'_> {
+        #[cfg(feature = "fixtures")]
+        {
+            // Return &FixtureManager when fixtures are enabled
+            &*self.0
+        }
+        #[cfg(not(feature = "fixtures"))]
+        {
+            // Return unit type when fixtures are disabled
+            ()
+        }
+    }
 }
 
 /// Facade for cache statistics
@@ -106,6 +122,7 @@ pub struct CacheStats {
 impl std::ops::Deref for Fixtures {
     type Target = crate::fixtures::FixtureManager;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.0
     }

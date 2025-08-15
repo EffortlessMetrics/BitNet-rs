@@ -96,12 +96,42 @@ pub const DEFAULT_MAX_PARALLEL_TESTS: usize = 4;
 
 /// Prelude module for tests - re-exports common types for convenience
 pub mod prelude {
-    // Fallible result alias + common error
-    pub use super::errors::{TestError, TestOpResult as TestResultCompat};
+    // Error handling types
+    pub use super::errors::{TestError, TestOpResult};
 
-    // Structured record (test outcome)
-    pub use super::results::TestResult as TestRecord;
+    // Result types (ensure clear distinction from TestOpResult)
+    pub use super::results::{
+        TestMetrics, 
+        TestResult,      // This is TestRecord, not TestOpResult
+        TestStatus, 
+        TestSuiteResult
+    };
 
-    // Common utilities people expect in test code
+    // Core test framework types
+    pub use super::harness::{
+        TestCase, 
+        TestHarness,
+        FixtureCtx,      // Stable fixture context type
+    };
+
+    // Configuration
     pub use super::config::TestConfig;
+
+    // Fixtures facade (provides stable API)
+    pub use super::fixtures_facade::Fixtures;
+
+    // CI reporting (when available)
+    #[cfg(feature = "reporting")]
+    pub use super::ci_reporting::{
+        CIReporter,
+        CIFormat,
+    };
+
+    // Trend analysis types (when available)
+    #[cfg(feature = "trend")]
+    pub use super::trend::{
+        TrendAnalyzer,
+        TrendData,
+        TrendReport,
+    };
 }
