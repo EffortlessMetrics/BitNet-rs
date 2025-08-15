@@ -1,7 +1,7 @@
 //! Core test reporter trait and management
 
 use super::{ReportConfig, ReportError, ReportFormat, ReportResult};
-use crate::results::{TestResult, TestSuiteResult};
+use crate::results::TestSuiteResult;
 use async_trait::async_trait;
 use std::path::Path;
 use tokio::fs;
