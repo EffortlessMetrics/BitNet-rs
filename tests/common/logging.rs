@@ -801,7 +801,7 @@ impl MetricsCollector {
         }
 
         let mut histograms = self.histograms.write().await;
-        histograms.entry(name.to_string()).or_insert_with(Vec::new).push(value);
+        histograms.entry(name.to_string()).or_default().push(value);
     }
 
     /// Record a custom metric

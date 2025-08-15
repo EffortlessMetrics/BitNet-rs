@@ -196,6 +196,6 @@ mod tests {
     #[test]
     fn test_parallel_thread_calculation() {
         let threads = get_optimal_thread_count();
-        assert!(threads >= 1 && threads <= 8);
+        assert!((1..=8).contains(&threads));
     }
 }

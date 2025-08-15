@@ -614,7 +614,7 @@ mod tests {
         assert!(config.test_timeout.as_secs() > 0);
         assert!(!config.cache_dir.as_os_str().is_empty());
         assert!(!config.log_level.is_empty());
-        assert!(config.coverage_threshold >= 0.0 && config.coverage_threshold <= 1.0);
+        assert!((0.0..=1.0).contains(&config.coverage_threshold));
     }
 
     #[test]

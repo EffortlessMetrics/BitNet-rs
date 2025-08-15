@@ -216,15 +216,14 @@ impl TrendReporter {
     }
 
     fn analyze_trends(&self, entries: &[TrendEntry]) -> Result<TrendAnalysis> {
-        let mut test_trends = HashMap::new();
-        let mut suite_trends = HashMap::new();
+        let mut test_trends: HashMap<String, Vec<TestDataPoint>> = HashMap::new();
+        let mut suite_trends: HashMap<String, Vec<SuiteDataPoint>> = HashMap::new();
 
         // Collect data points for each test
         for entry in entries {
             for suite in &entry.results {
                 // Suite-level trends
-                let suite_stats =
-                    suite_trends.entry(suite.suite_name.clone()).or_insert_with(Vec::new);
+                let suite_stats = suite_trends.entry(suite.suite_name.clone()).or_default();
 
                 suite_stats.push(SuiteDataPoint {
                     timestamp: entry.timestamp,
@@ -237,8 +236,7 @@ impl TrendReporter {
 
                 // Test-level trends
                 for test in &suite.test_results {
-                    let test_stats =
-                        test_trends.entry(test.test_name.clone()).or_insert_with(Vec::new);
+                    let test_stats = test_trends.entry(test.test_name.clone()).or_default();
 
                     test_stats.push(TestDataPoint {
                         timestamp: entry.timestamp,
