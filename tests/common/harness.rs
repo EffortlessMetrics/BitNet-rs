@@ -9,9 +9,11 @@ use tokio::time::timeout;
 use super::{
     config::TestConfig,
     errors::{TestError, TestOpResult as TestResultCompat},
-    fixtures::FixtureManager,
     results::{TestMetrics, TestResult as TestRecord, TestStatus, TestSuiteResult},
 };
+
+#[cfg(feature = "fixtures")]
+use super::fixtures::FixtureManager;
 
 /// Core test harness for executing tests with parallel support and proper isolation
 pub struct TestHarness {
