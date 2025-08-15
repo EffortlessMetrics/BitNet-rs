@@ -347,10 +347,7 @@ mod tests {
             Ok(ConcreteTensor::mock(vec![1, 10, 768]))
         }
 
-        fn logits(
-            &self,
-            _hidden: &ConcreteTensor,
-        ) -> bitnet_common::Result<ConcreteTensor> {
+        fn logits(&self, _hidden: &ConcreteTensor) -> bitnet_common::Result<ConcreteTensor> {
             Ok(ConcreteTensor::mock(vec![1, 10, 50257]))
         }
     }

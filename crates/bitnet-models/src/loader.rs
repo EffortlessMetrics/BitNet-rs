@@ -155,10 +155,10 @@ impl ModelLoader {
 
     /// Detect format by magic bytes
     fn detect_by_magic_bytes(&self, path: &Path) -> Result<Option<&dyn FormatLoader>> {
-        let file = File::open(path).map_err(|e| BitNetError::Io(e))?;
+        let file = File::open(path).map_err(BitNetError::Io)?;
 
         // Read first few bytes to check magic numbers
-        let mmap = unsafe { Mmap::map(&file) }.map_err(|e| BitNetError::Io(e))?;
+        let mmap = unsafe { Mmap::map(&file) }.map_err(BitNetError::Io)?;
 
         if mmap.len() < 8 {
             return Ok(None);
@@ -259,9 +259,9 @@ pub struct MmapFile {
 
 impl MmapFile {
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let file = File::open(path).map_err(|e| BitNetError::Io(e))?;
+        let file = File::open(path).map_err(BitNetError::Io)?;
 
-        let mmap = unsafe { Mmap::map(&file) }.map_err(|e| BitNetError::Io(e))?;
+        let mmap = unsafe { Mmap::map(&file) }.map_err(BitNetError::Io)?;
 
         Ok(Self { _file: file, mmap })
     }

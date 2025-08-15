@@ -119,7 +119,7 @@ impl BitNetModel {
     }
 
     /// Convert Candle tensor to ConcreteTensor
-    fn from_candle_tensor(&self, tensor: CandleTensor) -> ConcreteTensor {
+    fn candle_to_concrete(&self, tensor: CandleTensor) -> ConcreteTensor {
         ConcreteTensor::BitNet(BitNetTensor::new(tensor))
     }
 }
@@ -145,7 +145,7 @@ impl Model for BitNetModel {
             let output = transformer.forward(&input_tensor, kv_cache)?;
 
             // Convert back to ConcreteTensor
-            Ok(self.from_candle_tensor(output))
+            Ok(self.candle_to_concrete(output))
         } else {
             // Fallback to mock implementation
             let batch_size = input.shape()[0];
@@ -158,7 +158,7 @@ impl Model for BitNetModel {
     fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor> {
         if let Some(transformer) = &self.transformer {
             let embedded = transformer.embed(tokens)?;
-            Ok(self.from_candle_tensor(embedded))
+            Ok(self.candle_to_concrete(embedded))
         } else {
             // Mock embedding
             let seq_len = tokens.len();
@@ -171,7 +171,7 @@ impl Model for BitNetModel {
         if let Some(transformer) = &self.transformer {
             let hidden_tensor = self.to_candle_tensor(hidden)?;
             let logits = transformer.logits(&hidden_tensor)?;
-            Ok(self.from_candle_tensor(logits))
+            Ok(self.candle_to_concrete(logits))
         } else {
             // Mock logits
             let batch_size = hidden.shape()[0];

@@ -230,7 +230,7 @@ impl<'a> GgufReader<'a> {
                 )));
             }
 
-            if tensor_info.shape.iter().any(|&dim| dim == 0) {
+            if tensor_info.shape.contains(&0) {
                 return Err(BitNetError::Validation(format!(
                     "Tensor '{}' has zero dimension",
                     tensor_info.name
