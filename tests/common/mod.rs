@@ -10,34 +10,38 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(dead_code)]
 
-// pub mod cache;
-// pub mod ci_reporting;
+// Lightweight, always-on modules
 pub mod config;
 pub mod config_scenarios;
-// pub mod config_validator;
+pub mod config_scenarios_simple;
+pub mod errors;
+pub mod results;
+pub mod serde_time;
+pub mod utils;
+pub mod harness;
+
+// Optional debug modules
 pub mod debug_cli;
 pub mod debug_integration;
 pub mod debugging;
-// pub mod enhanced_error_handler;
-// pub mod error_analysis;
-pub mod errors;
-// pub mod execution_optimizer;
-pub mod fast_config;
-pub mod fast_feedback_simple;
+
+// Heavy/optional modules - only compile when feature is enabled
+#[cfg(feature = "fixtures")]
 pub mod fixtures;
-// pub mod github_cache;
-pub mod harness;
+
+#[cfg(feature = "fixtures")]
+pub mod fast_config;
+
+#[cfg(feature = "fixtures")]
+pub mod fast_feedback_simple;
+
+#[cfg(feature = "reporting")]
+pub mod reporting;
+
 pub mod incremental;
-// pub mod logging;
-// pub mod logging_example;
 pub mod optimization;
 pub mod parallel;
-pub mod reporting;
-pub mod results;
 pub mod selection;
-// pub mod test_utilities;
-// pub mod trend_reporting;
-pub mod utils;
 
 // Re-export commonly used functions
 pub use utils::{format_bytes, format_duration, get_memory_usage, get_peak_memory_usage};
@@ -56,9 +60,14 @@ pub use utils::{format_bytes, format_duration, get_memory_usage, get_peak_memory
 // Re-export commonly used types
 pub use config::TestConfig;
 pub use config_scenarios::{ScenarioConfigManager, TestingScenario, EnvironmentType};
-pub use errors::{TestError, TestOpResult as TestResult};
+
+// Avoid name collisions: expose both result types clearly
+pub use errors::{TestError, TestOpResult};
+pub use results::{TestResult, TestSuiteResult, TestMetrics};
+
+// Only re-export FixtureManager when fixtures are enabled
+#[cfg(feature = "fixtures")]
 pub use fixtures::FixtureManager;
-pub use results::TestMetrics;
 
 // Heavy/optional modules
 #[cfg(feature = "trend")]

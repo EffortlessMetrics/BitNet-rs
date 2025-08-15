@@ -2,7 +2,11 @@ use super::config::{
     ComparisonTolerance, CrossValidationConfig, FixtureConfig, ReportFormat, ReportingConfig,
     TestConfig,
 };
+#[cfg(feature = "fixtures")]
 use super::fast_config::{FastConfigBuilder, SpeedProfile};
+
+#[cfg(not(feature = "fixtures"))]
+use super::config_scenarios_simple::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
