@@ -317,6 +317,23 @@ cargo run -p bitnet-tests --example reporting_example
 
 The HTML report includes interactive features like collapsible test suites, filtering, and modern styling.
 
+### Coverage Collection
+
+Generate code coverage reports with tarpaulin:
+
+```bash
+# Install tarpaulin (Linux recommended)
+cargo install cargo-tarpaulin --locked
+
+# Generate coverage with HTML output
+cargo cov-html
+
+# View coverage report
+open target/coverage/tarpaulin-report.html
+```
+
+Coverage is automatically collected in CI and uploaded as artifacts. See [docs/coverage.md](docs/coverage.md) for detailed information.
+
 ## Developer Tooling: `xtask`
 
 We ship a robust `xtask` CLI for repeatable dev workflows.
