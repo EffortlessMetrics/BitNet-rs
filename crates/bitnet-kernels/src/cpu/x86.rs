@@ -633,7 +633,7 @@ mod tests {
             return;
         }
 
-        let input = vec![1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1].repeat(16); // 128 elements
+        let input = [1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1].repeat(16); // 128 elements
         let mut output = vec![0u8; 32]; // 128 values / 4 per byte = 32 bytes
         let mut scales = vec![0.0f32; 1]; // 128 values / 128 per block = 1 block
 

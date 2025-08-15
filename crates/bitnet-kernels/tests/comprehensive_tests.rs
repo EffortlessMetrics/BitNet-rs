@@ -1,7 +1,7 @@
 //! Comprehensive tests for bitnet-kernels
 //! Covers edge cases, error conditions, and end-to-end scenarios
 
-use bitnet_common::{BitNetError, KernelError, QuantizationType, Result};
+use bitnet_common::QuantizationType;
 use bitnet_kernels::*;
 use std::time::Instant;
 
@@ -126,12 +126,12 @@ mod error_handling {
         let mut output = vec![0u8; 2];
         let mut scales = vec![0.0f32; 1];
 
-        let result = kernel.quantize(&input_nan, &mut output, &mut scales, QuantizationType::I2S);
+        let _result = kernel.quantize(&input_nan, &mut output, &mut scales, QuantizationType::I2S);
         // Should handle NaN gracefully (either error or replace with valid values)
 
         // Test with infinity values
         let input_inf = vec![f32::INFINITY, f32::NEG_INFINITY, 1.0, 2.0];
-        let result = kernel.quantize(&input_inf, &mut output, &mut scales, QuantizationType::I2S);
+        let _result = kernel.quantize(&input_inf, &mut output, &mut scales, QuantizationType::I2S);
         // Should handle infinity gracefully
     }
 }
@@ -500,7 +500,7 @@ mod manager_tests {
         assert!(!cpu_kernel.name().is_empty());
 
         // Should be one of the known CPU kernels
-        let known_kernels = vec!["fallback", "avx2", "neon"];
+        let known_kernels = ["fallback", "avx2", "neon"];
         assert!(known_kernels.contains(&cpu_kernel.name()));
     }
 

@@ -399,7 +399,7 @@ fn read_string<R: Read>(r: &mut R) -> Result<String> {
     let len = read_u64(r)? as usize;
     let mut buf = vec![0u8; len];
     r.read_exact(&mut buf)?;
-    Ok(String::from_utf8(buf).context("string not utf8")?)
+    String::from_utf8(buf).context("string not utf8")
 }
 
 // Minimal KV skipping (we only read general.alignment if present)
@@ -432,10 +432,10 @@ fn skip_n_seek<R: Read + Seek>(r: &mut R, n: u64) -> Result<()> {
 fn skip_gguf_value<R: Read>(r: &mut R, ty: u32) -> Result<()> {
     // GGUF scalar sizes (see llama.cpp)
     match ty {
-        0 | 1 => skip_n(r, 1)?,     // uint8 | int8
-        2 | 3 => skip_n(r, 2)?,     // uint16 | int16
-        4 | 5 | 6 => skip_n(r, 4)?, // uint32 | int32 | float32
-        7 => skip_n(r, 1)?,         // bool
+        0 | 1 => skip_n(r, 1)?, // uint8 | int8
+        2 | 3 => skip_n(r, 2)?, // uint16 | int16
+        4..=6 => skip_n(r, 4)?, // uint32 | int32 | float32
+        7 => skip_n(r, 1)?,     // bool
         8 => {
             // string: u64 len + bytes
             let n = read_u64(r)?;
@@ -449,7 +449,7 @@ fn skip_gguf_value<R: Read>(r: &mut R, ty: u32) -> Result<()> {
                 skip_gguf_value(r, elem_ty)?;
             }
         }
-        10 | 11 | 12 => skip_n(r, 8)?, // uint64 | int64 | float64
+        10..=12 => skip_n(r, 8)?, // uint64 | int64 | float64
         _ => bail!("unknown GGUF kv type id {ty}"),
     }
     Ok(())
@@ -459,10 +459,10 @@ fn skip_gguf_value<R: Read>(r: &mut R, ty: u32) -> Result<()> {
 fn skip_gguf_value_seek<R: Read + Seek>(r: &mut R, ty: u32) -> Result<()> {
     // GGUF scalar sizes (see llama.cpp)
     match ty {
-        0 | 1 => skip_n_seek(r, 1)?,     // uint8 | int8
-        2 | 3 => skip_n_seek(r, 2)?,     // uint16 | int16
-        4 | 5 | 6 => skip_n_seek(r, 4)?, // uint32 | int32 | float32
-        7 => skip_n_seek(r, 1)?,         // bool
+        0 | 1 => skip_n_seek(r, 1)?, // uint8 | int8
+        2 | 3 => skip_n_seek(r, 2)?, // uint16 | int16
+        4..=6 => skip_n_seek(r, 4)?, // uint32 | int32 | float32
+        7 => skip_n_seek(r, 1)?,     // bool
         8 => {
             // string: u64 len + bytes
             let n = read_u64(r)?;
@@ -476,7 +476,7 @@ fn skip_gguf_value_seek<R: Read + Seek>(r: &mut R, ty: u32) -> Result<()> {
                 skip_gguf_value_seek(r, elem_ty)?;
             }
         }
-        10 | 11 | 12 => skip_n_seek(r, 8)?, // uint64 | int64 | float64
+        10..=12 => skip_n_seek(r, 8)?, // uint64 | int64 | float64
         _ => bail!("unknown GGUF kv type id {ty}"),
     }
     Ok(())
@@ -580,7 +580,7 @@ mod tests {
 
         // Float64 type=12
         buf.extend_from_slice(&12u32.to_le_bytes());
-        buf.extend_from_slice(&3.14159f64.to_le_bytes());
+        buf.extend_from_slice(&std::f64::consts::PI.to_le_bytes());
 
         let mut cur = Cursor::new(&buf[..]);
 

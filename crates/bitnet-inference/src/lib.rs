@@ -22,11 +22,7 @@ pub use parity::{
 pub use sampling::{SamplingConfig, SamplingStrategy};
 pub use streaming::{GenerationStream, StreamingConfig};
 
-use anyhow::Result;
-use bitnet_common::{BitNetConfig, Device, Tensor};
-use bitnet_models::Model;
-use bitnet_tokenizers::Tokenizer;
-use std::sync::Arc;
+// Module-level imports (removed - unused)
 
 /// Re-export commonly used types
 pub mod prelude {

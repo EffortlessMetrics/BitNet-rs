@@ -85,11 +85,7 @@ fn map_tensor_name(name: &str) -> Option<String> {
 
     // Handle "layers.N." prefix (LLaMA style)
     if name.starts_with("layers.") || name.starts_with("model.layers.") {
-        let clean_name = if name.starts_with("model.") {
-            &name[6..] // Remove "model." prefix
-        } else {
-            name
-        };
+        let clean_name = name.strip_prefix("model.").unwrap_or(name);
 
         let parts: Vec<&str> = clean_name.split('.').collect();
         if parts.len() >= 3 && parts[0] == "layers" {

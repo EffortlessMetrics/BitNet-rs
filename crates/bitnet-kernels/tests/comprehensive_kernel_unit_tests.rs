@@ -306,7 +306,7 @@ mod cpu_kernel_tests {
             return;
         }
 
-        let input = vec![1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1].repeat(16); // 128 elements
+        let input = [1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1].repeat(16); // 128 elements
         let mut output = vec![0u8; 32]; // 128 values / 4 per byte = 32 bytes
         let mut scales = vec![0.0f32; 1]; // 128 values / 128 per block = 1 block
 
@@ -327,7 +327,7 @@ mod cpu_kernel_tests {
             return;
         }
 
-        let input = vec![1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1].repeat(4); // 32 elements
+        let input = [1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1].repeat(4); // 32 elements
         let mut output = vec![0u8; 8]; // 32 values / 4 per byte = 8 bytes
         let mut scales = vec![0.0f32; 1]; // 32 values / 32 per block = 1 block
 
@@ -448,7 +448,7 @@ mod cpu_kernel_tests {
             return;
         }
 
-        let input = vec![1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1].repeat(4); // 32 elements
+        let input = [1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1].repeat(4); // 32 elements
         let mut output = vec![0u8; 8]; // 32 values / 4 per byte = 8 bytes
         let mut scales = vec![0.0f32; 1]; // 32 values / 32 per block = 1 block
 
@@ -793,7 +793,7 @@ mod kernel_selection_tests {
         assert!(!cpu_kernel.name().is_empty(), "CPU kernel should have a name");
 
         // Should be one of the known CPU kernels
-        let known_kernels = vec!["fallback", "avx2", "neon"];
+        let known_kernels = ["fallback", "avx2", "neon"];
         assert!(
             known_kernels.contains(&cpu_kernel.name()),
             "Unknown CPU kernel: {}",
@@ -1091,7 +1091,7 @@ mod performance_tests {
 
         // Test with extreme values (excluding infinity which may not be handled consistently)
         let extreme_cases =
-            vec![vec![f32::MAX; 32], vec![f32::MIN; 32], vec![1e-10; 32], vec![-1e-10; 32]];
+            [vec![f32::MAX; 32], vec![f32::MIN; 32], vec![1e-10; 32], vec![-1e-10; 32]];
 
         for (i, input) in extreme_cases.iter().enumerate() {
             let mut output = vec![0u8; 8];
@@ -1115,7 +1115,7 @@ mod performance_tests {
         }
 
         // Test infinity cases separately (these are expected to either fail or produce special handling)
-        let infinity_cases = vec![vec![f32::INFINITY; 32], vec![f32::NEG_INFINITY; 32]];
+        let infinity_cases = [vec![f32::INFINITY; 32], vec![f32::NEG_INFINITY; 32]];
 
         for (i, input) in infinity_cases.iter().enumerate() {
             let mut output = vec![0u8; 8];
