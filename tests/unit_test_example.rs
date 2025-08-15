@@ -3,9 +3,9 @@
 //! This example shows how to write effective unit tests using the BitNet.rs
 //! testing framework, including setup, teardown, error testing, and assertions.
 
-use bitnet_tests::common::{TestError, TestUtilities};
 use std::collections::HashMap;
 use std::time::Duration;
+use tempfile::TempDir;
 
 /// Example data structure for testing
 #[derive(Debug, Clone, PartialEq)]
@@ -319,8 +319,8 @@ mod tests {
     #[tokio::test]
     async fn test_with_temporary_files() {
         // Example of testing with temporary files
-        let temp_dir = TestUtilities::create_temp_dir("processor_test").await.unwrap();
-        let config_file = temp_dir.join("config.json");
+        let temp_dir = TempDir::new().unwrap();
+        let config_file = temp_dir.path().join("config.json");
 
         // Create test configuration file
         let config_json = r#"
@@ -330,11 +330,11 @@ mod tests {
             "prefix": "FILE: "
         }
         "#;
-        TestUtilities::write_test_file(&config_file, config_json.as_bytes()).await.unwrap();
+        tokio::fs::write(&config_file, config_json.as_bytes()).await.unwrap();
 
         // Verify file was created
         assert!(config_file.exists());
-        let content = TestUtilities::read_test_file(&config_file).await.unwrap();
+        let content = tokio::fs::read(&config_file).await.unwrap();
         assert_eq!(content, config_json.as_bytes());
 
         // Use the configuration (in a real scenario, you'd parse the JSON)

@@ -50,10 +50,10 @@ cargo tarpaulin --out html --output-dir target/coverage
 The framework includes several example tests that demonstrate best practices:
 
 ```bash
-# Run the unit test example
+# Run the unit test example (shows 14 different test patterns)
 cargo test --test unit_test_example
 
-# Run the integration test example  
+# Run the integration test example (shows workflow and component testing)
 cargo test --test integration_test_example
 
 # Run the reporting system example
@@ -61,18 +61,46 @@ cargo run -p bitnet-tests --example reporting_example
 ```
 
 These examples show:
-- **Unit Test Example**: Comprehensive unit testing patterns including error handling, performance testing, and resource management
-- **Integration Test Example**: Complete workflow testing with component interactions and data flow validation
-- **Reporting Example**: How to generate HTML, JSON, JUnit XML, and Markdown reports
+- **Unit Test Example** (`tests/unit_test_example.rs`): Comprehensive unit testing patterns including error handling, performance testing, resource management, caching, and concurrent testing
+- **Integration Test Example** (`tests/integration_test_example.rs`): Complete workflow testing with component interactions, data flow validation, file I/O, and system integration
+- **Reporting Example** (`tests/examples/reporting_example.rs`): How to generate HTML, JSON, JUnit XML, and Markdown reports
+
+You can also run specific tests from the examples:
+```bash
+# Run a specific unit test
+cargo test --test unit_test_example test_process_basic_functionality
+
+# List all available tests in an example
+cargo test --test unit_test_example -- --list
+```
+
+## Developer Tools
+
+The framework includes helpful tools to make test authoring easier:
+
+### Test Template Generator
+
+Quickly create test files from templates:
+
+```bash
+# Linux/macOS
+./scripts/create-test-template.sh my_feature_test
+
+# Windows PowerShell  
+.\scripts\create-test-template.ps1 my_feature_test
+```
+
+See [Testing Tools README](../../scripts/testing-tools-README.md) for full usage instructions.
 
 ## Contributing
 
 When adding new tests or modifying the testing framework, please:
 
-1. Follow the guidelines in the [Test Authoring Guide](test-authoring-guide.md)
-2. Update documentation as needed
-3. Ensure all tests pass before submitting changes
-4. Add appropriate test coverage for new functionality
+1. Use the test template generator to create properly structured test files
+2. Follow the guidelines in the [Test Authoring Guide](test-authoring-guide.md)
+3. Update documentation as needed
+4. Ensure all tests pass before submitting changes
+5. Add appropriate test coverage for new functionality
 
 ## Support
 
