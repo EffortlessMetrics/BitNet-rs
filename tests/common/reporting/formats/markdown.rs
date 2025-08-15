@@ -1,7 +1,7 @@
 //! Markdown report format implementation
 
 use super::super::{ReportError, ReportFormat, ReportResult, TestReporter};
-use crate::results::{TestResult, TestStatus, TestSuiteResult};
+use crate::{TestResult, TestStatus, TestSuiteResult};
 use async_trait::async_trait;
 use std::path::Path;
 use std::time::Instant;
@@ -221,7 +221,7 @@ impl Default for MarkdownReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::results::{TestMetrics, TestSummary};
+    use crate::{TestMetrics, TestSummary};
     use std::collections::HashMap;
     use std::time::Duration;
     use tempfile::TempDir;

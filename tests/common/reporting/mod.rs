@@ -11,8 +11,7 @@ pub mod formats;
 pub mod reporter;
 // pub mod templates;
 
-pub use formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter};
-pub use reporter::{ReportingManager, TestReporter};
+pub use reporter::TestReporter;
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
