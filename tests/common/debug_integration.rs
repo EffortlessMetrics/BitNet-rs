@@ -6,6 +6,9 @@ use super::errors::TestOpResult;
 use super::harness::{TestCase, TestHarness, TestReporter};
 use super::results::{TestResult, TestSuiteResult};
 
+#[cfg(feature = "fixtures")]
+use super::fixtures::FixtureManager;
+
 /// Enhanced test harness with integrated debugging support
 pub struct DebugEnabledTestHarness {
     inner_harness: TestHarness,
@@ -113,13 +116,47 @@ impl TestCase for DebugTestCase {
         &self.test_name
     }
 
-    async fn setup(&self, fixtures: &super::fixtures::FixtureManager) -> TestOpResult<()> {
+    #[cfg(feature = "fixtures")]
+    async fn setup(&self, fixtures: &FixtureManager) -> TestOpResult<()> {
         // Start debugging for this test
         self.debugger.start_test_debug(&self.test_name).await?;
         self.debugger.start_phase(&self.test_name, "setup").await?;
 
         // Run the actual setup
         let result = self.inner.setup(fixtures).await;
+
+        // Record setup result
+        match &result {
+            Ok(_) => {
+                self.debugger.end_phase(&self.test_name, "setup", true, None).await?;
+                self.debugger
+                    .add_debug_message(&self.test_name, "Setup completed successfully")
+                    .await?;
+            }
+            Err(e) => {
+                self.debugger
+                    .end_phase(
+                        &self.test_name,
+                        "setup",
+                        false,
+                        Some([("error".to_string(), e.to_string())].into()),
+                    )
+                    .await?;
+                self.debugger.capture_error(Some(&self.test_name), e).await?;
+            }
+        }
+
+        result
+    }
+    
+    #[cfg(not(feature = "fixtures"))]
+    async fn setup(&self) -> TestOpResult<()> {
+        // Start debugging for this test
+        self.debugger.start_test_debug(&self.test_name).await?;
+        self.debugger.start_phase(&self.test_name, "setup").await?;
+
+        // Run the actual setup
+        let result = self.inner.setup().await;
 
         // Record setup result
         match &result {
@@ -443,10 +480,19 @@ mod tests {
             &self.name
         }
 
+        #[cfg(feature = "fixtures")]
         async fn setup(
             &self,
-            _fixtures: &super::super::fixtures::FixtureManager,
+            _fixtures: &FixtureManager,
         ) -> TestOpResult<()> {
+            if self.should_fail && self.name.contains("setup_fail") {
+                return Err(TestError::setup("Mock setup failure"));
+            }
+            Ok(())
+        }
+        
+        #[cfg(not(feature = "fixtures"))]
+        async fn setup(&self) -> TestOpResult<()> {
             if self.should_fail && self.name.contains("setup_fail") {
                 return Err(TestError::setup("Mock setup failure"));
             }
@@ -484,10 +530,14 @@ mod tests {
         let debug_test = DebugTestCase::new(mock_test, debugger.clone());
 
         // Test successful execution
-        let fixtures =
-            super::super::fixtures::FixtureManager::new(&Default::default()).await.unwrap();
-
-        assert!(debug_test.setup(&fixtures).await.is_ok());
+        #[cfg(feature = "fixtures")]
+        {
+            let fixtures = FixtureManager::new(&Default::default()).await.unwrap();
+            assert!(debug_test.setup(&fixtures).await.is_ok());
+        }
+        
+        #[cfg(not(feature = "fixtures"))]
+        assert!(debug_test.setup().await.is_ok());
         assert!(debug_test.execute().await.is_ok());
         assert!(debug_test.cleanup().await.is_ok());
 
@@ -507,10 +557,14 @@ mod tests {
         let debug_test = DebugTestCase::new(mock_test, debugger.clone());
 
         // Test failure handling
-        let fixtures =
-            super::super::fixtures::FixtureManager::new(&Default::default()).await.unwrap();
-
-        assert!(debug_test.setup(&fixtures).await.is_ok());
+        #[cfg(feature = "fixtures")]
+        {
+            let fixtures = FixtureManager::new(&Default::default()).await.unwrap();
+            assert!(debug_test.setup(&fixtures).await.is_ok());
+        }
+        
+        #[cfg(not(feature = "fixtures"))]
+        assert!(debug_test.setup().await.is_ok());
         assert!(debug_test.execute().await.is_err());
         assert!(debug_test.cleanup().await.is_ok());
 
