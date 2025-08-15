@@ -111,8 +111,11 @@ impl TestExecutionOptimizer {
         config.test_timeout = self.config.test_timeout;
 
         // Enable caching for speed
-        config.fixtures.auto_download = self.config.enable_caching;
-        config.fixtures.max_cache_size = 5 * 1024 * 1024 * 1024; // 5GB cache
+        #[cfg(feature = "fixtures")]
+        {
+            config.fixtures.auto_download = self.config.enable_caching;
+            config.fixtures.max_cache_size = 5 * 1024 * 1024 * 1024; // 5GB cache
+        }
 
         // Optimize reporting for speed
         config.reporting.generate_coverage = false; // Skip coverage for speed

@@ -1,4 +1,4 @@
-use bitnet_tests::config_validator::{ConfigValidator, ValidationResult};
+use bitnet_tests::config_validator::ConfigValidator;
 use std::env;
 use std::path::PathBuf;
 use std::process;

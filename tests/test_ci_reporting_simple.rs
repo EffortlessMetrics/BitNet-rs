@@ -1,7 +1,6 @@
 //! Simple tests for CI reporting functionality
 
 use std::collections::HashMap;
-use std::time::Duration;
 
 // Test the basic structures and functionality without external dependencies
 #[test]

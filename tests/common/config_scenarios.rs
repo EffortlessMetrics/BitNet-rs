@@ -1,5 +1,5 @@
 use super::config::{
-    ComparisonTolerance, CrossValidationConfig, FixtureConfig, ReportFormat, ReportingConfig,
+    ComparisonTolerance, CrossValidationConfig, ReportFormat, ReportingConfig,
     TestConfig,
 };
 
@@ -188,6 +188,8 @@ impl ScenarioConfigManager {
                 test_timeout: Duration::from_secs(60),
                 log_level: "info".to_string(),
                 coverage_threshold: 0.0,
+                #[cfg(feature = "fixtures")]
+                #[cfg(feature = "fixtures")]
                 fixtures: FixtureConfig::default(),
                 crossval: CrossValidationConfig::default(),
                 reporting: ReportingConfig {
@@ -203,6 +205,8 @@ impl ScenarioConfigManager {
                 test_timeout: Duration::from_secs(30),
                 log_level: "error".to_string(),
                 coverage_threshold: 0.0,
+                #[cfg(feature = "fixtures")]
+                #[cfg(feature = "fixtures")]
                 fixtures: FixtureConfig::default(),
                 crossval: CrossValidationConfig::default(),
                 reporting: ReportingConfig {
@@ -304,6 +308,7 @@ impl ScenarioConfigManager {
                 scenario_config.log_level
             },
             coverage_threshold: scenario_config.coverage_threshold.max(env_config.coverage_threshold),
+            #[cfg(feature = "fixtures")]
             fixtures: scenario_config.fixtures,
             crossval: scenario_config.crossval,
             reporting: ReportingConfig {

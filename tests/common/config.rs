@@ -18,6 +18,7 @@ pub struct TestConfig {
     /// Minimum code coverage threshold (0.0 to 1.0)
     pub coverage_threshold: f64,
     /// Configuration for test fixtures
+    #[cfg(feature = "fixtures")]
     pub fixtures: FixtureConfig,
     /// Configuration for cross-validation testing
     pub crossval: CrossValidationConfig,
@@ -33,6 +34,7 @@ impl Default for TestConfig {
             cache_dir: PathBuf::from("tests/cache"),
             log_level: "info".to_string(),
             coverage_threshold: 0.9,
+            #[cfg(feature = "fixtures")]
             fixtures: FixtureConfig::default(),
             crossval: CrossValidationConfig::default(),
             reporting: ReportingConfig::default(),
@@ -255,20 +257,23 @@ pub fn load_config_from_env(config: &mut TestConfig) -> TestResultCompat<()> {
     }
 
     // Fixture configuration from environment
-    if let Ok(val) = std::env::var("BITNET_TEST_AUTO_DOWNLOAD") {
-        config.fixtures.auto_download = val
-            .parse()
-            .map_err(|e| TestError::config(format!("Invalid BITNET_TEST_AUTO_DOWNLOAD: {}", e)))?;
-    }
+    #[cfg(feature = "fixtures")]
+    {
+        if let Ok(val) = std::env::var("BITNET_TEST_AUTO_DOWNLOAD") {
+            config.fixtures.auto_download = val
+                .parse()
+                .map_err(|e| TestError::config(format!("Invalid BITNET_TEST_AUTO_DOWNLOAD: {}", e)))?;
+        }
 
-    if let Ok(val) = std::env::var("BITNET_TEST_MAX_CACHE_SIZE") {
-        config.fixtures.max_cache_size = val
-            .parse()
-            .map_err(|e| TestError::config(format!("Invalid BITNET_TEST_MAX_CACHE_SIZE: {}", e)))?;
-    }
+        if let Ok(val) = std::env::var("BITNET_TEST_MAX_CACHE_SIZE") {
+            config.fixtures.max_cache_size = val
+                .parse()
+                .map_err(|e| TestError::config(format!("Invalid BITNET_TEST_MAX_CACHE_SIZE: {}", e)))?;
+        }
 
-    if let Ok(val) = std::env::var("BITNET_TEST_FIXTURE_BASE_URL") {
-        config.fixtures.base_url = Some(val);
+        if let Ok(val) = std::env::var("BITNET_TEST_FIXTURE_BASE_URL") {
+            config.fixtures.base_url = Some(val);
+        }
     }
 
     // Reporting configuration from environment
@@ -365,46 +370,54 @@ pub fn validate_config(config: &TestConfig) -> TestResultCompat<()> {
     }
 
     // Validate fixture config
-    if config.fixtures.download_timeout.as_secs() == 0 {
-        return Err(TestError::config("download_timeout must be greater than 0"));
+    #[cfg(feature = "fixtures")]
+    {
+        if config.fixtures.download_timeout.as_secs() == 0 {
+            return Err(TestError::config("download_timeout must be greater than 0"));
+        }
     }
 
+    #[cfg(feature = "fixtures")]
     if config.fixtures.download_timeout.as_secs() > 3600 {
         return Err(TestError::config("download_timeout should not exceed 1 hour"));
     }
 
+    #[cfg(feature = "fixtures")]
     if config.fixtures.cleanup_interval.as_secs() == 0 {
         return Err(TestError::config("cleanup_interval must be greater than 0"));
     }
 
     // Validate custom fixtures
-    for fixture in &config.fixtures.custom_fixtures {
-        if fixture.name.is_empty() {
-            return Err(TestError::config("Custom fixture name cannot be empty"));
-        }
+    #[cfg(feature = "fixtures")]
+    {
+        for fixture in &config.fixtures.custom_fixtures {
+            if fixture.name.is_empty() {
+                return Err(TestError::config("Custom fixture name cannot be empty"));
+            }
 
-        if fixture.url.is_empty() {
-            return Err(TestError::config("Custom fixture URL cannot be empty"));
-        }
+            if fixture.url.is_empty() {
+                return Err(TestError::config("Custom fixture URL cannot be empty"));
+            }
 
-        if fixture.checksum.is_empty() {
-            return Err(TestError::config("Custom fixture checksum cannot be empty"));
-        }
+            if fixture.checksum.is_empty() {
+                return Err(TestError::config("Custom fixture checksum cannot be empty"));
+            }
 
-        // Basic URL validation
-        if !fixture.url.starts_with("http://") && !fixture.url.starts_with("https://") {
-            return Err(TestError::config(format!(
-                "Invalid URL for fixture '{}': must start with http:// or https://",
-                fixture.name
-            )));
-        }
+            // Basic URL validation
+            if !fixture.url.starts_with("http://") && !fixture.url.starts_with("https://") {
+                return Err(TestError::config(format!(
+                    "Invalid URL for fixture '{}': must start with http:// or https://",
+                    fixture.name
+                )));
+            }
 
-        // Basic checksum validation (should be hex string)
-        if !fixture.checksum.chars().all(|c| c.is_ascii_hexdigit()) {
-            return Err(TestError::config(format!(
-                "Invalid checksum for fixture '{}': must be a hex string",
-                fixture.name
-            )));
+            // Basic checksum validation (should be hex string)
+            if !fixture.checksum.chars().all(|c| c.is_ascii_hexdigit()) {
+                return Err(TestError::config(format!(
+                    "Invalid checksum for fixture '{}': must be a hex string",
+                    fixture.name
+                )));
+            }
         }
     }
 
@@ -498,7 +511,10 @@ pub fn minimal_config() -> TestConfig {
     config.crossval.enabled = false;
 
     // Disable auto-download to avoid network calls
-    config.fixtures.auto_download = false;
+    #[cfg(feature = "fixtures")]
+    {
+        config.fixtures.auto_download = false;
+    }
 
     config
 }
@@ -511,6 +527,7 @@ pub fn merge_configs(base: TestConfig, override_config: TestConfig) -> TestConfi
         cache_dir: override_config.cache_dir,
         log_level: override_config.log_level,
         coverage_threshold: override_config.coverage_threshold,
+        #[cfg(feature = "fixtures")]
         fixtures: FixtureConfig {
             auto_download: override_config.fixtures.auto_download,
             max_cache_size: override_config.fixtures.max_cache_size,
@@ -575,11 +592,15 @@ pub fn get_config_value(config: &TestConfig, key_path: &str) -> Option<String> {
         ["log_level"] => Some(config.log_level.clone()),
         ["coverage_threshold"] => Some(config.coverage_threshold.to_string()),
 
+        #[cfg(feature = "fixtures")]
         ["fixtures", "auto_download"] => Some(config.fixtures.auto_download.to_string()),
+        #[cfg(feature = "fixtures")]
         ["fixtures", "max_cache_size"] => Some(config.fixtures.max_cache_size.to_string()),
+        #[cfg(feature = "fixtures")]
         ["fixtures", "download_timeout"] => {
             Some(config.fixtures.download_timeout.as_secs().to_string())
         }
+        #[cfg(feature = "fixtures")]
         ["fixtures", "base_url"] => config.fixtures.base_url.clone(),
 
         ["crossval", "enabled"] => Some(config.crossval.enabled.to_string()),

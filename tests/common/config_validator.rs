@@ -1,6 +1,6 @@
 use crate::config::{load_test_config, validate_config, TestConfig};
 use crate::errors::{TestError, TestOpResult as TestResultCompat};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Configuration validation utility
 pub struct ConfigValidator {
