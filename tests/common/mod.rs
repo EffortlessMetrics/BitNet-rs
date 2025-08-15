@@ -13,6 +13,7 @@
 // pub mod cache;
 // pub mod ci_reporting;
 pub mod config;
+pub mod config_scenarios;
 // pub mod config_validator;
 pub mod debug_cli;
 pub mod debug_integration;
