@@ -39,6 +39,12 @@ pub enum ModelSize {
     Large,
 }
 
+impl Default for ComparisonTestCaseRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ComparisonTestCaseRegistry {
     /// Create a new test case registry with all built-in test cases
     pub fn new() -> Self {
