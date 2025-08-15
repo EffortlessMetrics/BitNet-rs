@@ -11,6 +11,9 @@ pub mod parity;
 pub mod sampling;
 pub mod simple_forward;
 pub mod streaming;
+mod tensor_ext;
+
+pub(crate) use tensor_ext::TensorDeviceExt;
 
 pub use backends::{Backend, CpuBackend, GpuBackend};
 pub use cache::{CacheConfig, KVCache};
