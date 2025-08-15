@@ -37,8 +37,6 @@ pub mod prelude {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[tokio::test]
     async fn test_inference_engine_creation() {
         // This would require actual model and tokenizer implementations
