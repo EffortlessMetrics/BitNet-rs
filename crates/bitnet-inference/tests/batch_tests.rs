@@ -7,7 +7,7 @@
 //! - Resource management and limits
 //! - Performance optimization
 
-use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, PerformanceMetrics};
+use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, InferenceError, PerformanceMetrics};
 use bitnet_inference::prelude::*;
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
@@ -186,9 +186,9 @@ pub struct MockBatchProcessor {
 }
 
 impl MockBatchProcessor {
-    pub fn new(engine: InferenceEngine, config: BatchProcessorConfig) -> Result<Self, BitNetError> {
+    pub fn new(engine: Arc<InferenceEngine>, config: BatchProcessorConfig) -> Result<Self, BitNetError> {
         config.validate()?;
-        Ok(Self { engine: Arc::new(engine), config })
+        Ok(Self { engine, config })
     }
 
     pub async fn process_batch(&self, requests: Vec<BatchRequest>) -> Vec<BatchResponse> {
@@ -326,7 +326,7 @@ mod batch_request_tests {
 
     #[test]
     fn test_batch_request_creation() {
-        let config = GenerationConfig::default();
+        let _config = GenerationConfig::default();
         let request = BatchRequest {
             id: "test-1".to_string(),
             prompt: "Hello, world!".to_string(),

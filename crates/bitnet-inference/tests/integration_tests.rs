@@ -595,7 +595,7 @@ mod performance_tests {
 
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
 
-        let stats_before = engine.get_stats().await;
+        let _stats_before = engine.get_stats().await;
 
         // Generate text to use memory
         let _ = engine.generate("Memory usage test prompt").await;
@@ -734,7 +734,7 @@ mod error_handling_tests {
         let tokenizer = Arc::new(MockTokenizer::new());
         let device = Device::Cpu;
 
-        let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
+        let _engine = InferenceEngine::new(model, tokenizer, device).unwrap();
 
         let mut invalid_config = GenerationConfig::default();
         invalid_config.max_new_tokens = 0;
