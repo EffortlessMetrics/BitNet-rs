@@ -21,3 +21,10 @@ jobs:
       - run: rustup component add clippy
       - run: cargo clippy -p bitnet-cli    --all-targets -- -D warnings
       - run: cargo clippy -p bitnet-server --all-targets -- -D warnings
+
+  clippy-degraded-ok:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup component add clippy
+      - run: cargo clippy -p bitnet-server --all-targets --features degraded-ok -- -D warnings
