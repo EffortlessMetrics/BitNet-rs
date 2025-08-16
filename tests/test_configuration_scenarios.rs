@@ -18,6 +18,18 @@ use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 
+// Shared environment lock for all tests that mutate env vars
+#[cfg(test)]
+use std::sync::{Mutex, OnceLock};
+
+#[cfg(test)]
+static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+#[cfg(test)]
+fn env_guard() -> std::sync::MutexGuard<'static, ()> {
+    ENV_LOCK.get_or_init(|| Mutex::new(())).lock().expect("env guard poisoned")
+}
+
 // Helper to avoid duplicate formats in reporting configuration
 fn ensure_format(v: &mut Vec<ReportFormat>, f: ReportFormat) {
     if !v.contains(&f) {
@@ -30,6 +42,19 @@ fn env_bool(var: &str) -> bool {
     std::env::var(var)
         .map(|s| matches!(s.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
         .unwrap_or(false)
+}
+
+// Typed helper functions for parsing numeric environment variables
+fn env_u64(var: &str) -> Option<u64> {
+    std::env::var(var).ok()?.trim().parse::<u64>().ok()
+}
+
+fn env_usize(var: &str) -> Option<usize> {
+    std::env::var(var).ok()?.trim().parse::<usize>().ok()
+}
+
+fn env_duration_secs(var: &str) -> Option<std::time::Duration> {
+    env_u64(var).map(std::time::Duration::from_secs)
 }
 
 
@@ -181,10 +206,10 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
         cfg.crossval.enabled = true;
         // If the test set a tolerance, it must be reflected exactly.
         if ctx.quality_requirements.accuracy_tolerance > 0.0 {
-            cfg.crossval.tolerance.min_token_accuracy =
-                ctx.quality_requirements.accuracy_tolerance;
-            cfg.crossval.tolerance.numerical_tolerance =
-                ctx.quality_requirements.accuracy_tolerance;
+            // Ensure no negative values slip through
+            let tol = ctx.quality_requirements.accuracy_tolerance.max(0.0);
+            cfg.crossval.tolerance.min_token_accuracy = tol;
+            cfg.crossval.tolerance.numerical_tolerance = tol;
         }
         cfg.crossval.performance_comparison = true;
         cfg.crossval.accuracy_comparison = true;
@@ -202,6 +227,7 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
     }
 
     // ----- Final clamp: fast-feedback must stay minimal -------------------------
+    // NOTE: This final clamp is intentionally LAST and overrides any prior merges.
     if let Some(tft) = ctx.time_constraints.target_feedback_time {
         if tft <= Duration::from_secs(120) {
             cfg.reporting.generate_coverage = false;
@@ -248,15 +274,11 @@ fn context_from_environment() -> TestConfigContext {
     }
     
     // Check resource constraints from environment
-    if let Ok(max_mem) = env::var("BITNET_MAX_MEMORY_MB") {
-        if let Ok(mb) = max_mem.parse::<u64>() {
-            ctx.resource_constraints.max_memory_mb = mb;
-        }
+    if let Some(mb) = env_u64("BITNET_MAX_MEMORY_MB") {
+        ctx.resource_constraints.max_memory_mb = mb;
     }
-    if let Ok(max_par) = env::var("BITNET_MAX_PARALLEL") {
-        if let Ok(n) = max_par.parse::<usize>() {
-            ctx.resource_constraints.max_parallel_tests = Some(n);
-        }
+    if let Some(n) = env_usize("BITNET_MAX_PARALLEL") {
+        ctx.resource_constraints.max_parallel_tests = Some(n);
     }
     if env_bool("BITNET_NO_NETWORK") {
         ctx.resource_constraints.network_access = false;
@@ -265,20 +287,14 @@ fn context_from_environment() -> TestConfigContext {
     }
     
     // Check time constraints from environment
-    if let Ok(max_dur) = env::var("BITNET_MAX_DURATION_SECS") {
-        if let Ok(secs) = max_dur.parse::<u64>() {
-            ctx.time_constraints.max_total_duration = Duration::from_secs(secs);
-        }
+    if let Some(d) = env_duration_secs("BITNET_MAX_DURATION_SECS") {
+        ctx.time_constraints.max_total_duration = d;
     }
-    if let Ok(timeout) = env::var("BITNET_TEST_TIMEOUT_SECS") {
-        if let Ok(secs) = timeout.parse::<u64>() {
-            ctx.time_constraints.max_test_timeout = Duration::from_secs(secs);
-        }
+    if let Some(d) = env_duration_secs("BITNET_TEST_TIMEOUT_SECS") {
+        ctx.time_constraints.max_test_timeout = d;
     }
-    if let Ok(feedback) = env::var("BITNET_TARGET_FEEDBACK_SECS") {
-        if let Ok(secs) = feedback.parse::<u64>() {
-            ctx.time_constraints.target_feedback_time = Some(Duration::from_secs(secs));
-        }
+    if let Some(d) = env_duration_secs("BITNET_TARGET_FEEDBACK_SECS") {
+        ctx.time_constraints.target_feedback_time = Some(d);
     }
     if env_bool("BITNET_FAIL_FAST") {
         ctx.time_constraints.fail_fast = true;
@@ -1635,6 +1651,7 @@ async fn run_tests() -> TestOpResult<()> {
 // Standard test entry point for cargo test
 #[tokio::test]
 async fn test_configuration_scenarios() {
+    let _g = env_guard(); // serialize all env changes in this test
     // Note: env_logger may already be initialized, so ignore errors
     let _ = env_logger::try_init();
     
@@ -1649,14 +1666,6 @@ mod shim_unit_tests {
     use std::time::Duration;
     use std::sync::Mutex;
     
-    // Global lock to prevent race conditions when tests modify environment variables
-    use std::sync::OnceLock;
-    static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    
-    fn get_env_lock() -> &'static Mutex<()> {
-        ENV_LOCK.get_or_init(|| Mutex::new(()))
-    }
-    
     #[test]
     fn test_fast_feedback_forces_json_and_caps_parallelism() {
         let mgr = ScenarioConfigManager::new();
@@ -1669,6 +1678,17 @@ mod shim_unit_tests {
         assert!(!cfg.reporting.generate_performance);
         assert_eq!(cfg.reporting.formats, vec![ReportFormat::Json]);
         assert!(cfg.max_parallel_tests <= 4);
+    }
+
+    #[test]
+    fn test_fast_feedback_disables_artifacts() {
+        let mgr = ScenarioConfigManager::new();
+        let mut ctx = TestConfigContext::default();
+        ctx.time_constraints.target_feedback_time = Some(Duration::from_secs(30));
+
+        let cfg = get_context_config(&mgr, &ctx);
+        assert!(!cfg.reporting.include_artifacts, "Fast-feedback should skip artifacts");
+        assert_eq!(cfg.reporting.formats, vec![ReportFormat::Json]);
     }
     
     #[test]
@@ -1684,7 +1704,7 @@ mod shim_unit_tests {
     
     #[test]
     fn test_env_ci_is_detected() {
-        let _guard = get_env_lock().lock().unwrap(); // Serialize env changes
+        let _g = env_guard(); // Serialize env changes
         
         // Save original values if exist
         let original_ci = env::var("CI").ok();
@@ -1733,7 +1753,7 @@ mod shim_unit_tests {
     
     #[test]
     fn test_env_bool_helper() {
-        let _guard = get_env_lock().lock().unwrap(); // Serialize env changes
+        let _g = env_guard(); // Serialize env changes
         
         // Test various truthy values
         env::set_var("TEST_VAR", "true");
@@ -1810,7 +1830,7 @@ mod shim_unit_tests {
     
     #[test]
     fn test_explicit_env_overrides_ci_detection() {
-        let _guard = get_env_lock().lock().unwrap(); // Serialize env changes
+        let _g = env_guard(); // Serialize env changes
         
         // Save original values
         let original_ci = env::var("CI").ok();
