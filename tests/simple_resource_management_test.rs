@@ -7,6 +7,9 @@ mod resource_management_tests {
     use tokio::io::AsyncWriteExt;
     use tokio::sync::{Mutex, Semaphore};
     use tokio::time::{sleep, timeout};
+    
+    // Import the canonical MB constant
+    use common::BYTES_PER_MB;
 
     // Platform-specific memory usage functions
     #[cfg(target_os = "windows")]
@@ -29,7 +32,7 @@ mod resource_management_tests {
     #[cfg(not(target_os = "windows"))]
     fn get_memory_usage() -> u64 {
         // Fallback for non-Windows platforms
-        1024 * 1024 // Return 1MB as a placeholder
+        BYTES_PER_MB // Return 1MB as a placeholder
     }
 
     /// Test 1: Memory usage and leak detection
@@ -62,7 +65,7 @@ mod resource_management_tests {
         println!("  Memory delta: {} bytes", memory_delta);
 
         // Check for memory leaks (allow for some variance)
-        let leak_threshold = 5 * 1024 * 1024; // 5MB threshold (generous for test)
+        let leak_threshold = 5 * BYTES_PER_MB; // 5MB threshold (generous for test)
         assert!(
             memory_delta < leak_threshold,
             "Memory leak detected: {} bytes not released (threshold: {} bytes)",
