@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 use tempfile::TempDir;
 use tokio::fs;
-use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
+use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Create simple test data for basic reporting
 fn create_simple_test_data() -> Vec<TestSuiteResult> {

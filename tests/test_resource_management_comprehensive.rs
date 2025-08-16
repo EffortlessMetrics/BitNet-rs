@@ -15,7 +15,7 @@ use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{Mutex, RwLock, Semaphore};
 use tokio::time::{sleep, timeout};
-use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
+use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Comprehensive resource management test suite for task 20
 pub struct ComprehensiveResourceManagementTestSuite {

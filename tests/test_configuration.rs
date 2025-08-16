@@ -26,7 +26,7 @@ use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
 use tempfile::{tempdir, TempDir};
-use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
+use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Test suite for configuration testing
 pub struct ConfigurationTestSuite {

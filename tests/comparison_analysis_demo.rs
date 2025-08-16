@@ -13,7 +13,7 @@ use bitnet_tests::common::reporting::comparison_analysis::{
 };
 use std::path::PathBuf;
 use std::time::Duration;
-use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
+use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 #[tokio::test]
 async fn test_comparison_analysis_report_generation() {

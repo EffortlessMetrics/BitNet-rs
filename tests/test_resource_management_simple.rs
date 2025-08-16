@@ -1,5 +1,5 @@
 #[cfg(test)]
-use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
+use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 mod resource_management_tests {
     use std::time::Duration;
