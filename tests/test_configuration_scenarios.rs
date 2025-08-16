@@ -25,6 +25,11 @@ fn ensure_format(v: &mut Vec<ReportFormat>, f: ReportFormat) {
     }
 }
 
+// Helper for consistent boolean environment variable parsing
+fn env_bool(var: &str) -> bool {
+    matches!(std::env::var(var).ok().as_deref(), Some("1" | "true" | "yes" | "on"))
+}
+
 
 // Compatibility structs for the old test API
 #[derive(Debug, Clone)]
@@ -80,8 +85,17 @@ struct QualityRequirements {
     pub accuracy_tolerance: f64,
 }
 
-// Helper function to call the framework with our test context,
-// then apply the legacy merges the test suite expects.
+/// Helper function to call the framework with our test context,
+/// then apply the legacy merges the test suite expects.
+///
+/// Precedence (later wins unless the "final clamp" applies):
+/// 1. scenario defaults
+/// 2. environment overrides
+/// 3. resource constraints (cap threads, disk cache, network)
+/// 4. time constraints (timeouts, fast-feedback)
+/// 5. quality requirements (coverage, perf, crossval)
+/// 6. platform caps (windows/mac limits)
+/// 7. final clamp (fast-feedback JSON-only + ≤4 parallel)
 fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) -> TestConfig {
     use std::time::Duration;
     use bitnet_tests::config::ReportFormat;
@@ -101,7 +115,9 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
         let mb = ctx.resource_constraints.max_disk_cache_mb;
         #[cfg(feature = "fixtures")]
         {
-            cfg.fixtures.max_cache_size = (mb as u64) * 1024 * 1024;
+            // Use saturating_mul to prevent overflow
+            const BYTES_PER_MB: u64 = 1_048_576; // 1024 * 1024
+            cfg.fixtures.max_cache_size = (mb as u64).saturating_mul(BYTES_PER_MB);
         }
     }
     if !ctx.resource_constraints.network_access {
@@ -188,6 +204,9 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
         }
     }
 
+    // Ensure max_parallel_tests is always at least 1
+    cfg.max_parallel_tests = cfg.max_parallel_tests.max(1);
+
     cfg
 }
 
@@ -208,7 +227,7 @@ fn context_from_environment() -> TestConfigContext {
     }
     
     // Also detect common CI environment variables
-    if env::var("CI").as_deref() == Ok("true") || env::var("GITHUB_ACTIONS").is_ok() {
+    if env_bool("CI") || env::var("GITHUB_ACTIONS").is_ok() {
         ctx.environment = EnvironmentType::CI;
     }
     
@@ -223,7 +242,7 @@ fn context_from_environment() -> TestConfigContext {
             ctx.resource_constraints.max_parallel_tests = Some(n);
         }
     }
-    if env::var("BITNET_NO_NETWORK").unwrap_or_default() == "1" {
+    if env_bool("BITNET_NO_NETWORK") {
         ctx.resource_constraints.network_access = false;
     } else {
         ctx.resource_constraints.network_access = true;
@@ -245,7 +264,7 @@ fn context_from_environment() -> TestConfigContext {
             ctx.time_constraints.target_feedback_time = Some(Duration::from_secs(secs));
         }
     }
-    if env::var("BITNET_FAIL_FAST").unwrap_or_default() == "1" {
+    if env_bool("BITNET_FAIL_FAST") {
         ctx.time_constraints.fail_fast = true;
     }
     
@@ -255,10 +274,10 @@ fn context_from_environment() -> TestConfigContext {
             ctx.quality_requirements.min_coverage = cov;
         }
     }
-    if env::var("BITNET_COMPREHENSIVE_REPORTING").unwrap_or_default() == "1" {
+    if env_bool("BITNET_COMPREHENSIVE_REPORTING") {
         ctx.quality_requirements.comprehensive_reporting = true;
     }
-    if env::var("BITNET_ENABLE_CROSSVAL").unwrap_or_default() == "1" {
+    if env_bool("BITNET_ENABLE_CROSSVAL") {
         ctx.quality_requirements.cross_validation = true;
     }
     
@@ -1605,4 +1624,127 @@ async fn test_configuration_scenarios() {
     
     // Run the test suite
     run_tests().await.expect("Configuration scenarios test suite failed");
+}
+
+// Unit tests for the compatibility shim
+#[cfg(test)]
+mod shim_unit_tests {
+    use super::*;
+    use std::time::Duration;
+    
+    #[test]
+    fn test_fast_feedback_forces_json_and_caps_parallelism() {
+        let mgr = ScenarioConfigManager::new();
+        let mut ctx = TestConfigContext::default();
+        ctx.time_constraints.target_feedback_time = Some(Duration::from_secs(60));
+        ctx.resource_constraints.max_parallel_tests = Some(32);
+        
+        let cfg = get_context_config(&mgr, &ctx);
+        assert!(!cfg.reporting.generate_coverage);
+        assert!(!cfg.reporting.generate_performance);
+        assert_eq!(cfg.reporting.formats, vec![ReportFormat::Json]);
+        assert!(cfg.max_parallel_tests <= 4);
+    }
+    
+    #[test]
+    fn test_platform_caps_apply_after_merges() {
+        let mgr = ScenarioConfigManager::new();
+        let mut ctx = TestConfigContext::default();
+        ctx.platform_settings.os = Some("darwin".to_string());
+        ctx.resource_constraints.max_parallel_tests = Some(64);
+        
+        let cfg = get_context_config(&mgr, &ctx);
+        assert!(cfg.max_parallel_tests <= 6, "Darwin should cap at 6 parallel tests");
+    }
+    
+    #[test]
+    fn test_env_ci_is_detected() {
+        // Save original value if exists
+        let original = env::var("CI").ok();
+        
+        env::set_var("CI", "true");
+        let ctx = context_from_environment();
+        assert!(matches!(ctx.environment, EnvironmentType::CI));
+        
+        // Restore original value
+        if let Some(val) = original {
+            env::set_var("CI", val);
+        } else {
+            env::remove_var("CI");
+        }
+    }
+    
+    #[test]
+    fn test_max_parallel_tests_always_at_least_one() {
+        let mgr = ScenarioConfigManager::new();
+        let mut ctx = TestConfigContext::default();
+        ctx.resource_constraints.max_parallel_tests = Some(0);
+        
+        let cfg = get_context_config(&mgr, &ctx);
+        assert!(cfg.max_parallel_tests >= 1, "Should never allow zero parallel tests");
+    }
+    
+    #[test]
+    fn test_disk_cache_saturating_mul() {
+        let mgr = ScenarioConfigManager::new();
+        let mut ctx = TestConfigContext::default();
+        ctx.resource_constraints.max_disk_cache_mb = u64::MAX / 1024; // Very large value
+        
+        let cfg = get_context_config(&mgr, &ctx);
+        #[cfg(feature = "fixtures")]
+        {
+            // Should not panic due to overflow
+            assert!(cfg.fixtures.max_cache_size > 0);
+        }
+    }
+    
+    #[test]
+    fn test_env_bool_helper() {
+        // Test various truthy values
+        env::set_var("TEST_VAR", "true");
+        assert!(env_bool("TEST_VAR"));
+        
+        env::set_var("TEST_VAR", "1");
+        assert!(env_bool("TEST_VAR"));
+        
+        env::set_var("TEST_VAR", "yes");
+        assert!(env_bool("TEST_VAR"));
+        
+        env::set_var("TEST_VAR", "on");
+        assert!(env_bool("TEST_VAR"));
+        
+        // Test falsy values
+        env::set_var("TEST_VAR", "false");
+        assert!(!env_bool("TEST_VAR"));
+        
+        env::set_var("TEST_VAR", "0");
+        assert!(!env_bool("TEST_VAR"));
+        
+        env::set_var("TEST_VAR", "no");
+        assert!(!env_bool("TEST_VAR"));
+        
+        // Clean up
+        env::remove_var("TEST_VAR");
+        
+        // Test missing var
+        assert!(!env_bool("NONEXISTENT_VAR"));
+    }
+    
+    #[test]
+    fn test_precedence_order() {
+        let mgr = ScenarioConfigManager::new();
+        let mut ctx = TestConfigContext::default();
+        
+        // Set conflicting values to test precedence
+        ctx.scenario = TestingScenario::Integration; // Would set generate_coverage = true
+        ctx.quality_requirements.comprehensive_reporting = true; // Would enable coverage
+        ctx.time_constraints.target_feedback_time = Some(Duration::from_secs(30)); // Should disable coverage
+        
+        let cfg = get_context_config(&mgr, &ctx);
+        
+        // Fast feedback should win due to final clamp
+        assert!(!cfg.reporting.generate_coverage, "Fast feedback final clamp should disable coverage");
+        assert!(!cfg.reporting.generate_performance, "Fast feedback final clamp should disable performance");
+        assert_eq!(cfg.reporting.formats, vec![ReportFormat::Json], "Fast feedback should force JSON only");
+    }
 }
