@@ -78,11 +78,11 @@ do_class "MB literal (1024*1024)" \
   's/\b1024\s*\*\s*1024\b/BYTES_PER_MB/g' \
   "codemod(units): 1024*1024 → BYTES_PER_MB (tests)"
 
-# 2) N * 1024 * 1024 → N * BYTES_PER_MB
+# 2) N * 1024 * 1024 → N * BYTES_PER_MB (allow underscores in N)
 do_class "MB scaled (N*1024*1024)" \
-  '\b(\d+)\s*\*\s*1024\s*\*\s*1024\b' \
-  '[0-9]+[[:space:]]*\*[[:space:]]*1024[[:space:]]*\*[[:space:]]*1024' \
-  's/\b(\d+)\s*\*\s*1024\s*\*\s*1024\b/$1 * BYTES_PER_MB/g' \
+  '\b(\d(?:_?\d)*)\s*\*\s*1024\s*\*\s*1024\b' \
+  '[0-9_]+[[:space:]]*\*[[:space:]]*1024[[:space:]]*\*[[:space:]]*1024' \
+  's/\b(\d(?:_?\d)*)\s*\*\s*1024\s*\*\s*1024\b/$1 * BYTES_PER_MB/g' \
   "codemod(units): N*1024*1024 → N*BYTES_PER_MB (tests)"
 
 # 3) MB decimal constants → BYTES_PER_MB
@@ -99,11 +99,11 @@ do_class "GB literal (1024*1024*1024)" \
   's/\b1024\s*\*\s*1024\s*\*\s*1024\b/BYTES_PER_GB/g' \
   "codemod(units): 1024*1024*1024 → BYTES_PER_GB (tests)"
 
-# 5) N*1024*1024*1024 → N*BYTES_PER_GB
+# 5) N*1024*1024*1024 → N*BYTES_PER_GB (allow underscores in N; unwrapped pattern)
 do_class "GB scaled (N*1024*1024*1024)" \
-  '\b(\d+)\s*\*\s*1024\s*\*\s*1024\s*\*\s*1024\b' \
-  '[0-9]+[[:space:]]*\*[[:space:]]*1024[[:space:]]*\*[[:space:]]*1024[[:space:]]*\*[[:space:]]*1024' \
-  's/\b(\d+)\s*\*\s*1024\s*\*\s*1024\s*\*\s*1024\b/$1 * BYTES_PER_GB/g' \
+  '\b(\d(?:_?\d)*)\s*\*\s*1024\s*\*\s*1024\s*\*\s*1024\b' \
+  '[0-9_]+[[:space:]]*\*[[:space:]]*1024[[:space:]]*\*[[:space:]]*1024[[:space:]]*\*[[:space:]]*1024' \
+  's/\b(\d(?:_?\d)*)\s*\*\s*1024\s*\*\s*1024\s*\*\s*1024\b/$1 * BYTES_PER_GB/g' \
   "codemod(units): N*1024*1024*1024 → N*BYTES_PER_GB (tests)"
 
 # 6) GB decimal constants → BYTES_PER_GB
@@ -113,7 +113,16 @@ do_class "GB decimal (1073741824 / 1_073_741_824)" \
   's/\b(1_073_741_824|1073741824)\b/BYTES_PER_GB/g' \
   "codemod(units): GB decimal → BYTES_PER_GB (tests)"
 
-# 7) Bit-shifts (review-only)
+# 7) KB scaled (conservative; run after MB/GB steps)
+# Replace: N * 1024   (NOT followed by another * 1024)
+# Rationale: Avoid touching MB/GB chains; Perl does the negative-lookahead filter.
+do_class "KB scaled (N*1024, not followed by another *1024)" \
+  '\b(\d(?:_?\d)*)\s*\*\s*1024\b(?!\s*\*)' \
+  '[0-9_]+[[:space:]]*\*[[:space:]]*1024' \
+  's/\b(\d(?:_?\d)*)\s*\*\s*1024\b(?!\s*\*)/$1 * BYTES_PER_KB/g' \
+  "codemod(units): N*1024 → N*BYTES_PER_KB (tests, conservative)"
+
+# 8) Bit-shifts (review-only)
 echo
 echo "Candidates for manual review (bit-shifts):"
 if has_cmd rg; then
