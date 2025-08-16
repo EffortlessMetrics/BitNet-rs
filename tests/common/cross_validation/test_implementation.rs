@@ -271,7 +271,7 @@ mod tests {
     #[tokio::test]
     async fn test_resource_manager() {
         let limits = ResourceLimits {
-            max_memory: Some(10 * 1024 * 1024), // 10MB
+            max_memory: Some(10 * crate::BYTES_PER_MB), // 10MB
             max_implementations: Some(2),
             max_models_per_implementation: Some(1),
         };
