@@ -1,0 +1,26 @@
+name: Docs Check
+on:
+  pull_request:
+    paths: ["docs/**", "README.md", "CONTRIBUTING.md"]
+  push:
+    branches: [main]
+    paths: ["docs/**", "README.md", "CONTRIBUTING.md"]
+
+jobs:
+  linkcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lycheeverse/lychee-action@v1
+        with:
+          args: --verbose --no-progress --accept 200,429,999 docs/**/*.md README.md CONTRIBUTING.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: avto-dev/markdown-lint@v1
+        with:
+          args: "README.md CONTRIBUTING.md docs/**/*.md"
