@@ -53,7 +53,7 @@ pub mod selection;
 
 // Re-export commonly used functions
 pub use utils::{format_bytes, format_duration, get_memory_usage, get_peak_memory_usage};
-pub use units::{BYTES_PER_MB, BYTES_PER_GB};
+pub use units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 pub use env::{env_guard, env_bool, env_u64, env_usize, env_duration_secs, env_string};
 
 // Cross-validation module temporarily disabled
