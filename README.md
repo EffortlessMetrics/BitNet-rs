@@ -489,7 +489,7 @@ pub const BYTES_PER_MB: u64 = 1_048_576; // 1024 * 1024
 Typed environment helpers are available in `tests/common/env.rs`:
 
 ```rust
-use common::env::{env_bool, env_u64, env_usize, env_duration_secs, env_string};
+use bitnet_tests::common::{env_bool, env_u64, env_usize, env_duration_secs, env_string};
 
 // Parse booleans (case-insensitive: true/1/yes/on/enabled)
 let is_ci = env_bool("CI");

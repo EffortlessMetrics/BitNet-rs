@@ -8,8 +8,8 @@ use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 use tempfile::TempDir;
 
-// Import the canonical MB constant
-use common::BYTES_PER_MB;
+// Import the canonical MB constant from the test harness crate
+use bitnet_tests::common::BYTES_PER_MB;
 
 // Simple test structures to avoid dependency issues
 #[derive(Debug, Clone)]

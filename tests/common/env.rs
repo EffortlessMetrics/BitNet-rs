@@ -20,6 +20,7 @@ static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 ///     // Test code here...
 /// }
 /// ```
+#[must_use]
 pub fn env_guard() -> std::sync::MutexGuard<'static, ()> {
     ENV_LOCK
         .get_or_init(|| Mutex::new(()))
