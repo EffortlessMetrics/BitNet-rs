@@ -39,6 +39,12 @@ With `degraded-ok` enabled:
 | `Degraded` | 200 OK | Partial degradation but still serving |
 | `Unhealthy` | 503 Service Unavailable | Critical issues detected |
 
+### Endpoint Semantics
+
+* **`/health`** – Returns the overall health JSON and **HTTP status according to the mapping** (default fail-fast; with `--features degraded-ok`, Degraded → 200).
+* **`/health/live`** – **Uses the same mapping** as `/health`.
+* **`/health/ready`** – **Always fail-fast**: `Healthy` → 200; `Degraded|Unhealthy` → 503, regardless of `degraded-ok`.
+
 ## Examples
 
 ```bash

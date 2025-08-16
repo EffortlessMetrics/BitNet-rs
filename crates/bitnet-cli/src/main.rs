@@ -17,7 +17,9 @@ mod config;
 mod sampling;
 
 #[cfg(feature = "full-cli")]
-use commands::{BenchmarkCommand, ConvertCommand, InferenceCommand, ServeCommand};
+use commands::{ConvertCommand, InferenceCommand, ServeCommand};
+#[cfg(feature = "cli-bench")]
+use commands::BenchmarkCommand;
 use config::{CliConfig, ConfigBuilder};
 
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
@@ -136,7 +138,7 @@ enum Commands {
     #[command(alias = "conv")]
     Convert(ConvertCommand),
 
-    #[cfg(feature = "full-cli")]
+    #[cfg(feature = "cli-bench")]
     /// Benchmark model performance
     #[command(alias = "bench")]
     Benchmark(BenchmarkCommand),
@@ -227,7 +229,7 @@ async fn main() -> Result<()> {
         Some(Commands::Inference(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
-        #[cfg(feature = "full-cli")]
+        #[cfg(feature = "cli-bench")]
         Some(Commands::Benchmark(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Serve(cmd)) => cmd.execute(&config).await,

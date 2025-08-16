@@ -1,4 +1,5 @@
 //! Benchmarking command implementation
+#![cfg(feature = "cli-bench")]
 
 use anyhow::{Context, Result};
 use clap::Args;

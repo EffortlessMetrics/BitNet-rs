@@ -28,3 +28,15 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup component add clippy
       - run: cargo clippy -p bitnet-server --all-targets --features degraded-ok -- -D warnings
+
+  test-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo test -p bitnet-server --all-targets
+
+  test-server-degraded-ok:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo test -p bitnet-server --all-targets --features degraded-ok

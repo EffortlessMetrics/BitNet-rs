@@ -10,7 +10,7 @@ use tokio::sync::RwLock;
 use super::metrics::MetricsCollector;
 
 /// Health check status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum HealthStatus {
     Healthy,
@@ -310,7 +310,7 @@ async fn health_handler(
     State(health_checker): State<Arc<HealthChecker>>,
 ) -> (StatusCode, Json<HealthResponse>) {
     let health = health_checker.check_health().await;
-    let status_code = status_code_for(health.status.clone());
+    let status_code = status_code_for(health.status);
     (status_code, Json(health))
 }
 

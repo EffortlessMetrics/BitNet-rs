@@ -17,7 +17,7 @@ path = "src/main.rs"
 [dependencies]
 bitnet-common = { path = "../bitnet-common" }
 bitnet-models = { path = "../bitnet-models" }
-bitnet-inference = { path = "../bitnet-inference" }
+bitnet-inference = { path = "../bitnet-inference", optional = true }
 bitnet-quantization = { path = "../bitnet-quantization" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers" }
 candle-core.workspace = true
@@ -44,7 +44,9 @@ rand_chacha = "0.3"
 
 [features]
 default = ["cpu"]
-cpu = ["bitnet-inference/cpu"]
-gpu = ["bitnet-inference/gpu"]
+cpu = ["bitnet-inference?/cpu"]
+gpu = ["bitnet-inference?/gpu"]
+# Gate benchmark subcommand behind feature flag
+cli-bench = ["dep:bitnet-inference"]
 # build the extra subcommands only when you want them
-full-cli = []
+full-cli = ["cli-bench"]
