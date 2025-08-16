@@ -329,6 +329,7 @@ async fn handle_config_command(action: ConfigAction, config: &CliConfig) -> Resu
 }
 
 /// Run text generation with sampling
+#[allow(clippy::too_many_arguments)]
 async fn run_simple_generation(
     model_path: std::path::PathBuf,
     tokenizer_path: Option<std::path::PathBuf>,

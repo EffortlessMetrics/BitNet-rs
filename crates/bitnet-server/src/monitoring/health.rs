@@ -52,7 +52,9 @@ pub struct HealthMetrics {
 /// Health checker that monitors system components
 pub struct HealthChecker {
     start_time: Instant,
+    #[allow(dead_code)]
     metrics: Arc<MetricsCollector>,
+    #[allow(dead_code)]
     component_checks: Arc<RwLock<HashMap<String, ComponentHealth>>>,
 }
 
@@ -120,7 +122,7 @@ impl HealthChecker {
         let memory_health = self.check_memory_health().await;
         let inference_health = self.check_inference_engine_health().await;
 
-        let critical_components = vec![&model_health, &memory_health, &inference_health];
+        let critical_components = [&model_health, &memory_health, &inference_health];
 
         if critical_components.iter().any(|c| c.status == HealthStatus::Unhealthy) {
             HealthStatus::Unhealthy
@@ -184,6 +186,7 @@ impl HealthChecker {
         }
     }
 
+    #[allow(dead_code)]
     #[cfg(feature = "cuda")]
     async fn check_gpu_health(&self) -> ComponentHealth {
         let start = Instant::now();
@@ -202,6 +205,7 @@ impl HealthChecker {
         }
     }
 
+    #[allow(dead_code)]
     #[cfg(feature = "cuda")]
     async fn check_gpu_status(&self) -> Result<String, String> {
         // Placeholder GPU check - in production, use actual CUDA queries
@@ -246,13 +250,7 @@ impl HealthChecker {
         let degraded_count =
             components.values().filter(|c| c.status == HealthStatus::Degraded).count();
 
-        if unhealthy_count > 0 {
-            HealthStatus::Degraded
-        } else if degraded_count > 0 {
-            HealthStatus::Degraded
-        } else {
-            HealthStatus::Healthy
-        }
+        overall_status_from_counts(unhealthy_count, degraded_count)
     }
 
     async fn collect_health_metrics(&self) -> HealthMetrics {
@@ -265,6 +263,17 @@ impl HealthChecker {
             memory_usage_mb: 0.0,
             tokens_per_second: 0.0,
         }
+    }
+}
+
+#[inline]
+fn overall_status_from_counts(unhealthy_count: usize, degraded_count: usize) -> HealthStatus {
+    if unhealthy_count > 0 {
+        HealthStatus::Unhealthy
+    } else if degraded_count > 0 {
+        HealthStatus::Degraded
+    } else {
+        HealthStatus::Healthy
     }
 }
 
@@ -283,7 +292,7 @@ async fn health_handler(
 ) -> Result<Json<HealthResponse>, StatusCode> {
     let health = health_checker.check_health().await;
 
-    let status_code = match health.status {
+    let _status_code = match health.status {
         HealthStatus::Healthy => StatusCode::OK,
         HealthStatus::Degraded => StatusCode::OK, // Still serving traffic
         HealthStatus::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,
@@ -305,5 +314,27 @@ async fn readiness_handler(State(health_checker): State<Arc<HealthChecker>>) -> 
     match health_checker.check_readiness().await {
         HealthStatus::Healthy => StatusCode::OK,
         HealthStatus::Degraded | HealthStatus::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{overall_status_from_counts, HealthStatus};
+
+    #[test]
+    fn overall_unhealthy_wins() {
+        assert!(matches!(overall_status_from_counts(1, 0), HealthStatus::Unhealthy));
+        assert!(matches!(overall_status_from_counts(3, 2), HealthStatus::Unhealthy));
+    }
+
+    #[test]
+    fn overall_degraded_when_no_unhealthy() {
+        assert!(matches!(overall_status_from_counts(0, 1), HealthStatus::Degraded));
+        assert!(matches!(overall_status_from_counts(0, 7), HealthStatus::Degraded));
+    }
+
+    #[test]
+    fn overall_healthy_when_none() {
+        assert!(matches!(overall_status_from_counts(0, 0), HealthStatus::Healthy));
     }
 }

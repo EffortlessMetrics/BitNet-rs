@@ -79,6 +79,7 @@ impl Default for ValidatedConfig {
 }
 
 /// Configuration validator with comprehensive error reporting
+#[derive(Default)]
 pub struct ConfigValidator {
     errors: Vec<String>,
     warnings: Vec<String>,
@@ -86,7 +87,7 @@ pub struct ConfigValidator {
 
 impl ConfigValidator {
     pub fn new() -> Self {
-        Self { errors: Vec::new(), warnings: Vec::new() }
+        Self::default()
     }
 
     /// Validate a configuration and return detailed results

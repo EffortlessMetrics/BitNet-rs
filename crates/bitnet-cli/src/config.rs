@@ -89,6 +89,7 @@ impl CliConfig {
     }
 
     /// Save configuration to file
+    #[allow(dead_code)]
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let path = path.as_ref();
         debug!("Saving configuration to: {}", path.display());
