@@ -77,6 +77,10 @@ struct Cli {
     #[arg(long, value_name = "SHELL")]
     completions: Option<Shell>,
 
+    /// Write the effective configuration to a file and exit
+    #[arg(long, value_name = "PATH")]
+    save_config: Option<std::path::PathBuf>,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -182,6 +186,13 @@ async fn main() -> Result<()> {
 
     // Load configuration
     let config = load_configuration(&cli).await?;
+
+    // Handle save-config flag
+    if let Some(path) = &cli.save_config {
+        config.save_to_file(path)?;
+        println!("Saved effective configuration to {}", path.display());
+        return Ok(());
+    }
 
     // Setup logging
     setup_logging(&config, cli.log_level.as_deref())?;
