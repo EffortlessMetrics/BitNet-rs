@@ -8,6 +8,9 @@ use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 use tempfile::TempDir;
 
+// Import the canonical MB constant
+use common::BYTES_PER_MB;
+
 // Simple test structures to avoid dependency issues
 #[derive(Debug, Clone)]
 pub struct SimpleBenchmarkResult {
@@ -29,8 +32,8 @@ impl SimpleBenchmarkResult {
             avg_duration: Duration::from_millis(duration_ms),
             min_duration: Duration::from_millis(duration_ms.saturating_sub(2)),
             max_duration: Duration::from_millis(duration_ms + 5),
-            peak_memory: memory_mb * 1024 * 1024,
-            avg_memory: memory_mb * 1024 * 1024,
+            peak_memory: memory_mb * BYTES_PER_MB,
+            avg_memory: memory_mb * BYTES_PER_MB,
             ops_per_second: ops_per_sec,
         }
     }

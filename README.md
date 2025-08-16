@@ -486,15 +486,16 @@ pub const BYTES_PER_MB: u64 = 1_048_576; // 1024 * 1024
 
 ### Case‑insensitive env parsers
 
-Keep env parsing consistent and whitespace‑tolerant:
+Typed environment helpers are available in `tests/common/env.rs`:
 
 ```rust
-fn env_bool(var: &str) -> bool { /* ...case‑insensitive true/1/yes/on... */ }
-fn env_u64(var: &str) -> Option<u64> { std::env::var(var).ok()?.trim().parse().ok() }
-fn env_usize(var: &str) -> Option<usize> { std::env::var(var).ok()?.trim().parse().ok() }
-fn env_duration_secs(var: &str) -> Option<std::time::Duration> {
-    env_u64(var).map(std::time::Duration::from_secs)
-}
+use common::env::{env_bool, env_u64, env_usize, env_duration_secs, env_string};
+
+// Parse booleans (case-insensitive: true/1/yes/on/enabled)
+let is_ci = env_bool("CI");
+
+// Parse numbers with whitespace tolerance
+let threads = env_usize("BITNET_THREADS").unwrap_or(4);
 ```
 
 ### Further reading

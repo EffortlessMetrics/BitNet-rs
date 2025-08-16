@@ -3,6 +3,7 @@
 ## Env mutations
 - Take `let _g = env_guard();` at the top of any test that touches `std::env`.
 - Save & restore original env values if you temporarily override them.
+- Typed env helpers are available in `tests/common/env.rs`.
 
 ```rust
 #[test]
