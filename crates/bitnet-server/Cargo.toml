@@ -43,5 +43,6 @@ path = "src/bin/server.rs"
 
 [features]
 default = ["prometheus"]
+cuda = []  # Recognized flag that gates GPU health checks
 prometheus = ["dep:prometheus", "dep:metrics-prometheus"]
 opentelemetry = ["dep:opentelemetry", "dep:opentelemetry-prometheus", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tracing-opentelemetry"]

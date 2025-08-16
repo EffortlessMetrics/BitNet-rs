@@ -103,9 +103,8 @@ impl Sampler {
         indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
         let mut filtered = vec![f32::NEG_INFINITY; logits.len()];
-        for i in 0..self.top_k.min(indexed.len()) {
-            let (idx, val) = indexed[i];
-            filtered[idx] = val;
+        for (idx, val) in indexed.iter().take(self.top_k.min(indexed.len())) {
+            filtered[*idx] = *val;
         }
         filtered
     }
@@ -133,9 +132,8 @@ impl Sampler {
         }
 
         let mut filtered = vec![f32::NEG_INFINITY; logits.len()];
-        for i in 0..cutoff_idx {
-            let (idx, val) = indexed[i];
-            filtered[idx] = val;
+        for (idx, val) in indexed.iter().take(cutoff_idx) {
+            filtered[*idx] = *val;
         }
         filtered
     }
