@@ -18,6 +18,13 @@ use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 
+// Helper to avoid duplicate formats in reporting configuration
+fn ensure_format(v: &mut Vec<ReportFormat>, f: ReportFormat) {
+    if !v.contains(&f) {
+        v.push(f);
+    }
+}
+
 
 // Compatibility structs for the old test API
 #[derive(Debug, Clone)]
@@ -139,9 +146,7 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
         cfg.reporting.generate_performance = true;
         cfg.reporting.include_artifacts = true;
         for f in [ReportFormat::Html, ReportFormat::Json, ReportFormat::Junit, ReportFormat::Markdown] {
-            if !cfg.reporting.formats.contains(&f) {
-                cfg.reporting.formats.push(f);
-            }
+            ensure_format(&mut cfg.reporting.formats, f);
         }
     }
     if ctx.quality_requirements.performance_monitoring {
@@ -165,10 +170,22 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
         let osl = os.to_lowercase();
         if osl.contains("windows") {
             if cfg.max_parallel_tests > 8 { cfg.max_parallel_tests = 8; }
-        } else if osl.contains("mac") {
+        } else if osl.contains("mac") || osl.contains("darwin") {
             if cfg.max_parallel_tests > 6 { cfg.max_parallel_tests = 6; }
         }
         // Linux/generic: no extra cap
+    }
+
+    // ----- Final clamp: fast-feedback must stay minimal -------------------------
+    if let Some(tft) = ctx.time_constraints.target_feedback_time {
+        if tft <= Duration::from_secs(120) {
+            cfg.reporting.generate_coverage = false;
+            cfg.reporting.generate_performance = false;
+            cfg.reporting.formats = vec![ReportFormat::Json];
+            if cfg.max_parallel_tests > 4 {
+                cfg.max_parallel_tests = 4;
+            }
+        }
     }
 
     cfg
@@ -188,6 +205,11 @@ fn context_from_environment() -> TestConfigContext {
             "ci" => EnvironmentType::CI,
             _ => ctx.environment,
         };
+    }
+    
+    // Also detect common CI environment variables
+    if env::var("CI").as_deref() == Ok("true") || env::var("GITHUB_ACTIONS").is_ok() {
+        ctx.environment = EnvironmentType::CI;
     }
     
     // Check resource constraints from environment
