@@ -1,5 +1,4 @@
 //! Health check endpoints for load balancer integration
-#![allow(unexpected_cfgs)]
 
 use axum::{extract::State, http::StatusCode, response::Json, routing::get, Router};
 use serde::{Deserialize, Serialize};
@@ -251,7 +250,9 @@ impl HealthChecker {
         let degraded_count =
             components.values().filter(|c| c.status == HealthStatus::Degraded).count();
 
-        if unhealthy_count > 0 || degraded_count > 0 {
+        if unhealthy_count > 0 {
+            HealthStatus::Unhealthy
+        } else if degraded_count > 0 {
             HealthStatus::Degraded
         } else {
             HealthStatus::Healthy
