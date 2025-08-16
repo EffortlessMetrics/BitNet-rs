@@ -803,7 +803,7 @@ impl TestCase for BatchResourceManagementTest {
         // Test resource limits
         debug!("Testing resource limits");
         let limited_config = InferenceConfig {
-            memory_pool_size: 1024 * 1024 * 100, // 100MB limit
+            memory_pool_size: BYTES_PER_MB * 100, // 100MB limit
             ..Default::default()
         };
 

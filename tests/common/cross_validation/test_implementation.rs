@@ -68,7 +68,7 @@ impl BitNetImplementation for MockImplementation {
                 name: "test_model".to_string(),
                 path: "/tmp/test_model.gguf".into(),
                 format: ModelFormat::GGUF,
-                size_bytes: 1024 * 1024,
+                size_bytes: BYTES_PER_MB,
                 parameter_count: Some(1_000_000),
                 context_length: Some(2048),
                 vocabulary_size: Some(32000),
@@ -111,7 +111,7 @@ impl BitNetImplementation for MockImplementation {
             probabilities: Some(vec![0.9; output_tokens.len()]),
             logits: None,
             duration,
-            memory_usage: 1024 * 1024, // 1MB
+            memory_usage: BYTES_PER_MB, // 1MB
             token_count: output_tokens.len(),
         })
     }
@@ -126,7 +126,7 @@ impl BitNetImplementation for MockImplementation {
 
     fn get_resource_info(&self) -> ResourceInfo {
         ResourceInfo {
-            memory_usage: 1024 * 1024, // 1MB
+            memory_usage: BYTES_PER_MB, // 1MB
             file_handles: 1,
             thread_count: 1,
             gpu_memory: None,
@@ -235,7 +235,7 @@ mod tests {
         assert!(!result.text.is_empty());
         assert!(result.probabilities.is_some());
         assert!(result.duration.as_millis() >= 0);
-        assert_eq!(result.memory_usage, 1024 * 1024);
+        assert_eq!(result.memory_usage, BYTES_PER_MB);
     }
 
     #[tokio::test]
@@ -281,11 +281,11 @@ mod tests {
         let impl1 = Box::new(MockImplementation::new("test1".to_string(), "1.0".to_string()));
         manager.add_implementation("impl1".to_string(), impl1).await.unwrap();
 
-        assert_eq!(manager.get_total_memory_usage(), 1024 * 1024); // 1MB
+        assert_eq!(manager.get_total_memory_usage(), BYTES_PER_MB); // 1MB
 
         let summary = manager.get_resource_summary();
         assert_eq!(summary.total_implementations, 1);
-        assert_eq!(summary.total_memory, 1024 * 1024);
+        assert_eq!(summary.total_memory, BYTES_PER_MB);
         assert_eq!(summary.active_implementations.len(), 1);
 
         // Cleanup

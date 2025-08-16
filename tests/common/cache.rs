@@ -36,7 +36,7 @@ impl Default for CacheConfig {
         Self {
             enabled: true,
             max_age_seconds: 24 * 60 * 60,      // 24 hours
-            max_size_bytes: 1024 * 1024 * 1024, // 1 GB
+            max_size_bytes: BYTES_PER_MB * 1024, // 1 GB
             incremental_testing: true,
             smart_selection: true,
             compression_level: 6,

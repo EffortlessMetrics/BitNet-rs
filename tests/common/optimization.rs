@@ -114,7 +114,7 @@ impl TestExecutionOptimizer {
         #[cfg(feature = "fixtures")]
         {
             config.fixtures.auto_download = self.config.enable_caching;
-            config.fixtures.max_cache_size = 5 * 1024 * 1024 * 1024; // 5GB cache
+            config.fixtures.max_cache_size = 5 * BYTES_PER_MB * 1024; // 5GB cache
         }
 
         // Optimize reporting for speed

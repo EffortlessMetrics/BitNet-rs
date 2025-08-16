@@ -1419,9 +1419,9 @@ mod tests {
                 avg_duration: Some(Duration::from_millis((1000.0 / ops_per_sec) as u64)),
                 min_duration: Some(Duration::from_millis((900.0 / ops_per_sec) as u64)),
                 max_duration: Some(Duration::from_millis((1100.0 / ops_per_sec) as u64)),
-                avg_memory_usage: Some(memory_mb * 1024 * 1024),
-                peak_memory_usage: Some(memory_mb * 1024 * 1024),
-                total_memory_allocated: Some(memory_mb * 1024 * 1024),
+                avg_memory_usage: Some(memory_mb * BYTES_PER_MB),
+                peak_memory_usage: Some(memory_mb * BYTES_PER_MB),
+                total_memory_allocated: Some(memory_mb * BYTES_PER_MB),
                 custom_metrics: HashMap::new(),
             },
         }

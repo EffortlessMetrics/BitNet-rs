@@ -31,7 +31,7 @@ pub fn fast_config() -> TestConfig {
     config.fixtures.auto_download = false;
 
     // Smaller cache size
-    config.fixtures.max_cache_size = 100 * 1024 * 1024; // 100 MB
+    config.fixtures.max_cache_size = 100 * BYTES_PER_MB; // 100 MB
 
     config
 }

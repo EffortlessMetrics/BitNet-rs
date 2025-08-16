@@ -94,7 +94,7 @@ fn create_standalone_test_data() -> Vec<TestSuiteResult> {
                 status: TestStatus::Passed,
                 duration: Duration::from_secs(2),
                 metrics: TestMetrics {
-                    memory_peak: Some(1024 * 1024),
+                    memory_peak: Some(BYTES_PER_MB),
                     memory_average: Some(512 * 1024),
                     cpu_time: Some(Duration::from_millis(1800)),
                     wall_time: Duration::from_secs(2),
@@ -115,7 +115,7 @@ fn create_standalone_test_data() -> Vec<TestSuiteResult> {
                 duration: Duration::from_secs(2),
                 metrics: TestMetrics {
                     memory_peak: Some(2048 * 1024),
-                    memory_average: Some(1024 * 1024),
+                    memory_average: Some(BYTES_PER_MB),
                     cpu_time: Some(Duration::from_millis(1900)),
                     wall_time: Duration::from_secs(2),
                     custom_metrics: HashMap::new(),

@@ -330,7 +330,7 @@ async fn test_platform_specific_configuration() -> TestOpResult<()> {
     #[cfg(target_arch = "x86_64")]
     {
         let mut x86_64_config = base_config.clone();
-        x86_64_config.fixtures.max_cache_size = 10 * 1024 * 1024 * 1024; // 10GB on x86_64
+        x86_64_config.fixtures.max_cache_size = 10 * BYTES_PER_MB * 1024; // 10GB on x86_64
         validate_config(&x86_64_config)
             .map_err(|e| TestError::assertion(format!("x86_64 config validation failed: {}", e)))?;
     }

@@ -609,7 +609,7 @@ impl FixtureManager {
                 filename: "small-bitnet.gguf".to_string(),
                 checksum: "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
                     .to_string(), // "hello" hash for testing
-                size: 1024 * 1024, // 1MB
+                size: BYTES_PER_MB, // 1MB
                 description: "Small BitNet model for integration testing".to_string(),
                 model_type: ModelType::BitNet,
                 format: ModelFormat::Gguf,
