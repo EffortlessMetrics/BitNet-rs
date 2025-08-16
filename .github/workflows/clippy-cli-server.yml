@@ -1,0 +1,23 @@
+name: Clippy (CLI & Server)
+
+on:
+  pull_request:
+    paths:
+      - "crates/bitnet-cli/**"
+      - "crates/bitnet-server/**"
+      - ".github/workflows/**"
+  push:
+    branches: [main]
+    paths:
+      - "crates/bitnet-cli/**"
+      - "crates/bitnet-server/**"
+      - ".github/workflows/**"
+
+jobs:
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup component add clippy
+      - run: cargo clippy -p bitnet-cli    --all-targets -- -D warnings
+      - run: cargo clippy -p bitnet-server --all-targets -- -D warnings
