@@ -12,7 +12,7 @@ use bitnet_tests::{
     },
     errors::{TestError, TestOpResult},
     harness::{FixtureCtx, TestCase, TestHarness, TestSuite},
-    results::{TestMetrics, TestResult as TestCaseResult, TestStatus},
+    results::{TestMetrics, TestStatus},
 };
 use std::collections::HashMap;
 use std::env;
@@ -147,9 +147,9 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
         }
     }
     if ctx.resource_constraints.max_disk_cache_mb > 0 {
-        let mb = ctx.resource_constraints.max_disk_cache_mb;
         #[cfg(feature = "fixtures")]
         {
+            let mb = ctx.resource_constraints.max_disk_cache_mb;
             // Use saturating_mul to prevent overflow
             cfg.fixtures.max_cache_size = (mb as u64).saturating_mul(BYTES_PER_MB);
         }
@@ -1664,7 +1664,6 @@ async fn test_configuration_scenarios() {
 mod shim_unit_tests {
     use super::*;
     use std::time::Duration;
-    use std::sync::Mutex;
     
     #[test]
     fn test_fast_feedback_forces_json_and_caps_parallelism() {
