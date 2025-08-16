@@ -26,6 +26,7 @@ use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
 use tempfile::{tempdir, TempDir};
+use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Test suite for configuration testing
 pub struct ConfigurationTestSuite {
@@ -255,7 +256,7 @@ impl TestCase for ConfigurationCombinationsTest {
         // Test memory-constrained configuration
         let mut memory_constrained_config = TestConfig::default();
         memory_constrained_config.max_parallel_tests = 1;
-        memory_constrained_config.fixtures.max_cache_size = 100 * 1024 * 1024; // 100MB
+        memory_constrained_config.fixtures.max_cache_size = 100 * BYTES_PER_MB; // 100MB
         memory_constrained_config.reporting.include_artifacts = false;
         validate_config(&memory_constrained_config).map_err(|e| {
             TestError::assertion(format!("Memory-constrained config validation failed: {}", e))
@@ -780,7 +781,7 @@ impl TestCase for FeatureFlagCombinationTest {
         // Test all fixture features enabled
         let mut fixture_config = TestConfig::default();
         fixture_config.fixtures.auto_download = true;
-        fixture_config.fixtures.max_cache_size = 5 * 1024 * 1024 * 1024; // 5GB
+        fixture_config.fixtures.max_cache_size = 5 * BYTES_PER_MB * 1024; // 5GB
         fixture_config.fixtures.cleanup_interval = Duration::from_secs(12 * 60 * 60); // 12 hours
         fixture_config.fixtures.download_timeout = Duration::from_secs(600); // 10 minutes
         fixture_config.fixtures.custom_fixtures.push(CustomFixture {
@@ -907,7 +908,7 @@ impl TestCase for PlatformSpecificConfigurationTest {
         #[cfg(target_arch = "x86_64")]
         {
             let mut x86_64_config = base_config.clone();
-            x86_64_config.fixtures.max_cache_size = 10 * 1024 * 1024 * 1024; // 10GB on x86_64
+            x86_64_config.fixtures.max_cache_size = 10 * BYTES_PER_MB * 1024; // 10GB on x86_64
             validate_config(&x86_64_config).map_err(|e| {
                 TestError::assertion(format!("x86_64 config validation failed: {}", e))
             })?;
@@ -916,7 +917,7 @@ impl TestCase for PlatformSpecificConfigurationTest {
         #[cfg(target_arch = "aarch64")]
         {
             let mut aarch64_config = base_config.clone();
-            aarch64_config.fixtures.max_cache_size = 5 * 1024 * 1024 * 1024; // 5GB on ARM64
+            aarch64_config.fixtures.max_cache_size = 5 * BYTES_PER_MB * 1024; // 5GB on ARM64
             aarch64_config.max_parallel_tests = std::cmp::min(num_cpus::get(), 4); // Conservative on ARM
             validate_config(&aarch64_config).map_err(|e| {
                 TestError::assertion(format!("aarch64 config validation failed: {}", e))
@@ -947,7 +948,7 @@ impl TestCase for PlatformSpecificConfigurationTest {
         if is_container {
             let mut container_config = base_config.clone();
             container_config.max_parallel_tests = std::cmp::min(num_cpus::get(), 2); // Very conservative in containers
-            container_config.fixtures.max_cache_size = 1024 * 1024 * 1024; // 1GB in containers
+            container_config.fixtures.max_cache_size = BYTES_PER_MB * 1024; // 1GB in containers
             container_config.test_timeout = Duration::from_secs(600); // Longer timeout in containers
             validate_config(&container_config).map_err(|e| {
                 TestError::assertion(format!("Container config validation failed: {}", e))
@@ -1145,7 +1146,7 @@ impl TestCase for ConfigurationCompatibilityTest {
             coverage_threshold: 0.9,
             fixtures: FixtureConfig {
                 auto_download: true,
-                max_cache_size: 10 * 1024 * 1024 * 1024,
+                max_cache_size: 10 * BYTES_PER_MB * 1024,
                 cleanup_interval: Duration::from_secs(24 * 60 * 60),
                 download_timeout: Duration::from_secs(300),
                 base_url: None,

@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use tokio::fs;
 use tracing::{debug, info, warn};
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// GitHub Actions cache integration for test results and data
 pub struct GitHubCacheManager {
@@ -223,7 +224,7 @@ impl GitHubCacheManager {
 
         // Check cache size before saving
         let size_bytes = self.calculate_cache_size(&key_info.paths).await?;
-        let size_mb = size_bytes / (1024 * 1024);
+        let size_mb = size_bytes / (BYTES_PER_MB);
 
         if size_mb > self.config.max_size_mb {
             warn!(

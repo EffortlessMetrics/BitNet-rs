@@ -8,6 +8,7 @@ use tokio::fs;
 use tracing::{debug, info, warn};
 
 use crate::{
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
     config::FixtureConfig,
     errors::{FixtureError, FixtureResult},
     utils::format_bytes,
@@ -609,7 +610,7 @@ impl FixtureManager {
                 filename: "small-bitnet.gguf".to_string(),
                 checksum: "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
                     .to_string(), // "hello" hash for testing
-                size: 1024 * 1024, // 1MB
+                size: BYTES_PER_MB, // 1MB
                 description: "Small BitNet model for integration testing".to_string(),
                 model_type: ModelType::BitNet,
                 format: ModelFormat::Gguf,
@@ -1048,7 +1049,7 @@ mod tests {
 
         let stats = manager.get_cache_stats().await.unwrap();
         assert_eq!(stats.file_count, 5);
-        assert_eq!(stats.total_size, 5 * 1024);
+        assert_eq!(stats.total_size, 5 * BYTES_PER_KB);
 
         // Test size-based cleanup (won't trigger with default config)
         let cleanup_stats = manager.cleanup_by_size().await.unwrap();
