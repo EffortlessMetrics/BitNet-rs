@@ -9,6 +9,18 @@ repos:
 
   - repo: local
     hooks:
+      - id: shellcheck
+        name: shellcheck scripts
+        entry: bash -lc 'shellcheck scripts/*.sh || true'
+        language: system
+        files: ^scripts/.*\.sh$
+
+      - id: guards
+        name: unit/env guards
+        entry: bash -lc './scripts/check-units.sh && ./scripts/check-envlock.sh && ./scripts/check-units-imports.sh'
+        language: system
+        pass_filenames: false
+
       - id: cargo-fmt
         name: cargo fmt (check)
         entry: bash -c 'cargo fmt --all -- --check'
