@@ -62,7 +62,8 @@ cargo test --workspace --features crossval
 - **Do not** apply fast‑feedback/resource/quality clamps inside `ScenarioConfigManager`.
   The test wrapper owns this logic to prevent double application.
 - Use the shared `ENV_LOCK` + `env_guard()` in any test touching `std::env`.
-- Use `BYTES_PER_MB` for all MB→bytes conversions.
+- Use `BYTES_PER_KB`, `BYTES_PER_MB`, or `BYTES_PER_GB` for all unit→bytes conversions.
+  (These are **binary** units: 1 KB = 1024 B, 1 MB = 1024 KB, 1 GB = 1024 MB.)
 - Prefer typed env helpers (`env_u64`, `env_usize`, `env_duration_secs`) and a
   case‑insensitive `env_bool`.
 - When adding new cross‑validation thresholds, clamp to **non‑negative** values.

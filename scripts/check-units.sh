@@ -6,13 +6,17 @@ echo "Checking for raw MB/GB conversions..."
 ALLOW='tests/common/units\.rs'
 
 # 1) 1024 * 1024 and 1024 * 1024 * 1024 (with spaces/underscores)
-if grep -rE '(1024\s*\*\s*1024(\s*\*\s*1024)?)\b' tests --include="*.rs" | grep -v "$ALLOW" | grep -v 'BYTES_PER_' ; then
+if grep -rE '(1024\s*\*\s*1024(\s*\*\s*1024)?)\b' tests --include="*.rs" \
+  | grep -v "$ALLOW" | grep -v 'BYTES_PER_' \
+  | grep -vE '^[^:]+:\s*//' ; then
   echo "❌ Raw 1024*1024 or 1024*1024*1024 found. Use BYTES_PER_MB or BYTES_PER_GB." >&2
   exit 1
 fi
 
 # 2) Decimal/underscore constants (1_048_576 / 1_073_741_824)
-if grep -rE '\b(1_048_576|1048576|1_073_741_824|1073741824)\b' tests --include="*.rs" | grep -v "$ALLOW" | grep -v 'BYTES_PER_' ; then
+if grep -rE '\b(1_048_576|1048576|1_073_741_824|1073741824)\b' tests --include="*.rs" \
+  | grep -v "$ALLOW" | grep -v 'BYTES_PER_' \
+  | grep -vE '^[^:]+:\s*//' ; then
   echo "❌ Raw MB/GB decimal constants found. Use BYTES_PER_MB or BYTES_PER_GB." >&2
   exit 1
 fi

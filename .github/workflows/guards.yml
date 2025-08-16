@@ -1,0 +1,21 @@
+name: Guards
+on:
+  pull_request:
+    paths:
+      - "tests/**"
+      - "scripts/*.sh"
+  push:
+    branches: [main]
+    paths:
+      - "tests/**"
+      - "scripts/*.sh"
+
+jobs:
+  guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Ensure scripts are executable in fresh clones
+      - run: chmod +x scripts/*.sh || true
+      - run: ./scripts/check-units.sh
+      - run: ./scripts/check-envlock.sh
