@@ -13,22 +13,12 @@ use bitnet_tests::{
     errors::{TestError, TestOpResult},
     harness::{FixtureCtx, TestCase, TestHarness, TestSuite},
     results::{TestMetrics, TestStatus},
+    // Use the single, shared env guard and helpers from the test harness crate
+    common::{env_guard, env_bool, env_u64, env_usize, env_duration_secs, BYTES_PER_MB},
 };
 use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
-
-// Shared environment lock for all tests that mutate env vars
-#[cfg(test)]
-use std::sync::{Mutex, OnceLock};
-
-#[cfg(test)]
-static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-
-#[cfg(test)]
-fn env_guard() -> std::sync::MutexGuard<'static, ()> {
-    ENV_LOCK.get_or_init(|| Mutex::new(())).lock().expect("env guard poisoned")
-}
 
 // Helper to avoid duplicate formats in reporting configuration
 fn ensure_format(v: &mut Vec<ReportFormat>, f: ReportFormat) {
@@ -37,25 +27,7 @@ fn ensure_format(v: &mut Vec<ReportFormat>, f: ReportFormat) {
     }
 }
 
-// Helper for consistent boolean environment variable parsing (case-insensitive)
-fn env_bool(var: &str) -> bool {
-    std::env::var(var)
-        .map(|s| matches!(s.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
-        .unwrap_or(false)
-}
-
-// Typed helper functions for parsing numeric environment variables
-fn env_u64(var: &str) -> Option<u64> {
-    std::env::var(var).ok()?.trim().parse::<u64>().ok()
-}
-
-fn env_usize(var: &str) -> Option<usize> {
-    std::env::var(var).ok()?.trim().parse::<usize>().ok()
-}
-
-fn env_duration_secs(var: &str) -> Option<std::time::Duration> {
-    env_u64(var).map(std::time::Duration::from_secs)
-}
+// All env helpers are now imported from common::env module
 
 
 // Compatibility structs for the old test API
@@ -133,7 +105,7 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
     
     // Centralized constant for MB to bytes conversion
     #[cfg(feature = "fixtures")]
-    const BYTES_PER_MB: u64 = 1_048_576; // Canonical MB→bytes multiplier (1024 * 1024)
+    // Use the canonical MB constant from common module
 
     let framework_ctx = ctx.to_framework_context();
     let mut cfg = bitnet_tests::config_scenarios::ScenarioConfigManager
@@ -744,7 +716,7 @@ impl TestCase for ResourceConstraintsTest {
         let config = get_context_config(&manager, &context);
         #[cfg(feature = "fixtures")]
         {
-            const MB_500: u64 = 500 * 1_048_576; // 500MB using canonical multiplier
+            const MB_500: u64 = 500 * BYTES_PER_MB; // 500MB using canonical multiplier
             assert_eq!(
                 config.fixtures.max_cache_size,
                 MB_500,

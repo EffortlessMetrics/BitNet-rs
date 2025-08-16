@@ -8,8 +8,8 @@ mod resource_management_tests {
     use tokio::sync::{Mutex, Semaphore};
     use tokio::time::{sleep, timeout};
     
-    // Import the canonical MB constant
-    use common::BYTES_PER_MB;
+    // Import the canonical MB constant from the test harness crate
+    use bitnet_tests::common::BYTES_PER_MB;
 
     // Platform-specific memory usage functions
     #[cfg(target_os = "windows")]
