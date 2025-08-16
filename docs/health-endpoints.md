@@ -15,13 +15,29 @@ Readiness check - returns 200 OK only when the server is ready to handle inferen
 
 ## Health Status Mapping
 
+By default the server uses a **fail-fast** policy:
+
 | Status | HTTP Code | Description |
 |--------|-----------|-------------|
 | `Healthy` | 200 OK | All systems operational |
 | `Degraded` | 503 Service Unavailable | Partial degradation detected (e.g., high memory usage) |
 | `Unhealthy` | 503 Service Unavailable | Critical issues detected (e.g., model loading failed) |
 
-**Note**: Both `Degraded` and `Unhealthy` return 503 to trigger fail-fast behavior in load balancers. If you need load balancers to continue routing traffic during partial degradation, consider mapping `Degraded` to 200 OK.
+### Optional: treat `Degraded` as 200 OK
+
+If you prefer to keep the load balancer routing traffic during partial issues, build the server with:
+
+```bash
+cargo build -p bitnet-server --features degraded-ok
+```
+
+With `degraded-ok` enabled:
+
+| Status | HTTP Code | Description |
+|--------|-----------|-------------|
+| `Healthy` | 200 OK | All systems operational |
+| `Degraded` | 200 OK | Partial degradation but still serving |
+| `Unhealthy` | 503 Service Unavailable | Critical issues detected |
 
 ## Examples
 

@@ -277,6 +277,25 @@ fn overall_status_from_counts(unhealthy_count: usize, degraded_count: usize) -> 
     }
 }
 
+// HTTP mapping is configurable at build-time:
+// - Default (fail-fast): Degraded → 503, Unhealthy → 503
+// - With `--features degraded-ok`: Degraded → 200, Unhealthy → 503
+#[cfg(feature = "degraded-ok")]
+fn status_code_for(status: HealthStatus) -> StatusCode {
+    match status {
+        HealthStatus::Healthy | HealthStatus::Degraded => StatusCode::OK,
+        HealthStatus::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,
+    }
+}
+
+#[cfg(not(feature = "degraded-ok"))]
+fn status_code_for(status: HealthStatus) -> StatusCode {
+    match status {
+        HealthStatus::Healthy => StatusCode::OK,
+        HealthStatus::Degraded | HealthStatus::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,
+    }
+}
+
 /// Create health check routes
 pub fn create_health_routes(health_checker: Arc<HealthChecker>) -> Router {
     Router::new()
@@ -292,11 +311,7 @@ async fn health_handler(
 ) -> Result<Json<HealthResponse>, StatusCode> {
     let health = health_checker.check_health().await;
 
-    let _status_code = match health.status {
-        HealthStatus::Healthy => StatusCode::OK,
-        HealthStatus::Degraded => StatusCode::OK, // Still serving traffic
-        HealthStatus::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,
-    };
+    let _status_code = status_code_for(health.status.clone());
 
     Ok(Json(health))
 }
@@ -319,7 +334,8 @@ async fn readiness_handler(State(health_checker): State<Arc<HealthChecker>>) -> 
 
 #[cfg(test)]
 mod tests {
-    use super::{overall_status_from_counts, HealthStatus};
+    use super::{overall_status_from_counts, status_code_for, HealthStatus};
+    use axum::http::StatusCode;
 
     #[test]
     fn overall_unhealthy_wins() {
@@ -336,5 +352,22 @@ mod tests {
     #[test]
     fn overall_healthy_when_none() {
         assert!(matches!(overall_status_from_counts(0, 0), HealthStatus::Healthy));
+    }
+
+    // Mapping tests (compile-time conditioned)
+    #[cfg(not(feature = "degraded-ok"))]
+    #[test]
+    fn http_mapping_fail_fast_default() {
+        assert_eq!(status_code_for(HealthStatus::Healthy), StatusCode::OK);
+        assert_eq!(status_code_for(HealthStatus::Degraded), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(status_code_for(HealthStatus::Unhealthy), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[cfg(feature = "degraded-ok")]
+    #[test]
+    fn http_mapping_degraded_ok_feature() {
+        assert_eq!(status_code_for(HealthStatus::Healthy), StatusCode::OK);
+        assert_eq!(status_code_for(HealthStatus::Degraded), StatusCode::OK);
+        assert_eq!(status_code_for(HealthStatus::Unhealthy), StatusCode::SERVICE_UNAVAILABLE);
     }
 }
