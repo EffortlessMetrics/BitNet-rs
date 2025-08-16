@@ -1,4 +1,5 @@
 //! CUDA kernel implementation using cudarc 0.17
+#![cfg_attr(not(feature = "cuda"), allow(dead_code, unused_imports, unused_variables))]
 
 use crate::KernelProvider;
 use bitnet_common::{KernelError, QuantizationType, Result};
