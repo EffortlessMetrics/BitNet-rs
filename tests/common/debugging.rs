@@ -583,7 +583,7 @@ impl TestDebugger {
 
         // Check for memory issues
         let high_memory_tests: Vec<_> = debug_data.test_traces.values()
-            .filter(|t| t.resource_usage.iter().any(|r| r.memory_usage > 1024 * 1024 * 1024)) // > 1GB
+            .filter(|t| t.resource_usage.iter().any(|r| r.memory_usage > BYTES_PER_MB * 1024)) // > 1GB
             .collect();
 
         if !high_memory_tests.is_empty() {
@@ -592,7 +592,7 @@ impl TestDebugger {
             writeln!(guide, "Tests with high memory usage:")?;
             for test in high_memory_tests {
                 let peak = test.resource_usage.iter().map(|r| r.memory_usage).max().unwrap_or(0);
-                writeln!(guide, "- {}: {} MB", test.test_name, peak / (1024 * 1024))?;
+                writeln!(guide, "- {}: {} MB", test.test_name, peak / (BYTES_PER_MB))?;
             }
             writeln!(guide, "\n**Recommendations:**")?;
             writeln!(guide, "1. Review memory allocation patterns")?;
@@ -815,7 +815,7 @@ impl TestDebugger {
         let high_memory_tests = debug_data
             .test_traces
             .values()
-            .filter(|t| t.resource_usage.iter().any(|r| r.memory_usage > 512 * 1024 * 1024))
+            .filter(|t| t.resource_usage.iter().any(|r| r.memory_usage > 512 * BYTES_PER_MB))
             .count();
 
         if high_memory_tests > 0 {
@@ -855,9 +855,9 @@ impl TestDebugger {
 
         // Check for high memory usage
         if let Some(peak) = test_trace.resource_usage.iter().map(|r| r.memory_usage).max() {
-            if peak > 1024 * 1024 * 1024 {
+            if peak > BYTES_PER_MB * 1024 {
                 // > 1GB
-                issues.push(format!("High memory usage: {} MB", peak / (1024 * 1024)));
+                issues.push(format!("High memory usage: {} MB", peak / (BYTES_PER_MB)));
             }
         }
 
@@ -940,7 +940,7 @@ impl TestDebugger {
         writeln!(
             summary,
             "- Peak memory: {} MB",
-            report.performance_summary.peak_memory / (1024 * 1024)
+            report.performance_summary.peak_memory / (BYTES_PER_MB)
         )
         .unwrap();
         writeln!(

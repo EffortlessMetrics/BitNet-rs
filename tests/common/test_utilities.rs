@@ -397,7 +397,7 @@ fn get_available_memory() -> u64 {
     }
 
     // Fallback: assume 8GB available
-    8 * 1024 * 1024 * 1024
+    8 * BYTES_PER_MB * 1024
 }
 
 /// Get Rust version

@@ -69,7 +69,7 @@ async fn test_implementation_registry() {
 #[tokio::test]
 async fn test_resource_manager() {
     let limits = ResourceLimits {
-        max_memory: Some(10 * 1024 * 1024), // 10MB
+        max_memory: Some(10 * BYTES_PER_MB), // 10MB
         max_implementations: Some(2),
         max_models_per_implementation: Some(1),
     };
@@ -85,7 +85,7 @@ async fn test_resource_manager() {
     // Test resource tracking
     let summary = manager.get_resource_summary();
     assert_eq!(summary.total_implementations, 2);
-    assert_eq!(summary.total_memory, 2 * 1024 * 1024); // 2MB total
+    assert_eq!(summary.total_memory, 2 * BYTES_PER_MB); // 2MB total
 
     // Test cleanup
     manager.cleanup_all().await.unwrap();

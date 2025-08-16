@@ -41,7 +41,7 @@ impl Default for TestDataConfig {
         Self {
             base_dir: std::path::PathBuf::from("tests/data"),
             enable_generation: true,
-            max_data_size: 100 * 1024 * 1024, // 100 MB
+            max_data_size: 100 * BYTES_PER_MB, // 100 MB
             validation_level: ValidationLevel::Standard,
         }
     }

@@ -152,7 +152,7 @@ fn get_memory_usage() -> u64 {
 #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 fn get_memory_usage() -> u64 {
     // Fallback for unsupported platforms
-    1024 * 1024 // Return 1MB as a placeholder
+    BYTES_PER_MB // Return 1MB as a placeholder
 }
 
 // Test 1: Memory leak detection test
@@ -198,7 +198,7 @@ impl TestCase for MemoryLeakDetectionTest {
         let memory_delta = final_memory as i64 - initial_memory as i64;
 
         // Check for memory leaks (allow for some variance)
-        let leak_threshold = 1024 * 1024; // 1MB threshold
+        let leak_threshold = BYTES_PER_MB; // 1MB threshold
         if memory_delta > leak_threshold {
             return Err(TestError::assertion(format!(
                 "Memory leak detected: {} bytes not released (threshold: {} bytes)",
@@ -573,7 +573,7 @@ impl TestCase for ResourceExhaustionTest {
 
         // Try to allocate memory until we approach limits
         let allocation_size = 10 * bitnet_tests::common::BYTES_PER_MB; // 10MB chunks
-        let max_memory_limit = 500 * 1024 * 1024; // 500MB limit for safety
+        let max_memory_limit = 500 * BYTES_PER_MB; // 500MB limit for safety
 
         for i in 0..50 {
             let current_memory = get_memory_usage();
@@ -804,14 +804,14 @@ impl TestCase for ResourceThresholdTest {
     }
 
     async fn execute(&self) -> Result<TestMetrics, TestError> {
-        let memory_threshold = 20 * 1024 * 1024; // 20MB threshold
+        let memory_threshold = 20 * BYTES_PER_MB; // 20MB threshold
         let initial_memory = get_memory_usage();
         let mut threshold_events = 0;
         let mut allocations = Vec::new();
 
         // Gradually increase resource usage and check thresholds
         for i in 0..20 {
-            let allocation = vec![0u8; 2 * 1024 * 1024]; // 2MB
+            let allocation = vec![0u8; 2 * BYTES_PER_MB]; // 2MB
             allocations.push(allocation);
 
             let current_memory = get_memory_usage();

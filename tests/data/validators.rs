@@ -712,7 +712,7 @@ mod tests {
             ModelFormat::Gguf,
             ModelType::BitNet,
         )
-        .with_file_size(50 * 1024 * 1024); // 50MB fits Tiny category
+        .with_file_size(50 * BYTES_PER_MB); // 50MB fits Tiny category
 
         let result = validator.validate_model(&valid_model);
         assert!(result.is_valid);

@@ -77,7 +77,7 @@ impl Default for SizeConstraints {
     fn default() -> Self {
         Self {
             min_size: 0,
-            max_size: 1024 * 1024, // 1MB
+            max_size: BYTES_PER_MB, // 1MB
             target_size: None,
         }
     }
@@ -117,7 +117,7 @@ impl ModelDataGenerator {
 
         let (min_size, max_size) = size.size_range();
         let file_size = if max_size == u64::MAX {
-            min_size + self.rng.gen::<u32>() as u64 * 1024 * 1024 // Add up to 4GB
+            min_size + self.rng.gen::<u32>() as u64 * BYTES_PER_MB // Add up to 4GB
         } else {
             self.rng.gen_range(min_size..=max_size)
         };
@@ -188,11 +188,11 @@ impl DataGenerator for ModelDataGenerator {
         let mut generator = Self::new(config.seed);
 
         // Determine model size based on size constraints
-        let size = if config.size_constraints.max_size <= 100 * 1024 * 1024 {
+        let size = if config.size_constraints.max_size <= 100 * BYTES_PER_MB {
             ModelSize::Tiny
-        } else if config.size_constraints.max_size <= 1024 * 1024 * 1024 {
+        } else if config.size_constraints.max_size <= BYTES_PER_MB * 1024 {
             ModelSize::Small
-        } else if config.size_constraints.max_size <= 10 * 1024 * 1024 * 1024 {
+        } else if config.size_constraints.max_size <= 10 * BYTES_PER_MB * 1024 {
             ModelSize::Medium
         } else {
             ModelSize::Large
@@ -556,15 +556,15 @@ mod tests {
 
         let tiny_model = generator.generate_model(ModelSize::Tiny);
         assert_eq!(tiny_model.size, ModelSize::Tiny);
-        assert!(tiny_model.file_size <= 100 * 1024 * 1024);
+        assert!(tiny_model.file_size <= 100 * BYTES_PER_MB);
         assert!(!tiny_model.id.is_empty());
         assert!(!tiny_model.name.is_empty());
         assert!(tiny_model.parameters.parameter_count.is_some());
 
         let small_model = generator.generate_model(ModelSize::Small);
         assert_eq!(small_model.size, ModelSize::Small);
-        assert!(small_model.file_size > 100 * 1024 * 1024);
-        assert!(small_model.file_size <= 1024 * 1024 * 1024);
+        assert!(small_model.file_size > 100 * BYTES_PER_MB);
+        assert!(small_model.file_size <= BYTES_PER_MB * 1024);
     }
 
     #[test]
@@ -643,7 +643,7 @@ mod tests {
         let config = GenerationConfig::default();
         assert!(matches!(config.data_type, DataType::Text));
         assert_eq!(config.size_constraints.min_size, 0);
-        assert_eq!(config.size_constraints.max_size, 1024 * 1024);
+        assert_eq!(config.size_constraints.max_size, BYTES_PER_MB);
         assert!(matches!(config.quality, QualityLevel::Standard));
         assert!(config.seed.is_none());
     }

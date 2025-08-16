@@ -223,7 +223,7 @@ impl GitHubCacheManager {
 
         // Check cache size before saving
         let size_bytes = self.calculate_cache_size(&key_info.paths).await?;
-        let size_mb = size_bytes / (1024 * 1024);
+        let size_mb = size_bytes / (BYTES_PER_MB);
 
         if size_mb > self.config.max_size_mb {
             warn!(

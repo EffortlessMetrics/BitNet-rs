@@ -278,7 +278,7 @@ impl PerformanceBenchmarkSuite {
 
                 Ok(SimulatedInferenceResult {
                     tokens_generated: scenario.max_tokens,
-                    memory_used: 1024 * 1024 * 100, // Simulated C++ memory usage
+                    memory_used: BYTES_PER_MB * 100, // Simulated C++ memory usage
                     throughput: scenario.max_tokens as f64 / duration.as_secs_f64(),
                 })
             })
@@ -594,9 +594,9 @@ mod tests {
                 avg_duration: Some(Duration::from_millis(100)),
                 min_duration: Some(Duration::from_millis(95)),
                 max_duration: Some(Duration::from_millis(105)),
-                avg_memory_usage: Some(1024 * 1024 * 50),
-                peak_memory_usage: Some(1024 * 1024 * 60),
-                total_memory_allocated: Some(1024 * 1024 * 250),
+                avg_memory_usage: Some(BYTES_PER_MB * 50),
+                peak_memory_usage: Some(BYTES_PER_MB * 60),
+                total_memory_allocated: Some(BYTES_PER_MB * 250),
                 custom_metrics: HashMap::new(),
             },
         };
@@ -610,9 +610,9 @@ mod tests {
                 avg_duration: Some(Duration::from_millis(250)), // 2.5x slower
                 min_duration: Some(Duration::from_millis(240)),
                 max_duration: Some(Duration::from_millis(260)),
-                avg_memory_usage: Some(1024 * 1024 * 70),
-                peak_memory_usage: Some(1024 * 1024 * 80),
-                total_memory_allocated: Some(1024 * 1024 * 350),
+                avg_memory_usage: Some(BYTES_PER_MB * 70),
+                peak_memory_usage: Some(BYTES_PER_MB * 80),
+                total_memory_allocated: Some(BYTES_PER_MB * 350),
                 custom_metrics: HashMap::new(),
             },
         };
@@ -662,9 +662,9 @@ mod tests {
                 avg_duration: Some(Duration::from_millis(100)),
                 min_duration: Some(Duration::from_millis(95)),
                 max_duration: Some(Duration::from_millis(105)),
-                avg_memory_usage: Some(1024 * 1024 * 50),
-                peak_memory_usage: Some(1024 * 1024 * 60),
-                total_memory_allocated: Some(1024 * 1024 * 250),
+                avg_memory_usage: Some(BYTES_PER_MB * 50),
+                peak_memory_usage: Some(BYTES_PER_MB * 60),
+                total_memory_allocated: Some(BYTES_PER_MB * 250),
                 custom_metrics: HashMap::new(),
             },
         };

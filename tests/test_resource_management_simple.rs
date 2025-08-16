@@ -9,7 +9,7 @@ mod resource_management_tests {
         let initial_memory = get_memory_usage();
 
         // Allocate some memory
-        let _data = vec![0u8; 1024 * 1024]; // 1MB
+        let _data = vec![0u8; BYTES_PER_MB]; // 1MB
 
         let after_alloc_memory = get_memory_usage();
 
@@ -156,6 +156,6 @@ mod resource_management_tests {
     #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     fn get_memory_usage() -> u64 {
         // Fallback for unsupported platforms
-        1024 * 1024 // Return 1MB as a placeholder
+        BYTES_PER_MB // Return 1MB as a placeholder
     }
 }

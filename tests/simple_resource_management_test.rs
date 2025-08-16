@@ -156,7 +156,7 @@ mod resource_management_tests {
         let mut allocations = Vec::new();
 
         // Phase 1: Allocate memory until we reach a reasonable limit
-        let allocation_size = 5 * 1024 * 1024; // 5MB chunks
+        let allocation_size = 5 * BYTES_PER_MB; // 5MB chunks
         let max_allocations = 20; // 100MB total
 
         for i in 0..max_allocations {
@@ -203,7 +203,7 @@ mod resource_management_tests {
     async fn test_resource_monitoring() {
         let memory_samples = Arc::new(Mutex::new(Vec::new()));
         let alert_count = Arc::new(AtomicUsize::new(0));
-        let memory_threshold = 10 * 1024 * 1024; // 10MB threshold
+        let memory_threshold = 10 * BYTES_PER_MB; // 10MB threshold
 
         // Start monitoring task
         let samples_clone = Arc::clone(&memory_samples);
@@ -233,7 +233,7 @@ mod resource_management_tests {
         // Simulate workload
         let mut workload_data = Vec::new();
         for i in 0..10 {
-            let data = vec![0u8; 2 * 1024 * 1024]; // 2MB allocation
+            let data = vec![0u8; 2 * BYTES_PER_MB]; // 2MB allocation
             workload_data.push(data);
             sleep(Duration::from_millis(100)).await;
         }

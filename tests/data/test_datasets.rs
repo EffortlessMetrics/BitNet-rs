@@ -19,7 +19,7 @@ impl TestDatasets {
                 ModelFormat::Gguf,
                 ModelType::BitNet,
             )
-            .with_file_size(50 * 1024 * 1024) // 50MB
+            .with_file_size(50 * BYTES_PER_MB) // 50MB
             .with_checksum("a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456")
             .with_description("Tiny BitNet model for basic functionality testing")
             .with_tags(vec!["tiny".to_string(), "bitnet".to_string(), "quick".to_string()]),
@@ -30,7 +30,7 @@ impl TestDatasets {
                 ModelFormat::SafeTensors,
                 ModelType::Transformer,
             )
-            .with_file_size(75 * 1024 * 1024) // 75MB
+            .with_file_size(75 * BYTES_PER_MB) // 75MB
             .with_checksum("b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef1234567")
             .with_description("Tiny transformer for comparison testing")
             .with_tags(vec!["tiny".to_string(), "transformer".to_string(), "comparison".to_string()]),
@@ -42,7 +42,7 @@ impl TestDatasets {
                 ModelFormat::Gguf,
                 ModelType::BitNet,
             )
-            .with_file_size(400 * 1024 * 1024) // 400MB
+            .with_file_size(400 * BYTES_PER_MB) // 400MB
             .with_checksum("c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678")
             .with_description("Small BitNet model for integration testing")
             .with_tags(vec!["small".to_string(), "bitnet".to_string(), "integration".to_string()]),
@@ -53,7 +53,7 @@ impl TestDatasets {
                 ModelFormat::Gguf,
                 ModelType::Transformer,
             )
-            .with_file_size(800 * 1024 * 1024) // 800MB
+            .with_file_size(800 * BYTES_PER_MB) // 800MB
             .with_checksum("d4e5f6789012345678901234567890abcdef1234567890abcdef123456789")
             .with_description("Small LLaMA model for performance comparison")
             .with_tags(vec!["small".to_string(), "llama".to_string(), "performance".to_string()]),
@@ -65,7 +65,7 @@ impl TestDatasets {
                 ModelFormat::Gguf,
                 ModelType::BitNet,
             )
-            .with_file_size(2 * 1024 * 1024 * 1024) // 2GB
+            .with_file_size(2 * BYTES_PER_MB * 1024) // 2GB
             .with_checksum("e5f6789012345678901234567890abcdef1234567890abcdef1234567890")
             .with_description("Medium BitNet model for comprehensive performance testing")
             .with_tags(vec!["medium".to_string(), "bitnet".to_string(), "performance".to_string()]),
