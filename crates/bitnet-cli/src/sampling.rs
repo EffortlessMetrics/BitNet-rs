@@ -1,6 +1,5 @@
 //! Sampling utilities for text generation
 
-use anyhow::Result;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use std::collections::HashMap;
@@ -112,7 +111,7 @@ impl Sampler {
     }
 
     /// Apply top-p (nucleus) filtering
-    fn top_p_filter(&self, mut logits: Vec<f32>) -> Vec<f32> {
+    fn top_p_filter(&self, logits: Vec<f32>) -> Vec<f32> {
         if self.top_p >= 1.0 {
             return logits;
         }
@@ -121,7 +120,7 @@ impl Sampler {
         indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
         let probs = softmax(&logits);
-        let mut sorted_probs: Vec<_> = indexed.iter().map(|&(i, _)| probs[i]).collect();
+        let sorted_probs: Vec<_> = indexed.iter().map(|&(i, _)| probs[i]).collect();
 
         let mut cumsum = 0.0;
         let mut cutoff_idx = sorted_probs.len();
