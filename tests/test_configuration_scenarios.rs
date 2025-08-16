@@ -8,13 +8,13 @@ use async_trait::async_trait;
 use bitnet_tests::{
     config::{validate_config, ReportFormat, TestConfig},
     config_scenarios::{
-        EnvironmentType, ScenarioConfigManager, TestingScenario,
+        ConfigurationContext, EnvironmentType, ScenarioConfigManager, TestingScenario,
     },
     errors::{TestError, TestOpResult},
     harness::{FixtureCtx, TestCase, TestHarness, TestSuite},
     results::{TestMetrics, TestStatus},
     // Use the single, shared env guard and helpers from the test harness crate
-    common::{env_guard, env_bool, env_u64, env_usize, env_duration_secs, BYTES_PER_MB},
+    env_guard, env_bool, env_u64, env_usize, env_duration_secs, BYTES_PER_MB,
 };
 use std::collections::HashMap;
 use std::env;
@@ -104,12 +104,10 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
     use bitnet_tests::config::ReportFormat;
     
     // Centralized constant for MB to bytes conversion
-    #[cfg(feature = "fixtures")]
     // Use the canonical MB constant from common module
 
     let framework_ctx = ctx.to_framework_context();
-    let mut cfg = bitnet_tests::config_scenarios::ScenarioConfigManager
-        ::get_context_config(manager, &framework_ctx);
+    let mut cfg = ScenarioConfigManager::get_context_config(manager, &framework_ctx);
 
     // ----- Resource constraints -------------------------------------------------
     if let Some(n) = ctx.resource_constraints.max_parallel_tests {

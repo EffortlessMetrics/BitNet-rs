@@ -28,10 +28,12 @@ pub fn env_guard() -> std::sync::MutexGuard<'static, ()> {
         .expect("env guard poisoned")
 }
 
-/// Parse an environment variable as a boolean.
+/// Parse an environment variable as a boolean (case-insensitive).
 /// 
-/// Recognizes (case-insensitive): true, 1, yes, on, enabled
-/// Everything else (including missing) is false.
+/// Truthy: "1", "true", "yes", "on", "enabled"
+/// Falsy: "0", "false", "no", "off", "disabled" (or unset)
+/// 
+/// Note: Any other value is treated as false.
 pub fn env_bool(var: &str) -> bool {
     std::env::var(var)
         .ok()

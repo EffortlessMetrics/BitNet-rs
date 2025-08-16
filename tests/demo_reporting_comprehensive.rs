@@ -13,8 +13,8 @@ use std::time::Duration;
 use tempfile::TempDir;
 use tokio::fs;
 
-// Import the canonical MB constant from the test harness crate
-use bitnet_tests::common::BYTES_PER_MB;
+// Import the canonical KB and MB constants from the test harness crate
+use bitnet_tests::common::{BYTES_PER_KB, BYTES_PER_MB};
 
 /// Create comprehensive test data for demonstration
 fn create_demo_test_data() -> Vec<TestSuiteResult> {
@@ -174,7 +174,7 @@ fn create_demo_test_data() -> Vec<TestSuiteResult> {
                     duration: Duration::from_secs(6),
                     metrics: TestMetrics {
                         memory_peak: Some(BYTES_PER_MB), // 1MB
-                        memory_average: Some(768 * 1024), // 768KB
+                        memory_average: Some(768 * BYTES_PER_KB), // 768KB
                         cpu_time: Some(Duration::from_secs(5)),
                         wall_time: Duration::from_secs(6),
                         custom_metrics: {
