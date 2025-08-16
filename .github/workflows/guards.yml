@@ -19,3 +19,5 @@ jobs:
       - run: chmod +x scripts/*.sh || true
       - run: ./scripts/check-units.sh
       - run: ./scripts/check-envlock.sh
+      - run: chmod +x scripts/check-units-imports.sh
+      - run: ./scripts/check-units-imports.sh
