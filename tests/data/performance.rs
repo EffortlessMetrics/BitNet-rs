@@ -415,7 +415,7 @@ impl BenchmarkResult {
             self.summary.custom_metrics.get("bytes_processed"),
         ) {
             let bytes_per_second = bytes_metric.average / avg_duration.as_secs_f64();
-            Some(bytes_per_second / (1024.0 * 1024.0)) // Convert to MB/s
+            Some(bytes_per_second / (1024.0 * BYTES_PER_KB.0)) // Convert to MB/s
         } else {
             None
         }

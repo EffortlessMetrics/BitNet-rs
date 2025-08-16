@@ -23,7 +23,7 @@ fn create_simple_test_data() -> Vec<TestSuiteResult> {
                 duration: Duration::from_secs(2),
                 metrics: TestMetrics {
                     memory_peak: Some(BYTES_PER_MB),   // 1 MB
-                    memory_average: Some(512 * 1024), // 512 KB
+                    memory_average: Some(512 * BYTES_PER_KB), // 512 KB
                     cpu_time: Some(Duration::from_millis(1500)),
                     wall_time: Duration::from_secs(2),
                     custom_metrics: HashMap::new(),
@@ -42,7 +42,7 @@ fn create_simple_test_data() -> Vec<TestSuiteResult> {
                 status: TestStatus::Failed,
                 duration: Duration::from_secs(3),
                 metrics: TestMetrics {
-                    memory_peak: Some(2048 * 1024),    // 2 MB
+                    memory_peak: Some(2048 * BYTES_PER_KB),    // 2 MB
                     memory_average: Some(BYTES_PER_MB), // 1 MB
                     cpu_time: Some(Duration::from_millis(2500)),
                     wall_time: Duration::from_secs(3),
@@ -67,7 +67,7 @@ fn create_simple_test_data() -> Vec<TestSuiteResult> {
             success_rate: 50.0,
             total_duration: Duration::from_secs(5),
             average_duration: Duration::from_millis(2500),
-            peak_memory: Some(2048 * 1024),
+            peak_memory: Some(2048 * BYTES_PER_KB),
             total_assertions: 5,
         },
         environment: HashMap::new(),

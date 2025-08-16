@@ -1048,7 +1048,7 @@ mod tests {
 
         let stats = manager.get_cache_stats().await.unwrap();
         assert_eq!(stats.file_count, 5);
-        assert_eq!(stats.total_size, 5 * 1024);
+        assert_eq!(stats.total_size, 5 * BYTES_PER_KB);
 
         // Test size-based cleanup (won't trigger with default config)
         let cleanup_stats = manager.cleanup_by_size().await.unwrap();

@@ -20,7 +20,7 @@ async fn test_fixture_reliability_and_cleanup() -> TestResult<()> {
     // Create fixture config with aggressive cleanup settings
     let mut config = FixtureConfig::default();
     config.auto_download = false; // Disable auto-download for testing
-    config.max_cache_size = 10 * 1024; // 10KB limit
+    config.max_cache_size = 10 * BYTES_PER_KB; // 10KB limit
     config.cleanup_interval = Duration::from_secs(1); // 1 second for testing
 
     // Create fixture manager
@@ -157,7 +157,7 @@ async fn test_realistic_fixture_cleanup() -> TestResult<()> {
     std::env::set_var("BITNET_TEST_CACHE", temp_dir.path());
 
     let mut config = FixtureConfig::default();
-    config.max_cache_size = 50 * 1024; // 50KB limit
+    config.max_cache_size = 50 * BYTES_PER_KB; // 50KB limit
     config.cleanup_interval = Duration::from_secs(1);
 
     let manager = FixtureManager::new(&config).await?;
@@ -165,8 +165,8 @@ async fn test_realistic_fixture_cleanup() -> TestResult<()> {
     // Create files of various sizes and ages
     let files = vec![
         ("small_old.bin", vec![b'a'; 1024], true), // 1KB, old
-        ("medium_new.bin", vec![b'b'; 10 * 1024], false), // 10KB, new
-        ("large_old.bin", vec![b'c'; 30 * 1024], true), // 30KB, old
+        ("medium_new.bin", vec![b'b'; 10 * BYTES_PER_KB], false), // 10KB, new
+        ("large_old.bin", vec![b'c'; 30 * BYTES_PER_KB], true), // 30KB, old
         ("tiny_new.bin", vec![b'd'; 512], false),  // 512B, new
     ];
 

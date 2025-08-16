@@ -460,7 +460,7 @@ mod tests {
             Ok(super::super::results::TestMetrics {
                 wall_time: Duration::from_millis(100),
                 memory_peak: Some(BYTES_PER_MB),   // 1MB
-                memory_average: Some(512 * 1024), // 512KB
+                memory_average: Some(512 * BYTES_PER_KB), // 512KB
                 cpu_time: Some(Duration::from_millis(50)),
                 custom_metrics: std::collections::HashMap::new(),
                 assertions: 10,

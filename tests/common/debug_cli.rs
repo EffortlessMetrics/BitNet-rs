@@ -293,7 +293,7 @@ impl DebugCli {
                     test_name: test.test_name.clone(),
                     issue_type: PerformanceIssueType::HighMemoryUsage,
                     value: test.peak_memory as f64,
-                    threshold: 512.0 * 1024.0 * 1024.0,
+                    threshold: 512.0 * BYTES_PER_KB.0 * BYTES_PER_KB.0,
                     description: format!(
                         "Test used {} MB of memory",
                         test.peak_memory / (BYTES_PER_MB)
