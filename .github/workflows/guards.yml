@@ -4,11 +4,13 @@ on:
     paths:
       - "tests/**"
       - "scripts/*.sh"
+      - ".github/workflows/**"
   push:
     branches: [main]
     paths:
       - "tests/**"
       - "scripts/*.sh"
+      - ".github/workflows/**"
 
 jobs:
   guards:
