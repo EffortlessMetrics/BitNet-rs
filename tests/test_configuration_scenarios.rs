@@ -14,12 +14,12 @@ use bitnet_tests::{
     harness::{FixtureCtx, TestCase, TestHarness, TestSuite},
     results::{TestMetrics, TestStatus},
     // Use the single, shared env guard and helpers from the test harness crate
-    env_guard, env_bool, env_u64, env_usize, env_duration_secs, BYTES_PER_MB,
+    env_guard, env_bool, env_u64, env_usize, env_duration_secs,
 };
+use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
-use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 // Helper to avoid duplicate formats in reporting configuration
 fn ensure_format(v: &mut Vec<ReportFormat>, f: ReportFormat) {
