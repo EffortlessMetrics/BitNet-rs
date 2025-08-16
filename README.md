@@ -6,7 +6,7 @@
 [![Build Status](https://github.com/microsoft/BitNet/workflows/CI/badge.svg)](https://github.com/microsoft/BitNet/actions)
 [![MSRV](https://img.shields.io/badge/MSRV-1.70.0-blue.svg)](https://github.com/microsoft/BitNet)
 
-**BitNet.rs is the production-ready implementation of BitNet 1-bit Large Language Model inference.** Built from the ground up in Rust, it delivers superior performance, memory safety, and developer experience compared to the original C++ implementation.
+**BitNet.rs is the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.** Built from the ground up in Rust, it delivers superior performance, memory safety, and developer experience compared to the original C++ implementation.
 
 ## Why BitNet.rs?
 
