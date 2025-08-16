@@ -35,8 +35,8 @@ pub struct InferenceMetrics {
     pub cache_hit_rate: Gauge,
 }
 
-impl InferenceMetrics {
-    pub fn new() -> Self {
+impl Default for InferenceMetrics {
+    fn default() -> Self {
         Self {
             requests_total: counter!("bitnet_requests_total"),
             requests_active: gauge!("bitnet_requests_active"),
@@ -50,6 +50,12 @@ impl InferenceMetrics {
             queue_depth: gauge!("bitnet_queue_depth"),
             cache_hit_rate: gauge!("bitnet_cache_hit_rate"),
         }
+    }
+}
+
+impl InferenceMetrics {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -70,8 +76,8 @@ pub struct SystemMetrics {
     pub uptime_seconds: Gauge,
 }
 
-impl SystemMetrics {
-    pub fn new() -> Self {
+impl Default for SystemMetrics {
+    fn default() -> Self {
         Self {
             cpu_usage_percent: gauge!("system_cpu_usage_percent"),
             memory_usage_percent: gauge!("system_memory_usage_percent"),
@@ -80,6 +86,12 @@ impl SystemMetrics {
             network_bytes_sent: counter!("system_network_bytes_sent_total"),
             uptime_seconds: gauge!("system_uptime_seconds"),
         }
+    }
+}
+
+impl SystemMetrics {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -138,6 +150,7 @@ pub struct MetricsCollector {
     pub inference: Arc<InferenceMetrics>,
     pub system: Arc<SystemMetrics>,
     start_time: Instant,
+    #[allow(dead_code)]
     config: MonitoringConfig,
     performance_history: Arc<RwLock<Vec<PerformanceSnapshot>>>,
 }
@@ -270,6 +283,7 @@ impl MetricsCollector {
 #[derive(Debug)]
 struct MemoryInfo {
     used_bytes: u64,
+    #[allow(dead_code)]
     total_bytes: u64,
     usage_percent: f64,
 }
