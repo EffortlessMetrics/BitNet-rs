@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 use tempfile::TempDir;
 use tokio::fs;
+use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Create comprehensive test data for reporting
 fn create_comprehensive_test_data() -> Vec<TestSuiteResult> {

@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use super::debugging::DebugReport;
 use super::errors::{TestError, TestOpResult};
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Command-line interface for debugging test issues
 pub struct DebugCli {
@@ -293,7 +294,7 @@ impl DebugCli {
                     test_name: test.test_name.clone(),
                     issue_type: PerformanceIssueType::HighMemoryUsage,
                     value: test.peak_memory as f64,
-                    threshold: 512.0 * BYTES_PER_KB.0 * BYTES_PER_KB.0,
+                    threshold: 512.0 * BYTES_PER_MB as f64,
                     description: format!(
                         "Test used {} MB of memory",
                         test.peak_memory / (BYTES_PER_MB)

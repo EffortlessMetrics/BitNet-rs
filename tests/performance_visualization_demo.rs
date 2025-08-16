@@ -18,6 +18,7 @@ use common::data::performance::{
     BenchmarkResult, BenchmarkRunner, MetricSummary, PerformanceSummary,
 };
 use common::reporting::{
+use common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
     create_performance_dashboard,
     performance_viz::{create_performance_comparison, ComparisonResults, PerformanceMetrics},
     DashboardConfig, PerformanceComparison, PerformanceDashboardGenerator, PerformanceVisualizer,

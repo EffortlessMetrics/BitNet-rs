@@ -19,6 +19,7 @@ use bitnet_tests::{
 use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
+use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 // Helper to avoid duplicate formats in reporting configuration
 fn ensure_format(v: &mut Vec<ReportFormat>, f: ReportFormat) {

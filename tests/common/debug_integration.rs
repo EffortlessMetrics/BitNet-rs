@@ -5,6 +5,7 @@ use super::debugging::{DebugConfig, TestDebugger};
 use super::errors::TestOpResult;
 use super::harness::{TestCase, TestHarness, TestReporter, FixtureCtx};
 use super::results::{TestResult, TestSuiteResult};
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 
 /// Enhanced test harness with integrated debugging support

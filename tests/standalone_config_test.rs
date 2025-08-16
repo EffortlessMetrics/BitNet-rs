@@ -6,6 +6,7 @@ use std::time::Duration;
 
 // Import the canonical MB and GB constants from the test harness crate
 use bitnet_tests::common::{BYTES_PER_MB, BYTES_PER_GB};
+use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 // Minimal configuration structures for testing
 #[derive(Debug, Clone, PartialEq)]

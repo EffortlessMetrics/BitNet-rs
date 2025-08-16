@@ -5,6 +5,7 @@ use tokio::fs;
 use tokio::time::timeout;
 
 use super::errors::{TestError, TestOpResult as TestResultCompat};
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Utility functions for common test operations
 pub struct TestUtilities;
