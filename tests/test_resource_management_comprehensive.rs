@@ -572,7 +572,7 @@ impl TestCase for ResourceExhaustionTest {
         let mut max_allocations = 0;
 
         // Try to allocate memory until we approach limits
-        let allocation_size = 10 * 1024 * 1024; // 10MB chunks
+        let allocation_size = 10 * bitnet_tests::common::BYTES_PER_MB; // 10MB chunks
         let max_memory_limit = 500 * 1024 * 1024; // 500MB limit for safety
 
         for i in 0..50 {
