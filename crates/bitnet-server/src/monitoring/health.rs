@@ -308,24 +308,20 @@ pub fn create_health_routes(health_checker: Arc<HealthChecker>) -> Router {
 /// Comprehensive health check endpoint
 async fn health_handler(
     State(health_checker): State<Arc<HealthChecker>>,
-) -> Result<Json<HealthResponse>, StatusCode> {
+) -> (StatusCode, Json<HealthResponse>) {
     let health = health_checker.check_health().await;
-
-    let _status_code = status_code_for(health.status.clone());
-
-    Ok(Json(health))
+    let status_code = status_code_for(health.status.clone());
+    (status_code, Json(health))
 }
 
 /// Liveness probe endpoint (Kubernetes)
 async fn liveness_handler(State(health_checker): State<Arc<HealthChecker>>) -> StatusCode {
-    match health_checker.check_liveness().await {
-        HealthStatus::Healthy | HealthStatus::Degraded => StatusCode::OK,
-        HealthStatus::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,
-    }
+    status_code_for(health_checker.check_liveness().await)
 }
 
 /// Readiness probe endpoint (Kubernetes)
 async fn readiness_handler(State(health_checker): State<Arc<HealthChecker>>) -> StatusCode {
+    // Readiness always uses strict fail-fast (degraded = not ready)
     match health_checker.check_readiness().await {
         HealthStatus::Healthy => StatusCode::OK,
         HealthStatus::Degraded | HealthStatus::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,
