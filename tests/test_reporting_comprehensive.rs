@@ -27,7 +27,7 @@ fn create_comprehensive_test_data() -> Vec<TestSuiteResult> {
                     duration: Duration::from_secs(3),
                     metrics: TestMetrics {
                         memory_peak: Some(BYTES_PER_MB), // 1MB
-                        memory_average: Some(512 * 1024), // 512KB
+                        memory_average: Some(512 * BYTES_PER_KB), // 512KB
                         cpu_time: Some(Duration::from_secs(2)),
                         wall_time: Duration::from_secs(3),
                         custom_metrics: {
@@ -56,8 +56,8 @@ fn create_comprehensive_test_data() -> Vec<TestSuiteResult> {
                     status: TestStatus::Passed,
                     duration: Duration::from_secs(2),
                     metrics: TestMetrics {
-                        memory_peak: Some(256 * 1024), // 256KB
-                        memory_average: Some(128 * 1024), // 128KB
+                        memory_peak: Some(256 * BYTES_PER_KB), // 256KB
+                        memory_average: Some(128 * BYTES_PER_KB), // 128KB
                         cpu_time: Some(Duration::from_millis(1500)),
                         wall_time: Duration::from_secs(2),
                         custom_metrics: {
@@ -81,7 +81,7 @@ fn create_comprehensive_test_data() -> Vec<TestSuiteResult> {
                     status: TestStatus::Failed,
                     duration: Duration::from_secs(8),
                     metrics: TestMetrics {
-                        memory_peak: Some(2048 * 1024), // 2MB
+                        memory_peak: Some(2048 * BYTES_PER_KB), // 2MB
                         memory_average: Some(BYTES_PER_MB), // 1MB
                         cpu_time: Some(Duration::from_secs(6)),
                         wall_time: Duration::from_secs(8),
@@ -123,7 +123,7 @@ fn create_comprehensive_test_data() -> Vec<TestSuiteResult> {
                 success_rate: 50.0,
                 total_duration: Duration::from_secs(15),
                 average_duration: Duration::from_millis(3750),
-                peak_memory: Some(2048 * 1024),
+                peak_memory: Some(2048 * BYTES_PER_KB),
                 total_assertions: 16,
             },
             environment: {
@@ -152,8 +152,8 @@ fn create_comprehensive_test_data() -> Vec<TestSuiteResult> {
                     status: TestStatus::Passed,
                     duration: Duration::from_secs(12),
                     metrics: TestMetrics {
-                        memory_peak: Some(4096 * 1024), // 4MB
-                        memory_average: Some(2048 * 1024), // 2MB
+                        memory_peak: Some(4096 * BYTES_PER_KB), // 4MB
+                        memory_average: Some(2048 * BYTES_PER_KB), // 2MB
                         cpu_time: Some(Duration::from_secs(10)),
                         wall_time: Duration::from_secs(12),
                         custom_metrics: {
@@ -177,8 +177,8 @@ fn create_comprehensive_test_data() -> Vec<TestSuiteResult> {
                     status: TestStatus::Timeout,
                     duration: Duration::from_secs(10),
                     metrics: TestMetrics {
-                        memory_peak: Some(8192 * 1024), // 8MB
-                        memory_average: Some(4096 * 1024), // 4MB
+                        memory_peak: Some(8192 * BYTES_PER_KB), // 8MB
+                        memory_average: Some(4096 * BYTES_PER_KB), // 4MB
                         cpu_time: Some(Duration::from_secs(8)),
                         wall_time: Duration::from_secs(10),
                         custom_metrics: {
@@ -203,7 +203,7 @@ fn create_comprehensive_test_data() -> Vec<TestSuiteResult> {
                     duration: Duration::from_secs(3),
                     metrics: TestMetrics {
                         memory_peak: Some(BYTES_PER_MB), // 1MB
-                        memory_average: Some(512 * 1024), // 512KB
+                        memory_average: Some(512 * BYTES_PER_KB), // 512KB
                         cpu_time: Some(Duration::from_secs(2)),
                         wall_time: Duration::from_secs(3),
                         custom_metrics: {
@@ -232,7 +232,7 @@ fn create_comprehensive_test_data() -> Vec<TestSuiteResult> {
                 success_rate: 66.67,
                 total_duration: Duration::from_secs(25),
                 average_duration: Duration::from_millis(8333),
-                peak_memory: Some(8192 * 1024),
+                peak_memory: Some(8192 * BYTES_PER_KB),
                 total_assertions: 33,
             },
             environment: {

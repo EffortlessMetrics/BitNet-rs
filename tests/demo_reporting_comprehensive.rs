@@ -59,8 +59,8 @@ fn create_demo_test_data() -> Vec<TestSuiteResult> {
                     status: TestStatus::Passed,
                     duration: Duration::from_secs(3),
                     metrics: TestMetrics {
-                        memory_peak: Some(512 * 1024), // 512KB
-                        memory_average: Some(256 * 1024), // 256KB
+                        memory_peak: Some(512 * BYTES_PER_KB), // 512KB
+                        memory_average: Some(256 * BYTES_PER_KB), // 256KB
                         cpu_time: Some(Duration::from_millis(2500)),
                         wall_time: Duration::from_secs(3),
                         custom_metrics: {
@@ -84,8 +84,8 @@ fn create_demo_test_data() -> Vec<TestSuiteResult> {
                     status: TestStatus::Failed,
                     duration: Duration::from_secs(5),
                     metrics: TestMetrics {
-                        memory_peak: Some(4096 * 1024), // 4MB
-                        memory_average: Some(2048 * 1024), // 2MB
+                        memory_peak: Some(4096 * BYTES_PER_KB), // 4MB
+                        memory_average: Some(2048 * BYTES_PER_KB), // 2MB
                         cpu_time: Some(Duration::from_secs(4)),
                         wall_time: Duration::from_secs(5),
                         custom_metrics: {
@@ -115,7 +115,7 @@ fn create_demo_test_data() -> Vec<TestSuiteResult> {
                 success_rate: 66.67,
                 total_duration: Duration::from_secs(12),
                 average_duration: Duration::from_secs(4),
-                peak_memory: Some(4096 * 1024),
+                peak_memory: Some(4096 * BYTES_PER_KB),
                 total_assertions: 25,
             },
             environment: {
@@ -146,8 +146,8 @@ fn create_demo_test_data() -> Vec<TestSuiteResult> {
                     status: TestStatus::Passed,
                     duration: Duration::from_secs(8),
                     metrics: TestMetrics {
-                        memory_peak: Some(8192 * 1024), // 8MB
-                        memory_average: Some(4096 * 1024), // 4MB
+                        memory_peak: Some(8192 * BYTES_PER_KB), // 8MB
+                        memory_average: Some(4096 * BYTES_PER_KB), // 4MB
                         cpu_time: Some(Duration::from_secs(7)),
                         wall_time: Duration::from_secs(8),
                         custom_metrics: {
@@ -199,8 +199,8 @@ fn create_demo_test_data() -> Vec<TestSuiteResult> {
                     status: TestStatus::Timeout,
                     duration: Duration::from_secs(6),
                     metrics: TestMetrics {
-                        memory_peak: Some(16384 * 1024), // 16MB
-                        memory_average: Some(8192 * 1024), // 8MB
+                        memory_peak: Some(16384 * BYTES_PER_KB), // 16MB
+                        memory_average: Some(8192 * BYTES_PER_KB), // 8MB
                         cpu_time: Some(Duration::from_secs(5)),
                         wall_time: Duration::from_secs(6),
                         custom_metrics: {
@@ -230,7 +230,7 @@ fn create_demo_test_data() -> Vec<TestSuiteResult> {
                 success_rate: 66.67,
                 total_duration: Duration::from_secs(20),
                 average_duration: Duration::from_millis(6667),
-                peak_memory: Some(16384 * 1024),
+                peak_memory: Some(16384 * BYTES_PER_KB),
                 total_assertions: 45,
             },
             environment: {
