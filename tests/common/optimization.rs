@@ -153,7 +153,7 @@ impl TestExecutionOptimizer {
         &mut self,
         all_tests: Vec<String>,
     ) -> TestResultCompat<OptimizationStrategy> {
-        let start_time = Instant::now();
+        let _start_time = Instant::now();
         let mut optimization_notes = Vec::new();
 
         // Load historical performance data

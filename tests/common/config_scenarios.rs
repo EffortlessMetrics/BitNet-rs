@@ -601,7 +601,13 @@ impl ScenarioConfigManager {
         ]
     }
 
-    /// Old entry-point used by the tests; internally delegates to `resolve`.
+    /// Returns a **base** config for the given context:
+    /// - merges scenario + environment defaults
+    /// - applies platform caps (e.g., Windows ≤ 8, macOS ≤ 6)
+    ///
+    /// NOTE: **Does not** apply fast-feedback/resource/quality overrides.
+    /// The test harness wrapper (in `test_configuration_scenarios.rs`) applies
+    /// the final context clamps to keep responsibilities separate.
     pub fn get_context_config(&self, ctx: &ConfigurationContext) -> TestConfig {
         // Start with the canonical scenario + environment merge.
         let mut cfg = self.resolve(&ctx.scenario, &ctx.environment);

@@ -133,7 +133,7 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
     
     // Centralized constant for MB to bytes conversion
     #[cfg(feature = "fixtures")]
-    const BYTES_PER_MB: u64 = 1_048_576; // 1024 * 1024
+    const BYTES_PER_MB: u64 = 1_048_576; // Canonical MB→bytes multiplier (1024 * 1024)
 
     let framework_ctx = ctx.to_framework_context();
     let mut cfg = bitnet_tests::config_scenarios::ScenarioConfigManager
@@ -743,11 +743,14 @@ impl TestCase for ResourceConstraintsTest {
         context.resource_constraints.max_disk_cache_mb = 500;
         let config = get_context_config(&manager, &context);
         #[cfg(feature = "fixtures")]
-        assert_eq!(
-            config.fixtures.max_cache_size,
-            500 * 1024 * 1024,
-            "Disk cache constraint should be applied"
-        );
+        {
+            const MB_500: u64 = 500 * 1_048_576; // 500MB using canonical multiplier
+            assert_eq!(
+                config.fixtures.max_cache_size,
+                MB_500,
+                "Disk cache constraint should be applied"
+            );
+        }
 
         // Test network access constraint
         context.resource_constraints.network_access = false;
@@ -1868,6 +1871,48 @@ mod shim_unit_tests {
             env::set_var("GITHUB_ACTIONS", val);
         } else {
             env::remove_var("GITHUB_ACTIONS");
+        }
+    }
+
+    #[test]
+    fn test_fast_feedback_is_applied_once() {
+        // This test ensures we don't double-apply context overrides
+        // (once in ScenarioConfigManager, once in test wrapper)
+        let mgr = ScenarioConfigManager::new();
+        let mut ctx = TestConfigContext::default();
+        ctx.time_constraints.target_feedback_time = Some(Duration::from_secs(30));
+        
+        let cfg = get_context_config(&mgr, &ctx);
+        
+        // The wrapper sets JSON-only formats once.
+        assert_eq!(cfg.reporting.formats, vec![ReportFormat::Json]);
+        
+        // Parallelism ≤ 4 once (not pushed below 1 by repeated mins).
+        assert!(cfg.max_parallel_tests >= 1 && cfg.max_parallel_tests <= 4);
+        
+        // Artifacts disabled exactly once for very short feedback times.
+        assert!(!cfg.reporting.include_artifacts);
+    }
+    
+    #[test] 
+    fn test_no_double_clamp_on_resources() {
+        // Verify resource constraints are applied exactly once
+        let mgr = ScenarioConfigManager::new();
+        let mut ctx = TestConfigContext::default();
+        ctx.resource_constraints.max_parallel_tests = Some(2);
+        ctx.resource_constraints.network_access = false;
+        
+        let cfg = get_context_config(&mgr, &ctx);
+        
+        // Parallelism should be exactly 2 (not clamped again)
+        assert_eq!(cfg.max_parallel_tests, 2);
+        
+        // Network features disabled once
+        assert!(!cfg.reporting.upload_reports);
+        #[cfg(feature = "fixtures")]
+        {
+            assert!(!cfg.fixtures.auto_download);
+            assert!(cfg.fixtures.base_url.is_none());
         }
     }
 }

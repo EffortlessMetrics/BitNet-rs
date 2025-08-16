@@ -9,6 +9,13 @@ Welcome to the comprehensive documentation for BitNet.rs, the production-ready R
 - **[API Reference](api-reference.md)** - Complete API documentation with examples
 - **[Migration Guide](migration-guide.md)** - Migrate from Python/C++ BitNet implementations
 
+### Configuration & Testing
+- **[Configuration layering and clamps](./configuration.md)** - How the manager, environment overlay, and context clamps interact
+- **[Testing guidelines](./testing.md)** - Writing stable, non-flaky tests
+
+### Architecture
+- **[ADR-0001: Configuration layering and clamp location](./adr/0001-configuration-layering.md)** - Architectural decision record
+
 ### Guides
 - **[Performance Tuning](performance-tuning.md)** - Optimize performance for your hardware and use case
 - **[Troubleshooting](troubleshooting.md)** - Common issues and solutions

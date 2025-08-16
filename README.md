@@ -429,6 +429,80 @@ cargo audit
 cargo deny check
 ```
 
+## Configuration model (at a glance)
+
+BitNet's test harness builds a runtime configuration in three layers:
+
+1. **Scenario defaults** – opinionated, named test "scenarios" (e.g., `Unit`, `CI`, `PreProd`).
+2. **Environment overlay** – CI/host capabilities and env‑driven tweaks (e.g., `CI=true` caps parallelism).
+3. **Context clamps** – *final* overrides based on the live test context (fast‑feedback, resource limits, quality gates).
+
+> Separation of concerns: the manager returns a **base** config (scenario + env + platform caps).
+> The test wrapper applies **context clamps** (fast‑feedback, resource, quality) so we never double‑apply rules.
+
+### Fast‑feedback mode
+
+If `target_feedback_time ≤ 120s`, we cut non‑critical work:
+- Coverage & performance reports are disabled
+- Output formats become **JSON‑only**
+- `max_parallel_tests` is capped (≤ 4)
+- If `target_feedback_time ≤ 30s`, artifacts are **skipped** entirely
+
+### Environment safety in tests
+
+Tests that mutate `std::env` must take a shared lock:
+
+```rust
+#[cfg(test)]
+use std::sync::{Mutex, OnceLock};
+
+#[cfg(test)]
+static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+#[cfg(test)]
+fn env_guard() -> std::sync::MutexGuard<'static, ()> {
+    ENV_LOCK.get_or_init(|| Mutex::new(())).lock().expect("env guard poisoned")
+}
+```
+
+Use it at the top of any test that reads/writes env:
+
+```rust
+#[test]
+fn my_env_test() {
+    let _g = env_guard();
+    // safely mutate env here...
+}
+```
+
+### MB → bytes
+
+Use a single canonical multiplier everywhere:
+
+```rust
+/// Canonical MB→bytes multiplier used anywhere we convert disk sizes.
+pub const BYTES_PER_MB: u64 = 1_048_576; // 1024 * 1024
+```
+
+### Case‑insensitive env parsers
+
+Keep env parsing consistent and whitespace‑tolerant:
+
+```rust
+fn env_bool(var: &str) -> bool { /* ...case‑insensitive true/1/yes/on... */ }
+fn env_u64(var: &str) -> Option<u64> { std::env::var(var).ok()?.trim().parse().ok() }
+fn env_usize(var: &str) -> Option<usize> { std::env::var(var).ok()?.trim().parse().ok() }
+fn env_duration_secs(var: &str) -> Option<std::time::Duration> {
+    env_u64(var).map(std::time::Duration::from_secs)
+}
+```
+
+### Further reading
+
+- Full layering details: see [`docs/configuration.md`](docs/configuration.md)
+- Architectural decision record: see [`docs/adr/0001-configuration-layering.md`](docs/adr/0001-configuration-layering.md)
+- Testing guidelines: see [`docs/testing.md`](docs/testing.md)
+
 ## Legacy C++ Implementation
 
 For compatibility testing and benchmarking, the original Microsoft BitNet C++ implementation is available as an external dependency through our cross-validation framework. **This is not recommended for production use** - BitNet.rs is the primary, actively maintained implementation.
