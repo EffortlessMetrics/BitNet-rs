@@ -44,6 +44,7 @@ pub fn env_bool(var: &str) -> bool {
 
 /// Parse an environment variable as a u64.
 /// Returns None if not set or not parseable.
+#[must_use]
 pub fn env_u64(var: &str) -> Option<u64> {
     std::env::var(var)
         .ok()
@@ -52,6 +53,7 @@ pub fn env_u64(var: &str) -> Option<u64> {
 
 /// Parse an environment variable as a usize.
 /// Returns None if not set or not parseable.
+#[must_use]
 pub fn env_usize(var: &str) -> Option<usize> {
     std::env::var(var)
         .ok()
@@ -60,12 +62,14 @@ pub fn env_usize(var: &str) -> Option<usize> {
 
 /// Parse an environment variable as a Duration in seconds.
 /// Returns None if not set or not parseable.
+#[must_use]
 pub fn env_duration_secs(var: &str) -> Option<Duration> {
     env_u64(var).map(Duration::from_secs)
 }
 
 /// Parse an environment variable as a string, trimming whitespace.
 /// Returns None if not set.
+#[must_use]
 pub fn env_string(var: &str) -> Option<String> {
     std::env::var(var)
         .ok()

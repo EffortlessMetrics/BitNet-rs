@@ -4,6 +4,9 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+// Import the canonical MB and GB constants from the test harness crate
+use bitnet_tests::common::{BYTES_PER_MB, BYTES_PER_GB};
+
 // Minimal configuration structures for testing
 #[derive(Debug, Clone, PartialEq)]
 pub struct TestConfig {
@@ -124,7 +127,7 @@ impl Default for FixtureConfig {
     fn default() -> Self {
         Self {
             auto_download: true,
-            max_cache_size: 10 * 1024 * 1024 * 1024, // 10 GB
+            max_cache_size: 10 * BYTES_PER_GB, // 10 GiB
             cleanup_interval: Duration::from_secs(24 * 60 * 60), // 24 hours
             download_timeout: Duration::from_secs(300), // 5 minutes
             base_url: None,
