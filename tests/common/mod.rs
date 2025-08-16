@@ -17,6 +17,7 @@ pub mod config_scenarios_simple;
 pub mod errors;
 pub mod results;
 pub mod serde_time;
+pub mod units;
 pub mod utils;
 pub mod harness;
 
@@ -51,6 +52,7 @@ pub mod selection;
 
 // Re-export commonly used functions
 pub use utils::{format_bytes, format_duration, get_memory_usage, get_peak_memory_usage};
+pub use units::BYTES_PER_MB;
 
 // Cross-validation module temporarily disabled
 // pub mod cross_validation;
