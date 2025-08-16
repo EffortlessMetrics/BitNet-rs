@@ -16,7 +16,7 @@ use bitnet_tests::{
     // Use the single, shared env guard and helpers from the test harness crate
     env_guard, env_bool, env_u64, env_usize, env_duration_secs,
 };
-use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
+use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
