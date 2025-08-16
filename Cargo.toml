@@ -75,6 +75,7 @@ serde_json = "1.0"
 ctor = "0.2"
 rand = "0.8"
 async-trait = "0.1"
+env_logger = "0.11"
 bitnet-tests = { path = "tests", package = "bitnet-tests" }
 
 [features]
@@ -117,6 +118,12 @@ cli = []    # Handled by bitnet-cli crate
 
 # Cross-validation features
 crossval = [] # Enable cross-validation against C++ implementation
+
+# Test framework features (forward to bitnet-tests)
+fixtures = ["bitnet-tests/fixtures"]
+reporting = ["bitnet-tests/reporting"]
+trend = ["bitnet-tests/trend"]
+full-framework = ["fixtures", "reporting", "trend"]
 
 # Convenience features
 full = ["cpu", "gpu", "avx2", "avx512", "neon"]
