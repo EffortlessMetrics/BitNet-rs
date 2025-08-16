@@ -250,13 +250,7 @@ impl HealthChecker {
         let degraded_count =
             components.values().filter(|c| c.status == HealthStatus::Degraded).count();
 
-        if unhealthy_count > 0 {
-            HealthStatus::Unhealthy
-        } else if degraded_count > 0 {
-            HealthStatus::Degraded
-        } else {
-            HealthStatus::Healthy
-        }
+        overall_status_from_counts(unhealthy_count, degraded_count)
     }
 
     async fn collect_health_metrics(&self) -> HealthMetrics {
@@ -269,6 +263,17 @@ impl HealthChecker {
             memory_usage_mb: 0.0,
             tokens_per_second: 0.0,
         }
+    }
+}
+
+#[inline]
+fn overall_status_from_counts(unhealthy_count: usize, degraded_count: usize) -> HealthStatus {
+    if unhealthy_count > 0 {
+        HealthStatus::Unhealthy
+    } else if degraded_count > 0 {
+        HealthStatus::Degraded
+    } else {
+        HealthStatus::Healthy
     }
 }
 
@@ -309,5 +314,27 @@ async fn readiness_handler(State(health_checker): State<Arc<HealthChecker>>) -> 
     match health_checker.check_readiness().await {
         HealthStatus::Healthy => StatusCode::OK,
         HealthStatus::Degraded | HealthStatus::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{overall_status_from_counts, HealthStatus};
+
+    #[test]
+    fn overall_unhealthy_wins() {
+        assert!(matches!(overall_status_from_counts(1, 0), HealthStatus::Unhealthy));
+        assert!(matches!(overall_status_from_counts(3, 2), HealthStatus::Unhealthy));
+    }
+
+    #[test]
+    fn overall_degraded_when_no_unhealthy() {
+        assert!(matches!(overall_status_from_counts(0, 1), HealthStatus::Degraded));
+        assert!(matches!(overall_status_from_counts(0, 7), HealthStatus::Degraded));
+    }
+
+    #[test]
+    fn overall_healthy_when_none() {
+        assert!(matches!(overall_status_from_counts(0, 0), HealthStatus::Healthy));
     }
 }
