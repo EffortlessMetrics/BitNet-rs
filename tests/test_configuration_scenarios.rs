@@ -96,6 +96,10 @@ struct QualityRequirements {
 /// 5. quality requirements (coverage, perf, crossval)
 /// 6. platform caps (windows/mac limits)
 /// 7. final clamp (fast-feedback JSON-only + ≤4 parallel)
+///
+/// The final fast-feedback clamp is applied last and intentionally overrides all
+/// prior merges (including comprehensive reporting), ensuring JSON-only, no heavy
+/// generators, and ≤4 parallel tests.
 fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) -> TestConfig {
     use std::time::Duration;
     use bitnet_tests::config::ReportFormat;
@@ -217,17 +221,17 @@ fn context_from_environment() -> TestConfigContext {
     ctx.scenario = framework_ctx.scenario;
     ctx.environment = framework_ctx.environment;
     
-    // Also check BITNET_ENV for backward compatibility
+    // Check explicit BITNET_ENV first (highest priority)
     if let Ok(env_str) = env::var("BITNET_ENV") {
         ctx.environment = match env_str.to_lowercase().as_str() {
             "production" | "prod" => EnvironmentType::Production,
+            "preproduction" | "preprod" => EnvironmentType::PreProduction,
             "ci" => EnvironmentType::CI,
+            "local" => EnvironmentType::Local,
             _ => ctx.environment,
         };
-    }
-    
-    // Also detect common CI environment variables
-    if env_bool("CI") || env::var("GITHUB_ACTIONS").is_ok() {
+    } else if env_bool("CI") || env::var("GITHUB_ACTIONS").is_ok() {
+        // Only infer CI if no explicit BITNET_ENV was provided
         ctx.environment = EnvironmentType::CI;
     }
     
@@ -922,7 +926,7 @@ impl TestCase for PlatformSpecificConfigurationTest {
 
         // Test Generic platform
         context.platform_settings.os = Some("generic".to_string());
-        let config = get_context_config(&manager, &context);
+        let _config = get_context_config(&manager, &context);
         // Generic doesn't impose additional limits
 
         metrics.wall_time = start_time.elapsed();
@@ -1631,6 +1635,15 @@ async fn test_configuration_scenarios() {
 mod shim_unit_tests {
     use super::*;
     use std::time::Duration;
+    use std::sync::Mutex;
+    
+    // Global lock to prevent race conditions when tests modify environment variables
+    use std::sync::OnceLock;
+    static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    
+    fn get_env_lock() -> &'static Mutex<()> {
+        ENV_LOCK.get_or_init(|| Mutex::new(()))
+    }
     
     #[test]
     fn test_fast_feedback_forces_json_and_caps_parallelism() {
@@ -1659,18 +1672,26 @@ mod shim_unit_tests {
     
     #[test]
     fn test_env_ci_is_detected() {
-        // Save original value if exists
-        let original = env::var("CI").ok();
+        let _guard = get_env_lock().lock().unwrap(); // Serialize env changes
         
+        // Save original values if exist
+        let original_ci = env::var("CI").ok();
+        let original_bitnet_env = env::var("BITNET_ENV").ok();
+        
+        // Ensure BITNET_ENV is not set so CI detection can happen
+        env::remove_var("BITNET_ENV");
         env::set_var("CI", "true");
         let ctx = context_from_environment();
         assert!(matches!(ctx.environment, EnvironmentType::CI));
         
-        // Restore original value
-        if let Some(val) = original {
+        // Restore original values
+        if let Some(val) = original_ci {
             env::set_var("CI", val);
         } else {
             env::remove_var("CI");
+        }
+        if let Some(val) = original_bitnet_env {
+            env::set_var("BITNET_ENV", val);
         }
     }
     
@@ -1690,16 +1711,18 @@ mod shim_unit_tests {
         let mut ctx = TestConfigContext::default();
         ctx.resource_constraints.max_disk_cache_mb = u64::MAX / 1024; // Very large value
         
-        let cfg = get_context_config(&mgr, &ctx);
+        let _cfg = get_context_config(&mgr, &ctx);
         #[cfg(feature = "fixtures")]
         {
             // Should not panic due to overflow
-            assert!(cfg.fixtures.max_cache_size > 0);
+            assert!(_cfg.fixtures.max_cache_size > 0);
         }
     }
     
     #[test]
     fn test_env_bool_helper() {
+        let _guard = get_env_lock().lock().unwrap(); // Serialize env changes
+        
         // Test various truthy values
         env::set_var("TEST_VAR", "true");
         assert!(env_bool("TEST_VAR"));
@@ -1746,5 +1769,49 @@ mod shim_unit_tests {
         assert!(!cfg.reporting.generate_coverage, "Fast feedback final clamp should disable coverage");
         assert!(!cfg.reporting.generate_performance, "Fast feedback final clamp should disable performance");
         assert_eq!(cfg.reporting.formats, vec![ReportFormat::Json], "Fast feedback should force JSON only");
+    }
+    
+    #[test]
+    fn test_explicit_env_overrides_ci_detection() {
+        let _guard = get_env_lock().lock().unwrap(); // Serialize env changes
+        
+        // Save original values
+        let original_ci = env::var("CI").ok();
+        let original_bitnet_env = env::var("BITNET_ENV").ok();
+        let original_github = env::var("GITHUB_ACTIONS").ok();
+        
+        // Set both CI indicators and explicit BITNET_ENV
+        env::set_var("CI", "true");
+        env::set_var("GITHUB_ACTIONS", "true");
+        env::set_var("BITNET_ENV", "production");
+        
+        let ctx = context_from_environment();
+        
+        // Explicit BITNET_ENV should win
+        assert!(matches!(ctx.environment, EnvironmentType::Production), 
+                "Explicit BITNET_ENV=production should override CI detection");
+        
+        // Test other explicit values
+        env::set_var("BITNET_ENV", "local");
+        let ctx = context_from_environment();
+        assert!(matches!(ctx.environment, EnvironmentType::Local), 
+                "Explicit BITNET_ENV=local should override CI detection");
+        
+        // Restore original values
+        if let Some(val) = original_ci {
+            env::set_var("CI", val);
+        } else {
+            env::remove_var("CI");
+        }
+        if let Some(val) = original_bitnet_env {
+            env::set_var("BITNET_ENV", val);
+        } else {
+            env::remove_var("BITNET_ENV");
+        }
+        if let Some(val) = original_github {
+            env::set_var("GITHUB_ACTIONS", val);
+        } else {
+            env::remove_var("GITHUB_ACTIONS");
+        }
     }
 }
