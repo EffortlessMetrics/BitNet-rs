@@ -204,6 +204,42 @@ pub struct DeviceCapabilities {
 
 ## Quantization
 
+### Quantize Trait
+
+The `Quantize` trait defines the interface for quantization and dequantization operations.
+
+```rust
+pub trait Quantize {
+    /// Quantize a tensor using the specified quantization type.
+    fn quantize(&self, qtype: QuantizationType) -> Result<QuantizedTensor>;
+
+    /// Dequantize back to a full precision tensor.
+    fn dequantize(&self) -> Result<BitNetTensor>;
+}
+```
+
+### QuantizedTensor
+
+Represents a quantized tensor with compressed data and metadata.
+
+```rust
+#[derive(Debug, Clone)]
+pub struct QuantizedTensor {
+    /// Compressed quantized data.
+    pub data: Vec<u8>,
+    /// Scale factors for dequantization.
+    pub scales: Vec<f32>,
+    /// Zero points for asymmetric quantization (if needed).
+    pub zero_points: Option<Vec<i32>>,
+    /// Original tensor shape.
+    pub shape: Vec<usize>,
+    /// Quantization type used.
+    pub qtype: QuantizationType,
+    /// Block size for grouped quantization.
+    pub block_size: usize,
+}
+```
+
 ### QuantizationConfig
 
 Configuration for model quantization.
@@ -252,55 +288,129 @@ impl Default for QuantizationConfig {
 }
 ```
 
+## Models
+
+### Model Trait
+
+The `Model` trait defines the interface for all BitNet models. It provides a common set of methods for interacting with different model implementations.
+
+```rust
+pub trait Model: Send + Sync {
+    /// Returns the configuration of the model.
+    fn config(&self) -> &BitNetConfig;
+
+    /// Performs a forward pass through the model.
+    fn forward(
+        &self,
+        input: &ConcreteTensor,
+        cache: &mut dyn std::any::Any,
+    ) -> Result<ConcreteTensor>;
+
+    /// Embeds a sequence of tokens into a tensor.
+    fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor>;
+
+    /// Computes the logits for a given hidden state.
+    fn logits(&self, hidden: &ConcreteTensor) -> Result<ConcreteTensor>;
+}
+```
+
 ## Inference Engine
 
 ### InferenceEngine
 
-Low-level inference engine for advanced use cases.
+The `InferenceEngine` is the main entry point for running inference with a BitNet model. It encapsulates the model, tokenizer, and backend, providing a high-level API for text generation.
 
 ```rust
 pub struct InferenceEngine {
-    // Internal fields
+    // ... private fields
 }
 
 impl InferenceEngine {
-    /// Create a new inference engine
+    /// Creates a new inference engine with the given model, tokenizer, and device.
     pub fn new(
         model: Arc<dyn Model>,
         tokenizer: Arc<dyn Tokenizer>,
         device: Device,
-    ) -> Result<Self, BitNetError>;
-    
-    /// Create with custom configuration
+    ) -> Result<Self>;
+
+    /// Creates a new inference engine with a custom configuration.
     pub fn with_config(
         model: Arc<dyn Model>,
         tokenizer: Arc<dyn Tokenizer>,
         device: Device,
         config: InferenceConfig,
-    ) -> Result<Self, BitNetError>;
-    
-    /// Run inference on token IDs
-    pub async fn forward(
-        &self,
-        input_ids: &[u32],
-        attention_mask: Option<&[bool]>,
-    ) -> Result<Tensor, BitNetError>;
-    
-    /// Generate next token probabilities
-    pub async fn next_token_logits(
-        &self,
-        input_ids: &[u32],
-        temperature: f32,
-    ) -> Result<Vec<f32>, BitNetError>;
-    
-    /// Sample next token from logits
-    pub fn sample_token(
-        &self,
-        logits: &[f32],
-        config: &SamplingConfig,
-    ) -> Result<u32, BitNetError>;
-}
+    ) -> Result<Self>;
 
+    /// Generates text from a prompt using the default generation configuration.
+    pub async fn generate(&self, prompt: &str) -> Result<String>;
+
+    /// Generates text from a prompt with a custom generation configuration.
+    pub async fn generate_with_config(
+        &self,
+        prompt: &str,
+        config: &GenerationConfig,
+    ) -> Result<String>;
+
+    /// Returns a stream of generated tokens for a given prompt.
+    pub fn generate_stream(&self, prompt: &str) -> GenerationStream;
+
+    /// Returns a stream of generated tokens with a custom generation configuration.
+    pub fn generate_stream_with_config(
+        &self,
+        prompt: &str,
+        config: &GenerationConfig,
+    ) -> GenerationStream;
+
+    /// Returns the configuration of the underlying model.
+    pub fn model_config(&self) -> &BitNetConfig;
+
+    /// Returns statistics about the inference engine, such as cache usage and backend type.
+    pub async fn get_stats(&self) -> InferenceStats;
+
+    /// Clears the KV cache of the inference engine.
+    pub async fn clear_cache(&self);
+}
+```
+
+### InferenceResult
+
+Represents the result of an inference operation.
+
+```rust
+#[derive(Debug, Clone)]
+pub struct InferenceResult {
+    /// The generated text.
+    pub generated_text: String,
+    /// The number of tokens that were generated.
+    pub tokens_generated: usize,
+    /// The latency of the generation in milliseconds.
+    pub latency_ms: u64,
+    /// The number of tokens generated per second.
+    pub tokens_per_second: f64,
+}
+```
+
+### InferenceStats
+
+Statistics about the inference engine.
+
+```rust
+#[derive(Debug, Clone)]
+pub struct InferenceStats {
+    /// The size of the KV cache in bytes.
+    pub cache_size: usize,
+    /// The usage of the KV cache as a percentage.
+    pub cache_usage: f64,
+    /// The type of the backend being used (e.g., "cpu", "cuda").
+    pub backend_type: String,
+}
+```
+
+### InferenceConfig
+
+Configuration for the inference engine.
+
+```rust
 #[derive(Debug, Clone)]
 pub struct InferenceConfig {
     /// Maximum batch size
@@ -322,45 +432,26 @@ pub struct InferenceConfig {
 
 ## Tokenization
 
-### Tokenizer
+### Tokenizer Trait
 
-Interface for text tokenization.
+The `Tokenizer` trait defines the interface for all tokenizers.
 
 ```rust
 pub trait Tokenizer: Send + Sync {
-    /// Encode text to token IDs
-    fn encode(&self, text: &str, add_special_tokens: bool) -> Result<Vec<u32>, TokenizerError>;
-    
-    /// Decode token IDs to text
-    fn decode(&self, token_ids: &[u32], skip_special_tokens: bool) -> Result<String, TokenizerError>;
-    
-    /// Get vocabulary size
-    fn vocab_size(&self) -> usize;
-    
-    /// Get special token IDs
-    fn special_tokens(&self) -> &SpecialTokens;
-    
-    /// Batch encode multiple texts
-    fn encode_batch(
-        &self,
-        texts: &[&str],
-        add_special_tokens: bool,
-    ) -> Result<Vec<Vec<u32>>, TokenizerError>;
-    
-    /// Batch decode multiple token sequences
-    fn decode_batch(
-        &self,
-        token_ids: &[&[u32]],
-        skip_special_tokens: bool,
-    ) -> Result<Vec<String>, TokenizerError>;
-}
+    /// Encodes a string into a sequence of token IDs.
+    fn encode(&self, text: &str, add_special_tokens: bool) -> Result<Vec<u32>>;
 
-#[derive(Debug, Clone)]
-pub struct SpecialTokens {
-    pub bos_token_id: Option<u32>,
-    pub eos_token_id: Option<u32>,
-    pub pad_token_id: Option<u32>,
-    pub unk_token_id: Option<u32>,
+    /// Decodes a sequence of token IDs into a string.
+    fn decode(&self, tokens: &[u32], skip_special_tokens: bool) -> Result<String>;
+
+    /// Returns the size of the vocabulary.
+    fn vocab_size(&self) -> usize;
+
+    /// Returns the ID of the end-of-sentence token, if any.
+    fn eos_token_id(&self) -> Option<u32>;
+
+    /// Returns the ID of the padding token, if any.
+    fn pad_token_id(&self) -> Option<u32>;
 }
 ```
 

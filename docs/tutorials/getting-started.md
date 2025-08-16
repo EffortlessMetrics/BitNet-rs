@@ -176,80 +176,12 @@ BitNet Rust respects these environment variables:
 - `BITNET_LOG_LEVEL`: Log level ("trace", "debug", "info", "warn", "error")
 - `CUDA_VISIBLE_DEVICES`: GPU device selection
 
-## Performance Optimization
-
-### CPU Optimization
-
-1. **Enable CPU features**:
-```bash
-RUSTFLAGS="-C target-cpu=native" cargo build --release
-```
-
-2. **Tune thread count**:
-```bash
-export RAYON_NUM_THREADS=8
-bitnet-cli inference --model model.gguf --prompt "Hello"
-```
-
-### GPU Optimization
-
-1. **Enable mixed precision**:
-```rust
-let config = InferenceConfig {
-    use_mixed_precision: true,
-    ..Default::default()
-};
-```
-
-2. **Optimize batch size**:
-```rust
-let config = InferenceConfig {
-    max_batch_size: 16,  // Adjust based on GPU memory
-    ..Default::default()
-};
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **CUDA not found**:
-   - Install CUDA 11.8 or later
-   - Set `CUDA_HOME` environment variable
-   - Build with `--no-default-features --features cli` for CPU-only
-
-2. **Model loading fails**:
-   - Check model format compatibility
-   - Verify model file integrity
-   - Ensure sufficient disk space and memory
-
-3. **Poor performance**:
-   - Enable native CPU features with `RUSTFLAGS="-C target-cpu=native"`
-   - Use GPU acceleration if available
-   - Adjust batch size and thread count
-
-### Debug Mode
-
-Enable debug logging:
-
-```bash
-RUST_LOG=debug bitnet-cli inference --model model.gguf --prompt "Hello"
-```
-
-### Memory Issues
-
-Monitor memory usage:
-
-```bash
-bitnet-cli benchmark --model model.gguf --monitor-memory
-```
-
 ## Next Steps
 
-- Read the [API Reference](api-reference.md) for detailed API documentation
-- Check out [Examples](examples/) for more usage patterns
-- See [Migration Guide](migration-guide.md) for migrating from Python/C++
-- Review [Performance Tuning](performance-tuning.md) for optimization tips
+- Read the [API Reference](../../reference/api-reference.md) for detailed API documentation.
+- Check out the [examples](../../../examples) for more usage patterns.
+- See the [Migration Guide](../how-to-guides/migration-guide.md) for migrating from Python/C++.
+- Review the [Performance Tuning Guide](../how-to-guides/performance-tuning.md) for optimization tips.
 
 ## Getting Help
 

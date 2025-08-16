@@ -2,34 +2,14 @@
 
 Welcome to the comprehensive documentation for BitNet.rs, the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.
 
-## Quick Navigation
+## Documentation
 
-### Getting Started
-- **[Getting Started Guide](getting-started.md)** - Installation, basic usage, and quick start examples
-- **[API Reference](api-reference.md)** - Complete API documentation with examples
-- **[Migration Guide](migration-guide.md)** - Migrate from Python/C++ BitNet implementations
+This documentation is structured according to the [Diataxis framework](https://diataxis.fr/), which divides documentation into four categories:
 
-### Guides
-- **[Performance Tuning](performance-tuning.md)** - Optimize performance for your hardware and use case
-- **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
-
-### Examples
-- **[Basic Examples](../examples/basic/)** - Simple usage patterns
-- **[Advanced Examples](../examples/advanced/)** - Complex integration scenarios
-- **[Web Integration](../examples/web/)** - Web service and browser examples
-
-## Documentation Overview
-
-### Core Concepts
-
-BitNet.rs is built around several key concepts:
-
-- **Models**: BitNet model implementations with 1-bit quantization support
-- **Inference Engines**: High-performance inference with CPU/GPU acceleration
-- **Quantization**: Efficient 1-bit model compression with multiple backends
-- **Streaming**: Real-time text generation with async/await support
-- **Cross-Validation**: Optional compatibility testing with legacy C++ implementation
-- **Device Abstraction**: Unified interface for CPU, CUDA, and Metal backends
+- **[Tutorials](./tutorials/getting-started.md)**: Learning-oriented guides that walk you through a series of steps to achieve a goal.
+- **[How-to Guides](./how-to-guides/performance-tuning.md)**: Goal-oriented guides that provide solutions to specific problems.
+- **[Reference](./reference/api-reference.md)**: Information-oriented documentation that provides a complete and accurate description of the API.
+- **[Explanation](./explanation/overview.md)**: Understanding-oriented documentation that explains the concepts and architecture of the project.
 
 ### Architecture
 
@@ -67,17 +47,17 @@ BitNet.rs is built around several key concepts:
 
 | Feature | Status | Documentation |
 |---------|--------|---------------|
-| **Core Inference** | ✅ Complete | [API Reference](api-reference.md#bitnetmodel) |
-| **Streaming Generation** | ✅ Complete | [Getting Started](getting-started.md#streaming-generation) |
-| **CPU Optimization** | ✅ Complete | [Performance Tuning](performance-tuning.md#cpu-optimization) |
-| **CUDA GPU Support** | ✅ Complete | [Performance Tuning](performance-tuning.md#gpu-optimization) |
-| **Metal GPU Support** | ✅ Complete | [Troubleshooting](troubleshooting.md#metal-gpu-issues) |
-| **Quantization (I2S)** | ✅ Complete | [API Reference](api-reference.md#quantization) |
-| **Quantization (TL1/TL2)** | ✅ Complete | [API Reference](api-reference.md#quantization) |
-| **Python Bindings** | ✅ Complete | [Migration Guide](migration-guide.md#migrating-from-python-bitnet) |
-| **C API** | ✅ Complete | [Migration Guide](migration-guide.md#migrating-from-c-bitnet) |
+| **Core Inference** | ✅ Complete | [API Reference](./reference/api-reference.md) |
+| **Streaming Generation** | ✅ Complete | [Getting Started](./tutorials/getting-started.md) |
+| **CPU Optimization** | ✅ Complete | [Performance Tuning](./how-to-guides/performance-tuning.md) |
+| **CUDA GPU Support** | ✅ Complete | [Performance Tuning](./how-to-guides/performance-tuning.md) |
+| **Metal GPU Support** | ✅ Complete | [Troubleshooting](./how-to-guides/troubleshooting.md) |
+| **Quantization (I2S)** | ✅ Complete | [Quantization Explained](./explanation/quantization.md) |
+| **Quantization (TL1/TL2)** | ✅ Complete | [Quantization Explained](./explanation/quantization.md) |
+| **Python Bindings** | ✅ Complete | [Migration Guide](./how-to-guides/migration-guide.md) |
+| **C API** | ✅ Complete | [Migration Guide](./how-to-guides/migration-guide.md) |
 | **WebAssembly** | ✅ Complete | [Examples](../examples/wasm/) |
-| **CLI Tool** | ✅ Complete | [Getting Started](getting-started.md#using-the-cli) |
+| **CLI Tool** | ✅ Complete | [Getting Started](./tutorials/getting-started.md) |
 
 ## Quick Start
 
@@ -131,7 +111,7 @@ BitNet.rs delivers significant performance improvements over existing implementa
 
 *Benchmarks include cached dependencies and optimized build system.*
 
-See [Performance Guide](performance-guide.md) for optimization guidelines.
+See [Performance Tuning Guide](./how-to-guides/performance-tuning.md) for optimization guidelines.
 
 ## Supported Platforms
 
@@ -242,4 +222,4 @@ BitNet Rust is licensed under the [MIT License](../LICENSE).
 
 ---
 
-**Need help?** Check our [Troubleshooting Guide](troubleshooting.md) or join our [Discord community](https://discord.gg/bitnet-rust).
+**Need help?** Check our [Troubleshooting Guide](./how-to-guides/troubleshooting.md) or join our [Discord community](https://discord.gg/bitnet-rust).
