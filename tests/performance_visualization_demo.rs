@@ -18,6 +18,7 @@ use common::data::performance::{
     BenchmarkResult, BenchmarkRunner, MetricSummary, PerformanceSummary,
 };
 use common::reporting::{
+use common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
     create_performance_dashboard,
     performance_viz::{create_performance_comparison, ComparisonResults, PerformanceMetrics},
     DashboardConfig, PerformanceComparison, PerformanceDashboardGenerator, PerformanceVisualizer,
@@ -52,9 +53,9 @@ fn create_demo_benchmark_result(
             avg_duration: Some(Duration::from_millis(duration_ms)),
             min_duration: Some(Duration::from_millis(duration_ms - 5)),
             max_duration: Some(Duration::from_millis(duration_ms + 10)),
-            avg_memory_usage: Some(memory_mb * 1024 * 1024),
-            peak_memory_usage: Some(memory_mb * 1024 * 1024),
-            total_memory_allocated: Some(memory_mb * 1024 * 1024),
+            avg_memory_usage: Some(memory_mb * BYTES_PER_MB),
+            peak_memory_usage: Some(memory_mb * BYTES_PER_MB),
+            total_memory_allocated: Some(memory_mb * BYTES_PER_MB),
             custom_metrics,
         },
     }

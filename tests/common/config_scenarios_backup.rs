@@ -10,6 +10,7 @@ use super::config_scenarios_simple::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Configuration scenarios for different testing contexts
 /// This module provides comprehensive configuration management for various testing scenarios
@@ -308,7 +309,7 @@ impl ScenarioConfigManager {
         stress_config.max_parallel_tests = num_cpus::get() * 2; // Oversubscribe for stress
         stress_config.test_timeout = Duration::from_secs(1800); // 30 minutes
         stress_config.log_level = "debug".to_string();
-        stress_config.fixtures.max_cache_size = 100 * 1024 * 1024; // Limit cache for stress
+        stress_config.fixtures.max_cache_size = 100 * BYTES_PER_MB; // Limit cache for stress
         stress_config.reporting.generate_performance = true;
         stress_config.reporting.formats = vec![ReportFormat::Json, ReportFormat::Html];
         self.scenario_overrides.insert(TestingScenario::Stress, stress_config);
@@ -445,7 +446,7 @@ impl ScenarioConfigManager {
         }
 
         if constraints.max_disk_cache_mb > 0 {
-            config.fixtures.max_cache_size = constraints.max_disk_cache_mb * 1024 * 1024;
+            config.fixtures.max_cache_size = constraints.max_disk_cache_mb * BYTES_PER_MB;
         }
 
         if !constraints.network_access {

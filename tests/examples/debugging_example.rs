@@ -3,6 +3,7 @@ use std::time::Duration;
 use tokio::time::sleep;
 
 use tests::common::{
+use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
     config::TestConfig,
     debug_integration::{create_debug_harness, debug_config_from_env, DebugTestReporter},
     debugging::DebugConfig,
@@ -105,31 +106,31 @@ impl DebuggingExampleSuite {
                 "fast_passing_test",
                 false,
                 Duration::from_millis(100),
-                1024 * 1024, // 1MB
+                BYTES_PER_MB, // 1MB
             )),
             Box::new(DebuggableTestCase::new(
                 "slow_passing_test",
                 false,
                 Duration::from_secs(2),
-                10 * 1024 * 1024, // 10MB
+                10 * BYTES_PER_MB, // 10MB
             )),
             Box::new(DebuggableTestCase::new(
                 "memory_intensive_test",
                 false,
                 Duration::from_millis(500),
-                100 * 1024 * 1024, // 100MB
+                100 * BYTES_PER_MB, // 100MB
             )),
             Box::new(DebuggableTestCase::new(
                 "failing_execution_test",
                 true,
                 Duration::from_millis(200),
-                5 * 1024 * 1024, // 5MB
+                5 * BYTES_PER_MB, // 5MB
             )),
             Box::new(DebuggableTestCase::new(
                 "setup_fail_test",
                 true,
                 Duration::from_millis(100),
-                1024 * 1024, // 1MB
+                BYTES_PER_MB, // 1MB
             )),
         ];
 
@@ -153,42 +154,42 @@ impl TestSuite for DebuggingExampleSuite {
                         name,
                         false,
                         Duration::from_millis(100),
-                        1024 * 1024,
+                        BYTES_PER_MB,
                     )) as Box<dyn TestCase>
                 } else if name.contains("slow_passing") {
                     Box::new(DebuggableTestCase::new(
                         name,
                         false,
                         Duration::from_secs(2),
-                        10 * 1024 * 1024,
+                        10 * BYTES_PER_MB,
                     )) as Box<dyn TestCase>
                 } else if name.contains("memory_intensive") {
                     Box::new(DebuggableTestCase::new(
                         name,
                         false,
                         Duration::from_millis(500),
-                        100 * 1024 * 1024,
+                        100 * BYTES_PER_MB,
                     )) as Box<dyn TestCase>
                 } else if name.contains("failing_execution") {
                     Box::new(DebuggableTestCase::new(
                         name,
                         true,
                         Duration::from_millis(200),
-                        5 * 1024 * 1024,
+                        5 * BYTES_PER_MB,
                     )) as Box<dyn TestCase>
                 } else if name.contains("setup_fail") {
                     Box::new(DebuggableTestCase::new(
                         name,
                         true,
                         Duration::from_millis(100),
-                        1024 * 1024,
+                        BYTES_PER_MB,
                     )) as Box<dyn TestCase>
                 } else {
                     Box::new(DebuggableTestCase::new(
                         name,
                         false,
                         Duration::from_millis(100),
-                        1024 * 1024,
+                        BYTES_PER_MB,
                     )) as Box<dyn TestCase>
                 }
             })
@@ -278,7 +279,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Display summary of debug information
     println!("\n📈 Debug Summary:");
     println!("  Session ID: {}", debug_report.session_id);
-    println!("  Peak memory: {} MB", debug_report.performance_summary.peak_memory / (1024 * 1024));
+    println!("  Peak memory: {} MB", debug_report.performance_summary.peak_memory / (BYTES_PER_MB));
     println!(
         "  Average test duration: {:?}",
         debug_report.performance_summary.average_test_duration

@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::fs;
+use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Create example test data
 fn create_example_test_data() -> Vec<TestSuiteResult> {
@@ -24,8 +25,8 @@ fn create_example_test_data() -> Vec<TestSuiteResult> {
                 status: TestStatus::Passed,
                 duration: Duration::from_secs(3),
                 metrics: TestMetrics {
-                    memory_peak: Some(1024 * 1024),   // 1MB
-                    memory_average: Some(512 * 1024), // 512KB
+                    memory_peak: Some(BYTES_PER_MB),   // 1MB
+                    memory_average: Some(512 * BYTES_PER_KB), // 512KB
                     cpu_time: Some(Duration::from_secs(2)),
                     wall_time: Duration::from_secs(3),
                     custom_metrics: {
@@ -49,8 +50,8 @@ fn create_example_test_data() -> Vec<TestSuiteResult> {
                 status: TestStatus::Failed,
                 duration: Duration::from_secs(5),
                 metrics: TestMetrics {
-                    memory_peak: Some(2048 * 1024),    // 2MB
-                    memory_average: Some(1024 * 1024), // 1MB
+                    memory_peak: Some(2048 * BYTES_PER_KB),    // 2MB
+                    memory_average: Some(BYTES_PER_MB), // 1MB
                     cpu_time: Some(Duration::from_secs(4)),
                     wall_time: Duration::from_secs(5),
                     custom_metrics: HashMap::new(),
@@ -74,7 +75,7 @@ fn create_example_test_data() -> Vec<TestSuiteResult> {
             success_rate: 50.0,
             total_duration: Duration::from_secs(8),
             average_duration: Duration::from_secs(4),
-            peak_memory: Some(2048 * 1024),
+            peak_memory: Some(2048 * BYTES_PER_KB),
             total_assertions: 8,
         },
         environment: {

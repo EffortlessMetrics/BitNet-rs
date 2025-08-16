@@ -1,5 +1,6 @@
 use super::config::{ReportFormat, TestConfig};
 use std::time::Duration;
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Fast configuration presets for different testing scenarios
 /// This module provides optimized configurations for speed-critical testing
@@ -31,7 +32,7 @@ pub fn fast_config() -> TestConfig {
     config.fixtures.auto_download = false;
 
     // Smaller cache size
-    config.fixtures.max_cache_size = 100 * 1024 * 1024; // 100 MB
+    config.fixtures.max_cache_size = 100 * BYTES_PER_MB; // 100 MB
 
     config
 }

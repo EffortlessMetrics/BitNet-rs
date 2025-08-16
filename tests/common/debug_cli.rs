@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use super::debugging::DebugReport;
 use super::errors::{TestError, TestOpResult};
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Command-line interface for debugging test issues
 pub struct DebugCli {
@@ -236,17 +237,17 @@ impl DebugCli {
         }
 
         // Memory issues
-        if report.performance_summary.peak_memory > 2 * 1024 * 1024 * 1024 {
+        if report.performance_summary.peak_memory > 2 * BYTES_PER_MB * 1024 {
             // > 2GB
             issues.push(CriticalIssue {
                 title: "Excessive Memory Usage".to_string(),
                 description: format!(
                     "Peak memory usage: {} MB",
-                    report.performance_summary.peak_memory / (1024 * 1024)
+                    report.performance_summary.peak_memory / (BYTES_PER_MB)
                 ),
                 severity: IssueSeverity::High,
                 affected_tests: report.test_summaries.iter()
-                    .filter(|t| t.peak_memory > 1024 * 1024 * 1024) // > 1GB
+                    .filter(|t| t.peak_memory > BYTES_PER_MB * 1024) // > 1GB
                     .map(|t| t.test_name.clone())
                     .collect(),
             });
@@ -287,16 +288,16 @@ impl DebugCli {
 
         // High memory usage per test
         for test in &report.test_summaries {
-            if test.peak_memory > 512 * 1024 * 1024 {
+            if test.peak_memory > 512 * BYTES_PER_MB {
                 // > 512MB
                 issues.push(PerformanceIssue {
                     test_name: test.test_name.clone(),
                     issue_type: PerformanceIssueType::HighMemoryUsage,
                     value: test.peak_memory as f64,
-                    threshold: 512.0 * 1024.0 * 1024.0,
+                    threshold: 512.0 * BYTES_PER_MB as f64,
                     description: format!(
                         "Test used {} MB of memory",
-                        test.peak_memory / (1024 * 1024)
+                        test.peak_memory / (BYTES_PER_MB)
                     ),
                 });
             }
@@ -343,7 +344,7 @@ impl DebugCli {
             recommendations.push("Review failed tests for common error patterns".to_string());
         }
 
-        if report.performance_summary.peak_memory > 1024 * 1024 * 1024 {
+        if report.performance_summary.peak_memory > BYTES_PER_MB * 1024 {
             recommendations.push("Consider optimizing memory usage in tests".to_string());
         }
 
@@ -376,7 +377,7 @@ impl DebugCli {
         }
 
         // Suggest memory optimization
-        if report.performance_summary.peak_memory > 1024 * 1024 * 1024 {
+        if report.performance_summary.peak_memory > BYTES_PER_MB * 1024 {
             fixes.push(QuickFix {
                 title: "Optimize memory usage".to_string(),
                 description: "High memory usage detected, consider reducing test data size"
@@ -539,7 +540,7 @@ impl DebugCli {
             analysis.report_summary.failed_tests,
             analysis.report_summary.success_rate
         );
-        println!("  Peak Memory: {} MB", analysis.report_summary.peak_memory / (1024 * 1024));
+        println!("  Peak Memory: {} MB", analysis.report_summary.peak_memory / (BYTES_PER_MB));
 
         if !analysis.critical_issues.is_empty() {
             println!("\n🚨 Critical Issues:");

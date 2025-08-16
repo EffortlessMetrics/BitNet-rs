@@ -10,6 +10,7 @@ use tokio::sync::RwLock;
 use tracing::{error, info, warn};
 
 use super::{
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
     error_analysis::{ErrorAnalysis, ErrorAnalyzer, ErrorContext, SystemResourceSnapshot},
     errors::{ErrorReport, ErrorSeverity, TestError},
     logging::{DebugContext, LoggingManager},
@@ -239,7 +240,7 @@ impl EnhancedErrorHandler {
     fn get_memory_usage_mb(&self) -> u64 {
         // Simplified implementation - in production use proper system monitoring
         use super::utils::get_memory_usage;
-        get_memory_usage() / (1024 * 1024) // Convert bytes to MB
+        get_memory_usage() / (BYTES_PER_MB) // Convert bytes to MB
     }
 
     /// Get CPU usage percentage

@@ -2,6 +2,7 @@ use super::config::TestConfig;
 use super::errors::TestOpResult as TestResultCompat;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Configuration for parallel test execution
 #[derive(Debug, Clone)]
@@ -114,7 +115,7 @@ impl TestExecutionOptimizer {
         #[cfg(feature = "fixtures")]
         {
             config.fixtures.auto_download = self.config.enable_caching;
-            config.fixtures.max_cache_size = 5 * 1024 * 1024 * 1024; // 5GB cache
+            config.fixtures.max_cache_size = 5 * BYTES_PER_MB * 1024; // 5GB cache
         }
 
         // Optimize reporting for speed

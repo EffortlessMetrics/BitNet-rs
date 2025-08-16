@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::fs;
 use tracing::{debug, info, warn};
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Test result cache for storing and retrieving test results
 pub struct TestCache {
@@ -36,7 +37,7 @@ impl Default for CacheConfig {
         Self {
             enabled: true,
             max_age_seconds: 24 * 60 * 60,      // 24 hours
-            max_size_bytes: 1024 * 1024 * 1024, // 1 GB
+            max_size_bytes: BYTES_PER_MB * 1024, // 1 GB
             incremental_testing: true,
             smart_selection: true,
             compression_level: 6,

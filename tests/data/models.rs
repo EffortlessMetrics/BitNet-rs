@@ -134,10 +134,10 @@ impl ModelSize {
     /// Get the typical file size range for this model size
     pub fn size_range(&self) -> (u64, u64) {
         match self {
-            Self::Tiny => (0, 100 * 1024 * 1024), // 0 - 100MB
-            Self::Small => (100 * 1024 * 1024, 1024 * 1024 * 1024), // 100MB - 1GB
-            Self::Medium => (1024 * 1024 * 1024, 10 * 1024 * 1024 * 1024), // 1GB - 10GB
-            Self::Large => (10 * 1024 * 1024 * 1024, u64::MAX), // > 10GB
+            Self::Tiny => (0, 100 * BYTES_PER_MB), // 0 - 100MB
+            Self::Small => (100 * BYTES_PER_MB, BYTES_PER_MB * 1024), // 100MB - 1GB
+            Self::Medium => (BYTES_PER_MB * 1024, 10 * BYTES_PER_MB * 1024), // 1GB - 10GB
+            Self::Large => (10 * BYTES_PER_MB * 1024, u64::MAX), // > 10GB
         }
     }
 
@@ -289,7 +289,7 @@ impl TestModelRegistry {
             ModelFormat::Gguf,
             ModelType::BitNet,
         )
-        .with_file_size(50 * 1024 * 1024) // 50MB
+        .with_file_size(50 * BYTES_PER_MB) // 50MB
         .with_checksum("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
         .with_parameters(ModelParameters::bitnet(
             125_000_000,  // 125M parameters
@@ -308,7 +308,7 @@ impl TestModelRegistry {
             ModelFormat::SafeTensors,
             ModelType::Transformer,
         )
-        .with_file_size(75 * 1024 * 1024) // 75MB
+        .with_file_size(75 * BYTES_PER_MB) // 75MB
         .with_checksum("d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35")
         .with_parameters(ModelParameters {
             parameter_count: Some(125_000_000),
@@ -331,7 +331,7 @@ impl TestModelRegistry {
             ModelFormat::Gguf,
             ModelType::BitNet,
         )
-        .with_file_size(500 * 1024 * 1024) // 500MB
+        .with_file_size(500 * BYTES_PER_MB) // 500MB
         .with_checksum("aec070645fe53ee3b3763059376134f058cc337247c978add178b6ccdfb0019f")
         .with_parameters(ModelParameters::bitnet(
             1_300_000_000, // 1.3B parameters
@@ -351,7 +351,7 @@ impl TestModelRegistry {
             ModelFormat::Gguf,
             ModelType::BitNet,
         )
-        .with_file_size(3 * 1024 * 1024 * 1024) // 3GB
+        .with_file_size(3 * BYTES_PER_MB * 1024) // 3GB
         .with_checksum("b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9")
         .with_parameters(ModelParameters::bitnet(
             7_000_000_000, // 7B parameters
@@ -380,15 +380,15 @@ mod tests {
 
     #[test]
     fn test_model_size_ranges() {
-        assert_eq!(ModelSize::Tiny.size_range(), (0, 100 * 1024 * 1024));
+        assert_eq!(ModelSize::Tiny.size_range(), (0, 100 * BYTES_PER_MB));
         assert_eq!(
             ModelSize::Small.size_range(),
-            (100 * 1024 * 1024, 1024 * 1024 * 1024)
+            (100 * BYTES_PER_MB, BYTES_PER_MB * 1024)
         );
 
-        assert!(ModelSize::Tiny.fits_size(50 * 1024 * 1024));
-        assert!(!ModelSize::Tiny.fits_size(200 * 1024 * 1024));
-        assert!(ModelSize::Small.fits_size(500 * 1024 * 1024));
+        assert!(ModelSize::Tiny.fits_size(50 * BYTES_PER_MB));
+        assert!(!ModelSize::Tiny.fits_size(200 * BYTES_PER_MB));
+        assert!(ModelSize::Small.fits_size(500 * BYTES_PER_MB));
     }
 
     #[test]
