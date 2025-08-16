@@ -5,8 +5,7 @@ use super::config::{
 #[cfg(feature = "fixtures")]
 use super::config::FixtureConfig;
 
-// Always use simple configs for now since FastConfigBuilder isn't working
-use super::config_scenarios_simple::*;
+// Simple configs are now defined inline as part of the compatibility shim
 
 use std::collections::HashMap;
 use std::time::Duration;
@@ -623,6 +622,10 @@ impl ScenarioConfigManager {
             }
         }
 
+        // NOTE: The test file's get_context_config wrapper applies all the
+        // context overrides (fast-feedback, resource constraints, quality requirements).
+        // We don't apply them here to avoid double-application.
+        
         cfg
     }
 
