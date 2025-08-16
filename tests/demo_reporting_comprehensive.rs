@@ -15,6 +15,7 @@ use tokio::fs;
 
 // Import the canonical KB and MB constants from the test harness crate
 use bitnet_tests::common::{BYTES_PER_KB, BYTES_PER_MB};
+use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Create comprehensive test data for demonstration
 fn create_demo_test_data() -> Vec<TestSuiteResult> {

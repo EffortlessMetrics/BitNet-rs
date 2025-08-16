@@ -10,6 +10,7 @@ use super::config_scenarios_simple::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Configuration scenarios for different testing contexts
 /// This module provides comprehensive configuration management for various testing scenarios

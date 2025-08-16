@@ -7,6 +7,7 @@ use tokio::sync::RwLock;
 
 use super::errors::{TestError, TestOpResult};
 use super::results::TestResult;
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Comprehensive debugging support for the testing framework
 pub struct TestDebugger {

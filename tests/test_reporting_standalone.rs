@@ -8,6 +8,7 @@ use tokio::fs;
 
 // Manually define the types we need to avoid import issues
 use serde::{Deserialize, Serialize};
+use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TestStatus {

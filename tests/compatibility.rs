@@ -4,6 +4,7 @@
 //! and performance parity to ensure smooth migration from legacy implementations.
 
 use std::path::Path;
+use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Test API compatibility between different implementations
 #[cfg(test)]

@@ -3,6 +3,7 @@ use super::utils::get_optimal_parallel_tests;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Helper to pick non-empty PathBuf or fallback to default
 pub fn pick_dir(env: &PathBuf, scenario: &PathBuf) -> PathBuf {

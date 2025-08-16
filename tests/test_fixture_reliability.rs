@@ -7,6 +7,7 @@ use futures_util;
 use std::time::{Duration, SystemTime};
 use tempfile::TempDir;
 use tokio::fs;
+use bitnet_tests::common::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Test comprehensive fixture management reliability and automatic cleanup
 #[tokio::test]

@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use tokio::fs;
 use tracing::{debug, info, warn};
+use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// GitHub Actions cache integration for test results and data
 pub struct GitHubCacheManager {
