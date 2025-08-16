@@ -25,9 +25,11 @@ fn ensure_format(v: &mut Vec<ReportFormat>, f: ReportFormat) {
     }
 }
 
-// Helper for consistent boolean environment variable parsing
+// Helper for consistent boolean environment variable parsing (case-insensitive)
 fn env_bool(var: &str) -> bool {
-    matches!(std::env::var(var).ok().as_deref(), Some("1" | "true" | "yes" | "on"))
+    std::env::var(var)
+        .map(|s| matches!(s.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+        .unwrap_or(false)
 }
 
 
@@ -103,6 +105,10 @@ struct QualityRequirements {
 fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) -> TestConfig {
     use std::time::Duration;
     use bitnet_tests::config::ReportFormat;
+    
+    // Centralized constant for MB to bytes conversion
+    #[cfg(feature = "fixtures")]
+    const BYTES_PER_MB: u64 = 1_048_576; // 1024 * 1024
 
     let framework_ctx = ctx.to_framework_context();
     let mut cfg = bitnet_tests::config_scenarios::ScenarioConfigManager
@@ -120,7 +126,6 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
         #[cfg(feature = "fixtures")]
         {
             // Use saturating_mul to prevent overflow
-            const BYTES_PER_MB: u64 = 1_048_576; // 1024 * 1024
             cfg.fixtures.max_cache_size = (mb as u64).saturating_mul(BYTES_PER_MB);
         }
     }
@@ -155,7 +160,7 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
     // ----- Quality requirements -------------------------------------------------
     // Coverage threshold from context should be respected and turn coverage on when > 0
     if ctx.quality_requirements.min_coverage >= 0.0 {
-        cfg.coverage_threshold = ctx.quality_requirements.min_coverage;
+        cfg.coverage_threshold = ctx.quality_requirements.min_coverage.clamp(0.0, 1.0);  // Ensure valid range
         if cfg.coverage_threshold > 0.0 {
             cfg.reporting.generate_coverage = true;
         }
@@ -201,6 +206,7 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
         if tft <= Duration::from_secs(120) {
             cfg.reporting.generate_coverage = false;
             cfg.reporting.generate_performance = false;
+            cfg.reporting.include_artifacts = false;  // Skip artifacts too
             cfg.reporting.formats = vec![ReportFormat::Json];
             if cfg.max_parallel_tests > 4 {
                 cfg.max_parallel_tests = 4;
@@ -210,6 +216,10 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
 
     // Ensure max_parallel_tests is always at least 1
     cfg.max_parallel_tests = cfg.max_parallel_tests.max(1);
+    
+    // Debug assertions for invariants
+    debug_assert!(cfg.max_parallel_tests >= 1);
+    debug_assert!(cfg.coverage_threshold >= 0.0 && cfg.coverage_threshold <= 1.0);
 
     cfg
 }
@@ -221,6 +231,8 @@ fn context_from_environment() -> TestConfigContext {
     ctx.scenario = framework_ctx.scenario;
     ctx.environment = framework_ctx.environment;
     
+    // BITNET_ENV (explicit) takes precedence over inferred CI markers.
+    // We only infer CI when BITNET_ENV is not set.
     // Check explicit BITNET_ENV first (highest priority)
     if let Ok(env_str) = env::var("BITNET_ENV") {
         ctx.environment = match env_str.to_lowercase().as_str() {
@@ -1736,6 +1748,16 @@ mod shim_unit_tests {
         env::set_var("TEST_VAR", "on");
         assert!(env_bool("TEST_VAR"));
         
+        // Test case-insensitive matching (new)
+        env::set_var("TEST_VAR", "TRUE");
+        assert!(env_bool("TEST_VAR"), "Should match uppercase TRUE");
+        
+        env::set_var("TEST_VAR", "Yes");
+        assert!(env_bool("TEST_VAR"), "Should match mixed-case Yes");
+        
+        env::set_var("TEST_VAR", "ON");
+        assert!(env_bool("TEST_VAR"), "Should match uppercase ON");
+        
         // Test falsy values
         env::set_var("TEST_VAR", "false");
         assert!(!env_bool("TEST_VAR"));
@@ -1769,6 +1791,21 @@ mod shim_unit_tests {
         assert!(!cfg.reporting.generate_coverage, "Fast feedback final clamp should disable coverage");
         assert!(!cfg.reporting.generate_performance, "Fast feedback final clamp should disable performance");
         assert_eq!(cfg.reporting.formats, vec![ReportFormat::Json], "Fast feedback should force JSON only");
+    }
+    
+    #[test]
+    fn test_coverage_clamping() {
+        let mgr = ScenarioConfigManager::new();
+        let mut ctx = TestConfigContext::default();
+        
+        // Test clamping of invalid coverage values
+        ctx.quality_requirements.min_coverage = 1.5; // Invalid > 1.0
+        let cfg = get_context_config(&mgr, &ctx);
+        assert!(cfg.coverage_threshold <= 1.0, "Coverage should be clamped to max 1.0");
+        
+        ctx.quality_requirements.min_coverage = -0.5; // Invalid < 0.0
+        let cfg = get_context_config(&mgr, &ctx);
+        assert!(cfg.coverage_threshold >= 0.0, "Coverage should be clamped to min 0.0");
     }
     
     #[test]
