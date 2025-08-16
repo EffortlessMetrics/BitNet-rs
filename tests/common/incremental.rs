@@ -233,7 +233,7 @@ impl IncrementalTester {
         dir: &'a PathBuf,
         since: SystemTime,
     ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = Result<Vec<PathBuf>, TestError>> + Send + '_>,
+        Box<dyn std::future::Future<Output = Result<Vec<PathBuf>, TestError>> + Send + 'a>,
     > {
         Box::pin(async move {
             let mut modified_files = Vec::new();
