@@ -2,6 +2,13 @@
 
 use bitnet_common::{BitNetError, ModelError, Result};
 
+#[inline]
+pub fn align_up(off: usize, align: usize) -> usize {
+    if align == 0 { return off; }
+    debug_assert!(align.is_power_of_two(), "alignment should be power-of-two");
+    (off + align - 1) & !(align - 1)
+}
+
 /// GGUF file header
 #[derive(Debug, Clone)]
 pub struct GgufHeader {
@@ -9,6 +16,7 @@ pub struct GgufHeader {
     pub version: u32,
     pub tensor_count: u64,
     pub metadata_kv_count: u64,
+    pub alignment: usize, // KV data alignment for v3+
 }
 
 impl GgufHeader {
@@ -59,8 +67,12 @@ impl GgufHeader {
             data[*offset + 7],
         ]);
         *offset += 8;
+        
+        // GGUF v3 uses fixed alignment of 32 bytes for metadata values
+        // There's no explicit alignment field in the header
+        let alignment = 32usize;
 
-        Ok(Self { magic, version, tensor_count, metadata_kv_count })
+        Ok(Self { magic, version, tensor_count, metadata_kv_count, alignment })
     }
 }
 
@@ -122,14 +134,68 @@ impl GgufValue {
                 let array_len = read_u64(data, offset)? as usize;
 
                 let mut array = Vec::with_capacity(array_len);
-                for _ in 0..array_len {
-                    // Create a temporary buffer with the array type byte
-                    let mut temp_data = vec![array_type];
-                    temp_data.extend_from_slice(&data[*offset..]);
-                    let mut temp_offset = 0;
-
-                    array.push(GgufValue::read(&temp_data, &mut temp_offset)?);
-                    *offset += temp_offset - 1; // Adjust for the type byte we added
+                
+                // Read elements based on the array element type
+                match array_type {
+                    0 => {
+                        // Array of U8
+                        for _ in 0..array_len {
+                            array.push(GgufValue::U8(read_u8(data, offset)?));
+                        }
+                    }
+                    1 => {
+                        // Array of I8
+                        for _ in 0..array_len {
+                            array.push(GgufValue::I8(read_i8(data, offset)?));
+                        }
+                    }
+                    2 => {
+                        // Array of U16
+                        for _ in 0..array_len {
+                            array.push(GgufValue::U16(read_u16(data, offset)?));
+                        }
+                    }
+                    3 => {
+                        // Array of I16
+                        for _ in 0..array_len {
+                            array.push(GgufValue::I16(read_i16(data, offset)?));
+                        }
+                    }
+                    4 => {
+                        // Array of U32
+                        for _ in 0..array_len {
+                            array.push(GgufValue::U32(read_u32(data, offset)?));
+                        }
+                    }
+                    5 => {
+                        // Array of I32
+                        for _ in 0..array_len {
+                            array.push(GgufValue::I32(read_i32(data, offset)?));
+                        }
+                    }
+                    6 => {
+                        // Array of F32
+                        for _ in 0..array_len {
+                            array.push(GgufValue::F32(read_f32(data, offset)?));
+                        }
+                    }
+                    7 => {
+                        // Array of Bool
+                        for _ in 0..array_len {
+                            array.push(GgufValue::Bool(read_bool(data, offset)?));
+                        }
+                    }
+                    8 => {
+                        // Array of String - most common for token pieces
+                        for _ in 0..array_len {
+                            array.push(GgufValue::String(read_string(data, offset)?));
+                        }
+                    }
+                    _ => {
+                        return Err(BitNetError::Model(ModelError::InvalidFormat {
+                            format: format!("Unsupported GGUF array element type: {}", array_type),
+                        }));
+                    }
                 }
                 Ok(GgufValue::Array(array))
             }
@@ -425,5 +491,14 @@ mod tests {
         let result = read_string(&data, &mut offset);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), test_str);
+    }
+
+    #[test]
+    fn test_align_up() {
+        assert_eq!(align_up(0, 32), 0);
+        assert_eq!(align_up(1, 32), 32);
+        assert_eq!(align_up(31, 32), 32);
+        assert_eq!(align_up(32, 32), 32);
+        assert_eq!(align_up(33, 32), 64);
     }
 }
