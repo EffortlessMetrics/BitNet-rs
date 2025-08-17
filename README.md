@@ -597,7 +597,8 @@ cargo build -p bitnet-wasm --target wasm32-unknown-unknown --features console-er
 
 Notes:
 - The WASM crate is opt-in and not part of default builds.
-- `getrandom` is configured with the JS backend for `wasm32`.
+- WASM builds currently require manual configuration due to transitive dependencies on `getrandom`.
+- To build: Dependencies may need to be updated to support WASM target.
 
 ## Contributing
 
