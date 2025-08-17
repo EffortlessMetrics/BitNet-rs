@@ -1,5 +1,5 @@
 #[cfg(test)]
-use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
+use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 
 mod resource_management_tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -9,7 +9,7 @@ mod resource_management_tests {
     use tokio::io::AsyncWriteExt;
     use tokio::sync::{Mutex, Semaphore};
     use tokio::time::{sleep, timeout};
-    
+
     // Import the canonical MB constant from the test harness crate
     use bitnet_tests::common::BYTES_PER_MB;
 

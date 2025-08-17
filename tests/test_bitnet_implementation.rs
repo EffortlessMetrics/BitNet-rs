@@ -1,7 +1,7 @@
 use bitnet_tests::cross_validation::test_implementation::MockImplementation;
+use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use bitnet_tests::*;
 use std::path::PathBuf;
-use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 #[tokio::test]
 async fn test_bitnet_implementation_abstraction() {

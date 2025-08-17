@@ -1,9 +1,8 @@
-use super::config::{
-    ComparisonTolerance, CrossValidationConfig, ReportFormat, ReportingConfig,
-    TestConfig,
-};
 #[cfg(feature = "fixtures")]
 use super::config::FixtureConfig;
+use super::config::{
+    ComparisonTolerance, CrossValidationConfig, ReportFormat, ReportingConfig, TestConfig,
+};
 
 // Simple configs are now defined inline as part of the compatibility shim
 
@@ -146,10 +145,8 @@ pub struct ScenarioConfigManager {
 
 impl Default for ScenarioConfigManager {
     fn default() -> Self {
-        let mut manager = Self {
-            scenario_overrides: HashMap::new(),
-            environment_overrides: HashMap::new(),
-        };
+        let mut manager =
+            Self { scenario_overrides: HashMap::new(), environment_overrides: HashMap::new() };
         manager.initialize_scenario_overrides();
         manager.initialize_environment_overrides();
         manager
@@ -216,7 +213,7 @@ impl ScenarioConfigManager {
         prod_config.reporting.generate_coverage = true;
         prod_config.reporting.generate_performance = true;
         self.environment_overrides.insert(EnvironmentType::Production, prod_config);
-        
+
         // Local environment (development settings)
         let mut local_config = TestConfig::default();
         local_config.log_level = "info".to_string();
@@ -228,18 +225,12 @@ impl ScenarioConfigManager {
 
     /// Get configuration for a specific scenario
     pub fn get_scenario_config(&self, scenario: &TestingScenario) -> TestConfig {
-        self.scenario_overrides
-            .get(scenario)
-            .cloned()
-            .unwrap_or_default()
+        self.scenario_overrides.get(scenario).cloned().unwrap_or_default()
     }
 
     /// Get configuration for a specific environment
     pub fn get_environment_config(&self, environment: &EnvironmentType) -> TestConfig {
-        self.environment_overrides
-            .get(environment)
-            .cloned()
-            .unwrap_or_default()
+        self.environment_overrides.get(environment).cloned().unwrap_or_default()
     }
 
     /// Resolve configuration for a scenario and environment
@@ -247,11 +238,13 @@ impl ScenarioConfigManager {
         let base = TestConfig::default();
         let scenario_config = self.get_scenario_config(scenario);
         let env_config = self.get_environment_config(environment);
-        
+
         // Merge configs: base -> scenario -> environment
         // Environment overrides take precedence
         TestConfig {
-            max_parallel_tests: env_config.max_parallel_tests.max(scenario_config.max_parallel_tests),
+            max_parallel_tests: env_config
+                .max_parallel_tests
+                .max(scenario_config.max_parallel_tests),
             test_timeout: scenario_config.test_timeout.max(env_config.test_timeout),
             cache_dir: env_config.cache_dir.clone(),
             log_level: if env_config.log_level != base.log_level {
@@ -259,7 +252,9 @@ impl ScenarioConfigManager {
             } else {
                 scenario_config.log_level
             },
-            coverage_threshold: scenario_config.coverage_threshold.max(env_config.coverage_threshold),
+            coverage_threshold: scenario_config
+                .coverage_threshold
+                .max(env_config.coverage_threshold),
             #[cfg(feature = "fixtures")]
             fixtures: scenario_config.fixtures,
             crossval: scenario_config.crossval,
@@ -271,12 +266,16 @@ impl ScenarioConfigManager {
                 },
                 output_dir: super::config::pick_dir(
                     &env_config.reporting.output_dir,
-                    &scenario_config.reporting.output_dir
+                    &scenario_config.reporting.output_dir,
                 ),
-                include_artifacts: scenario_config.reporting.include_artifacts || env_config.reporting.include_artifacts,
-                generate_coverage: scenario_config.reporting.generate_coverage || env_config.reporting.generate_coverage,
-                generate_performance: scenario_config.reporting.generate_performance || env_config.reporting.generate_performance,
-                upload_reports: scenario_config.reporting.upload_reports || env_config.reporting.upload_reports,
+                include_artifacts: scenario_config.reporting.include_artifacts
+                    || env_config.reporting.include_artifacts,
+                generate_coverage: scenario_config.reporting.generate_coverage
+                    || env_config.reporting.generate_coverage,
+                generate_performance: scenario_config.reporting.generate_performance
+                    || env_config.reporting.generate_performance,
+                upload_reports: scenario_config.reporting.upload_reports
+                    || env_config.reporting.upload_reports,
             },
         }
     }
@@ -288,7 +287,8 @@ impl ScenarioConfigManager {
             .and_then(|s| s.parse().ok())
             .unwrap_or(TestingScenario::Unit);
 
-        let environment = if std::env::var("CI").is_ok() || std::env::var("GITHUB_ACTIONS").is_ok() {
+        let environment = if std::env::var("CI").is_ok() || std::env::var("GITHUB_ACTIONS").is_ok()
+        {
             EnvironmentType::CI
         } else {
             std::env::var("BITNET_TEST_ENV")
@@ -332,10 +332,10 @@ mod tests {
     fn test_config_resolution() {
         let manager = ScenarioConfigManager::default();
         let config = manager.resolve(&TestingScenario::Unit, &EnvironmentType::CI);
-        
+
         // CI environment should set specific formats
         assert!(config.reporting.formats.contains(&ReportFormat::Junit));
-        
+
         // Unit scenario should have its settings
         assert_eq!(config.max_parallel_tests, 8);
     }
@@ -361,40 +361,25 @@ impl Default for ConfigurationContext {
 
 impl Default for ResourceConstraints {
     fn default() -> Self {
-        Self {
-            max_memory_mb: None,
-            max_cpu_cores: None,
-            max_disk_gb: None,
-        }
+        Self { max_memory_mb: None, max_cpu_cores: None, max_disk_gb: None }
     }
 }
 
 impl Default for TimeConstraints {
     fn default() -> Self {
-        Self {
-            max_total_duration: None,
-            max_test_duration: None,
-        }
+        Self { max_total_duration: None, max_test_duration: None }
     }
 }
 
 impl Default for QualityRequirements {
     fn default() -> Self {
-        Self {
-            min_coverage: None,
-            max_flakiness: None,
-            required_passes: None,
-        }
+        Self { min_coverage: None, max_flakiness: None, required_passes: None }
     }
 }
 
 impl Default for PlatformSettings {
     fn default() -> Self {
-        Self {
-            os: None,
-            arch: None,
-            features: vec![],
-        }
+        Self { os: None, arch: None, features: vec![] }
     }
 }
 
@@ -407,7 +392,7 @@ fn create_unit_config() -> TestConfig {
         coverage_threshold: 0.8,
         reporting: ReportingConfig {
             formats: vec![ReportFormat::Json],
-            generate_coverage: true,  // Unit tests should generate coverage
+            generate_coverage: true, // Unit tests should generate coverage
             generate_performance: false,
             ..Default::default()
         },
@@ -424,7 +409,7 @@ fn create_integration_config() -> TestConfig {
         reporting: ReportingConfig {
             formats: vec![ReportFormat::Json, ReportFormat::Html, ReportFormat::Junit],
             generate_coverage: true,
-            generate_performance: true,  // Integration tests should generate performance reports
+            generate_performance: true, // Integration tests should generate performance reports
             ..Default::default()
         },
         ..Default::default()
@@ -439,14 +424,11 @@ fn create_perf_config() -> TestConfig {
         coverage_threshold: 0.0,
         reporting: ReportingConfig {
             formats: vec![ReportFormat::Json, ReportFormat::Csv],
-            generate_coverage: false,  // Don't generate coverage for performance tests
+            generate_coverage: false, // Don't generate coverage for performance tests
             generate_performance: true,
             ..Default::default()
         },
-        crossval: CrossValidationConfig {
-            enabled: false,
-            ..Default::default()
-        },
+        crossval: CrossValidationConfig { enabled: false, ..Default::default() },
         ..Default::default()
     }
 }
@@ -470,8 +452,8 @@ fn create_e2e_config() -> TestConfig {
 
 fn create_smoke_config() -> TestConfig {
     TestConfig {
-        max_parallel_tests: 1,  // Smoke tests should be sequential
-        test_timeout: Duration::from_secs(10),  // Short timeout for smoke tests (changed from 5 to 10)
+        max_parallel_tests: 1,                 // Smoke tests should be sequential
+        test_timeout: Duration::from_secs(10), // Short timeout for smoke tests (changed from 5 to 10)
         log_level: "error".to_string(),
         coverage_threshold: 0.0,
         reporting: ReportingConfig {
@@ -499,7 +481,7 @@ fn create_crossval_config() -> TestConfig {
         crossval: CrossValidationConfig {
             enabled: true,
             tolerance: ComparisonTolerance {
-                min_token_accuracy: 0.999999,  // Very strict tolerance for cross-validation
+                min_token_accuracy: 0.999999, // Very strict tolerance for cross-validation
                 ..Default::default()
             },
             ..Default::default()
@@ -515,10 +497,7 @@ fn create_debug_config() -> TestConfig {
         log_level: "trace".to_string(),
         coverage_threshold: 0.9,
         #[cfg(feature = "fixtures")]
-        fixtures: FixtureConfig {
-            auto_download: false,
-            ..Default::default()
-        },
+        fixtures: FixtureConfig { auto_download: false, ..Default::default() },
         reporting: ReportingConfig {
             formats: vec![ReportFormat::Json, ReportFormat::Html],
             generate_coverage: true,
@@ -538,7 +517,7 @@ fn create_development_config() -> TestConfig {
         coverage_threshold: 0.0,
         reporting: ReportingConfig {
             formats: vec![ReportFormat::Html],
-            generate_coverage: false,  // Skip coverage for faster feedback
+            generate_coverage: false, // Skip coverage for faster feedback
             generate_performance: false,
             ..Default::default()
         },
@@ -567,24 +546,29 @@ impl ScenarioConfigManager {
     /// assertions like "mentions Fast / isolated / Sequential / comparison" still pass.
     pub fn scenario_description(s: &TestingScenario) -> &'static str {
         match s {
-            TestingScenario::Unit => 
-                "Fast, isolated tests with minimal dependencies and quick feedback.",
-            TestingScenario::Integration =>
-                "End-to-end integration tests covering realistic flows and services.",
-            TestingScenario::Performance =>
-                "Sequential performance runs that measure latency and throughput.",
-            TestingScenario::CrossValidation =>
-                "A/B comparison (cross-validation) to check accuracy regressions.",
-            TestingScenario::Debug =>
-                "Verbose debug runs with thorough logging and artifact capture.",
-            TestingScenario::Development =>
-                "Local development defaults for quick iteration and diagnostics.",
-            TestingScenario::Minimal =>
-                "Tiny smoke test configuration for ultra-fast checks.",
-            TestingScenario::EndToEnd =>
-                "Complete end-to-end workflow tests with full stack validation.",
-            TestingScenario::Smoke =>
-                "Quick smoke tests to verify basic functionality.",
+            TestingScenario::Unit => {
+                "Fast, isolated tests with minimal dependencies and quick feedback."
+            }
+            TestingScenario::Integration => {
+                "End-to-end integration tests covering realistic flows and services."
+            }
+            TestingScenario::Performance => {
+                "Sequential performance runs that measure latency and throughput."
+            }
+            TestingScenario::CrossValidation => {
+                "A/B comparison (cross-validation) to check accuracy regressions."
+            }
+            TestingScenario::Debug => {
+                "Verbose debug runs with thorough logging and artifact capture."
+            }
+            TestingScenario::Development => {
+                "Local development defaults for quick iteration and diagnostics."
+            }
+            TestingScenario::Minimal => "Tiny smoke test configuration for ultra-fast checks.",
+            TestingScenario::EndToEnd => {
+                "Complete end-to-end workflow tests with full stack validation."
+            }
+            TestingScenario::Smoke => "Quick smoke tests to verify basic functionality.",
         }
     }
 
@@ -617,10 +601,14 @@ impl ScenarioConfigManager {
             if let Some(ref os) = platform.os {
                 match os.as_str() {
                     "windows" => {
-                        if cfg.max_parallel_tests > 8 { cfg.max_parallel_tests = 8; }
+                        if cfg.max_parallel_tests > 8 {
+                            cfg.max_parallel_tests = 8;
+                        }
                     }
                     "macos" => {
-                        if cfg.max_parallel_tests > 6 { cfg.max_parallel_tests = 6; }
+                        if cfg.max_parallel_tests > 6 {
+                            cfg.max_parallel_tests = 6;
+                        }
                     }
                     // linux / generic: do not tighten beyond scenario defaults
                     _ => {}
@@ -631,8 +619,7 @@ impl ScenarioConfigManager {
         // NOTE: The test file's get_context_config wrapper applies all the
         // context overrides (fast-feedback, resource constraints, quality requirements).
         // We don't apply them here to avoid double-application.
-        
+
         cfg
     }
-
 }

@@ -1,8 +1,7 @@
+use crate::config::TestConfig;
 /// Facade for fixture management that provides a consistent API regardless of feature flags
 /// This reduces cfg scatter throughout the codebase
-
 use crate::errors::TestOpResult;
-use crate::config::TestConfig;
 
 #[cfg(feature = "fixtures")]
 use std::sync::Arc;
@@ -84,7 +83,7 @@ impl Fixtures {
             Ok(CacheStats {
                 total_size: stats.total_size,
                 file_count: stats.file_count,
-                cache_hits: 0,  // Not tracked in current implementation
+                cache_hits: 0,   // Not tracked in current implementation
                 cache_misses: 0, // Not tracked in current implementation
             })
         }

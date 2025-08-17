@@ -16,11 +16,11 @@ pub mod config_scenarios;
 pub mod config_scenarios_simple;
 pub mod env;
 pub mod errors;
+pub mod harness;
 pub mod results;
 pub mod serde_time;
 pub mod units;
 pub mod utils;
-pub mod harness;
 
 // Optional debug modules
 pub mod debug_cli;
@@ -52,9 +52,9 @@ pub mod parallel;
 pub mod selection;
 
 // Re-export commonly used functions
+pub use env::{env_bool, env_duration_secs, env_guard, env_string, env_u64, env_usize};
+pub use units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 pub use utils::{format_bytes, format_duration, get_memory_usage, get_peak_memory_usage};
-pub use units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
-pub use env::{env_guard, env_bool, env_u64, env_usize, env_duration_secs, env_string};
 
 // Cross-validation module temporarily disabled
 // pub mod cross_validation;
@@ -69,11 +69,11 @@ pub use env::{env_guard, env_bool, env_u64, env_usize, env_duration_secs, env_st
 
 // Re-export commonly used types
 pub use config::TestConfig;
-pub use config_scenarios::{ScenarioConfigManager, TestingScenario, EnvironmentType};
+pub use config_scenarios::{EnvironmentType, ScenarioConfigManager, TestingScenario};
 
 // Avoid name collisions: expose both result types clearly
 pub use errors::{TestError, TestOpResult};
-pub use results::{TestResult, TestSuiteResult, TestMetrics};
+pub use results::{TestMetrics, TestResult, TestSuiteResult};
 
 // Only re-export FixtureManager when fixtures are enabled
 #[cfg(feature = "fixtures")]
@@ -105,17 +105,17 @@ pub mod prelude {
 
     // Result types (ensure clear distinction from TestOpResult)
     pub use super::results::{
-        TestMetrics, 
-        TestResult,      // This is TestRecord, not TestOpResult
-        TestStatus, 
-        TestSuiteResult
+        TestMetrics,
+        TestResult, // This is TestRecord, not TestOpResult
+        TestStatus,
+        TestSuiteResult,
     };
 
     // Core test framework types
     pub use super::harness::{
-        TestCase, 
+        FixtureCtx, // Stable fixture context type
+        TestCase,
         TestHarness,
-        FixtureCtx,      // Stable fixture context type
     };
 
     // Configuration

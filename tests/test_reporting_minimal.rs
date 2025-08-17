@@ -6,9 +6,7 @@ use tempfile::TempDir;
 
 // Import only the reporting types we need
 use bitnet_tests::reporting::{ReportConfig, ReportFormat, ReportingManager};
-use bitnet_tests::results::{
-    TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary,
-};
+use bitnet_tests::results::{TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary};
 
 #[tokio::test]
 async fn test_json_reporter_basic() {

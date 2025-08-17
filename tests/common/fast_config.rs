@@ -1,6 +1,6 @@
 use super::config::{ReportFormat, TestConfig};
+use super::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use std::time::Duration;
-use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Fast configuration presets for different testing scenarios
 /// This module provides optimized configurations for speed-critical testing

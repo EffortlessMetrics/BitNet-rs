@@ -9,8 +9,8 @@ use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 use tracing::{error, info, warn};
 
+use super::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use super::{
-use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
     error_analysis::{ErrorAnalysis, ErrorAnalyzer, ErrorContext, SystemResourceSnapshot},
     errors::{ErrorReport, ErrorSeverity, TestError},
     logging::{DebugContext, LoggingManager},

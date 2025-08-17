@@ -1,7 +1,7 @@
-/// Simplified configuration scenarios that work without heavy dependencies
-use super::config::{ReportFormat, ReportingConfig, TestConfig, CrossValidationConfig};
 #[cfg(feature = "fixtures")]
 use super::config::FixtureConfig;
+/// Simplified configuration scenarios that work without heavy dependencies
+use super::config::{CrossValidationConfig, ReportFormat, ReportingConfig, TestConfig};
 use std::time::Duration;
 
 /// Create a simple test config without FastConfigBuilder
@@ -70,10 +70,7 @@ pub fn create_smoke_config() -> TestConfig {
         #[cfg(feature = "fixtures")]
         fixtures: FixtureConfig::default(),
         crossval: CrossValidationConfig::default(),
-        reporting: ReportingConfig {
-            formats: vec![ReportFormat::Json],
-            ..Default::default()
-        },
+        reporting: ReportingConfig { formats: vec![ReportFormat::Json], ..Default::default() },
         ..Default::default()
     }
 }

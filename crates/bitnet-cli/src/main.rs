@@ -16,10 +16,10 @@ mod commands;
 mod config;
 mod sampling;
 
-#[cfg(feature = "full-cli")]
-use commands::{ConvertCommand, InferenceCommand, ServeCommand};
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
+#[cfg(feature = "full-cli")]
+use commands::{ConvertCommand, InferenceCommand, ServeCommand};
 use config::{CliConfig, ConfigBuilder};
 
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit

@@ -1,9 +1,9 @@
 use super::errors::{TestError, TestOpResult as TestResultCompat};
+use super::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use super::utils::get_optimal_parallel_tests;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Helper to pick non-empty PathBuf or fallback to default
 pub fn pick_dir(env: &PathBuf, scenario: &PathBuf) -> PathBuf {
@@ -270,15 +270,15 @@ pub fn load_config_from_env(config: &mut TestConfig) -> TestResultCompat<()> {
     #[cfg(feature = "fixtures")]
     {
         if let Ok(val) = std::env::var("BITNET_TEST_AUTO_DOWNLOAD") {
-            config.fixtures.auto_download = val
-                .parse()
-                .map_err(|e| TestError::config(format!("Invalid BITNET_TEST_AUTO_DOWNLOAD: {}", e)))?;
+            config.fixtures.auto_download = val.parse().map_err(|e| {
+                TestError::config(format!("Invalid BITNET_TEST_AUTO_DOWNLOAD: {}", e))
+            })?;
         }
 
         if let Ok(val) = std::env::var("BITNET_TEST_MAX_CACHE_SIZE") {
-            config.fixtures.max_cache_size = val
-                .parse()
-                .map_err(|e| TestError::config(format!("Invalid BITNET_TEST_MAX_CACHE_SIZE: {}", e)))?;
+            config.fixtures.max_cache_size = val.parse().map_err(|e| {
+                TestError::config(format!("Invalid BITNET_TEST_MAX_CACHE_SIZE: {}", e))
+            })?;
         }
 
         if let Ok(val) = std::env::var("BITNET_TEST_FIXTURE_BASE_URL") {

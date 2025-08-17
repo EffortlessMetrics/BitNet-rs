@@ -7,7 +7,7 @@ use tokio::sync::RwLock;
 
 use super::errors::{TestError, TestOpResult};
 use super::results::TestResult;
-use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
+use super::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 
 /// Comprehensive debugging support for the testing framework
 pub struct TestDebugger {
@@ -293,7 +293,10 @@ impl TestDebugger {
             ),
             [
                 ("test_name".to_string(), test_name.to_string()),
-                ("status".to_string(), if result.is_success() { "passed".to_string() } else { "failed".to_string() }),
+                (
+                    "status".to_string(),
+                    if result.is_success() { "passed".to_string() } else { "failed".to_string() },
+                ),
                 ("duration".to_string(), format!("{:?}", result.duration)),
             ]
             .into(),

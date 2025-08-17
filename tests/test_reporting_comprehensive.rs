@@ -8,11 +8,11 @@ use bitnet_tests::reporting::{
     ReportConfig, ReportFormat, TestReporter,
 };
 use bitnet_tests::results::{TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary};
+use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use std::collections::HashMap;
 use std::time::Duration;
 use tempfile::TempDir;
 use tokio::fs;
-use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Create comprehensive test data for reporting
 fn create_comprehensive_test_data() -> Vec<TestSuiteResult> {

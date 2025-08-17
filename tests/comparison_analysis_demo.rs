@@ -11,9 +11,9 @@ use bitnet_tests::common::cross_validation::{
 use bitnet_tests::common::reporting::comparison_analysis::{
     ComparisonAnalysisConfig, ComparisonAnalysisReporter, StatusLevel,
 };
+use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use std::path::PathBuf;
 use std::time::Duration;
-use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 #[tokio::test]
 async fn test_comparison_analysis_report_generation() {
