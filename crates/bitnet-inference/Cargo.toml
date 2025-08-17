@@ -39,3 +39,5 @@ gpu = ["bitnet-kernels/cuda"]
 streaming = []
 # Only run GPU-dependent tests when requested:
 gpu-tests = []
+# Run tests that require complete kernels/weights:
+full-engine = []
