@@ -36,25 +36,61 @@ impl<'a> GgufReader<'a> {
         let mut metadata = Vec::new();
         for _ in 0..header.metadata_kv_count {
             metadata.push(GgufMetadata::read(data, &mut offset)?);
-            // No per-KV alignment in GGUF v3 - KVs are packed back-to-back
+            // KVs are tightly packed; no per-KV alignment.
         }
 
-        // Read tensor infos
-        let mut tensor_infos = Vec::new();
+        // --- tensor infos: offsets are authoritative ---
+        let mut tensor_infos = Vec::with_capacity(header.tensor_count as usize);
         for _ in 0..header.tensor_count {
             tensor_infos.push(TensorInfo::read(data, &mut offset)?);
         }
 
-        // Calculate data section start (aligned)
-        let data_start = align_up(offset, header.alignment);
-        
-        // Validate tensor offsets (they are relative to data_start, not file start)
-        for (i, tensor_info) in tensor_infos.iter().enumerate() {
-            let absolute_offset = data_start + tensor_info.offset as usize;
-            if absolute_offset + tensor_info.size as usize > data.len() {
+        // One-time alignment before the tensor data
+        let data_start = align_up(offset, /* GGUF v3 fixed */ 32);
+        let file_size = data.len();
+
+        // Recompute sizes from successive offsets (and file end for the last tensor)
+        for i in 0..tensor_infos.len() {
+            let cur_off = tensor_infos[i].offset as usize;
+            let abs_start = data_start.checked_add(cur_off).ok_or_else(|| {
+                BitNetError::Model(ModelError::LoadingFailed {
+                    reason: format!("Tensor '{}' offset overflow", tensor_infos[i].name),
+                })
+            })?;
+
+            let abs_end = if i + 1 < tensor_infos.len() {
+                let next_off = tensor_infos[i + 1].offset as usize;
+                data_start.checked_add(next_off).ok_or_else(|| {
+                    BitNetError::Model(ModelError::LoadingFailed {
+                        reason: format!("Tensor '{}' next offset overflow", tensor_infos[i].name),
+                    })
+                })?
+            } else {
+                file_size
+            };
+
+            if abs_end < abs_start {
                 return Err(BitNetError::Model(ModelError::LoadingFailed {
-                    reason: format!("Tensor {} data extends beyond file bounds (absolute offset: {}, size: {}, file size: {})", 
-                                   i, absolute_offset, tensor_info.size, data.len()),
+                    reason: format!(
+                        "Tensor '{}' has decreasing offsets (start: {}, end: {})",
+                        tensor_infos[i].name, abs_start, abs_end
+                    ),
+                }));
+            }
+            let sz = abs_end - abs_start;
+            tensor_infos[i].size = sz as u64;
+        }
+
+        // Final bound check (defensive)
+        for (i, info) in tensor_infos.iter().enumerate() {
+            let start = data_start + info.offset as usize;
+            let end = start + info.size as usize;
+            if end > file_size {
+                return Err(BitNetError::Model(ModelError::LoadingFailed {
+                    reason: format!(
+                        "Tensor {} '{}' extends beyond file (start {}, end {}, file {})",
+                        i, info.name, start, end, file_size
+                    ),
                 }));
             }
         }

@@ -2,6 +2,8 @@
 
 use crate::{BitNetError, Device, Result};
 use candle_core::{DType, Tensor as CandleTensor};
+#[cfg(all(target_os = "macos", feature = "gpu"))]
+use candle_core::backend::BackendDevice;
 
 /// Tensor trait for unified tensor operations
 pub trait Tensor: Send + Sync {
@@ -133,16 +135,16 @@ impl BitNetTensor {
                 }
             }
             Device::Metal => {
-                #[cfg(feature = "gpu")]
+                #[cfg(all(target_os = "macos", feature = "gpu"))]
                 {
                     Ok(candle_core::Device::Metal(
                         candle_core::MetalDevice::new(0)
                             .map_err(|e| BitNetError::Validation(e.to_string()))?,
                     ))
                 }
-                #[cfg(not(feature = "gpu"))]
+                #[cfg(not(all(target_os = "macos", feature = "gpu")))]
                 {
-                    Err(BitNetError::Validation("Metal not available".to_string()))
+                    Err(BitNetError::Validation("Metal device requested but not supported on this build".to_string()))
                 }
             }
         }
@@ -248,16 +250,16 @@ impl Tensor for MockTensor {
                 }
             }
             Device::Metal => {
-                #[cfg(feature = "gpu")]
+                #[cfg(all(target_os = "macos", feature = "gpu"))]
                 {
                     candle_core::Device::Metal(
                         candle_core::MetalDevice::new(0)
                             .map_err(|e| BitNetError::Validation(e.to_string()))?,
                     )
                 }
-                #[cfg(not(feature = "gpu"))]
+                #[cfg(not(all(target_os = "macos", feature = "gpu")))]
                 {
-                    return Err(BitNetError::Validation("Metal not available".to_string()));
+                    return Err(BitNetError::Validation("Metal device requested but not supported on this build".to_string()));
                 }
             }
         };
