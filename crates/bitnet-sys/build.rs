@@ -22,22 +22,25 @@ fn main() {
 
     #[cfg(feature = "ffi")]
     {
-        // When crossval feature is enabled, we REQUIRE the C++ implementation
+        // When crossval feature is enabled, try to find the C++ implementation
         let cpp_dir = env::var("BITNET_CPP_DIR")
             .or_else(|_| env::var("BITNET_CPP_PATH")) // Try legacy env var
+            .or_else(|_| env::var("HOME").map(|h| format!("{}/.cache/bitnet_cpp", h)))
             .map(PathBuf::from)
-            .expect(
-                "BITNET_CPP_DIR must be set to the Microsoft BitNet repository root.\n\
-                 Run: ./ci/fetch_bitnet_cpp.sh\n\
-                 Then: export BITNET_CPP_DIR=$HOME/.cache/bitnet_cpp"
-            );
+            .unwrap_or_default();
 
-        if !cpp_dir.exists() {
-            panic!(
-                "bitnet-sys: BITNET_CPP_DIR points to non-existent path: {}\n\
-                 Run: ./ci/fetch_bitnet_cpp.sh",
-                cpp_dir.display()
-            );
+        if cpp_dir.as_os_str().is_empty() || !cpp_dir.exists() {
+            println!("cargo:warning=BITNET_CPP_DIR not set/invalid; building without C++ bridge");
+            println!("cargo:rustc-cfg=bitnet_cpp_unavailable");
+            
+            // Create minimal bindings file
+            let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+            std::fs::write(
+                out_path.join("bindings.rs"),
+                "// C++ bridge unavailable - BITNET_CPP_DIR not set\n",
+            )
+            .unwrap();
+            return;
         }
 
         // Verify the C++ implementation is built
