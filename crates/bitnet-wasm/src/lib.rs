@@ -36,24 +36,38 @@ pub fn init_logger() {
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-// Re-export main components
-pub mod benchmark;
-pub mod inference;
-pub mod kernels;
-pub mod memory;
-pub mod model;
-pub mod progressive;
-pub mod streaming;
-pub mod utils;
+// For now, comment out modules that have compilation issues on wasm32
+// These will need to be fixed properly in a future PR
 
-pub use benchmark::*;
+// Re-export main components
+// pub mod benchmark;
+// pub mod kernels;
+// pub mod memory;
+// pub mod utils;
+
+// These modules depend on bitnet-inference, so only include them when the feature is enabled
+#[cfg(feature = "inference")]
+pub mod inference;
+#[cfg(feature = "inference")]
+pub mod model;
+#[cfg(feature = "inference")]
+pub mod progressive;
+#[cfg(feature = "inference")]
+pub mod streaming;
+
+// pub use benchmark::*;
+// pub use kernels::*;
+// pub use memory::*;
+// pub use utils::*;
+
+#[cfg(feature = "inference")]
 pub use inference::*;
-pub use kernels::*;
-pub use memory::*;
+#[cfg(feature = "inference")]
 pub use model::*;
+#[cfg(feature = "inference")]
 pub use progressive::*;
+#[cfg(feature = "inference")]
 pub use streaming::*;
-pub use utils::*;
 
 // Initialize the WASM module
 #[wasm_bindgen(start)]
@@ -63,4 +77,22 @@ pub fn main() {
 
     init_logger();
     console_log!("BitNet WASM module initialized");
+}
+
+/// Minimal async entry that compiles on wasm even when the Rust engine is not enabled.
+#[wasm_bindgen]
+pub async fn generate(prompt: String) -> Result<String, JsValue> {
+    generate_impl(prompt).await.map_err(|e| JsValue::from_str(&e))
+}
+
+#[cfg(feature = "inference")]
+async fn generate_impl(prompt: String) -> Result<String, String> {
+    // When inference is enabled, use the real implementation
+    // This would use bitnet_inference components
+    Err("Inference implementation not yet ready for WASM".to_string())
+}
+
+#[cfg(not(feature = "inference"))]
+async fn generate_impl(_prompt: String) -> Result<String, String> {
+    Ok("bitnet-wasm built without `inference` feature. Enable it with --features inference".into())
 }

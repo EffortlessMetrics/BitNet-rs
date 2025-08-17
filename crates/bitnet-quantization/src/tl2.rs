@@ -23,11 +23,19 @@ pub struct TL2Config {
 
 impl Default for TL2Config {
     fn default() -> Self {
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        let (use_avx512, use_avx2) = (
+            is_x86_feature_detected!("avx512f"),
+            is_x86_feature_detected!("avx2"),
+        );
+        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+        let (use_avx512, use_avx2) = (false, false);
+        
         Self {
             block_size: 128, // Larger blocks for x86 vectorization
             lookup_table_size: 256,
-            use_avx512: is_x86_feature_detected!("avx512f"),
-            use_avx2: is_x86_feature_detected!("avx2"),
+            use_avx512,
+            use_avx2,
             precision_bits: 2,
             vectorized_tables: true,
         }
@@ -116,11 +124,23 @@ struct CpuFeatures {
 
 impl CpuFeatures {
     fn detect() -> Self {
-        Self {
-            has_avx2: is_x86_feature_detected!("avx2"),
-            has_avx512f: is_x86_feature_detected!("avx512f"),
-            has_avx512bw: is_x86_feature_detected!("avx512bw"),
-            has_avx512vl: is_x86_feature_detected!("avx512vl"),
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        {
+            Self {
+                has_avx2: is_x86_feature_detected!("avx2"),
+                has_avx512f: is_x86_feature_detected!("avx512f"),
+                has_avx512bw: is_x86_feature_detected!("avx512bw"),
+                has_avx512vl: is_x86_feature_detected!("avx512vl"),
+            }
+        }
+        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+        {
+            Self {
+                has_avx2: false,
+                has_avx512f: false,
+                has_avx512bw: false,
+                has_avx512vl: false,
+            }
         }
     }
 
