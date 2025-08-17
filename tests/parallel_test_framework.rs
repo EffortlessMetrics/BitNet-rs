@@ -224,7 +224,7 @@ pub struct ParallelTestHarness {
     stats: Arc<RwLock<TestStats>>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct TestStats {
     total_tests: usize,
     passed_tests: usize,
@@ -264,7 +264,7 @@ impl ParallelTestHarness {
                 Ok(result) => results.push(result),
                 Err(e) => {
                     eprintln!("Task join error: {}", e);
-                    results.push(TestRecord::failed(
+                    results.push(TestResult::failed(
                         "unknown".to_string(),
                         Duration::ZERO,
                         format!("Task join error: {}", e),
@@ -289,7 +289,7 @@ impl ParallelTestHarness {
         let _permit = match semaphore.acquire().await {
             Ok(permit) => permit,
             Err(e) => {
-                return TestRecord::failed(
+                return TestResult::failed(
                     test_name,
                     Duration::ZERO,
                     format!("Failed to acquire semaphore: {}", e),
@@ -301,7 +301,7 @@ impl ParallelTestHarness {
         let isolated_env = match IsolatedEnvironment::new(&test_name) {
             Ok(env) => env,
             Err(e) => {
-                return TestRecord::failed(
+                return TestResult::failed(
                     test_name,
                     start_time.elapsed(),
                     format!("Failed to create isolated environment: {}", e),
@@ -336,21 +336,21 @@ impl ParallelTestHarness {
                     let mut stats_guard = stats.write().await;
                     stats_guard.passed_tests += 1;
                 }
-                TestRecord::passed(test_name, duration)
+                TestResult::passed(test_name, duration)
             }
             Ok(Err(e)) => {
                 {
                     let mut stats_guard = stats.write().await;
                     stats_guard.failed_tests += 1;
                 }
-                TestRecord::failed(test_name, duration, e)
+                TestResult::failed(test_name, duration, e)
             }
             Err(_) => {
                 {
                     let mut stats_guard = stats.write().await;
                     stats_guard.failed_tests += 1;
                 }
-                TestRecord::failed(
+                TestResult::failed(
                     test_name,
                     timeout_duration,
                     format!("Test timed out after {:?}", timeout_duration),
@@ -360,7 +360,7 @@ impl ParallelTestHarness {
     }
 
     pub async fn get_stats(&self) -> TestStats {
-        self.stats.read().await.clone()
+        (*self.stats.read().await).clone()
     }
 }
 
