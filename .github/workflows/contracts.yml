@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Need full history for git diff
+          fetch-depth: 0  # required so the base SHA is available for diffs
 
       - name: Install Rust (MSRV)
         uses: dtolnay/rust-toolchain@1.89.0
@@ -31,17 +31,16 @@ jobs:
             echo "head=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Check public API for stable crates
+      - name: Strict public API check (deny breaking changes)
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'allow-public-api-change') }}
         shell: bash
-        # REPORT-ONLY on first runs to avoid surprise failures.
-        # Flip to `continue-on-error: false` when you want to enforce.
-        continue-on-error: true
         run: |
           set -euo pipefail
           BASE="${{ steps.revs.outputs.base }}"
           HEAD="${{ steps.revs.outputs.head }}"
+          mkdir -p api-diff
 
-          # Only check stable library crates (skip binaries and experimental)
+          # Stable library crates only (skip binaries/experimental crates)
           CRATES=(
             bitnet-common
             bitnet-models
@@ -53,6 +52,15 @@ jobs:
 
           for c in "${CRATES[@]}"; do
             echo "===> $c"
+            # Deny breaks: removed/changed public items. Allow additions.
             cargo public-api -p "$c" diff "${BASE}..${HEAD}" \
-              || echo "::warning title=$c public API changed::Review public API diff for $c"
+              --deny removed --deny changed \
+              | tee "api-diff/${c}.txt"
           done
+
+      - name: Upload API diff (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-api-diff
+          path: api-diff/
