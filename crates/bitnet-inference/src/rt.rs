@@ -26,7 +26,7 @@ pub mod task {
     }
 }
 
-#[cfg(feature = "rt-wasm")]
+#[cfg(all(feature = "rt-wasm", not(feature = "rt-tokio")))]
 pub mod time {
     use super::Duration;
     
@@ -36,7 +36,7 @@ pub mod time {
     }
 }
 
-#[cfg(feature = "rt-wasm")]
+#[cfg(all(feature = "rt-wasm", not(feature = "rt-tokio")))]
 pub mod task {
     use super::Future;
     
