@@ -18,6 +18,21 @@ members = [
     "tests",
     "xtask",
 ]
+# Build and test these by default. Experimental crates remain workspace members
+# but are not built/tested unless explicitly selected.
+default-members = [
+    ".",                          # Main library crate
+    "crates/bitnet-common",
+    "crates/bitnet-models",
+    "crates/bitnet-tokenizers",
+    "crates/bitnet-quantization",
+    "crates/bitnet-kernels",
+    "crates/bitnet-inference",
+    "crates/bitnet-cli",
+    "crates/bitnet-server",
+    "tests",
+    "xtask",
+]
 
 [package]
 name = "bitnet"

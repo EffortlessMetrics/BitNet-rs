@@ -4,6 +4,8 @@
 //! enabling 1-bit LLM inference in browsers and edge environments with
 //! optimized memory usage and JavaScript async/await support.
 
+#![cfg(target_arch = "wasm32")]
+
 use wasm_bindgen::prelude::*;
 
 // Import the `console.log` function from the `console` module
