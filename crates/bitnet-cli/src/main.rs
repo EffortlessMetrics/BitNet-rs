@@ -126,6 +126,11 @@ enum Commands {
         /// Random seed for reproducibility
         #[arg(long)]
         seed: Option<u64>,
+
+        /// Allow falling back to mock loader if real loader fails
+        /// Also toggled by env BITNET_ALLOW_MOCK=1
+        #[arg(long, env = "BITNET_ALLOW_MOCK", default_value_t = false)]
+        allow_mock: bool,
     },
 
     #[cfg(feature = "full-cli")]
@@ -211,6 +216,7 @@ async fn main() -> Result<()> {
             top_p,
             repetition_penalty,
             seed,
+            allow_mock,
         }) => {
             run_simple_generation(
                 model,
@@ -222,6 +228,7 @@ async fn main() -> Result<()> {
                 top_p,
                 repetition_penalty,
                 seed,
+                allow_mock,
             )
             .await
         }
@@ -353,6 +360,7 @@ async fn run_simple_generation(
     top_p: f32,
     repetition_penalty: f32,
     seed: Option<u64>,
+    allow_mock: bool,
 ) -> Result<()> {
     use crate::sampling::Sampler;
     use bitnet_common::Device;
@@ -362,7 +370,7 @@ async fn run_simple_generation(
 
     println!("Loading model from: {}", model_path.display());
 
-    // Use the real model loader
+    // Try real loader first
     use bitnet_models::loader::{LoadConfig, ModelLoader};
     
     let loader = ModelLoader::new(Device::Cpu);
@@ -372,10 +380,30 @@ async fn run_simple_generation(
         progress_callback: None,
     };
     
-    let model = loader.load_with_config(&model_path, &load_config)
-        .context("Failed to load model")?;
-    let config = model.config().clone();
-    let model: Arc<dyn Model> = Arc::from(model);
+    let (model, config): (Arc<dyn Model>, _) = match loader
+        .load_with_config(&model_path, &load_config)
+    {
+        Ok(m) => {
+            let cfg = m.config().clone();
+            (Arc::from(m) as Arc<dyn Model>, cfg)
+        }
+        Err(e) => {
+            if !allow_mock {
+                anyhow::bail!(
+                    "Failed to load real model: {e}\n\
+                     To run with mock tensors (for smoke/UX testing only), \
+                     pass --allow-mock or set BITNET_ALLOW_MOCK=1"
+                );
+            }
+            tracing::warn!("Real loader failed: {e}. Falling back to MOCK loader (by request).");
+            // Mock fallback
+            let (cfg, tensors) = bitnet_models::gguf_simple::load_gguf(&model_path, Device::Cpu)
+                .context("Mock loader also failed")?;
+            let m = bitnet_models::BitNetModel::from_gguf(cfg.clone(), tensors, Device::Cpu)
+                .context("Failed to build mock model")?;
+            (Arc::new(m) as Arc<dyn Model>, cfg)
+        }
+    };
 
     // Load tokenizer
     let tokenizer_path = tokenizer_path.or_else(|| {

@@ -108,14 +108,14 @@ pub enum GgufValue {
 
 impl GgufValue {
     pub fn read(data: &[u8], offset: &mut usize) -> Result<Self> {
-        if *offset >= data.len() {
+        if *offset + 4 > data.len() {
             return Err(BitNetError::Model(ModelError::InvalidFormat {
-                format: "Unexpected end of data while reading GGUF value".to_string(),
+                format: "Unexpected end of data while reading GGUF value type".to_string(),
             }));
         }
 
-        let value_type = data[*offset];
-        *offset += 1;
+        // GGUF v3 uses 4-byte type field
+        let value_type = read_u32(data, offset)?;
 
         match value_type {
             0 => Ok(GgufValue::U8(read_u8(data, offset)?)),
@@ -129,8 +129,7 @@ impl GgufValue {
             8 => Ok(GgufValue::String(read_string(data, offset)?)),
             9 => {
                 // Array type
-                let array_type = data[*offset];
-                *offset += 1;
+                let array_type = read_u32(data, offset)?;
                 let array_len = read_u64(data, offset)? as usize;
 
                 let mut array = Vec::with_capacity(array_len);
@@ -230,9 +229,17 @@ impl TensorInfo {
         let tensor_offset = read_u64(data, offset)?;
 
         // Calculate tensor size
-        let element_size = tensor_type.element_size();
         let total_elements: usize = shape.iter().product();
-        let size = (total_elements * element_size) as u64;
+        let size = if tensor_type.is_quantized() {
+            // For quantized types, element_size is actually bytes per block
+            let block_size = tensor_type.block_size();
+            let bytes_per_block = tensor_type.element_size();
+            let num_blocks = (total_elements + block_size - 1) / block_size;
+            (num_blocks * bytes_per_block) as u64
+        } else {
+            // For non-quantized types, element_size is bytes per element
+            (total_elements * tensor_type.element_size()) as u64
+        };
 
         Ok(Self { name, shape, tensor_type, offset: tensor_offset, size })
     }
@@ -420,9 +427,20 @@ pub fn read_bool(data: &[u8], offset: &mut usize) -> Result<bool> {
 
 pub fn read_string(data: &[u8], offset: &mut usize) -> Result<String> {
     let len = read_u64(data, offset)? as usize;
+    
+    // Sanity check for reasonable string length (e.g., < 1MB)
+    const MAX_STRING_LEN: usize = 1024 * 1024;
+    if len > MAX_STRING_LEN {
+        return Err(BitNetError::Model(ModelError::InvalidFormat {
+            format: format!("String length {} exceeds maximum {} at offset {}", 
+                           len, MAX_STRING_LEN, *offset - 8),
+        }));
+    }
+    
     if *offset + len > data.len() {
         return Err(BitNetError::Model(ModelError::InvalidFormat {
-            format: "String extends beyond data bounds".to_string(),
+            format: format!("String extends beyond data bounds (offset: {}, len: {}, data size: {})", 
+                           *offset, len, data.len()),
         }));
     }
 
