@@ -32,7 +32,8 @@ jobs:
           fi
 
       - name: Strict public API check (deny breaking changes)
-        if: ${{ !contains(github.event.pull_request.labels.*.name, 'allow-public-api-change') }}
+        # Enforce on pushes; on PRs, allow the bypass label.
+        if: ${{ github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'allow-public-api-change') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -58,8 +59,8 @@ jobs:
               | tee "api-diff/${c}.txt"
           done
 
-      - name: Upload API diff (always)
-        if: always()
+      - name: Upload API diff (always, if present)
+        if: ${{ always() && hashFiles('api-diff/**') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: public-api-diff
