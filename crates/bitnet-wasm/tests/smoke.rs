@@ -1,9 +1,18 @@
 #![cfg(target_arch = "wasm32")]
 use wasm_bindgen_test::*;
 
-// Run tests in Node.js by default (more stable on CI)
-// To run in browser, uncomment the line below:
-// wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+// We rely on Node (default). Do NOT enable `run_in_browser` here.
+// Assert runner is Node to make it explicit:
+
+#[wasm_bindgen_test]
+fn running_under_node() {
+    // In Node, `window` is undefined.
+    let is_node = js_sys::eval("typeof window === 'undefined'")
+        .ok()
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    assert!(is_node, "WASM tests are expected to run under Node, not a browser");
+}
 
 // Call the stubbed `generate`—works even without the `inference` feature.
 #[wasm_bindgen_test]
