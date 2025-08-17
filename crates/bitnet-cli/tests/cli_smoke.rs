@@ -16,6 +16,24 @@ fn version_works() {
         .success();
 }
 
+#[test]
+fn help_mentions_core_subcommands() {
+    let out = Command::cargo_bin("bitnet")
+        .unwrap()
+        .arg("--help")
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let s = String::from_utf8(out).unwrap();
+
+    // Looser contract: presence of key verbs without snapshot churn.
+    for needle in ["serve", "infer", "--model", "--config"] {
+        assert!(s.contains(needle), "help missing `{needle}`");
+    }
+}
+
 #[cfg(feature = "full-cli")]
 #[test]
 fn benchmark_help_works() {
