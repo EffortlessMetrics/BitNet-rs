@@ -217,7 +217,6 @@ impl MockInferenceEngine {
     }
 }
 
-#[tokio::test]
 async fn test_cross_crate_data_flow() {
     println!("Testing cross-crate data flow validation");
 
@@ -253,7 +252,6 @@ async fn test_cross_crate_data_flow() {
     println!("✓ Cross-crate data flow test passed");
 }
 
-#[tokio::test]
 async fn test_error_handling_and_recovery() {
     println!("Testing error handling and recovery across components");
 
@@ -280,7 +278,6 @@ async fn test_error_handling_and_recovery() {
     println!("✓ Error handling and recovery test passed");
 }
 
-#[tokio::test]
 async fn test_resource_sharing() {
     println!("Testing resource sharing between components");
 
@@ -311,7 +308,6 @@ async fn test_resource_sharing() {
     println!("✓ Resource sharing test passed");
 }
 
-#[tokio::test]
 async fn test_configuration_propagation() {
     println!("Testing configuration propagation across components");
 

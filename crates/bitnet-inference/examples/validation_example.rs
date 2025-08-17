@@ -1,5 +1,6 @@
 //! Example of end-to-end validation against Python baseline
 
+use std::sync::Arc;
 use bitnet_common::{BitNetConfig, GenerationConfig};
 use bitnet_inference::{
     CpuBackend, CpuInferenceConfig, CpuInferenceEngine, EndToEndValidator, PerformanceThresholds,
@@ -42,11 +43,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create Rust inference engine
     let model_config = BitNetConfig::default();
     let device = Device::Cpu;
-    let model = BitNetModel::new(model_config, device);
+    let model = Arc::new(BitNetModel::new(model_config, device));
 
-    let cpu_backend = CpuBackend::new()?;
+    let cpu_backend = CpuBackend::new(model.clone())?;
     let cpu_config = CpuInferenceConfig::default();
-    let mut cpu_engine = CpuInferenceEngine::new(Box::new(model), cpu_backend, cpu_config)?;
+    let mut cpu_engine = CpuInferenceEngine::new(model, cpu_backend, cpu_config)?;
 
     // Create validator
     let validator = EndToEndValidator::new(validation_config);

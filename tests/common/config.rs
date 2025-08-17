@@ -1,5 +1,4 @@
 use super::errors::{TestError, TestOpResult as TestResultCompat};
-use super::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use super::utils::get_optimal_parallel_tests;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
