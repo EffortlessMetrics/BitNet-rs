@@ -363,9 +363,67 @@ pub fn read_string(data: &[u8], offset: &mut usize) -> Result<String> {
     let string_data = &data[*offset..*offset + len];
     *offset += len;
 
-    String::from_utf8(string_data.to_vec()).map_err(|_| {
-        BitNetError::Model(ModelError::InvalidFormat {
-            format: "Invalid UTF-8 in string".to_string(),
-        })
-    })
+    // GGUF may store byte strings (e.g., token pieces) that are not valid UTF-8.
+    // Use lossy decoding to handle this gracefully instead of failing.
+    match String::from_utf8(string_data.to_vec()) {
+        Ok(s) => Ok(s),
+        Err(e) => {
+            let bytes = e.into_bytes();
+            // Log once per problematic string
+            tracing::warn!("GGUF string contained invalid UTF-8; decoding lossily");
+            Ok(String::from_utf8_lossy(&bytes).into_owned())
+        }
+    }
+}
+
+/// For fields that genuinely need raw bytes (e.g., token pieces arrays),
+/// keep the bytes verbatim.
+pub fn read_bytes(data: &[u8], offset: &mut usize) -> Result<Vec<u8>> {
+    let len = read_u64(data, offset)? as usize;
+    if *offset + len > data.len() {
+        return Err(BitNetError::Model(ModelError::InvalidFormat {
+            format: "Bytes extend beyond data bounds".to_string(),
+        }));
+    }
+
+    let bytes = data[*offset..*offset + len].to_vec();
+    *offset += len;
+    Ok(bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lossy_utf8_string_does_not_panic() {
+        // Create test data with invalid UTF-8
+        // Length = 2, then bytes [0xC3, 0x28] which is invalid UTF-8
+        let mut data = Vec::new();
+        data.extend_from_slice(&2u64.to_le_bytes()); // length
+        data.extend_from_slice(&[0xC3, 0x28]); // invalid UTF-8 sequence
+        
+        let mut offset = 0;
+        // Should not error; should return a String with replacement char
+        let result = read_string(&data, &mut offset);
+        assert!(result.is_ok(), "lossy decode should succeed");
+        
+        let s = result.unwrap();
+        assert!(s.contains('\u{FFFD}'), "expected replacement char in lossy decode");
+        assert_eq!(offset, 10, "offset should be updated correctly");
+    }
+
+    #[test]
+    fn test_valid_utf8_string() {
+        // Create test data with valid UTF-8
+        let test_str = "Hello, GGUF!";
+        let mut data = Vec::new();
+        data.extend_from_slice(&(test_str.len() as u64).to_le_bytes());
+        data.extend_from_slice(test_str.as_bytes());
+        
+        let mut offset = 0;
+        let result = read_string(&data, &mut offset);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), test_str);
+    }
 }

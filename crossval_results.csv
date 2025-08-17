@@ -1,4 +1,5 @@
 impl,prompt,tokens,threads,tokens_per_sec,wall_time_sec,status
 cpp,"The sky is",64,1,15.00,4.34,OK
 cpp,"The sky is",64,8,17.77,3.60,OK
-rust,"The sky is",64,auto,435.37,0.147,MOCK_PATH
+rust,"The sky is",64,auto,435.37,0.147,MOCK_PATHcpp,"The sky is",64,1,17.51,OK
+cpp,"The sky is",64,1,14.62,OK
