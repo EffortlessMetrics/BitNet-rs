@@ -45,6 +45,8 @@ With `degraded-ok` enabled:
 * **`/health/live`** – **Uses the same mapping** as `/health`.
 * **`/health/ready`** – **Always fail-fast**: `Healthy` → 200; `Degraded|Unhealthy` → 503, regardless of `degraded-ok`.
 
+All health endpoints set `Cache-Control: no-store` to prevent caching.
+
 ## Examples
 
 ```bash
