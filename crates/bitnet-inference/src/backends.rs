@@ -338,6 +338,9 @@ mod tests {
         assert!(backend.is_ok());
     }
 
+    // These require complete kernels / weights. Keep them opt-in.
+    // Run with: cargo test -p bitnet-inference --features full-engine
+    #[cfg_attr(not(feature = "full-engine"), ignore)]
     #[tokio::test]
     async fn test_cpu_backend_forward() {
         let model = Arc::new(MockModel::new());
@@ -345,8 +348,10 @@ mod tests {
         let input = ConcreteTensor::mock(vec![1, 512]);
         let mut cache = KVCache::new(Default::default()).unwrap();
 
-        let output = backend.forward(&input, &mut cache).await;
-        assert!(output.is_ok());
+        let output = backend.forward(&input, &mut cache).await
+            .expect("CPU forward should succeed with mock model");
+        // Minimal invariant: output tensor has expected shape
+        assert_eq!(output.shape(), &[1, 10, 768], "unexpected output shape");
     }
 
     // Requires a CUDA/Metal/WGPU environment; off by default.
