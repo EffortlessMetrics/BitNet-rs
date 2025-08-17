@@ -15,8 +15,6 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 futures-util = "0.3"
-# Use the 0.3 line and its "wasm_js" feature.
-getrandom = { version = "0.3", features = ["wasm_js"] }
 bitnet-common = { path = "../bitnet-common" }
 bitnet-models = { path = "../bitnet-models" }
 bitnet-quantization = { path = "../bitnet-quantization" }
@@ -51,6 +49,9 @@ wee_alloc = { version = "0.4", optional = true }
 # Logging for WASM
 console_error_panic_hook = { version = "0.1", optional = true }
 wasm-logger = "0.2"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
 
 [features]
 default = ["browser"]
