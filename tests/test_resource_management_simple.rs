@@ -1,7 +1,6 @@
 #[cfg(test)]
-use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
-
 mod resource_management_tests {
+    use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
     use std::time::Duration;
 
     // Simple test to verify resource management functionality
@@ -11,7 +10,7 @@ mod resource_management_tests {
         let initial_memory = get_memory_usage();
 
         // Allocate some memory
-        let _data = vec![0u8; BYTES_PER_MB]; // 1MB
+        let _data = vec![0u8; BYTES_PER_MB as usize]; // 1MB
 
         let after_alloc_memory = get_memory_usage();
 
