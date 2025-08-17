@@ -1,12 +1,10 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 fn main() {
-    // Generate build-time constants, gracefully handling missing git
-    if let Err(e) = vergen::EmitBuilder::builder()
-        .build_timestamp()
-        .git_sha(false)
-        .rustc_semver()
-        .cargo_target_triple()
-        .emit()
-    {
-        println!("cargo:warning=vergen emit skipped: {}", e);
-    }
+    // Minimal, dependency-free metadata so the build never blocks on 'vergen'
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    println!("cargo:rustc-env=BITNET_BUILD_TS={ts}");
 }

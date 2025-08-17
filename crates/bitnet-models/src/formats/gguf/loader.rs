@@ -16,7 +16,7 @@ impl GgufLoader {
     fn device_to_candle(device: &Device) -> Result<candle_core::Device> {
         match device {
             Device::Cpu => Ok(candle_core::Device::Cpu),
-            Device::Cuda(_id) => {
+            Device::Cuda(id) => {
                 #[cfg(feature = "gpu")]
                 {
                     use candle_core::backend::BackendDevice;
@@ -30,14 +30,21 @@ impl GgufLoader {
                 }
             }
             Device::Metal => {
-                #[cfg(feature = "gpu")]
+                #[cfg(all(target_os = "macos", feature = "metal"))]
                 {
+                    use candle_core::backend::BackendDevice;
                     Ok(candle_core::Device::Metal(
                         candle_core::MetalDevice::new(0)
                             .map_err(|e| BitNetError::Validation(e.to_string()))?,
                     ))
                 }
-                #[cfg(not(feature = "gpu"))]
+                #[cfg(not(all(target_os = "macos", feature = "metal")))]
+                {
+                    Err(BitNetError::Validation(
+                        "Metal support not enabled; rebuild with --features metal on macOS".to_string(),
+                    ))
+                }
+                #[cfg(all(not(target_os = "macos"), feature = "gpu"))]
                 {
                     Err(BitNetError::Validation("Metal not available".to_string()))
                 }
