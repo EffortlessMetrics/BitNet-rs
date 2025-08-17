@@ -582,6 +582,23 @@ cargo run -p bitnet-server --features degraded-ok
 # Unhealthy → 503
 ```
 
+## WASM (experimental)
+
+BitNet has an experimental WebAssembly crate.
+
+```bash
+rustup target add wasm32-unknown-unknown
+# Minimal build (errors go to the browser console without symbols)
+cargo build -p bitnet-wasm --target wasm32-unknown-unknown
+
+# (Optional) Better browser panic messages
+cargo build -p bitnet-wasm --target wasm32-unknown-unknown --features console-error
+```
+
+Notes:
+- The WASM crate is opt-in and not part of default builds.
+- `getrandom` is configured with the JS backend for `wasm32`.
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
