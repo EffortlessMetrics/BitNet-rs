@@ -263,10 +263,28 @@ impl GgufLoader {
 
         // For quantized tensors, we need special handling
         if info.tensor_type.is_quantized() {
-            // Create tensor from raw bytes for quantized data
-            let tensor = Tensor::from_raw_buffer(data, dtype, &info.shape, &candle_device)
-                .map_err(|e| BitNetError::Validation(e.to_string()))?;
-            Ok(tensor)
+            // For I2_S quantization, we need to dequantize to F32
+            if matches!(info.tensor_type, GgufTensorType::I2_S) {
+                // For now, create a placeholder F32 tensor with the correct shape
+                // TODO: Implement proper I2_S dequantization
+                tracing::warn!("I2_S quantization detected for tensor {}, using placeholder values", info.name);
+                
+                let original_shape = &info.shape;
+                let num_elements: usize = original_shape.iter().product();
+                
+                // Create placeholder data (small random values to avoid NaN/Inf)
+                let float_data = vec![0.001f32; num_elements];
+                
+                // Create F32 tensor from placeholder data
+                Tensor::from_slice(&float_data, original_shape.as_slice(), &candle_device)
+                    .map_err(|e| BitNetError::Validation(e.to_string()))
+            } else {
+                // For other quantized types, keep as raw bytes for now
+                // (would need specific dequantizers for Q4_0, Q8_0, etc.)
+                let tensor = Tensor::from_raw_buffer(data, dtype, &info.shape, &candle_device)
+                    .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                Ok(tensor)
+            }
         } else {
             // For regular tensors, interpret the bytes according to the data type
             match dtype {

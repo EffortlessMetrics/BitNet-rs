@@ -41,19 +41,35 @@ impl BitNetModel {
         device: Device,
     ) -> Result<Self> {
         // Validate that required tensors are present
-        let required_tensors = ["token_embd.weight", "output.weight"];
-
-        for tensor_name in &required_tensors {
-            if !tensors.contains_key(*tensor_name) {
-                return Err(BitNetError::Validation(format!(
-                    "Missing required tensor: {}",
-                    tensor_name
-                )));
-            }
+        // LM head can be tied to embeddings, so check for either output.weight or embeddings
+        let has_output = tensors.contains_key("output.weight") 
+            || tensors.contains_key("lm_head.weight")
+            || tensors.contains_key("head.weight");
+        
+        let has_embeddings = tensors.contains_key("token_embd.weight")
+            || tensors.contains_key("tok_embeddings.weight")
+            || tensors.contains_key("model.embed_tokens.weight");
+        
+        if !has_embeddings {
+            return Err(BitNetError::Validation(
+                "Missing required tensor: token embeddings (token_embd.weight or equivalent)".to_string()
+            ));
+        }
+        
+        if !has_output && !has_embeddings {
+            return Err(BitNetError::Validation(
+                "Missing both output.weight and token_embd.weight - cannot compute logits".to_string()
+            ));
         }
 
         // Try to build transformer model if we have weights
-        let transformer = Self::build_transformer(&config, &tensors, &device).ok();
+        let transformer = match Self::build_transformer(&config, &tensors, &device) {
+            Ok(t) => Some(t),
+            Err(e) => {
+                tracing::warn!("Failed to build transformer model: {}", e);
+                None
+            }
+        };
 
         Ok(Self { config, device, tensors, transformer })
     }

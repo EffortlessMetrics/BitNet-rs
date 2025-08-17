@@ -27,6 +27,16 @@ pub fn remap_gguf_weights(tensors: &HashMap<String, Tensor>) -> Result<HashMap<S
             &unmapped[..5.min(unmapped.len())]
         );
     }
+    
+    // Check if we have lm_head
+    let has_lm_head = mapped.contains_key("lm_head.weight");
+    let has_embed = mapped.contains_key("embed_tokens.weight");
+    tracing::info!("Mapped tensors: has lm_head.weight={}, has embed_tokens.weight={}", has_lm_head, has_embed);
+    
+    // If no lm_head but we have embeddings, that's OK (tied weights)
+    if !has_lm_head && has_embed {
+        tracing::info!("No lm_head.weight found, will use tied weights with embed_tokens");
+    }
 
     Ok(mapped)
 }
@@ -129,11 +139,23 @@ pub fn create_var_builder(
     // Convert tensors to the target dtype if needed
     let mut converted = HashMap::new();
     for (name, tensor) in tensors {
-        let tensor = if tensor.dtype() != dtype { tensor.to_dtype(dtype)? } else { tensor };
+        tracing::trace!("Processing tensor {}: shape={:?}, dtype={:?}", name, tensor.shape(), tensor.dtype());
+        
+        let tensor = if tensor.dtype() != dtype { 
+            tracing::trace!("Converting {} from {:?} to {:?}", name, tensor.dtype(), dtype);
+            tensor.to_dtype(dtype)? 
+        } else { 
+            tensor 
+        };
 
         // Move to target device if needed
         let tensor =
-            if !tensor.device().same_device(device) { tensor.to_device(device)? } else { tensor };
+            if !tensor.device().same_device(device) { 
+                tracing::trace!("Moving {} to device", name);
+                tensor.to_device(device)? 
+            } else { 
+                tensor 
+            };
 
         converted.insert(name, tensor);
     }
