@@ -27,6 +27,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+      - run: rustup component add rustfmt
+      - run: cargo fmt --all -- --check
       - run: rustup component add clippy
       - run: cargo clippy -p bitnet-cli    --all-targets -- -D warnings
       - run: cargo clippy -p bitnet-server --all-targets -- -D warnings

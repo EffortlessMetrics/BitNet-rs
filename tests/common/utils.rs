@@ -293,7 +293,7 @@ mod tests {
 
     #[test]
     fn test_format_bytes() {
-        use super::super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
+        use super::super::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
         assert_eq!(format_bytes(0), "0 B");
         assert_eq!(format_bytes(512), "512 B");
         assert_eq!(format_bytes(BYTES_PER_KB), "1.0 KB");

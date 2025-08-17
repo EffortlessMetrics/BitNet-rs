@@ -7,8 +7,8 @@ use std::time::{Duration, SystemTime};
 use tokio::fs;
 use tracing::{debug, info, warn};
 
+use super::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use crate::{
-use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
     config::FixtureConfig,
     errors::{FixtureError, FixtureResult},
     utils::format_bytes,

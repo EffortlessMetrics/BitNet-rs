@@ -3,10 +3,9 @@ use std::sync::Arc;
 
 use super::debugging::{DebugConfig, TestDebugger};
 use super::errors::TestOpResult;
-use super::harness::{TestCase, TestHarness, TestReporter, FixtureCtx};
+use super::harness::{FixtureCtx, TestCase, TestHarness, TestReporter};
 use super::results::{TestResult, TestSuiteResult};
-use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
-
+use super::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 
 /// Enhanced test harness with integrated debugging support
 pub struct DebugEnabledTestHarness {
@@ -146,7 +145,6 @@ impl TestCase for DebugTestCase {
 
         result
     }
-    
 
     async fn execute(&self) -> TestOpResult<super::results::TestMetrics> {
         self.debugger.start_phase(&self.test_name, "execute").await?;
@@ -460,7 +458,7 @@ mod tests {
 
             Ok(super::super::results::TestMetrics {
                 wall_time: Duration::from_millis(100),
-                memory_peak: Some(BYTES_PER_MB),   // 1MB
+                memory_peak: Some(BYTES_PER_MB),          // 1MB
                 memory_average: Some(512 * BYTES_PER_KB), // 512KB
                 cpu_time: Some(Duration::from_millis(50)),
                 custom_metrics: std::collections::HashMap::new(),

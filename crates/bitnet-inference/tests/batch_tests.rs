@@ -7,7 +7,9 @@
 //! - Resource management and limits
 //! - Performance optimization
 
-use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, InferenceError, PerformanceMetrics};
+use bitnet_common::{
+    BitNetConfig, BitNetError, ConcreteTensor, Device, InferenceError, PerformanceMetrics,
+};
 use bitnet_inference::prelude::*;
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
@@ -186,7 +188,10 @@ pub struct MockBatchProcessor {
 }
 
 impl MockBatchProcessor {
-    pub fn new(engine: Arc<InferenceEngine>, config: BatchProcessorConfig) -> Result<Self, BitNetError> {
+    pub fn new(
+        engine: Arc<InferenceEngine>,
+        config: BatchProcessorConfig,
+    ) -> Result<Self, BitNetError> {
         config.validate()?;
         Ok(Self { engine, config })
     }
@@ -206,10 +211,14 @@ impl MockBatchProcessor {
                 let _permit = permit;
                 let start_time = std::time::Instant::now();
 
-                let result = engine.generate_with_config(&request.prompt, &request.config).await
-                    .map_err(|e| BitNetError::Inference(InferenceError::GenerationFailed {
-                        reason: e.to_string(),
-                    }));
+                let result = engine
+                    .generate_with_config(&request.prompt, &request.config)
+                    .await
+                    .map_err(|e| {
+                        BitNetError::Inference(InferenceError::GenerationFailed {
+                            reason: e.to_string(),
+                        })
+                    });
                 let processing_time = start_time.elapsed();
 
                 BatchResponse {

@@ -9,10 +9,9 @@ use tokio::time::timeout;
 use super::{
     config::TestConfig,
     errors::{TestError, TestOpResult as TestResultCompat},
-    results::{TestMetrics, TestResult as TestRecord, TestStatus, TestSuiteResult},
     fixtures_facade::Fixtures,
+    results::{TestMetrics, TestResult as TestRecord, TestStatus, TestSuiteResult},
 };
-
 
 // Import the stable fixture context type
 mod fixture_ctx;
@@ -261,7 +260,7 @@ impl TestHarness {
 
         // Call the test's setup method with stable API
         test_case.setup(self.fixtures.ctx()).await?;
-        
+
         Ok(())
     }
 
@@ -409,7 +408,7 @@ impl TestHarnessClone {
 
         // Call the test's setup method with stable API
         test_case.setup(self.fixtures.ctx()).await?;
-        
+
         Ok(())
     }
 

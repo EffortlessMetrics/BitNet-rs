@@ -7,8 +7,8 @@ use tempfile::TempDir;
 use tokio::fs;
 
 // Manually define the types we need to avoid import issues
+use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use serde::{Deserialize, Serialize};
-use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TestStatus {

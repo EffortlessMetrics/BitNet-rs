@@ -1,8 +1,8 @@
 use super::config::TestConfig;
 use super::errors::TestOpResult as TestResultCompat;
+use super::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Configuration for parallel test execution
 #[derive(Debug, Clone)]

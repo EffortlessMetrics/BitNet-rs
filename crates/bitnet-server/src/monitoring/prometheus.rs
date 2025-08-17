@@ -103,7 +103,8 @@ async fn metrics_handler(
 /// Standard ML inference metrics for Prometheus
 pub mod standard_metrics {
     use prometheus::{
-        register_counter, register_counter_vec, register_gauge, register_gauge_vec, register_histogram_vec, Counter, CounterVec, Gauge, GaugeVec, HistogramVec,
+        register_counter, register_counter_vec, register_gauge, register_gauge_vec,
+        register_histogram_vec, Counter, CounterVec, Gauge, GaugeVec, HistogramVec,
     };
     use std::sync::OnceLock;
 

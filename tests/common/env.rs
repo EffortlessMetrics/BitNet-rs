@@ -10,7 +10,7 @@ use std::time::Duration;
 static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 /// Acquire a guard for safe environment variable manipulation in tests.
-/// 
+///
 /// # Example
 /// ```rust
 /// #[test]
@@ -22,17 +22,14 @@ static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 /// ```
 #[must_use]
 pub fn env_guard() -> std::sync::MutexGuard<'static, ()> {
-    ENV_LOCK
-        .get_or_init(|| Mutex::new(()))
-        .lock()
-        .expect("env guard poisoned")
+    ENV_LOCK.get_or_init(|| Mutex::new(())).lock().expect("env guard poisoned")
 }
 
 /// Parse an environment variable as a boolean (case-insensitive).
-/// 
+///
 /// Truthy: "1", "true", "yes", "on", "enabled"
 /// Falsy: "0", "false", "no", "off", "disabled" (or unset)
-/// 
+///
 /// Note: Any other value is treated as false.
 pub fn env_bool(var: &str) -> bool {
     std::env::var(var)
@@ -48,18 +45,14 @@ pub fn env_bool(var: &str) -> bool {
 /// Returns None if not set or not parseable.
 #[must_use]
 pub fn env_u64(var: &str) -> Option<u64> {
-    std::env::var(var)
-        .ok()
-        .and_then(|v| v.trim().parse().ok())
+    std::env::var(var).ok().and_then(|v| v.trim().parse().ok())
 }
 
 /// Parse an environment variable as a usize.
 /// Returns None if not set or not parseable.
 #[must_use]
 pub fn env_usize(var: &str) -> Option<usize> {
-    std::env::var(var)
-        .ok()
-        .and_then(|v| v.trim().parse().ok())
+    std::env::var(var).ok().and_then(|v| v.trim().parse().ok())
 }
 
 /// Parse an environment variable as a Duration in seconds.
@@ -73,10 +66,7 @@ pub fn env_duration_secs(var: &str) -> Option<Duration> {
 /// Returns None if not set.
 #[must_use]
 pub fn env_string(var: &str) -> Option<String> {
-    std::env::var(var)
-        .ok()
-        .map(|v| v.trim().to_string())
-        .filter(|s| !s.is_empty())
+    std::env::var(var).ok().map(|v| v.trim().to_string()).filter(|s| !s.is_empty())
 }
 
 #[cfg(test)]
@@ -86,19 +76,19 @@ mod tests {
     #[test]
     fn test_env_bool_parsing() {
         let _g = env_guard();
-        
+
         // Test true values
         for val in &["true", "TRUE", "1", "yes", "YES", "on", "ON", "enabled", "ENABLED"] {
             std::env::set_var("TEST_BOOL", val);
             assert!(env_bool("TEST_BOOL"), "Failed to parse '{}' as true", val);
         }
-        
+
         // Test false values
         for val in &["false", "0", "no", "off", "disabled", "random", ""] {
             std::env::set_var("TEST_BOOL", val);
             assert!(!env_bool("TEST_BOOL"), "Failed to parse '{}' as false", val);
         }
-        
+
         // Test missing variable
         std::env::remove_var("TEST_BOOL");
         assert!(!env_bool("TEST_BOOL"));
@@ -107,18 +97,18 @@ mod tests {
     #[test]
     fn test_env_numeric_parsing() {
         let _g = env_guard();
-        
+
         std::env::set_var("TEST_NUM", "42");
         assert_eq!(env_u64("TEST_NUM"), Some(42));
         assert_eq!(env_usize("TEST_NUM"), Some(42));
-        
+
         std::env::set_var("TEST_NUM", "  100  ");
         assert_eq!(env_u64("TEST_NUM"), Some(100));
-        
+
         std::env::set_var("TEST_NUM", "not_a_number");
         assert_eq!(env_u64("TEST_NUM"), None);
         assert_eq!(env_usize("TEST_NUM"), None);
-        
+
         std::env::remove_var("TEST_NUM");
         assert_eq!(env_u64("TEST_NUM"), None);
     }
@@ -126,10 +116,10 @@ mod tests {
     #[test]
     fn test_env_duration_parsing() {
         let _g = env_guard();
-        
+
         std::env::set_var("TEST_DUR", "30");
         assert_eq!(env_duration_secs("TEST_DUR"), Some(Duration::from_secs(30)));
-        
+
         std::env::set_var("TEST_DUR", "invalid");
         assert_eq!(env_duration_secs("TEST_DUR"), None);
     }
@@ -137,13 +127,13 @@ mod tests {
     #[test]
     fn test_env_string_parsing() {
         let _g = env_guard();
-        
+
         std::env::set_var("TEST_STR", "  hello world  ");
         assert_eq!(env_string("TEST_STR"), Some("hello world".to_string()));
-        
+
         std::env::set_var("TEST_STR", "");
         assert_eq!(env_string("TEST_STR"), None);
-        
+
         std::env::remove_var("TEST_STR");
         assert_eq!(env_string("TEST_STR"), None);
     }

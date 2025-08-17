@@ -1,6 +1,7 @@
 // Standalone test runner for configuration testing
 // This allows us to test the configuration functionality independently
 
+use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use bitnet_tests::{
     config::{
         ci_config, dev_config, load_config_from_env, load_config_from_file, load_test_config,
@@ -18,7 +19,6 @@ use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
 use tempfile::{tempdir, TempDir};
-use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

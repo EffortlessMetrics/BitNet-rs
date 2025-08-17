@@ -419,7 +419,7 @@ mod security_tests {
     #[test]
     fn test_file_size_limits() {
         let security = ModelSecurity {
-            max_model_size: 1024, // 1KB limit
+            max_model_size: 1024,             // 1KB limit
             require_hash_verification: false, // Disable hash verification for this test
             ..Default::default()
         };

@@ -6,11 +6,11 @@
 use bitnet_tests::reporting::formats::{HtmlReporter, JsonReporter, MarkdownReporter};
 use bitnet_tests::reporting::{ReportFormat, TestReporter};
 use bitnet_tests::results::{TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary};
+use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use std::collections::HashMap;
 use std::time::Duration;
 use tempfile::TempDir;
 use tokio::fs;
-use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Create simple test data for basic reporting
 fn create_simple_test_data() -> Vec<TestSuiteResult> {
@@ -23,7 +23,7 @@ fn create_simple_test_data() -> Vec<TestSuiteResult> {
                 status: TestStatus::Passed,
                 duration: Duration::from_secs(2),
                 metrics: TestMetrics {
-                    memory_peak: Some(BYTES_PER_MB),   // 1 MB
+                    memory_peak: Some(BYTES_PER_MB),          // 1 MB
                     memory_average: Some(512 * BYTES_PER_KB), // 512 KB
                     cpu_time: Some(Duration::from_millis(1500)),
                     wall_time: Duration::from_secs(2),
@@ -43,8 +43,8 @@ fn create_simple_test_data() -> Vec<TestSuiteResult> {
                 status: TestStatus::Failed,
                 duration: Duration::from_secs(3),
                 metrics: TestMetrics {
-                    memory_peak: Some(2048 * BYTES_PER_KB),    // 2 MB
-                    memory_average: Some(BYTES_PER_MB), // 1 MB
+                    memory_peak: Some(2048 * BYTES_PER_KB), // 2 MB
+                    memory_average: Some(BYTES_PER_MB),     // 1 MB
                     cpu_time: Some(Duration::from_millis(2500)),
                     wall_time: Duration::from_secs(3),
                     custom_metrics: HashMap::new(),

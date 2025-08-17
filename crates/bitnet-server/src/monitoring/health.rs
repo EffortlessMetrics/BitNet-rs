@@ -308,8 +308,7 @@ fn status_code_for(status: HealthStatus) -> StatusCode {
 #[inline]
 fn with_no_store_headers(res: Response) -> Response {
     let mut res = res;
-    res.headers_mut()
-        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    res.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
     res
 }
 
@@ -326,11 +325,11 @@ impl HealthProbe for HealthChecker {
     async fn check_health(&self) -> HealthResponse {
         HealthChecker::check_health(self).await
     }
-    
+
     async fn check_liveness(&self) -> HealthStatus {
         HealthChecker::check_liveness(self).await
     }
-    
+
     async fn check_readiness(&self) -> HealthStatus {
         HealthChecker::check_readiness(self).await
     }
@@ -351,9 +350,7 @@ pub fn create_health_routes_with_probe<T: HealthProbe>(probe: Arc<T>) -> Router 
 }
 
 /// Comprehensive health check endpoint
-async fn health_handler<T: HealthProbe>(
-    State(probe): State<Arc<T>>,
-) -> Response {
+async fn health_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> Response {
     let health = probe.check_health().await;
     let status_code = status_code_for(health.status);
     with_no_store_headers((status_code, Json(health)).into_response())
@@ -460,10 +457,7 @@ mod tests {
             live: HealthStatus::Healthy,
             ready: HealthStatus::Healthy,
         }));
-        let resp = app
-            .oneshot(Request::get("/health").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
+        let resp = app.oneshot(Request::get("/health").body(Body::empty()).unwrap()).await.unwrap();
         assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(
             resp.headers().get(header::CACHE_CONTROL),
@@ -480,10 +474,7 @@ mod tests {
             live: HealthStatus::Healthy,
             ready: HealthStatus::Healthy,
         }));
-        let resp = app
-            .oneshot(Request::get("/health").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
+        let resp = app.oneshot(Request::get("/health").body(Body::empty()).unwrap()).await.unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
         assert_eq!(
             resp.headers().get(header::CACHE_CONTROL),
@@ -499,10 +490,8 @@ mod tests {
             live: HealthStatus::Healthy,
             ready: HealthStatus::Degraded,
         }));
-        let resp = app
-            .oneshot(Request::get("/health/ready").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
+        let resp =
+            app.oneshot(Request::get("/health/ready").body(Body::empty()).unwrap()).await.unwrap();
         assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(
             resp.headers().get(header::CACHE_CONTROL),
@@ -518,10 +507,8 @@ mod tests {
             live: HealthStatus::Degraded,
             ready: HealthStatus::Healthy,
         }));
-        let resp = app
-            .oneshot(Request::get("/health/live").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
+        let resp =
+            app.oneshot(Request::get("/health/live").body(Body::empty()).unwrap()).await.unwrap();
 
         #[cfg(not(feature = "degraded-ok"))]
         assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
@@ -561,13 +548,31 @@ mod tests {
         );
 
         // Test /health/ready endpoint
-        let resp = app
-            .oneshot(Request::get("/health/ready").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
+        let resp =
+            app.oneshot(Request::get("/health/ready").body(Body::empty()).unwrap()).await.unwrap();
         assert_eq!(
             resp.headers().get(header::CACHE_CONTROL),
             Some(&HeaderValue::from_static("no-store"))
         );
+    }
+
+    #[tokio::test]
+    async fn head_requests_set_no_store() {
+        let app: Router = create_health_routes_with_probe(Arc::new(StubProbe {
+            overall: HealthStatus::Healthy,
+            live: HealthStatus::Healthy,
+            ready: HealthStatus::Healthy,
+        }));
+
+        for path in ["/health", "/health/live", "/health/ready"] {
+            let req = Request::builder().method("HEAD").uri(path).body(Body::empty()).unwrap();
+            let resp = app.clone().oneshot(req).await.unwrap();
+            // Healthy stub ⇒ 200 for all three endpoints.
+            assert_eq!(resp.status(), StatusCode::OK);
+            assert_eq!(
+                resp.headers().get(header::CACHE_CONTROL),
+                Some(&HeaderValue::from_static("no-store"))
+            );
+        }
     }
 }

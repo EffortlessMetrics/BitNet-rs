@@ -3,8 +3,8 @@
 //! These tests validate API compatibility, model format compatibility,
 //! and performance parity to ensure smooth migration from legacy implementations.
 
+use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use std::path::Path;
-use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Test API compatibility between different implementations
 #[cfg(test)]

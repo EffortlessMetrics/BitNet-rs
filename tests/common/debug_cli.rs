@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use super::debugging::DebugReport;
 use super::errors::{TestError, TestOpResult};
-use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
+use super::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 
 /// Command-line interface for debugging test issues
 pub struct DebugCli {

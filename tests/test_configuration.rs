@@ -6,6 +6,7 @@
 //
 // Requirements: 5.3 - Integration testing framework configuration testing
 
+use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use bitnet_tests::{
     config::{
         ci_config, dev_config, load_config_from_env, load_config_from_file, load_test_config,
@@ -26,7 +27,6 @@ use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
 use tempfile::{tempdir, TempDir};
-use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
 /// Test suite for configuration testing
 pub struct ConfigurationTestSuite {
