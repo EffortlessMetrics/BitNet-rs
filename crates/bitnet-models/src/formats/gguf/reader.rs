@@ -9,6 +9,7 @@ pub struct GgufReader<'a> {
     header: GgufHeader,
     metadata: Vec<GgufMetadata>,
     tensor_infos: Vec<TensorInfo>,
+    data_start: usize,
 }
 
 impl<'a> GgufReader<'a> {
@@ -35,8 +36,7 @@ impl<'a> GgufReader<'a> {
         let mut metadata = Vec::new();
         for _ in 0..header.metadata_kv_count {
             metadata.push(GgufMetadata::read(data, &mut offset)?);
-            // CRITICAL: Apply alignment after each KV value (GGUF v3+)
-            offset = align_up(offset, header.alignment);
+            // No per-KV alignment in GGUF v3 - KVs are packed back-to-back
         }
 
         // Read tensor infos
@@ -45,16 +45,21 @@ impl<'a> GgufReader<'a> {
             tensor_infos.push(TensorInfo::read(data, &mut offset)?);
         }
 
-        // Validate tensor offsets
+        // Calculate data section start (aligned)
+        let data_start = align_up(offset, header.alignment);
+        
+        // Validate tensor offsets (they are relative to data_start, not file start)
         for (i, tensor_info) in tensor_infos.iter().enumerate() {
-            if tensor_info.offset as usize + tensor_info.size as usize > data.len() {
+            let absolute_offset = data_start + tensor_info.offset as usize;
+            if absolute_offset + tensor_info.size as usize > data.len() {
                 return Err(BitNetError::Model(ModelError::LoadingFailed {
-                    reason: format!("Tensor {} data extends beyond file bounds", i),
+                    reason: format!("Tensor {} data extends beyond file bounds (absolute offset: {}, size: {}, file size: {})", 
+                                   i, absolute_offset, tensor_info.size, data.len()),
                 }));
             }
         }
 
-        Ok(Self { data, header, metadata, tensor_infos })
+        Ok(Self { data, header, metadata, tensor_infos, data_start })
     }
 
     /// Get the GGUF version
@@ -92,12 +97,23 @@ impl<'a> GgufReader<'a> {
 
     /// Get tensor data by tensor info
     pub fn get_tensor_data_by_info(&self, info: &TensorInfo) -> Result<&[u8]> {
-        let start = info.offset as usize;
-        let end = start + info.size as usize;
+        // Tensor offsets in GGUF are relative to data_start
+        let start = self.data_start
+            .checked_add(info.offset as usize)
+            .ok_or_else(|| BitNetError::Model(ModelError::LoadingFailed {
+                reason: format!("Tensor '{}' offset overflow", info.name),
+            }))?;
+        
+        let end = start
+            .checked_add(info.size as usize)
+            .ok_or_else(|| BitNetError::Model(ModelError::LoadingFailed {
+                reason: format!("Tensor '{}' size overflow", info.name),
+            }))?;
 
         if end > self.data.len() {
             return Err(BitNetError::Model(ModelError::LoadingFailed {
-                reason: format!("Tensor '{}' data extends beyond file bounds", info.name),
+                reason: format!("Tensor '{}' data extends beyond file bounds (start: {}, end: {}, file size: {})", 
+                               info.name, start, end, self.data.len()),
             }));
         }
 
