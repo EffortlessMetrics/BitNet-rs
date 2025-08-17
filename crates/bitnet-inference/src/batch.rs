@@ -87,7 +87,7 @@ impl BatchProcessor {
         let semaphore = self.semaphore.clone();
         let is_running = self.is_running.clone();
         
-        tokio::spawn(async move {
+        crate::rt::task::spawn(async move {
             Self::processing_loop(
                 engine,
                 request_queue,
@@ -181,7 +181,7 @@ impl BatchProcessor {
                 last_batch_time = Instant::now();
             } else {
                 // Small delay to prevent busy waiting
-                tokio::time::sleep(Duration::from_millis(1)).await;
+                crate::rt::time::sleep(Duration::from_millis(1)).await;
             }
         }
     }
@@ -203,7 +203,7 @@ impl BatchProcessor {
                 let sender = response_sender.clone();
                 let semaphore = semaphore.clone();
                 
-                tokio::spawn(async move {
+                crate::rt::task::spawn(async move {
                     let _permit = semaphore.acquire().await.unwrap();
                     Self::process_single_request(engine, request, sender).await;
                 })

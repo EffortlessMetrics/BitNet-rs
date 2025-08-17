@@ -64,10 +64,19 @@ wasm-logger = "0.2"
 default = ["browser"]           # builds without inference, compiles on wasm32
 browser = ["wee_alloc"]
 # Opt-in to enable the Rust inference engine on wasm once the runtime is ready.
-inference = ["bitnet-inference"]
+# Use 'dep:' to activate the optional dependency and forward engine features.
+inference = [
+  "dep:bitnet-inference",
+  "bitnet-inference/cpu",
+  "bitnet-inference/rt-wasm",
+]
 nodejs = []
 embedded = []
 debug = ["console_error_panic_hook"]
+# Gradual module re-enablement
+wasm-utils = []
+wasm-mem = []
+wasm-kernels = []
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"
