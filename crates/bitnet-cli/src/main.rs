@@ -362,13 +362,20 @@ async fn run_simple_generation(
 
     println!("Loading model from: {}", model_path.display());
 
-    // Load model with simplified GGUF loader
-    let (config, tensors) = bitnet_models::gguf_simple::load_gguf(&model_path, Device::Cpu)
-        .context("Failed to load GGUF model")?;
-
-    let model = bitnet_models::BitNetModel::from_gguf(config.clone(), tensors, Device::Cpu)
-        .context("Failed to build model from GGUF")?;
-    let model = Arc::new(model) as Arc<dyn Model>;
+    // Use the real model loader
+    use bitnet_models::loader::{LoadConfig, ModelLoader};
+    
+    let loader = ModelLoader::new(Device::Cpu);
+    let load_config = LoadConfig {
+        use_mmap: true,
+        validate_checksums: false,
+        progress_callback: None,
+    };
+    
+    let model = loader.load_with_config(&model_path, &load_config)
+        .context("Failed to load model")?;
+    let config = model.config().clone();
+    let model: Arc<dyn Model> = Arc::from(model);
 
     // Load tokenizer
     let tokenizer_path = tokenizer_path.or_else(|| {
