@@ -175,9 +175,9 @@ rayon = "1.11"
 bytemuck = { version = "1.14", features = ["derive"] }
 
 # Tensor operations
-candle-core = "0.9"
-candle-nn = "0.9"
-candle-transformers = "0.9"
+candle-core = { version = "0.9", default-features = false }
+candle-nn = { version = "0.9", default-features = false }
+candle-transformers = { version = "0.9", default-features = false }
 
 # Serialization formats
 safetensors = "0.6"

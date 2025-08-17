@@ -10,6 +10,77 @@ use std::ffi::{c_char, c_float, c_int, c_uchar, CStr};
 #[allow(unused_imports)]
 use std::ptr;
 
+// Wrapper module for C++ functions with conditional compilation
+#[cfg(feature = "ffi")]
+mod cpp {
+    use std::ffi::{c_char, c_float, c_int, c_uchar};
+    
+    extern "C" {
+        pub fn bitnet_cpp_init() -> c_int;
+        pub fn bitnet_cpp_is_available() -> c_int;
+        pub fn bitnet_cpp_cleanup();
+        pub fn bitnet_cpp_matmul_i2s(
+            a: *const i8,
+            b: *const c_uchar,
+            c: *mut c_float,
+            m: c_int,
+            n: c_int,
+            k: c_int,
+        ) -> c_int;
+        pub fn bitnet_cpp_quantize(
+            input: *const c_float,
+            input_len: c_int,
+            output: *mut c_uchar,
+            output_len: c_int,
+            scales: *mut c_float,
+            scales_len: c_int,
+            qtype: c_int,
+        ) -> c_int;
+        pub fn bitnet_cpp_get_last_error() -> *const c_char;
+    }
+    
+    pub unsafe fn init() -> c_int { bitnet_cpp_init() }
+    pub unsafe fn is_available() -> c_int { bitnet_cpp_is_available() }
+    pub unsafe fn cleanup() { bitnet_cpp_cleanup() }
+    pub unsafe fn matmul_i2s(
+        a: *const i8, b: *const c_uchar, c: *mut c_float,
+        m: c_int, n: c_int, k: c_int
+    ) -> c_int { 
+        bitnet_cpp_matmul_i2s(a, b, c, m, n, k) 
+    }
+    pub unsafe fn quantize(
+        input: *const c_float, input_len: c_int,
+        output: *mut c_uchar, output_len: c_int,
+        scales: *mut c_float, scales_len: c_int,
+        qtype: c_int
+    ) -> c_int {
+        bitnet_cpp_quantize(input, input_len, output, output_len, scales, scales_len, qtype)
+    }
+    pub unsafe fn get_last_error() -> *const c_char {
+        bitnet_cpp_get_last_error()
+    }
+}
+
+#[cfg(not(feature = "ffi"))]
+mod cpp {
+    use std::ffi::{c_char, c_float, c_int, c_uchar};
+    
+    pub unsafe fn init() -> c_int { -1 }
+    pub unsafe fn is_available() -> c_int { 0 }
+    pub unsafe fn cleanup() {}
+    pub unsafe fn matmul_i2s(
+        _a: *const i8, _b: *const c_uchar, _c: *mut c_float,
+        _m: c_int, _n: c_int, _k: c_int
+    ) -> c_int { -1 }
+    pub unsafe fn quantize(
+        _input: *const c_float, _input_len: c_int,
+        _output: *mut c_uchar, _output_len: c_int,
+        _scales: *mut c_float, _scales_len: c_int,
+        _qtype: c_int
+    ) -> c_int { -1 }
+    pub unsafe fn get_last_error() -> *const c_char { std::ptr::null() }
+}
+
 /// FFI kernel that bridges to existing C++ implementations
 ///
 /// This kernel provides a safe interface to existing C++ kernel functions,
@@ -37,11 +108,11 @@ impl FfiKernel {
 
         // Initialize C++ library if available
         unsafe {
-            if bitnet_cpp_init() == 0 {
+            if cpp::init() == 0 {
                 Ok(Self { initialized: true })
             } else {
                 Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                    reason: "Failed to initialize C++ kernel library".to_string(),
+                    reason: "BitNet C++ FFI not available (build with --features ffi to enable)".to_string(),
                 }))
             }
         }
@@ -60,7 +131,7 @@ impl KernelProvider for FfiKernel {
     }
 
     fn is_available(&self) -> bool {
-        self.initialized && unsafe { bitnet_cpp_is_available() != 0 }
+        self.initialized && unsafe { cpp::is_available() != 0 }
     }
 
     fn matmul_i2s(
@@ -95,7 +166,7 @@ impl KernelProvider for FfiKernel {
 
         // Call C++ implementation
         let result = unsafe {
-            bitnet_cpp_matmul_i2s(
+            cpp::matmul_i2s(
                 a.as_ptr(),
                 b.as_ptr(),
                 c.as_mut_ptr(),
@@ -109,7 +180,7 @@ impl KernelProvider for FfiKernel {
             Ok(())
         } else {
             let error_msg = unsafe {
-                let error_ptr = bitnet_cpp_get_last_error();
+                let error_ptr = cpp::get_last_error();
                 if error_ptr.is_null() {
                     "Unknown C++ kernel error".to_string()
                 } else {
@@ -143,7 +214,7 @@ impl KernelProvider for FfiKernel {
 
         // Call C++ implementation
         let result = unsafe {
-            bitnet_cpp_quantize(
+            cpp::quantize(
                 input.as_ptr(),
                 input.len() as c_int,
                 output.as_mut_ptr(),
@@ -158,7 +229,7 @@ impl KernelProvider for FfiKernel {
             Ok(())
         } else {
             let error_msg = unsafe {
-                let error_ptr = bitnet_cpp_get_last_error();
+                let error_ptr = cpp::get_last_error();
                 if error_ptr.is_null() {
                     "Unknown C++ quantization error".to_string()
                 } else {
@@ -177,52 +248,10 @@ impl Drop for FfiKernel {
     fn drop(&mut self) {
         if self.initialized {
             unsafe {
-                bitnet_cpp_cleanup();
+                cpp::cleanup();
             }
         }
     }
-}
-
-// C++ function declarations
-extern "C" {
-    /// Initialize the C++ kernel library
-    /// Returns 0 on success, non-zero on error
-    fn bitnet_cpp_init() -> c_int;
-
-    /// Check if C++ kernels are available
-    /// Returns non-zero if available, 0 if not
-    fn bitnet_cpp_is_available() -> c_int;
-
-    /// Perform matrix multiplication: C = A * B
-    /// A is m x k (i8), B is k x n (u8), C is m x n (f32)
-    /// Returns 0 on success, non-zero on error
-    fn bitnet_cpp_matmul_i2s(
-        a: *const i8,
-        b: *const c_uchar,
-        c: *mut c_float,
-        m: c_int,
-        n: c_int,
-        k: c_int,
-    ) -> c_int;
-
-    /// Quantize input array using specified quantization type
-    /// Returns 0 on success, non-zero on error
-    fn bitnet_cpp_quantize(
-        input: *const c_float,
-        input_len: c_int,
-        output: *mut c_uchar,
-        output_len: c_int,
-        scales: *mut c_float,
-        scales_len: c_int,
-        qtype: c_int,
-    ) -> c_int;
-
-    /// Get the last error message from C++ code
-    /// Returns null-terminated string or null if no error
-    fn bitnet_cpp_get_last_error() -> *const c_char;
-
-    /// Clean up C++ kernel library
-    fn bitnet_cpp_cleanup();
 }
 
 /// Performance comparison utilities for migration validation
