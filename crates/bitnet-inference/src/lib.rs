@@ -8,6 +8,7 @@ pub mod cache;
 pub mod config;
 pub mod engine;
 pub mod parity;
+pub mod rt;
 pub mod sampling;
 pub mod simple_forward;
 pub mod streaming;
