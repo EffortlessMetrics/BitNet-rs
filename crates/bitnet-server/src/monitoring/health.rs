@@ -599,4 +599,25 @@ mod tests {
             Some(&HeaderValue::from_static("no-store"))
         );
     }
+
+    #[tokio::test]
+    async fn head_readiness_degraded_is_503() {
+        // Readiness is strict regardless of mapping.
+        let app: Router = create_health_routes_with_probe(Arc::new(StubProbe {
+            overall: HealthStatus::Healthy,
+            live: HealthStatus::Healthy,
+            ready: HealthStatus::Degraded,
+        }));
+        let req = Request::builder()
+            .method("HEAD")
+            .uri("/health/ready")
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(
+            resp.headers().get(header::CACHE_CONTROL),
+            Some(&HeaderValue::from_static("no-store"))
+        );
+    }
 }
