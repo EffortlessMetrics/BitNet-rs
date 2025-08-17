@@ -1,0 +1,50 @@
+//! Runtime facade to allow either Tokio (default) or a wasm-friendly executor.
+//! This abstraction allows the inference engine to work on both native and WASM targets.
+
+use std::{future::Future, time::Duration};
+
+#[cfg(feature = "rt-tokio")]
+pub mod time {
+    use super::Duration;
+    
+    /// Sleep for a duration using the runtime's timer implementation
+    pub async fn sleep(d: Duration) {
+        tokio::time::sleep(d).await;
+    }
+}
+
+#[cfg(feature = "rt-tokio")]
+pub mod task {
+    use super::Future;
+    
+    /// Spawn a future on the runtime
+    pub fn spawn<F>(f: F)
+    where
+        F: Future<Output = ()> + Send + 'static,
+    {
+        tokio::spawn(f);
+    }
+}
+
+#[cfg(feature = "rt-wasm")]
+pub mod time {
+    use super::Duration;
+    
+    /// Sleep for a duration using the runtime's timer implementation
+    pub async fn sleep(d: Duration) {
+        gloo_timers::future::TimeoutFuture::new(d.as_millis() as u32).await;
+    }
+}
+
+#[cfg(feature = "rt-wasm")]
+pub mod task {
+    use super::Future;
+    
+    /// Spawn a future on the runtime
+    pub fn spawn<F>(f: F)
+    where
+        F: Future<Output = ()> + 'static,
+    {
+        wasm_bindgen_futures::spawn_local(f);
+    }
+}

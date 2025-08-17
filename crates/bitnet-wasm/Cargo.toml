@@ -30,8 +30,13 @@ bitnet-tokenizers = { path = "../bitnet-tokenizers" }
 wasm-bindgen = { workspace = true, features = ["serde-serialize"] }
 wasm-bindgen-futures = "0.4"
 js-sys = { workspace = true }
+# Add common web APIs we'll likely use as modules are re-enabled
 web-sys = { workspace = true, features = [
     "console",
+    "Window",
+    "Navigator", 
+    "Performance",
+    "PerformanceTiming"
 ] }
 
 # Serialization
@@ -63,4 +68,7 @@ inference = ["bitnet-inference"]
 nodejs = []
 embedded = []
 debug = ["console_error_panic_hook"]
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
 

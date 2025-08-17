@@ -1,0 +1,19 @@
+#![cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::*;
+
+// Run tests in Node.js by default (more stable on CI)
+// To run in browser, uncomment the line below:
+// wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
+// Call the stubbed `generate`—works even without the `inference` feature.
+#[wasm_bindgen_test]
+async fn generate_stub_runs() {
+    let out = bitnet_wasm::generate("hello".to_string()).await;
+    assert!(out.is_ok(), "generate() should return Ok on stub");
+    let msg = out.unwrap();
+    // The stub returns a message about inference being disabled
+    assert!(
+        msg.contains("without `inference`") || msg.contains("built without"),
+        "message should be informative about missing inference feature"
+    );
+}
