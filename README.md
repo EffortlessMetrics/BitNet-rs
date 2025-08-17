@@ -561,6 +561,27 @@ The legacy C++ implementation is automatically downloaded and cached when needed
 - [Architecture Overview](docs/architecture.md) - System design
 - [Build Instructions](docs/building.md) - Development setup
 
+## Ops · Health checks
+
+See **[docs/health-endpoints.md](docs/health-endpoints.md)** for full details.
+
+Default (fail-fast): any non-Healthy ⇒ 503.
+
+```bash
+curl -si http://localhost:8080/health       | head -n1  # overall JSON + mapped code
+curl -si http://localhost:8080/health/live  | head -n1  # liveness (mapped)
+curl -si http://localhost:8080/health/ready | head -n1  # readiness (strict 503 on Degraded)
+```
+
+Build-time option to keep Degraded green:
+
+```bash
+cargo run -p bitnet-server --features degraded-ok
+# Healthy  → 200
+# Degraded → 200
+# Unhealthy → 503
+```
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
