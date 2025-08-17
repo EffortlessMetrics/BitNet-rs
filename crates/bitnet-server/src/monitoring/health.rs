@@ -282,6 +282,7 @@ fn overall_status_from_counts(unhealthy_count: usize, degraded_count: usize) -> 
 // - Default (fail-fast): Degraded → 503, Unhealthy → 503
 // - With `--features degraded-ok`: Degraded → 200, Unhealthy → 503
 #[cfg(feature = "degraded-ok")]
+#[inline]
 fn status_code_for(status: HealthStatus) -> StatusCode {
     match status {
         HealthStatus::Healthy | HealthStatus::Degraded => StatusCode::OK,
@@ -290,6 +291,7 @@ fn status_code_for(status: HealthStatus) -> StatusCode {
 }
 
 #[cfg(not(feature = "degraded-ok"))]
+#[inline]
 fn status_code_for(status: HealthStatus) -> StatusCode {
     match status {
         HealthStatus::Healthy => StatusCode::OK,
@@ -478,5 +480,25 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[tokio::test]
+    async fn route_live_uses_mapping() {
+        // Degraded should follow mapping (default: 503; with `degraded-ok`: 200)
+        let app: Router = create_health_routes_with_probe(Arc::new(StubProbe {
+            overall: HealthStatus::Healthy,
+            live: HealthStatus::Degraded,
+            ready: HealthStatus::Healthy,
+        }));
+        let resp = app
+            .oneshot(Request::get("/health/live").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        #[cfg(not(feature = "degraded-ok"))]
+        assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+
+        #[cfg(feature = "degraded-ok")]
+        assert_eq!(resp.status(), StatusCode::OK);
     }
 }
