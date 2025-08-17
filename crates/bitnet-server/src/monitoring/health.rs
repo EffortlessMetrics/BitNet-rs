@@ -1,5 +1,6 @@
 //! Health check endpoints for load balancer integration
 
+use async_trait::async_trait;
 use axum::{extract::State, http::StatusCode, response::Json, routing::get, Router};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -39,7 +40,7 @@ pub struct HealthResponse {
 }
 
 /// Key health metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct HealthMetrics {
     pub active_requests: u64,
     pub total_requests: u64,
@@ -296,33 +297,61 @@ fn status_code_for(status: HealthStatus) -> StatusCode {
     }
 }
 
-/// Create health check routes
+/// Abstraction for probing health (used to inject a stub in tests)
+#[async_trait]
+pub trait HealthProbe: Send + Sync + 'static {
+    async fn check_health(&self) -> HealthResponse;
+    async fn check_liveness(&self) -> HealthStatus;
+    async fn check_readiness(&self) -> HealthStatus;
+}
+
+#[async_trait]
+impl HealthProbe for HealthChecker {
+    async fn check_health(&self) -> HealthResponse {
+        HealthChecker::check_health(self).await
+    }
+    
+    async fn check_liveness(&self) -> HealthStatus {
+        HealthChecker::check_liveness(self).await
+    }
+    
+    async fn check_readiness(&self) -> HealthStatus {
+        HealthChecker::check_readiness(self).await
+    }
+}
+
+/// Production constructor keeps the same API
 pub fn create_health_routes(health_checker: Arc<HealthChecker>) -> Router {
+    create_health_routes_with_probe(health_checker)
+}
+
+/// Generic constructor (used by tests to inject a stub)
+pub fn create_health_routes_with_probe<T: HealthProbe>(probe: Arc<T>) -> Router {
     Router::new()
-        .route("/health", get(health_handler))
-        .route("/health/live", get(liveness_handler))
-        .route("/health/ready", get(readiness_handler))
-        .with_state(health_checker)
+        .route("/health", get(health_handler::<T>))
+        .route("/health/live", get(liveness_handler::<T>))
+        .route("/health/ready", get(readiness_handler::<T>))
+        .with_state(probe)
 }
 
 /// Comprehensive health check endpoint
-async fn health_handler(
-    State(health_checker): State<Arc<HealthChecker>>,
+async fn health_handler<T: HealthProbe>(
+    State(probe): State<Arc<T>>,
 ) -> (StatusCode, Json<HealthResponse>) {
-    let health = health_checker.check_health().await;
+    let health = probe.check_health().await;
     let status_code = status_code_for(health.status);
     (status_code, Json(health))
 }
 
 /// Liveness probe endpoint (Kubernetes)
-async fn liveness_handler(State(health_checker): State<Arc<HealthChecker>>) -> StatusCode {
-    status_code_for(health_checker.check_liveness().await)
+async fn liveness_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> StatusCode {
+    status_code_for(probe.check_liveness().await)
 }
 
 /// Readiness probe endpoint (Kubernetes)
-async fn readiness_handler(State(health_checker): State<Arc<HealthChecker>>) -> StatusCode {
+async fn readiness_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> StatusCode {
     // Readiness always uses strict fail-fast (degraded = not ready)
-    match health_checker.check_readiness().await {
+    match probe.check_readiness().await {
         HealthStatus::Healthy => StatusCode::OK,
         HealthStatus::Degraded | HealthStatus::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,
     }
@@ -330,8 +359,16 @@ async fn readiness_handler(State(health_checker): State<Arc<HealthChecker>>) -> 
 
 #[cfg(test)]
 mod tests {
-    use super::{overall_status_from_counts, status_code_for, HealthStatus};
-    use axum::http::StatusCode;
+    use super::{
+        create_health_routes_with_probe, overall_status_from_counts, status_code_for,
+        HealthMetrics, HealthProbe, HealthResponse, HealthStatus,
+    };
+    use async_trait::async_trait;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use axum::Router;
+    use std::sync::Arc;
+    use tower::ServiceExt;
 
     #[test]
     fn overall_unhealthy_wins() {
@@ -365,5 +402,81 @@ mod tests {
         assert_eq!(status_code_for(HealthStatus::Healthy), StatusCode::OK);
         assert_eq!(status_code_for(HealthStatus::Degraded), StatusCode::OK);
         assert_eq!(status_code_for(HealthStatus::Unhealthy), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    // ---- Route-level tests with a stubbed probe ----
+    struct StubProbe {
+        overall: HealthStatus,
+        live: HealthStatus,
+        ready: HealthStatus,
+    }
+
+    #[async_trait]
+    impl HealthProbe for StubProbe {
+        async fn check_health(&self) -> HealthResponse {
+            HealthResponse {
+                status: self.overall,
+                timestamp: chrono::Utc::now().to_rfc3339(),
+                uptime_seconds: 0,
+                version: "test".to_string(),
+                components: Default::default(),
+                metrics: HealthMetrics::default(),
+            }
+        }
+
+        async fn check_liveness(&self) -> HealthStatus {
+            self.live
+        }
+
+        async fn check_readiness(&self) -> HealthStatus {
+            self.ready
+        }
+    }
+
+    #[cfg(not(feature = "degraded-ok"))]
+    #[tokio::test]
+    async fn route_health_fail_fast_mapping() {
+        // Default (no feature): Degraded -> 503
+        let app: Router = create_health_routes_with_probe(Arc::new(StubProbe {
+            overall: HealthStatus::Degraded,
+            live: HealthStatus::Healthy,
+            ready: HealthStatus::Healthy,
+        }));
+        let resp = app
+            .oneshot(Request::get("/health").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[cfg(feature = "degraded-ok")]
+    #[tokio::test]
+    async fn route_health_degraded_ok_mapping() {
+        // With feature: Degraded -> 200
+        let app: Router = create_health_routes_with_probe(Arc::new(StubProbe {
+            overall: HealthStatus::Degraded,
+            live: HealthStatus::Healthy,
+            ready: HealthStatus::Healthy,
+        }));
+        let resp = app
+            .oneshot(Request::get("/health").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn route_readiness_always_fail_fast() {
+        // Readiness always uses strict fail-fast
+        let app: Router = create_health_routes_with_probe(Arc::new(StubProbe {
+            overall: HealthStatus::Healthy,
+            live: HealthStatus::Healthy,
+            ready: HealthStatus::Degraded,
+        }));
+        let resp = app
+            .oneshot(Request::get("/health/ready").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
     }
 }
