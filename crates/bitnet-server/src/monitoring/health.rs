@@ -1,7 +1,13 @@
 //! Health check endpoints for load balancer integration
 
 use async_trait::async_trait;
-use axum::{extract::State, http::StatusCode, response::Json, routing::get, Router};
+use axum::{
+    extract::State,
+    http::{header, HeaderValue, StatusCode},
+    response::{IntoResponse, Json, Response},
+    routing::get,
+    Router,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -299,6 +305,14 @@ fn status_code_for(status: HealthStatus) -> StatusCode {
     }
 }
 
+#[inline]
+fn with_no_store_headers(res: Response) -> Response {
+    let mut res = res;
+    res.headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    res
+}
+
 /// Abstraction for probing health (used to inject a stub in tests)
 #[async_trait]
 pub trait HealthProbe: Send + Sync + 'static {
@@ -339,23 +353,25 @@ pub fn create_health_routes_with_probe<T: HealthProbe>(probe: Arc<T>) -> Router 
 /// Comprehensive health check endpoint
 async fn health_handler<T: HealthProbe>(
     State(probe): State<Arc<T>>,
-) -> (StatusCode, Json<HealthResponse>) {
+) -> Response {
     let health = probe.check_health().await;
     let status_code = status_code_for(health.status);
-    (status_code, Json(health))
+    with_no_store_headers((status_code, Json(health)).into_response())
 }
 
 /// Liveness probe endpoint (Kubernetes)
-async fn liveness_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> StatusCode {
-    status_code_for(probe.check_liveness().await)
+async fn liveness_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> Response {
+    with_no_store_headers(status_code_for(probe.check_liveness().await).into_response())
 }
 
 /// Readiness probe endpoint (Kubernetes)
-async fn readiness_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> StatusCode {
+async fn readiness_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> Response {
     // Readiness always uses strict fail-fast (degraded = not ready)
     match probe.check_readiness().await {
-        HealthStatus::Healthy => StatusCode::OK,
-        HealthStatus::Degraded | HealthStatus::Unhealthy => StatusCode::SERVICE_UNAVAILABLE,
+        HealthStatus::Healthy => with_no_store_headers(StatusCode::OK.into_response()),
+        HealthStatus::Degraded | HealthStatus::Unhealthy => {
+            with_no_store_headers(StatusCode::SERVICE_UNAVAILABLE.into_response())
+        }
     }
 }
 
@@ -367,7 +383,7 @@ mod tests {
     };
     use async_trait::async_trait;
     use axum::body::Body;
-    use axum::http::{Request, StatusCode};
+    use axum::http::{header, HeaderValue, Request, StatusCode};
     use axum::Router;
     use std::sync::Arc;
     use tower::ServiceExt;
@@ -449,6 +465,10 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(
+            resp.headers().get(header::CACHE_CONTROL),
+            Some(&HeaderValue::from_static("no-store"))
+        );
     }
 
     #[cfg(feature = "degraded-ok")]
@@ -465,6 +485,10 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(
+            resp.headers().get(header::CACHE_CONTROL),
+            Some(&HeaderValue::from_static("no-store"))
+        );
     }
 
     #[tokio::test]
@@ -480,6 +504,10 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(
+            resp.headers().get(header::CACHE_CONTROL),
+            Some(&HeaderValue::from_static("no-store"))
+        );
     }
 
     #[tokio::test]
@@ -500,5 +528,46 @@ mod tests {
 
         #[cfg(feature = "degraded-ok")]
         assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn cache_control_headers_on_all_endpoints() {
+        let app: Router = create_health_routes_with_probe(Arc::new(StubProbe {
+            overall: HealthStatus::Healthy,
+            live: HealthStatus::Healthy,
+            ready: HealthStatus::Healthy,
+        }));
+
+        // Test /health endpoint
+        let resp = app
+            .clone()
+            .oneshot(Request::get("/health").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(
+            resp.headers().get(header::CACHE_CONTROL),
+            Some(&HeaderValue::from_static("no-store"))
+        );
+
+        // Test /health/live endpoint
+        let resp = app
+            .clone()
+            .oneshot(Request::get("/health/live").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(
+            resp.headers().get(header::CACHE_CONTROL),
+            Some(&HeaderValue::from_static("no-store"))
+        );
+
+        // Test /health/ready endpoint
+        let resp = app
+            .oneshot(Request::get("/health/ready").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(
+            resp.headers().get(header::CACHE_CONTROL),
+            Some(&HeaderValue::from_static("no-store"))
+        );
     }
 }
