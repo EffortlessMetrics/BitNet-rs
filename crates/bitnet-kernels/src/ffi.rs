@@ -8,7 +8,7 @@
 pub mod bridge;
 
 #[cfg(feature = "ffi-bridge")]
-pub use bridge::FfiKernel;
+pub use bridge::{FfiKernel, PerformanceComparison};
 
 // Stub implementation when FFI bridge is disabled
 #[cfg(not(feature = "ffi-bridge"))]

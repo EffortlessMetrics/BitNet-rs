@@ -1,3 +1,4 @@
+#![cfg(feature = "ffi")]
 //! Comprehensive kernel tests for validation and performance benchmarking
 //!
 //! This test suite validates the correctness of all kernel implementations
