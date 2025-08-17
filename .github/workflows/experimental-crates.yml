@@ -21,6 +21,8 @@ jobs:
           targets: wasm32-unknown-unknown
       
       - name: Build WASM crate
+        env:
+          RUSTFLAGS: --cfg=getrandom_backend="wasm_js"
         run: cargo build -p bitnet-wasm --target wasm32-unknown-unknown
       
       - name: Install wasm-pack

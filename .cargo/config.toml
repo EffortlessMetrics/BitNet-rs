@@ -16,3 +16,6 @@ report-example = "run -p bitnet-tests --example reporting_example"
 # Development quality check aliases
 check-all = "fmt --all && clippy -p bitnet-cli --all-targets -- -D warnings && clippy -p bitnet-server --all-targets -- -D warnings && test -p bitnet-server --all-targets && test -p bitnet-server --all-targets --features degraded-ok"
 
+[target.wasm32-unknown-unknown]
+# Select the JS/WebCrypto backend for getrandom 0.3
+rustflags = ['--cfg', 'getrandom_backend="wasm_js"']
