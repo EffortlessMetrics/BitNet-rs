@@ -15,6 +15,7 @@ pub mod config;
 pub mod config_scenarios;
 pub mod config_scenarios_simple;
 pub mod env;
+pub mod error_analysis;
 pub mod errors;
 pub mod harness;
 pub mod results;

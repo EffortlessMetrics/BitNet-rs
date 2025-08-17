@@ -5,7 +5,6 @@ use super::debugging::{DebugConfig, TestDebugger};
 use super::errors::TestOpResult;
 use super::harness::{FixtureCtx, TestCase, TestHarness, TestReporter};
 use super::results::{TestResult, TestSuiteResult};
-use super::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 
 /// Enhanced test harness with integrated debugging support
 pub struct DebugEnabledTestHarness {

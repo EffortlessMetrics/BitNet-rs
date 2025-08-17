@@ -419,7 +419,7 @@ mod performance_compatibility {
         println!("    Memory used for model loading: {} MB", memory_used / 1024 / 1024);
 
         // Memory usage assertions (placeholder)
-        assert!(memory_used < 10 * BYTES_PER_MB * 1024, "Model uses too much memory");
+        assert!(memory_used < (10 * BYTES_PER_MB * 1024) as usize, "Model uses too much memory");
         // 10GB limit
     }
 
@@ -437,7 +437,7 @@ mod performance_compatibility {
         println!("    Memory used for inference: {} MB", memory_used / 1024 / 1024);
 
         // Memory usage should be reasonable
-        assert!(memory_used < BYTES_PER_MB * 1024, "Inference uses too much memory");
+        assert!(memory_used < (BYTES_PER_MB * 1024) as usize, "Inference uses too much memory");
         // 1GB limit
     }
 
@@ -461,7 +461,7 @@ mod performance_compatibility {
         println!("    Memory difference after cleanup: {} MB", memory_diff / 1024 / 1024);
 
         // Memory should be mostly cleaned up
-        assert!(memory_diff.abs() < 100 * BYTES_PER_MB, "Memory not properly cleaned up");
+        assert!(memory_diff.abs() < (100 * BYTES_PER_MB) as i64, "Memory not properly cleaned up");
         // 100MB tolerance
     }
 
@@ -515,7 +515,7 @@ mod performance_compatibility {
         // Placeholder for memory usage measurement
         // In real implementation, this would use system APIs to get actual memory usage
         // For now, return a dummy value
-        BYTES_PER_MB * 1024 // 1GB placeholder
+        (BYTES_PER_MB * 1024) as usize // 1GB placeholder
     }
 }
 
