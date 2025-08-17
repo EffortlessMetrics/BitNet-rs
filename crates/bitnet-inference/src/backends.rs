@@ -349,6 +349,8 @@ mod tests {
         assert!(output.is_ok());
     }
 
+    // Requires a CUDA/Metal/WGPU environment; off by default.
+    #[cfg_attr(not(feature = "gpu-tests"), ignore)]
     #[tokio::test]
     async fn test_gpu_backend_creation() {
         let model = Arc::new(MockModel::new());

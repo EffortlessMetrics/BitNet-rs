@@ -37,3 +37,5 @@ default = ["cpu"]
 cpu = ["bitnet-kernels/cpu-optimized"]
 gpu = ["bitnet-kernels/cuda"]
 streaming = []
+# Only run GPU-dependent tests when requested:
+gpu-tests = []

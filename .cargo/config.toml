@@ -12,3 +12,6 @@ test-unit = "test --workspace --lib --bins"
 # Reporting aliases
 report-demo = "run -p bitnet-tests --bin demo_reporting_comprehensive"
 report-example = "run -p bitnet-tests --example reporting_example"
+
+# Development quality check aliases
+check-all = "fmt --all && clippy -p bitnet-cli --all-targets -- -D warnings && clippy -p bitnet-server --all-targets -- -D warnings && test -p bitnet-server --all-targets && test -p bitnet-server --all-targets --features degraded-ok"
