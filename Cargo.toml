@@ -72,7 +72,7 @@ bitnet-inference = { path = "crates/bitnet-inference", version = "0.1.0", option
 bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.1.0", optional = true }
 
 [build-dependencies]
-vergen = { version = "8.0", features = [
+vergen = { version = "9.0", features = [
     "build",
     "git",
     "gitcl",
@@ -84,9 +84,9 @@ vergen = { version = "8.0", features = [
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 tempfile = "3.8"
 serde_json = "1.0"
-ctor = "0.2"
-rand = "0.8"
-async-trait = "0.1"
+ctor = "0.5.0"
+rand = "0.9"
+async-trait = "0.1.89"
 env_logger = "0.11"
 bitnet-tests = { path = "tests", package = "bitnet-tests" }
 
@@ -189,7 +189,7 @@ memmap2 = "0.9"
 clap = { version = "4.4", features = ["derive", "env"] }
 clap_complete = "4.4"
 indicatif = "0.18"
-console = "0.15"
+console = "0.16"
 crossterm = "0.28"
 humantime = "2.1"
 humansize = "2.1"
@@ -202,14 +202,14 @@ tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace"] }
 
 # Monitoring and observability
-prometheus = "0.13"
+prometheus = "0.14"
 metrics = "0.24"
-metrics-prometheus = "0.8"
-opentelemetry = "0.29"
+metrics-prometheus = "0.11"
+opentelemetry = "0.30"
 opentelemetry-prometheus = "0.29"
-opentelemetry-otlp = "0.29"
-opentelemetry-stdout = "0.29"
-tracing-opentelemetry = "0.29"
+opentelemetry-otlp = "0.30"
+opentelemetry-stdout = "0.30"
+tracing-opentelemetry = "0.31"
 tracing-appender = "0.2"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4"] }
@@ -229,14 +229,14 @@ proptest = "1.4"
 tempfile = "3.8"
 
 # HTTP client for examples
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12.23", features = ["json"] }
 
 # Code quality
-cc = "1.0"
+cc = "1.2"
 bindgen = "0.72"
 
 # Build-time information
-vergen = { version = "8.0", features = [
+vergen = { version = "9.0", features = [
     "build",
     "git",
     "gitcl",
@@ -279,7 +279,7 @@ pre-release-replacements = [
 
 # Workspace metadata for crates.io publication
 [workspace.metadata.bitnet]
-msrv = "1.70.0"
+msrv = "1.89.0"
 categories = [
     "science",      # Scientific computing
     "algorithms",   # Algorithm implementations

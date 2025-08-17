@@ -15,7 +15,8 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 futures-util = "0.3"
-getrandom = { version = "0.2", features = ["js"] }
+# Use the 0.3 line and its "wasm_js" feature.
+getrandom = { version = "0.3", features = ["wasm_js"] }
 bitnet-common = { path = "../bitnet-common" }
 bitnet-models = { path = "../bitnet-models" }
 bitnet-quantization = { path = "../bitnet-quantization" }
