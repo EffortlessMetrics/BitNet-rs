@@ -620,4 +620,29 @@ mod tests {
             Some(&HeaderValue::from_static("no-store"))
         );
     }
+
+    #[tokio::test]
+    async fn head_live_respects_mapping_on_degraded() {
+        // Degraded should follow mapping (default: 503; with `degraded-ok`: 200)
+        let app: Router = create_health_routes_with_probe(Arc::new(StubProbe {
+            overall: HealthStatus::Healthy,
+            live: HealthStatus::Degraded,
+            ready: HealthStatus::Healthy,
+        }));
+        let req = Request::builder()
+            .method("HEAD")
+            .uri("/health/live")
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+
+        #[cfg(not(feature = "degraded-ok"))]
+        assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+        #[cfg(feature = "degraded-ok")]
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(
+            resp.headers().get(header::CACHE_CONTROL),
+            Some(&HeaderValue::from_static("no-store"))
+        );
+    }
 }
