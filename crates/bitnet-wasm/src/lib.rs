@@ -43,7 +43,8 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 // pub mod benchmark;
 // pub mod kernels;
 // pub mod memory;
-// pub mod utils;
+#[cfg(feature = "wasm-utils")]
+pub mod utils;
 
 // These modules depend on bitnet-inference, so only include them when the feature is enabled
 #[cfg(feature = "inference")]
@@ -58,7 +59,8 @@ pub mod streaming;
 // pub use benchmark::*;
 // pub use kernels::*;
 // pub use memory::*;
-// pub use utils::*;
+#[cfg(feature = "wasm-utils")]
+pub use utils::*;
 
 #[cfg(feature = "inference")]
 pub use inference::*;
@@ -71,7 +73,7 @@ pub use streaming::*;
 
 // Initialize the WASM module
 #[wasm_bindgen(start)]
-pub fn main() {
+pub fn init() {
     #[cfg(feature = "debug")]
     set_panic_hook();
 
