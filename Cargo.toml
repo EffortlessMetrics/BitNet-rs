@@ -44,10 +44,11 @@ keywords = ["machine-learning", "llm", "quantization", "inference", "bitnet"]
 categories = ["science", "algorithms", "mathematics", "wasm", "api-bindings"]
 description = "High-performance Rust implementation of BitNet 1-bit LLM inference with cross-platform support"
 readme = "README.md"
-rust-version = "1.89.0"
+rust-version.workspace = true
 
 [workspace.package]
 version = "0.1.0"
+rust-version = "1.89.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/microsoft/BitNet"
@@ -58,7 +59,6 @@ keywords = ["machine-learning", "llm", "quantization", "inference", "bitnet"]
 categories = ["science", "algorithms", "mathematics", "wasm", "api-bindings"]
 description = "High-performance Rust implementation of BitNet 1-bit LLM inference with cross-platform support"
 readme = "README.md"
-rust-version = "1.70.0"
 
 [dependencies]
 # Core crates - always included
