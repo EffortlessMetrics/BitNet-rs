@@ -7,6 +7,7 @@
 use crate::KernelProvider;
 use bitnet_common::{BitNetError, KernelError, QuantizationType, Result};
 use std::ffi::{c_char, c_float, c_int, c_uchar, CStr};
+#[allow(unused_imports)]
 use std::ptr;
 
 /// FFI kernel that bridges to existing C++ implementations
@@ -32,7 +33,7 @@ pub struct FfiKernel {
 impl FfiKernel {
     /// Create a new FFI kernel instance
     pub fn new() -> Result<Self> {
-        let kernel = Self { initialized: false };
+        let _kernel = Self { initialized: false };
 
         // Initialize C++ library if available
         unsafe {

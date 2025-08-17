@@ -20,35 +20,28 @@ impl GgufLoader {
                 #[cfg(feature = "gpu")]
                 {
                     use candle_core::backend::BackendDevice;
-                    let cuda_device = candle_core::CudaDevice::new(*id)
+                    let cuda = candle_core::CudaDevice::new(*id)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
-                    Ok(candle_core::Device::Cuda(cuda_device))
+                    Ok(candle_core::Device::Cuda(cuda))
                 }
                 #[cfg(not(feature = "gpu"))]
                 {
-                    Err(BitNetError::Validation("CUDA not available".to_string()))
+                    Err(BitNetError::Validation("CUDA support not enabled; rebuild with --features gpu".to_string()))
                 }
             }
+            // Compile this arm only on macOS with the 'gpu' feature.
+            #[cfg(all(target_os = "macos", feature = "gpu"))]
             Device::Metal => {
-                #[cfg(all(target_os = "macos", feature = "metal"))]
-                {
-                    use candle_core::backend::BackendDevice;
-                    Ok(candle_core::Device::Metal(
-                        candle_core::MetalDevice::new(0)
-                            .map_err(|e| BitNetError::Validation(e.to_string()))?,
-                    ))
-                }
-                #[cfg(not(all(target_os = "macos", feature = "metal")))]
-                {
-                    Err(BitNetError::Validation(
-                        "Metal support not enabled; rebuild with --features metal on macOS".to_string(),
-                    ))
-                }
-                #[cfg(all(not(target_os = "macos"), feature = "gpu"))]
-                {
-                    Err(BitNetError::Validation("Metal not available".to_string()))
-                }
+                use candle_core::backend::BackendDevice; // provides `new`
+                let metal = candle_core::MetalDevice::new(0)
+                    .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                Ok(candle_core::Device::Metal(metal))
             }
+            // Everywhere else, emit a clear error without referencing Metal symbols.
+            #[cfg(not(all(target_os = "macos", feature = "gpu")))]
+            Device::Metal => Err(BitNetError::Validation(
+                "Metal support not enabled; rebuild with --features gpu on macOS".to_string(),
+            ))
         }
     }
 }
