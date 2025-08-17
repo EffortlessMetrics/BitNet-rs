@@ -15,6 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Set up Node (for wasm tests)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -25,15 +30,14 @@ jobs:
           RUSTFLAGS: --cfg=getrandom_backend="wasm_js"
         run: cargo build -p bitnet-wasm --target wasm32-unknown-unknown
       
-      - name: Run WASM smoke tests (wasm-bindgen-test)
-        env:
-          RUSTFLAGS: --cfg=getrandom_backend="wasm_js"
-        run: |
-          cargo install wasm-bindgen-cli
-          cargo test -p bitnet-wasm --target wasm32-unknown-unknown
-      
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      
+      - name: Run WASM smoke tests (Node)
+        working-directory: crates/bitnet-wasm
+        env:
+          RUSTFLAGS: --cfg=getrandom_backend="wasm_js"
+        run: wasm-pack test --node
       
       - name: Build with wasm-pack
         run: |
