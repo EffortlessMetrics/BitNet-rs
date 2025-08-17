@@ -575,4 +575,28 @@ mod tests {
             );
         }
     }
+
+    #[tokio::test]
+    async fn head_respects_mapping_on_degraded() {
+        let app: Router = create_health_routes_with_probe(Arc::new(StubProbe {
+            overall: HealthStatus::Degraded,
+            live: HealthStatus::Healthy,
+            ready: HealthStatus::Healthy,
+        }));
+        let req = Request::builder()
+            .method("HEAD")
+            .uri("/health")
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+
+        #[cfg(not(feature = "degraded-ok"))]
+        assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+        #[cfg(feature = "degraded-ok")]
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(
+            resp.headers().get(header::CACHE_CONTROL),
+            Some(&HeaderValue::from_static("no-store"))
+        );
+    }
 }
