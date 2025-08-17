@@ -35,6 +35,8 @@ impl<'a> GgufReader<'a> {
         let mut metadata = Vec::new();
         for _ in 0..header.metadata_kv_count {
             metadata.push(GgufMetadata::read(data, &mut offset)?);
+            // CRITICAL: Apply alignment after each KV value (GGUF v3+)
+            offset = align_up(offset, header.alignment);
         }
 
         // Read tensor infos
