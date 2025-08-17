@@ -354,7 +354,7 @@ pub struct TransformerModel {
     pub embed_tokens: candle_nn::Embedding,
     pub layers: Vec<TransformerBlock>,
     pub norm: LayerNorm,
-    pub lm_head: Linear,
+    pub lm_head: Option<Linear>,  // Optional for tied weights
     device: Device,
 }
 
@@ -373,7 +373,16 @@ impl TransformerModel {
         }
 
         let norm = candle_nn::layer_norm(hidden_size, 1e-5, vb.pp("norm"))?;
-        let lm_head = candle_nn::linear(hidden_size, vocab_size, vb.pp("lm_head"))?;
+        
+        // Try to load lm_head, but it's optional (can be tied to embeddings)
+        // Try to create the linear layer, catching errors if weights don't exist
+        let lm_head = match candle_nn::linear(hidden_size, vocab_size, vb.pp("lm_head")) {
+            Ok(layer) => Some(layer),
+            Err(_) => {
+                tracing::info!("lm_head.weight not found, will use tied weights");
+                None
+            }
+        };
 
         Ok(Self { config, embed_tokens, layers, norm, lm_head, device })
     }
@@ -395,6 +404,21 @@ impl TransformerModel {
     }
 
     pub fn logits(&self, hidden: &Tensor) -> Result<Tensor> {
-        Ok(self.lm_head.forward(hidden)?)
+        if let Some(ref lm_head) = self.lm_head {
+            // Use dedicated LM head if available
+            Ok(lm_head.forward(hidden)?)
+        } else {
+            // Tied weights: use embedding matrix transposed
+            // hidden shape: [batch, seq_len, hidden_size]
+            // embeddings shape: [vocab_size, hidden_size]
+            // We need: hidden @ embeddings.T => [batch, seq_len, vocab_size]
+            static LOGGED: std::sync::Once = std::sync::Once::new();
+            LOGGED.call_once(|| {
+                tracing::info!("LM head tied to input embeddings (using E^T for logits)");
+            });
+            
+            let embeddings = self.embed_tokens.embeddings();
+            Ok(hidden.matmul(&embeddings.t()?)?)
+        }
     }
 }
