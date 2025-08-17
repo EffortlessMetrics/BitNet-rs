@@ -67,10 +67,10 @@ bitnet = "0.1"
 cargo install bitnet-cli bitnet-server
 
 # Or use our installation script
-curl -fsSL https://raw.githubusercontent.com/microsoft/BitNet/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/EffortlessSteven/BitNet-rs/main/scripts/install.sh | bash
 
 # Or download pre-built binaries
-curl -L https://github.com/microsoft/BitNet/releases/latest/download/bitnet-x86_64-unknown-linux-gnu.tar.gz | tar xz
+curl -L https://github.com/EffortlessSteven/BitNet-rs/releases/latest/download/bitnet-rs-x86_64-unknown-linux-gnu.tar.gz | tar xz
 
 # Package managers
 brew install bitnet-rs              # macOS
@@ -93,7 +93,7 @@ npm install @bitnet/wasm
 #### 📦 **Docker**
 
 ```bash
-docker run --rm -it ghcr.io/microsoft/bitnet:latest
+docker run --rm -it ghcr.io/EffortlessSteven/bitnet-rs:latest
 ```
 
 ### Basic Usage
@@ -217,7 +217,7 @@ BitNet.rs significantly outperforms the original implementations:
 | **Binary Size** | 12 MB | 45 MB | **73% smaller** |
 | **Build Time** | 45s | 7min | **9.3x faster** |
 
-*Benchmarks run on Intel i7-12700K with BitNet-3B model. Build times include cached dependencies.*
+*mock benchmarks. Need to be replaced with real. Build times include cached dependencies.*
 
 ### Key Performance Features
 
