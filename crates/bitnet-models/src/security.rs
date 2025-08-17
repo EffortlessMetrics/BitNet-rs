@@ -135,8 +135,14 @@ pub struct SecureModelDownloader {
 impl SecureModelDownloader {
     /// Create a new secure model downloader
     pub fn new(config: ModelSecurity) -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(300)) // 5 minute timeout
+            .build()
+            .expect("Failed to create HTTP client");
+        
+        #[cfg(target_arch = "wasm32")]
+        let client = reqwest::Client::builder()
             .build()
             .expect("Failed to create HTTP client");
 

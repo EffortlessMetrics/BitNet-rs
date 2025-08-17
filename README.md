@@ -593,12 +593,16 @@ cargo build -p bitnet-wasm --target wasm32-unknown-unknown
 
 # (Optional) Better browser panic messages
 cargo build -p bitnet-wasm --target wasm32-unknown-unknown --features console-error
+
+# (Optional) build with the Rust engine once wasm runtime support lands
+# cargo build -p bitnet-wasm --target wasm32-unknown-unknown --features inference
 ```
 
 Notes:
 - The WASM crate is opt-in and not part of default builds.
 - `getrandom` (0.3) uses the JS/WebCrypto backend on `wasm32`; this is selected for you via `.cargo/config.toml` (`getrandom_backend="wasm_js"`).
-- WASM builds currently require additional work as some dependencies (tokio) are not wasm32-compatible.
+- The default WASM build excludes the Rust inference engine to avoid pulling `tokio`/`mio`.
+  Enable `--features inference` later when the wasm runtime path is ready.
 
 ## Contributing
 
