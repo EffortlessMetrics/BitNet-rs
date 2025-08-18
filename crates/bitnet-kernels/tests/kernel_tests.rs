@@ -451,21 +451,30 @@ fn test_performance_comparison_with_ffi() {
     let a = TestDataGenerator::generate_matrix_a(64, 64, 99999);
     let b = TestDataGenerator::generate_matrix_b(64, 64, 88888);
 
-    match PerformanceComparison::compare_matmul(&rust_kernel, &ffi_kernel, &a, &b, 64, 64, 64) {
-        Ok(comparison) => {
-            println!("Performance comparison:");
-            println!("  Rust time: {} ns", comparison.rust_time_ns);
-            println!("  C++ time: {} ns", comparison.cpp_time_ns);
-            println!("  Accuracy match: {}", comparison.accuracy_match);
-            println!("  Max error: {}", comparison.max_error);
-            println!(
-                "  Performance improvement: {:.2}%",
-                comparison.performance_improvement() * 100.0
-            );
-            println!("  Migration recommended: {}", comparison.migration_recommended());
+    #[cfg(feature = "ffi")]
+    {
+        match PerformanceComparison::compare_matmul(&rust_kernel, &ffi_kernel, &a, &b, 64, 64, 64) {
+            Ok(comparison) => {
+                println!("Performance comparison:");
+                println!("  Rust time: {} ns", comparison.rust_time_ns);
+                println!("  C++ time: {} ns", comparison.cpp_time_ns);
+                println!("  Accuracy match: {}", comparison.accuracy_match);
+                println!("  Max error: {}", comparison.max_error);
+                println!(
+                    "  Performance improvement: {:.2}%",
+                    comparison.performance_improvement() * 100.0
+                );
+                println!("  Migration recommended: {}", comparison.migration_recommended());
+            }
+            Err(e) => {
+                println!("Performance comparison failed: {}", e);
+            }
         }
-        Err(e) => {
-            println!("Performance comparison failed: {}", e);
-        }
+    }
+
+    #[cfg(not(feature = "ffi"))]
+    {
+        println!("Skipping compare_matmul test: built without 'ffi' feature");
+        println!("  Test data generated: a[64x64], b[64x64]");
     }
 }

@@ -60,7 +60,7 @@ mod performance_tests {
         // Simulate inference
         let inference_start = Instant::now();
         std::thread::sleep(Duration::from_millis(5)); // Simulated inference
-        let inference_time = inference_start.elapsed();
+        let _inference_time = inference_start.elapsed();
 
         PerformanceMetrics {
             throughput_tokens_per_second: 130.5, // Slightly better than baseline

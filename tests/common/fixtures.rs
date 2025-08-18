@@ -964,9 +964,8 @@ mod tests {
 
         // Modify the file's timestamp to make it old
         let old_time = SystemTime::now() - Duration::from_secs(48 * 60 * 60); // 48 hours ago
-        if let Ok(file) = std::fs::File::open(&old_file) {
-            let _ = file.set_times(filetime::FileTime::from_system_time(old_time));
-        }
+        let file_time = filetime::FileTime::from_system_time(old_time);
+        filetime::set_file_mtime(&old_file, file_time).ok();
 
         let cleanup_stats = manager.cleanup_old_fixtures().await.unwrap();
         assert_eq!(cleanup_stats.removed_count, 1);
@@ -987,9 +986,8 @@ mod tests {
 
         // Make one file old
         let old_time = SystemTime::now() - Duration::from_secs(48 * 60 * 60);
-        if let Ok(file) = std::fs::File::open(&old_file) {
-            let _ = file.set_times(filetime::FileTime::from_system_time(old_time));
-        }
+        let file_time = filetime::FileTime::from_system_time(old_time);
+        filetime::set_file_mtime(&old_file, file_time).ok();
 
         let (age_cleanup, size_cleanup) = manager.auto_cleanup().await.unwrap();
         assert_eq!(age_cleanup.removed_count, 1);
@@ -1059,15 +1057,16 @@ mod tests {
     #[tokio::test]
     async fn test_concurrent_fixture_access() {
         let (manager, _temp_dir) = create_test_fixture_manager().await;
+        let manager = std::sync::Arc::new(manager);
 
         // Test concurrent access to fixture info
         let handles: Vec<_> = (0..10)
             .map(|_| {
-                let manager_ref = &manager;
+                let manager_clone = manager.clone();
                 tokio::spawn(async move {
-                    let info = manager_ref.get_fixture_info("tiny-model");
+                    let info = manager_clone.get_fixture_info("tiny-model");
                     assert!(info.is_some());
-                    let cached = manager_ref.is_cached("tiny-model").await;
+                    let cached = manager_clone.is_cached("tiny-model").await;
                     assert!(!cached); // Should not be cached initially
                 })
             })

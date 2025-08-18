@@ -3,10 +3,9 @@ use bitnet_tests::common::{
     config::TestConfig,
     errors::{TestError, TestOpResult as TestResult},
     fixtures::FixtureManager,
-    harness::{TestCase, TestHarness, TestSuite},
+    harness::{TestCase, TestHarness, TestSuite, ConsoleReporter},
     results::TestMetrics,
 };
-use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
@@ -209,7 +208,7 @@ async fn test_parallel_execution_with_isolation() {
     let mut harness = TestHarness::new(config).await.expect("Failed to create test harness");
 
     // Add console reporter
-    harness.add_reporter(bitnet_tests::common::harness::ConsoleReporter::new(true));
+    harness.add_reporter(ConsoleReporter::new(true));
 
     // Create test suite
     let suite = ParallelTestSuite::new();
@@ -282,7 +281,7 @@ async fn test_semaphore_limits_parallelism() {
     let mut harness = TestHarness::new(config).await.expect("Failed to create test harness");
 
     // Add console reporter
-    harness.add_reporter(bitnet_tests::common::harness::ConsoleReporter::new(false));
+    harness.add_reporter(ConsoleReporter::new(false));
 
     // Create a simple test suite with 3 tests
     let mut test_cases: Vec<Box<dyn TestCase>> = Vec::new();

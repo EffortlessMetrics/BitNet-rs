@@ -118,8 +118,8 @@ mod crossval_tests {
         let mut violations = Vec::new();
 
         for (i, (rust_logit, cpp_logit)) in rust_logits.iter().zip(cpp_logits.iter()).enumerate() {
-            let diff = (rust_logit - cpp_logit).abs();
-            if diff > tolerance {
+            let diff = ((rust_logit - cpp_logit) as f64).abs();
+            if diff > tolerance as f64 {
                 violations.push((i, diff));
             }
         }
@@ -417,7 +417,7 @@ while providing performance improvements.
 
         // Step 1: Setup
         println!("1. Setting up test environment...");
-        let test_prompt = "The quick brown fox jumps over the lazy dog";
+        let _test_prompt = "The quick brown fox jumps over the lazy dog";
 
         // Step 2: Generate results from both implementations
         println!("2. Generating results from both implementations...");

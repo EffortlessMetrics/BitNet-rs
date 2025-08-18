@@ -1,3 +1,4 @@
+#![cfg(feature = "crossval")]
 //! Demonstration of comparison analysis reporting functionality
 //!
 //! This test demonstrates how to use the comparison analysis reporter

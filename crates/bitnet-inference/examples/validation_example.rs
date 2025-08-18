@@ -18,14 +18,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let model: Arc<dyn Model> = Arc::new(BitNetModel::new(model_config, device.clone()));
 
     // Create backend
-    let cpu_backend = CpuBackend::new(model.clone())?;
+    let _cpu_backend = CpuBackend::new(model.clone())?;
     
     // Create tokenizer
     let tokenizer = TokenizerBuilder::from_pretrained("gpt2")?;
     
     // Create inference engine
-    let inference_config = InferenceConfig::default();
-    let mut engine = InferenceEngine::new(model, tokenizer, device)?;
+    let _inference_config = InferenceConfig::default();
+    let engine = InferenceEngine::new(model, tokenizer, device)?;
 
     // Generate text
     let prompt = "Hello, how are you?";

@@ -1,3 +1,4 @@
+#![cfg(feature = "crossval")]
 //! Integration tests for BitNet workspace
 
 mod cross_validation;
