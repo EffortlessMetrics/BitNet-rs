@@ -1,13 +1,14 @@
 //! OpenTelemetry integration for distributed tracing
 
 use anyhow::Result;
-use opentelemetry::{
-    global,
-    trace::{TraceError, Tracer},
-    KeyValue,
-};
+use opentelemetry::{global, trace::TracerProvider, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_prometheus::PrometheusExporter;
+use opentelemetry_sdk::{
+    metrics as sdkmetrics,
+    runtime,
+    trace::{self as sdktrace, Sampler},
+    Resource,
+};
 use std::time::Duration;
 
 use super::MonitoringConfig;
@@ -30,78 +31,71 @@ pub async fn init_opentelemetry(config: &MonitoringConfig) -> Result<()> {
 
 /// Initialize OpenTelemetry tracing
 async fn init_tracing(config: &MonitoringConfig) -> Result<()> {
-    let tracer = if let Some(endpoint) = &config.opentelemetry_endpoint {
+    if let Some(endpoint) = &config.opentelemetry_endpoint {
         // OTLP exporter for remote collection
-        opentelemetry_otlp::new_pipeline()
-            .tracing()
-            .with_exporter(
-                opentelemetry_otlp::new_exporter()
-                    .tonic()
-                    .with_endpoint(endpoint)
-                    .with_timeout(Duration::from_secs(3)),
-            )
-            .with_trace_config(
-                opentelemetry::sdk::trace::config()
-                    .with_resource(opentelemetry::sdk::Resource::new(vec![
-                        KeyValue::new("service.name", "bitnet-server"),
-                        KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
-                        KeyValue::new("service.namespace", "ml-inference"),
-                    ]))
-                    .with_sampler(opentelemetry::sdk::trace::Sampler::TraceIdRatioBased(1.0)),
-            )
-            .install_batch(opentelemetry::runtime::Tokio)?
-    } else {
-        // Stdout exporter for development
-        opentelemetry::sdk::trace::TracerProvider::builder()
-            .with_simple_exporter(opentelemetry_stdout::SpanExporter::default())
-            .with_config(opentelemetry::sdk::trace::config().with_resource(
-                opentelemetry::sdk::Resource::new(vec![
+        let exporter = opentelemetry_otlp::new_exporter()
+            .tonic()
+            .with_endpoint(endpoint)
+            .with_timeout(Duration::from_secs(3));
+
+        let provider = sdktrace::TracerProvider::builder()
+            .with_config(
+                sdktrace::Config::default().with_resource(Resource::new(vec![
                     KeyValue::new("service.name", "bitnet-server"),
                     KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
-                ]),
-            ))
-            .build()
-            .tracer("bitnet-server")
-    };
+                    KeyValue::new("service.namespace", "ml-inference"),
+                ]))
+            )
+            .with_batch_exporter(exporter, runtime::Tokio)
+            .with_sampler(Sampler::TraceIdRatioBased(1.0))
+            .build();
 
-    global::set_tracer_provider(tracer.provider().unwrap());
+        global::set_tracer_provider(provider);
+    } else {
+        // Stdout exporter for development
+        let provider = sdktrace::TracerProvider::builder()
+            .with_simple_exporter(opentelemetry_stdout::SpanExporter::default())
+            .with_config(
+                sdktrace::Config::default().with_resource(Resource::new(vec![
+                    KeyValue::new("service.name", "bitnet-server"),
+                    KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
+                ]))
+            )
+            .build();
+
+        global::set_tracer_provider(provider);
+    }
 
     Ok(())
 }
 
 /// Initialize OpenTelemetry metrics
-async fn init_metrics(config: &MonitoringConfig) -> Result<()> {
-    let exporter = PrometheusExporter::builder()
-        .with_resource(opentelemetry::sdk::Resource::new(vec![
+async fn init_metrics(_config: &MonitoringConfig) -> Result<()> {
+    // Initialize Prometheus metrics
+    let reader = opentelemetry_prometheus::exporter().build()?;
+    let provider = sdkmetrics::MeterProvider::builder()
+        .with_reader(reader)
+        .with_resource(Resource::new(vec![
             KeyValue::new("service.name", "bitnet-server"),
             KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
         ]))
-        .build()?;
+        .build();
 
-    global::set_meter_provider(exporter.meter_provider().unwrap());
+    global::set_meter_provider(provider);
 
     Ok(())
 }
 
 /// Shutdown OpenTelemetry gracefully
 pub async fn shutdown() -> Result<()> {
-    global::shutdown_tracer_provider();
+    // Note: In OpenTelemetry 0.30, providers shut down when dropped
+    // No explicit shutdown_tracer_provider() function
     tracing::info!("OpenTelemetry shutdown complete");
     Ok(())
 }
 
 /// OpenTelemetry tracing utilities
 pub mod tracing_utils {
-    use opentelemetry::{
-        global,
-        trace::{Span, SpanKind, Status, Tracer},
-        Context, KeyValue,
-    };
-    use std::time::Instant;
-
-    // Note: OpenTelemetry 0.29 has breaking changes with Span trait
-    // For now, we'll provide simplified tracing utilities that work with the current API
-
     /// Record inference metrics (simplified version)
     pub fn record_inference_metrics(
         model_name: &str,
@@ -164,19 +158,9 @@ pub mod tracing_utils {
 
 /// OpenTelemetry metrics utilities
 pub mod metrics_utils {
-    use opentelemetry::{
-        global,
-        metrics::{Counter, Histogram, Meter, UpDownCounter},
-        KeyValue,
-    };
-    use std::sync::OnceLock;
-
-    // Note: Static metrics removed due to OpenTelemetry 0.29 API changes
-    // Using tracing-based metrics instead
-
-    /// Initialize OpenTelemetry metrics (simplified for OpenTelemetry 0.29)
+    /// Initialize OpenTelemetry metrics (simplified for OpenTelemetry 0.30)
     pub fn init_metrics() {
-        // Note: OpenTelemetry 0.29 has API changes
+        // Note: OpenTelemetry 0.30 has API changes
         // For now, we'll use tracing for metrics until the API stabilizes
         tracing::info!("OpenTelemetry metrics initialized (using tracing backend)");
     }

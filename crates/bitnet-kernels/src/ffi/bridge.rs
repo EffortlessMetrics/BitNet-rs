@@ -6,79 +6,126 @@
 
 use crate::KernelProvider;
 use bitnet_common::{BitNetError, KernelError, QuantizationType, Result};
-use std::ffi::{c_char, c_float, c_int, c_uchar, CStr};
-#[allow(unused_imports)]
-use std::ptr;
 
-// Wrapper module for C++ functions with conditional compilation
-#[cfg(feature = "ffi")]
-mod cpp {
-    use std::ffi::{c_char, c_float, c_int, c_uchar};
-    
-    extern "C" {
-        pub fn bitnet_cpp_init() -> c_int;
-        pub fn bitnet_cpp_is_available() -> c_int;
-        pub fn bitnet_cpp_cleanup();
-        pub fn bitnet_cpp_matmul_i2s(
-            a: *const i8,
-            b: *const c_uchar,
-            c: *mut c_float,
-            m: c_int,
-            n: c_int,
-            k: c_int,
-        ) -> c_int;
-        pub fn bitnet_cpp_quantize(
-            input: *const c_float,
-            input_len: c_int,
-            output: *mut c_uchar,
-            output_len: c_int,
-            scales: *mut c_float,
-            scales_len: c_int,
-            qtype: c_int,
-        ) -> c_int;
-        pub fn bitnet_cpp_get_last_error() -> *const c_char;
-    }
-    
-    pub unsafe fn init() -> c_int { bitnet_cpp_init() }
-    pub unsafe fn is_available() -> c_int { bitnet_cpp_is_available() }
-    pub unsafe fn cleanup() { bitnet_cpp_cleanup() }
-    pub unsafe fn matmul_i2s(
-        a: *const i8, b: *const c_uchar, c: *mut c_float,
-        m: c_int, n: c_int, k: c_int
-    ) -> c_int { 
-        bitnet_cpp_matmul_i2s(a, b, c, m, n, k) 
-    }
-    pub unsafe fn quantize(
-        input: *const c_float, input_len: c_int,
-        output: *mut c_uchar, output_len: c_int,
-        scales: *mut c_float, scales_len: c_int,
-        qtype: c_int
-    ) -> c_int {
-        bitnet_cpp_quantize(input, input_len, output, output_len, scales, scales_len, qtype)
-    }
-    pub unsafe fn get_last_error() -> *const c_char {
-        bitnet_cpp_get_last_error()
-    }
-}
+// Keep the public module path stable for callers
+pub mod cpp {
+    // Real bridge only when the crate feature is on AND build.rs detected the C++ lib
+    #[cfg(all(feature = "ffi", have_cpp))]
+    mod imp {
+        use std::ffi::{c_char, c_float, c_int, c_uchar};
 
-#[cfg(not(feature = "ffi"))]
-mod cpp {
-    use std::ffi::{c_char, c_float, c_int, c_uchar};
-    
-    pub unsafe fn init() -> c_int { -1 }
-    pub unsafe fn is_available() -> c_int { 0 }
-    pub unsafe fn cleanup() {}
-    pub unsafe fn matmul_i2s(
-        _a: *const i8, _b: *const c_uchar, _c: *mut c_float,
-        _m: c_int, _n: c_int, _k: c_int
-    ) -> c_int { -1 }
-    pub unsafe fn quantize(
-        _input: *const c_float, _input_len: c_int,
-        _output: *mut c_uchar, _output_len: c_int,
-        _scales: *mut c_float, _scales_len: c_int,
-        _qtype: c_int
-    ) -> c_int { -1 }
-    pub unsafe fn get_last_error() -> *const c_char { std::ptr::null() }
+        extern "C" {
+            fn bitnet_cpp_init() -> c_int;
+            fn bitnet_cpp_cleanup();
+            fn bitnet_cpp_is_available() -> c_int;
+            fn bitnet_cpp_matmul_i2s(
+                a: *const i8,
+                b: *const c_uchar,
+                c: *mut c_float,
+                m: c_int,
+                n: c_int,
+                k: c_int,
+            ) -> c_int;
+            fn bitnet_cpp_quantize(
+                input: *const c_float,
+                input_len: c_int,
+                output: *mut c_uchar,
+                output_len: c_int,
+                scales: *mut c_float,
+                scales_len: c_int,
+                qtype: c_int,
+            ) -> c_int;
+            fn bitnet_cpp_get_last_error() -> *const c_char;
+        }
+
+        pub fn init() -> i32 { 
+            unsafe { bitnet_cpp_init() }
+        }
+        pub fn cleanup() { 
+            unsafe { bitnet_cpp_cleanup() }
+        }
+        pub fn is_available() -> bool { 
+            unsafe { bitnet_cpp_is_available() != 0 }
+        }
+
+        pub fn matmul_i2s(
+            a: &[i8], b: &[u8], c: &mut [f32], m: usize, n: usize, k: usize
+        ) -> Result<(), &'static str> {
+            let rc = unsafe {
+                bitnet_cpp_matmul_i2s(
+                    a.as_ptr(),
+                    b.as_ptr() as *const c_uchar,
+                    c.as_mut_ptr() as *mut c_float,
+                    m as c_int,
+                    n as c_int,
+                    k as c_int,
+                )
+            };
+            if rc == 0 { Ok(()) } else { Err("cpp matmul failed") }
+        }
+
+        pub fn quantize(
+            input: &[f32],
+            output: &mut [u8],
+            scales: &mut [f32],
+            qtype: i32,
+        ) -> Result<(), &'static str> {
+            let rc = unsafe {
+                bitnet_cpp_quantize(
+                    input.as_ptr() as *const c_float,
+                    input.len() as c_int,
+                    output.as_mut_ptr() as *mut c_uchar,
+                    output.len() as c_int,
+                    scales.as_mut_ptr() as *mut c_float,
+                    scales.len() as c_int,
+                    qtype as c_int,
+                )
+            };
+            if rc == 0 { Ok(()) } else { Err("cpp quantize failed") }
+        }
+
+        pub fn get_last_error() -> &'static str {
+            unsafe {
+                let ptr = bitnet_cpp_get_last_error();
+                if ptr.is_null() {
+                    "unknown error"
+                } else {
+                    std::ffi::CStr::from_ptr(ptr)
+                        .to_str()
+                        .unwrap_or("invalid error string")
+                }
+            }
+        }
+    }
+
+    // Fallback stubs when ffi is off OR the C++ library is missing
+    #[cfg(any(not(feature = "ffi"), not(have_cpp)))]
+    mod imp {
+        pub fn init() -> i32 { -1 }
+        pub fn cleanup() {}
+        pub fn is_available() -> bool { false }
+
+        pub fn matmul_i2s(
+            _a: &[i8], _b: &[u8], _c: &mut [f32], _m: usize, _n: usize, _k: usize
+        ) -> Result<(), &'static str> {
+            Err("ffi bridge unavailable")
+        }
+
+        pub fn quantize(
+            _input: &[f32],
+            _output: &mut [u8],
+            _scales: &mut [f32],
+            _qtype: i32,
+        ) -> Result<(), &'static str> {
+            Err("ffi bridge unavailable")
+        }
+
+        pub fn get_last_error() -> &'static str {
+            "ffi bridge unavailable"
+        }
+    }
+
+    pub use imp::*;
 }
 
 /// FFI kernel that bridges to existing C++ implementations
@@ -104,17 +151,13 @@ pub struct FfiKernel {
 impl FfiKernel {
     /// Create a new FFI kernel instance
     pub fn new() -> Result<Self> {
-        let _kernel = Self { initialized: false };
-
         // Initialize C++ library if available
-        unsafe {
-            if cpp::init() == 0 {
-                Ok(Self { initialized: true })
-            } else {
-                Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                    reason: "BitNet C++ FFI not available (build with --features ffi to enable)".to_string(),
-                }))
-            }
+        if cpp::init() == 0 {
+            Ok(Self { initialized: true })
+        } else {
+            Err(BitNetError::Kernel(KernelError::ExecutionFailed {
+                reason: "BitNet C++ FFI not available (build with --features ffi and ensure C++ library is present)".to_string(),
+            }))
         }
     }
 }
@@ -131,7 +174,7 @@ impl KernelProvider for FfiKernel {
     }
 
     fn is_available(&self) -> bool {
-        self.initialized && unsafe { cpp::is_available() != 0 }
+        self.initialized && cpp::is_available()
     }
 
     fn matmul_i2s(
@@ -165,33 +208,11 @@ impl KernelProvider for FfiKernel {
         }
 
         // Call C++ implementation
-        let result = unsafe {
-            cpp::matmul_i2s(
-                a.as_ptr(),
-                b.as_ptr(),
-                c.as_mut_ptr(),
-                m as c_int,
-                n as c_int,
-                k as c_int,
-            )
-        };
-
-        if result == 0 {
-            Ok(())
-        } else {
-            let error_msg = unsafe {
-                let error_ptr = cpp::get_last_error();
-                if error_ptr.is_null() {
-                    "Unknown C++ kernel error".to_string()
-                } else {
-                    CStr::from_ptr(error_ptr).to_string_lossy().into_owned()
-                }
-            };
-
-            Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!("C++ kernel error: {}", error_msg),
-            }))
-        }
+        cpp::matmul_i2s(a, b, c, m, n, k).map_err(|msg| {
+            BitNetError::Kernel(KernelError::ExecutionFailed {
+                reason: format!("C++ kernel error: {}", msg),
+            })
+        })
     }
 
     fn quantize(
@@ -213,43 +234,18 @@ impl KernelProvider for FfiKernel {
         };
 
         // Call C++ implementation
-        let result = unsafe {
-            cpp::quantize(
-                input.as_ptr(),
-                input.len() as c_int,
-                output.as_mut_ptr(),
-                output.len() as c_int,
-                scales.as_mut_ptr(),
-                scales.len() as c_int,
-                cpp_qtype,
-            )
-        };
-
-        if result == 0 {
-            Ok(())
-        } else {
-            let error_msg = unsafe {
-                let error_ptr = cpp::get_last_error();
-                if error_ptr.is_null() {
-                    "Unknown C++ quantization error".to_string()
-                } else {
-                    CStr::from_ptr(error_ptr).to_string_lossy().into_owned()
-                }
-            };
-
-            Err(BitNetError::Kernel(KernelError::ExecutionFailed {
-                reason: format!("C++ quantization error: {}", error_msg),
-            }))
-        }
+        cpp::quantize(input, output, scales, cpp_qtype).map_err(|msg| {
+            BitNetError::Kernel(KernelError::ExecutionFailed {
+                reason: format!("C++ quantization error: {}", msg),
+            })
+        })
     }
 }
 
 impl Drop for FfiKernel {
     fn drop(&mut self) {
         if self.initialized {
-            unsafe {
-                cpp::cleanup();
-            }
+            cpp::cleanup();
         }
     }
 }
@@ -364,7 +360,6 @@ impl PerformanceComparison {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cpu::FallbackKernel;
 
     #[test]
     fn test_ffi_kernel_creation() {
@@ -418,13 +413,12 @@ mod tests {
     #[test]
     fn test_stub_implementation() {
         // Test that stub implementation works when FFI is not available
-        #[cfg(not(feature = "ffi-bridge"))]
-        {
-            let kernel = super::super::FfiKernel;
+        if !cpp::is_available() {
+            let kernel = FfiKernel::default();
             assert_eq!(kernel.name(), "ffi");
             assert!(!kernel.is_available());
 
-            let result = kernel.matmul_i2s(&[], &[], &mut [], 0, 0, 0);
+            let result = kernel.matmul_i2s(&[0], &[0], &mut [0.0], 1, 1, 1);
             assert!(result.is_err());
         }
     }

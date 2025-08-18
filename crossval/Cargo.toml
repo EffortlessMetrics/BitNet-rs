@@ -9,6 +9,7 @@ publish = false
 [features]
 default = []
 crossval = ["dep:bindgen", "dep:cc", "dep:bitnet-sys", "bitnet-sys/crossval"]
+ffi = []
 
 [dependencies]
 # Core dependencies (always available)
@@ -30,11 +31,27 @@ scopeguard = "1.2"
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 tempfile = "3.0"
+rand = "0.8"
 
 [[bench]]
 name = "performance"
 harness = false
 required-features = ["crossval"]
+
+[[test]]
+name = "ffi_integration"
+path = "tests/ffi_integration.rs"
+required-features = ["ffi"]
+
+[[test]]
+name = "token_equivalence"
+path = "tests/token_equivalence.rs"
+required-features = ["ffi"]
+
+[[test]]
+name = "performance_validation"
+path = "tests/performance_validation.rs"
+required-features = ["ffi"]
 
 [build-dependencies]
 bindgen = { version = "0.69", optional = true }
