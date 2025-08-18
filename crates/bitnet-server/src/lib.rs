@@ -18,9 +18,10 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use monitoring::{
     health::{create_health_routes, HealthChecker},
     metrics::MetricsCollector,
-    prometheus::{create_prometheus_routes, PrometheusExporter},
     MonitoringConfig, MonitoringSystem,
 };
+#[cfg(feature = "prometheus")]
+use monitoring::prometheus::{create_prometheus_routes, PrometheusExporter};
 
 #[derive(Deserialize)]
 pub struct InferenceRequest {
@@ -57,6 +58,7 @@ pub struct BitNetServer {
     config: ServerConfig,
     monitoring: Arc<MonitoringSystem>,
     health_checker: Arc<HealthChecker>,
+    #[cfg(feature = "prometheus")]
     prometheus_exporter: Option<Arc<PrometheusExporter>>,
 }
 
@@ -70,13 +72,22 @@ impl BitNetServer {
         let health_checker = Arc::new(HealthChecker::new(monitoring.metrics()));
 
         // Initialize Prometheus exporter if enabled
+        #[cfg(feature = "prometheus")]
         let prometheus_exporter = if config.monitoring.prometheus_enabled {
             Some(Arc::new(PrometheusExporter::new(&config.monitoring)?))
         } else {
             None
         };
+        #[cfg(not(feature = "prometheus"))]
+        let _unused = ();
 
-        Ok(Self { config, monitoring, health_checker, prometheus_exporter })
+        Ok(Self { 
+            config, 
+            monitoring, 
+            health_checker, 
+            #[cfg(feature = "prometheus")]
+            prometheus_exporter 
+        })
     }
 
     /// Create the application router with all routes and middleware
@@ -90,6 +101,7 @@ impl BitNetServer {
         app = app.merge(create_health_routes(self.health_checker.clone()));
 
         // Add Prometheus routes if enabled
+        #[cfg(feature = "prometheus")]
         if let Some(prometheus) = &self.prometheus_exporter {
             app = app.merge(create_prometheus_routes(prometheus.clone()));
         }

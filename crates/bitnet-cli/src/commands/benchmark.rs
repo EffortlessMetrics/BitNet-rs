@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
 
-use bitnet_inference::{BitNetInferenceEngine, InferenceConfig};
+use bitnet_inference::{InferenceEngine, InferenceConfig};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::TokenizerBuilder;
 use candle_core::Device;
@@ -222,7 +222,7 @@ impl BenchmarkCommand {
     async fn load_model_and_tokenizer(
         &self,
         config: &CliConfig,
-    ) -> Result<(BitNetInferenceEngine, std::sync::Arc<dyn bitnet_tokenizers::Tokenizer>)> {
+    ) -> Result<(InferenceEngine, std::sync::Arc<dyn bitnet_tokenizers::Tokenizer>)> {
         let pb = ProgressBar::new_spinner();
         pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}").unwrap());
         pb.set_message("Loading model for benchmarking...");
@@ -233,7 +233,7 @@ impl BenchmarkCommand {
         debug!("Using device: {:?}", device);
 
         // Load model
-        let loader = ModelLoader::new(device);
+        let loader = ModelLoader::new(bitnet_common::Device::from(&device));
         let model = loader
             .load(&self.model)
             .with_context(|| format!("Failed to load model: {}", self.model.display()))?;
@@ -244,7 +244,7 @@ impl BenchmarkCommand {
 
         // Create inference engine
         let inference_config = InferenceConfig::default();
-        let engine = BitNetInferenceEngine::with_auto_backend(model, inference_config)
+        let engine = InferenceEngine::new(model, inference_config)
             .context("Failed to create inference engine")?;
 
         pb.finish_with_message(format!("{} Model loaded for benchmarking", style("✓").green()));
