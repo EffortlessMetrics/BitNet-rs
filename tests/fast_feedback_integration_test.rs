@@ -56,17 +56,17 @@ async fn test_fast_feedback_system_integration() {
 async fn test_fast_feedback_configurations() {
     // Test CI configuration
     let ci_system = FastFeedbackSystem::for_ci();
-    assert_eq!(ci_system.config.target_feedback_time, Duration::from_secs(90));
-    assert!(ci_system.config.fail_fast);
+    assert_eq!(ci_system.config().target_feedback_time, Duration::from_secs(90));
+    assert!(ci_system.config().fail_fast);
 
     // Test development configuration
     let dev_system = FastFeedbackSystem::for_development();
-    assert_eq!(dev_system.config.target_feedback_time, Duration::from_secs(30));
-    assert!(!dev_system.config.fail_fast);
+    assert_eq!(dev_system.config().target_feedback_time, Duration::from_secs(30));
+    assert!(!dev_system.config().fail_fast);
 
     // Test environment-based creation
     let env_system = utils::create_for_environment();
-    assert!(env_system.config.enable_incremental);
+    assert!(env_system.config().enable_incremental);
 }
 
 /// Test fast feedback utility functions
@@ -149,7 +149,7 @@ async fn test_incremental_testing_integration() {
     env::set_var("BITNET_INCREMENTAL", "1");
 
     let mut system = FastFeedbackSystem::with_defaults();
-    assert!(system.config.enable_incremental);
+    assert!(system.config().enable_incremental);
 
     // Test that incremental testing is detected
     let should_use = utils::should_use_fast_feedback();

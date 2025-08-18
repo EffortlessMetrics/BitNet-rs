@@ -9,11 +9,12 @@ name = "bitnet_tests"
 path = "common/mod.rs"
 
 [features]
-default = []
+default = ["reporting", "fixtures", "trend"]
 full-framework = ["reporting", "fixtures", "trend"]
 reporting = []
 fixtures = []
 trend = []
+crossval = []
 
 [[bin]]
 name = "validate_config"
@@ -147,6 +148,9 @@ flate2 = "1.0"
 
 # Coverage reporting
 cargo_metadata = "0.18"
+
+# File timestamp manipulation
+filetime = "0.2"
 
 # BitNet.rs crates for cross-validation
 bitnet-common = { path = "../crates/bitnet-common" }

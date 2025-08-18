@@ -351,7 +351,7 @@ impl ExecutionStats {
 mod tests {
     use super::*;
     #[cfg(feature = "fixtures")]
-    use crate::common::fast_config::fast_config;
+    use crate::fast_config::fast_config;
 
     #[tokio::test]
     #[cfg(feature = "fixtures")]

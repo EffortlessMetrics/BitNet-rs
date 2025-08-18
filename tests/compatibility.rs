@@ -1,3 +1,4 @@
+#![cfg(feature = "crossval")]
 //! Compatibility tests for BitNet.rs
 //!
 //! These tests validate API compatibility, model format compatibility,

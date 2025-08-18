@@ -1,3 +1,5 @@
+#![cfg(feature = "crossval")]
+
 // Configuration scenarios testing for BitNet.rs testing framework
 //
 // This module tests the comprehensive configuration management system
@@ -383,8 +385,8 @@ impl ConfigurationScenariosTestSuite {
     fn restore_env_vars(&self) {
         for (key, value) in &self.original_env {
             match value {
-                Some(val) => env::set_var(key, val),
-                None => env::remove_var(key),
+                Some(val) => std::env::set_var(key, val),
+                None => std::env::remove_var(key),
             }
         }
     }
@@ -1064,7 +1066,7 @@ impl TestCase for EnvironmentDetectionTest {
         .collect();
 
         // Test scenario detection
-        env::set_var("BITNET_TEST_SCENARIO", "performance");
+        std::env::set_var("BITNET_TEST_SCENARIO", "performance");
         let context = context_from_environment();
         assert_eq!(
             context.scenario,
@@ -1072,11 +1074,11 @@ impl TestCase for EnvironmentDetectionTest {
             "Should detect performance scenario"
         );
 
-        env::set_var("BITNET_TEST_SCENARIO", "unit");
+        std::env::set_var("BITNET_TEST_SCENARIO", "unit");
         let context = context_from_environment();
         assert_eq!(context.scenario, TestingScenario::Unit, "Should detect unit scenario");
 
-        env::set_var("BITNET_TEST_SCENARIO", "crossval");
+        std::env::set_var("BITNET_TEST_SCENARIO", "crossval");
         let context = context_from_environment();
         assert_eq!(
             context.scenario,
@@ -1085,18 +1087,18 @@ impl TestCase for EnvironmentDetectionTest {
         );
 
         // Test CI environment detection
-        env::set_var("CI", "true");
+        std::env::set_var("CI", "true");
         let context = context_from_environment();
         assert_eq!(context.environment, EnvironmentType::CI, "Should detect CI environment");
 
-        env::remove_var("CI");
-        env::set_var("GITHUB_ACTIONS", "true");
+        std::env::remove_var("CI");
+        std::env::set_var("GITHUB_ACTIONS", "true");
         let context = context_from_environment();
         assert_eq!(context.environment, EnvironmentType::CI, "Should detect GitHub Actions as CI");
 
         // Test production environment detection
-        env::remove_var("GITHUB_ACTIONS");
-        env::set_var("BITNET_ENV", "production");
+        std::env::remove_var("GITHUB_ACTIONS");
+        std::env::set_var("BITNET_ENV", "production");
         let context = context_from_environment();
         assert_eq!(
             context.environment,
@@ -1105,9 +1107,9 @@ impl TestCase for EnvironmentDetectionTest {
         );
 
         // Test resource constraints from environment
-        env::set_var("BITNET_MAX_MEMORY_MB", "2048");
-        env::set_var("BITNET_MAX_PARALLEL", "4");
-        env::set_var("BITNET_NO_NETWORK", "1");
+        std::env::set_var("BITNET_MAX_MEMORY_MB", "2048");
+        std::env::set_var("BITNET_MAX_PARALLEL", "4");
+        std::env::set_var("BITNET_NO_NETWORK", "1");
         let context = context_from_environment();
         assert_eq!(
             context.resource_constraints.max_memory_mb, 2048,
@@ -1121,9 +1123,9 @@ impl TestCase for EnvironmentDetectionTest {
         assert!(!context.resource_constraints.network_access, "Should detect network constraint");
 
         // Test time constraints from environment
-        env::set_var("BITNET_MAX_DURATION_SECS", "1800");
-        env::set_var("BITNET_TARGET_FEEDBACK_SECS", "120");
-        env::set_var("BITNET_FAIL_FAST", "1");
+        std::env::set_var("BITNET_MAX_DURATION_SECS", "1800");
+        std::env::set_var("BITNET_TARGET_FEEDBACK_SECS", "120");
+        std::env::set_var("BITNET_FAIL_FAST", "1");
         let context = context_from_environment();
         assert_eq!(
             context.time_constraints.max_total_duration,
@@ -1138,9 +1140,9 @@ impl TestCase for EnvironmentDetectionTest {
         assert!(context.time_constraints.fail_fast, "Should detect fail-fast setting");
 
         // Test quality requirements from environment
-        env::set_var("BITNET_MIN_COVERAGE", "0.95");
-        env::set_var("BITNET_COMPREHENSIVE_REPORTING", "1");
-        env::set_var("BITNET_ENABLE_CROSSVAL", "1");
+        std::env::set_var("BITNET_MIN_COVERAGE", "0.95");
+        std::env::set_var("BITNET_COMPREHENSIVE_REPORTING", "1");
+        std::env::set_var("BITNET_ENABLE_CROSSVAL", "1");
         let context = context_from_environment();
         assert_eq!(
             context.quality_requirements.min_coverage, 0.95,
@@ -1158,8 +1160,8 @@ impl TestCase for EnvironmentDetectionTest {
         // Restore original environment
         for (key, value) in original_env {
             match value {
-                Some(val) => env::set_var(&key, val),
-                None => env::remove_var(&key),
+                Some(val) => std::env::set_var(&key, val),
+                None => std::env::remove_var(&key),
             }
         }
 
@@ -1716,19 +1718,19 @@ mod shim_unit_tests {
         let original_bitnet_env = env::var("BITNET_ENV").ok();
 
         // Ensure BITNET_ENV is not set so CI detection can happen
-        env::remove_var("BITNET_ENV");
-        env::set_var("CI", "true");
+        std::env::remove_var("BITNET_ENV");
+        std::env::set_var("CI", "true");
         let ctx = context_from_environment();
         assert!(matches!(ctx.environment, EnvironmentType::CI));
 
         // Restore original values
         if let Some(val) = original_ci {
-            env::set_var("CI", val);
+            std::env::set_var("CI", val);
         } else {
-            env::remove_var("CI");
+            std::env::remove_var("CI");
         }
         if let Some(val) = original_bitnet_env {
-            env::set_var("BITNET_ENV", val);
+            std::env::set_var("BITNET_ENV", val);
         }
     }
 
@@ -1761,40 +1763,40 @@ mod shim_unit_tests {
         let _g = env_guard(); // Serialize env changes
 
         // Test various truthy values
-        env::set_var("TEST_VAR", "true");
+        std::env::set_var("TEST_VAR", "true");
         assert!(env_bool("TEST_VAR"));
 
-        env::set_var("TEST_VAR", "1");
+        std::env::set_var("TEST_VAR", "1");
         assert!(env_bool("TEST_VAR"));
 
-        env::set_var("TEST_VAR", "yes");
+        std::env::set_var("TEST_VAR", "yes");
         assert!(env_bool("TEST_VAR"));
 
-        env::set_var("TEST_VAR", "on");
+        std::env::set_var("TEST_VAR", "on");
         assert!(env_bool("TEST_VAR"));
 
         // Test case-insensitive matching (new)
-        env::set_var("TEST_VAR", "TRUE");
+        std::env::set_var("TEST_VAR", "TRUE");
         assert!(env_bool("TEST_VAR"), "Should match uppercase TRUE");
 
-        env::set_var("TEST_VAR", "Yes");
+        std::env::set_var("TEST_VAR", "Yes");
         assert!(env_bool("TEST_VAR"), "Should match mixed-case Yes");
 
-        env::set_var("TEST_VAR", "ON");
+        std::env::set_var("TEST_VAR", "ON");
         assert!(env_bool("TEST_VAR"), "Should match uppercase ON");
 
         // Test falsy values
-        env::set_var("TEST_VAR", "false");
+        std::env::set_var("TEST_VAR", "false");
         assert!(!env_bool("TEST_VAR"));
 
-        env::set_var("TEST_VAR", "0");
+        std::env::set_var("TEST_VAR", "0");
         assert!(!env_bool("TEST_VAR"));
 
-        env::set_var("TEST_VAR", "no");
+        std::env::set_var("TEST_VAR", "no");
         assert!(!env_bool("TEST_VAR"));
 
         // Clean up
-        env::remove_var("TEST_VAR");
+        std::env::remove_var("TEST_VAR");
 
         // Test missing var
         assert!(!env_bool("NONEXISTENT_VAR"));
@@ -1853,9 +1855,9 @@ mod shim_unit_tests {
         let original_github = env::var("GITHUB_ACTIONS").ok();
 
         // Set both CI indicators and explicit BITNET_ENV
-        env::set_var("CI", "true");
-        env::set_var("GITHUB_ACTIONS", "true");
-        env::set_var("BITNET_ENV", "production");
+        std::env::set_var("CI", "true");
+        std::env::set_var("GITHUB_ACTIONS", "true");
+        std::env::set_var("BITNET_ENV", "production");
 
         let ctx = context_from_environment();
 
@@ -1866,7 +1868,7 @@ mod shim_unit_tests {
         );
 
         // Test other explicit values
-        env::set_var("BITNET_ENV", "local");
+        std::env::set_var("BITNET_ENV", "local");
         let ctx = context_from_environment();
         assert!(
             matches!(ctx.environment, EnvironmentType::Local),
@@ -1875,19 +1877,19 @@ mod shim_unit_tests {
 
         // Restore original values
         if let Some(val) = original_ci {
-            env::set_var("CI", val);
+            std::env::set_var("CI", val);
         } else {
-            env::remove_var("CI");
+            std::env::remove_var("CI");
         }
         if let Some(val) = original_bitnet_env {
-            env::set_var("BITNET_ENV", val);
+            std::env::set_var("BITNET_ENV", val);
         } else {
-            env::remove_var("BITNET_ENV");
+            std::env::remove_var("BITNET_ENV");
         }
         if let Some(val) = original_github {
-            env::set_var("GITHUB_ACTIONS", val);
+            std::env::set_var("GITHUB_ACTIONS", val);
         } else {
-            env::remove_var("GITHUB_ACTIONS");
+            std::env::remove_var("GITHUB_ACTIONS");
         }
     }
 

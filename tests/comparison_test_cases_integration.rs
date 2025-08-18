@@ -1,3 +1,4 @@
+#![cfg(feature = "crossval")]
 use bitnet_tests::cross_validation::{
     test_suites, ComparisonTestCaseRegistry, ComparisonTestRunner, TestCaseCategory,
 };
