@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
@@ -59,21 +60,25 @@ impl IsolatedEnvironment {
 
     fn setup(&self) {
         // Set test-specific environment variables
-        std::env::set_var("BITNET_TEST_NAME", &self.test_name);
-        std::env::set_var("BITNET_TEST_TEMP_DIR", self.temp_dir.path());
-        std::env::set_var("BITNET_TEST_ISOLATION", "true");
+        unsafe {
+            std::env::set_var("BITNET_TEST_NAME", &self.test_name);
+            std::env::set_var("BITNET_TEST_TEMP_DIR", self.temp_dir.path());
+            std::env::set_var("BITNET_TEST_ISOLATION", "true");
+        }
     }
 
     fn cleanup(self) {
         // Restore original environment variables
-        for (key, value) in &self.original_env_vars {
-            std::env::set_var(key, value);
-        }
+        unsafe {
+            for (key, value) in &self.original_env_vars {
+                std::env::set_var(key, value);
+            }
 
-        // Remove test-specific environment variables
-        std::env::remove_var("BITNET_TEST_NAME");
-        std::env::remove_var("BITNET_TEST_TEMP_DIR");
-        std::env::remove_var("BITNET_TEST_ISOLATION");
+            // Remove test-specific environment variables
+            std::env::remove_var("BITNET_TEST_NAME");
+            std::env::remove_var("BITNET_TEST_TEMP_DIR");
+            std::env::remove_var("BITNET_TEST_ISOLATION");
+        }
 
         // Temp directory is automatically cleaned up when dropped
         drop(self.temp_dir);
@@ -81,6 +86,7 @@ impl IsolatedEnvironment {
 }
 
 /// Simple test case trait
+#[async_trait]
 trait SimpleTestCase: Send + Sync {
     fn name(&self) -> &str;
     async fn run(&self) -> Result<(), String>;
@@ -99,6 +105,7 @@ impl IsolationTestCase {
     }
 }
 
+#[async_trait]
 impl SimpleTestCase for IsolationTestCase {
     fn name(&self) -> &str {
         &self.name
@@ -455,6 +462,7 @@ async fn test_isolation_prevents_interference() {
         }
     }
 
+    #[async_trait]
     impl SimpleTestCase for InterferenceTestCase {
         fn name(&self) -> &str {
             &self.name
@@ -472,7 +480,9 @@ async fn test_isolation_prevents_interference() {
             }
 
             // Set a test-specific environment variable
-            std::env::set_var(&self.env_key, &self.env_value);
+            unsafe {
+                std::env::set_var(&self.env_key, &self.env_value);
+            }
 
             // Wait a bit to allow other tests to potentially interfere
             sleep(Duration::from_millis(100)).await;
