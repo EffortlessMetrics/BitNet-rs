@@ -358,7 +358,7 @@ mod tests {
     fn test_cuda_kernel_creation() {
         // Test CUDA kernel creation
         match CudaKernel::new() {
-            Ok(mut kernel) => {
+            Ok(kernel) => {
                 println!("CUDA kernel created successfully");
                 println!("Device info: {:?}", kernel.device_info());
                 assert!(kernel.is_available());
@@ -444,7 +444,7 @@ mod tests {
         // Test that multiple kernel creations don't leak memory
         for i in 0..10 {
             match CudaKernel::new() {
-                Ok(mut kernel) => {
+                Ok(kernel) => {
                     // Test small operation
                     let a = vec![1i8; 16];
                     let b = vec![1u8; 16];

@@ -1,6 +1,6 @@
 extern "C" __global__ void bitnet_matmul_i2s(
-    const int8_t* __restrict__ A,
-    const uint8_t* __restrict__ B,
+    const signed char* __restrict__ A,
+    const unsigned char* __restrict__ B,
     float* __restrict__ C,
     int M, int N, int K
 ) {
@@ -11,8 +11,8 @@ extern "C" __global__ void bitnet_matmul_i2s(
     
     float acc = 0.0f;
     for (int i = 0; i < K; ++i) {
-        int8_t a = A[row * K + i];
-        uint8_t b = B[i * N + col];
+        signed char a = A[row * K + i];
+        unsigned char b = B[i * N + col];
         acc += static_cast<float>(a) * static_cast<float>(b);
     }
     
