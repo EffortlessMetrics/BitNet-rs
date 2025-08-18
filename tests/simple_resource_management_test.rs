@@ -325,12 +325,12 @@ mod resource_management_tests {
         println!("Running comprehensive resource management tests...");
 
         // Run all individual tests
-        test_memory_leak_detection().await;
-        test_file_handle_cleanup().await;
-        test_concurrent_resource_access().await;
-        test_resource_exhaustion_recovery().await;
-        test_resource_monitoring().await;
-        test_resource_contention().await;
+        test_memory_leak_detection();
+        test_file_handle_cleanup();
+        test_concurrent_resource_access();
+        test_resource_exhaustion_recovery();
+        test_resource_monitoring();
+        test_resource_contention();
 
         println!("✅ All comprehensive resource management tests passed!");
     }

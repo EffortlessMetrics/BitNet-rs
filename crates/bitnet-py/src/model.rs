@@ -57,10 +57,10 @@ impl PyBitNetModel {
     #[getter]
     fn config(&self, py: Python<'_>) -> PyResult<PyObject> {
         let config = self.inner.config();
-        let py_config = PyDict::new(py);
+        let py_config = PyDict::new_bound(py);
 
         // Model configuration
-        let model_config = PyDict::new(py);
+        let model_config = PyDict::new_bound(py);
         model_config.set_item("vocab_size", config.model.vocab_size)?;
         model_config.set_item("hidden_size", config.model.hidden_size)?;
         model_config.set_item("num_layers", config.model.num_layers)?;
@@ -69,7 +69,7 @@ impl PyBitNetModel {
         py_config.set_item("model", model_config)?;
 
         // Quantization configuration
-        let quant_config = PyDict::new(py);
+        let quant_config = PyDict::new_bound(py);
         quant_config.set_item("quantization_type", format!("{:?}", config.quantization.quantization_type))?;
         quant_config.set_item("block_size", config.quantization.block_size)?;
         py_config.set_item("quantization", quant_config)?;
@@ -133,7 +133,7 @@ impl PyBitNetModel {
 
     /// Get model information as a dictionary
     fn info(&self, py: Python<'_>) -> PyResult<PyObject> {
-        let info = PyDict::new(py);
+        let info = PyDict::new_bound(py);
         let config = self.inner.config();
 
         info.set_item("architecture", self.architecture())?;
@@ -217,7 +217,7 @@ impl PyModelLoader {
             })
         })?;
 
-        let py_metadata = PyDict::new(py);
+        let py_metadata = PyDict::new_bound(py);
         py_metadata.set_item("architecture", metadata.architecture)?;
         py_metadata.set_item("vocab_size", metadata.vocab_size)?;
         py_metadata.set_item("context_length", metadata.context_length)?;

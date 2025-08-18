@@ -29,3 +29,5 @@ serde_json.workspace = true
 [features]
 default = []
 gpu = ["candle-core/cuda"]
+cuda = []   # passthrough for downstream crates
+metal = []  # passthrough for downstream crates

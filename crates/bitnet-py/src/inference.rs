@@ -9,6 +9,7 @@ use pyo3::types::{PyDict, PyIterator, PyList, PyString};
 // use pyo3_asyncio_0_21::tokio::future_into_py;
 use futures_util::StreamExt;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::RwLock;
 
 use crate::{parse_device, to_py_result, PyBitNetModel};
@@ -140,7 +141,7 @@ impl PyInferenceEngine {
             let engine = self.inner.read().await;
             let config = engine.model_config();
 
-            let py_config = PyDict::new(py);
+            let py_config = PyDict::new_bound(py);
             py_config.set_item("vocab_size", config.model.vocab_size)?;
             py_config.set_item("hidden_size", config.model.hidden_size)?;
             py_config.set_item("num_layers", config.model.num_layers)?;
@@ -165,7 +166,7 @@ impl PyInferenceEngine {
             let engine = self.inner.read().await;
             let stats = engine.get_stats().await;
 
-            let py_stats = PyDict::new(py);
+            let py_stats = PyDict::new_bound(py);
             py_stats.set_item("cache_size", stats.cache_size)?;
             py_stats.set_item("cache_usage", stats.cache_usage)?;
             py_stats.set_item("backend_type", stats.backend_type)?;
@@ -226,15 +227,13 @@ impl PyStreamingGenerator {
         }
 
         // Mock streaming - in practice this would use the actual streaming API
-        static mut COUNTER: usize = 0;
-        unsafe {
-            COUNTER += 1;
-            if COUNTER <= 5 {
-                Ok(Some(format!(" token_{}", COUNTER)))
-            } else {
-                COUNTER = 0;
-                Err(PyStopIteration::new_err(""))
-            }
+        static COUNTER: AtomicUsize = AtomicUsize::new(0);
+        let count = COUNTER.fetch_add(1, Ordering::Relaxed);
+        if count < 5 {
+            Ok(Some(format!(" token_{}", count + 1)))
+        } else {
+            COUNTER.store(0, Ordering::Relaxed);
+            Err(PyStopIteration::new_err(""))
         }
     }
 
