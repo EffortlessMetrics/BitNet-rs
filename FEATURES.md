@@ -1,286 +1,260 @@
-# BitNet.rs Feature Flags
+# BitNet.rs Feature Flags Documentation
 
-This document describes the feature flags available in BitNet.rs and their usage.
+This document provides comprehensive documentation for all feature flags available in the BitNet.rs project.
 
 ## Overview
 
-BitNet.rs uses Cargo feature flags to enable optional functionality and optimize builds for specific use cases. This allows users to include only the components they need, reducing compilation time and binary size.
+BitNet.rs uses Cargo feature flags to control compilation of optional functionality. **Default features are intentionally empty** to prevent unwanted dependencies and allow precise control over the build.
+
+## Quick Reference
+
+```bash
+# CPU-only build (most common)
+cargo build --no-default-features --features cpu
+
+# GPU-enabled build
+cargo build --no-default-features --features cuda
+
+# Full feature set
+cargo build --features full
+```
 
 ## Core Features
 
-### `default = ["cpu"]`
-
-The default feature set includes CPU inference with optimized kernels. This provides a good balance of functionality and performance for most use cases.
-
 ### `cpu`
+**Purpose:** Enable CPU inference with optimized kernels  
+**Dependencies:** None (pure Rust)  
+**When to use:** For CPU-only deployments without GPU requirements
 
-Enables CPU-based inference with optimized SIMD kernels.
-
-**Includes:**
-- `kernels`: High-performance compute kernels
-- `inference`: CPU inference engine
-- `tokenizers`: Tokenization support
-- `bitnet-kernels/cpu-optimized`: Optimized CPU kernels
-
-**Example:**
-```toml
-[dependencies]
-bitnet = { version = "0.1", features = ["cpu"] }
+```bash
+cargo build --no-default-features --features cpu
 ```
 
-### `gpu`
+Enables:
+- Fallback scalar kernels
+- Platform-specific SIMD optimizations (if available)
+- Multi-threaded CPU inference
+- Automatic CPU feature detection
 
-Enables GPU acceleration via CUDA.
+### `cuda`
+**Purpose:** Enable NVIDIA GPU acceleration  
+**Dependencies:** CUDA toolkit 11.0+, cudarc crate  
+**When to use:** For GPU-accelerated inference on NVIDIA hardware
 
-**Includes:**
-- `kernels`: High-performance compute kernels
-- `inference`: GPU inference engine
-- `tokenizers`: Tokenization support
-- `bitnet-kernels/cuda`: CUDA GPU kernels
-- `bitnet-inference/gpu`: GPU inference support
-
-**Requirements:**
-- CUDA Toolkit 11.0 or later
-- Compatible NVIDIA GPU
-
-**Example:**
-```toml
-[dependencies]
-bitnet = { version = "0.1", features = ["gpu"] }
+```bash
+cargo build --no-default-features --features cuda
 ```
 
-## Component Features
+Enables:
+- CUDA kernel compilation and execution
+- GPU memory management
+- Mixed-precision computation (FP16/BF16)
+- Multi-GPU support
+- Async GPU operations
 
-### `kernels`
-
-Enables the high-performance compute kernel system. This is automatically included with `cpu` and `gpu` features.
-
-**Provides:**
-- Kernel abstraction layer
-- Runtime kernel selection
-- Fallback implementations
-
-### `inference`
-
-Enables the inference engine system. Requires `kernels`.
-
-**Provides:**
-- CPU and GPU inference engines
-- Streaming generation
-- Batch processing
-- Sampling strategies
-
-### `tokenizers`
-
-Enables tokenization support for text processing.
-
-**Provides:**
-- GPT-2 tokenizer
-- SentencePiece tokenizer
-- HuggingFace tokenizer integration
-
-## SIMD Optimization Features
-
-### `avx2`
-
-Enables AVX2 SIMD optimizations for x86_64 processors.
-
-**Requirements:**
-- x86_64 processor with AVX2 support
-- Automatically detected at runtime
-
-### `avx512`
-
-Enables AVX-512 SIMD optimizations for x86_64 processors.
-
-**Requirements:**
-- x86_64 processor with AVX-512 support
-- Automatically detected at runtime
-
-### `neon`
-
-Enables ARM NEON SIMD optimizations for ARM64 processors.
-
-**Requirements:**
-- ARM64 processor with NEON support
-- Automatically detected at runtime
-
-## Language Binding Features
-
-These features are informational only - the actual bindings are provided by separate crates.
-
-### `python`
-
-Indicates Python binding support. Use the `bitnet-py` crate for actual Python bindings.
-
-### `wasm`
-
-Indicates WebAssembly support. Use the `bitnet-wasm` crate for WebAssembly bindings.
+Requirements:
+- NVIDIA GPU with compute capability 6.0+
+- CUDA toolkit installed
+- Set `LD_LIBRARY_PATH` to include CUDA libraries
 
 ### `ffi`
+**Purpose:** Enable C++ FFI bridge for cross-validation  
+**Dependencies:** cc, bindgen, C++ compiler  
+**When to use:** For comparing against original C++ implementation
 
-Indicates C API support. Use the `bitnet-ffi` crate for C API bindings.
-
-## Application Features
-
-These features are informational only - the actual applications are provided by separate crates.
-
-### `server`
-
-Indicates HTTP server support. Use the `bitnet-server` crate for the HTTP server.
-
-### `cli`
-
-Indicates CLI support. Use the `bitnet-cli` crate for the command-line interface.
-
-## Convenience Features
-
-### `full`
-
-Enables all available features for maximum functionality.
-
-**Includes:**
-- `cpu`: CPU inference
-- `gpu`: GPU inference
-- `avx2`: AVX2 optimizations
-- `avx512`: AVX-512 optimizations
-- `neon`: ARM NEON optimizations
-
-**Example:**
-```toml
-[dependencies]
-bitnet = { version = "0.1", features = ["full"] }
+```bash
+cargo build --features ffi
 ```
 
-### `minimal`
+Enables:
+- FFI bindings to BitNet C++ implementation
+- Cross-validation testing capabilities
+- Performance comparison tools
 
-Provides only the core functionality without inference capabilities.
+Note: Requires building or linking the C++ BitNet library.
 
-**Includes:**
-- Core types and utilities
-- Model loading and definitions
-- Quantization algorithms
+## SIMD Features
 
-**Use case:** When you only need model loading or quantization without inference.
+### `avx2`
+**Purpose:** Enable x86_64 AVX2 SIMD optimizations  
+**Dependencies:** x86_64 CPU with AVX2 support  
+**When to use:** Automatically detected on compatible CPUs
 
-**Example:**
-```toml
-[dependencies]
-bitnet = { version = "0.1", features = ["minimal"] }
+### `avx512`
+**Purpose:** Enable x86_64 AVX-512 SIMD optimizations  
+**Dependencies:** x86_64 CPU with AVX-512F support  
+**When to use:** For Intel server/workstation CPUs
+
+### `neon`
+**Purpose:** Enable ARM NEON SIMD optimizations  
+**Dependencies:** ARM64/AArch64 CPU  
+**When to use:** For ARM-based systems (Apple Silicon, ARM servers)
+
+## Development Features
+
+### `crossval`
+**Purpose:** Enable cross-validation against C++ implementation  
+**Dependencies:** `ffi` feature, C++ BitNet implementation  
+**When to use:** For validating Rust implementation correctness
+
+```bash
+cargo test --features "cpu,ffi,crossval"
+```
+
+### `full`
+**Purpose:** Enable all features for maximum functionality  
+**Dependencies:** All of the above  
+**When to use:** For development and testing
+
+```bash
+cargo build --features full
 ```
 
 ## Feature Combinations
 
-### Common Combinations
+### Common Configurations
 
-#### CPU-only with SIMD optimizations
-```toml
-[dependencies]
-bitnet = { version = "0.1", features = ["cpu", "avx2", "neon"] }
-```
-
-#### GPU with all optimizations
-```toml
-[dependencies]
-bitnet = { version = "0.1", features = ["gpu", "avx2", "avx512", "neon"] }
-```
-
-#### Model loading only
-```toml
-[dependencies]
-bitnet = { version = "0.1", features = ["minimal"] }
-```
-
-### Platform-Specific Recommendations
-
-#### x86_64 Linux/Windows
-```toml
-[dependencies]
-bitnet = { version = "0.1", features = ["cpu", "avx2"] }
-# Add "gpu" if CUDA is available
-# Add "avx512" for newer processors
-```
-
-#### ARM64 (Apple Silicon, ARM servers)
-```toml
-[dependencies]
-bitnet = { version = "0.1", features = ["cpu", "neon"] }
-```
-
-#### WebAssembly
-Use the `bitnet-wasm` crate instead:
-```toml
-[dependencies]
-bitnet-wasm = { version = "0.1" }
-```
-
-## Build Optimization
-
-### Release Builds
-
-For optimal performance in release builds, consider:
-
-```toml
-[profile.release]
-lto = true
-codegen-units = 1
-panic = "abort"
-strip = true
-```
-
-### Target-Specific Builds
-
-For maximum performance on known hardware:
-
+**Production CPU deployment:**
 ```bash
-# x86_64 with AVX2
-RUSTFLAGS="-C target-cpu=haswell" cargo build --release --features="cpu,avx2"
-
-# x86_64 with AVX-512
-RUSTFLAGS="-C target-cpu=skylake-avx512" cargo build --release --features="cpu,avx512"
-
-# ARM64 with NEON
-RUSTFLAGS="-C target-cpu=native" cargo build --release --features="cpu,neon"
+cargo build --release --no-default-features --features cpu
 ```
+
+**Production GPU deployment:**
+```bash
+cargo build --release --no-default-features --features "cpu,cuda"
+```
+
+**Development with validation:**
+```bash
+cargo build --features "cpu,cuda,ffi,crossval"
+```
+
+**Maximum performance:**
+```bash
+cargo build --release --features "cpu,cuda,avx512"
+```
+
+## Workspace Crate Features
+
+### bitnet-kernels
+- `cpu`: CPU kernel implementations
+- `cuda`: CUDA GPU kernels
+- `ffi`: FFI bridge to C++ kernels
+- `ffi-bridge`: Build-time FFI compilation
+
+### bitnet-inference
+- `cpu`: CPU inference engine
+- `cuda`: GPU inference engine
+- `async`: Async/await support (always enabled)
+
+### bitnet-cli
+- Inherits features from dependencies
+- No crate-specific features
+
+### bitnet-server
+- `cpu`: CPU inference endpoints
+- `cuda`: GPU inference endpoints
+
+## Feature Resolution
+
+The workspace uses Cargo's resolver version 2 to prevent feature unification across dependencies:
+
+```toml
+[workspace]
+resolver = "2"
+```
+
+This ensures:
+- Dev-dependencies don't affect production builds
+- Features are resolved per-package
+- No unexpected feature activation
 
 ## Troubleshooting
 
-### CUDA Not Found
+### Issue: Build fails with undefined references
+**Cause:** FFI enabled without C++ library  
+**Solution:** Either disable FFI or build the C++ library:
+```bash
+# Option 1: Disable FFI
+cargo build --no-default-features --features cpu
 
-If you get CUDA-related errors with the `gpu` feature:
+# Option 2: Build C++ library
+cargo xtask fetch-cpp
+cargo build --features "cpu,ffi"
+```
 
-1. Ensure CUDA Toolkit is installed
-2. Check that `nvcc` is in your PATH
-3. Verify your GPU is CUDA-compatible
-4. Consider using CPU-only features as fallback
+### Issue: CUDA features not working
+**Cause:** CUDA toolkit not installed or not in PATH  
+**Solution:** Install CUDA toolkit and set environment:
+```bash
+export PATH=/usr/local/cuda/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+```
 
-### SIMD Instructions Not Available
+### Issue: Features seem to be ignored
+**Cause:** Default features interfering  
+**Solution:** Always use `--no-default-features`:
+```bash
+cargo build --no-default-features --features cpu
+```
 
-If SIMD optimizations don't work:
+### Issue: Unexpected dependencies pulled in
+**Cause:** Feature unification in workspace  
+**Solution:** Ensure `resolver = "2"` in workspace Cargo.toml
 
-1. Check your processor capabilities: `cat /proc/cpuinfo` (Linux) or `sysctl -n machdep.cpu.features` (macOS)
-2. The library will automatically fall back to non-SIMD implementations
-3. Use `minimal` feature for basic functionality
+## Platform Support Matrix
 
-### Compilation Errors
+| Platform | CPU | CUDA | AVX2 | AVX512 | NEON | FFI |
+|----------|-----|------|------|--------|------|-----|
+| Linux x86_64 | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| Linux ARM64 | ✅ | ✅* | ❌ | ❌ | ✅ | ✅ |
+| macOS x86_64 | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ |
+| macOS ARM64 | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Windows x86_64 | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ |
 
-If you encounter compilation errors:
-
-1. Ensure you're using Rust 1.70.0 or later
-2. Try building with fewer features enabled
-3. Check that all required system dependencies are installed
-4. Use `cargo clean` to clear build cache
+✅ Supported  
+❌ Not supported  
+⚠️ Experimental  
+\* CUDA on ARM64 requires NVIDIA Jetson or similar
 
 ## Performance Impact
 
-| Feature | Binary Size Impact | Compilation Time | Runtime Performance |
-|---------|-------------------|------------------|-------------------|
-| `minimal` | Smallest | Fastest | Basic |
-| `cpu` | Medium | Medium | Good |
-| `cpu,avx2` | Medium+ | Medium+ | Better |
-| `cpu,avx512` | Medium+ | Medium+ | Best (x86_64) |
-| `cpu,neon` | Medium+ | Medium+ | Best (ARM64) |
-| `gpu` | Large | Slow | Excellent |
-| `full` | Largest | Slowest | Maximum |
+Enabling features affects performance and binary size:
 
-Choose features based on your specific requirements for binary size, compilation time, and runtime performance.
+| Feature | Performance Impact | Binary Size Impact |
+|---------|-------------------|-------------------|
+| `cpu` | Baseline | +2 MB |
+| `cuda` | 2-10x faster | +8 MB |
+| `avx2` | 1.5-2x faster | +0.5 MB |
+| `avx512` | 2-3x faster | +1 MB |
+| `neon` | 1.5-2x faster | +0.5 MB |
+| `ffi` | No impact | +4 MB |
+
+## Best Practices
+
+1. **Production builds:** Use minimal features needed
+2. **Development:** Use `full` for comprehensive testing
+3. **CI/CD:** Test with multiple feature combinations
+4. **Benchmarking:** Compare with and without SIMD features
+5. **Deployment:** Document required features in README
+
+## Future Features
+
+Planned features for future releases:
+
+- `rocm`: AMD GPU support via ROCm
+- `metal`: Apple Metal GPU support
+- `vulkan`: Cross-platform GPU via Vulkan
+- `wgpu`: WebGPU support for browsers
+- `onnx`: ONNX model format support
+- `tflite`: TensorFlow Lite support
+
+## Contributing
+
+When adding new features:
+
+1. Update this document
+2. Add feature to relevant Cargo.toml files
+3. Gate code with `#[cfg(feature = "name")]`
+4. Add tests for feature-gated code
+5. Update CI to test new feature

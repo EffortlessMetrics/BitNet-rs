@@ -6,26 +6,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Core Development Commands
 ```bash
-# Build the project with default features (CPU only)
-cargo build --release
+# Build the project with CPU support (no default features)
+cargo build --release --no-default-features --features cpu
 
-# Build with GPU support
-cargo build --release --features gpu
+# Build with GPU/CUDA support
+cargo build --release --no-default-features --features cuda
+
+# Build with both CPU and GPU
+cargo build --release --no-default-features --features "cpu,cuda"
 
 # Build with all optimizations
 cargo build --release --features full
 
 # Run all tests (fast, Rust-only)
-cargo test --workspace --features cpu
+cargo test --workspace --no-default-features --features cpu
+
+# Run GPU tests
+cargo test -p bitnet-kernels --no-default-features --features cuda
 
 # Run tests for specific crate
-cargo test -p bitnet-kernels --features cpu
+cargo test -p bitnet-kernels --no-default-features --features cpu
 
 # Run benchmarks
-cargo bench --workspace --features cpu
+cargo bench --workspace --no-default-features --features cpu
 
-# Cross-validation testing (requires C++ dependencies)
-cargo test --workspace --features crossval
+# Cross-validation testing (requires C++ dependencies and FFI)
+cargo test --workspace --features "cpu,ffi,crossval"
+
+# Test CUDA functionality
+cargo run -p bitnet-kernels --example cuda_smoke --no-default-features --features cuda
 ```
 
 ### Code Quality Commands
@@ -185,6 +194,23 @@ BitNet.rs is organized as a Rust workspace with 12 specialized crates, each serv
 ## Important Considerations
 
 - **MSRV**: Minimum Supported Rust Version is 1.70.0
-- **Feature Flags**: Default features include only CPU support. GPU and cross-validation features must be explicitly enabled.
+- **Feature Flags**: Default features are **empty** to prevent unwanted dependencies. You must explicitly enable features:
+  - `cpu`: CPU inference with SIMD optimizations
+  - `cuda`: NVIDIA GPU support
+  - `ffi`: C++ FFI bridge (required for cross-validation)
+  - `crossval`: Cross-validation against C++ implementation (requires `ffi`)
 - **Cross-Validation**: The `crossval` feature downloads and builds the C++ implementation, significantly increasing build time. It's disabled by default.
 - **Binary Distribution**: Release builds use LTO, single codegen unit, and strip symbols for minimal binary size.
+- **CUDA Requirements**: CUDA toolkit 11.0+ and appropriate GPU drivers. Set `LD_LIBRARY_PATH` to include CUDA libraries.
+
+## Troubleshooting Guide
+
+### Common Build Issues
+
+1. **FFI Linker Errors**: If you see `undefined reference to bitnet_cpp_*`, either disable FFI (`--no-default-features --features cpu`) or build the C++ library (`cargo xtask fetch-cpp`).
+
+2. **CUDA Compilation Errors**: Ensure CUDA toolkit is installed and `nvcc` is in PATH. The kernel code uses `signed char`/`unsigned char` instead of `int8_t`/`uint8_t` for compatibility.
+
+3. **Empty Default Features**: This is intentional to prevent accidental dependencies. Always specify features explicitly.
+
+4. **Feature Name Changes**: Use `cuda` instead of `gpu` for GPU support.
