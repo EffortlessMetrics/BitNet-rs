@@ -32,7 +32,7 @@ RUST_LOG=debug bitnet-cli inference --model model.gguf --prompt "Hello"
 Monitor memory usage:
 
 ```bash
-bitnet-cli benchmark --model model.gguf --monitor-memory
+bitnet-cli benchmark --model model.gguf --memory-profile
 ```
 
 ### Getting Help

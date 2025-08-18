@@ -16,33 +16,33 @@ pub struct BitNetModel {
 impl BitNetModel {
     /// Load a model from a file path
     pub async fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, BitNetError>;
-    
+
     /// Load a model from HuggingFace Hub
     pub async fn from_pretrained(model_id: &str) -> Result<Self, BitNetError>;
-    
+
     /// Load a model with custom configuration
     pub async fn from_pretrained_with_config(
         model_id: &str,
         config: &ModelConfig,
     ) -> Result<Self, BitNetError>;
-    
+
     /// Generate text from a prompt
     pub async fn generate(
         &self,
         prompt: &str,
         config: &GenerationConfig,
     ) -> Result<String, BitNetError>;
-    
+
     /// Generate streaming text
     pub fn generate_stream(
         &self,
         prompt: &str,
         config: &GenerationConfig,
     ) -> impl Stream<Item = Result<String, BitNetError>>;
-    
+
     /// Get model information
     pub fn model_info(&self) -> &ModelInfo;
-    
+
     /// Get model configuration
     pub fn config(&self) -> &ModelConfig;
 }
@@ -57,28 +57,28 @@ Configuration for model loading and behavior.
 pub struct ModelConfig {
     /// Device to run the model on
     pub device: Device,
-    
+
     /// Data type for model weights
     pub dtype: DType,
-    
+
     /// Maximum sequence length
     pub max_seq_len: usize,
-    
+
     /// Vocabulary size
     pub vocab_size: usize,
-    
+
     /// Number of attention heads
     pub num_heads: usize,
-    
+
     /// Hidden dimension size
     pub hidden_size: usize,
-    
+
     /// Number of layers
     pub num_layers: usize,
-    
+
     /// Quantization configuration
     pub quantization: QuantizationConfig,
-    
+
     /// KV cache configuration
     pub kv_cache: KVCacheConfig,
 }
@@ -107,48 +107,54 @@ Configuration for text generation.
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerationConfig {
-    /// Maximum number of new tokens to generate
+    /// Maximum number of new tokens to generate.
     pub max_new_tokens: u32,
-    
-    /// Sampling temperature (0.0 = deterministic)
+    /// Sampling temperature (0.0 = deterministic, higher = more random).
     pub temperature: f32,
-    
-    /// Top-p (nucleus) sampling threshold
-    pub top_p: f32,
-    
-    /// Top-k sampling limit
+    /// Top-k sampling limit (0 = disabled).
     pub top_k: u32,
-    
-    /// Repetition penalty
+    /// Top-p (nucleus) sampling threshold (1.0 = disabled).
+    pub top_p: f32,
+    /// Repetition penalty (1.0 = no penalty, higher = less repetition).
     pub repetition_penalty: f32,
-    
-    /// Stop sequences
+    /// Stop sequences to end generation.
     pub stop_sequences: Vec<String>,
-    
-    /// Random seed for reproducible generation
+    /// Random seed for reproducible generation.
     pub seed: Option<u64>,
-    
-    /// Whether to skip special tokens in output
+    /// Whether to skip special tokens in output.
     pub skip_special_tokens: bool,
-    
-    /// Whether to stream output
-    pub stream: bool,
 }
 
-impl Default for GenerationConfig {
-    fn default() -> Self {
-        Self {
-            max_new_tokens: 100,
-            temperature: 0.7,
-            top_p: 0.9,
-            top_k: 50,
-            repetition_penalty: 1.0,
-            stop_sequences: vec![],
-            seed: None,
-            skip_special_tokens: true,
-            stream: false,
-        }
-    }
+impl GenerationConfig {
+    /// Creates a greedy generation configuration (deterministic).
+    pub fn greedy() -> Self;
+
+    /// Creates a creative generation configuration (high randomness).
+    pub fn creative() -> Self;
+
+    /// Creates a balanced generation configuration.
+    pub fn balanced() -> Self;
+
+    /// Validates the configuration parameters.
+    pub fn validate(&self) -> Result<(), String>;
+
+    /// Sets the random seed for reproducible generation.
+    pub fn with_seed(mut self, seed: u64) -> Self;
+
+    /// Adds a stop sequence.
+    pub fn with_stop_sequence(mut self, stop_seq: String) -> Self;
+
+    /// Sets the maximum number of new tokens to generate.
+    pub fn with_max_tokens(mut self, max_tokens: u32) -> Self;
+
+    /// Sets the sampling temperature.
+    pub fn with_temperature(mut self, temperature: f32) -> Self;
+
+    /// Sets the top-k sampling limit.
+    pub fn with_top_k(mut self, top_k: u32) -> Self;
+
+    /// Sets the top-p (nucleus) sampling threshold.
+    pub fn with_top_p(mut self, top_p: f32) -> Self;
 }
 ```
 
@@ -174,13 +180,13 @@ pub enum Device {
 impl Device {
     /// Get available devices
     pub fn available_devices() -> Vec<Device>;
-    
+
     /// Check if device is available
     pub fn is_available(&self) -> bool;
-    
+
     /// Get device memory info
     pub fn memory_info(&self) -> Result<DeviceMemoryInfo, BitNetError>;
-    
+
     /// Get device capabilities
     pub fn capabilities(&self) -> DeviceCapabilities;
 }
@@ -249,13 +255,13 @@ Configuration for model quantization.
 pub struct QuantizationConfig {
     /// Quantization type
     pub qtype: QuantizationType,
-    
+
     /// Block size for quantization
     pub block_size: usize,
-    
+
     /// Whether to use dynamic quantization
     pub dynamic: bool,
-    
+
     /// Calibration dataset size
     pub calibration_size: Option<usize>,
 }
@@ -289,6 +295,76 @@ impl Default for QuantizationConfig {
 ```
 
 ## Models
+
+### ModelLoader
+
+The `ModelLoader` is responsible for loading models from disk. It automatically detects the model format and uses the appropriate loader.
+
+```rust
+pub struct ModelLoader {
+    // ... private fields
+}
+
+impl ModelLoader {
+    /// Creates a new model loader for the given device.
+    pub fn new(device: Device) -> Self;
+
+    /// Loads a model from the given path with default configuration.
+    pub fn load<P: AsRef<Path>>(&self, path: P) -> Result<Box<dyn Model>>;
+
+    /// Loads a model from the given path with a custom configuration.
+    pub fn load_with_config<P: AsRef<Path>>(
+        &self,
+        path: P,
+        config: &LoadConfig,
+    ) -> Result<Box<dyn Model>>;
+
+    /// Returns a list of available format loaders.
+    pub fn available_formats(&self) -> Vec<&str>;
+
+    /// Extracts the metadata from a model file without loading the full model.
+    pub fn extract_metadata<P: AsRef<Path>>(&self, path: P) -> Result<ModelMetadata>;
+}
+```
+
+### LoadConfig
+
+Configuration for the model loader.
+
+```rust
+#[derive(Clone)]
+pub struct LoadConfig {
+    /// Whether to use memory-mapped files for loading.
+    pub use_mmap: bool,
+    /// Whether to validate the checksums of the model files.
+    pub validate_checksums: bool,
+    /// An optional progress callback for monitoring the loading process.
+    pub progress_callback: Option<ProgressCallback>,
+}
+```
+
+### FormatLoader Trait
+
+The `FormatLoader` trait defines the interface for format-specific model loaders.
+
+```rust
+pub trait FormatLoader: Send + Sync {
+    /// Returns the name of the format.
+    fn name(&self) -> &'static str;
+
+    /// Returns `true` if the loader can load the given file.
+    fn can_load(&self, path: &Path) -> bool;
+
+    /// Detects whether the given file is in the correct format.
+    fn detect_format(&self, path: &Path) -> Result<bool>;
+
+    /// Extracts the metadata from a model file.
+    fn extract_metadata(&self, path: &Path) -> Result<ModelMetadata>;
+
+    /// Loads a model from the given file.
+    fn load(&self, path: &Path, device: &Device, config: &LoadConfig) -> Result<Box<dyn Model>>;
+}
+```
 
 ### Model Trait
 
@@ -406,27 +482,166 @@ pub struct InferenceStats {
 }
 ```
 
+### KVCacheConfig
+
+Configuration for the KV cache.
+
+```rust
+#[derive(Debug, Clone)]
+pub struct KVCacheConfig {
+    /// Maximum cache size in bytes.
+    pub max_size_bytes: usize,
+    /// Maximum sequence length to cache.
+    pub max_sequence_length: usize,
+    /// Enable cache compression for older entries.
+    pub enable_compression: bool,
+    /// Eviction policy when cache is full.
+    pub eviction_policy: EvictionPolicy,
+    /// Block size for memory allocation.
+    pub block_size: usize,
+}
+```
+
+### KVCache
+
+The `KVCache` is a key-value cache used to store intermediate results of the attention mechanism.
+
+```rust
+pub struct KVCache {
+    // ... private fields
+}
+
+impl KVCache {
+    /// Creates a new KV cache with the given configuration.
+    pub fn new(config: CacheConfig) -> Result<Self>;
+
+    /// Stores a key-value pair in the cache.
+    pub fn store(
+        &mut self,
+        layer: usize,
+        position: usize,
+        key: Vec<f32>,
+        value: Vec<f32>,
+    ) -> Result<()>;
+
+    /// Retrieves a key-value pair from the cache.
+    pub fn get(&mut self, layer: usize, position: usize) -> Option<(&Vec<f32>, &Vec<f32>)>;
+
+    /// Returns `true` if the cache contains an entry for the given layer and position.
+    pub fn contains(&self, layer: usize, position: usize) -> bool;
+
+    /// Clears all entries from the cache.
+    pub fn clear(&mut self);
+
+    /// Clears all entries for a specific layer from the cache.
+    pub fn clear_layer(&mut self, layer: usize);
+
+    /// Returns statistics about the cache.
+    pub fn stats(&self) -> CacheStats;
+
+    /// Returns the current size of the cache in bytes.
+    pub fn size(&self) -> usize;
+
+    /// Returns the usage of the cache as a percentage.
+    pub fn usage_percent(&self) -> f64;
+}
+```
+
+### CacheConfig
+
+Configuration for the KV cache.
+
+```rust
+#[derive(Debug, Clone)]
+pub struct CacheConfig {
+    /// Maximum cache size in bytes.
+    pub max_size_bytes: usize,
+    /// Maximum sequence length to cache.
+    pub max_sequence_length: usize,
+    /// Enable cache compression for older entries.
+    pub enable_compression: bool,
+    /// Eviction policy when cache is full.
+    pub eviction_policy: EvictionPolicy,
+    /// Block size for memory allocation.
+    pub block_size: usize,
+}
+```
+
+### EvictionPolicy
+
+Cache eviction policies.
+
+```rust
+#[derive(Debug, Clone, Copy)]
+pub enum EvictionPolicy {
+    /// Least Recently Used
+    LRU,
+    /// First In, First Out
+    FIFO,
+    /// Least Frequently Used
+    LFU,
+}
+```
+
+### CacheStats
+
+Statistics about the KV cache.
+
+```rust
+#[derive(Debug, Clone)]
+pub struct CacheStats {
+    pub total_entries: usize,
+    pub compressed_entries: usize,
+    pub current_size_bytes: usize,
+    pub max_size_bytes: usize,
+    pub hit_rate: f64,
+    pub memory_efficiency: f64,
+}
+```
+
 ### InferenceConfig
 
 Configuration for the inference engine.
 
 ```rust
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InferenceConfig {
-    /// Maximum batch size
-    pub max_batch_size: usize,
-    
-    /// KV cache size
-    pub kv_cache_size: usize,
-    
-    /// Maximum concurrent requests
-    pub max_concurrent_requests: usize,
-    
-    /// Request timeout
-    pub request_timeout: Duration,
-    
-    /// Whether to use mixed precision
-    pub use_mixed_precision: bool,
+    /// Maximum context length to maintain.
+    pub max_context_length: usize,
+    /// Number of threads for CPU inference.
+    pub num_threads: usize,
+    /// Batch size for processing.
+    pub batch_size: usize,
+    /// Enable mixed precision inference.
+    pub mixed_precision: bool,
+    /// Memory pool size in bytes.
+    pub memory_pool_size: usize,
+}
+
+impl InferenceConfig {
+    /// Creates a configuration optimized for CPU inference.
+    pub fn cpu_optimized() -> Self;
+
+    /// Creates a configuration optimized for GPU inference.
+    pub fn gpu_optimized() -> Self;
+
+    /// Creates a configuration for memory-constrained environments.
+    pub fn memory_efficient() -> Self;
+
+    /// Validates the configuration parameters.
+    pub fn validate(&self) -> Result<(), String>;
+
+    /// Sets the number of threads for CPU inference.
+    pub fn with_threads(mut self, threads: usize) -> Self;
+
+    /// Sets the batch size for processing.
+    pub fn with_batch_size(mut self, batch_size: usize) -> Self;
+
+    /// Enables or disables mixed precision inference.
+    pub fn with_mixed_precision(mut self, enabled: bool) -> Self;
+
+    /// Sets the memory pool size in bytes.
+    pub fn with_memory_pool_size(mut self, size: usize) -> Self;
 }
 ```
 
@@ -466,28 +681,28 @@ Main error type for BitNet operations.
 pub enum BitNetError {
     #[error("Model error: {0}")]
     Model(#[from] ModelError),
-    
+
     #[error("Tokenization error: {0}")]
     Tokenization(#[from] TokenizerError),
-    
+
     #[error("Device error: {0}")]
     Device(String),
-    
+
     #[error("Quantization error: {0}")]
     Quantization(String),
-    
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("Configuration error: {0}")]
     Config(String),
-    
+
     #[error("Memory error: {0}")]
     Memory(String),
-    
+
     #[error("Timeout error: operation timed out after {0:?}")]
     Timeout(Duration),
-    
+
     #[error("Capacity error: {0}")]
     Capacity(String),
 }
@@ -506,19 +721,19 @@ Information about a loaded model.
 pub struct ModelInfo {
     /// Model name
     pub name: String,
-    
+
     /// Model architecture
     pub architecture: String,
-    
+
     /// Parameter count
     pub num_parameters: u64,
-    
+
     /// Model size in bytes
     pub model_size: u64,
-    
+
     /// Quantization info
     pub quantization: QuantizationInfo,
-    
+
     /// Supported features
     pub features: Vec<String>,
 }
@@ -538,16 +753,16 @@ pub struct QuantizationInfo {
 pub struct PerformanceMetrics {
     /// Tokens generated per second
     pub tokens_per_second: f64,
-    
+
     /// Time to first token (ms)
     pub time_to_first_token: f64,
-    
+
     /// Average latency per token (ms)
     pub avg_latency_per_token: f64,
-    
+
     /// Memory usage (bytes)
     pub memory_usage: usize,
-    
+
     /// GPU utilization (0.0-1.0)
     pub gpu_utilization: Option<f32>,
 }
@@ -555,7 +770,7 @@ pub struct PerformanceMetrics {
 impl BitNetModel {
     /// Get performance metrics for the last generation
     pub fn last_metrics(&self) -> Option<PerformanceMetrics>;
-    
+
     /// Reset performance metrics
     pub fn reset_metrics(&self);
 }
@@ -589,16 +804,16 @@ use bitnet::{BitNetModel, GenerationConfig};
 #[tokio::main]
 async fn main() -> bitnet::Result<()> {
     let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
-    
+
     let config = GenerationConfig {
         max_new_tokens: 50,
         temperature: 0.8,
         ..Default::default()
     };
-    
+
     let output = model.generate("The future of AI is", &config).await?;
     println!("Generated: {}", output);
-    
+
     Ok(())
 }
 ```
@@ -613,16 +828,16 @@ use futures_util::StreamExt;
 async fn main() -> bitnet::Result<()> {
     let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
     let config = GenerationConfig::default();
-    
+
     let mut stream = model.generate_stream("Tell me about Rust:", &config);
-    
+
     while let Some(result) = stream.next().await {
         match result {
             Ok(token) => print!("{}", token),
             Err(e) => eprintln!("Error: {}", e),
         }
     }
-    
+
     Ok(())
 }
 ```
@@ -638,16 +853,16 @@ async fn main() -> bitnet::Result<()> {
         device: Device::Cuda(0), // Use first GPU
         ..Default::default()
     };
-    
+
     let model = BitNetModel::from_pretrained_with_config(
         "microsoft/bitnet-b1_58-large",
         &config,
     ).await?;
-    
+
     // Model will run on GPU 0
     let output = model.generate("Hello", &Default::default()).await?;
     println!("{}", output);
-    
+
     Ok(())
 }
 ```

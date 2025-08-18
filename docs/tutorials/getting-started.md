@@ -45,19 +45,14 @@ cargo build --release --no-default-features --features "cli"
 
 ### Using the CLI
 
-1. **Download a model**:
-```bash
-bitnet-cli model download microsoft/bitnet-b1_58-large
-```
-
-2. **Run inference**:
+1. **Run inference**:
 ```bash
 bitnet-cli inference --model microsoft/bitnet-b1_58-large --prompt "Hello, world!"
 ```
 
-3. **Stream generation**:
+2. **Interactive mode**:
 ```bash
-bitnet-cli inference --model microsoft/bitnet-b1_58-large --prompt "Tell me a story" --stream
+bitnet-cli inference --model microsoft/bitnet-b1_58-large --interactive
 ```
 
 ### Using the Rust API
@@ -155,9 +150,16 @@ default_model = "microsoft/bitnet-b1_58-large"
 cache_dir = "~/.cache/bitnet"
 
 [inference]
-device = "auto"  # "cpu", "cuda", or "auto"
-max_batch_size = 8
-kv_cache_size = 2048
+# Maximum context length to maintain
+max_context_length = 2048
+# Number of threads for CPU inference
+num_threads = 8
+# Batch size for processing
+batch_size = 1
+# Enable mixed precision inference
+mixed_precision = false
+# Memory pool size in bytes
+memory_pool_size = 536870912 # 512MB
 
 [generation]
 max_new_tokens = 512
