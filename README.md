@@ -158,12 +158,29 @@ curl -X POST http://localhost:8080/v1/completions \
 
 BitNet.rs uses feature flags to enable optional functionality:
 
-- `cpu` (default): CPU inference with optimized kernels
-- `gpu`: GPU acceleration via CUDA
+- `cpu`: CPU inference with optimized kernels (not enabled by default)
+- `cuda`: GPU acceleration via CUDA
 - `avx2`: x86_64 AVX2 SIMD optimizations
 - `avx512`: x86_64 AVX-512 SIMD optimizations
 - `neon`: ARM64 NEON SIMD optimizations
+- `ffi`: Enable C++ FFI bridge for cross-validation
 - `full`: Enable all features
+
+**Important:** Default features are empty to prevent unintended dependencies. You must explicitly enable features:
+
+```bash
+# CPU-only build
+cargo build --no-default-features --features cpu
+
+# GPU-enabled build
+cargo build --no-default-features --features cuda
+
+# Both CPU and GPU
+cargo build --no-default-features --features "cpu,cuda"
+
+# Full feature set
+cargo build --features full
+```
 
 See [FEATURES.md](FEATURES.md) for detailed feature documentation.
 
@@ -274,26 +291,74 @@ console.log(response);
 ### Building
 
 ```bash
-# Build with default features (CPU only)
-cargo build --release
+# Build with CPU support
+cargo build --release --no-default-features --features cpu
 
 # Build with GPU support
-cargo build --release --features gpu
+cargo build --release --no-default-features --features cuda
+
+# Build with both CPU and GPU
+cargo build --release --no-default-features --features "cpu,cuda"
 
 # Build with all optimizations
 cargo build --release --features full
 
 # Run tests (Rust-only, fast)
-cargo test --workspace
+cargo test --workspace --no-default-features --features cpu
+
+# Run GPU tests
+cargo test --workspace --no-default-features --features cuda
 
 # Run benchmarks
-cargo bench --workspace
+cargo bench --workspace --no-default-features --features cpu
 
 # Cross-validation testing (requires C++ dependencies)
-cargo test --workspace --features crossval
+cargo test --workspace --features "cpu,ffi,crossval"
 
 # Developer convenience tools
 cargo xtask --help
+```
+
+### Troubleshooting
+
+#### Common Issues and Solutions
+
+**1. Undefined reference errors during build**
+```
+undefined reference to `bitnet_cpp_init`
+```
+**Solution:** You have FFI enabled but the C++ library isn't built. Either:
+- Disable FFI: `cargo build --no-default-features --features cpu`
+- Or build the C++ library: `cargo xtask fetch-cpp && cargo build --features ffi`
+
+**2. CUDA compilation errors**
+```
+identifier "int8_t" is undefined
+```
+**Solution:** This was fixed in the latest version. Pull the latest changes or use `signed char`/`unsigned char` in CUDA kernels.
+
+**3. Feature resolution issues**
+```
+the package 'bitnet-kernels' does not contain this feature: gpu
+```
+**Solution:** Use `cuda` instead of `gpu`: `cargo build --features cuda`
+
+**4. No default features warning**
+```
+warning: bitnet-kernels has empty default features
+```
+**Solution:** This is intentional. Always specify features explicitly:
+```bash
+cargo build --no-default-features --features cpu
+```
+
+**5. CUDA runtime not found**
+```
+error while loading shared libraries: libcuda.so.1
+```
+**Solution:** Set your library path:
+```bash
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 ```
 
 ### Test Framework Quick Reference
