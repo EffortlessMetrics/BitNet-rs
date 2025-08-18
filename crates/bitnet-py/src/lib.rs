@@ -57,7 +57,7 @@ fn bitnet_py(py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_cuda_device_count, m)?)?;
 
     // Add quantization types
-    let quantization_types = PyDict::new(py);
+    let quantization_types = PyDict::new_bound(py);
     quantization_types.set_item("I2S", "i2s")?;
     quantization_types.set_item("TL1", "tl1")?;
     quantization_types.set_item("TL2", "tl2")?;
@@ -153,16 +153,16 @@ fn list_available_models(path: &str) -> PyResult<Vec<String>> {
 /// Get device information
 #[pyfunction]
 fn get_device_info(py: Python<'_>) -> PyResult<PyObject> {
-    let info = PyDict::new(py);
+    let info = PyDict::new_bound(py);
 
     // CPU information
-    let cpu_info = PyDict::new(py);
+    let cpu_info = PyDict::new_bound(py);
     cpu_info.set_item("cores", num_cpus::get())?;
     cpu_info.set_item("available", true)?;
     info.set_item("cpu", cpu_info)?;
 
     // GPU information
-    let gpu_info = PyDict::new(py);
+    let gpu_info = PyDict::new_bound(py);
     gpu_info.set_item("cuda_available", is_cuda_available())?;
     gpu_info.set_item("metal_available", is_metal_available())?;
     gpu_info.set_item("cuda_devices", get_cuda_device_count())?;
