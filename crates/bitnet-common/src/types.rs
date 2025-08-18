@@ -56,7 +56,7 @@ impl From<&candle_core::Device> for Device {
         match d {
             candle_core::Device::Cpu => Device::Cpu,
             #[cfg(feature = "cuda")]
-            candle_core::Device::Cuda(candle_core::CudaDevice { ordinal, .. }) => Device::Cuda(*ordinal),
+            candle_core::Device::Cuda(_) => Device::Cuda(0), // Default to device 0
             #[cfg(feature = "metal")]
             candle_core::Device::Metal(_) => Device::Metal,
             _ => Device::Cpu,

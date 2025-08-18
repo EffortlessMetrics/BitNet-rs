@@ -28,6 +28,7 @@ serde_json.workspace = true
 
 [features]
 default = []
-gpu = ["candle-core/cuda"]
-cuda = []   # passthrough for downstream crates
-metal = []  # passthrough for downstream crates
+# Enable GPU backends explicitly; keep them independent so callers can choose.
+gpu = []
+cuda = ["candle-core/cuda"]
+metal = ["candle-core/metal"]
