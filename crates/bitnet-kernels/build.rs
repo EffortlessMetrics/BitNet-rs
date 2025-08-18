@@ -104,5 +104,4 @@ fn generate_bindings(include_dir: &std::path::Path) {
 #[cfg(not(feature = "ffi-bridge"))]
 fn main() {
     // Do nothing when FFI bridge is not enabled
-    println!("cargo:warning=FFI bridge disabled, skipping C++ compilation");
 }

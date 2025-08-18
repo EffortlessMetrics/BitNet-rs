@@ -322,7 +322,7 @@ mod cpu_kernel_tests {
 #[cfg(feature = "cuda")]
 mod gpu_kernel_tests {
     use super::*;
-    use bitnet_kernels::gpu::*;
+    use bitnet_kernels::gpu::CudaKernel;
 
     #[test]
     fn test_cuda_kernel_availability() {
