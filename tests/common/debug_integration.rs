@@ -425,6 +425,7 @@ pub async fn setup_debug_test_environment(
 mod tests {
     use super::*;
     use std::time::Duration;
+    use crate::{TestError, BYTES_PER_MB, BYTES_PER_KB};
 
     struct MockTestCase {
         name: String,

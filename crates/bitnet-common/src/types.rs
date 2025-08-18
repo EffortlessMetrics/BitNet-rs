@@ -51,16 +51,51 @@ impl Default for Device {
     }
 }
 
+// Conservative conversion from Candle device - avoids assuming CUDA ordinal
 impl From<&candle_core::Device> for Device {
     fn from(d: &candle_core::Device) -> Self {
         match d {
             candle_core::Device::Cpu => Device::Cpu,
             #[cfg(feature = "cuda")]
-            candle_core::Device::Cuda(_) => Device::Cuda(0), // Default to device 0
+            candle_core::Device::Cuda(_) => Device::Cuda(usize::MAX), // unknown ordinal
             #[cfg(feature = "metal")]
             candle_core::Device::Metal(_) => Device::Metal,
+            #[allow(unreachable_patterns)]
             _ => Device::Cpu,
         }
+    }
+}
+
+impl Device {
+    /// Convert our device preference to Candle's device.
+    #[cfg(feature = "cuda")]
+    pub fn to_candle(&self) -> anyhow::Result<candle_core::Device> {
+        Ok(match *self {
+            Device::Cpu => candle_core::Device::Cpu,
+            Device::Cuda(i) if i != usize::MAX => candle_core::Device::new_cuda(i)?,
+            Device::Cuda(_) => candle_core::Device::Cpu, // fallback for unknown
+            #[cfg(all(feature = "metal", target_os = "macos"))]
+            Device::Metal => {
+                use candle_core::backend::BackendDevice;
+                candle_core::Device::Metal(candle_core::MetalDevice::new()?)
+            }
+            #[cfg(any(not(feature = "metal"), not(target_os = "macos")))]
+            Device::Metal => candle_core::Device::Cpu,
+        })
+    }
+
+    #[cfg(not(feature = "cuda"))]
+    pub fn to_candle(&self) -> anyhow::Result<candle_core::Device> {
+        Ok(match *self {
+            Device::Cpu => candle_core::Device::Cpu,
+            #[cfg(all(feature = "metal", target_os = "macos"))]
+            Device::Metal => {
+                use candle_core::backend::BackendDevice;
+                candle_core::Device::Metal(candle_core::MetalDevice::new()?)
+            }
+            #[cfg(any(not(feature = "metal"), not(target_os = "macos")))]
+            _ => candle_core::Device::Cpu,
+        })
     }
 }
 

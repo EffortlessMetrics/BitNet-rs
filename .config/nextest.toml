@@ -1,0 +1,10 @@
+[profile.default]
+retries = 0
+fail-fast = true
+
+[profile.default-miri]
+slow-timeout = "10m"
+
+[profile.ci]
+retries = 0
+fail-fast = false

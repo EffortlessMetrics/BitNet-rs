@@ -36,7 +36,7 @@ impl PyBitNetModel {
     /// Create a new BitNet model from file
     #[new]
     #[pyo3(signature = (path, device = "cpu", **kwargs))]
-    fn new_py(py: Python<'_>, path: &str, device: &str, kwargs: Option<&PyDict>) -> PyResult<Self> {
+    fn new_py(py: Python<'_>, path: &str, device: &str, kwargs: Option<&pyo3::Bound<'_, PyDict>>) -> PyResult<Self> {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
@@ -184,7 +184,7 @@ impl PyModelLoader {
 
     /// Load a model from file
     #[pyo3(signature = (path, **kwargs))]
-    fn load(&self, py: Python<'_>, path: &str, kwargs: Option<&PyDict>) -> PyResult<PyBitNetModel> {
+    fn load(&self, py: Python<'_>, path: &str, kwargs: Option<&pyo3::Bound<'_, PyDict>>) -> PyResult<PyBitNetModel> {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;

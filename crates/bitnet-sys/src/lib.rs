@@ -45,8 +45,8 @@ pub mod safe {
     //! This module provides safer abstractions over the raw C++ bindings
     //! with proper error handling and memory management.
 
-    use std::ffi::{CStr, CString};
-    use std::os::raw::{c_char, c_int, c_void};
+    use std::ffi::CString;
+    use std::os::raw::{c_int, c_void};
     use std::ptr;
 
     /// Error types for FFI operations
@@ -136,7 +136,7 @@ pub mod safe {
 
     /// Load a model from file
     pub fn load_model(path: &str) -> Result<ModelHandle> {
-        let c_path = CString::new(path)?;
+        let _c_path = CString::new(path)?;
 
         // Placeholder implementation
         // In real code, this would call bitnet_cpp_load_model(c_path.as_ptr())
@@ -146,15 +146,15 @@ pub mod safe {
     }
 
     /// Generate tokens using a loaded model
-    pub fn generate(model: &ModelHandle, prompt: &str, max_tokens: usize) -> Result<Vec<u32>> {
-        let c_prompt = CString::new(prompt)?;
+    pub fn generate(_model: &ModelHandle, prompt: &str, max_tokens: usize) -> Result<Vec<u32>> {
+        let _c_prompt = CString::new(prompt)?;
 
         if max_tokens == 0 {
             return Err(SysError::InvalidParameter("max_tokens must be > 0".to_string()));
         }
 
         let mut tokens = vec![0u32; max_tokens];
-        let mut actual_count: c_int = 0;
+        let actual_count: c_int = 0;
 
         // Placeholder implementation
         // In real code, this would call:

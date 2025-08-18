@@ -28,7 +28,15 @@ serde_json.workspace = true
 
 [features]
 default = []
-# Enable GPU backends explicitly; keep them independent so callers can choose.
 gpu = []
 cuda = ["candle-core/cuda"]
-metal = ["candle-core/metal"]
+# Do NOT enable Candle's Metal feature on non-Apple hosts.
+# We keep a local "metal" feature for code cfgs, but wire Candle's "metal"
+# only on macOS via a target-specific dependency (see below).
+metal = []
+
+[target.'cfg(target_os = "macos")'.dependencies.candle-core]
+# This augments the base candle-core dependency by adding the "metal" feature
+# ONLY on macOS, so Linux builds won't try to compile objc/Metal frameworks.
+workspace = true
+features = ["metal"]

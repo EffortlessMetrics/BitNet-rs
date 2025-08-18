@@ -26,7 +26,7 @@ pub use utils::*;
 
 /// BitNet Python module
 #[pymodule]
-fn bitnet_py(py: Python<'_>, m: &PyModule) -> PyResult<()> {
+fn bitnet_py(py: Python<'_>, m: &pyo3::Bound<'_, PyModule>) -> PyResult<()> {
     // Add version information
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add("__author__", "BitNet.rs Team")?;
@@ -102,7 +102,7 @@ fn load_model(
     py: Python<'_>,
     path: &str,
     device: &str,
-    kwargs: Option<&PyDict>,
+    kwargs: Option<&pyo3::Bound<'_, PyDict>>,
 ) -> PyResult<PyBitNetModel> {
     py.allow_threads(|| {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
