@@ -29,6 +29,7 @@ prometheus = { workspace = true, optional = true }
 metrics.workspace = true
 metrics-prometheus = { workspace = true, optional = true }
 opentelemetry = { workspace = true, optional = true }
+opentelemetry_sdk = { workspace = true, optional = true }
 opentelemetry-prometheus = { workspace = true, optional = true }
 opentelemetry-otlp = { workspace = true, optional = true }
 opentelemetry-stdout = { workspace = true, optional = true }
@@ -47,4 +48,4 @@ default = ["prometheus"]
 cuda = []  # Recognized flag that gates GPU health checks
 degraded-ok = []  # Map Degraded → 200 OK (default is fail-fast)
 prometheus = ["dep:prometheus", "dep:metrics-prometheus"]
-opentelemetry = ["dep:opentelemetry", "dep:opentelemetry-prometheus", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tracing-opentelemetry"]
+opentelemetry = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-prometheus", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tracing-opentelemetry"]

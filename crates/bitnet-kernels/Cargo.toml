@@ -45,8 +45,7 @@ avx2 = []
 avx512 = []
 neon = []
 cuda = ["dep:cudarc", "dep:half"]
-ffi = ["ffi-bridge"]
-ffi-bridge = ["dep:cc", "dep:bindgen"]
+ffi = ["dep:cc", "dep:bindgen"]
 
 [[bench]]
 name = "kernel_benchmarks"
@@ -55,22 +54,18 @@ harness = false
 [[test]]
 name = "kernel_tests"
 path = "tests/kernel_tests.rs"
-required-features = ["ffi"]
 
 [[test]]
 name = "comprehensive_tests"
 path = "tests/comprehensive_tests.rs"
-required-features = ["ffi"]
 
 [[test]]
 name = "comprehensive_unit_tests"
 path = "tests/comprehensive_unit_tests.rs"
-required-features = ["ffi"]
 
 [[test]]
 name = "comprehensive_kernel_unit_tests"
 path = "tests/comprehensive_kernel_unit_tests.rs"
-required-features = ["ffi"]
 
 [[test]]
 name = "gpu_integration"

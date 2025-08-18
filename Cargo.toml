@@ -203,9 +203,10 @@ tower-http = { version = "0.6", features = ["cors", "trace"] }
 prometheus = "0.14"
 metrics = "0.24"
 metrics-prometheus = "0.11"
-opentelemetry = "0.30"
-opentelemetry-prometheus = "0.29"
-opentelemetry-otlp = "0.30"
+opentelemetry = { version = "0.30", features = ["trace", "metrics"] }
+opentelemetry_sdk = { version = "0.30", features = ["trace", "metrics", "rt-tokio"] }
+opentelemetry-prometheus = "0.14"
+opentelemetry-otlp = { version = "0.26", features = ["grpc-tonic", "trace"] }
 opentelemetry-stdout = "0.30"
 tracing-opentelemetry = "0.31"
 tracing-appender = "0.2"

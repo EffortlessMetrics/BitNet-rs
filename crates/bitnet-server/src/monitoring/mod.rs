@@ -3,6 +3,7 @@
 pub mod config;
 pub mod health;
 pub mod metrics;
+#[cfg(feature = "prometheus")]
 pub mod prometheus;
 pub mod tracing;
 

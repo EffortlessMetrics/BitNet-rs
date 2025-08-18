@@ -1,5 +1,7 @@
 //! Prometheus metrics integration
 
+#![cfg(feature = "prometheus")]
+
 use anyhow::Result;
 use axum::{
     extract::State,

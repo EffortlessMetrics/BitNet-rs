@@ -4,6 +4,7 @@ use bitnet_common::{QuantizationType, Result};
 use std::sync::OnceLock;
 
 pub mod cpu;
+#[cfg(feature = "ffi")]
 pub mod ffi;
 #[cfg(feature = "cuda")]
 pub mod gpu;
@@ -80,7 +81,7 @@ impl KernelManager {
         }
 
         // Add FFI kernel as a fallback option (lower priority than optimized kernels)
-        #[cfg(feature = "ffi-bridge")]
+        #[cfg(feature = "ffi")]
         {
             if let Ok(ffi_kernel) = ffi::FfiKernel::new() {
                 if ffi_kernel.is_available() {

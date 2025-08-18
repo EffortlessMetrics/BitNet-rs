@@ -413,7 +413,7 @@ fn test_quantization_edge_cases() {
     assert!(result.is_ok(), "Should handle very small values");
 }
 
-#[cfg(feature = "ffi-bridge")]
+#[cfg(feature = "ffi")]
 #[test]
 fn test_ffi_kernel_integration() {
     use bitnet_kernels::ffi::FfiKernel;
@@ -431,7 +431,7 @@ fn test_ffi_kernel_integration() {
     }
 }
 
-#[cfg(feature = "ffi-bridge")]
+#[cfg(feature = "ffi")]
 #[test]
 fn test_performance_comparison_with_ffi() {
     use bitnet_kernels::cpu::FallbackKernel;

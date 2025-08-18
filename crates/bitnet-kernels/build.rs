@@ -1,107 +1,87 @@
-//! Build script for compiling C++ kernels during FFI bridge transition
-//!
-//! This build script compiles existing C++ kernel implementations when the
-//! ffi-bridge feature is enabled, allowing for gradual migration from C++
-//! to native Rust implementations.
+use std::{env, path::Path};
 
-#[cfg(feature = "ffi-bridge")]
 fn main() {
-    use std::env;
-    use std::path::PathBuf;
-
-    println!("cargo:rerun-if-changed=../../src/ggml-bitnet-lut.cpp");
-    println!("cargo:rerun-if-changed=../../src/ggml-bitnet-mad.cpp");
-    println!("cargo:rerun-if-changed=../../include/ggml-bitnet.h");
+    // Tell rustc that `cfg(have_cpp)` is a known conditional
+    println!("cargo:rustc-check-cfg=cfg(have_cpp)");
+    
+    // Always allow re-run if this file changes
     println!("cargo:rerun-if-changed=build.rs");
-
-    // Get the workspace root directory
-    let workspace_root = env::var("CARGO_MANIFEST_DIR")
-        .map(PathBuf::from)
-        .unwrap()
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .to_path_buf();
-
-    let cpp_src_dir = workspace_root.join("src");
-    let cpp_include_dir = workspace_root.join("include");
-
-    // Check if C++ source files exist
-    let lut_cpp = cpp_src_dir.join("ggml-bitnet-lut.cpp");
-    let mad_cpp = cpp_src_dir.join("ggml-bitnet-mad.cpp");
-    let header = cpp_include_dir.join("ggml-bitnet.h");
-
-    if !lut_cpp.exists() || !mad_cpp.exists() || !header.exists() {
-        println!("cargo:warning=C++ kernel sources not found, FFI bridge will not be functional");
-        println!("cargo:warning=Expected files:");
-        println!("cargo:warning=  {}", lut_cpp.display());
-        println!("cargo:warning=  {}", mad_cpp.display());
-        println!("cargo:warning=  {}", header.display());
+    
+    // CUDA configuration
+    if env::var_os("CARGO_FEATURE_CUDA").is_some() {
+        // Add CUDA library paths
+        println!("cargo:rustc-link-search=/usr/local/cuda/lib64");
+        println!("cargo:rustc-link-search=/usr/local/cuda/lib64/stubs");
+        println!("cargo:rustc-link-search=/usr/lib/x86_64-linux-gnu");
+        println!("cargo:rustc-link-search=/usr/lib64");
+        
+        // Try NVIDIA Jetson paths for ARM64
+        println!("cargo:rustc-link-search=/usr/local/cuda/targets/aarch64-linux/lib");
+        println!("cargo:rustc-link-search=/usr/local/cuda/targets/aarch64-linux/lib/stubs");
+        
+        // Common paths for CUDA installations
+        println!("cargo:rustc-link-search=/usr/local/cuda/targets/x86_64-linux");
+        println!("cargo:rustc-link-search=/usr/local/cuda/targets/x86_64-linux/lib");
+        println!("cargo:rustc-link-search=/usr/local/cuda/targets/x86_64-linux/lib/stubs");
+        
+        // Link CUDA libraries
+        println!("cargo:rustc-link-lib=cuda");
+        println!("cargo:rustc-link-lib=nvrtc");
+        println!("cargo:rustc-link-lib=curand");
+        println!("cargo:rustc-link-lib=cublas");
+        println!("cargo:rustc-link-lib=cublasLt");
+    }
+    
+    // Only do FFI detection work if the crate feature "ffi" is enabled
+    let ffi_enabled = env::var_os("CARGO_FEATURE_FFI").is_some();
+    if !ffi_enabled {
+        // No link lines or warnings in non-FFI builds
         return;
     }
-
-    // Configure C++ compilation
-    let mut build = cc::Build::new();
-
-    build
-        .cpp(true)
-        .std("c++17")
-        .include(&cpp_include_dir)
-        .file(&lut_cpp)
-        .file(&mad_cpp)
-        .file("src/ffi/cpp_bridge.cpp"); // Our bridge implementation
-
-    // Platform-specific optimizations
-    if cfg!(target_arch = "x86_64") {
-        build.flag("-mavx2").flag("-mfma").flag("-mf16c");
-
-        // Enable AVX-512 if available
-        if env::var("CARGO_CFG_TARGET_FEATURE").unwrap_or_default().contains("avx512f") {
-            build.flag("-mavx512f");
+    
+    // Where the C++ artifacts live. Allow override via env.
+    let root = env::var("BITNET_CPP_PATH")
+        .unwrap_or_else(|_| format!("{}/.cache/bitnet_cpp", env::var("HOME").unwrap()));
+    
+    let inc = Path::new(&root).join("include");
+    let lib = Path::new(&root).join("build").join("lib");
+    
+    // Check for the presence of C++ headers and libraries
+    let have_header = inc.join("ggml-bitnet.h").exists();
+    let have_static = lib.join("libbitnet.a").exists() || lib.join("libbitnet_static.a").exists();
+    let have_shared = lib.join("libbitnet.so").exists() || lib.join("libbitnet.dylib").exists();
+    
+    // Also check for individual component libraries
+    let have_components = lib.join("libggml.a").exists() || lib.join("libggml.so").exists();
+    
+    if have_header && (have_static || have_shared || have_components) {
+        // We found the C++ library!
+        println!("cargo:rustc-cfg=have_cpp");
+        println!("cargo:rustc-link-search=native={}", lib.display());
+        
+        // Link the libraries we found
+        if have_static {
+            if lib.join("libbitnet.a").exists() {
+                println!("cargo:rustc-link-lib=static=bitnet");
+            } else if lib.join("libbitnet_static.a").exists() {
+                println!("cargo:rustc-link-lib=static=bitnet_static");
+            }
+        } else if have_shared {
+            println!("cargo:rustc-link-lib=dylib=bitnet");
         }
-    } else if cfg!(target_arch = "aarch64") {
-        // ARM64 optimizations
-        build.flag("-march=armv8-a+simd");
-    }
-
-    // Debug/Release configuration
-    if env::var("PROFILE").unwrap() == "release" {
-        build.opt_level(3).flag("-DNDEBUG").flag("-ffast-math");
+        
+        // If we have component libraries, link them too
+        if lib.join("libggml.a").exists() {
+            println!("cargo:rustc-link-lib=static=ggml");
+        }
+        if lib.join("libllama.a").exists() {
+            println!("cargo:rustc-link-lib=static=llama");
+        }
+        
+        eprintln!("bitnet-kernels: FFI bridge enabled with C++ library from {}", root);
     } else {
-        build.opt_level(0).debug(true).flag("-DDEBUG");
+        // DO NOT emit link lines. Build the crate with FFI stubs instead.
+        eprintln!("bitnet-kernels: FFI enabled but C++ library not found at {}; using stub implementation", root);
+        eprintln!("bitnet-kernels: To enable the real FFI bridge, build the C++ library with `cargo xtask fetch-cpp` or set BITNET_CPP_PATH");
     }
-
-    // Compile the C++ code
-    build.compile("bitnet_cpp_kernels");
-
-    // Link against math library on Unix
-    if cfg!(unix) {
-        println!("cargo:rustc-link-lib=m");
-    }
-
-    // Generate bindings if bindgen is available
-    #[cfg(feature = "ffi-bridge")]
-    generate_bindings(&cpp_include_dir);
-}
-
-#[cfg(feature = "ffi-bridge")]
-fn generate_bindings(include_dir: &std::path::Path) {
-    use std::env;
-    use std::path::PathBuf;
-
-    let bindings = ::bindgen::Builder::default()
-        .header(include_dir.join("ggml-bitnet.h").to_string_lossy())
-        .clang_arg(format!("-I{}", include_dir.display()))
-        .parse_callbacks(Box::new(::bindgen::CargoCallbacks::new()))
-        .generate()
-        .expect("Unable to generate bindings");
-
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindings.write_to_file(out_path.join("bindings.rs")).expect("Couldn't write bindings!");
-}
-
-#[cfg(not(feature = "ffi-bridge"))]
-fn main() {
-    // Do nothing when FFI bridge is not enabled
 }
