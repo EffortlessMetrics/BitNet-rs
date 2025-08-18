@@ -11,6 +11,43 @@ Thank you for your interest in contributing to BitNet.rs! This document provides
 5. Run tests: `cargo test --workspace`
 6. Submit a pull request
 
+### Getting Started for New Contributors
+
+We warmly welcome new contributors! If you're looking for a way to get involved, here are some great places to start:
+
+**1. "Good First Issues"**
+
+We use the `good first issue` label on GitHub to mark issues that are well-suited for newcomers. These issues are typically:
+*   Well-defined with a clear scope.
+*   Have a low to moderate difficulty level.
+*   Provide a great introduction to the codebase.
+
+You can find them here: [https://github.com/microsoft/BitNet/labels/good%20first%20issue](https://github.com/microsoft/BitNet/labels/good%20first%20issue)
+
+**2. Documentation**
+
+Improving documentation is one of the most valuable contributions you can make. If you find a section in our `README.md`, `docs/`, or code comments that is unclear, confusing, or missing information, please open an issue or submit a pull request! This includes:
+*   Fixing typos and grammatical errors.
+*   Adding more detailed explanations.
+*   Creating new examples to clarify usage.
+
+**3. Adding Tests**
+
+We strive for high test coverage. A great way to contribute is to add unit or integration tests for parts of the code that are not well-covered. You can run `cargo cov-html` (see README) to generate a coverage report and find areas for improvement.
+
+**A Typical First Pull Request Workflow**
+
+1.  Find an issue you'd like to work on (or create one if you've found a bug or have an idea for an improvement).
+2.  Leave a comment on the issue to let others know you're working on it.
+3.  Fork the repository and create a new branch for your changes.
+4.  Make your code changes. Remember to add tests and documentation where appropriate!
+5.  Run `cargo fmt` to format your code and `cargo clippy` to check for lints.
+6.  Run the test suite with `cargo test --workspace` to ensure your changes haven't broken anything.
+7.  Commit your changes with a descriptive message.
+8.  Push your branch to your fork and open a pull request against the `main` branch of the `microsoft/BitNet` repository.
+
+We're excited to see your contributions!
+
 ## Development Setup
 
 ### Prerequisites
