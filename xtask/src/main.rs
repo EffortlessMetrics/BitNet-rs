@@ -117,7 +117,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
 const DEFAULT_MODEL_ID: &str = "microsoft/bitnet-b1.58-2B-4T-gguf";
 const DEFAULT_MODEL_FILE: &str = "ggml-model-i2_s.gguf";
 const USER_AGENT_STRING: &str = "bitnet-xtask/0.1 (+https://github.com/microsoft/BitNet-rs)";
-const DEFAULT_CPP_TAG: &str = "b1-65-ggml";
+const DEFAULT_CPP_TAG: &str = "main";
 
 #[derive(Parser)]
 #[command(name = "xtask", about = "Developer tasks for BitNet.rs")]
@@ -1147,7 +1147,7 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
 
     // Verify the build succeeded by checking for the binary
     let cpp_dir = dirs::home_dir().unwrap().join(".cache/bitnet_cpp");
-    let binary = cpp_dir.join("bitnet-llama-cli");
+    let binary = cpp_dir.join("build/bin/llama-cli");
 
     if !binary.exists() {
         return Err(anyhow!(

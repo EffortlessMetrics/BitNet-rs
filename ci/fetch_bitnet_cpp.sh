@@ -50,6 +50,10 @@ while [[ $# -gt 0 ]]; do
             FORCE=1
             shift
             ;;
+        --print-setup)
+            # This is a no-op, used to gracefully exit when already built
+            shift
+            ;;
         --help)
             echo "Usage: $0 [--tag TAG] [--clean] [--force]"
             echo "  --tag TAG    Git revision/tag to checkout (default: $DEFAULT_REV)"
