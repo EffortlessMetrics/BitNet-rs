@@ -19,7 +19,7 @@ use tracing::{debug, error, info, warn};
 
 use bitnet_inference::{InferenceEngine, InferenceConfig, SamplingConfig};
 use bitnet_models::ModelLoader;
-use bitnet_tokenizers::TokenizerBuilder;
+use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use candle_core::Device;
 
 use crate::config::CliConfig;
@@ -292,8 +292,10 @@ impl InferenceCommand {
         pb.set_message("Initializing inference engine...");
 
         // Create inference engine
-        let inference_config = InferenceConfig::default();
-        let engine = InferenceEngine::new(model, inference_config)
+        let model_arc: Arc<dyn bitnet_models::Model> = model.into();
+        let tokenizer_arc: Arc<dyn Tokenizer> = tokenizer.clone().into();
+        let bn_device = bitnet_common::Device::from(&device);
+        let engine = InferenceEngine::new(model_arc, tokenizer_arc, bn_device)
             .context("Failed to create inference engine")?;
 
         pb.finish_with_message(style("✓ Model loaded successfully").green().to_string());

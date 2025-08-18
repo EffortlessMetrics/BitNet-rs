@@ -64,13 +64,13 @@ impl PyBitNetModel {
         model_config.set_item("vocab_size", config.model.vocab_size)?;
         model_config.set_item("hidden_size", config.model.hidden_size)?;
         model_config.set_item("num_layers", config.model.num_layers)?;
-        model_config.set_item("num_attention_heads", config.model.num_attention_heads)?;
+        // num_attention_heads field was removed from ModelConfig
         model_config.set_item("max_position_embeddings", config.model.max_position_embeddings)?;
         py_config.set_item("model", model_config)?;
 
         // Quantization configuration
         let quant_config = PyDict::new(py);
-        quant_config.set_item("qtype", format!("{:?}", config.quantization.qtype))?;
+        quant_config.set_item("quantization_type", format!("{:?}", config.quantization.quantization_type))?;
         quant_config.set_item("block_size", config.quantization.block_size)?;
         py_config.set_item("quantization", quant_config)?;
 
@@ -105,7 +105,7 @@ impl PyBitNetModel {
         let params = self.parameter_count();
         let config = self.inner.config();
 
-        match config.quantization.qtype {
+        match config.quantization.quantization_type {
             bitnet_common::QuantizationType::I2S => params / 4, // 2 bits per parameter
             bitnet_common::QuantizationType::TL1 | bitnet_common::QuantizationType::TL2 => {
                 params / 2
@@ -122,7 +122,7 @@ impl PyBitNetModel {
     /// Get model quantization type
     #[getter]
     fn quantization(&self) -> String {
-        format!("{:?}", self.inner.config().quantization.qtype)
+        format!("{:?}", self.inner.config().quantization.quantization_type)
     }
 
     /// Check if model supports streaming
@@ -202,26 +202,31 @@ impl PyModelLoader {
 
     /// Extract metadata from a model file without loading it
     fn extract_metadata(&self, py: Python<'_>, path: &str) -> PyResult<PyObject> {
-        py.allow_threads(|| {
+        let path = path.to_string();
+        let device = self.device.clone();
+        
+        let metadata = py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 
             rt.block_on(async {
-                let loader = ModelLoader::new(self.device.clone());
-                let metadata = loader.extract_metadata(path).map_err(|e| {
+                let loader = ModelLoader::new(device);
+                loader.extract_metadata(&path).map_err(|e| {
                     PyRuntimeError::new_err(format!("Failed to extract metadata: {}", e))
-                })?;
-
-                let py_metadata = PyDict::new(py);
-                py_metadata.set_item("architecture", metadata.architecture)?;
-                py_metadata.set_item("vocab_size", metadata.vocab_size)?;
-                py_metadata.set_item("context_length", metadata.context_length)?;
-                py_metadata.set_item("parameter_count", metadata.parameter_count)?;
-                py_metadata.set_item("quantization", format!("{:?}", metadata.quantization))?;
-
-                Ok(py_metadata.into())
+                })
             })
-        })
+        })?;
+
+        let py_metadata = PyDict::new(py);
+        py_metadata.set_item("architecture", metadata.architecture)?;
+        py_metadata.set_item("vocab_size", metadata.vocab_size)?;
+        py_metadata.set_item("context_length", metadata.context_length)?;
+        // parameter_count field was removed from ModelMetadata
+        py_metadata.set_item("name", &metadata.name)?;
+        py_metadata.set_item("version", &metadata.version)?;
+        py_metadata.set_item("quantization", format!("{:?}", metadata.quantization))?;
+
+        Ok(py_metadata.into())
     }
 
     /// List available formats

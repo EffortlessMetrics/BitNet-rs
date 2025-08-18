@@ -89,12 +89,12 @@ mod crossval_tests {
         let rust_result = generate_mock_rust_result();
         let cpp_result = generate_mock_cpp_result();
 
-        let tolerance = 1e-3; // 0.001 tolerance
+        let tolerance = 1e-3f32; // 0.001 tolerance
 
         for (i, (rust_logit, cpp_logit)) in
             rust_result.logits.iter().zip(cpp_result.logits.iter()).enumerate()
         {
-            let diff: f64 = (rust_logit - cpp_logit).abs();
+            let diff = (rust_logit - cpp_logit).abs();
             assert!(
                 diff <= tolerance,
                 "Logit {} difference {} exceeds tolerance {}",
@@ -114,11 +114,11 @@ mod crossval_tests {
         let rust_logits = vec![0.1, 0.2, 0.3];
         let cpp_logits = vec![0.1, 0.2, 0.4]; // Last value exceeds tolerance
 
-        let tolerance = 1e-3; // 0.001 tolerance
+        let tolerance = 1e-3f32; // 0.001 tolerance
         let mut violations = Vec::new();
 
         for (i, (rust_logit, cpp_logit)) in rust_logits.iter().zip(cpp_logits.iter()).enumerate() {
-            let diff: f64 = (rust_logit - cpp_logit).abs();
+            let diff = (rust_logit - cpp_logit).abs();
             if diff > tolerance {
                 violations.push((i, diff));
             }
@@ -431,12 +431,12 @@ while providing performance improvements.
 
         // Step 4: Check numerical accuracy
         println!("4. Checking numerical accuracy...");
-        let tolerance = 1e-3;
+        let tolerance = 1e-3f32;
         let mut max_diff = 0.0f32;
         let mut accuracy_pass = true;
 
         for (rust_logit, cpp_logit) in rust_result.logits.iter().zip(cpp_result.logits.iter()) {
-            let diff: f64 = (rust_logit - cpp_logit).abs();
+            let diff = (rust_logit - cpp_logit).abs();
             max_diff = max_diff.max(diff);
             if diff > tolerance {
                 accuracy_pass = false;

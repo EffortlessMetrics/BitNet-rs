@@ -6,15 +6,15 @@ use clap::Args;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
 
 use bitnet_inference::{InferenceEngine, InferenceConfig};
 use bitnet_models::ModelLoader;
-use bitnet_tokenizers::TokenizerBuilder;
+use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use candle_core::Device;
 
 use crate::config::CliConfig;
@@ -243,8 +243,10 @@ impl BenchmarkCommand {
             TokenizerBuilder::from_pretrained("gpt2").context("Failed to load tokenizer")?;
 
         // Create inference engine
-        let inference_config = InferenceConfig::default();
-        let engine = InferenceEngine::new(model, inference_config)
+        let model_arc: Arc<dyn bitnet_models::Model> = model.into();
+        let tokenizer_arc: Arc<dyn Tokenizer> = tokenizer.clone().into();
+        let bn_device = bitnet_common::Device::from(&device);
+        let engine = InferenceEngine::new(model_arc, tokenizer_arc, bn_device)
             .context("Failed to create inference engine")?;
 
         pb.finish_with_message(format!("{} Model loaded for benchmarking", style("✓").green()));
@@ -272,7 +274,7 @@ impl BenchmarkCommand {
     /// Run all benchmarks
     async fn run_benchmarks(
         &self,
-        _engine: &mut BitNetInferenceEngine,
+        _engine: &mut InferenceEngine,
     ) -> Result<BenchmarkResults> {
         let start_time = Instant::now();
         let mut all_results = Vec::new();

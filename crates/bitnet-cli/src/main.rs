@@ -534,14 +534,14 @@ async fn show_system_info() -> Result<()> {
     {
         println!("  GPU support: {}", style("✓ Enabled").green());
         // Check CUDA availability
-        #[cfg(feature = "cuda")]
+        #[cfg(feature = "gpu")]
         {
             match candle_core::Device::cuda_if_available(0).is_ok() {
                 true => println!("  CUDA: {}", style("✓ Available").green()),
                 false => println!("  CUDA: {}", style("✗ Not available").red()),
             }
         }
-        #[cfg(not(feature = "cuda"))]
+        #[cfg(not(feature = "gpu"))]
         println!("  CUDA: {}", style("✗ Not compiled").yellow())
     }
     #[cfg(not(feature = "gpu"))]

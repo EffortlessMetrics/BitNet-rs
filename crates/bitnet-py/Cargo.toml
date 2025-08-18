@@ -20,6 +20,8 @@ bitnet-quantization = { path = "../bitnet-quantization" }
 pyo3 = { version = "0.21", features = ["extension-module", "abi3-py38"] }
 pyo3-asyncio-0-21 = { version = "0.21", features = ["tokio-runtime"] }
 tokio = { version = "1.0", features = ["full"] }
+futures-util = "0.3"
+num_cpus = "1.16"
 numpy = "0.21"
 ndarray = "0.16"
 serde = { version = "1.0", features = ["derive"] }
