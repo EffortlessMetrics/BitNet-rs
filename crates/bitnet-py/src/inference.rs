@@ -40,7 +40,7 @@ impl PyInferenceEngine {
         model: &PyBitNetModel,
         tokenizer: Option<&str>,
         device: &str,
-        kwargs: Option<&PyDict>,
+        kwargs: Option<&pyo3::Bound<'_, PyDict>>,
     ) -> PyResult<Self> {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
@@ -76,7 +76,7 @@ impl PyInferenceEngine {
         temperature: Option<f32>,
         top_p: Option<f32>,
         top_k: Option<u32>,
-        kwargs: Option<&PyDict>,
+        kwargs: Option<&pyo3::Bound<'_, PyDict>>,
     ) -> PyResult<String> {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
@@ -115,7 +115,7 @@ impl PyInferenceEngine {
         temperature: Option<f32>,
         top_p: Option<f32>,
         top_k: Option<u32>,
-        kwargs: Option<&PyDict>,
+        kwargs: Option<&pyo3::Bound<'_, PyDict>>,
     ) -> PyResult<PyStreamingGenerator> {
         let config = GenerationConfig {
             max_new_tokens: max_tokens.unwrap_or(100),
@@ -254,7 +254,7 @@ pub fn batch_generate(
     py: Python<'_>,
     engine: &PyInferenceEngine,
     prompts: Vec<String>,
-    kwargs: Option<&PyDict>,
+    kwargs: Option<&pyo3::Bound<'_, PyDict>>,
 ) -> PyResult<Vec<String>> {
     py.allow_threads(|| {
         let rt = tokio::runtime::Runtime::new()

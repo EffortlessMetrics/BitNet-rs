@@ -350,9 +350,11 @@ impl ExecutionStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "fixtures")]
     use crate::common::fast_config::fast_config;
 
     #[tokio::test]
+    #[cfg(feature = "fixtures")]
     async fn test_parallel_executor_creation() {
         let config = fast_config();
         let executor = ParallelExecutor::new(config);

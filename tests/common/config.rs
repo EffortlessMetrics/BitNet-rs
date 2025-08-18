@@ -689,6 +689,7 @@ mod tests {
         assert_eq!(config.log_level, "warn");
         assert!(!config.reporting.generate_coverage);
         assert!(!config.crossval.enabled);
+        #[cfg(feature = "fixtures")]
         assert!(!config.fixtures.auto_download);
     }
 
@@ -713,6 +714,7 @@ mod tests {
             Some(config.max_parallel_tests.to_string())
         );
 
+        #[cfg(feature = "fixtures")]
         assert_eq!(
             get_config_value(&config, "fixtures.auto_download"),
             Some(config.fixtures.auto_download.to_string())
@@ -722,6 +724,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "fixtures")]
     fn test_validate_custom_fixtures() {
         let mut config = TestConfig::default();
 

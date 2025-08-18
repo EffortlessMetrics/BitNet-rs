@@ -410,9 +410,11 @@ impl SelectionStrategy {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "fixtures")]
     use crate::common::fast_config::fast_config;
 
     #[tokio::test]
+    #[cfg(feature = "fixtures")]
     async fn test_test_selector_creation() {
         let config = fast_config();
         let selector = TestSelector::new(config);

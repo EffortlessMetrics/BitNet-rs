@@ -1,4 +1,5 @@
 //! Test for the reporting system implementation
+#![cfg(feature = "reporting")]
 
 use bitnet_tests::reporting::{ReportConfig, ReportFormat, ReportingManager};
 use bitnet_tests::results::{TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary};
