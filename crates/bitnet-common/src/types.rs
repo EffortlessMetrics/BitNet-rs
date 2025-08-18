@@ -51,6 +51,19 @@ impl Default for Device {
     }
 }
 
+impl From<&candle_core::Device> for Device {
+    fn from(d: &candle_core::Device) -> Self {
+        match d {
+            candle_core::Device::Cpu => Device::Cpu,
+            #[cfg(feature = "cuda")]
+            candle_core::Device::Cuda(candle_core::CudaDevice { ordinal, .. }) => Device::Cuda(*ordinal),
+            #[cfg(feature = "metal")]
+            candle_core::Device::Metal(_) => Device::Metal,
+            _ => Device::Cpu,
+        }
+    }
+}
+
 /// Generation configuration for inference
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerationConfig {

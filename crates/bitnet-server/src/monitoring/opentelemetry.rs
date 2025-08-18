@@ -1,7 +1,7 @@
 //! OpenTelemetry integration for distributed tracing
 
 use anyhow::Result;
-use opentelemetry::{global, trace::TracerProvider, KeyValue};
+use opentelemetry::{global, trace::Tracer, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
     metrics as sdkmetrics,
@@ -38,14 +38,12 @@ async fn init_tracing(config: &MonitoringConfig) -> Result<()> {
             .with_endpoint(endpoint)
             .with_timeout(Duration::from_secs(3));
 
-        let provider = sdktrace::TracerProvider::builder()
-            .with_config(
-                sdktrace::Config::default().with_resource(Resource::new(vec![
-                    KeyValue::new("service.name", "bitnet-server"),
-                    KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
-                    KeyValue::new("service.namespace", "ml-inference"),
-                ]))
-            )
+        let provider = sdktrace::SdkTracerProvider::builder()
+            .with_resource(Resource::from_attributes([
+                KeyValue::new("service.name", "bitnet-server"),
+                KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
+                KeyValue::new("service.namespace", "ml-inference"),
+            ]))
             .with_batch_exporter(exporter, runtime::Tokio)
             .with_sampler(Sampler::TraceIdRatioBased(1.0))
             .build();
@@ -53,14 +51,12 @@ async fn init_tracing(config: &MonitoringConfig) -> Result<()> {
         global::set_tracer_provider(provider);
     } else {
         // Stdout exporter for development
-        let provider = sdktrace::TracerProvider::builder()
+        let provider = sdktrace::SdkTracerProvider::builder()
             .with_simple_exporter(opentelemetry_stdout::SpanExporter::default())
-            .with_config(
-                sdktrace::Config::default().with_resource(Resource::new(vec![
-                    KeyValue::new("service.name", "bitnet-server"),
-                    KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
-                ]))
-            )
+            .with_resource(Resource::from_attributes([
+                KeyValue::new("service.name", "bitnet-server"),
+                KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
+            ]))
             .build();
 
         global::set_tracer_provider(provider);
@@ -73,9 +69,9 @@ async fn init_tracing(config: &MonitoringConfig) -> Result<()> {
 async fn init_metrics(_config: &MonitoringConfig) -> Result<()> {
     // Initialize Prometheus metrics
     let reader = opentelemetry_prometheus::exporter().build()?;
-    let provider = sdkmetrics::MeterProvider::builder()
+    let provider = sdkmetrics::SdkMeterProvider::builder()
         .with_reader(reader)
-        .with_resource(Resource::new(vec![
+        .with_resource(Resource::from_attributes([
             KeyValue::new("service.name", "bitnet-server"),
             KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
         ]))

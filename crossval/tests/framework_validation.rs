@@ -94,7 +94,7 @@ mod crossval_tests {
         for (i, (rust_logit, cpp_logit)) in
             rust_result.logits.iter().zip(cpp_result.logits.iter()).enumerate()
         {
-            let diff = (rust_logit - cpp_logit).abs();
+            let diff: f64 = (rust_logit - cpp_logit).abs();
             assert!(
                 diff <= tolerance,
                 "Logit {} difference {} exceeds tolerance {}",
@@ -118,7 +118,7 @@ mod crossval_tests {
         let mut violations = Vec::new();
 
         for (i, (rust_logit, cpp_logit)) in rust_logits.iter().zip(cpp_logits.iter()).enumerate() {
-            let diff = (rust_logit - cpp_logit).abs();
+            let diff: f64 = (rust_logit - cpp_logit).abs();
             if diff > tolerance {
                 violations.push((i, diff));
             }
@@ -338,7 +338,7 @@ while providing performance improvements.
         let current_memory = 1200.0; // 17% increase
 
         // Calculate changes
-        let throughput_change =
+        let throughput_change: f64 =
             (current_throughput - baseline_throughput) / baseline_throughput * 100.0;
         let latency_change = (current_latency - baseline_latency) / baseline_latency * 100.0;
         let memory_change = (current_memory - baseline_memory) / baseline_memory * 100.0;
@@ -436,7 +436,7 @@ while providing performance improvements.
         let mut accuracy_pass = true;
 
         for (rust_logit, cpp_logit) in rust_result.logits.iter().zip(cpp_result.logits.iter()) {
-            let diff = (rust_logit - cpp_logit).abs();
+            let diff: f64 = (rust_logit - cpp_logit).abs();
             max_diff = max_diff.max(diff);
             if diff > tolerance {
                 accuracy_pass = false;

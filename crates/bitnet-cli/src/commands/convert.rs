@@ -137,7 +137,7 @@ impl ConvertCommand {
     async fn load_input_model(
         &self,
         config: &CliConfig,
-    ) -> Result<Box<dyn bitnet_models::Model<Config = bitnet_common::BitNetConfig>>> {
+    ) -> Result<Box<dyn bitnet_models::Model>> {
         let pb = ProgressBar::new_spinner();
         pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}").unwrap());
         pb.set_message("Loading input model...");
@@ -147,7 +147,7 @@ impl ConvertCommand {
         let device = Device::Cpu;
 
         // Load model
-        let loader = ModelLoader::new(device);
+        let loader = ModelLoader::new(bitnet_common::Device::from(&device));
         let model = loader
             .load(&self.input)
             .with_context(|| format!("Failed to load input model: {}", self.input.display()))?;
@@ -173,7 +173,7 @@ impl ConvertCommand {
     /// Convert the model to the target format
     async fn convert_model(
         &self,
-        _model: Box<dyn bitnet_models::Model<Config = bitnet_common::BitNetConfig>>,
+        _model: Box<dyn bitnet_models::Model>,
     ) -> Result<()> {
         let pb = ProgressBar::new(100);
         pb.set_style(

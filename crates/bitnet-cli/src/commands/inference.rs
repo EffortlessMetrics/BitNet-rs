@@ -17,7 +17,7 @@ use std::{
 use tokio::{fs, time::timeout};
 use tracing::{debug, error, info, warn};
 
-use bitnet_inference::{BitNetInferenceEngine, InferenceConfig, InferenceEngine, SamplingConfig};
+use bitnet_inference::{InferenceEngine, InferenceConfig, SamplingConfig};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::TokenizerBuilder;
 use candle_core::Device;
@@ -259,7 +259,7 @@ impl InferenceCommand {
     async fn load_model_and_tokenizer(
         &self,
         config: &CliConfig,
-    ) -> Result<(BitNetInferenceEngine, Arc<dyn bitnet_tokenizers::Tokenizer>)> {
+    ) -> Result<(InferenceEngine, Arc<dyn bitnet_tokenizers::Tokenizer>)> {
         let model_path = self
             .model
             .as_ref()
@@ -279,7 +279,7 @@ impl InferenceCommand {
         debug!("Using device: {:?}", device);
 
         // Load model
-        let loader = ModelLoader::new(device.clone());
+        let loader = ModelLoader::new(bitnet_common::Device::from(&device));
         let model = loader
             .load(model_path)
             .with_context(|| format!("Failed to load model from: {}", model_path.display()))?;
@@ -293,7 +293,7 @@ impl InferenceCommand {
 
         // Create inference engine
         let inference_config = InferenceConfig::default();
-        let engine = BitNetInferenceEngine::with_auto_backend(model, inference_config)
+        let engine = InferenceEngine::new(model, inference_config)
             .context("Failed to create inference engine")?;
 
         pb.finish_with_message(style("✓ Model loaded successfully").green().to_string());
@@ -340,7 +340,7 @@ impl InferenceCommand {
     /// Run single inference
     async fn run_single_inference(
         &self,
-        mut engine: BitNetInferenceEngine,
+        mut engine: InferenceEngine,
         _tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
         prompt: &str,
     ) -> Result<()> {
@@ -365,7 +365,7 @@ impl InferenceCommand {
     /// Run streaming inference
     async fn run_streaming_inference(
         &self,
-        engine: &mut BitNetInferenceEngine,
+        engine: &mut InferenceEngine,
         prompt: &str,
         config: &GenerationConfig,
     ) -> Result<()> {
@@ -407,7 +407,7 @@ impl InferenceCommand {
     /// Run batch inference
     async fn run_batch_inference(
         &self,
-        engine: &mut BitNetInferenceEngine,
+        engine: &mut InferenceEngine,
         prompts: &[String],
         config: &GenerationConfig,
     ) -> Result<Vec<InferenceResult>> {
@@ -464,7 +464,7 @@ impl InferenceCommand {
     /// Process batch sequentially
     async fn process_batch_sequential(
         &self,
-        _engine: &mut BitNetInferenceEngine,
+        _engine: &mut InferenceEngine,
         batch: &[String],
         _config: &GenerationConfig,
     ) -> Result<Vec<InferenceResult>> {
@@ -497,7 +497,7 @@ impl InferenceCommand {
     /// Process batch in parallel (placeholder - would need thread-safe engine)
     async fn process_batch_parallel(
         &self,
-        engine: &mut BitNetInferenceEngine,
+        engine: &mut InferenceEngine,
         batch: &[String],
         config: &GenerationConfig,
         _workers: usize,
@@ -511,7 +511,7 @@ impl InferenceCommand {
     /// Run interactive mode
     async fn run_interactive_mode(
         &self,
-        mut engine: BitNetInferenceEngine,
+        mut engine: InferenceEngine,
         tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
     ) -> Result<()> {
         println!("{}", style("BitNet Interactive Mode").bold().cyan());
@@ -608,7 +608,7 @@ impl InferenceCommand {
     /// Run batch mode from file
     async fn run_batch_mode(
         &self,
-        mut engine: BitNetInferenceEngine,
+        mut engine: InferenceEngine,
         _tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
         input_file: &PathBuf,
     ) -> Result<()> {
@@ -649,11 +649,9 @@ impl InferenceCommand {
     fn create_generation_config(&self) -> Result<GenerationConfig> {
         let sampling = SamplingConfig {
             temperature: self.temperature,
-            top_k: self.top_k,
-            top_p: self.top_p,
+            top_k: self.top_k.unwrap_or(40) as u32,
+            top_p: self.top_p.unwrap_or(1.0),
             repetition_penalty: self.repetition_penalty,
-            frequency_penalty: 0.0,
-            presence_penalty: 0.0,
             seed: self.seed,
         };
 
