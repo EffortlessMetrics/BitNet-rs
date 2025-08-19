@@ -4,10 +4,14 @@
 //! configuration propagation, error handling and recovery, and resource sharing and cleanup.
 
 use super::*;
-use crate::common::{FixtureManager, TestCase, TestError, TestMetrics, TestSuite};
+use crate::common::harness::{TestCase, TestSuite};
+use crate::common::{TestError, TestMetrics};
+use crate::common::fixtures_facade::Fixtures;
+use crate::common::tensor_helpers::ct;
 use async_trait::async_trait;
 use bitnet_common::{BitNetConfig, BitNetError, Device, ModelConfig, Tensor};
-use bitnet_inference::{GenerationConfig, InferenceConfig, InferenceEngine, InferenceStats};
+use bitnet_inference::{GenerationConfig, InferenceConfig, InferenceEngine};
+use bitnet_inference::engine::InferenceStats;
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use std::collections::HashMap;
@@ -42,7 +46,7 @@ impl TestCase for CrossCrateDataFlowTest {
         "cross_crate_data_flow"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> Result<(), TestError> {
+    async fn setup(&self, _fixtures: crate::common::harness::FixtureCtx<'_>) -> Result<(), TestError> {
         info!("Setting up cross-crate data flow test");
         Ok(())
     }
@@ -58,7 +62,7 @@ impl TestCase for CrossCrateDataFlowTest {
 
         // Create inference engine
         let engine = InferenceEngine::new(model.clone(), tokenizer.clone(), Device::Cpu)
-            .map_err(|e| TestError::ExecutionError(format!("Failed to create engine: {}", e)))?;
+            .map_err(|e| TestError::ExecutionError { message: format!("Failed to create engine: {}", e) })?;
 
         // Test data flow through the complete pipeline
         let test_input = "Hello, world! This is a test of data flow.";
@@ -67,7 +71,7 @@ impl TestCase for CrossCrateDataFlowTest {
         let result = engine
             .generate(test_input)
             .await
-            .map_err(|e| TestError::ExecutionError(format!("Generation failed: {}", e)))?;
+            .map_err(|e| TestError::ExecutionError { message: format!("Generation failed: {}", e) })?;
 
         // Validate data flow occurred correctly
         let model_data_flow = model.get_data_flow_info();
@@ -100,7 +104,7 @@ impl TestCase for CrossCrateDataFlowTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
@@ -112,6 +116,8 @@ impl TestCase for CrossCrateDataFlowTest {
             ]
             .into_iter()
             .collect(),
+            assertions: 0,
+            operations: 0,
         })
     }
 
@@ -129,7 +135,7 @@ impl TestCase for ConfigurationPropagationTest {
         "configuration_propagation"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> Result<(), TestError> {
+    async fn setup(&self, _fixtures: crate::common::harness::FixtureCtx<'_>) -> Result<(), TestError> {
         info!("Setting up configuration propagation test");
         Ok(())
     }
@@ -153,19 +159,22 @@ impl TestCase for ConfigurationPropagationTest {
         };
 
         let inference_config = InferenceConfig {
-            max_context_length: 1024,
-            batch_size: 2,
-            temperature: 0.8,
-            top_p: 0.9,
-            ..Default::default()
+            num_threads: 8,
+            mixed_precision: false,
+            memory_pool_size: 100 * 1024 * 1024, // 100 MB
+            batch_size: 1,
+            max_context_length: 2048,
         };
 
         let generation_config = GenerationConfig {
-            max_new_tokens: 50,
-            temperature: 0.7,
+            max_new_tokens: 64,
+            temperature: 0.8,
             top_p: 0.95,
-            do_sample: true,
-            ..Default::default()
+            top_k: 40,
+            repetition_penalty: 1.1,
+            stop_sequences: vec![],
+            seed: Some(42),
+            skip_special_tokens: true,
         };
 
         // Create components with configurations
@@ -179,7 +188,7 @@ impl TestCase for ConfigurationPropagationTest {
             Device::Cpu,
             inference_config.clone(),
         )
-        .map_err(|e| TestError::ExecutionError(format!("Engine creation failed: {}", e)))?;
+        .map_err(|e| TestError::ExecutionError { message: format!("Engine creation failed: {}", e) })?;
 
         // Verify configuration propagation
         debug!("Verifying configuration propagation");
@@ -204,7 +213,7 @@ impl TestCase for ConfigurationPropagationTest {
             .generate_with_config("Test configuration propagation", &generation_config)
             .await
             .map_err(|e| {
-                TestError::ExecutionError(format!("Generation with config failed: {}", e))
+                TestError::ExecutionError { message: format!("Generation with config failed: {}", e) }
             })?;
 
         if result.is_empty() {
@@ -216,10 +225,12 @@ impl TestCase for ConfigurationPropagationTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("model_vocab_size".to_string(), model_config.model.vocab_size as f64),
                 ("model_hidden_size".to_string(), model_config.model.hidden_size as f64),
@@ -246,7 +257,7 @@ impl TestCase for ErrorHandlingAndRecoveryTest {
         "error_handling_and_recovery"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> Result<(), TestError> {
+    async fn setup(&self, _fixtures: crate::common::harness::FixtureCtx<'_>) -> Result<(), TestError> {
         info!("Setting up error handling and recovery test");
         Ok(())
     }
@@ -265,7 +276,7 @@ impl TestCase for ErrorHandlingAndRecoveryTest {
         let tokenizer = Arc::new(MockTokenizer::new());
 
         let engine = InferenceEngine::new(failing_model.clone(), tokenizer.clone(), Device::Cpu)
-            .map_err(|e| TestError::ExecutionError(format!("Engine creation failed: {}", e)))?;
+            .map_err(|e| TestError::ExecutionError { message: format!("Engine creation failed: {}", e) })?;
 
         // Inject model error
         failing_model.set_should_fail(true);
@@ -361,10 +372,12 @@ impl TestCase for ErrorHandlingAndRecoveryTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("error_scenarios_tested".to_string(), error_scenarios_tested as f64),
                 ("recovery_scenarios_successful".to_string(), recovery_scenarios_successful as f64),
@@ -396,7 +409,7 @@ impl TestCase for ResourceSharingTest {
         "resource_sharing"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> Result<(), TestError> {
+    async fn setup(&self, _fixtures: crate::common::harness::FixtureCtx<'_>) -> Result<(), TestError> {
         info!("Setting up resource sharing test");
         Ok(())
     }
@@ -413,21 +426,22 @@ impl TestCase for ResourceSharingTest {
         let tokenizer2 = Arc::new(MockTokenizer::new());
 
         let engine1 = InferenceEngine::new(shared_model.clone(), tokenizer1, Device::Cpu)
-            .map_err(|e| TestError::ExecutionError(format!("Engine1 creation failed: {}", e)))?;
+            .map_err(|e| TestError::ExecutionError { message: format!("Engine1 creation failed: {}", e) })?;
 
         let engine2 = InferenceEngine::new(shared_model.clone(), tokenizer2, Device::Cpu)
-            .map_err(|e| TestError::ExecutionError(format!("Engine2 creation failed: {}", e)))?;
+            .map_err(|e| TestError::ExecutionError { message: format!("Engine2 creation failed: {}", e) })?;
 
         // Use both engines concurrently
         let result1_future = engine1.generate("test shared model 1");
         let result2_future = engine2.generate("test shared model 2");
 
-        let (result1, result2) = tokio::join!(result1_future, result2_future);
+        let (result1, result2): (Result<String, _>, Result<String, _>) = 
+            tokio::join!(result1_future, result2_future);
 
         let result1 = result1
-            .map_err(|e| TestError::ExecutionError(format!("Engine1 generation failed: {}", e)))?;
+            .map_err(|e| TestError::ExecutionError { message: format!("Engine1 generation failed: {}", e) })?;
         let result2 = result2
-            .map_err(|e| TestError::ExecutionError(format!("Engine2 generation failed: {}", e)))?;
+            .map_err(|e| TestError::ExecutionError { message: format!("Engine2 generation failed: {}", e) })?;
 
         if result1.is_empty() || result2.is_empty() {
             return Err(TestError::AssertionError {
@@ -455,10 +469,12 @@ impl TestCase for ResourceSharingTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("shared_model_accesses".to_string(), model_usage.total_accesses as f64),
                 ("shared_model_concurrent".to_string(), model_usage.concurrent_accesses as f64),
@@ -527,7 +543,15 @@ impl Model for InstrumentedModel {
         guard.forward_calls += 1;
         drop(guard);
 
-        Ok(bitnet_common::MockTensor::new(vec![1, self.config.model.vocab_size]))
+        Ok(ct(vec![1, self.config.model.vocab_size]))
+    }
+
+    fn embed(&self, tokens: &[u32]) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        Ok(ct(vec![1, tokens.len(), 768]))
+    }
+
+    fn logits(&self, _input: &bitnet_common::ConcreteTensor) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        Ok(ct(vec![1, 1, self.config.model.vocab_size]))
     }
 }
 
@@ -610,7 +634,15 @@ impl Model for ConfigurableModel {
         _input: &bitnet_common::ConcreteTensor,
         _cache: &mut dyn std::any::Any,
     ) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
-        Ok(bitnet_common::MockTensor::new(vec![1, self.config.model.vocab_size]))
+        Ok(ct(vec![1, self.config.model.vocab_size]))
+    }
+
+    fn embed(&self, tokens: &[u32]) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        Ok(ct(vec![1, tokens.len(), 768]))
+    }
+
+    fn logits(&self, _input: &bitnet_common::ConcreteTensor) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        Ok(ct(vec![1, 1, self.config.model.vocab_size]))
     }
 }
 
@@ -672,9 +704,23 @@ impl Model for ErrorInjectingModel {
         _cache: &mut dyn std::any::Any,
     ) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
         if *self.should_fail.lock().unwrap() {
-            return Err(BitNetError::ModelError("Injected model error for testing".to_string()));
+            return Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed { reason: "Injected model error for testing".to_string() }));
         }
-        Ok(bitnet_common::MockTensor::new(vec![1, self.config.model.vocab_size]))
+        Ok(ct(vec![1, self.config.model.vocab_size]))
+    }
+
+    fn embed(&self, tokens: &[u32]) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        if *self.should_fail.lock().unwrap() {
+            return Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed { reason: "Injected embed error for testing".to_string() }));
+        }
+        Ok(ct(vec![1, tokens.len(), 768]))
+    }
+
+    fn logits(&self, _input: &bitnet_common::ConcreteTensor) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        if *self.should_fail.lock().unwrap() {
+            return Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed { reason: "Injected logits error for testing".to_string() }));
+        }
+        Ok(ct(vec![1, 1, self.config.model.vocab_size]))
     }
 }
 
@@ -727,13 +773,28 @@ impl Model for ResourceTrackingModel {
         stats.concurrent_accesses -= 1;
         drop(stats);
 
-        Ok(bitnet_common::MockTensor::new(vec![1, self.config.model.vocab_size]))
+        Ok(ct(vec![1, self.config.model.vocab_size]))
+    }
+
+    fn embed(&self, tokens: &[u32]) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        let mut stats = self.usage_stats.lock().unwrap();
+        stats.total_accesses += 1;
+        drop(stats);
+        Ok(ct(vec![1, tokens.len(), 768]))
+    }
+
+    fn logits(&self, _input: &bitnet_common::ConcreteTensor) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        let mut stats = self.usage_stats.lock().unwrap();
+        stats.total_accesses += 1;
+        drop(stats);
+        Ok(ct(vec![1, 1, self.config.model.vocab_size]))
     }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::{TestConfig, TestHarness};
+    use crate::{TestConfig, TestHarness};
+    use crate::common::results::PassCheck;
 
     #[tokio::test]
     async fn test_component_interaction_suite() {
@@ -741,8 +802,8 @@ mod tests {
         let harness = TestHarness::new(config).await.unwrap();
         let suite = ComponentInteractionTestSuite;
 
-        let result = harness.run_test_suite(suite).await;
-        assert!(result.is_ok());
+        let result = harness.run_test_suite(&suite).await;
+        assert!(result.passed());
 
         let suite_result = result.unwrap();
         assert!(suite_result.summary.total_tests > 0);
@@ -756,7 +817,7 @@ mod tests {
         let test_case = CrossCrateDataFlowTest;
 
         let result = harness.run_single_test(Box::new(test_case)).await;
-        assert!(result.is_ok());
+        assert!(result.passed());
     }
 
     #[tokio::test]
@@ -766,7 +827,7 @@ mod tests {
         let test_case = ConfigurationPropagationTest;
 
         let result = harness.run_single_test(Box::new(test_case)).await;
-        assert!(result.is_ok());
+        assert!(result.passed());
     }
 
     #[tokio::test]
@@ -776,7 +837,7 @@ mod tests {
         let test_case = ErrorHandlingAndRecoveryTest;
 
         let result = harness.run_single_test(Box::new(test_case)).await;
-        assert!(result.is_ok());
+        assert!(result.passed());
     }
 
     #[tokio::test]
@@ -786,6 +847,6 @@ mod tests {
         let test_case = ResourceSharingTest;
 
         let result = harness.run_single_test(Box::new(test_case)).await;
-        assert!(result.is_ok());
+        assert!(result.passed());
     }
 }
