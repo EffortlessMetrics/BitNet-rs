@@ -3,12 +3,19 @@
 //! This module contains integration tests that validate complete workflows
 //! across the BitNet Rust ecosystem components.
 
+#[cfg(test)]
 pub mod batch_processing_tests;
+#[cfg(test)]
 pub mod component_interaction_tests;
+#[cfg(test)]
 pub mod model_loading_tests;
+#[cfg(test)]
 pub mod resource_management_tests;
+#[cfg(test)]
 pub mod streaming_tests;
+#[cfg(test)]
 pub mod tokenization_pipeline_tests;
+#[cfg(test)]
 pub mod workflow_tests;
 
 // Use the prelude for common imports
