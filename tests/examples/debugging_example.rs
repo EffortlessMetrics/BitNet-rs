@@ -3,7 +3,7 @@ use std::time::Duration;
 use tokio::time::sleep;
 
 use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
-use tests::common::{
+use bitnet_tests::common::{
     config::TestConfig,
     debug_integration::{create_debug_harness, debug_config_from_env, DebugTestReporter},
     debugging::DebugConfig,

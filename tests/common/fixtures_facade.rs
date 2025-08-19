@@ -1,7 +1,11 @@
-use crate::config::TestConfig;
+use crate::common::config::TestConfig;
+use crate::common::errors::TestOpResult;
+#[cfg(feature = "fixtures")]
+use crate::common::fixtures;
+use crate::common::harness;
+
 /// Facade for fixture management that provides a consistent API regardless of feature flags
 /// This reduces cfg scatter throughout the codebase
-use crate::errors::TestOpResult;
 
 #[cfg(feature = "fixtures")]
 use std::sync::Arc;
@@ -9,7 +13,7 @@ use std::sync::Arc;
 /// Facade for fixture manager that adapts based on feature flags
 #[cfg(feature = "fixtures")]
 #[derive(Clone)]
-pub struct Fixtures(pub Arc<crate::fixtures::FixtureManager>);
+pub struct Fixtures(pub Arc<fixtures::FixtureManager>);
 
 #[cfg(not(feature = "fixtures"))]
 #[derive(Clone, Default)]
@@ -20,7 +24,7 @@ impl Fixtures {
     pub async fn new(cfg: &TestConfig) -> TestOpResult<Self> {
         #[cfg(feature = "fixtures")]
         {
-            let inner = crate::fixtures::FixtureManager::new(&cfg.fixtures).await?;
+            let inner = fixtures::FixtureManager::new(&cfg.fixtures).await?;
             return Ok(Self(Arc::new(inner)));
         }
         #[cfg(not(feature = "fixtures"))]
@@ -35,7 +39,7 @@ impl Fixtures {
         #[cfg(feature = "fixtures")]
         {
             self.0.cleanup_old_fixtures().await.map_err(|e| {
-                use crate::errors::TestError;
+                use crate::common::errors::TestError;
                 TestError::setup(format!("Failed to cleanup fixtures: {}", e))
             })?;
             Ok(())
@@ -48,12 +52,12 @@ impl Fixtures {
     pub async fn get_model_fixture(&self, _name: &str) -> TestOpResult<std::path::PathBuf> {
         #[cfg(feature = "fixtures")]
         return self.0.get_model_fixture(_name).await.map_err(|e| {
-            use crate::errors::TestError;
+            use crate::common::errors::TestError;
             TestError::setup(format!("Failed to get model fixture: {}", e))
         });
         #[cfg(not(feature = "fixtures"))]
         {
-            use crate::errors::TestError;
+            use crate::common::errors::TestError;
             Err(TestError::setup("Fixtures feature not enabled"))
         }
     }
@@ -62,12 +66,12 @@ impl Fixtures {
     pub async fn get_dataset_fixture(&self, _name: &str) -> TestOpResult<std::path::PathBuf> {
         #[cfg(feature = "fixtures")]
         return self.0.get_dataset_fixture(_name).await.map_err(|e| {
-            use crate::errors::TestError;
+            use crate::common::errors::TestError;
             TestError::setup(format!("Failed to get dataset fixture: {}", e))
         });
         #[cfg(not(feature = "fixtures"))]
         {
-            use crate::errors::TestError;
+            use crate::common::errors::TestError;
             Err(TestError::setup("Fixtures feature not enabled"))
         }
     }
@@ -77,7 +81,7 @@ impl Fixtures {
         #[cfg(feature = "fixtures")]
         {
             let stats = self.0.get_cache_stats().await.map_err(|e| {
-                use crate::errors::TestError;
+                use crate::common::errors::TestError;
                 TestError::setup(format!("Failed to get cache stats: {}", e))
             })?;
             Ok(CacheStats {
@@ -94,7 +98,7 @@ impl Fixtures {
     /// Returns the fixture context expected by TestCase::setup().
     /// This provides a stable API that works across all feature configurations.
     #[inline]
-    pub fn ctx(&self) -> crate::harness::FixtureCtx<'_> {
+    pub fn ctx(&self) -> harness::FixtureCtx<'_> {
         #[cfg(feature = "fixtures")]
         {
             // Return &FixtureManager when fixtures are enabled
@@ -119,7 +123,7 @@ pub struct CacheStats {
 
 #[cfg(feature = "fixtures")]
 impl std::ops::Deref for Fixtures {
-    type Target = crate::fixtures::FixtureManager;
+    type Target = fixtures::FixtureManager;
 
     #[inline]
     fn deref(&self) -> &Self::Target {

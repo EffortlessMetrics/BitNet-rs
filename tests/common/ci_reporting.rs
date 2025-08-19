@@ -3,7 +3,7 @@
 //! This module provides comprehensive CI integration for test reporting,
 //! including GitHub status checks, pull request comments, and notifications.
 
-use crate::results::{TestResult, TestSuiteResult};
+use crate::results::{TestResult, TestStatus, TestSuiteResult};
 use anyhow::{Context, Result};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -303,7 +303,7 @@ impl CINotificationManager {
         let failed_tests: Vec<&TestResult> = results
             .iter()
             .flat_map(|suite| &suite.test_results)
-            .filter(|test| matches!(test.status, crate::results::TestStatus::Failed))
+            .filter(|test| matches!(test.status, TestStatus::Failed))
             .collect();
 
         if failed_tests.is_empty() {
@@ -501,7 +501,7 @@ impl CINotificationManager {
                 let failed_tests: Vec<&TestResult> = suite
                     .test_results
                     .iter()
-                    .filter(|test| matches!(test.status, crate::results::TestStatus::Failed))
+                    .filter(|test| matches!(test.status, TestStatus::Failed))
                     .collect();
 
                 if !failed_tests.is_empty() {
