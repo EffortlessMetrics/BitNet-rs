@@ -15,7 +15,7 @@ The cross-validation system compares:
 
 ### System Requirements
 
-- Rust toolchain (1.70+)
+- Rust toolchain (1.89+)
 - C++ compiler (GCC 9+ or Clang 10+)
 - CMake 3.15+
 - Git (for submodule management)

@@ -340,7 +340,7 @@ impl TestCase for EnvironmentOverrideTest {
 
         // Test parallel tests override
         unsafe {
-            std::env::set_var("BITNET_TEST_PARALLEL", "8");
+            unsafe { std::env::set_var("BITNET_TEST_PARALLEL", "8"); }
         }
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
@@ -349,7 +349,7 @@ impl TestCase for EnvironmentOverrideTest {
 
         // Test timeout override
         unsafe {
-            std::env::set_var("BITNET_TEST_TIMEOUT", "120");
+            unsafe { std::env::set_var("BITNET_TEST_TIMEOUT", "120"); }
         }
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
@@ -362,7 +362,7 @@ impl TestCase for EnvironmentOverrideTest {
 
         // Test log level override
         unsafe {
-            std::env::set_var("BITNET_TEST_LOG_LEVEL", "trace");
+            unsafe { std::env::set_var("BITNET_TEST_LOG_LEVEL", "trace"); }
         }
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
@@ -371,7 +371,7 @@ impl TestCase for EnvironmentOverrideTest {
 
         // Test coverage threshold override
         unsafe {
-            std::env::set_var("BITNET_TEST_COVERAGE_THRESHOLD", "0.85");
+            unsafe { std::env::set_var("BITNET_TEST_COVERAGE_THRESHOLD", "0.85"); }
         }
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
@@ -383,8 +383,8 @@ impl TestCase for EnvironmentOverrideTest {
 
         // Test boolean overrides
         unsafe {
-            std::env::set_var("BITNET_TEST_CROSSVAL_ENABLED", "true");
-            std::env::set_var("BITNET_TEST_AUTO_DOWNLOAD", "false");
+            unsafe { std::env::set_var("BITNET_TEST_CROSSVAL_ENABLED", "true"); }
+            unsafe { std::env::set_var("BITNET_TEST_AUTO_DOWNLOAD", "false"); }
         }
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
@@ -394,7 +394,7 @@ impl TestCase for EnvironmentOverrideTest {
 
         // Test report formats override
         unsafe {
-            std::env::set_var("BITNET_TEST_REPORT_FORMATS", "json,junit");
+            unsafe { std::env::set_var("BITNET_TEST_REPORT_FORMATS", "json,junit"); }
         }
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
@@ -1327,7 +1327,7 @@ impl TestCase for ConfigurationErrorHandlingTest {
 
         // Test invalid parallel tests value
         unsafe {
-            std::env::set_var("BITNET_TEST_PARALLEL", "invalid");
+            unsafe { std::env::set_var("BITNET_TEST_PARALLEL", "invalid"); }
         }
         let mut config = TestConfig::default();
         let env_result = load_config_from_env(&mut config);
@@ -1335,7 +1335,7 @@ impl TestCase for ConfigurationErrorHandlingTest {
 
         // Test invalid timeout value
         unsafe {
-            std::env::set_var("BITNET_TEST_TIMEOUT", "not_a_number");
+            unsafe { std::env::set_var("BITNET_TEST_TIMEOUT", "not_a_number"); }
         }
         let mut config = TestConfig::default();
         let env_result = load_config_from_env(&mut config);
@@ -1343,7 +1343,7 @@ impl TestCase for ConfigurationErrorHandlingTest {
 
         // Test invalid coverage threshold value
         unsafe {
-            std::env::set_var("BITNET_TEST_COVERAGE_THRESHOLD", "invalid_float");
+            unsafe { std::env::set_var("BITNET_TEST_COVERAGE_THRESHOLD", "invalid_float"); }
         }
         let mut config = TestConfig::default();
         let env_result = load_config_from_env(&mut config);
@@ -1351,7 +1351,7 @@ impl TestCase for ConfigurationErrorHandlingTest {
 
         // Test invalid report formats
         unsafe {
-            std::env::set_var("BITNET_TEST_REPORT_FORMATS", "invalid_format,html");
+            unsafe { std::env::set_var("BITNET_TEST_REPORT_FORMATS", "invalid_format,html"); }
         }
         let mut config = TestConfig::default();
         let env_result = load_config_from_env(&mut config);

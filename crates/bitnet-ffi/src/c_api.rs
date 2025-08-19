@@ -35,7 +35,7 @@ pub const BITNET_ERROR_INTERNAL: c_int = -10;
 ///
 /// # Returns
 /// Current ABI version number
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_abi_version() -> c_uint {
     BITNET_ABI_VERSION
 }
@@ -47,7 +47,7 @@ pub extern "C" fn bitnet_abi_version() -> c_uint {
 ///
 /// # Returns
 /// Pointer to null-terminated version string
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_version() -> *const c_char {
     static VERSION: &str = "0.1.0\0";
     VERSION.as_ptr() as *const c_char
@@ -60,7 +60,7 @@ pub extern "C" fn bitnet_version() -> *const c_char {
 ///
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_init() -> c_int {
     clear_last_error();
 
@@ -93,7 +93,7 @@ pub extern "C" fn bitnet_init() -> c_int {
 ///
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cleanup() -> c_int {
     clear_last_error();
 
@@ -121,7 +121,7 @@ pub extern "C" fn bitnet_cleanup() -> c_int {
 ///
 /// # Returns
 /// Model ID (>= 0) on success, negative error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_model_load(path: *const c_char) -> c_int {
     clear_last_error();
 
@@ -163,7 +163,7 @@ pub extern "C" fn bitnet_model_load(path: *const c_char) -> c_int {
 ///
 /// # Returns
 /// Model ID (>= 0) on success, negative error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_model_load_with_config(
     path: *const c_char,
     config: *const BitNetCConfig,
@@ -214,7 +214,7 @@ pub extern "C" fn bitnet_model_load_with_config(
 ///
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_model_free(model_id: c_int) -> c_int {
     clear_last_error();
 
@@ -248,7 +248,7 @@ pub extern "C" fn bitnet_model_free(model_id: c_int) -> c_int {
 ///
 /// # Returns
 /// Number of characters written (excluding null terminator) on success, negative error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_inference(
     model_id: c_int,
     prompt: *const c_char,
@@ -326,7 +326,7 @@ pub extern "C" fn bitnet_inference(
 ///
 /// # Returns
 /// Number of characters written (excluding null terminator) on success, negative error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_inference_with_config(
     model_id: c_int,
     prompt: *const c_char,
@@ -410,7 +410,7 @@ pub extern "C" fn bitnet_inference_with_config(
 ///
 /// # Returns
 /// Pointer to null-terminated error message, or null if no error occurred
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_get_last_error() -> *const c_char {
     match get_last_error() {
         Some(error) => {
@@ -436,7 +436,7 @@ pub extern "C" fn bitnet_get_last_error() -> *const c_char {
 ///
 /// Clears the last error state. After calling this function,
 /// bitnet_get_last_error() will return null until another error occurs.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_clear_last_error() {
     clear_last_error();
 }
@@ -450,7 +450,7 @@ pub extern "C" fn bitnet_clear_last_error() {
 ///
 /// # Returns
 /// 1 if model is loaded, 0 if not loaded, negative error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_model_is_loaded(model_id: c_int) -> c_int {
     clear_last_error();
 
@@ -484,7 +484,7 @@ pub extern "C" fn bitnet_model_is_loaded(model_id: c_int) -> c_int {
 ///
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_model_get_info(model_id: c_int, info: *mut BitNetCModel) -> c_int {
     clear_last_error();
 
@@ -525,7 +525,7 @@ pub extern "C" fn bitnet_model_get_info(model_id: c_int, info: *mut BitNetCModel
 ///
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_set_num_threads(num_threads: c_uint) -> c_int {
     clear_last_error();
 
@@ -547,7 +547,7 @@ pub extern "C" fn bitnet_set_num_threads(num_threads: c_uint) -> c_int {
 ///
 /// # Returns
 /// Number of threads currently in use
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_get_num_threads() -> c_uint {
     crate::threading::get_num_threads() as c_uint
 }
@@ -562,7 +562,7 @@ pub extern "C" fn bitnet_get_num_threads() -> c_uint {
 ///
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_set_gpu_enabled(enable: c_int) -> c_int {
     clear_last_error();
 
@@ -581,7 +581,7 @@ pub extern "C" fn bitnet_set_gpu_enabled(enable: c_int) -> c_int {
 ///
 /// # Returns
 /// 1 if GPU is available, 0 if not available
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_is_gpu_available() -> c_int {
     if get_inference_manager().is_gpu_available() {
         1
@@ -609,7 +609,7 @@ pub extern "C" fn bitnet_is_gpu_available() -> c_int {
 ///
 /// # Returns
 /// Number of successful inferences on success, negative error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_batch_inference(
     model_id: c_int,
     prompts: *const *const c_char,
@@ -732,7 +732,7 @@ pub extern "C" fn bitnet_batch_inference(
 ///
 /// # Returns
 /// Stream ID (>= 0) on success, negative error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_start_streaming(
     model_id: c_int,
     prompt: *const c_char,
@@ -808,7 +808,7 @@ pub extern "C" fn bitnet_start_streaming(
 ///
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_stop_streaming(stream_id: c_int) -> c_int {
     clear_last_error();
 
@@ -838,7 +838,7 @@ pub extern "C" fn bitnet_stop_streaming(stream_id: c_int) -> c_int {
 ///
 /// # Returns
 /// Length of token on success, 0 if stream finished, negative error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_stream_next_token(
     stream_id: c_int,
     token: *mut c_char,
@@ -888,7 +888,7 @@ pub extern "C" fn bitnet_stream_next_token(
 ///
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_get_performance_metrics(
     model_id: c_int,
     metrics: *mut BitNetCPerformanceMetrics,
@@ -931,7 +931,7 @@ pub extern "C" fn bitnet_get_performance_metrics(
 ///
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_reset_performance_metrics(model_id: c_int) -> c_int {
     clear_last_error();
 
@@ -961,7 +961,7 @@ pub extern "C" fn bitnet_reset_performance_metrics(model_id: c_int) -> c_int {
 ///
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_set_memory_limit(limit_bytes: u64) -> c_int {
     clear_last_error();
 
@@ -982,7 +982,7 @@ pub extern "C" fn bitnet_set_memory_limit(limit_bytes: u64) -> c_int {
 ///
 /// # Returns
 /// Current memory usage in bytes
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_get_memory_usage() -> u64 {
     match crate::memory::get_memory_manager().get_stats() {
         Ok(stats) => stats.current_usage as u64,
@@ -996,7 +996,7 @@ pub extern "C" fn bitnet_get_memory_usage() -> u64 {
 ///
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_garbage_collect() -> c_int {
     clear_last_error();
 
@@ -1019,7 +1019,7 @@ pub extern "C" fn bitnet_garbage_collect() -> c_int {
 ///
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_switch_model_backend(
     model_id: c_int,
     backend_preference: c_uint,
@@ -1074,7 +1074,7 @@ pub extern "C" fn bitnet_switch_model_backend(
 ///
 /// # Returns
 /// Progress percentage (0-100) on success, negative error code on failure
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_get_model_loading_progress(model_id: c_int) -> c_int {
     clear_last_error();
 

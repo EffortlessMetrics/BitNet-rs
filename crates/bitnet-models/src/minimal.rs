@@ -45,13 +45,13 @@ pub fn load_minimal(mode: LoadMode) -> Result<MinimalWeights> {
             // Initialize embeddings with small random values
             let mut tok = vec![0f32; vocab * dim];
             for x in &mut tok {
-                *x = rng.gen::<f32>() * 0.02 - 0.01;
+                *x = rng.r#gen::<f32>() * 0.02 - 0.01;
             }
 
             // Initialize lm_head with small random values
             let mut head = vec![0f32; dim * vocab];
             for x in &mut head {
-                *x = rng.gen::<f32>() * 0.02 - 0.01;
+                *x = rng.r#gen::<f32>() * 0.02 - 0.01;
             }
 
             Ok(MinimalWeights { tok_embeddings: tok, lm_head: head, vocab, dim })

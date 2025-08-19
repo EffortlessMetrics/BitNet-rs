@@ -171,7 +171,7 @@ fn get_device_info(py: Python<'_>) -> PyResult<PyObject> {
 /// Set the number of CPU threads to use
 #[pyfunction]
 fn set_num_threads(num_threads: usize) -> PyResult<()> {
-    std::env::set_var("RAYON_NUM_THREADS", num_threads.to_string());
+    unsafe { std::env::set_var("RAYON_NUM_THREADS", num_threads.to_string()); }
     Ok(())
 }
 

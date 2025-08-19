@@ -51,7 +51,7 @@ Before starting migration, ensure you have:
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # Verify installation
-rustc --version  # Should be 1.70.0 or later
+rustc --version  # Should be 1.89.0 or later
 cargo --version
 ```
 
@@ -302,7 +302,7 @@ CMD ["./build/my_app"]
 
 #### Rust Dockerfile (Simple)
 ```dockerfile
-FROM rust:1.70 as builder
+FROM rust:1.89 as builder
 COPY . /app
 WORKDIR /app
 RUN cargo build --release
@@ -583,7 +583,7 @@ CMD ["./build/bitnet_server"]
 
 #### Rust Container (Simple)
 ```dockerfile
-FROM rust:1.70 as builder
+FROM rust:1.89 as builder
 COPY . /app
 WORKDIR /app
 RUN cargo build --release

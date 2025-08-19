@@ -295,7 +295,7 @@ async fn test_error_pattern_detection() -> Result<(), Box<dyn std::error::Error>
     let debug_context = logging_manager.create_debug_context("test_pattern_detection".to_string());
 
     // Simulate a timeout error in CI environment (should trigger CI pattern)
-    std::env::set_var("CI", "true");
+    unsafe { std::env::set_var("CI", "true"); }
 
     let timeout_error = TestError::timeout(Duration::from_secs(60));
     let execution_context = TestExecutionContext {
@@ -333,7 +333,7 @@ async fn test_error_pattern_detection() -> Result<(), Box<dyn std::error::Error>
     }
 
     // Clean up environment variable
-    std::env::remove_var("CI");
+    unsafe { std::env::remove_var("CI"); }
 
     Ok(())
 }

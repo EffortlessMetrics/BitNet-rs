@@ -360,7 +360,7 @@ impl TestExecutionOptimizer {
             let min_batch_idx = batch_times
                 .iter()
                 .enumerate()
-                .min_by_key(|(_, &time)| time)
+                .min_by_key(|&(_, &time)| time)
                 .map(|(idx, _)| idx)
                 .unwrap_or(0);
 
@@ -406,7 +406,7 @@ impl TestExecutionOptimizer {
             let min_worker = worker_loads
                 .iter()
                 .enumerate()
-                .min_by_key(|(_, &load)| load)
+                .min_by_key(|&(_, &load)| load)
                 .map(|(idx, _)| idx)
                 .unwrap_or(0);
 
