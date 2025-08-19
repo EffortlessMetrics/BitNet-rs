@@ -11,14 +11,14 @@ pub mod streaming_tests;
 pub mod tokenization_pipeline_tests;
 pub mod workflow_tests;
 
+// Use the prelude for common imports
+use crate::prelude::*;
+
 use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, MockTensor};
 use bitnet_inference::{GenerationConfig, InferenceConfig, InferenceEngine};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use std::sync::Arc;
-
-// Import the ct helper
-use crate::common::tensor_helpers::ct;
 
 /// Mock model implementation for integration tests
 pub struct MockModel {

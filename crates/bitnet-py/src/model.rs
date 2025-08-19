@@ -3,12 +3,12 @@
 //! Python bindings for BitNet models with automatic memory management
 //! and thread-safe access patterns.
 
-use crate::{device_to_string, parse_device, to_py_result};
-use bitnet_common::{BitNetConfig, Device};
-use bitnet_models::{loader::ModelLoader, BitNetModel, Model};
-use pyo3::exceptions::{PyRuntimeError, PyValueError};
+use crate::{device_to_string, parse_device};
+use bitnet_common::Device;
+use bitnet_models::{loader::ModelLoader, Model};
+use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyString};
+use pyo3::types::PyDict;
 use std::sync::Arc;
 
 /// Python wrapper for BitNet models

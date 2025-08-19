@@ -1,10 +1,8 @@
 //! Python Configuration Bindings
 
-use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
 
-use bitnet_common::{BitNetConfig, QuantizationType};
+use bitnet_common::BitNetConfig;
 use bitnet_inference::GenerationConfig;
 
 /// Python wrapper for BitNet configuration

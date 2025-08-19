@@ -109,13 +109,13 @@ unsafe impl GlobalAlloc for TrackingAllocator {
 pub struct MemoryPool {
     // Note: We avoid storing raw pointers to maintain thread safety
     // Instead, we track allocation statistics and provide memory management utilities
-    max_pool_size: usize,
+    _max_pool_size: usize,
     stats: Arc<Mutex<MemoryStats>>,
 }
 
 impl MemoryPool {
     pub fn new(max_pool_size: usize) -> Self {
-        Self { max_pool_size, stats: Arc::new(Mutex::new(MemoryStats::default())) }
+        Self { _max_pool_size: max_pool_size, stats: Arc::new(Mutex::new(MemoryStats::default())) }
     }
 
     /// Allocate memory from system

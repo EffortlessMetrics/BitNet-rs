@@ -3,18 +3,18 @@
 //! Python bindings for the BitNet inference engine with streaming support
 //! and async/await compatibility.
 
-use pyo3::exceptions::{PyRuntimeError, PyStopIteration, PyValueError};
+use pyo3::exceptions::{PyRuntimeError, PyStopIteration};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyIterator, PyList, PyString};
+use pyo3::types::PyDict;
 // use pyo3_asyncio_0_21::tokio::future_into_py;
 use futures_util::StreamExt;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::RwLock;
 
-use crate::{parse_device, to_py_result, PyBitNetModel};
+use crate::{parse_device, PyBitNetModel};
 use bitnet_common::Device;
-use bitnet_inference::{GenerationConfig, InferenceConfig, InferenceEngine};
+use bitnet_inference::{GenerationConfig, InferenceEngine};
 use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 
 /// Python wrapper for the inference engine
@@ -91,7 +91,7 @@ impl PyInferenceEngine {
                     ..Default::default()
                 };
 
-                let mut engine = self.inner.write().await;
+                let engine = self.inner.write().await;
                 let result = engine
                     .generate_with_config(prompt, &config)
                     .await
@@ -265,7 +265,7 @@ pub fn batch_generate(
             let config = GenerationConfig::default();
 
             for prompt in prompts {
-                let mut engine_guard = engine.inner.write().await;
+                let engine_guard = engine.inner.write().await;
                 let result = engine_guard
                     .generate_with_config(&prompt, &config)
                     .await

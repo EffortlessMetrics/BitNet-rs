@@ -1,6 +1,5 @@
 //! Async Runtime Management for Python Bindings
 
-use pyo3::prelude::*;
 use std::sync::OnceLock;
 use tokio::runtime::Runtime;
 
