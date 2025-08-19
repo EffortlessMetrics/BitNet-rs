@@ -255,6 +255,9 @@ enum Cmd {
         /// Additional CMake flags
         #[arg(long, default_value = "")]
         cmake_flags: String,
+        /// Git repository URL (default: official Microsoft BitNet)
+        #[arg(long, default_value = "https://github.com/microsoft/BitNet.git")]
+        repo: String,
     },
 
     /// Generate realistic test fixtures for unit testing
@@ -405,7 +408,7 @@ fn real_main() -> Result<()> {
             };
             crossval_cmd(&model_path, cpp_dir.as_deref(), release, &extra, dry_run)
         }
-        Cmd::FullCrossval { force, tag, backend, cmake_flags } => full_crossval_cmd(force, &tag, &backend, &cmake_flags),
+        Cmd::FullCrossval { force, tag, backend, cmake_flags, repo } => full_crossval_cmd(force, &tag, &backend, &cmake_flags, &repo),
         Cmd::GenFixtures { size, output } => gen_fixtures(&size, &output),
         Cmd::SetupCrossval => setup_crossval(),
         Cmd::CleanCache => clean_cache(),
@@ -1368,7 +1371,7 @@ fn crossval_cmd(
     run_cmd(&mut cmd)
 }
 
-fn full_crossval_cmd(force: bool, tag: &str, backend: &str, cmake_flags: &str) -> Result<()> {
+fn full_crossval_cmd(force: bool, tag: &str, backend: &str, cmake_flags: &str, repo: &str) -> Result<()> {
     println!("🚀 Running full cross-validation workflow");
     println!("   Backend: {}", backend);
     println!("   C++ Tag: {}", tag);
@@ -1398,7 +1401,7 @@ fn full_crossval_cmd(force: bool, tag: &str, backend: &str, cmake_flags: &str) -
 
     // Step 2: Fetch C++ implementation
     println!("Step 2/3: Fetching C++ implementation ({})", backend);
-    fetch_cpp_cmd(tag, force, false, backend, cmake_flags, "https://github.com/microsoft/BitNet.git")?;
+    fetch_cpp_cmd(tag, force, false, backend, cmake_flags, repo)?;
 
     println!();
 
