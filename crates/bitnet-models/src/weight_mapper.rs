@@ -139,7 +139,7 @@ pub fn create_var_builder(
     tensors: HashMap<String, Tensor>,
     dtype: DType,
     device: &Device,
-) -> Result<candle_nn::VarBuilder> {
+) -> Result<candle_nn::VarBuilder<'_>> {
     // Convert tensors to the target dtype if needed
     let mut converted = HashMap::new();
     for (name, tensor) in tensors {
