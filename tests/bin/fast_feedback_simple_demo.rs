@@ -2,7 +2,7 @@ use std::env;
 use std::time::Instant;
 
 // Import the simplified fast feedback system
-use bitnet_tests::fast_feedback_simple::{utils, FastFeedbackConfig, FastFeedbackSystem};
+use bitnet_tests::fast_feedback_simple::{utils, FastFeedbackSystem};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

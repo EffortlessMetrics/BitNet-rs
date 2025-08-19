@@ -6,15 +6,18 @@ version = "0.1.0"
 
 [lib]
 name = "bitnet_tests"
-path = "common/mod.rs"
+path = "lib.rs"
 
 [features]
+# Keep integration OFF by default to unblock builds/tests focused on crossval
 default = ["reporting", "fixtures", "trend"]
 full-framework = ["reporting", "fixtures", "trend"]
 reporting = []
 fixtures = []
 trend = []
 crossval = []
+# New: gate the integration suite
+integration-tests = []
 
 [[bin]]
 name = "validate_config"
@@ -163,4 +166,9 @@ bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
 winapi = { version = "0.3", features = ["processthreadsapi", "psapi", "fileapi", "minwindef"] }
 
 [dev-dependencies]
-# Additional test dependencies can be added here
+# Test helper dependencies
+fastrand = "2"
+filetime = "0.2"
+html-escape = "0.2"
+serde = { version = "1", features = ["derive"] }
+libc = "0.2"

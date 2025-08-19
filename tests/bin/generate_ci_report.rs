@@ -5,7 +5,7 @@
 
 use anyhow::{Context, Result};
 use bitnet_tests::ci_reporting::{CIContext, CINotificationManager, NotificationConfig};
-use bitnet_tests::results::{TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary};
+use bitnet_tests::results::{TestResult, TestStatus, TestSuiteResult, TestSummary};
 use bitnet_tests::trend_reporting::{TestRunMetadata, TrendConfig, TrendReporter};
 use clap::Parser;
 use serde_json;

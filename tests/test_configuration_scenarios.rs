@@ -6,13 +6,16 @@
 // that supports various testing scenarios including unit, integration,
 // performance, cross-validation, and other specialized testing contexts.
 
+mod common;
+
 use async_trait::async_trait;
+use crate::common::config_scenarios::{
+    ConfigurationContext, EnvironmentType, PlatformSettings, QualityRequirements, 
+    ResourceConstraints, ScenarioConfigManager, TestingScenario, TimeConstraints,
+};
 use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use bitnet_tests::{
     config::{validate_config, ReportFormat, TestConfig},
-    config_scenarios::{
-        ConfigurationContext, EnvironmentType, ScenarioConfigManager, TestingScenario,
-    },
     env_bool,
     env_duration_secs,
     // Use the single, shared env guard and helpers from the test harness crate
@@ -235,7 +238,7 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
 // Helper function for context_from_environment
 fn context_from_environment() -> TestConfigContext {
     let framework_ctx =
-        bitnet_tests::config_scenarios::ScenarioConfigManager::context_from_environment();
+        ScenarioConfigManager::context_from_environment();
     let mut ctx = TestConfigContext::default();
     ctx.scenario = framework_ctx.scenario;
     ctx.environment = framework_ctx.environment;
@@ -301,13 +304,13 @@ fn context_from_environment() -> TestConfigContext {
 
 impl TestConfigContext {
     // Convert to the new config_scenarios types
-    fn to_framework_context(&self) -> bitnet_tests::config_scenarios::ConfigurationContext {
-        let mut ctx = bitnet_tests::config_scenarios::ConfigurationContext::default();
+    fn to_framework_context(&self) -> ConfigurationContext {
+        let mut ctx = ConfigurationContext::default();
         ctx.scenario = self.scenario.clone();
         ctx.environment = self.environment.clone();
 
         if self.platform_settings.os.is_some() {
-            ctx.platform_settings = Some(bitnet_tests::config_scenarios::PlatformSettings {
+            ctx.platform_settings = Some(PlatformSettings {
                 os: self.platform_settings.os.clone(),
                 arch: None,
                 features: vec![],
@@ -318,7 +321,7 @@ impl TestConfigContext {
             || self.resource_constraints.max_memory_mb > 0
             || self.resource_constraints.max_disk_cache_mb > 0
         {
-            ctx.resource_constraints = Some(bitnet_tests::config_scenarios::ResourceConstraints {
+            ctx.resource_constraints = Some(ResourceConstraints {
                 max_memory_mb: if self.resource_constraints.max_memory_mb > 0 {
                     Some(self.resource_constraints.max_memory_mb as usize)
                 } else {
@@ -336,7 +339,7 @@ impl TestConfigContext {
         if self.time_constraints.max_test_timeout.as_secs() > 0
             || self.time_constraints.target_feedback_time.is_some()
         {
-            ctx.time_constraints = Some(bitnet_tests::config_scenarios::TimeConstraints {
+            ctx.time_constraints = Some(TimeConstraints {
                 max_total_duration: if self.time_constraints.max_test_timeout.as_secs() > 0 {
                     Some(self.time_constraints.max_test_timeout)
                 } else {
@@ -350,7 +353,7 @@ impl TestConfigContext {
             || self.quality_requirements.performance_monitoring
             || self.quality_requirements.comprehensive_reporting
         {
-            ctx.quality_requirements = Some(bitnet_tests::config_scenarios::QualityRequirements {
+            ctx.quality_requirements = Some(QualityRequirements {
                 min_coverage: if self.quality_requirements.min_coverage > 0.0 {
                     Some(self.quality_requirements.min_coverage)
                 } else {
@@ -385,8 +388,8 @@ impl ConfigurationScenariosTestSuite {
     fn restore_env_vars(&self) {
         for (key, value) in &self.original_env {
             match value {
-                Some(val) => std::env::set_var(key, val),
-                None => std::env::remove_var(key),
+                Some(val) => unsafe { std::env::set_var(key, val) },
+                None => unsafe { std::env::remove_var(key) },
             }
         }
     }
@@ -1299,7 +1302,7 @@ impl TestCase for ConfigurationValidationTest {
         let manager = ScenarioConfigManager::new();
 
         // Test that all scenario configurations are valid
-        for scenario in bitnet_tests::config_scenarios::ScenarioConfigManager::available_scenarios()
+        for scenario in ScenarioConfigManager::available_scenarios()
         {
             let config = manager.get_scenario_config(scenario);
             validate_config(&config).map_err(|e| {
@@ -1354,10 +1357,10 @@ impl TestCase for ScenarioDescriptionsTest {
         let start_time = std::time::Instant::now();
 
         // Test that all scenarios have descriptions
-        for scenario in bitnet_tests::config_scenarios::ScenarioConfigManager::available_scenarios()
+        for scenario in ScenarioConfigManager::available_scenarios()
         {
             let description =
-                bitnet_tests::config_scenarios::ScenarioConfigManager::scenario_description(
+                ScenarioConfigManager::scenario_description(
                     scenario,
                 )
                 .to_string();
@@ -1371,7 +1374,7 @@ impl TestCase for ScenarioDescriptionsTest {
 
         // Test specific descriptions
         let unit_desc =
-            bitnet_tests::config_scenarios::ScenarioConfigManager::scenario_description(
+            ScenarioConfigManager::scenario_description(
                 &TestingScenario::Unit,
             )
             .to_string();
@@ -1379,7 +1382,7 @@ impl TestCase for ScenarioDescriptionsTest {
         assert!(unit_desc.contains("isolated"), "Unit description should mention isolation");
 
         let performance_desc =
-            bitnet_tests::config_scenarios::ScenarioConfigManager::scenario_description(
+            ScenarioConfigManager::scenario_description(
                 &TestingScenario::Performance,
             )
             .to_string();
@@ -1393,7 +1396,7 @@ impl TestCase for ScenarioDescriptionsTest {
         );
 
         let crossval_desc =
-            bitnet_tests::config_scenarios::ScenarioConfigManager::scenario_description(
+            ScenarioConfigManager::scenario_description(
                 &TestingScenario::CrossValidation,
             )
             .to_string();

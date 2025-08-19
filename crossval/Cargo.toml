@@ -9,7 +9,7 @@ publish = false
 [features]
 default = []
 crossval = ["dep:bindgen", "dep:cc", "dep:bitnet-sys", "bitnet-sys/crossval"]
-ffi = []
+ffi = ["dep:cc"]
 
 [dependencies]
 # Core dependencies (always available)

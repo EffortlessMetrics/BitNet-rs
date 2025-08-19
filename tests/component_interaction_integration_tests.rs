@@ -4,13 +4,15 @@
 //! cross-crate component interactions, data flow, configuration propagation,
 //! error handling, and resource management.
 
-use tests::common::{TestConfig, TestHarness};
-use tests::integration::component_interaction_tests::ComponentInteractionTestSuite;
+use bitnet_tests::{TestConfig, TestHarness, TestStatus};
+use bitnet_tests::integration::component_interaction_tests::{ComponentInteractionTestSuite, CrossCrateDataFlowTest, ConfigurationPropagationTest, ErrorHandlingAndRecoveryTest, ResourceSharingTest};
+use log::LevelFilter;
+use env_logger;
 
 #[tokio::test]
 async fn run_component_interaction_tests() {
     // Initialize logging for test debugging
-    let _ = env_logger::builder().filter_level(log::LevelFilter::Debug).is_test(true).try_init();
+    let _ = env_logger::builder().filter_level(LevelFilter::Debug).is_test(true).try_init();
 
     // Create test configuration
     let config = TestConfig {
@@ -70,15 +72,15 @@ async fn run_component_interaction_tests() {
 
 #[tokio::test]
 async fn test_cross_crate_data_flow_validation() {
-    let _ = env_logger::builder().filter_level(log::LevelFilter::Debug).is_test(true).try_init();
+    let _ = env_logger::builder().filter_level(LevelFilter::Debug).is_test(true).try_init();
 
     let config = TestConfig::default();
     let harness = TestHarness::new(config).await.unwrap();
 
-    let test_case = tests::integration::component_interaction_tests::CrossCrateDataFlowTest;
+    let test_case = CrossCrateDataFlowTest;
     let result = harness.run_single_test(Box::new(test_case)).await.unwrap();
 
-    assert!(matches!(result.status, tests::common::TestStatus::Passed));
+    assert!(matches!(result.status, TestStatus::Passed));
 
     // Verify specific metrics for data flow
     let metrics = &result.metrics.custom_metrics;
@@ -89,15 +91,15 @@ async fn test_cross_crate_data_flow_validation() {
 
 #[tokio::test]
 async fn test_configuration_propagation_validation() {
-    let _ = env_logger::builder().filter_level(log::LevelFilter::Debug).is_test(true).try_init();
+    let _ = env_logger::builder().filter_level(LevelFilter::Debug).is_test(true).try_init();
 
     let config = TestConfig::default();
     let harness = TestHarness::new(config).await.unwrap();
 
-    let test_case = tests::integration::component_interaction_tests::ConfigurationPropagationTest;
+    let test_case = ConfigurationPropagationTest;
     let result = harness.run_single_test(Box::new(test_case)).await.unwrap();
 
-    assert!(matches!(result.status, tests::common::TestStatus::Passed));
+    assert!(matches!(result.status, TestStatus::Passed));
 
     // Verify configuration metrics
     let metrics = &result.metrics.custom_metrics;
@@ -107,15 +109,15 @@ async fn test_configuration_propagation_validation() {
 
 #[tokio::test]
 async fn test_error_handling_and_recovery_validation() {
-    let _ = env_logger::builder().filter_level(log::LevelFilter::Debug).is_test(true).try_init();
+    let _ = env_logger::builder().filter_level(LevelFilter::Debug).is_test(true).try_init();
 
     let config = TestConfig::default();
     let harness = TestHarness::new(config).await.unwrap();
 
-    let test_case = tests::integration::component_interaction_tests::ErrorHandlingAndRecoveryTest;
+    let test_case = ErrorHandlingAndRecoveryTest;
     let result = harness.run_single_test(Box::new(test_case)).await.unwrap();
 
-    assert!(matches!(result.status, tests::common::TestStatus::Passed));
+    assert!(matches!(result.status, TestStatus::Passed));
 
     // Verify error handling metrics
     let metrics = &result.metrics.custom_metrics;
@@ -125,15 +127,15 @@ async fn test_error_handling_and_recovery_validation() {
 
 #[tokio::test]
 async fn test_resource_sharing_validation() {
-    let _ = env_logger::builder().filter_level(log::LevelFilter::Debug).is_test(true).try_init();
+    let _ = env_logger::builder().filter_level(LevelFilter::Debug).is_test(true).try_init();
 
     let config = TestConfig::default();
     let harness = TestHarness::new(config).await.unwrap();
 
-    let test_case = tests::integration::component_interaction_tests::ResourceSharingTest;
+    let test_case = ResourceSharingTest;
     let result = harness.run_single_test(Box::new(test_case)).await.unwrap();
 
-    assert!(matches!(result.status, tests::common::TestStatus::Passed));
+    assert!(matches!(result.status, TestStatus::Passed));
 
     // Verify resource sharing metrics
     let metrics = &result.metrics.custom_metrics;

@@ -300,6 +300,11 @@ impl TestHarness {
         drop(env.temp_dir);
     }
 
+    /// Run a single test case (back-compat wrapper for integration tests)
+    pub async fn run_single_test(&self, test_case: Box<dyn TestCase>) -> TestRecord {
+        self.run_single_test_isolated(test_case).await
+    }
+
     /// Get execution statistics
     pub async fn get_stats(&self) -> ExecutionStats {
         self.execution_stats.read().await.clone()

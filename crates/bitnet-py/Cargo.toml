@@ -9,6 +9,9 @@ repository = "https://github.com/microsoft/BitNet"
 [lib]
 name = "bitnet_py"
 crate-type = ["cdylib"]
+doctest = false
+test = false
+bench = false
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common" }

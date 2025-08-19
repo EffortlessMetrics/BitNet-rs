@@ -3,7 +3,10 @@
 //! Tests streaming generation workflows, backpressure handling, and real-time performance.
 
 use super::*;
-use crate::{FixtureManager, TestCase, TestError, TestMetrics, TestResult};
+use crate::{TestCase, TestError, TestMetrics, TestResult};
+#[cfg(feature = "fixtures")]
+use crate::common::FixtureManager;
+use crate::common::harness::FixtureCtx;
 use async_trait::async_trait;
 use bitnet_inference::{GenerationStream, StreamingConfig};
 use futures_util::StreamExt;
@@ -38,7 +41,7 @@ impl TestCase for BasicStreamingTest {
         "basic_streaming_workflow"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up basic streaming workflow test");
         Ok(())
     }
@@ -160,10 +163,12 @@ impl TestCase for BasicStreamingTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("chunks_received".to_string(), chunk_count as f64),
                 ("total_characters".to_string(), total_text.len() as f64),
@@ -198,7 +203,7 @@ impl TestCase for StreamingConfigurationTest {
         "streaming_configuration"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up streaming configuration test");
         Ok(())
     }
@@ -386,10 +391,12 @@ impl TestCase for StreamingConfigurationTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("generation_configs_tested".to_string(), test_configs.len() as f64),
                 ("streaming_configs_tested".to_string(), streaming_configs.len() as f64),
@@ -418,7 +425,7 @@ impl TestCase for StreamingBackpressureTest {
         "streaming_backpressure"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up streaming backpressure test");
         Ok(())
     }
@@ -590,10 +597,12 @@ impl TestCase for StreamingBackpressureTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("slow_consumer_chunks".to_string(), slow_consumer_chunks as f64),
                 ("fast_consumer_chunks".to_string(), fast_consumer_chunks as f64),
@@ -628,7 +637,7 @@ impl TestCase for StreamingCancellationTest {
         "streaming_cancellation"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up streaming cancellation test");
         Ok(())
     }
@@ -788,10 +797,12 @@ impl TestCase for StreamingCancellationTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("early_termination_chunks".to_string(), early_termination_chunks as f64),
                 ("timeout_chunks".to_string(), timeout_chunks as f64),
@@ -821,7 +832,7 @@ impl TestCase for StreamingPerformanceTest {
         "streaming_performance"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up streaming performance test");
         Ok(())
     }
@@ -991,10 +1002,12 @@ impl TestCase for StreamingPerformanceTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("ttft_measurements".to_string(), ttft_measurements.len() as f64),
                 ("avg_ttft_ms".to_string(), avg_ttft.as_millis() as f64),
@@ -1033,7 +1046,7 @@ mod tests {
         let harness = TestHarness::new(config).await.unwrap();
         let suite = StreamingWorkflowTestSuite;
 
-        let result = harness.run_test_suite(suite).await;
+        let result = harness.run_test_suite(&suite).await;
         assert!(result.is_ok());
 
         let suite_result = result.unwrap();

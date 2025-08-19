@@ -6,6 +6,7 @@ use bitnet::prelude::*;
 use futures::StreamExt;
 use std::env;
 use std::io::{self, Write};
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -29,24 +30,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Load the model
     let loader = ModelLoader::new(device.clone());
-    let model = loader.load(model_path)?;
+    let model: Arc<dyn Model> = Arc::new(loader.load(model_path)?);
     println!("Model loaded successfully");
 
-    // Create inference engine
-    let mut engine = InferenceEngine::new(model)?;
-    println!("Inference engine created");
+    // Create a tokenizer (you'll need to provide your tokenizer implementation)
+    // For this example, we'll use a placeholder
+    // In real usage, load the tokenizer from a file or configuration
+    let tokenizer: Arc<dyn Tokenizer> = Arc::new(create_tokenizer()?);
 
-    // Configure generation parameters for streaming
-    let config = GenerationConfig {
-        max_new_tokens: 200,
-        temperature: 0.7,
-        top_p: 0.9,
-        top_k: Some(40),
-        repetition_penalty: 1.1,
-        stream_tokens: true, // Enable token-by-token streaming
-        ..Default::default()
-    };
-    engine.set_generation_config(config);
+    // Create inference engine with Arc-wrapped model and tokenizer
+    let engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device)?;
+    println!("Inference engine created");
 
     // Interactive loop
     loop {
@@ -69,9 +63,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         print!("Response: ");
         io::stdout().flush()?;
 
+        // Configure generation parameters for streaming
+        let config = GenerationConfig {
+            max_new_tokens: 200,
+            temperature: 0.7,
+            top_p: Some(0.9),
+            top_k: Some(40),
+            repetition_penalty: 1.1,
+            do_sample: true,
+            seed: None,
+        };
+
         // Create streaming generation
-        let mut stream = engine.generate_stream(prompt).await?;
+        let mut stream = engine.generate_stream_with_config(prompt, &config);
         let mut full_response = String::new();
+        let start_time = std::time::Instant::now();
+        let mut token_count = 0;
 
         // Process tokens as they arrive
         while let Some(token_result) = stream.next().await {
@@ -80,6 +87,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     print!("{}", token);
                     io::stdout().flush()?;
                     full_response.push_str(&token);
+                    token_count += 1;
                 }
                 Err(e) => {
                     eprintln!("\nError during generation: {}", e);
@@ -88,15 +96,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
+        let elapsed = start_time.elapsed();
+        let tokens_per_second = if elapsed.as_secs_f64() > 0.0 {
+            token_count as f64 / elapsed.as_secs_f64()
+        } else {
+            0.0
+        };
+
         println!("\n");
         println!("--- Generation Statistics ---");
-        let stats = engine.get_last_generation_stats()?;
-        println!("Tokens generated: {}", stats.tokens_generated);
-        println!("Generation time: {:.2}s", stats.generation_time_ms as f64 / 1000.0);
-        println!("Tokens per second: {:.2}", stats.tokens_per_second);
+        println!("Tokens generated: {}", token_count);
+        println!("Generation time: {:.2}s", elapsed.as_secs_f64());
+        println!("Tokens per second: {:.2}", tokens_per_second);
         println!("Total response length: {} characters", full_response.len());
     }
 
     println!("Goodbye!");
     Ok(())
+}
+
+// Placeholder function - replace with actual tokenizer loading
+fn create_tokenizer() -> Result<impl Tokenizer, Box<dyn std::error::Error>> {
+    // This should load your actual tokenizer
+    // For now, return a dummy implementation
+    struct DummyTokenizer;
+    
+    impl Tokenizer for DummyTokenizer {
+        fn encode(&self, text: &str) -> Result<Vec<u32>, Box<dyn std::error::Error>> {
+            // Simple character-based encoding for demonstration
+            Ok(text.chars().map(|c| c as u32).collect())
+        }
+        
+        fn decode(&self, tokens: &[u32]) -> Result<String, Box<dyn std::error::Error>> {
+            // Simple character-based decoding for demonstration
+            Ok(tokens.iter().map(|&t| char::from_u32(t).unwrap_or('?')).collect())
+        }
+        
+        fn vocab_size(&self) -> usize {
+            65536 // Unicode BMP size
+        }
+    }
+    
+    Ok(DummyTokenizer)
 }

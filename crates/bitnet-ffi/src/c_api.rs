@@ -778,7 +778,7 @@ pub extern "C" fn bitnet_start_streaming(
         return BITNET_ERROR_INVALID_ARGUMENT;
     }
 
-    let stream_config_ref = unsafe { &*stream_config };
+    let _stream_config_ref = unsafe { &*stream_config };
 
     match get_inference_manager().start_streaming(model_id as u32, prompt_str, config_ref) {
         Ok(session) => {

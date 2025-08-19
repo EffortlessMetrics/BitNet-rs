@@ -261,7 +261,7 @@ impl CrossValidationSuite {
             };
         }
 
-        let mut max_difference = 0.0;
+        let mut max_difference: f64 = 0.0;
         for (seq1, seq2) in logits1.iter().zip(logits2.iter()) {
             if seq1.len() != seq2.len() {
                 return FloatComparisonResult {
