@@ -497,3 +497,74 @@ jobs:
               --ppl-max 0.02 --latency-p95-max 0.05 --tok-s-min -0.05
           fi
         continue-on-error: true
+
+  # Fast smoke test for cross-validation (required for PRs)
+  crossval-cpu-smoke:
+    name: Cross-validation (CPU, smoke)
+    needs: [test]
+    runs-on: ubuntu-22.04
+    env:
+      CPP_TAG: "main"  # Pin to a specific SHA for determinism
+      RUST_BACKTRACE: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: 
+          toolchain: 1.82.0
+      - uses: Swatinem/rust-cache@v2
+        with: 
+          cache-all-crates: true
+          cache-targets: true
+
+      - name: Install deps
+        run: |
+          sudo apt-get update && sudo apt-get install -y build-essential cmake
+
+      - name: Cache BitNet C++ (smoke)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bitnet_cpp
+          key: bitnet-cpp-${{ runner.os }}-smoke-${{ env.CPP_TAG }}
+          restore-keys: |
+            bitnet-cpp-${{ runner.os }}-
+
+      - name: Fetch C++ (pinned)
+        run: |
+          cargo run -p xtask -- fetch-cpp --tag "${CPP_TAG}"
+
+      - name: Download test model
+        run: |
+          cargo run -p xtask -- download-model
+
+      - name: Verify model lock
+        run: |
+          # Verify the model matches expected SHA
+          MODEL_SHA=$(sha256sum models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf | cut -d' ' -f1)
+          EXPECTED_SHA=$(jq -r '.crossval_default.sha256' crossval-models.lock.json)
+          if [ "$MODEL_SHA" != "$EXPECTED_SHA" ]; then
+            echo "Model SHA mismatch: $MODEL_SHA != $EXPECTED_SHA"
+            exit 1
+          fi
+
+      - name: Run smoke tests (parity preflight + tiny checks)
+        env:
+          CROSSVAL_GGUF: models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+          OMP_NUM_THREADS: 1
+          GGML_NUM_THREADS: 1
+          MKL_NUM_THREADS: 1
+          OPENBLAS_NUM_THREADS: 1
+        run: |
+          # Build with crossval support
+          cargo build --workspace --no-default-features --features "cpu,ffi,crossval"
+          
+          # Run only framework validation tests (fast)
+          cargo test -p bitnet-crossval --features crossval --test framework -- --nocapture
+          
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crossval-smoke-${{ github.sha }}
+          path: |
+            crossval/**/results/**/*.json
+            crossval/**/logs/**/*.log

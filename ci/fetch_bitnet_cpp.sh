@@ -42,6 +42,10 @@ while [[ $# -gt 0 ]]; do
             REV="$2"
             shift 2
             ;;
+        --repo)
+            REPO_URL="$2"
+            shift 2
+            ;;
         --clean)
             CLEAN=1
             shift
@@ -51,8 +55,9 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --help)
-            echo "Usage: $0 [--tag TAG] [--clean] [--force]"
+            echo "Usage: $0 [--tag TAG] [--repo URL] [--clean] [--force]"
             echo "  --tag TAG    Git revision/branch to checkout (default: $DEFAULT_REV)"
+            echo "  --repo URL   Git repository URL (default: $REPO_URL)"
             echo "  --clean      Clean build before compiling"
             echo "  --force      Force rebuild even if already built"
             exit 0
