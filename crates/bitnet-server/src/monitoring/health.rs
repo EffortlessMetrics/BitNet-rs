@@ -583,11 +583,7 @@ mod tests {
             live: HealthStatus::Healthy,
             ready: HealthStatus::Healthy,
         }));
-        let req = Request::builder()
-            .method("HEAD")
-            .uri("/health")
-            .body(Body::empty())
-            .unwrap();
+        let req = Request::builder().method("HEAD").uri("/health").body(Body::empty()).unwrap();
         let resp = app.clone().oneshot(req).await.unwrap();
 
         #[cfg(not(feature = "degraded-ok"))]
@@ -608,11 +604,8 @@ mod tests {
             live: HealthStatus::Healthy,
             ready: HealthStatus::Degraded,
         }));
-        let req = Request::builder()
-            .method("HEAD")
-            .uri("/health/ready")
-            .body(Body::empty())
-            .unwrap();
+        let req =
+            Request::builder().method("HEAD").uri("/health/ready").body(Body::empty()).unwrap();
         let resp = app.clone().oneshot(req).await.unwrap();
         assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(
@@ -629,11 +622,8 @@ mod tests {
             live: HealthStatus::Degraded,
             ready: HealthStatus::Healthy,
         }));
-        let req = Request::builder()
-            .method("HEAD")
-            .uri("/health/live")
-            .body(Body::empty())
-            .unwrap();
+        let req =
+            Request::builder().method("HEAD").uri("/health/live").body(Body::empty()).unwrap();
         let resp = app.clone().oneshot(req).await.unwrap();
 
         #[cfg(not(feature = "degraded-ok"))]

@@ -230,9 +230,7 @@ fn create_test_suite(name: &str, total: usize, passed: usize, failed: usize) -> 
             total_duration,
             average_duration: if total > 0 {
                 Duration::from_nanos(
-                    (total_duration.as_nanos() / total as u128)
-                        .try_into()
-                        .unwrap_or(u64::MAX)
+                    (total_duration.as_nanos() / total as u128).try_into().unwrap_or(u64::MAX),
                 )
             } else {
                 Duration::from_secs(0)

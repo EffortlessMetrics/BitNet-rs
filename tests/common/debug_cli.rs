@@ -38,7 +38,8 @@ impl DebugCli {
         };
 
         if self.verbose {
-            println!("✅ Analysis complete. Found {} critical issues, {} performance issues, {} stability issues",
+            println!(
+                "✅ Analysis complete. Found {} critical issues, {} performance issues, {} stability issues",
                 analysis.critical_issues.len(),
                 analysis.performance_issues.len(),
                 analysis.stability_issues.len()

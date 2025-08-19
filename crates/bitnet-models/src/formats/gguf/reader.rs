@@ -134,17 +134,17 @@ impl<'a> GgufReader<'a> {
     /// Get tensor data by tensor info
     pub fn get_tensor_data_by_info(&self, info: &TensorInfo) -> Result<&[u8]> {
         // Tensor offsets in GGUF are relative to data_start
-        let start = self.data_start
-            .checked_add(info.offset as usize)
-            .ok_or_else(|| BitNetError::Model(ModelError::LoadingFailed {
+        let start = self.data_start.checked_add(info.offset as usize).ok_or_else(|| {
+            BitNetError::Model(ModelError::LoadingFailed {
                 reason: format!("Tensor '{}' offset overflow", info.name),
-            }))?;
-        
-        let end = start
-            .checked_add(info.size as usize)
-            .ok_or_else(|| BitNetError::Model(ModelError::LoadingFailed {
+            })
+        })?;
+
+        let end = start.checked_add(info.size as usize).ok_or_else(|| {
+            BitNetError::Model(ModelError::LoadingFailed {
                 reason: format!("Tensor '{}' size overflow", info.name),
-            }))?;
+            })
+        })?;
 
         if end > self.data.len() {
             return Err(BitNetError::Model(ModelError::LoadingFailed {

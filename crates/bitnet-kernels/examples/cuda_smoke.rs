@@ -52,7 +52,7 @@ fn main() -> anyhow::Result<()> {
     match kernel.matmul_i2s(&a, &s, &mut c, m, n, k) {
         Ok(()) => {
             println!("✓ Matrix multiplication completed successfully");
-            
+
             // Display first few results
             println!("\nFirst 8 results:");
             for (i, val) in c.iter().take(8).enumerate() {
@@ -62,11 +62,11 @@ fn main() -> anyhow::Result<()> {
             // Verify results are non-zero and finite
             let non_zero = c.iter().filter(|&&x| x != 0.0).count();
             let all_finite = c.iter().all(|&x| x.is_finite());
-            
+
             println!("\nValidation:");
             println!("  Non-zero elements: {}/{}", non_zero, c.len());
             println!("  All finite: {}", all_finite);
-            
+
             if non_zero > 0 && all_finite {
                 println!("✓ Results validated successfully");
             } else {

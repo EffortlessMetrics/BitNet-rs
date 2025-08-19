@@ -4,7 +4,7 @@
 //! retrieval functionality for the C API.
 
 use crate::{BitNetCConfig, BitNetCError};
-use bitnet_common::{BitNetConfig, ModelFormat, QuantizationType, ConcreteTensor};
+use bitnet_common::{BitNetConfig, ConcreteTensor, ModelFormat, QuantizationType};
 use bitnet_models::Model;
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -210,10 +210,7 @@ impl ModelManager {
     }
 
     /// Get a reference to a loaded model
-    pub fn get_model(
-        &self,
-        model_id: u32,
-    ) -> Result<Arc<dyn Model>, BitNetCError> {
+    pub fn get_model(&self, model_id: u32) -> Result<Arc<dyn Model>, BitNetCError> {
         let models = self.models.read().map_err(|_| {
             BitNetCError::ThreadSafety("Failed to acquire models read lock".to_string())
         })?;
@@ -333,9 +330,7 @@ struct MockModel {
 
 impl MockModel {
     fn new(config: BitNetConfig) -> Self {
-        Self {
-            config,
-        }
+        Self { config }
     }
 }
 
@@ -362,7 +357,6 @@ impl Model for MockModel {
     ) -> bitnet_common::Result<ConcreteTensor> {
         Ok(x.clone()) // minimal no-op
     }
-
 }
 
 // Global model manager instance

@@ -27,7 +27,9 @@ impl GgufLoader {
                 #[cfg(not(feature = "gpu"))]
                 {
                     let _ = id; // Suppress unused variable warning
-                    Err(BitNetError::Validation("CUDA support not enabled; rebuild with --features gpu".to_string()))
+                    Err(BitNetError::Validation(
+                        "CUDA support not enabled; rebuild with --features gpu".to_string(),
+                    ))
                 }
             }
             // Compile this arm only on macOS with the 'gpu' feature.
@@ -42,7 +44,7 @@ impl GgufLoader {
             #[cfg(not(all(target_os = "macos", feature = "gpu")))]
             Device::Metal => Err(BitNetError::Validation(
                 "Metal support not enabled; rebuild with --features gpu on macOS".to_string(),
-            ))
+            )),
         }
     }
 }
@@ -268,14 +270,17 @@ impl GgufLoader {
             if matches!(info.tensor_type, GgufTensorType::I2_S) {
                 // For now, create a placeholder F32 tensor with the correct shape
                 // TODO: Implement proper I2_S dequantization
-                tracing::warn!("I2_S quantization detected for tensor {}, using placeholder values", info.name);
-                
+                tracing::warn!(
+                    "I2_S quantization detected for tensor {}, using placeholder values",
+                    info.name
+                );
+
                 let original_shape = &info.shape;
                 let num_elements: usize = original_shape.iter().product();
-                
+
                 // Create placeholder data (small random values to avoid NaN/Inf)
                 let float_data = vec![0.001f32; num_elements];
-                
+
                 // Create F32 tensor from placeholder data
                 Tensor::from_slice(&float_data, original_shape.as_slice(), &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))

@@ -1,5 +1,5 @@
 use bitnet_tests::fast_feedback_simple::{
-    utils, FastFeedbackConfig, FastFeedbackSystem, FeedbackQuality,
+    FastFeedbackConfig, FastFeedbackSystem, FeedbackQuality, utils,
 };
 use std::time::{Duration, Instant};
 

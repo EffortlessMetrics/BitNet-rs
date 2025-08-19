@@ -4,8 +4,8 @@
 //! working together to generate comprehensive test reports.
 
 use bitnet_tests::reporting::{
-    formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter},
     ReportConfig, ReportFormat, ReportingManager, TestReporter,
+    formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter},
 };
 use bitnet_tests::results::{TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary};
 use std::collections::HashMap;

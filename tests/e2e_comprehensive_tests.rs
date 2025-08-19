@@ -15,7 +15,7 @@ use bitnet_common::{
     BitNetConfig, BitNetError, ConcreteTensor, Device, InferenceError, KernelError, MockTensor,
     ModelError, QuantizationError,
 };
-use bitnet_kernels::{select_best_provider, KernelManager};
+use bitnet_kernels::{KernelManager, select_best_provider};
 use bitnet_models::{ModelFormat, ModelLoader};
 use bitnet_quantization::{
     I2SQuantizer, QuantizationConfig, QuantizationType, Quantize, TL1Quantizer, TL2Quantizer,

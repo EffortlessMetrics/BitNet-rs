@@ -4,7 +4,9 @@ use bitnet_common::{BitNetError, ModelError, Result};
 
 #[inline]
 pub fn align_up(off: usize, align: usize) -> usize {
-    if align == 0 { return off; }
+    if align == 0 {
+        return off;
+    }
     debug_assert!(align.is_power_of_two(), "alignment should be power-of-two");
     (off + align - 1) & !(align - 1)
 }
@@ -67,7 +69,7 @@ impl GgufHeader {
             data[*offset + 7],
         ]);
         *offset += 8;
-        
+
         // GGUF v3 uses fixed alignment of 32 bytes for metadata values
         // There's no explicit alignment field in the header
         let alignment = 32usize;
@@ -133,7 +135,7 @@ impl GgufValue {
                 let array_len = read_u64(data, offset)? as usize;
 
                 let mut array = Vec::with_capacity(array_len);
-                
+
                 // Read elements based on the array element type
                 match array_type {
                     0 => {
@@ -427,20 +429,28 @@ pub fn read_bool(data: &[u8], offset: &mut usize) -> Result<bool> {
 
 pub fn read_string(data: &[u8], offset: &mut usize) -> Result<String> {
     let len = read_u64(data, offset)? as usize;
-    
+
     // Sanity check for reasonable string length (e.g., < 1MB)
     const MAX_STRING_LEN: usize = 1024 * 1024;
     if len > MAX_STRING_LEN {
         return Err(BitNetError::Model(ModelError::InvalidFormat {
-            format: format!("String length {} exceeds maximum {} at offset {}", 
-                           len, MAX_STRING_LEN, *offset - 8),
+            format: format!(
+                "String length {} exceeds maximum {} at offset {}",
+                len,
+                MAX_STRING_LEN,
+                *offset - 8
+            ),
         }));
     }
-    
+
     if *offset + len > data.len() {
         return Err(BitNetError::Model(ModelError::InvalidFormat {
-            format: format!("String extends beyond data bounds (offset: {}, len: {}, data size: {})", 
-                           *offset, len, data.len()),
+            format: format!(
+                "String extends beyond data bounds (offset: {}, len: {}, data size: {})",
+                *offset,
+                len,
+                data.len()
+            ),
         }));
     }
 
@@ -486,12 +496,12 @@ mod tests {
         let mut data = Vec::new();
         data.extend_from_slice(&2u64.to_le_bytes()); // length
         data.extend_from_slice(&[0xC3, 0x28]); // invalid UTF-8 sequence
-        
+
         let mut offset = 0;
         // Should not error; should return a String with replacement char
         let result = read_string(&data, &mut offset);
         assert!(result.is_ok(), "lossy decode should succeed");
-        
+
         let s = result.unwrap();
         assert!(s.contains('\u{FFFD}'), "expected replacement char in lossy decode");
         assert_eq!(offset, 10, "offset should be updated correctly");
@@ -504,7 +514,7 @@ mod tests {
         let mut data = Vec::new();
         data.extend_from_slice(&(test_str.len() as u64).to_le_bytes());
         data.extend_from_slice(test_str.as_bytes());
-        
+
         let mut offset = 0;
         let result = read_string(&data, &mut offset);
         assert!(result.is_ok());

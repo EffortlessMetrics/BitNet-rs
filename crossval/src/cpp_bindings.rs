@@ -29,7 +29,7 @@ mod imp {
     use super::*;
     use std::ffi::CString;
     use std::os::raw::{c_char, c_int, c_void};
-    
+
     extern "C" {
         fn bitnet_cpp_create_model(model_path: *const c_char) -> *mut c_void;
         fn bitnet_cpp_destroy_model(model: *mut c_void);
@@ -48,13 +48,13 @@ mod imp {
 
     impl CppModel {
         pub fn load<P: AsRef<Path>>(model_path: P) -> Result<Self> {
-            let path_str = model_path
-                .as_ref()
-                .to_str()
-                .ok_or_else(|| CrossvalError::ModelLoadError("Invalid path encoding".to_string()))?;
+            let path_str = model_path.as_ref().to_str().ok_or_else(|| {
+                CrossvalError::ModelLoadError("Invalid path encoding".to_string())
+            })?;
 
-            let c_path = CString::new(path_str)
-                .map_err(|_| CrossvalError::ModelLoadError("Path contains null bytes".to_string()))?;
+            let c_path = CString::new(path_str).map_err(|_| {
+                CrossvalError::ModelLoadError("Path contains null bytes".to_string())
+            })?;
 
             let handle = unsafe { bitnet_cpp_create_model(c_path.as_ptr()) };
 
@@ -85,8 +85,9 @@ mod imp {
                 ));
             }
 
-            let c_prompt = CString::new(prompt)
-                .map_err(|_| CrossvalError::InferenceError("Prompt contains null bytes".to_string()))?;
+            let c_prompt = CString::new(prompt).map_err(|_| {
+                CrossvalError::InferenceError("Prompt contains null bytes".to_string())
+            })?;
 
             let mut tokens = vec![0u32; max_tokens];
             let mut actual_count: c_int = 0;
@@ -109,7 +110,9 @@ mod imp {
             }
 
             if actual_count < 0 {
-                return Err(CrossvalError::InferenceError("Invalid token count from C++".to_string()));
+                return Err(CrossvalError::InferenceError(
+                    "Invalid token count from C++".to_string(),
+                ));
             }
 
             if actual_count as usize > max_tokens {

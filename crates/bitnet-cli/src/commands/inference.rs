@@ -17,7 +17,7 @@ use std::{
 use tokio::{fs, time::timeout};
 use tracing::{debug, error, info, warn};
 
-use bitnet_inference::{InferenceEngine, InferenceConfig, SamplingConfig};
+use bitnet_inference::{InferenceConfig, InferenceEngine, SamplingConfig};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use candle_core::Device;

@@ -1148,10 +1148,10 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
     // Verify the build succeeded by checking for libraries or binaries
     let cpp_dir = dirs::home_dir().unwrap().join(".cache/bitnet_cpp");
     let build_dir = cpp_dir.join("build");
-    
+
     // Check for any built artifacts (libraries or binaries)
     let mut found_artifacts = false;
-    
+
     // Check for shared libraries
     if cfg!(target_os = "macos") {
         let lib_patterns = ["*.dylib", "*.so", "*.a"];
@@ -1183,7 +1183,7 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
             }
         }
     }
-    
+
     // Also check for any executable files
     if !found_artifacts {
         if let Ok(entries) = std::fs::read_dir(&build_dir) {

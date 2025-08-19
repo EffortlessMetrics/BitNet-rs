@@ -42,23 +42,25 @@ impl BitNetModel {
     ) -> Result<Self> {
         // Validate that required tensors are present
         // LM head can be tied to embeddings, so check for either output.weight or embeddings
-        let has_output = tensors.contains_key("output.weight") 
+        let has_output = tensors.contains_key("output.weight")
             || tensors.contains_key("lm_head.weight")
             || tensors.contains_key("head.weight");
-        
+
         let has_embeddings = tensors.contains_key("token_embd.weight")
             || tensors.contains_key("tok_embeddings.weight")
             || tensors.contains_key("model.embed_tokens.weight");
-        
+
         if !has_embeddings {
             return Err(BitNetError::Validation(
-                "Missing required tensor: token embeddings (token_embd.weight or equivalent)".to_string()
+                "Missing required tensor: token embeddings (token_embd.weight or equivalent)"
+                    .to_string(),
             ));
         }
-        
+
         if !has_output && !has_embeddings {
             return Err(BitNetError::Validation(
-                "Missing both output.weight and token_embd.weight - cannot compute logits".to_string()
+                "Missing both output.weight and token_embd.weight - cannot compute logits"
+                    .to_string(),
             ));
         }
 

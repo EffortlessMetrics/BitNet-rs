@@ -333,11 +333,7 @@ impl CrossValidationSuite {
             }
         }
 
-        if count > 0 {
-            total_similarity / count as f64
-        } else {
-            0.0
-        }
+        if count > 0 { total_similarity / count as f64 } else { 0.0 }
     }
 }
 

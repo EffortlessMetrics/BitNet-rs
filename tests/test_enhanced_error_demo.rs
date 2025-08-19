@@ -14,9 +14,8 @@ async fn test_enhanced_error_handling_works() {
     // Create different types of errors to show enhanced debugging
     let timeout_error = TestError::TimeoutError { timeout: Duration::from_secs(30) };
 
-    let fixture_error = TestError::ConfigError { 
-        message: "Failed to download test model".to_string() 
-    };
+    let fixture_error =
+        TestError::ConfigError { message: "Failed to download test model".to_string() };
 
     let assertion_error =
         TestError::AssertionError { message: "Expected 'hello' but got 'world'".to_string() };

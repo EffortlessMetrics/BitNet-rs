@@ -56,12 +56,11 @@ impl crate::KernelProvider for FfiKernel {
         n: usize,
         k: usize,
     ) -> bitnet_common::Result<()> {
-        self.matmul_i2s(a, b, c, m, n, k)
-            .map_err(|e| bitnet_common::BitNetError::Kernel(
-                bitnet_common::KernelError::UnsupportedArchitecture {
-                    arch: e.to_string(),
-                },
-            ))
+        self.matmul_i2s(a, b, c, m, n, k).map_err(|e| {
+            bitnet_common::BitNetError::Kernel(
+                bitnet_common::KernelError::UnsupportedArchitecture { arch: e.to_string() },
+            )
+        })
     }
 
     fn quantize(

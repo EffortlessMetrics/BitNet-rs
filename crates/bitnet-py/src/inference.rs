@@ -8,8 +8,8 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 // use pyo3_asyncio_0_21::tokio::future_into_py;
 use futures_util::StreamExt;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::{parse_device, PyBitNetModel};

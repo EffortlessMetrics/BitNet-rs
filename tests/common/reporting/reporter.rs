@@ -171,7 +171,7 @@ impl ReportingManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::results::{TestMetrics, TestStatus, TestSummary, TestResult};
+    use crate::results::{TestMetrics, TestResult, TestStatus, TestSummary};
     use std::collections::HashMap;
     use std::time::Duration;
     use tempfile::TempDir;

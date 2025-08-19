@@ -7,17 +7,16 @@
 // Requirements: 5.3 - Integration testing framework configuration testing
 
 use bitnet_tests::{
-    BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB,
+    BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB, FixtureManager,
     config::{
-        ci_config, dev_config, load_config_from_env, load_config_from_file, load_test_config,
-        merge_configs, minimal_config, save_config_to_file, validate_config, ComparisonTolerance,
-        CrossValidationConfig, CustomFixture, FixtureConfig, ReportFormat, ReportingConfig,
-        TestConfig,
+        ComparisonTolerance, CrossValidationConfig, CustomFixture, FixtureConfig, ReportFormat,
+        ReportingConfig, TestConfig, ci_config, dev_config, load_config_from_env,
+        load_config_from_file, load_test_config, merge_configs, minimal_config,
+        save_config_to_file, validate_config,
     },
     errors::{TestError, TestOpResult as TestResult},
     harness::{TestCase, TestHarness, TestSuite},
     results::{TestMetrics, TestResult as TestCaseResult, TestStatus},
-    FixtureManager,
 };
 
 #[cfg(feature = "fixtures")]
@@ -29,7 +28,7 @@ use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 
 /// Test suite for configuration testing
 pub struct ConfigurationTestSuite {
@@ -340,14 +339,18 @@ impl TestCase for EnvironmentOverrideTest {
         .collect();
 
         // Test parallel tests override
-        unsafe { std::env::set_var("BITNET_TEST_PARALLEL", "8"); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_PARALLEL", "8");
+        }
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
             .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;
         assert_eq!(config.max_parallel_tests, 8, "Environment override for parallel tests failed");
 
         // Test timeout override
-        unsafe { std::env::set_var("BITNET_TEST_TIMEOUT", "120"); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_TIMEOUT", "120");
+        }
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
             .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;
@@ -358,14 +361,18 @@ impl TestCase for EnvironmentOverrideTest {
         );
 
         // Test log level override
-        unsafe { std::env::set_var("BITNET_TEST_LOG_LEVEL", "trace"); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_LOG_LEVEL", "trace");
+        }
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
             .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;
         assert_eq!(config.log_level, "trace", "Environment override for log level failed");
 
         // Test coverage threshold override
-        unsafe { std::env::set_var("BITNET_TEST_COVERAGE_THRESHOLD", "0.85"); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_COVERAGE_THRESHOLD", "0.85");
+        }
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
             .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;
@@ -386,7 +393,9 @@ impl TestCase for EnvironmentOverrideTest {
         assert!(!config.fixtures.auto_download, "Environment override for auto download failed");
 
         // Test report formats override
-        unsafe { std::env::set_var("BITNET_TEST_REPORT_FORMATS", "json,junit"); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_REPORT_FORMATS", "json,junit");
+        }
         let mut config = TestConfig::default();
         load_config_from_env(&mut config)
             .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;
@@ -1317,25 +1326,33 @@ impl TestCase for ConfigurationErrorHandlingTest {
                 .collect();
 
         // Test invalid parallel tests value
-        unsafe { std::env::set_var("BITNET_TEST_PARALLEL", "invalid"); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_PARALLEL", "invalid");
+        }
         let mut config = TestConfig::default();
         let env_result = load_config_from_env(&mut config);
         assert!(env_result.is_err(), "Invalid parallel tests env var should fail");
 
         // Test invalid timeout value
-        unsafe { std::env::set_var("BITNET_TEST_TIMEOUT", "not_a_number"); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_TIMEOUT", "not_a_number");
+        }
         let mut config = TestConfig::default();
         let env_result = load_config_from_env(&mut config);
         assert!(env_result.is_err(), "Invalid timeout env var should fail");
 
         // Test invalid coverage threshold value
-        unsafe { std::env::set_var("BITNET_TEST_COVERAGE_THRESHOLD", "invalid_float"); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_COVERAGE_THRESHOLD", "invalid_float");
+        }
         let mut config = TestConfig::default();
         let env_result = load_config_from_env(&mut config);
         assert!(env_result.is_err(), "Invalid coverage threshold env var should fail");
 
         // Test invalid report formats
-        unsafe { std::env::set_var("BITNET_TEST_REPORT_FORMATS", "invalid_format,html"); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_REPORT_FORMATS", "invalid_format,html");
+        }
         let mut config = TestConfig::default();
         let env_result = load_config_from_env(&mut config);
         assert!(env_result.is_err(), "Invalid report format should fail");

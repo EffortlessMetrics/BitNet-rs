@@ -276,10 +276,8 @@ impl TrendReporter {
 
         let durations: Vec<f64> = data_points.iter().map(|dp| dp.duration.as_secs_f64()).collect();
 
-        let success_count = data_points
-            .iter()
-            .filter(|dp| matches!(dp.status, TestStatus::Passed))
-            .count();
+        let success_count =
+            data_points.iter().filter(|dp| matches!(dp.status, TestStatus::Passed)).count();
 
         let success_rate = success_count as f64 / data_points.len() as f64;
 
@@ -349,11 +347,7 @@ impl TrendReporter {
 
         let total_suites: usize = entries.iter().map(|entry| entry.results.len()).sum();
 
-        if total_suites > 0 {
-            total_success_rate / (total_suites as f64 * 100.0)
-        } else {
-            1.0
-        }
+        if total_suites > 0 { total_success_rate / (total_suites as f64 * 100.0) } else { 1.0 }
     }
 
     fn calculate_performance_trend(&self, entries: &[TrendEntry]) -> PerformanceTrend {

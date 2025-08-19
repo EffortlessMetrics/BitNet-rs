@@ -8,14 +8,14 @@
 
 mod common;
 
-use async_trait::async_trait;
 use crate::common::config_scenarios::{
-    ConfigurationContext, EnvironmentType, PlatformSettings, QualityRequirements, 
+    ConfigurationContext, EnvironmentType, PlatformSettings, QualityRequirements,
     ResourceConstraints, ScenarioConfigManager, TestingScenario, TimeConstraints,
 };
+use async_trait::async_trait;
 use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use bitnet_tests::{
-    config::{validate_config, ReportFormat, TestConfig},
+    config::{ReportFormat, TestConfig, validate_config},
     env_bool,
     env_duration_secs,
     // Use the single, shared env guard and helpers from the test harness crate
@@ -237,8 +237,7 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
 
 // Helper function for context_from_environment
 fn context_from_environment() -> TestConfigContext {
-    let framework_ctx =
-        ScenarioConfigManager::context_from_environment();
+    let framework_ctx = ScenarioConfigManager::context_from_environment();
     let mut ctx = TestConfigContext::default();
     ctx.scenario = framework_ctx.scenario;
     ctx.environment = framework_ctx.environment;
@@ -1302,8 +1301,7 @@ impl TestCase for ConfigurationValidationTest {
         let manager = ScenarioConfigManager::new();
 
         // Test that all scenario configurations are valid
-        for scenario in ScenarioConfigManager::available_scenarios()
-        {
+        for scenario in ScenarioConfigManager::available_scenarios() {
             let config = manager.get_scenario_config(scenario);
             validate_config(&config).map_err(|e| {
                 TestError::assertion(format!(
@@ -1357,13 +1355,8 @@ impl TestCase for ScenarioDescriptionsTest {
         let start_time = std::time::Instant::now();
 
         // Test that all scenarios have descriptions
-        for scenario in ScenarioConfigManager::available_scenarios()
-        {
-            let description =
-                ScenarioConfigManager::scenario_description(
-                    scenario,
-                )
-                .to_string();
+        for scenario in ScenarioConfigManager::available_scenarios() {
+            let description = ScenarioConfigManager::scenario_description(scenario).to_string();
             assert!(!description.is_empty(), "Scenario {:?} should have a description", scenario);
             assert!(
                 description.len() > 10,
@@ -1374,18 +1367,12 @@ impl TestCase for ScenarioDescriptionsTest {
 
         // Test specific descriptions
         let unit_desc =
-            ScenarioConfigManager::scenario_description(
-                &TestingScenario::Unit,
-            )
-            .to_string();
+            ScenarioConfigManager::scenario_description(&TestingScenario::Unit).to_string();
         assert!(unit_desc.contains("Fast"), "Unit description should mention speed");
         assert!(unit_desc.contains("isolated"), "Unit description should mention isolation");
 
         let performance_desc =
-            ScenarioConfigManager::scenario_description(
-                &TestingScenario::Performance,
-            )
-            .to_string();
+            ScenarioConfigManager::scenario_description(&TestingScenario::Performance).to_string();
         assert!(
             performance_desc.contains("Sequential"),
             "Performance description should mention sequential execution"
@@ -1396,10 +1383,8 @@ impl TestCase for ScenarioDescriptionsTest {
         );
 
         let crossval_desc =
-            ScenarioConfigManager::scenario_description(
-                &TestingScenario::CrossValidation,
-            )
-            .to_string();
+            ScenarioConfigManager::scenario_description(&TestingScenario::CrossValidation)
+                .to_string();
         assert!(
             crossval_desc.contains("comparison"),
             "Cross-validation description should mention comparison"
@@ -1663,7 +1648,7 @@ async fn run_tests() -> TestOpResult<()> {
 #[tokio::test]
 async fn test_configuration_scenarios() {
     let _g = env_guard(); // serialize all env changes in this test
-                          // Note: env_logger may already be initialized, so ignore errors
+    // Note: env_logger may already be initialized, so ignore errors
     let _ = env_logger::try_init();
 
     // Run the test suite

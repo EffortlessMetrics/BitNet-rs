@@ -1,6 +1,6 @@
 #![cfg(feature = "crossval")]
 use bitnet_tests::cross_validation::{
-    test_suites, ComparisonTestCaseRegistry, ComparisonTestRunner, TestCaseCategory,
+    ComparisonTestCaseRegistry, ComparisonTestRunner, TestCaseCategory, test_suites,
 };
 use bitnet_tests::data::models::ModelSize;
 

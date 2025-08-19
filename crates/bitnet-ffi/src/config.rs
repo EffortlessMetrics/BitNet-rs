@@ -430,10 +430,10 @@ mod tests {
         assert_eq!(gen_config.top_p, 0.95);
         // repetition_penalty is now a plain f32, not an Option
         assert!((gen_config.repetition_penalty - 1.2f32).abs() < 1e-6);
-        
+
         // do_sample field was removed from GenerationConfig
         // Sampling is now controlled via temperature/top_p/top_k parameters
-        
+
         assert_eq!(gen_config.seed, Some(42));
     }
 }

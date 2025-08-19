@@ -6,11 +6,7 @@ use std::time::Duration;
 
 /// Helper to pick non-empty PathBuf or fallback to default
 pub fn pick_dir(env: &PathBuf, scenario: &PathBuf) -> PathBuf {
-    if !env.as_os_str().is_empty() {
-        env.clone()
-    } else {
-        scenario.clone()
-    }
+    if !env.as_os_str().is_empty() { env.clone() } else { scenario.clone() }
 }
 
 /// Main configuration for the testing framework

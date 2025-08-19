@@ -32,7 +32,7 @@ fn main() {
         if cpp_dir.as_os_str().is_empty() || !cpp_dir.exists() {
             println!("cargo:warning=BITNET_CPP_DIR not set/invalid; building without C++ bridge");
             println!("cargo:rustc-cfg=bitnet_cpp_unavailable");
-            
+
             // Create minimal bindings file
             let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
             std::fs::write(
@@ -160,7 +160,7 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
         cpp_dir.join("src/llama.h"),
         cpp_dir.join("llama.h"),
     ];
-    
+
     let mut llama_h = None;
     for location in &possible_llama_locations {
         if location.exists() {
@@ -168,12 +168,13 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
             break;
         }
     }
-    
+
     let llama_h = llama_h.ok_or_else(|| {
         format!(
             "llama.h not found in any expected location:\n{}\n\
              Is the Microsoft BitNet repository complete?",
-            possible_llama_locations.iter()
+            possible_llama_locations
+                .iter()
                 .map(|p| format!("  - {}", p.display()))
                 .collect::<Vec<_>>()
                 .join("\n")
@@ -192,24 +193,23 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    let mut builder = bindgen::Builder::default()
-        .header(llama_h.to_string_lossy());
-    
+    let mut builder = bindgen::Builder::default().header(llama_h.to_string_lossy());
+
     // Add include paths - check which ones exist
     let possible_include_paths = [
         cpp_dir.join("3rdparty/llama.cpp/include"),
         cpp_dir.join("3rdparty/llama.cpp/ggml/include"),
         cpp_dir.join("include"),
         cpp_dir.join("src"),
-        cpp_dir.clone(),
+        cpp_dir.to_path_buf(),
     ];
-    
+
     for include_path in &possible_include_paths {
         if include_path.exists() {
             builder = builder.clang_arg(format!("-I{}", include_path.display()));
         }
     }
-    
+
     builder = builder
         // Main llama.cpp C API
         .allowlist_function("llama_.*")

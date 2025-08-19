@@ -4,9 +4,8 @@
 use bitnet_tests::units::BYTES_PER_MB;
 use bitnet_tests::{
     config::{
-        ci_config, dev_config, load_config_from_env, load_config_from_file,
-        merge_configs, minimal_config, save_config_to_file, validate_config, ReportFormat,
-        TestConfig,
+        ReportFormat, TestConfig, ci_config, dev_config, load_config_from_env,
+        load_config_from_file, merge_configs, minimal_config, save_config_to_file, validate_config,
     },
     config_validator::ConfigValidator,
     errors::{TestError, TestOpResult},

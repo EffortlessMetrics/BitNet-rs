@@ -49,10 +49,10 @@ pub mod reporting;
 pub mod ci_reporting;
 
 pub mod incremental;
+pub mod logging;
 pub mod optimization;
 pub mod parallel;
 pub mod selection;
-pub mod logging;
 
 // Re-export commonly used functions
 pub use env::{env_bool, env_duration_secs, env_guard, env_string, env_u64, env_usize};

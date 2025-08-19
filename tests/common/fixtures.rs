@@ -817,11 +817,7 @@ pub struct CacheStats {
 impl CacheStats {
     /// Get cache utilization as a percentage (if max size is configured)
     pub fn utilization_percent(&self, max_size: u64) -> Option<f64> {
-        if max_size > 0 {
-            Some((self.total_size as f64 / max_size as f64) * 100.0)
-        } else {
-            None
-        }
+        if max_size > 0 { Some((self.total_size as f64 / max_size as f64) * 100.0) } else { None }
     }
 
     /// Check if cache is over the size limit

@@ -1,9 +1,9 @@
 //! Tensor abstractions and utilities
 
 use crate::{BitNetError, Device, Result};
-use candle_core::{DType, Tensor as CandleTensor};
 #[cfg(all(target_os = "macos", feature = "gpu"))]
 use candle_core::backend::BackendDevice;
+use candle_core::{DType, Tensor as CandleTensor};
 
 /// Tensor trait for unified tensor operations
 pub trait Tensor: Send + Sync {
@@ -144,7 +144,9 @@ impl BitNetTensor {
                 }
                 #[cfg(not(all(target_os = "macos", feature = "gpu")))]
                 {
-                    Err(BitNetError::Validation("Metal device requested but not supported on this build".to_string()))
+                    Err(BitNetError::Validation(
+                        "Metal device requested but not supported on this build".to_string(),
+                    ))
                 }
             }
         }
@@ -259,7 +261,9 @@ impl Tensor for MockTensor {
                 }
                 #[cfg(not(all(target_os = "macos", feature = "gpu")))]
                 {
-                    return Err(BitNetError::Validation("Metal device requested but not supported on this build".to_string()));
+                    return Err(BitNetError::Validation(
+                        "Metal device requested but not supported on this build".to_string(),
+                    ));
                 }
             }
         };

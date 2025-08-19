@@ -410,8 +410,8 @@ pub fn debug_config_from_env() -> DebugConfig {
 }
 
 /// Quick debug setup for tests
-pub async fn setup_debug_test_environment(
-) -> TestOpResult<(DebugEnabledTestHarness, Arc<TestDebugger>)> {
+pub async fn setup_debug_test_environment()
+-> TestOpResult<(DebugEnabledTestHarness, Arc<TestDebugger>)> {
     let test_config = super::config::TestConfig::default();
     let debug_config = debug_config_from_env();
 
@@ -424,8 +424,8 @@ pub async fn setup_debug_test_environment(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{BYTES_PER_KB, BYTES_PER_MB, TestError};
     use std::time::Duration;
-    use crate::{TestError, BYTES_PER_MB, BYTES_PER_KB};
 
     struct MockTestCase {
         name: String,

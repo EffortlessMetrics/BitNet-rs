@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
 
-use bitnet_inference::{InferenceEngine, InferenceConfig};
+use bitnet_inference::{InferenceConfig, InferenceEngine};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use candle_core::Device;
@@ -272,10 +272,7 @@ impl BenchmarkCommand {
     }
 
     /// Run all benchmarks
-    async fn run_benchmarks(
-        &self,
-        _engine: &mut InferenceEngine,
-    ) -> Result<BenchmarkResults> {
+    async fn run_benchmarks(&self, _engine: &mut InferenceEngine) -> Result<BenchmarkResults> {
         let start_time = Instant::now();
         let mut all_results = Vec::new();
 

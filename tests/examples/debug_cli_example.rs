@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use bitnet_tests::debug_cli::{create_debug_cli, DebugCli};
+use std::path::PathBuf;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

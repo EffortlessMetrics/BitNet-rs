@@ -64,7 +64,7 @@ impl InferenceManager {
             })?;
 
             futures::executor::block_on(
-                engine_guard.generate_with_config(prompt, &generation_config)
+                engine_guard.generate_with_config(prompt, &generation_config),
             )
             .map_err(|e| BitNetCError::InferenceFailed(format!("Generation failed: {}", e)))?
         };
@@ -83,7 +83,7 @@ impl InferenceManager {
     pub fn generate_tokens(
         &self,
         model_id: u32,
-        input_tokens: &[u32],
+        _input_tokens: &[u32],
         config: &BitNetCInferenceConfig,
     ) -> Result<Vec<u32>, BitNetCError> {
         // Validate configuration
@@ -147,7 +147,7 @@ impl InferenceManager {
 
         match engines.get(&model_id) {
             Some(engine) => {
-                let engine_guard = engine.lock().map_err(|_| {
+                let _engine_guard = engine.lock().map_err(|_| {
                     BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
                 })?;
 
@@ -167,7 +167,7 @@ impl InferenceManager {
 
         match engines.get(&model_id) {
             Some(engine) => {
-                let engine_guard = engine.lock().map_err(|_| {
+                let _engine_guard = engine.lock().map_err(|_| {
                     BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
                 })?;
 
@@ -232,7 +232,7 @@ impl InferenceManager {
         // Create new engine
         let _model = get_model_manager().get_model(model_id)?;
 
-        let inference_config = {
+        let _inference_config = {
             let default_config = self.default_config.read().map_err(|_| {
                 BitNetCError::ThreadSafety("Failed to acquire default config read lock".to_string())
             })?;
@@ -243,9 +243,8 @@ impl InferenceManager {
         let model = Arc::new(MockInferenceModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
         let device = bitnet_common::Device::Cpu;
-        
-        let engine = InferenceEngine::new(model, tokenizer, device)
-        .map_err(|e| {
+
+        let engine = InferenceEngine::new(model, tokenizer, device).map_err(|e| {
             BitNetCError::InferenceFailed(format!("Failed to create inference engine: {}", e))
         })?;
 
@@ -331,10 +330,16 @@ impl bitnet_tokenizers::Tokenizer for MockTokenizer {
         Ok(text.bytes().map(|b| b as u32).collect())
     }
 
-    fn decode(&self, token_ids: &[u32], _skip_special_tokens: bool) -> bitnet_common::Result<String> {
+    fn decode(
+        &self,
+        token_ids: &[u32],
+        _skip_special_tokens: bool,
+    ) -> bitnet_common::Result<String> {
         // Simple mock: convert each u32 back to byte
         let bytes: Vec<u8> = token_ids.iter().map(|&id| id as u8).collect();
-        String::from_utf8(bytes).map_err(|e| bitnet_common::BitNetError::Validation(format!("UTF-8 decoding error: {}", e)))
+        String::from_utf8(bytes).map_err(|e| {
+            bitnet_common::BitNetError::Validation(format!("UTF-8 decoding error: {}", e))
+        })
     }
 
     fn vocab_size(&self) -> usize {
@@ -352,9 +357,7 @@ impl bitnet_tokenizers::Tokenizer for MockTokenizer {
 
 impl MockInferenceModel {
     fn new() -> Self {
-        Self {
-            cfg: bitnet_common::BitNetConfig::default(),
-        }
+        Self { cfg: bitnet_common::BitNetConfig::default() }
     }
 }
 
@@ -370,7 +373,10 @@ impl bitnet_models::Model for MockInferenceModel {
         todo!("embed not used in bitnet-ffi tests")
     }
 
-    fn logits(&self, _x: &bitnet_common::ConcreteTensor) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+    fn logits(
+        &self,
+        _x: &bitnet_common::ConcreteTensor,
+    ) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
         todo!("logits not used in bitnet-ffi tests")
     }
 
@@ -382,7 +388,6 @@ impl bitnet_models::Model for MockInferenceModel {
         // Mock implementation - return input as-is
         Ok(input.clone())
     }
-
 }
 
 // Global inference manager instance

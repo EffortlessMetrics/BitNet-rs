@@ -419,15 +419,21 @@ mod tests {
         println!("  Sequential time would be: {:?}", sequential_time);
 
         // Verify that parallel execution was faster than sequential
-        assert!(total_duration < sequential_time,
-            "Parallel execution should be faster than sequential. Got {:?}, expected less than {:?}", 
-            total_duration, sequential_time);
+        assert!(
+            total_duration < sequential_time,
+            "Parallel execution should be faster than sequential. Got {:?}, expected less than {:?}",
+            total_duration,
+            sequential_time
+        );
 
         // Verify significant parallelism (should be at least 30% faster)
         let efficiency_threshold = sequential_time.as_millis() as f64 * 0.7;
-        assert!((total_duration.as_millis() as f64) < efficiency_threshold,
+        assert!(
+            (total_duration.as_millis() as f64) < efficiency_threshold,
             "Parallel execution should show significant improvement. Got {:?}, expected less than {}ms",
-            total_duration, efficiency_threshold);
+            total_duration,
+            efficiency_threshold
+        );
 
         // Verify stats
         let stats = harness.get_stats().await;

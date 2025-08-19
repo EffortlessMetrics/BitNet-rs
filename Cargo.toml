@@ -93,6 +93,15 @@ num_cpus = "1.16"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 # For test error handling construction
 reqwest = { version = "0.12", default-features = false }
+# Additional dependencies used by root-level tests
+anyhow = "1.0"
+chrono = { version = "0.4", default-features = true, features = ["clock"] }
+futures-util = "0.3"
+tracing = "0.1"
+fastrand = "2.0"
+filetime = "0.2"
+html-escape = "0.2"
+libc = "0.2"
 
 [features]
 default = ["cpu"]

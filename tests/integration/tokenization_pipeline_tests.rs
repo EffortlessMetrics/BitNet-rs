@@ -4,10 +4,10 @@
 //! validating data flow and transformations between components.
 
 use super::*;
-use crate::{TestCase, TestError, TestMetrics, TestResult};
 #[cfg(feature = "fixtures")]
 use crate::common::FixtureManager;
 use crate::common::harness::FixtureCtx;
+use crate::{TestCase, TestError, TestMetrics, TestResult};
 use async_trait::async_trait;
 use std::time::Instant;
 use tracing::{debug, info, warn};

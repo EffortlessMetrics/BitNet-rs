@@ -1,6 +1,6 @@
 use bitnet_common::QuantizationType;
 use bitnet_kernels::{KernelManager, KernelProvider};
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 fn benchmark_kernels(c: &mut Criterion) {
     let mut manager = KernelManager::new();
