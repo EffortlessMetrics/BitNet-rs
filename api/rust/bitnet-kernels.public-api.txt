@@ -1,0 +1,27 @@
+// Public API for bitnet-kernels
+// Auto-generated baseline - DO NOT EDIT MANUALLY
+// Update with: cargo public-api -p bitnet-kernels > api/rust/bitnet-kernels.public-api.txt
+
+pub mod bitnet_kernels::cpu
+pub fn bitnet_kernels::cpu::matmul_i2s_f32(a: &[i8], b: &[i8], c: &mut [f32], m: usize, n: usize, k: usize)
+pub fn bitnet_kernels::cpu::matmul_tl1_f32(a: &[u8], b: &[u8], c: &mut [f32], m: usize, n: usize, k: usize)
+pub fn bitnet_kernels::cpu::quantize_i2s(input: &[f32], output: &mut [i8], scale: f32)
+pub fn bitnet_kernels::cpu::dequantize_i2s(input: &[i8], output: &mut [f32], scale: f32)
+
+#[cfg(feature = "cuda")]
+pub mod bitnet_kernels::cuda
+pub fn bitnet_kernels::cuda::matmul_i2s_f32_cuda(a: &[i8], b: &[i8], c: &mut [f32], m: usize, n: usize, k: usize) -> Result<()>
+pub fn bitnet_kernels::cuda::matmul_tl1_f32_cuda(a: &[u8], b: &[u8], c: &mut [f32], m: usize, n: usize, k: usize) -> Result<()>
+pub fn bitnet_kernels::cuda::quantize_i2s_cuda(input: &[f32], output: &mut [i8], scale: f32) -> Result<()>
+pub fn bitnet_kernels::cuda::dequantize_i2s_cuda(input: &[i8], output: &mut [f32], scale: f32) -> Result<()>
+
+pub struct bitnet_kernels::KernelConfig
+pub struct bitnet_kernels::KernelConfig::block_size: usize
+pub struct bitnet_kernels::KernelConfig::device: bitnet_common::Device
+pub struct bitnet_kernels::KernelConfig::use_simd: bool
+
+pub fn bitnet_kernels::select_kernel(config: &KernelConfig) -> Box<dyn Kernel>
+
+pub trait bitnet_kernels::Kernel
+pub trait bitnet_kernels::Kernel::matmul(&self, a: &[i8], b: &[i8], c: &mut [f32], m: usize, n: usize, k: usize)
+pub trait bitnet_kernels::Kernel::name(&self) -> &str

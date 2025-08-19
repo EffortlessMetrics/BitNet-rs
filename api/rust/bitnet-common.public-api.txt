@@ -1,0 +1,36 @@
+// Public API for bitnet-common
+// Auto-generated baseline - DO NOT EDIT MANUALLY
+// Update with: cargo public-api -p bitnet-common > api/rust/bitnet-common.public-api.txt
+
+pub struct bitnet_common::BitNetConfig
+pub struct bitnet_common::BitNetConfig::block_size: usize
+pub struct bitnet_common::BitNetConfig::hidden_size: usize
+pub struct bitnet_common::BitNetConfig::model_type: bitnet_common::ModelType
+pub struct bitnet_common::BitNetConfig::n_embd: usize
+pub struct bitnet_common::BitNetConfig::n_head: usize
+pub struct bitnet_common::BitNetConfig::n_layer: usize
+pub struct bitnet_common::BitNetConfig::n_local_heads: usize
+pub struct bitnet_common::BitNetConfig::rope_scaling: f32
+pub struct bitnet_common::BitNetConfig::vocab_size: usize
+
+pub enum bitnet_common::BitNetError
+pub enum bitnet_common::BitNetError::Config(String)
+pub enum bitnet_common::BitNetError::Cuda(String)
+pub enum bitnet_common::BitNetError::Inference(String)
+pub enum bitnet_common::BitNetError::Io(std::io::Error)
+pub enum bitnet_common::BitNetError::Model(String)
+pub enum bitnet_common::BitNetError::Quantization(String)
+pub enum bitnet_common::BitNetError::Tokenization(String)
+
+pub enum bitnet_common::Device
+pub enum bitnet_common::Device::Cpu
+pub enum bitnet_common::Device::Cuda(usize)
+
+pub enum bitnet_common::ModelType
+pub enum bitnet_common::ModelType::BitNet158
+pub enum bitnet_common::ModelType::Llama
+pub enum bitnet_common::ModelType::Unknown
+
+pub trait bitnet_common::QuantizedTensor
+pub trait bitnet_common::QuantizedTensor::dequantize(&self) -> Vec<f32>
+pub trait bitnet_common::QuantizedTensor::quantize(data: &[f32]) -> Self

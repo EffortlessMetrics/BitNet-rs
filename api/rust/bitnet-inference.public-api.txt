@@ -1,0 +1,29 @@
+// Public API for bitnet-inference
+// Auto-generated baseline - DO NOT EDIT MANUALLY
+// Update with: cargo public-api -p bitnet-inference > api/rust/bitnet-inference.public-api.txt
+
+pub struct bitnet_inference::InferenceEngine
+pub fn bitnet_inference::InferenceEngine::new(model: Box<dyn Model>, config: InferenceConfig) -> Self
+pub fn bitnet_inference::InferenceEngine::generate(&mut self, prompt: &str, options: GenerationOptions) -> Result<String>
+pub fn bitnet_inference::InferenceEngine::generate_stream(&mut self, prompt: &str, options: GenerationOptions) -> Result<impl Stream<Item = Result<String>>>
+
+pub struct bitnet_inference::InferenceConfig
+pub struct bitnet_inference::InferenceConfig::batch_size: usize
+pub struct bitnet_inference::InferenceConfig::device: bitnet_common::Device
+pub struct bitnet_inference::InferenceConfig::max_seq_len: usize
+pub struct bitnet_inference::InferenceConfig::temperature: f32
+pub struct bitnet_inference::InferenceConfig::top_k: usize
+pub struct bitnet_inference::InferenceConfig::top_p: f32
+
+pub struct bitnet_inference::GenerationOptions
+pub struct bitnet_inference::GenerationOptions::max_tokens: usize
+pub struct bitnet_inference::GenerationOptions::stop_sequences: Vec<String>
+pub struct bitnet_inference::GenerationOptions::stream: bool
+pub struct bitnet_inference::GenerationOptions::temperature: Option<f32>
+pub struct bitnet_inference::GenerationOptions::top_k: Option<usize>
+pub struct bitnet_inference::GenerationOptions::top_p: Option<f32>
+
+pub trait bitnet_inference::Model
+pub trait bitnet_inference::Model::forward(&self, input: &[i32], position: usize) -> Result<Vec<f32>>
+pub trait bitnet_inference::Model::get_config(&self) -> &BitNetConfig
+pub trait bitnet_inference::Model::load_weights(&mut self, path: &Path) -> Result<()>
