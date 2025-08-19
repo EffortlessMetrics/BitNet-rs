@@ -222,6 +222,23 @@ BitNet.rs is organized as a comprehensive Rust workspace with 12 specialized cra
 | `bitnet-sys` | FFI bindings for C++ comparison (requires `--features ffi`) |
 | `crossval` | Cross-validation framework |
 
+#### Microsoft BitNet Integration
+
+The cross-validation system is fully integrated with the official [Microsoft BitNet](https://github.com/microsoft/BitNet) repository:
+
+```bash
+# Fetch and build the official Microsoft BitNet C++ implementation
+cargo run -p xtask -- fetch-cpp
+
+# Run cross-validation tests against Microsoft's implementation
+cargo run -p xtask -- crossval
+
+# Or run the complete workflow in one command
+cargo run -p xtask -- full-crossval
+```
+
+This integration ensures compatibility and allows performance comparisons with the reference implementation.
+
 ## Performance Comparison
 
 BitNet.rs significantly outperforms the original implementations:
