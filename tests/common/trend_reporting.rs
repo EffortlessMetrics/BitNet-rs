@@ -3,7 +3,7 @@
 //! This module provides functionality to track test results over time,
 //! analyze trends, and generate historical reports.
 
-use crate::results::TestSuiteResult;
+use crate::results::{TestStatus, TestSuiteResult};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -278,7 +278,7 @@ impl TrendReporter {
 
         let success_count = data_points
             .iter()
-            .filter(|dp| matches!(dp.status, crate::results::TestStatus::Passed))
+            .filter(|dp| matches!(dp.status, TestStatus::Passed))
             .count();
 
         let success_rate = success_count as f64 / data_points.len() as f64;
@@ -642,7 +642,7 @@ pub struct PerformanceDataPoint {
 struct TestDataPoint {
     timestamp: DateTime<Utc>,
     duration: Duration,
-    status: crate::results::TestStatus,
+    status: TestStatus,
     memory_peak: Option<u64>,
 }
 
