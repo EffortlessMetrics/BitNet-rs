@@ -3,12 +3,12 @@
 //! This tool generates comprehensive trend analysis reports
 //! from historical test data.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use bitnet_tests::trend_reporting::{TrendConfig, TrendReporter};
 use clap::Parser;
 use std::path::PathBuf;
 use tokio::fs;
-use tracing::{info, warn};
+use tracing::info;
 
 #[derive(Parser)]
 #[command(name = "generate_trend_analysis")]

@@ -4,7 +4,10 @@
 //! for multiple simultaneous inference requests.
 
 use super::*;
-use crate::{FixtureManager, TestCase, TestError, TestMetrics, TestResult};
+use crate::{TestCase, TestError, TestMetrics, TestResult, BYTES_PER_MB};
+#[cfg(feature = "fixtures")]
+use crate::common::FixtureManager;
+use crate::common::harness::FixtureCtx;
 use anyhow::Result;
 use async_trait::async_trait;
 use futures_util::future::join_all;
@@ -39,7 +42,7 @@ impl TestCase for BasicBatchProcessingTest {
         "basic_batch_processing"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up basic batch processing test");
         Ok(())
     }
@@ -207,10 +210,12 @@ impl TestCase for BasicBatchProcessingTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("sequential_batch_size".to_string(), batch_prompts.len() as f64),
                 ("sequential_total_time_ms".to_string(), sequential_total_time.as_millis() as f64),
@@ -248,7 +253,7 @@ impl TestCase for ParallelBatchProcessingTest {
         "parallel_batch_processing"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up parallel batch processing test");
         Ok(())
     }
@@ -462,10 +467,12 @@ impl TestCase for ParallelBatchProcessingTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("concurrent_tasks".to_string(), concurrent_prompts.len() as f64),
                 ("successful_concurrent".to_string(), successful_concurrent as f64),
@@ -505,7 +512,7 @@ impl TestCase for BatchSizeOptimizationTest {
         "batch_size_optimization"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up batch size optimization test");
         Ok(())
     }
@@ -636,7 +643,7 @@ impl TestCase for BatchSizeOptimizationTest {
 
         let mut adaptive_results = Vec::new();
 
-        for (load_name, concurrent_requests) in load_patterns {
+        for &(load_name, concurrent_requests) in &load_patterns {
             debug!(
                 "Testing adaptive behavior under {}: {} concurrent requests",
                 load_name, concurrent_requests
@@ -709,10 +716,12 @@ impl TestCase for BatchSizeOptimizationTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("batch_sizes_tested".to_string(), batch_size_results.len() as f64),
                 ("optimal_batch_size".to_string(), optimal_batch_size as f64),
@@ -745,7 +754,7 @@ impl TestCase for BatchResourceManagementTest {
         "batch_resource_management"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up batch resource management test");
         Ok(())
     }
@@ -803,7 +812,7 @@ impl TestCase for BatchResourceManagementTest {
         // Test resource limits
         debug!("Testing resource limits");
         let limited_config = InferenceConfig {
-            memory_pool_size: BYTES_PER_MB * 100, // 100MB limit
+            memory_pool_size: (BYTES_PER_MB * 100) as usize, // 100MB limit
             ..Default::default()
         };
 
@@ -927,10 +936,12 @@ impl TestCase for BatchResourceManagementTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("memory_batches_processed".to_string(), batch_count as f64),
                 ("items_per_batch".to_string(), items_per_batch as f64),
@@ -966,7 +977,7 @@ impl TestCase for BatchErrorHandlingTest {
         "batch_error_handling"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up batch error handling test");
         Ok(())
     }
@@ -1165,10 +1176,12 @@ impl TestCase for BatchErrorHandlingTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("mixed_prompts_tested".to_string(), mixed_prompts.len() as f64),
                 ("partial_successes".to_string(), partial_successes as f64),
@@ -1208,7 +1221,7 @@ mod tests {
         let harness = TestHarness::new(config).await.unwrap();
         let suite = BatchProcessingTestSuite;
 
-        let result = harness.run_test_suite(suite).await;
+        let result = harness.run_test_suite(&suite).await;
         assert!(result.is_ok());
 
         let suite_result = result.unwrap();

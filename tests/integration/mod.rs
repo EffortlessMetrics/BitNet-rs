@@ -17,6 +17,9 @@ use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use std::sync::Arc;
 
+// Import the ct helper
+use crate::common::tensor_helpers::ct;
+
 /// Mock model implementation for integration tests
 pub struct MockModel {
     config: BitNetConfig,
@@ -47,7 +50,24 @@ impl Model for MockModel {
         *self.forward_calls.lock().unwrap() += 1;
 
         // Return mock output tensor with vocab size dimensions
-        Ok(MockTensor::new(vec![1, 50257]))
+        Ok(ct(vec![1, 50257]))
+    }
+
+    fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor, BitNetError> {
+        // Return mock embedding tensor with [batch_size, seq_len, hidden_dim] shape
+        let batch_size = 1;
+        let seq_len = tokens.len();
+        let hidden_dim = 768; // typical hidden dimension
+        Ok(ct(vec![batch_size, seq_len, hidden_dim]))
+    }
+
+    fn logits(&self, input: &ConcreteTensor) -> Result<ConcreteTensor, BitNetError> {
+        // Return mock logits tensor with [batch_size, seq_len, vocab_size] shape
+        let _ = input; // unused in mock
+        let batch_size = 1;
+        let seq_len = 1;
+        let vocab_size = 50257;
+        Ok(ct(vec![batch_size, seq_len, vocab_size]))
     }
 }
 

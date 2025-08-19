@@ -20,6 +20,7 @@ pub mod errors;
 pub mod harness;
 pub mod results;
 pub mod serde_time;
+pub mod tensor_helpers;
 pub mod units;
 pub mod utils;
 
@@ -126,7 +127,11 @@ pub mod prelude {
     // Fixtures facade (provides stable API)
     pub use super::fixtures_facade::Fixtures;
 
+    // Tensor helpers
+    pub use super::tensor_helpers::ct;
+    pub use crate::ctv; // bring the macro into scope
+
     // CI reporting re-export when available
     #[cfg(feature = "reporting")]
-    pub use crate::ci_reporting;
+    pub use super::ci_reporting;
 }

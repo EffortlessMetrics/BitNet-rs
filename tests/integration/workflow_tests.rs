@@ -4,7 +4,10 @@
 //! validating the integration between all components.
 
 use super::*;
-use crate::{FixtureManager, TestCase, TestError, TestMetrics, TestResult};
+use crate::{TestCase, TestError, TestMetrics, TestResult};
+#[cfg(feature = "fixtures")]
+use crate::common::FixtureManager;
+use crate::common::harness::FixtureCtx;
 use async_trait::async_trait;
 use std::time::Instant;
 use tracing::{debug, info};
@@ -37,7 +40,7 @@ impl TestCase for BasicInferenceWorkflowTest {
         "basic_inference_workflow"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up basic inference workflow test");
         Ok(())
     }
@@ -90,10 +93,12 @@ impl TestCase for BasicInferenceWorkflowTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("model_forward_calls".to_string(), model_calls as f64),
                 ("tokenizer_encode_calls".to_string(), encode_calls as f64),
@@ -120,7 +125,7 @@ impl TestCase for MultiPromptWorkflowTest {
         "multi_prompt_workflow"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up multi-prompt workflow test");
         Ok(())
     }
@@ -183,10 +188,12 @@ impl TestCase for MultiPromptWorkflowTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("prompts_processed".to_string(), test_prompts.len() as f64),
                 ("total_generated_length".to_string(), total_generated_length as f64),
@@ -218,7 +225,7 @@ impl TestCase for ConfigurationVariationTest {
         "configuration_variation_workflow"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up configuration variation workflow test");
         Ok(())
     }
@@ -272,10 +279,12 @@ impl TestCase for ConfigurationVariationTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("configurations_tested".to_string(), test_configs.len() as f64),
                 ("unique_results".to_string(), unique_results.len() as f64),
@@ -301,7 +310,7 @@ impl TestCase for ErrorHandlingWorkflowTest {
         "error_handling_workflow"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up error handling workflow test");
         Ok(())
     }
@@ -363,10 +372,12 @@ impl TestCase for ErrorHandlingWorkflowTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("error_scenarios_tested".to_string(), 3.0),
                 ("model_forward_calls".to_string(), model.forward_call_count() as f64),
@@ -391,7 +402,7 @@ impl TestCase for ResourceCleanupWorkflowTest {
         "resource_cleanup_workflow"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up resource cleanup workflow test");
         Ok(())
     }
@@ -462,10 +473,12 @@ impl TestCase for ResourceCleanupWorkflowTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("initial_cache_size".to_string(), initial_stats.cache_size as f64),
                 ("initial_cache_usage".to_string(), initial_stats.cache_usage),
@@ -497,7 +510,7 @@ mod tests {
         let harness = TestHarness::new(config).await.unwrap();
         let suite = WorkflowIntegrationTestSuite;
 
-        let result = harness.run_test_suite(suite).await;
+        let result = harness.run_test_suite(&suite).await;
         assert!(result.is_ok());
 
         let suite_result = result.unwrap();

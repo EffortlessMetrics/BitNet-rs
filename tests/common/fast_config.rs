@@ -1,5 +1,5 @@
 use super::config::{ReportFormat, TestConfig};
-use super::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
+use super::units::BYTES_PER_MB;
 use std::time::Duration;
 
 /// Fast configuration presets for different testing scenarios

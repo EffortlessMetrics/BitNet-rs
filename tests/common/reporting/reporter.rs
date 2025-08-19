@@ -1,10 +1,9 @@
 //! Core test reporter trait and management
 
 use super::{ReportConfig, ReportError, ReportFormat, ReportResult};
-use crate::results::{TestSuiteResult, TestResult, TestStatus, TestMetrics};
+use crate::results::TestSuiteResult;
 use async_trait::async_trait;
 use std::path::Path;
-use std::time::Duration;
 use tokio::fs;
 
 /// Core trait for test reporters
@@ -172,7 +171,7 @@ impl ReportingManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::results::{TestMetrics, TestStatus, TestSummary};
+    use crate::results::{TestMetrics, TestStatus, TestSummary, TestResult};
     use std::collections::HashMap;
     use std::time::Duration;
     use tempfile::TempDir;

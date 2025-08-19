@@ -4,7 +4,7 @@
 //! retrieval functionality for the C API.
 
 use crate::{BitNetCConfig, BitNetCError};
-use bitnet_common::{BitNetConfig, ModelFormat, QuantizationType};
+use bitnet_common::{BitNetConfig, ModelFormat, QuantizationType, ConcreteTensor};
 use bitnet_models::Model;
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -101,7 +101,7 @@ impl ModelInfo {
 
 /// Thread-safe model manager
 pub struct ModelManager {
-    models: RwLock<HashMap<u32, Arc<dyn Model<Config = BitNetConfig>>>>,
+    models: RwLock<HashMap<u32, Arc<dyn Model>>>,
     model_info: RwLock<HashMap<u32, ModelInfo>>,
     next_id: Mutex<u32>,
 }
@@ -213,7 +213,7 @@ impl ModelManager {
     pub fn get_model(
         &self,
         model_id: u32,
-    ) -> Result<Arc<dyn Model<Config = BitNetConfig>>, BitNetCError> {
+    ) -> Result<Arc<dyn Model>, BitNetCError> {
         let models = self.models.read().map_err(|_| {
             BitNetCError::ThreadSafety("Failed to acquire models read lock".to_string())
         })?;
@@ -247,7 +247,7 @@ impl ModelManager {
         &self,
         path: &str,
         config: &BitNetConfig,
-    ) -> Result<Arc<dyn Model<Config = BitNetConfig>>, BitNetCError> {
+    ) -> Result<Arc<dyn Model>, BitNetCError> {
         // This is a placeholder implementation
         // In the real implementation, this would use the bitnet-models crate
         // to load the actual model based on the file format
@@ -333,31 +333,36 @@ struct MockModel {
 
 impl MockModel {
     fn new(config: BitNetConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+        }
     }
 }
 
 impl Model for MockModel {
-    type Config = BitNetConfig;
+    // No associated type anymore
 
-    fn config(&self) -> &Self::Config {
+    fn config(&self) -> &BitNetConfig {
         &self.config
+    }
+
+    fn embed(&self, _tokens: &[u32]) -> bitnet_common::Result<ConcreteTensor> {
+        // If these mocks are never called in the C-API tests, a todo!() is fine
+        todo!("embed not used in bitnet-ffi tests")
+    }
+
+    fn logits(&self, _x: &ConcreteTensor) -> bitnet_common::Result<ConcreteTensor> {
+        todo!("logits not used in bitnet-ffi tests")
     }
 
     fn forward(
         &self,
-        _input: &bitnet_common::BitNetTensor,
-    ) -> bitnet_common::Result<bitnet_common::BitNetTensor> {
-        // Mock implementation - create a dummy tensor
-        use candle_core::Device;
-        let device = Device::Cpu;
-        bitnet_common::BitNetTensor::zeros(&[1, 1], candle_core::DType::F32, &device)
+        x: &ConcreteTensor,
+        _state: &mut dyn std::any::Any,
+    ) -> bitnet_common::Result<ConcreteTensor> {
+        Ok(x.clone()) // minimal no-op
     }
 
-    fn generate(&self, _tokens: &[u32]) -> bitnet_common::Result<Vec<u32>> {
-        // Mock implementation
-        Ok(vec![1, 2, 3]) // Return some dummy tokens
-    }
 }
 
 // Global model manager instance

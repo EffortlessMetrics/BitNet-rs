@@ -582,7 +582,7 @@ struct StatusCheckPayload {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "lowercase")]
-enum StatusState {
+pub(crate) enum StatusState {
     Pending,
     Success,
     Error,

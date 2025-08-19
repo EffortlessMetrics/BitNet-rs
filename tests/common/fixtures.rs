@@ -7,7 +7,7 @@ use std::time::{Duration, SystemTime};
 use tokio::fs;
 use tracing::{debug, info, warn};
 
-use super::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
+use super::units::BYTES_PER_MB;
 use crate::{
     config::FixtureConfig,
     errors::{FixtureError, FixtureResult},
@@ -892,6 +892,7 @@ pub struct ValidationStats {
 mod tests {
     use super::*;
     use crate::config::FixtureConfig;
+    use crate::units::BYTES_PER_KB;
     use tempfile::TempDir;
 
     async fn create_test_fixture_manager() -> (FixtureManager, TempDir) {

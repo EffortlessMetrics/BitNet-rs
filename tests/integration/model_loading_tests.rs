@@ -3,10 +3,15 @@
 //! Tests model loading workflows, initialization processes, and configuration validation.
 
 use super::*;
-use crate::{FixtureManager, TestCase, TestError, TestMetrics, TestResult};
+use crate::{TestCase, TestError, TestMetrics, TestResult};
+#[cfg(feature = "fixtures")]
+use crate::common::FixtureManager;
+use crate::common::harness::FixtureCtx;
+use crate::common::tensor_helpers::ct;
 use anyhow::Result;
 use async_trait::async_trait;
-use bitnet_common::{BitNetConfig, Device};
+use bitnet_common::{BitNetConfig, BitNetError, Device, MockTensor};
+use bitnet_models::Model;
 use std::time::Instant;
 use tracing::{debug, info, warn};
 
@@ -97,7 +102,9 @@ impl TestCase for BasicModelLoadingTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
+            assertions: 0,
+            operations: 0,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
@@ -126,7 +133,7 @@ impl TestCase for ModelConfigurationTest {
         "model_configuration_validation"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up model configuration test");
         Ok(())
     }
@@ -227,7 +234,9 @@ impl TestCase for ModelConfigurationTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
+            assertions: 0,
+            operations: 0,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
@@ -259,7 +268,7 @@ impl TestCase for MultipleModelLoadingTest {
         "multiple_model_loading"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up multiple model loading test");
         Ok(())
     }
@@ -339,7 +348,9 @@ impl TestCase for MultipleModelLoadingTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
+            assertions: 0,
+            operations: 0,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
@@ -370,7 +381,7 @@ impl TestCase for ModelInitializationErrorTest {
         "model_initialization_error_handling"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up model initialization error test");
         Ok(())
     }
@@ -427,7 +438,9 @@ impl TestCase for ModelInitializationErrorTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
+            assertions: 0,
+            operations: 0,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
@@ -455,7 +468,7 @@ impl TestCase for ModelMemoryManagementTest {
         "model_memory_management"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up model memory management test");
         Ok(())
     }
@@ -529,7 +542,9 @@ impl TestCase for ModelMemoryManagementTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
+            assertions: 0,
+            operations: 0,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
@@ -541,7 +556,7 @@ impl TestCase for ModelMemoryManagementTest {
                 ),
                 (
                     "max_cache_size".to_string(),
-                    peak_memory_estimates.iter().max().unwrap_or(&0) as &usize as f64,
+                    *peak_memory_estimates.iter().max().unwrap_or(&0) as f64,
                 ),
                 ("final_cache_size".to_string(), final_stats.cache_size as f64),
                 ("final_cache_usage".to_string(), final_stats.cache_usage),
@@ -575,10 +590,18 @@ impl Model for MockModelWithConfig {
 
     fn forward(
         &self,
-        _input: &dyn Tensor,
+        _input: &bitnet_common::ConcreteTensor,
         _cache: &mut dyn std::any::Any,
-    ) -> Result<Box<dyn Tensor>> {
-        Ok(Box::new(MockTensor::new(vec![1, self.config.model.vocab_size])))
+    ) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        Ok(ct(vec![1, self.config.model.vocab_size]))
+    }
+
+    fn embed(&self, tokens: &[u32]) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        Ok(ct(vec![1, tokens.len(), 768]))
+    }
+
+    fn logits(&self, _input: &bitnet_common::ConcreteTensor) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        Ok(ct(vec![1, 1, self.config.model.vocab_size]))
     }
 }
 
@@ -600,10 +623,18 @@ impl Model for FailingMockModel {
 
     fn forward(
         &self,
-        _input: &dyn Tensor,
+        _input: &bitnet_common::ConcreteTensor,
         _cache: &mut dyn std::any::Any,
-    ) -> Result<Box<dyn Tensor>> {
-        Err(anyhow::anyhow!("Mock model forward pass failure"))
+    ) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed { reason: "Mock model forward pass failure".to_string() }))
+    }
+
+    fn embed(&self, _tokens: &[u32]) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed { reason: "Mock model embed failure".to_string() }))
+    }
+
+    fn logits(&self, _input: &bitnet_common::ConcreteTensor) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed { reason: "Mock model logits failure".to_string() }))
     }
 }
 
@@ -618,7 +649,7 @@ mod tests {
         let harness = TestHarness::new(config).await.unwrap();
         let suite = ModelLoadingTestSuite;
 
-        let result = harness.run_test_suite(suite).await;
+        let result = harness.run_test_suite(&suite).await;
         assert!(result.is_ok());
 
         let suite_result = result.unwrap();

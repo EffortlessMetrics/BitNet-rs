@@ -118,6 +118,7 @@ impl BitNetCConfig {
                 num_heads: self.num_heads as usize,
                 intermediate_size: self.intermediate_size as usize,
                 max_position_embeddings: self.max_position_embeddings as usize,
+                ..Default::default()
             },
             inference: bitnet_common::InferenceConfig::default(),
             quantization: bitnet_common::QuantizationConfig {
@@ -265,15 +266,15 @@ impl BitNetCInferenceConfig {
     }
 
     /// Convert to Rust GenerationConfig
-    pub fn to_generation_config(&self) -> bitnet_common::GenerationConfig {
-        bitnet_common::GenerationConfig {
-            max_new_tokens: self.max_new_tokens as usize,
+    pub fn to_generation_config(&self) -> bitnet_inference::GenerationConfig {
+        bitnet_inference::GenerationConfig {
+            max_new_tokens: self.max_new_tokens,
             temperature: self.temperature,
-            top_k: if self.top_k == 0 { None } else { Some(self.top_k as usize) },
-            top_p: if self.top_p == 0.0 { None } else { Some(self.top_p) },
+            top_k: self.top_k,
+            top_p: self.top_p,
             repetition_penalty: self.repetition_penalty,
-            do_sample: self.do_sample != 0,
             seed: if self.seed == 0 { None } else { Some(self.seed as u64) },
+            ..Default::default()
         }
     }
 }
@@ -425,10 +426,14 @@ mod tests {
         let gen_config = c_config.to_generation_config();
         assert_eq!(gen_config.max_new_tokens, 256);
         assert_eq!(gen_config.temperature, 0.8);
-        assert_eq!(gen_config.top_k, Some(40));
-        assert_eq!(gen_config.top_p, Some(0.95));
-        assert_eq!(gen_config.repetition_penalty, 1.2);
-        assert_eq!(gen_config.do_sample, true);
+        assert_eq!(gen_config.top_k, 40);
+        assert_eq!(gen_config.top_p, 0.95);
+        // repetition_penalty is now a plain f32, not an Option
+        assert!((gen_config.repetition_penalty - 1.2f32).abs() < 1e-6);
+        
+        // do_sample field was removed from GenerationConfig
+        // Sampling is now controlled via temperature/top_p/top_k parameters
+        
         assert_eq!(gen_config.seed, Some(42));
     }
 }

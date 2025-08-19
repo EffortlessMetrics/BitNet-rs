@@ -4,7 +4,10 @@
 //! validating data flow and transformations between components.
 
 use super::*;
-use crate::{FixtureManager, TestCase, TestError, TestMetrics, TestResult};
+use crate::{TestCase, TestError, TestMetrics, TestResult};
+#[cfg(feature = "fixtures")]
+use crate::common::FixtureManager;
+use crate::common::harness::FixtureCtx;
 use async_trait::async_trait;
 use std::time::Instant;
 use tracing::{debug, info, warn};
@@ -37,7 +40,7 @@ impl TestCase for BasicTokenizationPipelineTest {
         "basic_tokenization_pipeline"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up basic tokenization pipeline test");
         Ok(())
     }
@@ -158,10 +161,12 @@ impl TestCase for BasicTokenizationPipelineTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("inputs_processed".to_string(), test_inputs.len() as f64),
                 ("avg_tokens_per_input".to_string(), avg_tokens),
@@ -192,7 +197,7 @@ impl TestCase for TokenizationAccuracyTest {
         "tokenization_accuracy"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up tokenization accuracy test");
         Ok(())
     }
@@ -308,10 +313,12 @@ impl TestCase for TokenizationAccuracyTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("consistency_tests".to_string(), token_sets.len() as f64),
                 ("round_trip_tests".to_string(), round_trip_results.len() as f64),
@@ -341,7 +348,7 @@ impl TestCase for SpecialTokenHandlingTest {
         "special_token_handling"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up special token handling test");
         Ok(())
     }
@@ -459,10 +466,12 @@ impl TestCase for SpecialTokenHandlingTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("stop_sequences_tested".to_string(), config_with_stop.stop_sequences.len() as f64),
                 ("has_eos_token".to_string(), if eos_token_id.is_some() { 1.0 } else { 0.0 }),
@@ -492,7 +501,7 @@ impl TestCase for LongSequenceTokenizationTest {
         "long_sequence_tokenization"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up long sequence tokenization test");
         Ok(())
     }
@@ -514,7 +523,7 @@ impl TestCase for LongSequenceTokenizationTest {
         let mut processing_times = Vec::new();
         let mut token_counts = Vec::new();
 
-        for length in sequence_lengths {
+        for &length in &sequence_lengths {
             debug!("Testing sequence length: {}", length);
 
             // Generate long text
@@ -614,10 +623,12 @@ impl TestCase for LongSequenceTokenizationTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("sequence_lengths_tested".to_string(), sequence_lengths.len() as f64),
                 ("avg_processing_time_ms".to_string(), avg_processing_time.as_millis() as f64),
@@ -648,7 +659,7 @@ impl TestCase for TokenizationErrorHandlingTest {
         "tokenization_error_handling"
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestResult<()> {
         info!("Setting up tokenization error handling test");
         Ok(())
     }
@@ -799,10 +810,12 @@ impl TestCase for TokenizationErrorHandlingTest {
         let duration = start_time.elapsed();
 
         Ok(TestMetrics {
-            duration,
+            wall_time: duration,
             memory_peak: None,
             memory_average: None,
             cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("problematic_inputs_tested".to_string(), problematic_inputs.len() as f64),
                 ("successful_tokenizations".to_string(), successful_tokenizations as f64),
@@ -839,7 +852,7 @@ mod tests {
         let harness = TestHarness::new(config).await.unwrap();
         let suite = TokenizationPipelineTestSuite;
 
-        let result = harness.run_test_suite(suite).await;
+        let result = harness.run_test_suite(&suite).await;
         assert!(result.is_ok());
 
         let suite_result = result.unwrap();
