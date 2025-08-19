@@ -195,7 +195,7 @@ BitNet.rs is organized as a Rust workspace with 12 specialized crates, each serv
 
 ## Important Considerations
 
-- **MSRV**: Minimum Supported Rust Version is 1.70.0
+- **MSRV**: Minimum Supported Rust Version is 1.89.0 (uses Rust 2024 edition)
 - **Feature Flags**: Default features are **empty** to prevent unwanted dependencies. You must explicitly enable features:
   - `cpu`: CPU inference with SIMD optimizations
   - `cuda`: NVIDIA GPU support

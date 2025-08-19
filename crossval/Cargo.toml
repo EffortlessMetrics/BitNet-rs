@@ -1,7 +1,7 @@
 [package]
 name = "bitnet-crossval"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Cross-validation framework for BitNet Rust vs C++ implementations"
 license = "MIT"
 publish = false
