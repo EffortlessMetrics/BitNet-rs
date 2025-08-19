@@ -40,6 +40,18 @@ pub extern "C" fn bitnet_abi_version() -> c_uint {
     BITNET_ABI_VERSION
 }
 
+/// Get FFI API version
+///
+/// Returns the FFI API version for tracking API changes.
+/// This is used for API compatibility checking in CI.
+///
+/// # Returns
+/// FFI API version number
+#[unsafe(no_mangle)]
+pub extern "C" fn bitnet_ffi_api_version() -> u32 {
+    1
+}
+
 /// Get library version string
 ///
 /// Returns a null-terminated string containing the library version.
