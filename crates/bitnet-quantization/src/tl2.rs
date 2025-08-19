@@ -446,32 +446,34 @@ impl TL2Quantizer {
         let remainder = chunks.remainder();
 
         for (i, chunk) in chunks.enumerate() {
-            let data_vec = _mm256_loadu_ps(chunk.as_ptr());
-            let scaled = _mm256_mul_ps(data_vec, inv_scale_vec);
-            let offset = _mm256_add_ps(scaled, offset_vec);
-            let indices = _mm256_cvtps_epi32(offset);
+            unsafe {
+                let data_vec = _mm256_loadu_ps(chunk.as_ptr());
+                let scaled = _mm256_mul_ps(data_vec, inv_scale_vec);
+                let offset = _mm256_add_ps(scaled, offset_vec);
+                let indices = _mm256_cvtps_epi32(offset);
 
-            // Vectorized lookup table access
-            let mut result = [0i8; 8];
-            result[0] =
-                lookup_table.forward[(_mm256_extract_epi32(indices, 0).clamp(0, 255)) as usize];
-            result[1] =
-                lookup_table.forward[(_mm256_extract_epi32(indices, 1).clamp(0, 255)) as usize];
-            result[2] =
-                lookup_table.forward[(_mm256_extract_epi32(indices, 2).clamp(0, 255)) as usize];
-            result[3] =
-                lookup_table.forward[(_mm256_extract_epi32(indices, 3).clamp(0, 255)) as usize];
-            result[4] =
-                lookup_table.forward[(_mm256_extract_epi32(indices, 4).clamp(0, 255)) as usize];
-            result[5] =
-                lookup_table.forward[(_mm256_extract_epi32(indices, 5).clamp(0, 255)) as usize];
-            result[6] =
-                lookup_table.forward[(_mm256_extract_epi32(indices, 6).clamp(0, 255)) as usize];
-            result[7] =
-                lookup_table.forward[(_mm256_extract_epi32(indices, 7).clamp(0, 255)) as usize];
+                // Vectorized lookup table access
+                let mut result = [0i8; 8];
+                result[0] =
+                    lookup_table.forward[(_mm256_extract_epi32::<0>(indices).clamp(0, 255)) as usize];
+                result[1] =
+                    lookup_table.forward[(_mm256_extract_epi32::<1>(indices).clamp(0, 255)) as usize];
+                result[2] =
+                    lookup_table.forward[(_mm256_extract_epi32::<2>(indices).clamp(0, 255)) as usize];
+                result[3] =
+                    lookup_table.forward[(_mm256_extract_epi32::<3>(indices).clamp(0, 255)) as usize];
+                result[4] =
+                    lookup_table.forward[(_mm256_extract_epi32::<4>(indices).clamp(0, 255)) as usize];
+                result[5] =
+                    lookup_table.forward[(_mm256_extract_epi32::<5>(indices).clamp(0, 255)) as usize];
+                result[6] =
+                    lookup_table.forward[(_mm256_extract_epi32::<6>(indices).clamp(0, 255)) as usize];
+                result[7] =
+                    lookup_table.forward[(_mm256_extract_epi32::<7>(indices).clamp(0, 255)) as usize];
 
-            // Store results
-            std::ptr::copy_nonoverlapping(result.as_ptr(), output.as_mut_ptr().add(i * 8), 8);
+                // Store results
+                std::ptr::copy_nonoverlapping(result.as_ptr(), output.as_mut_ptr().add(i * 8), 8);
+            }
         }
 
         // Handle remainder with scalar code
@@ -493,16 +495,18 @@ impl TL2Quantizer {
         let remainder = chunks.remainder();
 
         for (i, chunk) in chunks.enumerate() {
-            // Load 8 i8 values and convert to i32
-            let i8_data = std::ptr::read_unaligned(chunk.as_ptr() as *const i64);
-            let i8_vec = _mm256_set1_epi64x(i8_data);
-            let i32_vec = _mm256_cvtepi8_epi32(_mm256_castsi256_si128(i8_vec));
+            unsafe {
+                // Load 8 i8 values and convert to i32
+                let i8_data = std::ptr::read_unaligned(chunk.as_ptr() as *const i64);
+                let i8_vec = _mm_set1_epi64x(i8_data);
+                let i32_vec = _mm256_cvtepi8_epi32(i8_vec);
 
-            // Convert to float and scale
-            let f32_vec = _mm256_cvtepi32_ps(i32_vec);
-            let result = _mm256_mul_ps(f32_vec, scale_vec);
+                // Convert to float and scale
+                let f32_vec = _mm256_cvtepi32_ps(i32_vec);
+                let result = _mm256_mul_ps(f32_vec, scale_vec);
 
-            _mm256_storeu_ps(output.as_mut_ptr().add(i * 8), result);
+                _mm256_storeu_ps(output.as_mut_ptr().add(i * 8), result);
+            }
         }
 
         // Handle remainder with scalar code
