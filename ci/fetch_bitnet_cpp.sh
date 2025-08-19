@@ -57,12 +57,51 @@ while [[ $# -gt 0 ]]; do
             echo "  --force      Force rebuild even if already built"
             exit 0
             ;;
+        --print-setup)
+            # Just print setup instructions and exit
+            PRINT_SETUP_ONLY=1
+            shift
+            ;;
         *)
             log_error "Unknown option: $1"
             exit 1
             ;;
     esac
 done
+
+# If just printing setup instructions
+if [[ "${PRINT_SETUP_ONLY:-0}" -eq 1 ]]; then
+    # Determine library paths for environment setup
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        LD_VAR="DYLD_LIBRARY_PATH"
+        LIB_EXT="dylib"
+    else
+        LD_VAR="LD_LIBRARY_PATH"
+        LIB_EXT="so"
+    fi
+    
+    BUILD_DIR="$CACHE_DIR/build"
+    LIB_PATHS="$BUILD_DIR/3rdparty/llama.cpp/src:$BUILD_DIR/3rdparty/llama.cpp/ggml/src"
+    
+    log_info ""
+    log_info "================================================================"
+    log_info "BitNet C++ setup instructions:"
+    log_info "================================================================"
+    log_info "Repository:     $CACHE_DIR"
+    log_info "Build:          $BUILD_DIR"
+    log_info ""
+    log_info "To use for cross-validation:"
+    log_info ""
+    log_info "  export BITNET_CPP_DIR='$CACHE_DIR'"
+    log_info "  export ${LD_VAR}='${LIB_PATHS}:\$${LD_VAR}'"
+    log_info "  export OMP_NUM_THREADS=1    # For determinism"
+    log_info "  export GGML_NUM_THREADS=1"
+    log_info ""
+    log_info "Then run:"
+    log_info "  cargo test --features crossval -p crossval"
+    log_info "================================================================"
+    exit 0
+fi
 
 # Check if already built (skip expensive operations if possible)
 if [[ -d "$CACHE_DIR/build" ]] && [[ $FORCE -eq 0 ]] && [[ $CLEAN -eq 0 ]]; then
