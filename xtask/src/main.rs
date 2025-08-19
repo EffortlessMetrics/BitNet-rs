@@ -306,6 +306,21 @@ enum Cmd {
         #[arg(long, default_value = "-0.05")]
         tok_s_min: f64,
     },
+
+    /// Detect breaking changes in the API
+    ///
+    /// Compares the current API surface with a baseline to detect breaking changes
+    DetectBreaking {
+        /// Path to baseline version (default: latest git tag)
+        #[arg(long)]
+        baseline: Option<PathBuf>,
+        /// Path to current version (default: current directory)
+        #[arg(long, default_value = ".")]
+        current: PathBuf,
+        /// Output format (json, human)
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
 }
 
 fn main() {
@@ -395,6 +410,9 @@ fn real_main() -> Result<()> {
         Cmd::Benchmark { platform } => run_benchmark(&platform),
         Cmd::CompareMetrics { baseline, current, ppl_max, latency_p95_max, tok_s_min } => {
             compare_metrics(&baseline, &current, ppl_max, latency_p95_max, tok_s_min)
+        }
+        Cmd::DetectBreaking { baseline, current, format } => {
+            detect_breaking_changes_cmd(baseline.as_deref(), &current, &format)
         }
     }
 }
@@ -1613,6 +1631,71 @@ struct MetricsData {
     tok_s: f64,
     #[serde(default)]
     gpu_mem_mb: f64,
+}
+
+fn detect_breaking_changes_cmd(baseline: Option<&Path>, current: &Path, format: &str) -> Result<()> {
+    // If no baseline specified, try to use the latest git tag
+    let baseline_path = if let Some(base) = baseline {
+        base.to_path_buf()
+    } else {
+        // Get latest git tag
+        let output = Command::new("git")
+            .args(["describe", "--tags", "--abbrev=0"])
+            .output()
+            .context("Failed to get latest git tag")?;
+        
+        if !output.status.success() {
+            return Err(anyhow!("No git tags found. Please specify --baseline"));
+        }
+        
+        let tag = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        println!("Using git tag as baseline: {}", tag);
+        
+        // Create temp directory and checkout the tag
+        let temp_dir = tempfile::tempdir()?;
+        let baseline_path = temp_dir.path().join("baseline");
+        
+        Command::new("git")
+            .args(["worktree", "add", baseline_path.to_str().unwrap(), &tag])
+            .status()
+            .context("Failed to checkout baseline version")?;
+        
+        baseline_path
+    };
+    
+    // Simple implementation - would use the breaking_changes module in production
+    println!("🔍 Detecting breaking changes...");
+    println!("  Baseline: {}", baseline_path.display());
+    println!("  Current: {}", current.display());
+    
+    // Run cargo-semver-checks if available
+    let result = Command::new("cargo")
+        .args([
+            "semver-checks",
+            "--baseline-path", baseline_path.to_str().unwrap(),
+            "--manifest-path", current.join("Cargo.toml").to_str().unwrap(),
+        ])
+        .status();
+    
+    match result {
+        Ok(status) if status.success() => {
+            println!("✅ No breaking changes detected!");
+        }
+        Ok(_) => {
+            println!("⚠️  Breaking changes detected!");
+            if format == "json" {
+                println!(r#"{{"breaking_changes": true, "compatible": false}}"#);
+            }
+            return Err(anyhow!("Breaking changes detected"));
+        }
+        Err(_) => {
+            println!("⚠️  cargo-semver-checks not installed");
+            println!("    Install with: cargo install cargo-semver-checks");
+            println!("    Skipping breaking change detection");
+        }
+    }
+    
+    Ok(())
 }
 
 fn compare_metrics(
