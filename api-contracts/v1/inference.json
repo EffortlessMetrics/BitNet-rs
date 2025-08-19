@@ -1,0 +1,246 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BitNet Inference API v1",
+  "version": "1.0.0",
+  "description": "Contract for BitNet inference API endpoints and data structures",
+  
+  "definitions": {
+    "ModelConfig": {
+      "type": "object",
+      "required": ["model_type", "hidden_size", "num_layers", "vocab_size"],
+      "properties": {
+        "model_type": {
+          "type": "string",
+          "enum": ["bitnet_b158", "bitnet_3b", "custom"]
+        },
+        "hidden_size": {
+          "type": "integer",
+          "minimum": 128,
+          "maximum": 16384
+        },
+        "num_layers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 128
+        },
+        "vocab_size": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 256000
+        },
+        "intermediate_size": {
+          "type": "integer",
+          "minimum": 256
+        },
+        "num_attention_heads": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "quantization": {
+          "type": "string",
+          "enum": ["i2_s", "tl1", "tl2"],
+          "default": "i2_s"
+        }
+      }
+    },
+    
+    "InferenceRequest": {
+      "type": "object",
+      "required": ["prompt"],
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "default": 256
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 2.0,
+          "default": 1.0
+        },
+        "top_p": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 1.0
+        },
+        "top_k": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 50
+        },
+        "stream": {
+          "type": "boolean",
+          "default": false
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    
+    "InferenceResponse": {
+      "type": "object",
+      "required": ["id", "choices", "usage", "model", "created"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9-]+$"
+        },
+        "choices": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/Choice"
+          }
+        },
+        "usage": {
+          "$ref": "#/definitions/Usage"
+        },
+        "model": {
+          "type": "string"
+        },
+        "created": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    
+    "Choice": {
+      "type": "object",
+      "required": ["index", "text", "finish_reason"],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "text": {
+          "type": "string"
+        },
+        "finish_reason": {
+          "type": "string",
+          "enum": ["stop", "length", "error", null]
+        },
+        "logprobs": {
+          "type": ["object", "null"]
+        }
+      }
+    },
+    
+    "Usage": {
+      "type": "object",
+      "required": ["prompt_tokens", "completion_tokens", "total_tokens"],
+      "properties": {
+        "prompt_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "completion_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_tokens": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    
+    "StreamChunk": {
+      "type": "object",
+      "required": ["id", "choices", "created"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "delta": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  }
+                }
+              },
+              "finish_reason": {
+                "type": ["string", "null"]
+              }
+            }
+          }
+        },
+        "created": {
+          "type": "integer"
+        }
+      }
+    },
+    
+    "Error": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "invalid_request",
+            "model_not_found",
+            "rate_limit_exceeded",
+            "internal_error",
+            "out_of_memory",
+            "unsupported_feature"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    }
+  },
+  
+  "endpoints": {
+    "/v1/models": {
+      "GET": {
+        "description": "List available models",
+        "response": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ModelConfig"
+          }
+        }
+      }
+    },
+    "/v1/completions": {
+      "POST": {
+        "description": "Generate text completion",
+        "request": {
+          "$ref": "#/definitions/InferenceRequest"
+        },
+        "response": {
+          "$ref": "#/definitions/InferenceResponse"
+        },
+        "errors": {
+          "$ref": "#/definitions/Error"
+        }
+      }
+    }
+  }
+}

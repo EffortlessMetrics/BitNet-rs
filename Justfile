@@ -43,6 +43,24 @@ crossval-cuda TAG="main" ARCHS="80;86":
 compare-metrics BASELINE="baselines/cpu-main.json" CURRENT="crossval/results/last_run.json":
     cargo run -p xtask -- compare-metrics --baseline {{BASELINE}} --current {{CURRENT}}
 
+# Check for API breaking changes
+check-breaking BASELINE="origin/main":
+    cargo run -p xtask -- detect-breaking --baseline {{BASELINE}} --current .
+
+# Run API snapshot tests
+test-api-snapshots:
+    cargo test --test api_snapshots
+    @echo "✅ API snapshots verified"
+
+# Update API snapshots (use when intentionally changing API)
+update-api-snapshots:
+    cargo test --test api_snapshots -- --accept
+    @echo "📸 API snapshots updated - remember to commit the changes!"
+
+# Full API compatibility check
+api-check: check-breaking test-api-snapshots
+    @echo "✅ API compatibility verified"
+
 # Format all code
 fmt:
     cargo fmt --all

@@ -123,6 +123,51 @@ jobs:
         if: matrix.cross
         run: cross build --target ${{ matrix.target }} --no-default-features --features cpu
 
+  # API compatibility and semver checking
+  api-compat:
+    name: API Compatibility Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for baseline comparison
+      
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+      
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+      
+      - name: Install cargo-semver-checks
+        run: |
+          cargo install cargo-semver-checks --locked || true
+      
+      - name: Check for breaking changes
+        run: |
+          # Get the base branch (usually main)
+          BASE_BRANCH="${{ github.base_ref }}"
+          echo "Checking against base branch: $BASE_BRANCH"
+          
+          # Run breaking change detection
+          cargo run -p xtask -- detect-breaking \
+            --baseline origin/$BASE_BRANCH \
+            --current . \
+            --format json || echo "::warning::Breaking changes detected"
+      
+      - name: Run API snapshot tests
+        run: |
+          cargo test --test api_snapshots
+      
+      - name: Upload compatibility report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-compatibility-report
+          path: api-compatibility-report.json
+
   security:
     name: Security Audit
     runs-on: ubuntu-latest
