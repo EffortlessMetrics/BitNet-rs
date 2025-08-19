@@ -34,7 +34,7 @@ default-members = [
 [package]
 name = "bitnet"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/microsoft/BitNet"
 homepage = "https://github.com/microsoft/BitNet"
@@ -48,8 +48,8 @@ rust-version.workspace = true
 
 [workspace.package]
 version = "0.1.0"
-rust-version = "1.82.0"
-edition = "2021"
+rust-version = "1.89.0"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/microsoft/BitNet"
 homepage = "https://github.com/microsoft/BitNet"

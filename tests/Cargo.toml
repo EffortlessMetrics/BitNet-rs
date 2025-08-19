@@ -1,6 +1,6 @@
 [package]
 description = "Comprehensive testing framework for BitNet.rs"
-edition = "2021"
+edition = "2024"
 name = "bitnet-tests"
 version = "0.1.0"
 

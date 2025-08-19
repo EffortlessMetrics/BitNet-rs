@@ -62,23 +62,23 @@ impl IsolatedEnvironment {
 
     fn setup(&self) {
         // Set test-specific environment variables
-        std::env::set_var("BITNET_TEST_NAME", &self.test_name);
-        std::env::set_var("BITNET_TEST_TEMP_DIR", self.temp_dir.path());
-        std::env::set_var("BITNET_TEST_ISOLATION", "true");
-        std::env::set_var("BITNET_TEST_ID", format!("{}", std::process::id()));
+        unsafe { std::env::set_var("BITNET_TEST_NAME", &self.test_name); }
+        unsafe { std::env::set_var("BITNET_TEST_TEMP_DIR", self.temp_dir.path()); }
+        unsafe { std::env::set_var("BITNET_TEST_ISOLATION", "true"); }
+        unsafe { std::env::set_var("BITNET_TEST_ID", format!("{}", std::process::id())); }
     }
 
     fn cleanup(self) {
         // Restore original environment variables
         for (key, value) in &self.original_env_vars {
-            std::env::set_var(key, value);
+            unsafe { std::env::set_var(key, value); }
         }
 
         // Remove test-specific environment variables
-        std::env::remove_var("BITNET_TEST_NAME");
-        std::env::remove_var("BITNET_TEST_TEMP_DIR");
-        std::env::remove_var("BITNET_TEST_ISOLATION");
-        std::env::remove_var("BITNET_TEST_ID");
+        unsafe { std::env::remove_var("BITNET_TEST_NAME"); }
+        unsafe { std::env::remove_var("BITNET_TEST_TEMP_DIR"); }
+        unsafe { std::env::remove_var("BITNET_TEST_ISOLATION"); }
+        unsafe { std::env::remove_var("BITNET_TEST_ID"); }
 
         // Temp directory is automatically cleaned up when dropped
         drop(self.temp_dir);
@@ -168,7 +168,7 @@ impl TestCase for IsolationTestCase {
         }
 
         // Set a unique environment variable for this test
-        std::env::set_var("UNIQUE_TEST_VAR", &self.unique_value);
+        unsafe { std::env::set_var("UNIQUE_TEST_VAR", &self.unique_value); }
 
         // Create a unique file in the temp directory
         let unique_file = std::path::Path::new(&temp_dir).join(format!("{}.txt", self.name));
@@ -541,7 +541,7 @@ mod tests {
                 }
 
                 // Set a test-specific environment variable
-                std::env::set_var(&self.env_key, &self.env_value);
+                unsafe { std::env::set_var(&self.env_key, &self.env_value); }
 
                 // Create a file in temp directory
                 let temp_dir =

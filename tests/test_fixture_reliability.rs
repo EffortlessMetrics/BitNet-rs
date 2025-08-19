@@ -16,7 +16,7 @@ async fn test_fixture_reliability_and_cleanup() -> TestResult<()> {
 
     // Create a temporary directory for testing
     let temp_dir = TempDir::new().unwrap();
-    std::env::set_var("BITNET_TEST_CACHE", temp_dir.path());
+    unsafe { std::env::set_var("BITNET_TEST_CACHE", temp_dir.path()); }
 
     // Create fixture config with aggressive cleanup settings
     let mut config = FixtureConfig::default();
@@ -115,7 +115,7 @@ async fn test_fixture_concurrent_reliability() -> TestResult<()> {
     let _ = tracing_subscriber::fmt::try_init();
 
     let temp_dir = TempDir::new().unwrap();
-    std::env::set_var("BITNET_TEST_CACHE", temp_dir.path());
+    unsafe { std::env::set_var("BITNET_TEST_CACHE", temp_dir.path()); }
 
     let config = FixtureConfig::default();
     let manager = FixtureManager::new(&config).await?;
@@ -155,7 +155,7 @@ async fn test_realistic_fixture_cleanup() -> TestResult<()> {
     let _ = tracing_subscriber::fmt::try_init();
 
     let temp_dir = TempDir::new().unwrap();
-    std::env::set_var("BITNET_TEST_CACHE", temp_dir.path());
+    unsafe { std::env::set_var("BITNET_TEST_CACHE", temp_dir.path()); }
 
     let mut config = FixtureConfig::default();
     config.max_cache_size = 50 * BYTES_PER_KB; // 50KB limit
@@ -218,7 +218,7 @@ async fn test_fixture_error_recovery() -> TestResult<()> {
     let _ = tracing_subscriber::fmt::try_init();
 
     let temp_dir = TempDir::new().unwrap();
-    std::env::set_var("BITNET_TEST_CACHE", temp_dir.path());
+    unsafe { std::env::set_var("BITNET_TEST_CACHE", temp_dir.path()); }
 
     let config = FixtureConfig::default();
     let manager = FixtureManager::new(&config).await?;

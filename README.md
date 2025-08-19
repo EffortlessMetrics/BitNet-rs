@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/bitnet/badge.svg)](https://docs.rs/bitnet)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/microsoft/BitNet#license)
 [![Build Status](https://github.com/microsoft/BitNet/workflows/CI/badge.svg)](https://github.com/microsoft/BitNet/actions)
-[![MSRV](https://img.shields.io/badge/MSRV-1.70.0-blue.svg)](https://github.com/microsoft/BitNet)
+[![MSRV](https://img.shields.io/badge/MSRV-1.89.0-blue.svg)](https://github.com/microsoft/BitNet)
 
 **BitNet.rs is the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.** Built from the ground up in Rust, it delivers superior performance, memory safety, and developer experience compared to the original C++ implementation.
 
@@ -301,7 +301,7 @@ console.log(response);
 
 ### Prerequisites
 
-- Rust 1.70.0 or later
+- Rust 1.89.0 or later
 - Python 3.8+ (for Python bindings)
 - CUDA Toolkit 11.0+ (for GPU support)
 
@@ -714,4 +714,4 @@ This project is licensed under the MIT OR Apache-2.0 license. See [LICENSE](LICE
 
 ---
 
-**Minimum Supported Rust Version (MSRV)**: 1.70.0
+**Minimum Supported Rust Version (MSRV)**: 1.89.0

@@ -555,9 +555,9 @@ mod tests {
         assert!(!cache_manager.is_github_actions());
 
         // Set environment variable
-        std::env::set_var("GITHUB_ACTIONS", "true");
+        unsafe { std::env::set_var("GITHUB_ACTIONS", "true"); }
         assert!(cache_manager.is_github_actions());
-        std::env::remove_var("GITHUB_ACTIONS");
+        unsafe { std::env::remove_var("GITHUB_ACTIONS"); }
     }
 
     #[tokio::test]

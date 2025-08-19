@@ -140,7 +140,7 @@ impl Sampler {
 
     /// Sample from probability distribution
     fn sample_from_probs(&mut self, probs: &[f32]) -> u32 {
-        let uniform: f32 = self.rng.gen();
+        let uniform: f32 = self.rng.r#gen();
         let mut cumsum = 0.0;
 
         for (i, &prob) in probs.iter().enumerate() {

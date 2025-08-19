@@ -519,9 +519,9 @@ mod tests {
     #[tokio::test]
     async fn test_debug_config_from_env() {
         // Set environment variables
-        std::env::set_var("BITNET_DEBUG_ENABLED", "true");
-        std::env::set_var("BITNET_DEBUG_VERBOSE", "true");
-        std::env::set_var("BITNET_DEBUG_MAX_FILES", "50");
+        unsafe { std::env::set_var("BITNET_DEBUG_ENABLED", "true"); }
+        unsafe { std::env::set_var("BITNET_DEBUG_VERBOSE", "true"); }
+        unsafe { std::env::set_var("BITNET_DEBUG_MAX_FILES", "50"); }
 
         let config = debug_config_from_env();
 
@@ -530,8 +530,8 @@ mod tests {
         assert_eq!(config.max_debug_files, 50);
 
         // Clean up
-        std::env::remove_var("BITNET_DEBUG_ENABLED");
-        std::env::remove_var("BITNET_DEBUG_VERBOSE");
-        std::env::remove_var("BITNET_DEBUG_MAX_FILES");
+        unsafe { std::env::remove_var("BITNET_DEBUG_ENABLED"); }
+        unsafe { std::env::remove_var("BITNET_DEBUG_VERBOSE"); }
+        unsafe { std::env::remove_var("BITNET_DEBUG_MAX_FILES"); }
     }
 }

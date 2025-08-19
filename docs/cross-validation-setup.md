@@ -96,7 +96,7 @@ Ensure you have a recent Rust version:
 # Update Rust
 rustup update stable
 
-# Verify version (1.70+ required)
+# Verify version (1.89+ required)
 rustc --version
 ```
 

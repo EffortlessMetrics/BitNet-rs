@@ -231,7 +231,7 @@ impl SamplingStrategy {
         }
 
         // Sample using cumulative distribution
-        let random_value: f32 = self.rng.gen();
+        let random_value: f32 = self.rng.r#gen();
         let mut cumulative = 0.0;
 
         for (i, &prob) in probabilities.iter().enumerate() {
