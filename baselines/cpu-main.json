@@ -1,0 +1,25 @@
+{
+  "git": {
+    "sha": "baseline",
+    "branch": "main",
+    "cpp_tag": "main"
+  },
+  "timestamp_utc": "2025-01-01T00:00:00Z",
+  "device": {
+    "backend": "cpu",
+    "compute_caps": "avx2",
+    "driver": "n/a"
+  },
+  "model": {
+    "name": "bitnet-b1.58-2B-4T",
+    "vocab": 32000
+  },
+  "metrics": {
+    "ppl": 6.42,
+    "acc": 0.713,
+    "latency_p50_ms": 21.3,
+    "latency_p95_ms": 39.8,
+    "tok_s": 1625.0,
+    "gpu_mem_mb": 0.0
+  }
+}

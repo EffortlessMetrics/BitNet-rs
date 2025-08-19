@@ -104,7 +104,7 @@ html-escape = "0.2"
 libc = "0.2"
 
 [features]
-default = ["cpu"]
+default = []  # Empty default features - must be explicitly enabled
 
 # Core inference features
 cpu = [
@@ -114,13 +114,15 @@ cpu = [
     "bitnet-kernels/cpu-optimized",
     "bitnet-inference/cpu",
 ]
-gpu = [
+cuda = [
     "kernels",
     "inference",
     "tokenizers",
     "bitnet-kernels/cuda",
     "bitnet-inference/gpu",
 ]
+# Alias for backward compatibility
+gpu = ["cuda"]
 
 # Component features
 kernels = ["dep:bitnet-kernels"]
@@ -151,7 +153,7 @@ trend = ["bitnet-tests/trend"]
 full-framework = ["fixtures", "reporting", "trend"]
 
 # Convenience features
-full = ["cpu", "gpu", "avx2", "avx512", "neon"]
+full = ["cpu", "cuda", "avx2", "avx512", "neon"]
 minimal = []                                    # Only core crates, no inference
 examples = []                                   # Feature gate for examples
 
