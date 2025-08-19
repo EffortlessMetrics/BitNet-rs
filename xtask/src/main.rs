@@ -201,6 +201,12 @@ enum Cmd {
         /// Clean rebuild
         #[arg(long, default_value_t = false)]
         clean: bool,
+        /// Backend: "cpu" (default) | "cuda"
+        #[arg(long, default_value = "cpu")]
+        backend: String,
+        /// Additional CMake flags (e.g., "-DCMAKE_CUDA_ARCHITECTURES=80;86")
+        #[arg(long, default_value = "")]
+        cmake_flags: String,
     },
 
     /// Run deterministic cross-validation tests against C++ implementation
@@ -237,6 +243,15 @@ enum Cmd {
         /// Force redownload/rebuild
         #[arg(long, default_value_t = false)]
         force: bool,
+        /// Branch/tag to fetch (default: main)
+        #[arg(long, default_value = DEFAULT_CPP_TAG)]
+        tag: String,
+        /// Backend: "cpu" (default) | "cuda"
+        #[arg(long, default_value = "cpu")]
+        backend: String,
+        /// Additional CMake flags
+        #[arg(long, default_value = "")]
+        cmake_flags: String,
     },
 
     /// Generate realistic test fixtures for unit testing
@@ -269,6 +284,27 @@ enum Cmd {
         /// Platform to test
         #[arg(long, default_value = "current")]
         platform: String,
+    },
+
+    /// Compare metrics with baseline for regression detection
+    ///
+    /// Compares crossval metrics JSON with a baseline and fails if thresholds are exceeded
+    CompareMetrics {
+        /// Path to baseline metrics JSON
+        #[arg(long)]
+        baseline: PathBuf,
+        /// Path to current metrics JSON
+        #[arg(long)]
+        current: PathBuf,
+        /// Max allowed perplexity increase (e.g., 0.02 for 2%)
+        #[arg(long, default_value = "0.02")]
+        ppl_max: f64,
+        /// Max allowed latency P95 increase (e.g., 0.05 for 5%)
+        #[arg(long, default_value = "0.05")]
+        latency_p95_max: f64,
+        /// Min required tokens/sec (e.g., -0.05 for 5% decrease allowed)
+        #[arg(long, default_value = "-0.05")]
+        tok_s_min: f64,
     },
 }
 
@@ -343,7 +379,7 @@ fn real_main() -> Result<()> {
             retries,
             timeout,
         }),
-        Cmd::FetchCpp { tag, force, clean } => fetch_cpp_cmd(&tag, force, clean),
+        Cmd::FetchCpp { tag, force, clean, backend, cmake_flags } => fetch_cpp_cmd(&tag, force, clean, &backend, &cmake_flags),
         Cmd::Crossval { model, cpp_dir, release, dry_run, extra } => {
             let model_path = match model {
                 Some(p) => p,
@@ -351,12 +387,15 @@ fn real_main() -> Result<()> {
             };
             crossval_cmd(&model_path, cpp_dir.as_deref(), release, &extra, dry_run)
         }
-        Cmd::FullCrossval { force } => full_crossval_cmd(force),
+        Cmd::FullCrossval { force, tag, backend, cmake_flags } => full_crossval_cmd(force, &tag, &backend, &cmake_flags),
         Cmd::GenFixtures { size, output } => gen_fixtures(&size, &output),
         Cmd::SetupCrossval => setup_crossval(),
         Cmd::CleanCache => clean_cache(),
         Cmd::CheckFeatures => check_features(),
         Cmd::Benchmark { platform } => run_benchmark(&platform),
+        Cmd::CompareMetrics { baseline, current, ppl_max, latency_p95_max, tok_s_min } => {
+            compare_metrics(&baseline, &current, ppl_max, latency_p95_max, tok_s_min)
+        }
     }
 }
 
@@ -1117,7 +1156,7 @@ fn verify_sha256(path: &Path, expected_hex: &str) -> Result<()> {
     Ok(())
 }
 
-fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
+fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool, backend: &str, cmake_flags: &str) -> Result<()> {
     let script = PathBuf::from("ci/fetch_bitnet_cpp.sh");
     if !script.exists() {
         return Err(anyhow!(
@@ -1132,8 +1171,12 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
 
     println!("🔧 Fetching Microsoft BitNet C++ implementation");
     println!("   Branch/Rev: {}", tag);
+    println!("   Backend: {}", backend);
     println!("   Force: {}", force);
     println!("   Clean: {}", clean);
+    if !cmake_flags.is_empty() {
+        println!("   CMake flags: {}", cmake_flags);
+    }
 
     let mut args = vec!["--tag".to_string(), tag.to_string()];
     if force {
@@ -1141,6 +1184,23 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
     }
     if clean {
         args.push("--clean".to_string());
+    }
+    
+    // Add backend-specific CMake flags
+    if backend == "cuda" {
+        args.push("--cmake-flags".to_string());
+        let mut cuda_flags = String::from("-DGGML_CUDA=ON -DLLAMA_CUBLAS=ON");
+        if !cmake_flags.is_empty() {
+            cuda_flags.push_str(" ");
+            cuda_flags.push_str(cmake_flags);
+        } else {
+            // Default CUDA architectures if not specified
+            cuda_flags.push_str(" -DCMAKE_CUDA_ARCHITECTURES=80;86");
+        }
+        args.push(cuda_flags);
+    } else if !cmake_flags.is_empty() {
+        args.push("--cmake-flags".to_string());
+        args.push(cmake_flags.to_string());
     }
 
     run("bash", std::iter::once(script.to_string_lossy().to_string()).chain(args).collect())?;
@@ -1276,8 +1336,13 @@ fn crossval_cmd(
     run_cmd(&mut cmd)
 }
 
-fn full_crossval_cmd(force: bool) -> Result<()> {
+fn full_crossval_cmd(force: bool, tag: &str, backend: &str, cmake_flags: &str) -> Result<()> {
     println!("🚀 Running full cross-validation workflow");
+    println!("   Backend: {}", backend);
+    println!("   C++ Tag: {}", tag);
+    if !cmake_flags.is_empty() {
+        println!("   CMake flags: {}", cmake_flags);
+    }
     println!();
 
     // Step 1: Download model
@@ -1300,8 +1365,8 @@ fn full_crossval_cmd(force: bool) -> Result<()> {
     println!();
 
     // Step 2: Fetch C++ implementation
-    println!("Step 2/3: Fetching C++ implementation");
-    fetch_cpp_cmd(DEFAULT_CPP_TAG, force, false)?;
+    println!("Step 2/3: Fetching C++ implementation ({})", backend);
+    fetch_cpp_cmd(tag, force, false, backend, cmake_flags)?;
 
     println!();
 
@@ -1502,6 +1567,123 @@ fn run_benchmark(platform: &str) -> Result<()> {
     }
 
     println!("✅ Benchmarks completed successfully!");
+    Ok(())
+}
+
+// Metrics structure for cross-validation comparison
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+struct CrossvalMetrics {
+    #[serde(default)]
+    git: GitInfo,
+    #[serde(default)]
+    timestamp_utc: String,
+    #[serde(default)]
+    device: DeviceInfo,
+    #[serde(default)]
+    model: ModelInfo,
+    metrics: MetricsData,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, Default)]
+struct GitInfo {
+    sha: String,
+    branch: String,
+    cpp_tag: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, Default)]
+struct DeviceInfo {
+    backend: String,
+    compute_caps: String,
+    driver: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, Default)]
+struct ModelInfo {
+    name: String,
+    vocab: u32,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+struct MetricsData {
+    ppl: f64,
+    acc: f64,
+    latency_p50_ms: f64,
+    latency_p95_ms: f64,
+    tok_s: f64,
+    #[serde(default)]
+    gpu_mem_mb: f64,
+}
+
+fn compare_metrics(
+    baseline_path: &Path,
+    current_path: &Path,
+    ppl_max: f64,
+    latency_p95_max: f64,
+    tok_s_min: f64,
+) -> Result<()> {
+    println!("📊 Comparing metrics for regression detection");
+    
+    // Load baseline metrics
+    let baseline_json = fs::read_to_string(baseline_path)
+        .with_context(|| format!("Failed to read baseline: {}", baseline_path.display()))?;
+    let baseline: CrossvalMetrics = serde_json::from_str(&baseline_json)
+        .with_context(|| "Failed to parse baseline JSON")?;
+    
+    // Load current metrics
+    let current_json = fs::read_to_string(current_path)
+        .with_context(|| format!("Failed to read current: {}", current_path.display()))?;
+    let current: CrossvalMetrics = serde_json::from_str(&current_json)
+        .with_context(|| "Failed to parse current JSON")?;
+    
+    println!("\n📈 Baseline:");
+    println!("  PPL: {:.2}", baseline.metrics.ppl);
+    println!("  Latency P95: {:.1}ms", baseline.metrics.latency_p95_ms);
+    println!("  Throughput: {:.0} tok/s", baseline.metrics.tok_s);
+    
+    println!("\n📉 Current:");
+    println!("  PPL: {:.2}", current.metrics.ppl);
+    println!("  Latency P95: {:.1}ms", current.metrics.latency_p95_ms);
+    println!("  Throughput: {:.0} tok/s", current.metrics.tok_s);
+    
+    // Calculate changes
+    let ppl_change = (current.metrics.ppl - baseline.metrics.ppl) / baseline.metrics.ppl;
+    let latency_change = (current.metrics.latency_p95_ms - baseline.metrics.latency_p95_ms) 
+        / baseline.metrics.latency_p95_ms;
+    let tok_change = (current.metrics.tok_s - baseline.metrics.tok_s) / baseline.metrics.tok_s;
+    
+    println!("\n📊 Changes:");
+    println!("  PPL: {:+.2}%", ppl_change * 100.0);
+    println!("  Latency P95: {:+.1}%", latency_change * 100.0);
+    println!("  Throughput: {:+.1}%", tok_change * 100.0);
+    
+    // Check thresholds
+    let mut regressions = Vec::new();
+    
+    if ppl_change > ppl_max {
+        regressions.push(format!("PPL increased by {:.2}% (max allowed: {:.2}%)", 
+            ppl_change * 100.0, ppl_max * 100.0));
+    }
+    
+    if latency_change > latency_p95_max {
+        regressions.push(format!("Latency P95 increased by {:.1}% (max allowed: {:.1}%)",
+            latency_change * 100.0, latency_p95_max * 100.0));
+    }
+    
+    if tok_change < tok_s_min {
+        regressions.push(format!("Throughput decreased by {:.1}% (max allowed: {:.1}%)",
+            -tok_change * 100.0, -tok_s_min * 100.0));
+    }
+    
+    if !regressions.is_empty() {
+        println!("\n❌ Regression detected!");
+        for reg in &regressions {
+            println!("  - {}", reg);
+        }
+        return Err(anyhow!("Performance regressions detected: {}", regressions.join(", ")));
+    }
+    
+    println!("\n✅ All metrics within acceptable thresholds!");
     Ok(())
 }
 

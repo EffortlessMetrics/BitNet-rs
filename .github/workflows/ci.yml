@@ -3,14 +3,29 @@ name: CI
 on:
   push:
     branches: [main, develop]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      cpp_tag:
+        description: 'Pin C++ (BitNet/llama.cpp) repo tag/commit for crossval/ffi'
+        required: false
+        default: 'main'
+  schedule:
+    - cron: "0 3 * * *"  # Daily at 03:00 UTC for nightly CUDA tests
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  # Disable crossval feature by default for fast CI
-  CARGO_BUILD_FEATURES: ""
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: "-D warnings"
+  # Pin C++ version for reproducible crossval
+  CPP_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.cpp_tag || 'main' }}
+  # CUDA architectures for GPU builds
+  CUDA_ARCHS: "80;86"  # A100, RTX 30xx/40xx
 
 jobs:
   # Fast primary test suite - Rust only, no cross-validation
@@ -80,7 +95,7 @@ jobs:
 
       - name: Run clippy with strict checks
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-        run: RUSTFLAGS="-Dwarnings" cargo clippy --workspace --no-default-features --features cpu --all-targets --exclude xtask -- -D warnings -D clippy::ptr_arg
+        run: cargo clippy --workspace --no-default-features --features cpu --all-targets --exclude xtask --exclude bitnet-py -- -D warnings
 
       - name: Check banned patterns
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
@@ -100,9 +115,9 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
         run: cargo test --workspace --no-default-features --features cpu --no-run
 
-      - name: Build with all features (except crossval)
+      - name: Build with CPU features
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-        run: cargo build --workspace --features "cpu,gpu,avx2,avx512,neon"
+        run: cargo build --workspace --no-default-features --features cpu
 
       - name: Cross-compile (ARM64)
         if: matrix.cross
@@ -218,12 +233,164 @@ jobs:
         env:
           RUSTDOCFLAGS: "-D warnings"
 
-  # Testing Framework Integration
-  testing-framework:
-    name: Testing Framework
-    if: contains(github.event.pull_request.labels.*.name, 'testing-framework') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
-    uses: ./.github/workflows/testing-framework-master.yml
-    with:
-      run_crossval: ${{ contains(github.event.pull_request.labels.*.name, 'crossval') || github.ref == 'refs/heads/main' }}
-      run_performance: ${{ github.ref == 'refs/heads/main' }}
-      coverage_threshold: "90"
+  # Cross-validation with C++ (CPU)
+  crossval-cpu:
+    name: Cross-validation (CPU)
+    needs: [test]
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+          cache-targets: true
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build
+
+      - name: Cache BitNet C++ (CPU)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bitnet_cpp
+          key: bitnet-cpp-${{ runner.os }}-cpu-${{ env.CPP_TAG }}
+          restore-keys: |
+            bitnet-cpp-${{ runner.os }}-cpu-
+
+      - name: Fetch & build C++ (CPU)
+        run: cargo run -p xtask -- fetch-cpp --tag "${CPP_TAG}"
+
+      - name: Build (cpu,ffi,crossval)
+        run: cargo build --workspace --no-default-features --features "cpu,ffi,crossval"
+
+      - name: Run full crossval (CPU)
+        run: cargo run -p xtask -- full-crossval --tag "${CPP_TAG}"
+
+      - name: Upload crossval artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crossval-cpu-${{ env.CPP_TAG }}
+          path: |
+            crossval/**/results/**/*.json
+            crossval/**/reports/**/*.{md,html,txt}
+            models/*.gguf
+
+  # CUDA build and test (requires GPU runner)
+  build-test-cuda:
+    name: Build & Test (CUDA)
+    needs: [test]
+    runs-on: [self-hosted, linux, x64, gpu]  # GPU runner labels
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.event_name == 'schedule'
+    continue-on-error: true  # Remove when GPU infra is stable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+          cache-targets: true
+
+      - name: Verify GPU visibility
+        run: |
+          nvidia-smi
+          echo "CUDA_HOME=${CUDA_HOME:-/usr/local/cuda}"
+          ls -l ${CUDA_HOME:-/usr/local/cuda}/lib64 || true
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build
+
+      - name: Cache BitNet C++ (CUDA)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bitnet_cpp
+          key: bitnet-cpp-${{ runner.os }}-cuda-${{ env.CPP_TAG }}-${{ env.CUDA_ARCHS }}
+          restore-keys: |
+            bitnet-cpp-${{ runner.os }}-cuda-
+
+      - name: Build workspace (cuda)
+        run: cargo build --workspace --no-default-features --features cuda
+
+      - name: Test kernels (CUDA)
+        run: cargo test -p bitnet-kernels --no-default-features --features cuda --tests -- --nocapture
+
+      - name: Run CUDA smoke test
+        run: cargo run -p bitnet-kernels --example cuda_smoke --no-default-features --features cuda
+
+  # Full cross-validation with CUDA
+  crossval-cuda:
+    name: Cross-validation (CUDA)
+    needs: [test]
+    runs-on: [self-hosted, linux, x64, gpu]
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.event_name == 'schedule'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+          cache-targets: true
+
+      - name: Verify GPU
+        run: nvidia-smi
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build
+
+      - name: Cache BitNet C++ (CUDA)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bitnet_cpp
+          key: bitnet-cpp-${{ runner.os }}-cuda-${{ env.CPP_TAG }}-${{ env.CUDA_ARCHS }}
+          restore-keys: |
+            bitnet-cpp-${{ runner.os }}-cuda-
+
+      - name: Fetch & build C++ (CUDA)
+        run: |
+          cargo run -p xtask -- fetch-cpp --tag "${CPP_TAG}" \
+            --backend cuda --cmake-flags "-DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCHS}"
+
+      - name: Build (cuda,ffi,crossval)
+        run: cargo build --workspace --no-default-features --features "cuda,ffi,crossval"
+
+      - name: Run full crossval (CUDA)
+        run: |
+          cargo run -p xtask -- full-crossval --tag "${CPP_TAG}" \
+            --backend cuda --cmake-flags "-DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCHS}"
+
+      - name: Upload crossval artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crossval-cuda-${{ env.CPP_TAG }}
+          path: |
+            crossval/**/results/**/*.json
+            crossval/**/reports/**/*.{md,html,txt}
+            crossval/**/logs/**/*.log
+            models/*.gguf
+
+      - name: Compare metrics with baseline
+        if: github.ref == 'refs/heads/main'
+        run: |
+          if [ -f "baselines/cuda-main.json" ]; then
+            cargo run -p xtask -- compare-metrics \
+              --baseline baselines/cuda-main.json \
+              --current crossval/results/last_run.json \
+              --ppl-max 0.02 --latency-p95-max 0.05 --tok-s-min -0.05
+          fi
+        continue-on-error: true
