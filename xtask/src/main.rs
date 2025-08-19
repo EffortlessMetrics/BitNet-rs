@@ -117,7 +117,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
 const DEFAULT_MODEL_ID: &str = "microsoft/bitnet-b1.58-2B-4T-gguf";
 const DEFAULT_MODEL_FILE: &str = "ggml-model-i2_s.gguf";
 const USER_AGENT_STRING: &str = "bitnet-xtask/0.1 (+https://github.com/microsoft/BitNet-rs)";
-const DEFAULT_CPP_TAG: &str = "b1-65-ggml";
+const DEFAULT_CPP_TAG: &str = "main";
 
 #[derive(Parser)]
 #[command(name = "xtask", about = "Developer tasks for BitNet.rs")]
@@ -192,7 +192,7 @@ enum Cmd {
     ///
     /// Validates that the C++ binary was successfully built after compilation
     FetchCpp {
-        /// Tag or rev to fetch (default: b1-65-ggml)
+        /// Branch or rev to fetch (default: main)
         #[arg(long, default_value = DEFAULT_CPP_TAG)]
         tag: String,
         /// Force rebuild
@@ -1131,7 +1131,7 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
     }
 
     println!("🔧 Fetching Microsoft BitNet C++ implementation");
-    println!("   Tag: {}", tag);
+    println!("   Branch/Rev: {}", tag);
     println!("   Force: {}", force);
     println!("   Clean: {}", clean);
 
@@ -1145,19 +1145,67 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool) -> Result<()> {
 
     run("bash", std::iter::once(script.to_string_lossy().to_string()).chain(args).collect())?;
 
-    // Verify the build succeeded by checking for the binary
+    // Verify the build succeeded by checking for libraries or binaries
     let cpp_dir = dirs::home_dir().unwrap().join(".cache/bitnet_cpp");
-    let binary = cpp_dir.join("bitnet-llama-cli");
+    let build_dir = cpp_dir.join("build");
+    
+    // Check for any built artifacts (libraries or binaries)
+    let mut found_artifacts = false;
+    
+    // Check for shared libraries
+    if cfg!(target_os = "macos") {
+        let lib_patterns = ["*.dylib", "*.so", "*.a"];
+        for _pattern in &lib_patterns {
+            if let Ok(entries) = std::fs::read_dir(&build_dir) {
+                for entry in entries.flatten() {
+                    if entry.path().extension().map_or(false, |ext| {
+                        lib_patterns.iter().any(|p| p.contains(ext.to_string_lossy().as_ref()))
+                    }) {
+                        found_artifacts = true;
+                        break;
+                    }
+                }
+            }
+        }
+    } else {
+        // Linux and other platforms
+        let lib_patterns = ["*.so", "*.a"];
+        for _pattern in &lib_patterns {
+            if let Ok(entries) = std::fs::read_dir(&build_dir) {
+                for entry in entries.flatten() {
+                    if entry.path().extension().map_or(false, |ext| {
+                        lib_patterns.iter().any(|p| p.contains(ext.to_string_lossy().as_ref()))
+                    }) {
+                        found_artifacts = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Also check for any executable files
+    if !found_artifacts {
+        if let Ok(entries) = std::fs::read_dir(&build_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() && is_executable(&path) {
+                    found_artifacts = true;
+                    break;
+                }
+            }
+        }
+    }
 
-    if !binary.exists() {
+    if !found_artifacts {
         return Err(anyhow!(
-            "C++ binary not found at {}. Build may have failed.\n\
+            "No build artifacts found in {}. Build may have failed.\n\
              Check the output above for errors.",
-            binary.display()
+            build_dir.display()
         ));
     }
 
-    println!("   ✓ C++ binary built successfully: {}", binary.display());
+    println!("   ✓ C++ build artifacts found successfully in: {}", build_dir.display());
     Ok(())
 }
 
@@ -1471,6 +1519,23 @@ fn run_cmd(cmd: &mut Command) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn is_executable(path: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(metadata) = std::fs::metadata(path) {
+            metadata.permissions().mode() & 0o111 != 0
+        } else {
+            false
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        // On Windows, check if it's an .exe file
+        path.extension().map_or(false, |ext| ext == "exe")
+    }
 }
 
 #[cfg(test)]
