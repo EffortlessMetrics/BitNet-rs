@@ -5,10 +5,7 @@
 
 use pyo3::exceptions::{PyIOError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyString};
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
+use pyo3::types::PyDict;
 
 mod async_runtime;
 mod config;

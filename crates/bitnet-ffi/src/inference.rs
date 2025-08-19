@@ -93,11 +93,11 @@ impl InferenceManager {
         let engine = self.get_or_create_engine(model_id)?;
 
         // Convert C config to Rust config
-        let generation_config = config.to_generation_config();
+        let _generation_config = config.to_generation_config();
 
         // Perform token generation
         let result = {
-            let mut engine_guard = engine.lock().map_err(|_| {
+            let _engine_guard = engine.lock().map_err(|_| {
                 BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
             })?;
 
@@ -124,16 +124,16 @@ impl InferenceManager {
         let engine = self.get_or_create_engine(model_id)?;
 
         // Convert C config to Rust config
-        let generation_config = config.to_generation_config();
+        let _generation_config = config.to_generation_config();
 
         // Start streaming
         let stream = {
-            let mut engine_guard = engine.lock().map_err(|_| {
+            let _engine_guard = engine.lock().map_err(|_| {
                 BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
             })?;
 
             // generate_stream now takes only prompt, not config
-            engine_guard.generate_stream(prompt)
+            _engine_guard.generate_stream(prompt)
         };
 
         Ok(StreamingSession::new(stream))
@@ -167,7 +167,7 @@ impl InferenceManager {
 
         match engines.get(&model_id) {
             Some(engine) => {
-                let mut engine_guard = engine.lock().map_err(|_| {
+                let engine_guard = engine.lock().map_err(|_| {
                     BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
                 })?;
 
@@ -265,14 +265,14 @@ impl InferenceManager {
 
 /// Streaming session for handling streaming inference
 pub struct StreamingSession {
-    stream: bitnet_inference::GenerationStream,
+    _stream: bitnet_inference::GenerationStream,
     buffer: Vec<String>,
     is_finished: bool,
 }
 
 impl StreamingSession {
     fn new(stream: bitnet_inference::GenerationStream) -> Self {
-        Self { stream, buffer: Vec::new(), is_finished: false }
+        Self { _stream: stream, buffer: Vec::new(), is_finished: false }
     }
 
     /// Get the next token from the stream

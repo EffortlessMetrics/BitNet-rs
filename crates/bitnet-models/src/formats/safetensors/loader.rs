@@ -27,6 +27,7 @@ impl SafeTensorsLoader {
                 }
                 #[cfg(not(feature = "gpu"))]
                 {
+                    let _ = id; // Suppress unused variable warning
                     Err(BitNetError::Validation("CUDA support not enabled; rebuild with --features gpu".to_string()))
                 }
             }

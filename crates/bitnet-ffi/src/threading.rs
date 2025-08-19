@@ -119,7 +119,7 @@ impl Drop for ThreadPool {
 
 /// Worker thread in the thread pool
 struct Worker {
-    id: usize,
+    _id: usize,
     thread: Option<thread::JoinHandle<()>>,
 }
 
@@ -158,7 +158,7 @@ impl Worker {
                 BitNetCError::ThreadSafety(format!("Failed to spawn worker thread: {}", e))
             })?;
 
-        Ok(Worker { id, thread: Some(thread) })
+        Ok(Worker { _id: id, thread: Some(thread) })
     }
 }
 
@@ -194,13 +194,13 @@ impl<T> ThreadSafeRefCounter<T> {
         Self { data: Arc::clone(&self.data), ref_count: Arc::clone(&self.ref_count) }
     }
 
-    pub fn read(&self) -> Result<std::sync::RwLockReadGuard<T>, BitNetCError> {
+    pub fn read(&self) -> Result<std::sync::RwLockReadGuard<'_, T>, BitNetCError> {
         self.data
             .read()
             .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire read lock".to_string()))
     }
 
-    pub fn write(&self) -> Result<std::sync::RwLockWriteGuard<T>, BitNetCError> {
+    pub fn write(&self) -> Result<std::sync::RwLockWriteGuard<'_, T>, BitNetCError> {
         self.data
             .write()
             .map_err(|_| BitNetCError::ThreadSafety("Failed to acquire write lock".to_string()))

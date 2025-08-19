@@ -216,10 +216,21 @@ pub mod disabled {
 
 // Re-export the appropriate module based on feature
 #[cfg(feature = "ffi")]
-pub use safe::*;
+pub use safe::{initialize, cleanup, version, is_available, ModelHandle, SysError};
 
 #[cfg(feature = "ffi")]
-pub use wrapper::*;
+pub use wrapper::{
+    init_backend, free_backend, get_version, CppError,
+    LlamaModel, LlamaContext, LlamaParams, LlamaToken,
+    load_model_from_file, tokenize, detokenize, generate,
+};
+
+// Export Result types under different names to avoid conflicts
+#[cfg(feature = "ffi")]
+pub use safe::Result as SafeResult;
+
+#[cfg(feature = "ffi")]
+pub use wrapper::Result as WrapperResult;
 
 #[cfg(not(feature = "ffi"))]
 pub use disabled::*;
