@@ -6,7 +6,9 @@ use pyo3::types::PyDict;
 /// Utility functions for BitNet Python bindings
 
 /// Convert Python kwargs to Rust HashMap
-pub fn kwargs_to_hashmap(kwargs: Option<&pyo3::Bound<'_, PyDict>>) -> std::collections::HashMap<String, String> {
+pub fn kwargs_to_hashmap(
+    kwargs: Option<&pyo3::Bound<'_, PyDict>>,
+) -> std::collections::HashMap<String, String> {
     let mut map = std::collections::HashMap::new();
 
     if let Some(kwargs) = kwargs {

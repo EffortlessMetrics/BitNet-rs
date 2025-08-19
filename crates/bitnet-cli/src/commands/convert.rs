@@ -134,10 +134,7 @@ impl ConvertCommand {
     }
 
     /// Load the input model
-    async fn load_input_model(
-        &self,
-        config: &CliConfig,
-    ) -> Result<Box<dyn bitnet_models::Model>> {
+    async fn load_input_model(&self, config: &CliConfig) -> Result<Box<dyn bitnet_models::Model>> {
         let pb = ProgressBar::new_spinner();
         pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}").unwrap());
         pb.set_message("Loading input model...");
@@ -171,10 +168,7 @@ impl ConvertCommand {
     }
 
     /// Convert the model to the target format
-    async fn convert_model(
-        &self,
-        _model: Box<dyn bitnet_models::Model>,
-    ) -> Result<()> {
+    async fn convert_model(&self, _model: Box<dyn bitnet_models::Model>) -> Result<()> {
         let pb = ProgressBar::new(100);
         pb.set_style(
             ProgressStyle::default_bar()

@@ -9,8 +9,8 @@ use bitnet_tests::common::{
 };
 use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -120,7 +120,7 @@ fn get_memory_usage() -> u64 {
 
 #[cfg(target_os = "macos")]
 fn get_memory_usage() -> u64 {
-    use libc::{getrusage, rusage, RUSAGE_SELF};
+    use libc::{RUSAGE_SELF, getrusage, rusage};
 
     unsafe {
         let mut usage = std::mem::zeroed::<rusage>();

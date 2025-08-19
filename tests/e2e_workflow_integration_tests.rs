@@ -303,7 +303,7 @@ async fn test_tokenization_pipeline_workflow() {
         "Special characters: !@#$%^&*()",
         "Numbers: 123456789",
         "Mixed: Hello123 World!@# Test",
-        "", // Empty input
+        "",    // Empty input
         "   ", // Whitespace only
     ];
 

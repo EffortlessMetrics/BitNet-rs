@@ -5,9 +5,9 @@
 //! to generate comprehensive reports from cross-validation results.
 
 use bitnet_tests::common::cross_validation::{
-    implementation::{InferenceConfig, InferenceResult, PerformanceMetrics},
     AccuracyResult, ComparisonSummary, ComparisonTestCase, CrossValidationResult,
     PerformanceComparison, SingleComparisonResult, TokenMismatch,
+    implementation::{InferenceConfig, InferenceResult, PerformanceMetrics},
 };
 use bitnet_tests::common::reporting::comparison_analysis::{
     ComparisonAnalysisConfig, ComparisonAnalysisReporter, StatusLevel,

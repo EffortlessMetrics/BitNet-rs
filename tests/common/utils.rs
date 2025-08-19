@@ -1,5 +1,5 @@
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 /// Get current memory usage in bytes
@@ -257,11 +257,7 @@ fn get_memory_usage_macos() -> u64 {
             &mut count,
         );
 
-        if result == libc::KERN_SUCCESS {
-            info.resident_size
-        } else {
-            0
-        }
+        if result == libc::KERN_SUCCESS { info.resident_size } else { 0 }
     }
 }
 
@@ -279,11 +275,7 @@ fn get_memory_usage_windows() -> u64 {
             mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32,
         );
 
-        if result != 0 {
-            pmc.WorkingSetSize as u64
-        } else {
-            0
-        }
+        if result != 0 { pmc.WorkingSetSize as u64 } else { 0 }
     }
 }
 

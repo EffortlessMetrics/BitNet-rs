@@ -28,7 +28,9 @@ impl SafeTensorsLoader {
                 #[cfg(not(feature = "gpu"))]
                 {
                     let _ = id; // Suppress unused variable warning
-                    Err(BitNetError::Validation("CUDA support not enabled; rebuild with --features gpu".to_string()))
+                    Err(BitNetError::Validation(
+                        "CUDA support not enabled; rebuild with --features gpu".to_string(),
+                    ))
                 }
             }
             // Compile this arm only on macOS with the 'gpu' feature.
@@ -43,7 +45,7 @@ impl SafeTensorsLoader {
             #[cfg(not(all(target_os = "macos", feature = "gpu")))]
             Device::Metal => Err(BitNetError::Validation(
                 "Metal support not enabled; rebuild with --features gpu on macOS".to_string(),
-            ))
+            )),
         }
     }
 }

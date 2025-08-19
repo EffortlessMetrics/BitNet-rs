@@ -15,13 +15,13 @@ use std::sync::Arc;
 use std::time::Instant;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
+#[cfg(feature = "prometheus")]
+use monitoring::prometheus::{create_prometheus_routes, PrometheusExporter};
 use monitoring::{
     health::{create_health_routes, HealthChecker},
     metrics::MetricsCollector,
     MonitoringConfig, MonitoringSystem,
 };
-#[cfg(feature = "prometheus")]
-use monitoring::prometheus::{create_prometheus_routes, PrometheusExporter};
 
 #[derive(Deserialize)]
 pub struct InferenceRequest {
@@ -81,12 +81,12 @@ impl BitNetServer {
         #[cfg(not(feature = "prometheus"))]
         let _unused = ();
 
-        Ok(Self { 
-            config, 
-            monitoring, 
-            health_checker, 
+        Ok(Self {
+            config,
+            monitoring,
+            health_checker,
             #[cfg(feature = "prometheus")]
-            prometheus_exporter 
+            prometheus_exporter,
         })
     }
 

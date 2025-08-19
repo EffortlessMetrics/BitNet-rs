@@ -59,9 +59,7 @@ async fn init_tracing(config: &MonitoringConfig) -> Result<()> {
         // Stdout exporter for development
         let resource = Resource::builder()
             .with_service_name("bitnet-server")
-            .with_attributes(vec![
-                KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
-            ])
+            .with_attributes(vec![KeyValue::new("service.version", env!("CARGO_PKG_VERSION"))])
             .build();
 
         let provider = SdkTracerProvider::builder()
@@ -80,16 +78,11 @@ async fn init_metrics(_config: &MonitoringConfig) -> Result<()> {
     // Initialize Prometheus metrics
     let resource = Resource::builder()
         .with_service_name("bitnet-server")
-        .with_attributes(vec![
-            KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
-        ])
+        .with_attributes(vec![KeyValue::new("service.version", env!("CARGO_PKG_VERSION"))])
         .build();
 
     let reader = exporter().build()?;
-    let provider = SdkMeterProvider::builder()
-        .with_resource(resource)
-        .with_reader(reader)
-        .build();
+    let provider = SdkMeterProvider::builder().with_resource(resource).with_reader(reader).build();
 
     global::set_meter_provider(provider);
 

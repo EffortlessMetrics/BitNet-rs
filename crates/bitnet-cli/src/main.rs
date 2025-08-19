@@ -372,14 +372,11 @@ async fn run_simple_generation(
 
     // Try real loader first
     use bitnet_models::loader::{LoadConfig, ModelLoader};
-    
+
     let loader = ModelLoader::new(Device::Cpu);
-    let load_config = LoadConfig {
-        use_mmap: true,
-        validate_checksums: false,
-        progress_callback: None,
-    };
-    
+    let load_config =
+        LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
+
     let (model, config): (Arc<dyn Model>, _) = match loader
         .load_with_config(&model_path, &load_config)
     {

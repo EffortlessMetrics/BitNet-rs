@@ -6,9 +6,8 @@ use std::time::Duration;
 // Import the configuration scenarios module directly
 mod common;
 use common::config_scenarios::{
-    scenarios, ConfigurationContext, EnvironmentType, Platform, PlatformSettings,
-    QualityRequirements, ResourceConstraints, ScenarioConfigManager, TestingScenario,
-    TimeConstraints,
+    ConfigurationContext, EnvironmentType, Platform, PlatformSettings, QualityRequirements,
+    ResourceConstraints, ScenarioConfigManager, TestingScenario, TimeConstraints, scenarios,
 };
 
 #[test]

@@ -120,22 +120,22 @@ fn create_tokenizer() -> Result<impl Tokenizer, Box<dyn std::error::Error>> {
     // This should load your actual tokenizer
     // For now, return a dummy implementation
     struct DummyTokenizer;
-    
+
     impl Tokenizer for DummyTokenizer {
         fn encode(&self, text: &str) -> Result<Vec<u32>, Box<dyn std::error::Error>> {
             // Simple character-based encoding for demonstration
             Ok(text.chars().map(|c| c as u32).collect())
         }
-        
+
         fn decode(&self, tokens: &[u32]) -> Result<String, Box<dyn std::error::Error>> {
             // Simple character-based decoding for demonstration
             Ok(tokens.iter().map(|&t| char::from_u32(t).unwrap_or('?')).collect())
         }
-        
+
         fn vocab_size(&self) -> usize {
             65536 // Unicode BMP size
         }
     }
-    
+
     Ok(DummyTokenizer)
 }

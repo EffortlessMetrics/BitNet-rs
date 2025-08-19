@@ -5,8 +5,8 @@ use std::time::Duration;
 mod common;
 
 use common::{
-    dev_config, init_logging, ConsoleReporter, DebugContext, FixtureManager, TestCase, TestConfig,
-    TestError, TestHarness, TestMetrics, TestResult, TestSuite, TestTracer, TraceEventType,
+    ConsoleReporter, DebugContext, FixtureManager, TestCase, TestConfig, TestError, TestHarness,
+    TestMetrics, TestResult, TestSuite, TestTracer, TraceEventType, dev_config, init_logging,
 };
 
 /// Example test case implementation

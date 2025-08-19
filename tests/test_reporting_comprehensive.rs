@@ -4,8 +4,8 @@
 //! including HTML, JSON, JUnit XML, and Markdown report generation.
 
 use bitnet_tests::reporting::{
-    formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter},
     ReportConfig, ReportFormat, TestReporter,
+    formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter},
 };
 use bitnet_tests::results::{TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary};
 use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};

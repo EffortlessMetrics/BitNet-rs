@@ -1,7 +1,7 @@
 #![cfg(feature = "crossval")]
 
+use bitnet_common::{InferenceConfig, ModelFormat, PerformanceMetrics};
 use bitnet_tests::units::BYTES_PER_MB;
-use bitnet_common::{InferenceConfig, PerformanceMetrics, ModelFormat};
 use std::path::PathBuf;
 
 // Placeholder for cross-validation types until they're properly migrated
@@ -14,24 +14,30 @@ impl MockImplementation {
     fn new(name: String, version: String) -> Self {
         Self { name, version }
     }
-    
+
     fn get_name(&self) -> &str {
         &self.name
     }
-    
+
     fn get_version(&self) -> &str {
         &self.version
     }
-    
+
     fn add_config(&mut self, _key: &str, _value: &str) {}
-    fn get_features(&self) -> Vec<String> { vec![] }
-    fn run_test(&mut self, _name: &str) -> std::io::Result<()> { Ok(()) }
+    fn get_features(&self) -> Vec<String> {
+        vec![]
+    }
+    fn run_test(&mut self, _name: &str) -> std::io::Result<()> {
+        Ok(())
+    }
 }
 
 struct MockImplementationFactory;
 
 impl MockImplementationFactory {
-    fn new() -> Self { Self }
+    fn new() -> Self {
+        Self
+    }
     fn create_implementation(&self, _name: &str) -> MockImplementation {
         MockImplementation::new("mock".to_string(), "1.0".to_string())
     }
@@ -42,9 +48,13 @@ struct ImplementationRegistry {
 }
 
 impl ImplementationRegistry {
-    fn new() -> Self { Self { implementations: vec![] } }
+    fn new() -> Self {
+        Self { implementations: vec![] }
+    }
     fn register(&mut self, _factory: MockImplementationFactory) {}
-    fn get_implementations(&self) -> &[MockImplementation] { &self.implementations }
+    fn get_implementations(&self) -> &[MockImplementation] {
+        &self.implementations
+    }
 }
 
 struct ResourceLimits {
@@ -56,10 +66,16 @@ struct ResourceLimits {
 struct ResourceManager;
 
 impl ResourceManager {
-    fn new(_limits: ResourceLimits) -> Self { Self }
-    fn allocate_memory(&mut self, _mb: usize) -> bool { true }
+    fn new(_limits: ResourceLimits) -> Self {
+        Self
+    }
+    fn allocate_memory(&mut self, _mb: usize) -> bool {
+        true
+    }
     fn release_memory(&mut self, _mb: usize) {}
-    fn can_allocate(&self, _mb: usize) -> bool { true }
+    fn can_allocate(&self, _mb: usize) -> bool {
+        true
+    }
 }
 
 #[tokio::test]

@@ -331,11 +331,7 @@ pub struct ExecutionStats {
 
 impl ExecutionStats {
     pub fn success_rate(&self) -> f64 {
-        if self.total_tests > 0 {
-            self.passed_tests as f64 / self.total_tests as f64
-        } else {
-            0.0
-        }
+        if self.total_tests > 0 { self.passed_tests as f64 / self.total_tests as f64 } else { 0.0 }
     }
 
     pub fn update_average_duration(&mut self) {

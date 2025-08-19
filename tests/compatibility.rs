@@ -351,7 +351,11 @@ mod performance_compatibility {
         let test_cases = vec![
             ("short_prompt", "Hello, world!", 10),
             ("medium_prompt", "Generate a story about a robot learning to paint.", 50),
-            ("long_prompt", "Write a detailed explanation of quantum computing and its applications in modern technology, including the challenges and future prospects.", 100),
+            (
+                "long_prompt",
+                "Write a detailed explanation of quantum computing and its applications in modern technology, including the challenges and future prospects.",
+                100,
+            ),
         ];
 
         for (name, prompt, max_tokens) in test_cases {
@@ -549,7 +553,11 @@ mod cross_validation {
         let test_cases = vec![
             ("small", "Short prompt", 10),
             ("medium", "Medium length prompt for testing", 50),
-            ("large", "This is a longer prompt designed to test the performance characteristics of the model with more substantial input text", 100),
+            (
+                "large",
+                "This is a longer prompt designed to test the performance characteristics of the model with more substantial input text",
+                100,
+            ),
         ];
 
         for (name, prompt, max_tokens) in test_cases {

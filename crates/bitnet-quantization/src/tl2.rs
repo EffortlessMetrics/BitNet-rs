@@ -24,13 +24,11 @@ pub struct TL2Config {
 impl Default for TL2Config {
     fn default() -> Self {
         #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        let (use_avx512, use_avx2) = (
-            is_x86_feature_detected!("avx512f"),
-            is_x86_feature_detected!("avx2"),
-        );
+        let (use_avx512, use_avx2) =
+            (is_x86_feature_detected!("avx512f"), is_x86_feature_detected!("avx2"));
         #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
         let (use_avx512, use_avx2) = (false, false);
-        
+
         Self {
             block_size: 128, // Larger blocks for x86 vectorization
             lookup_table_size: 256,
@@ -135,12 +133,7 @@ impl CpuFeatures {
         }
         #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
         {
-            Self {
-                has_avx2: false,
-                has_avx512f: false,
-                has_avx512bw: false,
-                has_avx512vl: false,
-            }
+            Self { has_avx2: false, has_avx512f: false, has_avx512bw: false, has_avx512vl: false }
         }
     }
 

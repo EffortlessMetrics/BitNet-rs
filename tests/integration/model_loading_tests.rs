@@ -3,11 +3,11 @@
 //! Tests model loading workflows, initialization processes, and configuration validation.
 
 use super::*;
-use crate::{TestCase, TestError, TestMetrics, TestResult};
 #[cfg(feature = "fixtures")]
 use crate::common::FixtureManager;
 use crate::common::harness::FixtureCtx;
 use crate::common::tensor_helpers::ct;
+use crate::{TestCase, TestError, TestMetrics, TestResult};
 use anyhow::Result;
 use async_trait::async_trait;
 use bitnet_common::{BitNetConfig, BitNetError, Device, MockTensor};
@@ -600,7 +600,10 @@ impl Model for MockModelWithConfig {
         Ok(ct(vec![1, tokens.len(), 768]))
     }
 
-    fn logits(&self, _input: &bitnet_common::ConcreteTensor) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+    fn logits(
+        &self,
+        _input: &bitnet_common::ConcreteTensor,
+    ) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
         Ok(ct(vec![1, 1, self.config.model.vocab_size]))
     }
 }
@@ -626,15 +629,24 @@ impl Model for FailingMockModel {
         _input: &bitnet_common::ConcreteTensor,
         _cache: &mut dyn std::any::Any,
     ) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
-        Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed { reason: "Mock model forward pass failure".to_string() }))
+        Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+            reason: "Mock model forward pass failure".to_string(),
+        }))
     }
 
     fn embed(&self, _tokens: &[u32]) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
-        Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed { reason: "Mock model embed failure".to_string() }))
+        Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+            reason: "Mock model embed failure".to_string(),
+        }))
     }
 
-    fn logits(&self, _input: &bitnet_common::ConcreteTensor) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
-        Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed { reason: "Mock model logits failure".to_string() }))
+    fn logits(
+        &self,
+        _input: &bitnet_common::ConcreteTensor,
+    ) -> Result<bitnet_common::ConcreteTensor, BitNetError> {
+        Err(BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+            reason: "Mock model logits failure".to_string(),
+        }))
     }
 }
 

@@ -354,7 +354,7 @@ pub struct TransformerModel {
     pub embed_tokens: candle_nn::Embedding,
     pub layers: Vec<TransformerBlock>,
     pub norm: LayerNorm,
-    pub lm_head: Option<Linear>,  // Optional for tied weights
+    pub lm_head: Option<Linear>, // Optional for tied weights
     device: Device,
 }
 
@@ -373,7 +373,7 @@ impl TransformerModel {
         }
 
         let norm = candle_nn::layer_norm(hidden_size, 1e-5, vb.pp("norm"))?;
-        
+
         // Try to load lm_head, but it's optional (can be tied to embeddings)
         // Try to create the linear layer, catching errors if weights don't exist
         let lm_head = match candle_nn::linear(hidden_size, vocab_size, vb.pp("lm_head")) {
@@ -416,7 +416,7 @@ impl TransformerModel {
             LOGGED.call_once(|| {
                 tracing::info!("LM head tied to input embeddings (using E^T for logits)");
             });
-            
+
             let embeddings = self.embed_tokens.embeddings();
             Ok(hidden.matmul(&embeddings.t()?)?)
         }

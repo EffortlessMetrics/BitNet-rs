@@ -38,18 +38,23 @@ pub mod cpp {
             fn bitnet_cpp_get_last_error() -> *const c_char;
         }
 
-        pub fn init() -> i32 { 
+        pub fn init() -> i32 {
             unsafe { bitnet_cpp_init() }
         }
-        pub fn cleanup() { 
+        pub fn cleanup() {
             unsafe { bitnet_cpp_cleanup() }
         }
-        pub fn is_available() -> bool { 
+        pub fn is_available() -> bool {
             unsafe { bitnet_cpp_is_available() != 0 }
         }
 
         pub fn matmul_i2s(
-            a: &[i8], b: &[u8], c: &mut [f32], m: usize, n: usize, k: usize
+            a: &[i8],
+            b: &[u8],
+            c: &mut [f32],
+            m: usize,
+            n: usize,
+            k: usize,
         ) -> Result<(), &'static str> {
             let rc = unsafe {
                 bitnet_cpp_matmul_i2s(
@@ -61,7 +66,11 @@ pub mod cpp {
                     k as c_int,
                 )
             };
-            if rc == 0 { Ok(()) } else { Err("cpp matmul failed") }
+            if rc == 0 {
+                Ok(())
+            } else {
+                Err("cpp matmul failed")
+            }
         }
 
         pub fn quantize(
@@ -81,7 +90,11 @@ pub mod cpp {
                     qtype as c_int,
                 )
             };
-            if rc == 0 { Ok(()) } else { Err("cpp quantize failed") }
+            if rc == 0 {
+                Ok(())
+            } else {
+                Err("cpp quantize failed")
+            }
         }
 
         pub fn get_last_error() -> &'static str {
@@ -90,9 +103,7 @@ pub mod cpp {
                 if ptr.is_null() {
                     "unknown error"
                 } else {
-                    std::ffi::CStr::from_ptr(ptr)
-                        .to_str()
-                        .unwrap_or("invalid error string")
+                    std::ffi::CStr::from_ptr(ptr).to_str().unwrap_or("invalid error string")
                 }
             }
         }
@@ -101,12 +112,21 @@ pub mod cpp {
     // Fallback stubs when ffi is off OR the C++ library is missing
     #[cfg(any(not(feature = "ffi"), not(have_cpp)))]
     mod imp {
-        pub fn init() -> i32 { -1 }
+        pub fn init() -> i32 {
+            -1
+        }
         pub fn cleanup() {}
-        pub fn is_available() -> bool { false }
+        pub fn is_available() -> bool {
+            false
+        }
 
         pub fn matmul_i2s(
-            _a: &[i8], _b: &[u8], _c: &mut [f32], _m: usize, _n: usize, _k: usize
+            _a: &[i8],
+            _b: &[u8],
+            _c: &mut [f32],
+            _m: usize,
+            _n: usize,
+            _k: usize,
         ) -> Result<(), &'static str> {
             Err("ffi bridge unavailable")
         }

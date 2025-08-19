@@ -5,7 +5,9 @@ This module demonstrates the current working capabilities of the BitNet Rust eco
 with realistic end-to-end workflows that actually compile and run successfully.
 */
 
-use bitnet_common::{BitNetConfig, BitNetTensor, Device, MockTensor, Tensor, ModelFormat, QuantizationConfig};
+use bitnet_common::{
+    BitNetConfig, BitNetTensor, Device, MockTensor, ModelFormat, QuantizationConfig, Tensor,
+};
 use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
 use std::fs;
 use tempfile::TempDir;
@@ -65,8 +67,8 @@ fn test_multi_quantizer_comparison() {
         match result {
             Ok(quantized) => {
                 let size_bytes = quantized.data.len();
-                let compression_ratio = (tensor.shape().iter().product::<usize>() * 4) as f32
-                    / size_bytes as f32;
+                let compression_ratio =
+                    (tensor.shape().iter().product::<usize>() * 4) as f32 / size_bytes as f32;
                 println!(
                     "{:10} | Size: {:6} bytes | Compression: {:.2}x",
                     name, size_bytes, compression_ratio
@@ -185,10 +187,11 @@ fn test_device_compatibility() {
         // Create tensor for this device
         let mock_tensor = MockTensor::new(vec![32, 32]);
         let data = mock_tensor.as_slice::<f32>().unwrap();
-        let tensor = BitNetTensor::from_slice(data, mock_tensor.shape(), &device).unwrap_or_else(|_| {
-            // If device is not available, fall back to CPU
-            BitNetTensor::from_slice(data, mock_tensor.shape(), &Device::Cpu).unwrap()
-        });
+        let tensor =
+            BitNetTensor::from_slice(data, mock_tensor.shape(), &device).unwrap_or_else(|_| {
+                // If device is not available, fall back to CPU
+                BitNetTensor::from_slice(data, mock_tensor.shape(), &Device::Cpu).unwrap()
+            });
 
         // Test basic operations
         assert_eq!(tensor.shape(), &[32, 32], "Tensor shape should be correct");
@@ -238,11 +241,17 @@ fn test_memory_management() {
 
 // Helper trait for abstracting quantizers
 trait QuantizerWrapper: Send + Sync {
-    fn quantize(&self, tensor: &BitNetTensor) -> Result<bitnet_quantization::QuantizedTensor, Box<dyn std::error::Error>>;
+    fn quantize(
+        &self,
+        tensor: &BitNetTensor,
+    ) -> Result<bitnet_quantization::QuantizedTensor, Box<dyn std::error::Error>>;
 }
 
 impl QuantizerWrapper for I2SQuantizer {
-    fn quantize(&self, tensor: &BitNetTensor) -> Result<bitnet_quantization::QuantizedTensor, Box<dyn std::error::Error>> {
+    fn quantize(
+        &self,
+        tensor: &BitNetTensor,
+    ) -> Result<bitnet_quantization::QuantizedTensor, Box<dyn std::error::Error>> {
         self.quantize_tensor(tensor).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
     }
 }
@@ -259,8 +268,13 @@ impl TL1Wrapper {
 }
 
 impl QuantizerWrapper for TL1Wrapper {
-    fn quantize(&self, tensor: &BitNetTensor) -> Result<bitnet_quantization::QuantizedTensor, Box<dyn std::error::Error>> {
-        self.quantizer.quantize_tensor(tensor).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+    fn quantize(
+        &self,
+        tensor: &BitNetTensor,
+    ) -> Result<bitnet_quantization::QuantizedTensor, Box<dyn std::error::Error>> {
+        self.quantizer
+            .quantize_tensor(tensor)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
     }
 }
 
@@ -276,7 +290,12 @@ impl TL2Wrapper {
 }
 
 impl QuantizerWrapper for TL2Wrapper {
-    fn quantize(&self, tensor: &BitNetTensor) -> Result<bitnet_quantization::QuantizedTensor, Box<dyn std::error::Error>> {
-        self.quantizer.quantize_tensor(tensor).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+    fn quantize(
+        &self,
+        tensor: &BitNetTensor,
+    ) -> Result<bitnet_quantization::QuantizedTensor, Box<dyn std::error::Error>> {
+        self.quantizer
+            .quantize_tensor(tensor)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
     }
 }

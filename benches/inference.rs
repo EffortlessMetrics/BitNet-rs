@@ -2,7 +2,7 @@ use bitnet_common::BitNetConfig;
 use bitnet_inference::InferenceEngine;
 use bitnet_models::BitNetModel;
 use candle_core::Device;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 fn benchmark_inference(c: &mut Criterion) {
     let device = Device::Cpu;

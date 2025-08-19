@@ -4,10 +4,13 @@
 //! cross-crate component interactions, data flow, configuration propagation,
 //! error handling, and resource management.
 
+use bitnet_tests::integration::component_interaction_tests::{
+    ComponentInteractionTestSuite, ConfigurationPropagationTest, CrossCrateDataFlowTest,
+    ErrorHandlingAndRecoveryTest, ResourceSharingTest,
+};
 use bitnet_tests::{TestConfig, TestHarness, TestStatus};
-use bitnet_tests::integration::component_interaction_tests::{ComponentInteractionTestSuite, CrossCrateDataFlowTest, ConfigurationPropagationTest, ErrorHandlingAndRecoveryTest, ResourceSharingTest};
-use log::LevelFilter;
 use env_logger;
+use log::LevelFilter;
 
 #[tokio::test]
 async fn run_component_interaction_tests() {

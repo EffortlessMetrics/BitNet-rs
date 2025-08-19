@@ -59,8 +59,8 @@ mod resource_management_tests {
 
     #[tokio::test]
     async fn test_concurrent_resource_access() {
-        use std::sync::atomic::{AtomicUsize, Ordering};
         use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
         use tokio::sync::Semaphore;
 
         // Test concurrent access to limited resources
@@ -124,7 +124,7 @@ mod resource_management_tests {
 
     #[cfg(target_os = "macos")]
     fn get_memory_usage() -> u64 {
-        use libc::{getrusage, rusage, RUSAGE_SELF};
+        use libc::{RUSAGE_SELF, getrusage, rusage};
 
         unsafe {
             let mut usage = std::mem::zeroed::<rusage>();

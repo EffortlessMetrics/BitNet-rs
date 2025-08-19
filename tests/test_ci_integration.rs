@@ -3,10 +3,10 @@
 //! Tests to verify that the CI integration components work correctly.
 
 use bitnet_tests::ci_reporting::CIReporter;
-use bitnet_tests::reporting::TestReporter;
-use bitnet_tests::{TestResult, TestSuiteResult};
 use bitnet_tests::prelude::TestStatus;
+use bitnet_tests::reporting::TestReporter;
 use bitnet_tests::results::TestSummary;
+use bitnet_tests::{TestResult, TestSuiteResult};
 use std::time::Duration;
 use tempfile::TempDir;
 

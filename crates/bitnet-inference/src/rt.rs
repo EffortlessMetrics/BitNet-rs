@@ -6,7 +6,7 @@ use std::{future::Future, time::Duration};
 #[cfg(feature = "rt-tokio")]
 pub mod time {
     use super::Duration;
-    
+
     /// Sleep for a duration using the runtime's timer implementation
     pub async fn sleep(d: Duration) {
         tokio::time::sleep(d).await;
@@ -16,7 +16,7 @@ pub mod time {
 #[cfg(feature = "rt-tokio")]
 pub mod task {
     use super::Future;
-    
+
     /// Spawn a future on the runtime
     pub fn spawn<F>(f: F)
     where
@@ -29,7 +29,7 @@ pub mod task {
 #[cfg(all(feature = "rt-wasm", not(feature = "rt-tokio")))]
 pub mod time {
     use super::Duration;
-    
+
     /// Sleep for a duration using the runtime's timer implementation
     pub async fn sleep(d: Duration) {
         gloo_timers::future::TimeoutFuture::new(d.as_millis() as u32).await;
@@ -39,7 +39,7 @@ pub mod time {
 #[cfg(all(feature = "rt-wasm", not(feature = "rt-tokio")))]
 pub mod task {
     use super::Future;
-    
+
     /// Spawn a future on the runtime
     pub fn spawn<F>(f: F)
     where

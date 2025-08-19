@@ -96,9 +96,9 @@ impl PerformanceMetrics {
 
 mod cpu_kernel_tests {
     use super::*;
+    use bitnet_kernels::cpu::FallbackKernel;
     #[cfg(target_arch = "aarch64")]
     use bitnet_kernels::cpu::NeonKernel;
-    use bitnet_kernels::cpu::{Avx2Kernel, FallbackKernel};
 
     #[test]
     fn test_fallback_kernel_comprehensive() {
@@ -1240,7 +1240,6 @@ mod ffi_kernel_tests {
 
 #[cfg(not(feature = "ffi"))]
 mod ffi_kernel_tests {
-    use super::*;
 
     #[test]
     fn test_ffi_kernel_disabled() {

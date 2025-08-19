@@ -3,7 +3,7 @@ use bitnet_tests::common::{
     config::TestConfig,
     errors::{TestError, TestOpResult as TestResult},
     fixtures::FixtureManager,
-    harness::{TestCase, TestHarness, TestSuite, ConsoleReporter},
+    harness::{ConsoleReporter, TestCase, TestHarness, TestSuite},
     results::TestMetrics,
 };
 use std::time::{Duration, Instant};

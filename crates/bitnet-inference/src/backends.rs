@@ -348,7 +348,9 @@ mod tests {
         let input = ConcreteTensor::mock(vec![1, 512]);
         let mut cache = KVCache::new(Default::default()).unwrap();
 
-        let output = backend.forward(&input, &mut cache).await
+        let output = backend
+            .forward(&input, &mut cache)
+            .await
             .expect("CPU forward should succeed with mock model");
         // Minimal invariant: output tensor has expected shape
         assert_eq!(output.shape(), &[1, 10, 768], "unexpected output shape");

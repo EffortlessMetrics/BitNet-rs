@@ -1,7 +1,7 @@
 #![cfg(feature = "crossval")]
 use bitnet_tests::cross_validation::implementation::InferenceConfig;
 use bitnet_tests::cross_validation::{
-    comparison::{test_cases, ComparisonTestCase, ComparisonTolerance},
+    comparison::{ComparisonTestCase, ComparisonTolerance, test_cases},
     test_implementation::MockImplementation,
 };
 

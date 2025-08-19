@@ -1,4 +1,4 @@
-use crate::config::{load_test_config, validate_config, TestConfig};
+use crate::config::{TestConfig, load_test_config, validate_config};
 use crate::errors::{TestError, TestOpResult as TestResultCompat};
 use std::path::Path;
 

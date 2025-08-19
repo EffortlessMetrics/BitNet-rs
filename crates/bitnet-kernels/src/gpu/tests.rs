@@ -245,8 +245,11 @@ mod tests {
                     if result.speedup > 0.0 {
                         println!(
                             "Benchmark passed: {}x{}x{} - {:.2}x speedup, {:.2} GFLOPS",
-                            result.dimensions.0, result.dimensions.1, result.dimensions.2,
-                            result.speedup, result.gflops
+                            result.dimensions.0,
+                            result.dimensions.1,
+                            result.dimensions.2,
+                            result.speedup,
+                            result.gflops
                         );
                     }
                 }
@@ -282,7 +285,8 @@ mod tests {
         let mut test_data = Vec::new();
 
         for i in 0..batch_size {
-            let a: Vec<i8> = (0..m * k).map(|j| (((i * 1000 + j) % 256) as i16 - 128) as i8).collect();
+            let a: Vec<i8> =
+                (0..m * k).map(|j| (((i * 1000 + j) % 256) as i16 - 128) as i8).collect();
             let b: Vec<u8> = (0..k * n).map(|j| ((i * 2000 + j) % 4) as u8).collect();
             let mut c = vec![0.0f32; m * n];
 

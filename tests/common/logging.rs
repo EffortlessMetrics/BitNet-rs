@@ -5,10 +5,10 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::Level;
 use tracing_subscriber::{
+    EnvFilter, Layer,
     fmt::{self, format::FmtSpan},
     layer::SubscriberExt,
     util::SubscriberInitExt,
-    EnvFilter, Layer,
 };
 
 use super::{

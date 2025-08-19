@@ -4,10 +4,10 @@
 //! for multiple simultaneous inference requests.
 
 use super::*;
-use crate::{TestCase, TestError, TestMetrics, TestResult, BYTES_PER_MB};
 #[cfg(feature = "fixtures")]
 use crate::common::FixtureManager;
 use crate::common::harness::FixtureCtx;
+use crate::{BYTES_PER_MB, TestCase, TestError, TestMetrics, TestResult};
 use anyhow::Result;
 use async_trait::async_trait;
 use futures_util::future::join_all;
