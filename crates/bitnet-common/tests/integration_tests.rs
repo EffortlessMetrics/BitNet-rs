@@ -127,8 +127,8 @@ use_gpu = false
     assert_eq!(config.quantization.quantization_type, QuantizationType::I2S);
     assert!(!config.performance.use_gpu);
 
-    unsafe { env::set_var("BITNET_TEMPERATURE", "0.9"); }
-    unsafe { env::set_var("BITNET_USE_GPU", "true"); }
+    unsafe { unsafe { env::set_var("BITNET_TEMPERATURE", "0.9"); } }
+    unsafe { unsafe { env::set_var("BITNET_USE_GPU", "true"); } }
 
     let config_with_env = BitNetConfig::from_file_with_env(&config_path).unwrap();
 
@@ -137,8 +137,8 @@ use_gpu = false
     assert_eq!(config_with_env.model.vocab_size, 32000);
     assert_eq!(config_with_env.inference.seed, Some(123));
 
-    unsafe { env::remove_var("BITNET_TEMPERATURE"); }
-    unsafe { env::remove_var("BITNET_USE_GPU"); }
+    unsafe { unsafe { env::remove_var("BITNET_TEMPERATURE"); } }
+    unsafe { unsafe { env::remove_var("BITNET_USE_GPU"); } }
 }
 
 #[test]
