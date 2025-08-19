@@ -57,9 +57,36 @@ update-api-snapshots:
     cargo test --test api_snapshots -- --accept
     @echo "📸 API snapshots updated - remember to commit the changes!"
 
+# Update API baselines (when making intentional API changes)
+update-api-baselines:
+    @echo "Updating Rust API baselines..."
+    cargo public-api -p bitnet-common > api/rust/bitnet-common.public-api.txt || true
+    cargo public-api -p bitnet-kernels > api/rust/bitnet-kernels.public-api.txt || true
+    cargo public-api -p bitnet-inference > api/rust/bitnet-inference.public-api.txt || true
+    cargo public-api -p bitnet-ffi > api/rust/bitnet-ffi.public-api.txt || true
+    cargo public-api -p bitnet-cli > api/rust/bitnet-cli.public-api.txt || true
+    @echo "Updating FFI header..."
+    cbindgen crates/bitnet-ffi --config api/ffi/cbindgen.toml -o api/ffi/bitnet_ffi.h || true
+    @echo "Updating FFI symbols..."
+    cargo build -p bitnet-ffi --release --no-default-features --features ffi
+    nm -D --defined-only target/release/libbitnet_ffi.so | awk '{print $3}' | sort > api/ffi/ffi.symbols.txt || true
+    @echo "Updating CLI help..."
+    cargo run -p bitnet-cli -- --help > api/cli/help.txt || true
+    @echo "📝 API baselines updated - review changes and update API_CHANGES.md!"
+
 # Full API compatibility check
 api-check: check-breaking test-api-snapshots
     @echo "✅ API compatibility verified"
+
+# Verify API baselines match current code
+verify-api-baselines:
+    @echo "Verifying API baselines..."
+    @for crate in bitnet-common bitnet-kernels bitnet-inference bitnet-ffi bitnet-cli; do \
+        echo "Checking $$crate..."; \
+        cargo public-api -p $$crate > /tmp/$$crate.current.txt || true; \
+        diff -q api/rust/$$crate.public-api.txt /tmp/$$crate.current.txt || echo "⚠️  $$crate baseline differs"; \
+    done
+    @echo "✅ API baseline verification complete"
 
 # Format all code
 fmt:

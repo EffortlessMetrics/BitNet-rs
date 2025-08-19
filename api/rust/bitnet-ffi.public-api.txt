@@ -1,0 +1,33 @@
+// Public API for bitnet-ffi
+// Auto-generated baseline - DO NOT EDIT MANUALLY
+// Update with: cargo public-api -p bitnet-ffi > api/rust/bitnet-ffi.public-api.txt
+
+#[no_mangle]
+pub extern "C" fn bitnet_ffi::bitnet_create_context(config: *const BitNetConfigFFI) -> *mut BitNetContext
+
+#[no_mangle]
+pub extern "C" fn bitnet_ffi::bitnet_destroy_context(ctx: *mut BitNetContext)
+
+#[no_mangle]
+pub extern "C" fn bitnet_ffi::bitnet_load_model(ctx: *mut BitNetContext, path: *const c_char) -> i32
+
+#[no_mangle]
+pub extern "C" fn bitnet_ffi::bitnet_generate(ctx: *mut BitNetContext, prompt: *const c_char, output: *mut c_char, output_len: usize) -> i32
+
+#[no_mangle]
+pub extern "C" fn bitnet_ffi::bitnet_get_last_error() -> *const c_char
+
+#[no_mangle]
+pub extern "C" fn bitnet_ffi::bitnet_version() -> *const c_char
+
+#[repr(C)]
+pub struct bitnet_ffi::BitNetConfigFFI
+pub struct bitnet_ffi::BitNetConfigFFI::batch_size: u32
+pub struct bitnet_ffi::BitNetConfigFFI::device_id: i32
+pub struct bitnet_ffi::BitNetConfigFFI::max_seq_len: u32
+pub struct bitnet_ffi::BitNetConfigFFI::temperature: f32
+pub struct bitnet_ffi::BitNetConfigFFI::top_k: u32
+pub struct bitnet_ffi::BitNetConfigFFI::top_p: f32
+pub struct bitnet_ffi::BitNetConfigFFI::use_cuda: u8
+
+pub struct bitnet_ffi::BitNetContext

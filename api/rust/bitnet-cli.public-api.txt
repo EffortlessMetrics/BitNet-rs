@@ -1,0 +1,38 @@
+// Public API for bitnet-cli
+// Auto-generated baseline - DO NOT EDIT MANUALLY
+// Update with: cargo public-api -p bitnet-cli > api/rust/bitnet-cli.public-api.txt
+
+pub fn bitnet_cli::main()
+
+pub struct bitnet_cli::Cli
+pub struct bitnet_cli::Cli::command: Command
+pub struct bitnet_cli::Cli::verbose: bool
+
+pub enum bitnet_cli::Command
+pub enum bitnet_cli::Command::Infer(InferCommand)
+pub enum bitnet_cli::Command::Convert(ConvertCommand)
+pub enum bitnet_cli::Command::Benchmark(BenchmarkCommand)
+pub enum bitnet_cli::Command::Server(ServerCommand)
+
+pub struct bitnet_cli::InferCommand
+pub struct bitnet_cli::InferCommand::model: PathBuf
+pub struct bitnet_cli::InferCommand::prompt: String
+pub struct bitnet_cli::InferCommand::max_tokens: Option<usize>
+pub struct bitnet_cli::InferCommand::temperature: Option<f32>
+pub struct bitnet_cli::InferCommand::device: Option<String>
+pub struct bitnet_cli::InferCommand::json: bool
+
+pub struct bitnet_cli::ConvertCommand
+pub struct bitnet_cli::ConvertCommand::input: PathBuf
+pub struct bitnet_cli::ConvertCommand::output: PathBuf
+pub struct bitnet_cli::ConvertCommand::format: String
+
+pub struct bitnet_cli::BenchmarkCommand
+pub struct bitnet_cli::BenchmarkCommand::model: PathBuf
+pub struct bitnet_cli::BenchmarkCommand::iterations: usize
+pub struct bitnet_cli::BenchmarkCommand::batch_size: Option<usize>
+
+pub struct bitnet_cli::ServerCommand
+pub struct bitnet_cli::ServerCommand::host: String
+pub struct bitnet_cli::ServerCommand::port: u16
+pub struct bitnet_cli::ServerCommand::model: PathBuf

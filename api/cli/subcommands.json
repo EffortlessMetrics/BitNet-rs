@@ -1,0 +1,20 @@
+{
+  "command": "infer",
+  "model": "models/bitnet-b1.58.gguf",
+  "prompt": "ping",
+  "response": {
+    "generated_text": "pong",
+    "metadata": {
+      "model": "bitnet-b1.58",
+      "tokens_generated": 1,
+      "generation_time_ms": 12.5,
+      "tokens_per_second": 80.0,
+      "temperature": 0.7,
+      "top_k": 40,
+      "top_p": 0.95,
+      "device": "cpu"
+    }
+  },
+  "status": "success",
+  "version": "1.0.0"
+}

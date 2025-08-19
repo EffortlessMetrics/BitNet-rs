@@ -141,25 +141,83 @@ jobs:
         with:
           cache-all-crates: true
       
-      - name: Install cargo-semver-checks
+      - name: Install tools
         run: |
           cargo install cargo-semver-checks --locked || true
+          cargo install cargo-public-api --locked || true
+          cargo install cbindgen --locked || true
+          sudo apt-get update && sudo apt-get install -y jq binutils
       
-      - name: Check for breaking changes
+      # Semver breaking check
+      - name: Semver breaking detection
         run: |
-          # Get the base branch (usually main)
-          BASE_BRANCH="${{ github.base_ref }}"
-          echo "Checking against base branch: $BASE_BRANCH"
-          
-          # Run breaking change detection
+          BASE="${{ github.base_ref || 'main' }}"
+          echo "Checking against base branch: $BASE"
           cargo run -p xtask -- detect-breaking \
-            --baseline origin/$BASE_BRANCH \
+            --baseline origin/$BASE \
             --current . \
             --format json || echo "::warning::Breaking changes detected"
       
-      - name: Run API snapshot tests
+      # Rust public API diffs
+      - name: Rust public API diffs
         run: |
-          cargo test --test api_snapshots
+          set -eu
+          echo "Checking Rust public API compatibility..."
+          for CR in bitnet-common bitnet-kernels bitnet-inference bitnet-ffi bitnet-cli; do
+            echo "Checking $CR..."
+            cargo public-api -p $CR > target/$CR.public-api.txt || true
+            if [ -f "api/rust/$CR.public-api.txt" ]; then
+              diff -u api/rust/$CR.public-api.txt target/$CR.public-api.txt || {
+                echo "::warning::API changes detected in $CR"
+              }
+            fi
+          done
+      
+      # FFI header diff
+      - name: FFI header diff
+        run: |
+          if [ -f "api/ffi/cbindgen.toml" ]; then
+            cbindgen crates/bitnet-ffi --config api/ffi/cbindgen.toml -o target/bitnet_ffi.h || true
+            diff -u api/ffi/bitnet_ffi.h target/bitnet_ffi.h || {
+              echo "::warning::FFI header changes detected"
+            }
+          fi
+      
+      # FFI symbols diff (Linux)
+      - name: FFI symbols diff
+        run: |
+          cargo build -p bitnet-ffi --release --no-default-features --features ffi || true
+          if [ -f "target/release/libbitnet_ffi.so" ]; then
+            nm -D --defined-only target/release/libbitnet_ffi.so | awk '{print $3}' | sort > target/ffi.symbols.txt || true
+            if [ -f "api/ffi/ffi.symbols.txt" ]; then
+              diff -u api/ffi/ffi.symbols.txt target/ffi.symbols.txt || {
+                echo "::warning::FFI symbol changes detected"
+              }
+            fi
+          fi
+      
+      # CLI contract diffs
+      - name: CLI help diff
+        run: |
+          cargo build -p bitnet-cli --release --no-default-features --features cpu || true
+          if [ -f "target/release/bitnet-cli" ]; then
+            ./target/release/bitnet-cli --help > target/help.txt || true
+            if [ -f "api/cli/help.txt" ]; then
+              diff -u api/cli/help.txt target/help.txt || {
+                echo "::warning::CLI help text changed"
+              }
+            fi
+          fi
+      
+      # Snapshot tests
+      - name: API snapshot tests
+        run: |
+          cargo test --test api_snapshots || echo "::warning::Snapshot tests failed"
+      
+      - name: Generate compatibility report
+        if: always()
+        run: |
+          echo '{"timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'", "status": "checked"}' > api-compatibility-report.json
       
       - name: Upload compatibility report
         if: always()

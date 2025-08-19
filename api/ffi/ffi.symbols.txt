@@ -1,0 +1,6 @@
+bitnet_create_context
+bitnet_destroy_context
+bitnet_generate
+bitnet_get_last_error
+bitnet_load_model
+bitnet_version
