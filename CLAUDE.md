@@ -93,9 +93,11 @@ cargo xtask download-model \
 #### Other xtask Commands
 ```bash
 # Fetch and build Microsoft BitNet C++ (for cross-validation)
-cargo xtask fetch-cpp  # Uses default tag b1-65-ggml
-cargo xtask fetch-cpp --tag b1-65-ggml --force --clean
-# ✅ Now validates that C++ binary was built successfully
+# Now uses official Microsoft BitNet repository!
+cargo xtask fetch-cpp  # Fetches from github.com/microsoft/BitNet.git (main branch)
+cargo xtask fetch-cpp --tag main --force --clean
+cargo xtask fetch-cpp --tag <commit-hash>  # Pin to specific commit for reproducible builds
+# ✅ Validates build artifacts and adapts to repository structure changes
 
 # Run deterministic cross-validation tests
 cargo xtask crossval  # Auto-discovers model in models/ directory
@@ -105,7 +107,7 @@ cargo xtask crossval --dry-run  # Print env and command without running
 # Full cross-validation workflow (download + fetch + test) - ONE COMMAND!
 cargo xtask full-crossval  # Runs all three steps sequentially
 cargo xtask full-crossval --force  # Force redownload/rebuild
-# ✅ Improved with better model auto-discovery and error handling
+# ✅ Fully integrated with official Microsoft BitNet repository
 
 # Generate test fixtures
 cargo xtask gen-fixtures --size tiny --output test-fixtures/
