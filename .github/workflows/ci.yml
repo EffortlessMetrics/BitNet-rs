@@ -22,8 +22,9 @@ env:
   RUST_BACKTRACE: 1
   CARGO_INCREMENTAL: 0
   RUSTFLAGS: "-D warnings"
-  # Pin C++ version for reproducible crossval
-  CPP_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.cpp_tag || 'main' }}
+  # Pin C++ version for reproducible crossval - use a specific commit for determinism
+  # This is commit 0e6fbf6 from Dec 17, 2024 - update as needed
+  CPP_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.cpp_tag || '0e6fbf6d92a7db6a2f44528a41fb1f35d2c223aa' }}
   # CUDA architectures for GPU builds
   CUDA_ARCHS: "80;86"  # A100, RTX 30xx/40xx
 
@@ -342,7 +343,7 @@ jobs:
     needs: [test]
     runs-on: ubuntu-22.04
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
-    continue-on-error: true
+    # Hard gate: fail the job on errors
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -375,6 +376,18 @@ jobs:
       - name: Run full crossval (CPU)
         run: cargo run -p xtask -- full-crossval --tag "${CPP_TAG}"
 
+      - name: Validate model vocab matches lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXP=$(jq -r '.crossval_default.n_vocab' crossval-models.lock.json)
+          GOT=$(jq -r '.model.vocab' crossval/results/last_run.json || echo "0")
+          if [ "$EXP" != "$GOT" ]; then
+            echo "::error::Vocab mismatch: expected $EXP, got $GOT"
+            exit 1
+          fi
+          echo "✓ Vocab validated: $GOT matches expected $EXP"
+
       - name: Upload crossval artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -391,7 +404,7 @@ jobs:
     needs: [test]
     runs-on: [self-hosted, linux, x64, gpu]  # GPU runner labels
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.event_name == 'schedule'
-    continue-on-error: true  # Remove when GPU infra is stable
+    # Hard gate: fail the job on errors
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -436,7 +449,7 @@ jobs:
     needs: [test]
     runs-on: [self-hosted, linux, x64, gpu]
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.event_name == 'schedule'
-    continue-on-error: true
+    # Hard gate: fail the job on errors
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -476,6 +489,18 @@ jobs:
           cargo run -p xtask -- full-crossval --tag "${CPP_TAG}" \
             --backend cuda --cmake-flags "-DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCHS}"
 
+      - name: Validate model vocab matches lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXP=$(jq -r '.crossval_default.n_vocab' crossval-models.lock.json)
+          GOT=$(jq -r '.model.vocab' crossval/results/last_run.json || echo "0")
+          if [ "$EXP" != "$GOT" ]; then
+            echo "::error::Vocab mismatch: expected $EXP, got $GOT"
+            exit 1
+          fi
+          echo "✓ Vocab validated: $GOT matches expected $EXP"
+
       - name: Upload crossval artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -489,14 +514,14 @@ jobs:
 
       - name: Compare metrics with baseline
         if: github.ref == 'refs/heads/main'
+        shell: bash
         run: |
-          if [ -f "baselines/cuda-main.json" ]; then
-            cargo run -p xtask -- compare-metrics \
-              --baseline baselines/cuda-main.json \
-              --current crossval/results/last_run.json \
-              --ppl-max 0.02 --latency-p95-max 0.05 --tok-s-min -0.05
-          fi
-        continue-on-error: true
+          set -euo pipefail
+          test -f baselines/cuda-main.json
+          cargo run -p xtask -- compare-metrics \
+            --baseline baselines/cuda-main.json \
+            --current crossval/results/last_run.json \
+            --ppl-max 0.02 --latency-p95-max 0.05 --tok-s-min -0.05
 
   # Fast smoke test for cross-validation (required for PRs)
   crossval-cpu-smoke:
@@ -504,7 +529,7 @@ jobs:
     needs: [test]
     runs-on: ubuntu-22.04
     env:
-      CPP_TAG: "main"  # Pin to a specific SHA for determinism
+      # Use the global CPP_TAG which is already pinned to a specific commit
       RUST_BACKTRACE: 1
     steps:
       - uses: actions/checkout@v4
@@ -549,6 +574,8 @@ jobs:
       - name: Run smoke tests (parity preflight + tiny checks)
         env:
           CROSSVAL_GGUF: models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+          BITNET_CPP_DIR: ~/.cache/bitnet_cpp
+          LD_LIBRARY_PATH: ~/.cache/bitnet_cpp/build/3rdparty/llama.cpp/src:~/.cache/bitnet_cpp/build/3rdparty/llama.cpp/ggml/src
           OMP_NUM_THREADS: 1
           GGML_NUM_THREADS: 1
           MKL_NUM_THREADS: 1
@@ -557,8 +584,8 @@ jobs:
           # Build with crossval support
           cargo build --workspace --no-default-features --features "cpu,ffi,crossval"
           
-          # Run only framework validation tests (fast)
-          cargo test -p bitnet-crossval --features crossval --test framework -- --nocapture
+          # Run smoke tests from the dedicated smoke.rs file
+          cargo test -p crossval --test smoke -- --ignored --nocapture
           
       - name: Upload smoke test results
         if: always()
