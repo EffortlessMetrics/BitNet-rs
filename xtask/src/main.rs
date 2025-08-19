@@ -207,6 +207,9 @@ enum Cmd {
         /// Additional CMake flags (e.g., "-DCMAKE_CUDA_ARCHITECTURES=80;86")
         #[arg(long, default_value = "")]
         cmake_flags: String,
+        /// Git repository URL (default: official Microsoft BitNet)
+        #[arg(long, default_value = "https://github.com/microsoft/BitNet.git")]
+        repo: String,
     },
 
     /// Run deterministic cross-validation tests against C++ implementation
@@ -394,7 +397,7 @@ fn real_main() -> Result<()> {
             retries,
             timeout,
         }),
-        Cmd::FetchCpp { tag, force, clean, backend, cmake_flags } => fetch_cpp_cmd(&tag, force, clean, &backend, &cmake_flags),
+        Cmd::FetchCpp { tag, force, clean, backend, cmake_flags, repo } => fetch_cpp_cmd(&tag, force, clean, &backend, &cmake_flags, &repo),
         Cmd::Crossval { model, cpp_dir, release, dry_run, extra } => {
             let model_path = match model {
                 Some(p) => p,
@@ -1174,7 +1177,7 @@ fn verify_sha256(path: &Path, expected_hex: &str) -> Result<()> {
     Ok(())
 }
 
-fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool, backend: &str, cmake_flags: &str) -> Result<()> {
+fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool, backend: &str, cmake_flags: &str, repo: &str) -> Result<()> {
     let script = PathBuf::from("ci/fetch_bitnet_cpp.sh");
     if !script.exists() {
         return Err(anyhow!(
@@ -1188,6 +1191,7 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool, backend: &str, cmake_flags
     }
 
     println!("🔧 Fetching Microsoft BitNet C++ implementation");
+    println!("   Repository: {}", repo);
     println!("   Branch/Rev: {}", tag);
     println!("   Backend: {}", backend);
     println!("   Force: {}", force);
@@ -1196,7 +1200,7 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool, backend: &str, cmake_flags
         println!("   CMake flags: {}", cmake_flags);
     }
 
-    let mut args = vec!["--tag".to_string(), tag.to_string()];
+    let mut args = vec!["--tag".to_string(), tag.to_string(), "--repo".to_string(), repo.to_string()];
     if force {
         args.push("--force".to_string());
     }
@@ -1323,8 +1327,14 @@ fn crossval_cmd(
         cpp.join("build/3rdparty/llama.cpp/ggml/src").display()
     );
     
-    // Get existing LD_LIBRARY_PATH and prepend our paths
-    let existing_ld_path = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
+    // Determine the correct library path variable based on OS
+    #[cfg(target_os = "macos")]
+    let ld_var = "DYLD_LIBRARY_PATH";
+    #[cfg(not(target_os = "macos"))]
+    let ld_var = "LD_LIBRARY_PATH";
+    
+    // Get existing library path and prepend our paths
+    let existing_ld_path = std::env::var(ld_var).unwrap_or_default();
     let full_ld_path = if existing_ld_path.is_empty() {
         lib_paths
     } else {
@@ -1334,7 +1344,7 @@ fn crossval_cmd(
     // Set environment for determinism and library loading
     cmd.env("BITNET_CPP_DIR", &cpp)
         .env("CROSSVAL_GGUF", model)
-        .env("LD_LIBRARY_PATH", &full_ld_path)
+        .env(ld_var, &full_ld_path)
         .env("OMP_NUM_THREADS", "1")
         .env("GGML_NUM_THREADS", "1")
         .env("MKL_NUM_THREADS", "1")
@@ -1348,7 +1358,7 @@ fn crossval_cmd(
         println!("\n[DRY RUN] Env + command:");
         println!("  BITNET_CPP_DIR={}", cpp.display());
         println!("  CROSSVAL_GGUF={}", model.display());
-        println!("  LD_LIBRARY_PATH={}", full_ld_path);
+        println!("  {}={}", ld_var, full_ld_path);
         println!("  OMP_NUM_THREADS=1 GGML_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1");
         println!("  RUST_BACKTRACE=1");
         println!("  {:?}", cmd);
@@ -1388,7 +1398,7 @@ fn full_crossval_cmd(force: bool, tag: &str, backend: &str, cmake_flags: &str) -
 
     // Step 2: Fetch C++ implementation
     println!("Step 2/3: Fetching C++ implementation ({})", backend);
-    fetch_cpp_cmd(tag, force, false, backend, cmake_flags)?;
+    fetch_cpp_cmd(tag, force, false, backend, cmake_flags, "https://github.com/microsoft/BitNet.git")?;
 
     println!();
 
