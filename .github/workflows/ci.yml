@@ -574,18 +574,20 @@ jobs:
       - name: Run smoke tests (parity preflight + tiny checks)
         env:
           CROSSVAL_GGUF: models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
-          BITNET_CPP_DIR: ~/.cache/bitnet_cpp
-          LD_LIBRARY_PATH: ~/.cache/bitnet_cpp/build/3rdparty/llama.cpp/src:~/.cache/bitnet_cpp/build/3rdparty/llama.cpp/ggml/src
           OMP_NUM_THREADS: 1
           GGML_NUM_THREADS: 1
           MKL_NUM_THREADS: 1
           OPENBLAS_NUM_THREADS: 1
         run: |
+          # Prepare dynamic loader search paths at runtime
+          echo "BITNET_CPP_DIR=$HOME/.cache/bitnet_cpp" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$HOME/.cache/bitnet_cpp/build/3rdparty/llama.cpp/src:$HOME/.cache/bitnet_cpp/build/3rdparty/llama.cpp/ggml/src:$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
+          
           # Build with crossval support
           cargo build --workspace --no-default-features --features "cpu,ffi,crossval"
           
           # Run smoke tests from the dedicated smoke.rs file
-          cargo test -p crossval --test smoke -- --ignored --nocapture
+          cargo test -p bitnet-crossval --test smoke -- --ignored --nocapture
           
       - name: Upload smoke test results
         if: always()
