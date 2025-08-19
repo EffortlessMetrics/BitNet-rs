@@ -153,19 +153,32 @@ fn link_cpp_implementation(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Err
 #[cfg(feature = "ffi")]
 fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // We'll generate bindings from llama.h which is the main C API
-    let mut llama_h = cpp_dir.join("3rdparty/llama.cpp/include/llama.h");
-    if !llama_h.exists() {
-        // Try alternate location
-        llama_h = cpp_dir.join("include/llama.h");
-        if !llama_h.exists() {
-            return Err(format!(
-                "llama.h not found. Expected at: {}\n\
-                 Is the Microsoft BitNet repository complete?",
-                llama_h.display()
-            )
-            .into());
+    // Try multiple possible locations for llama.h in the Microsoft BitNet repo
+    let possible_llama_locations = [
+        cpp_dir.join("3rdparty/llama.cpp/include/llama.h"),
+        cpp_dir.join("include/llama.h"),
+        cpp_dir.join("src/llama.h"),
+        cpp_dir.join("llama.h"),
+    ];
+    
+    let mut llama_h = None;
+    for location in &possible_llama_locations {
+        if location.exists() {
+            llama_h = Some(location.clone());
+            break;
         }
     }
+    
+    let llama_h = llama_h.ok_or_else(|| {
+        format!(
+            "llama.h not found in any expected location:\n{}\n\
+             Is the Microsoft BitNet repository complete?",
+            possible_llama_locations.iter()
+                .map(|p| format!("  - {}", p.display()))
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
+    })?;
 
     // Also check for BitNet-specific headers
     let bitnet_h = cpp_dir.join("include/ggml-bitnet.h");
@@ -180,11 +193,24 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut builder = bindgen::Builder::default()
-        .header(llama_h.to_string_lossy())
-        // Include paths
-        .clang_arg(format!("-I{}", cpp_dir.join("3rdparty/llama.cpp/include").display()))
-        .clang_arg(format!("-I{}", cpp_dir.join("3rdparty/llama.cpp/ggml/include").display()))
-        .clang_arg(format!("-I{}", cpp_dir.join("include").display()))
+        .header(llama_h.to_string_lossy());
+    
+    // Add include paths - check which ones exist
+    let possible_include_paths = [
+        cpp_dir.join("3rdparty/llama.cpp/include"),
+        cpp_dir.join("3rdparty/llama.cpp/ggml/include"),
+        cpp_dir.join("include"),
+        cpp_dir.join("src"),
+        cpp_dir.clone(),
+    ];
+    
+    for include_path in &possible_include_paths {
+        if include_path.exists() {
+            builder = builder.clang_arg(format!("-I{}", include_path.display()));
+        }
+    }
+    
+    builder = builder
         // Main llama.cpp C API
         .allowlist_function("llama_.*")
         .allowlist_type("llama_.*")
