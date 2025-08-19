@@ -386,20 +386,22 @@ impl TL1Quantizer {
         let remainder = chunks.remainder();
 
         for (i, chunk) in chunks.enumerate() {
-            let data_vec = vld1q_f32(chunk.as_ptr());
-            let scaled = vmulq_f32(data_vec, inv_scale_vec);
-            let offset = vaddq_f32(scaled, offset_vec);
-            let indices = vcvtq_u32_f32(offset);
+            unsafe {
+                let data_vec = vld1q_f32(chunk.as_ptr());
+                let scaled = vmulq_f32(data_vec, inv_scale_vec);
+                let offset = vaddq_f32(scaled, offset_vec);
+                let indices = vcvtq_u32_f32(offset);
 
-            // Use lookup table for each element
-            let mut result = [0i8; 4];
-            for j in 0..4 {
-                let idx = vgetq_lane_u32(indices, j as i32).min(255) as usize;
-                result[j] = lookup_table.forward[idx];
+                // Use lookup table for each element
+                let mut result = [0i8; 4];
+                for j in 0..4 {
+                    let idx = vgetq_lane_u32::<0>(indices).min(255) as usize;
+                    result[j] = lookup_table.forward[idx];
+                }
+
+                // Store results
+                std::ptr::copy_nonoverlapping(result.as_ptr(), output.as_mut_ptr().add(i * 4), 4);
             }
-
-            // Store results
-            std::ptr::copy_nonoverlapping(result.as_ptr(), output.as_mut_ptr().add(i * 4), 4);
         }
 
         // Handle remainder with scalar code
@@ -428,24 +430,26 @@ impl TL1Quantizer {
         let remainder = chunks.remainder();
 
         for (i, chunk) in chunks.enumerate() {
-            // Load 4 i8 values and convert to i32
-            let i8_data = std::ptr::read_unaligned(chunk.as_ptr() as *const u32);
-            let i8_vec = vreinterpret_s8_u32(vdup_n_u32(i8_data));
-            let i16_vec = vmovl_s8(i8_vec);
-            let i32_vec = vmovl_s16(vget_low_s16(i16_vec));
+            unsafe {
+                // Load 4 i8 values and convert to i32
+                let i8_data = std::ptr::read_unaligned(chunk.as_ptr() as *const u32);
+                let i8_vec = vreinterpret_s8_u32(vdup_n_u32(i8_data));
+                let i16_vec = vmovl_s8(i8_vec);
+                let i32_vec = vmovl_s16(vget_low_s16(i16_vec));
 
-            // Apply zero point adjustment if using asymmetric quantization
-            let adjusted = if self.config.use_asymmetric {
-                vsubq_s32(i32_vec, zero_point_vec)
-            } else {
-                i32_vec
-            };
+                // Apply zero point adjustment if using asymmetric quantization
+                let adjusted = if self.config.use_asymmetric {
+                    vsubq_s32(i32_vec, zero_point_vec)
+                } else {
+                    i32_vec
+                };
 
-            // Convert to float and scale
-            let f32_vec = vcvtq_f32_s32(adjusted);
-            let result = vmulq_f32(f32_vec, scale_vec);
+                // Convert to float and scale
+                let f32_vec = vcvtq_f32_s32(adjusted);
+                let result = vmulq_f32(f32_vec, scale_vec);
 
-            vst1q_f32(output.as_mut_ptr().add(i * 4), result);
+                vst1q_f32(output.as_mut_ptr().add(i * 4), result);
+            }
         }
 
         // Handle remainder with scalar code

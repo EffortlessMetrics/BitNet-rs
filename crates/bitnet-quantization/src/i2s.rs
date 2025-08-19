@@ -242,23 +242,25 @@ impl I2SQuantizer {
         let remainder = chunks.remainder();
 
         for (i, chunk) in chunks.enumerate() {
-            let data_vec = _mm256_loadu_ps(chunk.as_ptr());
-            let scaled = _mm256_mul_ps(data_vec, inv_scale_vec);
-            let rounded = _mm256_round_ps(scaled, _MM_FROUND_TO_NEAREST_INT);
-            let clamped = _mm256_max_ps(_mm256_min_ps(rounded, max_val), min_val);
+            unsafe {
+                let data_vec = _mm256_loadu_ps(chunk.as_ptr());
+                let scaled = _mm256_mul_ps(data_vec, inv_scale_vec);
+                let rounded = _mm256_round_ps::<_MM_FROUND_TO_NEAREST_INT>(scaled);
+                let clamped = _mm256_max_ps(_mm256_min_ps(rounded, max_val), min_val);
 
-            // Convert to i32 and then to i8
-            let i32_vec = _mm256_cvtps_epi32(clamped);
-            let i16_vec = _mm256_packs_epi32(i32_vec, i32_vec);
-            let i8_vec = _mm256_packs_epi16(i16_vec, i16_vec);
+                // Convert to i32 and then to i8
+                let i32_vec = _mm256_cvtps_epi32(clamped);
+                let i16_vec = _mm256_packs_epi32(i32_vec, i32_vec);
+                let i8_vec = _mm256_packs_epi16(i16_vec, i16_vec);
 
-            // Store 8 bytes
-            let result = _mm256_extract_epi64(i8_vec, 0) as i64;
-            std::ptr::copy_nonoverlapping(
-                &result as *const i64 as *const i8,
-                output.as_mut_ptr().add(i * 8),
-                8,
-            );
+                // Store 8 bytes
+                let result = _mm256_extract_epi64::<0>(i8_vec) as i64;
+                std::ptr::copy_nonoverlapping(
+                    &result as *const i64 as *const i8,
+                    output.as_mut_ptr().add(i * 8),
+                    8,
+                );
+            }
         }
 
         // Handle remainder with scalar code
@@ -280,16 +282,18 @@ impl I2SQuantizer {
         let remainder = chunks.remainder();
 
         for (i, chunk) in chunks.enumerate() {
-            // Load 8 i8 values
-            let i8_data = std::ptr::read_unaligned(chunk.as_ptr() as *const i64);
-            let i8_vec = _mm256_set1_epi64x(i8_data);
+            unsafe {
+                // Load 8 i8 values
+                let i8_data = std::ptr::read_unaligned(chunk.as_ptr() as *const i64);
+                let i8_vec = _mm_set1_epi64x(i8_data);
 
-            // Convert to i32 and then to f32
-            let i32_vec = _mm256_cvtepi8_epi32(_mm256_castsi256_si128(i8_vec));
-            let f32_vec = _mm256_cvtepi32_ps(i32_vec);
-            let result = _mm256_mul_ps(f32_vec, scale_vec);
+                // Convert to i32 and then to f32
+                let i32_vec = _mm256_cvtepi8_epi32(i8_vec);
+                let f32_vec = _mm256_cvtepi32_ps(i32_vec);
+                let result = _mm256_mul_ps(f32_vec, scale_vec);
 
-            _mm256_storeu_ps(output.as_mut_ptr().add(i * 8), result);
+                _mm256_storeu_ps(output.as_mut_ptr().add(i * 8), result);
+            }
         }
 
         // Handle remainder with scalar code
@@ -354,23 +358,25 @@ impl I2SQuantizer {
         let remainder = chunks.remainder();
 
         for (i, chunk) in chunks.enumerate() {
-            let data_vec = vld1q_f32(chunk.as_ptr());
-            let scaled = vmulq_f32(data_vec, inv_scale_vec);
-            let rounded = vrndnq_f32(scaled);
-            let clamped = vmaxq_f32(vminq_f32(rounded, max_val), min_val);
+            unsafe {
+                let data_vec = vld1q_f32(chunk.as_ptr());
+                let scaled = vmulq_f32(data_vec, inv_scale_vec);
+                let rounded = vrndnq_f32(scaled);
+                let clamped = vmaxq_f32(vminq_f32(rounded, max_val), min_val);
 
-            // Convert to i32 and then to i8
-            let i32_vec = vcvtq_s32_f32(clamped);
-            let i16_vec = vqmovn_s32(i32_vec);
-            let i8_vec = vqmovn_s16(vcombine_s16(i16_vec, i16_vec));
+                // Convert to i32 and then to i8
+                let i32_vec = vcvtq_s32_f32(clamped);
+                let i16_vec = vqmovn_s32(i32_vec);
+                let i8_vec = vqmovn_s16(vcombine_s16(i16_vec, i16_vec));
 
-            // Store 4 bytes
-            let result = vget_lane_u32(vreinterpret_u32_s8(i8_vec), 0);
-            std::ptr::copy_nonoverlapping(
-                &result as *const u32 as *const i8,
-                output.as_mut_ptr().add(i * 4),
-                4,
-            );
+                // Store 4 bytes
+                let result = vget_lane_u32::<0>(vreinterpret_u32_s8(i8_vec));
+                std::ptr::copy_nonoverlapping(
+                    &result as *const u32 as *const i8,
+                    output.as_mut_ptr().add(i * 4),
+                    4,
+                );
+            }
         }
 
         // Handle remainder with scalar code
@@ -392,17 +398,19 @@ impl I2SQuantizer {
         let remainder = chunks.remainder();
 
         for (i, chunk) in chunks.enumerate() {
-            // Load 4 i8 values
-            let i8_data = std::ptr::read_unaligned(chunk.as_ptr() as *const u32);
-            let i8_vec = vreinterpret_s8_u32(vdup_n_u32(i8_data));
+            unsafe {
+                // Load 4 i8 values
+                let i8_data = std::ptr::read_unaligned(chunk.as_ptr() as *const u32);
+                let i8_vec = vreinterpret_s8_u32(vdup_n_u32(i8_data));
 
-            // Convert to i32 and then to f32
-            let i16_vec = vmovl_s8(i8_vec);
-            let i32_vec = vmovl_s16(vget_low_s16(i16_vec));
-            let f32_vec = vcvtq_f32_s32(i32_vec);
-            let result = vmulq_f32(f32_vec, scale_vec);
+                // Convert to i32 and then to f32
+                let i16_vec = vmovl_s8(i8_vec);
+                let i32_vec = vmovl_s16(vget_low_s16(i16_vec));
+                let f32_vec = vcvtq_f32_s32(i32_vec);
+                let result = vmulq_f32(f32_vec, scale_vec);
 
-            vst1q_f32(output.as_mut_ptr().add(i * 4), result);
+                vst1q_f32(output.as_mut_ptr().add(i * 4), result);
+            }
         }
 
         // Handle remainder with scalar code
