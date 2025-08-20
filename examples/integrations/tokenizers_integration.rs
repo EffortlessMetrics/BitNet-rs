@@ -71,15 +71,17 @@ impl HuggingFaceTokenizerWrapper {
 }
 
 impl BitNetTokenizer for HuggingFaceTokenizerWrapper {
-    fn encode(&self, text: &str, add_special_tokens: bool) -> Result<Vec<u32>> {
-        let encoding = self.tokenizer.encode(text, add_special_tokens)
+    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+        // For backwards compatibility, use add_special for the HF tokenizer
+        let encoding = self.tokenizer.encode(text, add_special)
             .map_err(|e| anyhow::anyhow!("Encoding failed: {}", e))?;
         
         Ok(encoding.get_ids().to_vec())
     }
 
-    fn decode(&self, tokens: &[u32], skip_special_tokens: bool) -> Result<String> {
-        self.tokenizer.decode(tokens, skip_special_tokens)
+    fn decode(&self, tokens: &[u32]) -> Result<String> {
+        // Always skip special tokens for consistency
+        self.tokenizer.decode(tokens, true)
             .map_err(|e| anyhow::anyhow!("Decoding failed: {}", e))
     }
 
@@ -93,6 +95,10 @@ impl BitNetTokenizer for HuggingFaceTokenizerWrapper {
 
     fn pad_token_id(&self) -> Option<u32> {
         self.tokenizer.token_to_id("<|pad|>")
+    }
+    
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        self.tokenizer.id_to_token(token)
     }
 }
 

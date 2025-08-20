@@ -157,9 +157,11 @@ filetime = "0.2"
 
 # BitNet.rs crates for cross-validation
 bitnet-common = { path = "../crates/bitnet-common" }
-bitnet-inference = { path = "../crates/bitnet-inference" }
+bitnet-inference = { path = "../crates/bitnet-inference", default-features = false, features = ["cpu", "rt-tokio"] }
 bitnet-models = { path = "../crates/bitnet-models" }
 bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
+bitnet-compat = { path = "../crates/bitnet-compat" }
+bitnet = { path = "../", default-features = false, features = ["cpu"] }
 
 # Platform-specific dependencies
 [target.'cfg(target_os = "windows")'.dependencies]
