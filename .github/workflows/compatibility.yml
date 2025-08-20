@@ -9,6 +9,7 @@ on:
 env:
   RUST_BACKTRACE: 1
   CARGO_TERM_COLOR: always
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target
 
 jobs:
   msrv:
@@ -36,23 +37,24 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build FFI library
         run: |
-          cd crates/bitnet-ffi
-          cargo build --release
+          cargo build -p bitnet-ffi --release --no-default-features --features cpu
       - name: Extract symbols (Linux)
         if: runner.os == 'Linux'
         run: |
-          nm -D target/release/libbitnet_ffi.so | grep ' T bitnet_' | cut -d' ' -f3 | sort > symbols.txt
+          nm -D target/release/libbitnet_ffi.so | awk '{print $3}' | grep -E '^(bitnet_|llama_)' | sort > symbols.txt
           diff -u ci/expected-symbols-linux.txt symbols.txt
       - name: Extract symbols (macOS)
         if: runner.os == 'macOS'
         run: |
-          nm -g target/release/libbitnet_ffi.dylib | grep ' T _bitnet_' | cut -d' ' -f3 | sed 's/^_//' | sort > symbols.txt
+          nm -gU target/release/libbitnet_ffi.dylib | awk '{print $3}' | sed 's/^_//' | grep -E '^(bitnet_|llama_)' | sort > symbols.txt
           diff -u ci/expected-symbols-macos.txt symbols.txt
       - name: Extract symbols (Windows)
         if: runner.os == 'Windows'
+        shell: bash
         run: |
-          dumpbin /EXPORTS target/release/bitnet_ffi.dll | findstr bitnet_ | sort > symbols.txt
-          fc ci\expected-symbols-windows.txt symbols.txt
+          LLVM_NM="$(rustc --print sysroot)/lib/rustlib/x86_64-pc-windows-msvc/bin/llvm-nm.exe"
+          "$LLVM_NM" --defined-only target/release/bitnet_ffi.dll | grep -E 'bitnet_|llama_' | awk '{print $3}' | sort > symbols.txt
+          diff -u ci/expected-symbols-windows.txt symbols.txt
 
   ffi-smoke-test:
     name: FFI Smoke Test
@@ -62,19 +64,20 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build FFI library
         run: |
-          cd crates/bitnet-ffi
-          cargo build --release
+          cargo build -p bitnet-ffi --release --no-default-features --features cpu
       - name: Compile C test
         run: |
-          gcc -o test_ffi tests/c_integration_test.c \
-            -L../../target/release -lbitnet_ffi \
-            -I./include
+          cd crates/bitnet-ffi/tests
+          gcc -o test_ffi c_integration_test.c \
+            -L../../../target/release -lbitnet_ffi \
+            -I../include
       - name: Run C test
         run: |
+          cd crates/bitnet-ffi/tests
           if [ "$(uname)" = "Darwin" ]; then
-            DYLD_LIBRARY_PATH=../../target/release ./test_ffi
+            DYLD_LIBRARY_PATH=../../../target/release ./test_ffi
           else
-            LD_LIBRARY_PATH=../../target/release ./test_ffi
+            LD_LIBRARY_PATH=../../../target/release ./test_ffi
           fi
 
   tokenizer-fixtures:
@@ -180,14 +183,7 @@ jobs:
           cargo llvm-cov --workspace --features cpu --text | tee coverage.txt
       - name: Check coverage threshold
         run: |
-          COVERAGE=$(grep TOTAL coverage.txt | awk '{print $10}' | sed 's/%//')
-          echo "Coverage: $COVERAGE%"
-          # Use awk for numeric comparison instead of bc
-          awk -v cov="$COVERAGE" 'BEGIN { if (cov < 70) exit 1 }'
-          if [ $? -ne 0 ]; then
-            echo "Coverage below 70% threshold"
-            exit 1
-          fi
+          awk '/TOTAL/ {gsub(/%/,"",$(NF)); v=$(NF)+0; print "Coverage:", v"%"; if (v < 70) {print "Coverage below 70% threshold"; exit 1}}' coverage.txt
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:

@@ -92,7 +92,7 @@ impl MockTokenizer {
 }
 
 impl Tokenizer for MockTokenizer {
-    fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>, BitNetError> {
+    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>, BitNetError> {
         if self.should_fail {
             return Err(BitNetError::Inference(
                 bitnet_common::InferenceError::TokenizationFailed {
@@ -104,7 +104,7 @@ impl Tokenizer for MockTokenizer {
         Ok((0..text.len().min(10)).map(|i| i as u32 + 1).collect())
     }
 
-    fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String, BitNetError> {
+    fn decode(&self, tokens: &[u32]) -> Result<String, BitNetError> {
         if self.should_fail {
             return Err(BitNetError::Inference(
                 bitnet_common::InferenceError::TokenizationFailed {
@@ -125,6 +125,10 @@ impl Tokenizer for MockTokenizer {
 
     fn pad_token_id(&self) -> Option<u32> {
         Some(50257)
+    }
+
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        Some(format!("<token_{}>", token))
     }
 }
 

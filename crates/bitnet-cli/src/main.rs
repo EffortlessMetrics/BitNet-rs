@@ -462,7 +462,7 @@ async fn run_simple_generation(
         generated_tokens.push(next_token);
 
         // Decode and print the new token
-        let token_text = tokenizer.decode(&[next_token], false)?;
+        let token_text = tokenizer.decode(&[next_token])?;
         print!("{}", token_text);
         std::io::Write::flush(&mut std::io::stdout())?;
 

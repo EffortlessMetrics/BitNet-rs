@@ -91,12 +91,12 @@ impl MockTokenizer {
 }
 
 impl Tokenizer for MockTokenizer {
-    fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>, BitNetError> {
+    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>, BitNetError> {
         std::thread::sleep(self.processing_delay);
         Ok((0..text.len().min(100)).map(|i| i as u32 + 1).collect())
     }
 
-    fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String, BitNetError> {
+    fn decode(&self, tokens: &[u32]) -> Result<String, BitNetError> {
         std::thread::sleep(self.processing_delay);
         Ok(format!("decoded_{}_tokens", tokens.len()))
     }
@@ -111,6 +111,10 @@ impl Tokenizer for MockTokenizer {
 
     fn pad_token_id(&self) -> Option<u32> {
         Some(50257)
+    }
+
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        Some(format!("<token_{}>", token))
     }
 }
 
