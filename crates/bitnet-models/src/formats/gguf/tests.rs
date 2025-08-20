@@ -430,3 +430,17 @@ fn test_reader_v3_rejects_doff_past_eof_and_falls_back() {
     let r = GgufReader::new(&bytes).expect("fallback path should parse");
     assert_eq!(r.get_u32_metadata("k"), Some(7));
 }
+
+#[test]
+fn test_reader_v3_falls_back_when_doff_past_eof() {
+    // Build valid v3 then patch data_offset to something absurdly beyond EOF.
+    let mut bytes = build_gguf_bytes_v3(vec![("k", GgufValue::U32(7))]);
+    // v3 header layout: magic(4) ver(4) n_t(8) n_kv(8) align(4) doff(8)
+    let doff_pos = 28;
+    let past_eof = (bytes.len() as u64) + 4096;
+    bytes[doff_pos..doff_pos + 8].copy_from_slice(&past_eof.to_le_bytes());
+
+    // Reader must not panic; it should fall back to align_up(kv_end, alignment).
+    let r = GgufReader::new(&bytes).expect("fallback should parse");
+    assert_eq!(r.get_u32_metadata("k"), Some(7));
+}
