@@ -9,6 +9,7 @@ use axum::{
     },
 };
 use futures::stream::Stream;
+use std::pin::Pin;
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 use std::sync::Arc;
@@ -46,16 +47,15 @@ pub struct StreamingComplete {
 pub async fn streaming_handler(
     State(state): State<AppState>,
     axum::Json(request): axum::Json<StreamingRequest>,
-) -> Response {
-    let stream = if let Some(engine) = &state.engine {
-        real_stream(engine, request).await
+) -> Sse<Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>>> {
+    let stream: Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>> = if let Some(engine) = &state.engine {
+        Box::pin(real_stream(engine, request).await)
     } else {
-        mock_stream(request).await
+        Box::pin(mock_stream(request).await)
     };
 
     Sse::new(stream)
         .keep_alive(KeepAlive::new().interval(Duration::from_secs(1)))
-        .into_response()
 }
 
 /// Real streaming using the BitNet engine
@@ -69,77 +69,69 @@ async fn real_stream(
     async_stream::stream! {
         // Build generation config
         let config = bitnet_inference::GenerationConfig {
-            max_new_tokens: request.max_tokens.unwrap_or(64),
+            max_new_tokens: request.max_tokens.unwrap_or(64) as u32,
             temperature: request.temperature.unwrap_or(1.0),
             top_p: request.top_p.unwrap_or(0.9),
-            top_k: request.top_k.unwrap_or(50),
+            top_k: request.top_k.unwrap_or(50) as u32,
             repetition_penalty: request.repetition_penalty.unwrap_or(1.0),
             ..Default::default()
         };
 
         // Create streaming config
-        let stream_config = bitnet_inference::StreamingConfig {
-            stream_tokens: true,
-            ..Default::default()
+        let _stream_config = bitnet_inference::StreamingConfig {
+            buffer_size: 128,
+            flush_interval_ms: 100,
         };
 
         // Get the engine and create a generation stream
         let engine = engine.read().await;
-        match engine.generate_stream(&request.prompt, &config, &stream_config).await {
-            Ok(mut stream) => {
-                let mut token_count = 0u64;
-                
-                while let Some(token_result) = stream.next().await {
-                    match token_result {
-                        Ok(token) => {
-                            token_count += 1;
-                            let elapsed = start.elapsed();
-                            
-                            let data = StreamingToken {
-                                token: token.text,
-                                token_id: token.id,
-                                cumulative_time_ms: elapsed.as_millis() as u64,
-                            };
-                            
-                            yield Ok(Event::default()
-                                .event("token")
-                                .json_data(data)
-                                .unwrap());
-                        }
-                        Err(e) => {
-                            yield Ok(Event::default()
-                                .event("error")
-                                .data(format!("Generation error: {}", e)));
-                            break;
-                        }
-                    }
+        let mut gen_stream = engine.generate_stream_with_config(&request.prompt, &config);
+        let mut token_count = 0u64;
+        
+        while let Some(token_result) = gen_stream.next().await {
+            match token_result {
+                Ok(token) => {
+                    token_count += 1;
+                    let elapsed = start.elapsed();
+                    
+                    let data = StreamingToken {
+                        token: token.clone(),
+                        token_id: 0,
+                        cumulative_time_ms: elapsed.as_millis() as u64,
+                    };
+                    
+                    yield Ok(Event::default()
+                        .event("token")
+                        .json_data(data)
+                        .unwrap());
                 }
-                
-                // Send completion event
-                let elapsed = start.elapsed();
-                let tokens_per_second = if elapsed.as_millis() > 0 {
-                    (token_count as f64 * 1000.0) / elapsed.as_millis() as f64
-                } else {
-                    0.0
-                };
-                
-                let complete = StreamingComplete {
-                    total_tokens: token_count,
-                    total_time_ms: elapsed.as_millis() as u64,
-                    tokens_per_second,
-                };
-                
-                yield Ok(Event::default()
-                    .event("complete")
-                    .json_data(complete)
-                    .unwrap());
-            }
-            Err(e) => {
-                yield Ok(Event::default()
-                    .event("error")
-                    .data(format!("Failed to create stream: {}", e)));
+                Err(e) => {
+                    yield Ok(Event::default()
+                        .event("error")
+                        .data(format!("Generation error: {}", e)));
+                    break;
+                }
             }
         }
+        
+        // Send completion event
+        let elapsed = start.elapsed();
+        let tokens_per_second = if elapsed.as_millis() > 0 {
+            (token_count as f64 * 1000.0) / elapsed.as_millis() as f64
+        } else {
+            0.0
+        };
+        
+        let complete = StreamingComplete {
+            total_tokens: token_count,
+            total_time_ms: elapsed.as_millis() as u64,
+            tokens_per_second,
+        };
+        
+        yield Ok(Event::default()
+            .event("complete")
+            .json_data(complete)
+            .unwrap());
     }
 }
 

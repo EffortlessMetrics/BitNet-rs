@@ -221,6 +221,8 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
         // Standard options
         .derive_debug(true)
         .derive_default(true)
+        // For Rust 2024 compatibility
+        .raw_line("// Auto-generated bindings - DO NOT EDIT")
         // Note: derive_copy automatically includes Clone
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()));
 
@@ -236,7 +238,15 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let bindings = builder.generate().map_err(|e| format!("bindgen failed: {}", e))?;
 
     let out_path = PathBuf::from(env::var("OUT_DIR")?);
-    bindings.write_to_file(out_path.join("bindings.rs"))?;
+    let bindings_path = out_path.join("bindings.rs");
+    
+    // Write initial bindings
+    bindings.write_to_file(&bindings_path)?;
+    
+    // Post-process to add unsafe to extern blocks for Rust 2024
+    let bindings_content = std::fs::read_to_string(&bindings_path)?;
+    let fixed_content = bindings_content.replace("extern \"C\" {", "unsafe extern \"C\" {");
+    std::fs::write(&bindings_path, fixed_content)?;
 
     println!("cargo:warning=bitnet-sys: Generated C++ bindings successfully");
     Ok(())

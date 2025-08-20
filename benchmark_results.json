@@ -1,0 +1,14 @@
+{
+  "cpp": {
+    "mean": 2.445526202519735,
+    "stdev": 0.06997281002000735,
+    "min": 2.3916428089141846,
+    "max": 2.5246083736419678,
+    "iterations": 3
+  },
+  "rust": null,
+  "comparison": {
+    "speedup": null,
+    "improvement_percent": null
+  }
+}

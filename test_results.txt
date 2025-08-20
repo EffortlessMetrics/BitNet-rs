@@ -1,0 +1,417 @@
+   Compiling bitnet-quantization v0.1.0 (/home/steven/code/Rust/BitNet-rs/crates/bitnet-quantization)
+   Compiling bitnet-kernels v0.1.0 (/home/steven/code/Rust/BitNet-rs/crates/bitnet-kernels)
+   Compiling bitnet v0.1.0 (/home/steven/code/Rust/BitNet-rs)
+warning: bitnet-sys@0.1.0: bitnet-sys: 'ffi' feature not enabled; skipping native build
+   Compiling bitnet-common v0.1.0 (/home/steven/code/Rust/BitNet-rs/crates/bitnet-common)
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-kernels/src/cpu/x86.rs:116:31
+    |
+116 |                 let mut acc = unsafe { [_mm256_setzero_ps(); 8] };
+    |                               ^^^^^^ unnecessary `unsafe` block
+    |
+    = note: `#[warn(unused_unsafe)]` on by default
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-kernels/src/cpu/x86.rs:155:29
+    |
+155 | ...                   unsafe {
+    |                       ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-kernels/src/cpu/x86.rs:181:29
+    |
+181 | ...                   unsafe {
+    |                       ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-kernels/src/cpu/x86.rs:242:31
+    |
+242 |             let mut max_vec = unsafe { _mm256_setzero_ps() };
+    |                               ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-kernels/src/cpu/x86.rs:248:32
+    |
+248 |                 let abs_vals = unsafe { _mm256_andnot_ps(_mm256_set1_ps(-0.0), vals) }; // abs using bit mask
+    |                                ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-kernels/src/cpu/x86.rs:249:27
+    |
+249 |                 max_vec = unsafe { _mm256_max_ps(max_vec, abs_vals) };
+    |                           ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-kernels/src/cpu/x86.rs:254:33
+    |
+254 |             let mut final_max = unsafe {
+    |                                 ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-kernels/src/cpu/x86.rs:270:29
+    |
+270 |             let scale_vec = unsafe { _mm256_set1_ps(scale) };
+    |                             ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-kernels/src/cpu/x86.rs:276:34
+    |
+276 |                 let normalized = unsafe { _mm256_div_ps(vals, scale_vec) };
+    |                                  ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-kernels/src/cpu/x86.rs:382:31
+    |
+382 |             let mut max_vec = unsafe { _mm256_setzero_ps() };
+    |                               ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-kernels/src/cpu/x86.rs:393:33
+    |
+393 |             let mut final_max = unsafe {
+    |                                 ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-kernels/src/cpu/x86.rs:409:29
+    |
+409 |             let scale_vec = unsafe { _mm256_set1_ps(scale) };
+    |                             ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-kernels/src/cpu/x86.rs:415:34
+    |
+415 |                 let normalized = unsafe { _mm256_div_ps(vals, scale_vec) };
+    |                                  ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-common/tests/integration_tests.rs:130:5
+    |
+130 |     unsafe { unsafe { env::set_var("BITNET_TEMPERATURE", "0.9"); } }
+    |     ^^^^^^ unnecessary `unsafe` block
+    |
+    = note: `#[warn(unused_unsafe)]` on by default
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-common/tests/integration_tests.rs:131:5
+    |
+131 |     unsafe { unsafe { env::set_var("BITNET_USE_GPU", "true"); } }
+    |     ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-common/tests/integration_tests.rs:140:5
+    |
+140 |     unsafe { unsafe { env::remove_var("BITNET_TEMPERATURE"); } }
+    |     ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> crates/bitnet-common/tests/integration_tests.rs:141:5
+    |
+141 |     unsafe { unsafe { env::remove_var("BITNET_USE_GPU"); } }
+    |     ^^^^^^ unnecessary `unsafe` block
+
+warning: `bitnet-kernels` (lib) generated 13 warnings
+   Compiling bitnet-models v0.1.0 (/home/steven/code/Rust/BitNet-rs/crates/bitnet-models)
+   Compiling bitnet-inference v0.1.0 (/home/steven/code/Rust/BitNet-rs/crates/bitnet-inference)
+   Compiling bitnet-tests v0.1.0 (/home/steven/code/Rust/BitNet-rs/tests)
+warning: `bitnet-common` (test "integration_tests") generated 4 warnings
+   Compiling bitnet-crossval v0.1.0 (/home/steven/code/Rust/BitNet-rs/crossval)
+   Compiling bitnet-ffi v0.1.0 (/home/steven/code/Rust/BitNet-rs/crates/bitnet-ffi)
+   Compiling bitnet-server v0.1.0 (/home/steven/code/Rust/BitNet-rs/crates/bitnet-server)
+   Compiling bitnet-wasm v0.1.0 (/home/steven/code/Rust/BitNet-rs/crates/bitnet-wasm)
+warning: unused import: `DType`
+ --> crates/bitnet-ffi/src/model.rs:9:19
+  |
+9 | use candle_core::{DType, Tensor as CandleTensor, Device as CDevice};
+  |                   ^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+error[E0432]: unresolved import `bitnet_models::gguf_min::load_gguf`
+   --> crates/bitnet-server/src/lib.rs:134:13
+    |
+134 |         use bitnet_models::gguf_min::load_gguf;
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `load_gguf` in `gguf_min`
+
+warning: unused imports: `Device` and `MockTensor`
+  --> tests/integration/mod.rs:24:64
+   |
+24 | use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, MockTensor};
+   |                                                                ^^^^^^  ^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `InferenceEngine`
+  --> tests/integration/mod.rs:25:59
+   |
+25 | use bitnet_inference::{GenerationConfig, InferenceConfig, InferenceEngine};
+   |                                                           ^^^^^^^^^^^^^^^
+
+warning[E0133]: call to unsafe function `std::alloc::GlobalAlloc::alloc` is unsafe and requires unsafe block
+  --> crates/bitnet-ffi/src/memory.rs:95:19
+   |
+95 |         let ptr = self.inner.alloc(layout);
+   |                   ^^^^^^^^^^^^^^^^^^^^^^^^ call to unsafe function
+   |
+   = note: for more information, see <https://doc.rust-lang.org/nightly/edition-guide/rust-2024/unsafe-op-in-unsafe-fn.html>
+   = note: consult the function's documentation for information on how to avoid undefined behavior
+note: an unsafe function restricts its caller, but its body is safe by default
+  --> crates/bitnet-ffi/src/memory.rs:94:5
+   |
+94 |     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = note: `#[warn(unsafe_op_in_unsafe_fn)]` on by default
+
+warning[E0133]: call to unsafe function `std::alloc::GlobalAlloc::dealloc` is unsafe and requires unsafe block
+   --> crates/bitnet-ffi/src/memory.rs:104:9
+    |
+104 |         self.inner.dealloc(ptr, layout);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ call to unsafe function
+    |
+    = note: for more information, see <https://doc.rust-lang.org/nightly/edition-guide/rust-2024/unsafe-op-in-unsafe-fn.html>
+    = note: consult the function's documentation for information on how to avoid undefined behavior
+note: an unsafe function restricts its caller, but its body is safe by default
+   --> crates/bitnet-ffi/src/memory.rs:102:5
+    |
+102 |     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: comparison is useless due to type limits
+   --> crates/bitnet-inference/tests/integration_tests.rs:551:17
+    |
+551 |         assert!(stats.cache_size >= 0);
+    |                 ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_comparisons)]` on by default
+
+error[E0308]: `if` and `else` have incompatible types
+   --> crates/bitnet-server/src/streaming.rs:53:9
+    |
+50  |       let stream = if let Some(engine) = &state.engine {
+    |  __________________-
+51  | |         real_stream(engine, request).await
+    | |         ---------------------------------- expected because of this
+52  | |     } else {
+53  | |         mock_stream(request).await
+    | |         ^^^^^^^^^^^^^^^^^^^^^^^^^^ expected opaque type, found a different opaque type
+54  | |     };
+    | |_____- `if` and `else` have incompatible types
+...
+65  |   ) -> impl Stream<Item = Result<Event, Infallible>> {
+    |        --------------------------------------------- the expected opaque type
+...
+149 |   ) -> impl Stream<Item = Result<Event, Infallible>> {
+    |        --------------------------------------------- the found opaque type
+    |
+    = note: expected opaque type `impl Stream<Item = Result<axum::response::sse::Event, Infallible>>`
+               found opaque type `impl Stream<Item = Result<axum::response::sse::Event, Infallible>>`
+    = note: distinct uses of `impl Trait` result in different opaque types
+
+error[E0308]: mismatched types
+  --> crates/bitnet-server/src/streaming.rs:72:29
+   |
+72 |             max_new_tokens: request.max_tokens.unwrap_or(64),
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `u32`, found `usize`
+
+error[E0308]: mismatched types
+  --> crates/bitnet-server/src/streaming.rs:75:20
+   |
+75 |             top_k: request.top_k.unwrap_or(50),
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `u32`, found `usize`
+
+error[E0560]: struct `StreamingConfig` has no field named `stream_tokens`
+  --> crates/bitnet-server/src/streaming.rs:82:13
+   |
+82 |             stream_tokens: true,
+   |             ^^^^^^^^^^^^^ `StreamingConfig` does not have this field
+   |
+   = note: available fields are: `buffer_size`, `flush_interval_ms`
+
+error[E0061]: this method takes 1 argument but 3 arguments were supplied
+   --> crates/bitnet-server/src/streaming.rs:88:22
+    |
+88  |         match engine.generate_stream(&request.prompt, &config, &stream_config).await {
+    |                      ^^^^^^^^^^^^^^^                  -------  -------------- unexpected argument #3 of type `&StreamingConfig`
+    |                                                       |
+    |                                                       unexpected argument #2 of type `&bitnet_inference::GenerationConfig`
+    |
+note: method defined here
+   --> /home/steven/code/Rust/BitNet-rs/crates/bitnet-inference/src/engine.rs:135:12
+    |
+135 |     pub fn generate_stream(&self, prompt: &str) -> GenerationStream {
+    |            ^^^^^^^^^^^^^^^
+help: remove the extra arguments
+    |
+88  -         match engine.generate_stream(&request.prompt, &config, &stream_config).await {
+88  +         match engine.generate_stream(&request.prompt).await {
+    |
+
+error[E0277]: `GenerationStream` is not a future
+  --> crates/bitnet-server/src/streaming.rs:88:80
+   |
+88 |         match engine.generate_stream(&request.prompt, &config, &stream_config).await {
+   |                                                                                ^^^^^ `GenerationStream` is not a future
+   |
+   = help: the trait `futures::Future` is not implemented for `GenerationStream`
+   = note: GenerationStream must be a future or must implement `IntoFuture` to be awaited
+   = note: required for `GenerationStream` to implement `std::future::IntoFuture`
+help: remove the `.await`
+   |
+88 -         match engine.generate_stream(&request.prompt, &config, &stream_config).await {
+88 +         match engine.generate_stream(&request.prompt, &config, &stream_config) {
+   |
+
+error[E0308]: mismatched types
+   --> crates/bitnet-server/src/lib.rs:303:25
+    |
+303 |         max_new_tokens: request.max_tokens.unwrap_or(64),
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `u32`, found `usize`
+
+error[E0308]: mismatched types
+   --> crates/bitnet-server/src/lib.rs:306:16
+    |
+306 |         top_k: request.top_k.unwrap_or(50),
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `u32`, found `usize`
+
+Some errors have detailed explanations: E0061, E0277, E0308, E0432, E0560.
+For more information about an error, try `rustc --explain E0061`.
+error: could not compile `bitnet-server` (lib) due to 9 previous errors
+warning: build failed, waiting for other jobs to finish...
+warning: unused import: `crate::common::FixtureManager`
+ --> tests/integration/batch_processing_tests.rs:8:5
+  |
+8 | use crate::common::FixtureManager;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `crate::common::fixtures_facade::Fixtures`
+ --> tests/integration/component_interaction_tests.rs:7:5
+  |
+7 | use crate::common::fixtures_facade::Fixtures;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Tensor`
+  --> tests/integration/component_interaction_tests.rs:12:69
+   |
+12 | use bitnet_common::{BitNetConfig, BitNetError, Device, ModelConfig, Tensor};
+   |                                                                     ^^^^^^
+
+warning: unused import: `bitnet_inference::engine::InferenceStats`
+  --> tests/integration/component_interaction_tests.rs:13:5
+   |
+13 | use bitnet_inference::engine::InferenceStats;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> tests/integration/component_interaction_tests.rs:17:5
+   |
+17 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `MockTensor`
+  --> tests/integration/model_loading_tests.rs:13:56
+   |
+13 | use bitnet_common::{BitNetConfig, BitNetError, Device, MockTensor};
+   |                                                        ^^^^^^^^^^
+
+warning: unused import: `TestError`
+ --> tests/integration/resource_management_tests.rs:6:13
+  |
+6 | use crate::{TestError, TestResult};
+  |             ^^^^^^^^^
+
+warning: unused import: `crate::common::FixtureManager`
+ --> tests/integration/streaming_tests.rs:7:5
+  |
+7 | use crate::common::FixtureManager;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `GenerationStream`
+  --> tests/integration/streaming_tests.rs:11:24
+   |
+11 | use bitnet_inference::{GenerationStream, StreamingConfig};
+   |                        ^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::common::FixtureManager`
+ --> tests/integration/tokenization_pipeline_tests.rs:8:5
+  |
+8 | use crate::common::FixtureManager;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::common::FixtureManager`
+ --> tests/integration/workflow_tests.rs:8:5
+  |
+8 | use crate::common::FixtureManager;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `MockTensor`
+  --> tests/integration/mod.rs:24:72
+   |
+24 | use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, MockTensor};
+   |                                                                        ^^^^^^^^^^
+
+warning: unused variable: `test_duration`
+   --> tests/common/fast_feedback_simple.rs:256:17
+    |
+256 |             let test_duration = self.estimate_test_duration(test_name);
+    |                 ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_test_duration`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `context`
+   --> tests/common/ci_reporting.rs:301:9
+    |
+301 |         context: &CIContext,
+    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_context`
+
+error: could not compile `bitnet-server` (lib test) due to 9 previous errors
+warning: type `StatusState` is more private than the item `GitHubReporter::create_status_check`
+   --> tests/common/ci_reporting.rs:52:5
+    |
+52  | /     pub async fn create_status_check(
+53  | |         &self,
+54  | |         sha: &str,
+55  | |         context: &str,
+...   |
+58  | |         target_url: Option<&str>,
+59  | |     ) -> Result<()> {
+    | |___________________^ method `GitHubReporter::create_status_check` is reachable at visibility `pub`
+    |
+note: but type `StatusState` is only usable at visibility `pub(crate)`
+   --> tests/common/ci_reporting.rs:585:1
+    |
+585 | pub(crate) enum StatusState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: `bitnet-inference` (test "integration_tests") generated 1 warning
+For more information about this error, try `rustc --explain E0133`.
+warning: `bitnet-ffi` (lib) generated 3 warnings (run `cargo fix --lib -p bitnet-ffi` to apply 3 suggestions)
+warning: `bitnet-tests` (lib) generated 5 warnings (run `cargo fix --lib -p bitnet-tests` to apply 2 suggestions)
+warning: unused variable: `adaptive_engine`
+   --> tests/integration/batch_processing_tests.rs:635:13
+    |
+635 |         let adaptive_engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device)
+    |             ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_adaptive_engine`
+
+warning: variable `failed_adaptive` is assigned to, but never used
+   --> tests/integration/batch_processing_tests.rs:669:21
+    |
+669 |             let mut failed_adaptive = 0;
+    |                     ^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_failed_adaptive` instead
+
+warning: unused variable: `initial_usage`
+   --> tests/integration/component_interaction_tests.rs:481:13
+    |
+481 |         let initial_usage = shared_model.get_usage_stats();
+    |             ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_initial_usage`
+
+warning: unused variable: `chunk`
+   --> tests/integration/streaming_tests.rs:932:20
+    |
+932 |                 Ok(chunk) => {
+    |                    ^^^^^ help: if this is intentional, prefix it with an underscore: `_chunk`
+
+warning: `bitnet-tests` (lib test) generated 19 warnings (3 duplicates) (run `cargo fix --lib -p bitnet-tests --tests` to apply 12 suggestions)
