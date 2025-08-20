@@ -1,6 +1,7 @@
 //! HTTP server for BitNet inference with comprehensive monitoring
 
 pub mod monitoring;
+pub mod streaming;
 
 use anyhow::Result;
 use axum::{
@@ -14,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Instant;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tokio::sync::RwLock;
 
 #[cfg(feature = "prometheus")]
 use monitoring::prometheus::{create_prometheus_routes, PrometheusExporter};
@@ -29,6 +31,9 @@ pub struct InferenceRequest {
     pub max_tokens: Option<usize>,
     pub model: Option<String>,
     pub temperature: Option<f32>,
+    pub top_p: Option<f32>,
+    pub top_k: Option<usize>,
+    pub repetition_penalty: Option<f32>,
 }
 
 #[derive(Serialize)]
@@ -45,11 +50,21 @@ pub struct ServerConfig {
     pub host: String,
     pub port: u16,
     pub monitoring: MonitoringConfig,
+    pub model_path: Option<String>,
+    pub tokenizer_path: Option<String>,
+    pub device: String,
 }
 
 impl Default for ServerConfig {
     fn default() -> Self {
-        Self { host: "0.0.0.0".to_string(), port: 8080, monitoring: MonitoringConfig::default() }
+        Self { 
+            host: "0.0.0.0".to_string(), 
+            port: 8080, 
+            monitoring: MonitoringConfig::default(),
+            model_path: None,
+            tokenizer_path: None,
+            device: "cpu".to_string(),
+        }
     }
 }
 
@@ -60,6 +75,7 @@ pub struct BitNetServer {
     health_checker: Arc<HealthChecker>,
     #[cfg(feature = "prometheus")]
     prometheus_exporter: Option<Arc<PrometheusExporter>>,
+    engine: Option<Arc<RwLock<bitnet_inference::InferenceEngine>>>,
 }
 
 impl BitNetServer {
@@ -81,21 +97,87 @@ impl BitNetServer {
         #[cfg(not(feature = "prometheus"))]
         let _unused = ();
 
+        // Try to load inference engine if model path provided
+        let engine = if let Some(model_path) = &config.model_path {
+            match Self::load_engine(model_path, config.tokenizer_path.as_deref(), &config.device).await {
+                Ok(eng) => {
+                    tracing::info!("Loaded model from {}", model_path);
+                    Some(Arc::new(RwLock::new(eng)))
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to load model: {}. Server will start without inference.", e);
+                    None
+                }
+            }
+        } else {
+            tracing::info!("No model path provided. Server will start in mock mode.");
+            None
+        };
+
         Ok(Self {
             config,
             monitoring,
             health_checker,
             #[cfg(feature = "prometheus")]
             prometheus_exporter,
+            engine,
         })
+    }
+
+    /// Load the inference engine
+    async fn load_engine(
+        model_path: &str,
+        tokenizer_path: Option<&str>,
+        device: &str,
+    ) -> Result<bitnet_inference::InferenceEngine> {
+        use bitnet_common::Device;
+        use bitnet_models::gguf_min::load_gguf;
+        use std::path::Path;
+
+        // Parse device
+        let device = match device {
+            "cuda" | "gpu" => Device::Cuda(0),
+            _ => Device::Cpu,
+        };
+
+        // Load model from GGUF
+        let model_path = Path::new(model_path);
+        if !model_path.exists() {
+            anyhow::bail!("Model file not found: {}", model_path.display());
+        }
+        
+        let model = load_gguf(model_path)?;
+        
+        // Load tokenizer (for now, use a basic tokenizer)
+        // TODO: Implement proper tokenizer loading from tokenizer_path
+        let tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer> = if let Some(_tok_path) = tokenizer_path {
+            // In production, load from file
+            Arc::new(bitnet_tokenizers::BasicTokenizer::default())
+        } else {
+            Arc::new(bitnet_tokenizers::BasicTokenizer::default())
+        };
+        
+        // Create inference engine
+        let model: Arc<dyn bitnet_models::Model> = Arc::new(model);
+        let engine = bitnet_inference::InferenceEngine::new(
+            model,
+            tokenizer,
+            device,
+        )?;
+        
+        Ok(engine)
     }
 
     /// Create the application router with all routes and middleware
     pub fn create_app(&self) -> Router {
         let mut app = Router::new()
             .route("/inference", post(inference_handler))
+            .route("/stream", post(streaming::streaming_handler))
             .route("/", get(root_handler))
-            .with_state(AppState { metrics: self.monitoring.metrics() });
+            .with_state(AppState { 
+                metrics: self.monitoring.metrics(),
+                engine: self.engine.clone(),
+            });
 
         // Add health check routes
         app = app.merge(create_health_routes(self.health_checker.clone()));
@@ -146,8 +228,9 @@ impl BitNetServer {
 
 /// Application state shared across handlers
 #[derive(Clone)]
-struct AppState {
+pub(crate) struct AppState {
     metrics: Arc<MetricsCollector>,
+    engine: Option<Arc<RwLock<bitnet_inference::InferenceEngine>>>,
 }
 
 /// Root handler
@@ -174,8 +257,12 @@ async fn inference_handler(
         "Processing inference request"
     );
 
-    // Simulate inference (replace with actual inference logic)
-    let inference_result = simulate_inference(&request).await;
+    // Use real inference if engine is available, otherwise simulate
+    let inference_result = if let Some(engine) = &state.engine {
+        real_inference(engine, &request).await
+    } else {
+        simulate_inference(&request).await
+    };
 
     match inference_result {
         Ok(response) => {
@@ -202,6 +289,44 @@ async fn inference_handler(
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
+}
+
+/// Real inference using the BitNet engine
+async fn real_inference(
+    engine: &Arc<RwLock<bitnet_inference::InferenceEngine>>,
+    request: &InferenceRequest,
+) -> Result<InferenceResponse> {
+    let start = Instant::now();
+    
+    // Build generation config
+    let config = bitnet_inference::GenerationConfig {
+        max_new_tokens: request.max_tokens.unwrap_or(64),
+        temperature: request.temperature.unwrap_or(1.0),
+        top_p: request.top_p.unwrap_or(0.9),
+        top_k: request.top_k.unwrap_or(50),
+        repetition_penalty: request.repetition_penalty.unwrap_or(1.0),
+        ..Default::default()
+    };
+    
+    // Run inference
+    let engine = engine.read().await;
+    let generated_text = engine.generate_with_config(&request.prompt, &config).await?;
+    
+    let duration = start.elapsed();
+    // Estimate tokens (roughly 4 chars per token)
+    let tokens_generated = (generated_text.len() / 4).max(1) as u64;
+    let tokens_per_second = if duration.as_millis() > 0 {
+        (tokens_generated as f64 * 1000.0) / duration.as_millis() as f64
+    } else {
+        0.0
+    };
+    
+    Ok(InferenceResponse {
+        text: generated_text,
+        tokens_generated,
+        inference_time_ms: duration.as_millis() as u64,
+        tokens_per_second,
+    })
 }
 
 /// Simulate inference (placeholder implementation)

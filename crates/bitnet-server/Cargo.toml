@@ -13,7 +13,12 @@ description = "HTTP server for BitNet inference"
 [dependencies]
 bitnet-common = { path = "../bitnet-common" }
 bitnet-inference = { path = "../bitnet-inference" }
+bitnet-models = { path = "../bitnet-models" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers" }
 async-trait = "0.1"
+async-stream = "0.3"
+futures = "0.3"
+tokio-stream = "0.1"
 axum.workspace = true
 tokio.workspace = true
 tower.workspace = true
