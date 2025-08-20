@@ -3,7 +3,15 @@
 use super::types::*;
 use bitnet_common::{BitNetError, ModelError, QuantizationType, Result};
 
-/// GGUF file reader
+/// GGUF file reader.
+///
+/// Supports **GGUF v2 and v3**:
+/// - v2: header = `magic`, `version`, `n_tensors (u64)`, `n_kv (u64)`. Alignment defaults to 32.
+/// - v3: header additionally contains `alignment (u32)` and `data_offset (u64)`.
+///
+/// For v3, the reader **prefers** `data_offset` when it is valid (>= end of KV section,
+/// <= file size, and aligned). Otherwise it falls back to `align_up(kv_end, alignment)`.
+/// Alignment is sanitized to a power-of-two (defaults to 32 if the file is malformed).
 pub struct GgufReader<'a> {
     data: &'a [u8],
     header: GgufHeader,
@@ -13,6 +21,29 @@ pub struct GgufReader<'a> {
 }
 
 impl<'a> GgufReader<'a> {
+    /// Compute the tensor-data start offset, preferring v3 `data_offset` when valid.
+    /// Falls back to `align_up(kv_end_offset, alignment)` if `data_offset` is invalid.
+    #[inline]
+    fn compute_data_start(header: &GgufHeader, kv_end_offset: usize, file_size: usize) -> usize {
+        let a = (header.alignment.max(1)) as usize;
+
+        if header.version >= 3 {
+            let doff = header.data_offset as usize;
+
+            // sanity: doff must be >= kv_end, <= file_size, and aligned
+            if doff >= kv_end_offset && doff <= file_size && doff % a == 0 {
+                return doff;
+            }
+
+            tracing::warn!(
+                "GGUF v{}: invalid data_offset={} (kv_end={}, align={}); falling back to align_up",
+                header.version, doff, kv_end_offset, a
+            );
+        }
+
+        align_up(kv_end_offset, a)
+    }
+
     pub fn new(data: &'a [u8]) -> Result<Self> {
         if data.len() < 16 {
             return Err(BitNetError::Model(ModelError::InvalidFormat {
@@ -45,8 +76,8 @@ impl<'a> GgufReader<'a> {
             tensor_infos.push(TensorInfo::read(data, &mut offset)?);
         }
 
-        // One-time alignment before the tensor data
-        let data_start = align_up(offset, header.alignment as usize);
+        // Compute data start (uses data_offset for v3 if valid)
+        let data_start = Self::compute_data_start(&header, offset, data.len());
         let file_size = data.len();
 
         // Recompute sizes from successive offsets (and file end for the last tensor)
@@ -219,6 +250,8 @@ impl<'a> GgufReader<'a> {
     /// Get alignment value from header
     #[inline]
     pub fn alignment(&self) -> u32 {
+        // NOTE: GgufHeader::read() already clamps invalid values (0, non-POT) to 32.
+        // So this is always >=1 and a power of two.
         self.header.alignment
     }
 

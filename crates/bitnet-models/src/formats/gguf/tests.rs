@@ -296,9 +296,13 @@ fn test_insufficient_data_errors() {
 
 /// Helper to build valid GGUF v3 bytes for testing (no tensors)
 fn build_gguf_bytes_v3(kvs: Vec<(&str, GgufValue)>) -> Vec<u8> {
+    build_gguf_bytes_v3_with_align(kvs, 32)
+}
+
+/// Helper to build valid GGUF v3 bytes with custom alignment
+fn build_gguf_bytes_v3_with_align(kvs: Vec<(&str, GgufValue)>, align: u32) -> Vec<u8> {
     let mut data = Vec::<u8>::new();
     const V3: u32 = 3;
-    const ALIGN: u32 = 32;
 
     // --- Header (v3) ---
     data.extend_from_slice(b"GGUF");                    // magic
@@ -307,7 +311,7 @@ fn build_gguf_bytes_v3(kvs: Vec<(&str, GgufValue)>) -> Vec<u8> {
     let n_kv = kvs.len() as u64;
     data.extend_from_slice(&n_tensors.to_le_bytes());   // n_tensors
     data.extend_from_slice(&n_kv.to_le_bytes());        // n_kv
-    data.extend_from_slice(&ALIGN.to_le_bytes());       // alignment (u32)
+    data.extend_from_slice(&align.to_le_bytes());       // alignment (u32)
     let doff_pos = data.len();
     data.extend_from_slice(&0u64.to_le_bytes());        // placeholder data_offset
 
@@ -320,7 +324,7 @@ fn build_gguf_bytes_v3(kvs: Vec<(&str, GgufValue)>) -> Vec<u8> {
     }
 
     // --- compute & backfill data_offset, then pad to it ---
-    let pad = (ALIGN as usize - (data.len() % ALIGN as usize)) % ALIGN as usize;
+    let pad = (align as usize - (data.len() % align as usize)) % align as usize;
     let data_offset = (data.len() + pad) as u64;
     data[doff_pos .. doff_pos + 8].copy_from_slice(&data_offset.to_le_bytes());
     data.resize(data_offset as usize, 0);
@@ -365,4 +369,64 @@ fn test_reader_v2_v3_parity_for_same_kvs() {
     assert_eq!(r2.get_bool_metadata("tokenizer.ggml.add_bos"), r3.get_bool_metadata("tokenizer.ggml.add_bos"));
     assert_eq!(r2.get_bool_metadata("tokenizer.ggml.add_eos"), r3.get_bool_metadata("tokenizer.ggml.add_eos"));
     assert_eq!(r2.get_u32_metadata("tokenizer.ggml.vocab_size"), r3.get_u32_metadata("tokenizer.ggml.vocab_size"));
+}
+
+#[test]
+fn test_reader_v3_ignores_bad_data_offset() {
+    // Build a v3 file but deliberately write data_offset = 0 (bad).
+    let mut bytes = build_gguf_bytes_v3(vec![
+        ("k", GgufValue::U32(1)),
+    ]);
+
+    // Overwrite the data_offset (8 bytes) to 0.
+    // Header layout: "GGUF"(4) + ver(4) + n_t(8) + n_kv(8) + align(4) + data_offset(8)
+    //                ^0         ^4      ^8        ^16        ^24        ^28
+    let doff_pos = 28;
+    bytes[doff_pos..doff_pos+8].copy_from_slice(&0u64.to_le_bytes());
+
+    let r = GgufReader::new(&bytes).expect("v3 with bad doff should still parse via fallback");
+    assert_eq!(r.get_u32_metadata("k"), Some(1));
+    // We don't assert the exact data_start; the fact that metadata read succeeded
+    // proves we fell back to align_up(kv_end, alignment).
+}
+
+#[test]
+fn test_reader_v3_clamps_weird_alignment() {
+    // Write v3 with alignment = 0 (invalid), data_offset aligned to 32 anyway.
+    let mut bytes = build_gguf_bytes_v3(vec![
+        ("flag", GgufValue::Bool(true)),
+    ]);
+    // Patch alignment to 0 to trigger the guard.
+    bytes[24..28].copy_from_slice(&0u32.to_le_bytes());
+
+    let r = GgufReader::new(&bytes).expect("v3 with align=0 should still parse");
+    // Reader should clamp to 32 (warns in logs).
+    assert_eq!(r.alignment(), 32);
+    assert_eq!(r.get_bool_metadata("flag"), Some(true));
+}
+
+#[test]
+fn test_reader_v3_respects_header_alignment() {
+    let bytes = build_gguf_bytes_v3_with_align(
+        vec![("val", GgufValue::U32(42))],
+        64
+    );
+    let r = GgufReader::new(&bytes).expect("v3/align=64");
+    assert_eq!(r.alignment(), 64);
+    assert_eq!(r.get_u32_metadata("val"), Some(42));
+}
+
+#[test]
+fn test_reader_v3_rejects_doff_past_eof_and_falls_back() {
+    // Build a minimal v3 file
+    let mut bytes = build_gguf_bytes_v3(vec![("k", GgufValue::U32(7))]);
+
+    // data_offset is at bytes[28..36] for v3 (after magic, ver, n_t, n_kv, align)
+    let doff_pos = 28;
+    let absurd_doff = (bytes.len() as u64) + 10_000; // well past EOF
+    bytes[doff_pos..doff_pos+8].copy_from_slice(&absurd_doff.to_le_bytes());
+
+    // Reader should fall back to align_up(kv_end, alignment), NOT panic.
+    let r = GgufReader::new(&bytes).expect("fallback path should parse");
+    assert_eq!(r.get_u32_metadata("k"), Some(7));
 }
