@@ -131,7 +131,7 @@ impl BitNetServer {
         device: &str,
     ) -> Result<bitnet_inference::InferenceEngine> {
         use bitnet_common::Device;
-        use bitnet_models::gguf_min::load_gguf;
+        use bitnet_models::formats::gguf::loader::GgufLoader;
         use std::path::Path;
 
         // Parse device
@@ -146,7 +146,8 @@ impl BitNetServer {
             anyhow::bail!("Model file not found: {}", model_path.display());
         }
         
-        let model = load_gguf(model_path)?;
+        let loader = GgufLoader::new();
+        let model = loader.load_from_path(model_path)?;
         
         // Load tokenizer (for now, use a basic tokenizer)
         // TODO: Implement proper tokenizer loading from tokenizer_path
@@ -300,10 +301,10 @@ async fn real_inference(
     
     // Build generation config
     let config = bitnet_inference::GenerationConfig {
-        max_new_tokens: request.max_tokens.unwrap_or(64),
+        max_new_tokens: request.max_tokens.unwrap_or(64) as u32,
         temperature: request.temperature.unwrap_or(1.0),
         top_p: request.top_p.unwrap_or(0.9),
-        top_k: request.top_k.unwrap_or(50),
+        top_k: request.top_k.unwrap_or(50) as u32,
         repetition_penalty: request.repetition_penalty.unwrap_or(1.0),
         ..Default::default()
     };
