@@ -46,7 +46,7 @@ impl<'a> GgufReader<'a> {
         }
 
         // One-time alignment before the tensor data
-        let data_start = align_up(offset, /* GGUF v3 fixed */ 32);
+        let data_start = align_up(offset, header.alignment as usize);
         let file_size = data.len();
 
         // Recompute sizes from successive offsets (and file end for the last tensor)
@@ -214,6 +214,18 @@ impl<'a> GgufReader<'a> {
     /// Get all metadata keys
     pub fn metadata_keys(&self) -> Vec<&str> {
         self.metadata.iter().map(|m| m.key.as_str()).collect()
+    }
+
+    /// Get alignment value from header
+    #[inline]
+    pub fn alignment(&self) -> u32 {
+        self.header.alignment
+    }
+
+    /// Get data offset value from header (v3 only, 0 for v2)
+    #[inline]
+    pub fn data_offset(&self) -> u64 {
+        self.header.data_offset
     }
 
     /// Infer quantization type from tensor types

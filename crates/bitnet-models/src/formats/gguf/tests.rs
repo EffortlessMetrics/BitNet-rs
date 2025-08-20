@@ -5,17 +5,16 @@ use crate::loader::FormatLoader;
 use std::io::Write;
 use tempfile::NamedTempFile;
 
-/// Helper to build valid GGUF v3 bytes for testing
+/// Helper to build valid GGUF bytes for testing
 fn build_gguf_bytes(metadata: Vec<(&str, GgufValue)>) -> Vec<u8> {
     let mut data = Vec::<u8>::new();
-    const V3: u32 = 3;
+    const GGUF_VERSION: u32 = 2;
     const ALIGN: usize = 32;
 
-    // --- Header (v3) ---
-    // Note: The reader doesn't expect alignment/data_offset fields in the header
-    // It only reads: magic, version, tensor_count, metadata_kv_count
+    // --- Header (v2 shape expected by reader) ---
+    // The reader reads: magic, version, n_tensors (u64), n_kv (u64)
     data.extend_from_slice(b"GGUF");               // magic
-    data.extend_from_slice(&V3.to_le_bytes());     // version
+    data.extend_from_slice(&GGUF_VERSION.to_le_bytes()); // version
     let n_tensors = 0u64;
     let n_kv = metadata.len() as u64;
     data.extend_from_slice(&n_tensors.to_le_bytes()); // n_tensors
@@ -88,20 +87,43 @@ fn write_gguf_value(data: &mut Vec<u8>, value: GgufValue) {
 
 #[test]
 fn test_gguf_header_parsing() {
-    let mut data = Vec::new();
-    data.extend_from_slice(b"GGUF"); // Magic
-    data.extend_from_slice(&3u32.to_le_bytes()); // Version
-    data.extend_from_slice(&5u64.to_le_bytes()); // Tensor count
-    data.extend_from_slice(&2u64.to_le_bytes()); // Metadata count
+    // Test v2 header
+    let mut data_v2 = Vec::new();
+    data_v2.extend_from_slice(b"GGUF"); // Magic
+    data_v2.extend_from_slice(&2u32.to_le_bytes()); // Version 2
+    data_v2.extend_from_slice(&5u64.to_le_bytes()); // Tensor count
+    data_v2.extend_from_slice(&2u64.to_le_bytes()); // Metadata count
 
     let mut offset = 0;
-    let header = GgufHeader::read(&data, &mut offset).unwrap();
+    let header_v2 = GgufHeader::read(&data_v2, &mut offset).unwrap();
 
-    assert_eq!(header.magic, *b"GGUF");
-    assert_eq!(header.version, 3);
-    assert_eq!(header.tensor_count, 5);
-    assert_eq!(header.metadata_kv_count, 2);
+    assert_eq!(header_v2.magic, *b"GGUF");
+    assert_eq!(header_v2.version, 2);
+    assert_eq!(header_v2.tensor_count, 5);
+    assert_eq!(header_v2.metadata_kv_count, 2);
+    assert_eq!(header_v2.alignment, 32); // Default for v2
+    assert_eq!(header_v2.data_offset, 0); // Default for v2
     assert_eq!(offset, 24);
+
+    // Test v3 header
+    let mut data_v3 = Vec::new();
+    data_v3.extend_from_slice(b"GGUF"); // Magic
+    data_v3.extend_from_slice(&3u32.to_le_bytes()); // Version 3
+    data_v3.extend_from_slice(&5u64.to_le_bytes()); // Tensor count
+    data_v3.extend_from_slice(&2u64.to_le_bytes()); // Metadata count
+    data_v3.extend_from_slice(&64u32.to_le_bytes()); // Alignment
+    data_v3.extend_from_slice(&1024u64.to_le_bytes()); // Data offset
+
+    let mut offset = 0;
+    let header_v3 = GgufHeader::read(&data_v3, &mut offset).unwrap();
+
+    assert_eq!(header_v3.magic, *b"GGUF");
+    assert_eq!(header_v3.version, 3);
+    assert_eq!(header_v3.tensor_count, 5);
+    assert_eq!(header_v3.metadata_kv_count, 2);
+    assert_eq!(header_v3.alignment, 64);
+    assert_eq!(header_v3.data_offset, 1024);
+    assert_eq!(offset, 36); // 24 + 4 + 8
 }
 
 #[test]
@@ -118,17 +140,16 @@ fn test_gguf_header_invalid_magic() {
 }
 
 #[test]
-fn test_builder_writes_v3_header() {
+fn test_builder_writes_header_v2_shape() {
     let bytes = build_gguf_bytes(vec![("k", GgufValue::U32(1))]);
     // Check header structure
     assert_eq!(&bytes[0..4], b"GGUF");
-    assert_eq!(u32::from_le_bytes(bytes[4..8].try_into().unwrap()), 3); // version
+    assert_eq!(u32::from_le_bytes(bytes[4..8].try_into().unwrap()), 2); // version
     let n_tensors = u64::from_le_bytes(bytes[8..16].try_into().unwrap());
     let n_kv = u64::from_le_bytes(bytes[16..24].try_into().unwrap());
     assert_eq!(n_tensors, 0);
     assert_eq!(n_kv, 1);
-    // Check that the data is aligned to 32 bytes
-    // The header (24 bytes) + KV data should be padded to next 32-byte boundary
+    // Body is padded to 32 bytes (safe modulo logic in builder)
     assert_eq!(bytes.len() % 32, 0, "Total size should be aligned to 32 bytes");
 }
 
@@ -271,4 +292,77 @@ fn test_insufficient_data_errors() {
 
     // Should fail - not enough data for u32
     assert!(read_u32(&data, &mut offset).is_err());
+}
+
+/// Helper to build valid GGUF v3 bytes for testing (no tensors)
+fn build_gguf_bytes_v3(kvs: Vec<(&str, GgufValue)>) -> Vec<u8> {
+    let mut data = Vec::<u8>::new();
+    const V3: u32 = 3;
+    const ALIGN: u32 = 32;
+
+    // --- Header (v3) ---
+    data.extend_from_slice(b"GGUF");                    // magic
+    data.extend_from_slice(&V3.to_le_bytes());          // version
+    let n_tensors = 0u64;
+    let n_kv = kvs.len() as u64;
+    data.extend_from_slice(&n_tensors.to_le_bytes());   // n_tensors
+    data.extend_from_slice(&n_kv.to_le_bytes());        // n_kv
+    data.extend_from_slice(&ALIGN.to_le_bytes());       // alignment (u32)
+    let doff_pos = data.len();
+    data.extend_from_slice(&0u64.to_le_bytes());        // placeholder data_offset
+
+    // --- KV section ---
+    for (key, value) in kvs {
+        let kb = key.as_bytes();
+        data.extend_from_slice(&(kb.len() as u64).to_le_bytes());
+        data.extend_from_slice(kb);
+        write_gguf_value(&mut data, value);
+    }
+
+    // --- compute & backfill data_offset, then pad to it ---
+    let pad = (ALIGN as usize - (data.len() % ALIGN as usize)) % ALIGN as usize;
+    let data_offset = (data.len() + pad) as u64;
+    data[doff_pos .. doff_pos + 8].copy_from_slice(&data_offset.to_le_bytes());
+    data.resize(data_offset as usize, 0);
+
+    // no tensors (n_tensors = 0)
+    data
+}
+
+#[test]
+fn test_reader_accepts_v3_header_and_metadata() {
+    let bytes = build_gguf_bytes_v3(vec![
+        ("u32_key", GgufValue::U32(123)),
+        ("i32_key", GgufValue::I32(-7)),
+        ("f32_key", GgufValue::F32(3.14)),
+        ("bool_key", GgufValue::Bool(true)),
+        ("str_key", GgufValue::String("hello".into())),
+    ]);
+    let r = GgufReader::new(&bytes).expect("read gguf v3");
+    assert_eq!(r.get_u32_metadata("u32_key"), Some(123));
+    assert_eq!(r.get_i32_metadata("i32_key"), Some(-7));
+    assert!((r.get_f32_metadata("f32_key").unwrap_or(0.0) - 3.14).abs() < 1e-6);
+    assert_eq!(r.get_bool_metadata("bool_key"), Some(true));
+    assert_eq!(r.get_string_metadata("str_key").as_deref(), Some("hello"));
+    // New getters also work:
+    assert_eq!(r.alignment(), 32);
+    assert_eq!((r.data_offset() as usize) % (r.alignment() as usize), 0);
+}
+
+#[test]
+fn test_reader_v2_v3_parity_for_same_kvs() {
+    let kvs = vec![
+        ("tokenizer.ggml.model", GgufValue::String("gpt2".into())),
+        ("tokenizer.ggml.add_bos", GgufValue::Bool(false)),
+        ("tokenizer.ggml.add_eos", GgufValue::Bool(true)),
+        ("tokenizer.ggml.vocab_size", GgufValue::U32(128_256)),
+    ];
+    let v2 = build_gguf_bytes(kvs.clone());
+    let v3 = build_gguf_bytes_v3(kvs);
+    let r2 = GgufReader::new(&v2).expect("v2 ok");
+    let r3 = GgufReader::new(&v3).expect("v3 ok");
+    assert_eq!(r2.get_string_metadata("tokenizer.ggml.model"), r3.get_string_metadata("tokenizer.ggml.model"));
+    assert_eq!(r2.get_bool_metadata("tokenizer.ggml.add_bos"), r3.get_bool_metadata("tokenizer.ggml.add_bos"));
+    assert_eq!(r2.get_bool_metadata("tokenizer.ggml.add_eos"), r3.get_bool_metadata("tokenizer.ggml.add_eos"));
+    assert_eq!(r2.get_u32_metadata("tokenizer.ggml.vocab_size"), r3.get_u32_metadata("tokenizer.ggml.vocab_size"));
 }

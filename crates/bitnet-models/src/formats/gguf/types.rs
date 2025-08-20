@@ -18,7 +18,8 @@ pub struct GgufHeader {
     pub version: u32,
     pub tensor_count: u64,
     pub metadata_kv_count: u64,
-    pub alignment: usize, // KV data alignment for v3+
+    pub alignment: u32,      // Alignment for v3+ (default 32 for v2)
+    pub data_offset: u64,    // Data offset for v3 (default 0 for v2)
 }
 
 impl GgufHeader {
@@ -70,11 +71,42 @@ impl GgufHeader {
         ]);
         *offset += 8;
 
-        // GGUF v3 uses fixed alignment of 32 bytes for metadata values
-        // There's no explicit alignment field in the header
-        let alignment = 32usize;
+        // v3 adds alignment (u32) and data_offset (u64)
+        let (alignment, data_offset) = if version >= 3 {
+            // Check we have enough data for v3 fields
+            if data.len() < *offset + 12 {
+                return Err(BitNetError::Model(ModelError::InvalidFormat {
+                    format: "Insufficient data for GGUF v3 header fields".to_string(),
+                }));
+            }
+            
+            let align = u32::from_le_bytes([
+                data[*offset],
+                data[*offset + 1],
+                data[*offset + 2],
+                data[*offset + 3],
+            ]);
+            *offset += 4;
+            
+            let doff = u64::from_le_bytes([
+                data[*offset],
+                data[*offset + 1],
+                data[*offset + 2],
+                data[*offset + 3],
+                data[*offset + 4],
+                data[*offset + 5],
+                data[*offset + 6],
+                data[*offset + 7],
+            ]);
+            *offset += 8;
+            
+            (align, doff)
+        } else {
+            // v2 defaults: 32-byte alignment, no data_offset
+            (32u32, 0u64)
+        };
 
-        Ok(Self { magic, version, tensor_count, metadata_kv_count, alignment })
+        Ok(Self { magic, version, tensor_count, metadata_kv_count, alignment, data_offset })
     }
 }
 
