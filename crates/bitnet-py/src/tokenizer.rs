@@ -23,15 +23,16 @@ impl PyTokenizer {
 
     fn encode(&self, text: &str, add_special_tokens: Option<bool>) -> PyResult<Vec<u32>> {
         let add_special = add_special_tokens.unwrap_or(true);
+        // For Python API compatibility, use add_special for both add_bos and add_special
         self.inner
-            .encode(text, add_special)
+            .encode(text, add_special, add_special)
             .map_err(|e| PyRuntimeError::new_err(format!("Encoding failed: {}", e)))
     }
 
-    fn decode(&self, tokens: Vec<u32>, skip_special_tokens: Option<bool>) -> PyResult<String> {
-        let skip_special = skip_special_tokens.unwrap_or(true);
+    fn decode(&self, tokens: Vec<u32>, _skip_special_tokens: Option<bool>) -> PyResult<String> {
+        // New API doesn't take skip_special_tokens parameter
         self.inner
-            .decode(&tokens, skip_special)
+            .decode(&tokens)
             .map_err(|e| PyRuntimeError::new_err(format!("Decoding failed: {}", e)))
     }
 

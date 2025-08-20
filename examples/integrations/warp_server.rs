@@ -714,11 +714,11 @@ mod tests {
     }
 
     impl bitnet_tokenizers::Tokenizer for MockTokenizer {
-        fn encode(&self, _text: &str, _add_special_tokens: bool) -> Result<Vec<u32>> {
+        fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
             Ok(vec![1, 2, 3])
         }
 
-        fn decode(&self, _tokens: &[u32], _skip_special_tokens: bool) -> Result<String> {
+        fn decode(&self, _tokens: &[u32]) -> Result<String> {
             Ok("mock decoded text".to_string())
         }
 
@@ -732,6 +732,10 @@ mod tests {
 
         fn pad_token_id(&self) -> Option<u32> {
             None
+        }
+        
+        fn token_to_piece(&self, token: u32) -> Option<String> {
+            Some(format!("<token_{}>", token))
         }
     }
 }
