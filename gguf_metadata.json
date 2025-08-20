@@ -1,0 +1,20 @@
+{
+  "general.architecture": "bitnet-b1.58",
+  "general.name": "bitnet2b",
+  "bitnet-b1.58.vocab_size": 128256,
+  "bitnet-b1.58.context_length": 4096,
+  "bitnet-b1.58.embedding_length": 2560,
+  "bitnet-b1.58.block_count": 30,
+  "bitnet-b1.58.feed_forward_length": 6912,
+  "bitnet-b1.58.rope.dimension_count": 128,
+  "bitnet-b1.58.attention.head_count": 20,
+  "bitnet-b1.58.attention.head_count_kv": 5,
+  "tokenizer.ggml.add_bos_token": true,
+  "bitnet-b1.58.attention.layer_norm_rms_epsilon": 9.999999747378752e-06,
+  "bitnet-b1.58.rope.freq_base": 500000.0,
+  "general.file_type": 40,
+  "tokenizer.ggml.model": "gpt2",
+  "tokenizer.ggml.tokens": "[128256 items]",
+  "tokenizer.ggml.scores": "Array of type 6 with 128256 elements",
+  "": 0
+}
