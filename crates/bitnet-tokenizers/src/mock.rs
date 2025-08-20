@@ -19,12 +19,12 @@ impl Default for MockTokenizer {
 }
 
 impl Tokenizer for MockTokenizer {
-    fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>> {
+    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
         // Simple character-based encoding for testing
         Ok(text.chars().map(|c| c as u32 % self.vocab_size as u32).collect())
     }
 
-    fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String> {
+    fn decode(&self, tokens: &[u32]) -> Result<String> {
         // Simple placeholder
         Ok(tokens.iter().map(|&t| ((t % 128) as u8) as char).collect())
     }
@@ -33,11 +33,7 @@ impl Tokenizer for MockTokenizer {
         self.vocab_size
     }
 
-    fn eos_token_id(&self) -> Option<u32> {
-        Some(50256)
-    }
-
-    fn pad_token_id(&self) -> Option<u32> {
-        None
+    fn token_to_piece(&self, _token: u32) -> Option<String> {
+        Some("<token>".to_string())
     }
 }

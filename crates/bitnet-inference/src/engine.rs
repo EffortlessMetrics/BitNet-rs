@@ -81,6 +81,32 @@ impl InferenceEngine {
         engine.config = config;
         Ok(engine)
     }
+    
+    /// Evaluate token IDs and return logits for deterministic comparison
+    /// This is used for cross-validation with C++ implementation
+    pub fn eval_ids(&mut self, ids: &[u32]) -> Result<Vec<f32>> {
+        // Start timing
+        let start = std::time::Instant::now();
+        
+        // Convert token IDs to internal tensor representation
+        let device = self.backend.device();
+        let input_ids = candle_core::Tensor::from_slice(
+            ids,
+            &[1, ids.len()],
+            &device,
+        )?;
+        
+        // Run forward pass through model to get logits
+        let logits_tensor = self.backend.forward(&input_ids)?;
+        
+        // Extract logits as f32 vector
+        let logits = logits_tensor.to_vec2::<f32>()?;
+        let flat_logits = logits.into_iter().flatten().collect::<Vec<f32>>();
+        
+        debug!("eval_ids: processed {} tokens in {:?}", ids.len(), start.elapsed());
+        
+        Ok(flat_logits)
+    }
 
     /// Generate text from a prompt
     #[instrument(skip(self))]
@@ -102,7 +128,7 @@ impl InferenceEngine {
 
         // Tokenize input
         let input_tokens =
-            self.tokenizer.encode(prompt, true).context("Failed to tokenize input prompt")?;
+            self.tokenizer.encode(prompt, true, true).context("Failed to tokenize input prompt")?;
 
         debug!("Input tokens: {} tokens", input_tokens.len());
 
@@ -115,7 +141,7 @@ impl InferenceEngine {
         // Decode output
         let generated_text = self
             .tokenizer
-            .decode(&generated_tokens, true)
+            .decode(&generated_tokens)
             .context("Failed to decode generated tokens")?;
 
         let duration = start_time.elapsed();
@@ -262,16 +288,17 @@ impl InferenceEngine {
 
     /// Check if generation should stop
     fn should_stop(&self, token: u32, generated_tokens: &[u32], config: &GenerationConfig) -> bool {
-        // Check for EOS token
-        if let Some(eos_token) = self.tokenizer.eos_token_id() {
-            if token == eos_token {
+        // Check for EOS token from config, fallback to tokenizer default
+        let eos_token = config.eos_token_id.or_else(|| self.tokenizer.eos_token_id());
+        if let Some(eos) = eos_token {
+            if token == eos {
                 return true;
             }
         }
 
         // Check for stop sequences
         if !config.stop_sequences.is_empty() {
-            let current_text = self.tokenizer.decode(generated_tokens, true).unwrap_or_default();
+            let current_text = self.tokenizer.decode(generated_tokens).unwrap_or_default();
             for stop_seq in &config.stop_sequences {
                 if current_text.ends_with(stop_seq) {
                     return true;

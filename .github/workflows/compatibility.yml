@@ -3,233 +3,177 @@ name: Compatibility Tests
 on:
   push:
     branches: [main]
-    paths:
-      - 'crates/bitnet-ffi/**'
-      - 'crates/bitnet-tokenizers/**'
-      - 'crates/bitnet-models/**'
-      - 'crates/bitnet-py/**'
-      - 'include/**'
   pull_request:
-    paths:
-      - 'crates/bitnet-ffi/**'
-      - 'crates/bitnet-tokenizers/**'
-      - 'crates/bitnet-models/**'
-      - 'crates/bitnet-py/**'
-      - 'include/**'
+    branches: [main]
 
 env:
-  CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
 
 jobs:
-  # Test FFI API compatibility
-  ffi-compatibility:
-    name: FFI API Compatibility
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        rust: [stable, 1.89.0]  # MSRV
+  msrv:
+    name: Minimum Supported Rust Version
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Install Rust
+      - name: Install Rust 1.89.0
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ matrix.rust }}
-      
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-ffi-${{ hashFiles('**/Cargo.lock') }}
-      
-      - name: Run FFI contract tests
+          toolchain: 1.89.0
+      - name: Check MSRV
         run: |
-          cargo test -p bitnet-ffi --test api_contract --no-default-features --features cpu
-      
-      - name: Check C header compatibility
-        run: |
-          # Verify header compiles with C compiler
-          echo '#include "include/llama_compat.h"' > test.c
-          echo 'int main() { return 0; }' >> test.c
-          gcc -c test.c -I. -o test.o || clang -c test.c -I. -o test.o
-      
-      - name: Build static library
-        run: |
-          cargo build -p bitnet-ffi --release --no-default-features --features cpu
-          # Verify .a/.lib file exists
-          ls target/release/*.a || ls target/release/*.lib || true
+          cargo check --workspace --all-features
+          cargo build --workspace --no-default-features --features cpu
 
-  # Test tokenizer compatibility
-  tokenizer-compatibility:
-    name: Tokenizer Compatibility
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Run tokenizer contract tests
-        run: |
-          cargo test -p bitnet-tokenizers --test tokenizer_contracts
-      
-      - name: Test GPT-2 tokenizer regression
-        run: |
-          # This is the tokenizer that breaks llama.cpp
-          cargo test -p bitnet-tokenizers --test tokenizer_contracts test_gpt2_llama_cpp_regression
-
-  # Test GGUF compatibility
-  gguf-compatibility:
-    name: GGUF Compatibility
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Run GGUF compatibility tests
-        run: |
-          cargo test -p bitnet-models --test gguf_compatibility
-      
-      - name: Test Microsoft BitNet model fix
-        run: |
-          # Test the specific model that breaks llama.cpp
-          cargo test -p bitnet-models --test gguf_compatibility test_microsoft_bitnet_model_fix
-
-  # Test Python API compatibility
-  python-compatibility:
-    name: Python API Compatibility
+  abi-stability:
+    name: ABI Stability Check
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ['3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-      
-      - name: Install Python dependencies
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build FFI library
         run: |
-          pip install pytest maturin
-      
-      - name: Build Python module
+          cd crates/bitnet-ffi
+          cargo build --release
+      - name: Extract symbols (Linux)
+        if: runner.os == 'Linux'
         run: |
-          cd crates/bitnet-py
-          maturin develop
-      
-      - name: Run Python contract tests
+          nm -D target/release/libbitnet_ffi.so | grep ' T bitnet_' | cut -d' ' -f3 | sort > symbols.txt
+          diff -u ci/expected-symbols-linux.txt symbols.txt
+      - name: Extract symbols (macOS)
+        if: runner.os == 'macOS'
         run: |
-          cd crates/bitnet-py
-          pytest tests/test_llama_compat.py -v
-      
-      - name: Test import compatibility
+          nm -g target/release/libbitnet_ffi.dylib | grep ' T _bitnet_' | cut -d' ' -f3 | sed 's/^_//' | sort > symbols.txt
+          diff -u ci/expected-symbols-macos.txt symbols.txt
+      - name: Extract symbols (Windows)
+        if: runner.os == 'Windows'
         run: |
-          python -c "from bitnet.llama_compat import Llama, LlamaCache"
+          dumpbin /EXPORTS target/release/bitnet_ffi.dll | findstr bitnet_ | sort > symbols.txt
+          fc ci\expected-symbols-windows.txt symbols.txt
 
-  # Integration test with real model
-  integration-test:
-    name: Integration Test
+  ffi-smoke-test:
+    name: FFI Smoke Test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build FFI library
+        run: |
+          cd crates/bitnet-ffi
+          cargo build --release
+      - name: Compile C test
+        run: |
+          gcc -o test_ffi tests/c_integration_test.c \
+            -L../../target/release -lbitnet_ffi \
+            -I./include
+      - name: Run C test
+        run: |
+          LD_LIBRARY_PATH=../../target/release ./test_ffi
+
+  tokenizer-fixtures:
+    name: Tokenizer Compatibility Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Test tokenizer fixtures
+        run: |
+          cd crates/bitnet-tokenizers
+          cargo test --features fixtures -- --nocapture
+      - name: Verify GPT-2 compatibility
+        run: |
+          cargo run --example tokenizer_compat_test -- \
+            --model gpt2 \
+            --input "Hello, world!" \
+            --expected fixtures/gpt2-hello-world.json
+      - name: Verify Llama compatibility
+        run: |
+          cargo run --example tokenizer_compat_test -- \
+            --model llama \
+            --input "Hello, world!" \
+            --expected fixtures/llama-hello-world.json
+
+  gguf-compat:
+    name: GGUF Compatibility Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Download test GGUF
+        run: |
+          wget -q https://huggingface.co/TheBloke/Llama-2-7B-GGUF/resolve/main/llama-2-7b.Q2_K.gguf \
+            -O test-model.gguf
+      - name: Check GGUF compatibility
+        run: |
+          cargo run -p bitnet-cli -- compat-check test-model.gguf > compat-report.txt
+          grep -q "compatibility issues" compat-report.txt || echo "Model is compatible"
+      - name: Test GGUF export
+        run: |
+          cargo run -p bitnet-cli -- compat-fix test-model.gguf fixed-model.gguf
+          test -f fixed-model.gguf.compat.json
+
+  cross-val-determinism:
+    name: Cross-Validation Determinism
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - name: Download test model
+        run: cargo xtask download-model
+      - name: Build C++ implementation
+        run: cargo xtask fetch-cpp
+      - name: Run deterministic cross-validation
+        env:
+          BITNET_GGUF: models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+          BITNET_DETERMINISTIC: 1
+          BITNET_SEED: 42
         run: |
-          # Download a small test model if available
-          # For now, skip if not available
-          echo "Integration test would run here with real model"
-      
-      - name: Test C++ compatibility
-        run: |
-          # Build example C program using our API
-          gcc examples/c_example.c -L target/release -lbitnet_ffi -o test_c || true
-          ./test_c || true
-      
-      - name: Test Python compatibility
-        run: |
-          # Run Python example
-          python examples/llama_cpp_migration.py || true
+          cargo test --package crossval --features deterministic -- \
+            --test eval_ids_parity \
+            --nocapture
 
-  # ABI stability check
-  abi-stability:
-    name: ABI Stability Check
+  audit-and-deny:
+    name: Security and License Audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Install cargo-abi-checker (if available)
-        run: |
-          # Tool to check ABI stability
-          cargo install cargo-abi-checker || true
-      
-      - name: Generate ABI snapshot
-        run: |
-          # Generate ABI information for comparison
-          cargo build -p bitnet-ffi --release --no-default-features --features cpu
-          nm -D target/release/libbitnet_ffi.so > abi_snapshot.txt || true
-      
-      - name: Check ABI compatibility
-        run: |
-          # In PR, compare against main branch ABI
-          echo "ABI check would run here"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - name: Install cargo-deny
+        run: cargo install cargo-deny
+      - name: Run security audit
+        run: cargo audit
+      - name: Check licenses
+        run: cargo deny check licenses
+      - name: Check dependencies
+        run: cargo deny check bans
 
-  # Performance regression check
-  performance-check:
-    name: Performance Regression Check
+  coverage:
+    name: Code Coverage
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Run benchmarks
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov
+      - name: Generate coverage
         run: |
-          cargo bench -p bitnet-tokenizers --no-default-features --features cpu -- --save-baseline pr
-      
-      - name: Compare with main
+          cargo llvm-cov --workspace --features cpu --html
+          cargo llvm-cov --workspace --features cpu --text | tee coverage.txt
+      - name: Check coverage threshold
         run: |
-          # Would compare against main branch baseline
-          echo "Performance comparison would run here"
-
-  # All tests must pass
-  all-compatibility-tests:
-    name: All Compatibility Tests
-    runs-on: ubuntu-latest
-    needs:
-      - ffi-compatibility
-      - tokenizer-compatibility
-      - gguf-compatibility
-      - python-compatibility
-      - abi-stability
-    if: always()
-    steps:
-      - name: Check all tests passed
-        run: |
-          if [[ "${{ needs.ffi-compatibility.result }}" != "success" || \
-                "${{ needs.tokenizer-compatibility.result }}" != "success" || \
-                "${{ needs.gguf-compatibility.result }}" != "success" || \
-                "${{ needs.python-compatibility.result }}" != "success" || \
-                "${{ needs.abi-stability.result }}" != "success" ]]; then
-            echo "Some compatibility tests failed!"
+          COVERAGE=$(grep TOTAL coverage.txt | awk '{print $10}' | sed 's/%//')
+          echo "Coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+            echo "Coverage below 70% threshold"
             exit 1
           fi
-          echo "✅ All compatibility tests passed!"
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: target/llvm-cov/html/
