@@ -20,6 +20,7 @@ bitnet-common = { path = "../bitnet-common" }
 bitnet-models = { path = "../bitnet-models" }
 bitnet-inference = { path = "../bitnet-inference" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers" }
+bitnet-compat = { path = "../bitnet-compat" }
 anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true
@@ -27,6 +28,7 @@ serde_json.workspace = true
 num_cpus = "1.16"
 candle-core.workspace = true
 futures.workspace = true
+log = "0.4"
 
 # Optional CUDA support
 cudarc = { workspace = true, optional = true }

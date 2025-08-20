@@ -1,10 +1,11 @@
 // llama.cpp compatible C API for drop-in replacement
 #![allow(non_camel_case_types)]
 
-use std::ffi::{CStr, CString};
+use std::ffi::CStr;
 use std::os::raw::{c_char, c_float, c_int, c_void};
 use std::ptr;
 use std::slice;
+use std::sync::Arc;
 use log::{debug, error, warn};
 
 use bitnet_inference::{InferenceEngine, GenerationConfig};
@@ -15,8 +16,8 @@ use bitnet_common::Device;
 /// Opaque model handle - matches llama_model*
 #[repr(C)]
 pub struct llama_model {
-    model: Box<Model>,
-    tokenizer: Box<dyn Tokenizer>,
+    model: Arc<dyn Model>,
+    tokenizer: Arc<dyn Tokenizer>,
     device: Device,
 }
 
@@ -68,7 +69,7 @@ pub struct llama_context_params {
 }
 
 /// Load model from file - 100% compatible with llama_load_model_from_file
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn llama_load_model_from_file(
     path_model: *const c_char,
     params: llama_model_params,
@@ -106,25 +107,16 @@ pub extern "C" fn llama_load_model_from_file(
     };
 
     // Load model with auto-fix for compatibility
-    let model = match Model::load_with_auto_fix(path, device.clone()) {
+    let model = match fix_and_load_model(path, device.clone()) {
         Ok(m) => m,
         Err(e) => {
             error!("Failed to load model: {}", e);
-            
-            // Try compatibility fixes
-            warn!("Attempting compatibility fixes...");
-            match fix_and_load_model(path, device.clone()) {
-                Ok(m) => m,
-                Err(e) => {
-                    error!("Compatibility fixes failed: {}", e);
-                    return ptr::null_mut();
-                }
-            }
+            return ptr::null_mut();
         }
     };
 
     // Create universal tokenizer that handles all formats
-    let tokenizer = match create_universal_tokenizer(&model) {
+    let tokenizer = match create_universal_tokenizer(model.as_ref()) {
         Ok(t) => t,
         Err(e) => {
             error!("Failed to create tokenizer: {}", e);
@@ -133,7 +125,7 @@ pub extern "C" fn llama_load_model_from_file(
     };
 
     let llama_model = Box::new(llama_model {
-        model: Box::new(model),
+        model,
         tokenizer,
         device,
     });
@@ -142,7 +134,7 @@ pub extern "C" fn llama_load_model_from_file(
 }
 
 /// Free model - matches llama_free_model
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn llama_free_model(model: *mut llama_model) {
     if !model.is_null() {
         unsafe {
@@ -152,7 +144,7 @@ pub extern "C" fn llama_free_model(model: *mut llama_model) {
 }
 
 /// Create context from model - matches llama_new_context_with_model
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn llama_new_context_with_model(
     model: *mut llama_model,
     params: llama_context_params,
@@ -162,16 +154,8 @@ pub extern "C" fn llama_new_context_with_model(
     }
 
     let model = unsafe { &*model };
-    
-    let config = GenerationConfig {
-        max_tokens: params.n_ctx as usize,
-        temperature: 1.0,
-        top_p: 1.0,
-        top_k: 0,
-        seed: Some(params.seed as u64),
-    };
 
-    match InferenceEngine::new(model.model.as_ref().clone(), config) {
+    match InferenceEngine::new(model.model.clone(), model.tokenizer.clone(), model.device.clone()) {
         Ok(engine) => {
             let vocab_size = model.tokenizer.vocab_size();
             let ctx = Box::new(llama_context {
@@ -189,7 +173,7 @@ pub extern "C" fn llama_new_context_with_model(
 }
 
 /// Free context - matches llama_free
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn llama_free(ctx: *mut llama_context) {
     if !ctx.is_null() {
         unsafe {
@@ -201,7 +185,7 @@ pub extern "C" fn llama_free(ctx: *mut llama_context) {
 /// Tokenize text - 100% compatible with llama_tokenize
 /// Returns number of tokens, or negative value on error
 /// If return value > n_max_tokens, call again with larger buffer
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn llama_tokenize(
     model: *const llama_model,
     text: *const c_char,
@@ -271,7 +255,7 @@ pub extern "C" fn llama_tokenize(
 }
 
 /// Evaluate tokens - matches llama_eval
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn llama_eval(
     ctx: *mut llama_context,
     tokens: *const c_int,
@@ -287,8 +271,9 @@ pub extern "C" fn llama_eval(
     let tokens = unsafe { slice::from_raw_parts(tokens, n_tokens as usize) };
     let token_ids: Vec<u32> = tokens.iter().map(|&t| t as u32).collect();
 
-    // Run inference
-    match ctx.engine.forward(&token_ids) {
+    // Run inference - need to block on async
+    use futures::executor::block_on;
+    match block_on(ctx.engine.eval_ids(&token_ids)) {
         Ok(logits) => {
             // Store logits for retrieval
             ctx.last_logits = logits;
@@ -302,7 +287,7 @@ pub extern "C" fn llama_eval(
 }
 
 /// Get logits pointer - matches llama_get_logits
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn llama_get_logits(ctx: *mut llama_context) -> *mut c_float {
     if ctx.is_null() {
         return ptr::null_mut();
@@ -313,7 +298,7 @@ pub extern "C" fn llama_get_logits(ctx: *mut llama_context) -> *mut c_float {
 }
 
 /// Get logits for specific token - matches llama_get_logits_ith
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn llama_get_logits_ith(ctx: *mut llama_context, i: c_int) -> *mut c_float {
     if ctx.is_null() || i < 0 {
         return ptr::null_mut();
@@ -330,7 +315,7 @@ pub extern "C" fn llama_get_logits_ith(ctx: *mut llama_context, i: c_int) -> *mu
 }
 
 /// Get vocabulary size
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn llama_n_vocab(model: *const llama_model) -> c_int {
     if model.is_null() {
         return 0;
@@ -341,20 +326,20 @@ pub extern "C" fn llama_n_vocab(model: *const llama_model) -> c_int {
 }
 
 /// Get context size
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn llama_n_ctx(ctx: *const llama_context) -> c_int {
     if ctx.is_null() {
         return 0;
     }
     
     let ctx = unsafe { &*ctx };
-    ctx.engine.config().max_tokens as c_int
+    ctx.engine.model_config().model.max_position_embeddings as c_int
 }
 
 // Helper functions
 
-fn fix_and_load_model(path: &str, device: Device) -> anyhow::Result<Model> {
-    use bitnet_models::formats::gguf::GgufCompatibilityFixer;
+fn fix_and_load_model(path: &str, device: Device) -> anyhow::Result<Arc<dyn Model>> {
+    use bitnet_compat::gguf_fixer::GgufCompatibilityFixer;
     
     // Diagnose issues
     let fixes = GgufCompatibilityFixer::diagnose(path)?;
@@ -367,23 +352,35 @@ fn fix_and_load_model(path: &str, device: Device) -> anyhow::Result<Model> {
         
         // Create fixed version
         let fixed_path = format!("{}.fixed", path);
-        GgufCompatibilityFixer::apply_fixes(path, &fixed_path)?;
+        GgufCompatibilityFixer::export_fixed(path, &fixed_path)?;
         
         // Load fixed model
-        Model::load(&fixed_path, device)
+        use bitnet_models::formats::gguf::GgufLoader;
+        use bitnet_models::loader::{FormatLoader, LoadConfig};
+        use std::path::Path;
+        let loader = GgufLoader;
+        loader.load(Path::new(&fixed_path), &device, &LoadConfig::default())
+            .map_err(|e| anyhow::anyhow!("Failed to load model: {}", e))
+            .map(|m| Arc::from(m))
     } else {
-        Model::load(path, device)
+        use bitnet_models::formats::gguf::GgufLoader;
+        use bitnet_models::loader::{FormatLoader, LoadConfig};
+        use std::path::Path;
+        let loader = GgufLoader;
+        loader.load(Path::new(path), &device, &LoadConfig::default())
+            .map_err(|e| anyhow::anyhow!("Failed to load model: {}", e))
+            .map(|m| Arc::from(m))
     }
 }
 
-fn create_universal_tokenizer(model: &Model) -> anyhow::Result<Box<dyn Tokenizer>> {
+fn create_universal_tokenizer(_model: &dyn Model) -> anyhow::Result<Arc<dyn Tokenizer>> {
     use bitnet_tokenizers::{UniversalTokenizer, TokenizerConfig};
     
-    // Extract tokenizer config from model metadata
-    let config = TokenizerConfig::from_model(model)?;
+    // Create default tokenizer config
+    let config = TokenizerConfig::new();
     
     // Create tokenizer that handles GPT2, SentencePiece, etc.
     let tokenizer = UniversalTokenizer::new(config)?;
     
-    Ok(Box::new(tokenizer))
+    Ok(Arc::new(tokenizer))
 }

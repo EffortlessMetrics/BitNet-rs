@@ -611,7 +611,7 @@ impl InstrumentedTokenizer {
 }
 
 impl Tokenizer for InstrumentedTokenizer {
-    fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>, BitNetError> {
+    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>, BitNetError> {
         let mut guard = self.data_flow.lock().unwrap();
         guard.inputs_received.push(text.to_string());
         guard.encode_calls += 1;
@@ -620,7 +620,7 @@ impl Tokenizer for InstrumentedTokenizer {
         Ok((0..text.len().min(10)).map(|i| (i + 1) as u32).collect())
     }
 
-    fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String, BitNetError> {
+    fn decode(&self, tokens: &[u32]) -> Result<String, BitNetError> {
         let mut guard = self.data_flow.lock().unwrap();
         guard.decode_calls += 1;
         drop(guard);
@@ -638,6 +638,10 @@ impl Tokenizer for InstrumentedTokenizer {
 
     fn pad_token_id(&self) -> Option<u32> {
         Some(50257)
+    }
+
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        Some(format!("<token_{}>", token))
     }
 }
 struct ConfigurableModel {
@@ -686,11 +690,11 @@ impl ConfigurableTokenizer {
 }
 
 impl Tokenizer for ConfigurableTokenizer {
-    fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>, BitNetError> {
+    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>, BitNetError> {
         Ok((0..text.len().min(10)).map(|i| (i + 1) as u32).collect())
     }
 
-    fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String, BitNetError> {
+    fn decode(&self, tokens: &[u32]) -> Result<String, BitNetError> {
         Ok(format!("generated_text_{}_tokens", tokens.len()))
     }
 
@@ -704,6 +708,10 @@ impl Tokenizer for ConfigurableTokenizer {
 
     fn pad_token_id(&self) -> Option<u32> {
         Some(self.vocab_size as u32)
+    }
+
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        Some(format!("<token_{}>", token))
     }
 }
 

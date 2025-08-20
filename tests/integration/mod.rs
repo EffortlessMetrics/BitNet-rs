@@ -104,7 +104,7 @@ impl MockTokenizer {
 }
 
 impl Tokenizer for MockTokenizer {
-    fn encode(&self, text: &str, _add_special_tokens: bool) -> Result<Vec<u32>, BitNetError> {
+    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>, BitNetError> {
         *self.encode_calls.lock().unwrap() += 1;
 
         // Simple mock encoding: convert text length to tokens
@@ -112,7 +112,7 @@ impl Tokenizer for MockTokenizer {
         Ok(tokens)
     }
 
-    fn decode(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String, BitNetError> {
+    fn decode(&self, tokens: &[u32]) -> Result<String, BitNetError> {
         *self.decode_calls.lock().unwrap() += 1;
 
         // Simple mock decoding: create text based on token count
@@ -129,6 +129,10 @@ impl Tokenizer for MockTokenizer {
 
     fn pad_token_id(&self) -> Option<u32> {
         Some(50257)
+    }
+
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        Some(format!("<token_{}>", token))
     }
 }
 
