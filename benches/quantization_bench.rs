@@ -5,7 +5,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer, QuantizerTrait};
-use candle_core::{Device, Tensor};
+use bitnet_common::{BitNetTensor, Device};
 
 fn generate_test_data(size: usize) -> Vec<f32> {
     (0..size)
@@ -18,7 +18,7 @@ fn bench_i2s_quantization(c: &mut Criterion) {
     
     for size in [1024, 4096, 16384, 65536].iter() {
         let data = generate_test_data(*size);
-        let tensor = Tensor::from_vec(data.clone(), &[*size], &Device::Cpu).unwrap();
+        let tensor = BitNetTensor::from_slice(&data, &[*size], &Device::Cpu).unwrap();
         
         group.throughput(Throughput::Elements(*size as u64));
         
@@ -48,7 +48,7 @@ fn bench_tl1_quantization(c: &mut Criterion) {
     
     for size in [1024, 4096, 16384, 65536].iter() {
         let data = generate_test_data(*size);
-        let tensor = Tensor::from_vec(data.clone(), &[*size], &Device::Cpu).unwrap();
+        let tensor = BitNetTensor::from_slice(&data, &[*size], &Device::Cpu).unwrap();
         
         group.throughput(Throughput::Elements(*size as u64));
         
@@ -78,7 +78,7 @@ fn bench_tl2_quantization(c: &mut Criterion) {
     
     for size in [1024, 4096, 16384, 65536].iter() {
         let data = generate_test_data(*size);
-        let tensor = Tensor::from_vec(data.clone(), &[*size], &Device::Cpu).unwrap();
+        let tensor = BitNetTensor::from_slice(&data, &[*size], &Device::Cpu).unwrap();
         
         group.throughput(Throughput::Elements(*size as u64));
         
@@ -107,7 +107,7 @@ fn bench_simd_vs_scalar(c: &mut Criterion) {
     let mut group = c.benchmark_group("simd_vs_scalar");
     let size = 16384;
     let data = generate_test_data(size);
-    let tensor = Tensor::from_vec(data.clone(), &[size], &Device::Cpu).unwrap();
+    let tensor = BitNetTensor::from_slice(&data, &[size], &Device::Cpu).unwrap();
     
     group.throughput(Throughput::Elements(size as u64));
     
