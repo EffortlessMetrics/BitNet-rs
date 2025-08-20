@@ -140,3 +140,49 @@ We maintain strict compatibility with llama.cpp:
 - `BITNET_CPP_DIR`: Path to C++ implementation
 - `HF_TOKEN`: Hugging Face token for private repos
 - `BITNET_DETERMINISTIC`: Enable deterministic mode for testing
+- `BITNET_SEED`: Set seed for reproducible runs
+- `RAYON_NUM_THREADS`: Control CPU parallelism
+
+## Repository Contracts (for Claude)
+
+### Safe Operations
+- **Default features are empty** → always pass `--no-default-features --features cpu|cuda`
+- **Never mutate large binaries or GGUF in place** → use `bitnet-compat export-fixed` for new files
+- **Prefer `xtask` over ad-hoc scripts** for downloads/crossval/build steps
+- **Print commands before long operations** → use `--dry-run` where available
+- **No destructive cleanup** without confirmation → avoid `rm -rf target/` or `~/.cache/bitnet_cpp/`
+
+### Determinism & Environment
+- `BITNET_DETERMINISTIC=1` + `BITNET_SEED=42` → force stable runs
+- `RAYON_NUM_THREADS=1` → single-threaded CPU determinism
+- `RUSTFLAGS="-C target-cpu=native"` → local perf builds (not CI)
+- macOS FFI: set `DYLD_LIBRARY_PATH=target/release`
+- Linux FFI: set `LD_LIBRARY_PATH=target/release`
+
+## Fast Recipes
+
+```bash
+# Quick compile & test (CPU, MSRV-accurate)
+rustup run 1.89.0 cargo test --workspace --no-default-features --features cpu
+
+# Full cross-validation (deterministic)
+export BITNET_GGUF="$PWD/models/bitnet/ggml-model-i2_s.gguf"
+export BITNET_DETERMINISTIC=1 BITNET_SEED=42
+cargo run -p xtask -- full-crossval
+
+# Check model compatibility (read-only)
+cargo run -p bitnet-cli -- compat-check "$BITNET_GGUF"
+
+# Export fixed GGUF safely (non-destructive)
+cargo run -p bitnet-cli -- compat-fix "$BITNET_GGUF" fixed.gguf
+cat fixed.gguf.compat.json   # audit stamp
+
+# FFI smoke test (build + run)
+cargo build -p bitnet-ffi --release --no-default-features --features cpu
+export LD_LIBRARY_PATH=target/release  # or DYLD_LIBRARY_PATH on macOS
+./scripts/ffi_smoke.sh
+
+# Quick lint check
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features -- -D warnings
+```
