@@ -1,4 +1,5 @@
 //! GGUF type definitions
+//! Implements v2/v3 header parsing with alignment/data_offset sanitization.
 
 use bitnet_common::{BitNetError, ModelError, Result};
 
@@ -80,13 +81,20 @@ impl GgufHeader {
                 }));
             }
             
-            let align = u32::from_le_bytes([
+            let mut align = u32::from_le_bytes([
                 data[*offset],
                 data[*offset + 1],
                 data[*offset + 2],
                 data[*offset + 3],
             ]);
             *offset += 4;
+            
+            // Validate alignment (sanitize to a safe default).
+            // GGUF requires power-of-two alignment; we clamp invalid values to 32.
+            if align == 0 || !align.is_power_of_two() {
+                tracing::warn!("GGUF v{}: header alignment {} is invalid; forcing 32", version, align);
+                align = 32;
+            }
             
             let doff = u64::from_le_bytes([
                 data[*offset],
