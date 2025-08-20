@@ -1,8 +1,15 @@
 //! GGUF type definitions
-//! Implements v2/v3 header parsing with alignment/data_offset sanitization.
+//!
+//! Supports GGUF v2 and v3 headers. For v3, `alignment` (u32) and `data_offset` (u64)
+//! are read from the header and sanitized:
+//! - `alignment` is clamped to 32 if it is 0 or not a power of two.
+//! - `data_offset` is only *used* by the reader if it is ≥ end-of-KV, ≤ file size,
+//!   and aligned; otherwise the reader falls back to `align_up(kv_end, alignment)`.
 
 use bitnet_common::{BitNetError, ModelError, Result};
 
+/// Returns the smallest `x >= off` such that `x % align == 0`.
+/// Safe for any `align >= 1`.
 #[inline]
 pub fn align_up(off: usize, align: usize) -> usize {
     if align == 0 {
@@ -12,15 +19,19 @@ pub fn align_up(off: usize, align: usize) -> usize {
     (off + align - 1) & !(align - 1)
 }
 
-/// GGUF file header
+/// Parsed GGUF header (v2/v3).
+/// - For v2, `alignment = 32`, `data_offset = 0`.
+/// - For v3, both are read from the header; invalid `alignment` is clamped to 32.
 #[derive(Debug, Clone)]
 pub struct GgufHeader {
     pub magic: [u8; 4],
     pub version: u32,
     pub tensor_count: u64,
     pub metadata_kv_count: u64,
-    pub alignment: u32,      // Alignment for v3+ (default 32 for v2)
-    pub data_offset: u64,    // Data offset for v3 (default 0 for v2)
+    /// Metadata/tensor alignment in bytes (always a power of two; defaults to 32).
+    pub alignment: u32,
+    /// Byte offset to tensor data for v3. Zero for v2 or if absent.
+    pub data_offset: u64
 }
 
 impl GgufHeader {
@@ -90,7 +101,7 @@ impl GgufHeader {
             *offset += 4;
             
             // Validate alignment (sanitize to a safe default).
-            // GGUF requires power-of-two alignment; we clamp invalid values to 32.
+            // GGUF requires power-of-two alignment; clamp invalid values to 32.
             if align == 0 || !align.is_power_of_two() {
                 tracing::warn!("GGUF v{}: header alignment {} is invalid; forcing 32", version, align);
                 align = 32;

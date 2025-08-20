@@ -100,6 +100,13 @@ We guarantee to load:
   - GPT-2 tokenizer without pre-tokenizer field
   - Vocabulary size mismatches (with warning)
 
+### GGUF Format Support
+
+- **GGUF v2 and v3 headers**: BitNet.rs accepts both versions with defensive parsing
+  - For v3, invalid `alignment` values (0 or non-power-of-two) are clamped to 32
+  - For v3, invalid `data_offset` values (past EOF, misaligned, or backwards) fall back to `align_up(kv_end, alignment)`
+  - Maintains full backward compatibility with v2 files
+
 ## 🧪 Test Coverage Requirements
 
 All compatibility features are protected by tests:
