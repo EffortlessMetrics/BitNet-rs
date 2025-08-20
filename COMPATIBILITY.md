@@ -72,7 +72,7 @@ We guarantee to handle ALL of the following tokenizer types:
 
 ### Breaking llama.cpp Compatibility
 
-We **explicitly guarantee** to handle tokenizers that break llama.cpp:
+We **explicitly guarantee** to handle some tokenizers that break llama.cpp:
 
 ```yaml
 # This configuration breaks llama.cpp but MUST work in BitNet.rs
