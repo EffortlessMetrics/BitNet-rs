@@ -325,16 +325,12 @@ impl MockTokenizer {
 }
 
 impl bitnet_tokenizers::Tokenizer for MockTokenizer {
-    fn encode(&self, text: &str, _add_special_tokens: bool) -> bitnet_common::Result<Vec<u32>> {
+    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> bitnet_common::Result<Vec<u32>> {
         // Simple mock: convert each byte to u32
         Ok(text.bytes().map(|b| b as u32).collect())
     }
 
-    fn decode(
-        &self,
-        token_ids: &[u32],
-        _skip_special_tokens: bool,
-    ) -> bitnet_common::Result<String> {
+    fn decode(&self, token_ids: &[u32]) -> bitnet_common::Result<String> {
         // Simple mock: convert each u32 back to byte
         let bytes: Vec<u8> = token_ids.iter().map(|&id| id as u8).collect();
         String::from_utf8(bytes).map_err(|e| {
@@ -344,6 +340,10 @@ impl bitnet_tokenizers::Tokenizer for MockTokenizer {
 
     fn vocab_size(&self) -> usize {
         256 // Mock: support all byte values
+    }
+    
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        Some(format!("<token_{}>", token))
     }
 
     fn eos_token_id(&self) -> Option<u32> {
