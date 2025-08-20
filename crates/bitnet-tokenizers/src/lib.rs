@@ -2,6 +2,7 @@
 
 pub mod loader;
 mod mock;
+pub mod universal;
 
 use bitnet_common::Result;
 use std::path::Path;
@@ -9,14 +10,41 @@ use std::sync::Arc;
 
 pub use loader::load_tokenizer;
 pub use mock::MockTokenizer;
+pub use universal::UniversalTokenizer;
+
+/// Configuration for tokenizer initialization
+#[derive(Debug, Clone, Default)]
+pub struct TokenizerConfig {
+    pub model_type: String,
+    pub vocab_size: usize,
+    pub pre_tokenizer: Option<String>,
+    pub add_bos: bool,
+    pub add_eos: bool,
+    pub add_space_prefix: bool,
+    pub byte_fallback: bool,
+    pub bos_token_id: Option<u32>,
+    pub eos_token_id: Option<u32>,
+    pub pad_token_id: Option<u32>,
+    pub unk_token_id: Option<u32>,
+    pub vocabulary: Option<Vec<(String, f32)>>,
+    pub bpe_merges: Option<Vec<String>>,
+}
+
+impl TokenizerConfig {
+    /// Extract tokenizer config from a model
+    pub fn from_model(model: &bitnet_models::Model) -> Result<Self> {
+        // This would extract metadata from the model
+        // For now, return a default config
+        Ok(Self::default())
+    }
+}
 
 /// Tokenizer trait
 pub trait Tokenizer: Send + Sync {
-    fn encode(&self, text: &str, add_special_tokens: bool) -> Result<Vec<u32>>;
-    fn decode(&self, tokens: &[u32], skip_special_tokens: bool) -> Result<String>;
+    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>>;
+    fn decode(&self, tokens: &[u32]) -> Result<String>;
     fn vocab_size(&self) -> usize;
-    fn eos_token_id(&self) -> Option<u32>;
-    fn pad_token_id(&self) -> Option<u32>;
+    fn token_to_piece(&self, token: u32) -> Option<String>;
 }
 
 /// Basic tokenizer implementation
@@ -51,7 +79,7 @@ impl Default for BasicTokenizer {
 }
 
 impl Tokenizer for BasicTokenizer {
-    fn encode(&self, text: &str, add_special_tokens: bool) -> Result<Vec<u32>> {
+    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
         if text.is_empty() {
             return Ok(Vec::new());
         }
@@ -61,7 +89,7 @@ impl Tokenizer for BasicTokenizer {
         let mut tokens: Vec<u32> = words.iter().enumerate().map(|(i, _)| i as u32).collect();
 
         // Add special tokens if requested
-        if add_special_tokens {
+        if add_special {
             if let Some(eos_id) = self.eos_token_id {
                 tokens.push(eos_id);
             }
@@ -70,42 +98,22 @@ impl Tokenizer for BasicTokenizer {
         Ok(tokens)
     }
 
-    fn decode(&self, tokens: &[u32], skip_special_tokens: bool) -> Result<String> {
+    fn decode(&self, tokens: &[u32]) -> Result<String> {
         if tokens.is_empty() {
             return Ok(String::new());
         }
 
-        let mut filtered_tokens = tokens.to_vec();
-
-        // Filter special tokens if requested
-        if skip_special_tokens {
-            if let Some(eos_id) = self.eos_token_id {
-                filtered_tokens.retain(|&token| token != eos_id);
-            }
-            if let Some(pad_id) = self.pad_token_id {
-                filtered_tokens.retain(|&token| token != pad_id);
-            }
-        }
-
-        // Handle case where all tokens were filtered out
-        if filtered_tokens.is_empty() {
-            return Ok(String::new());
-        }
-
         // Simple placeholder implementation - in real tokenizer this would map back to text
-        Ok(format!("Generated text from {} tokens", filtered_tokens.len()))
+        Ok(format!("Generated text from {} tokens", tokens.len()))
     }
 
     fn vocab_size(&self) -> usize {
         self.vocab_size
     }
 
-    fn eos_token_id(&self) -> Option<u32> {
-        self.eos_token_id
-    }
-
-    fn pad_token_id(&self) -> Option<u32> {
-        self.pad_token_id
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        // Simple implementation
+        Some(format!("<token_{}>", token))
     }
 }
 
