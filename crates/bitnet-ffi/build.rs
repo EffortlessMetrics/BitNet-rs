@@ -2,22 +2,39 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    // Generate pkg-config file
+    let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     
     // Tell cargo to link with required libraries
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=../../include/llama_compat.h");
+    println!("cargo:rerun-if-changed=cbindgen.toml");
+    println!("cargo:rerun-if-changed=src/");
+    
+    // Generate header with cbindgen if available
+    if let Ok(config) = cbindgen::Config::from_file("cbindgen.toml") {
+        let output_dir = PathBuf::from(&crate_dir).join("include");
+        std::fs::create_dir_all(&output_dir).unwrap();
+        
+        cbindgen::Builder::new()
+            .with_crate(&crate_dir)
+            .with_config(config)
+            .generate()
+            .expect("Unable to generate bindings")
+            .write_to_file(output_dir.join("bitnet_llama_compat.h"));
+    }
     
     // Copy header to output
     let include_dir = out_dir.join("include");
     std::fs::create_dir_all(&include_dir).unwrap();
     
-    // Copy our compatibility header
-    std::fs::copy(
-        "../../include/llama_compat.h",
-        include_dir.join("llama_compat.h")
-    ).unwrap();
+    // Copy generated header if it exists
+    let generated_header = PathBuf::from(&crate_dir).join("include/bitnet_llama_compat.h");
+    if generated_header.exists() {
+        std::fs::copy(
+            &generated_header,
+            include_dir.join("bitnet_llama_compat.h")
+        ).unwrap();
+    }
     
     // Generate pkg-config file for C/C++ users
     let pkg_config = format!(

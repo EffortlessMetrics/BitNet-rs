@@ -1,40 +1,25 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude (claude.ai) when working with the BitNet.rs codebase.
 
 ## Build and Development Commands
 
 ### Core Development Commands
 ```bash
-# Build the project with CPU support (no default features)
+# Build with CPU support (no default features)
 cargo build --release --no-default-features --features cpu
 
 # Build with GPU/CUDA support
 cargo build --release --no-default-features --features cuda
 
-# Build with both CPU and GPU
-cargo build --release --no-default-features --features "cpu,cuda"
-
-# Build with all optimizations
-cargo build --release --features full
-
-# Run all tests (fast, Rust-only)
+# Run tests (fast, Rust-only)
 cargo test --workspace --no-default-features --features cpu
-
-# Run GPU tests
-cargo test -p bitnet-kernels --no-default-features --features cuda
-
-# Run tests for specific crate
-cargo test -p bitnet-kernels --no-default-features --features cpu
 
 # Run benchmarks
 cargo bench --workspace --no-default-features --features cpu
 
-# Cross-validation testing (requires C++ dependencies and FFI)
+# Cross-validation testing (requires C++ dependencies)
 cargo test --workspace --features "cpu,ffi,crossval"
-
-# Test CUDA functionality
-cargo run -p bitnet-kernels --example cuda_smoke --no-default-features --features cuda
 ```
 
 ### Code Quality Commands
@@ -48,171 +33,110 @@ cargo clippy --all-targets --all-features -- -D warnings
 # Security audit
 cargo audit
 
-# Check for outdated dependencies
-cargo outdated
-
-# Find unused dependencies
-cargo machete
-
 # Generate code coverage
 cargo llvm-cov --workspace --features cpu --html
 ```
 
 ### Development Tools (xtask)
-
-#### Download Model - Production-Ready with Advanced Features
 ```bash
-# Download BitNet GGUF model from Hugging Face
-cargo xtask download-model  # Downloads default model
+# Download BitNet model from Hugging Face
+cargo run -p xtask -- download-model
 
-# Advanced options
-cargo xtask download-model \
-  --id microsoft/bitnet-b1.58-2B-4T-gguf \
-  --file ggml-model-i2_s.gguf \
-  --sha256 <hex> \               # Verify with SHA256
-  --rev main \                   # Pin to branch/tag/commit
-  --no-progress \                # Disable progress bar (CI-friendly)
-  --verbose \                    # Debug output
-  --base-url https://mirror.com # Use alternative repository
+# Fetch and build Microsoft BitNet C++ for cross-validation
+cargo run -p xtask -- fetch-cpp
 
-# Features:
-# ✅ Resumable downloads with smart Content-Range validation
-# ✅ 429 rate limiting with Retry-After header support
-# ✅ 304 Not Modified optimization via ETag/Last-Modified
-# ✅ Concurrent download protection (file locking)
-# ✅ Disk space validation with helpful errors
-# ✅ Path traversal protection
-# ✅ Atomic writes with fsync guarantees
-# ✅ Ctrl-C graceful handling with resume support
-# ✅ Automatic proxy support (respects HTTP[S]_PROXY)
+# Run cross-validation tests
+cargo run -p xtask -- crossval
 
-# Private repos: HF_TOKEN=xxx cargo xtask download-model
-
-```
-
-#### Other xtask Commands
-```bash
-# Fetch and build Microsoft BitNet C++ (for cross-validation)
-# Now uses official Microsoft BitNet repository!
-cargo xtask fetch-cpp  # Fetches from github.com/microsoft/BitNet.git (main branch)
-cargo xtask fetch-cpp --tag main --force --clean
-cargo xtask fetch-cpp --tag <commit-hash>  # Pin to specific commit for reproducible builds
-# ✅ Validates build artifacts and adapts to repository structure changes
-
-# Run deterministic cross-validation tests
-cargo xtask crossval  # Auto-discovers model in models/ directory
-cargo xtask crossval --model path/to/specific.gguf  # Use specific model
-cargo xtask crossval --dry-run  # Print env and command without running
-
-# Full cross-validation workflow (download + fetch + test) - ONE COMMAND!
-cargo xtask full-crossval  # Runs all three steps sequentially
-cargo xtask full-crossval --force  # Force redownload/rebuild
-# ✅ Fully integrated with official Microsoft BitNet repository
-
-# Generate test fixtures
-cargo xtask gen-fixtures --size tiny --output test-fixtures/
-cargo xtask gen-fixtures --size small --output test-fixtures/
-cargo xtask gen-fixtures --size medium --output test-fixtures/
-# ✅ Now generates realistic GGUF-like metadata and weight files
-
-# Setup cross-validation environment
-cargo xtask setup-crossval
-
-# Clean all caches (interactive with size reporting)
-cargo xtask clean-cache
-# ✅ Shows directory sizes and asks for confirmation
-# ✅ Cleans: target/, ~/.cache/bitnet_cpp/, crossval/fixtures/, models/
+# Full workflow (download + fetch + test)
+cargo run -p xtask -- full-crossval
 
 # Check feature flag consistency
-cargo xtask check-features
-
-# Run performance benchmarks
-cargo xtask benchmark --platform current
-```
-
-### Useful Cargo Aliases (defined in .cargo/config.toml)
-```bash
-cargo check-all    # Check all code
-cargo test-all     # Run all tests
-cargo quality      # Run quality checks
-cargo coverage     # Generate coverage report
-cargo crossval     # Run cross-validation tests
+cargo run -p xtask -- check-features
 ```
 
 ## High-Level Architecture
 
 ### Workspace Structure
-BitNet.rs is organized as a Rust workspace with 12 specialized crates, each serving a specific purpose:
+BitNet.rs is organized as a Rust workspace with specialized crates:
 
-#### Core Library Architecture
-- **`bitnet`** (root): Main library crate providing the unified public API. Re-exports functionality from other crates based on feature flags.
-- **`bitnet-common`**: Foundation layer with shared types (`BitNetConfig`, `BitNetError`, `Device`), traits, and utilities used across all crates.
-- **`bitnet-models`**: Model loading, format handling (GGUF, SafeTensors, HuggingFace), and model definitions.
-- **`bitnet-quantization`**: 1-bit quantization algorithms (I2_S, TL1, TL2) and dequantization logic.
-- **`bitnet-kernels`**: High-performance compute kernels with SIMD optimizations (AVX2/AVX-512/NEON) and CUDA support.
-- **`bitnet-inference`**: High-level inference engine that orchestrates model execution, generation, and streaming.
-- **`bitnet-tokenizers`**: Text tokenization and processing, supporting various tokenizer formats.
+#### Core Library
+- **`bitnet`** (root): Main library with unified public API
+- **`bitnet-common`**: Shared types, traits, and utilities
+- **`bitnet-models`**: Model loading and format handling (GGUF, SafeTensors)
+- **`bitnet-quantization`**: 1-bit quantization algorithms
+- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels
+- **`bitnet-inference`**: Inference engine with streaming support
+- **`bitnet-tokenizers`**: Universal tokenizer support
 
-#### Application Layer
-- **`bitnet-cli`**: Command-line interface for inference, conversion, and benchmarking.
-- **`bitnet-server`**: HTTP inference server with REST API endpoints.
-
-#### Language Bindings
-- **`bitnet-ffi`**: C API for cross-language interoperability.
-- **`bitnet-py`**: Python bindings via PyO3.
-- **`bitnet-wasm`**: WebAssembly bindings for browser deployment.
+#### Compatibility Layer
+- **`bitnet-compat`**: GGUF compatibility fixes and diagnostics
+- **`bitnet-ffi`**: C API for llama.cpp drop-in replacement
+- **`bitnet-py`**: Python bindings compatible with llama-cpp-python
 
 #### Cross-Validation
-- **`bitnet-sys`**: FFI bindings to original C++ implementation for comparison.
-- **`crossval`**: Cross-validation framework for testing against C++ implementation.
+- **`crossval`**: Framework for testing against C++ implementation
+- Tests use `BITNET_GGUF` or `CROSSVAL_GGUF` environment variable for model path
 
 ### Key Design Patterns
 
-1. **Feature-Gated Architecture**: The root `bitnet` crate uses feature flags to conditionally include functionality, allowing users to minimize binary size and dependencies.
-
-2. **Zero-Copy Operations**: Models are memory-mapped when possible, and tensor operations avoid unnecessary allocations through careful lifetime management.
-
-3. **SIMD Abstraction**: The kernels crate provides a unified interface over platform-specific SIMD instructions, with runtime CPU feature detection.
-
-4. **Async/Await**: The inference engine uses Tokio for async operations, enabling efficient batch processing and streaming generation.
-
-5. **Cross-Validation**: The `crossval` crate allows systematic comparison with the original C++ implementation to ensure correctness and measure performance improvements.
-
-### Performance Optimizations
-
-- **Compile-time optimizations**: Heavy use of const generics and inline hints
-- **Memory layout**: Cache-friendly data structures with aligned allocations
-- **Vectorization**: Hand-tuned SIMD kernels for critical operations
-- **Parallelization**: Rayon for data parallelism, Tokio for task parallelism
-
-### Testing Strategy
-
-- **Unit tests**: Each crate has comprehensive unit tests
-- **Integration tests**: The `tests/` directory contains cross-crate integration tests  
-- **Benchmarks**: Criterion benchmarks for performance-critical code
-- **Cross-validation**: Automated testing against C++ implementation
-- **Property-based testing**: Using proptest for edge cases
+1. **Feature-Gated Architecture**: Default features are **empty** - always specify features explicitly
+2. **Zero-Copy Operations**: Memory-mapped models, careful lifetime management
+3. **SIMD Abstraction**: Unified interface over platform-specific instructions
+4. **Cross-Validation**: Systematic comparison with C++ for correctness
 
 ## Important Considerations
 
-- **MSRV**: Minimum Supported Rust Version is 1.89.0 (uses Rust 2024 edition)
-- **Feature Flags**: Default features are **empty** to prevent unwanted dependencies. You must explicitly enable features:
-  - `cpu`: CPU inference with SIMD optimizations
-  - `cuda`: NVIDIA GPU support
-  - `ffi`: C++ FFI bridge (required for cross-validation)
-  - `crossval`: Cross-validation against C++ implementation (requires `ffi`)
-- **Cross-Validation**: The `crossval` feature downloads and builds the C++ implementation, significantly increasing build time. It's disabled by default.
-- **Binary Distribution**: Release builds use LTO, single codegen unit, and strip symbols for minimal binary size.
-- **CUDA Requirements**: CUDA toolkit 11.0+ and appropriate GPU drivers. Set `LD_LIBRARY_PATH` to include CUDA libraries.
+### MSRV
+Minimum Supported Rust Version: **1.89.0** (uses Rust 2024 edition)
 
-## Troubleshooting Guide
+### Feature Flags
+Default features are **empty** to prevent unwanted dependencies:
+- `cpu`: CPU inference with SIMD optimizations
+- `cuda`: NVIDIA GPU support
+- `ffi`: C++ FFI bridge (required for cross-validation)
+- `crossval`: Cross-validation against C++ (increases build time)
+
+### Testing Strategy
+- **Unit tests**: Each crate has comprehensive tests
+- **Integration tests**: Cross-crate tests in `tests/`
+- **Cross-validation**: Automated testing against C++ implementation
+- **CI gates**: Compatibility tests block on every PR
+
+### Compatibility Guarantees
+We maintain strict compatibility with llama.cpp:
+- C API functions have exact signature matches
+- Python API is drop-in compatible
+- We handle models that llama.cpp fails on (e.g., GPT-2 without pre-tokenizer)
+- See COMPATIBILITY.md for detailed guarantees
+
+## Troubleshooting
 
 ### Common Build Issues
 
-1. **FFI Linker Errors**: If you see `undefined reference to bitnet_cpp_*`, either disable FFI (`--no-default-features --features cpu`) or build the C++ library (`cargo xtask fetch-cpp`).
+1. **FFI Linker Errors**: Either disable FFI (`--no-default-features --features cpu`) or build C++ (`cargo xtask fetch-cpp`)
 
-2. **CUDA Compilation Errors**: Ensure CUDA toolkit is installed and `nvcc` is in PATH. The kernel code uses `signed char`/`unsigned char` instead of `int8_t`/`uint8_t` for compatibility.
+2. **CUDA Compilation**: Ensure CUDA toolkit is installed and `nvcc` is in PATH
 
-3. **Empty Default Features**: This is intentional to prevent accidental dependencies. Always specify features explicitly.
+3. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
 
-4. **Feature Name Changes**: Use `cuda` instead of `gpu` for GPU support.
+## Development Workflow
+
+1. **Making Changes**: Always run tests for affected crates
+2. **Before Committing**: Run `cargo fmt` and `cargo clippy`
+3. **Cross-Validation**: Run `cargo xtask crossval` for inference changes
+4. **Compatibility**: Check COMPATIBILITY.md before changing public APIs
+
+## Key Files
+
+- `COMPATIBILITY.md`: API stability guarantees and truth tables
+- `MIGRATION.md`: Step-by-step migration guide from llama.cpp
+- `.github/workflows/compatibility.yml`: CI compatibility tests
+- `crossval/`: Cross-validation test suite
+
+## Environment Variables
+
+- `BITNET_GGUF` / `CROSSVAL_GGUF`: Path to test model
+- `BITNET_CPP_DIR`: Path to C++ implementation
+- `HF_TOKEN`: Hugging Face token for private repos
+- `BITNET_DETERMINISTIC`: Enable deterministic mode for testing

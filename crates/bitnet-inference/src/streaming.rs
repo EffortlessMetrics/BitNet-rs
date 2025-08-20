@@ -92,7 +92,7 @@ impl GenerationStream {
 
         // Tokenize input
         let input_tokens =
-            tokenizer.encode(&prompt, true).context("Failed to tokenize input prompt")?;
+            tokenizer.encode(&prompt, true, true).context("Failed to tokenize input prompt")?;
 
         let mut current_tokens = input_tokens.clone();
         let mut generated_count = 0;
@@ -129,7 +129,7 @@ impl GenerationStream {
 
             // Decode token to text
             let token_text =
-                tokenizer.decode(&[next_token], true).context("Failed to decode token")?;
+                tokenizer.decode(&[next_token]).context("Failed to decode token")?;
 
             token_buffer.push(token_text);
             current_tokens.push(next_token);
@@ -204,16 +204,17 @@ impl GenerationStream {
         config: &GenerationConfig,
         tokenizer: &Arc<dyn Tokenizer>,
     ) -> bool {
-        // Check for EOS token
-        if let Some(eos_token) = tokenizer.eos_token_id() {
-            if token == eos_token {
+        // Check for EOS token from config, fallback to tokenizer default
+        let eos_token = config.eos_token_id.or_else(|| tokenizer.eos_token_id());
+        if let Some(eos) = eos_token {
+            if token == eos {
                 return true;
             }
         }
 
         // Check for stop sequences
         if !config.stop_sequences.is_empty() {
-            if let Ok(current_text) = tokenizer.decode(current_tokens, true) {
+            if let Ok(current_text) = tokenizer.decode(current_tokens) {
                 for stop_seq in &config.stop_sequences {
                     if current_text.ends_with(stop_seq) {
                         return true;
@@ -280,7 +281,8 @@ mod tests {
         fn encode(
             &self,
             _text: &str,
-            _add_special_tokens: bool,
+            _add_bos: bool,
+            _add_special: bool,
         ) -> bitnet_common::Result<Vec<u32>> {
             Ok(vec![1, 2, 3])
         }
@@ -288,7 +290,6 @@ mod tests {
         fn decode(
             &self,
             tokens: &[u32],
-            _skip_special_tokens: bool,
         ) -> bitnet_common::Result<String> {
             Ok(format!("token_{}", tokens.len()))
         }
@@ -297,12 +298,8 @@ mod tests {
             50257
         }
 
-        fn eos_token_id(&self) -> Option<u32> {
-            Some(50256)
-        }
-
-        fn pad_token_id(&self) -> Option<u32> {
-            None
+        fn token_to_piece(&self, _token: u32) -> Option<String> {
+            Some("<token>".to_string())
         }
     }
 

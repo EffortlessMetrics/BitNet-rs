@@ -31,6 +31,9 @@ futures.workspace = true
 # Optional CUDA support
 cudarc = { workspace = true, optional = true }
 
+[build-dependencies]
+cbindgen = "0.27"
+
 [dev-dependencies]
 tempfile.workspace = true
 

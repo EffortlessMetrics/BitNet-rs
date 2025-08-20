@@ -31,11 +31,9 @@ pub struct TokenizerConfig {
 }
 
 impl TokenizerConfig {
-    /// Extract tokenizer config from a model
-    pub fn from_model(model: &bitnet_models::Model) -> Result<Self> {
-        // This would extract metadata from the model
-        // For now, return a default config
-        Ok(Self::default())
+    /// Create a default config
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -45,6 +43,27 @@ pub trait Tokenizer: Send + Sync {
     fn decode(&self, tokens: &[u32]) -> Result<String>;
     fn vocab_size(&self) -> usize;
     fn token_to_piece(&self, token: u32) -> Option<String>;
+    
+    // Legacy shims for backward compatibility (default implementations)
+    /// Legacy encode method - calls new encode with sensible defaults
+    fn encode_legacy(&self, text: &str, add_special_tokens: bool) -> Result<Vec<u32>> {
+        self.encode(text, true, add_special_tokens)
+    }
+    
+    /// Legacy decode method - ignores skip_special_tokens parameter
+    fn decode_legacy(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String> {
+        self.decode(tokens)
+    }
+    
+    /// Legacy EOS token ID getter - returns None by default
+    fn eos_token_id(&self) -> Option<u32> {
+        None
+    }
+    
+    /// Legacy PAD token ID getter - returns None by default  
+    fn pad_token_id(&self) -> Option<u32> {
+        None
+    }
 }
 
 /// Basic tokenizer implementation

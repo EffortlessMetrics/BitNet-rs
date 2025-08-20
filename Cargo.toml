@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     ".",                          # Main library crate
     "crates/bitnet-common",
+    "crates/bitnet-compat",
     "crates/bitnet-models",
     "crates/bitnet-quantization",
     "crates/bitnet-kernels",

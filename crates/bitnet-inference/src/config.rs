@@ -50,6 +50,8 @@ pub struct GenerationConfig {
     pub seed: Option<u64>,
     /// Whether to skip special tokens in output
     pub skip_special_tokens: bool,
+    /// EOS token ID for stopping generation (None = use tokenizer default)
+    pub eos_token_id: Option<u32>,
 }
 
 impl Default for GenerationConfig {
@@ -63,6 +65,7 @@ impl Default for GenerationConfig {
             stop_sequences: vec![],
             seed: None,
             skip_special_tokens: true,
+            eos_token_id: None,
         }
     }
 }

@@ -164,6 +164,47 @@ from bitnet.llama_compat import Llama  # was: from llama_cpp import Llama
 # That's it! No code changes needed.
 ```
 
+## 📊 API Support Truth Table
+
+### llama.cpp C API Support Status
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| `llama_load_model_from_file` | ✓ | Full support |
+| `llama_free_model` | ✓ | Full support |
+| `llama_new_context_with_model` | ✓ | Full support |
+| `llama_free` | ✓ | Full support |
+| `llama_tokenize` | ✓ | Full support |
+| `llama_eval` | ✓ | Full support |
+| `llama_get_logits` | ✓ | Full support |
+| `llama_get_embeddings` | • | Planned for v1.1 |
+| `llama_batch_*` | • | Planned for v1.2 |
+| `llama_kv_cache_*` | • | Planned for v1.2 |
+| `llama_grammar_*` | × | Not planned (use constraints API) |
+| `llama_sampling_*` | ✓ | Full support |
+| `llama_model_quantize` | • | Planned for v1.3 |
+
+**Legend:**
+- ✓ = Fully supported
+- • = Planned/In progress
+- × = Not planned (alternative provided)
+
+### Error Code Table
+
+| Code | Meaning | llama.cpp Compatible |
+|------|---------|---------------------|
+| `0` | Success | ✓ |
+| `-1` | Generic error | ✓ |
+| `-2` | Invalid UTF-8 | ✓ |
+| `-3` | Tokenization failed | ✓ |
+| `-4` | Model not found | Extension |
+| `-5` | Model load failed | Extension |
+| `-6` | Inference failed | Extension |
+| `-7` | Out of memory | Extension |
+| `-8` | Thread safety error | Extension |
+| `-9` | Invalid model ID | Extension |
+| `-10` | Context length exceeded | Extension |
+
 ## 🏆 Compatibility Advantages
 
 BitNet.rs provides these advantages while maintaining compatibility:
@@ -186,8 +227,8 @@ BitNet.rs provides these advantages while maintaining compatibility:
 We commit to:
 
 1. **Never break existing code** that uses our compatibility layer
-2. **Always handle models** that llama.cpp fails on
-3. **Maintain or improve performance** vs llama.cpp
+2. **Always handle certain models** that llama.cpp fails on
+3. **Maintain or improve performance** vs bitnet.cpp
 4. **Keep tests passing** - CI blocks merges if compatibility breaks
 
 ## 📞 Contact
