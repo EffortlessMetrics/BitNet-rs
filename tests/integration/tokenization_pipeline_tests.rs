@@ -75,7 +75,7 @@ impl TestCase for BasicTokenizationPipelineTest {
 
             // Step 1: Direct tokenization test
             let encode_start = Instant::now();
-            let tokens = tokenizer.encode(input, true).map_err(|e| {
+            let tokens = tokenizer.encode(input, true, false).map_err(|e| {
                 TestError::execution(format!("Tokenization failed for input {}: {}", i + 1, e))
             })?;
             let encode_time = encode_start.elapsed();
@@ -91,7 +91,7 @@ impl TestCase for BasicTokenizationPipelineTest {
 
             // Step 2: Decode tokens back to text
             let decode_start = Instant::now();
-            let decoded = tokenizer.decode(&tokens, true).map_err(|e| {
+            let decoded = tokenizer.decode(&tokens).map_err(|e| {
                 TestError::execution(format!("Detokenization failed for input {}: {}", i + 1, e))
             })?;
             let decode_time = decode_start.elapsed();
@@ -213,7 +213,7 @@ impl TestCase for TokenizationAccuracyTest {
 
         debug!("Testing tokenization consistency");
         for i in 0..5 {
-            let tokens = tokenizer.encode(test_text, true).map_err(|e| {
+            let tokens = tokenizer.encode(test_text, true, false).map_err(|e| {
                 TestError::execution(format!("Tokenization failed in iteration {}: {}", i + 1, e))
             })?;
 
@@ -248,11 +248,11 @@ impl TestCase for TokenizationAccuracyTest {
         for (i, input) in test_inputs.iter().enumerate() {
             debug!("Round-trip test {}: '{}'", i + 1, input);
 
-            let tokens = tokenizer.encode(input, true).map_err(|e| {
+            let tokens = tokenizer.encode(input, true, false).map_err(|e| {
                 TestError::execution(format!("Encode failed for round-trip test {}: {}", i + 1, e))
             })?;
 
-            let decoded = tokenizer.decode(&tokens, true).map_err(|e| {
+            let decoded = tokenizer.decode(&tokens).map_err(|e| {
                 TestError::execution(format!("Decode failed for round-trip test {}: {}", i + 1, e))
             })?;
 
@@ -270,11 +270,11 @@ impl TestCase for TokenizationAccuracyTest {
         debug!("Testing tokenization parameters");
         let param_test_text = "Parameter test";
 
-        let tokens_with_special = tokenizer.encode(param_test_text, true).map_err(|e| {
+        let tokens_with_special = tokenizer.encode(param_test_text, true, true).map_err(|e| {
             TestError::execution(format!("Tokenization with special tokens failed: {}", e))
         })?;
 
-        let tokens_without_special = tokenizer.encode(param_test_text, false).map_err(|e| {
+        let tokens_without_special = tokenizer.encode(param_test_text, false, false).map_err(|e| {
             TestError::execution(format!("Tokenization without special tokens failed: {}", e))
         })?;
 
@@ -396,13 +396,13 @@ impl TestCase for SpecialTokenHandlingTest {
 
             // Test decoding with EOS token
             let tokens_with_eos = vec![1, 2, 3, eos_id, 4, 5];
-            let decoded_with_eos = tokenizer.decode(&tokens_with_eos, true).map_err(|e| {
+            let decoded_with_eos = tokenizer.decode(&tokens_with_eos).map_err(|e| {
                 TestError::execution(format!("Decoding with EOS token failed: {}", e))
             })?;
 
             debug!("Decoded with EOS (skip special): '{}'", decoded_with_eos);
 
-            let decoded_keep_eos = tokenizer.decode(&tokens_with_eos, false).map_err(|e| {
+            let decoded_keep_eos = tokenizer.decode(&tokens_with_eos).map_err(|e| {
                 TestError::execution(format!("Decoding keeping EOS token failed: {}", e))
             })?;
 
@@ -418,7 +418,7 @@ impl TestCase for SpecialTokenHandlingTest {
 
             // Test decoding with PAD tokens
             let tokens_with_pad = vec![1, 2, pad_id, pad_id, 3, 4];
-            let decoded_with_pad = tokenizer.decode(&tokens_with_pad, true).map_err(|e| {
+            let decoded_with_pad = tokenizer.decode(&tokens_with_pad).map_err(|e| {
                 TestError::execution(format!("Decoding with PAD tokens failed: {}", e))
             })?;
 
@@ -439,11 +439,11 @@ impl TestCase for SpecialTokenHandlingTest {
         for (i, edge_input) in edge_cases.iter().enumerate() {
             debug!("Testing edge case {}: {:?}", i + 1, edge_input);
 
-            match tokenizer.encode(edge_input, true) {
+            match tokenizer.encode(edge_input, true, false) {
                 Ok(tokens) => {
                     debug!("Edge case {} tokenized to {} tokens", i + 1, tokens.len());
 
-                    match tokenizer.decode(&tokens, true) {
+                    match tokenizer.decode(&tokens) {
                         Ok(decoded) => {
                             debug!("Edge case {} decoded to: {:?}", i + 1, decoded);
                             edge_case_results.push(true);
@@ -533,7 +533,7 @@ impl TestCase for LongSequenceTokenizationTest {
             let process_start = Instant::now();
 
             // Test tokenization
-            let tokens = tokenizer.encode(&long_text, true).map_err(|e| {
+            let tokens = tokenizer.encode(&long_text, true, false).map_err(|e| {
                 TestError::execution(format!(
                     "Long sequence tokenization failed for length {}: {}",
                     length, e
@@ -705,7 +705,7 @@ impl TestCase for TokenizationErrorHandlingTest {
                     successful_tokenizations += 1;
 
                     // Test decoding
-                    match tokenizer.decode(&tokens, true) {
+                    match tokenizer.decode(&tokens) {
                         Ok(decoded) => {
                             debug!("Problematic input {} decoded to: {:?}", i + 1, decoded);
                         }
@@ -747,7 +747,7 @@ impl TestCase for TokenizationErrorHandlingTest {
         for (i, tokens) in invalid_token_sequences.iter().enumerate() {
             debug!("Testing invalid token sequence {}: {:?}", i + 1, tokens);
 
-            match tokenizer.decode(tokens, true) {
+            match tokenizer.decode(tokens) {
                 Ok(decoded) => {
                     debug!("Invalid tokens {} decoded to: {:?}", i + 1, decoded);
                     invalid_decode_results.push(true);

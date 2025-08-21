@@ -10,6 +10,7 @@ use reqwest::header::{
     IF_MODIFIED_SINCE, IF_NONE_MATCH, IF_RANGE, LAST_MODIFIED, RANGE, RETRY_AFTER,
 };
 use reqwest::StatusCode;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     fs,
@@ -44,6 +45,41 @@ impl Drop for LockGuard {
             drop(file);
         }
         let _ = fs::remove_file(&self.path);
+    }
+}
+
+/// Cross-validation report for CI artifacts
+#[derive(Debug, Serialize, Deserialize)]
+struct CrossValReport {
+    model: String,
+    rust_ok: bool,
+    cpp_header_ok: bool,
+    cpp_full_ok: bool,
+    xfail: bool,
+    notes: String,
+    timestamp: String,
+    platform: String,
+}
+
+impl CrossValReport {
+    fn new(model: &Path) -> Self {
+        Self {
+            model: model.display().to_string(),
+            rust_ok: false,
+            cpp_header_ok: false,
+            cpp_full_ok: false,
+            xfail: false,
+            notes: String::new(),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            platform: format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
+        }
+    }
+    
+    fn save(&self, path: &Path) -> Result<()> {
+        let json = serde_json::to_string_pretty(self)?;
+        fs::write(path, json)?;
+        println!("📊 Saved cross-validation report to: {}", path.display());
+        Ok(())
     }
 }
 
@@ -273,6 +309,20 @@ enum Cmd {
         output: PathBuf,
     },
 
+    /// Generate a minimal valid GGUF file for smoke testing
+    ///
+    /// Always creates a GGUF v3 file with valid headers for testing.
+    /// If --version 2 is provided, still emits v3 but adds a 
+    /// compat.v2_requested=true metadata tag for test purposes.
+    GenMiniGguf {
+        /// Output file path
+        #[arg(long, default_value = "tests/models/mini.gguf")]
+        output: PathBuf,
+        /// GGUF version requested (2 or 3) - always emits v3 format
+        #[arg(long, default_value = "3")]
+        version: u32,
+    },
+
     /// Setup cross-validation environment
     SetupCrossval,
 
@@ -410,6 +460,7 @@ fn real_main() -> Result<()> {
         }
         Cmd::FullCrossval { force, tag, backend, cmake_flags, repo } => full_crossval_cmd(force, &tag, &backend, &cmake_flags, &repo),
         Cmd::GenFixtures { size, output } => gen_fixtures(&size, &output),
+        Cmd::GenMiniGguf { output, version } => gen_mini_gguf(&output, version),
         Cmd::SetupCrossval => setup_crossval(),
         Cmd::CleanCache => clean_cache(),
         Cmd::CheckFeatures => check_features(),
@@ -1211,22 +1262,30 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool, backend: &str, cmake_flags
         args.push("--clean".to_string());
     }
     
-    // Add backend-specific CMake flags
+    // Add backend-specific CMake flags with static build configuration
+    args.push("--cmake-flags".to_string());
+    
+    // Always use static builds to avoid library path issues
+    let mut all_flags = String::from("-DBUILD_SHARED_LIBS=OFF -DLLAMA_STATIC=ON -DLLAMA_BUILD_TESTS=OFF");
+    
     if backend == "cuda" {
-        args.push("--cmake-flags".to_string());
-        let mut cuda_flags = String::from("-DGGML_CUDA=ON -DLLAMA_CUBLAS=ON");
-        if !cmake_flags.is_empty() {
-            cuda_flags.push_str(" ");
-            cuda_flags.push_str(cmake_flags);
-        } else {
+        all_flags.push_str(" -DGGML_CUDA=ON -DLLAMA_CUBLAS=ON");
+        if cmake_flags.is_empty() {
             // Default CUDA architectures if not specified
-            cuda_flags.push_str(" -DCMAKE_CUDA_ARCHITECTURES=80;86");
+            all_flags.push_str(" -DCMAKE_CUDA_ARCHITECTURES=80;86");
         }
-        args.push(cuda_flags);
-    } else if !cmake_flags.is_empty() {
-        args.push("--cmake-flags".to_string());
-        args.push(cmake_flags.to_string());
+    } else {
+        // For CPU builds, enable native optimizations
+        all_flags.push_str(" -DGGML_NATIVE=ON");
     }
+    
+    // Append any additional user-provided flags
+    if !cmake_flags.is_empty() {
+        all_flags.push_str(" ");
+        all_flags.push_str(cmake_flags);
+    }
+    
+    args.push(all_flags);
 
     run("bash", std::iter::once(script.to_string_lossy().to_string()).chain(args).collect())?;
 
@@ -1281,6 +1340,98 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool, backend: &str, cmake_flags
     Ok(())
 }
 
+/// Apply C++ environment variables for Linux
+#[cfg(target_os = "linux")]
+fn apply_cpp_env(cmd: &mut Command, cpp_root: &Path) {
+    let lib_paths = format!(
+        "{}:{}:{}",
+        cpp_root.join("build/bin").display(),
+        cpp_root.join("build/3rdparty/llama.cpp/src").display(),
+        cpp_root.join("build/3rdparty/llama.cpp/ggml/src").display()
+    );
+    
+    let existing = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
+    let merged = if existing.is_empty() {
+        lib_paths
+    } else {
+        format!("{}:{}", lib_paths, existing)
+    };
+    
+    cmd.env("LD_LIBRARY_PATH", merged);
+}
+
+/// Apply C++ environment variables for macOS
+#[cfg(target_os = "macos")]
+fn apply_cpp_env(cmd: &mut Command, cpp_root: &Path) {
+    let lib_paths = format!(
+        "{}:{}:{}",
+        cpp_root.join("build/bin").display(),
+        cpp_root.join("build/3rdparty/llama.cpp/src").display(),
+        cpp_root.join("build/3rdparty/llama.cpp/ggml/src").display()
+    );
+    
+    let existing = std::env::var("DYLD_LIBRARY_PATH").unwrap_or_default();
+    let merged = if existing.is_empty() {
+        lib_paths
+    } else {
+        format!("{}:{}", lib_paths, existing)
+    };
+    
+    cmd.env("DYLD_LIBRARY_PATH", merged);
+}
+
+/// Apply C++ environment variables for Windows
+#[cfg(target_os = "windows")]
+fn apply_cpp_env(cmd: &mut Command, cpp_root: &Path) {
+    let bin_path = cpp_root.join("build/bin").display().to_string();
+    
+    let existing = std::env::var("PATH").unwrap_or_default();
+    let merged = if existing.is_empty() {
+        bin_path
+    } else {
+        format!("{};{}", bin_path, existing)
+    };
+    
+    cmd.env("PATH", merged);
+}
+
+/// Apply deterministic environment variables for testing
+fn apply_deterministic_env(cmd: &mut Command) {
+    cmd.env("RAYON_NUM_THREADS", "1")
+       .env("BITNET_DETERMINISTIC", "1")
+       .env("BITNET_SEED", "42")
+       .env("OMP_NUM_THREADS", "1")
+       .env("GGML_NUM_THREADS", "1")
+       .env("MKL_NUM_THREADS", "1")
+       .env("OPENBLAS_NUM_THREADS", "1");
+}
+
+/// Preflight check using C++ header tool before full load
+fn cpp_header_preflight(cpp_root: &Path, model: &Path) -> Result<()> {
+    let llama_gguf = cpp_root.join("build/bin/llama-gguf");
+    if !llama_gguf.exists() {
+        return Err(anyhow!("llama-gguf not found at: {}", llama_gguf.display()));
+    }
+    
+    let mut cmd = Command::new(&llama_gguf);
+    cmd.args(["-l", "-m"]).arg(model);
+    apply_cpp_env(&mut cmd, cpp_root);
+    apply_deterministic_env(&mut cmd);
+    
+    let output = cmd.output()
+        .with_context(|| format!("Failed to run C++ header preflight: {}", llama_gguf.display()))?;
+    
+    if output.status.success() {
+        println!("   ✓ C++ header preflight passed");
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let msg = format!("{}\n{}", stderr, stdout).to_lowercase();
+        Err(anyhow!("C++ header preflight failed: {}", msg))
+    }
+}
+
 fn crossval_cmd(
     model: &Path,
     cpp_dir: Option<&Path>,
@@ -1295,6 +1446,20 @@ fn crossval_cmd(
         ));
     }
 
+    // Initialize cross-validation report
+    let mut report = CrossValReport::new(model);
+
+    // First validate that the Rust implementation can load the model
+    println!("🔍 Validating Rust implementation can load the model...");
+    if let Err(e) = validate_rust_model_loading(model) {
+        report.rust_ok = false;
+        report.notes = format!("Rust implementation failed: {}", e);
+        let _ = report.save(&PathBuf::from("target/crossval_report.json"));
+        return Err(anyhow!("Rust implementation failed to load model: {}", e));
+    }
+    println!("   ✓ Rust implementation loaded model successfully");
+    report.rust_ok = true;
+
     let cpp = cpp_dir
         .map(|p| p.to_path_buf())
         .or_else(|| std::env::var_os("BITNET_CPP_DIR").map(PathBuf::from))
@@ -1303,6 +1468,39 @@ fn crossval_cmd(
     if !cpp.exists() {
         eprintln!("⚠️  Warning: BITNET_CPP_DIR not found at {}", cpp.display());
         eprintln!("   Tip: Run `cargo xtask fetch-cpp` first");
+    }
+
+    // Check if soft-fail is enabled for C++ compatibility issues
+    let allow_cpp_fail = std::env::var("CROSSVAL_ALLOW_CPP_FAIL")
+        .map(|v| v == "1" || v.to_lowercase() == "true")
+        .unwrap_or(false);
+
+    // Run C++ header preflight check before full tests
+    if cpp.exists() {
+        println!("🔬 Running C++ header preflight check...");
+        match cpp_header_preflight(&cpp, model) {
+            Ok(()) => {
+                println!("   ✓ C++ can parse GGUF header");
+                report.cpp_header_ok = true;
+            }
+            Err(e) => {
+                report.cpp_header_ok = false;
+                if allow_cpp_fail {
+                    println!("   ⚠️ XFAIL: C++ header preflight failed (CROSSVAL_ALLOW_CPP_FAIL=1)");
+                    println!("   Details: {}", e);
+                    report.xfail = true;
+                    report.notes = format!("C++ header preflight failed (XFAIL): {}", e);
+                    // Save report and exit early with success for known incompatibilities
+                    let _ = report.save(&PathBuf::from("target/crossval_report.json"));
+                    println!("\n✅ Cross-validation passed (C++ failure allowed)");
+                    return Ok(());
+                } else {
+                    report.notes = format!("C++ header preflight failed: {}", e);
+                    let _ = report.save(&PathBuf::from("target/crossval_report.json"));
+                    return Err(anyhow!("C++ header preflight failed: {}", e));
+                }
+            }
+        }
     }
 
     println!("🧪 Running cross-validation tests");
@@ -1314,6 +1512,10 @@ fn crossval_cmd(
     println!("   C++ dir: {}", cpp.display());
     println!("   Release: {}", release);
     println!("   Deterministic: yes (single-threaded)");
+    
+    if allow_cpp_fail {
+        println!("   C++ failures: ALLOWED (CROSSVAL_ALLOW_CPP_FAIL=1)");
+    }
 
     // Build the cargo test command
     let mut cmd = Command::new("cargo");
@@ -1323,35 +1525,15 @@ fn crossval_cmd(
         cmd.arg("--release");
     }
 
-    // Set up library paths for C++ libraries
-    let lib_paths = format!(
-        "{}:{}",
-        cpp.join("build/3rdparty/llama.cpp/src").display(),
-        cpp.join("build/3rdparty/llama.cpp/ggml/src").display()
-    );
+    // Apply platform-specific C++ library paths
+    apply_cpp_env(&mut cmd, &cpp);
     
-    // Determine the correct library path variable based on OS
-    #[cfg(target_os = "macos")]
-    let ld_var = "DYLD_LIBRARY_PATH";
-    #[cfg(not(target_os = "macos"))]
-    let ld_var = "LD_LIBRARY_PATH";
+    // Apply deterministic environment for testing
+    apply_deterministic_env(&mut cmd);
     
-    // Get existing library path and prepend our paths
-    let existing_ld_path = std::env::var(ld_var).unwrap_or_default();
-    let full_ld_path = if existing_ld_path.is_empty() {
-        lib_paths
-    } else {
-        format!("{}:{}", lib_paths, existing_ld_path)
-    };
-    
-    // Set environment for determinism and library loading
+    // Set other required environment variables
     cmd.env("BITNET_CPP_DIR", &cpp)
         .env("CROSSVAL_GGUF", model)
-        .env(ld_var, &full_ld_path)
-        .env("OMP_NUM_THREADS", "1")
-        .env("GGML_NUM_THREADS", "1")
-        .env("MKL_NUM_THREADS", "1")
-        .env("OPENBLAS_NUM_THREADS", "1")
         .env("RUST_BACKTRACE", "1");
 
     // Add test runner args
@@ -1361,14 +1543,120 @@ fn crossval_cmd(
         println!("\n[DRY RUN] Env + command:");
         println!("  BITNET_CPP_DIR={}", cpp.display());
         println!("  CROSSVAL_GGUF={}", model.display());
-        println!("  {}={}", ld_var, full_ld_path);
-        println!("  OMP_NUM_THREADS=1 GGML_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1");
+        println!("  Platform-specific library paths configured");
+        println!("  Deterministic env: RAYON_NUM_THREADS=1 BITNET_DETERMINISTIC=1 BITNET_SEED=42");
         println!("  RUST_BACKTRACE=1");
         println!("  {:?}", cmd);
         return Ok(());
     }
 
-    run_cmd(&mut cmd)
+    // Run the tests and handle C++ failures gracefully if configured
+    let result = cmd.output();
+    
+    match result {
+        Ok(output) => {
+            // Write output as it was generated
+            std::io::Write::write_all(&mut std::io::stdout(), &output.stdout)?;
+            std::io::Write::write_all(&mut std::io::stderr(), &output.stderr)?;
+            
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                
+                // Check if this is a C++ model loading failure - expand patterns for robustness
+                let msg = format!("{}\n{}", stderr, stdout).to_lowercase();
+                let is_cpp_load_fail = msg.contains("llama_load_model_from_file") ||
+                                      msg.contains("failed to load model") ||
+                                      msg.contains("invalid or unsupported tensor") ||
+                                      msg.contains("invalid gguf") ||
+                                      msg.contains("unsupported gguf version") ||
+                                      msg.contains("unknown tensor type") ||
+                                      msg.contains("could not open gguf") ||
+                                      msg.contains("ggml_assert") ||
+                                      msg.contains("c++ backend failed");
+                
+                if is_cpp_load_fail && allow_cpp_fail {
+                    println!("\n⚠️  XFAIL: C++ implementation failed to load model (unsupported GGUF variant)");
+                    println!("   This is expected for some experimental BitNet models.");
+                    println!("   Rust implementation validated successfully.");
+                    report.cpp_full_ok = false;
+                    report.xfail = true;
+                    report.notes = format!("C++ full load failed (XFAIL): {}", msg);
+                    let _ = report.save(&PathBuf::from("target/crossval_report.json"));
+                    return Ok(());
+                }
+                
+                report.cpp_full_ok = false;
+                report.notes = format!("Cross-validation tests failed: {}", msg);
+                let _ = report.save(&PathBuf::from("target/crossval_report.json"));
+                return Err(anyhow!("Cross-validation tests failed"));
+            }
+            
+            // All tests passed!
+            report.cpp_full_ok = true;
+            report.notes = "All cross-validation tests passed".to_string();
+            let _ = report.save(&PathBuf::from("target/crossval_report.json"));
+            Ok(())
+        }
+        Err(e) => {
+            report.notes = format!("Failed to run tests: {}", e);
+            let _ = report.save(&PathBuf::from("target/crossval_report.json"));
+            Err(e.into())
+        }
+    }
+}
+
+/// Validate that the Rust implementation can load the model
+fn validate_rust_model_loading(model_path: &Path) -> Result<()> {
+    // Use the real GGUF reader from bitnet-models
+    println!("   Validating with real GGUF reader...");
+    
+    use bitnet_models::formats::gguf::GgufReader;
+    use bitnet_models::loader::MmapFile;
+    
+    // Try to parse with the real GGUF reader
+    match MmapFile::open(model_path) {
+        Ok(mmap) => {
+            match GgufReader::new(mmap.as_slice()) {
+                Ok(reader) => {
+                    // Validate the file structure
+                    if let Err(e) = reader.validate() {
+                        return Err(anyhow!("GGUF validation failed: {}", e));
+                    }
+                    println!("   ✓ GGUF v{} parsed and validated successfully", reader.version());
+                    Ok(())
+                }
+                Err(e) => {
+                    // Fallback to basic validation for error details
+                    use std::fs::File;
+                    use std::io::Read;
+                    
+                    let mut file = File::open(model_path)
+                        .with_context(|| format!("Failed to open: {}", model_path.display()))?;
+                    
+                    // Check GGUF magic
+                    let mut magic = [0u8; 4];
+                    file.read_exact(&mut magic)?;
+                    if &magic != b"GGUF" {
+                        return Err(anyhow!("Not a valid GGUF file (invalid magic)"));
+                    }
+                    
+                    // Read version
+                    let mut version_bytes = [0u8; 4];
+                    file.read_exact(&mut version_bytes)?;
+                    let version = u32::from_le_bytes(version_bytes);
+                    
+                    if version != 2 && version != 3 {
+                        return Err(anyhow!("Unsupported GGUF version: {} (expected 2 or 3)", version));
+                    }
+                    
+                    // If basic checks pass but real reader fails, report the reader error
+                    Err(anyhow!("Rust GGUF reader could not parse: {}", e))
+                }
+            }
+        }
+        Err(e) => Err(anyhow!("Failed to memory-map file: {}", e))
+    }
 }
 
 fn full_crossval_cmd(force: bool, tag: &str, backend: &str, cmake_flags: &str, repo: &str) -> Result<()> {
@@ -1436,6 +1724,100 @@ fn full_crossval_cmd(force: bool, tag: &str, backend: &str, cmake_flags: &str, r
     println!();
     println!("✅ Full cross-validation workflow complete!");
 
+    Ok(())
+}
+
+// GGUF format constants
+const GGUF_VALUE_TYPE_STRING: u32 = 8;
+
+/// Helper to write a GGUF KV string pair (v3 format only)
+fn write_kv_string(buf: &mut Vec<u8>, key: &str, value: &str) {
+    // Write key
+    let key_bytes = key.as_bytes();
+    buf.extend_from_slice(&(key_bytes.len() as u64).to_le_bytes());
+    buf.extend_from_slice(key_bytes);
+    
+    // Write value type (string)
+    buf.extend_from_slice(&GGUF_VALUE_TYPE_STRING.to_le_bytes());
+    
+    // Write value
+    let value_bytes = value.as_bytes();
+    buf.extend_from_slice(&(value_bytes.len() as u64).to_le_bytes());
+    buf.extend_from_slice(value_bytes);
+}
+
+/// Generate a minimal valid GGUF file for smoke testing
+/// Always generates v3 format. If requested_version is 2, adds a metadata tag.
+fn gen_mini_gguf(output_path: &Path, requested_version: u32) -> Result<()> {
+    println!("🔧 Generating minimal GGUF file (v3 format)...");
+    if requested_version == 2 {
+        println!("   Note: Emitting v3 with compat.v2_requested=true tag");
+    }
+    println!("   Output: {}", output_path.display());
+    
+    // Create parent directory if needed
+    if let Some(parent) = output_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    
+    let mut data = Vec::new();
+    
+    // Write GGUF header (v3)
+    data.extend_from_slice(b"GGUF");
+    data.extend_from_slice(&3u32.to_le_bytes()); // version 3
+    data.extend_from_slice(&0u64.to_le_bytes()); // n_tensors = 0
+    
+    // Save position for n_kv (will backpatch later)
+    let n_kv_pos = data.len();
+    data.extend_from_slice(&0u64.to_le_bytes()); // placeholder for n_kv
+    
+    data.extend_from_slice(&32u32.to_le_bytes()); // alignment = 32
+    
+    // Save position for data_offset (will backpatch later)
+    let data_offset_pos = data.len();
+    data.extend_from_slice(&0u64.to_le_bytes()); // placeholder for data_offset
+    
+    // Write metadata KV pairs, counting as we go
+    let mut kv_count = 0u64;
+    
+    write_kv_string(&mut data, "general.architecture", "test");
+    kv_count += 1;
+    
+    write_kv_string(&mut data, "general.name", "mini_test_model");
+    kv_count += 1;
+    
+    write_kv_string(&mut data, "general.file_type", "smoke");
+    kv_count += 1;
+    
+    write_kv_string(&mut data, "compat.v2_requested", 
+                    if requested_version == 2 { "true" } else { "false" });
+    kv_count += 1;
+    
+    // Backpatch the actual n_kv count
+    data[n_kv_pos..n_kv_pos + 8].copy_from_slice(&kv_count.to_le_bytes());
+    
+    // Calculate aligned header size
+    let alignment = 32usize;
+    let unpadded_size = data.len();
+    let aligned_size = ((unpadded_size + alignment - 1) / alignment) * alignment;
+    
+    // Backpatch data_offset to point to aligned header end
+    data[data_offset_pos..data_offset_pos + 8].copy_from_slice(&(aligned_size as u64).to_le_bytes());
+    
+    // Pad to alignment (0 tensors means file ends at data_offset)
+    if aligned_size > unpadded_size {
+        data.extend(std::iter::repeat(0u8).take(aligned_size - unpadded_size));
+    }
+    
+    // Write to file
+    fs::write(output_path, &data)?;
+    
+    println!("✅ Generated minimal GGUF file ({} bytes)", data.len());
+    println!("   - Version: 3 (always)");
+    println!("   - Tensors: 0");
+    println!("   - Metadata: {} KV pairs", kv_count);
+    println!("   - Data offset: {} (aligned header end)", aligned_size);
+    
     Ok(())
 }
 

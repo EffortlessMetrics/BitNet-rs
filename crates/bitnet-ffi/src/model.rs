@@ -6,7 +6,7 @@
 use crate::{BitNetCConfig, BitNetCError};
 use bitnet_common::{BitNetConfig, ConcreteTensor, ModelFormat, QuantizationType, Tensor};
 use bitnet_models::Model;
-use candle_core::{DType, Tensor as CandleTensor, Device as CDevice};
+use candle_core::{Tensor as CandleTensor, Device as CDevice};
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_uint, c_ulong};

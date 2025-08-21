@@ -160,7 +160,7 @@ impl TestCase for BasicBatchProcessingTest {
             let mixed_start = Instant::now();
 
             // Get token count for analysis
-            let tokens = tokenizer.encode(prompt, true).map_err(|e| {
+            let tokens = tokenizer.encode(prompt, true, false).map_err(|e| {
                 TestError::execution(format!("Tokenization failed for mixed item {}: {}", i + 1, e))
             })?;
             mixed_token_counts.push(tokens.len());

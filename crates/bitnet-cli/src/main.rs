@@ -426,7 +426,7 @@ async fn run_simple_generation(
     };
 
     // Tokenize prompt
-    let mut tokens = tokenizer.encode(&prompt, true)?;
+    let mut tokens = tokenizer.encode(&prompt, true, false)?;
     println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
 
     // Create KV cache

@@ -8,7 +8,7 @@ use std::slice;
 use std::sync::Arc;
 use log::{debug, error, warn};
 
-use bitnet_inference::{InferenceEngine, GenerationConfig};
+use bitnet_inference::InferenceEngine;
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use bitnet_common::Device;

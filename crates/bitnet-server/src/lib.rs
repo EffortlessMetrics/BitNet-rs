@@ -131,7 +131,8 @@ impl BitNetServer {
         device: &str,
     ) -> Result<bitnet_inference::InferenceEngine> {
         use bitnet_common::Device;
-        use bitnet_models::formats::gguf::loader::GgufLoader;
+        use bitnet_models::formats::gguf::GgufLoader;
+        use bitnet_models::loader::FormatLoader;
         use std::path::Path;
 
         // Parse device
@@ -146,8 +147,9 @@ impl BitNetServer {
             anyhow::bail!("Model file not found: {}", model_path.display());
         }
         
-        let loader = GgufLoader::new();
-        let model = loader.load_from_path(model_path)?;
+        let loader = GgufLoader;
+        let load_config = bitnet_models::loader::LoadConfig::default();
+        let model = loader.load(model_path, &device, &load_config)?;
         
         // Load tokenizer (for now, use a basic tokenizer)
         // TODO: Implement proper tokenizer loading from tokenizer_path
@@ -158,8 +160,8 @@ impl BitNetServer {
             Arc::new(bitnet_tokenizers::BasicTokenizer::default())
         };
         
-        // Create inference engine
-        let model: Arc<dyn bitnet_models::Model> = Arc::new(model);
+        // Create inference engine - model is already a Box<dyn Model>, convert to Arc
+        let model: Arc<dyn bitnet_models::Model> = model.into();
         let engine = bitnet_inference::InferenceEngine::new(
             model,
             tokenizer,
