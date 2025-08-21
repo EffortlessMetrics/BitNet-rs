@@ -131,6 +131,22 @@ enum Commands {
         /// Also toggled by env BITNET_ALLOW_MOCK=1
         #[arg(long, env = "BITNET_ALLOW_MOCK", default_value_t = false)]
         allow_mock: bool,
+
+        /// Strict mapping mode: fail if any tensors are unmapped
+        #[arg(long, default_value_t = false)]
+        strict_mapping: bool,
+
+        /// Strict tokenizer mode: fail if no real tokenizer available
+        #[arg(long, default_value_t = false)]
+        strict_tokenizer: bool,
+
+        /// Output JSON results to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+
+        /// Dump token IDs to stdout
+        #[arg(long, default_value_t = false)]
+        dump_ids: bool,
     },
 
     #[cfg(feature = "full-cli")]
@@ -217,6 +233,10 @@ async fn main() -> Result<()> {
             repetition_penalty,
             seed,
             allow_mock,
+            strict_mapping,
+            strict_tokenizer,
+            json_out,
+            dump_ids,
         }) => {
             run_simple_generation(
                 model,
@@ -229,6 +249,10 @@ async fn main() -> Result<()> {
                 repetition_penalty,
                 seed,
                 allow_mock,
+                strict_mapping,
+                strict_tokenizer,
+                json_out,
+                dump_ids,
             )
             .await
         }
@@ -361,6 +385,10 @@ async fn run_simple_generation(
     repetition_penalty: f32,
     seed: Option<u64>,
     allow_mock: bool,
+    strict_mapping: bool,
+    strict_tokenizer: bool,
+    json_out: Option<std::path::PathBuf>,
+    dump_ids: bool,
 ) -> Result<()> {
     use crate::sampling::Sampler;
     use bitnet_common::Device;
@@ -417,10 +445,27 @@ async fn run_simple_generation(
 
     let tokenizer = if let Some(path) = tokenizer_path {
         println!("Loading tokenizer from: {}", path.display());
-        // For now just use mock tokenizer
-        println!("Warning: Using mock tokenizer (real tokenizer loading not yet implemented)");
-        Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
+        // Try to load real tokenizer
+        match bitnet_tokenizers::load_tokenizer(&path) {
+            Ok(tok) => tok,
+            Err(e) => {
+                if strict_tokenizer {
+                    anyhow::bail!("Failed to load tokenizer: {e}. Strict tokenizer mode enabled.");
+                }
+                if !allow_mock {
+                    anyhow::bail!("Failed to load tokenizer: {e}. Use --allow-mock to use mock tokenizer.");
+                }
+                println!("Warning: Using mock tokenizer due to: {e}");
+                Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
+            }
+        }
     } else {
+        if strict_tokenizer {
+            anyhow::bail!("No tokenizer found. Strict tokenizer mode requires --tokenizer <path>.");
+        }
+        if !allow_mock {
+            anyhow::bail!("No tokenizer found. Specify --tokenizer <path> or use --allow-mock.");
+        }
         println!("Warning: No tokenizer found, using mock tokenizer");
         Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
     };
@@ -476,6 +521,25 @@ async fn run_simple_generation(
 
     println!("\n\nGeneration complete!");
     println!("Generated {} tokens", generated_tokens.len());
+    
+    // Output JSON if requested
+    if let Some(json_path) = json_out {
+        let generated_text = tokenizer.decode(&generated_tokens)?;
+        let output = serde_json::json!({
+            "prompt": prompt,
+            "ids": generated_tokens,
+            "text": generated_text,
+            "tok_per_sec": generated_tokens.len() as f64, // TODO: track actual time
+        });
+        std::fs::write(&json_path, serde_json::to_string_pretty(&output)?)?;
+        println!("JSON output written to: {}", json_path.display());
+    }
+    
+    // Dump IDs if requested
+    if dump_ids {
+        println!("Token IDs: {:?}", generated_tokens);
+    }
+    
     Ok(())
 }
 

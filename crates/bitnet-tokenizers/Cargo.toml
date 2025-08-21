@@ -14,6 +14,7 @@ description = "Tokenization support for BitNet models"
 bitnet-common = { path = "../bitnet-common" }
 anyhow.workspace = true
 tracing.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

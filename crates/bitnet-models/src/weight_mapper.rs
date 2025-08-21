@@ -5,6 +5,11 @@ use std::collections::HashMap;
 
 /// Map GGUF tensor names to transformer module names
 pub fn remap_gguf_weights(tensors: &HashMap<String, Tensor>) -> Result<HashMap<String, Tensor>> {
+    remap_gguf_weights_with_options(tensors, false)
+}
+
+/// Map GGUF tensor names to transformer module names with strict option
+pub fn remap_gguf_weights_with_options(tensors: &HashMap<String, Tensor>, strict: bool) -> Result<HashMap<String, Tensor>> {
     let mut mapped = HashMap::new();
     let mut unmapped = Vec::new();
 
@@ -19,13 +24,21 @@ pub fn remap_gguf_weights(tensors: &HashMap<String, Tensor>) -> Result<HashMap<S
         mapped.insert(new_name, tensor.clone());
     }
 
-    // Log unmapped tensors for debugging
+    // Handle unmapped tensors
     if !unmapped.is_empty() {
-        eprintln!(
-            "Warning: {} unmapped tensors: {:?}",
-            unmapped.len(),
-            &unmapped[..5.min(unmapped.len())]
-        );
+        if strict {
+            return Err(bitnet_common::BitNetError::Validation(format!(
+                "Strict mapping mode: {} unmapped tensors found: {:?}",
+                unmapped.len(),
+                &unmapped[..5.min(unmapped.len())]
+            )));
+        } else {
+            eprintln!(
+                "Warning: {} unmapped tensors: {:?}",
+                unmapped.len(),
+                &unmapped[..5.min(unmapped.len())]
+            );
+        }
     }
 
     // Check if we have lm_head
@@ -89,6 +102,7 @@ fn map_tensor_name(name: &str) -> Option<String> {
 
                 // FFN normalization
                 "ffn_norm.weight" => "post_attention_layernorm.weight",
+                "ffn_sub_norm.weight" => "mlp.sub_layernorm.weight",  // BitNet specific
 
                 _ => return None,
             };
