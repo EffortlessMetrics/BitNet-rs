@@ -4,9 +4,13 @@
 set -euo pipefail
 
 # Configuration
-MODEL="${1:?Usage: $0 <model.gguf>}"
+MODEL="${1:?Usage: $0 <model.gguf> [tokenizer.model]}"
+TOK="${2:-}"  # Optional tokenizer, will try to extract from GGUF if not provided
 CPP_BIN="${LLAMA_BIN:-$HOME/.cache/bitnet_cpp/build/bin/llama-cli}"
-RS_BIN="/home/steven/.rust-build/target/release/bitnet"
+
+# Locate Rust exe deterministically
+RS_BIN=$(cargo build -p bitnet-cli --release --no-default-features --features cpu --message-format=json \
+  | jq -r 'select(.executable != null) | .executable' | tail -1)
 
 # Test prompts - short, deterministic
 PROMPTS=(
@@ -16,10 +20,16 @@ PROMPTS=(
 )
 N_TOKENS=24
 
-# Build if needed
+# Check Rust binary
 if [ ! -f "$RS_BIN" ]; then
-    echo "Building BitNet.rs..."
-    cargo build --release --no-default-features --features cpu
+    echo "Error: Could not build bitnet-cli"
+    exit 1
+fi
+
+# Build tokenizer args
+TOK_ARGS=""
+if [ -n "$TOK" ]; then
+    TOK_ARGS="--tokenizer $TOK"
 fi
 
 # Check C++ binary
@@ -49,15 +59,15 @@ for prompt in "${PROMPTS[@]}"; do
     echo "Testing prompt: \"$prompt\""
     echo "----------------------------------------"
     
-    # Run Rust implementation
+    # Run Rust implementation with strict mode
     echo -n "  Running BitNet.rs... "
     if $RS_BIN run \
-        --model "$MODEL" \
+        --model "$MODEL" $TOK_ARGS \
         --prompt "$prompt" \
         --max-new-tokens $N_TOKENS \
         --temperature 0.0 \
+        --strict-mapping \
         --json-out /tmp/rs_output.json \
-        --seed 42 \
         >/dev/null 2>&1; then
         echo "✓"
     else
@@ -96,19 +106,46 @@ for prompt in "${PROMPTS[@]}"; do
     # Get C++ text output
     CPP_TEXT=$(cat /tmp/cpp_output.txt | tr -d '\n')
     
+    # Tokenize C++ output to get IDs
+    if [ -n "$TOK" ]; then
+        echo -n "  Tokenizing C++ output... "
+        if $RS_BIN tokenize $TOK_ARGS --input-file /tmp/cpp_output.txt --json-out /tmp/cpp_ids.json >/dev/null 2>&1; then
+            echo "✓"
+            CPP_IDS=$(jq -c '.ids' /tmp/cpp_ids.json 2>/dev/null || echo "[]")
+        else
+            echo "✗ (tokenization failed)"
+            CPP_IDS="[]"
+        fi
+    else
+        CPP_IDS="[]"
+    fi
+    
     # Compare outputs
     echo "  Results:"
-    echo "    Rust text:  \"$RS_TEXT\""
-    echo "    C++ text:   \"$CPP_TEXT\""
-    echo "    Rust IDs:   $RS_IDS"
+    echo "    Rust text:  \"${RS_TEXT:0:80}...\""
+    echo "    C++ text:   \"${CPP_TEXT:0:80}...\""
     
-    # Simple text comparison for now (since we can't easily get IDs from C++)
-    if [ "$RS_TEXT" = "$CPP_TEXT" ]; then
-        echo "  ✅ PASS: Outputs match"
-        ((PASSED++))
+    # Compare token IDs if available
+    if [ -n "$TOK" ] && [ "$CPP_IDS" != "[]" ]; then
+        echo "    Rust IDs:   $RS_IDS"
+        echo "    C++ IDs:    $CPP_IDS"
+        
+        if [ "$RS_IDS" = "$CPP_IDS" ]; then
+            echo "  ✅ PASS: Token IDs match exactly"
+            ((PASSED++))
+        else
+            echo "  ❌ FAIL: Token IDs differ"
+            ((FAILED++))
+        fi
     else
-        echo "  ❌ FAIL: Outputs differ"
-        ((FAILED++))
+        # Fallback to text comparison
+        if [ "$RS_TEXT" = "$CPP_TEXT" ]; then
+            echo "  ✅ PASS: Text outputs match"
+            ((PASSED++))
+        else
+            echo "  ❌ FAIL: Text outputs differ"
+            ((FAILED++))
+        fi
     fi
     echo ""
 done

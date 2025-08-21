@@ -74,14 +74,15 @@ pub fn load_tokenizer_from_gguf(metadata: &std::collections::HashMap<String, ser
 
 /// Load tokenizer from GGUF reader
 pub fn load_tokenizer_from_gguf_reader(reader: &bitnet_models::GgufReader) -> Result<Box<dyn Tokenizer>> {
-    // Try to get the tokenizer model bytes from the GGUF metadata
-    if let Some(model_bytes) = reader.get_array_metadata("tokenizer.ggml.model") {
+    // Check if the GGUF contains an embedded tokenizer (try both binary and array formats)
+    if let Some(bytes) = reader.get_bin_or_u8_array("tokenizer.ggml.model") {
+        // Get BOS/EOS token IDs from metadata
         let bos = reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
         let eos = reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
         
-        return Ok(crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&model_bytes, bos, eos)?);
+        // Load the SentencePiece tokenizer from the embedded blob
+        return Ok(crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&bytes, bos, eos)?);
     }
     
-    // If no embedded tokenizer, fail
-    anyhow::bail!("GGUF file does not contain an embedded tokenizer (tokenizer.ggml.model)")
+    Err(anyhow::anyhow!("GGUF missing tokenizer.ggml.model").into())
 }

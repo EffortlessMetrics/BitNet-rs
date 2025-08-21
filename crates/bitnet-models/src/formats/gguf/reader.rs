@@ -265,6 +265,32 @@ impl<'a> GgufReader<'a> {
             _ => None,
         })
     }
+    
+    /// Get binary metadata by key
+    pub fn get_bin_metadata(&self, key: &str) -> Option<Vec<u8>> {
+        self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {
+            GgufValue::Array(arr) => {
+                // Binary data could be stored as U8 array
+                let bytes: Vec<u8> = arr.iter().filter_map(|v| match v {
+                    GgufValue::U8(b) => Some(*b),
+                    _ => None,
+                }).collect();
+                if bytes.len() == arr.len() {
+                    Some(bytes)
+                } else {
+                    None
+                }
+            },
+            _ => None,
+        })
+    }
+    
+    /// Get binary or array metadata - tries both formats
+    pub fn get_bin_or_u8_array(&self, key: &str) -> Option<Vec<u8>> {
+        if let Some(v) = self.get_array_metadata(key) { return Some(v); }
+        if let Some(v) = self.get_bin_metadata(key) { return Some(v); }
+        None
+    }
 
     /// Get all metadata keys
     pub fn metadata_keys(&self) -> Vec<&str> {
