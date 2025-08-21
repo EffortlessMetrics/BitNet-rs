@@ -150,13 +150,13 @@ impl Gpt2Tokenizer {
 }
 
 impl Tokenizer for Gpt2Tokenizer {
-    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
         // Full BPE implementation would go here
         // For now, return a stub
         Ok(vec![1, 2, 3])
     }
     
-    fn decode(&self, tokens: &[u32]) -> Result<String> {
+    fn decode(&self, _tokens: &[u32]) -> Result<String> {
         Ok("decoded".to_string())
     }
     
@@ -181,11 +181,11 @@ impl SentencePieceTokenizer {
 }
 
 impl Tokenizer for SentencePieceTokenizer {
-    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
         Ok(vec![1, 2, 3])
     }
     
-    fn decode(&self, tokens: &[u32]) -> Result<String> {
+    fn decode(&self, _tokens: &[u32]) -> Result<String> {
         Ok("decoded".to_string())
     }
     
@@ -209,11 +209,11 @@ impl LlamaTokenizer {
 }
 
 impl Tokenizer for LlamaTokenizer {
-    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
         Ok(vec![1, 2, 3])
     }
     
-    fn decode(&self, tokens: &[u32]) -> Result<String> {
+    fn decode(&self, _tokens: &[u32]) -> Result<String> {
         Ok("decoded".to_string())
     }
     
@@ -237,11 +237,11 @@ impl TiktokenTokenizer {
 }
 
 impl Tokenizer for TiktokenTokenizer {
-    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
         Ok(vec![1, 2, 3])
     }
     
-    fn decode(&self, tokens: &[u32]) -> Result<String> {
+    fn decode(&self, _tokens: &[u32]) -> Result<String> {
         Ok("decoded".to_string())
     }
     
@@ -265,11 +265,11 @@ impl FalconTokenizer {
 }
 
 impl Tokenizer for FalconTokenizer {
-    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
         Ok(vec![1, 2, 3])
     }
     
-    fn decode(&self, tokens: &[u32]) -> Result<String> {
+    fn decode(&self, _tokens: &[u32]) -> Result<String> {
         Ok("decoded".to_string())
     }
     
