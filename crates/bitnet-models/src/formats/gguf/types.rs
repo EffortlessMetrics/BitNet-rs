@@ -111,8 +111,10 @@ impl GgufHeader {
                 if potential_strlen > 0 && potential_strlen < 256 {
                     // Check if following bytes could be ASCII text
                     if *offset + 8 + potential_strlen as usize <= data.len() {
+                        let potential_string = &data[*offset + 8..*offset + 8 + (potential_strlen as usize).min(20)];
                         let looks_like_key = potential_string.iter()
-                            .all(|&b| matches!(b, b'a'..=b'z' | b'A'..=b'Z' | b'.' | b'_' | b'-'));
+                            .all(|&b| (b >= b'a' && b <= b'z') || 
+                                     (b >= b'A' && b <= b'Z') || 
                                      b == b'.' || b == b'_' || b == b'-');
                         
                         if looks_like_key {

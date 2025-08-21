@@ -1,10 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CI Acceptance Gate - Verify BitNet.rs is a drop-in replacement for bitnet.cpp
 
-set -e
+set -euo pipefail
 
 echo "🚀 BitNet.rs Drop-in Replacement Validation"
 echo "=========================================="
+echo
+echo "This script validates BitNet.rs as a production-ready drop-in replacement"
+echo "for bitnet.cpp by testing with multiple GGUF models."
+echo
 
 # Color codes for output
 RED='\033[0;31m'
@@ -55,10 +59,6 @@ if cargo build -p bitnet-ffi --release --no-default-features --features cpu 2>&1
 else
     report_test "FFI Library Build" "FAIL" "FFI library build failed"
 fi
-    report_test "FFI Library Build" "PASS" "C API compatibility layer built"
-else
-    report_test "FFI Library Build" "FAIL" "FFI build failed"
-fi
 
 echo ""
 echo "2️⃣  Running Test Suite"
@@ -93,58 +93,61 @@ export RAYON_NUM_THREADS=1
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
 
-        rust_ok=$(python3 -c "import json, sys; \
-    try: \
-        with open('target/crossval_report.json') as f: \
-            data = json.load(f); \
-        print(data.get('rust_ok', False)) \
-    except Exception as e: \
-        print(False)")
-        cpp_ok=$(python3 -c "import json, sys; \
-    try: \
-        with open('target/crossval_report.json') as f: \
-            data = json.load(f); \
-        print(data.get('cpp_header_ok', False)) \
-    except Exception as e: \
-        print(False)")
-        xfail=$(python3 -c "import json, sys; \
-    try: \
-        with open('target/crossval_report.json') as f: \
-            data = json.load(f); \
-        print(data.get('xfail', False)) \
-    except Exception as e: \
-        print(False)")
-    rust_ok=$(python3 -c "import json; print(json.load(open('target/crossval_report.json'))['rust_ok'])")
-    cpp_ok=$(python3 -c "import json; print(json.load(open('target/crossval_report.json')).get('cpp_header_ok', False))")
-    xfail=$(python3 -c "import json; print(json.load(open('target/crossval_report.json')).get('xfail', False))")
-    
-    if [ "$rust_ok" = "True" ]; then
-        if [ "$cpp_ok" = "False" ] && [ "$xfail" = "True" ]; then
-            report_test "Synthetic GGUF Cross-Val" "XFAIL" "Rust ✅, C++ ❌ (edge case handling superior)"
+if cargo run -p xtask --release -- crossval --model target/mini_v3.gguf 2>&1 | grep -q "Cross-validation passed"; then
+    if [ -f target/crossval_report.json ]; then
+        rust_ok=$(python3 -c "import json; print(json.load(open('target/crossval_report.json'))['rust_ok'])")
+        cpp_ok=$(python3 -c "import json; print(json.load(open('target/crossval_report.json')).get('cpp_header_ok', False))")
+        xfail=$(python3 -c "import json; print(json.load(open('target/crossval_report.json')).get('xfail', False))")
+        
+        if [ "$rust_ok" = "True" ]; then
+            if [ "$cpp_ok" = "False" ] && [ "$xfail" = "True" ]; then
+                report_test "Synthetic GGUF Cross-Val" "XFAIL" "Rust ✅, C++ ❌ (edge case handling superior)"
+            else
+                report_test "Synthetic GGUF Cross-Val" "PASS" "Both implementations validated"
+            fi
         else
-            report_test "Synthetic GGUF Cross-Val" "PASS" "Both implementations validated"
+            report_test "Synthetic GGUF Cross-Val" "FAIL" "Rust implementation failed"
         fi
     else
-        report_test "Synthetic GGUF Cross-Val" "FAIL" "Rust implementation failed"
+        report_test "Synthetic GGUF Cross-Val" "FAIL" "No report generated"
     fi
 else
-    report_test "Synthetic GGUF Cross-Val" "FAIL" "No report generated"
+    report_test "Synthetic GGUF Cross-Val" "FAIL" "Cross-validation command failed"
 fi
 
-# Test with real model if available
-if [ -f "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf" ]; then
-    echo "   Testing with real BitNet model..."
+# Test with TinyLlama positive control if available
+if [ -f "models/tinyllama-q2.gguf" ]; then
+    echo "   Testing with TinyLlama Q2_K (positive control)..."
     
-    # Test C++ can load it
-    if ~/.cache/bitnet_cpp/build/bin/llama-cli -m models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf -p "test" -n 1 2>&1 | grep -q "llama_model_loader: loaded meta data"; then
-        cpp_loads_real="yes"
+    # Strict mode for positive control
+    unset CROSSVAL_ALLOW_CPP_FAIL
+    if cargo run -p xtask --release -- crossval --model models/tinyllama-q2.gguf 2>&1 | grep -q "Cross-validation passed"; then
+        if [ -f target/crossval_report.json ]; then
+            rust_ok=$(jq -r '.rust_ok' target/crossval_report.json)
+            cpp_ok=$(jq -r '.cpp_header_ok // .cpp_full_ok // false' target/crossval_report.json)
+            
+            if [ "$rust_ok" = "true" ] && [ "$cpp_ok" = "true" ]; then
+                report_test "TinyLlama Positive Control" "PASS" "Both C++ and Rust load model successfully"
+            else
+                report_test "TinyLlama Positive Control" "FAIL" "One implementation failed"
+            fi
+        fi
     else
-        cpp_loads_real="no"
+        report_test "TinyLlama Positive Control" "FAIL" "Cross-validation failed"
     fi
+    # Restore XFAIL mode
+    export CROSSVAL_ALLOW_CPP_FAIL=1
+fi
+
+# Test with real Microsoft BitNet model if available
+if [ -f "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf" ]; then
+    echo "   Testing with Microsoft BitNet model..."
     
-    # Note: Rust has a known issue with this specific model format
-    # This is being addressed in a separate compatibility fix
-    report_test "Real Model Compatibility" "XFAIL" "C++ loads model, Rust fix in progress"
+    if cargo run -p xtask --release -- crossval --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf 2>&1 | grep -q "Rust implementation loaded model successfully"; then
+        report_test "Microsoft BitNet Model" "PASS" "Rust loads v3 variant successfully (fixed!)"
+    else
+        report_test "Microsoft BitNet Model" "FAIL" "Failed to load model"
+    fi
 fi
 
 echo ""
@@ -205,6 +208,16 @@ fi
 echo "   Tests Run: $TOTAL_TESTS"
 echo "   Tests Passed: $PASSED_TESTS"
 echo "   Success Rate: ${SUCCESS_RATE}%"
+
+# Show enhanced metadata if available
+if [ -f target/crossval_report.json ]; then
+    echo ""
+    echo "   Last Model Metadata:"
+    jq -r '"     - GGUF version: \(.gguf_version_detected // "unknown")
+     - KV pairs: \(.n_kv // "unknown")  
+     - Tensors: \(.n_tensors // "unknown")
+     - File size: \((.file_size // 0) / 1024 / 1024 | floor) MB"' target/crossval_report.json 2>/dev/null || true
+fi
 
 if [ $SUCCESS_RATE -ge 90 ]; then
     echo -e "\n${GREEN}✅ ACCEPTANCE GATE: PASSED${NC}"

@@ -59,10 +59,20 @@ struct CrossValReport {
     notes: String,
     timestamp: String,
     platform: String,
+    // Enhanced fields for better diagnostics
+    gguf_version_detected: Option<u32>,
+    n_kv: Option<u64>,
+    n_tensors: Option<u64>,
+    data_offset: Option<u64>,
+    file_size: Option<u64>,
 }
 
 impl CrossValReport {
     fn new(model: &Path) -> Self {
+        let file_size = std::fs::metadata(model)
+            .ok()
+            .map(|m| m.len());
+        
         Self {
             model: model.display().to_string(),
             rust_ok: false,
@@ -72,6 +82,11 @@ impl CrossValReport {
             notes: String::new(),
             timestamp: chrono::Utc::now().to_rfc3339(),
             platform: format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
+            gguf_version_detected: None,
+            n_kv: None,
+            n_tensors: None,
+            data_offset: None,
+            file_size,
         }
     }
     
@@ -1423,7 +1438,7 @@ fn cpp_header_preflight(cpp_root: &Path, model: &Path) -> Result<()> {
         cmd.args(["-l", "-m"]).arg(model);
     } else {
         // For llama-cli or main, use a minimal test
-        cmd.args(["-m", model, "-p", "", "-n", "1"]);
+        cmd.arg("-m").arg(model).args(["-p", "", "-n", "1"]);
     }
     apply_cpp_env(&mut cmd, cpp_root);
     apply_deterministic_env(&mut cmd);
@@ -1461,14 +1476,22 @@ fn crossval_cmd(
 
     // First validate that the Rust implementation can load the model
     println!("🔍 Validating Rust implementation can load the model...");
-    if let Err(e) = validate_rust_model_loading(model) {
-        report.rust_ok = false;
-        report.notes = format!("Rust implementation failed: {}", e);
-        let _ = report.save(&PathBuf::from("target/crossval_report.json"));
-        return Err(anyhow!("Rust implementation failed to load model: {}", e));
+    match validate_rust_model_loading(model) {
+        Ok((version, n_kv, n_tensors, data_offset)) => {
+            report.rust_ok = true;
+            report.gguf_version_detected = Some(version);
+            report.n_kv = Some(n_kv);
+            report.n_tensors = Some(n_tensors);
+            report.data_offset = Some(data_offset);
+            println!("   ✓ Rust implementation loaded model successfully");
+        }
+        Err(e) => {
+            report.rust_ok = false;
+            report.notes = format!("Rust implementation failed: {}", e);
+            let _ = report.save(&PathBuf::from("target/crossval_report.json"));
+            return Err(anyhow!("Rust implementation failed to load model: {}", e));
+        }
     }
-    println!("   ✓ Rust implementation loaded model successfully");
-    report.rust_ok = true;
 
     let cpp = cpp_dir
         .map(|p| p.to_path_buf())
@@ -1617,7 +1640,8 @@ fn crossval_cmd(
 }
 
 /// Validate that the Rust implementation can load the model
-fn validate_rust_model_loading(model_path: &Path) -> Result<()> {
+/// Returns GGUF metadata for enhanced reporting  
+fn validate_rust_model_loading(model_path: &Path) -> Result<(u32, u64, u64, u64)> {
     // Use the real GGUF reader from bitnet-models
     println!("   Validating with real GGUF reader...");
     
@@ -1633,8 +1657,18 @@ fn validate_rust_model_loading(model_path: &Path) -> Result<()> {
                     if let Err(e) = reader.validate() {
                         return Err(anyhow!("GGUF validation failed: {}", e));
                     }
-                    println!("   ✓ GGUF v{} parsed and validated successfully", reader.version());
-                    Ok(())
+                    
+                    let version = reader.version();
+                    let n_kv = reader.metadata_kv_count();
+                    let n_tensors = reader.tensor_count();
+                    let data_offset = reader.data_offset();
+                    
+                    println!("   ✓ GGUF v{} parsed and validated successfully", version);
+                    println!("     - KV pairs: {}", n_kv);
+                    println!("     - Tensors: {}", n_tensors);
+                    println!("     - Data offset: {}", data_offset);
+                    
+                    Ok((version, n_kv, n_tensors, data_offset))
                 }
                 Err(e) => {
                     // Fallback to basic validation for error details
