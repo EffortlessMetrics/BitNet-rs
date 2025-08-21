@@ -89,7 +89,7 @@ echo "----------------------------"
 # Run mapper dry-run test for MS BitNet if available
 if [ -f "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf" ]; then
     echo "   Testing tensor name mapping..."
-    if cargo test --package crossval ms_bitnet_names_map_clean -- --nocapture 2>&1 | grep -q "test result: ok"; then
+    if cargo test --package bitnet-crossval ms_bitnet_names_map_clean 2>&1 | grep -q "test result: ok.*1 passed"; then
         report_test "Tensor Name Mapping" "PASS" "All tensors mapped successfully"
     else
         report_test "Tensor Name Mapping" "FAIL" "Unmapped tensors detected"

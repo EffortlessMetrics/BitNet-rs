@@ -1,0 +1,10 @@
+{
+  "timestamp": "2025-08-21T14:26:34Z",
+  "tests": {
+    "build": "pass",
+    "mapper": "fail",
+    "sentencepiece": "skip",
+    "strict_mode": "skip",
+    "ab_tokens": "skip"
+  }
+}
