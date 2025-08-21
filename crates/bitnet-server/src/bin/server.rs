@@ -71,7 +71,7 @@ async fn main() -> Result<()> {
     let config = ServerConfig {
         host: args.host,
         port: args.port,
-        model_path: args.model,
+        model_path: Some(args.model),
         tokenizer_path: args.tokenizer,
         device: args.device,
         monitoring: MonitoringConfig {
