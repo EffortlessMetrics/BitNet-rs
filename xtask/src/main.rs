@@ -1408,18 +1408,28 @@ fn apply_deterministic_env(cmd: &mut Command) {
 
 /// Preflight check using C++ header tool before full load
 fn cpp_header_preflight(cpp_root: &Path, model: &Path) -> Result<()> {
-    let llama_gguf = cpp_root.join("build/bin/llama-gguf");
-    if !llama_gguf.exists() {
-        return Err(anyhow!("llama-gguf not found at: {}", llama_gguf.display()));
-    }
+    // Try multiple possible binary names
+    let candidates = ["llama-gguf", "llama-cli", "main"];
+    let llama_bin = candidates.iter()
+        .map(|b| cpp_root.join(format!("build/bin/{}", b)))
+        .find(|p| p.exists())
+        .ok_or_else(|| anyhow!("No llama binary found in {}. Tried: {:?}", 
+                                cpp_root.join("build/bin").display(), candidates))?;
     
-    let mut cmd = Command::new(&llama_gguf);
-    cmd.args(["-l", "-m"]).arg(model);
+    let mut cmd = Command::new(&llama_bin);
+    
+    // Use appropriate args based on which binary we found
+    if llama_bin.file_name().and_then(|s| s.to_str()) == Some("llama-gguf") {
+        cmd.args(["-l", "-m"]).arg(model);
+    } else {
+        // For llama-cli or main, use a minimal test
+        cmd.args(["-m", model, "-p", "", "-n", "1"]);
+    }
     apply_cpp_env(&mut cmd, cpp_root);
     apply_deterministic_env(&mut cmd);
     
     let output = cmd.output()
-        .with_context(|| format!("Failed to run C++ header preflight: {}", llama_gguf.display()))?;
+        .with_context(|| format!("Failed to run C++ header preflight: {}", llama_bin.display()))?;
     
     if output.status.success() {
         println!("   ✓ C++ header preflight passed");

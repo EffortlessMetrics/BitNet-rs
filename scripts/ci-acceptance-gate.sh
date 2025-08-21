@@ -50,8 +50,15 @@ report_test "Core Library Build" "PASS" "Built successfully with CPU features"
 
 # Build FFI library
 echo "   Building FFI library for C API compatibility..."
-cargo build -p bitnet-ffi --release --no-default-features --features cpu 2>&1 | grep -E "Compiling|Finished" | tail -2
-report_test "FFI Library Build" "PASS" "C API compatibility layer built"
+if cargo build -p bitnet-ffi --release --no-default-features --features cpu 2>&1 | grep -E "Compiling|Finished" | tail -2; then
+    report_test "FFI Library Build" "PASS" "C API compatibility layer built"
+else
+    report_test "FFI Library Build" "FAIL" "FFI library build failed"
+fi
+    report_test "FFI Library Build" "PASS" "C API compatibility layer built"
+else
+    report_test "FFI Library Build" "FAIL" "FFI build failed"
+fi
 
 echo ""
 echo "2️⃣  Running Test Suite"
@@ -86,9 +93,27 @@ export RAYON_NUM_THREADS=1
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
 
-cargo run -p xtask --release -- crossval --model target/mini_v3.gguf >/dev/null 2>&1
-
-if [ -f "target/crossval_report.json" ]; then
+        rust_ok=$(python3 -c "import json, sys; \
+    try: \
+        with open('target/crossval_report.json') as f: \
+            data = json.load(f); \
+        print(data.get('rust_ok', False)) \
+    except Exception as e: \
+        print(False)")
+        cpp_ok=$(python3 -c "import json, sys; \
+    try: \
+        with open('target/crossval_report.json') as f: \
+            data = json.load(f); \
+        print(data.get('cpp_header_ok', False)) \
+    except Exception as e: \
+        print(False)")
+        xfail=$(python3 -c "import json, sys; \
+    try: \
+        with open('target/crossval_report.json') as f: \
+            data = json.load(f); \
+        print(data.get('xfail', False)) \
+    except Exception as e: \
+        print(False)")
     rust_ok=$(python3 -c "import json; print(json.load(open('target/crossval_report.json'))['rust_ok'])")
     cpp_ok=$(python3 -c "import json; print(json.load(open('target/crossval_report.json')).get('cpp_header_ok', False))")
     xfail=$(python3 -c "import json; print(json.load(open('target/crossval_report.json')).get('xfail', False))")
@@ -171,7 +196,11 @@ echo "📊 Final Report"
 echo "========================================"
 
 # Calculate success rate
-SUCCESS_RATE=$((PASSED_TESTS * 100 / TOTAL_TESTS))
+if [ "$TOTAL_TESTS" -gt 0 ]; then
+    SUCCESS_RATE=$((PASSED_TESTS * 100 / TOTAL_TESTS))
+else
+    SUCCESS_RATE=0
+fi
 
 echo "   Tests Run: $TOTAL_TESTS"
 echo "   Tests Passed: $PASSED_TESTS"
