@@ -94,6 +94,7 @@ fn map_tensor_name(name: &str) -> Option<String> {
 
                 // Attention normalization
                 "attn_norm.weight" => "input_layernorm.weight",
+                "attn_sub_norm.weight" => "self_attn.sub_layernorm.weight",  // BitNet specific
 
                 // Feed-forward weights
                 "ffn_gate.weight" | "ffn_gate_inp.weight" => "mlp.gate_proj.weight",

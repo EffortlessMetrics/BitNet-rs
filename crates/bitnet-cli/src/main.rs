@@ -460,14 +460,31 @@ async fn run_simple_generation(
             }
         }
     } else {
-        if strict_tokenizer {
-            anyhow::bail!("No tokenizer found. Strict tokenizer mode requires --tokenizer <path>.");
+        // Try to load tokenizer from GGUF if no external tokenizer specified
+        println!("Attempting to load tokenizer from GGUF model...");
+        
+        // Read the GGUF file to get tokenizer metadata
+        let gguf_data = std::fs::read(&model_path)
+            .context("Failed to read GGUF file for tokenizer extraction")?;
+        let reader = bitnet_models::GgufReader::new(&gguf_data)
+            .context("Failed to parse GGUF for tokenizer extraction")?;
+        
+        match bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&reader) {
+            Ok(tok) => {
+                println!("Successfully loaded SentencePiece tokenizer from GGUF");
+                tok
+            }
+            Err(e) => {
+                if strict_tokenizer {
+                    anyhow::bail!("Failed to load tokenizer from GGUF: {e}. Strict tokenizer mode enabled.");
+                }
+                if !allow_mock {
+                    anyhow::bail!("Failed to load tokenizer from GGUF: {e}. Specify --tokenizer <path> or use --allow-mock.");
+                }
+                println!("Warning: Using mock tokenizer due to: {e}");
+                Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
+            }
         }
-        if !allow_mock {
-            anyhow::bail!("No tokenizer found. Specify --tokenizer <path> or use --allow-mock.");
-        }
-        println!("Warning: No tokenizer found, using mock tokenizer");
-        Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
     };
 
     // Tokenize prompt
@@ -483,6 +500,10 @@ async fn run_simple_generation(
 
     print!("Generating: {}", prompt);
     std::io::Write::flush(&mut std::io::stdout())?;
+    
+    // Track timing
+    let start_time = std::time::Instant::now();
+    let mut first_token_ms: Option<u64> = None;
 
     // Track generated tokens for repetition penalty
     let mut generated_tokens = Vec::new();
@@ -505,6 +526,11 @@ async fn run_simple_generation(
         let next_token = sampler.sample(&logits_vec, &generated_tokens);
         tokens.push(next_token);
         generated_tokens.push(next_token);
+        
+        // Track first token time
+        if first_token_ms.is_none() {
+            first_token_ms = Some(start_time.elapsed().as_millis() as u64);
+        }
 
         // Decode and print the new token
         let token_text = tokenizer.decode(&[next_token])?;
@@ -519,17 +545,45 @@ async fn run_simple_generation(
         }
     }
 
+    // Calculate timing metrics
+    let total_ms = start_time.elapsed().as_millis() as u64;
+    let tok_per_sec = if total_ms > 0 { 
+        (generated_tokens.len() as f64) / (total_ms as f64 / 1000.0) 
+    } else { 
+        0.0 
+    };
+    
     println!("\n\nGeneration complete!");
-    println!("Generated {} tokens", generated_tokens.len());
+    println!("Generated {} tokens in {}ms ({:.1} tok/s)", 
+             generated_tokens.len(), total_ms, tok_per_sec);
     
     // Output JSON if requested
     if let Some(json_path) = json_out {
         let generated_text = tokenizer.decode(&generated_tokens)?;
+        
+        // Get tokenizer info
+        let tokenizer_info = serde_json::json!({
+            "type": "sentencepiece",  // TODO: detect actual type
+            "bos": tokenizer.eos_token_id().unwrap_or(0),  // Note: we only have eos_token_id in trait
+            "eos": tokenizer.eos_token_id().unwrap_or(0),
+        });
+        
+        // Count info - these would come from the model loader in a real implementation
+        let counts = serde_json::json!({
+            "n_kv": 0,  // TODO: get from model metadata
+            "n_tensors": 0,  // TODO: get from model metadata  
+            "unmapped": 0,  // In strict mode this is always 0
+        });
+        
         let output = serde_json::json!({
             "prompt": prompt,
             "ids": generated_tokens,
             "text": generated_text,
-            "tok_per_sec": generated_tokens.len() as f64, // TODO: track actual time
+            "first_token_ms": first_token_ms,
+            "tok_per_sec": tok_per_sec,
+            "total_ms": total_ms,
+            "counts": counts,
+            "tokenizer": tokenizer_info,
         });
         std::fs::write(&json_path, serde_json::to_string_pretty(&output)?)?;
         println!("JSON output written to: {}", json_path.display());

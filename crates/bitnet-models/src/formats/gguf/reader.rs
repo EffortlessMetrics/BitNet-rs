@@ -246,6 +246,25 @@ impl<'a> GgufReader<'a> {
             _ => None,
         })
     }
+    
+    /// Get Array metadata by key (for tokenizer.ggml.model bytes)
+    pub fn get_array_metadata(&self, key: &str) -> Option<Vec<u8>> {
+        self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {
+            GgufValue::Array(arr) => {
+                // Convert array of U8 values to byte vector
+                let bytes: Vec<u8> = arr.iter().filter_map(|v| match v {
+                    GgufValue::U8(b) => Some(*b),
+                    _ => None,
+                }).collect();
+                if bytes.len() == arr.len() {
+                    Some(bytes)
+                } else {
+                    None
+                }
+            },
+            _ => None,
+        })
+    }
 
     /// Get all metadata keys
     pub fn metadata_keys(&self) -> Vec<&str> {

@@ -4,6 +4,7 @@ pub mod loader;
 mod mock;
 pub mod universal;
 pub mod gguf_tokenizer;
+pub mod sp_tokenizer;
 
 use bitnet_common::Result;
 use std::path::Path;

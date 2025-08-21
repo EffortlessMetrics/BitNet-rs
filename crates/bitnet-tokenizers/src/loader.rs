@@ -20,11 +20,68 @@ pub fn load_tokenizer(path: &Path) -> Result<Box<dyn Tokenizer>> {
             anyhow::bail!("JSON tokenizer loading not yet implemented")
         }
         "model" => {
-            // TODO: Load SentencePiece model
-            anyhow::bail!("SentencePiece tokenizer loading not yet implemented")
+            // Load SentencePiece model directly
+            match crate::sp_tokenizer::SpTokenizer::from_file(path) {
+                Ok(t) => Ok(t),
+                Err(e) => anyhow::bail!("Failed to load SentencePiece model: {}", e),
+            }
         }
         _ => {
             anyhow::bail!("Unknown tokenizer file format: {}", ext)
         }
     }
+}
+
+/// Load tokenizer from GGUF metadata (using HashMap)
+pub fn load_tokenizer_from_gguf(metadata: &std::collections::HashMap<String, serde_json::Value>) -> Result<Box<dyn Tokenizer>> {
+    use base64::Engine;
+    
+    // Check if we have a SentencePiece model embedded
+    if let Some(model_blob) = metadata.get("tokenizer.ggml.model") {
+        if let Some(blob_str) = model_blob.as_str() {
+            // It's base64 encoded
+            let bytes = base64::engine::general_purpose::STANDARD.decode(blob_str)?;
+            
+            let bos = metadata.get("tokenizer.ggml.bos_token_id")
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32);
+            let eos = metadata.get("tokenizer.ggml.eos_token_id")
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32);
+                
+            return Ok(crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&bytes, bos, eos)?);
+        } else if let Some(blob_array) = model_blob.as_array() {
+            // It's a byte array
+            let bytes: Vec<u8> = blob_array
+                .iter()
+                .filter_map(|v| v.as_u64().map(|b| b as u8))
+                .collect();
+                
+            let bos = metadata.get("tokenizer.ggml.bos_token_id")
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32);
+            let eos = metadata.get("tokenizer.ggml.eos_token_id")
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32);
+                
+            return Ok(crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&bytes, bos, eos)?);
+        }
+    }
+    
+    // If no embedded tokenizer, fail
+    anyhow::bail!("GGUF file does not contain an embedded tokenizer (tokenizer.ggml.model)")
+}
+
+/// Load tokenizer from GGUF reader
+pub fn load_tokenizer_from_gguf_reader(reader: &bitnet_models::GgufReader) -> Result<Box<dyn Tokenizer>> {
+    // Try to get the tokenizer model bytes from the GGUF metadata
+    if let Some(model_bytes) = reader.get_array_metadata("tokenizer.ggml.model") {
+        let bos = reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
+        let eos = reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
+        
+        return Ok(crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&model_bytes, bos, eos)?);
+    }
+    
+    // If no embedded tokenizer, fail
+    anyhow::bail!("GGUF file does not contain an embedded tokenizer (tokenizer.ggml.model)")
 }
