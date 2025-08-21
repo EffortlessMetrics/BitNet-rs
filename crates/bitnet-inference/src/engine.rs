@@ -390,7 +390,8 @@ mod tests {
         fn encode(
             &self,
             _text: &str,
-            _add_special_tokens: bool,
+            _add_bos: bool,
+            _add_special: bool,
         ) -> bitnet_common::Result<Vec<u32>> {
             Ok(vec![1, 2, 3])
         }
@@ -398,13 +399,16 @@ mod tests {
         fn decode(
             &self,
             _tokens: &[u32],
-            _skip_special_tokens: bool,
         ) -> bitnet_common::Result<String> {
             Ok("mock generated text".to_string())
         }
 
         fn vocab_size(&self) -> usize {
             50257
+        }
+
+        fn token_to_piece(&self, _token: u32) -> Option<String> {
+            Some("piece".to_string())
         }
 
         fn eos_token_id(&self) -> Option<u32> {
