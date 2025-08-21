@@ -25,9 +25,9 @@ mod accuracy_tests {
         let text = "The quick brown fox jumps over the lazy dog";
 
         // Multiple calls should produce identical results
-        let tokens1 = tokenizer.encode(text, false).unwrap();
-        let tokens2 = tokenizer.encode(text, false).unwrap();
-        let tokens3 = tokenizer.encode(text, false).unwrap();
+        let tokens1 = tokenizer.encode(text, false, false).unwrap();
+        let tokens2 = tokenizer.encode(text, false, false).unwrap();
+        let tokens3 = tokenizer.encode(text, false, false).unwrap();
 
         assert_eq!(tokens1, tokens2);
         assert_eq!(tokens2, tokens3);
@@ -40,8 +40,8 @@ mod accuracy_tests {
         let tokenizer2 = BasicTokenizer::new();
         let text = "consistency test across instances";
 
-        let tokens1 = tokenizer1.encode(text, false).unwrap();
-        let tokens2 = tokenizer2.encode(text, false).unwrap();
+        let tokens1 = tokenizer1.encode(text, false, false).unwrap();
+        let tokens2 = tokenizer2.encode(text, false, false).unwrap();
 
         assert_eq!(tokens1, tokens2);
     }
@@ -60,8 +60,8 @@ mod accuracy_tests {
         ];
 
         for text in test_cases {
-            let tokens = tokenizer.encode(text, false).unwrap();
-            let decoded = tokenizer.decode(&tokens, false).unwrap();
+            let tokens = tokenizer.encode(text, false, false).unwrap();
+            let decoded = tokenizer.decode(&tokens).unwrap();
 
             // Verify consistency (not exact match due to placeholder implementation)
             if text.trim().is_empty() {
@@ -80,8 +80,8 @@ mod accuracy_tests {
         let tokenizer = BasicTokenizer::new();
         let text = "test with special tokens";
 
-        let tokens_without = tokenizer.encode(text, false).unwrap();
-        let tokens_with = tokenizer.encode(text, true).unwrap();
+        let tokens_without = tokenizer.encode(text, false, false).unwrap();
+        let tokens_with = tokenizer.encode(text, true, false).unwrap();
 
         assert_eq!(tokens_without.len(), 4); // 4 words
         assert_eq!(tokens_with.len(), 5); // 4 words + EOS token
@@ -96,8 +96,8 @@ mod accuracy_tests {
         let tokenizer = BasicTokenizer::with_config(1000, Some(999), Some(0));
         let tokens = vec![1, 2, 0, 3, 999, 0]; // Mixed content and special tokens
 
-        let decoded_with_special = tokenizer.decode(&tokens, false).unwrap();
-        let decoded_without_special = tokenizer.decode(&tokens, true).unwrap();
+        let decoded_with_special = tokenizer.decode(&tokens).unwrap();
+        let decoded_without_special = tokenizer.decode(&tokens).unwrap();
 
         assert!(decoded_with_special.contains("6 tokens")); // All tokens included
         assert!(decoded_without_special.contains("3 tokens")); // Only content tokens
@@ -122,11 +122,11 @@ mod accuracy_tests {
         ];
 
         for (text, expected_count) in edge_cases {
-            let tokens = tokenizer.encode(text, false).unwrap();
+            let tokens = tokenizer.encode(text, false, false).unwrap();
             assert_eq!(tokens.len(), expected_count, "Failed for: '{}'", text);
 
             if expected_count > 0 {
-                let decoded = tokenizer.decode(&tokens, false).unwrap();
+                let decoded = tokenizer.decode(&tokens).unwrap();
                 assert!(decoded.contains(&format!("{} tokens", expected_count)));
             }
         }
@@ -147,8 +147,8 @@ mod format_configuration_tests {
 
         // Test encoding/decoding with GPT-2 config
         let text = "GPT-2 configuration test";
-        let tokens = tokenizer.encode(text, true).unwrap();
-        let decoded = tokenizer.decode(&tokens, false).unwrap();
+        let tokens = tokenizer.encode(text, true, false).unwrap();
+        let decoded = tokenizer.decode(&tokens).unwrap();
 
         assert_eq!(tokens.len(), 4); // 3 words + EOS
         assert_eq!(tokens[3], 50256); // EOS token
@@ -165,8 +165,8 @@ mod format_configuration_tests {
 
         // Test encoding/decoding with BERT config
         let text = "BERT configuration test";
-        let tokens = tokenizer.encode(text, true).unwrap();
-        let decoded = tokenizer.decode(&tokens, false).unwrap();
+        let tokens = tokenizer.encode(text, true, false).unwrap();
+        let decoded = tokenizer.decode(&tokens).unwrap();
 
         assert_eq!(tokens.len(), 4); // 3 words + EOS
         assert_eq!(tokens[3], 102); // BERT EOS token
@@ -183,8 +183,8 @@ mod format_configuration_tests {
 
         // Test encoding/decoding with tiny config
         let text = "tiny model test";
-        let tokens = tokenizer.encode(text, true).unwrap();
-        let decoded = tokenizer.decode(&tokens, false).unwrap();
+        let tokens = tokenizer.encode(text, true, false).unwrap();
+        let decoded = tokenizer.decode(&tokens).unwrap();
 
         assert_eq!(tokens.len(), 4); // 3 words + EOS
         assert_eq!(tokens[3], 999); // Tiny EOS token
@@ -201,9 +201,9 @@ mod format_configuration_tests {
 
         // Test with custom configuration
         let text = "custom configuration";
-        let tokens = tokenizer.encode(text, true).unwrap();
-        let decoded_with_special = tokenizer.decode(&tokens, false).unwrap();
-        let decoded_without_special = tokenizer.decode(&tokens, true).unwrap();
+        let tokens = tokenizer.encode(text, true, false).unwrap();
+        let decoded_with_special = tokenizer.decode(&tokens).unwrap();
+        let decoded_without_special = tokenizer.decode(&tokens).unwrap();
 
         assert_eq!(tokens.len(), 3); // 2 words + EOS
         assert_eq!(tokens[2], 4999); // Custom EOS token
@@ -265,8 +265,8 @@ mod special_token_tests {
         let tokenizer = BasicTokenizer::new();
         let text = "test EOS token";
 
-        let tokens_without_eos = tokenizer.encode(text, false).unwrap();
-        let tokens_with_eos = tokenizer.encode(text, true).unwrap();
+        let tokens_without_eos = tokenizer.encode(text, false, false).unwrap();
+        let tokens_with_eos = tokenizer.encode(text, true, false).unwrap();
 
         assert_eq!(tokens_without_eos.len(), 3);
         assert_eq!(tokens_with_eos.len(), 4);
@@ -282,8 +282,8 @@ mod special_token_tests {
         let tokenizer = BasicTokenizer::with_config(1000, Some(999), Some(0));
         let tokens_with_pads = vec![1, 2, 0, 3, 0, 4, 0];
 
-        let decoded_with_pads = tokenizer.decode(&tokens_with_pads, false).unwrap();
-        let decoded_without_pads = tokenizer.decode(&tokens_with_pads, true).unwrap();
+        let decoded_with_pads = tokenizer.decode(&tokens_with_pads).unwrap();
+        let decoded_without_pads = tokenizer.decode(&tokens_with_pads).unwrap();
 
         assert!(decoded_with_pads.contains("7 tokens")); // All tokens
         assert!(decoded_without_pads.contains("4 tokens")); // Only non-pad tokens
@@ -294,8 +294,8 @@ mod special_token_tests {
         let tokenizer = BasicTokenizer::with_config(1000, Some(999), Some(0));
         let tokens = vec![1, 0, 2, 999, 3, 0, 999]; // Mixed PAD and EOS tokens
 
-        let decoded_with_special = tokenizer.decode(&tokens, false).unwrap();
-        let decoded_without_special = tokenizer.decode(&tokens, true).unwrap();
+        let decoded_with_special = tokenizer.decode(&tokens).unwrap();
+        let decoded_without_special = tokenizer.decode(&tokens).unwrap();
 
         assert!(decoded_with_special.contains("7 tokens"));
         assert!(decoded_without_special.contains("3 tokens")); // Only content tokens
@@ -306,8 +306,8 @@ mod special_token_tests {
         let tokenizer = BasicTokenizer::with_config(100, Some(99), Some(0));
         let only_special = vec![0, 99, 0, 99, 0];
 
-        let decoded_with_special = tokenizer.decode(&only_special, false).unwrap();
-        let decoded_without_special = tokenizer.decode(&only_special, true).unwrap();
+        let decoded_with_special = tokenizer.decode(&only_special).unwrap();
+        let decoded_without_special = tokenizer.decode(&only_special).unwrap();
 
         assert!(decoded_with_special.contains("5 tokens"));
         assert_eq!(decoded_without_special, ""); // Empty after filtering
@@ -318,8 +318,8 @@ mod special_token_tests {
         let tokenizer = BasicTokenizer::with_config(1000, None, None);
         let text = "no special tokens";
 
-        let tokens_with_flag = tokenizer.encode(text, true).unwrap();
-        let tokens_without_flag = tokenizer.encode(text, false).unwrap();
+        let tokens_with_flag = tokenizer.encode(text, true, false).unwrap();
+        let tokens_without_flag = tokenizer.encode(text, false, false).unwrap();
 
         // Should be identical when no special tokens are configured
         assert_eq!(tokens_with_flag, tokens_without_flag);
@@ -342,8 +342,8 @@ mod special_token_tests {
             (vec![1, 2, 3], true, "3 tokens"),
         ];
 
-        for (tokens, skip_special, expected) in edge_cases {
-            let decoded = tokenizer.decode(&tokens, skip_special).unwrap();
+        for (tokens, _skip_special, expected) in edge_cases {
+            let decoded = tokenizer.decode(&tokens).unwrap();
             if expected.is_empty() {
                 assert_eq!(decoded, "");
             } else {
@@ -362,8 +362,8 @@ mod special_token_tests {
         assert_eq!(tokenizer.pad_token_id(), Some(0));
 
         let tokens = vec![1, 0, u32::MAX - 1, 2];
-        let decoded_with_special = tokenizer.decode(&tokens, false).unwrap();
-        let decoded_without_special = tokenizer.decode(&tokens, true).unwrap();
+        let decoded_with_special = tokenizer.decode(&tokens).unwrap();
+        let decoded_without_special = tokenizer.decode(&tokens).unwrap();
 
         assert!(decoded_with_special.contains("4 tokens"));
         assert!(decoded_without_special.contains("2 tokens"));
@@ -381,7 +381,7 @@ mod performance_tests {
 
         let start = Instant::now();
         for _ in 0..1000 {
-            let _ = tokenizer.encode(text, false).unwrap();
+            let _ = tokenizer.encode(text, false, false).unwrap();
         }
         let duration = start.elapsed();
 
@@ -396,7 +396,7 @@ mod performance_tests {
 
         let start = Instant::now();
         for _ in 0..1000 {
-            let _ = tokenizer.decode(&tokens, false).unwrap();
+            let _ = tokenizer.decode(&tokens).unwrap();
         }
         let duration = start.elapsed();
 
@@ -416,11 +416,11 @@ mod performance_tests {
             let text = words.join(" ");
 
             let start = Instant::now();
-            let tokens = tokenizer.encode(&text, false).unwrap();
+            let tokens = tokenizer.encode(&text, false, false).unwrap();
             let encode_time = start.elapsed();
 
             let start = Instant::now();
-            let _decoded = tokenizer.decode(&tokens, false).unwrap();
+            let _decoded = tokenizer.decode(&tokens).unwrap();
             let decode_time = start.elapsed();
 
             // Verify correctness
@@ -454,10 +454,10 @@ mod performance_tests {
         // Test memory usage doesn't grow excessively with large inputs
         let large_text = "word ".repeat(50000); // 50k words
 
-        let tokens = tokenizer.encode(&large_text, false).unwrap();
+        let tokens = tokenizer.encode(&large_text, false, false).unwrap();
         assert_eq!(tokens.len(), 50000);
 
-        let decoded = tokenizer.decode(&tokens, false).unwrap();
+        let decoded = tokenizer.decode(&tokens).unwrap();
         assert!(decoded.contains("50000 tokens"));
 
         // Memory should be released after operations
@@ -479,8 +479,8 @@ mod performance_tests {
                 let start = Instant::now();
 
                 for _ in 0..100 {
-                    let tokens = tokenizer_clone.encode(&text, false).unwrap();
-                    let _decoded = tokenizer_clone.decode(&tokens, false).unwrap();
+                    let tokens = tokenizer_clone.encode(&text, false, false).unwrap();
+                    let _decoded = tokenizer_clone.decode(&tokens).unwrap();
                 }
 
                 start.elapsed()
@@ -518,8 +518,8 @@ mod performance_tests {
             let start = Instant::now();
 
             for _ in 0..iterations {
-                let tokens = tokenizer.encode(text, false).unwrap();
-                let _decoded = tokenizer.decode(&tokens, false).unwrap();
+                let tokens = tokenizer.encode(text, false, false).unwrap();
+                let _decoded = tokenizer.decode(&tokens).unwrap();
             }
 
             let duration = start.elapsed();
@@ -554,8 +554,8 @@ mod linguistic_validation_tests {
         ];
 
         for (text, expected_tokens) in test_cases {
-            let tokens = tokenizer.encode(text, false).unwrap();
-            let decoded = tokenizer.decode(&tokens, false).unwrap();
+            let tokens = tokenizer.encode(text, false, false).unwrap();
+            let decoded = tokenizer.decode(&tokens).unwrap();
 
             assert_eq!(tokens.len(), expected_tokens, "Failed for: '{}'", text);
             assert!(decoded.contains(&format!("{} tokens", expected_tokens)));
@@ -582,8 +582,8 @@ mod linguistic_validation_tests {
         ];
 
         for (text, language, expected_tokens) in multilingual_tests {
-            let tokens = tokenizer.encode(text, false).unwrap();
-            let decoded = tokenizer.decode(&tokens, false).unwrap();
+            let tokens = tokenizer.encode(text, false, false).unwrap();
+            let decoded = tokenizer.decode(&tokens).unwrap();
 
             assert_eq!(tokens.len(), expected_tokens, "Failed for {} text: '{}'", language, text);
             assert!(decoded.contains(&format!("{} tokens", expected_tokens)));
@@ -622,7 +622,7 @@ mod linguistic_validation_tests {
         ];
 
         for (text, expected_tokens) in punctuation_tests {
-            let tokens = tokenizer.encode(text, false).unwrap();
+            let tokens = tokenizer.encode(text, false, false).unwrap();
             assert_eq!(tokens.len(), expected_tokens, "Failed for: '{}'", text);
         }
     }
@@ -650,7 +650,7 @@ mod linguistic_validation_tests {
         ];
 
         for (text, expected_tokens) in numeric_tests {
-            let tokens = tokenizer.encode(text, false).unwrap();
+            let tokens = tokenizer.encode(text, false, false).unwrap();
             assert_eq!(tokens.len(), expected_tokens, "Failed for: '{}'", text);
         }
     }
@@ -673,7 +673,7 @@ mod linguistic_validation_tests {
         ];
 
         for (text, expected_tokens) in whitespace_tests {
-            let tokens = tokenizer.encode(text, false).unwrap();
+            let tokens = tokenizer.encode(text, false, false).unwrap();
             assert_eq!(tokens.len(), expected_tokens, "Failed for: '{}'", text);
         }
     }
@@ -696,7 +696,7 @@ mod linguistic_validation_tests {
         ];
 
         for (text, expected_tokens) in unicode_tests {
-            let tokens = tokenizer.encode(text, false).unwrap();
+            let tokens = tokenizer.encode(text, false, false).unwrap();
             assert_eq!(tokens.len(), expected_tokens, "Failed for: '{}'", text);
         }
     }
@@ -716,7 +716,7 @@ mod linguistic_validation_tests {
 
         for group in pattern_groups {
             let token_counts: Vec<usize> =
-                group.iter().map(|text| tokenizer.encode(text, false).unwrap().len()).collect();
+                group.iter().map(|text| tokenizer.encode(text, false, false).unwrap().len()).collect();
 
             // All items in a group should have the same token count
             let first_count = token_counts[0];
@@ -747,7 +747,7 @@ mod linguistic_validation_tests {
         ];
 
         for (text, expected_tokens) in sentence_tests {
-            let tokens = tokenizer.encode(text, false).unwrap();
+            let tokens = tokenizer.encode(text, false, false).unwrap();
             assert_eq!(tokens.len(), expected_tokens, "Failed for: '{}'", text);
         }
     }
@@ -767,8 +767,8 @@ mod coverage_tests {
         assert_eq!(tokenizer.pad_token_id(), None);
 
         let text = "coverage test";
-        let tokens = tokenizer.encode(text, true).unwrap();
-        let decoded = tokenizer.decode(&tokens, true).unwrap();
+        let tokens = tokenizer.encode(text, true, false).unwrap();
+        let decoded = tokenizer.decode(&tokens).unwrap();
 
         assert!(!tokens.is_empty());
         assert!(!decoded.is_empty());
@@ -814,8 +814,8 @@ mod coverage_tests {
         assert_eq!(tokenizer.eos_token_id(), Some(50256));
         assert_eq!(tokenizer.pad_token_id(), None);
 
-        let tokens = tokenizer.encode("trait test", false).unwrap();
-        let decoded = tokenizer.decode(&tokens, false).unwrap();
+        let tokens = tokenizer.encode("trait test", false, false).unwrap();
+        let decoded = tokenizer.decode(&tokens).unwrap();
 
         assert_eq!(tokens.len(), 2);
         assert!(decoded.contains("2 tokens"));
@@ -826,13 +826,13 @@ mod coverage_tests {
         let tokenizer = BasicTokenizer::new();
 
         // Test that all methods handle edge cases gracefully
-        assert!(tokenizer.encode("", false).is_ok());
-        assert!(tokenizer.encode("normal", false).is_ok());
-        assert!(tokenizer.encode(&"x".repeat(100000), false).is_ok());
+        assert!(tokenizer.encode("", false, false).is_ok());
+        assert!(tokenizer.encode("normal", false, false).is_ok());
+        assert!(tokenizer.encode(&"x".repeat(100000), false, false).is_ok());
 
-        assert!(tokenizer.decode(&[], false).is_ok());
-        assert!(tokenizer.decode(&[0, 1, 2], false).is_ok());
-        assert!(tokenizer.decode(&[u32::MAX], false).is_ok());
+        assert!(tokenizer.decode(&[]).is_ok());
+        assert!(tokenizer.decode(&[0, 1, 2]).is_ok());
+        assert!(tokenizer.decode(&[u32::MAX]).is_ok());
 
         // Test builder error handling
         assert!(TokenizerBuilder::from_file("nonexistent").is_ok());
@@ -855,8 +855,8 @@ mod coverage_tests {
                 let _eos_id = tokenizer_clone.eos_token_id();
                 let _pad_id = tokenizer_clone.pad_token_id();
 
-                let tokens = tokenizer_clone.encode(&text, false).unwrap();
-                let _decoded = tokenizer_clone.decode(&tokens, false).unwrap();
+                let tokens = tokenizer_clone.encode(&text, false, false).unwrap();
+                let _decoded = tokenizer_clone.decode(&tokens).unwrap();
 
                 tokens.len()
             });
@@ -889,8 +889,8 @@ mod coverage_tests {
             assert_eq!(tokenizer.pad_token_id(), pad_id);
 
             // Test basic functionality still works
-            let tokens = tokenizer.encode("test", false).unwrap();
-            let decoded = tokenizer.decode(&tokens, false).unwrap();
+            let tokens = tokenizer.encode("test", false, false).unwrap();
+            let decoded = tokenizer.decode(&tokens).unwrap();
 
             assert_eq!(tokens.len(), 1);
             assert!(decoded.contains("1 tokens"));
@@ -918,23 +918,23 @@ mod integration_tests {
         for text in test_texts {
             // Test both with and without special tokens
             for add_special in [false, true] {
-                let tokens = tokenizer.encode(text, add_special).unwrap();
+                let tokens = tokenizer.encode(text, add_special, false).unwrap();
 
                 // Test both with and without special token filtering
-                for skip_special in [false, true] {
-                    let decoded = tokenizer.decode(&tokens, skip_special).unwrap();
+                for _skip_special in [false, true] {
+                    let decoded = tokenizer.decode(&tokens).unwrap();
 
                     // Verify basic consistency
                     if text.trim().is_empty() {
                         if !add_special {
                             assert!(tokens.is_empty());
                         }
-                        if skip_special || !add_special {
+                        if !add_special {
                             assert_eq!(decoded, "");
                         }
                     } else {
                         assert!(!tokens.is_empty());
-                        if !skip_special || !add_special {
+                        if !add_special {
                             assert!(!decoded.is_empty());
                         }
                     }
@@ -958,12 +958,12 @@ mod integration_tests {
 
             // Test consistency across multiple operations
             for _ in 0..10 {
-                let tokens1 = tokenizer.encode(test_text, false).unwrap();
-                let tokens2 = tokenizer.encode(test_text, false).unwrap();
+                let tokens1 = tokenizer.encode(test_text, false, false).unwrap();
+                let tokens2 = tokenizer.encode(test_text, false, false).unwrap();
                 assert_eq!(tokens1, tokens2);
 
-                let decoded1 = tokenizer.decode(&tokens1, false).unwrap();
-                let decoded2 = tokenizer.decode(&tokens1, false).unwrap();
+                let decoded1 = tokenizer.decode(&tokens1).unwrap();
+                let decoded2 = tokenizer.decode(&tokens1).unwrap();
                 assert_eq!(decoded1, decoded2);
             }
         }
@@ -979,8 +979,8 @@ mod integration_tests {
 
             let start = Instant::now();
             for _ in 0..100 {
-                let tokens = tokenizer.encode(text, false).unwrap();
-                let _decoded = tokenizer.decode(&tokens, false).unwrap();
+                let tokens = tokenizer.encode(text, false, false).unwrap();
+                let _decoded = tokenizer.decode(&tokens).unwrap();
             }
             let duration = start.elapsed();
 
@@ -1005,8 +1005,8 @@ mod integration_tests {
 
             // Perform multiple encode/decode cycles
             for _ in 0..10 {
-                let tokens = tokenizer.encode(&text, false).unwrap();
-                let decoded = tokenizer.decode(&tokens, false).unwrap();
+                let tokens = tokenizer.encode(&text, false, false).unwrap();
+                let decoded = tokenizer.decode(&tokens).unwrap();
 
                 assert_eq!(tokens.len(), size);
                 assert!(decoded.contains(&format!("{} tokens", size)));
@@ -1035,7 +1035,7 @@ mod benchmark_tests {
         for (text, iterations) in test_cases {
             let start = Instant::now();
             for _ in 0..iterations {
-                let _ = tokenizer.encode(text, false).unwrap();
+                let _ = tokenizer.encode(text, false, false).unwrap();
             }
             let duration = start.elapsed();
 
@@ -1063,7 +1063,7 @@ mod benchmark_tests {
         for (tokens, iterations) in token_sets {
             let start = Instant::now();
             for _ in 0..iterations {
-                let _ = tokenizer.decode(&tokens, false).unwrap();
+                let _ = tokenizer.decode(&tokens).unwrap();
             }
             let duration = start.elapsed();
 
@@ -1094,9 +1094,9 @@ mod benchmark_tests {
         let mut total_tokens = 0;
 
         for _ in 0..iterations {
-            let tokens = tokenizer.encode(text, false).unwrap();
+            let tokens = tokenizer.encode(text, false, false).unwrap();
             total_tokens += tokens.len();
-            let _ = tokenizer.decode(&tokens, false).unwrap();
+            let _ = tokenizer.decode(&tokens).unwrap();
         }
 
         let duration = start.elapsed();

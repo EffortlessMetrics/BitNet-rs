@@ -18,6 +18,18 @@ struct Args {
     #[arg(long, default_value = "8080")]
     port: u16,
 
+    /// Model path
+    #[arg(long, required = true)]
+    model: String,
+
+    /// Tokenizer path
+    #[arg(long)]
+    tokenizer: Option<String>,
+
+    /// Device to use (cpu, cuda)
+    #[arg(long, default_value = "cpu")]
+    device: String,
+
     /// Enable Prometheus metrics
     #[arg(long, default_value = "true")]
     prometheus: bool,
@@ -59,6 +71,9 @@ async fn main() -> Result<()> {
     let config = ServerConfig {
         host: args.host,
         port: args.port,
+        model_path: args.model,
+        tokenizer_path: args.tokenizer,
+        device: args.device,
         monitoring: MonitoringConfig {
             prometheus_enabled: args.prometheus,
             prometheus_path: args.prometheus_path,
