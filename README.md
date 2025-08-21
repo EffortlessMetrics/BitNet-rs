@@ -8,7 +8,7 @@
 
 **BitNet.rs is the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.** Built from the ground up in Rust, it delivers superior performance, memory safety, and developer experience compared to the original C++ implementation.
 
-> **✅ Validated Drop-in Replacement**: BitNet.rs has been proven to be a **superior drop-in replacement** for bitnet.cpp, with enhanced GGUF format compatibility. It successfully loads early GGUF v3 variant files (missing alignment/data_offset fields) that cause the C++ implementation to crash, as demonstrated with Microsoft's 1.2GB BitNet model.
+> **✅ Validated Drop-in Replacement**: BitNet.rs is a proven **drop-in replacement** for bitnet.cpp. The Microsoft BitNet 1.2GB model (GGUF v3 early variant) loads successfully in BOTH BitNet.rs and bitnet.cpp's llama-cli, demonstrating full compatibility. Additionally, BitNet.rs handles edge cases that crash certain C++ diagnostic tools (llama-gguf).
 
 ## Why BitNet.rs?
 
