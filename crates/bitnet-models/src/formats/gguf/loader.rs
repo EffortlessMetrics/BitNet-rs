@@ -210,7 +210,7 @@ impl GgufLoader {
         device: &Device,
         config: &LoadConfig,
     ) -> Result<GgufTensors> {
-        let tensor_count = reader.tensor_count();
+        let tensor_count = reader.tensor_count() as usize;
         let mut tensors = GgufTensors::new();
 
         info!("Loading {} tensors", tensor_count);

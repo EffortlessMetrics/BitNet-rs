@@ -135,13 +135,18 @@ impl<'a> GgufReader<'a> {
     }
 
     /// Get the number of tensors
-    pub fn tensor_count(&self) -> usize {
-        self.header.tensor_count as usize
+    pub fn tensor_count(&self) -> u64 {
+        self.header.tensor_count
     }
 
     /// Get the number of metadata entries
     pub fn metadata_count(&self) -> usize {
         self.header.metadata_kv_count as usize
+    }
+    
+    /// Get the number of metadata KV pairs (same as metadata_count)
+    pub fn metadata_kv_count(&self) -> u64 {
+        self.header.metadata_kv_count
     }
 
     /// Get tensor information by index
