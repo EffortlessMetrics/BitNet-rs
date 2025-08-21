@@ -83,9 +83,18 @@ impl GgufHeader {
         ]);
         *offset += 8;
 
-        // v3 typically adds alignment (u32) and data_offset (u64)
-        // However, some files claim v3 but omit these fields (early v3 format)
-        // We detect this by checking if the next bytes look like a KV pair
+        // GGUF v3 Format Variants:
+        // 1. Standard v3: Has alignment (u32) and data_offset (u64) fields after metadata_kv_count
+        // 2. Early v3 variant: Omits alignment and data_offset, goes directly to KV pairs
+        //
+        // The early v3 variant is used by some models like Microsoft's BitNet models.
+        // These files claim to be v3 but use a simpler header structure similar to v2.
+        // 
+        // Detection strategy:
+        // - Read the next 8 bytes as a potential u64 string length
+        // - If it's a reasonable length (0-256) and followed by ASCII text, it's likely a KV pair
+        // - This means we're looking at the early v3 variant without alignment/data_offset
+        // - Otherwise, parse as standard v3 with alignment and data_offset fields
         let (alignment, data_offset) = if version >= 3 {
             // Check we have enough data to peek
             if data.len() < *offset + 12 {
@@ -105,9 +114,10 @@ impl GgufHeader {
                     data[*offset + 7],
                 ]);
                 
-                // Metadata key strings are typically 10-50 chars (e.g., "general.architecture")
-                // If we see a reasonable string length, this is likely a KV pair, not alignment/offset
-                const STRING_SAMPLE_LEN: usize = 20;
+                // Heuristic: Metadata keys are typically short strings (10-50 chars)
+                // Examples: "general.architecture", "llama.attention.head_count"
+                // If we see a reasonable string length followed by ASCII text,
+                // we're likely looking at the first KV pair, not alignment/data_offset
                 if potential_strlen > 0 && potential_strlen < 256 {
                     // Check if following bytes could be ASCII text
                     if *offset + 8 + potential_strlen as usize <= data.len() {
@@ -118,8 +128,10 @@ impl GgufHeader {
                                      b == b'.' || b == b'_' || b == b'-');
                         
                         if looks_like_key {
-                            // This is an early v3 format without alignment/data_offset
-                            tracing::warn!("GGUF v3 without alignment/data_offset fields (early format)");
+                            // Early v3 variant detected: Missing alignment/data_offset fields
+                            // This format is used by Microsoft BitNet models and others
+                            // We handle it gracefully by using default alignment (32) and computing offset later
+                            tracing::warn!("GGUF v3 early variant detected (missing alignment/data_offset) - handling gracefully");
                             (32u32, 0u64)
                         } else {
                             // Standard v3 with alignment and data_offset
