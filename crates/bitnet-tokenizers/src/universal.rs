@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::Path;
-use bitnet_common::{BitNetError, Result};
+use bitnet_common::Result;
 use tracing::{debug, warn};
 
 use crate::{Tokenizer, TokenizerConfig};

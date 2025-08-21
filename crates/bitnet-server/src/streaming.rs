@@ -3,10 +3,7 @@
 use anyhow::Result;
 use axum::{
     extract::State,
-    response::{
-        sse::{Event, KeepAlive, Sse},
-        Response,
-    },
+    response::sse::{Event, KeepAlive, Sse},
 };
 use futures::stream::Stream;
 use std::pin::Pin;
@@ -48,7 +45,7 @@ pub async fn streaming_handler(
     State(state): State<AppState>,
     axum::Json(request): axum::Json<StreamingRequest>,
 ) -> Sse<Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>>> {
-    let stream: Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>> = if let Some(engine) = &state.engine {
+    let stream: Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>> = if let Some(engine) = state.engine {
         Box::pin(real_stream(engine, request).await)
     } else {
         Box::pin(mock_stream(request).await)
@@ -60,11 +57,10 @@ pub async fn streaming_handler(
 
 /// Real streaming using the BitNet engine
 async fn real_stream(
-    engine: &Arc<RwLock<bitnet_inference::InferenceEngine>>,
+    engine: Arc<RwLock<bitnet_inference::InferenceEngine>>,
     request: StreamingRequest,
 ) -> impl Stream<Item = Result<Event, Infallible>> {
     let start = std::time::Instant::now();
-    let engine = engine.clone();
 
     async_stream::stream! {
         // Build generation config

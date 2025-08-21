@@ -113,7 +113,7 @@ impl Avx2Kernel {
         for i in (0..m).step_by(BLOCK_M) {
             for j in (0..n).step_by(BLOCK_N) {
                 // Accumulator for 8x8 block
-                let mut acc = unsafe { [_mm256_setzero_ps(); 8] };
+                let mut acc = [_mm256_setzero_ps(); 8];
 
                 for l in (0..k).step_by(BLOCK_K) {
                     let k_end = (l + BLOCK_K).min(k);
@@ -152,7 +152,7 @@ impl Avx2Kernel {
                             let b_vec = unsafe { _mm256_loadu_si256(b_col.as_ptr() as *const __m256i) };
 
                             // Convert to i16 for multiplication
-                            unsafe {
+                            {
                                 let a_lo = _mm256_unpacklo_epi8(a_vec, _mm256_setzero_si256());
                                 let a_hi = _mm256_unpackhi_epi8(a_vec, _mm256_setzero_si256());
                                 let b_lo = _mm256_unpacklo_epi8(b_vec, _mm256_setzero_si256());
@@ -178,7 +178,7 @@ impl Avx2Kernel {
                     for jj in 0..(BLOCK_N.min(n - j)) {
                         if i + ii < m && j + jj < n {
                             // Horizontal sum of the vector
-                            unsafe {
+                            {
                                 let sum_vec = acc[jj];
                                 let sum_hi = _mm256_extractf128_ps(sum_vec, 1);
                                 let sum_lo = _mm256_castps256_ps128(sum_vec);
@@ -239,19 +239,19 @@ impl Avx2Kernel {
             let block = &input[start..end];
 
             // Find maximum absolute value using AVX2
-            let mut max_vec = unsafe { _mm256_setzero_ps() };
+            let mut max_vec = _mm256_setzero_ps();
             let mut i = 0;
 
             // Process 8 elements at a time
             while i + 8 <= block.len() {
                 let vals = unsafe { _mm256_loadu_ps(block.as_ptr().add(i)) };
-                let abs_vals = unsafe { _mm256_andnot_ps(_mm256_set1_ps(-0.0), vals) }; // abs using bit mask
-                max_vec = unsafe { _mm256_max_ps(max_vec, abs_vals) };
+                let abs_vals = _mm256_andnot_ps(_mm256_set1_ps(-0.0), vals); // abs using bit mask
+                max_vec = _mm256_max_ps(max_vec, abs_vals);
                 i += 8;
             }
 
             // Horizontal maximum
-            let mut final_max = unsafe {
+            let mut final_max = {
                 let max_hi = _mm256_extractf128_ps(max_vec, 1);
                 let max_lo = _mm256_castps256_ps128(max_vec);
                 let max_quad = _mm_max_ps(max_hi, max_lo);
@@ -267,13 +267,13 @@ impl Avx2Kernel {
 
             let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
             scales[block_idx] = scale;
-            let scale_vec = unsafe { _mm256_set1_ps(scale) };
+            let scale_vec = _mm256_set1_ps(scale);
 
             // Quantize block using vectorized lookup
             i = 0;
             while i + 8 <= block.len() {
                 let vals = unsafe { _mm256_loadu_ps(block.as_ptr().add(i)) };
-                let normalized = unsafe { _mm256_div_ps(vals, scale_vec) };
+                let normalized = _mm256_div_ps(vals, scale_vec);
 
                 // Find closest values in lookup table for each element
                 let mut quantized = [0u8; 8];
@@ -379,7 +379,7 @@ impl Avx2Kernel {
             let block = &input[start..end];
 
             // Find maximum absolute value using AVX2
-            let mut max_vec = unsafe { _mm256_setzero_ps() };
+            let mut max_vec = _mm256_setzero_ps();
             let mut i = 0;
 
             while i + 8 <= block.len() {
@@ -390,7 +390,7 @@ impl Avx2Kernel {
             }
 
             // Horizontal maximum
-            let mut final_max = unsafe {
+            let mut final_max = {
                 let max_hi = _mm256_extractf128_ps(max_vec, 1);
                 let max_lo = _mm256_castps256_ps128(max_vec);
                 let max_quad = _mm_max_ps(max_hi, max_lo);
@@ -406,13 +406,13 @@ impl Avx2Kernel {
 
             let scale = if final_max > 1e-8 { final_max / 1.5 } else { 1.0 };
             scales[block_idx] = scale;
-            let scale_vec = unsafe { _mm256_set1_ps(scale) };
+            let scale_vec = _mm256_set1_ps(scale);
 
             // Quantize block
             i = 0;
             while i + 8 <= block.len() {
                 let vals = unsafe { _mm256_loadu_ps(block.as_ptr().add(i)) };
-                let normalized = unsafe { _mm256_div_ps(vals, scale_vec) };
+                let normalized = _mm256_div_ps(vals, scale_vec);
 
                 // Vectorized quantization to {-1, 0, 1}
                 let _gt_pos = _mm256_cmp_ps(normalized, threshold_pos, _CMP_GT_OQ);

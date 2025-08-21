@@ -91,18 +91,18 @@ impl TrackingAllocator {
 }
 
 unsafe impl GlobalAlloc for TrackingAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 { unsafe {
         let ptr = self.inner.alloc(layout);
         if !ptr.is_null() {
             self.record_allocation(layout.size());
         }
         ptr
-    }
+    }}
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) { unsafe {
         self.record_deallocation(layout.size());
         self.inner.dealloc(ptr, layout);
-    }
+    }}
 }
 
 /// Memory pool for efficient allocation of common sizes

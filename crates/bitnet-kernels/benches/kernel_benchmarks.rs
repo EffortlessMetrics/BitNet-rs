@@ -14,7 +14,7 @@ struct BenchmarkData;
 
 impl BenchmarkData {
     fn matrix_a(m: usize, k: usize) -> Vec<i8> {
-        (0..m * k).map(|i| ((i % 256) as i8).wrapping_sub(128)).collect()
+        (0..m * k).map(|i| ((i % 256) as i16 - 128) as i8).collect()
     }
 
     fn matrix_b(k: usize, n: usize) -> Vec<u8> {
