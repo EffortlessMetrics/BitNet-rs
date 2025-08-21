@@ -57,7 +57,12 @@ pub trait Tokenizer: Send + Sync {
         self.decode(tokens)
     }
     
-    /// Legacy EOS token ID getter - returns None by default
+    /// BOS token ID getter - returns None by default
+    fn bos_token_id(&self) -> Option<u32> {
+        None
+    }
+    
+    /// EOS token ID getter - returns None by default
     fn eos_token_id(&self) -> Option<u32> {
         None
     }
