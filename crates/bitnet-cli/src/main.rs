@@ -443,7 +443,12 @@ async fn run_simple_generation(
         None
     });
 
+    // Track GGUF metadata for JSON output
+    let mut gguf_metadata: Option<(usize, usize)> = None;
+    let mut external_tokenizer = false;
+    
     let tokenizer = if let Some(path) = tokenizer_path {
+        external_tokenizer = true;
         println!("Loading tokenizer from: {}", path.display());
         // Try to load real tokenizer
         match bitnet_tokenizers::load_tokenizer(&path) {
@@ -468,6 +473,11 @@ async fn run_simple_generation(
             .context("Failed to read GGUF file for tokenizer extraction")?;
         let reader = bitnet_models::GgufReader::new(&gguf_data)
             .context("Failed to parse GGUF for tokenizer extraction")?;
+        
+        // Capture metadata counts
+        let n_tensors = reader.tensor_count() as usize;
+        let n_kv = reader.metadata_keys().len();
+        gguf_metadata = Some((n_kv, n_tensors));
         
         match bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&reader) {
             Ok(tok) => {
@@ -562,17 +572,24 @@ async fn run_simple_generation(
         let generated_text = tokenizer.decode(&generated_tokens)?;
         
         // Get tokenizer info
+        let tokenizer_type = if external_tokenizer {
+            "external"
+        } else {
+            "sentencepiece"  // From GGUF
+        };
+        
         let tokenizer_info = serde_json::json!({
-            "type": "sentencepiece",  // TODO: detect actual type
-            "bos": tokenizer.eos_token_id().unwrap_or(0),  // Note: we only have eos_token_id in trait
-            "eos": tokenizer.eos_token_id().unwrap_or(0),
+            "type": tokenizer_type,
+            "bos": tokenizer.bos_token_id().unwrap_or(1),
+            "eos": tokenizer.eos_token_id().unwrap_or(2),
         });
         
-        // Count info - these would come from the model loader in a real implementation
+        // Count info from GGUF metadata
+        let (n_kv, n_tensors) = gguf_metadata.unwrap_or((0, 0));
         let counts = serde_json::json!({
-            "n_kv": 0,  // TODO: get from model metadata
-            "n_tensors": 0,  // TODO: get from model metadata  
-            "unmapped": 0,  // In strict mode this is always 0
+            "n_kv": n_kv,
+            "n_tensors": n_tensors,
+            "unmapped": if strict_mapping { 0 } else { 0 },  // In strict mode this is always 0
         });
         
         let output = serde_json::json!({

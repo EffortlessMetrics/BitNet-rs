@@ -149,6 +149,21 @@ fn map_tensor_name(name: &str) -> Option<String> {
     None
 }
 
+/// Dry-run tensor name mapping for testing without loading actual tensors
+/// Returns list of unmapped tensor names
+pub fn dry_run_remap_names<I>(names: I) -> Vec<String>
+where
+    I: IntoIterator<Item = String>,
+{
+    let mut unmapped = Vec::new();
+    for name in names {
+        if map_tensor_name(&name).is_none() {
+            unmapped.push(name);
+        }
+    }
+    unmapped
+}
+
 /// Create a VarBuilder from mapped tensors
 pub fn create_var_builder(
     tensors: HashMap<String, Tensor>,
