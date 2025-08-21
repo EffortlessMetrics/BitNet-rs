@@ -23,7 +23,6 @@ pub mod comparison;
 
 pub mod fixtures;
 pub mod utils;
-pub mod validation;
 
 /// Error types for cross-validation operations
 #[derive(thiserror::Error, Debug)]
