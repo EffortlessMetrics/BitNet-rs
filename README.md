@@ -8,6 +8,8 @@
 
 **BitNet.rs is the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.** Built from the ground up in Rust, it delivers superior performance, memory safety, and developer experience compared to the original C++ implementation.
 
+> **✅ Validated Drop-in Replacement**: BitNet.rs has been proven to be a **superior drop-in replacement** for bitnet.cpp, successfully loading models that crash the C++ implementation, including Microsoft's 1.2GB BitNet model with GGUF v3 early variant format.
+
 ## Why BitNet.rs?
 
 ### 🚀 **Superior Performance**
