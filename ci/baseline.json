@@ -1,0 +1,12 @@
+{
+  "microsoft-bitnet-i2s": {
+    "tok_per_sec": 10.0,
+    "rss_mb": 1500,
+    "first_token_ms": 500
+  },
+  "tinyllama-q2": {
+    "tok_per_sec": 142.0,
+    "rss_mb": 1287,
+    "first_token_ms": 100
+  }
+}

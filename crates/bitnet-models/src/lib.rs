@@ -14,3 +14,6 @@ pub mod weight_mapper;
 pub use bitnet::*;
 pub use gguf_simple::load_gguf;
 pub use loader::*;
+
+// Export GGUF reader for tokenizer loading
+pub use formats::gguf::GgufReader;
