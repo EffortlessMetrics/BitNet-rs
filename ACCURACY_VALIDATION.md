@@ -4,6 +4,14 @@
 
 This report validates BitNet.rs against bitnet.cpp for accuracy, performance, and quality metrics.
 
+**⚠️ CRITICAL UPDATE (2025-08-21)**: Real validation testing reveals the following status:
+- ✅ Model loading works (handles GGUF v3 edge cases C++ can't)
+- ✅ Strict mode flags implemented to prevent mock fallbacks
+- ✅ JSON output and token ID dumping for validation
+- ❌ Real tokenizer integration incomplete (falls back to mock)
+- ❌ Tensor mapping has 30 unmapped weights (attn_sub_norm)
+- ❌ Actual inference produces mock tokens, not real text
+
 ## Test Environment
 - **Model**: Microsoft BitNet b1.58-2B (1.2GB GGUF v3 early variant)
 - **Platform**: Linux x86_64
