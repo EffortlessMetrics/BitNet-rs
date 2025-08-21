@@ -83,45 +83,134 @@ impl GgufHeader {
         ]);
         *offset += 8;
 
-        // v3 adds alignment (u32) and data_offset (u64)
+        // v3 typically adds alignment (u32) and data_offset (u64)
+        // However, some files claim v3 but omit these fields (early v3 format)
+        // We detect this by checking if the next bytes look like a KV pair
         let (alignment, data_offset) = if version >= 3 {
-            // Check we have enough data for v3 fields
+            // Check we have enough data to peek
             if data.len() < *offset + 12 {
-                return Err(BitNetError::Model(ModelError::InvalidFormat {
-                    format: "Insufficient data for GGUF v3 header fields".to_string(),
-                }));
+                // Not enough data for v3 fields, assume v2-style layout
+                tracing::warn!("GGUF v3 with insufficient header data, using v2 layout");
+                (32u32, 0u64)
+            } else {
+                // Peek at the next 8 bytes to see if it looks like a u64 string length
+                let potential_strlen = u64::from_le_bytes([
+                    data[*offset],
+                    data[*offset + 1],
+                    data[*offset + 2],
+                    data[*offset + 3],
+                    data[*offset + 4],
+                    data[*offset + 5],
+                    data[*offset + 6],
+                    data[*offset + 7],
+                ]);
+                
+                // Metadata key strings are typically 10-50 chars (e.g., "general.architecture")
+                // If we see a reasonable string length, this is likely a KV pair, not alignment/offset
+                if potential_strlen > 0 && potential_strlen < 256 {
+                    // Check if following bytes could be ASCII text
+                    if *offset + 8 + potential_strlen as usize <= data.len() {
+                        let potential_string = &data[*offset + 8..*offset + 8 + (potential_strlen as usize).min(20)];
+                        let looks_like_key = potential_string.iter()
+                            .all(|&b| (b >= b'a' && b <= b'z') || 
+                                     (b >= b'A' && b <= b'Z') || 
+                                     b == b'.' || b == b'_' || b == b'-');
+                        
+                        if looks_like_key {
+                            // This is an early v3 format without alignment/data_offset
+                            tracing::warn!("GGUF v3 without alignment/data_offset fields (early format)");
+                            (32u32, 0u64)
+                        } else {
+                            // Standard v3 with alignment and data_offset
+                            let mut align = u32::from_le_bytes([
+                                data[*offset],
+                                data[*offset + 1],
+                                data[*offset + 2],
+                                data[*offset + 3],
+                            ]);
+                            *offset += 4;
+                            
+                            // Validate alignment
+                            if align == 0 || !align.is_power_of_two() {
+                                tracing::warn!("GGUF v{}: alignment {} is invalid; using 32", version, align);
+                                align = 32;
+                            }
+                            
+                            let doff = u64::from_le_bytes([
+                                data[*offset],
+                                data[*offset + 1],
+                                data[*offset + 2],
+                                data[*offset + 3],
+                                data[*offset + 4],
+                                data[*offset + 5],
+                                data[*offset + 6],
+                                data[*offset + 7],
+                            ]);
+                            *offset += 8;
+                            
+                            (align, doff)
+                        }
+                    } else {
+                        // Can't peek far enough, assume standard v3
+                        let mut align = u32::from_le_bytes([
+                            data[*offset],
+                            data[*offset + 1],
+                            data[*offset + 2],
+                            data[*offset + 3],
+                        ]);
+                        *offset += 4;
+                        
+                        if align == 0 || !align.is_power_of_two() {
+                            tracing::warn!("GGUF v{}: alignment {} invalid; using 32", version, align);
+                            align = 32;
+                        }
+                        
+                        let doff = u64::from_le_bytes([
+                            data[*offset],
+                            data[*offset + 1],
+                            data[*offset + 2],
+                            data[*offset + 3],
+                            data[*offset + 4],
+                            data[*offset + 5],
+                            data[*offset + 6],
+                            data[*offset + 7],
+                        ]);
+                        *offset += 8;
+                        
+                        (align, doff)
+                    }
+                } else {
+                    // Unreasonably large string length, assume standard v3
+                    let mut align = u32::from_le_bytes([
+                        data[*offset],
+                        data[*offset + 1],
+                        data[*offset + 2],
+                        data[*offset + 3],
+                    ]);
+                    *offset += 4;
+                    
+                    if align == 0 || !align.is_power_of_two() {
+                        tracing::warn!("GGUF v{}: alignment {} invalid; using 32", version, align);
+                        align = 32;
+                    }
+                    
+                    let doff = u64::from_le_bytes([
+                        data[*offset],
+                        data[*offset + 1],
+                        data[*offset + 2],
+                        data[*offset + 3],
+                        data[*offset + 4],
+                        data[*offset + 5],
+                        data[*offset + 6],
+                        data[*offset + 7],
+                    ]);
+                    *offset += 8;
+                    
+                    (align, doff)
+                }
             }
-            
-            let mut align = u32::from_le_bytes([
-                data[*offset],
-                data[*offset + 1],
-                data[*offset + 2],
-                data[*offset + 3],
-            ]);
-            *offset += 4;
-            
-            // Validate alignment (sanitize to a safe default).
-            // GGUF requires power-of-two alignment; clamp invalid values to 32.
-            if align == 0 || !align.is_power_of_two() {
-                tracing::warn!("GGUF v{}: header alignment {} is invalid; forcing 32", version, align);
-                align = 32;
-            }
-            
-            let doff = u64::from_le_bytes([
-                data[*offset],
-                data[*offset + 1],
-                data[*offset + 2],
-                data[*offset + 3],
-                data[*offset + 4],
-                data[*offset + 5],
-                data[*offset + 6],
-                data[*offset + 7],
-            ]);
-            *offset += 8;
-            
-            (align, doff)
         } else {
-            // v2 defaults: 32-byte alignment, no data_offset
+            // v2: 32-byte alignment, no data_offset
             (32u32, 0u64)
         };
 
