@@ -86,6 +86,16 @@ echo ""
 echo "4️⃣  Cross-Validation Testing"
 echo "----------------------------"
 
+# Run mapper dry-run test for MS BitNet if available
+if [ -f "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf" ]; then
+    echo "   Testing tensor name mapping..."
+    if cargo test --package crossval ms_bitnet_names_map_clean -- --nocapture 2>&1 | grep -q "test result: ok"; then
+        report_test "Tensor Name Mapping" "PASS" "All tensors mapped successfully"
+    else
+        report_test "Tensor Name Mapping" "FAIL" "Unmapped tensors detected"
+    fi
+fi
+
 # Run cross-validation with mini fixture
 echo "   Testing with synthetic GGUF..."
 export CROSSVAL_ALLOW_CPP_FAIL=1
