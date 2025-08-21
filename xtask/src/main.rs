@@ -1431,6 +1431,9 @@ fn cpp_header_preflight(cpp_root: &Path, model: &Path) -> Result<()> {
         .ok_or_else(|| anyhow!("No llama binary found in {}. Tried: {:?}", 
                                 cpp_root.join("build/bin").display(), candidates))?;
     
+    // Log which binary we're using
+    println!("   • Using C++ binary: {}", llama_bin.display());
+    
     let mut cmd = Command::new(&llama_bin);
     
     // Use appropriate args based on which binary we found

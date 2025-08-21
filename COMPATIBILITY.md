@@ -108,8 +108,8 @@ We guarantee to load:
   - **v3 Early Variant**: ✅ **NEW** - Handles files missing alignment/data_offset fields (e.g., Microsoft BitNet models)
   - For v3, invalid `alignment` values (0 or non-power-of-two) are clamped to 32
   - For v3, invalid `data_offset` values (past EOF, misaligned, or backwards) fall back to `align_up(kv_end, alignment)`
-  - Automatically detects format variant by checking if expected alignment position contains KV pair data
-  - **Superior to llama.cpp**: Loads models that crash C++ implementation (proven with 1.2GB Microsoft BitNet model)
+  - Automatically detects format variant using header-only heuristics (bounded ASCII check with OOB guard, no tensor mmap needed)
+  - **Superior GGUF v3 early variant handling**: Loads models with this specific format variant that crash the C++ implementation (proven with 1.2GB Microsoft BitNet model)
 
 ## 🧪 Test Coverage Requirements
 

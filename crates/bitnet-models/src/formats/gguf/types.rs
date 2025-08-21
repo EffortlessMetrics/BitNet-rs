@@ -118,14 +118,22 @@ impl GgufHeader {
                 // Examples: "general.architecture", "llama.attention.head_count"
                 // If we see a reasonable string length followed by ASCII text,
                 // we're likely looking at the first KV pair, not alignment/data_offset
+                const SAMPLE: usize = 20;
+                
                 if potential_strlen > 0 && potential_strlen < 256 {
                     // Check if following bytes could be ASCII text
                     if *offset + 8 + potential_strlen as usize <= data.len() {
-                        let potential_string = &data[*offset + 8..*offset + 8 + (potential_strlen as usize).min(20)];
-                        let looks_like_key = potential_string.iter()
-                            .all(|&b| (b >= b'a' && b <= b'z') || 
-                                     (b >= b'A' && b <= b'Z') || 
-                                     b == b'.' || b == b'_' || b == b'-');
+                        let sample = &data[*offset + 8 .. *offset + 8 + SAMPLE.min(potential_strlen as usize)];
+                        
+                        // Keys typically contain: [A-Za-z0-9._-]
+                        let looks_like_key = sample.iter().all(|&b|
+                            matches!(b,
+                                b'0'..=b'9' |
+                                b'a'..=b'z' |
+                                b'A'..=b'Z' |
+                                b'.' | b'_' | b'-'
+                            )
+                        );
                         
                         if looks_like_key {
                             // Early v3 variant detected: Missing alignment/data_offset fields
