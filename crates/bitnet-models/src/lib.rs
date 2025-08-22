@@ -11,6 +11,9 @@ pub mod security;
 pub mod transformer;
 pub mod weight_mapper;
 
+#[cfg(test)]
+mod transformer_tests;
+
 pub use bitnet::*;
 pub use gguf_simple::load_gguf;
 pub use loader::*;

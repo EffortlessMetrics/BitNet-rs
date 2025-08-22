@@ -39,6 +39,11 @@ pub struct InferenceEngine {
 }
 
 impl InferenceEngine {
+    /// Get reference to the tokenizer
+    pub fn tokenizer(&self) -> Arc<dyn Tokenizer> {
+        self.tokenizer.clone()
+    }
+    
     /// Create a new inference engine
     #[instrument(skip(model, tokenizer))]
     pub fn new(

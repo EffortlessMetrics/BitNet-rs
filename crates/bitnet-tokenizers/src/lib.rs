@@ -5,6 +5,8 @@ mod mock;
 pub mod universal;
 pub mod gguf_tokenizer;
 pub mod sp_tokenizer;
+pub mod hf_tokenizer;
+pub mod spm_tokenizer;
 
 use bitnet_common::Result;
 use std::path::Path;
@@ -13,6 +15,9 @@ use std::sync::Arc;
 pub use loader::load_tokenizer;
 pub use mock::MockTokenizer;
 pub use universal::UniversalTokenizer;
+pub use hf_tokenizer::HfTokenizer;
+#[cfg(feature = "spm")]
+pub use spm_tokenizer::SpmTokenizer;
 
 /// Configuration for tokenizer initialization
 #[derive(Debug, Clone, Default)]
@@ -105,7 +110,7 @@ impl Default for BasicTokenizer {
 }
 
 impl Tokenizer for BasicTokenizer {
-    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+    fn encode(&self, text: &str, _add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
         if text.is_empty() {
             return Ok(Vec::new());
         }
@@ -143,15 +148,70 @@ impl Tokenizer for BasicTokenizer {
     }
 }
 
+/// Tokenizer file kind
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TokenizerFileKind { 
+    HfJson, 
+    #[cfg(feature = "spm")]
+    Spm 
+}
+
+/// Load tokenizer from path based on file extension
+pub fn from_path(path: &Path) -> Result<(Arc<dyn Tokenizer>, TokenizerFileKind)> {
+    use bitnet_common::{BitNetError, ModelError};
+    
+    let ext = path.extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    
+    match ext.as_str() {
+        "json" => {
+            let t = HfTokenizer::from_file(path)
+                .map_err(|e| BitNetError::Model(
+                    ModelError::LoadingFailed { reason: format!("Failed to load HF tokenizer: {}", e) }
+                ))?;
+            Ok((Arc::new(t), TokenizerFileKind::HfJson))
+        }
+        "model" => {
+            #[cfg(feature = "spm")]
+            {
+                let t = SpmTokenizer::from_file(path)
+                    .map_err(|e| BitNetError::Model(
+                        ModelError::LoadingFailed { reason: format!("Failed to load SPM tokenizer: {}", e) }
+                    ))?;
+                Ok((Arc::new(t), TokenizerFileKind::Spm))
+            }
+            #[cfg(not(feature = "spm"))]
+            {
+                Err(BitNetError::Model(
+                    ModelError::LoadingFailed { reason: "Build with `--features spm` to load SentencePiece .model files".to_string() }
+                ))
+            }
+        }
+        _ => Err(BitNetError::Model(
+            ModelError::LoadingFailed { reason: format!("Unsupported tokenizer file (expected *.json or *.model): {}", path.display()) }
+        )),
+    }
+}
+
+/// Try to construct tokenizer from GGUF metadata (placeholder)
+pub fn try_from_gguf_metadata<F>(_build_from_arrays: F) -> Option<Arc<dyn Tokenizer>>
+where
+    F: FnOnce() -> Result<Arc<dyn Tokenizer>>
+{
+    // Hook for future GGUF-embedded tokenizer support
+    None
+}
+
 /// Tokenizer builder for creating tokenizers
 pub struct TokenizerBuilder;
 
 impl TokenizerBuilder {
     /// Create tokenizer from file
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Arc<dyn Tokenizer>> {
-        // Placeholder implementation
-        tracing::debug!("Loading tokenizer from: {}", path.as_ref().display());
-        Ok(Arc::new(BasicTokenizer::new()))
+        let (tokenizer, _kind) = from_path(path.as_ref())?;
+        Ok(tokenizer)
     }
 
     /// Create tokenizer from pretrained model

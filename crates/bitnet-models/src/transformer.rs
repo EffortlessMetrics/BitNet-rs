@@ -352,9 +352,12 @@ impl KVCache {
 pub struct TransformerModel {
     pub config: BitNetConfig,
     pub embed_tokens: candle_nn::Embedding,
+    pub embed_transposed: bool,  // True if embeddings are stored as [hidden, vocab]
     pub layers: Vec<TransformerBlock>,
     pub norm: LayerNorm,
     pub lm_head: Option<Linear>, // Optional for tied weights
+    pub lm_head_weight: Option<Tensor>, // Direct access to lm_head weight for transposed handling
+    pub lm_head_transposed: bool,  // True if lm_head is stored as [hidden, vocab]
     device: Device,
 }
 
@@ -366,6 +369,19 @@ impl TransformerModel {
         let n_layers = config.model.num_layers;
 
         let embed_tokens = candle_nn::embedding(vocab_size, hidden_size, vb.pp("embed_tokens"))?;
+        
+        // Read transpose flag for embeddings (1-element tensor)
+        let embed_transposed = match vb.get((1,), "embed_tokens.transposed") {
+            Ok(t) => {
+                let val = t.to_vec0::<f32>()?;
+                val > 0.5
+            },
+            Err(_) => false,  // If flag doesn't exist, assume not transposed
+        };
+        
+        if embed_transposed {
+            tracing::info!("Embeddings are transposed [hidden, vocab] - will handle efficiently at runtime");
+        }
 
         let mut layers = Vec::with_capacity(n_layers);
         for i in 0..n_layers {
@@ -376,20 +392,57 @@ impl TransformerModel {
 
         // Try to load lm_head, but it's optional (can be tied to embeddings)
         // Try to create the linear layer, catching errors if weights don't exist
-        let lm_head = match candle_nn::linear(hidden_size, vocab_size, vb.pp("lm_head")) {
-            Ok(layer) => Some(layer),
+        let (lm_head, lm_head_weight, lm_head_transposed) = match candle_nn::linear(hidden_size, vocab_size, vb.pp("lm_head")) {
+            Ok(layer) => {
+                // Also get the weight tensor directly for transposed handling
+                // Note: weight dimensions might be transposed
+                let weight = vb.get((vocab_size, hidden_size), "lm_head.weight")
+                    .or_else(|_| vb.get((hidden_size, vocab_size), "lm_head.weight"))
+                    .ok();
+                
+                // Read transpose flag for lm_head
+                let transposed = match vb.get((1,), "lm_head.transposed") {
+                    Ok(t) => {
+                        let val = t.to_vec0::<f32>()?;
+                        val > 0.5
+                    },
+                    Err(_) => false,  // If flag doesn't exist, assume not transposed
+                };
+                
+                if transposed {
+                    tracing::info!("LM head is transposed [hidden, vocab] - will handle efficiently at runtime");
+                }
+                (Some(layer), weight, transposed)
+            },
             Err(_) => {
                 tracing::info!("lm_head.weight not found, will use tied weights");
-                None
+                (None, None, false)
             }
         };
 
-        Ok(Self { config, embed_tokens, layers, norm, lm_head, device })
+        Ok(Self { config, embed_tokens, embed_transposed, layers, norm, lm_head, lm_head_weight, lm_head_transposed, device })
     }
 
     pub fn embed(&self, tokens: &[u32]) -> Result<Tensor> {
         let token_ids = Tensor::from_vec(tokens.to_vec(), &[1, tokens.len()], &self.device)?;
-        Ok(self.embed_tokens.forward(&token_ids)?)
+        
+        // If embeddings are transposed, we need to handle this efficiently
+        if self.embed_transposed {
+            // Embeddings are stored as [hidden, vocab] but embedding op expects [vocab, hidden]
+            // Use view transpose (no allocation) for the weight matrix
+            let weight = self.embed_tokens.embeddings();
+            let weight_t = weight.t()?;  // View transpose, no allocation
+            
+            // Manual embedding lookup with transposed weight
+            let batch_size = token_ids.dims()[0];
+            let seq_len = token_ids.dims()[1];
+            let flat_ids = token_ids.flatten_all()?;
+            let embeddings = weight_t.index_select(&flat_ids, 0)?;
+            Ok(embeddings.reshape(&[batch_size, seq_len, self.config.model.hidden_size])?)
+        } else {
+            // Standard path: embeddings are [vocab, hidden]
+            Ok(self.embed_tokens.forward(&token_ids)?)
+        }
     }
 
     pub fn forward(&self, hidden: &Tensor, mut kv_cache: Option<&mut KVCache>) -> Result<Tensor> {
@@ -406,19 +459,36 @@ impl TransformerModel {
     pub fn logits(&self, hidden: &Tensor) -> Result<Tensor> {
         if let Some(ref lm_head) = self.lm_head {
             // Use dedicated LM head if available
-            Ok(lm_head.forward(hidden)?)
+            if self.lm_head_transposed {
+                if let Some(ref weight) = self.lm_head_weight {
+                    // LM head weight is stored as [hidden, vocab]
+                    // We want: hidden @ W where W is [hidden, vocab]
+                    // This gives us [batch, seq, vocab] directly
+                    Ok(hidden.matmul(weight)?)
+                } else {
+                    // Fallback to standard forward if we couldn't get weight directly
+                    Ok(lm_head.forward(hidden)?)
+                }
+            } else {
+                // Standard path: LM head weight is [vocab, hidden]
+                // Use the linear layer's forward (does hidden @ W^T)
+                Ok(lm_head.forward(hidden)?)
+            }
         } else {
-            // Tied weights: use embedding matrix transposed
-            // hidden shape: [batch, seq_len, hidden_size]
-            // embeddings shape: [vocab_size, hidden_size]
-            // We need: hidden @ embeddings.T => [batch, seq_len, vocab_size]
+            // Tied weights: use embedding matrix
             static LOGGED: std::sync::Once = std::sync::Once::new();
             LOGGED.call_once(|| {
-                tracing::info!("LM head tied to input embeddings (using E^T for logits)");
+                tracing::info!("LM head tied to input embeddings");
             });
 
             let embeddings = self.embed_tokens.embeddings();
-            Ok(hidden.matmul(&embeddings.t()?)?)
+            if self.embed_transposed {
+                // Embeddings are [hidden, vocab], perfect for hidden @ E
+                Ok(hidden.matmul(embeddings)?)
+            } else {
+                // Embeddings are [vocab, hidden], need hidden @ E^T
+                Ok(hidden.matmul(&embeddings.t()?)?)
+            }
         }
     }
 }

@@ -104,21 +104,43 @@ pub fn remap_gguf_weights_with_options(tensors: &HashMap<String, Tensor>, strict
 
 /// Map individual tensor name from GGUF to our transformer naming
 fn map_tensor_name(name: &str) -> Option<String> {
-    // Token embeddings variations
+    // Token embeddings variations - comprehensive list
     if name == "token_embd.weight"
         || name == "tok_embeddings.weight"
         || name == "model.embed_tokens.weight"
+        || name == "transformer.wte.weight"
+        || name == "transformer.word_embeddings.weight"
+        || name == "embeddings.word_embeddings.weight"
+        || name == "embed.weight"
+        || name == "embedding.weight"
+        || name == "word_embeddings.weight"
     {
         return Some("embed_tokens.weight".to_string());
     }
 
-    // Output layer variations
-    if name == "output.weight" || name == "lm_head.weight" || name == "model.lm_head.weight" {
+    // Output layer variations - comprehensive list
+    if name == "output.weight" 
+        || name == "lm_head.weight" 
+        || name == "model.lm_head.weight"
+        || name == "generator.weight"
+        || name == "transformer.lm_head.weight"
+        || name == "language_model_head.weight"
+        || name == "head.weight"
+        || name == "cls.weight"
+    {
         return Some("lm_head.weight".to_string());
     }
 
-    // Final normalization
-    if name == "output_norm.weight" || name == "norm.weight" || name == "model.norm.weight" {
+    // Final normalization - comprehensive list
+    if name == "output_norm.weight" 
+        || name == "norm.weight" 
+        || name == "model.norm.weight"
+        || name == "transformer.ln_f.weight"
+        || name == "ln_f.weight"
+        || name == "final_norm.weight"
+        || name == "final_layernorm.weight"
+        || name == "final_rmsnorm.weight"
+    {
         return Some("final_norm.weight".to_string());
     }
 
@@ -208,8 +230,95 @@ where
     unmapped
 }
 
+/// Detect hidden size from model weights that are guaranteed to be square or have known dimensions
+fn detect_hidden_size_from_weights(
+    tensors: &HashMap<String, Tensor>,
+    fallback: usize,
+) -> Result<usize> {
+    // Check q_proj/k_proj/v_proj weights - these are typically [hidden, hidden]
+    let projection_candidates = [
+        "layers.0.attn_q.weight",
+        "layers.0.attn_k.weight",
+        "layers.0.attn_v.weight",
+        "model.layers.0.self_attn.q_proj.weight",
+        "model.layers.0.self_attn.k_proj.weight",
+        "model.layers.0.self_attn.v_proj.weight",
+        "blk.0.attn_q.weight",
+        "blk.0.attn_k.weight",
+        "blk.0.attn_v.weight",
+    ];
+    
+    for key in &projection_candidates {
+        if let Some(tensor) = tensors.get(*key) {
+            let shape = tensor.shape();
+            if shape.dims().len() == 2 {
+                let (rows, cols) = (shape.dims()[0], shape.dims()[1]);
+                // Q/K/V projections are typically square [hidden, hidden]
+                if rows == cols {
+                    tracing::info!("Detected hidden_size={} from {}", rows, key);
+                    return Ok(rows);
+                }
+            }
+        }
+    }
+    
+    // Check layer norm weights - these are 1D with size=hidden
+    let norm_candidates = [
+        "layers.0.input_norm.weight",
+        "layers.0.post_norm.weight",
+        "model.layers.0.input_layernorm.weight",
+        "model.layers.0.post_attention_layernorm.weight",
+        "blk.0.attn_norm.weight",
+        "blk.0.ffn_norm.weight",
+        "final_norm.weight",
+        "model.norm.weight",
+    ];
+    
+    for key in &norm_candidates {
+        if let Some(tensor) = tensors.get(*key) {
+            let shape = tensor.shape();
+            if shape.dims().len() == 1 {
+                let size = shape.dims()[0];
+                tracing::info!("Detected hidden_size={} from {}", size, key);
+                return Ok(size);
+            }
+        }
+    }
+    
+    // Check MLP weights - gate/up are [hidden, intermediate], down is [intermediate, hidden]
+    let mlp_down_candidates = [
+        "layers.0.mlp_down.weight",
+        "model.layers.0.mlp.down_proj.weight",
+        "blk.0.ffn_down.weight",
+    ];
+    
+    for key in &mlp_down_candidates {
+        if let Some(tensor) = tensors.get(*key) {
+            let shape = tensor.shape();
+            if shape.dims().len() == 2 {
+                // down_proj is [intermediate, hidden], so second dim is hidden
+                let hidden = shape.dims()[1];
+                tracing::info!("Detected hidden_size={} from {}", hidden, key);
+                return Ok(hidden);
+            }
+        }
+    }
+    
+    // If we couldn't detect, use the fallback
+    if fallback > 0 {
+        tracing::warn!("Could not detect hidden_size from weights, using fallback={}", fallback);
+        Ok(fallback)
+    } else {
+        Err(bitnet_common::BitNetError::Validation(
+            "Could not detect hidden_size from model weights".to_string()
+        ))
+    }
+}
+
 /// Detect vocab size and normalize embedding/lm_head tensors
 /// Returns (vocab_size, actual_hidden_size)
+/// NOTE: To avoid large memory allocations, we don't transpose large tensors.
+/// Instead, we detect the orientation and handle it at inference time.
 pub fn normalize_model_tensors(
     tensors: &mut HashMap<String, Tensor>,
     expected_hidden_size: usize,
@@ -229,48 +338,75 @@ pub fn normalize_model_tensors(
             "embed tokens not found (tried embed_tokens/tok_embeddings/token_embd/transformer.wte)".to_string()
         ))?;
     
-    let emb = tensors.get(*emb_key).unwrap();
+    // Get embedding info first (before mutating tensors)
+    let emb_shape = {
+        let emb = tensors.get(*emb_key).unwrap();
+        let (er, ec) = dims2(emb, "embed_tokens.weight")?;
+        let device = emb.device().clone();
+        (er, ec, device)
+    };
+    let (er, ec, emb_device) = emb_shape;
     
-    // 2) Infer vocab + orientation from the embedding shape
-    let (er, ec) = dims2(emb, "embed_tokens.weight")?;
+    // 2) Try to detect hidden size from other model weights first
+    let detected_hidden = detect_hidden_size_from_weights(tensors, expected_hidden_size)?;
+    
+    // 3) Infer vocab + orientation from the embedding shape
     tracing::info!(
-        "Embedding tensor shape: [{}, {}], expected_hidden_size: {}",
-        er, ec, expected_hidden_size
+        "Embedding tensor shape: [{}, {}], detected_hidden_size: {}",
+        er, ec, detected_hidden
     );
     
-    // Detect actual hidden size and vocab from tensor
-    let (vocab_size, hidden_size, emb_needs_t) = if er > ec {
-        // Likely [vocab, hidden]
+    // Detect actual hidden size and vocab from tensor using our detection
+    let (vocab_size, hidden_size, emb_needs_t) = if er == detected_hidden {
+        // Shape is [hidden, vocab]
+        (ec, er, true)
+    } else if ec == detected_hidden {
+        // Shape is [vocab, hidden]
         (er, ec, false)
     } else {
-        // Likely [hidden, vocab]
-        (ec, er, true)
-    };
-    
-    // Warn if detected hidden size doesn't match expected
-    if hidden_size != expected_hidden_size && expected_hidden_size != 0 {
+        // Fallback to size heuristic if detection failed
         tracing::warn!(
-            "Detected hidden_size {} from tensor shape differs from expected {}",
-            hidden_size, expected_hidden_size
+            "Could not match hidden size {} to embedding dims [{}, {}], using size heuristic",
+            detected_hidden, er, ec
         );
+        if er > ec {
+            (er, ec, false)  // Assume [vocab, hidden]
+        } else {
+            (ec, er, true)   // Assume [hidden, vocab]
+        }
     };
     
-    // 3) Normalize embedding to [n_vocab, n_embd]
+    // Log final detection results
+    tracing::info!(
+        "Model dimensions detected: vocab_size={}, hidden_size={}, embedding_transposed={}",
+        vocab_size, hidden_size, emb_needs_t
+    );
+    
+    // 3) Store embedding orientation metadata instead of transposing
     if emb_needs_t {
-        let emb_norm = emb.t()?.contiguous()?;
-        tracing::info!(
-            "embed_tokens normalized -> [vocab={}, hidden={}], transposed=true",
-            vocab_size, hidden_size
+        tracing::warn!(
+            "embed_tokens is transposed [hidden={}, vocab={}] - avoiding {} MB transpose",
+            hidden_size, vocab_size,
+            (vocab_size * hidden_size * 4) / (1024 * 1024)  // Assuming f32
         );
-        tensors.insert("embed_tokens.weight".to_string(), emb_norm);
-        // Remove old key if different
+        // Store metadata about transposition instead of doing it
+        // The embedding layer will handle this at inference time
+        // For now, just log a warning and keep the tensor as-is
         if emb_key != &"embed_tokens.weight" {
-            tensors.remove(*emb_key);
+            let emb = tensors.remove(*emb_key).unwrap();
+            tensors.insert("embed_tokens.weight".to_string(), emb);
         }
+        // Add a metadata tensor to indicate transposition is needed
+        // This is a tiny 1-element tensor that signals the orientation
+        let transpose_flag = Tensor::from_slice(&[1.0f32], 1, &emb_device)?;
+        tensors.insert("embed_tokens.transposed".to_string(), transpose_flag);
     } else if emb_key != &"embed_tokens.weight" {
         // Just rename the key if needed
         let emb = tensors.remove(*emb_key).unwrap();
         tensors.insert("embed_tokens.weight".to_string(), emb);
+        // Add flag indicating no transposition needed
+        let transpose_flag = Tensor::from_slice(&[0.0f32], 1, &emb_device)?;
+        tensors.insert("embed_tokens.transposed".to_string(), transpose_flag);
     }
     
     // 4) Locate lm_head with robust aliases, normalize to [n_vocab, n_embd]
@@ -282,32 +418,45 @@ pub fn normalize_model_tensors(
     ];
     
     if let Some(lm_key) = lm_candidates.iter().find(|k| tensors.contains_key(**k)) {
-        let lm = tensors.get(*lm_key).unwrap();
-        let (lr, lc) = dims2(lm, "lm_head.weight")?;
-        
-        let lm_needs_t = match (lr, lc) {
-            (v, h) if v == vocab_size && h == hidden_size => false,
-            (h, v) if h == hidden_size && v == vocab_size => {
-                tracing::info!("lm_head appears transposed; normalizing.");
-                true
-            }
-            _ => {
-                return Err(bitnet_common::BitNetError::Validation(format!(
-                    "lm_head.weight bad shape [{},{}], want [{},{}] or transposed",
-                    lr, lc, vocab_size, hidden_size
-                )));
-            }
+        // Get lm_head info first (before mutating tensors)
+        let (lm_needs_t, lm_device) = {
+            let lm = tensors.get(*lm_key).unwrap();
+            let (lr, lc) = dims2(lm, "lm_head.weight")?;
+            let device = lm.device().clone();
+            
+            let needs_t = match (lr, lc) {
+                (v, h) if v == vocab_size && h == hidden_size => false,
+                (h, v) if h == hidden_size && v == vocab_size => {
+                    tracing::info!("lm_head appears transposed; normalizing.");
+                    true
+                }
+                _ => {
+                    return Err(bitnet_common::BitNetError::Validation(format!(
+                        "lm_head.weight bad shape [{},{}], want [{},{}] or transposed",
+                        lr, lc, vocab_size, hidden_size
+                    )));
+                }
+            };
+            (needs_t, device)
         };
         
         if lm_needs_t {
-            let lm_norm = lm.t()?.contiguous()?;
-            tensors.insert("lm_head.weight".to_string(), lm_norm);
+            tracing::warn!(
+                "lm_head is transposed - avoiding {} MB transpose",
+                (vocab_size * hidden_size * 4) / (1024 * 1024)
+            );
+            // Store metadata instead of transposing
             if lm_key != &"lm_head.weight" {
-                tensors.remove(*lm_key);
+                let lm = tensors.remove(*lm_key).unwrap();
+                tensors.insert("lm_head.weight".to_string(), lm);
             }
+            let transpose_flag = Tensor::from_slice(&[1.0f32], 1, &lm_device)?;
+            tensors.insert("lm_head.transposed".to_string(), transpose_flag);
         } else if lm_key != &"lm_head.weight" {
             let lm = tensors.remove(*lm_key).unwrap();
             tensors.insert("lm_head.weight".to_string(), lm);
+            let transpose_flag = Tensor::from_slice(&[0.0f32], 1, &lm_device)?;
+            tensors.insert("lm_head.transposed".to_string(), transpose_flag);
         }
     } else {
         tracing::info!("No lm_head.weight found; using tied weights with embed_tokens.");
