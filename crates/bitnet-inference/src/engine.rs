@@ -212,12 +212,40 @@ impl InferenceEngine {
 
         let mut sampling_strategy = SamplingStrategy::new(sampling_config);
 
-        for _ in 0..config.max_new_tokens {
+        for step in 0..config.max_new_tokens {
             // Forward pass through model
             let logits = self.forward_pass(&current_tokens).await?;
 
-            // Sample next token
+            // Sample next token first
             let next_token = sampling_strategy.sample(&logits, &current_tokens)?;
+            
+            // Capture logits if requested (after sampling to know chosen_id)
+            if let Some(cb) = &config.logits_cb {
+                if step < config.logits_tap_steps {
+                    let k = config.logits_topk.min(logits.len());
+                    
+                    // Use partial selection for efficiency on large vocabs
+                    let mut indices: Vec<usize> = (0..logits.len()).collect();
+                    if k < logits.len() {
+                        indices.select_nth_unstable_by(k.saturating_sub(1), |&a, &b| {
+                            logits[b].partial_cmp(&logits[a]).unwrap_or(std::cmp::Ordering::Equal)
+                        });
+                        indices.truncate(k);
+                    }
+                    
+                    // Sort the top-k for consistent ordering
+                    indices.sort_by(|&a, &b| {
+                        logits[b].partial_cmp(&logits[a]).unwrap_or(std::cmp::Ordering::Equal)
+                    });
+                    
+                    let topk: Vec<(u32, f32)> = indices.into_iter()
+                        .map(|idx| (idx as u32, logits[idx]))
+                        .collect();
+                    
+                    // Pass topk and the chosen token
+                    (cb)(step, topk, next_token);
+                }
+            }
 
             // Check for stop conditions
             if self.should_stop(next_token, &generated_tokens, config) {

@@ -82,7 +82,10 @@ mkdir -p "$PROP_ARTIFACTS_DIR"
 # Install Python dependencies if needed
 if ! python3 -c "import hypothesis" 2>/dev/null; then
     echo "Installing Python dependencies..."
-    pip3 install -q hypothesis pytest numpy scipy
+    pip3 install -q hypothesis pytest numpy scipy || {
+        echo -e "${YELLOW}Warning: Could not install Python dependencies${NC}"
+        echo "Install manually with: pip3 install hypothesis pytest numpy scipy"
+    }
 fi
 
 # Run the property tests

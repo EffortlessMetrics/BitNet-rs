@@ -73,61 +73,90 @@ class BitNetRunner:
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
         tmp.close()
         
-        # Force deterministic execution
+        # Deterministic environment (single-thread unless caller overrides)
         env = os.environ.copy()
-        env.update({
-            "OMP_NUM_THREADS": str(self.threads),
-            "MKL_NUM_THREADS": str(self.threads),
-            "BLAS_NUM_THREADS": str(self.threads),
-            "RAYON_NUM_THREADS": str(self.threads),
-            "BITNET_DETERMINISTIC": "1",
-            "BITNET_SEED": str(seed),
-        })
+        env.setdefault("BITNET_DETERMINISTIC", "1")
+        env.setdefault("OMP_NUM_THREADS", str(self.threads))
+        env.setdefault("MKL_NUM_THREADS", str(self.threads))
+        env.setdefault("BLAS_NUM_THREADS", str(self.threads))
+        env.setdefault("RAYON_NUM_THREADS", str(self.threads))
         
-        # Build command with greedy decoding
+        # Build command as argv list (no shell quoting issues)
         args = [
-            shlex.quote(self.bin), "run",
-            "--model", shlex.quote(self.model),
+            self.bin, "run",
+            "--model", self.model,
             "--max-new-tokens", str(max_new_tokens),
-            "--seed", str(seed),
-            "--json-out", shlex.quote(tmp.name),
-            "--temperature", "0" if greedy else "1",
-            "--top-p", "1" if greedy else "0.95",
-            "--top-k", "0" if greedy else "40",
+            "--seed", str(int(seed) & 0xFFFFFFFF),  # Ensure valid u32
+            "--json-out", tmp.name,
         ]
         
+        if greedy:
+            args += ["--greedy", "--deterministic", "--threads", "1"]
+        else:
+            args += ["--temperature", "1", "--top-p", "0.95", "--top-k", "40"]
+        
         if self.tokenizer:
-            args += ["--tokenizer", shlex.quote(self.tokenizer)]
+            args += ["--tokenizer", self.tokenizer]
         
         if dump_logits_steps > 0:
             args += ["--dump-logits", str(dump_logits_steps), "--topk", str(topk)]
         
-        args += ["--prompt", shlex.quote(prompt)]
-        
-        cmd = " ".join(args)
+        args += ["--prompt", prompt]
         
         try:
-            out, err, code = _run(cmd, timeout=timeout, env=env)
-            
-            # Read JSON output
+            # Run without shell to avoid quoting issues
+            p = subprocess.run(
+                args, 
+                env=env, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE,
+                timeout=timeout, 
+                check=False
+            )
+        except subprocess.TimeoutExpired as e:
+            Path(tmp.name).unlink(missing_ok=True)
+            raise RuntimeError(f"BitNet timed out after {timeout}s on prompt: {prompt[:100]}...") from e
+        
+        stdout = p.stdout.decode("utf-8", errors="replace")
+        stderr = p.stderr.decode("utf-8", errors="replace")
+        
+        # Check return code
+        if p.returncode != 0:
+            Path(tmp.name).unlink(missing_ok=True)
+            raise RuntimeError(
+                f"BitNet exited with code {p.returncode}\n"
+                f"STDERR:\n{stderr}\n"
+                f"STDOUT:\n{stdout}\n"
+                f"Prompt: {prompt[:100]}..."
+            )
+        
+        # Parse JSON output
+        try:
             with open(tmp.name, "r", encoding="utf-8") as f:
                 raw = json.load(f)
-            
-            text = normalize_text(raw.get("text", ""))
-            
-            meta = {
-                "counts": raw.get("counts", {}),
-                "timing_ms": raw.get("timing_ms", {}),
-                "throughput_tps": raw.get("throughput_tps", {}),
-                "tokenizer": raw.get("tokenizer", {}),
-                "seed": seed,
-                "exit_code": code,
-            }
-            
-            return RunResult(text, meta, raw)
-            
+        except Exception as e:
+            Path(tmp.name).unlink(missing_ok=True)
+            raise RuntimeError(
+                f"Failed to parse BitNet JSON output\n"
+                f"STDERR:\n{stderr}\n"
+                f"STDOUT:\n{stdout}\n"
+                f"Prompt: {prompt[:100]}..."
+            ) from e
         finally:
             Path(tmp.name).unlink(missing_ok=True)
+        
+        text = normalize_text(raw.get("text", ""))
+        
+        meta = {
+            "counts": raw.get("counts", {}),
+            "timing_ms": raw.get("timing_ms", {}),
+            "throughput_tps": raw.get("throughput_tps", {}),
+            "tokenizer": raw.get("tokenizer", {}),
+            "logits_dump": raw.get("logits_dump", []),  # For logit-parity
+            "seed": seed,
+        }
+        
+        return RunResult(text, meta, raw)
 
 
 class LlamaCppRunner:
@@ -152,23 +181,42 @@ class LlamaCppRunner:
         env = os.environ.copy()
         env["OMP_NUM_THREADS"] = str(self.threads)
         
-        # Build llama.cpp command (adjust flags to your version)
-        cmd = (
-            f"{shlex.quote(self.bin)} "
-            f"-m {shlex.quote(self.model)} "
-            f"-n {max_new_tokens} "
-            f"--seed {seed} "
-            f"--temp 0 --top-p 1 --top-k 0 "  # Force greedy
-            f"-t {self.threads} "
-            f"--no-penalize-nl "
-            f"--silent-prompt "
-            f"-p {shlex.quote(prompt)}"
-        )
+        # Build llama.cpp command as argv list
+        args = [
+            self.bin,
+            "-m", self.model,
+            "-n", str(max_new_tokens),
+            "--seed", str(int(seed) & 0xFFFFFFFF),
+            "--temp", "0",
+            "--top-p", "1", 
+            "--top-k", "0",  # Force greedy
+            "-t", str(self.threads),
+            "--no-penalize-nl",
+            "--repeat-penalty", "1.0",  # No repetition penalty
+            "-p", prompt,
+        ]
         
-        if greedy:
-            cmd += " --repeat-penalty 1.0"  # No repetition penalty
+        try:
+            p = subprocess.run(
+                args,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=timeout,
+                check=False
+            )
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeError(f"llama.cpp timed out after {timeout}s") from e
         
-        out, err, code = _run(cmd, timeout=timeout, env=env)
+        out = p.stdout.decode("utf-8", errors="replace")
+        err = p.stderr.decode("utf-8", errors="replace")
+        
+        if p.returncode != 0:
+            raise RuntimeError(
+                f"llama.cpp exited with code {p.returncode}\n"
+                f"STDERR:\n{err}\n"
+                f"Prompt: {prompt[:100]}..."
+            )
         
         # Extract generated text (after prompt)
         text = out
@@ -178,7 +226,7 @@ class LlamaCppRunner:
         
         return RunResult(
             text, 
-            {"seed": seed, "exit_code": code}, 
+            {"seed": seed}, 
             {"raw_stdout": out, "stderr": err}
         )
 

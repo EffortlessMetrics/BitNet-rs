@@ -151,6 +151,14 @@ pub struct InferenceCommand {
     /// Timeout for inference (in seconds)
     #[arg(long, value_name = "SECONDS")]
     pub timeout: Option<u64>,
+    
+    /// Dump top-k logits for first N decode steps (for testing)
+    #[arg(long, value_name = "N")]
+    pub dump_logits: Option<usize>,
+    
+    /// Number of top logits to dump per step
+    #[arg(long, default_value = "10", value_name = "K")]
+    pub logits_topk: usize,
 }
 
 /// Inference result for JSON output
@@ -164,6 +172,18 @@ pub struct InferenceResult {
     pub memory_used: Option<u64>,
     pub model_info: ModelInfo,
     pub tokenizer_info: TokenizerInfo,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logits_dump: Option<Vec<LogitStep>>,
+}
+
+/// Logit information for a single decode step
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LogitStep {
+    pub step: usize,
+    /// Top-k tokens with their logits: [(token_id, logit)]
+    pub topk: Vec<(u32, f32)>,
+    /// The token that was actually chosen at this step
+    pub chosen_id: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -597,20 +617,39 @@ impl InferenceCommand {
 
             // 3. Decode loop (measure)
             let t2 = Instant::now();
-            let mut generated_ids = Vec::new();
             
-            // Placeholder generation - replace with actual decoding
-            for _ in 0..config.max_new_tokens {
-                // TODO: let next_id = engine.decode_next()?;
-                let next_id = 50256; // Placeholder EOS token
-                generated_ids.push(next_id);
-                if tokenizer.eos_token_id() == Some(next_id) {
-                    break;
-                }
-                if generated_ids.len() >= config.max_new_tokens {
-                    break;
-                }
+            // Setup logits capture
+            let logits_collector = if self.dump_logits.is_some() {
+                let collector = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+                let collector_clone = collector.clone();
+                let logits_topk = self.logits_topk;
+                
+                // Create callback that captures chosen tokens
+                let cb = std::sync::Arc::new(move |step: usize, topk: Vec<(u32, f32)>, chosen: u32| {
+                    if let Ok(mut sink) = collector_clone.lock() {
+                        sink.push(LogitStep {
+                            step,
+                            topk,
+                            chosen_id: Some(chosen),
+                        });
+                    }
+                }) as std::sync::Arc<dyn Fn(usize, Vec<(u32, f32)>, u32) + Send + Sync>;
+                
+                Some((collector, cb))
+            } else {
+                None
+            };
+            
+            // Create generation config with logits callback
+            let mut gen_config = config.clone();
+            if let Some((_, cb)) = &logits_collector {
+                gen_config.logits_tap_steps = self.dump_logits.unwrap_or(0);
+                gen_config.logits_topk = self.logits_topk;
+                gen_config.logits_cb = Some(cb.clone());
             }
+            
+            // Generate with the engine
+            let generated_ids = engine.generate_tokens(&prompt_ids, &gen_config).await?;
             let t_decode_ms = t2.elapsed().as_secs_f64() * 1e3;
 
             // 4. Decode to text
@@ -626,6 +665,17 @@ impl InferenceCommand {
             let decode_tps = if t_decode_ms > 0.0 { generated_tokens as f64 / (t_decode_ms/1e3) } else { 0.0 };
             let e2e_tps = if t_total_ms > 0.0 { total_tokens as f64 / (t_total_ms/1e3) } else { 0.0 };
 
+            // Collect logits if requested
+            let logits_dump = if let Some((collector, _)) = logits_collector {
+                if let Ok(sink) = collector.lock() {
+                    Some(sink.clone())
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            
             results.push(InferenceResult {
                 prompt: prompt.clone(),
                 generated_text,
@@ -648,6 +698,7 @@ impl InferenceCommand {
                 memory_used: self.get_memory_usage(),
                 model_info: self.get_model_info(),
                 tokenizer_info: self.get_tokenizer_info(tokenizer.as_ref()),
+                logits_dump,
             });
         }
 
