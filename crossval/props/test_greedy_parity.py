@@ -17,7 +17,13 @@ import hypothesis.strategies as st
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from crossval.props.run_model import BitNetRunner, LlamaCppRunner, HFRuntimeRunner
-from crossval.props.metrics import basic_text_metrics, combined_similarity_score
+from crossval.props.metrics import (
+    basic_text_metrics, 
+    combined_similarity_score,
+    extract_json,
+    validate_json_schema,
+    relative_metrics
+)
 from crossval.props.strategies import prompt_strategy
 
 
@@ -173,6 +179,11 @@ class TestGreedyParity:
         metrics = basic_text_metrics(bitnet_result.text, ref_result.text)
         combined = combined_similarity_score(metrics)
         
+        # Add relative metrics
+        ref_len = max(1, len(ref_result.text.split()))
+        rel_metrics = relative_metrics(metrics, ref_len)
+        metrics.update(rel_metrics)
+        
         # Log for debugging
         note(f"BitNet: {bitnet_result.text!r}")
         note(f"{ref_name}: {ref_result.text!r}")
@@ -192,15 +203,43 @@ class TestGreedyParity:
                 f"Bigram F1 too low: {metrics['bigram_f1']:.3f} < {F1_MIN}"
             )
         
-        if metrics["levenshtein"] > LEV_MAX:
+        # Use relative threshold for longer outputs
+        REL_LEV_MAX = float(os.environ.get("PROP_REL_LEV_MAX", "0.55"))
+        if metrics["levenshtein"] > LEV_MAX and metrics.get("levenshtein_rel", 1.0) > REL_LEV_MAX:
             failures.append(
-                f"Edit distance too large: {metrics['levenshtein']} > {LEV_MAX}"
+                f"Edit distance too large: abs={metrics['levenshtein']} > {LEV_MAX}, "
+                f"rel={metrics.get('levenshtein_rel', 1.0):.2f} > {REL_LEV_MAX}"
             )
         
         if combined < COMBINED_MIN:
             failures.append(
                 f"Combined score too low: {combined:.3f} < {COMBINED_MIN}"
             )
+        
+        # JSON validation for JSON tasks
+        json_keywords = ["Respond ONLY with JSON", "Return a valid JSON", "Output JSON"]
+        if any(kw in prompt for kw in json_keywords):
+            bitnet_json = extract_json(bitnet_result.text)
+            ref_json = extract_json(ref_result.text)
+            
+            if bitnet_json is None:
+                failures.append(f"BitNet did not produce valid JSON. Output: {bitnet_result.text[:200]}")
+            
+            if ref_json is None:
+                failures.append(f"{ref_name} did not produce valid JSON. Output: {ref_result.text[:200]}")
+            
+            # Check schema if both produced JSON
+            if bitnet_json is not None and ref_json is not None:
+                # Check for specific schemas based on prompt
+                if '"title" and "items"' in prompt:
+                    if not validate_json_schema(bitnet_json, ["title", "items"]):
+                        failures.append(f"BitNet JSON missing required keys: {list(bitnet_json.keys())}")
+                elif '"answer"' in prompt and '"reason"' in prompt:
+                    if not validate_json_schema(bitnet_json, ["answer", "reason"]):
+                        failures.append(f"BitNet JSON missing required keys: {list(bitnet_json.keys())}")
+                elif '"lang"' in prompt and '"summary"' in prompt:
+                    if not validate_json_schema(bitnet_json, ["lang", "summary"]):
+                        failures.append(f"BitNet JSON missing required keys: {list(bitnet_json.keys())}")
         
         # Save artifact if failing
         if failures:

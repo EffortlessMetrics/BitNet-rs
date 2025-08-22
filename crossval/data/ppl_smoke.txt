@@ -1,20 +1,20 @@
-The capital of France is Paris.
-Machine learning has revolutionized artificial intelligence.
 The quick brown fox jumps over the lazy dog.
-In 2024, technology continues to advance rapidly.
-Climate change is a global challenge requiring immediate action.
-The human brain contains approximately 86 billion neurons.
-Shakespeare wrote 37 plays and 154 sonnets.
-The speed of light in vacuum is 299,792,458 meters per second.
-Democracy is a form of government by the people.
-The Great Wall of China is over 13,000 miles long.
-Water freezes at 0 degrees Celsius and boils at 100 degrees.
-The Earth orbits the Sun once every 365.25 days.
-DNA contains the genetic instructions for life.
-The internet has connected billions of people worldwide.
-Renewable energy sources include solar, wind, and hydroelectric power.
-The Pacific Ocean is the largest ocean on Earth.
-Mathematics is the language of the universe.
-The Renaissance was a period of cultural rebirth in Europe.
-Quantum mechanics describes the behavior of subatomic particles.
-Evolution by natural selection was proposed by Charles Darwin.
+BitNet is a 1-bit transformer architecture designed for efficient inference.
+Machine learning models can be quantized to reduce memory and computation requirements.
+Rust provides memory safety without garbage collection through its ownership system.
+Property-based testing helps find edge cases that unit tests might miss.
+Large language models have revolutionized natural language processing tasks.
+Quantization techniques enable running large models on resource-constrained devices.
+The attention mechanism is a key component of transformer architectures.
+Cross-entropy loss is commonly used for training language models.
+Teacher forcing is a training technique where the model uses ground truth tokens.
+Perplexity measures how well a language model predicts a sample of text.
+Lower perplexity indicates better model performance on the evaluation data.
+Tokenization converts raw text into discrete units for model processing.
+The softmax function normalizes logits into a probability distribution.
+Gradient descent optimizes model parameters to minimize the loss function.
+Inference engines accelerate model deployment in production environments.
+SIMD instructions enable parallel processing of multiple data elements.
+Memory-mapped files allow efficient access to large model weights.
+Deterministic execution ensures reproducible results across different runs.
+Property tests generate random inputs to verify program correctness.

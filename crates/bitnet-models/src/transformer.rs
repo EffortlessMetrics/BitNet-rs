@@ -426,23 +426,73 @@ impl TransformerModel {
     pub fn embed(&self, tokens: &[u32]) -> Result<Tensor> {
         let token_ids = Tensor::from_vec(tokens.to_vec(), &[1, tokens.len()], &self.device)?;
         
-        // If embeddings are transposed, we need to handle this efficiently
+        // Get dimensions
+        let batch_size = token_ids.dims()[0];
+        let seq_len = token_ids.dims()[1];
+        let hidden_size = self.config.model.hidden_size;
+        
+        // Flatten to [B*S] for index_select
+        let flat_ids = token_ids.flatten_all()?;
+        
         if self.embed_transposed {
-            // Embeddings are stored as [hidden, vocab] but embedding op expects [vocab, hidden]
-            // Use view transpose (no allocation) for the weight matrix
+            // Column-gather path for [hidden, vocab] storage
+            // This avoids materializing the full transpose
             let weight = self.embed_tokens.embeddings();
-            let weight_t = weight.t()?;  // View transpose, no allocation
             
-            // Manual embedding lookup with transposed weight
-            let batch_size = token_ids.dims()[0];
-            let seq_len = token_ids.dims()[1];
-            let flat_ids = token_ids.flatten_all()?;
-            let embeddings = weight_t.index_select(&flat_ids, 0)?;
-            Ok(embeddings.reshape(&[batch_size, seq_len, self.config.model.hidden_size])?)
+            // index_select on dim=1 gathers columns from [H, V]
+            // Result: [H, B*S] 
+            let cols = weight.index_select(&flat_ids, 1)?;
+            
+            // Transpose to [B*S, H] (small transpose, only B*S elements)
+            let embeddings = cols.t()?;
+            
+            // Reshape to [B, S, H]
+            Ok(embeddings.reshape(&[batch_size, seq_len, hidden_size])?)
         } else {
-            // Standard path: embeddings are [vocab, hidden]
-            Ok(self.embed_tokens.forward(&token_ids)?)
+            // Row-gather path for standard [vocab, hidden] storage
+            let weight = self.embed_tokens.embeddings();
+            
+            // index_select on dim=0 gathers rows from [V, H]
+            // Result: [B*S, H]
+            let rows = weight.index_select(&flat_ids, 0)?;
+            
+            // Reshape to [B, S, H]
+            Ok(rows.reshape(&[batch_size, seq_len, hidden_size])?)
         }
+    }
+
+    /// Teacher-forcing forward: full sequence [B,T] -> [B,T,V] logits
+    pub fn forward_full(&self, token_ids: &Tensor) -> Result<Tensor> {
+        // Get dimensions
+        let batch_size = token_ids.dims()[0];
+        let seq_len = token_ids.dims()[1];
+        
+        // 1. Embed tokens [B,T] -> [B,T,H]
+        // Note: This is a simplified path that may not handle all edge cases
+        // For production, we should refactor to share code with the main forward path
+        let flat_ids = token_ids.flatten_all()?;
+        let ids_vec: Vec<u32> = flat_ids.to_vec1()?;
+        let mut hidden = self.embed(&ids_vec)?;
+        
+        // Reshape back to [B,T,H]
+        let hidden_size = self.config.model.hidden_size;
+        let mut hidden = hidden.reshape(&[batch_size, seq_len, hidden_size])?;
+        
+        // 2. Pass through transformer blocks
+        // TODO: This currently doesn't apply proper positional encoding per step
+        // which may cause parity issues. The correct implementation would:
+        // - Apply causal mask properly
+        // - Handle position-dependent rotary embeddings correctly
+        // - Match the exact computation path of incremental decoding
+        for layer in &self.layers {
+            hidden = layer.forward(&hidden, None)?;
+        }
+        
+        // 3. Apply final normalization
+        hidden = self.norm.forward(&hidden)?;
+        
+        // 4. Project to vocabulary [B,T,H] -> [B,T,V]
+        self.logits(&hidden)
     }
 
     pub fn forward(&self, hidden: &Tensor, mut kv_cache: Option<&mut KVCache>) -> Result<Tensor> {

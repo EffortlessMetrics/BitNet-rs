@@ -3,6 +3,7 @@
 //! Configuration structures for inference engine and text generation.
 
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 /// Configuration for the inference engine
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,6 +53,14 @@ pub struct GenerationConfig {
     pub skip_special_tokens: bool,
     /// EOS token ID for stopping generation (None = use tokenizer default)
     pub eos_token_id: Option<u32>,
+    /// Number of decode steps to capture logits for (0 = disabled)
+    pub logits_tap_steps: usize,
+    /// Number of top tokens to capture per step
+    pub logits_topk: usize,
+    /// Optional callback for capturing logits at each step
+    /// Parameters: (step, topk_tokens_and_logits, chosen_token_id)
+    #[serde(skip)]
+    pub logits_cb: Option<Arc<dyn Fn(usize, Vec<(u32, f32)>, u32) + Send + Sync>>,
 }
 
 impl Default for GenerationConfig {
@@ -66,6 +75,9 @@ impl Default for GenerationConfig {
             seed: None,
             skip_special_tokens: true,
             eos_token_id: None,
+            logits_tap_steps: 0,
+            logits_topk: 10,
+            logits_cb: None,
         }
     }
 }
