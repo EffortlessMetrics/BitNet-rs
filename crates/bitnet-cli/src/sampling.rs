@@ -174,19 +174,33 @@ pub fn softmax(logits: &[f32]) -> Vec<f32> {
     exp_vals
 }
 
-/// Argmax function
+/// Argmax function with deterministic tie-breaking (choose lowest index on tie)
 pub fn argmax(logits: &[f32]) -> u32 {
     let mut best_idx = 0;
     let mut best_val = f32::NEG_INFINITY;
 
     for (i, &val) in logits.iter().enumerate() {
-        if val > best_val {
+        // On tie, prefer lower index for determinism
+        if val > best_val || (val == best_val && i < best_idx) {
             best_val = val;
             best_idx = i;
         }
     }
 
     best_idx as u32
+}
+
+/// Greedy selection with deterministic tie-breaking for temperature=0
+#[inline]
+pub fn greedy_tie_break_lowest_id(logits: &[f32]) -> u32 {
+    let mut best = (f32::NEG_INFINITY, u32::MAX);
+    for (i, &x) in logits.iter().enumerate() {
+        let id = i as u32;
+        if x > best.0 || (x == best.0 && id < best.1) {
+            best = (x, id);
+        }
+    }
+    best.1
 }
 
 #[cfg(test)]
@@ -206,6 +220,14 @@ mod tests {
     fn test_argmax() {
         let logits = vec![1.0, 3.0, 2.0];
         assert_eq!(argmax(&logits), 1);
+    }
+    
+    #[test]
+    fn test_argmax_tie_break() {
+        // On tie, should choose lowest index
+        let logits = vec![1.0, 2.0, 2.0, 1.5];
+        assert_eq!(argmax(&logits), 1); // index 1, not 2
+        assert_eq!(greedy_tie_break_lowest_id(&logits), 1);
     }
 
     #[test]

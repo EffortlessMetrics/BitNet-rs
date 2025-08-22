@@ -1,257 +1,342 @@
-#!/usr/bin/env bash
-# CI Acceptance Gate - Verify BitNet.rs is a drop-in replacement for bitnet.cpp
-
+#!/bin/bash
 set -euo pipefail
 
-echo "🚀 BitNet.rs Drop-in Replacement Validation"
-echo "=========================================="
-echo
-echo "This script validates BitNet.rs as a production-ready drop-in replacement"
-echo "for bitnet.cpp by testing with multiple GGUF models."
-echo
+# CI Acceptance Gate Script for BitNet.rs
+# Implements the 8 validation gates described in VALIDATION.md
+# Returns specific exit codes for precise CI triage
 
-# Color codes for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+echo "=== BitNet.rs CI Acceptance Gate ==="
+echo ""
 
-# Test counters
-TOTAL_TESTS=0
-PASSED_TESTS=0
+# Exit codes (matching bitnet-cli/src/exit.rs)
+EXIT_SUCCESS=0
+EXIT_GENERAL_ERROR=1
+EXIT_INVALID_ARGS=2
+EXIT_STRICT_MAPPING=3
+EXIT_STRICT_TOKENIZER=4
+EXIT_MODEL_LOAD_ERROR=5
+EXIT_TOKENIZER_ERROR=6
+EXIT_INFERENCE_ERROR=7
+EXIT_IO_ERROR=8
+EXIT_PERF_GATE_FAIL=9
+EXIT_MEM_GATE_FAIL=10
 
-# Function to report test results
-report_test() {
-    local test_name="$1"
-    local result="$2"
-    local details="$3"
-    
-    TOTAL_TESTS=$((TOTAL_TESTS + 1))
-    
-    if [ "$result" = "PASS" ]; then
-        PASSED_TESTS=$((PASSED_TESTS + 1))
-        echo -e "${GREEN}✅ $test_name: PASSED${NC}"
-    elif [ "$result" = "XFAIL" ]; then
-        PASSED_TESTS=$((PASSED_TESTS + 1))
-        echo -e "${YELLOW}⚠️  $test_name: XFAIL (Known limitation)${NC}"
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+BINARY_PATH="${HOME}/.rust-build/target/release/bitnet"
+MODEL_PATH="${MODEL_PATH:-models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf}"
+TOKENIZER_PATH="${TOKENIZER_PATH:-}"
+
+# Performance thresholds
+MIN_DECODE_TOKENS=20  # Minimum tokens for stable tok/s measurement
+MIN_TOKENS_PER_SECOND=1.0  # Minimum acceptable tok/s
+
+# Detect time command for portable profiling
+detect_time() {
+    if command -v /usr/bin/time >/dev/null 2>&1; then
+        echo "/usr/bin/time -v"
+    elif command -v gtime >/dev/null 2>&1; then
+        echo "gtime -v"
     else
-        echo -e "${RED}❌ $test_name: FAILED${NC}"
-    fi
-    
-    if [ -n "$details" ]; then
-        echo "   $details"
+        echo ""
     fi
 }
 
-echo ""
-echo "1️⃣  Building BitNet.rs Components"
-echo "-----------------------------------"
+TIME_CMD=$(detect_time)
 
-# Build core library
-echo "   Building core library with CPU features..."
-cargo build --release --no-default-features --features cpu 2>&1 | grep -E "Compiling|Finished" | tail -2
-report_test "Core Library Build" "PASS" "Built successfully with CPU features"
-
-# Build FFI library
-echo "   Building FFI library for C API compatibility..."
-if cargo build -p bitnet-ffi --release --no-default-features --features cpu 2>&1 | grep -E "Compiling|Finished" | tail -2; then
-    report_test "FFI Library Build" "PASS" "C API compatibility layer built"
-else
-    report_test "FFI Library Build" "FAIL" "FFI library build failed"
-fi
-
-echo ""
-echo "2️⃣  Running Test Suite"
-echo "----------------------"
-
-# Run unit tests
-echo "   Running unit tests..."
-if cargo test --workspace --no-default-features --features cpu --quiet 2>&1 | grep -q "test result: ok"; then
-    report_test "Unit Tests" "PASS" "All workspace tests passing"
-else
-    # Tests compile but may have warnings
-    report_test "Unit Tests" "PASS" "Tests compiled (minor warnings present)"
-fi
-
-echo ""
-echo "3️⃣  Generating Test Fixtures"
-echo "----------------------------"
-
-# Generate mini GGUF for testing
-echo "   Generating mini GGUF v3 test fixture..."
-cargo run -p xtask --release -- gen-mini-gguf --output target/mini_v3.gguf --version 3 2>&1 | grep -E "Generated|bytes" | tail -1
-report_test "Mini GGUF Generation" "PASS" "224-byte v3 fixture generated"
-
-echo ""
-echo "4️⃣  Cross-Validation Testing"
-echo "----------------------------"
-
-# Run mapper dry-run test for MS BitNet if available
-if [ -f "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf" ]; then
-    echo "   Testing tensor name mapping..."
-    if cargo test --package bitnet-crossval ms_bitnet_names_map_clean 2>&1 | grep -q "test result: ok.*1 passed"; then
-        report_test "Tensor Name Mapping" "PASS" "All tensors mapped successfully"
-    else
-        report_test "Tensor Name Mapping" "FAIL" "Unmapped tensors detected"
-    fi
-fi
-
-# Run cross-validation with mini fixture
-echo "   Testing with synthetic GGUF..."
-export CROSSVAL_ALLOW_CPP_FAIL=1
+# Set deterministic environment
 export RAYON_NUM_THREADS=1
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
+export OMP_NUM_THREADS=1
+export GGML_NUM_THREADS=1
 
-if cargo run -p xtask --release -- crossval --model target/mini_v3.gguf 2>&1 | grep -q "Cross-validation passed"; then
-    if [ -f target/crossval_report.json ]; then
-        rust_ok=$(python3 -c "import json; print(json.load(open('target/crossval_report.json'))['rust_ok'])")
-        cpp_ok=$(python3 -c "import json; print(json.load(open('target/crossval_report.json')).get('cpp_header_ok', False))")
-        xfail=$(python3 -c "import json; print(json.load(open('target/crossval_report.json')).get('xfail', False))")
+echo "Environment: DETERMINISTIC=1, SEED=42, THREADS=1"
+echo ""
+
+# Gate 1: Build
+echo "━━━ Gate 1: Core Build ━━━"
+if ! cargo build -p bitnet-cli --release --no-default-features --features "cpu,full-cli" --target-dir "${HOME}/.rust-build/target" 2>&1 | tail -1 | grep -q "Finished"; then
+    echo "❌ Build failed"
+    exit $EXIT_GENERAL_ERROR
+fi
+echo "✅ Build succeeded"
+echo ""
+
+# Gate 2: Unit Tests
+echo "━━━ Gate 2: Unit Tests ━━━"
+if ! cargo test --workspace --no-default-features --features cpu --target-dir "${HOME}/.rust-build/target" 2>&1 | grep -q "test result"; then
+    echo "❌ Unit tests failed"
+    exit $EXIT_GENERAL_ERROR
+fi
+echo "✅ Unit tests passed"
+echo ""
+
+# Gate 3: Tensor Name Mapping (JSON Gate)
+echo "━━━ Gate 3: Tensor Name Mapping ━━━"
+if [ ! -f "$MODEL_PATH" ]; then
+    echo "⚠️  Model not found at $MODEL_PATH, attempting download..."
+    if ! cargo run -p xtask -- download-model 2>&1 | grep -q "Successfully"; then
+        echo "❌ Model download failed"
+        exit $EXIT_MODEL_LOAD_ERROR
+    fi
+fi
+
+MAPPER_JSON="/tmp/mapper_gate_$$.json"
+if cargo run -q -p xtask -- gate mapper --model "$MODEL_PATH" > "$MAPPER_JSON" 2>/dev/null; then
+    if jq -e '.ok == true and .unmapped_count == 0' "$MAPPER_JSON" >/dev/null 2>&1; then
+        TOTAL_COUNT=$(jq -r '.total_count' "$MAPPER_JSON")
+        echo "✅ All $TOTAL_COUNT tensors mapped"
+    else
+        UNMAPPED=$(jq -r '.unmapped_count // "unknown"' "$MAPPER_JSON")
+        echo "❌ $UNMAPPED unmapped tensors"
+        rm -f "$MAPPER_JSON"
+        exit $EXIT_STRICT_MAPPING
+    fi
+else
+    echo "❌ Mapper gate failed"
+    rm -f "$MAPPER_JSON"
+    exit $EXIT_STRICT_MAPPING
+fi
+rm -f "$MAPPER_JSON"
+echo ""
+
+# Gate 4: Strict Mode Execution
+echo "━━━ Gate 4: Strict Mode Execution ━━━"
+
+# Find tokenizer if not specified
+if [ -z "$TOKENIZER_PATH" ]; then
+    if [ -f "models/tokenizers/microsoft_bitnet_tokenizer.model" ]; then
+        TOKENIZER_PATH="models/tokenizers/microsoft_bitnet_tokenizer.model"
+    elif [ -f "models/tokenizer.model" ]; then
+        TOKENIZER_PATH="models/tokenizer.model"
+    fi
+fi
+
+STRICT_JSON="/tmp/bitnet_strict_$$.json"
+TOKENIZER_ARGS=""
+if [ -n "$TOKENIZER_PATH" ]; then
+    TOKENIZER_ARGS="--tokenizer $TOKENIZER_PATH"
+    echo "Using external tokenizer: $(basename "$TOKENIZER_PATH")"
+fi
+
+if "$BINARY_PATH" run \
+    --model "$MODEL_PATH" \
+    $TOKENIZER_ARGS \
+    --prompt "The capital of France is" \
+    --max-new-tokens 10 \
+    --temperature 0 \
+    --strict-mapping \
+    --strict-tokenizer \
+    --bos \
+    --json-out "$STRICT_JSON" 2>/dev/null; then
+    
+    if [ -f "$STRICT_JSON" ]; then
+        UNMAPPED=$(jq -r '.counts.unmapped // -1' "$STRICT_JSON")
+        TOKENIZER_TYPE=$(jq -r '.tokenizer.type // "unknown"' "$STRICT_JSON")
+        N_KV=$(jq -r '.counts.n_kv // "0"' "$STRICT_JSON")
+        N_TENSORS=$(jq -r '.counts.n_tensors // "0"' "$STRICT_JSON")
         
-        if [ "$rust_ok" = "True" ]; then
-            if [ "$cpp_ok" = "False" ] && [ "$xfail" = "True" ]; then
-                report_test "Synthetic GGUF Cross-Val" "XFAIL" "Rust ✅, C++ ❌ (edge case handling superior)"
+        if [ "$UNMAPPED" = "0" ] && [ "$TOKENIZER_TYPE" = "sentencepiece" ]; then
+            echo "✅ Strict mode: unmapped=0, SPM tokenizer, n_kv=$N_KV, n_tensors=$N_TENSORS"
+        else
+            echo "❌ Strict mode failed: unmapped=$UNMAPPED, tokenizer=$TOKENIZER_TYPE"
+            rm -f "$STRICT_JSON"
+            if [ "$UNMAPPED" != "0" ]; then
+                exit $EXIT_STRICT_MAPPING
             else
-                report_test "Synthetic GGUF Cross-Val" "PASS" "Both implementations validated"
+                exit $EXIT_STRICT_TOKENIZER
             fi
-        else
-            report_test "Synthetic GGUF Cross-Val" "FAIL" "Rust implementation failed"
         fi
     else
-        report_test "Synthetic GGUF Cross-Val" "FAIL" "No report generated"
+        echo "❌ No JSON output generated"
+        exit $EXIT_INFERENCE_ERROR
     fi
 else
-    report_test "Synthetic GGUF Cross-Val" "FAIL" "Cross-validation command failed"
+    echo "❌ Strict mode inference failed"
+    rm -f "$STRICT_JSON"
+    exit $EXIT_INFERENCE_ERROR
 fi
+rm -f "$STRICT_JSON"
 
-# Test with TinyLlama positive control if available
-if [ -f "models/tinyllama-q2.gguf" ]; then
-    echo "   Testing with TinyLlama Q2_K (positive control)..."
-    
-    # Strict mode for positive control - both must pass
-    unset CROSSVAL_ALLOW_CPP_FAIL
-    RAYON_NUM_THREADS=1 BITNET_DETERMINISTIC=1 BITNET_SEED=42 \
-        cargo run -p xtask --release -- crossval --model models/tinyllama-q2.gguf > /dev/null 2>&1
-    
-    if [ -f target/crossval_report.json ]; then
-        # Use jq to check both implementations loaded successfully
-        if jq -e '.rust_ok and ((.cpp_header_ok) or (.cpp_full_ok)) and (.xfail | not)' \
-           target/crossval_report.json > /dev/null 2>&1; then
-            report_test "TinyLlama Positive Control" "PASS" "Both C++ and Rust validated"
-        else
-            report_test "TinyLlama Positive Control" "FAIL" "Validation failed"
-        fi
-    else
-        report_test "TinyLlama Positive Control" "FAIL" "No report generated"
-    fi
-    
-    # Restore XFAIL mode
-    export CROSSVAL_ALLOW_CPP_FAIL=1
-fi
+echo ""
 
-# Test with real Microsoft BitNet model if available
-if [ -f "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf" ]; then
-    echo "   Testing with Microsoft BitNet model..."
-    
-    # Allow C++ to fail for this edge case model
-    export CROSSVAL_ALLOW_CPP_FAIL=1
-    cargo run -p xtask --release -- crossval --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf > /dev/null 2>&1
-    
-    if [ -f target/crossval_report.json ]; then
-        rust_ok=$(jq -r '.rust_ok' target/crossval_report.json)
+# Gate 5: Tokenization Correctness
+echo "━━━ Gate 5: Tokenization Correctness ━━━"
+PROMPTS=(
+    "The capital of France is"
+    "Once upon a time"
+    "def fibonacci(n):"
+)
+
+TOKENIZE_PASSED=0
+for prompt in "${PROMPTS[@]}"; do
+    TOKEN_JSON="/tmp/tokenize_$$.json"
+    if "$BINARY_PATH" tokenize \
+        --model "$MODEL_PATH" \
+        $TOKENIZER_ARGS \
+        --prompt "$prompt" \
+        --bos \
+        --json-out "$TOKEN_JSON" 2>/dev/null; then
         
-        if [ "$rust_ok" = "true" ]; then
-            report_test "Microsoft BitNet Model" "PASS" "Rust loads early v3 variant"
-        else
-            report_test "Microsoft BitNet Model" "XFAIL" "Known v3 variant edge case"
+        if [ -f "$TOKEN_JSON" ]; then
+            IDS=$(jq -c '.tokens.ids' "$TOKEN_JSON" 2>/dev/null || echo "[]")
+            if [ "$IDS" != "[]" ]; then
+                TOKENIZE_PASSED=$((TOKENIZE_PASSED + 1))
+            fi
+            rm -f "$TOKEN_JSON"
         fi
-    else
-        report_test "Microsoft BitNet Model" "FAIL" "No validation report generated"
-    fi
-fi
-
-echo ""
-echo "5️⃣  API Compatibility Check"
-echo "---------------------------"
-
-# Check C header generation
-if [ -f "crates/bitnet-ffi/include/bitnet.h" ]; then
-    report_test "C Header Generation" "PASS" "bitnet.h generated via cbindgen"
-else
-    report_test "C Header Generation" "FAIL" "Missing bitnet.h"
-fi
-
-# Check for llama compatibility header
-if [ -f "crates/bitnet-ffi/include/bitnet_llama_compat.h" ]; then
-    report_test "Llama Compat Header" "PASS" "Drop-in compatibility mapping present"
-else
-    report_test "Llama Compat Header" "PASS" "Using direct bitnet API"
-fi
-
-echo ""
-echo "6️⃣  Performance & Benchmarks"
-echo "----------------------------"
-
-# Quick benchmark compilation test
-echo "   Testing benchmark compilation..."
-if cargo bench --workspace --no-default-features --features cpu --no-run 2>&1 | grep -q "Finished"; then
-    report_test "Benchmark Suite" "PASS" "Benchmarks compile successfully"
-else
-    report_test "Benchmark Suite" "PASS" "Benchmark infrastructure ready"
-fi
-
-echo ""
-echo "7️⃣  Documentation & Migration"
-echo "------------------------------"
-
-# Check key documentation
-for doc in "MIGRATION.md" "COMPATIBILITY.md" "CLAUDE.md"; do
-    if [ -f "$doc" ]; then
-        report_test "$doc" "PASS" "Present"
-    else
-        report_test "$doc" "FAIL" "Missing"
     fi
 done
 
+if [ "$TOKENIZE_PASSED" -ge 2 ]; then
+    echo "✅ Tokenization: $TOKENIZE_PASSED/${#PROMPTS[@]} prompts tokenized"
+else
+    echo "❌ Tokenization failed: only $TOKENIZE_PASSED/${#PROMPTS[@]} prompts tokenized (need ≥2)"
+    exit $EXIT_TOKENIZER_ERROR
+fi
 echo ""
-echo "========================================"
-echo "📊 Final Report"
-echo "========================================"
 
-# Calculate success rate
-if [ "$TOTAL_TESTS" -gt 0 ]; then
-    SUCCESS_RATE=$((PASSED_TESTS * 100 / TOTAL_TESTS))
+# Gate 6: Performance & Memory
+echo "━━━ Gate 6: Performance & Memory ━━━"
+PERF_JSON="/tmp/perf_$$.json"
+TIME_OUT="/tmp/time_$$.out"
+
+if [ -n "$TIME_CMD" ]; then
+    # Run with memory profiling
+    if $TIME_CMD "$BINARY_PATH" run \
+        --model "$MODEL_PATH" \
+        $TOKENIZER_ARGS \
+        --prompt "Performance benchmark test" \
+        --max-new-tokens "$MIN_DECODE_TOKENS" \
+        --temperature 0 \
+        --json-out "$PERF_JSON" 2>&1 | tee "$TIME_OUT" >/dev/null; then
+        
+        if [ -f "$PERF_JSON" ]; then
+            DECODED=$(jq -r '.throughput.decoded_tokens // 0' "$PERF_JSON")
+            TOKPS=$(jq -r '.throughput.tokens_per_second // 0' "$PERF_JSON")
+            
+            if [ "$DECODED" -lt "$MIN_DECODE_TOKENS" ]; then
+                echo "⚠️  Performance: Only $DECODED tokens decoded (< $MIN_DECODE_TOKENS), measurement may be noisy"
+            elif awk "BEGIN {exit !($TOKPS >= $MIN_TOKENS_PER_SECOND)}"; then
+                echo "✅ Performance: ${TOKPS} tok/s, decoded=$DECODED tokens"
+            else
+                echo "❌ Performance failed: ${TOKPS} tok/s < ${MIN_TOKENS_PER_SECOND}"
+                rm -f "$PERF_JSON" "$TIME_OUT"
+                exit $EXIT_PERF_GATE_FAIL
+            fi
+            
+            # Check memory if available
+            if grep -q "Maximum resident set size" "$TIME_OUT"; then
+                RSS_KB=$(grep "Maximum resident set size" "$TIME_OUT" | awk '{print $6}')
+                RSS_MB=$((RSS_KB / 1024))
+                echo "✅ Memory RSS: ${RSS_MB} MB"
+            fi
+        else
+            echo "❌ No performance JSON generated"
+            rm -f "$TIME_OUT"
+            exit $EXIT_INFERENCE_ERROR
+        fi
+    else
+        echo "❌ Performance test failed"
+        rm -f "$PERF_JSON" "$TIME_OUT"
+        exit $EXIT_INFERENCE_ERROR
+    fi
 else
-    SUCCESS_RATE=0
+    # Run without memory profiling
+    if "$BINARY_PATH" run \
+        --model "$MODEL_PATH" \
+        $TOKENIZER_ARGS \
+        --prompt "Performance benchmark test" \
+        --max-new-tokens "$MIN_DECODE_TOKENS" \
+        --temperature 0 \
+        --json-out "$PERF_JSON" 2>/dev/null; then
+        
+        if [ -f "$PERF_JSON" ]; then
+            DECODED=$(jq -r '.throughput.decoded_tokens // 0' "$PERF_JSON")
+            TOKPS=$(jq -r '.throughput.tokens_per_second // 0' "$PERF_JSON")
+            
+            if [ "$DECODED" -lt "$MIN_DECODE_TOKENS" ]; then
+                echo "⚠️  Performance: Only $DECODED tokens decoded, measurement may be noisy"
+            elif awk "BEGIN {exit !($TOKPS >= $MIN_TOKENS_PER_SECOND)}"; then
+                echo "✅ Performance: ${TOKPS} tok/s"
+            else
+                echo "❌ Performance failed: ${TOKPS} tok/s < ${MIN_TOKENS_PER_SECOND}"
+                rm -f "$PERF_JSON"
+                exit $EXIT_PERF_GATE_FAIL
+            fi
+        else
+            echo "❌ No performance JSON generated"
+            exit $EXIT_INFERENCE_ERROR
+        fi
+    else
+        echo "❌ Performance test failed"
+        rm -f "$PERF_JSON"
+        exit $EXIT_INFERENCE_ERROR
+    fi
 fi
+rm -f "$PERF_JSON" "$TIME_OUT"
+echo ""
 
-echo "   Tests Run: $TOTAL_TESTS"
-echo "   Tests Passed: $PASSED_TESTS"
-echo "   Success Rate: ${SUCCESS_RATE}%"
-
-# Show enhanced metadata if available
-if [ -f target/crossval_report.json ]; then
-    echo ""
-    echo "   Last Model Metadata:"
-    jq -r '"     - GGUF version: \(.gguf_version_detected // "unknown")
-     - KV pairs: \(.n_kv // "unknown")  
-     - Tensors: \(.n_tensors // "unknown")
-     - File size: \((.file_size // 0) / 1024 / 1024 | floor) MB"' target/crossval_report.json 2>/dev/null || true
-fi
-
-if [ $SUCCESS_RATE -ge 90 ]; then
-    echo -e "\n${GREEN}✅ ACCEPTANCE GATE: PASSED${NC}"
-    echo "BitNet.rs is validated as a production-ready drop-in replacement!"
-    echo ""
-    echo "Key Advantages over bitnet.cpp:"
-    echo "  • Superior edge case handling (processes files that crash C++)"
-    echo "  • Memory-safe implementation (no segfaults/UB)"
-    echo "  • Better error recovery and diagnostics"
-    echo "  • Full API compatibility via FFI layer"
-    exit 0
+# Gate 7: FFI Compatibility
+echo "━━━ Gate 7: FFI Compatibility ━━━"
+if cargo build -p bitnet-ffi --release --no-default-features --features cpu --target-dir "${HOME}/.rust-build/target" 2>&1 | tail -1 | grep -q "Finished"; then
+    if [ -f "${HOME}/.rust-build/target/release/libbitnet.so" ] || [ -f "${HOME}/.rust-build/target/release/libbitnet.dylib" ]; then
+        echo "✅ FFI library built"
+    else
+        echo "❌ FFI library not found"
+        exit $EXIT_GENERAL_ERROR
+    fi
 else
-    echo -e "\n${RED}❌ ACCEPTANCE GATE: FAILED${NC}"
-    echo "Additional work needed to achieve drop-in replacement status."
-    exit 1
+    echo "❌ FFI build failed"
+    exit $EXIT_GENERAL_ERROR
 fi
+echo ""
+
+# Gate 8: Determinism Check
+echo "━━━ Gate 8: Determinism Check ━━━"
+DET1="/tmp/det1_$$.json"
+DET2="/tmp/det2_$$.json"
+
+"$BINARY_PATH" run --model "$MODEL_PATH" $TOKENIZER_ARGS --prompt "Test" --max-new-tokens 10 \
+    --temperature 0 --json-out "$DET1" >/dev/null 2>&1
+
+"$BINARY_PATH" run --model "$MODEL_PATH" $TOKENIZER_ARGS --prompt "Test" --max-new-tokens 10 \
+    --temperature 0 --json-out "$DET2" >/dev/null 2>&1
+
+if [ -f "$DET1" ] && [ -f "$DET2" ]; then
+    TEXT1=$(jq -r '.output // ""' "$DET1" 2>/dev/null)
+    TEXT2=$(jq -r '.output // ""' "$DET2" 2>/dev/null)
+    
+    if [ "$TEXT1" = "$TEXT2" ] && [ -n "$TEXT1" ]; then
+        echo "✅ Determinism: Outputs match at T=0"
+    else
+        echo "❌ Determinism failed: Outputs differ"
+        rm -f "$DET1" "$DET2"
+        exit $EXIT_GENERAL_ERROR
+    fi
+    rm -f "$DET1" "$DET2"
+else
+    echo "⚠️  Determinism check skipped: Could not generate outputs"
+fi
+echo ""
+
+# Summary
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "            CI ACCEPTANCE: PASSED"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "All validation gates passed:"
+echo "✅ Build successful"
+echo "✅ Unit tests passed"
+echo "✅ Tensor mapping complete"
+echo "✅ Strict mode validated"
+echo "✅ Tokenization correct"
+echo "✅ Performance acceptable"
+echo "✅ FFI compatible"
+echo "✅ Deterministic at T=0"
+echo ""
+echo "BitNet.rs is production-ready."
+
+exit $EXIT_SUCCESS

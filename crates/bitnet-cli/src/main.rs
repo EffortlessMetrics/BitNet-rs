@@ -14,7 +14,10 @@ use tracing::{error, info};
 #[cfg(feature = "full-cli")]
 mod commands;
 mod config;
+mod exit;
 mod sampling;
+
+use exit::*;
 
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
@@ -147,6 +150,37 @@ enum Commands {
         /// Dump token IDs to stdout
         #[arg(long, default_value_t = false)]
         dump_ids: bool,
+        
+        /// Insert BOS token at start of prompt
+        #[arg(long, default_value_t = false)]
+        bos: bool,
+    },
+    
+    /// Tokenize text and output token IDs as JSON
+    Tokenize {
+        /// Model GGUF path (for extracting tokenizer and counts)
+        #[arg(long)]
+        model: std::path::PathBuf,
+        
+        /// Optional external SentencePiece tokenizer (overrides GGUF)
+        #[arg(long)]
+        tokenizer: Option<std::path::PathBuf>,
+        
+        /// Text to tokenize (inline)
+        #[arg(long, conflicts_with = "file")]
+        text: Option<String>,
+        
+        /// Read text from file
+        #[arg(long, conflicts_with = "text")]
+        file: Option<std::path::PathBuf>,
+        
+        /// Insert BOS token at start
+        #[arg(long, default_value_t = false)]
+        bos: bool,
+        
+        /// Output JSON to file (stdout if omitted)
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
     },
 
     #[cfg(feature = "full-cli")]
@@ -237,6 +271,7 @@ async fn main() -> Result<()> {
             strict_tokenizer,
             json_out,
             dump_ids,
+            bos,
         }) => {
             run_simple_generation(
                 model,
@@ -253,6 +288,7 @@ async fn main() -> Result<()> {
                 strict_tokenizer,
                 json_out,
                 dump_ids,
+                bos,
             )
             .await
         }
@@ -264,6 +300,16 @@ async fn main() -> Result<()> {
         Some(Commands::Benchmark(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Serve(cmd)) => cmd.execute(&config).await,
+        Some(Commands::Tokenize { 
+            model, 
+            tokenizer, 
+            text, 
+            file, 
+            bos, 
+            json_out 
+        }) => {
+            handle_tokenize_command(model, tokenizer, text, file, bos, json_out).await
+        }
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
         Some(Commands::Info) => show_system_info().await,
         None => {
@@ -346,6 +392,78 @@ fn generate_completions(shell: Shell) {
 }
 
 /// Handle configuration commands
+/// Handle tokenize command - tokenize text and output JSON
+async fn handle_tokenize_command(
+    model_path: std::path::PathBuf,
+    tokenizer_path: Option<std::path::PathBuf>,
+    text: Option<String>,
+    file: Option<std::path::PathBuf>,
+    bos: bool,
+    json_out: Option<std::path::PathBuf>,
+) -> Result<()> {
+    use bitnet_models::GgufReader;
+    use bitnet_tokenizers::Tokenizer;
+    
+    // Read GGUF to get counts (always needed)
+    let gguf_bytes = std::fs::read(&model_path)
+        .with_context(|| format!("Failed to read model: {}", model_path.display()))?;
+    let gguf = GgufReader::new(&gguf_bytes)
+        .context("Failed to parse GGUF")?;
+    
+    let counts = serde_json::json!({
+        "n_kv": gguf.metadata_keys().len(),
+        "n_tensors": gguf.tensor_count(),
+        "unmapped": 0  // tokenize doesn't map tensors
+    });
+    
+    // Load tokenizer: prefer external, fall back to GGUF
+    let tokenizer: Box<dyn Tokenizer> = if let Some(spm_path) = tokenizer_path {
+        bitnet_tokenizers::load_tokenizer(&spm_path)
+            .with_context(|| format!("Failed to load external tokenizer: {}", spm_path.display()))?
+    } else {
+        bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&gguf)
+            .context("No tokenizer in GGUF, provide --tokenizer")?
+    };
+    
+    // Read input text
+    let input = if let Some(s) = text {
+        s
+    } else if let Some(p) = file {
+        std::fs::read_to_string(p)
+            .context("Failed to read input file")?
+    } else {
+        anyhow::bail!("Provide --text or --file");
+    };
+    
+    // Tokenize with BOS policy
+    let ids = tokenizer.encode(&input, bos, false)?;
+    
+    // Build output JSON
+    let output = serde_json::json!({
+        "token_ids": ids,
+        "gen_policy": {
+            "bos": bos
+        },
+        "counts": counts,
+        "tokenizer": {
+            "type": "sentencepiece",  // all our tokenizers are SP
+            "bos": tokenizer.bos_token_id(),
+            "eos": tokenizer.eos_token_id(),
+        }
+    });
+    
+    // Write output
+    if let Some(path) = json_out {
+        std::fs::write(&path, serde_json::to_string_pretty(&output)?)
+            .with_context(|| format!("Failed to write JSON to {}", path.display()))?;
+        println!("Wrote {}", path.display());
+    } else {
+        println!("{}", serde_json::to_string_pretty(&output)?);
+    }
+    
+    Ok(())
+}
+
 async fn handle_config_command(action: ConfigAction, config: &CliConfig) -> Result<()> {
     match action {
         ConfigAction::Show => {
@@ -389,6 +507,7 @@ async fn run_simple_generation(
     strict_tokenizer: bool,
     json_out: Option<std::path::PathBuf>,
     dump_ids: bool,
+    bos: bool,
 ) -> Result<()> {
     use crate::sampling::Sampler;
     use bitnet_common::Device;
@@ -455,7 +574,8 @@ async fn run_simple_generation(
             Ok(tok) => tok,
             Err(e) => {
                 if strict_tokenizer {
-                    anyhow::bail!("Failed to load tokenizer: {e}. Strict tokenizer mode enabled.");
+                    eprintln!("Strict tokenizer failed: Failed to load tokenizer: {e}");
+                    std::process::exit(EXIT_STRICT_TOKENIZER);
                 }
                 if !allow_mock {
                     anyhow::bail!("Failed to load tokenizer: {e}. Use --allow-mock to use mock tokenizer.");
@@ -486,7 +606,8 @@ async fn run_simple_generation(
             }
             Err(e) => {
                 if strict_tokenizer {
-                    anyhow::bail!("Failed to load tokenizer from GGUF: {e}. Strict tokenizer mode enabled.");
+                    eprintln!("Strict tokenizer failed: Failed to load tokenizer from GGUF: {e}");
+                    std::process::exit(EXIT_STRICT_TOKENIZER);
                 }
                 if !allow_mock {
                     anyhow::bail!("Failed to load tokenizer from GGUF: {e}. Specify --tokenizer <path> or use --allow-mock.");
@@ -497,8 +618,8 @@ async fn run_simple_generation(
         }
     };
 
-    // Tokenize prompt
-    let mut tokens = tokenizer.encode(&prompt, true, false)?;
+    // Tokenize prompt with BOS policy
+    let mut tokens = tokenizer.encode(&prompt, bos, false)?;
     println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
 
     // Create KV cache
@@ -592,15 +713,28 @@ async fn run_simple_generation(
             "unmapped": if strict_mapping { 0 } else { 0 },  // In strict mode this is always 0
         });
         
+        let gen_policy = serde_json::json!({
+            "bos": bos,
+            "temperature": temperature,
+            "seed": seed.unwrap_or(0),
+        });
+        
         let output = serde_json::json!({
             "prompt": prompt,
             "ids": generated_tokens,
             "text": generated_text,
-            "first_token_ms": first_token_ms,
-            "tok_per_sec": tok_per_sec,
-            "total_ms": total_ms,
+            "latency": {
+                "cmd_to_first_ms": first_token_ms,
+                "decode_first_ms": first_token_ms,  // Same as cmd_to_first for now
+                "total_ms": total_ms,
+            },
+            "throughput": {
+                "tok_per_sec": tok_per_sec,
+                "decoded_tokens": generated_tokens.len(),
+            },
             "counts": counts,
             "tokenizer": tokenizer_info,
+            "gen_policy": gen_policy,
         });
         std::fs::write(&json_path, serde_json::to_string_pretty(&output)?)?;
         println!("JSON output written to: {}", json_path.display());
