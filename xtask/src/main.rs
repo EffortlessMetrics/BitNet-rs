@@ -26,6 +26,8 @@ use std::{
 };
 use walkdir::WalkDir;
 
+mod gates;
+
 // RAII guard for lock file cleanup
 struct LockGuard {
     file: Option<std::fs::File>,
@@ -349,6 +351,12 @@ enum Cmd {
 
     /// Check feature flag consistency
     CheckFeatures,
+    
+    /// CI gates that emit JSON for robust detection
+    Gate {
+        #[command(subcommand)]
+        which: GateWhich,
+    },
 
     /// Run performance benchmarks
     Benchmark {
@@ -391,6 +399,16 @@ enum Cmd {
         /// Output format (json, human)
         #[arg(long, default_value = "human")]
         format: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum GateWhich {
+    /// Dry-run tensor-name mapper gate → JSON
+    Mapper {
+        /// Path to model GGUF (only header/tensor names are read)
+        #[arg(long)]
+        model: PathBuf,
     },
 }
 
@@ -479,6 +497,11 @@ fn real_main() -> Result<()> {
         Cmd::SetupCrossval => setup_crossval(),
         Cmd::CleanCache => clean_cache(),
         Cmd::CheckFeatures => check_features(),
+        Cmd::Gate { which } => match which {
+            GateWhich::Mapper { model } => {
+                std::process::exit(gates::mapper_gate(model)?)
+            }
+        },
         Cmd::Benchmark { platform } => run_benchmark(&platform),
         Cmd::CompareMetrics { baseline, current, ppl_max, latency_p95_max, tok_s_min } => {
             compare_metrics(&baseline, &current, ppl_max, latency_p95_max, tok_s_min)
