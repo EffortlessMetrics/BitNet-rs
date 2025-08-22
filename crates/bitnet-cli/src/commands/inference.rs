@@ -84,6 +84,18 @@ pub struct InferenceCommand {
     #[arg(long, value_name = "SEED")]
     pub seed: Option<u64>,
 
+    /// Enable greedy decoding (temperature=0, top_p=1, top_k=0)
+    #[arg(long)]
+    pub greedy: bool,
+
+    /// Force deterministic execution (single-threaded, deterministic ops)
+    #[arg(long)]
+    pub deterministic: bool,
+
+    /// Number of threads to use (default: all cores)
+    #[arg(long, value_name = "N")]
+    pub threads: Option<usize>,
+
     /// Enable streaming output
     #[arg(long)]
     pub stream: bool,
@@ -208,6 +220,9 @@ pub struct PerformanceMetrics {
 impl InferenceCommand {
     /// Execute the inference command
     pub async fn execute(&self, config: &CliConfig) -> Result<()> {
+        // Setup deterministic environment if requested
+        self.setup_environment()?;
+
         // Setup logging and progress reporting
         let _guard = self.setup_logging(config)?;
 
@@ -228,6 +243,44 @@ impl InferenceCommand {
                 anyhow::bail!("Must provide either --prompt, --input-file, or --interactive");
             }
         }
+    }
+
+    /// Setup environment for deterministic execution
+    fn setup_environment(&self) -> Result<()> {
+        use std::env;
+
+        // Set thread count if specified
+        if let Some(threads) = self.threads {
+            env::set_var("RAYON_NUM_THREADS", threads.to_string());
+            env::set_var("OMP_NUM_THREADS", threads.to_string());
+            env::set_var("MKL_NUM_THREADS", threads.to_string());
+            env::set_var("BLAS_NUM_THREADS", threads.to_string());
+            debug!("Set thread count to {}", threads);
+        }
+
+        // Enable deterministic mode if requested
+        if self.deterministic {
+            env::set_var("BITNET_DETERMINISTIC", "1");
+            env::set_var("CANDLE_DETERMINISTIC", "1");
+            
+            // Force single-threaded execution for full determinism
+            if self.threads.is_none() {
+                env::set_var("RAYON_NUM_THREADS", "1");
+                env::set_var("OMP_NUM_THREADS", "1");
+                env::set_var("MKL_NUM_THREADS", "1");
+                env::set_var("BLAS_NUM_THREADS", "1");
+            }
+            
+            debug!("Enabled deterministic mode");
+        }
+
+        // Set seed in environment if provided
+        if let Some(seed) = self.seed {
+            env::set_var("BITNET_SEED", seed.to_string());
+            debug!("Set seed to {}", seed);
+        }
+
+        Ok(())
     }
 
     /// Setup logging based on configuration
@@ -754,11 +807,23 @@ impl InferenceCommand {
 
     /// Create generation configuration
     fn create_generation_config(&self) -> Result<GenerationConfig> {
+        // Apply greedy decoding if requested
+        let (temperature, top_k, top_p, repetition_penalty) = if self.greedy {
+            (0.0, 0, 1.0, 1.0)  // Force greedy: no sampling, no penalties
+        } else {
+            (
+                self.temperature,
+                self.top_k.unwrap_or(40) as u32,
+                self.top_p.unwrap_or(1.0),
+                self.repetition_penalty,
+            )
+        };
+
         let sampling = SamplingConfig {
-            temperature: self.temperature,
-            top_k: self.top_k.unwrap_or(40) as u32,
-            top_p: self.top_p.unwrap_or(1.0),
-            repetition_penalty: self.repetition_penalty,
+            temperature,
+            top_k,
+            top_p,
+            repetition_penalty,
             seed: self.seed,
         };
 

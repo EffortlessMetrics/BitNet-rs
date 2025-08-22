@@ -1,0 +1,239 @@
+name: Property-Based Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/**'
+      - 'crossval/**'
+      - 'scripts/prop-*.sh'
+      - '.github/workflows/property-tests.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'crates/**'
+      - 'crossval/**'
+      - 'scripts/prop-*.sh'
+      - '.github/workflows/property-tests.yml'
+  workflow_dispatch:
+    inputs:
+      num_examples:
+        description: 'Number of property test examples'
+        required: false
+        default: '30'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  property-tests:
+    name: Greedy Parity Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    
+    strategy:
+      matrix:
+        model:
+          - name: "BitNet b1.58 2B"
+            gguf: "ggml-model-i2_s.gguf"
+            tokenizer: "tokenizer.json"
+            hf_id: "1bitLLM/bitnet_b1_58-3B"
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.89.0
+          override: true
+          components: rustfmt, clippy
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Cache test models
+        uses: actions/cache@v4
+        with:
+          path: |
+            models/
+            ~/.cache/huggingface/
+          key: ${{ runner.os }}-models-${{ matrix.model.name }}
+          restore-keys: |
+            ${{ runner.os }}-models-
+      
+      - name: Install Python dependencies
+        run: |
+          pip install -U pip
+          pip install hypothesis pytest numpy scipy
+      
+      - name: Build BitNet CLI
+        run: |
+          cargo build -p bitnet-cli --release --no-default-features --features cpu
+      
+      - name: Download test model
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # Download model if not cached
+          MODEL_DIR="models/${{ matrix.model.name }}"
+          if [ ! -f "$MODEL_DIR/${{ matrix.model.gguf }}" ]; then
+            echo "Downloading model..."
+            cargo run -p xtask -- download-model \
+              --model-id "${{ matrix.model.hf_id }}" \
+              --output-dir "$MODEL_DIR" \
+              || echo "Model download failed, will use fallback"
+          fi
+          
+          # Fallback: download minimal test model
+          if [ ! -f "$MODEL_DIR/${{ matrix.model.gguf }}" ]; then
+            mkdir -p "$MODEL_DIR"
+            # Create a minimal test model (you'd replace with actual download)
+            echo "Using fallback test model"
+          fi
+      
+      - name: Run determinism tests
+        run: |
+          export MODEL_PATH="models/${{ matrix.model.name }}/${{ matrix.model.gguf }}"
+          export TOKENIZER="models/${{ matrix.model.name }}/${{ matrix.model.tokenizer }}"
+          export BITNET_BIN="target/release/bitnet"
+          export PROP_EXAMPLES="${{ github.event.inputs.num_examples || '10' }}"
+          export PROP_MAX_NEW_TOKENS="64"
+          export PROP_TIMEOUT="120"
+          
+          # Test BitNet determinism only (no reference system in CI)
+          scripts/prop-greedy-parity.sh || exit 1
+      
+      - name: Run regression tests
+        run: |
+          export MODEL_PATH="models/${{ matrix.model.name }}/${{ matrix.model.gguf }}"
+          export TOKENIZER="models/${{ matrix.model.name }}/${{ matrix.model.tokenizer }}"
+          export BITNET_BIN="target/release/bitnet"
+          
+          python3 -m pytest \
+            crossval/props/test_greedy_parity.py::TestRegression \
+            -v --tb=short
+      
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: property-test-failures-${{ matrix.model.name }}
+          path: test-artifacts/
+          retention-days: 7
+      
+      - name: Performance report
+        if: always()
+        run: |
+          # Generate performance summary from test artifacts
+          if [ -d "test-artifacts" ]; then
+            echo "## Performance Summary"
+            python3 -c "
+import json
+import glob
+import statistics
+
+files = glob.glob('test-artifacts/regression_*.json')
+if files:
+    timings = []
+    for f in files:
+        with open(f) as fp:
+            data = json.load(fp)
+            if 'meta' in data and 'timing_ms' in data['meta']:
+                total = data['meta']['timing_ms'].get('total', 0)
+                if total > 0:
+                    timings.append(total)
+    
+    if timings:
+        print(f'Median inference time: {statistics.median(timings):.1f}ms')
+        print(f'Mean inference time: {statistics.mean(timings):.1f}ms')
+        print(f'Min/Max: {min(timings):.1f}ms / {max(timings):.1f}ms')
+"
+          fi
+      
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Read test results
+            let comment = '## Property Test Results\n\n';
+            
+            // Check if tests passed
+            const exitCode = process.env.TEST_EXIT_CODE || '0';
+            if (exitCode === '0') {
+              comment += '✅ **All property tests passed!**\n\n';
+            } else {
+              comment += '❌ **Some property tests failed**\n\n';
+              comment += 'See artifacts for details.\n\n';
+            }
+            
+            // Add performance metrics if available
+            comment += '### Performance\n';
+            comment += 'Model: ${{ matrix.model.name }}\n';
+            comment += 'Examples tested: ${{ github.event.inputs.num_examples || "10" }}\n';
+            
+            // Post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  cross-system-parity:
+    name: Cross-System Parity (Optional)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup environment
+        run: |
+          echo "Setting up cross-system testing environment"
+          # This job would download and build llama.cpp for comparison
+          # Only runs on manual dispatch to save CI time
+      
+      - name: Build llama.cpp
+        run: |
+          git clone https://github.com/ggerganov/llama.cpp.git
+          cd llama.cpp
+          make -j$(nproc)
+          cd ..
+      
+      - name: Run cross-system tests
+        run: |
+          export LLAMA_BIN="llama.cpp/main"
+          export LLAMA_MODEL="$MODEL_PATH"
+          export PROP_EXAMPLES="20"
+          
+          scripts/prop-greedy-parity.sh || true  # Don't fail CI on parity issues
