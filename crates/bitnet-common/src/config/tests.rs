@@ -1,6 +1,7 @@
 //! Configuration tests
 
 use super::*;
+use serial_test::serial;
 use std::env;
 use std::io::Write;
 use std::sync::Mutex;
@@ -68,6 +69,7 @@ fn test_config_validation() {
 }
 
 #[test]
+#[serial]
 fn test_toml_config_loading() {
     // Clean up any existing env vars first
     let env_vars = [
@@ -117,6 +119,7 @@ batch_size = 4
 }
 
 #[test]
+#[serial]
 fn test_json_config_loading() {
     // Clean up any existing env vars first
     let env_vars = [
@@ -165,6 +168,7 @@ fn test_json_config_loading() {
 }
 
 #[test]
+#[serial]
 fn test_env_overrides() {
     let _lock = acquire_env_lock();
 
@@ -217,6 +221,7 @@ fn test_config_merging() {
 }
 
 #[test]
+#[serial]
 fn test_config_loader_precedence() {
     let _lock = acquire_env_lock();
 
@@ -262,6 +267,7 @@ temperature = 0.9
 }
 
 #[test]
+#[serial]
 fn test_memory_limit_parsing() {
     let _lock = acquire_env_lock();
 
@@ -297,6 +303,7 @@ fn test_memory_limit_parsing() {
 }
 
 #[test]
+#[serial]
 fn test_invalid_env_values() {
     let _lock = acquire_env_lock();
 

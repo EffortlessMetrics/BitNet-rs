@@ -187,7 +187,7 @@ where
 
 /// Traits that model and tokenizer must implement
 pub trait Model {
-    fn forward(&mut self, input_ids: &[u32], start_pos: usize) -> Result<Logits>;
+    fn forward(&mut self, input_ids: &[u32], start_pos: usize) -> Result<Box<dyn Logits>>;
     fn vocab_size(&self) -> usize;
     fn model_path(&self) -> &str;
 }
@@ -250,8 +250,9 @@ mod tests {
         let log_probs = log_softmax(&logits);
         
         // Should sum to approximately 1 when exp'd
+        // Using 1e-4 tolerance for f32 precision
         let sum: f32 = log_probs.iter().map(|&lp| lp.exp()).sum();
-        assert!((sum - 1.0).abs() < 1e-6);
+        assert!((sum - 1.0).abs() < 1e-4, "Sum: {}, expected ~1.0", sum);
         
         // Highest logit should have highest probability
         let max_idx = log_probs

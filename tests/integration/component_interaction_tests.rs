@@ -182,6 +182,7 @@ impl TestCase for ConfigurationPropagationTest {
             stop_sequences: vec![],
             seed: Some(42),
             skip_special_tokens: true,
+            eos_token_id: None,
         };
 
         // Create components with configurations

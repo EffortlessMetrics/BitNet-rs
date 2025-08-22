@@ -695,7 +695,7 @@ impl TestCase for TokenizationErrorHandlingTest {
             debug!("Testing problematic input {}: {:?}", i + 1, input);
 
             // Test direct tokenization
-            match tokenizer.encode(input, true) {
+            match tokenizer.encode(input, true, false) {
                 Ok(tokens) => {
                     debug!(
                         "Problematic input {} tokenized successfully to {} tokens",
