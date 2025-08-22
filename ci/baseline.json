@@ -1,34 +1,34 @@
 {
-  "tinyllama_q2k": {
-    "tokens_per_second": 140.0,
-    "rss_mb": 1290,
-    "model_size_mb": 432,
-    "model": "models/tinyllama-q2.gguf",
-    "description": "TinyLlama 1.1B Q2_K with embedded SentencePiece tokenizer",
-    "cpu": "Generic x86_64",
-    "threads": 1,
-    "deterministic": true
+  "cpu": {
+    "tinyllama_q2k_cpu": {
+      "tok_s": 42.5,
+      "rss_mb": 512
+    },
+    "bitnet_i2s_cpu": {
+      "tok_s": 38.0,
+      "rss_mb": 480
+    },
+    "model_default": {
+      "tok_s": 40.0,
+      "rss_mb": 500
+    }
   },
-  "ms_bitnet_i2s": {
-    "tokens_per_second": 12.5,
-    "rss_mb": 1450,
-    "model_size_mb": 1847,
-    "model": "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf",
-    "description": "Microsoft BitNet 1.58b 2B I2_S with external tokenizer",
-    "cpu": "Generic x86_64", 
-    "threads": 1,
-    "deterministic": true
+  "gpu": {
+    "tinyllama_q2k_gpu": {
+      "tok_s": 256.0,
+      "rss_mb": 1024
+    },
+    "bitnet_i2s_gpu": {
+      "tok_s": 220.0,
+      "rss_mb": 980
+    }
   },
   "metadata": {
     "version": "1.0.0",
-    "created": "2025-08-22",
-    "notes": "Baseline performance metrics for CI regression testing. Values should be updated periodically based on representative hardware.",
-    "environment": {
-      "RAYON_NUM_THREADS": 1,
-      "BITNET_DETERMINISTIC": 1,
-      "BITNET_SEED": 42,
-      "OMP_NUM_THREADS": 1,
-      "GGML_NUM_THREADS": 1
-    }
+    "updated": "2025-08-22",
+    "machine": "reference_machine",
+    "cpu": "AMD Ryzen 9 5950X",
+    "gpu": "NVIDIA RTX 3090",
+    "note": "Initial baseline values for CI validation"
   }
 }
