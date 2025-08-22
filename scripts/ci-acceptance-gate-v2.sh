@@ -29,8 +29,84 @@ need() {
 }
 
 need jq
+need awk
+need diff
 need cargo
 need rustc
+
+# Compose a bitnet run invocation with optional --tokenizer.
+run_bitnet() {
+  local subcmd="$1"; shift
+  local args=( "$subcmd" --model "$MODEL_PATH" )
+  if [[ -n "${TOKENIZER_PATH:-}" ]]; then
+    args+=( --tokenizer "$TOKENIZER_PATH" )
+  fi
+  "$BITNET_BIN" "${args[@]}" "$@"
+}
+
+# Best-effort cleanup of temporaries created in this script
+_CLEANUP_FILES=()
+_track() { _CLEANUP_FILES+=("$@"); }
+trap 'for f in "${_CLEANUP_FILES[@]}"; do rm -f "$f" 2>/dev/null || true; done' EXIT
+
+# === Auto-exclude Python/pyo3 crates for unit tests ==============
+build_test_excludes() {
+  # Detect workspace members that look like python/pyo3/bindings crates
+  local meta pkgs
+  meta=$(cargo metadata --no-deps --format-version 1 2>/dev/null || true)
+  if [[ -z "$meta" || "$meta" == "null" ]]; then
+    echo "" ; return
+  fi
+  # names that contain python|pyo3|bindings OR depend on pyo3
+  mapfile -t pkgs < <(
+    printf '%s' "$meta" \
+    | jq -r '
+        .packages[]
+        | select(
+            (.name | test("python|pyo3|bindings"; "i"))
+            or ( [.dependencies[].name] | any(. != null and test("pyo3|python"; "i")) )
+          )
+        | .name
+      ' | sort -u
+  )
+  local flags=()
+  for p in "${pkgs[@]}"; do flags+=(--exclude "$p"); done
+  printf '%s ' "${flags[@]}"
+}
+
+# === CPU determinism (IDs identical at T=0, fixed seed) ==========
+cpu_determinism_check() {
+  local TMP PROMPT
+  PROMPT='Determinism test: print the first 20 prime numbers.'
+  TMP="${TMPDIR:-/tmp}/bitnet_cpu_det.$RANDOM"
+  mkdir -p "$TMP"
+  cat >"$TMP/prompts.yaml" <<EOF
+version: 1
+bos: true
+max_new_tokens: 64
+prompts:
+  - "$PROMPT"
+EOF
+  export BITNET_SEED=0 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 RAYON_NUM_THREADS=1
+  run_bitnet run --temperature 0 \
+    --prompts "$TMP/prompts.yaml" --dump-token-ids "$TMP/ids1" \
+    --json-out "$TMP/run1.json" >/dev/null
+  run_bitnet run --temperature 0 \
+    --prompts "$TMP/prompts.yaml" --dump-token-ids "$TMP/ids2" \
+    --json-out "$TMP/run2.json" >/dev/null
+  if diff -u "$TMP/ids1" "$TMP/ids2" >/dev/null; then
+    echo "✓ CPU determinism OK"
+  else
+    echo "✗ CPU determinism failed (IDs differ)"; exit $EXIT_DETERMINISM_FAIL
+  fi
+  rm -rf "$TMP"
+}
+
+# === Nested baseline helpers (cpu/gpu trees) =====================
+read_cpu_baseline() {
+  local key="$1" field="$2" base="ci/baseline.json"
+  jq -r --arg k "$key" ".cpu[\$k].$field // 0" "$base" 2>/dev/null
+}
 
 # Deterministic environment setup
 export RAYON_NUM_THREADS=1
@@ -77,12 +153,14 @@ echo "   Binary: $BITNET_BIN"
 echo ""
 
 # Gate 2: Unit Tests
-echo "━━━ Gate 2: Unit Tests ━━━"
+echo "━━━ Gate 2: Unit Tests (no python/pyo3 crates) ━━━"
 TEST_OUTPUT=$(mktemp)
 
-# Run tests excluding Python bindings which require Python dev libraries
-if ! cargo test --workspace --no-default-features --features cpu \
-        --exclude bitnet-py --lib -- -q > "$TEST_OUTPUT" 2>&1; then
+# Run tests with auto-excluded Python/pyo3 crates
+EXCLUDES=$(build_test_excludes)
+# shellcheck disable=SC2086
+if ! cargo test --workspace $EXCLUDES --no-default-features --features cpu \
+        --lib -- -q > "$TEST_OUTPUT" 2>&1; then
     echo "❌ Unit tests failed"
     tail -50 "$TEST_OUTPUT"
     rm -f "$TEST_OUTPUT"
@@ -147,7 +225,7 @@ echo ""
 
 # Gate 5: Strict Mode Execution
 echo "━━━ Gate 5: Strict Mode Execution ━━━"
-STRICT_JSON=$(mktemp)
+STRICT_JSON=$(mktemp); _track "$STRICT_JSON"
 
 # Build strict mode command
 STRICT_CMD=(
@@ -261,15 +339,20 @@ elif command -v gtime >/dev/null 2>&1; then
     TIME_CMD="gtime -v"
 fi
 
-PERF_JSON=$(mktemp)
-TIME_OUTPUT=$(mktemp)
+PERF_JSON=$(mktemp -t perf.XXXXXX.json); _track "$PERF_JSON"
+TIME_OUTPUT=$(mktemp); _track "$TIME_OUTPUT"
 
 # Run performance test
 if [[ -n "$TIME_CMD" ]]; then
-    PERF_CMD=(
-        $TIME_CMD
-        "$BITNET_BIN" run
-        --model "$MODEL_PATH"
+    # Build full command with time prefix
+    PERF_CMD=( $TIME_CMD )
+    PERF_CMD+=( "$BITNET_BIN" run --model "$MODEL_PATH" )
+    
+    if [[ -n "${TOKENIZER_PATH:-}" ]]; then
+        PERF_CMD+=( --tokenizer "$TOKENIZER_PATH" )
+    fi
+    
+    PERF_CMD+=(
         --prompt "Performance test"
         --max-new-tokens 128
         --temperature 0
@@ -286,20 +369,14 @@ if [[ -n "$TIME_CMD" ]]; then
     fi
 else
     # No time command available, run without memory profiling
-    RUN_CMD=(
-        "$BITNET_BIN" run
-        --model "$MODEL_PATH"
-        --prompt "Performance test"
-        --max-new-tokens 128
-        --temperature 0
-        --json-out "$PERF_JSON"
-    )
-    
-    if [[ "$REQUIRE_EMBEDDED_TOKENIZER" != "true" ]]; then
-        RUN_CMD+=(--allow-mock)
-    fi
-    
-    if ! "${RUN_CMD[@]}" >/dev/null 2>&1; then
+    # No time command, run without profiling
+    if ! run_bitnet run \
+            --prompt "Performance test" \
+            --max-new-tokens 128 \
+            --temperature 0 \
+            --json-out "$PERF_JSON" \
+            $([[ "$REQUIRE_EMBEDDED_TOKENIZER" != "true" ]] && echo "--allow-mock") \
+            >/dev/null 2>&1; then
         echo "⚠️  Performance test failed to complete"
         rm -f "$PERF_JSON"
     fi
@@ -317,20 +394,26 @@ if [[ -f "$PERF_JSON" ]]; then
         exit $EXIT_PERF_FAIL
     fi
     
-    # Check against baseline if available
+    # Check against baseline if available (using nested cpu/gpu structure)
     BASELINE_FILE="ci/baseline.json"
     if [[ -f "$BASELINE_FILE" ]]; then
-        MODEL_NAME=$(basename "$MODEL_PATH" .gguf | tr '[:upper:]' '[:lower:]' | tr -d '_-')
-        BASELINE_TPS=$(jq -r ".\"$MODEL_NAME\".tokens_per_second // 0" "$BASELINE_FILE")
+        # Sanity check baseline structure
+        if ! jq -e '.cpu and .gpu and .metadata' "$BASELINE_FILE" >/dev/null 2>&1; then
+            echo "⚠️  baseline.json missing required top-level keys (cpu/gpu/metadata)"
+        else
+            KEY="${MODEL_KEY:-tinyllama_q2k_cpu}"
+            BASE_TS=$(read_cpu_baseline "$KEY" "tok_s")
+            BASE_RSS=$(read_cpu_baseline "$KEY" "rss_mb")
         
-        if [[ "$BASELINE_TPS" != "0" ]]; then
-            THRESHOLD=$(awk -v b="$BASELINE_TPS" 'BEGIN{printf "%.2f", b * 0.95}')
+        if [[ "$BASE_TS" != "0" ]]; then
+            THRESHOLD=$(awk -v b="$BASE_TS" 'BEGIN{printf "%.2f", b * 0.95}')
             if ! awk -v c="$TOKENS_PER_SEC" -v t="$THRESHOLD" 'BEGIN{exit !(c >= t)}'; then
-                echo "❌ Performance regression: $TOKENS_PER_SEC < $THRESHOLD (95% of $BASELINE_TPS)"
+                echo "❌ Performance regression: $TOKENS_PER_SEC < $THRESHOLD (95% of $BASE_TS)"
                 rm -f "$PERF_JSON" "$TIME_OUTPUT"
                 exit $EXIT_PERF_FAIL
             fi
         fi
+        fi  # end of baseline structure check
     fi
     
     echo "✅ Performance: $TOKENS_PER_SEC tok/s (decoded: $DECODED_TOKENS tokens)"
@@ -341,16 +424,12 @@ if [[ -f "$PERF_JSON" ]]; then
         RSS_MB=$((RSS_KB / 1024))
         
         # Check against baseline if available
-        if [[ -f "$BASELINE_FILE" ]]; then
-            BASELINE_RSS=$(jq -r ".\"$MODEL_NAME\".rss_mb // 0" "$BASELINE_FILE")
-            
-            if [[ "$BASELINE_RSS" != "0" ]]; then
-                THRESHOLD=$(awk -v b="$BASELINE_RSS" 'BEGIN{printf "%d", b * 1.03}')
-                if [[ $RSS_MB -gt $THRESHOLD ]]; then
-                    echo "❌ Memory regression: ${RSS_MB}MB > ${THRESHOLD}MB (103% of ${BASELINE_RSS}MB)"
-                    rm -f "$PERF_JSON" "$TIME_OUTPUT"
-                    exit $EXIT_MEM_FAIL
-                fi
+        if [[ -f "$BASELINE_FILE" ]] && [[ "$BASE_RSS" != "0" ]]; then
+            THRESHOLD=$(awk -v b="$BASE_RSS" 'BEGIN{printf "%d", b * 1.03}')
+            if [[ $RSS_MB -gt $THRESHOLD ]]; then
+                echo "❌ Memory regression: ${RSS_MB}MB > ${THRESHOLD}MB (103% of ${BASE_RSS}MB)"
+                rm -f "$PERF_JSON" "$TIME_OUTPUT"
+                exit $EXIT_MEM_FAIL
             fi
         fi
         
@@ -438,6 +517,68 @@ else
 fi
 
 rm -f "$FFI_OUTPUT"
+echo ""
+
+# Gate 10: Cross-validation and CPU Determinism
+echo "━━━ Gate 10: Cross-validation & CPU Determinism ━━━"
+
+# Check if cross-validation scripts exist
+if [[ -f "scripts/crossval-llama.sh" && -f "crossval/prompts.yaml" ]]; then
+    echo "Running cross-validation..."
+    if scripts/crossval-llama.sh "crossval/data/ppl_smoke.txt" "crossval/prompts.yaml"; then
+        echo "✅ Cross-validation passed"
+    else
+        if [[ "${XVAL_NONBLOCKING:-0}" == "1" ]]; then
+            echo "⚠️  Cross-validation failed (non-blocking)"
+        else
+            echo "❌ Cross-validation failed"
+            exit $EXIT_GENERAL_ERROR
+        fi
+    fi
+else
+    echo "⚠️  Cross-validation scripts not found"
+fi
+
+# A/B Token-ID parity check (if available)
+if [[ -x scripts/ab-suite.sh ]]; then
+    echo "Running A/B token-ID parity check..."
+    if BITNET_BIN="$BITNET_BIN" \
+       LLAMA_BIN="${LLAMA_BIN:-/usr/local/bin/llama-cli}" \
+       MODEL_PATH="$MODEL_PATH" \
+       TOKENIZER_PATH="${TOKENIZER_PATH:-}" \
+       scripts/ab-suite.sh crossval/prompts.yaml; then
+        echo "✅ A/B token-ID parity passed"
+    else
+        if [[ "${XVAL_NONBLOCKING:-0}" == "1" ]]; then
+            echo "⚠️  A/B parity failed (non-blocking)"
+        else
+            echo "❌ A/B token-ID parity failed"
+            exit $EXIT_GENERAL_ERROR
+        fi
+    fi
+else
+    echo "⚠️  A/B parity script not found (scripts/ab-suite.sh)"
+fi
+
+# CPU determinism check
+cpu_determinism_check
+
+# JSON schema validation (if we have any JSONs to check)
+if [[ -f "scripts/json-schema-gate.sh" ]]; then
+    JSONS_TO_CHECK=()
+    [[ -f "${STRICT_JSON:-}" ]] && JSONS_TO_CHECK+=("$STRICT_JSON")
+    [[ -f "${PERF_JSON:-}" ]] && JSONS_TO_CHECK+=("$PERF_JSON")
+    
+    if [[ ${#JSONS_TO_CHECK[@]} -gt 0 ]]; then
+        if scripts/json-schema-gate.sh "${JSONS_TO_CHECK[@]}"; then
+            echo "✅ JSON schema gates passed"
+        else
+            echo "❌ JSON schema validation failed"
+            exit $EXIT_GENERAL_ERROR
+        fi
+    fi
+fi
+
 echo ""
 
 # Summary

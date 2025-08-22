@@ -317,12 +317,12 @@ echo "Performance: $tokps tokens/sec"
 
 # Check against baseline if available
 if [ -f ci/baseline.json ]; then
-    MODEL_KEY="tinyllama_q2k"
+    MODEL_KEY="tinyllama_q2k_cpu"
     if [ "$MODE" = "NIGHTLY" ]; then
-        MODEL_KEY="ms_bitnet_i2s"
+        MODEL_KEY="bitnet_i2s_cpu"
     fi
     
-    base_tps=$(jq -r --arg key "$MODEL_KEY" '.[$key].tokens_per_second // 0' ci/baseline.json)
+    base_tps=$(jq -r --arg key "$MODEL_KEY" '.cpu[$key].tok_s // 0' ci/baseline.json)
     
     if [[ "$base_tps" != "0" ]]; then
         threshold=$(awk -v b="$base_tps" 'BEGIN{print 0.95 * b}')
@@ -339,7 +339,7 @@ if [ -f ci/baseline.json ]; then
         rss_mb=$((rss_kb / 1024))
         echo "Memory RSS: ${rss_mb}MB"
         
-        base_rss=$(jq -r --arg key "$MODEL_KEY" '.[$key].rss_mb // 0' ci/baseline.json)
+        base_rss=$(jq -r --arg key "$MODEL_KEY" '.cpu[$key].rss_mb // 0' ci/baseline.json)
         
         if [[ "$base_rss" != "0" ]]; then
             threshold=$(awk -v b="$base_rss" 'BEGIN{print int(1.03 * b)}')

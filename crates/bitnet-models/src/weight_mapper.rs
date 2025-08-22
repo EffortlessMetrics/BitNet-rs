@@ -1,11 +1,30 @@
 use bitnet_common::Result;
 use candle_core::{DType, Device, Tensor};
 /// Weight mapping utilities for loading model weights from various formats
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 /// Map GGUF tensor names to transformer module names
 pub fn remap_gguf_weights(tensors: &HashMap<String, Tensor>) -> Result<HashMap<String, Tensor>> {
     remap_gguf_weights_with_options(tensors, false)
+}
+
+/// Normalize exporter name drift to our canonical names.
+/// Known drifts:
+///  - attn_sub_norm <-> attention_sub_norm  
+///  - ffn_sub_norm  <-> mlp_sub_layernorm
+fn normalize_name(name: &str) -> Cow<'_, str> {
+    if name.contains("attention_sub_norm") {
+        // Map Microsoft's variation to our canonical name
+        let s = name.replace("attention_sub_norm", "attn_sub_norm");
+        return Cow::Owned(s);
+    }
+    if name.contains("mlp_sub_layernorm") {
+        // Map to our canonical FFN sub norm
+        let s = name.replace("mlp_sub_layernorm", "ffn_sub_norm");
+        return Cow::Owned(s);
+    }
+    Cow::Borrowed(name)
 }
 
 /// Map GGUF tensor names to transformer module names with strict option
@@ -14,7 +33,9 @@ pub fn remap_gguf_weights_with_options(tensors: &HashMap<String, Tensor>, strict
     let mut unmapped = Vec::new();
 
     for (name, tensor) in tensors {
-        let new_name = if let Some(mapped_name) = map_tensor_name(name) {
+        // First normalize any known name variations
+        let normalized = normalize_name(name);
+        let new_name = if let Some(mapped_name) = map_tensor_name(&normalized) {
             mapped_name
         } else {
             unmapped.push(name.clone());

@@ -1,356 +1,233 @@
-# BitNet.rs Validation Framework
+# Validation Framework
 
-## Executive Summary
+## Overview
 
-BitNet.rs validation framework achieves **100% CI pass rate** with robust, machine-verifiable gates that are immune to toolchain output format changes.
+BitNet.rs implements comprehensive validation to ensure correctness, performance, and compatibility with llama.cpp. This document outlines our validation approach and requirements.
 
-### Current Status: ✅ Production Ready
+## JSON Schemas (Frozen)
 
-- **CI Acceptance Gate**: 13/13 tests passing (100% success rate)
-- **Strict Mode**: Real SentencePiece tokenizer, zero unmapped tensors
-- **Deterministic**: Reproducible greedy sampling at temperature=0
-- **JSON-Driven**: All gates use machine-parseable JSON (no log grepping)
-- **Exit Codes**: Distinct codes for precise CI triage
-- **Performance Ratios**: Baseline-relative validation (95% throughput, 103% RSS)
-- **Score Command**: Perplexity skeleton ready for logits integration
+All CLI JSON output includes `"schema_version": "1"` to track format changes.
 
-### Latest Updates (2025-08-22)
-
-- ✅ **Performance ratio gates** implemented in CI script
-- ✅ **Baseline configuration** (`ci/baseline.json`) with model-specific thresholds
-- ✅ **Score subcommand** skeleton added for perplexity calculation
-- ✅ **Comprehensive validation script** with all 8 gates
-- ✅ **Documentation** updated (README, CHANGELOG, ROADMAP)
-
-## Validation Gates
-
-### 1. Core Build Validation
-- **What**: Ensures release build with CPU features compiles
-- **Command**: `cargo build -p bitnet-cli --release --no-default-features --features "cpu,full-cli"`
-- **Pass Criteria**: Build completes without errors
-
-### 2. Unit Test Suite
-- **What**: Validates core functionality across all crates
-- **Command**: `cargo test --workspace --no-default-features --features cpu`
-- **Pass Criteria**: Tests compile (warnings allowed in CI gate)
-
-### 3. Tensor Name Mapping (JSON Gate)
-- **What**: Validates all GGUF tensors map to internal names
-- **Command**: `cargo run -p xtask -- gate mapper --model <path>`
-- **JSON Schema**:
-  ```json
-  {
-    "name": "ms_bitnet_names_map_clean",
-    "ok": true,
-    "unmapped_count": 0,
-    "total_count": 201,
-    "unmapped_names": []
-  }
-  ```
-- **Pass Criteria**: `ok == true && unmapped_count == 0`
-
-### 4. Strict Mode Execution
-- **What**: Validates model runs with strict tokenizer and mapping checks
-- **Command**: 
-  ```bash
-  bitnet run --model <path> --tokenizer <spm> \
-    --prompt "test" --max-new-tokens 16 \
-    --strict-mapping --strict-tokenizer \
-    --json-out output.json
-  ```
-- **Exit Codes**:
-  - `0`: Success
-  - `3`: Strict mapping failure (EXIT_STRICT_MAPPING)
-  - `4`: Strict tokenizer failure (EXIT_STRICT_TOKENIZER)
-
-### 5. A/B Tokenization Correctness
-- **What**: Compares token IDs against llama.cpp reference
-- **Command**: `bitnet tokenize --model <path> --prompt <text> --bos --json-out tokens.json`
-- **Pass Criteria**: ≥66% prompts match reference IDs exactly
-- **JSON Schema**:
-  ```json
-  {
-    "type": "tokenize",
-    "model": "path/to/model.gguf",
-    "tokens": {
-      "ids": [1, 450, 7483, 310, 3444],
-      "count": 5
-    },
-    "gen_policy": {
-      "bos": true,
-      "temperature": 0.0,
-      "seed": 42
-    }
-  }
-  ```
-
-### 6. Performance & Memory Gates
-- **What**: Validates throughput and memory usage
-- **Requirements**:
-  - Minimum decoded tokens: 20 (prevents noisy measurements)
-  - Throughput: Reports tokens/second
-  - Memory: RSS in MB (when GNU time available)
-- **JSON Fields**:
-  ```json
-  {
-    "latency": {
-      "cmd_to_first_ms": 1234,
-      "total_ms": 5678
-    },
-    "throughput": {
-      "tokens_per_second": 45.2,
-      "decoded_tokens": 20
-    }
-  }
-  ```
-
-### 7. Score Mode (Teacher-Forcing Perplexity)
-- **What**: Computes perplexity using teacher-forcing for accuracy validation
-- **Command**: `bitnet score --model <path> --input <text-file> --json-output score.json`
-- **Implementation**: `crossval/src/score.rs`
-- **Features**:
-  - Numerically stable log-softmax computation
-  - Teacher-forcing: uses true tokens as input at each step
-  - Computes negative log-likelihood (NLL) per token
-  - Reports mean NLL and perplexity
-- **JSON Output**:
-  ```json
-  {
-    "mean_nll": 2.3456,
-    "perplexity": 10.4412,
-    "total_tokens": 1000,
-    "num_lines": 20,
-    "tokens_per_second": 150.0,
-    "model_info": {
-      "model_path": "models/tinyllama-q2.gguf",
-      "vocab_size": 32000,
-      "context_length": 2048
-    },
-    "tokenizer_info": {
-      "bos_token_id": 1,
-      "eos_token_id": 2,
-      "add_bos": true,
-      "add_eos": false
-    }
-  }
-  ```
-- **Parity Validation**: |Δ NLL| ≤ 0.01 tolerance with llama.cpp
-- **Test Data**: `crossval/data/ppl_smoke.txt` (20 lines)
-
-### 8. FFI Compatibility Check
-- **What**: Validates C API builds and links correctly
-- **Command**: `cargo build -p bitnet-ffi --release --no-default-features --features cpu`
-- **Pass Criteria**: Library builds without linker errors
-
-### 8. Cross-Validation Tests
-- **What**: Compares outputs against Microsoft C++ implementation
-- **Command**: `cargo run -p xtask -- crossval`
-- **Pass Criteria**: Inference outputs match within tolerance
-
-## JSON Output Schema
-
-All commands support `--json-out` for machine-parseable output:
+### Run Schema
 
 ```json
 {
-  "type": "run|tokenize",
+  "type": "run",
+  "schema_version": "1",
   "model": "path/to/model.gguf",
-  "prompt": "input text",
-  "output": "generated text (run only)",
-  "tokens": {
-    "prompt": 5,
-    "generated": 16,
-    "total": 21,
-    "ids": [1, 2, 3]  // tokenize only
+  "throughput": {
+    "tokens_per_second": 42.5,
+    "tokens_total": 128,
+    "time_total_ms": 3012
   },
-  "counts": {
-    "n_kv": "1024",
-    "n_tensors": "201",
-    "unmapped": 0
-  },
-  "tokenizer": {
-    "type": "sentencepiece|gpt2|...",
-    "source": "embedded|external",
-    "path": "/path/to/tokenizer.model"
-  },
+  "decoded_tokens": 64,
   "gen_policy": {
     "bos": true,
     "temperature": 0.0,
-    "seed": 42,
-    "max_new_tokens": 16
+    "seed": "42"
   },
-  "latency": {
-    "cmd_to_first_ms": 1234,
-    "total_ms": 5678
+  "tokenizer": {
+    "type": "sentencepiece",
+    "origin": "embedded"
   },
-  "throughput": {
-    "tokens_per_second": 45.2,
-    "decoded_tokens": 20
+  "counts": {
+    "n_meta_keys": 42,
+    "n_tensors": 128,
+    "unmapped": 0
+  },
+  "memory": {
+    "rss_mb": 512,
+    "peak_mb": 768
   }
 }
 ```
 
-## Determinism Guarantees
+### Score Schema
 
-### Environment Variables
-```bash
-export BITNET_DETERMINISTIC=1  # Enable deterministic mode
-export BITNET_SEED=42          # Fixed seed
-export RAYON_NUM_THREADS=1     # Single-threaded CPU
-export OMP_NUM_THREADS=1        # OpenMP threads (C++)
-export GGML_NUM_THREADS=1       # GGML threads (C++)
+```json
+{
+  "type": "score",
+  "schema_version": "1",
+  "model": "path/to/model.gguf",
+  "dataset": "path/to/dataset.txt",
+  "lines": 100,
+  "tokens": 2048,
+  "mean_nll": 2.831,
+  "ppl": 16.96,
+  "latency": {
+    "total_ms": 5432
+  },
+  "tokenizer": {
+    "type": "sentencepiece",
+    "origin": "external"
+  },
+  "gen_policy": {
+    "bos": true,
+    "temperature": 0.0,
+    "seed": "42"
+  },
+  "counts": {
+    "n_meta_keys": 42,
+    "n_tensors": 128,
+    "unmapped": 0
+  }
+}
 ```
 
-### Greedy Sampling (T=0)
-- On logit ties, selects **lowest token ID**
-- Ensures reproducible outputs across runs
-- Implemented in `bitnet-cli/src/sampling.rs::greedy_tie_break_lowest_id()`
+## Validation Gates
 
-## CI Scripts
+### 1. Model Compatibility (Required)
+- Zero unmapped tensors (`counts.unmapped == 0`)
+- Tokenizer origin validation (embedded vs external)
+- Strict shape assertions for all critical tensors
 
-### Primary Gates
+### 2. CPU Accuracy Parity (Required)
+- NLL parity with llama.cpp: |Δ mean_nll| ≤ 0.01
+- Token ID exact match: ≥95% across test suite
+- Deterministic output with fixed seed
 
-1. **CI Acceptance Gate** (`scripts/ci-acceptance-gate.sh`)
-   - Fast PR validation (13 tests)
-   - JSON-based detection
-   - 100% pass rate required
+### 3. CPU Performance (Required)
+- Absolute floor: ≥1.0 tokens/second
+- Ratio vs baseline: ≥95% throughput
+- Memory usage: ≤103% of baseline RSS
 
-2. **Comprehensive Validation** (`scripts/comprehensive-validation.sh`)
-   - Extended test suite
-   - Performance profiling
-   - Memory usage tracking
+### 4. GPU Validation (When Available)
+- Determinism: identical outputs across runs
+- Performance ratios: same gates as CPU
+- Memory tracking: device + host allocations
 
-### Quick Local Validation
+## Test Datasets
 
+### Quick Smoke Test (`crossval/data/ppl_smoke.txt`)
+20 diverse prompts covering:
+- Multiple languages (English, Chinese, Japanese, German, French, Spanish)
+- Code snippets (Rust, Python, SQL, C++)
+- Mathematical expressions
+- Unicode and emoji
+- Edge cases (leap dates, NaN comparisons)
+
+### A/B Token Parity (`crossval/prompts.yaml`)
+Structured prompts with:
+- BOS policy specification
+- Max new tokens control
+- Long context synthesis (~1200 tokens)
+- Mixed content types
+
+## CI Integration
+
+### PR Gates (Fast Path)
+1. Model compatibility check
+2. Unit tests with CPU features
+3. Quick cross-validation smoke test
+4. CPU performance ratio check
+
+### Nightly Gates (Full Coverage)
+1. All PR gates
+2. Full dataset NLL parity
+3. Token ID A/B suite (≥95% match)
+4. GPU determinism (if available)
+5. Baseline updates
+
+## Running Validation
+
+### Quick Validation
 ```bash
-# Run CI acceptance gate
-./scripts/ci-acceptance-gate.sh
+# CPU accuracy parity
+scripts/ci-acceptance-gate.sh
 
-# Check specific gate
-cargo run -p xtask -- gate mapper --model models/bitnet.gguf
+# Token ID A/B testing
+scripts/ab-suite.sh
 
-# Verify determinism
-BITNET_DETERMINISTIC=1 BITNET_SEED=42 \
-  bitnet run --model model.gguf --prompt "test" \
-  --temperature 0 --max-new-tokens 10 --json-out out.json
+# Performance gates
+ci/cpu-perf-gate.sh out/run.json
 ```
 
-## Troubleshooting
-
-### Common Issues
-
-1. **Binary Not Found**
-   - Location: `$HOME/.rust-build/target/release/bitnet`
-   - Build: `cargo build -p bitnet-cli --release --features "cpu,full-cli"`
-
-2. **Unmapped Tensors**
-   - Run: `cargo run -p xtask -- gate mapper --model <path>`
-   - Check: `unmapped_names` field in JSON output
-   - Fix: Update tensor mappings in `bitnet-models`
-
-3. **Tokenizer Failures**
-   - MS BitNet requires external SPM: `--tokenizer path/to/tokenizer.model`
-   - Use `--strict-tokenizer` to enforce SentencePiece
-   - Check `tokenizer.type` in JSON output
-
-4. **Non-Deterministic Output**
-   - Set: `BITNET_DETERMINISTIC=1 BITNET_SEED=42`
-   - Use: `--temperature 0` for greedy sampling
-   - Verify: `gen_policy` in JSON shows correct settings
-
-### Exit Codes Reference
-
-| Code | Constant | Meaning |
-|------|----------|---------|
-| 0 | SUCCESS | All operations completed successfully |
-| 1 | GENERAL_ERROR | Unspecified error |
-| 2 | INVALID_ARGS | Invalid command-line arguments |
-| 3 | EXIT_STRICT_MAPPING | Strict mapping check failed |
-| 4 | EXIT_STRICT_TOKENIZER | Strict tokenizer check failed |
-| 5 | MODEL_LOAD_ERROR | Failed to load model |
-| 6 | TOKENIZER_ERROR | Tokenizer operation failed |
-| 7 | INFERENCE_ERROR | Inference operation failed |
-| 8 | IO_ERROR | File I/O operation failed |
-| 9 | PERF_GATE_FAIL | Performance gate failed |
-| 10 | MEM_GATE_FAIL | Memory usage gate failed |
-
-## Recent Improvements (Implemented)
-
-### ✅ Completed Enhancements
-1. **Performance Ratio Gates**: Implemented in `scripts/ci-acceptance-gate.sh`
-   - Compares against `ci/baseline.json` thresholds
-   - 95% throughput ratio requirement
-   - 103% RSS memory ratio limit
-   - Falls back to absolute thresholds if baseline missing
-
-2. **Score Subcommand**: Skeleton implemented in `crates/bitnet-cli/src/score.rs`
-   - Ready for teacher-forcing NLL/PPL calculation
-   - JSON output with tokenizer origin tracking
-   - Awaiting logits API integration
-
-3. **Baseline Configuration**: Created `ci/baseline.json`
-   - Model-specific performance targets
-   - Supports ms_bitnet_i2s, tinyllama_q2k, gpt2_gguf
-   - Environment variable MODEL_KEY for selection
-
-## Future Enhancements
-
-### Near-term
-1. **Complete Perplexity Scorer**: Wire logits into teacher-forcing loop
-2. **Matrix Expansion**: Add embedded-tokenizer models to CI matrix
-3. **Nightly Regression**: Automated performance tracking
-
-### Long-term
-1. **Streaming Validation**: Test streaming inference modes
-2. **Multi-GPU Testing**: Validate CUDA multi-device support
-3. **Quantization Parity**: Bit-exact validation of quantized weights
-
-## Appendix: Implementation Details
-
-### Key Files Modified
-
-1. **xtask/src/gates.rs**: JSON gate framework
-2. **bitnet-cli/src/main.rs**: `tokenize` subcommand, JSON output
-3. **bitnet-cli/src/sampling.rs**: Deterministic tie-breaking
-4. **bitnet-cli/src/exit.rs**: Distinct exit codes
-5. **scripts/ci-acceptance-gate.sh**: JSON-based CI validation
-6. **scripts/comprehensive-validation.sh**: Extended validation suite
-
-### Testing Commands
-
+### Full Validation
 ```bash
-# Full CI simulation
-export RAYON_NUM_THREADS=1 BITNET_DETERMINISTIC=1 BITNET_SEED=42
-./scripts/ci-acceptance-gate.sh
+# Comprehensive validation suite
+scripts/comprehensive-validation.sh
 
-# Mapper gate only
-cargo run -q -p xtask -- gate mapper \
-  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
-
-# Tokenization test
-~/.rust-build/target/release/bitnet tokenize \
-  --model models/bitnet.gguf \
-  --prompt "The capital of France is" \
-  --bos --json-out tokens.json
-
-# Strict execution
-~/.rust-build/target/release/bitnet run \
-  --model models/bitnet.gguf \
-  --tokenizer tokenizer.model \
-  --prompt "Test prompt" \
-  --max-new-tokens 16 \
-  --temperature 0 \
-  --strict-mapping --strict-tokenizer \
-  --json-out output.json
+# Update baselines
+scripts/update-baseline.sh
 ```
 
-## Summary
+## Baselines
 
-The BitNet.rs validation framework provides production-ready CI gates with:
-- **100% pass rate** on acceptance tests
-- **JSON-driven** detection immune to output format changes
-- **Deterministic** behavior for reproducible validation
-- **Comprehensive** coverage of correctness, performance, and compatibility
-- **Clear exit codes** for precise CI triage
+Performance baselines are tracked in `ci/baseline.json`:
 
-The framework ensures BitNet.rs operates as a strict, drop-in replacement for llama.cpp while maintaining superior robustness in CI/CD pipelines.
+```json
+{
+  "cpu": {
+    "tinyllama_q2k_cpu": {
+      "tok_s": 42.5,
+      "rss_mb": 512
+    }
+  },
+  "gpu": {
+    "tinyllama_q2k_gpu": {
+      "tok_s": 256.0,
+      "rss_mb": 1024
+    }
+  }
+}
+```
+
+## Determinism Requirements
+
+For reproducible validation:
+- `BITNET_DETERMINISTIC=1`
+- `BITNET_SEED=42`
+- `RAYON_NUM_THREADS=1`
+- `OMP_NUM_THREADS=1`
+- `MKL_NUM_THREADS=1`
+
+## Failure Handling
+
+### Model Compatibility Failures
+- Check weight mapper synonyms
+- Verify tensor shapes match expectations
+- Review GGUF metadata completeness
+
+### Accuracy Failures
+- Compare tokenization policies (BOS, special tokens)
+- Check numerical precision settings
+- Verify KV cache management
+
+### Performance Regressions
+- Profile with `cargo flamegraph`
+- Check SIMD utilization
+- Review memory access patterns
+
+## CI Acceptance (PR & Nightly)
+
+**Schema:** All CLI subcommands (`run`, `score`, `tokenize`) MUST include `"schema_version": "1"` in their JSON outputs. For `run` outputs, `.gen_policy.bos` MUST be present.
+
+**PR lane (embedded SPM; TinyLlama Q2\_K):**
+- **Mapper gate:** zero unmapped tensors (`xtask gate mapper` JSON `.unmapped_count==0`).
+- **Strict run:** `--strict-mapping --strict-tokenizer`; JSON must show `counts.unmapped==0`, tokenizer type `sentencepiece`.
+- **Tokenization smoke:** ≥2/3 prompts produce non‑empty IDs.
+- **Cross‑validation:**  
+  - NLL parity (teacher‑forcing): `|Δ mean_nll| ≤ 1e-2` vs `llama.cpp`.  
+  - Token‑ID A/B parity: ≥95% exact match across 20+ prompts (long‑ctx synthesized).
+- **CPU Determinism:** T=0 two runs → identical IDs (BITNET_SEED=0, OMP_NUM_THREADS=1).
+- **Performance:**  
+  - Floor ≥ **1.0 tok/s**.  
+  - Ratio ≥ **95%** of `ci/baseline.json.cpu[MODEL_KEY].tok_s`.  
+  - RSS ≤ **103%** of `ci/baseline.json.cpu[MODEL_KEY].rss_mb`.
+
+**Nightly lane (external SPM; MS BitNet):**  
+Repeat all of the above with `TOKENIZER_PATH` provided. Optionally add GPU gates (IDs identical; perf ratios in `gpu` section of baseline).
+
+**Exit codes:**  
+3/4: resource missing; 6: tokenization smoke failed; 9: perf floor/ratio; 10: RSS ratio; 11: determinism fail; 1: general gate failure.
+
+**Determinism env:**  
+`BITNET_SEED=0`, `OMP_NUM_THREADS=1`, `MKL_NUM_THREADS=1`, `RAYON_NUM_THREADS=1`, `--temperature 0`. For GPU nightlies, also disable TF32 for deterministic results.
+
+## Examples
+
+Example validation outputs are stored in `crossval/examples/`:
+- `run_cpu.json` - CPU inference output
+- `score_cpu.json` - CPU perplexity calculation
+- `run_gpu.json` - GPU inference output
+- `parity_report.json` - Token ID comparison results

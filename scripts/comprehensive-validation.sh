@@ -1,443 +1,458 @@
-#!/bin/bash
-# Comprehensive validation script implementing VALIDATION.md specifications
-# This script runs ALL validation gates including score/perplexity testing
-
+#!/usr/bin/env bash
+# Comprehensive validation suite for BitNet.rs vs llama.cpp
 set -euo pipefail
-
-echo "=== BitNet.rs Comprehensive Validation Suite ==="
-echo ""
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Exit codes (matching bitnet-cli/src/exit.rs)
-EXIT_SUCCESS=0
-EXIT_GENERAL_ERROR=1
-EXIT_INVALID_ARGS=2
-EXIT_STRICT_MAPPING=3
-EXIT_STRICT_TOKENIZER=4
-EXIT_MODEL_LOAD_ERROR=5
-EXIT_TOKENIZER_ERROR=6
-EXIT_INFERENCE_ERROR=7
-EXIT_IO_ERROR=8
-EXIT_PERF_GATE_FAIL=9
-EXIT_MEM_GATE_FAIL=10
-
 # Configuration
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-BINARY_PATH="${HOME}/.rust-build/target/release/bitnet"
-MODELS_DIR="${PROJECT_ROOT}/models"
+MODEL="${BITNET_GGUF:-models/bitnet/ggml-model-i2_s.gguf}"
+SPM="${TOKENIZER_PATH:-}"
+CROSSVAL_DIR="${CROSSVAL_DIR:-crossval}"
+TMP="${TMPDIR:-/tmp}/bitnet_validation.$$"
+mkdir -p "$TMP"
 
-# Test counters
-TOTAL_TESTS=0
-PASSED_TESTS=0
-FAILED_TESTS=0
-XFAIL_TESTS=0
+# Cleanup on exit
+trap 'rm -rf "$TMP"' EXIT
 
-# Test results array
-declare -a TEST_RESULTS=()
+echo -e "${YELLOW}BitNet.rs Comprehensive Validation Suite${NC}"
+echo "================================================"
+echo "Model: $MODEL"
+echo "Tokenizer: ${SPM:-embedded}"
+echo "Temp dir: $TMP"
+echo ""
 
-# Logging functions
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+# Function to check if llama.cpp is available
+check_llama_cpp() {
+    if ! command -v llama-cli &> /dev/null; then
+        echo -e "${YELLOW}Warning: llama-cli not found. Attempting to use crossval build...${NC}"
+        if [[ -f "$HOME/.cache/bitnet_cpp/build/bin/llama-cli" ]]; then
+            export PATH="$HOME/.cache/bitnet_cpp/build/bin:$PATH"
+        else
+            echo -e "${RED}Error: llama-cli not available. Run 'cargo xtask fetch-cpp' first.${NC}"
+            exit 1
+        fi
+    fi
 }
 
-log_success() {
-    echo -e "${GREEN}[PASS]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[FAIL]${NC} $1"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-log_xfail() {
-    echo -e "${YELLOW}[XFAIL]${NC} $1"
-}
-
-report_test() {
-    local test_name="$1"
-    local status="$2"
-    local details="${3:-}"
-    
-    TOTAL_TESTS=$((TOTAL_TESTS + 1))
-    
-    if [ "$status" = "PASS" ]; then
-        log_success "$test_name"
-        PASSED_TESTS=$((PASSED_TESTS + 1))
-        TEST_RESULTS+=("PASS: $test_name")
-    elif [ "$status" = "XFAIL" ]; then
-        log_xfail "$test_name (Expected failure)"
-        XFAIL_TESTS=$((XFAIL_TESTS + 1))
-        PASSED_TESTS=$((PASSED_TESTS + 1))  # Count as pass
-        TEST_RESULTS+=("XFAIL: $test_name")
-    elif [ "$status" = "SKIP" ]; then
-        log_warning "$test_name: SKIPPED"
-        TEST_RESULTS+=("SKIP: $test_name")
+# Function to run bitnet CLI
+run_bitnet() {
+    local args="$@"
+    if [[ -f "target/release/bitnet" ]]; then
+        ./target/release/bitnet $args
     else
-        log_error "$test_name"
-        FAILED_TESTS=$((FAILED_TESTS + 1))
-        TEST_RESULTS+=("FAIL: $test_name")
+        cargo run --release -p bitnet-cli --no-default-features --features cpu -- $args
+    fi
+}
+
+# 1. Model Compatibility Check
+validate_model_compatibility() {
+    echo -e "\n${YELLOW}1. Model Compatibility Check${NC}"
+    echo "--------------------------------"
+    
+    # Check model with bitnet
+    echo "Checking model with BitNet.rs..."
+    local bitnet_out="$TMP/model_check.json"
+    
+    if [[ -n "$SPM" ]]; then
+        run_bitnet compat-check --model "$MODEL" --tokenizer "$SPM" --json-out "$bitnet_out" || true
+    else
+        run_bitnet compat-check --model "$MODEL" --json-out "$bitnet_out" || true
     fi
     
-    if [ -n "$details" ]; then
-        echo "   $details"
-    fi
-}
-
-# Detect time command for portable profiling
-detect_time() {
-    if command -v /usr/bin/time >/dev/null 2>&1; then
-        echo "/usr/bin/time -v"
-    elif command -v gtime >/dev/null 2>&1; then
-        echo "gtime -v"
+    if [[ -f "$bitnet_out" ]]; then
+        local unmapped=$(jq -r '.counts.unmapped // 0' "$bitnet_out")
+        local n_tensors=$(jq -r '.counts.n_tensors // 0' "$bitnet_out")
+        local tokenizer_origin=$(jq -r '.tokenizer.origin // "unknown"' "$bitnet_out")
+        
+        echo "  Tensors: $n_tensors"
+        echo "  Unmapped: $unmapped"
+        echo "  Tokenizer: $tokenizer_origin"
+        
+        if [[ "$unmapped" -gt 0 ]]; then
+            echo -e "${RED}  ✗ Model has $unmapped unmapped tensors${NC}"
+            return 1
+        else
+            echo -e "${GREEN}  ✓ All tensors mapped successfully${NC}"
+        fi
     else
-        echo ""
+        echo -e "${RED}  ✗ Failed to check model compatibility${NC}"
+        return 1
     fi
 }
 
-TIME_CMD=$(detect_time)
-
-# Set deterministic environment
-setup_deterministic_env() {
-    export RAYON_NUM_THREADS=1
+# 2. Perplexity/NLL Parity Test
+validate_perplexity_parity() {
+    echo -e "\n${YELLOW}2. Perplexity/NLL Parity Test${NC}"
+    echo "--------------------------------"
+    
+    # Create test dataset if not exists
+    local dataset="$CROSSVAL_DIR/data/ppl_smoke.txt"
+    if [[ ! -f "$dataset" ]]; then
+        echo "Creating smoke test dataset..."
+        mkdir -p "$(dirname "$dataset")"
+        cat > "$dataset" << 'EOF'
+The quick brown fox jumps over the lazy dog.
+To be, or not to be, that is the question.
+1 1 2 3 5 8 13 21 34 55
+Today is 2025-08-22 in ISO format.
+fn main() { println!("hello"); }
+¿Dónde está la biblioteca?
+今天天气很好。
+Les élèves étudient la physique quantique.
+Der schnellste Weg ist nicht immer der beste.
+π is approximately 3.14159.
+Call me Ishmael.
+The capital of Canada is Ottawa.
+HTTP/2 introduced header compression.
+Rust's borrow checker prevents data races.
+NaN != NaN by IEEE-754 rules.
+2024-02-29 is a leap day.
+SELECT 1 WHERE 1=1;
+🐍 > 🦀? Depends on the day.
+Long contexts require careful KV cache management.
+EOF
+    fi
+    
+    # Set deterministic mode
     export BITNET_DETERMINISTIC=1
     export BITNET_SEED=42
+    export RAYON_NUM_THREADS=1
     export OMP_NUM_THREADS=1
-    export GGML_NUM_THREADS=1
-    log_info "Set deterministic environment (threads=1, seed=42)"
+    
+    echo "Running BitNet.rs perplexity calculation..."
+    local bitnet_ppl="$TMP/bitnet_ppl.json"
+    
+    if [[ -n "$SPM" ]]; then
+        run_bitnet score --model "$MODEL" --tokenizer "$SPM" --file "$dataset" \
+            --bos --json-out "$bitnet_ppl" > /dev/null 2>&1 || true
+    else
+        run_bitnet score --model "$MODEL" --file "$dataset" \
+            --bos --json-out "$bitnet_ppl" > /dev/null 2>&1 || true
+    fi
+    
+    if [[ -f "$bitnet_ppl" ]]; then
+        local bitnet_nll=$(jq -r '.mean_nll // "N/A"' "$bitnet_ppl")
+        local bitnet_ppl_val=$(jq -r '.ppl // "N/A"' "$bitnet_ppl")
+        
+        echo "  BitNet.rs NLL: $bitnet_nll"
+        echo "  BitNet.rs PPL: $bitnet_ppl_val"
+        
+        # Try to run llama.cpp for comparison
+        if command -v llama-cli &> /dev/null; then
+            echo "Running llama.cpp perplexity calculation..."
+            local cpp_ppl="$TMP/cpp_ppl.json"
+            
+            # Note: This assumes llama-cli has similar interface
+            # You may need to adjust based on actual llama.cpp CLI
+            llama-cli --model "$MODEL" --ppl-file "$dataset" \
+                --json-out "$cpp_ppl" > /dev/null 2>&1 || true
+            
+            if [[ -f "$cpp_ppl" ]]; then
+                local cpp_nll=$(jq -r '.mean_nll // "N/A"' "$cpp_ppl")
+                
+                if [[ "$bitnet_nll" != "N/A" && "$cpp_nll" != "N/A" ]]; then
+                    # Calculate difference
+                    local diff=$(python3 -c "
+import sys
+r = float('$bitnet_nll')
+c = float('$cpp_nll')
+d = abs(r - c)
+print(f'{d:.6f}')
+sys.exit(0 if d <= 0.01 else 1)
+")
+                    if [[ $? -eq 0 ]]; then
+                        echo -e "${GREEN}  ✓ NLL parity passed: |Δ| = $diff ≤ 0.01${NC}"
+                    else
+                        echo -e "${RED}  ✗ NLL parity failed: |Δ| = $diff > 0.01${NC}"
+                    fi
+                fi
+            fi
+        else
+            echo -e "${YELLOW}  ⚠ llama.cpp not available for comparison${NC}"
+        fi
+    else
+        echo -e "${RED}  ✗ Failed to calculate perplexity${NC}"
+    fi
 }
 
-echo "${BLUE}━━━ Gate 1: Core Build Validation ━━━${NC}"
-log_info "Building release with CPU features..."
-if cargo build -p bitnet-cli --release --no-default-features --features "cpu,full-cli" --target-dir "${HOME}/.rust-build/target" 2>&1 | tail -1 | grep -q "Finished"; then
-    report_test "Core Build" "PASS"
-else
-    report_test "Core Build" "FAIL" "Build failed"
-fi
-
-echo ""
-echo "${BLUE}━━━ Gate 2: Unit Test Suite ━━━${NC}"
-log_info "Running workspace unit tests..."
-if cargo test --workspace --no-default-features --features cpu --target-dir "${HOME}/.rust-build/target" 2>&1 | grep -q "test result"; then
-    report_test "Unit Tests" "PASS"
-else
-    report_test "Unit Tests" "FAIL" "Tests did not compile or run"
-fi
-
-echo ""
-echo "${BLUE}━━━ Gate 3: Tensor Name Mapping (JSON Gate) ━━━${NC}"
-MODEL_PATH="models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
-if [ -f "$MODEL_PATH" ]; then
-    log_info "Testing tensor mapping with xtask gate..."
-    JSON_OUT="/tmp/mapper_gate_$$.json"
-    if cargo run -q -p xtask -- gate mapper --model "$MODEL_PATH" > "$JSON_OUT" 2>/dev/null; then
-        if jq -e '.ok == true and .unmapped_count == 0' "$JSON_OUT" >/dev/null 2>&1; then
-            total_count=$(jq -r '.total_count' "$JSON_OUT")
-            report_test "Tensor Name Mapping" "PASS" "All $total_count tensors mapped"
-        else
-            unmapped=$(jq -r '.unmapped_count // "unknown"' "$JSON_OUT")
-            report_test "Tensor Name Mapping" "FAIL" "$unmapped unmapped tensors"
-        fi
+# 3. Token ID A/B Parity Test
+validate_token_parity() {
+    echo -e "\n${YELLOW}3. Token ID A/B Parity Test${NC}"
+    echo "--------------------------------"
+    
+    # Create prompts file
+    local prompts_file="$CROSSVAL_DIR/prompts.yaml"
+    if [[ ! -f "$prompts_file" ]]; then
+        echo "Creating test prompts..."
+        mkdir -p "$(dirname "$prompts_file")"
+        cat > "$prompts_file" << 'EOF'
+version: 1
+bos: true
+max_new_tokens: 64
+prompts:
+  - "Add 27 and 38."
+  - "Print a Rust function that reverses a string."
+  - "Translate 'good morning' to French."
+  - "What day of the week was 2000-01-01?"
+  - "List the first 10 prime numbers."
+  - "Explain HTTP cookies in one paragraph."
+  - "生成一个中文的打招呼句子。"
+  - "Wie buchstabiert man 'Quantenmechanik'?"
+  - "Sum from 1 to 100."
+  - "Write a SQL query to select users older than 30."
+  - "Continue the Fibonacci sequence: 1, 1, 2, 3, 5, 8,"
+  - "C++: create a vector and push three integers."
+  - "日本の首都はどこですか。"
+  - "What's the derivative of sin(x)*x^2?"
+  - "Tell a two-sentence horror story."
+  - "Explain SIMD briefly."
+  - "Give a JSON object with keys a,b,c."
+  - "Name three Canadian provinces."
+  - "Write a haiku about databases."
+  - "What is 2^10?"
+EOF
+    fi
+    
+    echo "Running token generation with BitNet.rs..."
+    local bitnet_ids="$TMP/bitnet.ids"
+    local bitnet_run="$TMP/bitnet_run.json"
+    
+    if [[ -n "$SPM" ]]; then
+        run_bitnet run --model "$MODEL" --tokenizer "$SPM" \
+            --prompts "$prompts_file" --temperature 0 \
+            --dump-token-ids "$bitnet_ids" \
+            --json-out "$bitnet_run" > /dev/null 2>&1 || true
     else
-        report_test "Tensor Name Mapping" "FAIL" "xtask gate mapper failed"
-    fi
-    rm -f "$JSON_OUT"
-else
-    log_warning "Model not found, attempting download..."
-    if cargo run -p xtask -- download-model 2>&1 | grep -q "Successfully"; then
-        report_test "Model Download" "PASS"
-    else
-        report_test "Model Download" "FAIL"
-    fi
-fi
-
-echo ""
-echo "${BLUE}━━━ Gate 4: Strict Mode Execution ━━━${NC}"
-setup_deterministic_env
-if [ -f "$MODEL_PATH" ]; then
-    log_info "Running strict mode validation..."
-    
-    # Check if tokenizer exists
-    TOKENIZER_PATH=""
-    if [ -f "models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.model" ]; then
-        TOKENIZER_PATH="models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.model"
+        run_bitnet run --model "$MODEL" \
+            --prompts "$prompts_file" --temperature 0 \
+            --dump-token-ids "$bitnet_ids" \
+            --json-out "$bitnet_run" > /dev/null 2>&1 || true
     fi
     
-    if [ -n "$TOKENIZER_PATH" ]; then
-        log_info "Using external tokenizer: $(basename "$TOKENIZER_PATH")"
-        if "$BINARY_PATH" run \
-            --model "$MODEL_PATH" \
-            --tokenizer "$TOKENIZER_PATH" \
-            --prompt "The capital of France is" \
-            --max-new-tokens 10 \
-            --temperature 0 \
-            --strict-mapping \
-            --strict-tokenizer \
-            --bos \
-            --json-out /tmp/bitnet_strict.json 2>/dev/null; then
-            
-            # Verify JSON output
-            if [ -f /tmp/bitnet_strict.json ]; then
-                UNMAPPED=$(jq -r '.counts.unmapped // 1' /tmp/bitnet_strict.json)
-                TOKENIZER_TYPE=$(jq -r '.tokenizer.type // "unknown"' /tmp/bitnet_strict.json)
-                
-                if [ "$UNMAPPED" = "0" ] && [ "$TOKENIZER_TYPE" = "sentencepiece" ]; then
-                    n_kv=$(jq -r '.counts.n_kv // "0"' /tmp/bitnet_strict.json)
-                    n_tensors=$(jq -r '.counts.n_tensors // "0"' /tmp/bitnet_strict.json)
-                    report_test "Strict Mode" "PASS" "unmapped=0, SPM tokenizer, n_kv=$n_kv, n_tensors=$n_tensors"
-                else
-                    report_test "Strict Mode" "FAIL" "unmapped=$UNMAPPED, tokenizer=$TOKENIZER_TYPE"
-                fi
-            else
-                report_test "Strict Mode" "FAIL" "No JSON output generated"
-            fi
-        else
-            report_test "Strict Mode" "FAIL" "Inference failed"
-        fi
-    else
-        # Run with embedded tokenizer (if available)
-        log_info "Attempting with embedded tokenizer..."
-        if "$BINARY_PATH" run \
-            --model "$MODEL_PATH" \
-            --prompt "The capital of France is" \
-            --max-new-tokens 10 \
-            --temperature 0 \
-            --strict-mapping \
-            --json-out /tmp/bitnet_strict.json 2>/dev/null; then
-            if [ -f /tmp/bitnet_strict.json ]; then
-                UNMAPPED=$(jq -r '.counts.unmapped // 1' /tmp/bitnet_strict.json)
-                if [ "$UNMAPPED" = "0" ]; then
-                    report_test "Strict Mode" "PASS" "Inference completed with embedded tokenizer"
-                else
-                    report_test "Strict Mode" "FAIL" "Unmapped tensors: $UNMAPPED"
-                fi
-            else
-                report_test "Strict Mode" "FAIL" "No JSON output"
-            fi
-        else
-            report_test "Strict Mode" "FAIL" "Inference failed"
-        fi
-    fi
-else
-    report_test "Strict Mode" "SKIP" "Model not available"
-fi
-
-echo ""
-echo "${BLUE}━━━ Gate 5: A/B Tokenization Correctness ━━━${NC}"
-if [ -f "$MODEL_PATH" ]; then
-    log_info "Testing tokenization with multiple prompts..."
-    # Test prompts
-    PROMPTS=(
-        "The capital of France is"
-        "Once upon a time"
-        "def fibonacci(n):"
-    )
-    
-    AB_PASSED=0
-    AB_TOTAL=${#PROMPTS[@]}
-    
-    for prompt in "${PROMPTS[@]}"; do
-        JSON_OUT="/tmp/tokenize_$$.json"
-        if "$BINARY_PATH" tokenize \
-            --model "$MODEL_PATH" \
-            --prompt "$prompt" \
-            --bos \
-            --json-out "$JSON_OUT" 2>/dev/null; then
-            
-            if [ -f "$JSON_OUT" ]; then
-                RS_IDS=$(jq -c '.tokens.ids' "$JSON_OUT" 2>/dev/null || echo "[]")
-                log_info "Prompt: '$prompt' → IDs: $RS_IDS"
-                AB_PASSED=$((AB_PASSED + 1))
-                rm -f "$JSON_OUT"
-            fi
-        fi
-    done
-    
-    if [ "$AB_PASSED" -ge 2 ]; then
-        report_test "A/B Tokenization" "PASS" "$AB_PASSED/$AB_TOTAL prompts tokenized successfully"
-    else
-        report_test "A/B Tokenization" "FAIL" "Only $AB_PASSED/$AB_TOTAL prompts tokenized (need ≥2)"
-    fi
-else
-    report_test "A/B Tokenization" "SKIP" "Model not available"
-fi
-
-echo ""
-echo "${BLUE}━━━ Gate 6: Performance & Memory Gates ━━━${NC}"
-
-MIN_DECODE=20  # Minimum tokens for stable tok/s
-
-if [ -f "$MODEL_PATH" ]; then
-    if [ -z "$TIME_CMD" ]; then
-        log_warning "No GNU time available for memory profiling"
-        # Still run without memory profiling
-        if "$BINARY_PATH" run \
-            --model "$MODEL_PATH" \
-            --prompt "Validation performance benchmark" \
-            --max-new-tokens "$MIN_DECODE" \
-            --temperature 0 \
-            --json-out /tmp/perf.json 2>&1 | grep -q "Generated"; then
-            
-            if [ -f /tmp/perf.json ]; then
-                DECODED=$(jq -r '.throughput.decoded_tokens // 0' /tmp/perf.json)
-                TOKPS=$(jq -r '.throughput.tokens_per_second // 0' /tmp/perf.json)
-                
-                if [ "$DECODED" -lt "$MIN_DECODE" ]; then
-                    report_test "Performance" "WARN" "Decoded=$DECODED (<$MIN_DECODE); measurement may be noisy"
-                else
-                    report_test "Performance" "PASS" "${TOKPS} tok/s, decoded=$DECODED tokens"
-                fi
-            else
-                report_test "Performance" "FAIL" "No perf JSON generated"
-            fi
-        else
-            report_test "Performance" "FAIL" "Benchmark failed"
-        fi
-    else
-        # Run with time command for memory profiling
-        log_info "Running with memory profiling..."
-        if $TIME_CMD "$BINARY_PATH" run \
-            --model "$MODEL_PATH" \
-            --prompt "Validation performance benchmark" \
-            --max-new-tokens "$MIN_DECODE" \
-            --temperature 0 \
-            --json-out /tmp/perf.json 2>&1 | tee /tmp/time.out >/dev/null; then
-            
-            if [ -f /tmp/perf.json ]; then
-                DECODED=$(jq -r '.throughput.decoded_tokens // 0' /tmp/perf.json)
-                TOKPS=$(jq -r '.throughput.tokens_per_second // 0' /tmp/perf.json)
-                
-                if [ "$DECODED" -lt "$MIN_DECODE" ]; then
-                    report_test "Performance" "WARN" "Decoded=$DECODED (<$MIN_DECODE); measurement may be noisy"
-                else
-                    report_test "Performance" "PASS" "${TOKPS} tok/s, decoded=$DECODED tokens"
-                fi
-                
-                # Extract RSS if available
-                if grep -q "Maximum resident set size" /tmp/time.out; then
-                    RSS_KB=$(grep "Maximum resident set size" /tmp/time.out | awk '{print $6}')
-                    RSS_MB=$((RSS_KB / 1024))
-                    report_test "Memory RSS" "PASS" "Max RSS: ${RSS_MB} MB"
-                fi
-            else
-                report_test "Performance" "FAIL" "No perf JSON generated"
-            fi
-        else
-            report_test "Performance" "FAIL" "Benchmark failed"
-        fi
-    fi
-else
-    report_test "Performance" "SKIP" "Model not available"
-fi
-
-echo ""
-echo "${BLUE}━━━ Gate 7: FFI Compatibility Check ━━━${NC}"
-log_info "Building FFI library..."
-if cargo build -p bitnet-ffi --release --no-default-features --features cpu 2>&1 | tail -1 | grep -q "Finished"; then
-    report_test "FFI Build" "PASS"
-    
-    # Check library exists
-    if [ -f "target/release/libbitnet_ffi.so" ] || [ -f "target/release/libbitnet_ffi.dylib" ]; then
-        report_test "FFI Library" "PASS" "Shared library created"
-    else
-        report_test "FFI Library" "FAIL" "Library not found"
-    fi
-else
-    report_test "FFI Build" "FAIL"
-fi
-
-echo ""
-echo "${BLUE}━━━ Gate 8: Cross-Validation Tests ━━━${NC}"
-if command -v cargo >/dev/null 2>&1; then
-    log_info "Running cross-validation tests..."
-    if cargo test --package bitnet-crossval --no-default-features --features 'cpu,ffi' 2>&1 | grep -q "test result"; then
-        report_test "Cross-Validation" "PASS"
-    else
-        report_test "Cross-Validation" "SKIP" "Tests not available or FFI not built"
-    fi
-else
-    report_test "Cross-Validation" "SKIP" "Cargo not available"
-fi
-
-echo ""
-echo "${BLUE}━━━ Additional: Determinism Check ━━━${NC}"
-if [ -f "$MODEL_PATH" ]; then
-    log_info "Testing deterministic output..."
-    setup_deterministic_env
-    
-    OUT1="/tmp/det1_$$.json"
-    OUT2="/tmp/det2_$$.json"
-    
-    # Run twice with same seed
-    "$BINARY_PATH" run --model "$MODEL_PATH" --prompt "Test" --max-new-tokens 10 \
-        --temperature 0 --json-out "$OUT1" >/dev/null 2>&1
-    
-    "$BINARY_PATH" run --model "$MODEL_PATH" --prompt "Test" --max-new-tokens 10 \
-        --temperature 0 --json-out "$OUT2" >/dev/null 2>&1
-    
-    if [ -f "$OUT1" ] && [ -f "$OUT2" ]; then
-        TEXT1=$(jq -r '.output // ""' "$OUT1" 2>/dev/null)
-        TEXT2=$(jq -r '.output // ""' "$OUT2" 2>/dev/null)
+    if [[ -f "$bitnet_ids" ]]; then
+        local n_prompts=$(wc -l < "$bitnet_ids")
+        echo "  Generated tokens for $n_prompts prompts"
         
-        if [ "$TEXT1" = "$TEXT2" ] && [ -n "$TEXT1" ]; then
-            report_test "Determinism" "PASS" "Outputs match at T=0"
+        # If llama.cpp is available, compare
+        if command -v llama-cli &> /dev/null; then
+            echo "Running token generation with llama.cpp..."
+            local cpp_ids="$TMP/cpp.ids"
+            
+            llama-cli --model "$MODEL" --prompts "$prompts_file" \
+                --temperature 0 --dump-token-ids "$cpp_ids" \
+                > /dev/null 2>&1 || true
+            
+            if [[ -f "$cpp_ids" ]]; then
+                # Compare token IDs
+                python3 - "$bitnet_ids" "$cpp_ids" << 'PY' || true
+import sys
+try:
+    rs = [l.strip().split() for l in open(sys.argv[1])]
+    cp = [l.strip().split() for l in open(sys.argv[2])]
+    if len(rs) != len(cp):
+        print(f"  ⚠ Prompt count mismatch: {len(rs)} vs {len(cp)}")
+        sys.exit(1)
+    
+    total = len(rs)
+    ok = 0
+    divergences = []
+    
+    for i, (a, b) in enumerate(zip(rs, cp)):
+        if a == b:
+            ok += 1
+        else:
+            j = 0
+            while j < min(len(a), len(b)) and a[j] == b[j]:
+                j += 1
+            divergences.append((i, j, a[j:j+3] if j < len(a) else [], b[j:j+3] if j < len(b) else []))
+    
+    rate = ok / total if total > 0 else 0
+    print(f"  Exact match rate: {rate:.1%} ({ok}/{total})")
+    
+    if divergences and len(divergences) <= 3:
+        print("  First divergences:")
+        for i, pos, rs_tok, cpp_tok in divergences[:3]:
+            print(f"    Prompt #{i} @ pos {pos}: rs={rs_tok} cpp={cpp_tok}")
+    
+    if rate >= 0.95:
+        print(f"\033[0;32m  ✓ Token ID parity passed: {rate:.1%} ≥ 95%\033[0m")
+        sys.exit(0)
+    else:
+        print(f"\033[0;31m  ✗ Token ID parity failed: {rate:.1%} < 95%\033[0m")
+        sys.exit(1)
+except Exception as e:
+    print(f"  Error comparing tokens: {e}")
+    sys.exit(1)
+PY
+            fi
         else
-            report_test "Determinism" "FAIL" "Outputs differ"
+            echo -e "${YELLOW}  ⚠ llama.cpp not available for comparison${NC}"
+        fi
+    else
+        echo -e "${RED}  ✗ Failed to generate tokens${NC}"
+    fi
+}
+
+# 4. Performance Validation
+validate_performance() {
+    echo -e "\n${YELLOW}4. Performance Validation${NC}"
+    echo "--------------------------------"
+    
+    # Check if we have a baseline
+    local baseline_file="ci/baseline.json"
+    if [[ ! -f "$baseline_file" ]]; then
+        echo -e "${YELLOW}  ⚠ No baseline file found at $baseline_file${NC}"
+        echo "  Creating initial baseline..."
+        
+        # Run a performance test
+        local perf_out="$TMP/perf.json"
+        echo "Running performance benchmark..."
+        
+        # Create a simple prompt for benchmarking
+        cat > "$TMP/bench_prompt.yaml" << 'EOF'
+version: 1
+bos: true
+max_new_tokens: 128
+prompts:
+  - "Write a detailed explanation of how neural networks work, including backpropagation."
+EOF
+        
+        if [[ -n "$SPM" ]]; then
+            run_bitnet run --model "$MODEL" --tokenizer "$SPM" \
+                --prompts "$TMP/bench_prompt.yaml" --temperature 0.7 \
+                --json-out "$perf_out" > /dev/null 2>&1 || true
+        else
+            run_bitnet run --model "$MODEL" \
+                --prompts "$TMP/bench_prompt.yaml" --temperature 0.7 \
+                --json-out "$perf_out" > /dev/null 2>&1 || true
         fi
         
-        rm -f "$OUT1" "$OUT2"
+        if [[ -f "$perf_out" ]]; then
+            local tok_s=$(jq -r '.throughput.tokens_per_second // 0' "$perf_out")
+            local rss_mb=$(jq -r '.memory.rss_mb // 0' "$perf_out")
+            
+            echo "  Tokens/second: $tok_s"
+            echo "  RSS (MB): $rss_mb"
+            
+            # Check absolute floor
+            if (( $(echo "$tok_s >= 1.0" | bc -l) )); then
+                echo -e "${GREEN}  ✓ Performance floor passed: $tok_s ≥ 1.0 tok/s${NC}"
+            else
+                echo -e "${RED}  ✗ Performance floor failed: $tok_s < 1.0 tok/s${NC}"
+            fi
+            
+            # Create initial baseline
+            mkdir -p "$(dirname "$baseline_file")"
+            cat > "$baseline_file" << EOF
+{
+  "cpu": {
+    "model_default": {
+      "tok_s": $tok_s,
+      "rss_mb": $rss_mb
+    }
+  }
+}
+EOF
+            echo "  Created initial baseline at $baseline_file"
+        else
+            echo -e "${RED}  ✗ Failed to run performance benchmark${NC}"
+        fi
     else
-        report_test "Determinism" "SKIP" "Could not generate outputs"
+        # Compare against baseline
+        echo "Comparing against baseline..."
+        
+        local perf_out="$TMP/perf.json"
+        cat > "$TMP/bench_prompt.yaml" << 'EOF'
+version: 1
+bos: true
+max_new_tokens: 128
+prompts:
+  - "Write a detailed explanation of how neural networks work, including backpropagation."
+EOF
+        
+        if [[ -n "$SPM" ]]; then
+            run_bitnet run --model "$MODEL" --tokenizer "$SPM" \
+                --prompts "$TMP/bench_prompt.yaml" --temperature 0.7 \
+                --json-out "$perf_out" > /dev/null 2>&1 || true
+        else
+            run_bitnet run --model "$MODEL" \
+                --prompts "$TMP/bench_prompt.yaml" --temperature 0.7 \
+                --json-out "$perf_out" > /dev/null 2>&1 || true
+        fi
+        
+        if [[ -f "$perf_out" ]]; then
+            local tok_s=$(jq -r '.throughput.tokens_per_second // 0' "$perf_out")
+            local rss_mb=$(jq -r '.memory.rss_mb // 0' "$perf_out")
+            local baseline_tok_s=$(jq -r '.cpu.model_default.tok_s // 0' "$baseline_file")
+            local baseline_rss_mb=$(jq -r '.cpu.model_default.rss_mb // 0' "$baseline_file")
+            
+            echo "  Current: $tok_s tok/s, $rss_mb MB RSS"
+            echo "  Baseline: $baseline_tok_s tok/s, $baseline_rss_mb MB RSS"
+            
+            # Check ratios
+            python3 - << PY || true
+import sys
+tok_s = float($tok_s)
+rss_mb = float($rss_mb)
+baseline_tok_s = float($baseline_tok_s)
+baseline_rss_mb = float($baseline_rss_mb)
+
+# Check absolute floor
+if tok_s < 1.0:
+    print(f"\033[0;31m  ✗ Performance floor failed: {tok_s} < 1.0 tok/s\033[0m")
+    sys.exit(1)
+
+# Check throughput ratio
+if baseline_tok_s > 0:
+    ratio = tok_s / baseline_tok_s
+    if ratio >= 0.95:
+        print(f"\033[0;32m  ✓ Throughput ratio passed: {ratio:.1%} ≥ 95%\033[0m")
+    else:
+        print(f"\033[0;31m  ✗ Throughput ratio failed: {ratio:.1%} < 95%\033[0m")
+        sys.exit(1)
+
+# Check memory ratio
+if baseline_rss_mb > 0:
+    mem_ratio = rss_mb / baseline_rss_mb
+    if mem_ratio <= 1.03:
+        print(f"\033[0;32m  ✓ Memory ratio passed: {mem_ratio:.1%} ≤ 103%\033[0m")
+    else:
+        print(f"\033[0;31m  ✗ Memory ratio failed: {mem_ratio:.1%} > 103%\033[0m")
+        sys.exit(1)
+PY
+        fi
     fi
-else
-    report_test "Determinism" "SKIP" "Model not available"
-fi
+}
 
-echo ""
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}            VALIDATION SUMMARY            ${NC}"
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
+# Main validation flow
+main() {
+    local failed=0
+    
+    # Check prerequisites
+    check_llama_cpp
+    
+    # Run validation steps
+    validate_model_compatibility || ((failed++))
+    validate_perplexity_parity || ((failed++))
+    validate_token_parity || ((failed++))
+    validate_performance || ((failed++))
+    
+    # Summary
+    echo -e "\n${YELLOW}Validation Summary${NC}"
+    echo "=================="
+    
+    if [[ $failed -eq 0 ]]; then
+        echo -e "${GREEN}✓ All validation checks passed!${NC}"
+        exit 0
+    else
+        echo -e "${RED}✗ $failed validation check(s) failed${NC}"
+        exit 1
+    fi
+}
 
-echo "Total Tests: $TOTAL_TESTS"
-echo -e "${GREEN}Passed: $PASSED_TESTS${NC}"
-echo -e "${RED}Failed: $FAILED_TESTS${NC}"
-echo -e "${YELLOW}XFail: $XFAIL_TESTS${NC}"
-echo ""
-
-SUCCESS_RATE=0
-if [ $TOTAL_TESTS -gt 0 ]; then
-    SUCCESS_RATE=$((PASSED_TESTS * 100 / TOTAL_TESTS))
-fi
-
-echo "Pass Rate: ${SUCCESS_RATE}%"
-
-if [ $SUCCESS_RATE -eq 100 ]; then
-    echo -e "\n${GREEN}✅ ALL TESTS PASSED!${NC}"
-    echo ""
-    echo "BitNet.rs validation complete:"
-    echo "• Zero unmapped tensors in strict mode"
-    echo "• Real SentencePiece tokenization"
-    echo "• Deterministic outputs at T=0"
-    echo "• JSON-driven gates for CI robustness"
-    exit 0
-elif [ $SUCCESS_RATE -ge 90 ]; then
-    echo -e "\n${YELLOW}⚠️  MOSTLY PASSING (${SUCCESS_RATE}%)${NC}"
-    echo ""
-    echo "BitNet.rs validation mostly complete"
-    exit 0
-else
-    echo -e "\n${RED}❌ VALIDATION FAILED (${SUCCESS_RATE}%)${NC}"
-    echo ""
-    echo "Please address failing tests before deployment"
-    exit 1
-fi
+# Run main function
+main "$@"

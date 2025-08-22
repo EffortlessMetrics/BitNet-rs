@@ -1,0 +1,28 @@
+# CI Acceptance targets for BitNet.rs
+
+.PHONY: accept accept-pr accept-nightly help
+
+# Default values
+LANE ?= PR
+XVAL_NONBLOCKING ?= 0
+
+help:
+	@echo "CI Acceptance targets:"
+	@echo "  make -f Makefile.ci accept         # Run CI acceptance gate (default: PR lane)"
+	@echo "  make -f Makefile.ci accept-pr      # Run PR acceptance gate"
+	@echo "  make -f Makefile.ci accept-nightly # Run Nightly acceptance gate"
+	@echo ""
+	@echo "Environment variables:"
+	@echo "  LANE=PR|NIGHTLY            # Select lane (default: PR)"
+	@echo "  XVAL_NONBLOCKING=0|1       # Make cross-validation non-blocking (default: 0)"
+	@echo "  PR_MODEL=path/to/model     # Override model for PR lane"
+	@echo "  NIGHTLY_MODEL=path/to/model # Override model for Nightly lane"
+
+accept:
+	@LANE=$(LANE) XVAL_NONBLOCKING=$(XVAL_NONBLOCKING) ./scripts/ci-acceptance-gate-v2.sh
+
+accept-pr:
+	@LANE=PR XVAL_NONBLOCKING=$(XVAL_NONBLOCKING) ./scripts/ci-acceptance-gate-v2.sh
+
+accept-nightly:
+	@LANE=NIGHTLY XVAL_NONBLOCKING=$(XVAL_NONBLOCKING) ./scripts/ci-acceptance-gate-v2.sh
