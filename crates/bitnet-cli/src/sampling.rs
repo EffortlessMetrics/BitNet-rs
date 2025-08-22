@@ -192,6 +192,7 @@ pub fn argmax(logits: &[f32]) -> u32 {
 
 /// Greedy selection with deterministic tie-breaking for temperature=0
 #[inline]
+#[allow(dead_code)]
 pub fn greedy_tie_break_lowest_id(logits: &[f32]) -> u32 {
     let mut best = (f32::NEG_INFINITY, u32::MAX);
     for (i, &x) in logits.iter().enumerate() {

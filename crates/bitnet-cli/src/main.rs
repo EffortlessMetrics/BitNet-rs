@@ -16,6 +16,7 @@ mod commands;
 mod config;
 mod exit;
 mod sampling;
+mod score;
 
 use exit::*;
 
@@ -182,6 +183,9 @@ enum Commands {
         #[arg(long)]
         json_out: Option<std::path::PathBuf>,
     },
+    
+    /// Calculate perplexity score for a model
+    Score(score::ScoreArgs),
 
     #[cfg(feature = "full-cli")]
     /// Run inference on a model
@@ -310,6 +314,7 @@ async fn main() -> Result<()> {
         }) => {
             handle_tokenize_command(model, tokenizer, text, file, bos, json_out).await
         }
+        Some(Commands::Score(args)) => score::run_score(&args).await,
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
         Some(Commands::Info) => show_system_info().await,
         None => {
@@ -417,12 +422,14 @@ async fn handle_tokenize_command(
     });
     
     // Load tokenizer: prefer external, fall back to GGUF
-    let tokenizer: Box<dyn Tokenizer> = if let Some(spm_path) = tokenizer_path {
-        bitnet_tokenizers::load_tokenizer(&spm_path)
-            .with_context(|| format!("Failed to load external tokenizer: {}", spm_path.display()))?
+    let (tokenizer, is_external): (Box<dyn Tokenizer>, bool) = if let Some(spm_path) = tokenizer_path {
+        let tok = bitnet_tokenizers::load_tokenizer(&spm_path)
+            .with_context(|| format!("Failed to load external tokenizer: {}", spm_path.display()))?;
+        (tok, true)
     } else {
-        bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&gguf)
-            .context("No tokenizer in GGUF, provide --tokenizer")?
+        let tok = bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&gguf)
+            .context("No tokenizer in GGUF, provide --tokenizer")?;
+        (tok, false)
     };
     
     // Read input text
@@ -440,13 +447,17 @@ async fn handle_tokenize_command(
     
     // Build output JSON
     let output = serde_json::json!({
-        "token_ids": ids,
+        "tokens": {
+            "ids": ids,
+            "count": ids.len(),
+        },
         "gen_policy": {
             "bos": bos
         },
         "counts": counts,
         "tokenizer": {
             "type": "sentencepiece",  // all our tokenizers are SP
+            "origin": if is_external { "external" } else { "embedded" },
             "bos": tokenizer.bos_token_id(),
             "eos": tokenizer.eos_token_id(),
         }
@@ -693,14 +704,9 @@ async fn run_simple_generation(
         let generated_text = tokenizer.decode(&generated_tokens)?;
         
         // Get tokenizer info
-        let tokenizer_type = if external_tokenizer {
-            "external"
-        } else {
-            "sentencepiece"  // From GGUF
-        };
-        
         let tokenizer_info = serde_json::json!({
-            "type": tokenizer_type,
+            "type": "sentencepiece",
+            "origin": if external_tokenizer { "external" } else { "embedded" },
             "bos": tokenizer.bos_token_id().unwrap_or(1),
             "eos": tokenizer.eos_token_id().unwrap_or(2),
         });
@@ -719,17 +725,23 @@ async fn run_simple_generation(
             "seed": seed.unwrap_or(0),
         });
         
+        let prompt_tokens_len = tokens.len() - generated_tokens.len();
         let output = serde_json::json!({
             "prompt": prompt,
-            "ids": generated_tokens,
             "text": generated_text,
+            "tokens": {
+                "prompt": prompt_tokens_len,
+                "generated": generated_tokens.len(),
+                "total": prompt_tokens_len + generated_tokens.len(),
+                "ids": generated_tokens,
+            },
             "latency": {
                 "cmd_to_first_ms": first_token_ms,
                 "decode_first_ms": first_token_ms,  // Same as cmd_to_first for now
                 "total_ms": total_ms,
             },
             "throughput": {
-                "tok_per_sec": tok_per_sec,
+                "tokens_per_second": tok_per_sec,
                 "decoded_tokens": generated_tokens.len(),
             },
             "counts": counts,

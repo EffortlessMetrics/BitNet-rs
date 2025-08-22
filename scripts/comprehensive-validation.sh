@@ -1,10 +1,10 @@
 #!/bin/bash
+# Comprehensive validation script implementing VALIDATION.md specifications
+# This script runs ALL validation gates including score/perplexity testing
+
 set -euo pipefail
 
-# Comprehensive validation script for BitNet.rs
-# Tests all validation gates described in VALIDATION.md
-
-echo "=== BitNet.rs Comprehensive Validation ==="
+echo "=== BitNet.rs Comprehensive Validation Suite ==="
 echo ""
 
 # Colors for output

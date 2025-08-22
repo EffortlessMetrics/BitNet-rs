@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Comprehensive CI Validation Framework**:
+  - 8-gate acceptance system with JSON-driven detection
+  - Distinct exit codes (0-10) for precise CI triage
+  - Performance ratio gates with baseline comparisons
+  - Deterministic execution environment (SEED=42, THREADS=1)
+  - Portable memory profiling with GNU time/gtime
+- **Score/Perplexity Subcommand**:
+  - Teacher-forcing perplexity calculation skeleton
+  - JSON output with tokenizer origin tracking
+  - Support for external SentencePiece models
+  - Ready for logits API integration
+- **Strict Mode Enforcement**:
+  - Zero unmapped tensors requirement
+  - SentencePiece tokenizer validation
+  - BOS token policy enforcement
+  - Deterministic tie-breaking (lowest ID)
 - Cross-validation framework for numerical accuracy testing
 - Performance benchmarking suite with automated regression detection
 - Version management system for external C++ dependency

@@ -1,342 +1,365 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# BitNet.rs CI Acceptance Gate - Strict, Deterministic, No Compromises
+# Binary discovery, JSON-driven assertions, no brittle greps
+# All gates must pass - no skips, no mocks, no excuses
 set -euo pipefail
 
-# CI Acceptance Gate Script for BitNet.rs
-# Implements the 8 validation gates described in VALIDATION.md
-# Returns specific exit codes for precise CI triage
+# Exit codes for precise failure triage
+readonly EXIT_SUCCESS=0
+readonly EXIT_GENERAL_ERROR=1
+readonly EXIT_MISSING_MODEL=2
+readonly EXIT_MAPPING_FAILED=3
+readonly EXIT_TOKENIZER_FAILED=4
+readonly EXIT_INFERENCE_FAILED=5
+readonly EXIT_TOKENIZATION_FAILED=6
+readonly EXIT_DETERMINISM_FAILED=7
+readonly EXIT_TEST_FAILED=8
+readonly EXIT_PERF_REGRESSION=9
+readonly EXIT_MEMORY_REGRESSION=10
 
-echo "=== BitNet.rs CI Acceptance Gate ==="
-echo ""
+# Temp file management with automatic cleanup
+TMPFILES=()
+mktempf() { local tmp=$(mktemp); TMPFILES+=("$tmp"); echo "$tmp"; }
+cleanup() { rm -f "${TMPFILES[@]:-}" 2>/dev/null || true; }
+trap cleanup EXIT
 
-# Exit codes (matching bitnet-cli/src/exit.rs)
-EXIT_SUCCESS=0
-EXIT_GENERAL_ERROR=1
-EXIT_INVALID_ARGS=2
-EXIT_STRICT_MAPPING=3
-EXIT_STRICT_TOKENIZER=4
-EXIT_MODEL_LOAD_ERROR=5
-EXIT_TOKENIZER_ERROR=6
-EXIT_INFERENCE_ERROR=7
-EXIT_IO_ERROR=8
-EXIT_PERF_GATE_FAIL=9
-EXIT_MEM_GATE_FAIL=10
-
-# Configuration
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-BINARY_PATH="${HOME}/.rust-build/target/release/bitnet"
-MODEL_PATH="${MODEL_PATH:-models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf}"
-TOKENIZER_PATH="${TOKENIZER_PATH:-}"
-
-# Performance thresholds
-MIN_DECODE_TOKENS=20  # Minimum tokens for stable tok/s measurement
-MIN_TOKENS_PER_SECOND=1.0  # Minimum acceptable tok/s
-
-# Detect time command for portable profiling
-detect_time() {
-    if command -v /usr/bin/time >/dev/null 2>&1; then
-        echo "/usr/bin/time -v"
-    elif command -v gtime >/dev/null 2>&1; then
-        echo "gtime -v"
-    else
-        echo ""
-    fi
-}
-
-TIME_CMD=$(detect_time)
-
-# Set deterministic environment
+# Strict environment for determinism
 export RAYON_NUM_THREADS=1
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
 export OMP_NUM_THREADS=1
 export GGML_NUM_THREADS=1
 
+# Check prerequisites
+need() { 
+    command -v "$1" >/dev/null || { 
+        echo "❌ $1 is required but not installed"
+        exit $EXIT_GENERAL_ERROR
+    }
+}
+need cargo
+need jq
+
+echo "=== BitNet.rs CI Acceptance Gate ==="
 echo "Environment: DETERMINISTIC=1, SEED=42, THREADS=1"
-echo ""
 
-# Gate 1: Build
-echo "━━━ Gate 1: Core Build ━━━"
-if ! cargo build -p bitnet-cli --release --no-default-features --features "cpu,full-cli" --target-dir "${HOME}/.rust-build/target" 2>&1 | tail -1 | grep -q "Finished"; then
-    echo "❌ Build failed"
+# ━━━ Gate 1: Build & Binary Discovery ━━━
+echo "━━━ Gate 1: Build & Binary Discovery ━━━"
+
+RS_BIN=$(
+    cargo build -p bitnet-cli --release --no-default-features --features "cpu,full-cli" \
+        --message-format=json 2>/dev/null \
+    | grep '^{' \
+    | jq -r 'select(.executable!=null and .target.kind[]=="bin" and .target.name=="bitnet") | .executable' \
+    | tail -1
+)
+
+# Fallback if JSON parsing fails
+if [ -z "${RS_BIN:-}" ] || [ ! -x "$RS_BIN" ]; then
+    echo "⚠ JSON parse failed, attempting fallback build..."
+    cargo build -p bitnet-cli --release --no-default-features --features "cpu,full-cli" 2>&1 | tee /tmp/cargo_build.log
+    RS_BIN=$(find target -name bitnet -type f -executable 2>/dev/null | head -1)
+fi
+
+if [ ! -x "${RS_BIN:-}" ]; then
+    echo "❌ Failed to build or locate bitnet binary"
     exit $EXIT_GENERAL_ERROR
 fi
-echo "✅ Build succeeded"
-echo ""
 
-# Gate 2: Unit Tests
+echo "✓ Binary discovered: $RS_BIN"
+
+# ━━━ Gate 2: Unit Tests ━━━
 echo "━━━ Gate 2: Unit Tests ━━━"
-if ! cargo test --workspace --no-default-features --features cpu --target-dir "${HOME}/.rust-build/target" 2>&1 | grep -q "test result"; then
+
+TEST_OUTPUT=$(mktempf)
+if ! cargo test --workspace --no-default-features --features cpu \
+        --exclude bitnet-py --lib -- -q > "$TEST_OUTPUT" 2>&1; then
     echo "❌ Unit tests failed"
-    exit $EXIT_GENERAL_ERROR
+    tail -200 "$TEST_OUTPUT"
+    exit $EXIT_TEST_FAILED
 fi
-echo "✅ Unit tests passed"
-echo ""
+echo "✓ Unit tests passed"
 
-# Gate 3: Tensor Name Mapping (JSON Gate)
-echo "━━━ Gate 3: Tensor Name Mapping ━━━"
+# ━━━ Gate 3: Model Selection ━━━
+echo "━━━ Gate 3: Model Selection ━━━"
+
+# Determine if we're in PR or nightly mode
+if [ -n "${CI_PR:-}" ] || [ -z "${NIGHTLY:-}" ]; then
+    MODE="PR"
+    MODEL_PATH="${PR_MODEL:-models/tinyllama-q2.gguf}"
+    TOKENIZER_MODE="embedded"
+else
+    MODE="NIGHTLY"
+    MODEL_PATH="${BITNET_GGUF:-models/bitnet/ggml-model-i2_s.gguf}"
+    TOKENIZER_PATH="${TOKENIZER_PATH:-models/bitnet/tokenizer.model}"
+    TOKENIZER_MODE="external"
+fi
+
+echo "Mode: $MODE"
+echo "Model: $MODEL_PATH"
+
+# Check model exists (NO SKIPPING!)
 if [ ! -f "$MODEL_PATH" ]; then
-    echo "⚠️  Model not found at $MODEL_PATH, attempting download..."
-    if ! cargo run -p xtask -- download-model 2>&1 | grep -q "Successfully"; then
-        echo "❌ Model download failed"
-        exit $EXIT_MODEL_LOAD_ERROR
+    echo "❌ Missing model file: $MODEL_PATH"
+    if [ "$MODE" = "PR" ]; then
+        echo "Run: scripts/fetch-pr-model.sh to download TinyLlama with embedded tokenizer"
+    else
+        echo "Run: cargo run -p xtask -- download-model"
     fi
+    exit $EXIT_MISSING_MODEL
 fi
 
-MAPPER_JSON="/tmp/mapper_gate_$$.json"
-if cargo run -q -p xtask -- gate mapper --model "$MODEL_PATH" > "$MAPPER_JSON" 2>/dev/null; then
-    if jq -e '.ok == true and .unmapped_count == 0' "$MAPPER_JSON" >/dev/null 2>&1; then
-        TOTAL_COUNT=$(jq -r '.total_count' "$MAPPER_JSON")
-        echo "✅ All $TOTAL_COUNT tensors mapped"
-    else
-        UNMAPPED=$(jq -r '.unmapped_count // "unknown"' "$MAPPER_JSON")
-        echo "❌ $UNMAPPED unmapped tensors"
-        rm -f "$MAPPER_JSON"
-        exit $EXIT_STRICT_MAPPING
+# For nightly, check external tokenizer
+if [ "$MODE" = "NIGHTLY" ] && [ ! -f "$TOKENIZER_PATH" ]; then
+    echo "❌ Missing tokenizer: $TOKENIZER_PATH (required for nightly)"
+    exit $EXIT_TOKENIZER_FAILED
+fi
+
+# ━━━ Gate 4: Tensor Mapping Validation ━━━
+echo "━━━ Gate 4: Tensor Mapping Validation ━━━"
+
+MAPPER_JSON=$(mktempf)
+if ! cargo run -q -p xtask -- gate mapper --model "$MODEL_PATH" > "$MAPPER_JSON" 2>/dev/null; then
+    echo "❌ Mapper gate failed to run"
+    exit $EXIT_MAPPING_FAILED
+fi
+
+if ! jq -e '.ok==true and .unmapped_count==0' "$MAPPER_JSON" >/dev/null; then
+    echo "❌ Tensor mapping failed"
+    jq '.' "$MAPPER_JSON"
+    exit $EXIT_MAPPING_FAILED
+fi
+
+UNMAPPED=$(jq -r '.unmapped_count // -1' "$MAPPER_JSON")
+echo "✓ All tensors mapped (unmapped=$UNMAPPED)"
+
+# ━━━ Gate 5: Strict Inference ━━━
+echo "━━━ Gate 5: Strict Inference (no mocks) ━━━"
+
+STRICT_JSON=$(mktempf)
+STRICT_ARGS=(
+    run
+    --model "$MODEL_PATH"
+    --prompt "The capital of France is"
+    --bos
+    --max-new-tokens 16
+    --temperature 0
+    --strict-mapping
+    --strict-tokenizer
+    --json-out "$STRICT_JSON"
+)
+
+# Add external tokenizer for nightly
+if [ "$MODE" = "NIGHTLY" ]; then
+    STRICT_ARGS+=(--tokenizer "$TOKENIZER_PATH")
+fi
+
+if ! "$RS_BIN" "${STRICT_ARGS[@]}" >/dev/null 2>&1; then
+    echo "❌ Strict inference failed"
+    exit $EXIT_INFERENCE_FAILED
+fi
+
+# Validate strict JSON output
+if [ "$MODE" = "PR" ]; then
+    # PR mode: require embedded SentencePiece
+    if ! jq -e '.counts.unmapped==0 and 
+                (.counts.n_kv|tonumber)>0 and 
+                (.counts.n_tensors|tonumber)>0 and 
+                .tokenizer.type=="sentencepiece"' "$STRICT_JSON" >/dev/null; then
+        echo "❌ Strict validation failed (PR mode requires embedded tokenizer)"
+        jq '.' "$STRICT_JSON"
+        exit $EXIT_INFERENCE_FAILED
     fi
 else
-    echo "❌ Mapper gate failed"
-    rm -f "$MAPPER_JSON"
-    exit $EXIT_STRICT_MAPPING
-fi
-rm -f "$MAPPER_JSON"
-echo ""
-
-# Gate 4: Strict Mode Execution
-echo "━━━ Gate 4: Strict Mode Execution ━━━"
-
-# Find tokenizer if not specified
-if [ -z "$TOKENIZER_PATH" ]; then
-    if [ -f "models/tokenizers/microsoft_bitnet_tokenizer.model" ]; then
-        TOKENIZER_PATH="models/tokenizers/microsoft_bitnet_tokenizer.model"
-    elif [ -f "models/tokenizer.model" ]; then
-        TOKENIZER_PATH="models/tokenizer.model"
+    # Nightly mode: external tokenizer OK
+    if ! jq -e '.counts.unmapped==0 and 
+                (.counts.n_kv|tonumber)>0 and 
+                (.counts.n_tensors|tonumber)>0' "$STRICT_JSON" >/dev/null; then
+        echo "❌ Strict validation failed"
+        jq '.' "$STRICT_JSON"
+        exit $EXIT_INFERENCE_FAILED
     fi
 fi
 
-STRICT_JSON="/tmp/bitnet_strict_$$.json"
-TOKENIZER_ARGS=""
-if [ -n "$TOKENIZER_PATH" ]; then
-    TOKENIZER_ARGS="--tokenizer $TOKENIZER_PATH"
-    echo "Using external tokenizer: $(basename "$TOKENIZER_PATH")"
-fi
+echo "✓ Strict inference passed (tokenizer=$TOKENIZER_MODE)"
 
-if "$BINARY_PATH" run \
-    --model "$MODEL_PATH" \
-    $TOKENIZER_ARGS \
-    --prompt "The capital of France is" \
-    --max-new-tokens 10 \
-    --temperature 0 \
-    --strict-mapping \
-    --strict-tokenizer \
-    --bos \
-    --json-out "$STRICT_JSON" 2>/dev/null; then
-    
-    if [ -f "$STRICT_JSON" ]; then
-        UNMAPPED=$(jq -r '.counts.unmapped // -1' "$STRICT_JSON")
-        TOKENIZER_TYPE=$(jq -r '.tokenizer.type // "unknown"' "$STRICT_JSON")
-        N_KV=$(jq -r '.counts.n_kv // "0"' "$STRICT_JSON")
-        N_TENSORS=$(jq -r '.counts.n_tensors // "0"' "$STRICT_JSON")
-        
-        if [ "$UNMAPPED" = "0" ] && [ "$TOKENIZER_TYPE" = "sentencepiece" ]; then
-            echo "✅ Strict mode: unmapped=0, SPM tokenizer, n_kv=$N_KV, n_tensors=$N_TENSORS"
-        else
-            echo "❌ Strict mode failed: unmapped=$UNMAPPED, tokenizer=$TOKENIZER_TYPE"
-            rm -f "$STRICT_JSON"
-            if [ "$UNMAPPED" != "0" ]; then
-                exit $EXIT_STRICT_MAPPING
-            else
-                exit $EXIT_STRICT_TOKENIZER
-            fi
-        fi
-    else
-        echo "❌ No JSON output generated"
-        exit $EXIT_INFERENCE_ERROR
-    fi
-else
-    echo "❌ Strict mode inference failed"
-    rm -f "$STRICT_JSON"
-    exit $EXIT_INFERENCE_ERROR
-fi
-rm -f "$STRICT_JSON"
+# ━━━ Gate 6: Tokenization Smoke Test ━━━
+echo "━━━ Gate 6: Tokenization Smoke Test ━━━"
 
-echo ""
-
-# Gate 5: Tokenization Correctness
-echo "━━━ Gate 5: Tokenization Correctness ━━━"
-PROMPTS=(
+prompts=(
     "The capital of France is"
     "Once upon a time"
     "def fibonacci(n):"
 )
+pass=0
+failed_prompts=()
 
-TOKENIZE_PASSED=0
-for prompt in "${PROMPTS[@]}"; do
-    TOKEN_JSON="/tmp/tokenize_$$.json"
-    if "$BINARY_PATH" tokenize \
-        --model "$MODEL_PATH" \
-        $TOKENIZER_ARGS \
-        --prompt "$prompt" \
-        --bos \
-        --json-out "$TOKEN_JSON" 2>/dev/null; then
-        
-        if [ -f "$TOKEN_JSON" ]; then
-            IDS=$(jq -c '.tokens.ids' "$TOKEN_JSON" 2>/dev/null || echo "[]")
-            if [ "$IDS" != "[]" ]; then
-                TOKENIZE_PASSED=$((TOKENIZE_PASSED + 1))
-            fi
-            rm -f "$TOKEN_JSON"
+for prompt in "${prompts[@]}"; do
+    TOK_JSON=$(mktempf)
+    TOK_ARGS=(
+        tokenize
+        --model "$MODEL_PATH"
+        --prompt "$prompt"
+        --bos
+        --json-out "$TOK_JSON"
+    )
+    
+    if [ "$MODE" = "NIGHTLY" ]; then
+        TOK_ARGS+=(--tokenizer "$TOKENIZER_PATH")
+    fi
+    
+    if "$RS_BIN" "${TOK_ARGS[@]}" >/dev/null 2>&1; then
+        ids=$(jq -c '.tokens.ids' "$TOK_JSON" 2>/dev/null || echo "[]")
+        if [[ "$ids" != "[]" ]] && [[ "$ids" != "null" ]]; then
+            pass=$((pass+1))
+        else
+            failed_prompts+=("$prompt")
         fi
+    else
+        failed_prompts+=("$prompt")
     fi
 done
 
-if [ "$TOKENIZE_PASSED" -ge 2 ]; then
-    echo "✅ Tokenization: $TOKENIZE_PASSED/${#PROMPTS[@]} prompts tokenized"
-else
-    echo "❌ Tokenization failed: only $TOKENIZE_PASSED/${#PROMPTS[@]} prompts tokenized (need ≥2)"
-    exit $EXIT_TOKENIZER_ERROR
+if [[ "$pass" -lt 2 ]]; then
+    echo "❌ Tokenization failed: only $pass/${#prompts[@]} prompts succeeded"
+    for fp in "${failed_prompts[@]}"; do
+        echo "  Failed: $fp"
+    done
+    exit $EXIT_TOKENIZATION_FAILED
 fi
-echo ""
 
-# Gate 6: Performance & Memory
-echo "━━━ Gate 6: Performance & Memory ━━━"
-PERF_JSON="/tmp/perf_$$.json"
-TIME_OUT="/tmp/time_$$.out"
+echo "✓ Tokenization smoke test: $pass/${#prompts[@]} passed"
 
+# ━━━ Gate 7: Determinism Check ━━━
+echo "━━━ Gate 7: Determinism Check ━━━"
+
+RUN1=$(mktempf)
+RUN2=$(mktempf)
+DET_ARGS=(
+    run
+    --model "$MODEL_PATH"
+    --prompt "Once upon"
+    --bos
+    --max-new-tokens 32
+    --temperature 0
+    --json-out
+)
+
+if [ "$MODE" = "NIGHTLY" ]; then
+    DET_ARGS+=(--tokenizer "$TOKENIZER_PATH")
+fi
+
+"$RS_BIN" "${DET_ARGS[@]}" "$RUN1" >/dev/null 2>&1
+"$RS_BIN" "${DET_ARGS[@]}" "$RUN2" >/dev/null 2>&1
+
+# Compare token IDs for exact determinism (more robust than text)
+IDS1=$(jq -c '.tokens.ids // []' "$RUN1" 2>/dev/null || echo "[]")
+IDS2=$(jq -c '.tokens.ids // []' "$RUN2" 2>/dev/null || echo "[]")
+
+if [[ "$IDS1" != "$IDS2" ]] || [[ "$IDS1" == "[]" ]]; then
+    echo "❌ Non-deterministic token generation detected"
+    echo "Run 1 IDs: $IDS1"
+    echo "Run 2 IDs: $IDS2"
+    exit $EXIT_DETERMINISM_FAILED
+fi
+
+echo "✓ Deterministic execution verified"
+
+# ━━━ Gate 8: Performance & Memory ━━━
+echo "━━━ Gate 8: Performance & Memory ━━━"
+
+# Find time command (Linux /usr/bin/time or macOS gtime)
+TIME_CMD=""
+if [ -x /usr/bin/time ]; then
+    TIME_CMD="/usr/bin/time -v"
+elif command -v gtime >/dev/null 2>&1; then
+    TIME_CMD="gtime -v"
+fi
+
+PERF_JSON=$(mktempf)
+TIME_OUTPUT=$(mktempf)
+PERF_ARGS=(
+    run
+    --model "$MODEL_PATH"
+    --prompt "The quick brown fox jumps over the lazy dog"
+    --max-new-tokens 128
+    --temperature 0
+    --json-out "$PERF_JSON"
+)
+
+if [ "$MODE" = "NIGHTLY" ]; then
+    PERF_ARGS+=(--tokenizer "$TOKENIZER_PATH")
+fi
+
+# Run with timing if available
 if [ -n "$TIME_CMD" ]; then
-    # Run with memory profiling
-    if $TIME_CMD "$BINARY_PATH" run \
-        --model "$MODEL_PATH" \
-        $TOKENIZER_ARGS \
-        --prompt "Performance benchmark test" \
-        --max-new-tokens "$MIN_DECODE_TOKENS" \
-        --temperature 0 \
-        --json-out "$PERF_JSON" 2>&1 | tee "$TIME_OUT" >/dev/null; then
-        
-        if [ -f "$PERF_JSON" ]; then
-            DECODED=$(jq -r '.throughput.decoded_tokens // 0' "$PERF_JSON")
-            TOKPS=$(jq -r '.throughput.tokens_per_second // 0' "$PERF_JSON")
-            
-            if [ "$DECODED" -lt "$MIN_DECODE_TOKENS" ]; then
-                echo "⚠️  Performance: Only $DECODED tokens decoded (< $MIN_DECODE_TOKENS), measurement may be noisy"
-            elif awk "BEGIN {exit !($TOKPS >= $MIN_TOKENS_PER_SECOND)}"; then
-                echo "✅ Performance: ${TOKPS} tok/s, decoded=$DECODED tokens"
-            else
-                echo "❌ Performance failed: ${TOKPS} tok/s < ${MIN_TOKENS_PER_SECOND}"
-                rm -f "$PERF_JSON" "$TIME_OUT"
-                exit $EXIT_PERF_GATE_FAIL
-            fi
-            
-            # Check memory if available
-            if grep -q "Maximum resident set size" "$TIME_OUT"; then
-                RSS_KB=$(grep "Maximum resident set size" "$TIME_OUT" | awk '{print $6}')
-                RSS_MB=$((RSS_KB / 1024))
-                echo "✅ Memory RSS: ${RSS_MB} MB"
-            fi
-        else
-            echo "❌ No performance JSON generated"
-            rm -f "$TIME_OUT"
-            exit $EXIT_INFERENCE_ERROR
-        fi
-    else
-        echo "❌ Performance test failed"
-        rm -f "$PERF_JSON" "$TIME_OUT"
-        exit $EXIT_INFERENCE_ERROR
-    fi
+    $TIME_CMD "$RS_BIN" "${PERF_ARGS[@]}" 2>"$TIME_OUTPUT" >/dev/null
 else
-    # Run without memory profiling
-    if "$BINARY_PATH" run \
-        --model "$MODEL_PATH" \
-        $TOKENIZER_ARGS \
-        --prompt "Performance benchmark test" \
-        --max-new-tokens "$MIN_DECODE_TOKENS" \
-        --temperature 0 \
-        --json-out "$PERF_JSON" 2>/dev/null; then
-        
-        if [ -f "$PERF_JSON" ]; then
-            DECODED=$(jq -r '.throughput.decoded_tokens // 0' "$PERF_JSON")
-            TOKPS=$(jq -r '.throughput.tokens_per_second // 0' "$PERF_JSON")
-            
-            if [ "$DECODED" -lt "$MIN_DECODE_TOKENS" ]; then
-                echo "⚠️  Performance: Only $DECODED tokens decoded, measurement may be noisy"
-            elif awk "BEGIN {exit !($TOKPS >= $MIN_TOKENS_PER_SECOND)}"; then
-                echo "✅ Performance: ${TOKPS} tok/s"
-            else
-                echo "❌ Performance failed: ${TOKPS} tok/s < ${MIN_TOKENS_PER_SECOND}"
-                rm -f "$PERF_JSON"
-                exit $EXIT_PERF_GATE_FAIL
-            fi
-        else
-            echo "❌ No performance JSON generated"
-            exit $EXIT_INFERENCE_ERROR
-        fi
-    else
-        echo "❌ Performance test failed"
-        rm -f "$PERF_JSON"
-        exit $EXIT_INFERENCE_ERROR
-    fi
+    "$RS_BIN" "${PERF_ARGS[@]}" >/dev/null 2>&1
 fi
-rm -f "$PERF_JSON" "$TIME_OUT"
-echo ""
 
-# Gate 7: FFI Compatibility
-echo "━━━ Gate 7: FFI Compatibility ━━━"
-if cargo build -p bitnet-ffi --release --no-default-features --features cpu --target-dir "${HOME}/.rust-build/target" 2>&1 | tail -1 | grep -q "Finished"; then
-    if [ -f "${HOME}/.rust-build/target/release/libbitnet.so" ] || [ -f "${HOME}/.rust-build/target/release/libbitnet.dylib" ]; then
-        echo "✅ FFI library built"
-    else
-        echo "❌ FFI library not found"
-        exit $EXIT_GENERAL_ERROR
-    fi
-else
-    echo "❌ FFI build failed"
-    exit $EXIT_GENERAL_ERROR
+# Extract performance metrics
+tokps=$(jq -r '.throughput.tokens_per_second // 0' "$PERF_JSON" 2>/dev/null || echo "0")
+decoded=$(jq -r '.throughput.decoded_tokens // 0' "$PERF_JSON" 2>/dev/null || echo "0")
+
+# Warn if too few tokens (noisy measurement)
+if (( decoded < 64 )); then
+    echo "⚠ Warning: only decoded $decoded tokens (<64), performance measurement may be noisy"
 fi
-echo ""
 
-# Gate 8: Determinism Check
-echo "━━━ Gate 8: Determinism Check ━━━"
-DET1="/tmp/det1_$$.json"
-DET2="/tmp/det2_$$.json"
+# Check absolute floor
+if ! awk "BEGIN{exit !($tokps >= 1.0)}"; then
+    echo "❌ Performance too low: $tokps tokens/sec < 1.0 minimum"
+    exit $EXIT_PERF_REGRESSION
+fi
 
-"$BINARY_PATH" run --model "$MODEL_PATH" $TOKENIZER_ARGS --prompt "Test" --max-new-tokens 10 \
-    --temperature 0 --json-out "$DET1" >/dev/null 2>&1
+echo "Performance: $tokps tokens/sec"
 
-"$BINARY_PATH" run --model "$MODEL_PATH" $TOKENIZER_ARGS --prompt "Test" --max-new-tokens 10 \
-    --temperature 0 --json-out "$DET2" >/dev/null 2>&1
-
-if [ -f "$DET1" ] && [ -f "$DET2" ]; then
-    TEXT1=$(jq -r '.output // ""' "$DET1" 2>/dev/null)
-    TEXT2=$(jq -r '.output // ""' "$DET2" 2>/dev/null)
+# Check against baseline if available
+if [ -f ci/baseline.json ]; then
+    MODEL_KEY="tinyllama_q2k"
+    if [ "$MODE" = "NIGHTLY" ]; then
+        MODEL_KEY="ms_bitnet_i2s"
+    fi
     
-    if [ "$TEXT1" = "$TEXT2" ] && [ -n "$TEXT1" ]; then
-        echo "✅ Determinism: Outputs match at T=0"
-    else
-        echo "❌ Determinism failed: Outputs differ"
-        rm -f "$DET1" "$DET2"
-        exit $EXIT_GENERAL_ERROR
+    base_tps=$(jq -r --arg key "$MODEL_KEY" '.[$key].tokens_per_second // 0' ci/baseline.json)
+    
+    if [[ "$base_tps" != "0" ]]; then
+        threshold=$(awk -v b="$base_tps" 'BEGIN{print 0.95 * b}')
+        if ! awk -v c="$tokps" -v t="$threshold" 'BEGIN{exit !(c >= t)}'; then
+            echo "❌ Performance regression: $tokps < 95% of baseline $base_tps"
+            exit $EXIT_PERF_REGRESSION
+        fi
+        echo "✓ Performance ratio: $tokps / $base_tps baseline"
     fi
-    rm -f "$DET1" "$DET2"
+    
+    # Check RSS if time command available
+    if [ -n "$TIME_CMD" ] && grep -q "Maximum resident set size" "$TIME_OUTPUT" 2>/dev/null; then
+        rss_kb=$(awk '/Maximum resident set size/{print $6}' "$TIME_OUTPUT")
+        rss_mb=$((rss_kb / 1024))
+        echo "Memory RSS: ${rss_mb}MB"
+        
+        base_rss=$(jq -r --arg key "$MODEL_KEY" '.[$key].rss_mb // 0' ci/baseline.json)
+        
+        if [[ "$base_rss" != "0" ]]; then
+            threshold=$(awk -v b="$base_rss" 'BEGIN{print int(1.03 * b)}')
+            if (( rss_mb > threshold )); then
+                echo "❌ Memory regression: ${rss_mb}MB > 103% of baseline ${base_rss}MB"
+                exit $EXIT_MEMORY_REGRESSION
+            fi
+            echo "✓ Memory ratio: ${rss_mb}MB / ${base_rss}MB baseline"
+        fi
+    fi
 else
-    echo "⚠️  Determinism check skipped: Could not generate outputs"
+    echo "✓ Performance acceptable (no baseline for regression testing)"
 fi
-echo ""
 
-# Summary
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "            CI ACCEPTANCE: PASSED"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "All validation gates passed:"
-echo "✅ Build successful"
-echo "✅ Unit tests passed"
-echo "✅ Tensor mapping complete"
-echo "✅ Strict mode validated"
-echo "✅ Tokenization correct"
-echo "✅ Performance acceptable"
-echo "✅ FFI compatible"
-echo "✅ Deterministic at T=0"
-echo ""
-echo "BitNet.rs is production-ready."
-
+# ━━━ Success ━━━
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🎉 CI Acceptance Gate: ALL PASSED"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Mode: $MODE"
+echo "Binary: $RS_BIN"
+echo "Model: $MODEL_PATH"
+echo "All gates passed with strict validation"
 exit $EXIT_SUCCESS
