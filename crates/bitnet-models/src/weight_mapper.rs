@@ -27,11 +27,34 @@ fn normalize_name(name: &str) -> Cow<'_, str> {
     Cow::Borrowed(name)
 }
 
+/// Helper to get 2D tensor dimensions
+fn dims2(tensor: &Tensor, name: &str) -> Result<(usize, usize)> {
+    let dims = tensor.dims();
+    if dims.len() != 2 {
+        return Err(bitnet_common::BitNetError::Validation(format!(
+            "{} must be 2D, got {:?}",
+            name, dims
+        )));
+    }
+    Ok((dims[0], dims[1]))
+}
+
+/// Find a tensor by trying multiple aliases
+fn pick<'a>(tensors: &'a HashMap<String, Tensor>, candidates: &[&str]) -> Option<&'a Tensor> {
+    for k in candidates {
+        if let Some(t) = tensors.get(*k) {
+            return Some(t);
+        }
+    }
+    None
+}
+
 /// Map GGUF tensor names to transformer module names with strict option
 pub fn remap_gguf_weights_with_options(tensors: &HashMap<String, Tensor>, strict: bool) -> Result<HashMap<String, Tensor>> {
     let mut mapped = HashMap::new();
     let mut unmapped = Vec::new();
 
+    // First pass: map all tensors
     for (name, tensor) in tensors {
         // First normalize any known name variations
         let normalized = normalize_name(name);
@@ -183,6 +206,114 @@ where
         }
     }
     unmapped
+}
+
+/// Detect vocab size and normalize embedding/lm_head tensors
+/// Returns (vocab_size, actual_hidden_size)
+pub fn normalize_model_tensors(
+    tensors: &mut HashMap<String, Tensor>,
+    expected_hidden_size: usize,
+) -> Result<(usize, usize)> {
+    // 1) Locate embedding with robust aliases
+    let emb_candidates = [
+        "embed_tokens.weight",
+        "model.embed_tokens.weight",
+        "tok_embeddings.weight",
+        "token_embd.weight",
+        "transformer.wte.weight",
+    ];
+    
+    let emb_key = emb_candidates.iter()
+        .find(|k| tensors.contains_key(**k))
+        .ok_or_else(|| bitnet_common::BitNetError::Validation(
+            "embed tokens not found (tried embed_tokens/tok_embeddings/token_embd/transformer.wte)".to_string()
+        ))?;
+    
+    let emb = tensors.get(*emb_key).unwrap();
+    
+    // 2) Infer vocab + orientation from the embedding shape
+    let (er, ec) = dims2(emb, "embed_tokens.weight")?;
+    tracing::info!(
+        "Embedding tensor shape: [{}, {}], expected_hidden_size: {}",
+        er, ec, expected_hidden_size
+    );
+    
+    // Detect actual hidden size and vocab from tensor
+    let (vocab_size, hidden_size, emb_needs_t) = if er > ec {
+        // Likely [vocab, hidden]
+        (er, ec, false)
+    } else {
+        // Likely [hidden, vocab]
+        (ec, er, true)
+    };
+    
+    // Warn if detected hidden size doesn't match expected
+    if hidden_size != expected_hidden_size && expected_hidden_size != 0 {
+        tracing::warn!(
+            "Detected hidden_size {} from tensor shape differs from expected {}",
+            hidden_size, expected_hidden_size
+        );
+    };
+    
+    // 3) Normalize embedding to [n_vocab, n_embd]
+    if emb_needs_t {
+        let emb_norm = emb.t()?.contiguous()?;
+        tracing::info!(
+            "embed_tokens normalized -> [vocab={}, hidden={}], transposed=true",
+            vocab_size, hidden_size
+        );
+        tensors.insert("embed_tokens.weight".to_string(), emb_norm);
+        // Remove old key if different
+        if emb_key != &"embed_tokens.weight" {
+            tensors.remove(*emb_key);
+        }
+    } else if emb_key != &"embed_tokens.weight" {
+        // Just rename the key if needed
+        let emb = tensors.remove(*emb_key).unwrap();
+        tensors.insert("embed_tokens.weight".to_string(), emb);
+    }
+    
+    // 4) Locate lm_head with robust aliases, normalize to [n_vocab, n_embd]
+    let lm_candidates = [
+        "lm_head.weight",
+        "output.weight",
+        "model.lm_head.weight",
+        "generator.weight",
+    ];
+    
+    if let Some(lm_key) = lm_candidates.iter().find(|k| tensors.contains_key(**k)) {
+        let lm = tensors.get(*lm_key).unwrap();
+        let (lr, lc) = dims2(lm, "lm_head.weight")?;
+        
+        let lm_needs_t = match (lr, lc) {
+            (v, h) if v == vocab_size && h == hidden_size => false,
+            (h, v) if h == hidden_size && v == vocab_size => {
+                tracing::info!("lm_head appears transposed; normalizing.");
+                true
+            }
+            _ => {
+                return Err(bitnet_common::BitNetError::Validation(format!(
+                    "lm_head.weight bad shape [{},{}], want [{},{}] or transposed",
+                    lr, lc, vocab_size, hidden_size
+                )));
+            }
+        };
+        
+        if lm_needs_t {
+            let lm_norm = lm.t()?.contiguous()?;
+            tensors.insert("lm_head.weight".to_string(), lm_norm);
+            if lm_key != &"lm_head.weight" {
+                tensors.remove(*lm_key);
+            }
+        } else if lm_key != &"lm_head.weight" {
+            let lm = tensors.remove(*lm_key).unwrap();
+            tensors.insert("lm_head.weight".to_string(), lm);
+        }
+    } else {
+        tracing::info!("No lm_head.weight found; using tied weights with embed_tokens.");
+    }
+    
+    Ok((vocab_size, hidden_size))
 }
 
 /// Create a VarBuilder from mapped tensors

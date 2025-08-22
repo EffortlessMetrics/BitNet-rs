@@ -167,7 +167,10 @@ impl GgufLoader {
             config.model.vocab_size = vocab_size as usize;
         }
 
-        if let Some(hidden_size) = reader.get_u32_metadata("llama.embedding_length") {
+        // Try multiple keys for hidden size
+        if let Some(hidden_size) = reader.get_u32_metadata("llama.embedding_length")
+            .or_else(|| reader.get_u32_metadata("llama.hidden_size"))
+            .or_else(|| reader.get_u32_metadata("bitnet.hidden_size")) {
             config.model.hidden_size = hidden_size as usize;
         }
 
