@@ -82,7 +82,7 @@ impl BitNetModel {
         tensors: &HashMap<String, CandleTensor>,
         device: &Device,
     ) -> Result<Arc<TransformerModel>> {
-        use crate::weight_mapper::{create_var_builder, remap_gguf_weights};
+        use crate::weight_mapper::{create_var_builder, remap_gguf_weights, normalize_model_tensors};
 
         // Create a VarBuilder that uses our loaded tensors
         let device = match device {
@@ -96,8 +96,33 @@ impl BitNetModel {
         // If we have tensors, try to use them
         let vb = if !tensors.is_empty() {
             // Remap tensor names to match our transformer module structure
-            let mapped = remap_gguf_weights(tensors)?;
-            create_var_builder(mapped, DType::F32, &device)?
+            let mut mapped = remap_gguf_weights(tensors)?;
+            
+            // Normalize embeddings and lm_head tensors, detect vocab size and hidden size
+            let (detected_vocab, detected_hidden) = normalize_model_tensors(&mut mapped, config.model.hidden_size)?;
+            
+            // Update config with detected values
+            let mut updated_config = config.clone();
+            if updated_config.model.vocab_size != detected_vocab {
+                tracing::info!(
+                    "Updating vocab_size from {} to {} based on tensor shapes",
+                    updated_config.model.vocab_size,
+                    detected_vocab
+                );
+                updated_config.model.vocab_size = detected_vocab;
+            }
+            if updated_config.model.hidden_size != detected_hidden {
+                tracing::info!(
+                    "Updating hidden_size from {} to {} based on tensor shapes",
+                    updated_config.model.hidden_size,
+                    detected_hidden
+                );
+                updated_config.model.hidden_size = detected_hidden;
+            }
+            
+            let vb = create_var_builder(mapped, DType::F32, &device)?;
+            let model = TransformerModel::new(updated_config, vb)?;
+            return Ok(Arc::new(model));
         } else {
             // Fallback to zeros for testing
             VarBuilder::zeros(DType::F32, &device)
