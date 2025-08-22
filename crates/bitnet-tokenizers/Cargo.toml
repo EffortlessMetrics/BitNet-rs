@@ -15,10 +15,19 @@ bitnet-common = { path = "../bitnet-common" }
 bitnet-models = { path = "../bitnet-models" }
 anyhow.workspace = true
 tracing.workspace = true
+serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-sentencepiece = "0.11"
+tokenizers = { version = "0.19", default-features = false, features = ["onig"] }
 tempfile = "3.8"
 base64 = "0.21"
+
+[features]
+default = []
+spm = ["sentencepiece"]
+
+[dependencies.sentencepiece]
+version = "0.11"
+optional = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

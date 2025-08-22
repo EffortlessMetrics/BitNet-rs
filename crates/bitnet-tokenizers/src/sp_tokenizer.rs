@@ -1,13 +1,18 @@
+#[cfg(feature = "spm")]
 use bitnet_common::{BitNetError, Result};
+#[cfg(feature = "spm")]
 use sentencepiece::SentencePieceProcessor;
+#[cfg(feature = "spm")]
 use crate::Tokenizer;
 
+#[cfg(feature = "spm")]
 pub struct SpTokenizer {
     sp: SentencePieceProcessor,
     bos_token_id: Option<u32>,
     eos_token_id: Option<u32>,
 }
 
+#[cfg(feature = "spm")]
 impl SpTokenizer {
     pub fn from_file(path: &std::path::Path) -> Result<Box<dyn Tokenizer>> {
         let sp = SentencePieceProcessor::open(path).map_err(|e| {
@@ -33,6 +38,7 @@ impl SpTokenizer {
     }
 }
 
+#[cfg(feature = "spm")]
 impl Tokenizer for SpTokenizer {
     fn encode(&self, text: &str, add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
         // Use encode which returns Vec<PieceWithId>

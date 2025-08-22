@@ -119,6 +119,18 @@ pub struct InferenceCommand {
     /// Chat template to use
     #[arg(long, value_name = "TEMPLATE")]
     pub chat_template: Option<String>,
+    
+    /// Path to tokenizer.json (HF) or tokenizer.model (SPM)
+    #[arg(long, value_name = "PATH")]
+    pub tokenizer: Option<PathBuf>,
+    
+    /// Disable BOS insertion
+    #[arg(long, default_value_t = false)]
+    pub no_bos: bool,
+    
+    /// Disable EOS insertion
+    #[arg(long, default_value_t = false)]
+    pub no_eos: bool,
 
     /// Stop sequences
     #[arg(long, value_name = "SEQ")]
@@ -134,11 +146,42 @@ pub struct InferenceCommand {
 pub struct InferenceResult {
     pub prompt: String,
     pub generated_text: String,
-    pub tokens_generated: usize,
-    pub time_taken: Duration,
-    pub tokens_per_second: f64,
+    pub counts: TokenCounts,
+    pub timing_ms: TimingMetrics,
+    pub throughput_tps: ThroughputMetrics,
     pub memory_used: Option<u64>,
     pub model_info: ModelInfo,
+    pub tokenizer_info: TokenizerInfo,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TokenCounts {
+    pub prompt_tokens: usize,
+    pub generated_tokens: usize,
+    pub total_tokens: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TimingMetrics {
+    pub tokenize: f64,
+    pub prefill: f64,
+    pub decode: f64,
+    pub total: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ThroughputMetrics {
+    pub prefill: f64,
+    pub decode: f64,
+    pub e2e: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TokenizerInfo {
+    pub source: String,
+    pub vocab_size: usize,
+    pub bos_id: Option<u32>,
+    pub eos_id: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -147,6 +190,8 @@ pub struct ModelInfo {
     pub quantization: String,
     pub device: String,
     pub parameters: Option<u64>,
+    pub vocab_size: Option<usize>,
+    pub hidden_size: Option<usize>,
 }
 
 /// Performance metrics
@@ -325,7 +370,20 @@ impl InferenceCommand {
         &self,
         model_path: &PathBuf,
     ) -> Result<Arc<dyn bitnet_tokenizers::Tokenizer>> {
-        // Try to load tokenizer from model directory or use default
+        // If explicit tokenizer path provided, use it
+        if let Some(tokenizer_path) = &self.tokenizer {
+            debug!("Loading tokenizer from: {}", tokenizer_path.display());
+            return TokenizerBuilder::from_file(tokenizer_path)
+                .context("Failed to load tokenizer from file");
+        }
+        
+        // Try GGUF-embedded tokenizer (placeholder for now)
+        if let Some(tokenizer) = bitnet_tokenizers::try_from_gguf_metadata(|| anyhow::bail!("GGUF tokenizer not implemented")) {
+            debug!("Using GGUF-embedded tokenizer");
+            return Ok(tokenizer);
+        }
+        
+        // Try to load tokenizer from model directory
         let tokenizer_path =
             model_path.parent().map(|p| p.join("tokenizer.json")).filter(|p| p.exists());
 
@@ -334,8 +392,7 @@ impl InferenceCommand {
             TokenizerBuilder::from_file(&tokenizer_path)
                 .context("Failed to load tokenizer from file")
         } else {
-            debug!("Using default GPT-2 tokenizer");
-            TokenizerBuilder::from_pretrained("gpt2").context("Failed to load default tokenizer")
+            anyhow::bail!("No tokenizer found. Pass --tokenizer <tokenizer.json|tokenizer.model> or ensure tokenizer.json exists in model directory.")
         }
     }
 
@@ -446,7 +503,7 @@ impl InferenceCommand {
             if self.verbose {
                 let batch_tokens_per_sec: f64 = results[batch_idx * self.batch_size..]
                     .iter()
-                    .map(|r| r.tokens_per_second)
+                    .map(|r| r.throughput_tps.decode)
                     .sum::<f64>()
                     / batch.len() as f64;
 
@@ -463,33 +520,81 @@ impl InferenceCommand {
         Ok(results)
     }
 
-    /// Process batch sequentially
+    /// Process batch sequentially with proper timing
     async fn process_batch_sequential(
         &self,
-        _engine: &mut InferenceEngine,
+        engine: &mut InferenceEngine,
         batch: &[String],
-        _config: &GenerationConfig,
+        config: &GenerationConfig,
     ) -> Result<Vec<InferenceResult>> {
         let mut results = Vec::new();
+        let tokenizer = engine.tokenizer();
 
         for prompt in batch {
-            let start_time = Instant::now();
+            // 1. Tokenize (measure)
+            let t0 = Instant::now();
+            let prompt_ids = tokenizer.encode(prompt, !self.no_bos, false)?;
+            let t_tok_ms = t0.elapsed().as_secs_f64() * 1e3;
 
-            // Placeholder implementation
-            let generated = format!("Generated response for: {}", prompt);
+            // 2. Prefill (measure)
+            let t1 = Instant::now();
+            // TODO: Call actual prefill when engine supports it
+            // let _ = engine.prefill(&prompt_ids)?;
+            let t_prefill_ms = t1.elapsed().as_secs_f64() * 1e3;
 
-            let elapsed = start_time.elapsed();
-            let tokens_generated = generated.split_whitespace().count(); // Rough token count
-            let tokens_per_second = tokens_generated as f64 / elapsed.as_secs_f64();
+            // 3. Decode loop (measure)
+            let t2 = Instant::now();
+            let mut generated_ids = Vec::new();
+            
+            // Placeholder generation - replace with actual decoding
+            for _ in 0..config.max_new_tokens {
+                // TODO: let next_id = engine.decode_next()?;
+                let next_id = 50256; // Placeholder EOS token
+                generated_ids.push(next_id);
+                if tokenizer.eos_token_id() == Some(next_id) {
+                    break;
+                }
+                if generated_ids.len() >= config.max_new_tokens {
+                    break;
+                }
+            }
+            let t_decode_ms = t2.elapsed().as_secs_f64() * 1e3;
+
+            // 4. Decode to text
+            let generated_text = tokenizer.decode(&generated_ids)?;
+
+            // 5. Calculate metrics
+            let prompt_tokens = prompt_ids.len();
+            let generated_tokens = generated_ids.len();
+            let total_tokens = prompt_tokens + generated_tokens;
+            let t_total_ms = t_tok_ms + t_prefill_ms + t_decode_ms;
+            
+            let prefill_tps = if t_prefill_ms > 0.0 { prompt_tokens as f64 / (t_prefill_ms/1e3) } else { 0.0 };
+            let decode_tps = if t_decode_ms > 0.0 { generated_tokens as f64 / (t_decode_ms/1e3) } else { 0.0 };
+            let e2e_tps = if t_total_ms > 0.0 { total_tokens as f64 / (t_total_ms/1e3) } else { 0.0 };
 
             results.push(InferenceResult {
                 prompt: prompt.clone(),
-                generated_text: generated,
-                tokens_generated,
-                time_taken: elapsed,
-                tokens_per_second,
+                generated_text,
+                counts: TokenCounts {
+                    prompt_tokens,
+                    generated_tokens,
+                    total_tokens,
+                },
+                timing_ms: TimingMetrics {
+                    tokenize: t_tok_ms,
+                    prefill: t_prefill_ms,
+                    decode: t_decode_ms,
+                    total: t_total_ms,
+                },
+                throughput_tps: ThroughputMetrics {
+                    prefill: prefill_tps,
+                    decode: decode_tps,
+                    e2e: e2e_tps,
+                },
                 memory_used: self.get_memory_usage(),
                 model_info: self.get_model_info(),
+                tokenizer_info: self.get_tokenizer_info(tokenizer.as_ref()),
             });
         }
 
@@ -698,9 +803,9 @@ impl InferenceCommand {
                         writeln!(
                             writer,
                             "Tokens: {}, Time: {:.2}s, Speed: {:.2} tok/s",
-                            result.tokens_generated,
-                            result.time_taken.as_secs_f64(),
-                            result.tokens_per_second
+                            result.counts.generated_tokens,
+                            result.timing_ms.total / 1e3,
+                            result.throughput_tps.decode
                         )?;
                     }
                     if results.len() > 1 {
@@ -749,6 +854,32 @@ impl InferenceCommand {
             quantization: self.quantization.clone().unwrap_or_default(),
             device: self.device.clone().unwrap_or_default(),
             parameters: None, // Would be extracted from model
+            vocab_size: None, // Would be extracted from model
+            hidden_size: None, // Would be extracted from model
+        }
+    }
+    
+    /// Get tokenizer information
+    fn get_tokenizer_info(&self, tokenizer: &dyn bitnet_tokenizers::Tokenizer) -> TokenizerInfo {
+        // Determine source from tokenizer type or path
+        let source = if self.tokenizer.is_some() {
+            let path = self.tokenizer.as_ref().unwrap();
+            if path.extension().map_or(false, |e| e == "json") {
+                "hf_json".to_string()
+            } else if path.extension().map_or(false, |e| e == "model") {
+                "spm".to_string()
+            } else {
+                "unknown".to_string()
+            }
+        } else {
+            "gguf".to_string() // Assume GGUF if no explicit tokenizer
+        };
+        
+        TokenizerInfo {
+            source,
+            vocab_size: tokenizer.vocab_size(),
+            bos_id: tokenizer.bos_token_id(),
+            eos_id: tokenizer.eos_token_id(),
         }
     }
 

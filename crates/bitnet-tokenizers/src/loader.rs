@@ -21,9 +21,16 @@ pub fn load_tokenizer(path: &Path) -> Result<Box<dyn Tokenizer>> {
         }
         "model" => {
             // Load SentencePiece model directly
-            match crate::sp_tokenizer::SpTokenizer::from_file(path) {
-                Ok(t) => Ok(t),
-                Err(e) => anyhow::bail!("Failed to load SentencePiece model: {}", e),
+            #[cfg(feature = "spm")]
+            {
+                match crate::sp_tokenizer::SpTokenizer::from_file(path) {
+                    Ok(t) => Ok(t),
+                    Err(e) => anyhow::bail!("Failed to load SentencePiece model: {}", e),
+                }
+            }
+            #[cfg(not(feature = "spm"))]
+            {
+                anyhow::bail!("SentencePiece support not compiled in. Enable the 'spm' feature.")
             }
         }
         _ => {
@@ -49,7 +56,13 @@ pub fn load_tokenizer_from_gguf(metadata: &std::collections::HashMap<String, ser
                 .and_then(|v| v.as_u64())
                 .map(|v| v as u32);
                 
-            return Ok(crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&bytes, bos, eos)?);
+            #[cfg(feature = "spm")]
+            #[cfg(feature = "spm")]
+        return Ok(crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&bytes, bos, eos)?);
+        #[cfg(not(feature = "spm"))]
+        return Err(anyhow::anyhow!("SentencePiece support not compiled in. Enable the 'spm' feature."));
+            #[cfg(not(feature = "spm"))]
+            return Err(anyhow::anyhow!("SentencePiece support not compiled in. Enable the 'spm' feature."));
         } else if let Some(blob_array) = model_blob.as_array() {
             // It's a byte array
             let bytes: Vec<u8> = blob_array
@@ -64,7 +77,13 @@ pub fn load_tokenizer_from_gguf(metadata: &std::collections::HashMap<String, ser
                 .and_then(|v| v.as_u64())
                 .map(|v| v as u32);
                 
-            return Ok(crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&bytes, bos, eos)?);
+            #[cfg(feature = "spm")]
+            #[cfg(feature = "spm")]
+        return Ok(crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&bytes, bos, eos)?);
+        #[cfg(not(feature = "spm"))]
+        return Err(anyhow::anyhow!("SentencePiece support not compiled in. Enable the 'spm' feature."));
+            #[cfg(not(feature = "spm"))]
+            return Err(anyhow::anyhow!("SentencePiece support not compiled in. Enable the 'spm' feature."));
         }
     }
     
@@ -81,7 +100,10 @@ pub fn load_tokenizer_from_gguf_reader(reader: &bitnet_models::GgufReader) -> Re
         let eos = reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
         
         // Load the SentencePiece tokenizer from the embedded blob
+        #[cfg(feature = "spm")]
         return Ok(crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&bytes, bos, eos)?);
+        #[cfg(not(feature = "spm"))]
+        return Err(anyhow::anyhow!("SentencePiece support not compiled in. Enable the 'spm' feature."));
     }
     
     Err(anyhow::anyhow!("GGUF missing tokenizer.ggml.model").into())
