@@ -52,8 +52,9 @@ for p in "${PROMPTS[@]}"; do
   fi
 
   # Compare token id sequences (tolerate spacing/newlines)
-  mapfile -t A < <(tr -s '[:space:]' ' ' < "$rs_ids" | tr ' ' '\n' | grep -E '^[0-9]+' || true)
-  mapfile -t B < <(tr -s '[:space:]' ' ' < "$cpp_ids" | tr ' ' '\n' | grep -E '^[0-9]+' || true)
+  # Use awk instead of grep so pipefail doesn't trip when there are no matches.
+  mapfile -t A < <(tr -s '[:space:]' ' ' < "$rs_ids"  | tr ' ' '\n' | awk '/^[0-9]+$/ {print}')
+  mapfile -t B < <(tr -s '[:space:]' ' ' < "$cpp_ids" | tr ' ' '\n' | awk '/^[0-9]+$/ {print}')
 
   # Exact comparison
   exact=1
