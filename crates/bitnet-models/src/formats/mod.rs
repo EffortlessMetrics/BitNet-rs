@@ -3,7 +3,7 @@
 use std::path::Path;
 use anyhow::{Result, anyhow, Context};
 use serde::{Serialize, Deserialize};
-use tracing::{info, debug};
+use tracing::debug;
 
 pub mod gguf;
 pub mod huggingface;
@@ -46,10 +46,11 @@ impl ModelFormat {
             .with_context(|| format!("Failed to open file: {}", path.display()))?;
         let mut reader = BufReader::new(file);
         
-        // Read first 8 bytes for magic number
-        let mut header = [0u8; 8];
-        reader.read_exact(&mut header)
-            .context("Failed to read file header")?;
+        // Read first 16 bytes for magic number detection
+        let mut header = [0u8; 16];
+        if reader.read_exact(&mut header).is_err() {
+            return Err(anyhow!("File too small to determine format"));
+        }
         
         // Check for GGUF magic: "GGUF" (0x46554747 little-endian)
         if &header[0..4] == b"GGUF" {
@@ -58,7 +59,7 @@ impl ModelFormat {
         
         // Check for SafeTensors header (JSON metadata)
         // SafeTensors files start with an 8-byte little-endian size followed by JSON
-        if header[0] == b'{' || (header[8..].len() > 0 && header[8] == b'{') {
+        if header[0] == b'{' || header[8] == b'{' {
             return Ok(Self::SafeTensors);
         }
         

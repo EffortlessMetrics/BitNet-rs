@@ -262,6 +262,7 @@ impl GgufLoader {
             | GgufTensorType::Q5_K
             | GgufTensorType::Q6_K
             | GgufTensorType::Q8_K
+            | GgufTensorType::IQ2_S
             | GgufTensorType::I2_S => DType::U8, // Quantized types stored as bytes
         };
 
@@ -269,31 +270,46 @@ impl GgufLoader {
 
         // For quantized tensors, we need special handling
         if info.tensor_type.is_quantized() {
-            // For I2_S quantization, we need to dequantize to F32
-            if matches!(info.tensor_type, GgufTensorType::I2_S) {
-                // For now, create a placeholder F32 tensor with the correct shape
-                // TODO: Implement proper I2_S dequantization
-                tracing::warn!(
-                    "I2_S quantization detected for tensor {}, using placeholder values",
-                    info.name
-                );
-
-                let original_shape = &info.shape;
-                let num_elements: usize = original_shape.iter().product();
-
-                // Create placeholder data (small random values to avoid NaN/Inf)
-                let float_data = vec![0.001f32; num_elements];
-
-                // Create F32 tensor from placeholder data
-                Tensor::from_slice(&float_data, original_shape.as_slice(), &candle_device)
-                    .map_err(|e| BitNetError::Validation(e.to_string()))
-            } else {
-                // For other quantized types, keep as raw bytes for now
-                // (would need specific dequantizers for Q4_0, Q8_0, etc.)
-                let tensor = Tensor::from_raw_buffer(data, dtype, &info.shape, &candle_device)
+            // Handle IQ2_S quantization with FFI dequantization
+            #[cfg(feature = "iq2s-ffi")]
+            if matches!(info.tensor_type, GgufTensorType::IQ2_S) {
+                use crate::quant::iq2s;
+                let f32_data = iq2s::dequantize_to_f32(data, &info.shape)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?;
-                Ok(tensor)
+                let tensor = Tensor::from_slice(&f32_data, info.shape.as_slice(), &candle_device)
+                    .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                return Ok(tensor);
             }
+            
+            // For IQ2_S without FFI support, fail with clear message
+            #[cfg(not(feature = "iq2s-ffi"))]
+            if matches!(info.tensor_type, GgufTensorType::IQ2_S) {
+                return Err(BitNetError::Model(ModelError::InvalidFormat {
+                    format: format!(
+                        "IQ2_S tensor '{}' found but support not compiled in. \
+                        Rebuild with `--features iq2s-ffi` to enable IQ2_S support.",
+                        info.name
+                    ),
+                }));
+            }
+            
+            // For I2_S quantization, fail fast with clear error
+            if matches!(info.tensor_type, GgufTensorType::I2_S) {
+                return Err(BitNetError::Model(ModelError::InvalidFormat {
+                    format: format!(
+                        "Unsupported quantization type I2_S in tensor '{}'. \
+                        Re-quantize to a supported type (e.g., Q4_0, Q5_0, Q8_0) \
+                        or build with I2_S support after alpha.",
+                        info.name
+                    ),
+                }));
+            }
+            
+            // For other quantized types, keep as raw bytes for now
+            // (would need specific dequantizers for Q4_0, Q8_0, etc.)
+            let tensor = Tensor::from_raw_buffer(data, dtype, &info.shape, &candle_device)
+                .map_err(|e| BitNetError::Validation(e.to_string()))?;
+            Ok(tensor)
         } else {
             // For regular tensors, interpret the bytes according to the data type
             match dtype {

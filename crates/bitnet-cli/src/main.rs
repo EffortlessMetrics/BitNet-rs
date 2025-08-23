@@ -239,6 +239,17 @@ enum Commands {
 
     /// Show system information
     Info,
+    
+    /// Inspect model metadata without loading tensors
+    Inspect {
+        /// Model file path  
+        #[arg(long)]
+        model: std::path::PathBuf,
+        
+        /// Output format as JSON
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -353,6 +364,7 @@ async fn main() -> Result<()> {
         Some(Commands::Score(args)) => score::run_score(&args).await,
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
         Some(Commands::Info) => show_system_info().await,
+        Some(Commands::Inspect { model, json }) => handle_inspect_command(model, json).await,
         None => {
             // No command provided, show help
             let mut cmd = Cli::command();
@@ -1016,5 +1028,127 @@ async fn show_system_info() -> Result<()> {
     println!("  TL1 (ARM optimized): {}", style("✓").green());
     println!("  TL2 (x86 optimized): {}", style("✓").green());
 
+    Ok(())
+}
+
+/// Inspect model metadata without loading full tensors
+async fn handle_inspect_command(model_path: std::path::PathBuf, json: bool) -> Result<()> {
+    use bitnet_models::formats::ModelFormat;
+    use bitnet_models::GgufReader;
+    use serde_json::json;
+    use std::fs::File;
+    use memmap2::Mmap;
+    
+    // Tokenizer source constants
+    const TOKENIZER_SOURCE_EMBEDDED: &str = "embedded-gguf";
+    const TOKENIZER_SOURCE_EXTERNAL: &str = "external";
+
+    // Detect model format
+    let format = ModelFormat::detect_from_header(&model_path)?;
+    
+    // Extract metadata based on format
+    let metadata = match format {
+        ModelFormat::Gguf => {
+            // Memory-map the file for efficient reading
+            let file = File::open(&model_path)?;
+            let mmap = unsafe { Mmap::map(&file)? };
+            let reader = GgufReader::new(&mmap)?;
+            
+            // Extract key metadata
+            let name = reader.get_string_metadata("general.name")
+                .unwrap_or_else(|| "unknown".to_string());
+            let architecture = reader.get_string_metadata("general.architecture")
+                .unwrap_or_else(|| "unknown".to_string());
+            fn get_quantization(reader: &GgufReader) -> String {
+                if let Some(q) = reader.get_string_metadata("general.quantization_type") {
+                    q
+                } else if let Some(q) = reader.get_quantization_type() {
+                    format!("{:?}", q)
+                } else {
+                    "unknown".to_string()
+                }
+            }
+            let quantization = get_quantization(&reader);
+            let vocab_size = reader.get_u32_metadata("llama.vocab_size")
+                .or_else(|| reader.get_u32_metadata("tokenizer.ggml.tokens"))
+                .unwrap_or(0);
+            let context_length = reader.get_u32_metadata("llama.context_length")
+                .unwrap_or(0);
+            
+            // Check for tokenizer
+            let has_tokenizer = reader.get_u32_metadata("tokenizer.ggml.tokens").is_some();
+            let tokenizer_source = if has_tokenizer {
+                TOKENIZER_SOURCE_EMBEDDED
+            } else {
+                TOKENIZER_SOURCE_EXTERNAL
+            };
+            
+            // Get tensor count
+            let tensor_count = reader.tensor_count();
+            
+            json!({
+                "format": "GGUF",
+                "name": name,
+                "architecture": architecture,
+                "quantization": quantization,
+                "vocab_size": vocab_size,
+                "context_length": context_length,
+                "tensor_count": tensor_count,
+                "tokenizer": {
+                    "source": tokenizer_source,
+                    "embedded": has_tokenizer
+                },
+                "scoring_policy": {
+                    "add_bos": true,  // Default GGUF behavior
+                    "append_eos": false,
+                    "mask_pad": true
+                }
+            })
+        },
+        ModelFormat::SafeTensors => {
+            use std::io::Read;
+            
+            let mut file = File::open(&model_path)?;
+            let mut header_size_bytes = [0u8; 8];
+            file.read_exact(&mut header_size_bytes)?;
+            let header_size = u64::from_le_bytes(header_size_bytes) as usize;
+            
+            let mut header_bytes = vec![0u8; header_size];
+            file.read_exact(&mut header_bytes)?;
+            let header_str = String::from_utf8(header_bytes)
+                .map_err(|e| anyhow::anyhow!("Invalid header encoding: {}", e))?;
+            let header: serde_json::Value = serde_json::from_str(&header_str)?;
+            
+            // Count tensors (keys that aren't "__metadata__")
+            let tensor_count = header.as_object()
+                .map(|obj| obj.keys().filter(|k| *k != "__metadata__").count())
+                .unwrap_or(0);
+            
+            json!({
+                "format": "SafeTensors", 
+                "tensor_count": tensor_count,
+                "metadata": header.get("__metadata__").unwrap_or(&json!({})),
+                "tokenizer": {
+                    "source": "external-json"
+                },
+                "scoring_policy": {
+                    "add_bos": true,
+                    "append_eos": false,
+                    "mask_pad": true
+                }
+            })
+        },
+        _ => {
+            return Err(anyhow::anyhow!("Unsupported format: {:?}", format));
+        }
+    };
+    
+    if json {
+        println!("{}", serde_json::to_string_pretty(&metadata)?);
+    } else {
+        println!("{}", style("Model Metadata").bold().cyan());
+        println!("{:#?}", metadata);
+    }
+    
     Ok(())
 }

@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-08-23T09:15:00Z",
+  "platform": "Linux-x86_64-WSL2",
+  "wsl2": true,
+  "deterministic": 1,
+  "threads": 1,
+  "binary": "./bin/bitnet",
+  "tests": {
+    "introspection": false,
+    "parity": false,
+    "performance": false,
+    "ci_checks": false
+  },
+  "artifacts": {
+    "info_safetensors": "test-results/acceptance-20250823-051458/info-safetensors.json",
+    "info_gguf": "test-results/acceptance-20250823-051458/info-gguf.json",
+    "parity_results": "test-results/acceptance-20250823-051458/parity_results.json",
+    "performance_report": "test-results/acceptance-20250823-051458/PERF_COMPARISON.md"
+  },
+  "failed_checks": 2,
+  "pass": false
+}
