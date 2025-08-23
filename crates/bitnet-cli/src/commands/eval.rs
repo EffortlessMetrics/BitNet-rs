@@ -42,6 +42,10 @@ pub struct EvalCommand {
     #[arg(short, long, value_name = "PATH")]
     pub model: Option<PathBuf>,
 
+    /// Model format (auto, gguf, safetensors)
+    #[arg(long, default_value = "auto", value_name = "FORMAT")]
+    pub model_format: String,
+
     /// Path to text file for evaluation (not required if --teacher-force-ids is used)
     #[arg(long, value_name = "PATH", required_unless_present = "teacher_force_ids")]
     pub text_file: Option<PathBuf>,

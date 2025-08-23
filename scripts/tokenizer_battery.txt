@@ -1,0 +1,64 @@
+Hello, world!
+The quick brown fox jumps over the lazy dog.
+Testing 123... Testing!
+CamelCaseIdentifier and snake_case_identifier
+UPPERCASE AND lowercase AND MiXeD CaSe
+Special chars: !@#$%^&*()_+-=[]{}|;:'"<>,.?/~`
+Spaces    and     tabs	with	varying	widths
+Numbers: 0 1 42 3.14159 -273.15 1e10 0xFF 0b1010
+Math: 2+2=4, x²+y²=r², ∫f(x)dx, ∑(i=1 to n), π≈3.14159
+Code: def fibonacci(n): return n if n<=1 else fibonacci(n-1)+fibonacci(n-2)
+SQL: SELECT * FROM users WHERE id = 1 AND status = 'active';
+JSON: {"name": "test", "value": 42, "nested": {"key": "value"}}
+XML: <tag attr="value">Content &amp; entities</tag>
+Regex: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+URLs: https://www.example.com/path?query=value&param=123#anchor
+Paths: /usr/local/bin/program C:\Windows\System32\cmd.exe
+Emoji: 😀 🎉 🚀 ❤️ 🔥 💯 🤖 🦀 🐍 ☕
+Unicode: café naïve résumé Zürich
+Greek: Α Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω
+Cyrillic: Привет мир! Здравствуйте! Спасибо!
+Hebrew: שלום עולם
+Arabic: مرحبا بالعالم
+Chinese: 你好世界 中文测试 人工智能
+Japanese: こんにちは世界 日本語のテスト カタカナ ひらがな 漢字
+Korean: 안녕하세요 세계 한글 테스트
+Multi-line text with
+line breaks and
+various formatting.
+"Quoted text" and 'single quotes' and `backticks`
+Email: user@example.com admin+test@company.co.uk
+Markdown: **bold** *italic* ~~strikethrough~~ `code` [link](url)
+HTML entities: &lt;&gt;&amp;&quot;&#39;&nbsp;
+Escape sequences: \n \t \r \\ \" \' \u0041 \x42
+Binary: 01001000 01100101 01101100 01101100 01101111
+Hex dump: 48 65 6C 6C 6F 20 57 6F 72 6C 64
+Base64: SGVsbG8gV29ybGQh
+Timestamps: 2024-01-15T10:30:00Z 1705318200 Mon Jan 15 10:30:00 2024
+IPv4: 192.168.1.1 10.0.0.1 127.0.0.1 255.255.255.0
+IPv6: 2001:0db8:85a3:0000:0000:8a2e:0370:7334 ::1 fe80::
+MAC: 00:1B:44:11:3A:B7 AA-BB-CC-DD-EE-FF
+UUID: 550e8400-e29b-41d4-a716-446655440000
+Hashes: d2d2d2d2d2d2d2d2 abc123def456 sha256:1234567890abcdef
+Phone: +1-555-123-4567 (555) 123-4567 555.123.4567
+Currency: $100.00 €50.50 £75.25 ¥1000 ₹500
+Fractions: ½ ⅓ ¼ ⅕ ⅙ ⅐ ⅛ ⅑ ⅒
+Arrows: → ← ↑ ↓ ↔ ↕ ⇒ ⇐ ⇑ ⇓ ⇔ ⇕
+Box drawing: ┌─┬─┐ │ │ │ ├─┼─┤ │ │ │ └─┴─┘
+Control chars: 
+Whitespace:   　
+Zero-width: ​‌‍
+Long word: Pneumonoultramicroscopicsilicovolcanoconiosis
+Repeated: aaaaaaaaaa BBBBBBBBBB 1111111111 ##########
+Mixed scripts: Hello世界مرحباПриветשלום
+Edge cases: "" '' `` <> [] {} () null undefined NaN Infinity
+<|endoftext|>
+<|begin|>
+<|end|>
+<s>
+</s>
+[CLS]
+[SEP]
+[PAD]
+[UNK]
+[MASK]
