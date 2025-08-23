@@ -1,233 +1,219 @@
-# Validation Framework
+# BitNet.rs Validation Framework
 
 ## Overview
 
-BitNet.rs implements comprehensive validation to ensure correctness, performance, and compatibility with llama.cpp. This document outlines our validation approach and requirements.
+The BitNet.rs validation framework provides comprehensive testing and benchmarking tools to ensure correctness and performance of the 1-bit LLM implementation. It includes tokenizer parity testing, logit correlation analysis, perplexity evaluation, and performance benchmarking.
 
-## JSON Schemas (Frozen)
+## Components
 
-All CLI JSON output includes `"schema_version": "1"` to track format changes.
+### 1. Main Validation Script (`scripts/validate_all.sh`)
 
-### Run Schema
+Runs the complete validation suite including:
+- Unit tests
+- Tokenizer parity
+- Greedy argmax invariant
+- Logit parity (τ-b correlation)
+- NLL parity (perplexity)
+- Optional throughput benchmarking
 
-```json
-{
-  "type": "run",
-  "schema_version": "1",
-  "model": "path/to/model.gguf",
-  "throughput": {
-    "tokens_per_second": 42.5,
-    "tokens_total": 128,
-    "time_total_ms": 3012
-  },
-  "decoded_tokens": 64,
-  "gen_policy": {
-    "bos": true,
-    "temperature": 0.0,
-    "seed": "42"
-  },
-  "tokenizer": {
-    "type": "sentencepiece",
-    "origin": "embedded"
-  },
-  "counts": {
-    "n_meta_keys": 42,
-    "n_tensors": 128,
-    "unmapped": 0
-  },
-  "memory": {
-    "rss_mb": 512,
-    "peak_mb": 768
-  }
-}
+**Usage:**
+```bash
+MODEL_PATH=models/bitnet/model.gguf \
+TOKENIZER=models/bitnet/tokenizer.json \
+HF_MODEL_ID=1bitLLM/bitnet_b1_58-3B \
+scripts/validate_all.sh
 ```
 
-### Score Schema
-
-```json
-{
-  "type": "score",
-  "schema_version": "1",
-  "model": "path/to/model.gguf",
-  "dataset": "path/to/dataset.txt",
-  "lines": 100,
-  "tokens": 2048,
-  "mean_nll": 2.831,
-  "ppl": 16.96,
-  "latency": {
-    "total_ms": 5432
-  },
-  "tokenizer": {
-    "type": "sentencepiece",
-    "origin": "external"
-  },
-  "gen_policy": {
-    "bos": true,
-    "temperature": 0.0,
-    "seed": "42"
-  },
-  "counts": {
-    "n_meta_keys": 42,
-    "n_tensors": 128,
-    "unmapped": 0
-  }
-}
+**For quantized models:**
+```bash
+DELTA_NLL_MAX=2e-2 scripts/validate_all.sh
 ```
 
-## Validation Gates
+### 2. Greedy Argmax Checker (`scripts/check_greedy_argmax.py`)
 
-### 1. Model Compatibility (Required)
-- Zero unmapped tensors (`counts.unmapped == 0`)
-- Tokenizer origin validation (embedded vs external)
-- Strict shape assertions for all critical tensors
+Validates that greedy decoding always selects the argmax token from logits.
 
-### 2. CPU Accuracy Parity (Required)
-- NLL parity with llama.cpp: |Δ mean_nll| ≤ 0.01
-- Token ID exact match: ≥95% across test suite
-- Deterministic output with fixed seed
+**Usage:**
+```bash
+bitnet run --model model.gguf --tokenizer tokenizer.json \
+  --prompt "Test" --greedy --dump-logit-steps 10 \
+  --json-out output.json
 
-### 3. CPU Performance (Required)
-- Absolute floor: ≥1.0 tokens/second
-- Ratio vs baseline: ≥95% throughput
-- Memory usage: ≤103% of baseline RSS
+python3 scripts/check_greedy_argmax.py output.json
+```
 
-### 4. GPU Validation (When Available)
-- Determinism: identical outputs across runs
-- Performance ratios: same gates as CPU
-- Memory tracking: device + host allocations
+### 3. Decode Throughput Benchmark (`scripts/bench-decode.sh`)
 
-## Test Datasets
+Measures generation throughput and first-token latency.
 
-### Quick Smoke Test (`crossval/data/ppl_smoke.txt`)
-20 diverse prompts covering:
-- Multiple languages (English, Chinese, Japanese, German, French, Spanish)
-- Code snippets (Rust, Python, SQL, C++)
-- Mathematical expressions
-- Unicode and emoji
-- Edge cases (leap dates, NaN comparisons)
+**Usage:**
+```bash
+MODEL_PATH=model.gguf TOKENIZER=tokenizer.json \
+scripts/bench-decode.sh
+```
 
-### A/B Token Parity (`crossval/prompts.yaml`)
-Structured prompts with:
-- BOS policy specification
-- Max new tokens control
-- Long context synthesis (~1200 tokens)
-- Mixed content types
+**With baseline comparison:**
+```bash
+BENCH_BASELINE=baseline.json scripts/bench-decode.sh
+```
+
+### 4. Performance Gate (`scripts/perf-gate.sh`)
+
+Automated performance regression detection with configurable thresholds.
+
+**Usage:**
+```bash
+MODEL_PATH=model.gguf TOKENIZER=tokenizer.json \
+scripts/perf-gate.sh
+```
+
+### 5. Replay Tool (`scripts/replay_parity.py`)
+
+Debug parity failures by replaying specific test cases.
+
+**Usage:**
+```bash
+python3 scripts/replay_parity.py --row 1 artifacts/parity_failures.jsonl
+```
+
+## CLI Enhancements
+
+The `bitnet` CLI now supports advanced validation features:
+
+### Run Command
+```bash
+bitnet run --model model.gguf --tokenizer tokenizer.json \
+  --prompt "Hello world" \
+  --greedy                    # Force greedy decoding
+  --deterministic            # Single-threaded determinism
+  --threads 1                # Explicit thread count
+  --dump-logit-steps 10      # Capture first 10 steps
+  --logits-topk 10          # Top-10 logits per step
+  --assert-greedy           # Fail on non-argmax selection
+  --json-out results.json
+```
+
+### Eval Command
+```bash
+bitnet eval --model model.gguf --tokenizer tokenizer.json \
+  --text-file corpus.txt \
+  --deterministic \
+  --dump-logit-steps 24 \
+  --logits-topk 10 \
+  --json-out eval.json
+```
+
+## Validation Thresholds
+
+### PR Gates (Default)
+- **Tau-b correlation**: ≥ 0.60
+- **NLL delta**: ≤ 1e-2 (FP32), ≤ 2e-2 (quantized)
+- **Examples**: 12 prompts, 24 steps
+- **Performance regression**: ≤ 10%
+
+### Nightly Validation (Strict)
+- **Tau-b correlation**: ≥ 0.70
+- **NLL delta**: ≤ 1e-2
+- **Examples**: 100 prompts, 32 steps
+- **Performance regression**: ≤ 10%
+
+## Exit Codes
+
+| Code | Meaning | Action Required |
+|------|---------|-----------------|
+| 0 | Success | None |
+| 3 | Strict mapping failed | Check tensor mapping |
+| 4 | Strict tokenizer failed | Fix tokenizer loading |
+| 5 | NLL too high | Check perplexity calculation |
+| 6 | Tau-b too low | Check logit correlation |
+| 7 | Argmax mismatch | Fix greedy decoding |
+| 9 | Performance regression | Profile and optimize |
+
+## Environment Variables
+
+### Determinism
+- `BITNET_DETERMINISTIC=1`: Force deterministic execution
+- `RAYON_NUM_THREADS=1`: Single-threaded CPU
+- `BITNET_SEED=42`: Fixed random seed
+
+### Validation Tuning
+- `PROP_EXAMPLES`: Number of test examples
+- `TAU_STEPS`: Steps for tau-b calculation
+- `TAU_MIN`: Minimum tau-b threshold
+- `DELTA_NLL_MAX`: Maximum NLL delta
+- `LOGIT_TOPK`: Top-k logits to capture
+
+### Performance
+- `BENCH_PROMPTS`: Number of benchmark prompts
+- `MAX_NEW_TOKENS`: Tokens per benchmark
+- `PERF_REGRESSION_THRESHOLD`: Max acceptable regression %
 
 ## CI Integration
 
-### PR Gates (Fast Path)
-1. Model compatibility check
-2. Unit tests with CPU features
-3. Quick cross-validation smoke test
-4. CPU performance ratio check
+### GitHub Actions Workflow
+```yaml
+- name: Run Validation
+  env:
+    MODEL_PATH: ${{ env.MODEL_PATH }}
+    TOKENIZER: ${{ env.TOKENIZER }}
+    HF_MODEL_ID: ${{ env.HF_MODEL_ID }}
+  run: scripts/validate_all.sh
+```
 
-### Nightly Gates (Full Coverage)
-1. All PR gates
-2. Full dataset NLL parity
-3. Token ID A/B suite (≥95% match)
-4. GPU determinism (if available)
-5. Baseline updates
+### Nightly Validation
+See `.github/workflows/nightly-validation.yml` for automated strict validation with artifact collection.
 
-## Running Validation
+## Troubleshooting
 
-### Quick Validation
+### Tokenizer Parity Fails
+1. Check BOS/EOS token handling
+2. Verify vocabulary mapping
+3. Compare special token IDs
+
+### Low Tau-b Correlation
+1. Check teacher-forcing path construction
+2. Verify attention masks and position encoding
+3. Look for NaN/inf in logits
+4. Check tie-breaking determinism
+
+### High NLL Delta
+1. Verify token-weighted aggregation
+2. Check PAD masking policy
+3. For quantized models, increase threshold to 2e-2
+
+### Performance Regression
+1. Profile with `cargo bench`
+2. Check recent changes to hot paths
+3. Compare with `perf record/report`
+4. Update baseline if regression is expected
+
+## Quick Recipes
+
+### Full validation (deterministic)
 ```bash
-# CPU accuracy parity
-scripts/ci-acceptance-gate.sh
-
-# Token ID A/B testing
-scripts/ab-suite.sh
-
-# Performance gates
-ci/cpu-perf-gate.sh out/run.json
+export MODEL_PATH="models/bitnet/model.gguf"
+export TOKENIZER="models/bitnet/tokenizer.json"
+export HF_MODEL_ID="1bitLLM/bitnet_b1_58-3B"
+export BITNET_DETERMINISTIC=1 BITNET_SEED=42
+scripts/validate_all.sh
 ```
 
-### Full Validation
+### Quick smoke test
 ```bash
-# Comprehensive validation suite
-scripts/comprehensive-validation.sh
-
-# Update baselines
-scripts/update-baseline.sh
+cargo test -p bitnet-cli --no-default-features --features cpu
 ```
 
-## Baselines
-
-Performance baselines are tracked in `ci/baseline.json`:
-
-```json
-{
-  "cpu": {
-    "tinyllama_q2k_cpu": {
-      "tok_s": 42.5,
-      "rss_mb": 512
-    }
-  },
-  "gpu": {
-    "tinyllama_q2k_gpu": {
-      "tok_s": 256.0,
-      "rss_mb": 1024
-    }
-  }
-}
+### Performance baseline
+```bash
+MODEL_PATH=model.gguf TOKENIZER=tokenizer.json \
+scripts/perf-gate.sh
 ```
 
-## Determinism Requirements
+### Debug parity failure
+```bash
+# Capture failure
+PARITY_ARTIFACT=debug.jsonl scripts/validate_all.sh
 
-For reproducible validation:
-- `BITNET_DETERMINISTIC=1`
-- `BITNET_SEED=42`
-- `RAYON_NUM_THREADS=1`
-- `OMP_NUM_THREADS=1`
-- `MKL_NUM_THREADS=1`
-
-## Failure Handling
-
-### Model Compatibility Failures
-- Check weight mapper synonyms
-- Verify tensor shapes match expectations
-- Review GGUF metadata completeness
-
-### Accuracy Failures
-- Compare tokenization policies (BOS, special tokens)
-- Check numerical precision settings
-- Verify KV cache management
-
-### Performance Regressions
-- Profile with `cargo flamegraph`
-- Check SIMD utilization
-- Review memory access patterns
-
-## CI Acceptance (PR & Nightly)
-
-**Schema:** All CLI subcommands (`run`, `score`, `tokenize`) MUST include `"schema_version": "1"` in their JSON outputs. For `run` outputs, `.gen_policy.bos` MUST be present.
-
-**PR lane (embedded SPM; TinyLlama Q2\_K):**
-- **Mapper gate:** zero unmapped tensors (`xtask gate mapper` JSON `.unmapped_count==0`).
-- **Strict run:** `--strict-mapping --strict-tokenizer`; JSON must show `counts.unmapped==0`, tokenizer type `sentencepiece`.
-- **Tokenization smoke:** ≥2/3 prompts produce non‑empty IDs.
-- **Cross‑validation:**  
-  - NLL parity (teacher‑forcing): `|Δ mean_nll| ≤ 1e-2` vs `llama.cpp`.  
-  - Token‑ID A/B parity: ≥95% exact match across 20+ prompts (long‑ctx synthesized).
-- **CPU Determinism:** T=0 two runs → identical IDs (BITNET_SEED=0, OMP_NUM_THREADS=1).
-- **Performance:**  
-  - Floor ≥ **1.0 tok/s**.  
-  - Ratio ≥ **95%** of `ci/baseline.json.cpu[MODEL_KEY].tok_s`.  
-  - RSS ≤ **103%** of `ci/baseline.json.cpu[MODEL_KEY].rss_mb`.
-
-**Nightly lane (external SPM; MS BitNet):**  
-Repeat all of the above with `TOKENIZER_PATH` provided. Optionally add GPU gates (IDs identical; perf ratios in `gpu` section of baseline).
-
-**Exit codes:**  
-3/4: resource missing; 6: tokenization smoke failed; 9: perf floor/ratio; 10: RSS ratio; 11: determinism fail; 1: general gate failure.
-
-**Determinism env:**  
-`BITNET_SEED=0`, `OMP_NUM_THREADS=1`, `MKL_NUM_THREADS=1`, `RAYON_NUM_THREADS=1`, `--temperature 0`. For GPU nightlies, also disable TF32 for deterministic results.
-
-## Examples
-
-Example validation outputs are stored in `crossval/examples/`:
-- `run_cpu.json` - CPU inference output
-- `score_cpu.json` - CPU perplexity calculation
-- `run_gpu.json` - GPU inference output
-- `parity_report.json` - Token ID comparison results
+# Replay specific case
+python3 scripts/replay_parity.py --row 1 debug.jsonl
+```

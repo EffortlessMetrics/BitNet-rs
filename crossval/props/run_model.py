@@ -157,6 +157,60 @@ class BitNetRunner:
         }
         
         return RunResult(text, meta, raw)
+    
+    def run_teacher_force(
+        self, 
+        token_ids, 
+        steps, 
+        topk, 
+        timeout=120
+    ):
+        """Run BitNet with teacher-forcing on a specific token path."""
+        import tempfile
+        import json
+        import subprocess
+        import os
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
+        tmp.close()
+        
+        env = os.environ.copy()
+        env.setdefault("BITNET_DETERMINISTIC", "1")
+        env.setdefault("RAYON_NUM_THREADS", "1")
+        env.setdefault("OMP_NUM_THREADS", "1")
+        env.setdefault("MKL_NUM_THREADS", "1")
+        env.setdefault("BLAS_NUM_THREADS", "1")
+        
+        # Build argv - teacher-force doesn't need text-file content
+        args = [
+            self.bin, "eval",
+            "--model", self.model,
+            "--teacher-force-ids", ",".join(map(str, token_ids)),
+            "--dump-logit-steps", str(steps),
+            "--logits-topk", str(topk),
+            "--json-out", tmp.name
+        ]
+        
+        if self.tokenizer:
+            args += ["--tokenizer", self.tokenizer]
+        
+        p = subprocess.run(
+            args, 
+            env=env, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            timeout=timeout, 
+            check=False
+        )
+        
+        if p.returncode != 0:
+            os.unlink(tmp.name)
+            raise RuntimeError(f"bitnet eval failed: {p.stderr.decode('utf-8','replace')}")
+        
+        with open(tmp.name, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        os.unlink(tmp.name)
+        
+        return data.get("logits_dump", [])
 
 
 class LlamaCppRunner:
@@ -246,12 +300,23 @@ class HFRuntimeRunner:
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer
             
+            # Set deterministic PyTorch settings
+            torch.set_num_threads(1)
+            torch.set_num_interop_threads(1)
+            if hasattr(torch, 'use_deterministic_algorithms'):
+                torch.use_deterministic_algorithms(True, warn_only=True)
+            
             self._tokenizer = AutoTokenizer.from_pretrained(self.model_id)
             self._model = AutoModelForCausalLM.from_pretrained(
                 self.model_id, 
                 torch_dtype=torch.float32
             ).to(self.device)
             self._model.eval()
+    
+    def tokenizer(self):
+        """Get tokenizer for external use."""
+        self._load()
+        return self._tokenizer
     
     def run(
         self, 
@@ -298,3 +363,31 @@ class HFRuntimeRunner:
             {"seed": seed, "model_id": self.model_id},
             {"full_text": full_text}
         )
+    
+    def run_teacher_force(self, token_ids, steps, topk):
+        """Run HF model with teacher-forcing on a specific token path."""
+        import torch
+        self._load()
+        
+        device = next(self._model.parameters()).device
+        ids = torch.tensor([token_ids], dtype=torch.long, device=device)
+        
+        with torch.no_grad():
+            out = self._model(input_ids=ids)
+            L = out.logits.squeeze(0)  # [T, V]
+        
+        upto = min(steps, L.size(0)-1)
+        dump = []
+        
+        for t in range(upto):
+            v = L[t]  # logits predicting token_ids[t+1]
+            k = min(topk, v.size(-1))
+            vals, idxs = torch.topk(v, k)
+            topk_pairs = [(int(i), float(val)) for i, val in zip(idxs.tolist(), vals.tolist())]
+            dump.append({
+                "step": t, 
+                "topk": topk_pairs, 
+                "chosen_id": int(token_ids[t+1]) if t+1 < len(token_ids) else None
+            })
+        
+        return dump

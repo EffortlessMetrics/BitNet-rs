@@ -221,7 +221,7 @@ impl InferenceEngine {
             
             // Capture logits if requested (after sampling to know chosen_id)
             if let Some(cb) = &config.logits_cb {
-                if step < config.logits_tap_steps {
+                if (step as usize) < config.logits_tap_steps {
                     let k = config.logits_topk.min(logits.len());
                     
                     // Use partial selection for efficiency on large vocabs
@@ -243,7 +243,7 @@ impl InferenceEngine {
                         .collect();
                     
                     // Pass topk and the chosen token
-                    (cb)(step, topk, next_token);
+                    (cb)(step as usize, topk, next_token);
                 }
             }
 

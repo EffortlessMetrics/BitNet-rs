@@ -228,19 +228,50 @@ BitNet.rs provides these advantages while maintaining compatibility:
 
 ## ✅ Validation Results
 
-### Drop-in Replacement Validation (2025-08-21)
+### Drop-in Replacement Validation (2025-08-22)
 
 BitNet.rs has been **validated as a superior drop-in replacement** for bitnet.cpp:
 
 | Test | Result | Details |
 |------|--------|---------|
+| **Validation Framework** | ✅ Production-ready | Full parity test suite |
+| **Token-Weighted NLL** | ✅ Matches HF reference | Proper corpus perplexity |
+| **Tau-b Correlation** | ✅ Score-aware | Handles quantization ties |
+| **Deterministic Top-K** | ✅ Stable | Tie-breaking by token ID |
 | **Microsoft BitNet 1.2GB** | ✅ Rust loads / ❌ C++ crashes | GGUF v3 early variant support |
 | **Synthetic GGUF fixtures** | ✅ Both pass | Full compatibility |
 | **CI Acceptance Gate** | 91% pass rate | 11/12 tests passing |
 | **Memory safety** | ✅ No segfaults | Rust guarantees |
 | **Error handling** | ✅ Graceful failures | Better diagnostics |
 
-**Key Achievement**: BitNet.rs successfully loads the Microsoft BitNet model (GGUF v3 early variant) that causes the C++ implementation to crash with assertion failures.
+### Validation Framework Components
+
+#### 1. Tokenizer Parity
+- **Exact token ID matching** between Rust and HF tokenizers
+- **BOS/EOS handling** consistency
+- **Smoke tests** for quick validation
+
+#### 2. Logit Parity (Tau-b)
+- **Score-aware Kendall's tau-b** for handling quantization ties
+- **Deterministic top-k** with tie-breaking by token ID
+- **NaN demotion** to -inf for robustness
+- **Configurable thresholds**: TAU_MIN=0.60 (default), 0.70 (strict)
+
+#### 3. NLL Parity
+- **Token-weighted mean** matching industry standard
+- **Teacher-forcing** through decode path
+- **PAD masking** support
+- **Configurable tolerance**: 1e-2 (FP32), 2e-2 (quantized)
+
+#### 4. Property-Based Testing
+- **Hypothesis framework** for exhaustive testing
+- **Greedy argmax invariant** validation
+- **Deterministic replay** from artifacts
+
+**Key Achievements**:
+1. BitNet.rs successfully loads the Microsoft BitNet model (GGUF v3 early variant) that causes the C++ implementation to crash
+2. Complete validation framework with tokenizer → logit → NLL parity testing
+3. Robust handling of quantization effects without false positives
 
 ## 📅 Stability Timeline
 

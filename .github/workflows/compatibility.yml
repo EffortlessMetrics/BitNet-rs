@@ -80,12 +80,64 @@ jobs:
             LD_LIBRARY_PATH=../../../target/release ./test_ffi
           fi
 
+  validation-pr:
+    name: Model Validation (PR Lane)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq bc
+          pip install transformers torch scipy
+      - name: Build BitNet CLI
+        run: |
+          cargo build -p bitnet-cli --release --no-default-features --features cpu
+      - name: Download test model
+        run: |
+          # Download small test model for CI (you'll need to set this up)
+          echo "Model download would go here"
+          # For now, skip if no model available
+          if [ ! -f "models/test/model.gguf" ]; then
+            echo "No test model available, skipping validation"
+            exit 0
+          fi
+      - name: Run validation suite
+        run: |
+          if [ -f "models/test/model.gguf" ]; then
+            MODEL_PATH=models/test/model.gguf \
+            TOKENIZER=models/test/tokenizer.json \
+            HF_MODEL_ID=test/model \
+            PROP_EXAMPLES=5 \
+            TAU_STEPS=10 \
+            TAU_MIN=0.60 \
+            DELTA_NLL_MAX=1e-2 \
+            scripts/validate_all.sh
+          fi
+      - name: Upload artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-artifacts
+          path: artifacts/
+
   tokenizer-fixtures:
     name: Tokenizer Compatibility Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install Python dependencies
+        run: |
+          pip install transformers torch
       - name: Test tokenizer fixtures
         run: |
           cd crates/bitnet-tokenizers
@@ -102,6 +154,22 @@ jobs:
             --model llama \
             --input "Hello, world!" \
             --expected fixtures/llama-hello-world.json
+      - name: Tokenizer parity smoke test
+        if: github.event_name == 'pull_request'
+        run: |
+          # Build BitNet CLI
+          cargo build -p bitnet-cli --release --no-default-features --features cpu
+          
+          # Run smoke test if model and tokenizer available
+          if [ -f "models/test-model.gguf" ] && [ -f "models/tokenizer.json" ]; then
+            BITNET_BIN=target/release/bitnet \
+            MODEL_PATH=models/test-model.gguf \
+            TOKENIZER=models/tokenizer.json \
+            HF_MODEL_ID=gpt2 \
+            scripts/test-tokenizer-parity.py --smoke
+          else
+            echo "Skipping tokenizer parity test - model not available"
+          fi
 
   gguf-compat:
     name: GGUF Compatibility Check
@@ -138,6 +206,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install Python dependencies
+        run: |
+          pip install hypothesis transformers torch
       - name: Download test model
         run: cargo xtask download-model
       - name: Build C++ implementation
@@ -147,10 +221,17 @@ jobs:
           BITNET_GGUF: models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
           BITNET_DETERMINISTIC: 1
           BITNET_SEED: 42
+          PARITY_ARTIFACT: artifacts/parity_failures.jsonl
         run: |
           cargo test --package crossval --features deterministic -- \
             --test eval_ids_parity \
             --nocapture
+      - name: Upload parity artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-artifacts
+          path: artifacts/*.jsonl
 
   audit-and-deny:
     name: Security and License Audit

@@ -1,15 +1,39 @@
 use anyhow::{Context, Result};
 use clap::Args;
 use serde::{Deserialize, Serialize};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::time::Instant;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use bitnet_inference::InferenceEngine;
 use bitnet_models::ModelLoader;
 
 use crate::config::CliConfig;
+
+/// Running sum of NLL and the number of predicted tokens (T-1)
+#[derive(Clone, Copy, Debug, Default)]
+struct NllStats {
+    sum: f64,      // total negative log-likelihood over predicted tokens
+    tokens: usize, // number of predicted tokens (T-1), padding excluded
+}
+
+impl NllStats {
+    #[inline]
+    fn mean(self) -> f64 {
+        if self.tokens > 0 {
+            self.sum / self.tokens as f64
+        } else {
+            0.0
+        }
+    }
+
+    #[inline]
+    fn add(&mut self, other: NllStats) {
+        self.sum += other.sum;
+        self.tokens += other.tokens;
+    }
+}
 
 /// Evaluate model perplexity and performance
 #[derive(Debug, Args)]
@@ -18,9 +42,9 @@ pub struct EvalCommand {
     #[arg(short, long, value_name = "PATH")]
     pub model: Option<PathBuf>,
 
-    /// Path to text file for evaluation
-    #[arg(long, value_name = "PATH")]
-    pub text_file: PathBuf,
+    /// Path to text file for evaluation (not required if --teacher-force-ids is used)
+    #[arg(long, value_name = "PATH", required_unless_present = "teacher_force_ids")]
+    pub text_file: Option<PathBuf>,
 
     /// Path to tokenizer.json (HF) or tokenizer.model (SPM)
     #[arg(long, value_name = "PATH")]
@@ -53,6 +77,43 @@ pub struct EvalCommand {
     /// Number of lines to evaluate (default: all)
     #[arg(long)]
     pub max_lines: Option<usize>,
+
+    /// Teacher-forcing mode: comma-separated token IDs
+    #[arg(long, value_name = "IDS")]
+    pub teacher_force_ids: Option<String>,
+
+    /// Dump logit steps during teacher-forcing (max steps)
+    #[arg(long)]
+    pub dump_logit_steps: Option<usize>,
+
+    /// Top-k tokens to include in logit dump
+    #[arg(long, default_value = "10", value_name = "K")]
+    pub logits_topk: usize,
+
+    /// Enable deterministic mode (single-threaded)
+    #[arg(long)]
+    pub deterministic: bool,
+
+    /// Number of threads to use (0 = all cores)
+    #[arg(long, default_value = "0")]
+    pub threads: usize,
+}
+
+/// Single step of logit information for teacher-forcing
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LogitStep {
+    pub step: usize,
+    pub topk: Vec<(u32, f32)>, // (token_id, logit)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chosen_id: Option<u32>,
+}
+
+/// Scoring policy configuration
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ScoringPolicy {
+    pub add_bos: bool,
+    pub append_eos: bool,
+    pub mask_pad: bool,
 }
 
 /// Evaluation results
@@ -67,6 +128,20 @@ pub struct EvalResults {
     pub perplexity: f64,
     pub timing_ms: EvalTiming,
     pub tokens_per_second: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logits_dump: Option<Vec<LogitStep>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scoring_policy: Option<ScoringPolicy>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tf_path_head: Option<Vec<u32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub totals: Option<EvalTotals>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EvalTotals {
+    pub lines: usize,
+    pub predicted_tokens: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -76,23 +151,91 @@ pub struct EvalTiming {
     pub per_token: f64,
 }
 
+/// Small helper for deterministic, robust top-k on possibly quantized logits
+#[inline]
+fn topk_stable_indices(logits: &[f32], k: usize) -> Vec<usize> {
+    use core::cmp::Ordering;
+    if k == 0 {
+        return Vec::new();
+    }
+    
+    let mut idx: Vec<usize> = (0..logits.len()).collect();
+    
+    // Sort by logit descending, then by index ascending for ties
+    idx.sort_by(|&a, &b| {
+        match logits[b].partial_cmp(&logits[a]) {
+            Some(Ordering::Less) => Ordering::Less,
+            Some(Ordering::Greater) => Ordering::Greater,
+            _ => a.cmp(&b), // Deterministic tie-breaking
+        }
+    });
+    
+    idx.truncate(k);
+    idx
+}
+
+/// Stable log-softmax computation
+#[inline]
+fn log_softmax_stable(xs: &[f32]) -> Vec<f32> {
+    let mut m = f32::NEG_INFINITY;
+    for &v in xs {
+        if v > m {
+            m = v;
+        }
+    }
+    let mut sum = 0.0f32;
+    for &v in xs {
+        sum += (v - m).exp();
+    }
+    let lse = m + sum.ln();
+    xs.iter().map(|&v| v - lse).collect()
+}
+
 impl EvalCommand {
     /// Execute the evaluation command
     pub async fn execute(&self, config: &CliConfig) -> Result<()> {
         // Setup logging
         self.setup_logging(config)?;
 
+        // Set deterministic mode if requested
+        if self.deterministic {
+            std::env::set_var("BITNET_DETERMINISTIC", "1");
+            std::env::set_var("RAYON_NUM_THREADS", "1");
+            std::env::set_var("OMP_NUM_THREADS", "1");
+            std::env::set_var("MKL_NUM_THREADS", "1");
+            std::env::set_var("BLAS_NUM_THREADS", "1");
+        }
+
+        // Set thread count
+        if self.threads > 0 {
+            std::env::set_var("RAYON_NUM_THREADS", self.threads.to_string());
+        }
+
         info!("Starting model evaluation");
 
         // Load model and tokenizer
         let (engine, tokenizer) = self.load_model_and_tokenizer(config).await?;
 
-        // Read text file
-        let lines = self.read_text_file()?;
-        info!("Loaded {} lines for evaluation", lines.len());
+        // Friendly guardrail for accidental empty top-k
+        if self.dump_logit_steps.unwrap_or(0) > 0 && self.logits_topk == 0 {
+            warn!("--dump-logit-steps > 0 but --logits-topk == 0: no tokens will be recorded.");
+        }
 
-        // Perform evaluation
-        let results = self.evaluate(engine, tokenizer, lines).await?;
+        // Route: teacher-forcing vs file
+        let results = if let Some(tf_csv) = &self.teacher_force_ids {
+            let tf_ids: Vec<u32> = tf_csv
+                .split(',')
+                .filter(|s| !s.is_empty())
+                .map(|s| s.parse::<u32>())
+                .collect::<Result<Vec<_>, _>>()
+                .context("Failed to parse --teacher-force-ids CSV")?;
+            info!("Running teacher-forcing evaluation with {} tokens", tf_ids.len());
+            self.evaluate_teacher_force(engine, tf_ids).await?
+        } else {
+            let lines = self.read_text_file()?;
+            info!("Loaded {} lines for evaluation", lines.len());
+            self.evaluate(engine, tokenizer, lines).await?
+        };
 
         // Output results
         self.output_results(&results)?;
@@ -203,10 +346,13 @@ impl EvalCommand {
         }
     }
 
-    /// Read text file
+    /// Read text file (only required when not teacher-forcing)
     fn read_text_file(&self) -> Result<Vec<String>> {
-        let file = std::fs::File::open(&self.text_file)
-            .with_context(|| format!("Failed to open text file: {}", self.text_file.display()))?;
+        let tf = self.text_file.as_ref()
+            .ok_or_else(|| anyhow::anyhow!("--text-file is required unless --teacher-force-ids is provided"))?;
+        
+        let file = std::fs::File::open(tf)
+            .with_context(|| format!("Failed to open text file: {}", tf.display()))?;
         
         let reader = BufReader::new(file);
         let mut lines = Vec::new();
@@ -227,7 +373,58 @@ impl EvalCommand {
         Ok(lines)
     }
 
-    /// Perform evaluation
+    /// Teacher-forcing NLL for a single sequence using the decode path
+    /// Returns (sum of NLL over predicted tokens, number of predicted tokens)
+    async fn compute_nll_stats(
+        &self,
+        engine: &mut InferenceEngine,
+        tokens: &[u32],
+        pad_id: Option<u32>,
+    ) -> Result<NllStats> {
+        if tokens.len() < 2 {
+            return Ok(NllStats::default());
+        }
+
+        let mut stats = NllStats::default();
+        let mut prefix: Vec<u32> = Vec::with_capacity(tokens.len());
+        prefix.push(tokens[0]);
+
+        for t in 1..tokens.len() {
+            // Get logits from forward pass
+            let mut logits = engine.eval_ids(&prefix).await
+                .context("eval_ids in teacher-forcing")?;
+            
+            // Demote NaNs for robustness
+            for v in &mut logits {
+                if !v.is_finite() {
+                    *v = f32::NEG_INFINITY;
+                }
+            }
+
+            // Skip padding tokens if specified
+            if let Some(pid) = pad_id {
+                if tokens[t] == pid {
+                    prefix.push(tokens[t]);
+                    continue;
+                }
+            }
+
+            // Compute log probabilities
+            let logp = log_softmax_stable(&logits);
+            let target = tokens[t] as usize;
+            let lp = *logp.get(target)
+                .ok_or_else(|| anyhow::anyhow!("target index {} out of bounds", target))?;
+            
+            stats.sum -= lp as f64;
+            stats.tokens += 1;
+
+            prefix.push(tokens[t]);
+        }
+        
+        Ok(stats)
+    }
+
+    /// Evaluate on lines from a file (corpus), token-weighted mean NLL
     async fn evaluate(
         &self,
         mut engine: InferenceEngine,
@@ -235,8 +432,7 @@ impl EvalCommand {
         lines: Vec<String>,
     ) -> Result<EvalResults> {
         let start = Instant::now();
-        let mut nlls = Vec::new();
-        let mut total_tokens = 0;
+        let mut agg = NllStats::default();
 
         // Set seed if provided
         if let Some(seed) = self.seed {
@@ -252,15 +448,10 @@ impl EvalCommand {
                 continue; // Skip too short sequences
             }
 
-            // Compute NLL (placeholder - requires actual implementation)
-            // In real implementation, this would:
-            // 1. Run forward pass with teacher forcing
-            // 2. Compute cross-entropy loss
-            // 3. Return mean NLL
-            let nll = self.compute_nll(&mut engine, &tokens)?;
-            
-            nlls.push(nll);
-            total_tokens += tokens.len();
+            // Compute NLL with proper teacher-forcing
+            let pad_id = tokenizer.pad_token_id();
+            let s = self.compute_nll_stats(&mut engine, &tokens, pad_id).await?;
+            agg.add(s);
 
             if (i + 1) % 10 == 0 {
                 info!("Progress: {}/{} lines", i + 1, lines.len());
@@ -269,62 +460,133 @@ impl EvalCommand {
 
         let elapsed = start.elapsed();
         let elapsed_ms = elapsed.as_secs_f64() * 1000.0;
-
-        // Compute statistics
-        let mean_nll = nlls.iter().sum::<f64>() / nlls.len() as f64;
-        let variance = nlls.iter()
-            .map(|x| (x - mean_nll).powi(2))
-            .sum::<f64>() / nlls.len() as f64;
-        let std_nll = variance.sqrt();
+        let mean_nll = agg.mean();
         let perplexity = mean_nll.exp();
+        let predicted = agg.tokens.max(1); // T-1 token count
 
         Ok(EvalResults {
             model_path: self.model.as_ref()
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|| "default".to_string()),
-            text_file: self.text_file.display().to_string(),
-            lines_evaluated: nlls.len(),
-            total_tokens,
+            text_file: self.text_file.as_ref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "teacher-forced".to_string()),
+            lines_evaluated: lines.len(),
+            total_tokens: predicted,
             mean_nll,
-            std_nll,
+            std_nll: 0.0, // Would need to track per-line stats for proper std
             perplexity,
             timing_ms: EvalTiming {
                 total: elapsed_ms,
-                per_line: elapsed_ms / nlls.len() as f64,
-                per_token: elapsed_ms / total_tokens as f64,
+                per_line: elapsed_ms / (lines.len().max(1) as f64),
+                per_token: elapsed_ms / (predicted as f64),
             },
-            tokens_per_second: total_tokens as f64 / elapsed.as_secs_f64(),
+            tokens_per_second: (predicted as f64) / elapsed.as_secs_f64(),
+            logits_dump: None,
+            scoring_policy: Some(ScoringPolicy {
+                add_bos: true,
+                append_eos: true,
+                mask_pad: true,
+            }),
+            tf_path_head: None,
+            totals: Some(EvalTotals {
+                lines: lines.len(),
+                predicted_tokens: predicted,
+            }),
         })
     }
 
-    /// Compute NLL for a sequence using teacher-forcing
-    fn compute_nll(&self, engine: &mut InferenceEngine, tokens: &[u32]) -> Result<f64> {
-        use candle_core::{Tensor, Device, D};
-        use candle_nn::ops::log_softmax;
+    /// Evaluate with teacher-forcing on an explicit token path, with optional logits dump
+    async fn evaluate_teacher_force(
+        &self,
+        mut engine: InferenceEngine,
+        tf_ids: Vec<u32>,
+    ) -> Result<EvalResults> {
+        let start = Instant::now();
         
-        if tokens.len() < 2 {
-            return Ok(0.0);
-        }
+        // Compute NLL stats
+        let stats = if tf_ids.len() >= 2 {
+            self.compute_nll_stats(&mut engine, &tf_ids, None).await?
+        } else {
+            NllStats::default()
+        };
         
-        let device = Device::Cpu;
-        let seq_len = tokens.len();
+        let mean_nll = stats.mean();
+        let perplexity = mean_nll.exp();
+        let predicted = stats.tokens.max(1);
+
+        // Optional logits dump (teacher-forced)
+        let logits_dump = if let Some(steps) = self.dump_logit_steps {
+            if steps > 0 && tf_ids.len() > 1 {
+                let mut dump = Vec::new();
+                for (step, t) in (0..(tf_ids.len() - 1)).take(steps).enumerate() {
+                    let mut logits: Vec<f32> = engine.eval_ids(&tf_ids[..=t]).await?;
+                    
+                    // Demote NaNs to -inf
+                    for v in &mut logits {
+                        if !v.is_finite() {
+                            *v = f32::NEG_INFINITY;
+                        }
+                    }
+                    
+                    let k = self.logits_topk.min(logits.len());
+                    let idx = topk_stable_indices(&logits, k);
+                    let topk: Vec<(u32, f32)> = idx.into_iter()
+                        .map(|i| (i as u32, logits[i]))
+                        .collect();
+                    
+                    dump.push(LogitStep {
+                        step,
+                        topk,
+                        chosen_id: Some(tf_ids[t + 1]),
+                    });
+                }
+                Some(dump)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let elapsed = start.elapsed();
+        let elapsed_ms = elapsed.as_secs_f64() * 1000.0;
         
-        // Create input tensor [1, T]
-        let input_ids = Tensor::from_vec(tokens.to_vec(), (1, seq_len), &device)?;
+        // Include first N tokens of TF path for replay
+        let tf_path_head = if tf_ids.len() <= 100 {
+            Some(tf_ids.clone())
+        } else {
+            Some(tf_ids[..100].to_vec())
+        };
         
-        // Get the model and call forward_full
-        // Note: This requires access to the underlying model's transformer
-        // For now we'll use a simplified approach
-        // In production, we'd expose this through the engine API
-        
-        // Placeholder: compute a realistic NLL based on token count
-        // Real implementation would call model.transformer.forward_full(&input_ids)
-        // then compute cross-entropy with shifted targets
-        
-        // Approximate perplexity-based NLL (temporary)
-        let base_nll = 2.3; // Typical for good models
-        let length_penalty = (seq_len as f64).ln() * 0.1;
-        Ok(base_nll + length_penalty)
+        Ok(EvalResults {
+            model_path: self.model.as_ref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "default".to_string()),
+            text_file: "teacher-forced".to_string(),
+            lines_evaluated: 1,
+            total_tokens: predicted, // predicted tokens (T-1)
+            mean_nll,
+            std_nll: 0.0,
+            perplexity,
+            timing_ms: EvalTiming {
+                total: elapsed_ms,
+                per_line: elapsed_ms,
+                per_token: elapsed_ms / (predicted as f64),
+            },
+            tokens_per_second: (predicted as f64) / elapsed.as_secs_f64(),
+            logits_dump,
+            scoring_policy: Some(ScoringPolicy {
+                add_bos: false, // TF path already includes BOS if needed
+                append_eos: false,
+                mask_pad: false,
+            }),
+            tf_path_head,
+            totals: Some(EvalTotals {
+                lines: 1,
+                predicted_tokens: predicted,
+            }),
+        })
     }
 
     /// Output results
