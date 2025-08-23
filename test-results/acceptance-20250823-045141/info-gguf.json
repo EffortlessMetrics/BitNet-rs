@@ -1,0 +1,5 @@
+error: unexpected argument '--model' found
+
+Usage: bitnet info [OPTIONS]
+
+For more information, try '--help'.

@@ -400,6 +400,26 @@ enum Cmd {
         #[arg(long, default_value = "human")]
         format: String,
     },
+
+    /// Vendor GGML quantization files for IQ2_S support
+    ///
+    /// Downloads GGML quantization headers and implementation from llama.cpp
+    /// to enable IQ2_S tensor support through FFI. This is required for
+    /// building with the `iq2s-ffi` feature.
+    ///
+    /// Example:
+    ///   cargo xtask vendor-ggml --commit b4247
+    VendorGgml {
+        /// llama.cpp commit SHA to vendor from
+        #[arg(long, default_value = "b4247")]
+        commit: String,
+        /// Force re-download even if files exist
+        #[arg(long, default_value_t = false)]
+        force: bool,
+        /// Output directory for vendored files
+        #[arg(long, default_value = "crates/bitnet-ggml-ffi/csrc")]
+        output: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -508,6 +528,9 @@ fn real_main() -> Result<()> {
         }
         Cmd::DetectBreaking { baseline, current, format } => {
             detect_breaking_changes_cmd(baseline.as_deref(), &current, &format)
+        }
+        Cmd::VendorGgml { commit, force, output } => {
+            vendor_ggml_cmd(&commit, force, &output)
         }
     }
 }
@@ -2270,6 +2293,92 @@ fn is_executable(path: &Path) -> bool {
         // On Windows, check if it's an .exe file
         path.extension().map_or(false, |ext| ext == "exe")
     }
+}
+
+fn vendor_ggml_cmd(commit: &str, force: bool, output_dir: &Path) -> Result<()> {
+    println!("📦 Vendoring GGML quantization files from llama.cpp");
+    println!("   Commit: {}", commit);
+    println!("   Output: {}", output_dir.display());
+    
+    // Create output directory structure
+    let ggml_dir = output_dir.join("ggml");
+    let include_dir = ggml_dir.join("include").join("ggml");
+    let src_dir = ggml_dir.join("src");
+    
+    fs::create_dir_all(&include_dir)?;
+    fs::create_dir_all(&src_dir)?;
+    
+    // Files to download - try multiple paths for compatibility
+    let files = vec![
+        // Try new structure first, then old
+        (vec!["ggml/include/ggml/ggml.h", "ggml.h", "ggml-src/ggml.h"], include_dir.join("ggml.h")),
+        (vec!["ggml/src/ggml-quants.h", "ggml-quants.h"], src_dir.join("ggml-quants.h")),
+        (vec!["ggml/src/ggml-quants.c", "ggml-quants.c"], src_dir.join("ggml-quants.c")),
+        (vec!["ggml/src/ggml-common.h", "ggml-common.h"], src_dir.join("ggml-common.h")),
+        (vec!["ggml/src/ggml-impl.h", "ggml-impl.h"], src_dir.join("ggml-impl.h")),
+    ];
+    
+    let client = Client::builder()
+        .user_agent(USER_AGENT_STRING)
+        .timeout(Duration::from_secs(30))
+        .build()?;
+    
+    let base_url = format!("https://raw.githubusercontent.com/ggerganov/llama.cpp/{}", commit);
+    
+    for (remote_paths, local_path) in files {
+        if local_path.exists() && !force {
+            println!("   ✓ {} (exists, skipping)", local_path.file_name().unwrap().to_string_lossy());
+            continue;
+        }
+        
+        println!("   ⬇ Downloading {}...", local_path.file_name().unwrap().to_string_lossy());
+        
+        let mut downloaded = false;
+        for remote_path in &remote_paths {
+            let url = format!("{}/{}", base_url, remote_path);
+            
+            match client.get(&url).send() {
+                Ok(response) if response.status().is_success() => {
+                    let content = response.bytes()?;
+                    fs::write(&local_path, &content)?;
+                    println!("   ✓ {} ({} bytes)", 
+                        local_path.file_name().unwrap().to_string_lossy(), 
+                        content.len());
+                    downloaded = true;
+                    break;
+                }
+                _ => continue,
+            }
+        }
+        
+        if !downloaded {
+            // Some files are optional (e.g., ggml-common.h, ggml-impl.h)
+            if local_path.file_name().unwrap().to_string_lossy().contains("common") ||
+               local_path.file_name().unwrap().to_string_lossy().contains("impl") {
+                println!("   ⚠ {} (optional file not found, skipping)", 
+                    local_path.file_name().unwrap().to_string_lossy());
+            } else {
+                bail!("Failed to download required file: {}", 
+                    local_path.file_name().unwrap().to_string_lossy());
+            }
+        }
+    }
+    
+    // Create version file to track vendored commit
+    let version_file = ggml_dir.join("GGML_VERSION");
+    fs::write(&version_file, commit)?;
+    
+    println!();
+    println!("✅ GGML files vendored successfully from commit {}", commit);
+    println!("   Files saved to: {}", ggml_dir.display());
+    println!();
+    println!("Next steps:");
+    println!("  1. Build with IQ2_S support:");
+    println!("     cargo build -p bitnet-cli --release --features iq2s-ffi");
+    println!("  2. Test IQ2_S model loading:");
+    println!("     ./target/release/bitnet inspect --model <iq2s-model.gguf>");
+    
+    Ok(())
 }
 
 #[cfg(test)]

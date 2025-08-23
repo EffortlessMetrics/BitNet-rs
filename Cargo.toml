@@ -4,6 +4,7 @@ members = [
     ".",                          # Main library crate
     "crates/bitnet-common",
     "crates/bitnet-compat",
+    "crates/bitnet-ggml-ffi",      # GGML FFI for IQ2_S support
     "crates/bitnet-models",
     "crates/bitnet-quantization",
     "crates/bitnet-kernels",

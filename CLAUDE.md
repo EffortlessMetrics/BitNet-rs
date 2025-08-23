@@ -12,6 +12,9 @@ cargo build --release --no-default-features --features cpu
 # Build with GPU/CUDA support
 cargo build --release --no-default-features --features cuda
 
+# Build with IQ2_S quantization support (requires GGML FFI)
+cargo build --release --no-default-features --features "cpu,iq2s-ffi"
+
 # Run tests (fast, Rust-only)
 cargo test --workspace --no-default-features --features cpu
 
@@ -41,6 +44,9 @@ cargo llvm-cov --workspace --features cpu --html
 ```bash
 # Download BitNet model from Hugging Face
 cargo run -p xtask -- download-model
+
+# Vendor GGML quantization files for IQ2_S support
+cargo run -p xtask -- vendor-ggml --commit <llama.cpp-commit>
 
 # Fetch and build Microsoft BitNet C++ for cross-validation
 cargo run -p xtask -- fetch-cpp

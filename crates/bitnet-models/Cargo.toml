@@ -13,6 +13,7 @@ description = "Model definitions and loading for BitNet inference"
 [dependencies]
 bitnet-common = { path = "../bitnet-common" }
 bitnet-quantization = { path = "../bitnet-quantization" }
+bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", optional = true }
 anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true
@@ -38,3 +39,4 @@ proptest = "1"
 default = []
 gpu = ["bitnet-common/gpu", "candle-core/cuda"]
 validation = []
+iq2s-ffi = ["bitnet-ggml-ffi/iq2s-ffi"]

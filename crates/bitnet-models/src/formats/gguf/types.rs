@@ -426,6 +426,7 @@ pub enum GgufTensorType {
     Q5_K,
     Q6_K,
     Q8_K,
+    IQ2_S, // GGML IQ2_S quantization (type 24)
     I2_S, // BitNet 2-bit signed quantization (type 36)
 }
 
@@ -446,6 +447,7 @@ impl GgufTensorType {
             13 => Ok(Self::Q5_K),
             14 => Ok(Self::Q6_K),
             15 => Ok(Self::Q8_K),
+            24 => Ok(Self::IQ2_S), // GGML IQ2_S format
             36 => Ok(Self::I2_S), // BitNet I2_S format
             _ => Err(BitNetError::Model(ModelError::InvalidFormat {
                 format: format!("Unknown tensor type: {}", value),
@@ -469,6 +471,7 @@ impl GgufTensorType {
             Self::Q5_K => 176,
             Self::Q6_K => 210,
             Self::Q8_K => 256,
+            Self::IQ2_S => 66, // GGML IQ2_S block size: 256/4 bits + 2 bytes
             Self::I2_S => {
                 // Delegate to centralized I2SLayout
                 use bitnet_quantization::I2SLayout;
@@ -494,6 +497,7 @@ impl GgufTensorType {
             Self::Q5_K => 256,
             Self::Q6_K => 256,
             Self::Q8_K => 256,
+            Self::IQ2_S => 256, // GGML IQ2_S uses 256-element blocks
             Self::I2_S => {
                 // Delegate to centralized I2SLayout
                 use bitnet_quantization::I2SLayout;

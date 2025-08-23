@@ -85,14 +85,13 @@ run_introspection() {
 
     if [[ -n "$SAFETENSORS_MODEL" && -f "$SAFETENSORS_MODEL" ]]; then
         echo "  Checking SafeTensors format..."
-        $BITNET_BIN info \
+        env RUST_LOG=error $BITNET_BIN inspect \
             --model "$SAFETENSORS_MODEL" \
-            --tokenizer "$SAFETENSORS_TOKENIZER" \
             --json > "$OUTPUT_DIR/info-safetensors.json" 2>&1
 
         if [ $? -eq 0 ]; then
             log_pass "SafeTensors introspection"
-            jq -r '.format, .tokenizer_source, .scoring_policy' "$OUTPUT_DIR/info-safetensors.json" | head -3
+            jq -r '.format, .tokenizer.source, .scoring_policy' "$OUTPUT_DIR/info-safetensors.json" | head -3
         else
             log_fail "SafeTensors introspection failed"
             FAILED=$((FAILED + 1))
@@ -109,13 +108,13 @@ run_introspection() {
 
     if [[ -n "$GGUF_MODEL" && -f "$GGUF_MODEL" ]]; then
         echo "  Checking GGUF format..."
-        $BITNET_BIN info \
+        env RUST_LOG=error $BITNET_BIN inspect \
             --model "$GGUF_MODEL" \
             --json > "$OUTPUT_DIR/info-gguf.json" 2>&1
 
         if [ $? -eq 0 ]; then
             log_pass "GGUF introspection"
-            jq -r '.format, .tokenizer_source, .scoring_policy' "$OUTPUT_DIR/info-gguf.json" | head -3
+            jq -r '.format, .tokenizer.source, .scoring_policy' "$OUTPUT_DIR/info-gguf.json" | head -3
         else
             log_fail "GGUF introspection failed"
             FAILED=$((FAILED + 1))

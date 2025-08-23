@@ -41,6 +41,7 @@ dirs.workspace = true
 chrono = { version = "0.4", features = ["serde"] }
 rand = "0.8"
 rand_chacha = "0.3"
+memmap2.workspace = true
 
 [dev-dependencies]
 assert_cmd = "2.0"
@@ -50,6 +51,8 @@ predicates = "3.1"
 default = ["cpu"]
 cpu = ["bitnet-inference?/cpu"]
 gpu = ["bitnet-inference?/gpu"]
+# IQ2_S support via GGML FFI
+iq2s-ffi = ["bitnet-models/iq2s-ffi"]
 # Gate benchmark subcommand behind feature flag
 cli-bench = ["dep:bitnet-inference"]
 # build the extra subcommands only when you want them
