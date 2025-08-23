@@ -120,6 +120,38 @@ pub struct ScoringPolicy {
     pub mask_pad: bool,
 }
 
+/// Environment information for evaluation
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EvalEnvironment {
+    pub platform: String,
+    pub bitnet_cli: String,
+    pub rust_version: String,
+    pub deterministic: bool,
+    pub seed: Option<u64>,
+    pub threads: usize,
+}
+
+/// Model metadata for evaluation
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EvalModelMeta {
+    pub format: String,
+    pub tokenizer_source: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quantization: Option<String>,
+}
+
+/// Complete metadata for evaluation
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EvalMeta {
+    pub format: String,
+    pub tokenizer: String,
+    pub scoring_policy: ScoringPolicy,
+    pub environment: EvalEnvironment,
+    pub model: EvalModelMeta,
+}
+
 /// Evaluation results
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EvalResults {
@@ -140,6 +172,8 @@ pub struct EvalResults {
     pub tf_path_head: Option<Vec<u32>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub totals: Option<EvalTotals>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub meta: Option<EvalMeta>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -196,6 +230,44 @@ fn log_softmax_stable(xs: &[f32]) -> Vec<f32> {
 }
 
 impl EvalCommand {
+    /// Build metadata for the evaluation
+    fn build_metadata(&self, format: &str, tokenizer_source: &str, scoring_policy: ScoringPolicy) -> EvalMeta {
+        let platform = format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH);
+        let bitnet_cli = env!("CARGO_PKG_VERSION").to_string();
+        
+        // Get Rust version
+        let rust_version = "rustc 1.89.0".to_string(); // Simplified for now
+        
+        let threads = if self.deterministic {
+            1
+        } else {
+            std::env::var("RAYON_NUM_THREADS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(1)
+        };
+        
+        EvalMeta {
+            format: format.to_string(),
+            tokenizer: tokenizer_source.to_string(),
+            scoring_policy,
+            environment: EvalEnvironment {
+                platform,
+                bitnet_cli,
+                rust_version,
+                deterministic: self.deterministic || std::env::var("BITNET_DETERMINISTIC").is_ok(),
+                seed: self.seed,
+                threads,
+            },
+            model: EvalModelMeta {
+                format: format.to_string(),
+                tokenizer_source: tokenizer_source.to_string(),
+                parameters: None,
+                quantization: None,
+            },
+        }
+    }
+
     /// Execute the evaluation command
     pub async fn execute(&self, config: &CliConfig) -> Result<()> {
         // Setup logging

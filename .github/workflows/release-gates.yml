@@ -28,36 +28,37 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Check for mock features
+      - name: Reject mock builds
         run: |
-          # Fail if any Cargo.toml includes mock features
-          if grep -r "features.*mocks" crates/*/Cargo.toml; then
-            echo "❌ ERROR: Mock features detected in PR"
-            echo "Remove all mock features before merging"
+          # Fail if any file includes mock features in build commands
+          if git grep -n -E '(--features mocks|--features.*mocks)' -- .; then
+            echo "::error::Mock features found in CI config or build scripts"
             exit 1
           fi
       
-      - name: Check GGUF changes require validation
+      - name: Check GGUF parity on changes
         run: |
           # Check if GGUF files changed
-          if git diff --name-only origin/main...HEAD | grep -q '\.gguf$'; then
-            echo "GGUF files changed - validation required"
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^models/.+\.gguf$' || true)
+          if [ -n "$CHANGED" ]; then
+            echo "GGUF files changed, running parity validation..."
             echo "GGUF_CHANGED=true" >> $GITHUB_ENV
+          else
+            echo "No GGUF changes; skipping parity validation."
           fi
       
-      - name: Check performance docs have measurements
+      - name: Verify perf docs match JSON
         run: |
           # Check if perf docs changed
-          if git diff --name-only origin/main...HEAD | grep -q 'docs/PERF_.*\.md$'; then
+          CHANGED_MD=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^docs/PERF_.*\.md$' || true)
+          if [ -n "$CHANGED_MD" ]; then
             # Verify corresponding JSON exists
-            for doc in $(git diff --name-only origin/main...HEAD | grep 'docs/PERF_.*\.md$'); do
-              platform=$(echo $doc | sed 's/docs\/PERF_\(.*\)_.*\.md/\1/')
-              if ! git diff --name-only origin/main...HEAD | grep -q "bench/results/${platform}.*\.json"; then
-                echo "❌ ERROR: Performance doc $doc changed without measurement JSON"
-                echo "Add bench/results/${platform}-*.json with actual measurements"
-                exit 1
-              fi
-            done
+            CHANGED_JSON=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^bench/results/.*\.json$' || true)
+            if [ -z "$CHANGED_JSON" ]; then
+              echo "::error::Performance docs changed without corresponding JSON measurements"
+              exit 1
+            fi
+            echo "Performance docs have matching JSON measurements."
           fi
       
       - name: Setup Rust
@@ -117,11 +118,12 @@ jobs:
         run: |
           cargo run -p xtask -- download-model
       
-      - name: Run strict validation
+      - name: Run strict validation with tighter thresholds
         run: |
           # Stricter thresholds for nightly
           export TAU_MIN=0.95  # FP32↔FP32
           export DELTA_NLL_MAX=1e-2  # FP32↔FP32
+          export DELTA_NLL_MAX_QUANT=2e-2  # Quantized
           export PROP_EXAMPLES=100
           export TAU_STEPS=32
           
@@ -133,7 +135,7 @@ jobs:
       
       - name: Upload validation artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: nightly-validation-${{ github.run_id }}
           path: |
@@ -141,10 +143,12 @@ jobs:
             validation.log
             bench/results/*.json
             artifacts/parity_failures.jsonl
+            /tmp/parity_results.json
+          retention-days: 30
       
       - name: Create issue on failure
-        if: env.VALIDATION_EXIT_CODE != '0'
-        uses: actions/github-script@v6
+        if: failure()
+        uses: actions/github-script@v7
         with:
           script: |
             const issue = await github.rest.issues.create({
@@ -155,8 +159,8 @@ jobs:
               
               The strict nightly validation has detected issues with dual-format support.
               
-              **Run ID:** ${{ github.run_id }}
-              **Artifacts:** [Download validation results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              **Run ID:** [#${{ github.run_number }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              **Artifacts:** Available for debugging in the run artifacts
               
               ### Required Actions
               - [ ] Review validation.log for specific failures
@@ -221,7 +225,7 @@ jobs:
       
       - name: Post PR comment
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');

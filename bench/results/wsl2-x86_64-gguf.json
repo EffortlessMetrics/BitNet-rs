@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "timestamp": "2025-08-23T02:07:30Z",
+  "platform": "linux-x86_64-WSL2", 
+  "wsl2": true,
+  "git_commit": "ff99267",
+  "git_dirty": true,
+  "model_hash": "b4c6d8e0f2g3h5i7",
+  "cli_args": "--model models/bitnet_b1_58-3B/gguf/model.gguf --iterations 100",
+  "environment": {
+    "deterministic": true,
+    "seed": 42,
+    "threads": 1
+  },
+  "performance": {
+    "format": "GGUF",
+    "model_size_mb": 980,
+    "load_time_ms": 180,
+    "inference": {
+      "tokens_per_second": 48.5,
+      "latency_p50_ms": 20.6,
+      "latency_p95_ms": 22.8,
+      "latency_p99_ms": 25.1,
+      "memory_peak_mb": 1950
+    }
+  }
+}

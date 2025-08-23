@@ -7,6 +7,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
+# Setup deterministic environment
+setup_deterministic_env
+
+# Find BitNet binary using common function
+BITNET_BIN=$(find_bitnet_binary)
+
 # Colors for presentation
 BOLD='\033[1m'
 RED='\033[0;31m'
@@ -52,6 +58,11 @@ intro() {
     clear
     header "BitNet.rs Dual-Format Validation Demo"
     
+    # Show platform info
+    print_platform_banner
+    detect_wsl2 || true
+    echo
+    
     echo "Welcome to the BitNet.rs stakeholder demo!"
     echo
     echo "This 5-minute demonstration will showcase:"
@@ -61,6 +72,7 @@ intro() {
     echo "  4. Rapid failure triage with replay capabilities"
     echo
     info "All results are reproducible with deterministic execution"
+    info "Binary: $BITNET_BIN"
     
     pause
 }
