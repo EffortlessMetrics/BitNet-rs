@@ -155,6 +155,30 @@ enum Commands {
         /// Insert BOS token at start of prompt
         #[arg(long, default_value_t = false)]
         bos: bool,
+        
+        /// Use greedy decoding (overrides temperature)
+        #[arg(long, default_value_t = false)]
+        greedy: bool,
+        
+        /// Enable deterministic mode (single-threaded)
+        #[arg(long, default_value_t = false)]
+        deterministic: bool,
+        
+        /// Number of threads to use (0 = all cores)
+        #[arg(long, default_value_t = 0)]
+        threads: usize,
+        
+        /// Dump logit steps during generation (max steps)
+        #[arg(long)]
+        dump_logit_steps: Option<usize>,
+        
+        /// Top-k tokens to include in logit dump
+        #[arg(long, default_value = "10", value_name = "K")]
+        logits_topk: usize,
+        
+        /// Assert greedy argmax invariant when dumping logits
+        #[arg(long, default_value_t = false)]
+        assert_greedy: bool,
     },
     
     /// Tokenize text and output token IDs as JSON
@@ -276,6 +300,12 @@ async fn main() -> Result<()> {
             json_out,
             dump_ids,
             bos,
+            greedy,
+            deterministic,
+            threads,
+            dump_logit_steps,
+            logits_topk,
+            assert_greedy,
         }) => {
             run_simple_generation(
                 model,
@@ -293,6 +323,12 @@ async fn main() -> Result<()> {
                 json_out,
                 dump_ids,
                 bos,
+                greedy,
+                deterministic,
+                threads,
+                dump_logit_steps,
+                logits_topk,
+                assert_greedy,
             )
             .await
         }
@@ -519,12 +555,40 @@ async fn run_simple_generation(
     json_out: Option<std::path::PathBuf>,
     dump_ids: bool,
     bos: bool,
+    greedy: bool,
+    deterministic: bool,
+    threads: usize,
+    dump_logit_steps: Option<usize>,
+    logits_topk: usize,
+    assert_greedy: bool,
 ) -> Result<()> {
     use crate::sampling::Sampler;
     use bitnet_common::Device;
     use bitnet_models::{transformer::KVCache, Model};
     use bitnet_tokenizers::Tokenizer;
     use std::sync::Arc;
+    
+    // Simple logit step for dumping
+    #[derive(Debug, serde::Serialize)]
+    struct LogitStep {
+        step: usize,
+        top_logits: Vec<serde_json::Value>,
+        chosen_id: Option<u32>,
+    }
+    
+    // Set deterministic mode if requested
+    if deterministic {
+        unsafe {
+            std::env::set_var("BITNET_DETERMINISTIC", "1");
+            std::env::set_var("RAYON_NUM_THREADS", "1");
+            if threads > 0 {
+                std::env::set_var("RAYON_NUM_THREADS", threads.to_string());
+            }
+        }
+    }
+    
+    // Override temperature if greedy mode
+    let temperature = if greedy { 0.0 } else { temperature };
 
     println!("Loading model from: {}", model_path.display());
 
@@ -649,9 +713,12 @@ async fn run_simple_generation(
 
     // Track generated tokens for repetition penalty
     let mut generated_tokens = Vec::new();
+    
+    // Track logits dump if requested
+    let mut logits_dump: Vec<LogitStep> = Vec::new();
 
     // Generation loop
-    for _ in 0..max_new_tokens {
+    for step_idx in 0..max_new_tokens {
         // Embed tokens
         let x = model.embed(&tokens)?;
 
@@ -664,8 +731,78 @@ async fn run_simple_generation(
         // Extract last token logits
         let logits_vec = extract_logits(&logits)?;
 
+        // Capture logits if requested
+        if let Some(max_steps) = dump_logit_steps {
+            if step_idx < max_steps {
+                // Helper for deterministic, robust top-k
+                let topk_indices = {
+                    let mut indexed: Vec<(usize, f32)> = logits_vec.iter()
+                        .enumerate()
+                        .map(|(i, &v)| (i, v))
+                        .collect();
+                    // Sort by (-logit, token_id) for determinism
+                    indexed.sort_by(|a, b| {
+                        match (a.1.is_finite(), b.1.is_finite()) {
+                            (false, true) => std::cmp::Ordering::Greater,
+                            (true, false) => std::cmp::Ordering::Less,
+                            _ => {
+                                let cmp = b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal);
+                                if cmp == std::cmp::Ordering::Equal {
+                                    a.0.cmp(&b.0)
+                                } else {
+                                    cmp
+                                }
+                            }
+                        }
+                    });
+                    indexed.into_iter().take(logits_topk).map(|(i, _)| i).collect::<Vec<_>>()
+                };
+                
+                let top_logits: Vec<(u32, f32)> = topk_indices.iter()
+                    .map(|&i| (i as u32, logits_vec[i]))
+                    .collect();
+                
+                // Will capture chosen_id after sampling
+                let step = LogitStep {
+                    step: step_idx,
+                    top_logits: top_logits.iter().map(|&(token_id, logit)| {
+                        serde_json::json!({
+                            "token_id": token_id,
+                            "logit": logit
+                        })
+                    }).collect(),
+                    chosen_id: None,  // Will set after sampling
+                };
+                logits_dump.push(step);
+            }
+        }
+        
         // Sample next token
         let next_token = sampler.sample(&logits_vec, &generated_tokens);
+        
+        // Assert greedy invariant if requested
+        if assert_greedy && greedy && dump_logit_steps.is_some() && step_idx < dump_logit_steps.unwrap() {
+            let (mut best_i, mut best_v) = (0usize, f32::NEG_INFINITY);
+            for (i, &v) in logits_vec.iter().enumerate() {
+                if v.is_finite() && v > best_v { 
+                    best_v = v; 
+                    best_i = i; 
+                }
+            }
+            if next_token as usize != best_i {
+                eprintln!("ERROR: Non-argmax token chosen in --greedy at step {}", step_idx);
+                eprintln!("  argmax={} (logit={:.4}) but chosen={}", best_i, best_v, next_token);
+                std::process::exit(EXIT_ARGMAX_MISMATCH);
+            }
+        }
+        
+        // Update chosen token in logits dump
+        if let Some(max_steps) = dump_logit_steps {
+            if step_idx < max_steps && !logits_dump.is_empty() {
+                logits_dump.last_mut().unwrap().chosen_id = Some(next_token);
+            }
+        }
+        
         tokens.push(next_token);
         generated_tokens.push(next_token);
         
@@ -723,6 +860,8 @@ async fn run_simple_generation(
             "bos": bos,
             "temperature": temperature,
             "seed": seed.unwrap_or(0),
+            "greedy": greedy,
+            "deterministic": deterministic,
         });
         
         let prompt_tokens_len = tokens.len() - generated_tokens.len();
@@ -747,6 +886,17 @@ async fn run_simple_generation(
             "counts": counts,
             "tokenizer": tokenizer_info,
             "gen_policy": gen_policy,
+            "logits_dump": if !logits_dump.is_empty() { 
+                Some(logits_dump.iter().map(|step| {
+                    serde_json::json!({
+                        "step": step.step,
+                        "top_logits": step.top_logits,
+                        "chosen_id": step.chosen_id
+                    })
+                }).collect::<Vec<_>>())
+            } else { 
+                None 
+            },
         });
         std::fs::write(&json_path, serde_json::to_string_pretty(&output)?)?;
         println!("JSON output written to: {}", json_path.display());

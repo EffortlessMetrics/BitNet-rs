@@ -263,8 +263,8 @@ async fn test_environment_override() -> TestOpResult<()> {
     // Restore original environment
     for (key, value) in original_env {
         match value {
-            Some(val) => env::set_var(&key, val),
-            None => env::remove_var(&key),
+            Some(val) => unsafe { env::set_var(&key, val) },
+            None => unsafe { env::remove_var(&key) },
         }
     }
 

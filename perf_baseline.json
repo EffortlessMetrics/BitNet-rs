@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-01-23T00:00:00Z",
+  "system": {
+    "cpu": "Unknown",
+    "cores": 8,
+    "memory_gb": 16
+  },
+  "model": {
+    "path": "models/bitnet/model.gguf",
+    "size_mb": 1024
+  },
+  "results": {
+    "median_tps": 150.0,
+    "mean_tps": 148.5,
+    "std_tps": 5.2,
+    "min_tps": 140.0,
+    "max_tps": 160.0,
+    "first_token_ms": 25.0,
+    "samples": 3
+  },
+  "configuration": {
+    "max_new_tokens": 128,
+    "temperature": 0.0,
+    "threads": 1,
+    "deterministic": true
+  },
+  "note": "Initial baseline - update with actual measurements from your hardware"
+}

@@ -183,6 +183,9 @@ impl TestCase for ConfigurationPropagationTest {
             seed: Some(42),
             skip_special_tokens: true,
             eos_token_id: None,
+            logits_tap_steps: 0,
+            logits_topk: 10,
+            logits_cb: None,
         };
 
         // Create components with configurations

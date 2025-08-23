@@ -1,0 +1,178 @@
+name: Nightly Validation (Strict)
+
+on:
+  schedule:
+    # Run every day at 7 AM UTC
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      tau_min:
+        description: 'Minimum tau-b threshold'
+        required: false
+        default: '0.70'
+      prop_examples:
+        description: 'Number of property test examples'
+        required: false
+        default: '100'
+      delta_nll_max:
+        description: 'Maximum NLL delta'
+        required: false
+        default: '0.01'
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+  BITNET_DETERMINISTIC: 1
+  BITNET_SEED: 42
+  RAYON_NUM_THREADS: 1
+
+jobs:
+  strict-validation:
+    name: Strict Validation Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        model:
+          - 1bitLLM/bitnet_b1_58-3B
+        
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "v1-rust"
+      
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install Python Dependencies
+        run: |
+          pip install -r scripts/requirements.txt
+          pip install hypothesis pytest transformers torch tokenizers
+      
+      - name: Build BitNet CLI
+        run: |
+          cargo build -p bitnet-cli --release --no-default-features --features cpu
+      
+      - name: Download Test Model
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          mkdir -p models/bitnet
+          python scripts/download_model.py \
+            --model-id ${{ matrix.model }} \
+            --output-dir models/bitnet
+      
+      - name: Tokenizer Parity (Strict)
+        run: |
+          BITNET_BIN=target/release/bitnet \
+          MODEL_PATH=models/bitnet/model.gguf \
+          TOKENIZER=models/bitnet/tokenizer.json \
+          HF_MODEL_ID=${{ matrix.model }} \
+          scripts/test-tokenizer-parity.py --full
+      
+      - name: Logit Parity (Strict)
+        env:
+          TAU_MIN: ${{ github.event.inputs.tau_min || '0.70' }}
+          TAU_STEPS: 32
+          LOGIT_TOPK: 10
+          PROP_EXAMPLES: ${{ github.event.inputs.prop_examples || '100' }}
+        run: |
+          MODEL_PATH=models/bitnet/model.gguf \
+          TOKENIZER=models/bitnet/tokenizer.json \
+          HF_MODEL_ID=${{ matrix.model }} \
+          scripts/logit-parity.sh
+      
+      - name: NLL Parity (Strict)
+        env:
+          DELTA_NLL_MAX: ${{ github.event.inputs.delta_nll_max || '0.01' }}
+        run: |
+          MODEL_PATH=models/bitnet/model.gguf \
+          TOKENIZER=models/bitnet/tokenizer.json \
+          HF_MODEL_ID=${{ matrix.model }} \
+          PPL_FILE=crossval/data/ppl_smoke.txt \
+          scripts/nll-parity.sh
+      
+      - name: Property-Based Tests (Extended)
+        env:
+          PROP_EXAMPLES: ${{ github.event.inputs.prop_examples || '100' }}
+          TAU_MIN: ${{ github.event.inputs.tau_min || '0.70' }}
+        run: |
+          MODEL_PATH=models/bitnet/model.gguf \
+          TOKENIZER=models/bitnet/tokenizer.json \
+          HF_MODEL_ID=${{ matrix.model }} \
+          pytest crossval/props/test_logit_parity.py -v --tb=short
+      
+      - name: Upload Validation Artifacts
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: validation-artifacts-${{ matrix.model }}
+          path: |
+            *.jsonl
+            /tmp/*.json
+            test-results.txt
+          retention-days: 7
+      
+      - name: Report Results
+        if: always()
+        run: |
+          echo "## Nightly Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Model: ${{ matrix.model }}" >> $GITHUB_STEP_SUMMARY
+          echo "Tau-b threshold: ${{ env.TAU_MIN }}" >> $GITHUB_STEP_SUMMARY
+          echo "NLL delta threshold: ${{ env.DELTA_NLL_MAX }}" >> $GITHUB_STEP_SUMMARY
+          echo "Property examples: ${{ env.PROP_EXAMPLES }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f test-results.txt ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Test Output" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -n 50 test-results.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+  
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: strict-validation
+    if: failure()
+    
+    steps:
+      - name: Create Issue on Failure
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const title = `Nightly Validation Failed - ${new Date().toISOString().split('T')[0]}`;
+            const body = `
+            ## Nightly Validation Failure
+            
+            The strict nightly validation has failed. Please review the artifacts and logs.
+            
+            **Workflow Run**: [${context.runId}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            
+            **Configuration**:
+            - Tau-b threshold: ${process.env.TAU_MIN || '0.70'}
+            - NLL delta threshold: ${process.env.DELTA_NLL_MAX || '0.01'}  
+            - Property examples: ${process.env.PROP_EXAMPLES || '100'}
+            
+            Please investigate and fix any regressions.
+            `;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['validation', 'nightly', 'automated']
+            });

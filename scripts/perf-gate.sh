@@ -1,65 +1,110 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Performance regression gate
-BASELINE="${1:-baseline.json}"
-RESULTS="bench-results.jsonl"
+# Check required dependencies
+command -v jq >/dev/null || { echo "Error: jq not found. Please install jq."; exit 1; }
+command -v bc >/dev/null || { echo "Error: bc not found. Please install bc."; exit 1; }
+
+# ---- Config (override via env) ----------------------------------------------
+: "${BITNET_BIN:=$(command -v bitnet || echo "target/release/bitnet")}"
+: "${MODEL_PATH:?Set MODEL_PATH=path/to/model.gguf}"
+: "${TOKENIZER:?Set TOKENIZER=path/to/tokenizer.json}"
+
+# Performance gate thresholds
+: "${PERF_REGRESSION_THRESHOLD:=10}"  # Fail if >10% regression
+: "${PERF_BASELINE_FILE:=perf_baseline.json}"
+: "${PERF_RESULTS_FILE:=perf_results.json}"
+
+# Benchmark config
+: "${BENCH_PROMPTS:=5}"
+: "${MAX_NEW_TOKENS:=128}"
+
+# ---- Main -------------------------------------------------------------------
+echo "==> Performance Gate Check"
+echo "    Regression threshold: ${PERF_REGRESSION_THRESHOLD}%"
+echo
 
 # Run benchmark
 echo "Running performance benchmark..."
-scripts/bench-decode.sh >/dev/null 2>&1
+BENCH_JSON="$PERF_RESULTS_FILE" \
+BENCH_PROMPTS="$BENCH_PROMPTS" \
+MAX_NEW_TOKENS="$MAX_NEW_TOKENS" \
+    scripts/bench-decode.sh
 
-if [ ! -f "$RESULTS" ]; then
-    echo "Error: No benchmark results found"
-    exit 1
+# Check if baseline exists
+if [[ ! -f "$PERF_BASELINE_FILE" ]]; then
+    echo
+    echo "No baseline found at $PERF_BASELINE_FILE"
+    echo "Creating baseline from current run..."
+    cp "$PERF_RESULTS_FILE" "$PERF_BASELINE_FILE"
+    echo "✅ Baseline created. Future runs will compare against this."
+    exit 0
 fi
 
-# Extract current metrics
-CURR_DECODE_TPS=$(jq -s '[.[].throughput_tps.decode] | sort | .[length/2|floor]' "$RESULTS" 2>/dev/null || echo "0")
+# Compare with baseline
+echo
+echo "==> Comparing with baseline..."
 
-if [ -f "$BASELINE" ]; then
-    # Compare with baseline
-    BASE_DECODE_TPS=$(jq '.decode_tps_median' "$BASELINE" 2>/dev/null || echo "0")
+# Extract metrics
+current_tps=$(jq -r '.results.throughput.median_tps' "$PERF_RESULTS_FILE")
+baseline_tps=$(jq -r '.results.throughput.median_tps' "$PERF_BASELINE_FILE")
+
+current_first=$(jq -r '.results.first_token_ms.median' "$PERF_RESULTS_FILE")
+baseline_first=$(jq -r '.results.first_token_ms.median' "$PERF_BASELINE_FILE")
+
+# Calculate percentage changes
+tps_change=$(echo "scale=2; (($current_tps - $baseline_tps) / $baseline_tps) * 100" | bc -l)
+first_change=$(echo "scale=2; (($current_first - $baseline_first) / $baseline_first) * 100" | bc -l)
+
+# Display results
+echo "Throughput:"
+echo "  Baseline:  ${baseline_tps} tok/s"
+echo "  Current:   ${current_tps} tok/s"
+echo "  Change:    ${tps_change}%"
+echo
+
+echo "First token latency:"
+echo "  Baseline:  ${baseline_first}ms"
+echo "  Current:   ${current_first}ms"
+echo "  Change:    ${first_change}%"
+echo
+
+# Check for regressions
+failed=0
+
+# Check throughput regression
+if (( $(echo "$tps_change < -$PERF_REGRESSION_THRESHOLD" | bc -l) )); then
+    echo "❌ FAIL: Throughput regression > ${PERF_REGRESSION_THRESHOLD}%"
+    failed=1
+fi
+
+# Check first token latency regression (inverse - higher is worse)
+if (( $(echo "$first_change > $PERF_REGRESSION_THRESHOLD" | bc -l) )); then
+    echo "❌ FAIL: First token latency regression > ${PERF_REGRESSION_THRESHOLD}%"
+    failed=1
+fi
+
+if [[ $failed -eq 0 ]]; then
+    echo "✅ PASS: Performance within acceptable bounds"
     
-    # Calculate regression percentage
-    if [ "$(echo "$BASE_DECODE_TPS > 0" | bc -l)" -eq 1 ]; then
-        REGRESSION=$(echo "scale=2; (($BASE_DECODE_TPS - $CURR_DECODE_TPS) / $BASE_DECODE_TPS) * 100" | bc -l)
-        
-        echo "Performance Comparison:"
-        echo "  Baseline decode TPS: $BASE_DECODE_TPS"
-        echo "  Current decode TPS:  $CURR_DECODE_TPS"
-        echo "  Regression: ${REGRESSION}%"
-        
-        # Fail if regression > 10%
-        if [ "$(echo "$REGRESSION > 10" | bc -l)" -eq 1 ]; then
-            echo "ERROR: Performance regression exceeds 10% threshold"
-            exit 1
-        elif [ "$(echo "$REGRESSION > 5" | bc -l)" -eq 1 ]; then
-            echo "WARNING: Performance regression between 5-10%"
-        else
-            echo "✓ Performance within acceptable range"
+    # Optionally update baseline if significant improvement
+    if (( $(echo "$tps_change > 20" | bc -l) )); then
+        echo
+        echo "🎉 Significant improvement detected (>20%)"
+        read -p "Update baseline? (y/N) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            cp "$PERF_RESULTS_FILE" "$PERF_BASELINE_FILE"
+            echo "Baseline updated."
         fi
-    else
-        echo "Warning: Invalid baseline TPS value"
     fi
 else
-    echo "No baseline found. Creating new baseline..."
-    jq -s '{
-        decode_tps_median: [.[].throughput_tps.decode] | sort | .[length/2|floor],
-        prefill_tps_median: [.[].throughput_tps.prefill] | sort | .[length/2|floor],
-        e2e_tps_median: [.[].throughput_tps.e2e] | sort | .[length/2|floor],
-        timestamp: now | strftime("%Y-%m-%d %H:%M:%S")
-    }' "$RESULTS" > "$BASELINE"
-    echo "Baseline created at: $BASELINE"
+    echo
+    echo "Performance gate FAILED"
+    echo "To investigate:"
+    echo "  1. Review changes that might impact performance"
+    echo "  2. Profile with: cargo bench --workspace"
+    echo "  3. If regression is expected, update baseline:"
+    echo "     cp $PERF_RESULTS_FILE $PERF_BASELINE_FILE"
+    exit 9
 fi
-
-# Save current metrics for reporting
-jq -s '{
-    decode_tps_median: [.[].throughput_tps.decode] | sort | .[length/2|floor],
-    prefill_tps_median: [.[].throughput_tps.prefill] | sort | .[length/2|floor],
-    e2e_tps_median: [.[].throughput_tps.e2e] | sort | .[length/2|floor],
-    samples: length
-}' "$RESULTS" > current-perf.json
-
-echo ""
-echo "Current performance saved to: current-perf.json"

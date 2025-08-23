@@ -186,3 +186,67 @@ export LD_LIBRARY_PATH=target/release  # or DYLD_LIBRARY_PATH on macOS
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 ```
+
+## Validation Framework
+
+### Evaluation Commands
+
+```bash
+# Evaluate perplexity on a corpus (token-weighted NLL)
+target/release/bitnet eval \
+  --model models/bitnet/model.gguf \
+  --tokenizer models/bitnet/tokenizer.json \
+  --text-file crossval/data/ppl_smoke.txt
+
+# Teacher-forcing with explicit token IDs + logit dump
+target/release/bitnet eval \
+  --model models/bitnet/model.gguf \
+  --tokenizer models/bitnet/tokenizer.json \
+  --teacher-force-ids 1,2,3,4,5,6 \
+  --dump-logit-steps 6 --logits-topk 10 \
+  --json-out /tmp/tf_eval.json
+
+# Deterministic greedy generation with logit tapping
+target/release/bitnet run \
+  --model models/bitnet/model.gguf \
+  --tokenizer models/bitnet/tokenizer.json \
+  --prompt "Define entropy." \
+  --max-new-tokens 32 --greedy \
+  --deterministic --threads 1 \
+  --dump-logit-steps 8 --logits-topk 10 \
+  --json-out /tmp/run.json
+```
+
+### Validation Tests
+
+```bash
+# Tokenizer parity check
+BITNET_BIN=target/release/bitnet \
+MODEL_PATH=models/bitnet/model.gguf \
+TOKENIZER=models/bitnet/tokenizer.json \
+HF_MODEL_ID=1bitLLM/bitnet_b1_58-3B \
+scripts/test-tokenizer-parity.py --smoke
+
+# Logit parity with tau-b correlation
+PROP_EXAMPLES=10 TAU_STEPS=24 LOGIT_TOPK=10 TAU_MIN=0.60 \
+MODEL_PATH=models/bitnet/model.gguf \
+TOKENIZER=models/bitnet/tokenizer.json \
+HF_MODEL_ID=1bitLLM/bitnet_b1_58-3B \
+scripts/logit-parity.sh
+
+# NLL parity (token-weighted)
+DELTA_NLL_MAX=1e-2 \
+MODEL_PATH=models/bitnet/model.gguf \
+TOKENIZER=models/bitnet/tokenizer.json \
+HF_MODEL_ID=1bitLLM/bitnet_b1_58-3B \
+PPL_FILE=crossval/data/ppl_smoke.txt \
+scripts/nll-parity.sh
+```
+
+### Key Validation Features
+
+1. **Token-Weighted NLL**: Proper corpus perplexity using `Σ(token_nlls) / Σ(predicted_tokens)`
+2. **Teacher-Forcing**: Exact decode path with causal masking and position encoding
+3. **Deterministic Top-K**: Stable sorting with tie-breaking by token ID, NaN demotion
+4. **Logit Dumping**: Capture top-k logits at each generation step for analysis
+5. **Tau-b Correlation**: Score-aware rank correlation for quantization robustness

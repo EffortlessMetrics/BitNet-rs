@@ -33,7 +33,7 @@ impl Default for InferenceConfig {
 }
 
 /// Configuration for text generation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct GenerationConfig {
     /// Maximum number of new tokens to generate
     pub max_new_tokens: u32,
@@ -61,6 +61,25 @@ pub struct GenerationConfig {
     /// Parameters: (step, topk_tokens_and_logits, chosen_token_id)
     #[serde(skip)]
     pub logits_cb: Option<Arc<dyn Fn(usize, Vec<(u32, f32)>, u32) + Send + Sync>>,
+}
+
+impl std::fmt::Debug for GenerationConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GenerationConfig")
+            .field("max_new_tokens", &self.max_new_tokens)
+            .field("temperature", &self.temperature)
+            .field("top_k", &self.top_k)
+            .field("top_p", &self.top_p)
+            .field("repetition_penalty", &self.repetition_penalty)
+            .field("stop_sequences", &self.stop_sequences)
+            .field("seed", &self.seed)
+            .field("skip_special_tokens", &self.skip_special_tokens)
+            .field("eos_token_id", &self.eos_token_id)
+            .field("logits_tap_steps", &self.logits_tap_steps)
+            .field("logits_topk", &self.logits_topk)
+            .field("logits_cb", &self.logits_cb.is_some())
+            .finish()
+    }
 }
 
 impl Default for GenerationConfig {

@@ -475,3 +475,61 @@ def kendalls_tau(topk_a_ids: List[int], topk_b_ids: List[int], variant: str = "b
             return (concordant - discordant) / ((n1 * n2) ** 0.5)
     
     return 0.0
+
+
+def kendalls_tau_b_scored(
+    a_topk: List[Tuple[int, float]], 
+    b_topk: List[Tuple[int, float]], 
+    *, 
+    eps: float = 1e-6
+) -> float:
+    """
+    Kendall's tau-b using the *scores* (logits) to detect ties.
+    `a_topk` / `b_topk` are lists of (token_id, score), descending by score.
+    
+    This is critical for quantized models where many logits may be identical.
+    
+    Args:
+        a_topk: List of (token_id, logit) from system A
+        b_topk: List of (token_id, logit) from system B 
+        eps: Epsilon for float tie detection
+    
+    Returns:
+        Tau-b in [-1, 1] accounting for score ties
+    """
+    # id -> score maps
+    A = {tid: float(score) for tid, score in a_topk}
+    B = {tid: float(score) for tid, score in b_topk}
+
+    common = [t for t in A.keys() if t in B]
+    n = len(common)
+    if n < 2:
+        return 0.0
+
+    # pairwise counts
+    conc = disc = ties_a = ties_b = ties_both = 0
+    for i in range(n):
+        ti = common[i]
+        for j in range(i + 1, n):
+            tj = common[j]
+            da = A[ti] - A[tj]
+            db = B[ti] - B[tj]
+
+            # Score comparison with epsilon for float equality
+            sa = 0 if abs(da) <= eps else (1 if da > 0 else -1)
+            sb = 0 if abs(db) <= eps else (1 if db > 0 else -1)
+
+            if sa == 0 and sb == 0:
+                ties_both += 1
+            elif sa == 0:
+                ties_a += 1
+            elif sb == 0:
+                ties_b += 1
+            elif sa == sb:
+                conc += 1
+            else:
+                disc += 1
+
+    n0 = n * (n - 1) / 2.0
+    denom = ((n0 - ties_a - ties_both) * (n0 - ties_b - ties_both)) ** 0.5
+    return (conc - disc) / denom if denom > 0 else 0.0

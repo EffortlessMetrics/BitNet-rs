@@ -1162,8 +1162,8 @@ impl TestCase for EnvironmentDetectionTest {
         // Restore original environment
         for (key, value) in original_env {
             match value {
-                Some(val) => std::env::set_var(&key, val),
-                None => std::env::remove_var(&key),
+                Some(val) => unsafe { std::env::set_var(&key, val) },
+                None => unsafe { std::env::remove_var(&key) },
             }
         }
 
