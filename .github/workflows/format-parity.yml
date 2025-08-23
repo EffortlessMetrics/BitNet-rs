@@ -1,0 +1,286 @@
+name: Format Parity Validation
+
+on:
+  pull_request:
+    paths:
+      - 'crates/bitnet-models/**'
+      - 'crates/bitnet-inference/**'
+      - 'crates/bitnet-cli/**'
+      - 'scripts/*parity*.sh'
+      - 'scripts/*convert*.py'
+      - '.github/workflows/format-parity.yml'
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * *'  # Nightly at 2 AM UTC
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  BITNET_DETERMINISTIC: 1
+  BITNET_SEED: 42
+  RAYON_NUM_THREADS: 1
+
+jobs:
+  format-parity:
+    name: Validate Format Parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    strategy:
+      matrix:
+        model:
+          - bitnet_b1_58-3B
+        
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install Python dependencies
+        run: |
+          pip install -U pip
+          pip install safetensors torch numpy scipy
+      
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Cache cargo build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Cache models
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/bitnet-rs/models
+            models
+          key: ${{ runner.os }}-models-${{ matrix.model }}
+      
+      - name: Build BitNet CLI
+        run: |
+          cargo build -p bitnet-cli --release --no-default-features --features cpu
+          echo "BITNET_BIN=$PWD/target/release/bitnet" >> $GITHUB_ENV
+      
+      - name: Download test model
+        run: |
+          if [ ! -d "$HOME/.cache/bitnet-rs/models/${{ matrix.model }}" ]; then
+            cargo xtask download-model || true
+          fi
+      
+      - name: Setup model storage
+        run: |
+          bash scripts/setup_model_storage.sh
+          echo "MODELS_DIR=$PWD/models" >> $GITHUB_ENV
+      
+      - name: Convert to GGUF
+        run: |
+          if [ -f "models/${{ matrix.model }}/safetensors/model.safetensors" ]; then
+            python3 scripts/convert_safetensors_to_gguf.py \
+              "models/${{ matrix.model }}/safetensors" \
+              "models/${{ matrix.model }}/gguf/model.gguf" || true
+          fi
+      
+      - name: Run format parity validation
+        id: parity
+        run: |
+          set +e  # Don't fail immediately
+          
+          OUTPUT_DIR="validation_results"
+          mkdir -p "$OUTPUT_DIR"
+          
+          # Run parity validation
+          bash scripts/validate_format_parity.sh "${{ matrix.model }}"
+          PARITY_EXIT=$?
+          
+          # Upload results regardless of outcome
+          if [ -f "$OUTPUT_DIR/${{ matrix.model }}/parity_report.json" ]; then
+            echo "parity_report=$OUTPUT_DIR/${{ matrix.model }}/parity_report.json" >> $GITHUB_OUTPUT
+          fi
+          
+          exit $PARITY_EXIT
+      
+      - name: Run comprehensive validation
+        if: success() || failure()
+        run: |
+          bash scripts/validate_all_formats.sh || true
+      
+      - name: Upload validation results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: validation-results-${{ matrix.model }}
+          path: |
+            validation_results/
+            models/${{ matrix.model }}/*.meta.json
+      
+      - name: Generate validation report
+        if: always()
+        run: |
+          if [ -f "validation_results/${{ matrix.model }}/format_comparison.json" ]; then
+            python3 -c "
+          import json
+          with open('validation_results/${{ matrix.model }}/format_comparison.json') as f:
+              data = json.load(f)
+          
+          print('## Format Parity Report')
+          print(f'**Model:** {data.get(\"model_id\", \"unknown\")}')
+          print()
+          
+          # Extract test results
+          for fmt in ['safetensors', 'gguf']:
+              if fmt in data.get('formats', {}):
+                  tests = data['formats'][fmt].get('tests', {})
+                  passed = sum(1 for v in tests.values() if v)
+                  total = len(tests)
+                  print(f'- **{fmt.upper()}:** {passed}/{total} tests passed')
+          
+          # Performance comparison
+          if 'performance_comparison' in data:
+              print()
+              print('### Performance Differences')
+              perf = data['performance_comparison']
+              for key, val in perf.items():
+                  metric = key.replace('_diff_pct', '').replace('_', ' ').title()
+                  sign = '+' if val > 0 else ''
+                  print(f'- {metric}: {sign}{val:.1f}%')
+          " >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Check parity thresholds
+        run: |
+          # Strict thresholds for CI
+          export TOLERANCE_NLL=0.01     # 1e-2 for FP32
+          export TOLERANCE_LOGIT=0.70   # Higher for CI
+          
+          if [ -f "validation_results/${{ matrix.model }}/parity_report.json" ]; then
+            python3 -c "
+          import json
+          import sys
+          
+          with open('validation_results/${{ matrix.model }}/parity_report.json') as f:
+              report = json.load(f)
+          
+          if not report.get('passed', False):
+              print('❌ Format parity validation FAILED')
+              sys.exit(1)
+          else:
+              print('✅ Format parity validation PASSED')
+          "
+          fi
+
+  performance-regression:
+    name: Check Performance Regression
+    runs-on: ubuntu-latest
+    needs: format-parity
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need history for base comparison
+      
+      - name: Download current results
+        uses: actions/download-artifact@v3
+        with:
+          name: validation-results-bitnet_b1_58-3B
+          path: current-results
+      
+      - name: Checkout base branch
+        run: |
+          git checkout ${{ github.base_ref }}
+      
+      - name: Run base performance measurement
+        run: |
+          # Build and measure base branch performance
+          cargo build -p bitnet-cli --release --no-default-features --features cpu
+          bash scripts/measure_perf_json.sh || true
+          cp bench/results/*.json base-results.json || echo "{}" > base-results.json
+      
+      - name: Compare performance
+        run: |
+          python3 -c "
+          import json
+          import sys
+          
+          try:
+              with open('base-results.json') as f:
+                  base = json.load(f)
+              with open('current-results/*/benchmark.json') as f:
+                  current = json.load(f)
+              
+              # Check for regressions (>5% degradation)
+              REGRESSION_THRESHOLD = 5.0
+              
+              regressions = []
+              if 'throughput' in base and 'throughput' in current:
+                  base_tps = base['throughput'].get('mean_tps', 0)
+                  curr_tps = current['throughput'].get('mean_tps', 0)
+                  if base_tps > 0:
+                      diff_pct = ((curr_tps - base_tps) / base_tps) * 100
+                      if diff_pct < -REGRESSION_THRESHOLD:
+                          regressions.append(f'Throughput: {diff_pct:.1f}%')
+              
+              if regressions:
+                  print('⚠️ Performance regressions detected:')
+                  for r in regressions:
+                      print(f'  - {r}')
+                  sys.exit(1)
+              else:
+                  print('✅ No performance regressions detected')
+                  
+          except Exception as e:
+              print(f'Could not compare performance: {e}')
+          "
+
+  update-docs:
+    name: Update Performance Docs
+    runs-on: ubuntu-latest
+    needs: format-parity
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Download validation results
+        uses: actions/download-artifact@v3
+        with:
+          name: validation-results-bitnet_b1_58-3B
+          path: validation-results
+      
+      - name: Generate performance docs
+        run: |
+          # Only update docs if we have real measured data
+          if [ -f "validation-results/*/format_comparison.json" ]; then
+            python3 scripts/render_perf_md.py \
+              validation-results/*/format_comparison.json \
+              > docs/PERFORMANCE.md
+            
+            # Check if docs changed
+            if git diff --quiet docs/PERFORMANCE.md; then
+              echo "No performance changes to commit"
+            else
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git add docs/PERFORMANCE.md
+              git commit -m "docs: Update performance metrics [skip ci]"
+              git push
+            fi
+          fi

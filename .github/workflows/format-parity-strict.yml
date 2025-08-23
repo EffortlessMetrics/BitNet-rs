@@ -1,0 +1,260 @@
+name: Strict Format Parity Gates
+
+on:
+  pull_request:
+    paths:
+      - 'models/**/*.gguf'
+      - 'models/**/*.safetensors'
+      - 'crates/bitnet-models/**'
+      - 'crates/bitnet-inference/**'
+      - 'docs/performance/*.md'
+      - 'bench/results/*.json'
+
+jobs:
+  check-no-mocks:
+    name: Ensure No Mock Features
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for mock features in build commands
+        run: |
+          echo "Checking for --features mocks in PR..."
+          
+          # Check all shell scripts
+          if grep -r "features.*mocks" scripts/ .github/; then
+            echo "❌ ERROR: Found --features mocks in build scripts"
+            echo "Production builds must not use mock features"
+            exit 1
+          fi
+          
+          # Check Cargo.toml files
+          if grep -r 'default.*=.*\["mocks"' crates/*/Cargo.toml; then
+            echo "❌ ERROR: Found mocks in default features"
+            exit 1
+          fi
+          
+          echo "✅ No mock features found"
+
+  validate-model-changes:
+    name: Validate Model Format Changes
+    runs-on: ubuntu-latest
+    if: |
+      contains(github.event.pull_request.files, 'models/') &&
+      (contains(github.event.pull_request.files, '.gguf') ||
+       contains(github.event.pull_request.files, '.safetensors'))
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.89.0
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Build BitNet CLI
+        run: |
+          cargo build --release --no-default-features --features cpu
+      
+      - name: Get changed model files
+        id: changed_models
+        run: |
+          # Get list of changed model files
+          git diff --name-only origin/main..HEAD | grep -E 'models/.*\.(gguf|safetensors)$' > changed_models.txt || true
+          
+          if [[ ! -s changed_models.txt ]]; then
+            echo "No model files changed"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changed model files:"
+            cat changed_models.txt
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Validate format parity
+        if: steps.changed_models.outputs.has_changes == 'true'
+        run: |
+          source scripts/common.sh
+          setup_deterministic_env
+          
+          while read model_file; do
+            echo "Validating: $model_file"
+            
+            # Determine model directory
+            model_dir=$(dirname "$model_file")
+            model_id=$(basename "$model_dir")
+            
+            # Check for parity file
+            parity_file="${model_dir}/parity_safetensors_vs_gguf.json"
+            
+            if [[ ! -f "$parity_file" ]]; then
+              echo "❌ Missing parity file: $parity_file"
+              echo "Run: scripts/validate_format_parity.sh $model_id"
+              exit 1
+            fi
+            
+            # Validate parity passes
+            if ! jq -e '.overall_passed == true' "$parity_file" >/dev/null; then
+              echo "❌ Parity validation failed for $model_id"
+              echo "Review: $parity_file"
+              exit 1
+            fi
+            
+            echo "✅ Parity validation passed for $model_id"
+          done < changed_models.txt
+
+  validate-perf-docs:
+    name: Validate Performance Documentation
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.files, 'docs/performance/')
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check for new performance data
+        run: |
+          # Get changed performance docs
+          git diff --name-only origin/main..HEAD | grep 'docs/performance/.*\.md$' > changed_docs.txt || true
+          
+          if [[ ! -s changed_docs.txt ]]; then
+            echo "No performance docs changed"
+            exit 0
+          fi
+          
+          # Check for corresponding JSON data
+          while read doc_file; do
+            echo "Checking: $doc_file"
+            
+            # Look for performance JSON from same commit
+            doc_name=$(basename "$doc_file" .md)
+            json_pattern="bench/results/*${doc_name}*.json"
+            
+            # Check if JSON was also updated
+            if ! git diff --name-only origin/main..HEAD | grep -E "$json_pattern"; then
+              echo "❌ Performance doc changed without new measurement data"
+              echo "Doc: $doc_file"
+              echo "Expected JSON matching: $json_pattern"
+              echo ""
+              echo "Run: scripts/measure_perf_json.sh"
+              exit 1
+            fi
+            
+            echo "✅ Found corresponding performance data"
+          done < changed_docs.txt
+
+  nightly-strict-validation:
+    name: Nightly Strict Validation
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 2 * * *'  # Daily at 2 AM UTC
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup environment
+        run: |
+          source scripts/common.sh
+          setup_deterministic_env
+          print_platform_banner
+      
+      - name: Run strict validation
+        env:
+          STRICT_VALIDATION: true
+          TAU_MIN: 0.95       # Stricter for nightly
+          DELTA_NLL_MAX: 0.005  # Stricter for nightly
+        run: |
+          # Run comprehensive validation
+          scripts/validate_all_formats.sh
+          
+          # Check all tests passed
+          if [[ ! -f validation_results/summary.json ]]; then
+            echo "❌ No validation summary found"
+            exit 1
+          fi
+          
+          if ! jq -e '.all_passed == true' validation_results/summary.json; then
+            echo "❌ Nightly validation failed"
+            exit 1
+          fi
+      
+      - name: Upload validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: nightly-validation-${{ github.sha }}
+          path: |
+            validation_results/
+            bench/results/
+      
+      - name: Create issue on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Nightly validation failed - ${new Date().toISOString().split('T')[0]}`,
+              body: `## Nightly Validation Failure
+              
+              The nightly strict validation has failed.
+              
+              **Commit:** ${context.sha}
+              **Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}
+              
+              ### Artifacts
+              - [Download validation results](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              
+              Please investigate and fix the validation issues.`,
+              labels: ['validation', 'nightly', 'high-priority']
+            });
+            
+            console.log(`Created issue #${issue.data.number}`);
+
+  enforce-determinism:
+    name: Enforce Deterministic Builds
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check scripts for determinism
+        run: |
+          echo "Checking all validation scripts set deterministic environment..."
+          
+          # List of required env vars
+          required_vars=(
+            "BITNET_DETERMINISTIC"
+            "RAYON_NUM_THREADS"
+            "OMP_NUM_THREADS"
+          )
+          
+          # Check each validation script
+          for script in scripts/validate*.sh scripts/measure*.sh; do
+            if [[ ! -f "$script" ]]; then
+              continue
+            fi
+            
+            echo "Checking: $script"
+            
+            for var in "${required_vars[@]}"; do
+              if ! grep -q "export $var=" "$script" && ! grep -q "source.*common.sh" "$script"; then
+                echo "❌ Script $script doesn't set $var"
+                echo "Add: export $var=1"
+                exit 1
+              fi
+            done
+          done
+          
+          echo "✅ All scripts enforce determinism"

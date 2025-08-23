@@ -40,6 +40,10 @@ pub struct InferenceCommand {
     #[arg(short, long, value_name = "PATH")]
     pub model: Option<PathBuf>,
 
+    /// Model format (auto, gguf, safetensors)
+    #[arg(long, default_value = "auto", value_name = "FORMAT")]
+    pub model_format: String,
+
     /// Input prompt (if not provided, interactive mode is used)
     #[arg(short, long, value_name = "TEXT")]
     pub prompt: Option<String>,

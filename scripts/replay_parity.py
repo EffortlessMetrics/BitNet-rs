@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-Minimal replay tool for parity debugging.
+Replay parity failures for rapid debugging.
 
 Reads a JSONL artifact row and re-runs both Rust and HF sides to compute:
 - Median tau-b correlation  
 - Mean NLL delta
 - Detailed step-by-step comparison
+- Performance regression analysis
 
 Usage:
     python scripts/replay_parity.py artifact.jsonl --row 5
     python scripts/replay_parity.py artifact.jsonl --prompt "Test prompt"
+    python scripts/replay_parity.py parity_failures.jsonl --max-failures 10
+    python scripts/replay_parity.py parity_failures.jsonl --filter-tau-b 0.90
 """
 
 import json
@@ -18,6 +21,8 @@ import argparse
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import List, Dict, Any
+import os
 from typing import Dict, Any, Optional, Tuple
 import numpy as np
 from scipy.stats import kendalltau
