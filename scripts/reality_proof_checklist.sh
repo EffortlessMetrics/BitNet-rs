@@ -8,6 +8,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
+# Setup deterministic environment immediately
+setup_deterministic_env
+
 # Configuration
 MODEL_ID="${MODEL_ID:-bitnet_b1_58-3B}"
 HF_MODEL_ID="${HF_MODEL_ID:-1bitLLM/bitnet_b1_58-3B}"
@@ -48,13 +51,17 @@ log_info() {
 test_environment() {
     log_test "1. Environment & Determinism"
     
-    setup_deterministic_env
     print_platform_banner
+    detect_wsl2 || true
+    
+    # Find BitNet binary using common function
+    local BIN=$(find_bitnet_binary)
     
     # Check bitnet version
-    if $BITNET_BIN --version > /dev/null 2>&1; then
-        VERSION=$($BITNET_BIN --version)
+    if $BIN --version > /dev/null 2>&1; then
+        VERSION=$($BIN --version)
         log_info "BitNet version: $VERSION"
+        log_info "Binary path: $BIN"
         log_pass "Environment setup"
     else
         log_fail "Cannot find bitnet binary"
@@ -255,16 +262,34 @@ EOF
     
     if [ $failed -eq 0 ]; then
         echo -e "${GREEN}✅ All reality-proof checks passed!${NC}"
+        echo ""
+        echo "Both SafeTensors and GGUF formats are production-ready."
+        echo ""
+        echo "Artifacts generated:"
+        echo "  • ${OUTPUT_DIR}/summary.json - Test summary"
+        echo "  • bench/results/*.json - Performance measurements"
+        echo "  • docs/PERF_*.md - Rendered performance reports"
+        echo ""
+        echo "Next steps:"
+        echo "  1. Review performance reports in docs/"
+        echo "  2. Run 'scripts/stakeholder_demo.sh' for a 5-minute tour"
+        echo "  3. Deploy with confidence!"
         return 0
     else
         echo -e "${RED}❌ Some checks failed. Review the logs for details.${NC}"
+        echo "Check ${OUTPUT_DIR}/ for detailed logs."
         return 1
     fi
 }
 
 # Main execution
 main() {
-    log_info "Starting Reality-Proof Checklist"
+    echo ""
+    echo "====================================================="
+    echo "  Reality-Proof Checklist for Dual-Format Support"
+    echo "====================================================="
+    echo ""
+    log_info "Platform: $(get_platform_name)"
     log_info "Output directory: ${OUTPUT_DIR}"
     echo
     

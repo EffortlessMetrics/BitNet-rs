@@ -254,13 +254,35 @@ main() {
     # Create output directory
     mkdir -p "$OUTPUT_DIR"
     
-    # Generate final JSON
+    # Generate final JSON with WSL2 detection and provenance
+    local wsl2_flag=$(detect_wsl2 && echo "true" || echo "false")
+    local platform_name="${PLATFORM}-${ARCH}"
+    if [ "$wsl2_flag" = "true" ]; then
+        platform_name="${platform_name}-WSL2"
+    fi
+    
+    # Add git commit and model hash for provenance
+    local git_commit=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+    local git_dirty=$([ -n "$(git status --porcelain 2>/dev/null)" ] && echo "true" || echo "false")
+    local model_hash="unknown"
+    if [ -f "$gguf_model" ]; then
+        model_hash=$(sha256sum "$gguf_model" | cut -d' ' -f1 | head -c 16)
+    elif [ -f "$st_model" ]; then
+        model_hash=$(sha256sum "$st_model" | cut -d' ' -f1 | head -c 16)
+    fi
+    
     local output_file="${OUTPUT_DIR}/${PLATFORM}-${DATE}.json"
     cat > "$output_file" <<EOF
 {
-    "platform": "${PLATFORM}-${ARCH}",
+    "schema_version": 1,
+    "platform": "$platform_name",
+    "wsl2": $wsl2_flag,
     "date": "${DATE}",
+    "git_commit": "$git_commit",
+    "git_dirty": $git_dirty,
+    "model_hash": "$model_hash",
     "model_id": "${MODEL_ID}",
+    "cli_args": "$*",
     "iterations": $ITERATIONS,
     "warmup": $WARMUP,
     "threads": ${THREADS:-$(nproc)},

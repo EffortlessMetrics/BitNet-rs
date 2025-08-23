@@ -1,0 +1,153 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BitNet Format Parity Schema",
+  "description": "Schema for format parity validation JSON outputs",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "platform",
+    "wsl2",
+    "date",
+    "git_commit",
+    "model_id",
+    "pass",
+    "summary",
+    "thresholds",
+    "results"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version number"
+    },
+    "platform": {
+      "type": "string",
+      "description": "Platform identifier"
+    },
+    "wsl2": {
+      "type": "boolean",
+      "description": "Whether running under WSL2"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Validation timestamp"
+    },
+    "git_commit": {
+      "type": "string",
+      "description": "Git commit hash"
+    },
+    "git_dirty": {
+      "type": "boolean",
+      "description": "Whether working tree has uncommitted changes"
+    },
+    "model_id": {
+      "type": "string",
+      "description": "Model identifier"
+    },
+    "model_hash_safetensors": {
+      "type": "string",
+      "description": "SHA256 hash of SafeTensors model"
+    },
+    "model_hash_gguf": {
+      "type": "string",
+      "description": "SHA256 hash of GGUF model"
+    },
+    "pass": {
+      "type": "boolean",
+      "description": "Overall pass/fail status"
+    },
+    "summary": {
+      "type": "object",
+      "required": ["median_tau_b", "mean_nll_delta", "pass_rate"],
+      "properties": {
+        "median_tau_b": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1,
+          "description": "Median Kendall's tau-b correlation"
+        },
+        "mean_nll_delta": {
+          "type": "number",
+          "description": "Mean NLL difference"
+        },
+        "pass_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Proportion of tests passed"
+        },
+        "tests_run": {
+          "type": "integer",
+          "description": "Total number of tests run"
+        },
+        "tests_passed": {
+          "type": "integer",
+          "description": "Number of tests passed"
+        }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "required": ["tau_b_min", "nll_delta_max"],
+      "properties": {
+        "tau_b_min": {
+          "type": "number",
+          "description": "Minimum acceptable tau-b correlation"
+        },
+        "nll_delta_max": {
+          "type": "number",
+          "description": "Maximum acceptable NLL delta"
+        },
+        "quantized": {
+          "type": "boolean",
+          "description": "Whether using relaxed quantized thresholds"
+        }
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["prompt", "tau_b", "nll_delta", "passed"],
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "Test prompt"
+          },
+          "tau_b": {
+            "type": "number",
+            "minimum": -1,
+            "maximum": 1,
+            "description": "Kendall's tau-b correlation for this prompt"
+          },
+          "nll_delta": {
+            "type": "number",
+            "description": "NLL difference for this prompt"
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "Whether this test passed"
+          },
+          "safetensors_nll": {
+            "type": "number",
+            "description": "SafeTensors format NLL"
+          },
+          "gguf_nll": {
+            "type": "number",
+            "description": "GGUF format NLL"
+          }
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "deterministic": { "type": "boolean" },
+        "seed": { "type": "integer" },
+        "threads": { "type": "integer" }
+      }
+    }
+  }
+}

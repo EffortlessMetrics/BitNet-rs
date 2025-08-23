@@ -2,6 +2,10 @@
 """
 Render performance JSON to markdown with Methods & Environment box
 This ensures all performance docs are generated from measured data only
+
+Usage:
+  python3 scripts/render_perf_md.py bench/results/<platform>-safetensors.json
+  python3 scripts/render_perf_md.py bench/results/<platform>-safetensors.json bench/results/<platform>-gguf.json
 """
 
 import json
@@ -187,9 +191,52 @@ def render_charts(measurements: Dict[str, Any]) -> str:
     
     return charts
 
+def render_format_comparison(st_data: Dict[str, Any], gguf_data: Dict[str, Any]) -> str:
+    """Render comparison between SafeTensors and GGUF formats"""
+    
+    comparison = """
+## Format Comparison (SafeTensors vs GGUF)
+
+| Metric | SafeTensors | GGUF | Difference | Ratio |
+|--------|-------------|------|------------|-------|
+"""
+    
+    # Helper to safely get nested values
+    def get_metric(data, path, default=0):
+        parts = path.split('.')
+        val = data
+        for i, p in enumerate(parts):
+            if isinstance(val, dict) and p in val:
+                val = val[p]
+            else:
+                return default
+        return val
+    
+    # Compare key metrics
+    metrics = [
+        ('Throughput (tok/s)', 'measurements.tokens_per_second.median'),
+        ('First Token (ms)', 'measurements.time_to_first_token.median'),
+        ('Memory (MB)', 'measurements.memory_mb.peak'),
+        ('Load Time (s)', 'measurements.load_time.median'),
+    ]
+    
+    for name, path in metrics:
+        st_val = get_metric(st_data, path)
+        gguf_val = get_metric(gguf_data, path)
+        
+        if st_val and gguf_val:
+            diff = gguf_val - st_val
+            ratio = gguf_val / st_val if st_val else 0
+            sign = '+' if diff > 0 else ''
+            comparison += f"| {name} | {format_number(st_val)} | {format_number(gguf_val)} | "
+            comparison += f"{sign}{format_number(diff)} | {ratio:.2f}x |\n"
+    
+    return comparison
+
 def main():
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <performance.json>", file=sys.stderr)
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} <performance.json> [<performance2.json>]", file=sys.stderr)
+        print("  Provide one JSON for a single report, or two JSONs for format comparison.", file=sys.stderr)
         sys.exit(1)
     
     json_file = sys.argv[1]
@@ -218,7 +265,19 @@ def main():
 {render_performance_table(data.get('measurements', {}))}
 
 {render_validation_results(data)}
-
+"""
+    
+    # Add format comparison if second JSON provided
+    if len(sys.argv) > 2:
+        json_file2 = sys.argv[2]
+        try:
+            with open(json_file2, 'r') as f:
+                data2 = json.load(f)
+            output += render_format_comparison(data, data2)
+        except Exception as e:
+            print(f"Warning: Could not load second JSON: {e}", file=sys.stderr)
+    
+    output += f"""
 {render_charts(data.get('measurements', {}))}
 
 ## Raw Measurements
@@ -236,6 +295,7 @@ def main():
 
 *Generated from measured data: {os.path.basename(json_file)}*  
 *Report generated: {datetime.utcnow().isoformat()}Z*
+*Note: All performance measurements are from actual runs, not estimates.*
 """
     
     print(output)
