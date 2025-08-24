@@ -1,3 +1,5 @@
+#![cfg(feature = "integration-tests")]
+
 use async_trait::async_trait;
 use bitnet_tests::common::{
     config::TestConfig,

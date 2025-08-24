@@ -1,6 +1,6 @@
+use bitnet_common::Result;
 use std::collections::HashMap;
 use std::path::Path;
-use bitnet_common::Result;
 use tracing::{debug, warn};
 
 use crate::{Tokenizer, TokenizerConfig};
@@ -14,6 +14,7 @@ pub struct UniversalTokenizer {
 enum TokenizerBackend {
     Gpt2(Gpt2Tokenizer),
     SentencePiece(SentencePieceTokenizer),
+    #[allow(dead_code)]
     Llama(LlamaTokenizer),
     Tiktoken(TiktokenTokenizer),
     Falcon(FalconTokenizer),
@@ -38,12 +39,12 @@ impl UniversalTokenizer {
         let config = TokenizerConfig::default();
         Self::new(config)
     }
-    
+
     /// Create from model with auto-detection
     pub fn from_model_config(config: TokenizerConfig) -> Result<Self> {
         Self::new(config)
     }
-    
+
     fn detect_and_create_backend(config: &TokenizerConfig) -> Result<TokenizerBackend> {
         match config.model_type.as_str() {
             "gpt2" | "bpe" => {
@@ -83,7 +84,7 @@ impl Tokenizer for UniversalTokenizer {
         } else {
             text.to_string()
         };
-        
+
         // Delegate to backend
         let mut tokens = match &self.backend {
             TokenizerBackend::Gpt2(t) => t.encode(&processed, false, add_special)?,
@@ -92,17 +93,17 @@ impl Tokenizer for UniversalTokenizer {
             TokenizerBackend::Tiktoken(t) => t.encode(&processed, false, add_special)?,
             TokenizerBackend::Falcon(t) => t.encode(&processed, false, add_special)?,
         };
-        
+
         // Add BOS if requested and configured
         if add_bos && self.config.add_bos {
             if let Some(bos_id) = self.config.bos_token_id {
                 tokens.insert(0, bos_id);
             }
         }
-        
+
         Ok(tokens)
     }
-    
+
     fn decode(&self, tokens: &[u32]) -> Result<String> {
         match &self.backend {
             TokenizerBackend::Gpt2(t) => t.decode(tokens),
@@ -112,11 +113,11 @@ impl Tokenizer for UniversalTokenizer {
             TokenizerBackend::Falcon(t) => t.decode(tokens),
         }
     }
-    
+
     fn vocab_size(&self) -> usize {
         self.config.vocab_size
     }
-    
+
     fn token_to_piece(&self, token: u32) -> Option<String> {
         match &self.backend {
             TokenizerBackend::Gpt2(t) => t.token_to_piece(token),
@@ -132,7 +133,9 @@ impl Tokenizer for UniversalTokenizer {
 // These would be fully implemented in their respective modules
 
 struct Gpt2Tokenizer {
+    #[allow(dead_code)]
     vocab: HashMap<String, u32>,
+    #[allow(dead_code)]
     merges: Vec<(String, String)>,
     config: TokenizerConfig,
 }
@@ -141,11 +144,7 @@ impl Gpt2Tokenizer {
     fn new(config: &TokenizerConfig) -> Result<Self> {
         // Implementation for GPT-2 BPE tokenizer
         // This handles Llama 3's 128k vocab GPT-2 variant
-        Ok(Self {
-            vocab: HashMap::new(),
-            merges: vec![],
-            config: config.clone(),
-        })
+        Ok(Self { vocab: HashMap::new(), merges: vec![], config: config.clone() })
     }
 }
 
@@ -155,15 +154,15 @@ impl Tokenizer for Gpt2Tokenizer {
         // For now, return a stub
         Ok(vec![1, 2, 3])
     }
-    
+
     fn decode(&self, _tokens: &[u32]) -> Result<String> {
         Ok("decoded".to_string())
     }
-    
+
     fn vocab_size(&self) -> usize {
         self.config.vocab_size
     }
-    
+
     fn token_to_piece(&self, _token: u32) -> Option<String> {
         Some("piece".to_string())
     }
@@ -184,15 +183,15 @@ impl Tokenizer for SentencePieceTokenizer {
     fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
         Ok(vec![1, 2, 3])
     }
-    
+
     fn decode(&self, _tokens: &[u32]) -> Result<String> {
         Ok("decoded".to_string())
     }
-    
+
     fn vocab_size(&self) -> usize {
         self.config.vocab_size
     }
-    
+
     fn token_to_piece(&self, _token: u32) -> Option<String> {
         Some("piece".to_string())
     }
@@ -203,6 +202,7 @@ struct LlamaTokenizer {
 }
 
 impl LlamaTokenizer {
+    #[allow(dead_code)]
     fn new(config: &TokenizerConfig) -> Result<Self> {
         Ok(Self { config: config.clone() })
     }
@@ -212,15 +212,15 @@ impl Tokenizer for LlamaTokenizer {
     fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
         Ok(vec![1, 2, 3])
     }
-    
+
     fn decode(&self, _tokens: &[u32]) -> Result<String> {
         Ok("decoded".to_string())
     }
-    
+
     fn vocab_size(&self) -> usize {
         self.config.vocab_size
     }
-    
+
     fn token_to_piece(&self, _token: u32) -> Option<String> {
         Some("piece".to_string())
     }
@@ -240,15 +240,15 @@ impl Tokenizer for TiktokenTokenizer {
     fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
         Ok(vec![1, 2, 3])
     }
-    
+
     fn decode(&self, _tokens: &[u32]) -> Result<String> {
         Ok("decoded".to_string())
     }
-    
+
     fn vocab_size(&self) -> usize {
         self.config.vocab_size
     }
-    
+
     fn token_to_piece(&self, _token: u32) -> Option<String> {
         Some("piece".to_string())
     }
@@ -268,15 +268,15 @@ impl Tokenizer for FalconTokenizer {
     fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
         Ok(vec![1, 2, 3])
     }
-    
+
     fn decode(&self, _tokens: &[u32]) -> Result<String> {
         Ok("decoded".to_string())
     }
-    
+
     fn vocab_size(&self) -> usize {
         self.config.vocab_size
     }
-    
+
     fn token_to_piece(&self, _token: u32) -> Option<String> {
         Some("piece".to_string())
     }
@@ -285,17 +285,17 @@ impl Tokenizer for FalconTokenizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_universal_tokenizer_detection() {
         // Test GPT-2 detection
         let mut config = TokenizerConfig::default();
         config.model_type = "gpt2".to_string();
         config.vocab_size = 50257;
-        
+
         let tokenizer = UniversalTokenizer::new(config).unwrap();
         assert_eq!(tokenizer.vocab_size(), 50257);
-        
+
         // Test auto-fix for missing pre-tokenizer
         // This would be tested with actual GGUF files
     }

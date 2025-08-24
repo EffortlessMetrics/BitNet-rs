@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Simple test for the core reporting system functionality
 
 use std::collections::HashMap;

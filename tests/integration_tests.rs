@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 #![cfg(feature = "crossval")]
 //! Integration tests for BitNet workspace
 

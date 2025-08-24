@@ -3,11 +3,14 @@
 //! This example demonstrates the enhanced error handling capabilities
 //! implemented for the BitNet.rs testing framework.
 
+#![allow(dead_code, unused_imports, unused_mut)]
+
 use std::time::Duration;
 
 // Import the enhanced error types directly
 use bitnet::testing::errors::TestError;
 
+#[cfg(feature = "examples")]
 fn main() {
     println!("🚀 BitNet.rs Enhanced Error Handling Demo");
     println!("==========================================\n");
@@ -348,3 +351,6 @@ mod bitnet {
         }
     }
 }
+
+#[cfg(not(feature = "examples"))]
+fn main() {}

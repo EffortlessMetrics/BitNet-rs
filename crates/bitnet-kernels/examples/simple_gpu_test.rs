@@ -4,9 +4,9 @@
 //! without the complex test infrastructure.
 
 #[cfg(feature = "cuda")]
-use bitnet_kernels::gpu::{cuda_device_count, is_cuda_available, CudaKernel};
-#[cfg(feature = "cuda")]
 use bitnet_kernels::KernelProvider;
+#[cfg(feature = "cuda")]
+use bitnet_kernels::gpu::{CudaKernel, cuda_device_count, is_cuda_available};
 
 fn main() {
     #[cfg(not(feature = "cuda"))]

@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 #![cfg(feature = "crossval")]
 //! Demonstration of comparison analysis reporting functionality
 //!

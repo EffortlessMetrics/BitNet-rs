@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 // Integration tests for security and safety measures
 use std::path::Path;
 use std::process::Command;

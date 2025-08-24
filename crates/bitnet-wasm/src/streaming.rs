@@ -5,10 +5,10 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::{console, ReadableStream, ReadableStreamDefaultController};
+use web_sys::{ReadableStream, ReadableStreamDefaultController, console};
 
 use crate::inference::WasmGenerationConfig;
-use crate::utils::{to_js_error, JsError};
+use crate::utils::{JsError, to_js_error};
 
 /// WebAssembly-compatible streaming generation
 #[wasm_bindgen]

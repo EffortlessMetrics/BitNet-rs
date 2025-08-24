@@ -22,9 +22,9 @@ pub mod cpp_bindings;
 pub mod comparison;
 
 pub mod fixtures;
+pub mod score;
 pub mod utils;
 pub mod validation;
-pub mod score;
 
 /// Error types for cross-validation operations
 #[derive(thiserror::Error, Debug)]

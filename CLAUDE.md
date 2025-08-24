@@ -15,6 +15,9 @@ cargo build --release --no-default-features --features cuda
 # Build with IQ2_S quantization support (requires GGML FFI)
 cargo build --release --no-default-features --features "cpu,iq2s-ffi"
 
+# Build with native I2_S support (no external dependencies)
+cargo build --release --no-default-features --features cpu
+
 # Run tests (fast, Rust-only)
 cargo test --workspace --no-default-features --features cpu
 
@@ -98,10 +101,17 @@ Minimum Supported Rust Version: **1.89.0** (uses Rust 2024 edition)
 
 ### Feature Flags
 Default features are **empty** to prevent unwanted dependencies:
-- `cpu`: CPU inference with SIMD optimizations
+- `cpu`: CPU inference with SIMD optimizations, includes native I2_S support
 - `cuda`: NVIDIA GPU support
+- `iq2s-ffi`: IQ2_S quantization via GGML FFI (requires vendored GGML files)
 - `ffi`: C++ FFI bridge (required for cross-validation)
 - `crossval`: Cross-validation against C++ (increases build time)
+
+### Quantization Support
+BitNet-rs supports multiple quantization formats:
+- **I2_S**: Native Rust implementation, always available with `cpu` feature
+- **IQ2_S**: Via GGML FFI, requires `iq2s-ffi` feature for llama.cpp compatibility
+- **Standard formats**: Q4_0, Q5_0, Q8_0, etc. (planned)
 
 ### Testing Strategy
 - **Unit tests**: Each crate has comprehensive tests

@@ -13,6 +13,12 @@ pub struct IncrementalTester {
     dependency_graph: DependencyGraph,
 }
 
+impl Default for IncrementalTester {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IncrementalTester {
     pub fn new() -> Self {
         let cache_dir = PathBuf::from("tests/cache/incremental");
@@ -26,7 +32,7 @@ impl IncrementalTester {
         info!("Detecting changes for incremental testing...");
 
         // Ensure cache directory exists
-        fs::create_dir_all(&self.cache_dir).await.map_err(|e| TestError::IoError(e))?;
+        fs::create_dir_all(&self.cache_dir).await.map_err(TestError::IoError)?;
 
         let changed_files = if self.is_git_repository().await {
             self.detect_git_changes().await?
@@ -192,7 +198,7 @@ impl IncrementalTester {
         if output.status.success() {
             let commit_hash = String::from_utf8_lossy(&output.stdout).trim().to_string();
             let commit_file = self.cache_dir.join("last_commit.txt");
-            fs::write(commit_file, commit_hash).await.map_err(|e| TestError::IoError(e))?;
+            fs::write(commit_file, commit_hash).await.map_err(TestError::IoError)?;
         }
 
         Ok(())
@@ -213,16 +219,16 @@ impl IncrementalTester {
 
         fs::write(&self.last_run_file, timestamp.to_string())
             .await
-            .map_err(|e| TestError::IoError(e))?;
+            .map_err(TestError::IoError)?;
 
         Ok(())
     }
 
     /// Check if a file was modified after the given time
     async fn is_file_modified(&self, path: &Path, since: SystemTime) -> Result<bool, TestError> {
-        let metadata = fs::metadata(path).await.map_err(|e| TestError::IoError(e))?;
+        let metadata = fs::metadata(path).await.map_err(TestError::IoError)?;
 
-        let modified = metadata.modified().map_err(|e| TestError::IoError(e))?;
+        let modified = metadata.modified().map_err(TestError::IoError)?;
 
         Ok(modified > since)
     }
@@ -237,9 +243,9 @@ impl IncrementalTester {
     > {
         Box::pin(async move {
             let mut modified_files = Vec::new();
-            let mut entries = fs::read_dir(dir).await.map_err(|e| TestError::IoError(e))?;
+            let mut entries = fs::read_dir(dir).await.map_err(TestError::IoError)?;
 
-            while let Some(entry) = entries.next_entry().await.map_err(|e| TestError::IoError(e))? {
+            while let Some(entry) = entries.next_entry().await.map_err(TestError::IoError)? {
                 let path = entry.path();
 
                 if path.is_file() && self.is_relevant_file(&path) {

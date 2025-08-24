@@ -1,23 +1,23 @@
 //! Tokenization support for BitNet models
 
+pub mod gguf_tokenizer;
+pub mod hf_tokenizer;
 pub mod loader;
 mod mock;
-pub mod universal;
-pub mod gguf_tokenizer;
 pub mod sp_tokenizer;
-pub mod hf_tokenizer;
 pub mod spm_tokenizer;
+pub mod universal;
 
 use bitnet_common::Result;
 use std::path::Path;
 use std::sync::Arc;
 
+pub use hf_tokenizer::HfTokenizer;
 pub use loader::load_tokenizer;
 pub use mock::MockTokenizer;
-pub use universal::UniversalTokenizer;
-pub use hf_tokenizer::HfTokenizer;
 #[cfg(feature = "spm")]
 pub use spm_tokenizer::SpmTokenizer;
+pub use universal::UniversalTokenizer;
 
 /// Configuration for tokenizer initialization
 #[derive(Debug, Clone, Default)]
@@ -50,28 +50,28 @@ pub trait Tokenizer: Send + Sync {
     fn decode(&self, tokens: &[u32]) -> Result<String>;
     fn vocab_size(&self) -> usize;
     fn token_to_piece(&self, token: u32) -> Option<String>;
-    
+
     // Legacy shims for backward compatibility (default implementations)
     /// Legacy encode method - calls new encode with sensible defaults
     fn encode_legacy(&self, text: &str, add_special_tokens: bool) -> Result<Vec<u32>> {
         self.encode(text, true, add_special_tokens)
     }
-    
+
     /// Legacy decode method - ignores skip_special_tokens parameter
     fn decode_legacy(&self, tokens: &[u32], _skip_special_tokens: bool) -> Result<String> {
         self.decode(tokens)
     }
-    
+
     /// BOS token ID getter - returns None by default
     fn bos_token_id(&self) -> Option<u32> {
         None
     }
-    
+
     /// EOS token ID getter - returns None by default
     fn eos_token_id(&self) -> Option<u32> {
         None
     }
-    
+
     /// Legacy PAD token ID getter - returns None by default  
     fn pad_token_id(&self) -> Option<u32> {
         None
@@ -82,6 +82,7 @@ pub trait Tokenizer: Send + Sync {
 pub struct BasicTokenizer {
     vocab_size: usize,
     eos_token_id: Option<u32>,
+    #[allow(dead_code)]
     pad_token_id: Option<u32>,
 }
 
@@ -150,55 +151,58 @@ impl Tokenizer for BasicTokenizer {
 
 /// Tokenizer file kind
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TokenizerFileKind { 
-    HfJson, 
+pub enum TokenizerFileKind {
+    HfJson,
     #[cfg(feature = "spm")]
-    Spm 
+    Spm,
 }
 
 /// Load tokenizer from path based on file extension
 pub fn from_path(path: &Path) -> Result<(Arc<dyn Tokenizer>, TokenizerFileKind)> {
     use bitnet_common::{BitNetError, ModelError};
-    
-    let ext = path.extension()
-        .and_then(|s| s.to_str())
-        .unwrap_or("")
-        .to_ascii_lowercase();
-    
+
+    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("").to_ascii_lowercase();
+
     match ext.as_str() {
         "json" => {
-            let t = HfTokenizer::from_file(path)
-                .map_err(|e| BitNetError::Model(
-                    ModelError::LoadingFailed { reason: format!("Failed to load HF tokenizer: {}", e) }
-                ))?;
+            let t = HfTokenizer::from_file(path).map_err(|e| {
+                BitNetError::Model(ModelError::LoadingFailed {
+                    reason: format!("Failed to load HF tokenizer: {}", e),
+                })
+            })?;
             Ok((Arc::new(t), TokenizerFileKind::HfJson))
         }
         "model" => {
             #[cfg(feature = "spm")]
             {
-                let t = SpmTokenizer::from_file(path)
-                    .map_err(|e| BitNetError::Model(
-                        ModelError::LoadingFailed { reason: format!("Failed to load SPM tokenizer: {}", e) }
-                    ))?;
+                let t = SpmTokenizer::from_file(path).map_err(|e| {
+                    BitNetError::Model(ModelError::LoadingFailed {
+                        reason: format!("Failed to load SPM tokenizer: {}", e),
+                    })
+                })?;
                 Ok((Arc::new(t), TokenizerFileKind::Spm))
             }
             #[cfg(not(feature = "spm"))]
             {
-                Err(BitNetError::Model(
-                    ModelError::LoadingFailed { reason: "Build with `--features spm` to load SentencePiece .model files".to_string() }
-                ))
+                Err(BitNetError::Model(ModelError::LoadingFailed {
+                    reason: "Build with `--features spm` to load SentencePiece .model files"
+                        .to_string(),
+                }))
             }
         }
-        _ => Err(BitNetError::Model(
-            ModelError::LoadingFailed { reason: format!("Unsupported tokenizer file (expected *.json or *.model): {}", path.display()) }
-        )),
+        _ => Err(BitNetError::Model(ModelError::LoadingFailed {
+            reason: format!(
+                "Unsupported tokenizer file (expected *.json or *.model): {}",
+                path.display()
+            ),
+        })),
     }
 }
 
 /// Try to construct tokenizer from GGUF metadata (placeholder)
 pub fn try_from_gguf_metadata<F>(_build_from_arrays: F) -> Option<Arc<dyn Tokenizer>>
 where
-    F: FnOnce() -> Result<Arc<dyn Tokenizer>>
+    F: FnOnce() -> Result<Arc<dyn Tokenizer>>,
 {
     // Hook for future GGUF-embedded tokenizer support
     None

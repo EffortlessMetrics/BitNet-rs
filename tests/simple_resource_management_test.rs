@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 #[cfg(test)]
 use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 

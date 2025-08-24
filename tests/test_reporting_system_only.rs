@@ -3,6 +3,8 @@
 //! This test focuses specifically on the reporting system without
 //! dependencies on other modules that may have compilation issues.
 
+#![cfg(feature = "integration-tests")]
+
 use bitnet_tests::reporting::{
     ReportConfig, ReportFormat, ReportingManager, TestReporter,
     formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter},

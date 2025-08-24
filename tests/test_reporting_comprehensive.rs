@@ -3,6 +3,8 @@
 //! This test demonstrates the complete reporting system functionality
 //! including HTML, JSON, JUnit XML, and Markdown report generation.
 
+#![cfg(feature = "integration-tests")]
+
 use bitnet_tests::reporting::{
     ReportConfig, ReportFormat, TestReporter,
     formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter},

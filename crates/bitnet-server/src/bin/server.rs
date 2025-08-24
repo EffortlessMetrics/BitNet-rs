@@ -115,7 +115,7 @@ async fn wait_for_shutdown() {
 
     #[cfg(unix)]
     let terminate = async {
-        use tokio::signal::unix::{signal, SignalKind};
+        use tokio::signal::unix::{SignalKind, signal};
         signal(SignalKind::terminate()).expect("Failed to install signal handler").recv().await;
     };
 

@@ -249,6 +249,12 @@ pub struct ThreadManager {
     num_threads: AtomicUsize,
 }
 
+impl Default for ThreadManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ThreadManager {
     pub fn new() -> Self {
         Self { thread_pool: RwLock::new(None), num_threads: AtomicUsize::new(num_cpus::get()) }
@@ -356,13 +362,13 @@ static THREAD_MANAGER: std::sync::OnceLock<ThreadManager> = std::sync::OnceLock:
 
 /// Initialize the thread pool
 pub fn initialize_thread_pool() -> Result<(), BitNetCError> {
-    let manager = THREAD_MANAGER.get_or_init(|| ThreadManager::new());
+    let manager = THREAD_MANAGER.get_or_init(ThreadManager::new);
     manager.initialize()
 }
 
 /// Get the global thread manager instance
 pub fn get_thread_manager() -> &'static ThreadManager {
-    THREAD_MANAGER.get_or_init(|| ThreadManager::new())
+    THREAD_MANAGER.get_or_init(ThreadManager::new)
 }
 
 /// Set the number of threads
@@ -385,11 +391,7 @@ where
 
 /// Cleanup the thread pool
 pub fn cleanup_thread_pool() -> Result<(), BitNetCError> {
-    if let Some(manager) = THREAD_MANAGER.get() {
-        manager.cleanup()
-    } else {
-        Ok(())
-    }
+    if let Some(manager) = THREAD_MANAGER.get() { manager.cleanup() } else { Ok(()) }
 }
 
 #[cfg(test)]
@@ -461,11 +463,13 @@ mod tests {
         let executed = Arc::new(AtomicBool::new(false));
         let executed_clone = Arc::clone(&executed);
 
-        assert!(manager
-            .execute(move || {
-                executed_clone.store(true, Ordering::SeqCst);
-            })
-            .is_ok());
+        assert!(
+            manager
+                .execute(move || {
+                    executed_clone.store(true, Ordering::SeqCst);
+                })
+                .is_ok()
+        );
 
         thread::sleep(Duration::from_millis(100));
         assert!(executed.load(Ordering::SeqCst));

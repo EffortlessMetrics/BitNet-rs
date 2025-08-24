@@ -6,7 +6,7 @@
 
 use crate::gpu::cuda::CudaKernel;
 use crate::gpu::validation::PerformanceResult;
-use crate::{cpu::fallback::FallbackKernel, cpu::x86::Avx2Kernel, KernelProvider};
+use crate::{KernelProvider, cpu::fallback::FallbackKernel, cpu::x86::Avx2Kernel};
 use bitnet_common::Result;
 
 use std::time::Instant;

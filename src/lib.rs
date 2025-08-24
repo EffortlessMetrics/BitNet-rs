@@ -1,16 +1,16 @@
 //! # BitNet.rs - High-Performance 1-bit LLM Inference
 //!
-//! BitNet.rs is a high-performance Rust implementation of BitNet 1-bit Large Language Model inference,
+//! BitNet.rs is a high-performance Rust implementation of `BitNet` 1-bit Large Language Model inference,
 //! providing drop-in compatibility with the original Python/C++ implementation while achieving
 //! superior performance and safety.
 //!
 //! ## Features
 //!
-//! - **High Performance**: Optimized SIMD kernels for x86_64 (AVX2/AVX-512) and ARM64 (NEON)
+//! - **High Performance**: Optimized SIMD kernels for `x86_64` (AVX2/AVX-512) and ARM64 (NEON)
 //! - **Cross-Platform**: Support for Linux, macOS, and Windows
 //! - **Multiple Backends**: CPU and GPU (CUDA) inference engines
-//! - **Format Support**: GGUF, SafeTensors, and HuggingFace model formats
-//! - **Quantization**: I2_S, TL1 (ARM), and TL2 (x86) quantization algorithms
+//! - **Format Support**: GGUF, `SafeTensors`, and `HuggingFace` model formats
+//! - **Quantization**: `I2_S`, TL1 (ARM), and TL2 (x86) quantization algorithms
 //! - **Language Bindings**: C API, Python bindings, and WebAssembly support
 //! - **Production Ready**: Comprehensive testing, benchmarking, and monitoring
 //!
@@ -40,7 +40,7 @@
 //!
 //! - `cpu` (default): CPU inference with optimized kernels
 //! - `gpu`: GPU acceleration via CUDA
-//! - `python`: Python bindings via PyO3
+//! - `python`: Python bindings via `PyO3`
 //! - `wasm`: WebAssembly support for browser deployment
 //! - `server`: HTTP server for inference API
 //! - `cli`: Command-line interface

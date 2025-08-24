@@ -4,10 +4,12 @@
 //! implementations against reference implementations and cross-validate between
 //! different quantization types.
 
+#![cfg(feature = "integration-tests")]
+
 use bitnet_common::{BitNetTensor, QuantizationType, Tensor};
 use bitnet_quantization::{
-    convert_quantization, I2SQuantizer, Quantize, QuantizerFactory, QuantizerTrait, TL1Quantizer,
-    TL2Quantizer,
+    I2SQuantizer, Quantize, QuantizerFactory, QuantizerTrait, TL1Quantizer, TL2Quantizer,
+    convert_quantization,
 };
 use candle_core::{Device, Tensor as CandleTensor};
 use proptest::prelude::*;

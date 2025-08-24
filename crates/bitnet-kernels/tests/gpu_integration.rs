@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Integration tests for GPU kernel validation
 //!
 //! These tests validate the complete GPU kernel system including:
@@ -9,11 +10,11 @@
 #[cfg(feature = "cuda")]
 mod cuda_tests {
     use bitnet_common::QuantizationType;
-    use bitnet_kernels::gpu::{
-        print_benchmark_results, print_validation_results, quick_benchmark, BenchmarkConfig,
-        CudaKernel, GpuBenchmark, GpuValidator, ValidationConfig,
-    };
     use bitnet_kernels::KernelProvider;
+    use bitnet_kernels::gpu::{
+        BenchmarkConfig, CudaKernel, GpuBenchmark, GpuValidator, ValidationConfig,
+        print_benchmark_results, print_validation_results, quick_benchmark,
+    };
 
     #[test]
     #[ignore] // Run with: cargo test --features cuda --ignored

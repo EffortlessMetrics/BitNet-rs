@@ -20,6 +20,7 @@ bitnet-models = { path = "../bitnet-models" }
 bitnet-inference = { path = "../bitnet-inference", optional = true }
 bitnet-quantization = { path = "../bitnet-quantization" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers" }
+bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", optional = true }
 candle-core.workspace = true
 anyhow.workspace = true
 clap = { workspace = true, features = ["derive", "env", "color"] }
@@ -52,8 +53,12 @@ default = ["cpu"]
 cpu = ["bitnet-inference?/cpu"]
 gpu = ["bitnet-inference?/gpu"]
 # IQ2_S support via GGML FFI
-iq2s-ffi = ["bitnet-models/iq2s-ffi"]
+iq2s-ffi = ["bitnet-models/iq2s-ffi", "bitnet-ggml-ffi/iq2s-ffi"]
+# Cross-validation support
+crossval = []
 # Gate benchmark subcommand behind feature flag
 cli-bench = ["dep:bitnet-inference"]
 # build the extra subcommands only when you want them
 full-cli = ["cli-bench"]
+# Gate integration tests
+integration-tests = []

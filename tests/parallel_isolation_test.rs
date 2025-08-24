@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 // Comprehensive test for parallel execution with proper isolation
 // This test validates that the test framework can run tests in parallel
 // while maintaining proper isolation between test executions

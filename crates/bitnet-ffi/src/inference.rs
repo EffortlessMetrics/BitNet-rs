@@ -3,7 +3,7 @@
 //! This module provides thread-safe inference operations, streaming support,
 //! and performance monitoring for the C API.
 
-use crate::{get_model_manager, BitNetCError, BitNetCInferenceConfig, BitNetCPerformanceMetrics};
+use crate::{BitNetCError, BitNetCInferenceConfig, BitNetCPerformanceMetrics, get_model_manager};
 // use bitnet_common::PerformanceMetrics;
 use bitnet_inference::{InferenceConfig, InferenceEngine};
 use std::collections::HashMap;
@@ -17,6 +17,12 @@ pub struct InferenceManager {
     engines: RwLock<HashMap<u32, Arc<Mutex<InferenceEngine>>>>,
     gpu_enabled: RwLock<bool>,
     default_config: RwLock<InferenceConfig>,
+}
+
+impl Default for InferenceManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl InferenceManager {
@@ -325,7 +331,12 @@ impl MockTokenizer {
 }
 
 impl bitnet_tokenizers::Tokenizer for MockTokenizer {
-    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> bitnet_common::Result<Vec<u32>> {
+    fn encode(
+        &self,
+        text: &str,
+        _add_bos: bool,
+        _add_special: bool,
+    ) -> bitnet_common::Result<Vec<u32>> {
         // Simple mock: convert each byte to u32
         Ok(text.bytes().map(|b| b as u32).collect())
     }
@@ -341,7 +352,7 @@ impl bitnet_tokenizers::Tokenizer for MockTokenizer {
     fn vocab_size(&self) -> usize {
         256 // Mock: support all byte values
     }
-    
+
     fn token_to_piece(&self, token: u32) -> Option<String> {
         Some(format!("<token_{}>", token))
     }
@@ -395,7 +406,7 @@ static INFERENCE_MANAGER: std::sync::OnceLock<InferenceManager> = std::sync::Onc
 
 /// Get the global inference manager instance
 pub fn get_inference_manager() -> &'static InferenceManager {
-    INFERENCE_MANAGER.get_or_init(|| InferenceManager::new())
+    INFERENCE_MANAGER.get_or_init(InferenceManager::new)
 }
 
 #[cfg(test)]

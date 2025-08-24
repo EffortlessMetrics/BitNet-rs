@@ -31,7 +31,7 @@ pub struct GgufHeader {
     /// Metadata/tensor alignment in bytes (always a power of two; defaults to 32).
     pub alignment: u32,
     /// Byte offset to tensor data for v3. Zero for v2 or if absent.
-    pub data_offset: u64
+    pub data_offset: u64,
 }
 
 impl GgufHeader {
@@ -89,7 +89,7 @@ impl GgufHeader {
         //
         // The early v3 variant is used by some models like Microsoft's BitNet models.
         // These files claim to be v3 but use a simpler header structure similar to v2.
-        // 
+        //
         // Detection strategy:
         // - Read the next 8 bytes as a potential u64 string length
         // - If it's a reasonable length (0-256) and followed by ASCII text, it's likely a KV pair
@@ -113,33 +113,36 @@ impl GgufHeader {
                     data[*offset + 6],
                     data[*offset + 7],
                 ]);
-                
+
                 // Heuristic: Metadata keys are typically short strings (10-50 chars)
                 // Examples: "general.architecture", "llama.attention.head_count"
                 // If we see a reasonable string length followed by ASCII text,
                 // we're likely looking at the first KV pair, not alignment/data_offset
                 const SAMPLE: usize = 20;
-                
+
                 if potential_strlen > 0 && potential_strlen < 256 {
                     // Check if following bytes could be ASCII text
                     if *offset + 8 + potential_strlen as usize <= data.len() {
-                        let sample = &data[*offset + 8 .. *offset + 8 + SAMPLE.min(potential_strlen as usize)];
-                        
+                        let sample =
+                            &data[*offset + 8..*offset + 8 + SAMPLE.min(potential_strlen as usize)];
+
                         // Keys typically contain: [A-Za-z0-9._-]
-                        let looks_like_key = sample.iter().all(|&b|
+                        let looks_like_key = sample.iter().all(|&b| {
                             matches!(b,
                                 b'0'..=b'9' |
                                 b'a'..=b'z' |
                                 b'A'..=b'Z' |
                                 b'.' | b'_' | b'-'
                             )
-                        );
-                        
+                        });
+
                         if looks_like_key {
                             // Early v3 variant detected: Missing alignment/data_offset fields
                             // This format is used by Microsoft BitNet models and others
                             // We handle it gracefully by using default alignment (32) and computing offset later
-                            tracing::warn!("GGUF v3 early variant detected (missing alignment/data_offset) - handling gracefully");
+                            tracing::warn!(
+                                "GGUF v3 early variant detected (missing alignment/data_offset) - handling gracefully"
+                            );
                             (32u32, 0u64)
                         } else {
                             // Standard v3 with alignment and data_offset
@@ -150,13 +153,17 @@ impl GgufHeader {
                                 data[*offset + 3],
                             ]);
                             *offset += 4;
-                            
+
                             // Validate alignment
                             if align == 0 || !align.is_power_of_two() {
-                                tracing::warn!("GGUF v{}: alignment {} is invalid; using 32", version, align);
+                                tracing::warn!(
+                                    "GGUF v{}: alignment {} is invalid; using 32",
+                                    version,
+                                    align
+                                );
                                 align = 32;
                             }
-                            
+
                             let doff = u64::from_le_bytes([
                                 data[*offset],
                                 data[*offset + 1],
@@ -168,7 +175,7 @@ impl GgufHeader {
                                 data[*offset + 7],
                             ]);
                             *offset += 8;
-                            
+
                             (align, doff)
                         }
                     } else {
@@ -180,12 +187,16 @@ impl GgufHeader {
                             data[*offset + 3],
                         ]);
                         *offset += 4;
-                        
+
                         if align == 0 || !align.is_power_of_two() {
-                            tracing::warn!("GGUF v{}: alignment {} invalid; using 32", version, align);
+                            tracing::warn!(
+                                "GGUF v{}: alignment {} invalid; using 32",
+                                version,
+                                align
+                            );
                             align = 32;
                         }
-                        
+
                         let doff = u64::from_le_bytes([
                             data[*offset],
                             data[*offset + 1],
@@ -197,7 +208,7 @@ impl GgufHeader {
                             data[*offset + 7],
                         ]);
                         *offset += 8;
-                        
+
                         (align, doff)
                     }
                 } else {
@@ -209,12 +220,12 @@ impl GgufHeader {
                         data[*offset + 3],
                     ]);
                     *offset += 4;
-                    
+
                     if align == 0 || !align.is_power_of_two() {
                         tracing::warn!("GGUF v{}: alignment {} invalid; using 32", version, align);
                         align = 32;
                     }
-                    
+
                     let doff = u64::from_le_bytes([
                         data[*offset],
                         data[*offset + 1],
@@ -226,7 +237,7 @@ impl GgufHeader {
                         data[*offset + 7],
                     ]);
                     *offset += 8;
-                    
+
                     (align, doff)
                 }
             }
@@ -397,7 +408,7 @@ impl TensorInfo {
             // For quantized types, element_size is actually bytes per block
             let block_size = tensor_type.block_size();
             let bytes_per_block = tensor_type.element_size();
-            let num_blocks = (total_elements + block_size - 1) / block_size;
+            let num_blocks = total_elements.div_ceil(block_size);
             (num_blocks * bytes_per_block) as u64
         } else {
             // For non-quantized types, element_size is bytes per element
@@ -427,10 +438,34 @@ pub enum GgufTensorType {
     Q6_K,
     Q8_K,
     IQ2_S, // GGML IQ2_S quantization (type 24)
-    I2_S, // BitNet 2-bit signed quantization (type 36)
+    I2_S,  // BitNet 2-bit signed quantization (type 36)
 }
 
 impl GgufTensorType {
+    /// Parse quantization type from string, tolerating common aliases
+    pub fn from_quant_string(s: &str) -> Option<Self> {
+        let s = s.to_ascii_lowercase();
+        match s.as_str() {
+            "i2_s" | "is_2" | "is2" => Some(Self::I2_S),
+            "iq2_s" => Some(Self::IQ2_S),
+            "q4_0" => Some(Self::Q4_0),
+            "q4_1" => Some(Self::Q4_1),
+            "q5_0" => Some(Self::Q5_0),
+            "q5_1" => Some(Self::Q5_1),
+            "q8_0" => Some(Self::Q8_0),
+            "q8_1" => Some(Self::Q8_1),
+            "q2_k" => Some(Self::Q2_K),
+            "q3_k" => Some(Self::Q3_K),
+            "q4_k" => Some(Self::Q4_K),
+            "q5_k" => Some(Self::Q5_K),
+            "q6_k" => Some(Self::Q6_K),
+            "q8_k" => Some(Self::Q8_K),
+            "f32" => Some(Self::F32),
+            "f16" => Some(Self::F16),
+            _ => None,
+        }
+    }
+
     pub fn from_u32(value: u32) -> Result<Self> {
         match value {
             0 => Ok(Self::F32),
@@ -448,7 +483,7 @@ impl GgufTensorType {
             14 => Ok(Self::Q6_K),
             15 => Ok(Self::Q8_K),
             24 => Ok(Self::IQ2_S), // GGML IQ2_S format
-            36 => Ok(Self::I2_S), // BitNet I2_S format
+            36 => Ok(Self::I2_S),  // BitNet I2_S format
             _ => Err(BitNetError::Model(ModelError::InvalidFormat {
                 format: format!("Unknown tensor type: {}", value),
             })),

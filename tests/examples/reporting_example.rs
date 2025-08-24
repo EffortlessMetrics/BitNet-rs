@@ -4,11 +4,11 @@
 //! to generate HTML, JSON, JUnit XML, and Markdown reports.
 
 use bitnet_tests::reporting::{
-    formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter},
     ReportConfig, ReportFormat, ReportingManager, TestReporter,
+    formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter},
 };
 use bitnet_tests::results::{TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary};
-use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
+use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;

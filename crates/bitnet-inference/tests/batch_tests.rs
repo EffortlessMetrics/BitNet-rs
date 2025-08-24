@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Batch processing tests for bitnet-inference
 //!
 //! These tests validate batch processing functionality including:
@@ -160,7 +161,12 @@ impl Model for MockModel {
 struct MockTokenizer;
 
 impl Tokenizer for MockTokenizer {
-    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>, BitNetError> {
+    fn encode(
+        &self,
+        text: &str,
+        _add_bos: bool,
+        _add_special: bool,
+    ) -> Result<Vec<u32>, BitNetError> {
         Ok((0..text.len().min(10)).map(|i| i as u32 + 1).collect())
     }
 
@@ -278,11 +284,9 @@ mod batch_config_tests {
         let mut invalid_config = config;
         invalid_config.max_concurrent_requests = 0;
         assert!(invalid_config.validate().is_err());
-        assert!(invalid_config
-            .validate()
-            .unwrap_err()
-            .to_string()
-            .contains("max_concurrent_requests"));
+        assert!(
+            invalid_config.validate().unwrap_err().to_string().contains("max_concurrent_requests")
+        );
     }
 
     #[test]

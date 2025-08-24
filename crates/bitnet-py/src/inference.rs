@@ -7,15 +7,15 @@ use pyo3::exceptions::{PyRuntimeError, PyStopIteration};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 // use pyo3_asyncio_0_21::tokio::future_into_py;
-use futures_util::StreamExt;
-use std::sync::atomic::{AtomicUsize, Ordering};
+// use futures_util::StreamExt;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::RwLock;
 
-use crate::{parse_device, PyBitNetModel};
+use crate::{PyBitNetModel, parse_device};
 use bitnet_common::Device;
 use bitnet_inference::{GenerationConfig, InferenceEngine};
-use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
+use bitnet_tokenizers::TokenizerBuilder;
 
 /// Python wrapper for the inference engine
 #[pyclass(name = "InferenceEngine")]
@@ -34,13 +34,13 @@ impl PyInferenceEngine {
 impl PyInferenceEngine {
     /// Create a new inference engine
     #[new]
-    #[pyo3(signature = (model, tokenizer = None, device = "cpu", **kwargs))]
+    #[pyo3(signature = (model, tokenizer = None, device = "cpu", **_kwargs))]
     fn new_py(
         py: Python<'_>,
         model: &PyBitNetModel,
         tokenizer: Option<&str>,
         device: &str,
-        kwargs: Option<&pyo3::Bound<'_, PyDict>>,
+        _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
     ) -> PyResult<Self> {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
@@ -56,7 +56,7 @@ impl PyInferenceEngine {
                 })?;
 
                 // Create inference engine
-                let engine = InferenceEngine::new(model.inner(), tokenizer, device.clone())
+                let engine = InferenceEngine::new(model.inner(), tokenizer, device)
                     .map_err(|e| {
                         PyRuntimeError::new_err(format!("Failed to create engine: {}", e))
                     })?;
@@ -67,7 +67,7 @@ impl PyInferenceEngine {
     }
 
     /// Generate text from a prompt
-    #[pyo3(signature = (prompt, max_tokens = 100, temperature = 0.7, top_p = 0.9, top_k = 50, **kwargs))]
+    #[pyo3(signature = (prompt, max_tokens = 100, temperature = 0.7, top_p = 0.9, top_k = 50, **_kwargs))]
     fn generate(
         &self,
         py: Python<'_>,
@@ -76,7 +76,7 @@ impl PyInferenceEngine {
         temperature: Option<f32>,
         top_p: Option<f32>,
         top_k: Option<u32>,
-        kwargs: Option<&pyo3::Bound<'_, PyDict>>,
+        _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
     ) -> PyResult<String> {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
@@ -106,7 +106,7 @@ impl PyInferenceEngine {
     // Commented out for now to avoid compilation issues
 
     /// Generate streaming tokens
-    #[pyo3(signature = (prompt, max_tokens = 100, temperature = 0.7, top_p = 0.9, top_k = 50, **kwargs))]
+    #[pyo3(signature = (prompt, max_tokens = 100, temperature = 0.7, top_p = 0.9, top_k = 50, **_kwargs))]
     fn generate_stream(
         &self,
         py: Python<'_>,
@@ -115,7 +115,7 @@ impl PyInferenceEngine {
         temperature: Option<f32>,
         top_p: Option<f32>,
         top_k: Option<u32>,
-        kwargs: Option<&pyo3::Bound<'_, PyDict>>,
+        _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
     ) -> PyResult<PyStreamingGenerator> {
         let config = GenerationConfig {
             max_new_tokens: max_tokens.unwrap_or(100),
@@ -249,12 +249,12 @@ impl PyStreamingGenerator {
 
 /// Batch inference for multiple prompts
 #[pyfunction]
-#[pyo3(signature = (engine, prompts, **kwargs))]
+#[pyo3(signature = (engine, prompts, **_kwargs))]
 pub fn batch_generate(
     py: Python<'_>,
     engine: &PyInferenceEngine,
     prompts: Vec<String>,
-    kwargs: Option<&pyo3::Bound<'_, PyDict>>,
+    _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
 ) -> PyResult<Vec<String>> {
     py.allow_threads(|| {
         let rt = tokio::runtime::Runtime::new()

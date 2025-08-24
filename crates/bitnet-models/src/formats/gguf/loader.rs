@@ -152,7 +152,7 @@ impl FormatLoader for GgufLoader {
         }
 
         // Create model instance
-        let model = BitNetModel::from_gguf(model_config, tensors, device.clone())?;
+        let model = BitNetModel::from_gguf(model_config, tensors, *device)?;
 
         Ok(Box::new(model))
     }
@@ -168,9 +168,11 @@ impl GgufLoader {
         }
 
         // Try multiple keys for hidden size
-        if let Some(hidden_size) = reader.get_u32_metadata("llama.embedding_length")
+        if let Some(hidden_size) = reader
+            .get_u32_metadata("llama.embedding_length")
             .or_else(|| reader.get_u32_metadata("llama.hidden_size"))
-            .or_else(|| reader.get_u32_metadata("bitnet.hidden_size")) {
+            .or_else(|| reader.get_u32_metadata("bitnet.hidden_size"))
+        {
             config.model.hidden_size = hidden_size as usize;
         }
 
@@ -280,7 +282,7 @@ impl GgufLoader {
                     .map_err(|e| BitNetError::Validation(e.to_string()))?;
                 return Ok(tensor);
             }
-            
+
             // For IQ2_S without FFI support, fail with clear message
             #[cfg(not(feature = "iq2s-ffi"))]
             if matches!(info.tensor_type, GgufTensorType::IQ2_S) {
@@ -292,19 +294,17 @@ impl GgufLoader {
                     ),
                 }));
             }
-            
-            // For I2_S quantization, fail fast with clear error
+
+            // Handle I2_S quantization with native Rust dequantization
             if matches!(info.tensor_type, GgufTensorType::I2_S) {
-                return Err(BitNetError::Model(ModelError::InvalidFormat {
-                    format: format!(
-                        "Unsupported quantization type I2_S in tensor '{}'. \
-                        Re-quantize to a supported type (e.g., Q4_0, Q5_0, Q8_0) \
-                        or build with I2_S support after alpha.",
-                        info.name
-                    ),
-                }));
+                use crate::quant::i2s;
+                let f32_data = i2s::dequantize_to_f32(data, &info.shape)
+                    .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                let tensor = Tensor::from_slice(&f32_data, info.shape.as_slice(), &candle_device)
+                    .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                return Ok(tensor);
             }
-            
+
             // For other quantized types, keep as raw bytes for now
             // (would need specific dequantizers for Q4_0, Q8_0, etc.)
             let tensor = Tensor::from_raw_buffer(data, dtype, &info.shape, &candle_device)

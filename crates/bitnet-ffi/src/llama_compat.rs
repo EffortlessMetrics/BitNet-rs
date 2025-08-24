@@ -1,17 +1,17 @@
 // llama.cpp compatible C API for drop-in replacement
 #![allow(non_camel_case_types)]
 
+use log::{debug, error, warn};
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_float, c_int, c_void};
 use std::ptr;
 use std::slice;
 use std::sync::Arc;
-use log::{debug, error, warn};
 
+use bitnet_common::Device;
 use bitnet_inference::InferenceEngine;
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
-use bitnet_common::Device;
 
 /// Opaque model handle - matches llama_model*
 #[repr(C)]
@@ -107,7 +107,7 @@ pub extern "C" fn llama_load_model_from_file(
     };
 
     // Load model with auto-fix for compatibility
-    let model = match fix_and_load_model(path, device.clone()) {
+    let model = match fix_and_load_model(path, device) {
         Ok(m) => m,
         Err(e) => {
             error!("Failed to load model: {}", e);
@@ -124,11 +124,7 @@ pub extern "C" fn llama_load_model_from_file(
         }
     };
 
-    let llama_model = Box::new(llama_model {
-        model,
-        tokenizer,
-        device,
-    });
+    let llama_model = Box::new(llama_model { model, tokenizer, device });
 
     Box::into_raw(llama_model)
 }
@@ -147,7 +143,7 @@ pub extern "C" fn llama_free_model(model: *mut llama_model) {
 #[unsafe(no_mangle)]
 pub extern "C" fn llama_new_context_with_model(
     model: *mut llama_model,
-    params: llama_context_params,
+    _params: llama_context_params,
 ) -> *mut llama_context {
     if model.is_null() {
         return ptr::null_mut();
@@ -155,14 +151,11 @@ pub extern "C" fn llama_new_context_with_model(
 
     let model = unsafe { &*model };
 
-    match InferenceEngine::new(model.model.clone(), model.tokenizer.clone(), model.device.clone()) {
+    match InferenceEngine::new(model.model.clone(), model.tokenizer.clone(), model.device) {
         Ok(engine) => {
             let vocab_size = model.tokenizer.vocab_size();
-            let ctx = Box::new(llama_context {
-                engine,
-                last_logits: vec![0.0; vocab_size],
-                vocab_size,
-            });
+            let ctx =
+                Box::new(llama_context { engine, last_logits: vec![0.0; vocab_size], vocab_size });
             Box::into_raw(ctx)
         }
         Err(e) => {
@@ -200,7 +193,7 @@ pub extern "C" fn llama_tokenize(
     }
 
     let model = unsafe { &*model };
-    
+
     // Convert text
     let text_slice = if text_len < 0 {
         // Null-terminated string
@@ -232,13 +225,13 @@ pub extern "C" fn llama_tokenize(
     };
 
     let n_tokens = token_ids.len() as c_int;
-    
+
     // Check buffer size
     if tokens.is_null() {
         // Caller is querying required size
         return n_tokens;
     }
-    
+
     if n_tokens > n_max_tokens {
         // Buffer too small - return negative to indicate required size
         return -n_tokens;
@@ -260,8 +253,8 @@ pub extern "C" fn llama_eval(
     ctx: *mut llama_context,
     tokens: *const c_int,
     n_tokens: c_int,
-    n_past: c_int,
-    n_threads: c_int,
+    _n_past: c_int,
+    _n_threads: c_int,
 ) -> c_int {
     if ctx.is_null() || tokens.is_null() || n_tokens <= 0 {
         return 1; // Error
@@ -292,7 +285,7 @@ pub extern "C" fn llama_get_logits(ctx: *mut llama_context) -> *mut c_float {
     if ctx.is_null() {
         return ptr::null_mut();
     }
-    
+
     let ctx = unsafe { &mut *ctx };
     ctx.last_logits.as_mut_ptr()
 }
@@ -303,14 +296,14 @@ pub extern "C" fn llama_get_logits_ith(ctx: *mut llama_context, i: c_int) -> *mu
     if ctx.is_null() || i < 0 {
         return ptr::null_mut();
     }
-    
+
     let ctx = unsafe { &mut *ctx };
     let offset = (i as usize) * ctx.vocab_size;
-    
+
     if offset >= ctx.last_logits.len() {
         return ptr::null_mut();
     }
-    
+
     unsafe { ctx.last_logits.as_mut_ptr().add(offset) }
 }
 
@@ -320,7 +313,7 @@ pub extern "C" fn llama_n_vocab(model: *const llama_model) -> c_int {
     if model.is_null() {
         return 0;
     }
-    
+
     let model = unsafe { &*model };
     model.tokenizer.vocab_size() as c_int
 }
@@ -331,7 +324,7 @@ pub extern "C" fn llama_n_ctx(ctx: *const llama_context) -> c_int {
     if ctx.is_null() {
         return 0;
     }
-    
+
     let ctx = unsafe { &*ctx };
     ctx.engine.model_config().model.max_position_embeddings as c_int
 }
@@ -340,47 +333,49 @@ pub extern "C" fn llama_n_ctx(ctx: *const llama_context) -> c_int {
 
 fn fix_and_load_model(path: &str, device: Device) -> anyhow::Result<Arc<dyn Model>> {
     use bitnet_compat::gguf_fixer::GgufCompatibilityFixer;
-    
+
     // Diagnose issues
     let fixes = GgufCompatibilityFixer::diagnose(path)?;
-    
+
     if !fixes.is_empty() {
         warn!("Model compatibility issues detected:");
         for fix in &fixes {
             warn!("  - {}", fix);
         }
-        
+
         // Create fixed version
         let fixed_path = format!("{}.fixed", path);
         GgufCompatibilityFixer::export_fixed(path, &fixed_path)?;
-        
+
         // Load fixed model
         use bitnet_models::formats::gguf::GgufLoader;
         use bitnet_models::loader::{FormatLoader, LoadConfig};
         use std::path::Path;
         let loader = GgufLoader;
-        loader.load(Path::new(&fixed_path), &device, &LoadConfig::default())
+        loader
+            .load(Path::new(&fixed_path), &device, &LoadConfig::default())
             .map_err(|e| anyhow::anyhow!("Failed to load model: {}", e))
-            .map(|m| Arc::from(m))
+            .map(Arc::from)
     } else {
         use bitnet_models::formats::gguf::GgufLoader;
         use bitnet_models::loader::{FormatLoader, LoadConfig};
         use std::path::Path;
         let loader = GgufLoader;
-        loader.load(Path::new(path), &device, &LoadConfig::default())
+        loader
+            .load(Path::new(path), &device, &LoadConfig::default())
             .map_err(|e| anyhow::anyhow!("Failed to load model: {}", e))
-            .map(|m| Arc::from(m))
+            .map(Arc::from)
     }
 }
 
 fn create_universal_tokenizer(_model: &dyn Model) -> anyhow::Result<Arc<dyn Tokenizer>> {
-    use bitnet_tokenizers::{UniversalTokenizer, TokenizerConfig};
-    
+    use bitnet_tokenizers::{TokenizerConfig, UniversalTokenizer};
+
     // Create default tokenizer config
     let config = TokenizerConfig::new();
-    
+
     // Create tokenizer that handles GPT2, SentencePiece, etc.
     let tokenizer = UniversalTokenizer::new(config)?;
-    
+
     Ok(Arc::new(tokenizer))
 }

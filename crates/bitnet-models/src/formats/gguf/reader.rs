@@ -37,7 +37,10 @@ impl<'a> GgufReader<'a> {
 
             tracing::warn!(
                 "GGUF v{}: invalid data_offset={} (kv_end={}, align={}); falling back to align_up",
-                header.version, doff, kv_end_offset, a
+                header.version,
+                doff,
+                kv_end_offset,
+                a
             );
         }
 
@@ -143,7 +146,7 @@ impl<'a> GgufReader<'a> {
     pub fn metadata_count(&self) -> usize {
         self.header.metadata_kv_count as usize
     }
-    
+
     /// Get the number of metadata KV pairs (same as metadata_count)
     pub fn metadata_kv_count(&self) -> u64 {
         self.header.metadata_kv_count
@@ -184,8 +187,13 @@ impl<'a> GgufReader<'a> {
 
         if end > self.data.len() {
             return Err(BitNetError::Model(ModelError::LoadingFailed {
-                reason: format!("Tensor '{}' data extends beyond file bounds (start: {}, end: {}, file size: {})", 
-                               info.name, start, end, self.data.len()),
+                reason: format!(
+                    "Tensor '{}' data extends beyond file bounds (start: {}, end: {}, file size: {})",
+                    info.name,
+                    start,
+                    end,
+                    self.data.len()
+                ),
             }));
         }
 
@@ -246,49 +254,51 @@ impl<'a> GgufReader<'a> {
             _ => None,
         })
     }
-    
+
     /// Get Array metadata by key (for tokenizer.ggml.model bytes)
     pub fn get_array_metadata(&self, key: &str) -> Option<Vec<u8>> {
         self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {
             GgufValue::Array(arr) => {
                 // Convert array of U8 values to byte vector
-                let bytes: Vec<u8> = arr.iter().filter_map(|v| match v {
-                    GgufValue::U8(b) => Some(*b),
-                    _ => None,
-                }).collect();
-                if bytes.len() == arr.len() {
-                    Some(bytes)
-                } else {
-                    None
-                }
-            },
+                let bytes: Vec<u8> = arr
+                    .iter()
+                    .filter_map(|v| match v {
+                        GgufValue::U8(b) => Some(*b),
+                        _ => None,
+                    })
+                    .collect();
+                if bytes.len() == arr.len() { Some(bytes) } else { None }
+            }
             _ => None,
         })
     }
-    
+
     /// Get binary metadata by key
     pub fn get_bin_metadata(&self, key: &str) -> Option<Vec<u8>> {
         self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {
             GgufValue::Array(arr) => {
                 // Binary data could be stored as U8 array
-                let bytes: Vec<u8> = arr.iter().filter_map(|v| match v {
-                    GgufValue::U8(b) => Some(*b),
-                    _ => None,
-                }).collect();
-                if bytes.len() == arr.len() {
-                    Some(bytes)
-                } else {
-                    None
-                }
-            },
+                let bytes: Vec<u8> = arr
+                    .iter()
+                    .filter_map(|v| match v {
+                        GgufValue::U8(b) => Some(*b),
+                        _ => None,
+                    })
+                    .collect();
+                if bytes.len() == arr.len() { Some(bytes) } else { None }
+            }
             _ => None,
         })
     }
-    
+
     /// Get binary or array metadata - tries both formats
     pub fn get_bin_or_u8_array(&self, key: &str) -> Option<Vec<u8>> {
-        if let Some(v) = self.get_array_metadata(key) { return Some(v); }
-        if let Some(v) = self.get_bin_metadata(key) { return Some(v); }
+        if let Some(v) = self.get_array_metadata(key) {
+            return Some(v);
+        }
+        if let Some(v) = self.get_bin_metadata(key) {
+            return Some(v);
+        }
         None
     }
 

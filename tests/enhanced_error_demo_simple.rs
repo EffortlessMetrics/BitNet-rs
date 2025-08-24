@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 // Simple demonstration of enhanced error handling functionality
 // This file can be run independently to show the enhanced error handling works
 

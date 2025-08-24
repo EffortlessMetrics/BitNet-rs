@@ -1,4 +1,5 @@
 #![cfg(feature = "crossval")]
+#![cfg(feature = "integration-tests")]
 
 use bitnet_common::{InferenceConfig, ModelFormat, PerformanceMetrics};
 use bitnet_tests::units::BYTES_PER_MB;

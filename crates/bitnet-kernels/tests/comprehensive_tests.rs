@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 #![cfg(feature = "ffi")]
 //! Comprehensive tests for bitnet-kernels
 //! Covers edge cases, error conditions, and end-to-end scenarios

@@ -6,7 +6,7 @@
 use anyhow::{Context, Result};
 use candle_core::{DType, IndexOp};
 use clap::{CommandFactory, Parser, Subcommand};
-use clap_complete::{generate, Shell};
+use clap_complete::{Shell, generate};
 use console::style;
 use std::io;
 use tracing::{error, info};
@@ -19,6 +19,45 @@ mod sampling;
 mod score;
 
 use exit::*;
+
+fn compiled_features() -> &'static [&'static str] {
+    &[
+        #[cfg(feature = "cpu")]
+        "cpu",
+        #[cfg(feature = "gpu")]
+        "gpu",
+        // Removed cuda and ffi - not declared in bitnet-cli/Cargo.toml
+        #[cfg(feature = "iq2s-ffi")]
+        "iq2s-ffi",
+        #[cfg(feature = "crossval")]
+        "crossval",
+    ]
+}
+
+fn bitnet_version() -> &'static str {
+    use std::sync::OnceLock;
+    static VERSION_STRING: OnceLock<String> = OnceLock::new();
+
+    VERSION_STRING.get_or_init(|| {
+        let features = compiled_features();
+        let features_line = if features.is_empty() {
+            "features: none".to_string()
+        } else {
+            format!("features: {}", features.join(", "))
+        };
+
+        #[cfg(feature = "iq2s-ffi")]
+        let ggml_line = format!("ggml: {}", bitnet_ggml_ffi::GGML_COMMIT);
+        #[cfg(not(feature = "iq2s-ffi"))]
+        let ggml_line = String::new();
+
+        if ggml_line.is_empty() {
+            format!("{}\n{}", env!("CARGO_PKG_VERSION"), features_line)
+        } else {
+            format!("{}\n{}\n{}", env!("CARGO_PKG_VERSION"), features_line, ggml_line)
+        }
+    })
+}
 
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
@@ -56,7 +95,7 @@ Examples:
 
 For more information, visit: https://github.com/microsoft/BitNet
 "#)]
-#[command(version)]
+#[command(version = bitnet_version())]
 #[command(author = "BitNet Contributors")]
 struct Cli {
     /// Configuration file path
@@ -151,63 +190,63 @@ enum Commands {
         /// Dump token IDs to stdout
         #[arg(long, default_value_t = false)]
         dump_ids: bool,
-        
+
         /// Insert BOS token at start of prompt
         #[arg(long, default_value_t = false)]
         bos: bool,
-        
+
         /// Use greedy decoding (overrides temperature)
         #[arg(long, default_value_t = false)]
         greedy: bool,
-        
+
         /// Enable deterministic mode (single-threaded)
         #[arg(long, default_value_t = false)]
         deterministic: bool,
-        
+
         /// Number of threads to use (0 = all cores)
         #[arg(long, default_value_t = 0)]
         threads: usize,
-        
+
         /// Dump logit steps during generation (max steps)
         #[arg(long)]
         dump_logit_steps: Option<usize>,
-        
+
         /// Top-k tokens to include in logit dump
         #[arg(long, default_value = "10", value_name = "K")]
         logits_topk: usize,
-        
+
         /// Assert greedy argmax invariant when dumping logits
         #[arg(long, default_value_t = false)]
         assert_greedy: bool,
     },
-    
+
     /// Tokenize text and output token IDs as JSON
     Tokenize {
         /// Model GGUF path (for extracting tokenizer and counts)
         #[arg(long)]
         model: std::path::PathBuf,
-        
+
         /// Optional external SentencePiece tokenizer (overrides GGUF)
         #[arg(long)]
         tokenizer: Option<std::path::PathBuf>,
-        
+
         /// Text to tokenize (inline)
         #[arg(long, conflicts_with = "file")]
         text: Option<String>,
-        
+
         /// Read text from file
         #[arg(long, conflicts_with = "text")]
         file: Option<std::path::PathBuf>,
-        
+
         /// Insert BOS token at start
         #[arg(long, default_value_t = false)]
         bos: bool,
-        
+
         /// Output JSON to file (stdout if omitted)
         #[arg(long)]
         json_out: Option<std::path::PathBuf>,
     },
-    
+
     /// Calculate perplexity score for a model
     Score(score::ScoreArgs),
 
@@ -239,13 +278,13 @@ enum Commands {
 
     /// Show system information
     Info,
-    
+
     /// Inspect model metadata without loading tensors
     Inspect {
         /// Model file path  
         #[arg(long)]
         model: std::path::PathBuf,
-        
+
         /// Output format as JSON
         #[arg(long, default_value_t = false)]
         json: bool,
@@ -351,14 +390,7 @@ async fn main() -> Result<()> {
         Some(Commands::Benchmark(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Serve(cmd)) => cmd.execute(&config).await,
-        Some(Commands::Tokenize { 
-            model, 
-            tokenizer, 
-            text, 
-            file, 
-            bos, 
-            json_out 
-        }) => {
+        Some(Commands::Tokenize { model, tokenizer, text, file, bos, json_out }) => {
             handle_tokenize_command(model, tokenizer, text, file, bos, json_out).await
         }
         Some(Commands::Score(args)) => score::run_score(&args).await,
@@ -456,43 +488,43 @@ async fn handle_tokenize_command(
 ) -> Result<()> {
     use bitnet_models::GgufReader;
     use bitnet_tokenizers::Tokenizer;
-    
+
     // Read GGUF to get counts (always needed)
     let gguf_bytes = std::fs::read(&model_path)
         .with_context(|| format!("Failed to read model: {}", model_path.display()))?;
-    let gguf = GgufReader::new(&gguf_bytes)
-        .context("Failed to parse GGUF")?;
-    
+    let gguf = GgufReader::new(&gguf_bytes).context("Failed to parse GGUF")?;
+
     let counts = serde_json::json!({
         "n_kv": gguf.metadata_keys().len(),
         "n_tensors": gguf.tensor_count(),
         "unmapped": 0  // tokenize doesn't map tensors
     });
-    
+
     // Load tokenizer: prefer external, fall back to GGUF
-    let (tokenizer, is_external): (Box<dyn Tokenizer>, bool) = if let Some(spm_path) = tokenizer_path {
-        let tok = bitnet_tokenizers::load_tokenizer(&spm_path)
-            .with_context(|| format!("Failed to load external tokenizer: {}", spm_path.display()))?;
-        (tok, true)
-    } else {
-        let tok = bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&gguf)
-            .context("No tokenizer in GGUF, provide --tokenizer")?;
-        (tok, false)
-    };
-    
+    let (tokenizer, is_external): (Box<dyn Tokenizer>, bool) =
+        if let Some(spm_path) = tokenizer_path {
+            let tok = bitnet_tokenizers::load_tokenizer(&spm_path).with_context(|| {
+                format!("Failed to load external tokenizer: {}", spm_path.display())
+            })?;
+            (tok, true)
+        } else {
+            let tok = bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&gguf)
+                .context("No tokenizer in GGUF, provide --tokenizer")?;
+            (tok, false)
+        };
+
     // Read input text
     let input = if let Some(s) = text {
         s
     } else if let Some(p) = file {
-        std::fs::read_to_string(p)
-            .context("Failed to read input file")?
+        std::fs::read_to_string(p).context("Failed to read input file")?
     } else {
         anyhow::bail!("Provide --text or --file");
     };
-    
+
     // Tokenize with BOS policy
     let ids = tokenizer.encode(&input, bos, false)?;
-    
+
     // Build output JSON
     let output = serde_json::json!({
         "tokens": {
@@ -510,7 +542,7 @@ async fn handle_tokenize_command(
             "eos": tokenizer.eos_token_id(),
         }
     });
-    
+
     // Write output
     if let Some(path) = json_out {
         std::fs::write(&path, serde_json::to_string_pretty(&output)?)
@@ -519,7 +551,7 @@ async fn handle_tokenize_command(
     } else {
         println!("{}", serde_json::to_string_pretty(&output)?);
     }
-    
+
     Ok(())
 }
 
@@ -576,10 +608,10 @@ async fn run_simple_generation(
 ) -> Result<()> {
     use crate::sampling::Sampler;
     use bitnet_common::Device;
-    use bitnet_models::{transformer::KVCache, Model};
+    use bitnet_models::{Model, transformer::KVCache};
     use bitnet_tokenizers::Tokenizer;
     use std::sync::Arc;
-    
+
     // Simple logit step for dumping
     #[derive(Debug, serde::Serialize)]
     struct LogitStep {
@@ -587,7 +619,7 @@ async fn run_simple_generation(
         top_logits: Vec<serde_json::Value>,
         chosen_id: Option<u32>,
     }
-    
+
     // Set deterministic mode if requested
     if deterministic {
         unsafe {
@@ -598,7 +630,7 @@ async fn run_simple_generation(
             }
         }
     }
-    
+
     // Override temperature if greedy mode
     let temperature = if greedy { 0.0 } else { temperature };
 
@@ -652,7 +684,7 @@ async fn run_simple_generation(
     // Track GGUF metadata for JSON output
     let mut gguf_metadata: Option<(usize, usize)> = None;
     let mut external_tokenizer = false;
-    
+
     let tokenizer = if let Some(path) = tokenizer_path {
         external_tokenizer = true;
         println!("Loading tokenizer from: {}", path.display());
@@ -665,7 +697,9 @@ async fn run_simple_generation(
                     std::process::exit(EXIT_STRICT_TOKENIZER);
                 }
                 if !allow_mock {
-                    anyhow::bail!("Failed to load tokenizer: {e}. Use --allow-mock to use mock tokenizer.");
+                    anyhow::bail!(
+                        "Failed to load tokenizer: {e}. Use --allow-mock to use mock tokenizer."
+                    );
                 }
                 println!("Warning: Using mock tokenizer due to: {e}");
                 Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
@@ -674,18 +708,18 @@ async fn run_simple_generation(
     } else {
         // Try to load tokenizer from GGUF if no external tokenizer specified
         println!("Attempting to load tokenizer from GGUF model...");
-        
+
         // Read the GGUF file to get tokenizer metadata
         let gguf_data = std::fs::read(&model_path)
             .context("Failed to read GGUF file for tokenizer extraction")?;
         let reader = bitnet_models::GgufReader::new(&gguf_data)
             .context("Failed to parse GGUF for tokenizer extraction")?;
-        
+
         // Capture metadata counts
         let n_tensors = reader.tensor_count() as usize;
         let n_kv = reader.metadata_keys().len();
         gguf_metadata = Some((n_kv, n_tensors));
-        
+
         match bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&reader) {
             Ok(tok) => {
                 println!("Successfully loaded SentencePiece tokenizer from GGUF");
@@ -697,7 +731,9 @@ async fn run_simple_generation(
                     std::process::exit(EXIT_STRICT_TOKENIZER);
                 }
                 if !allow_mock {
-                    anyhow::bail!("Failed to load tokenizer from GGUF: {e}. Specify --tokenizer <path> or use --allow-mock.");
+                    anyhow::bail!(
+                        "Failed to load tokenizer from GGUF: {e}. Specify --tokenizer <path> or use --allow-mock."
+                    );
                 }
                 println!("Warning: Using mock tokenizer due to: {e}");
                 Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
@@ -718,14 +754,14 @@ async fn run_simple_generation(
 
     print!("Generating: {}", prompt);
     std::io::Write::flush(&mut std::io::stdout())?;
-    
+
     // Track timing
     let start_time = std::time::Instant::now();
     let mut first_token_ms: Option<u64> = None;
 
     // Track generated tokens for repetition penalty
     let mut generated_tokens = Vec::new();
-    
+
     // Track logits dump if requested
     let mut logits_dump: Vec<LogitStep> = Vec::new();
 
@@ -748,57 +784,55 @@ async fn run_simple_generation(
             if step_idx < max_steps {
                 // Helper for deterministic, robust top-k
                 let topk_indices = {
-                    let mut indexed: Vec<(usize, f32)> = logits_vec.iter()
-                        .enumerate()
-                        .map(|(i, &v)| (i, v))
-                        .collect();
+                    let mut indexed: Vec<(usize, f32)> =
+                        logits_vec.iter().enumerate().map(|(i, &v)| (i, v)).collect();
                     // Sort by (-logit, token_id) for determinism
-                    indexed.sort_by(|a, b| {
-                        match (a.1.is_finite(), b.1.is_finite()) {
-                            (false, true) => std::cmp::Ordering::Greater,
-                            (true, false) => std::cmp::Ordering::Less,
-                            _ => {
-                                let cmp = b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal);
-                                if cmp == std::cmp::Ordering::Equal {
-                                    a.0.cmp(&b.0)
-                                } else {
-                                    cmp
-                                }
-                            }
+                    indexed.sort_by(|a, b| match (a.1.is_finite(), b.1.is_finite()) {
+                        (false, true) => std::cmp::Ordering::Greater,
+                        (true, false) => std::cmp::Ordering::Less,
+                        _ => {
+                            let cmp = b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal);
+                            if cmp == std::cmp::Ordering::Equal { a.0.cmp(&b.0) } else { cmp }
                         }
                     });
                     indexed.into_iter().take(logits_topk).map(|(i, _)| i).collect::<Vec<_>>()
                 };
-                
-                let top_logits: Vec<(u32, f32)> = topk_indices.iter()
-                    .map(|&i| (i as u32, logits_vec[i]))
-                    .collect();
-                
+
+                let top_logits: Vec<(u32, f32)> =
+                    topk_indices.iter().map(|&i| (i as u32, logits_vec[i])).collect();
+
                 // Will capture chosen_id after sampling
                 let step = LogitStep {
                     step: step_idx,
-                    top_logits: top_logits.iter().map(|&(token_id, logit)| {
-                        serde_json::json!({
-                            "token_id": token_id,
-                            "logit": logit
+                    top_logits: top_logits
+                        .iter()
+                        .map(|&(token_id, logit)| {
+                            serde_json::json!({
+                                "token_id": token_id,
+                                "logit": logit
+                            })
                         })
-                    }).collect(),
-                    chosen_id: None,  // Will set after sampling
+                        .collect(),
+                    chosen_id: None, // Will set after sampling
                 };
                 logits_dump.push(step);
             }
         }
-        
+
         // Sample next token
         let next_token = sampler.sample(&logits_vec, &generated_tokens);
-        
+
         // Assert greedy invariant if requested
-        if assert_greedy && greedy && dump_logit_steps.is_some() && step_idx < dump_logit_steps.unwrap() {
+        if assert_greedy
+            && greedy
+            && dump_logit_steps.is_some()
+            && step_idx < dump_logit_steps.unwrap()
+        {
             let (mut best_i, mut best_v) = (0usize, f32::NEG_INFINITY);
             for (i, &v) in logits_vec.iter().enumerate() {
-                if v.is_finite() && v > best_v { 
-                    best_v = v; 
-                    best_i = i; 
+                if v.is_finite() && v > best_v {
+                    best_v = v;
+                    best_i = i;
                 }
             }
             if next_token as usize != best_i {
@@ -807,17 +841,17 @@ async fn run_simple_generation(
                 std::process::exit(EXIT_ARGMAX_MISMATCH);
             }
         }
-        
+
         // Update chosen token in logits dump
         if let Some(max_steps) = dump_logit_steps {
             if step_idx < max_steps && !logits_dump.is_empty() {
                 logits_dump.last_mut().unwrap().chosen_id = Some(next_token);
             }
         }
-        
+
         tokens.push(next_token);
         generated_tokens.push(next_token);
-        
+
         // Track first token time
         if first_token_ms.is_none() {
             first_token_ms = Some(start_time.elapsed().as_millis() as u64);
@@ -838,20 +872,24 @@ async fn run_simple_generation(
 
     // Calculate timing metrics
     let total_ms = start_time.elapsed().as_millis() as u64;
-    let tok_per_sec = if total_ms > 0 { 
-        (generated_tokens.len() as f64) / (total_ms as f64 / 1000.0) 
-    } else { 
-        0.0 
+    let tok_per_sec = if total_ms > 0 {
+        (generated_tokens.len() as f64) / (total_ms as f64 / 1000.0)
+    } else {
+        0.0
     };
-    
+
     println!("\n\nGeneration complete!");
-    println!("Generated {} tokens in {}ms ({:.1} tok/s)", 
-             generated_tokens.len(), total_ms, tok_per_sec);
-    
+    println!(
+        "Generated {} tokens in {}ms ({:.1} tok/s)",
+        generated_tokens.len(),
+        total_ms,
+        tok_per_sec
+    );
+
     // Output JSON if requested
     if let Some(json_path) = json_out {
         let generated_text = tokenizer.decode(&generated_tokens)?;
-        
+
         // Get tokenizer info
         let tokenizer_info = serde_json::json!({
             "type": "sentencepiece",
@@ -859,7 +897,7 @@ async fn run_simple_generation(
             "bos": tokenizer.bos_token_id().unwrap_or(1),
             "eos": tokenizer.eos_token_id().unwrap_or(2),
         });
-        
+
         // Count info from GGUF metadata
         let (n_kv, n_tensors) = gguf_metadata.unwrap_or((0, 0));
         let counts = serde_json::json!({
@@ -867,7 +905,7 @@ async fn run_simple_generation(
             "n_tensors": n_tensors,
             "unmapped": if strict_mapping { 0 } else { 0 },  // In strict mode this is always 0
         });
-        
+
         let gen_policy = serde_json::json!({
             "bos": bos,
             "temperature": temperature,
@@ -875,7 +913,7 @@ async fn run_simple_generation(
             "greedy": greedy,
             "deterministic": deterministic,
         });
-        
+
         let prompt_tokens_len = tokens.len() - generated_tokens.len();
         let output = serde_json::json!({
             "prompt": prompt,
@@ -898,7 +936,7 @@ async fn run_simple_generation(
             "counts": counts,
             "tokenizer": tokenizer_info,
             "gen_policy": gen_policy,
-            "logits_dump": if !logits_dump.is_empty() { 
+            "logits_dump": if !logits_dump.is_empty() {
                 Some(logits_dump.iter().map(|step| {
                     serde_json::json!({
                         "step": step.step,
@@ -906,19 +944,19 @@ async fn run_simple_generation(
                         "chosen_id": step.chosen_id
                     })
                 }).collect::<Vec<_>>())
-            } else { 
-                None 
+            } else {
+                None
             },
         });
         std::fs::write(&json_path, serde_json::to_string_pretty(&output)?)?;
         println!("JSON output written to: {}", json_path.display());
     }
-    
+
     // Dump IDs if requested
     if dump_ids {
         println!("Token IDs: {:?}", generated_tokens);
     }
-    
+
     Ok(())
 }
 
@@ -1033,19 +1071,19 @@ async fn show_system_info() -> Result<()> {
 
 /// Inspect model metadata without loading full tensors
 async fn handle_inspect_command(model_path: std::path::PathBuf, json: bool) -> Result<()> {
-    use bitnet_models::formats::ModelFormat;
     use bitnet_models::GgufReader;
+    use bitnet_models::formats::ModelFormat;
+    use memmap2::Mmap;
     use serde_json::json;
     use std::fs::File;
-    use memmap2::Mmap;
-    
+
     // Tokenizer source constants
     const TOKENIZER_SOURCE_EMBEDDED: &str = "embedded-gguf";
     const TOKENIZER_SOURCE_EXTERNAL: &str = "external";
 
     // Detect model format
     let format = ModelFormat::detect_from_header(&model_path)?;
-    
+
     // Extract metadata based on format
     let metadata = match format {
         ModelFormat::Gguf => {
@@ -1053,11 +1091,12 @@ async fn handle_inspect_command(model_path: std::path::PathBuf, json: bool) -> R
             let file = File::open(&model_path)?;
             let mmap = unsafe { Mmap::map(&file)? };
             let reader = GgufReader::new(&mmap)?;
-            
+
             // Extract key metadata
-            let name = reader.get_string_metadata("general.name")
-                .unwrap_or_else(|| "unknown".to_string());
-            let architecture = reader.get_string_metadata("general.architecture")
+            let name =
+                reader.get_string_metadata("general.name").unwrap_or_else(|| "unknown".to_string());
+            let architecture = reader
+                .get_string_metadata("general.architecture")
                 .unwrap_or_else(|| "unknown".to_string());
             fn get_quantization(reader: &GgufReader) -> String {
                 if let Some(q) = reader.get_string_metadata("general.quantization_type") {
@@ -1069,28 +1108,52 @@ async fn handle_inspect_command(model_path: std::path::PathBuf, json: bool) -> R
                 }
             }
             let quantization = get_quantization(&reader);
-            let vocab_size = reader.get_u32_metadata("llama.vocab_size")
+            let vocab_size = reader
+                .get_u32_metadata("llama.vocab_size")
                 .or_else(|| reader.get_u32_metadata("tokenizer.ggml.tokens"))
                 .unwrap_or(0);
-            let context_length = reader.get_u32_metadata("llama.context_length")
-                .unwrap_or(0);
-            
+            let context_length = reader.get_u32_metadata("llama.context_length").unwrap_or(0);
+
             // Check for tokenizer
             let has_tokenizer = reader.get_u32_metadata("tokenizer.ggml.tokens").is_some();
-            let tokenizer_source = if has_tokenizer {
-                TOKENIZER_SOURCE_EMBEDDED
-            } else {
-                TOKENIZER_SOURCE_EXTERNAL
-            };
-            
+            let tokenizer_source =
+                if has_tokenizer { TOKENIZER_SOURCE_EMBEDDED } else { TOKENIZER_SOURCE_EXTERNAL };
+
             // Get tensor count
             let tensor_count = reader.tensor_count();
-            
-            json!({
+
+            // Add backend info for IQ2_S quantization
+            let backend_info = if quantization.contains("IQ2_S") || quantization.contains("iq2_s") {
+                #[cfg(feature = "iq2s-ffi")]
+                {
+                    use bitnet_models::quant::backend::Iq2sBackend;
+                    let backend = Iq2sBackend::selected();
+                    Some(json!({
+                        "kind": backend.name(),
+                        "ggml_commit": bitnet_ggml_ffi::GGML_COMMIT,
+                        "qk": backend.qk(),
+                        "block_bytes": backend.block_bytes()
+                    }))
+                }
+                #[cfg(not(feature = "iq2s-ffi"))]
+                {
+                    Some(json!({
+                        "kind": "rust",
+                        "qk": 256,
+                        "block_bytes": 66
+                    }))
+                }
+            } else {
+                None
+            };
+
+            let mut metadata = json!({
                 "format": "GGUF",
                 "name": name,
                 "architecture": architecture,
-                "quantization": quantization,
+                "quantization": {
+                    "name": quantization
+                },
                 "vocab_size": vocab_size,
                 "context_length": context_length,
                 "tensor_count": tensor_count,
@@ -1103,29 +1166,37 @@ async fn handle_inspect_command(model_path: std::path::PathBuf, json: bool) -> R
                     "append_eos": false,
                     "mask_pad": true
                 }
-            })
-        },
+            });
+
+            // If we detected IQ2_S, attach backend info under quantization
+            if let Some(backend) = backend_info {
+                metadata["quantization"]["backend"] = backend;
+            }
+
+            metadata
+        }
         ModelFormat::SafeTensors => {
             use std::io::Read;
-            
+
             let mut file = File::open(&model_path)?;
             let mut header_size_bytes = [0u8; 8];
             file.read_exact(&mut header_size_bytes)?;
             let header_size = u64::from_le_bytes(header_size_bytes) as usize;
-            
+
             let mut header_bytes = vec![0u8; header_size];
             file.read_exact(&mut header_bytes)?;
             let header_str = String::from_utf8(header_bytes)
                 .map_err(|e| anyhow::anyhow!("Invalid header encoding: {}", e))?;
             let header: serde_json::Value = serde_json::from_str(&header_str)?;
-            
+
             // Count tensors (keys that aren't "__metadata__")
-            let tensor_count = header.as_object()
+            let tensor_count = header
+                .as_object()
                 .map(|obj| obj.keys().filter(|k| *k != "__metadata__").count())
                 .unwrap_or(0);
-            
+
             json!({
-                "format": "SafeTensors", 
+                "format": "SafeTensors",
                 "tensor_count": tensor_count,
                 "metadata": header.get("__metadata__").unwrap_or(&json!({})),
                 "tokenizer": {
@@ -1137,18 +1208,15 @@ async fn handle_inspect_command(model_path: std::path::PathBuf, json: bool) -> R
                     "mask_pad": true
                 }
             })
-        },
-        _ => {
-            return Err(anyhow::anyhow!("Unsupported format: {:?}", format));
         }
     };
-    
+
     if json {
         println!("{}", serde_json::to_string_pretty(&metadata)?);
     } else {
         println!("{}", style("Model Metadata").bold().cyan());
         println!("{:#?}", metadata);
     }
-    
+
     Ok(())
 }

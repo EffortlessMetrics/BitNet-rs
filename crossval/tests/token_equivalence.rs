@@ -4,11 +4,12 @@
 //! to ensure numerical accuracy and compatibility.
 
 #![cfg(feature = "crossval")]
+#![cfg(feature = "integration-tests")]
 
 use bitnet_crossval::{
-    comparison::CrossValidator,
-    fixtures::{TestFixture, STANDARD_PROMPTS},
     CrossvalConfig,
+    comparison::CrossValidator,
+    fixtures::{STANDARD_PROMPTS, TestFixture},
 };
 
 #[test]

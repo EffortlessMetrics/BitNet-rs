@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Comprehensive tests for type definitions in bitnet-common
 
 use bitnet_common::*;

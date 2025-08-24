@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -61,9 +62,15 @@ impl IsolatedEnvironment {
     fn setup(&self) {
         // Set test-specific environment variables
         unsafe {
-            unsafe { std::env::set_var("BITNET_TEST_NAME", &self.test_name); }
-            unsafe { std::env::set_var("BITNET_TEST_TEMP_DIR", self.temp_dir.path()); }
-            unsafe { std::env::set_var("BITNET_TEST_ISOLATION", "true"); }
+            unsafe {
+                std::env::set_var("BITNET_TEST_NAME", &self.test_name);
+            }
+            unsafe {
+                std::env::set_var("BITNET_TEST_TEMP_DIR", self.temp_dir.path());
+            }
+            unsafe {
+                std::env::set_var("BITNET_TEST_ISOLATION", "true");
+            }
         }
     }
 
@@ -71,13 +78,21 @@ impl IsolatedEnvironment {
         // Restore original environment variables
         unsafe {
             for (key, value) in &self.original_env_vars {
-                unsafe { std::env::set_var(key, value); }
+                unsafe {
+                    std::env::set_var(key, value);
+                }
             }
 
             // Remove test-specific environment variables
-            unsafe { std::env::remove_var("BITNET_TEST_NAME"); }
-            unsafe { std::env::remove_var("BITNET_TEST_TEMP_DIR"); }
-            unsafe { std::env::remove_var("BITNET_TEST_ISOLATION"); }
+            unsafe {
+                std::env::remove_var("BITNET_TEST_NAME");
+            }
+            unsafe {
+                std::env::remove_var("BITNET_TEST_TEMP_DIR");
+            }
+            unsafe {
+                std::env::remove_var("BITNET_TEST_ISOLATION");
+            }
         }
 
         // Temp directory is automatically cleaned up when dropped
@@ -481,7 +496,9 @@ async fn test_isolation_prevents_interference() {
 
             // Set a test-specific environment variable
             unsafe {
-                unsafe { std::env::set_var(&self.env_key, &self.env_value); }
+                unsafe {
+                    std::env::set_var(&self.env_key, &self.env_value);
+                }
             }
 
             // Wait a bit to allow other tests to potentially interfere

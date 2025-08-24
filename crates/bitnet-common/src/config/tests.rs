@@ -81,7 +81,9 @@ fn test_toml_config_loading() {
         "BITNET_MODEL_FORMAT",
     ];
     for var in &env_vars {
-        unsafe { env::remove_var(var); }
+        unsafe {
+            env::remove_var(var);
+        }
     }
 
     let toml_content = r#"
@@ -131,7 +133,9 @@ fn test_json_config_loading() {
         "BITNET_MODEL_FORMAT",
     ];
     for var in &env_vars {
-        unsafe { env::remove_var(var); }
+        unsafe {
+            env::remove_var(var);
+        }
     }
 
     let json_content = r#"
@@ -182,15 +186,27 @@ fn test_env_overrides() {
         "BITNET_MODEL_FORMAT",
     ];
     for var in &env_vars {
-        unsafe { env::remove_var(var); }
+        unsafe {
+            env::remove_var(var);
+        }
     }
 
     // Set environment variables
-    unsafe { env::set_var("BITNET_VOCAB_SIZE", "60000"); }
-    unsafe { env::set_var("BITNET_TEMPERATURE", "0.7"); }
-    unsafe { env::set_var("BITNET_USE_GPU", "true"); }
-    unsafe { env::set_var("BITNET_QUANTIZATION_TYPE", "TL2"); }
-    unsafe { env::set_var("BITNET_MEMORY_LIMIT", "2GB"); }
+    unsafe {
+        env::set_var("BITNET_VOCAB_SIZE", "60000");
+    }
+    unsafe {
+        env::set_var("BITNET_TEMPERATURE", "0.7");
+    }
+    unsafe {
+        env::set_var("BITNET_USE_GPU", "true");
+    }
+    unsafe {
+        env::set_var("BITNET_QUANTIZATION_TYPE", "TL2");
+    }
+    unsafe {
+        env::set_var("BITNET_MEMORY_LIMIT", "2GB");
+    }
 
     let config = BitNetConfig::from_env().unwrap();
     assert_eq!(config.model.vocab_size, 60000);
@@ -201,7 +217,9 @@ fn test_env_overrides() {
 
     // Clean up
     for var in &env_vars {
-        unsafe { env::remove_var(var); }
+        unsafe {
+            env::remove_var(var);
+        }
     }
 }
 
@@ -235,7 +253,9 @@ fn test_config_loader_precedence() {
         "BITNET_MODEL_FORMAT",
     ];
     for var in &env_vars {
-        unsafe { env::remove_var(var); }
+        unsafe {
+            env::remove_var(var);
+        }
     }
 
     // Create a config file
@@ -251,7 +271,9 @@ temperature = 0.9
     temp_file.write_all(toml_content.as_bytes()).unwrap();
 
     // Set environment variable that should override file
-    unsafe { env::set_var("BITNET_VOCAB_SIZE", "50000"); }
+    unsafe {
+        env::set_var("BITNET_VOCAB_SIZE", "50000");
+    }
 
     let config = ConfigLoader::load_with_precedence(Some(temp_file.path())).unwrap();
 
@@ -262,7 +284,9 @@ temperature = 0.9
 
     // Clean up
     for var in &env_vars {
-        unsafe { env::remove_var(var); }
+        unsafe {
+            env::remove_var(var);
+        }
     }
 }
 
@@ -281,24 +305,34 @@ fn test_memory_limit_parsing() {
         "BITNET_MODEL_FORMAT",
     ];
     for var in &env_vars {
-        unsafe { env::remove_var(var); }
+        unsafe {
+            env::remove_var(var);
+        }
     }
 
-    unsafe { env::set_var("BITNET_MEMORY_LIMIT", "1GB"); }
+    unsafe {
+        env::set_var("BITNET_MEMORY_LIMIT", "1GB");
+    }
     let mut config = BitNetConfig::default();
     config.apply_env_overrides().unwrap();
     assert_eq!(config.performance.memory_limit, Some(1024 * 1024 * 1024));
 
-    unsafe { env::set_var("BITNET_MEMORY_LIMIT", "512MB"); }
+    unsafe {
+        env::set_var("BITNET_MEMORY_LIMIT", "512MB");
+    }
     config.apply_env_overrides().unwrap();
     assert_eq!(config.performance.memory_limit, Some(512 * 1024 * 1024));
 
-    unsafe { env::set_var("BITNET_MEMORY_LIMIT", "none"); }
+    unsafe {
+        env::set_var("BITNET_MEMORY_LIMIT", "none");
+    }
     config.apply_env_overrides().unwrap();
     assert_eq!(config.performance.memory_limit, None);
 
     for var in &env_vars {
-        unsafe { env::remove_var(var); }
+        unsafe {
+            env::remove_var(var);
+        }
     }
 }
 
@@ -317,29 +351,45 @@ fn test_invalid_env_values() {
         "BITNET_MODEL_FORMAT",
     ];
     for var in &env_vars {
-        unsafe { env::remove_var(var); }
+        unsafe {
+            env::remove_var(var);
+        }
     }
 
     // Test invalid vocab size
-    unsafe { env::set_var("BITNET_VOCAB_SIZE", "invalid"); }
+    unsafe {
+        env::set_var("BITNET_VOCAB_SIZE", "invalid");
+    }
     let mut config = BitNetConfig::default();
     assert!(config.apply_env_overrides().is_err());
-    unsafe { env::remove_var("BITNET_VOCAB_SIZE"); }
+    unsafe {
+        env::remove_var("BITNET_VOCAB_SIZE");
+    }
 
     // Test invalid model format
-    unsafe { env::set_var("BITNET_MODEL_FORMAT", "invalid"); }
+    unsafe {
+        env::set_var("BITNET_MODEL_FORMAT", "invalid");
+    }
     config = BitNetConfig::default();
     assert!(config.apply_env_overrides().is_err());
-    unsafe { env::remove_var("BITNET_MODEL_FORMAT"); }
+    unsafe {
+        env::remove_var("BITNET_MODEL_FORMAT");
+    }
 
     // Test invalid use_gpu value
-    unsafe { env::set_var("BITNET_USE_GPU", "maybe"); }
+    unsafe {
+        env::set_var("BITNET_USE_GPU", "maybe");
+    }
     config = BitNetConfig::default();
     assert!(config.apply_env_overrides().is_err());
-    unsafe { env::remove_var("BITNET_USE_GPU"); }
+    unsafe {
+        env::remove_var("BITNET_USE_GPU");
+    }
 
     // Clean up
     for var in &env_vars {
-        unsafe { env::remove_var(var); }
+        unsafe {
+            env::remove_var(var);
+        }
     }
 }

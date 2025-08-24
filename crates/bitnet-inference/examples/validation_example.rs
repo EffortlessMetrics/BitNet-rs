@@ -1,7 +1,7 @@
 //! Example of basic inference with BitNet models
 
 use bitnet_common::{BitNetConfig, Device};
-use bitnet_inference::{backends::CpuBackend, GenerationConfig, InferenceConfig, InferenceEngine};
+use bitnet_inference::{GenerationConfig, InferenceConfig, InferenceEngine, backends::CpuBackend};
 use bitnet_models::{BitNetModel, Model};
 use bitnet_tokenizers::TokenizerBuilder;
 use std::sync::Arc;

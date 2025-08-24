@@ -1,3 +1,6 @@
+#![cfg(feature = "integration-tests")]
+#![cfg(feature = "ffi-tests")]
+
 //! Comprehensive C API validation and compatibility tests
 //!
 //! This module provides extensive testing of the C API to ensure compatibility
@@ -5,18 +8,18 @@
 //! and performance characteristics.
 
 use bitnet_ffi::{
+    BITNET_ABI_VERSION, BITNET_ERROR_CONTEXT_LENGTH_EXCEEDED, BITNET_ERROR_INFERENCE_FAILED,
+    BITNET_ERROR_INTERNAL, BITNET_ERROR_INVALID_ARGUMENT, BITNET_ERROR_INVALID_MODEL_ID,
+    BITNET_ERROR_MODEL_LOAD_FAILED, BITNET_ERROR_MODEL_NOT_FOUND, BITNET_ERROR_OUT_OF_MEMORY,
+    BITNET_ERROR_THREAD_SAFETY, BITNET_ERROR_UNSUPPORTED_OPERATION, BITNET_SUCCESS,
+    BitNetCInferenceConfig, BitNetCModel, BitNetCPerformanceMetrics, BitNetCStreamConfig,
     bitnet_abi_version, bitnet_batch_inference, bitnet_cleanup, bitnet_clear_last_error,
     bitnet_garbage_collect, bitnet_get_last_error, bitnet_get_memory_usage, bitnet_get_num_threads,
     bitnet_get_performance_metrics, bitnet_inference, bitnet_inference_with_config, bitnet_init,
     bitnet_is_gpu_available, bitnet_model_free, bitnet_model_get_info, bitnet_model_is_loaded,
     bitnet_model_load, bitnet_reset_performance_metrics, bitnet_set_gpu_enabled,
     bitnet_set_memory_limit, bitnet_set_num_threads, bitnet_start_streaming, bitnet_stop_streaming,
-    bitnet_stream_next_token, bitnet_version, BitNetCInferenceConfig, BitNetCModel,
-    BitNetCPerformanceMetrics, BitNetCStreamConfig, BITNET_ABI_VERSION,
-    BITNET_ERROR_CONTEXT_LENGTH_EXCEEDED, BITNET_ERROR_INFERENCE_FAILED, BITNET_ERROR_INTERNAL,
-    BITNET_ERROR_INVALID_ARGUMENT, BITNET_ERROR_INVALID_MODEL_ID, BITNET_ERROR_MODEL_LOAD_FAILED,
-    BITNET_ERROR_MODEL_NOT_FOUND, BITNET_ERROR_OUT_OF_MEMORY, BITNET_ERROR_THREAD_SAFETY,
-    BITNET_ERROR_UNSUPPORTED_OPERATION, BITNET_SUCCESS,
+    bitnet_stream_next_token, bitnet_version,
 };
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
@@ -84,7 +87,6 @@ fn test_version_and_abi() {
 
 #[test]
 fn test_error_handling() {
-
     // Initialize library
     bitnet_init();
 
@@ -115,7 +117,6 @@ fn test_error_handling() {
 
 #[test]
 fn test_model_loading_invalid_cases() {
-
     bitnet_init();
 
     // Test null path
@@ -178,7 +179,6 @@ fn test_model_lifecycle() {
 
 #[test]
 fn test_inference_invalid_cases() {
-
     bitnet_init();
 
     let mut output = [0u8; 1024];
@@ -190,8 +190,7 @@ fn test_inference_invalid_cases() {
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     // Test null prompt
-    let result =
-        bitnet_inference(0, ptr::null(), output.as_mut_ptr() as *mut c_char, output.len());
+    let result = bitnet_inference(0, ptr::null(), output.as_mut_ptr() as *mut c_char, output.len());
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     // Test null output
@@ -207,7 +206,6 @@ fn test_inference_invalid_cases() {
 
 #[test]
 fn test_configuration_management() {
-
     bitnet_init();
 
     // Test thread count management
@@ -241,7 +239,6 @@ fn test_configuration_management() {
 
 #[test]
 fn test_memory_management() {
-
     bitnet_init();
 
     // Test memory limit setting
@@ -266,7 +263,6 @@ fn test_memory_management() {
 
 #[test]
 fn test_batch_inference_invalid_cases() {
-
     bitnet_init();
 
     let prompts = [CString::new("prompt 1").unwrap(), CString::new("prompt 2").unwrap()];
@@ -317,7 +313,6 @@ fn test_batch_inference_invalid_cases() {
 
 #[test]
 fn test_streaming_invalid_cases() {
-
     bitnet_init();
 
     let prompt = CString::new("test prompt").unwrap();
@@ -345,7 +340,6 @@ fn test_streaming_invalid_cases() {
 
 #[test]
 fn test_performance_metrics() {
-
     bitnet_init();
 
     let mut metrics = BitNetCPerformanceMetrics::default();
@@ -369,7 +363,6 @@ fn test_performance_metrics() {
 fn test_thread_safety() {
     const NUM_THREADS: usize = 4;
     const OPERATIONS_PER_THREAD: usize = 100;
-
 
     bitnet_init();
 
@@ -418,7 +411,6 @@ fn test_thread_safety() {
         handle.join().expect("Thread panicked");
     }
 
-
     bitnet_cleanup();
 }
 
@@ -454,7 +446,6 @@ fn test_memory_leak_detection() {
 
 #[test]
 fn test_configuration_validation() {
-
     bitnet_init();
 
     // Test valid configuration
@@ -500,11 +491,7 @@ fn test_performance_characteristics() {
     let elapsed = start.elapsed();
 
     // These operations should be very fast
-    assert!(
-        elapsed < Duration::from_millis(100),
-        "Basic operations took too long: {:?}",
-        elapsed
-    );
+    assert!(elapsed < Duration::from_millis(100), "Basic operations took too long: {:?}", elapsed);
 
     bitnet_cleanup();
 }
@@ -530,7 +517,6 @@ fn test_api_stability() {
 
 #[test]
 fn test_string_handling() {
-
     bitnet_init();
 
     // Test version string handling

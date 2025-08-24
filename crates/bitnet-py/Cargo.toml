@@ -36,6 +36,7 @@ thiserror = "1.0"
 pyo3-build-config = "0.21"
 
 [features]
+integration-tests = []
 default = ["cpu"]
 cpu = ["bitnet-inference/cpu"]
 gpu = ["bitnet-inference/gpu"]

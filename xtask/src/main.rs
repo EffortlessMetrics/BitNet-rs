@@ -1,15 +1,15 @@
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use clap::{Parser, Subcommand};
-use fs2::available_space;
 use fs2::FileExt;
+use fs2::available_space;
 use httpdate::parse_http_date;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use reqwest::StatusCode;
 use reqwest::blocking::Client;
 use reqwest::header::{
     ACCEPT_ENCODING, ACCEPT_RANGES, AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, ETAG,
     IF_MODIFIED_SINCE, IF_NONE_MATCH, IF_RANGE, LAST_MODIFIED, RANGE, RETRY_AFTER,
 };
-use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -18,8 +18,8 @@ use std::{
     path::{Path, PathBuf},
     process::{self, Command},
     sync::{
-        atomic::{AtomicBool, Ordering},
         Once,
+        atomic::{AtomicBool, Ordering},
     },
     thread,
     time::{Duration, Instant, SystemTime},
@@ -71,10 +71,8 @@ struct CrossValReport {
 
 impl CrossValReport {
     fn new(model: &Path) -> Self {
-        let file_size = std::fs::metadata(model)
-            .ok()
-            .map(|m| m.len());
-        
+        let file_size = std::fs::metadata(model).ok().map(|m| m.len());
+
         Self {
             model: model.display().to_string(),
             rust_ok: false,
@@ -91,7 +89,7 @@ impl CrossValReport {
             file_size,
         }
     }
-    
+
     fn save(&self, path: &Path) -> Result<()> {
         let json = serde_json::to_string_pretty(self)?;
         fs::write(path, json)?;
@@ -329,7 +327,7 @@ enum Cmd {
     /// Generate a minimal valid GGUF file for smoke testing
     ///
     /// Always creates a GGUF v3 file with valid headers for testing.
-    /// If --version 2 is provided, still emits v3 but adds a 
+    /// If --version 2 is provided, still emits v3 but adds a
     /// compat.v2_requested=true metadata tag for test purposes.
     GenMiniGguf {
         /// Output file path
@@ -351,7 +349,7 @@ enum Cmd {
 
     /// Check feature flag consistency
     CheckFeatures,
-    
+
     /// CI gates that emit JSON for robust detection
     Gate {
         #[command(subcommand)]
@@ -503,7 +501,9 @@ fn real_main() -> Result<()> {
             retries,
             timeout,
         }),
-        Cmd::FetchCpp { tag, force, clean, backend, cmake_flags, repo } => fetch_cpp_cmd(&tag, force, clean, &backend, &cmake_flags, &repo),
+        Cmd::FetchCpp { tag, force, clean, backend, cmake_flags, repo } => {
+            fetch_cpp_cmd(&tag, force, clean, &backend, &cmake_flags, &repo)
+        }
         Cmd::Crossval { model, cpp_dir, release, dry_run, extra } => {
             let model_path = match model {
                 Some(p) => p,
@@ -511,16 +511,16 @@ fn real_main() -> Result<()> {
             };
             crossval_cmd(&model_path, cpp_dir.as_deref(), release, &extra, dry_run)
         }
-        Cmd::FullCrossval { force, tag, backend, cmake_flags, repo } => full_crossval_cmd(force, &tag, &backend, &cmake_flags, &repo),
+        Cmd::FullCrossval { force, tag, backend, cmake_flags, repo } => {
+            full_crossval_cmd(force, &tag, &backend, &cmake_flags, &repo)
+        }
         Cmd::GenFixtures { size, output } => gen_fixtures(&size, &output),
         Cmd::GenMiniGguf { output, version } => gen_mini_gguf(&output, version),
         Cmd::SetupCrossval => setup_crossval(),
         Cmd::CleanCache => clean_cache(),
         Cmd::CheckFeatures => check_features(),
         Cmd::Gate { which } => match which {
-            GateWhich::Mapper { model } => {
-                std::process::exit(gates::mapper_gate(model)?)
-            }
+            GateWhich::Mapper { model } => std::process::exit(gates::mapper_gate(model)?),
         },
         Cmd::Benchmark { platform } => run_benchmark(&platform),
         Cmd::CompareMetrics { baseline, current, ppl_max, latency_p95_max, tok_s_min } => {
@@ -529,9 +529,7 @@ fn real_main() -> Result<()> {
         Cmd::DetectBreaking { baseline, current, format } => {
             detect_breaking_changes_cmd(baseline.as_deref(), &current, &format)
         }
-        Cmd::VendorGgml { commit, force, output } => {
-            vendor_ggml_cmd(&commit, force, &output)
-        }
+        Cmd::VendorGgml { commit, force, output } => vendor_ggml_cmd(&commit, force, &output),
     }
 }
 
@@ -667,9 +665,13 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
             if let Ok(resp) = head_req.send() {
                 // Add friendlier auth message on HEAD
                 if matches!(resp.status(), StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN) {
-                    bail!("HTTP {} from Hugging Face during metadata check. If the repo is private, set HF_TOKEN, e.g.\n\
-                           HF_TOKEN=*** cargo xtask download-model --id {} --file {}", 
-                          resp.status().as_u16(), id, file);
+                    bail!(
+                        "HTTP {} from Hugging Face during metadata check. If the repo is private, set HF_TOKEN, e.g.\n\
+                           HF_TOKEN=*** cargo xtask download-model --id {} --file {}",
+                        resp.status().as_u16(),
+                        id,
+                        file
+                    );
                 }
 
                 match resp.status() {
@@ -1292,7 +1294,14 @@ fn verify_sha256(path: &Path, expected_hex: &str) -> Result<()> {
     Ok(())
 }
 
-fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool, backend: &str, cmake_flags: &str, repo: &str) -> Result<()> {
+fn fetch_cpp_cmd(
+    tag: &str,
+    force: bool,
+    clean: bool,
+    backend: &str,
+    cmake_flags: &str,
+    repo: &str,
+) -> Result<()> {
     let script = PathBuf::from("ci/fetch_bitnet_cpp.sh");
     if !script.exists() {
         return Err(anyhow!(
@@ -1315,20 +1324,22 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool, backend: &str, cmake_flags
         println!("   CMake flags: {}", cmake_flags);
     }
 
-    let mut args = vec!["--tag".to_string(), tag.to_string(), "--repo".to_string(), repo.to_string()];
+    let mut args =
+        vec!["--tag".to_string(), tag.to_string(), "--repo".to_string(), repo.to_string()];
     if force {
         args.push("--force".to_string());
     }
     if clean {
         args.push("--clean".to_string());
     }
-    
+
     // Add backend-specific CMake flags with static build configuration
     args.push("--cmake-flags".to_string());
-    
+
     // Always use static builds to avoid library path issues
-    let mut all_flags = String::from("-DBUILD_SHARED_LIBS=OFF -DLLAMA_STATIC=ON -DLLAMA_BUILD_TESTS=OFF");
-    
+    let mut all_flags =
+        String::from("-DBUILD_SHARED_LIBS=OFF -DLLAMA_STATIC=ON -DLLAMA_BUILD_TESTS=OFF");
+
     if backend == "cuda" {
         all_flags.push_str(" -DGGML_CUDA=ON -DLLAMA_CUBLAS=ON");
         if cmake_flags.is_empty() {
@@ -1339,13 +1350,13 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool, backend: &str, cmake_flags
         // For CPU builds, enable native optimizations
         all_flags.push_str(" -DGGML_NATIVE=ON");
     }
-    
+
     // Append any additional user-provided flags
     if !cmake_flags.is_empty() {
-        all_flags.push_str(" ");
+        all_flags.push(' ');
         all_flags.push_str(cmake_flags);
     }
-    
+
     args.push(all_flags);
 
     run("bash", std::iter::once(script.to_string_lossy().to_string()).chain(args).collect())?;
@@ -1356,14 +1367,11 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool, backend: &str, cmake_flags
 
     // Check for any built artifacts (libraries or binaries) - recursively
     let mut found_artifacts = false;
-    
+
     // Use walkdir to recursively find libraries
-    let lib_extensions = if cfg!(target_os = "macos") {
-        vec!["dylib", "so", "a"]
-    } else {
-        vec!["so", "a"]
-    };
-    
+    let lib_extensions =
+        if cfg!(target_os = "macos") { vec!["dylib", "so", "a"] } else { vec!["so", "a"] };
+
     for entry in walkdir::WalkDir::new(&build_dir)
         .max_depth(5)  // Limit depth to avoid excessive scanning
         .into_iter()
@@ -1389,7 +1397,7 @@ fn fetch_cpp_cmd(tag: &str, force: bool, clean: bool, backend: &str, cmake_flags
             }
         }
     }
-    
+
     // For now, just warn if no artifacts found - the build log already showed success
     if !found_artifacts {
         println!("⚠️  Warning: Could not verify build artifacts in {}", build_dir.display());
@@ -1410,14 +1418,11 @@ fn apply_cpp_env(cmd: &mut Command, cpp_root: &Path) {
         cpp_root.join("build/3rdparty/llama.cpp/src").display(),
         cpp_root.join("build/3rdparty/llama.cpp/ggml/src").display()
     );
-    
+
     let existing = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
-    let merged = if existing.is_empty() {
-        lib_paths
-    } else {
-        format!("{}:{}", lib_paths, existing)
-    };
-    
+    let merged =
+        if existing.is_empty() { lib_paths } else { format!("{}:{}", lib_paths, existing) };
+
     cmd.env("LD_LIBRARY_PATH", merged);
 }
 
@@ -1430,14 +1435,11 @@ fn apply_cpp_env(cmd: &mut Command, cpp_root: &Path) {
         cpp_root.join("build/3rdparty/llama.cpp/src").display(),
         cpp_root.join("build/3rdparty/llama.cpp/ggml/src").display()
     );
-    
+
     let existing = std::env::var("DYLD_LIBRARY_PATH").unwrap_or_default();
-    let merged = if existing.is_empty() {
-        lib_paths
-    } else {
-        format!("{}:{}", lib_paths, existing)
-    };
-    
+    let merged =
+        if existing.is_empty() { lib_paths } else { format!("{}:{}", lib_paths, existing) };
+
     cmd.env("DYLD_LIBRARY_PATH", merged);
 }
 
@@ -1445,43 +1447,45 @@ fn apply_cpp_env(cmd: &mut Command, cpp_root: &Path) {
 #[cfg(target_os = "windows")]
 fn apply_cpp_env(cmd: &mut Command, cpp_root: &Path) {
     let bin_path = cpp_root.join("build/bin").display().to_string();
-    
+
     let existing = std::env::var("PATH").unwrap_or_default();
-    let merged = if existing.is_empty() {
-        bin_path
-    } else {
-        format!("{};{}", bin_path, existing)
-    };
-    
+    let merged = if existing.is_empty() { bin_path } else { format!("{};{}", bin_path, existing) };
+
     cmd.env("PATH", merged);
 }
 
 /// Apply deterministic environment variables for testing
 fn apply_deterministic_env(cmd: &mut Command) {
     cmd.env("RAYON_NUM_THREADS", "1")
-       .env("BITNET_DETERMINISTIC", "1")
-       .env("BITNET_SEED", "42")
-       .env("OMP_NUM_THREADS", "1")
-       .env("GGML_NUM_THREADS", "1")
-       .env("MKL_NUM_THREADS", "1")
-       .env("OPENBLAS_NUM_THREADS", "1");
+        .env("BITNET_DETERMINISTIC", "1")
+        .env("BITNET_SEED", "42")
+        .env("OMP_NUM_THREADS", "1")
+        .env("GGML_NUM_THREADS", "1")
+        .env("MKL_NUM_THREADS", "1")
+        .env("OPENBLAS_NUM_THREADS", "1");
 }
 
 /// Preflight check using C++ header tool before full load
 fn cpp_header_preflight(cpp_root: &Path, model: &Path) -> Result<()> {
     // Try multiple possible binary names
     let candidates = ["llama-gguf", "llama-cli", "main"];
-    let llama_bin = candidates.iter()
+    let llama_bin = candidates
+        .iter()
         .map(|b| cpp_root.join(format!("build/bin/{}", b)))
         .find(|p| p.exists())
-        .ok_or_else(|| anyhow!("No llama binary found in {}. Tried: {:?}", 
-                                cpp_root.join("build/bin").display(), candidates))?;
-    
+        .ok_or_else(|| {
+            anyhow!(
+                "No llama binary found in {}. Tried: {:?}",
+                cpp_root.join("build/bin").display(),
+                candidates
+            )
+        })?;
+
     // Log which binary we're using
     println!("   • Using C++ binary: {}", llama_bin.display());
-    
+
     let mut cmd = Command::new(&llama_bin);
-    
+
     // Use appropriate args based on which binary we found
     if llama_bin.file_name().and_then(|s| s.to_str()) == Some("llama-gguf") {
         cmd.args(["-l", "-m"]).arg(model);
@@ -1491,10 +1495,11 @@ fn cpp_header_preflight(cpp_root: &Path, model: &Path) -> Result<()> {
     }
     apply_cpp_env(&mut cmd, cpp_root);
     apply_deterministic_env(&mut cmd);
-    
-    let output = cmd.output()
+
+    let output = cmd
+        .output()
         .with_context(|| format!("Failed to run C++ header preflight: {}", llama_bin.display()))?;
-    
+
     if output.status.success() {
         println!("   ✓ C++ header preflight passed");
         Ok(())
@@ -1568,7 +1573,9 @@ fn crossval_cmd(
             Err(e) => {
                 report.cpp_header_ok = false;
                 if allow_cpp_fail {
-                    println!("   ⚠️ XFAIL: C++ header preflight failed (CROSSVAL_ALLOW_CPP_FAIL=1)");
+                    println!(
+                        "   ⚠️ XFAIL: C++ header preflight failed (CROSSVAL_ALLOW_CPP_FAIL=1)"
+                    );
                     println!("   Details: {}", e);
                     report.xfail = true;
                     report.notes = format!("C++ header preflight failed (XFAIL): {}", e);
@@ -1594,7 +1601,7 @@ fn crossval_cmd(
     println!("   C++ dir: {}", cpp.display());
     println!("   Release: {}", release);
     println!("   Deterministic: yes (single-threaded)");
-    
+
     if allow_cpp_fail {
         println!("   C++ failures: ALLOWED (CROSSVAL_ALLOW_CPP_FAIL=1)");
     }
@@ -1609,14 +1616,12 @@ fn crossval_cmd(
 
     // Apply platform-specific C++ library paths
     apply_cpp_env(&mut cmd, &cpp);
-    
+
     // Apply deterministic environment for testing
     apply_deterministic_env(&mut cmd);
-    
+
     // Set other required environment variables
-    cmd.env("BITNET_CPP_DIR", &cpp)
-        .env("CROSSVAL_GGUF", model)
-        .env("RUST_BACKTRACE", "1");
+    cmd.env("BITNET_CPP_DIR", &cpp).env("CROSSVAL_GGUF", model).env("RUST_BACKTRACE", "1");
 
     // Add test runner args
     cmd.arg("--").args(["--nocapture", "--test-threads=1"]).args(extra);
@@ -1634,31 +1639,33 @@ fn crossval_cmd(
 
     // Run the tests and handle C++ failures gracefully if configured
     let result = cmd.output();
-    
+
     match result {
         Ok(output) => {
             // Write output as it was generated
             std::io::Write::write_all(&mut std::io::stdout(), &output.stdout)?;
             std::io::Write::write_all(&mut std::io::stderr(), &output.stderr)?;
-            
+
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 let stdout = String::from_utf8_lossy(&output.stdout);
-                
+
                 // Check if this is a C++ model loading failure - expand patterns for robustness
                 let msg = format!("{}\n{}", stderr, stdout).to_lowercase();
-                let is_cpp_load_fail = msg.contains("llama_load_model_from_file") ||
-                                      msg.contains("failed to load model") ||
-                                      msg.contains("invalid or unsupported tensor") ||
-                                      msg.contains("invalid gguf") ||
-                                      msg.contains("unsupported gguf version") ||
-                                      msg.contains("unknown tensor type") ||
-                                      msg.contains("could not open gguf") ||
-                                      msg.contains("ggml_assert") ||
-                                      msg.contains("c++ backend failed");
-                
+                let is_cpp_load_fail = msg.contains("llama_load_model_from_file")
+                    || msg.contains("failed to load model")
+                    || msg.contains("invalid or unsupported tensor")
+                    || msg.contains("invalid gguf")
+                    || msg.contains("unsupported gguf version")
+                    || msg.contains("unknown tensor type")
+                    || msg.contains("could not open gguf")
+                    || msg.contains("ggml_assert")
+                    || msg.contains("c++ backend failed");
+
                 if is_cpp_load_fail && allow_cpp_fail {
-                    println!("\n⚠️  XFAIL: C++ implementation failed to load model (unsupported GGUF variant)");
+                    println!(
+                        "\n⚠️  XFAIL: C++ implementation failed to load model (unsupported GGUF variant)"
+                    );
                     println!("   This is expected for some experimental BitNet models.");
                     println!("   Rust implementation validated successfully.");
                     report.cpp_full_ok = false;
@@ -1667,13 +1674,13 @@ fn crossval_cmd(
                     let _ = report.save(&PathBuf::from("target/crossval_report.json"));
                     return Ok(());
                 }
-                
+
                 report.cpp_full_ok = false;
                 report.notes = format!("Cross-validation tests failed: {}", msg);
                 let _ = report.save(&PathBuf::from("target/crossval_report.json"));
                 return Err(anyhow!("Cross-validation tests failed"));
             }
-            
+
             // All tests passed!
             report.cpp_full_ok = true;
             report.notes = "All cross-validation tests passed".to_string();
@@ -1693,10 +1700,10 @@ fn crossval_cmd(
 fn validate_rust_model_loading(model_path: &Path) -> Result<(u32, u64, u64, u64)> {
     // Use the real GGUF reader from bitnet-models
     println!("   Validating with real GGUF reader...");
-    
+
     use bitnet_models::formats::gguf::GgufReader;
     use bitnet_models::loader::MmapFile;
-    
+
     // Try to parse with the real GGUF reader
     match MmapFile::open(model_path) {
         Ok(mmap) => {
@@ -1706,53 +1713,62 @@ fn validate_rust_model_loading(model_path: &Path) -> Result<(u32, u64, u64, u64)
                     if let Err(e) = reader.validate() {
                         return Err(anyhow!("GGUF validation failed: {}", e));
                     }
-                    
+
                     let version = reader.version();
                     let n_kv = reader.metadata_kv_count();
                     let n_tensors = reader.tensor_count();
                     let data_offset = reader.data_offset();
-                    
+
                     println!("   ✓ GGUF v{} parsed and validated successfully", version);
                     println!("     - KV pairs: {}", n_kv);
                     println!("     - Tensors: {}", n_tensors);
                     println!("     - Data offset: {}", data_offset);
-                    
+
                     Ok((version, n_kv, n_tensors, data_offset))
                 }
                 Err(e) => {
                     // Fallback to basic validation for error details
                     use std::fs::File;
                     use std::io::Read;
-                    
+
                     let mut file = File::open(model_path)
                         .with_context(|| format!("Failed to open: {}", model_path.display()))?;
-                    
+
                     // Check GGUF magic
                     let mut magic = [0u8; 4];
                     file.read_exact(&mut magic)?;
                     if &magic != b"GGUF" {
                         return Err(anyhow!("Not a valid GGUF file (invalid magic)"));
                     }
-                    
+
                     // Read version
                     let mut version_bytes = [0u8; 4];
                     file.read_exact(&mut version_bytes)?;
                     let version = u32::from_le_bytes(version_bytes);
-                    
+
                     if version != 2 && version != 3 {
-                        return Err(anyhow!("Unsupported GGUF version: {} (expected 2 or 3)", version));
+                        return Err(anyhow!(
+                            "Unsupported GGUF version: {} (expected 2 or 3)",
+                            version
+                        ));
                     }
-                    
+
                     // If basic checks pass but real reader fails, report the reader error
                     Err(anyhow!("Rust GGUF reader could not parse: {}", e))
                 }
             }
         }
-        Err(e) => Err(anyhow!("Failed to memory-map file: {}", e))
+        Err(e) => Err(anyhow!("Failed to memory-map file: {}", e)),
     }
 }
 
-fn full_crossval_cmd(force: bool, tag: &str, backend: &str, cmake_flags: &str, repo: &str) -> Result<()> {
+fn full_crossval_cmd(
+    force: bool,
+    tag: &str,
+    backend: &str,
+    cmake_flags: &str,
+    repo: &str,
+) -> Result<()> {
     println!("🚀 Running full cross-validation workflow");
     println!("   Backend: {}", backend);
     println!("   C++ Tag: {}", tag);
@@ -1829,10 +1845,10 @@ fn write_kv_string(buf: &mut Vec<u8>, key: &str, value: &str) {
     let key_bytes = key.as_bytes();
     buf.extend_from_slice(&(key_bytes.len() as u64).to_le_bytes());
     buf.extend_from_slice(key_bytes);
-    
+
     // Write value type (string)
     buf.extend_from_slice(&GGUF_VALUE_TYPE_STRING.to_le_bytes());
-    
+
     // Write value
     let value_bytes = value.as_bytes();
     buf.extend_from_slice(&(value_bytes.len() as u64).to_le_bytes());
@@ -1847,70 +1863,74 @@ fn gen_mini_gguf(output_path: &Path, requested_version: u32) -> Result<()> {
         println!("   Note: Emitting v3 with compat.v2_requested=true tag");
     }
     println!("   Output: {}", output_path.display());
-    
+
     // Create parent directory if needed
     if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent)?;
     }
-    
+
     let mut data = Vec::new();
-    
+
     // Write GGUF header (v3)
     data.extend_from_slice(b"GGUF");
     data.extend_from_slice(&3u32.to_le_bytes()); // version 3
     data.extend_from_slice(&0u64.to_le_bytes()); // n_tensors = 0
-    
+
     // Save position for n_kv (will backpatch later)
     let n_kv_pos = data.len();
     data.extend_from_slice(&0u64.to_le_bytes()); // placeholder for n_kv
-    
+
     data.extend_from_slice(&32u32.to_le_bytes()); // alignment = 32
-    
+
     // Save position for data_offset (will backpatch later)
     let data_offset_pos = data.len();
     data.extend_from_slice(&0u64.to_le_bytes()); // placeholder for data_offset
-    
+
     // Write metadata KV pairs, counting as we go
     let mut kv_count = 0u64;
-    
+
     write_kv_string(&mut data, "general.architecture", "test");
     kv_count += 1;
-    
+
     write_kv_string(&mut data, "general.name", "mini_test_model");
     kv_count += 1;
-    
+
     write_kv_string(&mut data, "general.file_type", "smoke");
     kv_count += 1;
-    
-    write_kv_string(&mut data, "compat.v2_requested", 
-                    if requested_version == 2 { "true" } else { "false" });
+
+    write_kv_string(
+        &mut data,
+        "compat.v2_requested",
+        if requested_version == 2 { "true" } else { "false" },
+    );
     kv_count += 1;
-    
+
     // Backpatch the actual n_kv count
     data[n_kv_pos..n_kv_pos + 8].copy_from_slice(&kv_count.to_le_bytes());
-    
+
     // Calculate aligned header size
     let alignment = 32usize;
     let unpadded_size = data.len();
-    let aligned_size = ((unpadded_size + alignment - 1) / alignment) * alignment;
-    
+    let aligned_size = unpadded_size.div_ceil(alignment) * alignment;
+
     // Backpatch data_offset to point to aligned header end
-    data[data_offset_pos..data_offset_pos + 8].copy_from_slice(&(aligned_size as u64).to_le_bytes());
-    
+    data[data_offset_pos..data_offset_pos + 8]
+        .copy_from_slice(&(aligned_size as u64).to_le_bytes());
+
     // Pad to alignment (0 tensors means file ends at data_offset)
     if aligned_size > unpadded_size {
-        data.extend(std::iter::repeat(0u8).take(aligned_size - unpadded_size));
+        data.extend(std::iter::repeat_n(0u8, aligned_size - unpadded_size));
     }
-    
+
     // Write to file
     fs::write(output_path, &data)?;
-    
+
     println!("✅ Generated minimal GGUF file ({} bytes)", data.len());
     println!("   - Version: 3 (always)");
     println!("   - Tensors: 0");
     println!("   - Metadata: {} KV pairs", kv_count);
     println!("   - Data offset: {} (aligned header end)", aligned_size);
-    
+
     Ok(())
 }
 
@@ -2125,7 +2145,11 @@ struct MetricsData {
     gpu_mem_mb: f64,
 }
 
-fn detect_breaking_changes_cmd(baseline: Option<&Path>, current: &Path, format: &str) -> Result<()> {
+fn detect_breaking_changes_cmd(
+    baseline: Option<&Path>,
+    current: &Path,
+    format: &str,
+) -> Result<()> {
     // If no baseline specified, try to use the latest git tag
     let baseline_path = if let Some(base) = baseline {
         base.to_path_buf()
@@ -2135,40 +2159,42 @@ fn detect_breaking_changes_cmd(baseline: Option<&Path>, current: &Path, format: 
             .args(["describe", "--tags", "--abbrev=0"])
             .output()
             .context("Failed to get latest git tag")?;
-        
+
         if !output.status.success() {
             return Err(anyhow!("No git tags found. Please specify --baseline"));
         }
-        
+
         let tag = String::from_utf8_lossy(&output.stdout).trim().to_string();
         println!("Using git tag as baseline: {}", tag);
-        
+
         // Create temp directory and checkout the tag
         let temp_dir = tempfile::tempdir()?;
         let baseline_path = temp_dir.path().join("baseline");
-        
+
         Command::new("git")
             .args(["worktree", "add", baseline_path.to_str().unwrap(), &tag])
             .status()
             .context("Failed to checkout baseline version")?;
-        
+
         baseline_path
     };
-    
+
     // Simple implementation - would use the breaking_changes module in production
     println!("🔍 Detecting breaking changes...");
     println!("  Baseline: {}", baseline_path.display());
     println!("  Current: {}", current.display());
-    
+
     // Run cargo-semver-checks if available
     let result = Command::new("cargo")
         .args([
             "semver-checks",
-            "--baseline-path", baseline_path.to_str().unwrap(),
-            "--manifest-path", current.join("Cargo.toml").to_str().unwrap(),
+            "--baseline-path",
+            baseline_path.to_str().unwrap(),
+            "--manifest-path",
+            current.join("Cargo.toml").to_str().unwrap(),
         ])
         .status();
-    
+
     match result {
         Ok(status) if status.success() => {
             println!("✅ No breaking changes detected!");
@@ -2186,7 +2212,7 @@ fn detect_breaking_changes_cmd(baseline: Option<&Path>, current: &Path, format: 
             println!("    Skipping breaking change detection");
         }
     }
-    
+
     Ok(())
 }
 
@@ -2198,58 +2224,67 @@ fn compare_metrics(
     tok_s_min: f64,
 ) -> Result<()> {
     println!("📊 Comparing metrics for regression detection");
-    
+
     // Load baseline metrics
     let baseline_json = fs::read_to_string(baseline_path)
         .with_context(|| format!("Failed to read baseline: {}", baseline_path.display()))?;
-    let baseline: CrossvalMetrics = serde_json::from_str(&baseline_json)
-        .with_context(|| "Failed to parse baseline JSON")?;
-    
+    let baseline: CrossvalMetrics =
+        serde_json::from_str(&baseline_json).with_context(|| "Failed to parse baseline JSON")?;
+
     // Load current metrics
     let current_json = fs::read_to_string(current_path)
         .with_context(|| format!("Failed to read current: {}", current_path.display()))?;
-    let current: CrossvalMetrics = serde_json::from_str(&current_json)
-        .with_context(|| "Failed to parse current JSON")?;
-    
+    let current: CrossvalMetrics =
+        serde_json::from_str(&current_json).with_context(|| "Failed to parse current JSON")?;
+
     println!("\n📈 Baseline:");
     println!("  PPL: {:.2}", baseline.metrics.ppl);
     println!("  Latency P95: {:.1}ms", baseline.metrics.latency_p95_ms);
     println!("  Throughput: {:.0} tok/s", baseline.metrics.tok_s);
-    
+
     println!("\n📉 Current:");
     println!("  PPL: {:.2}", current.metrics.ppl);
     println!("  Latency P95: {:.1}ms", current.metrics.latency_p95_ms);
     println!("  Throughput: {:.0} tok/s", current.metrics.tok_s);
-    
+
     // Calculate changes
     let ppl_change = (current.metrics.ppl - baseline.metrics.ppl) / baseline.metrics.ppl;
-    let latency_change = (current.metrics.latency_p95_ms - baseline.metrics.latency_p95_ms) 
+    let latency_change = (current.metrics.latency_p95_ms - baseline.metrics.latency_p95_ms)
         / baseline.metrics.latency_p95_ms;
     let tok_change = (current.metrics.tok_s - baseline.metrics.tok_s) / baseline.metrics.tok_s;
-    
+
     println!("\n📊 Changes:");
     println!("  PPL: {:+.2}%", ppl_change * 100.0);
     println!("  Latency P95: {:+.1}%", latency_change * 100.0);
     println!("  Throughput: {:+.1}%", tok_change * 100.0);
-    
+
     // Check thresholds
     let mut regressions = Vec::new();
-    
+
     if ppl_change > ppl_max {
-        regressions.push(format!("PPL increased by {:.2}% (max allowed: {:.2}%)", 
-            ppl_change * 100.0, ppl_max * 100.0));
+        regressions.push(format!(
+            "PPL increased by {:.2}% (max allowed: {:.2}%)",
+            ppl_change * 100.0,
+            ppl_max * 100.0
+        ));
     }
-    
+
     if latency_change > latency_p95_max {
-        regressions.push(format!("Latency P95 increased by {:.1}% (max allowed: {:.1}%)",
-            latency_change * 100.0, latency_p95_max * 100.0));
+        regressions.push(format!(
+            "Latency P95 increased by {:.1}% (max allowed: {:.1}%)",
+            latency_change * 100.0,
+            latency_p95_max * 100.0
+        ));
     }
-    
+
     if tok_change < tok_s_min {
-        regressions.push(format!("Throughput decreased by {:.1}% (max allowed: {:.1}%)",
-            -tok_change * 100.0, -tok_s_min * 100.0));
+        regressions.push(format!(
+            "Throughput decreased by {:.1}% (max allowed: {:.1}%)",
+            -tok_change * 100.0,
+            -tok_s_min * 100.0
+        ));
     }
-    
+
     if !regressions.is_empty() {
         println!("\n❌ Regression detected!");
         for reg in &regressions {
@@ -2257,7 +2292,7 @@ fn compare_metrics(
         }
         return Err(anyhow!("Performance regressions detected: {}", regressions.join(", ")));
     }
-    
+
     println!("\n✅ All metrics within acceptable thresholds!");
     Ok(())
 }
@@ -2299,15 +2334,15 @@ fn vendor_ggml_cmd(commit: &str, force: bool, output_dir: &Path) -> Result<()> {
     println!("📦 Vendoring GGML quantization files from llama.cpp");
     println!("   Commit: {}", commit);
     println!("   Output: {}", output_dir.display());
-    
+
     // Create output directory structure
     let ggml_dir = output_dir.join("ggml");
     let include_dir = ggml_dir.join("include").join("ggml");
     let src_dir = ggml_dir.join("src");
-    
+
     fs::create_dir_all(&include_dir)?;
     fs::create_dir_all(&src_dir)?;
-    
+
     // Files to download - try multiple paths for compatibility
     let files = vec![
         // Try new structure first, then old
@@ -2317,57 +2352,65 @@ fn vendor_ggml_cmd(commit: &str, force: bool, output_dir: &Path) -> Result<()> {
         (vec!["ggml/src/ggml-common.h", "ggml-common.h"], src_dir.join("ggml-common.h")),
         (vec!["ggml/src/ggml-impl.h", "ggml-impl.h"], src_dir.join("ggml-impl.h")),
     ];
-    
-    let client = Client::builder()
-        .user_agent(USER_AGENT_STRING)
-        .timeout(Duration::from_secs(30))
-        .build()?;
-    
+
+    let client =
+        Client::builder().user_agent(USER_AGENT_STRING).timeout(Duration::from_secs(30)).build()?;
+
     let base_url = format!("https://raw.githubusercontent.com/ggerganov/llama.cpp/{}", commit);
-    
+
     for (remote_paths, local_path) in files {
         if local_path.exists() && !force {
-            println!("   ✓ {} (exists, skipping)", local_path.file_name().unwrap().to_string_lossy());
+            println!(
+                "   ✓ {} (exists, skipping)",
+                local_path.file_name().unwrap().to_string_lossy()
+            );
             continue;
         }
-        
+
         println!("   ⬇ Downloading {}...", local_path.file_name().unwrap().to_string_lossy());
-        
+
         let mut downloaded = false;
         for remote_path in &remote_paths {
             let url = format!("{}/{}", base_url, remote_path);
-            
+
             match client.get(&url).send() {
                 Ok(response) if response.status().is_success() => {
                     let content = response.bytes()?;
                     fs::write(&local_path, &content)?;
-                    println!("   ✓ {} ({} bytes)", 
-                        local_path.file_name().unwrap().to_string_lossy(), 
-                        content.len());
+                    println!(
+                        "   ✓ {} ({} bytes)",
+                        local_path.file_name().unwrap().to_string_lossy(),
+                        content.len()
+                    );
                     downloaded = true;
                     break;
                 }
                 _ => continue,
             }
         }
-        
+
         if !downloaded {
             // Some files are optional (e.g., ggml-common.h, ggml-impl.h)
-            if local_path.file_name().unwrap().to_string_lossy().contains("common") ||
-               local_path.file_name().unwrap().to_string_lossy().contains("impl") {
-                println!("   ⚠ {} (optional file not found, skipping)", 
-                    local_path.file_name().unwrap().to_string_lossy());
+            if local_path.file_name().unwrap().to_string_lossy().contains("common")
+                || local_path.file_name().unwrap().to_string_lossy().contains("impl")
+            {
+                println!(
+                    "   ⚠ {} (optional file not found, skipping)",
+                    local_path.file_name().unwrap().to_string_lossy()
+                );
             } else {
-                bail!("Failed to download required file: {}", 
-                    local_path.file_name().unwrap().to_string_lossy());
+                bail!(
+                    "Failed to download required file: {}",
+                    local_path.file_name().unwrap().to_string_lossy()
+                );
             }
         }
     }
-    
+
     // Create version file to track vendored commit
     let version_file = ggml_dir.join("GGML_VERSION");
     fs::write(&version_file, commit)?;
-    
+
     println!();
     println!("✅ GGML files vendored successfully from commit {}", commit);
     println!("   Files saved to: {}", ggml_dir.display());
@@ -2377,7 +2420,7 @@ fn vendor_ggml_cmd(commit: &str, force: bool, output_dir: &Path) -> Result<()> {
     println!("     cargo build -p bitnet-cli --release --features iq2s-ffi");
     println!("  2. Test IQ2_S model loading:");
     println!("     ./target/release/bitnet inspect --model <iq2s-model.gguf>");
-    
+
     Ok(())
 }
 
@@ -2485,8 +2528,8 @@ mod tests {
     // Happy-path test: aligned 206 response
     #[test]
     fn test_aligned_206_download() {
-        use std::sync::atomic::{AtomicUsize, Ordering};
         use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
 
         let bytes_sent = Arc::new(AtomicUsize::new(0));
         let bytes_sent_clone = bytes_sent.clone();

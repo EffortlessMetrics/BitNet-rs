@@ -193,7 +193,7 @@ impl Backend for GpuBackend {
     fn clone_backend(&self) -> Box<dyn Backend> {
         Box::new(Self {
             model: self.model.clone(),
-            device: self.device.clone(),
+            device: self.device,
             mixed_precision: self.mixed_precision,
         })
     }
@@ -267,13 +267,8 @@ pub fn select_backend(
     model: Arc<dyn Model>,
     preferred_device: Option<Device>,
 ) -> Result<Box<dyn Backend>> {
-    let device = preferred_device.unwrap_or_else(|| {
-        if GpuBackend::is_available() {
-            Device::Cuda(0)
-        } else {
-            Device::Cpu
-        }
-    });
+    let device = preferred_device
+        .unwrap_or_else(|| if GpuBackend::is_available() { Device::Cuda(0) } else { Device::Cpu });
 
     match device {
         Device::Cpu => {

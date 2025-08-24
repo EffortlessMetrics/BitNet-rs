@@ -82,14 +82,16 @@ impl BitNetModel {
         tensors: &HashMap<String, CandleTensor>,
         device: &Device,
     ) -> Result<Arc<TransformerModel>> {
-        use crate::weight_mapper::{create_var_builder, remap_gguf_weights, normalize_model_tensors};
+        use crate::weight_mapper::{
+            create_var_builder, normalize_model_tensors, remap_gguf_weights,
+        };
 
         // Create a VarBuilder that uses our loaded tensors
         let device = match device {
             Device::Cpu => candle_core::Device::Cpu,
             Device::Cuda(id) => candle_core::Device::new_cuda(*id)?,
             Device::Metal => {
-                return Err(BitNetError::Validation("Metal not yet supported".to_string()))
+                return Err(BitNetError::Validation("Metal not yet supported".to_string()));
             }
         };
 
@@ -97,10 +99,11 @@ impl BitNetModel {
         let vb = if !tensors.is_empty() {
             // Remap tensor names to match our transformer module structure
             let mut mapped = remap_gguf_weights(tensors)?;
-            
+
             // Normalize embeddings and lm_head tensors, detect vocab size and hidden size
-            let (detected_vocab, detected_hidden) = normalize_model_tensors(&mut mapped, config.model.hidden_size)?;
-            
+            let (detected_vocab, detected_hidden) =
+                normalize_model_tensors(&mut mapped, config.model.hidden_size)?;
+
             // Update config with detected values
             let mut updated_config = config.clone();
             if updated_config.model.vocab_size != detected_vocab {
@@ -119,7 +122,7 @@ impl BitNetModel {
                 );
                 updated_config.model.hidden_size = detected_hidden;
             }
-            
+
             let vb = create_var_builder(mapped, DType::F32, &device)?;
             let model = TransformerModel::new(updated_config, vb)?;
             return Ok(Arc::new(model));
@@ -153,7 +156,7 @@ impl BitNetModel {
                     Device::Cpu => candle_core::Device::Cpu,
                     Device::Cuda(id) => candle_core::Device::new_cuda(id)?,
                     Device::Metal => {
-                        return Err(BitNetError::Validation("Metal not yet supported".to_string()))
+                        return Err(BitNetError::Validation("Metal not yet supported".to_string()));
                     }
                 };
                 Ok(CandleTensor::zeros(shape, DType::F32, &device)?)

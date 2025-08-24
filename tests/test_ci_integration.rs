@@ -2,6 +2,8 @@
 //!
 //! Tests to verify that the CI integration components work correctly.
 
+#![cfg(feature = "integration-tests")]
+
 use bitnet_tests::ci_reporting::CIReporter;
 use bitnet_tests::prelude::TestStatus;
 use bitnet_tests::reporting::TestReporter;

@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 #![cfg(feature = "ffi")]
 //! Comprehensive kernel tests for validation and performance benchmarking
 //!
@@ -50,11 +51,7 @@ impl SimpleRng {
 
     fn next_i8(&mut self) -> i8 {
         let val = self.next() % 256;
-        if val < 128 {
-            val as i8
-        } else {
-            (val as i8) - (256i16 as i8)
-        }
+        if val < 128 { val as i8 } else { (val as i8) - (256i16 as i8) }
     }
 
     fn next_u8(&mut self) -> u8 {

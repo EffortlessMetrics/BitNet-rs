@@ -101,7 +101,7 @@ impl FallbackKernel {
     /// I2_S quantization: 2-bit signed quantization with scale factors
     fn quantize_i2s(&self, input: &[f32], output: &mut [u8], scales: &mut [f32]) -> Result<()> {
         const BLOCK_SIZE: usize = 32;
-        let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        let num_blocks = input.len().div_ceil(BLOCK_SIZE);
 
         if output.len() < input.len() / 4 {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
@@ -161,7 +161,7 @@ impl FallbackKernel {
     /// TL1 quantization: Table lookup optimized for ARM
     fn quantize_tl1(&self, input: &[f32], output: &mut [u8], scales: &mut [f32]) -> Result<()> {
         const BLOCK_SIZE: usize = 64;
-        let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        let num_blocks = input.len().div_ceil(BLOCK_SIZE);
 
         if output.len() < input.len() / 4 {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
@@ -227,7 +227,7 @@ impl FallbackKernel {
     /// TL2 quantization: Table lookup optimized for x86
     fn quantize_tl2(&self, input: &[f32], output: &mut [u8], scales: &mut [f32]) -> Result<()> {
         const BLOCK_SIZE: usize = 128;
-        let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        let num_blocks = input.len().div_ceil(BLOCK_SIZE);
 
         if output.len() < input.len() / 4 {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {

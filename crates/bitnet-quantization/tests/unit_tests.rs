@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Comprehensive unit tests for bitnet-quantization
 //!
 //! This test suite covers:

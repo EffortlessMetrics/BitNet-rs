@@ -10,8 +10,8 @@
 
 #[cfg(feature = "cuda")]
 use bitnet_kernels::gpu::{
-    cuda_device_count, is_cuda_available, print_benchmark_results, print_validation_results,
-    BenchmarkConfig, CudaKernel, GpuBenchmark, GpuValidator, ValidationConfig,
+    BenchmarkConfig, CudaKernel, GpuBenchmark, GpuValidator, ValidationConfig, cuda_device_count,
+    is_cuda_available, print_benchmark_results, print_validation_results,
 };
 use std::env;
 

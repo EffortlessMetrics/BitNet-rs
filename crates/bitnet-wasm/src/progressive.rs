@@ -4,10 +4,10 @@ use js_sys::{Object, Promise, Reflect, Uint8Array};
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{console, ReadableStream, ReadableStreamDefaultReader};
+use web_sys::{ReadableStream, ReadableStreamDefaultReader, console};
 
 use crate::memory::{MemoryManager, WasmBuffer};
-use crate::utils::{to_js_error, JsError};
+use crate::utils::{JsError, to_js_error};
 
 /// Configuration for progressive loading
 #[derive(Debug, Clone)]

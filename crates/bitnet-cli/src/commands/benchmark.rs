@@ -642,7 +642,10 @@ impl BenchmarkCommand {
         mut output: Box<dyn Write>,
         results: &BenchmarkResults,
     ) -> Result<()> {
-        writeln!(output, "test_name,batch_size,sequence_length,mean_latency_ms,std_latency_ms,p95_latency_ms,mean_tokens_per_second,peak_memory_mb")?;
+        writeln!(
+            output,
+            "test_name,batch_size,sequence_length,mean_latency_ms,std_latency_ms,p95_latency_ms,mean_tokens_per_second,peak_memory_mb"
+        )?;
 
         for result in &results.results {
             writeln!(

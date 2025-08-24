@@ -1,6 +1,6 @@
 use bitnet_common::QuantizationType;
 use bitnet_quantization::{I2SLayout, I2SQuantizer, QuantizedTensor};
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 
 fn bench_i2s_dequant(c: &mut Criterion) {

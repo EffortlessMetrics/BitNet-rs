@@ -16,7 +16,7 @@ pub fn calculate_scale(data: &[f32], bits: u8) -> f32 {
 
 /// Calculate scale factors for grouped quantization
 pub fn calculate_grouped_scales(data: &[f32], block_size: usize, bits: u8) -> Vec<f32> {
-    let num_blocks = (data.len() + block_size - 1) / block_size;
+    let num_blocks = data.len().div_ceil(block_size);
     let mut scales = Vec::with_capacity(num_blocks);
 
     for i in 0..num_blocks {
@@ -31,7 +31,7 @@ pub fn calculate_grouped_scales(data: &[f32], block_size: usize, bits: u8) -> Ve
 
 /// Pack 4 2-bit values into a single byte
 pub fn pack_2bit_values(values: &[i8]) -> Vec<u8> {
-    let mut packed = Vec::with_capacity((values.len() + 3) / 4);
+    let mut packed = Vec::with_capacity(values.len().div_ceil(4));
 
     for chunk in values.chunks(4) {
         let mut byte = 0u8;
@@ -152,7 +152,7 @@ pub fn validate_shapes(shape1: &[usize], shape2: &[usize]) -> Result<()> {
 
 /// Calculate optimal block size for grouped quantization
 pub fn calculate_optimal_block_size(tensor_size: usize, target_blocks: usize) -> usize {
-    let block_size = (tensor_size + target_blocks - 1) / target_blocks;
+    let block_size = tensor_size.div_ceil(target_blocks);
     // Round to nearest power of 2 for better memory alignment
     block_size.next_power_of_two().clamp(16, 1024)
 }

@@ -22,6 +22,7 @@ tempfile = "3.8"
 base64 = "0.21"
 
 [features]
+integration-tests = []
 default = []
 spm = ["sentencepiece"]
 

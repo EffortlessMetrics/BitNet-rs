@@ -4,11 +4,12 @@
 //! with the C++ implementation.
 
 #![cfg(feature = "crossval")]
+#![cfg(feature = "integration-tests")]
 
 use bitnet_crossval::{
-    cpp_bindings::{is_available, CppModel},
-    fixtures::TestFixture,
     CrossvalError,
+    cpp_bindings::{CppModel, is_available},
+    fixtures::TestFixture,
 };
 use std::path::Path;
 

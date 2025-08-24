@@ -40,6 +40,8 @@ cbindgen = "0.27"
 tempfile.workspace = true
 
 [features]
+integration-tests = []
 default = ["cpu"]
 cpu = []
 cuda = ["cudarc", "bitnet-inference/gpu"]
+ffi-tests = []

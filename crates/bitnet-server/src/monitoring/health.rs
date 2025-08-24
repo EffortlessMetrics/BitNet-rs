@@ -2,11 +2,11 @@
 
 use async_trait::async_trait;
 use axum::{
+    Router,
     extract::State,
-    http::{header, HeaderValue, StatusCode},
+    http::{HeaderValue, StatusCode, header},
     response::{IntoResponse, Json, Response},
     routing::get,
-    Router,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -375,13 +375,13 @@ async fn readiness_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> Respo
 #[cfg(test)]
 mod tests {
     use super::{
-        create_health_routes_with_probe, overall_status_from_counts, status_code_for,
-        HealthMetrics, HealthProbe, HealthResponse, HealthStatus,
+        HealthMetrics, HealthProbe, HealthResponse, HealthStatus, create_health_routes_with_probe,
+        overall_status_from_counts, status_code_for,
     };
     use async_trait::async_trait;
-    use axum::body::Body;
-    use axum::http::{header, HeaderValue, Request, StatusCode};
     use axum::Router;
+    use axum::body::Body;
+    use axum::http::{HeaderValue, Request, StatusCode, header};
     use std::sync::Arc;
     use tower::ServiceExt;
 

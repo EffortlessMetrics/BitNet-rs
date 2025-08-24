@@ -4,14 +4,14 @@ use tokio::time::sleep;
 
 use bitnet_tests::common::{
     config::TestConfig,
-    debug_integration::{create_debug_harness, debug_config_from_env, DebugTestReporter},
+    debug_integration::{DebugTestReporter, create_debug_harness, debug_config_from_env},
     debugging::DebugConfig,
     errors::{TestError, TestOpResult},
     fixtures::FixtureManager,
     harness::{TestCase, TestSuite},
     results::TestMetrics,
 };
-use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
+use bitnet_tests::units::BYTES_PER_MB;
 
 /// Example test case that demonstrates debugging features
 struct DebuggableTestCase {

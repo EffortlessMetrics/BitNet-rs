@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Simple performance visualization test
 //!
 //! This test demonstrates the core performance visualization functionality

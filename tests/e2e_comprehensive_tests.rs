@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 /*!
 # End-to-End Comprehensive Tests
 

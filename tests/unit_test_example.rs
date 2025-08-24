@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Example unit test demonstrating common patterns
 //!
 //! This example shows how to write effective unit tests using the BitNet.rs

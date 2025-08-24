@@ -1,13 +1,13 @@
 //! OpenTelemetry integration for distributed tracing
 
 use anyhow::Result;
-use opentelemetry::{global, KeyValue};
+use opentelemetry::{KeyValue, global};
 use opentelemetry_otlp::{SpanExporter, WithExportConfig};
-use opentelemetry_prometheus::{exporter, PrometheusExporter};
+use opentelemetry_prometheus::{PrometheusExporter, exporter};
 use opentelemetry_sdk::{
+    Resource,
     metrics::SdkMeterProvider,
     trace::{self as sdktrace, Sampler, SdkTracerProvider},
-    Resource,
 };
 use std::time::Duration;
 

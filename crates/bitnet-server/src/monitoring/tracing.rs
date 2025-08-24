@@ -4,10 +4,10 @@ use anyhow::Result;
 use std::io;
 use tracing_appender::{non_blocking, rolling};
 use tracing_subscriber::{
+    EnvFilter,
     fmt::{self, format::FmtSpan},
     layer::SubscriberExt,
     util::SubscriberInitExt,
-    EnvFilter,
 };
 
 use super::MonitoringConfig;
@@ -68,7 +68,7 @@ pub async fn init_tracing(config: &MonitoringConfig) -> Result<TracingGuard> {
 
 /// Tracing utilities for request correlation
 pub mod request_tracing {
-    use tracing::{info_span, Span};
+    use tracing::{Span, info_span};
     use uuid::Uuid;
 
     /// Create a new request span with correlation ID

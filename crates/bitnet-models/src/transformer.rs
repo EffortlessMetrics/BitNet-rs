@@ -352,12 +352,12 @@ impl KVCache {
 pub struct TransformerModel {
     pub config: BitNetConfig,
     pub embed_tokens: candle_nn::Embedding,
-    pub embed_transposed: bool,  // True if embeddings are stored as [hidden, vocab]
+    pub embed_transposed: bool, // True if embeddings are stored as [hidden, vocab]
     pub layers: Vec<TransformerBlock>,
     pub norm: LayerNorm,
-    pub lm_head: Option<Linear>, // Optional for tied weights
+    pub lm_head: Option<Linear>,        // Optional for tied weights
     pub lm_head_weight: Option<Tensor>, // Direct access to lm_head weight for transposed handling
-    pub lm_head_transposed: bool,  // True if lm_head is stored as [hidden, vocab]
+    pub lm_head_transposed: bool,       // True if lm_head is stored as [hidden, vocab]
     device: Device,
 }
 
@@ -369,18 +369,20 @@ impl TransformerModel {
         let n_layers = config.model.num_layers;
 
         let embed_tokens = candle_nn::embedding(vocab_size, hidden_size, vb.pp("embed_tokens"))?;
-        
+
         // Read transpose flag for embeddings (1-element tensor)
         let embed_transposed = match vb.get((1,), "embed_tokens.transposed") {
             Ok(t) => {
                 let val = t.to_vec0::<f32>()?;
                 val > 0.5
-            },
-            Err(_) => false,  // If flag doesn't exist, assume not transposed
+            }
+            Err(_) => false, // If flag doesn't exist, assume not transposed
         };
-        
+
         if embed_transposed {
-            tracing::info!("Embeddings are transposed [hidden, vocab] - will handle efficiently at runtime");
+            tracing::info!(
+                "Embeddings are transposed [hidden, vocab] - will handle efficiently at runtime"
+            );
         }
 
         let mut layers = Vec::with_capacity(n_layers);
@@ -392,70 +394,87 @@ impl TransformerModel {
 
         // Try to load lm_head, but it's optional (can be tied to embeddings)
         // Try to create the linear layer, catching errors if weights don't exist
-        let (lm_head, lm_head_weight, lm_head_transposed) = match candle_nn::linear(hidden_size, vocab_size, vb.pp("lm_head")) {
+        let (lm_head, lm_head_weight, lm_head_transposed) = match candle_nn::linear(
+            hidden_size,
+            vocab_size,
+            vb.pp("lm_head"),
+        ) {
             Ok(layer) => {
                 // Also get the weight tensor directly for transposed handling
                 // Note: weight dimensions might be transposed
-                let weight = vb.get((vocab_size, hidden_size), "lm_head.weight")
+                let weight = vb
+                    .get((vocab_size, hidden_size), "lm_head.weight")
                     .or_else(|_| vb.get((hidden_size, vocab_size), "lm_head.weight"))
                     .ok();
-                
+
                 // Read transpose flag for lm_head
                 let transposed = match vb.get((1,), "lm_head.transposed") {
                     Ok(t) => {
                         let val = t.to_vec0::<f32>()?;
                         val > 0.5
-                    },
-                    Err(_) => false,  // If flag doesn't exist, assume not transposed
+                    }
+                    Err(_) => false, // If flag doesn't exist, assume not transposed
                 };
-                
+
                 if transposed {
-                    tracing::info!("LM head is transposed [hidden, vocab] - will handle efficiently at runtime");
+                    tracing::info!(
+                        "LM head is transposed [hidden, vocab] - will handle efficiently at runtime"
+                    );
                 }
                 (Some(layer), weight, transposed)
-            },
+            }
             Err(_) => {
                 tracing::info!("lm_head.weight not found, will use tied weights");
                 (None, None, false)
             }
         };
 
-        Ok(Self { config, embed_tokens, embed_transposed, layers, norm, lm_head, lm_head_weight, lm_head_transposed, device })
+        Ok(Self {
+            config,
+            embed_tokens,
+            embed_transposed,
+            layers,
+            norm,
+            lm_head,
+            lm_head_weight,
+            lm_head_transposed,
+            device,
+        })
     }
 
     pub fn embed(&self, tokens: &[u32]) -> Result<Tensor> {
         let token_ids = Tensor::from_vec(tokens.to_vec(), &[1, tokens.len()], &self.device)?;
-        
+
         // Get dimensions
         let batch_size = token_ids.dims()[0];
         let seq_len = token_ids.dims()[1];
         let hidden_size = self.config.model.hidden_size;
-        
+
         // Flatten to [B*S] for index_select
         let flat_ids = token_ids.flatten_all()?;
-        
+
         if self.embed_transposed {
             // Column-gather path for [hidden, vocab] storage
             // This avoids materializing the full transpose
             let weight = self.embed_tokens.embeddings();
-            
+
             // index_select on dim=1 gathers columns from [H, V]
-            // Result: [H, B*S] 
+            // Result: [H, B*S]
             let cols = weight.index_select(&flat_ids, 1)?;
-            
+
             // Transpose to [B*S, H] (small transpose, only B*S elements)
             let embeddings = cols.t()?;
-            
+
             // Reshape to [B, S, H]
             Ok(embeddings.reshape(&[batch_size, seq_len, hidden_size])?)
         } else {
             // Row-gather path for standard [vocab, hidden] storage
             let weight = self.embed_tokens.embeddings();
-            
+
             // index_select on dim=0 gathers rows from [V, H]
             // Result: [B*S, H]
             let rows = weight.index_select(&flat_ids, 0)?;
-            
+
             // Reshape to [B, S, H]
             Ok(rows.reshape(&[batch_size, seq_len, hidden_size])?)
         }
@@ -466,18 +485,18 @@ impl TransformerModel {
         // Get dimensions
         let batch_size = token_ids.dims()[0];
         let seq_len = token_ids.dims()[1];
-        
+
         // 1. Embed tokens [B,T] -> [B,T,H]
         // Note: This is a simplified path that may not handle all edge cases
         // For production, we should refactor to share code with the main forward path
         let flat_ids = token_ids.flatten_all()?;
         let ids_vec: Vec<u32> = flat_ids.to_vec1()?;
-        let mut hidden = self.embed(&ids_vec)?;
-        
+        let hidden = self.embed(&ids_vec)?;
+
         // Reshape back to [B,T,H]
         let hidden_size = self.config.model.hidden_size;
         let mut hidden = hidden.reshape(&[batch_size, seq_len, hidden_size])?;
-        
+
         // 2. Pass through transformer blocks
         // TODO: This currently doesn't apply proper positional encoding per step
         // which may cause parity issues. The correct implementation would:
@@ -487,10 +506,10 @@ impl TransformerModel {
         for layer in &self.layers {
             hidden = layer.forward(&hidden, None)?;
         }
-        
+
         // 3. Apply final normalization
         hidden = self.norm.forward(&hidden)?;
-        
+
         // 4. Project to vocabulary [B,T,H] -> [B,T,V]
         self.logits(&hidden)
     }

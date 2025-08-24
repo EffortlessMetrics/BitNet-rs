@@ -4,7 +4,7 @@
 //! It uses vectorized lookup tables and advanced SIMD operations to achieve maximum throughput
 //! on x86 architectures, with runtime CPU feature detection for optimal instruction set selection.
 
-use crate::{utils::*, QuantizedTensor, QuantizerTrait};
+use crate::{QuantizedTensor, QuantizerTrait, utils::*};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
 use candle_core::Device;
 use rayon::prelude::*;
@@ -95,11 +95,7 @@ impl VectorizedLookupTable {
     /// Dequantize using vectorized lookup
     pub fn dequantize(&self, quantized: i8) -> f32 {
         let index = quantized as usize;
-        if index < self.reverse.len() {
-            self.reverse[index]
-        } else {
-            0.0
-        }
+        if index < self.reverse.len() { self.reverse[index] } else { 0.0 }
     }
 }
 
@@ -454,22 +450,22 @@ impl TL2Quantizer {
 
                 // Vectorized lookup table access
                 let mut result = [0i8; 8];
-                result[0] =
-                    lookup_table.forward[(_mm256_extract_epi32::<0>(indices).clamp(0, 255)) as usize];
-                result[1] =
-                    lookup_table.forward[(_mm256_extract_epi32::<1>(indices).clamp(0, 255)) as usize];
-                result[2] =
-                    lookup_table.forward[(_mm256_extract_epi32::<2>(indices).clamp(0, 255)) as usize];
-                result[3] =
-                    lookup_table.forward[(_mm256_extract_epi32::<3>(indices).clamp(0, 255)) as usize];
-                result[4] =
-                    lookup_table.forward[(_mm256_extract_epi32::<4>(indices).clamp(0, 255)) as usize];
-                result[5] =
-                    lookup_table.forward[(_mm256_extract_epi32::<5>(indices).clamp(0, 255)) as usize];
-                result[6] =
-                    lookup_table.forward[(_mm256_extract_epi32::<6>(indices).clamp(0, 255)) as usize];
-                result[7] =
-                    lookup_table.forward[(_mm256_extract_epi32::<7>(indices).clamp(0, 255)) as usize];
+                result[0] = lookup_table.forward
+                    [(_mm256_extract_epi32::<0>(indices).clamp(0, 255)) as usize];
+                result[1] = lookup_table.forward
+                    [(_mm256_extract_epi32::<1>(indices).clamp(0, 255)) as usize];
+                result[2] = lookup_table.forward
+                    [(_mm256_extract_epi32::<2>(indices).clamp(0, 255)) as usize];
+                result[3] = lookup_table.forward
+                    [(_mm256_extract_epi32::<3>(indices).clamp(0, 255)) as usize];
+                result[4] = lookup_table.forward
+                    [(_mm256_extract_epi32::<4>(indices).clamp(0, 255)) as usize];
+                result[5] = lookup_table.forward
+                    [(_mm256_extract_epi32::<5>(indices).clamp(0, 255)) as usize];
+                result[6] = lookup_table.forward
+                    [(_mm256_extract_epi32::<6>(indices).clamp(0, 255)) as usize];
+                result[7] = lookup_table.forward
+                    [(_mm256_extract_epi32::<7>(indices).clamp(0, 255)) as usize];
 
                 // Store results
                 std::ptr::copy_nonoverlapping(result.as_ptr(), output.as_mut_ptr().add(i * 8), 8);

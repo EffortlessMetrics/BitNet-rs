@@ -7,7 +7,7 @@
 use bitnet_common::{BitNetTensor, QuantizationType};
 use bitnet_quantization::{I2SQuantizer, Quantize, QuantizerTrait, TL1Quantizer, TL2Quantizer};
 use candle_core::{Device, Tensor as CandleTensor};
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use std::hint::black_box;
 
 /// Helper function to create benchmark tensors

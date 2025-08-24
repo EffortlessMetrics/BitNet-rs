@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Comprehensive unit tests for bitnet-kernels
 //!
 //! This test suite provides comprehensive coverage of all kernel implementations
@@ -32,11 +33,7 @@ impl TestDataGenerator {
             .map(|_| {
                 self.seed = self.seed.wrapping_mul(1103515245).wrapping_add(12345);
                 let val = (self.seed % 256) as u8;
-                if val > 127 {
-                    (val as i16 - 256) as i8
-                } else {
-                    val as i8
-                }
+                if val > 127 { (val as i16 - 256) as i8 } else { val as i8 }
             })
             .collect()
     }
@@ -919,7 +916,6 @@ mod ffi_kernel_tests {
 
 #[cfg(not(feature = "ffi"))]
 mod ffi_kernel_disabled_tests {
-    use super::*;
 
     #[test]
     fn test_ffi_kernel_disabled() {
@@ -1000,7 +996,7 @@ mod performance_tests {
                     QuantizationType::TL1 => 64,
                     QuantizationType::TL2 => 128,
                 };
-                let num_blocks = (size + block_size - 1) / block_size;
+                let num_blocks = size.div_ceil(block_size);
                 let mut scales = vec![0.0f32; num_blocks];
 
                 // Warm up

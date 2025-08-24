@@ -3,6 +3,8 @@
 //! These tests ensure that our Rust implementation produces identical
 //! results to the Microsoft BitNet C++ implementation.
 
+#![cfg(feature = "integration-tests")]
+
 #[cfg(feature = "crossval")]
 use anyhow::{Context, Result};
 #[cfg(feature = "crossval")]

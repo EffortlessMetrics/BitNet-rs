@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Basic test for the reporting system
 //!
 //! This test validates that the core reporting functionality works

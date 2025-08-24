@@ -21,11 +21,7 @@ struct NllStats {
 impl NllStats {
     #[inline]
     fn mean(self) -> f64 {
-        if self.tokens > 0 {
-            self.sum / self.tokens as f64
-        } else {
-            0.0
-        }
+        if self.tokens > 0 { self.sum / self.tokens as f64 } else { 0.0 }
     }
 
     #[inline]
@@ -196,9 +192,9 @@ fn topk_stable_indices(logits: &[f32], k: usize) -> Vec<usize> {
     if k == 0 {
         return Vec::new();
     }
-    
+
     let mut idx: Vec<usize> = (0..logits.len()).collect();
-    
+
     // Sort by logit descending, then by index ascending for ties
     idx.sort_by(|&a, &b| {
         match logits[b].partial_cmp(&logits[a]) {
@@ -207,7 +203,7 @@ fn topk_stable_indices(logits: &[f32], k: usize) -> Vec<usize> {
             _ => a.cmp(&b), // Deterministic tie-breaking
         }
     });
-    
+
     idx.truncate(k);
     idx
 }
@@ -231,22 +227,24 @@ fn log_softmax_stable(xs: &[f32]) -> Vec<f32> {
 
 impl EvalCommand {
     /// Build metadata for the evaluation
-    fn build_metadata(&self, format: &str, tokenizer_source: &str, scoring_policy: ScoringPolicy) -> EvalMeta {
+    fn build_metadata(
+        &self,
+        format: &str,
+        tokenizer_source: &str,
+        scoring_policy: ScoringPolicy,
+    ) -> EvalMeta {
         let platform = format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH);
         let bitnet_cli = env!("CARGO_PKG_VERSION").to_string();
-        
+
         // Get Rust version
         let rust_version = "rustc 1.89.0".to_string(); // Simplified for now
-        
+
         let threads = if self.deterministic {
             1
         } else {
-            std::env::var("RAYON_NUM_THREADS")
-                .ok()
-                .and_then(|s| s.parse().ok())
-                .unwrap_or(1)
+            std::env::var("RAYON_NUM_THREADS").ok().and_then(|s| s.parse().ok()).unwrap_or(1)
         };
-        
+
         EvalMeta {
             format: format.to_string(),
             tokenizer: tokenizer_source.to_string(),
@@ -326,10 +324,7 @@ impl EvalCommand {
         let filter = tracing_subscriber::EnvFilter::try_from_default_env()
             .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(level));
 
-        tracing_subscriber::fmt()
-            .with_env_filter(filter)
-            .with_target(false)
-            .init();
+        tracing_subscriber::fmt().with_env_filter(filter).with_target(false).init();
 
         Ok(())
     }
@@ -362,7 +357,8 @@ impl EvalCommand {
 
         // Create inference engine
         let model_arc: std::sync::Arc<dyn bitnet_models::Model> = model.into();
-        let tokenizer_arc: std::sync::Arc<dyn bitnet_tokenizers::Tokenizer> = tokenizer.clone().into();
+        let tokenizer_arc: std::sync::Arc<dyn bitnet_tokenizers::Tokenizer> =
+            tokenizer.clone().into();
         let bn_device = bitnet_common::Device::from(&device);
         let engine = InferenceEngine::new(model_arc, tokenizer_arc, bn_device)
             .context("Failed to create inference engine")?;
@@ -387,7 +383,10 @@ impl EvalCommand {
                     Ok(Device::Cpu)
                 }
             }
-            _ => anyhow::bail!("Invalid device: {}. Must be one of: cpu, cuda, metal, auto", self.device),
+            _ => anyhow::bail!(
+                "Invalid device: {}. Must be one of: cpu, cuda, metal, auto",
+                self.device
+            ),
         }
     }
 
@@ -424,12 +423,13 @@ impl EvalCommand {
 
     /// Read text file (only required when not teacher-forcing)
     fn read_text_file(&self) -> Result<Vec<String>> {
-        let tf = self.text_file.as_ref()
-            .ok_or_else(|| anyhow::anyhow!("--text-file is required unless --teacher-force-ids is provided"))?;
-        
+        let tf = self.text_file.as_ref().ok_or_else(|| {
+            anyhow::anyhow!("--text-file is required unless --teacher-force-ids is provided")
+        })?;
+
         let file = std::fs::File::open(tf)
             .with_context(|| format!("Failed to open text file: {}", tf.display()))?;
-        
+
         let reader = BufReader::new(file);
         let mut lines = Vec::new();
 
@@ -467,9 +467,9 @@ impl EvalCommand {
 
         for t in 1..tokens.len() {
             // Get logits from forward pass
-            let mut logits = engine.eval_ids(&prefix).await
-                .context("eval_ids in teacher-forcing")?;
-            
+            let mut logits =
+                engine.eval_ids(&prefix).await.context("eval_ids in teacher-forcing")?;
+
             // Demote NaNs for robustness
             for v in &mut logits {
                 if !v.is_finite() {
@@ -488,15 +488,16 @@ impl EvalCommand {
             // Compute log probabilities
             let logp = log_softmax_stable(&logits);
             let target = tokens[t] as usize;
-            let lp = *logp.get(target)
+            let lp = *logp
+                .get(target)
                 .ok_or_else(|| anyhow::anyhow!("target index {} out of bounds", target))?;
-            
+
             stats.sum -= lp as f64;
             stats.tokens += 1;
 
             prefix.push(tokens[t]);
         }
-        
+
         Ok(stats)
     }
 
@@ -541,10 +542,14 @@ impl EvalCommand {
         let predicted = agg.tokens.max(1); // T-1 token count
 
         Ok(EvalResults {
-            model_path: self.model.as_ref()
+            model_path: self
+                .model
+                .as_ref()
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|| "default".to_string()),
-            text_file: self.text_file.as_ref()
+            text_file: self
+                .text_file
+                .as_ref()
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|| "teacher-forced".to_string()),
             lines_evaluated: lines.len(),
@@ -559,16 +564,9 @@ impl EvalCommand {
             },
             tokens_per_second: (predicted as f64) / elapsed.as_secs_f64(),
             logits_dump: None,
-            scoring_policy: Some(ScoringPolicy {
-                add_bos: true,
-                append_eos: true,
-                mask_pad: true,
-            }),
+            scoring_policy: Some(ScoringPolicy { add_bos: true, append_eos: true, mask_pad: true }),
             tf_path_head: None,
-            totals: Some(EvalTotals {
-                lines: lines.len(),
-                predicted_tokens: predicted,
-            }),
+            totals: Some(EvalTotals { lines: lines.len(), predicted_tokens: predicted }),
         })
     }
 
@@ -579,14 +577,14 @@ impl EvalCommand {
         tf_ids: Vec<u32>,
     ) -> Result<EvalResults> {
         let start = Instant::now();
-        
+
         // Compute NLL stats
         let stats = if tf_ids.len() >= 2 {
             self.compute_nll_stats(&mut engine, &tf_ids, None).await?
         } else {
             NllStats::default()
         };
-        
+
         let mean_nll = stats.mean();
         let perplexity = mean_nll.exp();
         let predicted = stats.tokens.max(1);
@@ -597,25 +595,20 @@ impl EvalCommand {
                 let mut dump = Vec::new();
                 for (step, t) in (0..(tf_ids.len() - 1)).take(steps).enumerate() {
                     let mut logits: Vec<f32> = engine.eval_ids(&tf_ids[..=t]).await?;
-                    
+
                     // Demote NaNs to -inf
                     for v in &mut logits {
                         if !v.is_finite() {
                             *v = f32::NEG_INFINITY;
                         }
                     }
-                    
+
                     let k = self.logits_topk.min(logits.len());
                     let idx = topk_stable_indices(&logits, k);
-                    let topk: Vec<(u32, f32)> = idx.into_iter()
-                        .map(|i| (i as u32, logits[i]))
-                        .collect();
-                    
-                    dump.push(LogitStep {
-                        step,
-                        topk,
-                        chosen_id: Some(tf_ids[t + 1]),
-                    });
+                    let topk: Vec<(u32, f32)> =
+                        idx.into_iter().map(|i| (i as u32, logits[i])).collect();
+
+                    dump.push(LogitStep { step, topk, chosen_id: Some(tf_ids[t + 1]) });
                 }
                 Some(dump)
             } else {
@@ -627,16 +620,15 @@ impl EvalCommand {
 
         let elapsed = start.elapsed();
         let elapsed_ms = elapsed.as_secs_f64() * 1000.0;
-        
+
         // Include first N tokens of TF path for replay
-        let tf_path_head = if tf_ids.len() <= 100 {
-            Some(tf_ids.clone())
-        } else {
-            Some(tf_ids[..100].to_vec())
-        };
-        
+        let tf_path_head =
+            if tf_ids.len() <= 100 { Some(tf_ids.clone()) } else { Some(tf_ids[..100].to_vec()) };
+
         Ok(EvalResults {
-            model_path: self.model.as_ref()
+            model_path: self
+                .model
+                .as_ref()
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|| "default".to_string()),
             text_file: "teacher-forced".to_string(),
@@ -658,10 +650,7 @@ impl EvalCommand {
                 mask_pad: false,
             }),
             tf_path_head,
-            totals: Some(EvalTotals {
-                lines: 1,
-                predicted_tokens: predicted,
-            }),
+            totals: Some(EvalTotals { lines: 1, predicted_tokens: predicted }),
         })
     }
 
@@ -682,8 +671,9 @@ impl EvalCommand {
 
         // Save to JSON if requested
         if let Some(json_path) = &self.json_out {
-            let file = std::fs::File::create(json_path)
-                .with_context(|| format!("Failed to create JSON output: {}", json_path.display()))?;
+            let file = std::fs::File::create(json_path).with_context(|| {
+                format!("Failed to create JSON output: {}", json_path.display())
+            })?;
             serde_json::to_writer_pretty(file, results)?;
             info!("Results saved to: {}", json_path.display());
         }

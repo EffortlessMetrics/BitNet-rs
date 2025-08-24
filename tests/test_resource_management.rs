@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 use bitnet_tests::common::{
     config::TestConfig,
     harness::{ConsoleReporter, TestHarness},

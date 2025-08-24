@@ -274,9 +274,10 @@ impl TestCase for TokenizationAccuracyTest {
             TestError::execution(format!("Tokenization with special tokens failed: {}", e))
         })?;
 
-        let tokens_without_special = tokenizer.encode(param_test_text, false, false).map_err(|e| {
-            TestError::execution(format!("Tokenization without special tokens failed: {}", e))
-        })?;
+        let tokens_without_special =
+            tokenizer.encode(param_test_text, false, false).map_err(|e| {
+                TestError::execution(format!("Tokenization without special tokens failed: {}", e))
+            })?;
 
         debug!("With special tokens: {} tokens", tokens_with_special.len());
         debug!("Without special tokens: {} tokens", tokens_without_special.len());
@@ -736,7 +737,7 @@ impl TestCase for TokenizationErrorHandlingTest {
         // Test invalid token sequences
         debug!("Testing invalid token sequences");
         let vocab_size = tokenizer.vocab_size() as u32;
-        let invalid_token_sequences = vec![
+        let invalid_token_sequences = [
             vec![vocab_size + 1],         // Out of vocabulary
             vec![u32::MAX],               // Maximum value
             vec![0, vocab_size + 100, 1], // Mixed valid/invalid

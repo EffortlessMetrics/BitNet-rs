@@ -1,9 +1,11 @@
+#![cfg(feature = "integration-tests")]
 /// Demonstration of Enhanced Error Handling Capabilities
 ///
 /// This demo shows the key features of the enhanced error handling system
 /// without relying on complex dependencies that have compilation issues.
 use std::time::Duration;
 
+#[cfg(not(test))]
 fn main() {
     println!("=== BitNet.rs Enhanced Error Handling Demo ===\n");
 

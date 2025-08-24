@@ -6,9 +6,9 @@ use axum::{
     response::sse::{Event, KeepAlive, Sse},
 };
 use futures::stream::Stream;
-use std::pin::Pin;
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
@@ -41,18 +41,18 @@ pub struct StreamingComplete {
 }
 
 /// SSE streaming handler for token-by-token generation
-pub async fn streaming_handler(
+pub(crate) async fn streaming_handler(
     State(state): State<AppState>,
     axum::Json(request): axum::Json<StreamingRequest>,
 ) -> Sse<Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>>> {
-    let stream: Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>> = if let Some(engine) = state.engine {
-        Box::pin(real_stream(engine, request).await)
-    } else {
-        Box::pin(mock_stream(request).await)
-    };
+    let stream: Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>> =
+        if let Some(engine) = state.engine {
+            Box::pin(real_stream(engine, request).await)
+        } else {
+            Box::pin(mock_stream(request).await)
+        };
 
-    Sse::new(stream)
-        .keep_alive(KeepAlive::new().interval(Duration::from_secs(1)))
+    Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(1)))
 }
 
 /// Real streaming using the BitNet engine
@@ -83,19 +83,19 @@ async fn real_stream(
         let engine = engine.read().await;
         let mut gen_stream = engine.generate_stream_with_config(&request.prompt, &config);
         let mut token_count = 0u64;
-        
+
         while let Some(token_result) = gen_stream.next().await {
             match token_result {
                 Ok(token) => {
                     token_count += 1;
                     let elapsed = start.elapsed();
-                    
+
                     let data = StreamingToken {
                         token: token.clone(),
                         token_id: 0,
                         cumulative_time_ms: elapsed.as_millis() as u64,
                     };
-                    
+
                     yield Ok(Event::default()
                         .event("token")
                         .json_data(data)
@@ -109,7 +109,7 @@ async fn real_stream(
                 }
             }
         }
-        
+
         // Send completion event
         let elapsed = start.elapsed();
         let tokens_per_second = if elapsed.as_millis() > 0 {
@@ -117,13 +117,13 @@ async fn real_stream(
         } else {
             0.0
         };
-        
+
         let complete = StreamingComplete {
             total_tokens: token_count,
             total_time_ms: elapsed.as_millis() as u64,
             tokens_per_second,
         };
-        
+
         yield Ok(Event::default()
             .event("complete")
             .json_data(complete)
@@ -132,30 +132,28 @@ async fn real_stream(
 }
 
 /// Mock streaming for testing without a model
-async fn mock_stream(
-    request: StreamingRequest,
-) -> impl Stream<Item = Result<Event, Infallible>> {
+async fn mock_stream(request: StreamingRequest) -> impl Stream<Item = Result<Event, Infallible>> {
     let start = std::time::Instant::now();
-    let tokens = vec!["Hello", " ", "from", " ", "BitNet", " ", "server", "!"];
+    let tokens = ["Hello", " ", "from", " ", "BitNet", " ", "server", "!"];
     let max_tokens = request.max_tokens.unwrap_or(8).min(tokens.len());
 
     async_stream::stream! {
         for (i, token) in tokens.iter().take(max_tokens).enumerate() {
             tokio::time::sleep(Duration::from_millis(50)).await;
-            
+
             let elapsed = start.elapsed();
             let data = StreamingToken {
                 token: token.to_string(),
                 token_id: i as u32,
                 cumulative_time_ms: elapsed.as_millis() as u64,
             };
-            
+
             yield Ok(Event::default()
                 .event("token")
                 .json_data(data)
                 .unwrap());
         }
-        
+
         // Send completion
         let elapsed = start.elapsed();
         let complete = StreamingComplete {
@@ -163,7 +161,7 @@ async fn mock_stream(
             total_time_ms: elapsed.as_millis() as u64,
             tokens_per_second: (max_tokens as f64 * 1000.0) / elapsed.as_millis() as f64,
         };
-        
+
         yield Ok(Event::default()
             .event("complete")
             .json_data(complete)

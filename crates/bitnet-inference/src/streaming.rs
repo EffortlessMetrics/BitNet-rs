@@ -11,7 +11,7 @@ use futures_util::Stream;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context as TaskContext, Poll};
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{RwLock, mpsc};
 use tracing::{debug, instrument, warn};
 
 use crate::{
@@ -128,8 +128,7 @@ impl GenerationStream {
             }
 
             // Decode token to text
-            let token_text =
-                tokenizer.decode(&[next_token]).context("Failed to decode token")?;
+            let token_text = tokenizer.decode(&[next_token]).context("Failed to decode token")?;
 
             token_buffer.push(token_text);
             current_tokens.push(next_token);
@@ -287,10 +286,7 @@ mod tests {
             Ok(vec![1, 2, 3])
         }
 
-        fn decode(
-            &self,
-            tokens: &[u32],
-        ) -> bitnet_common::Result<String> {
+        fn decode(&self, tokens: &[u32]) -> bitnet_common::Result<String> {
             Ok(format!("token_{}", tokens.len()))
         }
 

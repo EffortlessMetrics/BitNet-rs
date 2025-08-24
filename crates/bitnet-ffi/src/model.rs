@@ -6,7 +6,7 @@
 use crate::{BitNetCConfig, BitNetCError};
 use bitnet_common::{BitNetConfig, ConcreteTensor, ModelFormat, QuantizationType, Tensor};
 use bitnet_models::Model;
-use candle_core::{Tensor as CandleTensor, Device as CDevice};
+use candle_core::{Device as CDevice, Tensor as CandleTensor};
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_uint, c_ulong};
@@ -105,6 +105,12 @@ pub struct ModelManager {
     models: RwLock<HashMap<u32, Arc<dyn Model>>>,
     model_info: RwLock<HashMap<u32, ModelInfo>>,
     next_id: Mutex<u32>,
+}
+
+impl Default for ModelManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ModelManager {
@@ -257,7 +263,7 @@ impl ModelManager {
         let format = match path_obj.extension().and_then(|s| s.to_str()) {
             Some("gguf") => ModelFormat::Gguf,
             Some("safetensors") => ModelFormat::SafeTensors,
-            _ => ModelFormat::Gguf // Default fallback
+            _ => ModelFormat::Gguf, // Default fallback
         };
 
         // Try to load using the actual model loader
@@ -379,10 +385,10 @@ impl Model for MockModel {
         let vocab_size = self.config.model.vocab_size;
         let hidden_size = self.config.model.hidden_size;
         let batch_size = tokens.len();
-        
+
         // Create embeddings tensor [batch_size, hidden_size]
         let mut data = vec![0.0f32; batch_size * hidden_size];
-        
+
         // Simple embedding: use token id modulo to create variations
         for (i, &token) in tokens.iter().enumerate() {
             let offset = i * hidden_size;
@@ -390,14 +396,11 @@ impl Model for MockModel {
                 data[offset + j] = ((token as usize % vocab_size) as f32) / (vocab_size as f32);
             }
         }
-        
+
         // Create a Candle tensor and wrap it in ConcreteTensor
-        let tensor = CandleTensor::from_vec(
-            data,
-            &[batch_size, hidden_size],
-            &CDevice::Cpu,
-        ).map_err(|e| bitnet_common::BitNetError::Candle(e))?;
-        
+        let tensor = CandleTensor::from_vec(data, &[batch_size, hidden_size], &CDevice::Cpu)
+            .map_err(bitnet_common::BitNetError::Candle)?;
+
         Ok(ConcreteTensor::bitnet(tensor))
     }
 
@@ -405,17 +408,14 @@ impl Model for MockModel {
         // Simple logits: project to vocab size
         let vocab_size = self.config.model.vocab_size;
         let batch_size = x.shape()[0];
-        
+
         // Create logits tensor [batch_size, vocab_size]
         let data = vec![0.0f32; batch_size * vocab_size];
-        
+
         // Create a Candle tensor and wrap it in ConcreteTensor
-        let tensor = CandleTensor::from_vec(
-            data,
-            &[batch_size, vocab_size],
-            &CDevice::Cpu,
-        ).map_err(|e| bitnet_common::BitNetError::Candle(e))?;
-        
+        let tensor = CandleTensor::from_vec(data, &[batch_size, vocab_size], &CDevice::Cpu)
+            .map_err(bitnet_common::BitNetError::Candle)?;
+
         Ok(ConcreteTensor::bitnet(tensor))
     }
 
@@ -427,16 +427,13 @@ impl Model for MockModel {
         // Simple forward: return tensor with same batch size but hidden_size dimensions
         let batch_size = x.shape()[0];
         let hidden_size = self.config.model.hidden_size;
-        
+
         let data = vec![0.1f32; batch_size * hidden_size];
-        
+
         // Create a Candle tensor and wrap it in ConcreteTensor
-        let tensor = CandleTensor::from_vec(
-            data,
-            &[batch_size, hidden_size],
-            &CDevice::Cpu,
-        ).map_err(|e| bitnet_common::BitNetError::Candle(e))?;
-        
+        let tensor = CandleTensor::from_vec(data, &[batch_size, hidden_size], &CDevice::Cpu)
+            .map_err(bitnet_common::BitNetError::Candle)?;
+
         Ok(ConcreteTensor::bitnet(tensor))
     }
 }
@@ -449,30 +446,27 @@ impl Model for SimpleGgufModel {
     fn embed(&self, tokens: &[u32]) -> bitnet_common::Result<ConcreteTensor> {
         let batch_size = tokens.len();
         let hidden_size = self.hidden_size;
-        
+
         // Create embeddings tensor [batch_size, hidden_size]
         let mut data = vec![0.0f32; batch_size * hidden_size];
-        
+
         // Look up embeddings for each token
         for (i, &token) in tokens.iter().enumerate() {
             let token_idx = (token as usize) % self.vocab_size;
             let emb_offset = token_idx * hidden_size;
             let out_offset = i * hidden_size;
-            
+
             // Copy embedding vector
             if emb_offset + hidden_size <= self.embeddings.len() {
                 data[out_offset..out_offset + hidden_size]
                     .copy_from_slice(&self.embeddings[emb_offset..emb_offset + hidden_size]);
             }
         }
-        
+
         // Create a Candle tensor and wrap it in ConcreteTensor
-        let tensor = CandleTensor::from_vec(
-            data,
-            &[batch_size, hidden_size],
-            &CDevice::Cpu,
-        ).map_err(|e| bitnet_common::BitNetError::Candle(e))?;
-        
+        let tensor = CandleTensor::from_vec(data, &[batch_size, hidden_size], &CDevice::Cpu)
+            .map_err(bitnet_common::BitNetError::Candle)?;
+
         Ok(ConcreteTensor::bitnet(tensor))
     }
 
@@ -480,18 +474,18 @@ impl Model for SimpleGgufModel {
         // x shape: [batch_size, hidden_size]
         // lm_head shape: [hidden_size, vocab_size]
         // output: [batch_size, vocab_size]
-        
+
         let batch_size = x.shape()[0];
         let hidden_size = self.hidden_size;
         let vocab_size = self.vocab_size;
-        
+
         // Get input tensor and convert to Candle
         let input_tensor = x.to_candle()?;
         let input = input_tensor.flatten_all()?.to_vec1::<f32>()?;
-        
+
         // Compute matrix multiplication: input @ lm_head.T
         let mut output = vec![0.0f32; batch_size * vocab_size];
-        
+
         for b in 0..batch_size {
             for v in 0..vocab_size {
                 let mut sum = 0.0f32;
@@ -501,14 +495,11 @@ impl Model for SimpleGgufModel {
                 output[b * vocab_size + v] = sum;
             }
         }
-        
+
         // Create a Candle tensor and wrap it in ConcreteTensor
-        let tensor = CandleTensor::from_vec(
-            output,
-            &[batch_size, vocab_size],
-            &CDevice::Cpu,
-        ).map_err(|e| bitnet_common::BitNetError::Candle(e))?;
-        
+        let tensor = CandleTensor::from_vec(output, &[batch_size, vocab_size], &CDevice::Cpu)
+            .map_err(bitnet_common::BitNetError::Candle)?;
+
         Ok(ConcreteTensor::bitnet(tensor))
     }
 
@@ -527,14 +518,12 @@ static MODEL_MANAGER: std::sync::OnceLock<ModelManager> = std::sync::OnceLock::n
 
 /// Get the global model manager instance
 pub fn get_model_manager() -> &'static ModelManager {
-    MODEL_MANAGER.get_or_init(|| ModelManager::new())
+    MODEL_MANAGER.get_or_init(ModelManager::new)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
-    use tempfile::NamedTempFile;
 
     #[test]
     fn test_model_manager_creation() {

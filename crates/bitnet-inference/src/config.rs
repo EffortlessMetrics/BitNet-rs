@@ -5,6 +5,9 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+/// Type alias for logits callback function
+pub type LogitsCallback = Arc<dyn Fn(usize, Vec<(u32, f32)>, u32) + Send + Sync>;
+
 /// Configuration for the inference engine
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InferenceConfig {
@@ -60,7 +63,7 @@ pub struct GenerationConfig {
     /// Optional callback for capturing logits at each step
     /// Parameters: (step, topk_tokens_and_logits, chosen_token_id)
     #[serde(skip)]
-    pub logits_cb: Option<Arc<dyn Fn(usize, Vec<(u32, f32)>, u32) + Send + Sync>>,
+    pub logits_cb: Option<LogitsCallback>,
 }
 
 impl std::fmt::Debug for GenerationConfig {

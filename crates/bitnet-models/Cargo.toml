@@ -39,4 +39,6 @@ proptest = "1"
 default = []
 gpu = ["bitnet-common/gpu", "candle-core/cuda"]
 validation = []
-iq2s-ffi = ["bitnet-ggml-ffi/iq2s-ffi"]
+iq2s-ffi = ["dep:bitnet-ggml-ffi"]
+iq2s-rust = []  # Placeholder for pure-Rust IQ2_S (safe no-op)
+integration-tests = []

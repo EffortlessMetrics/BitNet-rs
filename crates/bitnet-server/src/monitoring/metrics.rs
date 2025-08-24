@@ -1,7 +1,7 @@
 //! Metrics collection and reporting for BitNet inference
 
 use anyhow::Result;
-use metrics::{counter, gauge, histogram, Counter, Gauge, Histogram};
+use metrics::{Counter, Gauge, Histogram, counter, gauge, histogram};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;

@@ -20,6 +20,9 @@ pub use i2s::{I2SLayout, I2SQuantizer};
 pub use tl1::TL1Quantizer;
 pub use tl2::TL2Quantizer;
 
+// Compatibility re-export: tests/benches historically used this path
+pub use bitnet_common::config::QuantizationConfig;
+
 /// Quantization trait for tensor quantization and dequantization operations
 pub trait Quantize {
     /// Quantize a tensor using the specified quantization type

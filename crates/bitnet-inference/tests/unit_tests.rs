@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Unit tests for individual bitnet-inference modules
 //!
 //! These tests focus on testing individual components in isolation:
@@ -60,7 +61,12 @@ impl MockTokenizer {
 }
 
 impl Tokenizer for MockTokenizer {
-    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>, BitNetError> {
+    fn encode(
+        &self,
+        text: &str,
+        _add_bos: bool,
+        _add_special: bool,
+    ) -> Result<Vec<u32>, BitNetError> {
         Ok((0..text.len().min(10)).map(|i| i as u32 + 1).collect())
     }
 
@@ -544,7 +550,7 @@ mod cache_unit_tests {
 mod backend_unit_tests {
     use super::*;
     use bitnet_inference::backends::{
-        select_backend, Backend, BackendCapabilities, CpuBackend, GpuBackend,
+        Backend, BackendCapabilities, CpuBackend, GpuBackend, select_backend,
     };
 
     #[tokio::test]

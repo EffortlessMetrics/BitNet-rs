@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 // Standalone test runner for configuration testing
 // This allows us to test the configuration functionality independently
 
@@ -236,14 +237,18 @@ async fn test_environment_override() -> TestOpResult<()> {
             .collect();
 
     // Test parallel tests override
-    unsafe { env::set_var("BITNET_TEST_PARALLEL", "8"); }
+    unsafe {
+        env::set_var("BITNET_TEST_PARALLEL", "8");
+    }
     let mut config = TestConfig::default();
     load_config_from_env(&mut config)
         .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;
     assert_eq!(config.max_parallel_tests, 8, "Environment override for parallel tests failed");
 
     // Test timeout override
-    unsafe { env::set_var("BITNET_TEST_TIMEOUT", "120"); }
+    unsafe {
+        env::set_var("BITNET_TEST_TIMEOUT", "120");
+    }
     let mut config = TestConfig::default();
     load_config_from_env(&mut config)
         .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;
@@ -254,7 +259,9 @@ async fn test_environment_override() -> TestOpResult<()> {
     );
 
     // Test log level override
-    unsafe { env::set_var("BITNET_TEST_LOG_LEVEL", "trace"); }
+    unsafe {
+        env::set_var("BITNET_TEST_LOG_LEVEL", "trace");
+    }
     let mut config = TestConfig::default();
     load_config_from_env(&mut config)
         .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;

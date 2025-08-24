@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 #![cfg(feature = "crossval")]
 //! Compatibility tests for BitNet.rs
 //!
@@ -822,8 +823,12 @@ mod test_setup {
         create_test_fixtures();
 
         // Set environment variables for testing
-        unsafe { std::env::set_var("BITNET_TEST_MODE", "1"); }
-        unsafe { std::env::set_var("RUST_LOG", "debug"); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_MODE", "1");
+        }
+        unsafe {
+            std::env::set_var("RUST_LOG", "debug");
+        }
     }
 
     #[ctor::dtor]

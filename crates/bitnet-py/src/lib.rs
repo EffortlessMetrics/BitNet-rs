@@ -3,6 +3,10 @@
 //! Python bindings for BitNet.rs providing a seamless migration path from
 //! existing Python implementations with identical API compatibility.
 
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+#![allow(unsafe_op_in_unsafe_fn)]
+
 use pyo3::exceptions::{PyIOError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -94,12 +98,12 @@ For more examples, see the documentation at https://github.com/microsoft/BitNet
 
 /// Load a model from file with automatic format detection
 #[pyfunction]
-#[pyo3(signature = (path, device = "cpu", **kwargs))]
+#[pyo3(signature = (path, device = "cpu", **_kwargs))]
 fn load_model(
     py: Python<'_>,
     path: &str,
     device: &str,
-    kwargs: Option<&pyo3::Bound<'_, PyDict>>,
+    _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
 ) -> PyResult<PyBitNetModel> {
     py.allow_threads(|| {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
@@ -171,7 +175,9 @@ fn get_device_info(py: Python<'_>) -> PyResult<PyObject> {
 /// Set the number of CPU threads to use
 #[pyfunction]
 fn set_num_threads(num_threads: usize) -> PyResult<()> {
-    unsafe { std::env::set_var("RAYON_NUM_THREADS", num_threads.to_string()); }
+    unsafe {
+        std::env::set_var("RAYON_NUM_THREADS", num_threads.to_string());
+    }
     Ok(())
 }
 

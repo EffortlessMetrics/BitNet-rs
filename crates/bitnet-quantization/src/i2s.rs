@@ -4,7 +4,7 @@
 //! optimization. Four 2-bit values are packed into each byte for optimal storage.
 //! The implementation includes SIMD-optimized kernels for x86_64 and ARM64.
 
-use crate::{utils::*, QuantizedTensor, QuantizerTrait};
+use crate::{QuantizedTensor, QuantizerTrait, utils::*};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
 use candle_core::Device;
 use rayon::prelude::*;
@@ -37,7 +37,7 @@ impl Default for I2SLayout {
 impl I2SLayout {
     pub fn with_block_size(block_size: usize) -> Self {
         // For I2_S: 2 bits per element
-        let data_bytes = (block_size * 2 + 7) / 8; // Round up bits to bytes
+        let data_bytes = (block_size * 2).div_ceil(8); // Round up bits to bytes
         Self {
             block_size,
             bytes_per_block: data_bytes + 2, // +2 for f16 scale

@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 use bitnet_tests::fast_feedback_simple::{
     FastFeedbackConfig, FastFeedbackSystem, FeedbackQuality, utils,
 };
@@ -146,7 +147,9 @@ async fn test_incremental_testing_integration() {
     use std::env;
 
     // Set environment variable to enable incremental testing
-    unsafe { env::set_var("BITNET_INCREMENTAL", "1"); }
+    unsafe {
+        env::set_var("BITNET_INCREMENTAL", "1");
+    }
 
     let mut system = FastFeedbackSystem::with_defaults();
     assert!(system.config().enable_incremental);
@@ -156,7 +159,9 @@ async fn test_incremental_testing_integration() {
     assert!(should_use);
 
     // Clean up
-    unsafe { env::remove_var("BITNET_INCREMENTAL"); }
+    unsafe {
+        env::remove_var("BITNET_INCREMENTAL");
+    }
 }
 
 /// Test fast feedback system error handling

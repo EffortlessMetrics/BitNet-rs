@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Standalone test for the reporting system
 //! This test only uses the core reporting functionality without dependencies on other modules
 

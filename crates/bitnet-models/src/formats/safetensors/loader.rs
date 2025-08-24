@@ -195,7 +195,7 @@ impl FormatLoader for SafeTensorsLoader {
         }
 
         // Create model instance
-        let model = BitNetModel::from_gguf(model_config, tensors, device.clone())?;
+        let model = BitNetModel::from_gguf(model_config, tensors, *device)?;
 
         Ok(Box::new(model))
     }

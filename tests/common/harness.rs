@@ -105,11 +105,11 @@ impl TestHarness {
         // Add environment information
         suite_result.add_environment(
             "rust_version",
-            &std::env::var("RUSTC_VERSION").unwrap_or_else(|_| "unknown".to_string()),
+            std::env::var("RUSTC_VERSION").unwrap_or_else(|_| "unknown".to_string()),
         );
         suite_result.add_environment(
             "target_triple",
-            &std::env::var("TARGET").unwrap_or_else(|_| "unknown".to_string()),
+            std::env::var("TARGET").unwrap_or_else(|_| "unknown".to_string()),
         );
         suite_result.add_environment("test_framework_version", "0.1.0");
 
@@ -250,16 +250,27 @@ impl TestHarness {
     ) -> TestResultCompat<()> {
         // Set isolated environment variables
         for (key, value) in &env.isolated_env_vars {
-            unsafe { std::env::set_var(key, value); }
+            unsafe {
+                std::env::set_var(key, value);
+            }
         }
 
         // Set test-specific environment
-        unsafe { std::env::set_var("BITNET_TEST_TEMP_DIR", env.temp_dir.path()); }
-        unsafe { std::env::set_var("BITNET_TEST_NAME", &env.test_name); }
-        unsafe { std::env::set_var("BITNET_TEST_ISOLATION", "true"); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_TEMP_DIR", env.temp_dir.path());
+        }
+        unsafe {
+            std::env::set_var("BITNET_TEST_NAME", &env.test_name);
+        }
+        unsafe {
+            std::env::set_var("BITNET_TEST_ISOLATION", "true");
+        }
 
         // Call the test's setup method with stable API
-        test_case.setup(self.fixtures.ctx()).await?;
+        {
+            self.fixtures.ctx();
+            test_case.setup(())
+        }.await?;
 
         Ok(())
     }
@@ -288,13 +299,21 @@ impl TestHarness {
     async fn cleanup_isolated_environment(&self, env: IsolatedEnvironment) {
         // Restore original environment variables
         for (key, value) in &env.original_env_vars {
-            unsafe { std::env::set_var(key, value); }
+            unsafe {
+                std::env::set_var(key, value);
+            }
         }
 
         // Remove test-specific environment variables
-        unsafe { std::env::remove_var("BITNET_TEST_TEMP_DIR"); }
-        unsafe { std::env::remove_var("BITNET_TEST_NAME"); }
-        unsafe { std::env::remove_var("BITNET_TEST_ISOLATION"); }
+        unsafe {
+            std::env::remove_var("BITNET_TEST_TEMP_DIR");
+        }
+        unsafe {
+            std::env::remove_var("BITNET_TEST_NAME");
+        }
+        unsafe {
+            std::env::remove_var("BITNET_TEST_ISOLATION");
+        }
 
         // Temp directory is automatically cleaned up when dropped
         drop(env.temp_dir);
@@ -403,16 +422,27 @@ impl TestHarnessClone {
     ) -> TestResultCompat<()> {
         // Set isolated environment variables
         for (key, value) in &env.isolated_env_vars {
-            unsafe { std::env::set_var(key, value); }
+            unsafe {
+                std::env::set_var(key, value);
+            }
         }
 
         // Set test-specific environment
-        unsafe { std::env::set_var("BITNET_TEST_TEMP_DIR", env.temp_dir.path()); }
-        unsafe { std::env::set_var("BITNET_TEST_NAME", &env.test_name); }
-        unsafe { std::env::set_var("BITNET_TEST_ISOLATION", "true"); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_TEMP_DIR", env.temp_dir.path());
+        }
+        unsafe {
+            std::env::set_var("BITNET_TEST_NAME", &env.test_name);
+        }
+        unsafe {
+            std::env::set_var("BITNET_TEST_ISOLATION", "true");
+        }
 
         // Call the test's setup method with stable API
-        test_case.setup(self.fixtures.ctx()).await?;
+        {
+            self.fixtures.ctx();
+            test_case.setup(())
+        }.await?;
 
         Ok(())
     }
@@ -441,13 +471,21 @@ impl TestHarnessClone {
     async fn cleanup_isolated_environment(&self, env: IsolatedEnvironment) {
         // Restore original environment variables
         for (key, value) in &env.original_env_vars {
-            unsafe { std::env::set_var(key, value); }
+            unsafe {
+                std::env::set_var(key, value);
+            }
         }
 
         // Remove test-specific environment variables
-        unsafe { std::env::remove_var("BITNET_TEST_TEMP_DIR"); }
-        unsafe { std::env::remove_var("BITNET_TEST_NAME"); }
-        unsafe { std::env::remove_var("BITNET_TEST_ISOLATION"); }
+        unsafe {
+            std::env::remove_var("BITNET_TEST_TEMP_DIR");
+        }
+        unsafe {
+            std::env::remove_var("BITNET_TEST_NAME");
+        }
+        unsafe {
+            std::env::remove_var("BITNET_TEST_ISOLATION");
+        }
 
         // Temp directory is automatically cleaned up when dropped
         drop(env.temp_dir);

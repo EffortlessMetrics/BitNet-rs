@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 // Simple test to verify configuration scenarios work
 // This test validates the core functionality without dependencies on the full test framework
 

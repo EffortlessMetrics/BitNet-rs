@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use clap::Args;
 use console::style;
 use futures::StreamExt;
-use humansize::{format_size, DECIMAL};
+use humansize::{DECIMAL, format_size};
 use humantime::format_duration;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
@@ -135,15 +135,15 @@ pub struct InferenceCommand {
     /// Chat template to use
     #[arg(long, value_name = "TEMPLATE")]
     pub chat_template: Option<String>,
-    
+
     /// Path to tokenizer.json (HF) or tokenizer.model (SPM)
     #[arg(long, value_name = "PATH")]
     pub tokenizer: Option<PathBuf>,
-    
+
     /// Disable BOS insertion
     #[arg(long, default_value_t = false)]
     pub no_bos: bool,
-    
+
     /// Disable EOS insertion
     #[arg(long, default_value_t = false)]
     pub no_eos: bool,
@@ -155,11 +155,11 @@ pub struct InferenceCommand {
     /// Timeout for inference (in seconds)
     #[arg(long, value_name = "SECONDS")]
     pub timeout: Option<u64>,
-    
+
     /// Dump top-k logits for first N decode steps (for testing)
     #[arg(long, value_name = "N")]
     pub dump_logits: Option<usize>,
-    
+
     /// Number of top logits to dump per step
     #[arg(long, default_value = "10", value_name = "K")]
     pub logits_topk: usize,
@@ -286,7 +286,7 @@ impl InferenceCommand {
         if self.deterministic {
             env::set_var("BITNET_DETERMINISTIC", "1");
             env::set_var("CANDLE_DETERMINISTIC", "1");
-            
+
             // Force single-threaded execution for full determinism
             if self.threads.is_none() {
                 env::set_var("RAYON_NUM_THREADS", "1");
@@ -294,7 +294,7 @@ impl InferenceCommand {
                 env::set_var("MKL_NUM_THREADS", "1");
                 env::set_var("BLAS_NUM_THREADS", "1");
             }
-            
+
             debug!("Enabled deterministic mode");
         }
 
@@ -453,13 +453,15 @@ impl InferenceCommand {
             return TokenizerBuilder::from_file(tokenizer_path)
                 .context("Failed to load tokenizer from file");
         }
-        
+
         // Try GGUF-embedded tokenizer (placeholder for now)
-        if let Some(tokenizer) = bitnet_tokenizers::try_from_gguf_metadata(|| anyhow::bail!("GGUF tokenizer not implemented")) {
+        if let Some(tokenizer) = bitnet_tokenizers::try_from_gguf_metadata(|| {
+            anyhow::bail!("GGUF tokenizer not implemented")
+        }) {
             debug!("Using GGUF-embedded tokenizer");
             return Ok(tokenizer);
         }
-        
+
         // Try to load tokenizer from model directory
         let tokenizer_path =
             model_path.parent().map(|p| p.join("tokenizer.json")).filter(|p| p.exists());
@@ -469,7 +471,9 @@ impl InferenceCommand {
             TokenizerBuilder::from_file(&tokenizer_path)
                 .context("Failed to load tokenizer from file")
         } else {
-            anyhow::bail!("No tokenizer found. Pass --tokenizer <tokenizer.json|tokenizer.model> or ensure tokenizer.json exists in model directory.")
+            anyhow::bail!(
+                "No tokenizer found. Pass --tokenizer <tokenizer.json|tokenizer.model> or ensure tokenizer.json exists in model directory."
+            )
         }
     }
 
@@ -621,29 +625,27 @@ impl InferenceCommand {
 
             // 3. Decode loop (measure)
             let t2 = Instant::now();
-            
+
             // Setup logits capture
             let logits_collector = if self.dump_logits.is_some() {
                 let collector = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
                 let collector_clone = collector.clone();
                 let logits_topk = self.logits_topk;
-                
+
                 // Create callback that captures chosen tokens
-                let cb = std::sync::Arc::new(move |step: usize, topk: Vec<(u32, f32)>, chosen: u32| {
-                    if let Ok(mut sink) = collector_clone.lock() {
-                        sink.push(LogitStep {
-                            step,
-                            topk,
-                            chosen_id: Some(chosen),
-                        });
-                    }
-                }) as std::sync::Arc<dyn Fn(usize, Vec<(u32, f32)>, u32) + Send + Sync>;
-                
+                let cb =
+                    std::sync::Arc::new(move |step: usize, topk: Vec<(u32, f32)>, chosen: u32| {
+                        if let Ok(mut sink) = collector_clone.lock() {
+                            sink.push(LogitStep { step, topk, chosen_id: Some(chosen) });
+                        }
+                    })
+                        as std::sync::Arc<dyn Fn(usize, Vec<(u32, f32)>, u32) + Send + Sync>;
+
                 Some((collector, cb))
             } else {
                 None
             };
-            
+
             // Create generation config with logits callback
             let mut gen_config = config.clone();
             if let Some((_, cb)) = &logits_collector {
@@ -651,7 +653,7 @@ impl InferenceCommand {
                 gen_config.logits_topk = self.logits_topk;
                 gen_config.logits_cb = Some(cb.clone());
             }
-            
+
             // Generate with the engine
             let generated_ids = engine.generate_tokens(&prompt_ids, &gen_config).await?;
             let t_decode_ms = t2.elapsed().as_secs_f64() * 1e3;
@@ -664,30 +666,25 @@ impl InferenceCommand {
             let generated_tokens = generated_ids.len();
             let total_tokens = prompt_tokens + generated_tokens;
             let t_total_ms = t_tok_ms + t_prefill_ms + t_decode_ms;
-            
-            let prefill_tps = if t_prefill_ms > 0.0 { prompt_tokens as f64 / (t_prefill_ms/1e3) } else { 0.0 };
-            let decode_tps = if t_decode_ms > 0.0 { generated_tokens as f64 / (t_decode_ms/1e3) } else { 0.0 };
-            let e2e_tps = if t_total_ms > 0.0 { total_tokens as f64 / (t_total_ms/1e3) } else { 0.0 };
+
+            let prefill_tps =
+                if t_prefill_ms > 0.0 { prompt_tokens as f64 / (t_prefill_ms / 1e3) } else { 0.0 };
+            let decode_tps =
+                if t_decode_ms > 0.0 { generated_tokens as f64 / (t_decode_ms / 1e3) } else { 0.0 };
+            let e2e_tps =
+                if t_total_ms > 0.0 { total_tokens as f64 / (t_total_ms / 1e3) } else { 0.0 };
 
             // Collect logits if requested
             let logits_dump = if let Some((collector, _)) = logits_collector {
-                if let Ok(sink) = collector.lock() {
-                    Some(sink.clone())
-                } else {
-                    None
-                }
+                if let Ok(sink) = collector.lock() { Some(sink.clone()) } else { None }
             } else {
                 None
             };
-            
+
             results.push(InferenceResult {
                 prompt: prompt.clone(),
                 generated_text,
-                counts: TokenCounts {
-                    prompt_tokens,
-                    generated_tokens,
-                    total_tokens,
-                },
+                counts: TokenCounts { prompt_tokens, generated_tokens, total_tokens },
                 timing_ms: TimingMetrics {
                     tokenize: t_tok_ms,
                     prefill: t_prefill_ms,
@@ -864,7 +861,7 @@ impl InferenceCommand {
     fn create_generation_config(&self) -> Result<GenerationConfig> {
         // Apply greedy decoding if requested
         let (temperature, top_k, top_p, repetition_penalty) = if self.greedy {
-            (0.0, 0, 1.0, 1.0)  // Force greedy: no sampling, no penalties
+            (0.0, 0, 1.0, 1.0) // Force greedy: no sampling, no penalties
         } else {
             (
                 self.temperature,
@@ -874,13 +871,8 @@ impl InferenceCommand {
             )
         };
 
-        let sampling = SamplingConfig {
-            temperature,
-            top_k,
-            top_p,
-            repetition_penalty,
-            seed: self.seed,
-        };
+        let sampling =
+            SamplingConfig { temperature, top_k, top_p, repetition_penalty, seed: self.seed };
 
         Ok(GenerationConfig {
             max_new_tokens: self.max_tokens,
@@ -973,12 +965,12 @@ impl InferenceCommand {
             path: self.model.as_ref().map(|p| p.display().to_string()).unwrap_or_default(),
             quantization: self.quantization.clone().unwrap_or_default(),
             device: self.device.clone().unwrap_or_default(),
-            parameters: None, // Would be extracted from model
-            vocab_size: None, // Would be extracted from model
+            parameters: None,  // Would be extracted from model
+            vocab_size: None,  // Would be extracted from model
             hidden_size: None, // Would be extracted from model
         }
     }
-    
+
     /// Get tokenizer information
     fn get_tokenizer_info(&self, tokenizer: &dyn bitnet_tokenizers::Tokenizer) -> TokenizerInfo {
         // Determine source from tokenizer type or path
@@ -994,7 +986,7 @@ impl InferenceCommand {
         } else {
             "gguf".to_string() // Assume GGUF if no explicit tokenizer
         };
-        
+
         TokenizerInfo {
             source,
             vocab_size: tokenizer.vocab_size(),

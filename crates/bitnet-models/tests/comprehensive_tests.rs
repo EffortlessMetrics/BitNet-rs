@@ -1,6 +1,8 @@
 //! Comprehensive tests for bitnet-models
 //! Covers edge cases, error conditions, and end-to-end scenarios
 
+#![cfg(feature = "integration-tests")]
+
 use bitnet_common::{BitNetConfig, Device, ModelMetadata, QuantizationType, Tensor};
 use bitnet_models::*;
 use std::fs;

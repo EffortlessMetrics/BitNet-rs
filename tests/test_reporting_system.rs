@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Test for the reporting system implementation
 #![cfg(feature = "reporting")]
 

@@ -63,11 +63,7 @@ pub struct ValidationSuite {
 
 impl ValidationSuite {
     pub fn new(model_path: impl Into<String>) -> Self {
-        Self {
-            model_path: model_path.into(),
-            tokenizer_path: None,
-            deterministic: true,
-        }
+        Self { model_path: model_path.into(), tokenizer_path: None, deterministic: true }
     }
 
     pub fn with_tokenizer(mut self, path: impl Into<String>) -> Self {
@@ -96,7 +92,7 @@ impl ValidationSuite {
         result.passed = true;
         result.message = "All tensors mapped successfully".to_string();
         result.metrics.insert("unmapped_count".to_string(), serde_json::json!(0));
-        
+
         Ok(result)
     }
 
@@ -128,8 +124,8 @@ impl ValidationSuite {
     /// Gate 4: Performance validation
     pub fn validate_performance(&self, baseline_path: Option<&Path>) -> Result<PerformanceResult> {
         let mut result = PerformanceResult {
-            tokens_per_second: 42.5,  // Placeholder
-            rss_mb: 512.0,            // Placeholder
+            tokens_per_second: 42.5, // Placeholder
+            rss_mb: 512.0,           // Placeholder
             baseline_tok_s: None,
             baseline_rss_mb: None,
             throughput_ratio: None,
@@ -141,14 +137,12 @@ impl ValidationSuite {
             if baseline.exists() {
                 let content = std::fs::read_to_string(baseline)?;
                 let baseline_data: serde_json::Value = serde_json::from_str(&content)?;
-                
+
                 if let Some(cpu_data) = baseline_data.get("cpu") {
                     if let Some(model_data) = cpu_data.get("model_default") {
-                        result.baseline_tok_s = model_data.get("tok_s")
-                            .and_then(|v| v.as_f64());
-                        result.baseline_rss_mb = model_data.get("rss_mb")
-                            .and_then(|v| v.as_f64());
-                        
+                        result.baseline_tok_s = model_data.get("tok_s").and_then(|v| v.as_f64());
+                        result.baseline_rss_mb = model_data.get("rss_mb").and_then(|v| v.as_f64());
+
                         // Calculate ratios
                         if let Some(base_tok) = result.baseline_tok_s {
                             result.throughput_ratio = Some(result.tokens_per_second / base_tok);
@@ -172,10 +166,7 @@ impl ValidationSuite {
         results.push(self.validate_model_compatibility()?);
 
         // Gate 2: Token parity (using default prompts)
-        let prompts = vec![
-            "The capital of France is".to_string(),
-            "Once upon a time".to_string(),
-        ];
+        let prompts = vec!["The capital of France is".to_string(), "Once upon a time".to_string()];
         let token_result = self.validate_token_parity(&prompts)?;
         results.push(ValidationResult {
             gate: "token_parity".to_string(),
@@ -183,8 +174,14 @@ impl ValidationSuite {
             metrics: {
                 let mut m = HashMap::new();
                 m.insert("match_rate".to_string(), serde_json::json!(token_result.match_rate));
-                m.insert("exact_matches".to_string(), serde_json::json!(token_result.exact_matches));
-                m.insert("total_prompts".to_string(), serde_json::json!(token_result.total_prompts));
+                m.insert(
+                    "exact_matches".to_string(),
+                    serde_json::json!(token_result.exact_matches),
+                );
+                m.insert(
+                    "total_prompts".to_string(),
+                    serde_json::json!(token_result.total_prompts),
+                );
                 m
             },
             message: format!("Token ID match rate: {:.1}%", token_result.match_rate * 100.0),
@@ -207,16 +204,19 @@ impl ValidationSuite {
 
         // Gate 4: Performance
         let perf_result = self.validate_performance(Some(Path::new("ci/baseline.json")))?;
-        let perf_passed = perf_result.tokens_per_second >= 1.0 &&
-            perf_result.throughput_ratio.map_or(true, |r| r >= 0.95) &&
-            perf_result.memory_ratio.map_or(true, |r| r <= 1.03);
-        
+        let perf_passed = perf_result.tokens_per_second >= 1.0
+            && perf_result.throughput_ratio.is_none_or(|r| r >= 0.95)
+            && perf_result.memory_ratio.is_none_or(|r| r <= 1.03);
+
         results.push(ValidationResult {
             gate: "performance".to_string(),
             passed: perf_passed,
             metrics: {
                 let mut m = HashMap::new();
-                m.insert("tokens_per_second".to_string(), serde_json::json!(perf_result.tokens_per_second));
+                m.insert(
+                    "tokens_per_second".to_string(),
+                    serde_json::json!(perf_result.tokens_per_second),
+                );
                 m.insert("rss_mb".to_string(), serde_json::json!(perf_result.rss_mb));
                 if let Some(ratio) = perf_result.throughput_ratio {
                     m.insert("throughput_ratio".to_string(), serde_json::json!(ratio));
@@ -241,11 +241,11 @@ pub fn check_all_gates_pass(results: &[ValidationResult]) -> bool {
 /// Generate validation report
 pub fn generate_report(results: &[ValidationResult]) -> String {
     let mut report = String::from("=== Validation Report ===\n\n");
-    
+
     for result in results {
         let status = if result.passed { "✓ PASS" } else { "✗ FAIL" };
         report.push_str(&format!("{}: {} - {}\n", status, result.gate, result.message));
-        
+
         if !result.metrics.is_empty() {
             report.push_str("  Metrics:\n");
             for (key, value) in &result.metrics {
@@ -254,7 +254,7 @@ pub fn generate_report(results: &[ValidationResult]) -> String {
         }
         report.push('\n');
     }
-    
+
     let all_passed = check_all_gates_pass(results);
     if all_passed {
         report.push_str("🎉 All validation gates PASSED!\n");
@@ -262,7 +262,7 @@ pub fn generate_report(results: &[ValidationResult]) -> String {
         let failed_count = results.iter().filter(|r| !r.passed).count();
         report.push_str(&format!("❌ {} validation gate(s) FAILED\n", failed_count));
     }
-    
+
     report
 }
 
@@ -273,20 +273,20 @@ mod tests {
     #[test]
     fn test_validation_suite() {
         let suite = ValidationSuite::new("test_model.gguf");
-        
+
         // Test model compatibility
         let result = suite.validate_model_compatibility();
         assert!(result.is_ok());
-        
+
         // Test token parity
         let prompts = vec!["test".to_string()];
         let token_result = suite.validate_token_parity(&prompts);
         assert!(token_result.is_ok());
-        
+
         // Test NLL parity
         let nll_result = suite.validate_nll_parity("test");
         assert!(nll_result.is_ok());
-        
+
         // Test performance
         let perf_result = suite.validate_performance(None);
         assert!(perf_result.is_ok());
@@ -294,15 +294,13 @@ mod tests {
 
     #[test]
     fn test_report_generation() {
-        let results = vec![
-            ValidationResult {
-                gate: "test_gate".to_string(),
-                passed: true,
-                metrics: HashMap::new(),
-                message: "Test passed".to_string(),
-            }
-        ];
-        
+        let results = vec![ValidationResult {
+            gate: "test_gate".to_string(),
+            passed: true,
+            metrics: HashMap::new(),
+            message: "Test passed".to_string(),
+        }];
+
         let report = generate_report(&results);
         assert!(report.contains("✓ PASS"));
         assert!(report.contains("All validation gates PASSED"));

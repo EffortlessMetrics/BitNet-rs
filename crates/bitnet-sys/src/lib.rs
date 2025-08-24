@@ -106,11 +106,7 @@ pub mod safe {
         ///
         /// The pointer must be valid and point to a valid C++ model object
         pub unsafe fn from_raw(ptr: *mut c_void) -> Option<Self> {
-            if ptr.is_null() {
-                None
-            } else {
-                Some(ModelHandle(ptr))
-            }
+            if ptr.is_null() { None } else { Some(ModelHandle(ptr)) }
         }
 
         /// Get the raw pointer
@@ -216,10 +212,10 @@ pub mod disabled {
 
 // Re-export the appropriate module based on feature
 #[cfg(feature = "ffi")]
-pub use safe::{cleanup, initialize, is_available, version, ModelHandle, SysError};
+pub use safe::{ModelHandle, SysError, cleanup, initialize, is_available, version};
 
 #[cfg(feature = "ffi")]
-pub use wrapper::{free_backend, get_version, init_backend, Context, CppError, Model, Session};
+pub use wrapper::{Context, CppError, Model, Session, free_backend, get_version, init_backend};
 
 // Export Result types under different names to avoid conflicts
 #[cfg(feature = "ffi")]

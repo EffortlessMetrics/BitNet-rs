@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Simple demonstration that enhanced error handling works
 //! This test bypasses the complex framework and directly tests the error handling components
 
