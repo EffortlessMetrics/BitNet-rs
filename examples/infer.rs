@@ -4,6 +4,7 @@
 //! Set BITNET_GGUF=/path/to/model.gguf to use real weights (once implemented).
 //! Set BITNET_TOKEN_ID to specify which token to score (default: 1).
 
+#[cfg(feature = "examples")]
 use std::env;
 #[cfg(feature = "examples")]
 use std::path::PathBuf;

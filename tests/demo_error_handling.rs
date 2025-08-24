@@ -1,16 +1,25 @@
-#![cfg(feature = "integration-tests")]
 /// Demonstration of Enhanced Error Handling Capabilities
 ///
 /// This demo shows the key features of the enhanced error handling system
 /// without relying on complex dependencies that have compilation issues.
-use std::time::Duration;
 
-#[cfg(not(test))]
 fn main() {
-    println!("=== BitNet.rs Enhanced Error Handling Demo ===\n");
+    #[cfg(feature = "integration-tests")]
+    run_demo();
+    
+    #[cfg(not(feature = "integration-tests"))]
+    {
+        println!("Error handling demo requires 'integration-tests' feature.");
+        println!("Run with: cargo run --bin demo_error_handling --features integration-tests");
+    }
+}
 
-    // Import the error types we need
+#[cfg(feature = "integration-tests")]
+fn run_demo() {
+    use std::time::Duration;
     use bitnet_tests::errors::{FixtureError, TestError};
+    
+    println!("=== BitNet.rs Enhanced Error Handling Demo ===\n");
 
     // Demo 1: Error Severity and Categorization
     println!("1. Error Severity and Categorization:");
@@ -33,60 +42,69 @@ fn main() {
             error.severity()
         );
     }
-    println!();
 
-    // Demo 2: Recovery Suggestions
-    println!("2. Recovery Suggestions for Timeout Error:");
-    let timeout_error = &errors[0];
-    let suggestions = timeout_error.recovery_suggestions();
-    for (i, suggestion) in suggestions.iter().take(3).enumerate() {
-        println!("  {}. {}", i + 1, suggestion);
+    // Demo 2: Error Context and Recovery
+    println!("\n2. Error Context and Recovery:");
+    let error_with_context = TestError::AssertionError {
+        message: "Value mismatch in tensor operation".to_string(),
     }
-    println!();
+    .with_context("While processing layer 3 of the model")
+    .with_suggestion("Check tensor dimensions match expected shape");
 
-    // Demo 3: Troubleshooting Steps
-    println!("3. Troubleshooting Steps for Assertion Error:");
-    let assertion_error = &errors[1];
-    let steps = assertion_error.troubleshooting_steps();
-    for step in steps.iter().take(3) {
-        println!("  Step {}: {} - {}", step.step_number, step.title, step.description);
+    println!("  Full error: {}", error_with_context);
+    if let Some(suggestion) = error_with_context.suggestion() {
+        println!("  💡 Suggestion: {}", suggestion);
     }
-    println!();
 
-    // Demo 4: Debug Information
-    println!("4. Debug Information for Fixture Error:");
-    let fixture_error = &errors[3];
-    let debug_info = fixture_error.debug_info();
-    println!("  Category: {}", debug_info.category);
-    println!("  Severity: {}", debug_info.severity);
-    println!("  Recoverable: {}", debug_info.recoverable);
-    println!("  Related Components: {:?}", debug_info.related_components);
-    println!();
+    // Demo 3: Error Chain Demonstration
+    println!("\n3. Error Chaining:");
+    let root_error = TestError::ExecutionError { message: "Failed to load model".to_string() };
 
-    // Demo 5: Error Report Generation
-    println!("5. Error Report Summary:");
-    let report = fixture_error.create_error_report();
-    let summary = report.generate_summary();
-    println!("{}", &summary[..summary.len().min(400)]); // Show first 400 chars
-    println!("  ... (truncated)");
-    println!();
+    let chain_error = TestError::SetupError { message: "Test setup failed".to_string() }
+        .with_source(Box::new(root_error))
+        .with_context("During test initialization");
 
-    // Demo 6: Environment Information
-    println!("6. Environment Information:");
-    let env_info = bitnet_tests::errors::collect_environment_info();
-    println!("  Platform: {} ({})", env_info.platform, env_info.architecture);
-    println!("  CPU Cores: {}", env_info.system_resources.cpu_cores);
-    println!("  Working Directory: {}", env_info.working_directory);
-    println!();
+    println!("  Error: {}", chain_error);
+    println!("  Full chain:");
+    let mut current_error: Option<&dyn std::error::Error> = Some(&chain_error);
+    let mut depth = 0;
+    while let Some(err) = current_error {
+        println!("    {} {}", "  ".repeat(depth), err);
+        current_error = err.source();
+        depth += 1;
+    }
 
-    println!("=== Demo Complete ===");
-    println!("The enhanced error handling system provides:");
-    println!("✓ Severity-based error prioritization");
-    println!("✓ Context-aware recovery suggestions");
-    println!("✓ Step-by-step troubleshooting guides");
-    println!("✓ Comprehensive debug information");
-    println!("✓ Environment analysis for debugging");
-    println!("✓ Actionable error reports");
+    // Demo 4: Fixture Error Handling
+    println!("\n4. Fixture-Specific Errors:");
+    let fixture_errors = vec![
+        FixtureError::NotFound { name: "test-model.gguf".to_string() },
+        FixtureError::ValidationFailed {
+            name: "corrupted-model.gguf".to_string(),
+            reason: "Checksum mismatch".to_string(),
+        },
+        FixtureError::CacheError { message: "Cache directory not writable".to_string() },
+    ];
+
+    for error in &fixture_errors {
+        println!("  - {}", error);
+        if error.is_retriable() {
+            println!("    ↻ This error is retriable");
+        }
+    }
+
+    // Demo 5: Error Recovery Strategies
+    println!("\n5. Recovery Strategies:");
+    let recoverable_error =
+        TestError::TimeoutError { timeout: Duration::from_secs(10) }.with_recovery_strategy(
+            "Increase timeout duration or run test with fewer parallel workers",
+        );
+
+    println!("  Error: {}", recoverable_error);
+    if let Some(recovery) = recoverable_error.recovery_strategy() {
+        println!("  Recovery: {}", recovery);
+    }
+
+    println!("\n=== Demo Complete ===");
 }
 
 #[cfg(test)]
@@ -94,8 +112,9 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(feature = "integration-tests")]
     fn test_demo_runs_without_panic() {
         // This test ensures the demo code runs without panicking
-        main();
+        run_demo();
     }
 }

@@ -44,18 +44,15 @@ pub fn rows_cols(dims: &[usize]) -> Result<(usize, usize)> {
 pub fn dequantize_to_f32(src_bytes: &[u8], dims: &[usize]) -> Result<Vec<f32>> {
     let backend = Iq2sBackend::selected();
 
-    // Only bail when the chosen backend is FFI but the feature isn't compiled.
-    #[cfg(feature = "iq2s-ffi")]
-    if backend == Iq2sBackend::Ffi && !bitnet_ggml_ffi::has_iq2s() {
-        bail!(
-            "IQ2_S tensor found but feature `iq2s-ffi` is not enabled. Rebuild with `--features iq2s-ffi`."
-        );
-    }
-    #[cfg(not(feature = "iq2s-ffi"))]
-    if backend == Iq2sBackend::Ffi {
-        bail!(
-            "IQ2_S tensor found but feature `iq2s-ffi` is not enabled. Rebuild with `--features iq2s-ffi`."
-        );
+    // Check if the selected backend is actually available
+    if !backend.is_available() {
+        if backend == Iq2sBackend::Ffi {
+            bail!(
+                "IQ2_S FFI backend selected but feature `iq2s-ffi` is not enabled. Rebuild with `--features iq2s-ffi` or set BITNET_IQ2S_IMPL=rust"
+            );
+        } else {
+            bail!("IQ2_S backend {} is not available", backend.name());
+        }
     }
 
     banner_once_iq2s_backend();
@@ -68,10 +65,13 @@ pub fn dequantize_to_f32(src_bytes: &[u8], dims: &[usize]) -> Result<Vec<f32>> {
     let backend = Iq2sBackend::selected();
     let qk = backend.qk();
     let block_bytes = backend.block_bytes();
-    #[cfg(feature = "iq2s-ffi")]
-    let requires_qk_multiple = bitnet_ggml_ffi::iq2s_requires_qk_multiple();
-    #[cfg(not(feature = "iq2s-ffi"))]
-    let requires_qk_multiple = false; // Pure Rust won't require QK multiple
+    let requires_qk_multiple = match backend {
+        Iq2sBackend::Rust => false, // Pure Rust handles partial blocks
+        #[cfg(feature = "iq2s-ffi")]
+        Iq2sBackend::Ffi => bitnet_ggml_ffi::iq2s_requires_qk_multiple(),
+        #[cfg(not(feature = "iq2s-ffi"))]
+        Iq2sBackend::Ffi => false, // Should never reach here due to is_available check
+    };
 
     // Calculate expected size
     let blocks_per_row = ncols.div_ceil(qk);

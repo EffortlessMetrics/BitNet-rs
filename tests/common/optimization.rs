@@ -1,5 +1,7 @@
 use super::config::TestConfig;
 use super::errors::TestOpResult as TestResultCompat;
+#[cfg(feature = "fixtures")]
+use super::units::BYTES_PER_MB;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
