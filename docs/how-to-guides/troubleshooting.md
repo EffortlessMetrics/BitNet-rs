@@ -2,7 +2,7 @@
 
 This guide helps you diagnose and resolve common issues with **BitNet.rs**, the primary, production-ready Rust implementation of BitNet inference.
 
-> **💡 Migration Tip**: If you're experiencing issues with the legacy C++ implementation, consider migrating to BitNet.rs for better reliability, performance, and support. See our [Migration Guide](migration-guide.md).
+> **💡 Migration Tip**: If you're experiencing issues with the legacy C++ implementation, consider migrating to BitNet.rs for better reliability, performance, and support. See our [Migration Guide](../tutorials/migration-guide.md).
 
 ## Why Choose BitNet.rs for Troubleshooting
 

@@ -2,23 +2,14 @@
 
 Welcome to the comprehensive documentation for BitNet.rs, the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.
 
-## Quick Navigation
+## Documentation Structure
 
-### Getting Started
-- **[Getting Started Guide](getting-started.md)** - Installation, basic usage, and quick start examples
-- **[API Reference](api-reference.md)** - Complete API documentation with examples
-- **[Migration Guide](migration-guide.md)** - Migrate from Python/C++ BitNet implementations
+This documentation is organized into four sections, following the Diataxis framework:
 
-### Configuration & Testing
-- **[Configuration layering and clamps](./configuration.md)** - How the manager, environment overlay, and context clamps interact
-- **[Testing guidelines](./testing.md)** - Writing stable, non-flaky tests
-
-### Architecture
-- **[ADR-0001: Configuration layering and clamp location](./adr/0001-configuration-layering.md)** - Architectural decision record
-
-### Guides
-- **[Performance Tuning](performance-tuning.md)** - Optimize performance for your hardware and use case
-- **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
+- **[Tutorials](./tutorials/)**: Learning-oriented guides to help you get started.
+- **[How-to Guides](./how-to-guides/)**: Goal-oriented guides to help you solve specific problems.
+- **[Reference](./reference/)**: Information-oriented guides for looking up specific details.
+- **[Explanation](./explanation/)**: Understanding-oriented guides for deeper concepts.
 
 ### Examples
 - **[Basic Examples](../examples/basic/)** - Simple usage patterns
@@ -74,17 +65,17 @@ BitNet.rs is built around several key concepts:
 
 | Feature | Status | Documentation |
 |---------|--------|---------------|
-| **Core Inference** | ✅ Complete | [API Reference](api-reference.md#bitnetmodel) |
-| **Streaming Generation** | ✅ Complete | [Getting Started](getting-started.md#streaming-generation) |
-| **CPU Optimization** | ✅ Complete | [Performance Tuning](performance-tuning.md#cpu-optimization) |
-| **CUDA GPU Support** | ✅ Complete | [Performance Tuning](performance-tuning.md#gpu-optimization) |
-| **Metal GPU Support** | ✅ Complete | [Troubleshooting](troubleshooting.md#metal-gpu-issues) |
-| **Quantization (I2S)** | ✅ Complete | [API Reference](api-reference.md#quantization) |
-| **Quantization (TL1/TL2)** | ✅ Complete | [API Reference](api-reference.md#quantization) |
-| **Python Bindings** | ✅ Complete | [Migration Guide](migration-guide.md#migrating-from-python-bitnet) |
-| **C API** | ✅ Complete | [Migration Guide](migration-guide.md#migrating-from-c-bitnet) |
+| **Core Inference** | ✅ Complete | [API Reference](./reference/api.md#bitnetmodel) |
+| **Streaming Generation** | ✅ Complete | [Getting Started](./tutorials/install-and-quickstart.md#streaming-generation) |
+| **CPU Optimization** | ✅ Complete | [How to Optimize Performance](./how-to-guides/optimize-performance.md#cpu-optimization) |
+| **CUDA GPU Support** | ✅ Complete | [How to Optimize Performance](./how-to-guides/optimize-performance.md#gpu-optimization) |
+| **Metal GPU Support** | ✅ Complete | [How to Troubleshoot Common Issues](./how-to-guides/troubleshoot-common-issues.md#common-issues) |
+| **Quantization (I2S)** | ✅ Complete | [API Reference](./reference/api.md#quantization) |
+| **Quantization (TL1/TL2)** | ✅ Complete | [API Reference](./reference/api.md#quantization) |
+| **Python Bindings** | ✅ Complete | [Migration Guide](./tutorials/migration-guide.md#migrating-from-python-bitnet) |
+| **C API** | ✅ Complete | [Migration Guide](./tutorials/migration-guide.md#migrating-from-c-bitnet) |
 | **WebAssembly** | ✅ Complete | [Examples](../examples/wasm/) |
-| **CLI Tool** | ✅ Complete | [Getting Started](getting-started.md#using-the-cli) |
+| **CLI Tool** | ✅ Complete | [Getting Started](./tutorials/install-and-quickstart.md#using-the-cli) |
 
 ## Quick Start
 
@@ -138,7 +129,7 @@ BitNet.rs delivers significant performance improvements over existing implementa
 
 *Benchmarks include cached dependencies and optimized build system.*
 
-See [Performance Guide](performance-guide.md) for optimization guidelines.
+See [How to Optimize Performance](./how-to-guides/optimize-performance.md) for optimization guidelines.
 
 ## Supported Platforms
 
@@ -209,7 +200,7 @@ char* output = bitnet_inference(model, "Hello, world!", 100, 0.7f);
 ### Contributing
 - **Contributing Guide**: [How to contribute](../CONTRIBUTING.md)
 - **Code of Conduct**: [Community guidelines](../CODE_OF_CONDUCT.md)
-- **Development Setup**: [Set up development environment](../docs/development.md)
+- **Development Setup**: [Set up development environment](./how-to-guides/development-setup.md)
 
 ### Professional Support
 - **Enterprise Support**: enterprise@bitnet-rust.com
@@ -249,4 +240,4 @@ BitNet Rust is licensed under the [MIT License](../LICENSE).
 
 ---
 
-**Need help?** Check our [Troubleshooting Guide](troubleshooting.md) or join our [Discord community](https://discord.gg/bitnet-rust).
+**Need help?** Check our [Troubleshooting Guide](./how-to-guides/troubleshoot-common-issues.md) or join our [Discord community](https://discord.gg/bitnet-rust).

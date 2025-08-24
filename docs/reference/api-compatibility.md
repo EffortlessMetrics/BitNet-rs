@@ -342,4 +342,4 @@ Contact: migration-support@bitnet-rs.com
 
 ---
 
-**Ready to migrate?** Start with our [Quick Start Guide](getting-started.md) or join our [Discord community](https://discord.gg/bitnet-rust) for migration support.
+**Ready to migrate?** Start with our [Quick Start Guide](../tutorials/install-and-quickstart.md) or join our [Discord community](https://discord.gg/bitnet-rust) for migration support.

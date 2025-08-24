@@ -157,9 +157,9 @@ cargo test -- --test-threads=4
 
 Once you're comfortable with basic tests:
 
-1. Read the [Test Authoring Guide](test-authoring-guide.md) for advanced patterns
-2. Check out [Framework Overview](framework-overview.md) to understand the architecture
-3. Look at [Cross-Validation Guide](cross-validation-guide.md) for comparing implementations
+1. Read the [Test Authoring Guide](../how-to-guides/testing/test-authoring-guide.md) for advanced patterns
+2. Check out [Framework Overview](../explanation/testing-framework-overview.md) to understand the architecture
+3. Look at [Cross-Validation Guide](../how-to-guides/testing/cross-validation-guide.md) for comparing implementations
 4. Browse existing tests in the `tests/` directory for examples
 
 ## Common Gotchas
@@ -226,7 +226,7 @@ async fn test_with_manual_cleanup() {
 
 ## Getting Help
 
-- Check the [Troubleshooting Guide](troubleshooting-guide.md) for common issues
+- Check the [Troubleshooting Guide](../how-to-guides/testing/troubleshooting-guide.md) for common issues
 - Look at existing tests for examples
 - Ask questions in GitHub issues or discussions
 

@@ -324,7 +324,7 @@ To contribute to the fast feedback system:
 
 ## References
 
-- [Testing Framework Overview](./testing-framework.md)
-- [Incremental Testing Guide](./incremental-testing.md)
-- [Performance Optimization](./performance-optimization.md)
-- [CI/CD Integration](./ci-integration.md)
+- [Testing Framework Overview](./testing-framework-overview.md)
+- [How to Use Incremental Testing](../how-to-guides/incremental-testing.md)
+- [How to Optimize Performance](../how-to-guides/optimize-performance.md)
+- [How to Integrate with CI/CD](../how-to-guides/ci-integration.md)

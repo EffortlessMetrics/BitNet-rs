@@ -503,4 +503,4 @@ cargo test --features crossval
 
 ---
 
-**Need help?** Join our [Discord community](https://discord.gg/bitnet-rust) or check the [troubleshooting guide](troubleshooting.md) for more assistance with cross-validation setup.
+**Need help?** Join our [Discord community](https://discord.gg/bitnet-rust) or check the [troubleshooting guide](./troubleshoot-common-issues.md) for more assistance with cross-validation setup.
