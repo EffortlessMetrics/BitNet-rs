@@ -213,6 +213,8 @@ response = model.generate("Hello, world!")
 print(response)
 ```
 
+For detailed usage, examples, and migration guides, please see the [BitNet.rs Python Bindings Documentation](crates/bitnet-py/README.md).
+
 ### C API
 
 ```c
@@ -382,7 +384,8 @@ The legacy C++ implementation is automatically downloaded and cached when needed
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
 
 ### 🔄 **Migration & Compatibility**
-- [Migration Guide](crates/bitnet-py/MIGRATION_GUIDE.md) - Migrate from C++/Python
+- [Migration Guide](docs/migration-guide.md) - Migrate from C++/Python
+- [Python Migration Guide](crates/bitnet-py/MIGRATION_GUIDE.md) - In-depth guide for Python users
 - [Cross-Validation](crossval/README.md) - Validate against legacy implementations
 - [API Compatibility](docs/api-compatibility.md) - Compatibility matrices
 
@@ -390,10 +393,11 @@ The legacy C++ implementation is automatically downloaded and cached when needed
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute
 - [Architecture Overview](docs/architecture.md) - System design
 - [Build Instructions](docs/building.md) - Development setup
+- [Deployment Guide](docs/deployment.md) - Deploying `BitNet.rs`
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for guidelines on how to get started.
 
 ## License
 

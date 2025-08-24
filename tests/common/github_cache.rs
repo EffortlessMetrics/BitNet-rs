@@ -379,22 +379,23 @@ impl GitHubCacheManager {
     /// Calculate size of a directory recursively
     fn calculate_directory_size(&self, path: &Path) -> std::pin::Pin<Box<dyn std::future::Future<Output = TestResult<u64>> + Send + '_>> {
         Box::pin(async move {
-        let mut total_size = 0u64;
+            let mut total_size = 0u64;
 
-        if path.is_file() {
-            if let Ok(metadata) = fs::metadata(path).await {
-                return Ok(metadata.len());
+            if path.is_file() {
+                if let Ok(metadata) = fs::metadata(path).await {
+                    return Ok(metadata.len());
+                }
+            } else if path.is_dir() {
+                let mut entries = fs::read_dir(path).await?;
+
+                while let Some(entry) = entries.next_entry().await? {
+                    let entry_path = entry.path();
+                    total_size += self.calculate_directory_size(&entry_path).await?;
+                }
             }
-        } else if path.is_dir() {
-            let mut entries = fs::read_dir(path).await?;
 
-            while let Some(entry) = entries.next_entry().await? {
-                let entry_path = entry.path();
-                total_size += self.calculate_directory_size(&entry_path).await?;
-            }
-        }
-
-        Ok(total_size)
+            Ok(total_size)
+        })
     }
 
     /// Hash a file for cache key generation

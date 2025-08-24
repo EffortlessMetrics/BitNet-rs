@@ -2,6 +2,12 @@
 
 This comprehensive guide will help you migrate from the original BitNet Python implementation to the new high-performance Rust-based `bitnet_py` library.
 
+## API Status: Production Ready
+
+**The `bitnet_py` library is a mature, feature-complete, and production-ready implementation.** It is designed as a high-performance, drop-in replacement for the original BitNet Python library.
+
+The API is stable, well-documented, and backed by a comprehensive test suite. Users can migrate with confidence.
+
 ## Table of Contents
 
 1. [Overview](#overview)
