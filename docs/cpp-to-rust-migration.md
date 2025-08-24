@@ -177,7 +177,7 @@ target_link_libraries(my_app BitNet::BitNet)
 [package]
 name = "my_app"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 bitnet = "0.1"

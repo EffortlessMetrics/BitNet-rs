@@ -43,7 +43,7 @@ if (-not (Test-Path "Cargo.toml") -or -not (Test-Path "crates")) {
 Write-Status "Checking Rust version..."
 try {
     $rustVersion = (rustc --version).Split(' ')[1]
-    $requiredVersion = "1.70.0"
+    $requiredVersion = "1.89.0"
     if ([version]$rustVersion -lt [version]$requiredVersion) {
         Write-Error "Rust version $rustVersion is below required $requiredVersion"
         exit 1

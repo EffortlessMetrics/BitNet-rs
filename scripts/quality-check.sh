@@ -40,7 +40,7 @@ fi
 # Check Rust version
 print_status "Checking Rust version..."
 RUST_VERSION=$(rustc --version | cut -d' ' -f2)
-REQUIRED_VERSION="1.70.0"
+REQUIRED_VERSION="1.89.0"
 if ! printf '%s\n%s\n' "$REQUIRED_VERSION" "$RUST_VERSION" | sort -V -C; then
     print_error "Rust version $RUST_VERSION is below required $REQUIRED_VERSION"
     exit 1

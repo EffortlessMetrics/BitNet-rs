@@ -1,5 +1,5 @@
 # Rust formatting configuration (stable-only)
-edition = "2021"
+edition = "2024"
 max_width = 100
 use_small_heuristics = "Max"
 newline_style = "Unix"

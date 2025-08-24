@@ -85,7 +85,7 @@ install_rust() {
         log_info "Rust already installed: $RUST_VERSION"
         
         # Check if version is recent enough
-        REQUIRED_VERSION="1.70.0"
+        REQUIRED_VERSION="1.89.0"
         if [[ "$(printf '%s\n' "$REQUIRED_VERSION" "$RUST_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]]; then
             log_warn "Rust version $RUST_VERSION is older than required $REQUIRED_VERSION"
             log_info "Updating Rust..."

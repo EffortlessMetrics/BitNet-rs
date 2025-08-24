@@ -2,7 +2,7 @@
 # Optimized for production deployment with minimal attack surface
 
 # Build stage
-FROM rust:1.70-slim as builder
+FROM rust:1.89-slim as builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \

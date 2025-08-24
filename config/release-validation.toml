@@ -72,7 +72,7 @@ slack_webhook = ""
 
 [matrix]
 # Rust versions to test against
-rust_versions = ["stable", "1.70.0", "beta"]
+rust_versions = ["stable", "1.89.0", "beta"]
 
 # Feature combinations to test
 feature_combinations = ["default", "gpu", "all-features"]
