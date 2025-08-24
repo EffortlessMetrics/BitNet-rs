@@ -110,8 +110,20 @@ Default features are **empty** to prevent unwanted dependencies:
 ### Quantization Support
 BitNet-rs supports multiple quantization formats:
 - **I2_S**: Native Rust implementation, always available with `cpu` feature
-- **IQ2_S**: Via GGML FFI, requires `iq2s-ffi` feature for llama.cpp compatibility
+- **IQ2_S**: Dual implementation:
+  - Native Rust: Optimized implementation with SIMD support
+  - GGML FFI: Via `iq2s-ffi` feature for llama.cpp compatibility
+  - Backend parity testing ensures both implementations produce identical results
 - **Standard formats**: Q4_0, Q5_0, Q8_0, etc. (planned)
+
+To test IQ2_S implementations:
+```bash
+# Run IQ2_S backend validation
+./scripts/test-iq2s-backend.sh
+
+# Run unit tests
+cargo test --package bitnet-models --no-default-features --features "cpu,iq2s-ffi"
+```
 
 ### Testing Strategy
 - **Unit tests**: Each crate has comprehensive tests
@@ -202,6 +214,43 @@ export LD_LIBRARY_PATH=target/release  # or DYLD_LIBRARY_PATH on macOS
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 ```
+
+## Test Suite
+
+### Running Tests
+
+```bash
+# Run all tests with CPU features
+cargo test --workspace --no-default-features --features cpu
+
+# Run specific test suites
+cargo test --package bitnet-tests --no-default-features --features fixtures
+cargo test --package bitnet-tests --features reporting,trend
+
+# Run integration tests
+cargo test --package bitnet-tests --features integration-tests,fixtures
+
+# Run examples
+cargo run --example reporting_example --features reporting
+cargo run --example ci_reporting_example --features reporting,trend
+cargo run --example debugging_example --features fixtures
+```
+
+### Test Configuration
+
+The test suite uses a feature-gated configuration system:
+- `fixtures`: Enables fixture management and test data generation
+- `reporting`: Enables test reporting (JSON, HTML, Markdown, JUnit)
+- `trend`: Enables trend analysis and performance tracking
+- `integration-tests`: Enables full integration test suite
+
+### Test Features
+
+- **Parallel Test Execution**: Configurable parallelism with resource limits
+- **Fixture Management**: Automatic test data generation and caching
+- **CI Integration**: JUnit output, exit codes, and CI-specific optimizations
+- **Error Reporting**: Detailed error messages with recovery suggestions
+- **Performance Tracking**: Benchmark results and regression detection
 
 ## Validation Framework
 

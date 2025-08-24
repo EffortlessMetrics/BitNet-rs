@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **IQ2_S Quantization Support**:
+  - Native Rust implementation with optimized dequantization
+  - FFI backend via GGML for compatibility
+  - Comprehensive unit tests and validation scripts
+  - Backend parity testing between FFI and native implementations
+- **Enhanced Test Suite**:
+  - Feature-gated test configuration system
+  - Improved fixture management with conditional compilation
+  - Comprehensive integration test coverage
+  - CI-friendly reporting with multiple output formats
 - **Comprehensive CI Validation Framework**:
   - 8-gate acceptance system with JSON-driven detection
   - Distinct exit codes (0-10) for precise CI triage
@@ -52,6 +62,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation rewritten to focus on Rust implementation
 - Legacy C++ implementation moved to external dependency system
 - Build system optimized for Rust-first development
+- Updated to Rust 2024 edition with MSRV 1.89.0
+
+### Fixed
+- **Test Suite Compilation Issues**:
+  - Fixed missing return value in `fixtures_facade.rs` for disabled features
+  - Added proper feature gating for `fast_config` imports
+  - Corrected `ReportConfig` field names (`include_artifacts`, `interactive_html`)
+  - Fixed feature flag naming from `ci_reporting` to `reporting`
+  - Resolved main function wrapping in `run_configuration_tests.rs`
+  - Updated `FixtureCtx` usage across test harness
+- **IQ2_S Quantization**:
+  - Fixed weight indexing issues in `dequantize_row_iq2s`
+  - Corrected bit manipulation for proper weight extraction
 
 ### Improved
 - **`fetch-cpp`**: Now verifies built binary exists after compilation
