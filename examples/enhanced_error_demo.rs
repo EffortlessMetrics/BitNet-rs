@@ -324,7 +324,7 @@ mod mock_testing {
             // Add common debug info
             info.insert("timestamp".to_string(), "2025-01-14T10:30:00Z".to_string());
             info.insert("test_framework_version".to_string(), "0.1.0".to_string());
-            info.insert("rust_version".to_string(), "1.70.0".to_string());
+            info.insert("rust_version".to_string(), "1.89.0".to_string());
 
             info
         }

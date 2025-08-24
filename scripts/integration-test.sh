@@ -302,7 +302,7 @@ test_docker_integration() {
     
     # Create minimal Dockerfile for testing
     cat > Dockerfile.test << 'EOF'
-FROM rust:1.70-slim as builder
+FROM rust:1.89-slim as builder
 
 WORKDIR /app
 COPY . .

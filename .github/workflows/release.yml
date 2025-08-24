@@ -37,7 +37,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.70.0
+          toolchain: 1.89.0
           components: rustfmt, clippy
 
       - name: Cache Rust dependencies
@@ -142,7 +142,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.70.0
+          toolchain: 1.89.0
           targets: ${{ matrix.target }}
 
       - name: Cache Rust dependencies
@@ -231,7 +231,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.70.0
+          toolchain: 1.89.0
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -266,7 +266,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.70.0
+          toolchain: 1.89.0
           targets: wasm32-unknown-unknown
 
       - name: Install wasm-pack
@@ -425,7 +425,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.70.0
+          toolchain: 1.89.0
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2

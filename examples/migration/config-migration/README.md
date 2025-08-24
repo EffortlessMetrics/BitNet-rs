@@ -178,7 +178,7 @@ BITNET_PROMETHEUS_PORT="9090"
 [package]
 name = "bitnet-server"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 bitnet-inference = { path = "../../crates/bitnet-inference" }
@@ -373,7 +373,7 @@ if [ ! -f "Cargo.toml" ]; then
 [package]
 name = "bitnet-app"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 bitnet-inference = { path = "../../crates/bitnet-inference" }
