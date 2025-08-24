@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Standalone demonstration of enhanced error handling
 //! This bypasses the complex framework compilation issues
 

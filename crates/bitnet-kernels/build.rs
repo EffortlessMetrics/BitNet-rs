@@ -81,7 +81,12 @@ fn main() {
         eprintln!("bitnet-kernels: FFI bridge enabled with C++ library from {}", root);
     } else {
         // DO NOT emit link lines. Build the crate with FFI stubs instead.
-        eprintln!("bitnet-kernels: FFI enabled but C++ library not found at {}; using stub implementation", root);
-        eprintln!("bitnet-kernels: To enable the real FFI bridge, build the C++ library with `cargo xtask fetch-cpp` or set BITNET_CPP_PATH");
+        eprintln!(
+            "bitnet-kernels: FFI enabled but C++ library not found at {}; using stub implementation",
+            root
+        );
+        eprintln!(
+            "bitnet-kernels: To enable the real FFI bridge, build the C++ library with `cargo xtask fetch-cpp` or set BITNET_CPP_PATH"
+        );
     }
 }

@@ -107,6 +107,7 @@ pub struct ConfigurationContext {
 
 /// Resource constraints for test execution
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct ResourceConstraints {
     pub max_memory_mb: Option<usize>,
     pub max_cpu_cores: Option<usize>,
@@ -115,6 +116,7 @@ pub struct ResourceConstraints {
 
 /// Time constraints for test execution
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct TimeConstraints {
     pub max_total_duration: Option<Duration>,
     pub max_test_duration: Option<Duration>,
@@ -122,6 +124,7 @@ pub struct TimeConstraints {
 
 /// Quality requirements for test results
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct QualityRequirements {
     pub min_coverage: Option<f64>,
     pub max_flakiness: Option<f64>,
@@ -130,6 +133,7 @@ pub struct QualityRequirements {
 
 /// Platform-specific settings
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct PlatformSettings {
     pub os: Option<String>,
     pub arch: Option<String>,
@@ -359,29 +363,9 @@ impl Default for ConfigurationContext {
     }
 }
 
-impl Default for ResourceConstraints {
-    fn default() -> Self {
-        Self { max_memory_mb: None, max_cpu_cores: None, max_disk_gb: None }
-    }
-}
 
-impl Default for TimeConstraints {
-    fn default() -> Self {
-        Self { max_total_duration: None, max_test_duration: None }
-    }
-}
 
-impl Default for QualityRequirements {
-    fn default() -> Self {
-        Self { min_coverage: None, max_flakiness: None, required_passes: None }
-    }
-}
 
-impl Default for PlatformSettings {
-    fn default() -> Self {
-        Self { os: None, arch: None, features: vec![] }
-    }
-}
 
 // Helper functions to create scenario configs
 fn create_unit_config() -> TestConfig {

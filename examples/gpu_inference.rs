@@ -5,7 +5,7 @@
 use bitnet::prelude::*;
 use std::env;
 
-#[cfg(feature = "gpu")]
+#[cfg(all(feature = "gpu", feature = "examples"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt::init();
@@ -98,9 +98,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(not(feature = "gpu"))]
+#[cfg(all(not(feature = "gpu"), feature = "examples"))]
 fn main() {
     eprintln!("This example requires the 'gpu' feature to be enabled.");
     eprintln!("Run with: cargo run --example gpu_inference --features gpu");
     std::process::exit(1);
 }
+
+#[cfg(not(feature = "examples"))]
+fn main() {}

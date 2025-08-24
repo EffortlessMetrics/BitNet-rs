@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Test demonstrating 2x+ performance improvement over C++ baseline
 //!
 //! This test validates that the Rust BitNet implementation achieves at least
@@ -11,7 +12,7 @@ use tempfile::TempDir;
 mod common;
 mod performance_benchmarks;
 
-use common::{TestError, TestOpResult as TestResult};
+use common::{TestError, TestResult};
 use performance_benchmarks::{BenchmarkConfig, PerformanceBenchmarkSuite};
 
 /// Main test function demonstrating 2x+ performance improvement

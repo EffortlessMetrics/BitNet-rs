@@ -8,6 +8,7 @@ use std::env;
 use std::io::{self, Write};
 use std::sync::Arc;
 
+#[cfg(feature = "examples")]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
@@ -139,3 +140,6 @@ fn create_tokenizer() -> Result<impl Tokenizer, Box<dyn std::error::Error>> {
 
     Ok(DummyTokenizer)
 }
+
+#[cfg(not(feature = "examples"))]
+fn main() {}

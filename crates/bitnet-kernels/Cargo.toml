@@ -37,6 +37,7 @@ env_logger = "0.11"
 # ARM-specific dependencies
 
 [features]
+integration-tests = []
 default = []
 cpu = ["cpu-fallback"]
 cpu-fallback = []

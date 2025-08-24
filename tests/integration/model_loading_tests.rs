@@ -10,7 +10,7 @@ use crate::common::tensor_helpers::ct;
 use crate::{TestCase, TestError, TestMetrics, TestResult};
 use anyhow::Result;
 use async_trait::async_trait;
-use bitnet_common::{BitNetConfig, BitNetError, Device, MockTensor};
+use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, MockTensor};
 use bitnet_models::Model;
 use std::time::Instant;
 use tracing::{debug, info, warn};

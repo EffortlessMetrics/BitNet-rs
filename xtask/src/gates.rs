@@ -1,6 +1,6 @@
-use std::{fs, path::PathBuf};
-use serde::Serialize;
 use anyhow::Result;
+use serde::Serialize;
+use std::{fs, path::PathBuf};
 
 #[derive(Serialize)]
 struct GateResult<'a> {
@@ -21,12 +21,9 @@ pub fn mapper_gate(model: PathBuf) -> Result<i32> {
     // Read GGUF header and tensor names
     let bytes = fs::read(&model)?;
     let reader = bitnet_models::GgufReader::new(&bytes)?;
-    
+
     // Get tensor names
-    let names: Vec<String> = reader.tensor_names()
-        .into_iter()
-        .map(|s| s.to_string())
-        .collect();
+    let names: Vec<String> = reader.tensor_names().into_iter().map(|s| s.to_string()).collect();
 
     // Dry-run map (names only; no tensor loads)
     let unmapped = bitnet_models::weight_mapper::dry_run_remap_names(names.clone());

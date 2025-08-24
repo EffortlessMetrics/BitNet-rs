@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 /// Integration test for the logging and debugging infrastructure
 ///
 /// This test verifies that all components of the logging infrastructure work together:

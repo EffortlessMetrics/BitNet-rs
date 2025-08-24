@@ -3,10 +3,10 @@
 #![cfg(feature = "crossval")]
 
 use crate::{
+    CrossvalConfig, CrossvalError, Result,
     cpp_bindings::CppModel,
     fixtures::TestFixture,
     utils::{compare_tokens, logging, perf},
-    CrossvalConfig, CrossvalError, Result,
 };
 use std::path::Path;
 

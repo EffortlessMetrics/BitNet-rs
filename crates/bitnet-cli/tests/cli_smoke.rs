@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 use assert_cmd::Command;
 
 #[test]

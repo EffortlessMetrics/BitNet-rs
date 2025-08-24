@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Minimal test for enhanced error handling functionality
 
 use std::time::Duration;

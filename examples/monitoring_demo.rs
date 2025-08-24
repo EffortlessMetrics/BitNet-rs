@@ -1,13 +1,21 @@
 //! Demonstration of BitNet server monitoring capabilities
 
+#[cfg(all(feature = "examples", feature = "server"))]
 use anyhow::Result;
+#[cfg(all(feature = "examples", feature = "server"))]
 use bitnet_server::monitoring::MonitoringConfig;
+#[cfg(all(feature = "examples", feature = "server"))]
 use bitnet_server::{BitNetServer, ServerConfig};
+#[cfg(all(feature = "examples", feature = "server"))]
 use reqwest;
+#[cfg(all(feature = "examples", feature = "server"))]
 use serde_json::json;
+#[cfg(all(feature = "examples", feature = "server"))]
 use std::time::Duration;
+#[cfg(all(feature = "examples", feature = "server"))]
 use tokio::time::sleep;
 
+#[cfg(all(feature = "examples", feature = "server"))]
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize tracing for the demo
@@ -200,3 +208,6 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(not(all(feature = "examples", feature = "server")))]
+fn main() {}

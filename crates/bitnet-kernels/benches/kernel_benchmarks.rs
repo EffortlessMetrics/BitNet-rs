@@ -6,7 +6,7 @@
 
 use bitnet_common::QuantizationType;
 use bitnet_kernels::KernelManager;
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use std::hint::black_box;
 
 /// Test data generator for consistent benchmarking
@@ -82,7 +82,7 @@ fn bench_quantization(c: &mut Criterion) {
         for size in &sizes {
             let input = BenchmarkData::quantization_input(*size);
             let mut output = vec![0u8; size / 4];
-            let mut scales = vec![0.0f32; (size + 31) / 32];
+            let mut scales = vec![0.0f32; size.div_ceil(32)];
 
             // Set throughput for elements per second
             group.throughput(Throughput::Elements(*size as u64));
@@ -234,7 +234,7 @@ fn bench_quantization_accuracy(c: &mut Criterion) {
 
     for (name, qtype) in qtypes {
         let mut output = vec![0u8; size / 4];
-        let mut scales = vec![0.0f32; (size + 31) / 32];
+        let mut scales = vec![0.0f32; size.div_ceil(32)];
 
         group.bench_function(format!("{}_{}", kernel.name(), name), |b| {
             b.iter(|| {

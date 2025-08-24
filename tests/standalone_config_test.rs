@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 // Standalone test to demonstrate configuration scenarios functionality
 // This test runs independently without the full test framework dependencies
 

@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! # End-to-End Workflow Integration Tests
 //!
 //! This module implements comprehensive integration tests that validate complete workflows
@@ -118,7 +119,12 @@ impl IntegrationTestTokenizer {
 }
 
 impl Tokenizer for IntegrationTestTokenizer {
-    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>, BitNetError> {
+    fn encode(
+        &self,
+        text: &str,
+        _add_bos: bool,
+        _add_special: bool,
+    ) -> Result<Vec<u32>, BitNetError> {
         *self.encode_calls.lock().unwrap() += 1;
         self.tokenization_history.lock().unwrap().push(format!("encode: {}", text));
 

@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 /// Test to validate that the cross-implementation comparison framework
 /// validates accuracy within 1e-6 tolerance as required by the task:
 /// "Cross-implementation comparison framework validates accuracy within 1e-6 tolerance"

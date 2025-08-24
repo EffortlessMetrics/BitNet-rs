@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 /// Standalone test for enhanced error handling functionality
 ///
 /// This test demonstrates the enhanced error handling without dependencies

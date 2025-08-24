@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Comprehensive tests for bitnet-common
 //! Covers edge cases, error conditions, and integration scenarios
 
@@ -105,31 +106,51 @@ mod config_comprehensive {
         let _lock = acquire_env_lock();
 
         // Test invalid numeric values
-        unsafe { env::set_var("BITNET_VOCAB_SIZE", "not_a_number"); }
+        unsafe {
+            env::set_var("BITNET_VOCAB_SIZE", "not_a_number");
+        }
         let result = BitNetConfig::from_env();
         assert!(result.is_err());
-        unsafe { env::remove_var("BITNET_VOCAB_SIZE"); }
+        unsafe {
+            env::remove_var("BITNET_VOCAB_SIZE");
+        }
 
-        unsafe { env::set_var("BITNET_TEMPERATURE", "invalid_float"); }
+        unsafe {
+            env::set_var("BITNET_TEMPERATURE", "invalid_float");
+        }
         let result = BitNetConfig::from_env();
         assert!(result.is_err());
-        unsafe { env::remove_var("BITNET_TEMPERATURE"); }
+        unsafe {
+            env::remove_var("BITNET_TEMPERATURE");
+        }
 
         // Test invalid enum values
-        unsafe { env::set_var("BITNET_MODEL_FORMAT", "invalid_format"); }
+        unsafe {
+            env::set_var("BITNET_MODEL_FORMAT", "invalid_format");
+        }
         let result = BitNetConfig::from_env();
         assert!(result.is_err());
-        unsafe { env::remove_var("BITNET_MODEL_FORMAT"); }
+        unsafe {
+            env::remove_var("BITNET_MODEL_FORMAT");
+        }
 
-        unsafe { env::set_var("BITNET_QUANTIZATION_TYPE", "INVALID_TYPE"); }
+        unsafe {
+            env::set_var("BITNET_QUANTIZATION_TYPE", "INVALID_TYPE");
+        }
         let result = BitNetConfig::from_env();
         assert!(result.is_err());
-        unsafe { env::remove_var("BITNET_QUANTIZATION_TYPE"); }
+        unsafe {
+            env::remove_var("BITNET_QUANTIZATION_TYPE");
+        }
 
-        unsafe { env::set_var("BITNET_USE_GPU", "maybe"); }
+        unsafe {
+            env::set_var("BITNET_USE_GPU", "maybe");
+        }
         let result = BitNetConfig::from_env();
         assert!(result.is_err());
-        unsafe { env::remove_var("BITNET_USE_GPU"); }
+        unsafe {
+            env::remove_var("BITNET_USE_GPU");
+        }
     }
 
     #[test]
@@ -176,32 +197,46 @@ mod config_comprehensive {
         let _lock = acquire_env_lock();
 
         // Test various memory limit formats
-        unsafe { env::set_var("BITNET_MEMORY_LIMIT", "1GB"); }
+        unsafe {
+            env::set_var("BITNET_MEMORY_LIMIT", "1GB");
+        }
         let config = BitNetConfig::from_env().unwrap();
         assert_eq!(config.performance.memory_limit, Some(1024 * 1024 * 1024));
 
-        unsafe { env::set_var("BITNET_MEMORY_LIMIT", "512MB"); }
+        unsafe {
+            env::set_var("BITNET_MEMORY_LIMIT", "512MB");
+        }
         let config = BitNetConfig::from_env().unwrap();
         assert_eq!(config.performance.memory_limit, Some(512 * 1024 * 1024));
 
-        unsafe { env::set_var("BITNET_MEMORY_LIMIT", "1024KB"); }
+        unsafe {
+            env::set_var("BITNET_MEMORY_LIMIT", "1024KB");
+        }
         let config = BitNetConfig::from_env().unwrap();
         assert_eq!(config.performance.memory_limit, Some(1024 * 1024));
 
-        unsafe { env::set_var("BITNET_MEMORY_LIMIT", "1048576"); }
+        unsafe {
+            env::set_var("BITNET_MEMORY_LIMIT", "1048576");
+        }
         let config = BitNetConfig::from_env().unwrap();
         assert_eq!(config.performance.memory_limit, Some(1048576));
 
-        unsafe { env::set_var("BITNET_MEMORY_LIMIT", "none"); }
+        unsafe {
+            env::set_var("BITNET_MEMORY_LIMIT", "none");
+        }
         let config = BitNetConfig::from_env().unwrap();
         assert_eq!(config.performance.memory_limit, None);
 
         // Test invalid memory limit
-        unsafe { env::set_var("BITNET_MEMORY_LIMIT", "invalid_size"); }
+        unsafe {
+            env::set_var("BITNET_MEMORY_LIMIT", "invalid_size");
+        }
         let result = BitNetConfig::from_env();
         assert!(result.is_err());
 
-        unsafe { env::remove_var("BITNET_MEMORY_LIMIT"); }
+        unsafe {
+            env::remove_var("BITNET_MEMORY_LIMIT");
+        }
     }
 
     // Helper function to acquire environment lock for tests
@@ -404,15 +439,23 @@ batch_size = 1
 
         // Test with environment overrides
         let _lock = acquire_env_lock();
-        unsafe { env::set_var("BITNET_TEMPERATURE", "0.9"); }
-        unsafe { env::set_var("BITNET_USE_GPU", "true"); }
+        unsafe {
+            env::set_var("BITNET_TEMPERATURE", "0.9");
+        }
+        unsafe {
+            env::set_var("BITNET_USE_GPU", "true");
+        }
 
         let config = BitNetConfig::from_file_with_env(&config_path).unwrap();
         assert_eq!(config.inference.temperature, 0.9);
         assert!(config.performance.use_gpu);
 
-        unsafe { env::remove_var("BITNET_TEMPERATURE"); }
-        unsafe { env::remove_var("BITNET_USE_GPU"); }
+        unsafe {
+            env::remove_var("BITNET_TEMPERATURE");
+        }
+        unsafe {
+            env::remove_var("BITNET_USE_GPU");
+        }
     }
 
     #[test]
@@ -438,9 +481,15 @@ batch_size = 2
         fs::write(&config_path, config_content).unwrap();
 
         // Set environment variables that should override file values
-        unsafe { env::set_var("BITNET_VOCAB_SIZE", "40000"); }
-        unsafe { env::set_var("BITNET_TEMPERATURE", "0.9"); }
-        unsafe { env::set_var("BITNET_USE_GPU", "true"); }
+        unsafe {
+            env::set_var("BITNET_VOCAB_SIZE", "40000");
+        }
+        unsafe {
+            env::set_var("BITNET_TEMPERATURE", "0.9");
+        }
+        unsafe {
+            env::set_var("BITNET_USE_GPU", "true");
+        }
         // Don't set BITNET_MAX_LENGTH or BITNET_BATCH_SIZE
 
         let config = ConfigLoader::load_with_precedence(Some(&config_path)).unwrap();
@@ -458,9 +507,15 @@ batch_size = 2
         assert_eq!(config.model.hidden_size, 4096); // Default value
 
         // Clean up
-        unsafe { env::remove_var("BITNET_VOCAB_SIZE"); }
-        unsafe { env::remove_var("BITNET_TEMPERATURE"); }
-        unsafe { env::remove_var("BITNET_USE_GPU"); }
+        unsafe {
+            env::remove_var("BITNET_VOCAB_SIZE");
+        }
+        unsafe {
+            env::remove_var("BITNET_TEMPERATURE");
+        }
+        unsafe {
+            env::remove_var("BITNET_USE_GPU");
+        }
     }
 
     // Helper function to acquire environment lock for tests

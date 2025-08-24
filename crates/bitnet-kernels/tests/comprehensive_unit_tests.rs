@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Comprehensive unit tests for bitnet-kernels
 //!
 //! This test suite provides comprehensive coverage of all kernel implementations
@@ -24,11 +25,7 @@ impl TestDataGenerator {
             .map(|_| {
                 self.seed = self.seed.wrapping_mul(1103515245).wrapping_add(12345);
                 let val = (self.seed % 256) as u8;
-                if val > 127 {
-                    (val as i16 - 256) as i8
-                } else {
-                    val as i8
-                }
+                if val > 127 { (val as i16 - 256) as i8 } else { val as i8 }
             })
             .collect()
     }
@@ -181,7 +178,7 @@ mod cpu_kernel_tests {
                     QuantizationType::TL1 => 64,
                     QuantizationType::TL2 => 128,
                 };
-                let num_blocks = (size + block_size - 1) / block_size;
+                let num_blocks = size.div_ceil(block_size);
                 let mut scales = vec![0.0f32; num_blocks];
 
                 let result = kernel.quantize(&input, &mut output, &mut scales, qtype);
@@ -731,7 +728,7 @@ mod performance_tests {
                     QuantizationType::TL1 => 64,
                     QuantizationType::TL2 => 128,
                 };
-                let num_blocks = (size + block_size - 1) / block_size;
+                let num_blocks = size.div_ceil(block_size);
                 let mut scales = vec![0.0f32; num_blocks];
 
                 // Warm up
@@ -1015,7 +1012,7 @@ mod integration_tests {
         // Step 1: Generate model weights and quantize them
         let weights_f32 = data_gen.generate_quantization_input(input_dim * output_dim);
         let mut quantized_weights = vec![0u8; (input_dim * output_dim) / 4];
-        let num_blocks = (input_dim * output_dim + 31) / 32;
+        let num_blocks = (input_dim * output_dim).div_ceil(32);
         let mut scales = vec![0.0f32; num_blocks];
 
         let start = Instant::now();

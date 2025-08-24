@@ -1,8 +1,9 @@
+#![cfg(feature = "integration-tests")]
 //! API Snapshot Tests
-//! 
+//!
 //! These tests capture the current API surface and prevent unintentional breaking changes.
 
-use insta::{assert_yaml_snapshot, assert_json_snapshot};
+use insta::{assert_json_snapshot, assert_yaml_snapshot};
 use serde_json::json;
 use std::collections::BTreeMap;
 
@@ -23,9 +24,9 @@ fn test_inference_api_contract() {
         "top_p": 0.95,
         "stream": false
     });
-    
+
     assert_json_snapshot!("inference_request", sample_request);
-    
+
     let sample_response = json!({
         "id": "completion-12345",
         "choices": [{
@@ -41,7 +42,7 @@ fn test_inference_api_contract() {
         "model": "bitnet-b1.58-2B",
         "created": 1234567890
     });
-    
+
     assert_json_snapshot!("inference_response", sample_response);
 }
 
@@ -57,7 +58,7 @@ fn test_model_config_api() {
         "num_attention_heads": 32,
         "quantization": "i2_s"
     });
-    
+
     assert_json_snapshot!("model_config", config);
 }
 
@@ -75,7 +76,7 @@ fn test_streaming_api_contract() {
         }],
         "created": 1234567890
     });
-    
+
     assert_json_snapshot!("stream_chunk", stream_chunk);
 }
 
@@ -92,7 +93,7 @@ fn test_error_api_contract() {
             "max": 2.0
         }
     });
-    
+
     assert_json_snapshot!("error_response", error_response);
 }
 
@@ -157,118 +158,124 @@ impl ApiSurface {
     fn capture() -> Self {
         // This would ideally use rustdoc JSON output or syn to parse the crate
         // For now, we manually define the key API surface
-        
+
         let mut modules = BTreeMap::new();
-        modules.insert("bitnet".to_string(), ModuleApi {
-            path: "bitnet".to_string(),
-            public_items: vec![
-                "Model".to_string(),
-                "Config".to_string(),
-                "Tokenizer".to_string(),
-                "InferenceEngine".to_string(),
-                "quantize".to_string(),
-                "dequantize".to_string(),
-            ],
-        });
-        
+        modules.insert(
+            "bitnet".to_string(),
+            ModuleApi {
+                path: "bitnet".to_string(),
+                public_items: vec![
+                    "Model".to_string(),
+                    "Config".to_string(),
+                    "Tokenizer".to_string(),
+                    "InferenceEngine".to_string(),
+                    "quantize".to_string(),
+                    "dequantize".to_string(),
+                ],
+            },
+        );
+
         let mut structs = BTreeMap::new();
-        structs.insert("Model".to_string(), StructApi {
-            name: "Model".to_string(),
-            fields: vec![
-                FieldApi {
+        structs.insert(
+            "Model".to_string(),
+            StructApi {
+                name: "Model".to_string(),
+                fields: vec![FieldApi {
                     name: "config".to_string(),
                     ty: "Config".to_string(),
                     visibility: "private".to_string(),
-                },
-            ],
-            methods: vec![
-                MethodSignature {
-                    name: "new".to_string(),
-                    signature: "fn new(config: Config) -> Result<Self>".to_string(),
-                    visibility: "public".to_string(),
-                },
-                MethodSignature {
-                    name: "forward".to_string(),
-                    signature: "fn forward(&self, input: &Tensor) -> Result<Tensor>".to_string(),
-                    visibility: "public".to_string(),
-                },
-                MethodSignature {
-                    name: "generate".to_string(),
-                    signature: "fn generate(&self, prompt: &str, max_tokens: usize) -> Result<String>".to_string(),
-                    visibility: "public".to_string(),
-                },
-            ],
-        });
-        
-        structs.insert("Config".to_string(), StructApi {
-            name: "Config".to_string(),
-            fields: vec![
-                FieldApi {
-                    name: "hidden_size".to_string(),
-                    ty: "usize".to_string(),
-                    visibility: "public".to_string(),
-                },
-                FieldApi {
-                    name: "num_layers".to_string(),
-                    ty: "usize".to_string(),
-                    visibility: "public".to_string(),
-                },
-                FieldApi {
-                    name: "vocab_size".to_string(),
-                    ty: "usize".to_string(),
-                    visibility: "public".to_string(),
-                },
-            ],
-            methods: vec![
-                MethodSignature {
+                }],
+                methods: vec![
+                    MethodSignature {
+                        name: "new".to_string(),
+                        signature: "fn new(config: Config) -> Result<Self>".to_string(),
+                        visibility: "public".to_string(),
+                    },
+                    MethodSignature {
+                        name: "forward".to_string(),
+                        signature: "fn forward(&self, input: &Tensor) -> Result<Tensor>"
+                            .to_string(),
+                        visibility: "public".to_string(),
+                    },
+                    MethodSignature {
+                        name: "generate".to_string(),
+                        signature:
+                            "fn generate(&self, prompt: &str, max_tokens: usize) -> Result<String>"
+                                .to_string(),
+                        visibility: "public".to_string(),
+                    },
+                ],
+            },
+        );
+
+        structs.insert(
+            "Config".to_string(),
+            StructApi {
+                name: "Config".to_string(),
+                fields: vec![
+                    FieldApi {
+                        name: "hidden_size".to_string(),
+                        ty: "usize".to_string(),
+                        visibility: "public".to_string(),
+                    },
+                    FieldApi {
+                        name: "num_layers".to_string(),
+                        ty: "usize".to_string(),
+                        visibility: "public".to_string(),
+                    },
+                    FieldApi {
+                        name: "vocab_size".to_string(),
+                        ty: "usize".to_string(),
+                        visibility: "public".to_string(),
+                    },
+                ],
+                methods: vec![MethodSignature {
                     name: "default".to_string(),
                     signature: "fn default() -> Self".to_string(),
                     visibility: "public".to_string(),
-                },
-            ],
-        });
-        
+                }],
+            },
+        );
+
         let mut traits = BTreeMap::new();
-        traits.insert("Quantizable".to_string(), TraitApi {
-            name: "Quantizable".to_string(),
-            methods: vec![
-                MethodSignature {
-                    name: "quantize".to_string(),
-                    signature: "fn quantize(&self) -> QuantizedTensor".to_string(),
-                    visibility: "public".to_string(),
-                },
-                MethodSignature {
-                    name: "dequantize".to_string(),
-                    signature: "fn dequantize(&self) -> Tensor".to_string(),
-                    visibility: "public".to_string(),
-                },
-            ],
-            associated_types: vec!["Output".to_string()],
-        });
-        
+        traits.insert(
+            "Quantizable".to_string(),
+            TraitApi {
+                name: "Quantizable".to_string(),
+                methods: vec![
+                    MethodSignature {
+                        name: "quantize".to_string(),
+                        signature: "fn quantize(&self) -> QuantizedTensor".to_string(),
+                        visibility: "public".to_string(),
+                    },
+                    MethodSignature {
+                        name: "dequantize".to_string(),
+                        signature: "fn dequantize(&self) -> Tensor".to_string(),
+                        visibility: "public".to_string(),
+                    },
+                ],
+                associated_types: vec!["Output".to_string()],
+            },
+        );
+
         let mut enums = BTreeMap::new();
-        enums.insert("QuantizationType".to_string(), EnumApi {
-            name: "QuantizationType".to_string(),
-            variants: vec![
-                "I2S".to_string(),
-                "TL1".to_string(),
-                "TL2".to_string(),
-            ],
-        });
-        
+        enums.insert(
+            "QuantizationType".to_string(),
+            EnumApi {
+                name: "QuantizationType".to_string(),
+                variants: vec!["I2S".to_string(), "TL1".to_string(), "TL2".to_string()],
+            },
+        );
+
         let mut functions = BTreeMap::new();
-        functions.insert("load_model".to_string(), FunctionApi {
-            name: "load_model".to_string(),
-            signature: "pub fn load_model(path: &Path) -> Result<Model>".to_string(),
-        });
-        
-        ApiSurface {
-            version: "1.0.0".to_string(),
-            modules,
-            traits,
-            structs,
-            enums,
-            functions,
-        }
+        functions.insert(
+            "load_model".to_string(),
+            FunctionApi {
+                name: "load_model".to_string(),
+                signature: "pub fn load_model(path: &Path) -> Result<Model>".to_string(),
+            },
+        );
+
+        ApiSurface { version: "1.0.0".to_string(), modules, traits, structs, enums, functions }
     }
 }

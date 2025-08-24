@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Format-specific comprehensive tests for bitnet-models
 //! Tests for GGUF, SafeTensors, and HuggingFace format loaders
 

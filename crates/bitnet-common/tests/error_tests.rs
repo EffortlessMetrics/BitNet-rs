@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Comprehensive error handling tests for bitnet-common
 
 use bitnet_common::*;

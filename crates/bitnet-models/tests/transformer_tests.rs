@@ -1,8 +1,9 @@
+#![cfg(feature = "integration-tests")]
 use bitnet_common::{BitNetConfig, Device, ModelConfig, Tensor as BitNetTensorTrait};
 /// Tests for transformer model implementation
 use bitnet_models::{
-    transformer::{KVCache, TransformerModel},
     BitNetModel, Model,
+    transformer::{KVCache, TransformerModel},
 };
 use candle_core::{DType, IndexOp, Tensor};
 use candle_nn::VarBuilder;

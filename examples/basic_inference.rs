@@ -5,6 +5,7 @@
 use bitnet::prelude::*;
 use std::env;
 
+#[cfg(feature = "examples")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt::init();
@@ -64,3 +65,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nInference completed successfully!");
     Ok(())
 }
+
+#[cfg(not(feature = "examples"))]
+fn main() {}

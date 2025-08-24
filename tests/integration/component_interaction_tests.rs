@@ -10,8 +10,9 @@ use crate::common::tensor_helpers::ct;
 use crate::common::{TestError, TestMetrics};
 use async_trait::async_trait;
 use bitnet_common::{BitNetConfig, BitNetError, Device, ModelConfig, Tensor};
+use bitnet_inference::config::GenerationConfig;
 use bitnet_inference::engine::InferenceStats;
-use bitnet_inference::{GenerationConfig, InferenceConfig, InferenceEngine};
+use bitnet_inference::{InferenceConfig, InferenceEngine};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use std::collections::HashMap;
@@ -615,7 +616,12 @@ impl InstrumentedTokenizer {
 }
 
 impl Tokenizer for InstrumentedTokenizer {
-    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>, BitNetError> {
+    fn encode(
+        &self,
+        text: &str,
+        _add_bos: bool,
+        _add_special: bool,
+    ) -> Result<Vec<u32>, BitNetError> {
         let mut guard = self.data_flow.lock().unwrap();
         guard.inputs_received.push(text.to_string());
         guard.encode_calls += 1;
@@ -694,7 +700,12 @@ impl ConfigurableTokenizer {
 }
 
 impl Tokenizer for ConfigurableTokenizer {
-    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>, BitNetError> {
+    fn encode(
+        &self,
+        text: &str,
+        _add_bos: bool,
+        _add_special: bool,
+    ) -> Result<Vec<u32>, BitNetError> {
         Ok((0..text.len().min(10)).map(|i| (i + 1) as u32).collect())
     }
 

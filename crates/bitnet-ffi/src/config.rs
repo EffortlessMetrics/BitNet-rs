@@ -77,7 +77,7 @@ impl BitNetCConfig {
                 return Err(BitNetCError::InvalidArgument(format!(
                     "Invalid model format: {}",
                     self.model_format
-                )))
+                )));
             }
         };
 
@@ -89,7 +89,7 @@ impl BitNetCConfig {
                 return Err(BitNetCError::InvalidArgument(format!(
                     "Invalid quantization type: {}",
                     self.quantization_type
-                )))
+                )));
             }
         };
 
@@ -273,7 +273,7 @@ impl BitNetCInferenceConfig {
             top_k: self.top_k,
             top_p: self.top_p,
             repetition_penalty: self.repetition_penalty,
-            seed: if self.seed == 0 { None } else { Some(self.seed as u64) },
+            seed: if self.seed == 0 { None } else { Some(self.seed) },
             ..Default::default()
         }
     }

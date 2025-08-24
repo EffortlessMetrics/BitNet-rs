@@ -66,11 +66,7 @@ pub mod cpp {
                     k as c_int,
                 )
             };
-            if rc == 0 {
-                Ok(())
-            } else {
-                Err("cpp matmul failed")
-            }
+            if rc == 0 { Ok(()) } else { Err("cpp matmul failed") }
         }
 
         pub fn quantize(
@@ -90,11 +86,7 @@ pub mod cpp {
                     qtype as c_int,
                 )
             };
-            if rc == 0 {
-                Ok(())
-            } else {
-                Err("cpp quantize failed")
-            }
+            if rc == 0 { Ok(()) } else { Err("cpp quantize failed") }
         }
 
         pub fn get_last_error() -> &'static str {

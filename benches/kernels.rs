@@ -1,3 +1,5 @@
+#![cfg(feature = "bench")]
+
 use bitnet_common::QuantizationType;
 use bitnet_kernels::{KernelManager, KernelProvider};
 use criterion::{Criterion, black_box, criterion_group, criterion_main};

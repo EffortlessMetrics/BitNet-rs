@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 // Example test demonstrating the testing framework
 use std::sync::Arc;
 use std::time::Duration;

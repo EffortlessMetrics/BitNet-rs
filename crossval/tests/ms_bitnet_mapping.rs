@@ -2,7 +2,7 @@
 fn ms_bitnet_names_map_clean() {
     use bitnet_models::{GgufReader, weight_mapper::dry_run_remap_names};
     use std::path::Path;
-    
+
     let model = std::env::var("BITNET_MS_MODEL")
         .unwrap_or_else(|_| "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf".into());
     let path = Path::new(&model);
@@ -21,6 +21,6 @@ fn ms_bitnet_names_map_clean() {
     if !unmapped.is_empty() {
         println!("First unmapped: {:?}", &unmapped[..unmapped.len().min(10)]);
     }
-    
+
     assert!(unmapped.is_empty(), "unmapped: {:?}", &unmapped[..unmapped.len().min(10)]);
 }

@@ -12,7 +12,7 @@ use bitnet_models::{Model, ModelLoader};
 use bitnet_tokenizers::TokenizerBuilder;
 
 use crate::memory::MemoryManager;
-use crate::utils::{to_js_error, JsError};
+use crate::utils::{JsError, to_js_error};
 
 /// Configuration for WASM model loading
 #[derive(Debug, Clone, Serialize, Deserialize)]

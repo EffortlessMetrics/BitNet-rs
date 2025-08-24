@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Example integration test demonstrating workflow testing
 //!
 //! This example shows how to write integration tests that validate

@@ -21,8 +21,9 @@ pub mod workflow_tests;
 // Use the prelude for common imports
 use crate::prelude::*;
 
-use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, MockTensor};
-use bitnet_inference::{GenerationConfig, InferenceConfig, InferenceEngine};
+use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, Tensor};
+use bitnet_inference::config::GenerationConfig;
+use bitnet_inference::{InferenceConfig, InferenceEngine};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use std::sync::Arc;
@@ -104,7 +105,12 @@ impl MockTokenizer {
 }
 
 impl Tokenizer for MockTokenizer {
-    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>, BitNetError> {
+    fn encode(
+        &self,
+        text: &str,
+        _add_bos: bool,
+        _add_special: bool,
+    ) -> Result<Vec<u32>, BitNetError> {
         *self.encode_calls.lock().unwrap() += 1;
 
         // Simple mock encoding: convert text length to tokens

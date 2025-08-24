@@ -7,6 +7,7 @@ description = "GGML FFI bindings for BitNet quantization support"
 repository = "https://github.com/microsoft/BitNet"
 
 [features]
+integration-tests = []
 # When enabled, we compile the GGML shim and expose IQ2_S dequantization.
 iq2s-ffi = []
 

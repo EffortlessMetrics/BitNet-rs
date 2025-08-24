@@ -48,7 +48,7 @@ impl FormatLoader for HuggingFaceLoader {
 
         // TODO: Implement HuggingFace loading
         let config = BitNetConfig::default();
-        let model = BitNetModel::new(config, device.clone());
+        let model = BitNetModel::new(config, *device);
 
         Ok(Box::new(model))
     }

@@ -5,11 +5,11 @@
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gpu::{
-        cuda_device_count, is_cuda_available, BenchmarkConfig, CudaKernel, GpuBenchmark,
-        MemoryPoolConfig, MixedPrecisionKernel, OptimizedMemoryPool, PrecisionMode,
-    };
     use crate::KernelProvider;
+    use crate::gpu::{
+        BenchmarkConfig, CudaKernel, GpuBenchmark, MemoryPoolConfig, MixedPrecisionKernel,
+        OptimizedMemoryPool, PrecisionMode, cuda_device_count, is_cuda_available,
+    };
     use bitnet_common::QuantizationType;
     use std::sync::Arc;
     use std::time::Duration;

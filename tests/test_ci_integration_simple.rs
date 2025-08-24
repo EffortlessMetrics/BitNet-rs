@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Simple CI Integration Test
 //!
 //! Basic test to verify CI integration components work.

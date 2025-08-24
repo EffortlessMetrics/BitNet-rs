@@ -1,0 +1,157 @@
+name: Quantization Matrix CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  build-matrix:
+    name: Build ${{ matrix.features }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        features:
+          - "cpu"
+          - "cpu,iq2s-ffi"
+      fail-fast: false
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: 1.89.0
+    
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: |
+          . -> target
+        key: ${{ matrix.features }}
+    
+    - name: Verify vendored GGML commit
+      if: contains(matrix.features, 'iq2s-ffi')
+      run: |
+        test -s crates/bitnet-ggml-ffi/csrc/VENDORED_GGML_COMMIT
+        ! grep -qx "unknown" crates/bitnet-ggml-ffi/csrc/VENDORED_GGML_COMMIT
+    
+    - name: Clippy Check
+      run: |
+        cargo clippy --workspace \
+          --no-default-features \
+          --features "${{ matrix.features }}" \
+          --all-targets \
+          -- -D warnings -D clippy::pedantic -D unused_unsafe
+    
+    - name: Build
+      run: |
+        cargo build -p bitnet-cli \
+          --no-default-features \
+          --features "${{ matrix.features }}" \
+          --release
+    
+    - name: Run tests
+      run: |
+        cargo test --workspace \
+          --no-default-features \
+          --features "${{ matrix.features }}" \
+          -- --nocapture
+    
+    - name: Acceptance Test (IQ2_S)
+      if: contains(matrix.features, 'iq2s-ffi')
+      env:
+        IQ2S_MODEL: ${{ secrets.IQ2S_TEST_MODEL }}
+      run: |
+        if [ -n "$IQ2S_MODEL" ]; then
+          scripts/test-iq2s-acceptance.sh \
+            --model "$IQ2S_MODEL" \
+            --timeout 30
+        else
+          echo "Skipping acceptance test: IQ2S_MODEL secret not configured"
+        fi
+    
+    - name: Store binary artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: bitnet-cli-${{ matrix.features }}
+        path: target/release/bitnet
+
+  smoke-test:
+    name: Smoke Test Quantization
+    runs-on: ubuntu-latest
+    needs: build-matrix
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download I2_S binary
+      uses: actions/download-artifact@v3
+      with:
+        name: bitnet-cli-cpu
+        path: ./bin
+    
+    - name: Download IQ2_S binary
+      uses: actions/download-artifact@v3
+      with:
+        name: bitnet-cli-cpu,iq2s-ffi
+        path: ./bin-iq2s
+    
+    - name: Make binaries executable
+      run: |
+        chmod +x ./bin/bitnet
+        chmod +x ./bin-iq2s/bitnet
+    
+    - name: Test I2_S binary version
+      run: |
+        echo "=== I2_S Binary (cpu only) ==="
+        ./bin/bitnet --version
+        echo
+    
+    - name: Test IQ2_S binary version
+      run: |
+        echo "=== IQ2_S Binary (cpu,iq2s-ffi) ==="
+        ./bin-iq2s/bitnet --version
+        echo
+    
+    # Future: download test model slices and run inspect/decode tests
+    # - name: Test I2_S model inspect
+    #   run: |
+    #     env RUST_LOG=error ./bin/bitnet inspect \
+    #       --model tests/data/sample_i2s.gguf \
+    #       --json | jq '.quantization'
+    
+    # - name: Test IQ2_S model inspect
+    #   run: |
+    #     env RUST_LOG=error ./bin-iq2s/bitnet inspect \
+    #       --model tests/data/sample_iq2s.gguf \
+    #       --json | jq '.quantization,.environment.ggml_commit'
+
+  parity-test:
+    name: Parity Test (when slices exist)
+    runs-on: ubuntu-latest
+    needs: build-matrix
+    if: false # Enable when test data is available
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: 1.89.0
+    
+    - name: Run IQ2_S parity test
+      run: |
+        # When test slices are committed:
+        cargo test -p bitnet-models \
+          --no-default-features \
+          --features "cpu,iq2s-ffi" \
+          --test iq2s_tests \
+          -- --nocapture

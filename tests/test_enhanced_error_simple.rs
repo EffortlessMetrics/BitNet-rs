@@ -1,8 +1,9 @@
+#![cfg(feature = "integration-tests")]
 use std::time::Duration;
 
 // Import the compatibility types
-use crate::common::errors::TestError;
-use crate::common::results::{TestResult, TestResultCompat};
+use bitnet_tests::errors::TestError;
+use bitnet_tests::results::{TestResult, TestResultCompat};
 
 #[tokio::test]
 async fn test_enhanced_error_handling_basic() {

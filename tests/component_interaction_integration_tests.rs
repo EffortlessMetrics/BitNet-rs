@@ -4,6 +4,8 @@
 //! cross-crate component interactions, data flow, configuration propagation,
 //! error handling, and resource management.
 
+#![cfg(feature = "integration-tests")]
+
 use bitnet_tests::integration::component_interaction_tests::{
     ComponentInteractionTestSuite, ConfigurationPropagationTest, CrossCrateDataFlowTest,
     ErrorHandlingAndRecoveryTest, ResourceSharingTest,

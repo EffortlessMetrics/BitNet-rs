@@ -4,9 +4,9 @@
 //! bindings exactly, providing a drop-in replacement with enhanced functionality.
 
 use crate::{
-    clear_last_error, get_inference_manager, get_last_error, get_model_manager, set_last_error,
     BitNetCConfig, BitNetCError, BitNetCInferenceConfig, BitNetCModel, BitNetCPerformanceMetrics,
-    BitNetCStreamConfig,
+    BitNetCStreamConfig, clear_last_error, get_inference_manager, get_last_error,
+    get_model_manager, set_last_error,
 };
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_uint};
@@ -429,7 +429,7 @@ pub extern "C" fn bitnet_get_last_error() -> *const c_char {
             let error_msg = format!("{}\0", error);
             // Store in thread-local storage to ensure lifetime
             thread_local! {
-                static ERROR_MSG: std::cell::RefCell<Option<CString>> = std::cell::RefCell::new(None);
+                static ERROR_MSG: std::cell::RefCell<Option<CString>> = const { std::cell::RefCell::new(None) };
             }
 
             ERROR_MSG.with(|msg| {
@@ -595,11 +595,7 @@ pub extern "C" fn bitnet_set_gpu_enabled(enable: c_int) -> c_int {
 /// 1 if GPU is available, 0 if not available
 #[unsafe(no_mangle)]
 pub extern "C" fn bitnet_is_gpu_available() -> c_int {
-    if get_inference_manager().is_gpu_available() {
-        1
-    } else {
-        0
-    }
+    if get_inference_manager().is_gpu_available() { 1 } else { 0 }
 }
 
 /* ========================================================================== */

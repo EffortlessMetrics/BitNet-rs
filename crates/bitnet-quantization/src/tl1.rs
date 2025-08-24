@@ -4,7 +4,7 @@
 //! It uses lookup tables to accelerate quantization and dequantization operations,
 //! with configurable block sizes for optimal performance on ARM architectures.
 
-use crate::{utils::*, QuantizedTensor, QuantizerTrait};
+use crate::{QuantizedTensor, QuantizerTrait, utils::*};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
 use candle_core::Device;
 use rayon::prelude::*;
@@ -99,11 +99,7 @@ impl LookupTable {
     /// Dequantize a value using the lookup table
     pub fn dequantize(&self, quantized: i8) -> f32 {
         let index = quantized as usize;
-        if index < self.reverse.len() {
-            self.reverse[index]
-        } else {
-            0.0
-        }
+        if index < self.reverse.len() { self.reverse[index] } else { 0.0 }
     }
 }
 

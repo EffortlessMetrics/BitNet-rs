@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Prelude module for integration tests
 //!
 //! This module re-exports commonly used types and functions to simplify imports

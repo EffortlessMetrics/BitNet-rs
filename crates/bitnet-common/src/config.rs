@@ -148,7 +148,7 @@ impl BitNetConfig {
             _ => {
                 return Err(BitNetError::Config(
                     "Unsupported config file format. Use .toml or .json".to_string(),
-                ))
+                ));
             }
         };
 
@@ -263,7 +263,7 @@ impl BitNetConfig {
                     return Err(BitNetError::Config(format!(
                         "Invalid model format '{}'. Use 'gguf', 'safetensors', or 'huggingface'",
                         format
-                    )))
+                    )));
                 }
             };
         }
@@ -345,7 +345,7 @@ impl BitNetConfig {
                     return Err(BitNetError::Config(format!(
                         "Invalid quantization type '{}'. Use 'I2S', 'TL1', or 'TL2'",
                         qtype
-                    )))
+                    )));
                 }
             };
         }
@@ -376,7 +376,7 @@ impl BitNetConfig {
                     return Err(BitNetError::Config(format!(
                         "Invalid BITNET_USE_GPU value '{}'. Use 'true' or 'false'",
                         use_gpu
-                    )))
+                    )));
                 }
             };
         }

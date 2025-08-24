@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 #[cfg(feature = "iq2s-ffi")]
 #[test]
 fn iq2s_symbol_is_linked() {

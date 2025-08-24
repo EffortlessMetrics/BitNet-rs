@@ -60,7 +60,7 @@ impl DebugCli {
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "json") {
                 if let Ok(content) = tokio::fs::read_to_string(&path).await {
                     if let Ok(report) = serde_json::from_str::<DebugReport>(&content) {
                         reports.push((path, report));
@@ -112,7 +112,7 @@ impl DebugCli {
             for (i, step) in pattern.steps.iter().enumerate() {
                 guide.push_str(&format!("{}. {}\n", i + 1, step));
             }
-            guide.push_str("\n");
+            guide.push('\n');
         }
 
         // Add general debugging tips
@@ -454,7 +454,7 @@ impl DebugCli {
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "json") {
                 if let Ok(content) = tokio::fs::read_to_string(&path).await {
                     if let Ok(report) = serde_json::from_str::<DebugReport>(&content) {
                         if report.test_summaries.iter().any(|t| t.test_name == test_name) {
@@ -504,7 +504,7 @@ impl DebugCli {
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "json") {
                 if let Ok(content) = tokio::fs::read_to_string(&path).await {
                     if let Ok(report) = serde_json::from_str::<DebugReport>(&content) {
                         let summary = self.generate_report_summary(&report);

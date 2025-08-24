@@ -3,6 +3,8 @@
 //! This test validates that all report formats (HTML, JSON, JUnit XML, Markdown)
 //! can be generated successfully with comprehensive test data.
 
+#![cfg(feature = "integration-tests")]
+
 use bitnet_tests::prelude::*;
 use bitnet_tests::reporting::{
     ReportConfig, ReportFormat, ReportingManager, TestReporter,

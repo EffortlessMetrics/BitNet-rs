@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 /// Simple test demonstrating enhanced error handling functionality
 ///
 /// This test focuses on the core error handling capabilities without

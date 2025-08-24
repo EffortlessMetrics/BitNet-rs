@@ -133,7 +133,7 @@ impl TestSelector {
         }
 
         let content =
-            tokio::fs::read_to_string(&cargo_toml_path).await.map_err(|e| TestError::IoError(e))?;
+            tokio::fs::read_to_string(&cargo_toml_path).await.map_err(TestError::IoError)?;
 
         let cargo_toml: toml::Value = content.parse().map_err(|e| TestError::SetupError {
             message: format!("Failed to parse Cargo.toml: {}", e),
@@ -153,7 +153,7 @@ impl TestSelector {
             .map(|name| {
                 // Extract crate name from path
                 if name.contains('/') {
-                    name.split('/').last().unwrap_or(name).to_string()
+                    name.split('/').next_back().unwrap_or(name).to_string()
                 } else {
                     name.to_string()
                 }
@@ -300,7 +300,7 @@ impl TestSelector {
             }
 
             // If test file path matches changed file
-            if file_str.contains(&test.file_path.to_string_lossy().as_ref()) {
+            if file_str.contains(test.file_path.to_string_lossy().as_ref()) {
                 return true;
             }
         }

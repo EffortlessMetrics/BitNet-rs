@@ -8,7 +8,9 @@ use tempfile::TempDir;
 async fn test_fixture_manager_integration() {
     // Create a temporary directory for testing
     let temp_dir = TempDir::new().unwrap();
-    unsafe { std::env::set_var("BITNET_TEST_CACHE", temp_dir.path()); }
+    unsafe {
+        std::env::set_var("BITNET_TEST_CACHE", temp_dir.path());
+    }
 
     // Create fixture config
     let mut config = FixtureConfig::default();
@@ -55,7 +57,9 @@ async fn test_fixture_manager_integration() {
 #[tokio::test]
 async fn test_fixture_lifecycle_management() {
     let temp_dir = TempDir::new().unwrap();
-    unsafe { std::env::set_var("BITNET_TEST_CACHE", temp_dir.path()); }
+    unsafe {
+        std::env::set_var("BITNET_TEST_CACHE", temp_dir.path());
+    }
 
     let config = FixtureConfig::default();
     let manager = FixtureManager::new(&config).await.unwrap();

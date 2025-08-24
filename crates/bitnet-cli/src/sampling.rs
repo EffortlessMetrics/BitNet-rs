@@ -222,7 +222,7 @@ mod tests {
         let logits = vec![1.0, 3.0, 2.0];
         assert_eq!(argmax(&logits), 1);
     }
-    
+
     #[test]
     fn test_argmax_tie_break() {
         // On tie, should choose lowest index

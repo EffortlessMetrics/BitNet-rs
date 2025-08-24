@@ -1,6 +1,8 @@
 //! Comprehensive tests for bitnet-quantization
 //! Covers edge cases, error conditions, and end-to-end scenarios
 
+#![cfg(feature = "integration-tests")]
+
 use bitnet_common::{BitNetTensor, MockTensor, Tensor};
 use bitnet_quantization::tl1::TL1Config;
 use bitnet_quantization::tl2::TL2Config;

@@ -47,6 +47,7 @@ rt-wasm = ["dep:wasm-bindgen-futures", "dep:gloo-timers"]
 gpu-tests = []
 # Run tests that require complete kernels/weights:
 full-engine = []
+integration-tests = []
 
 [[test]]
 name = "comprehensive_tests"

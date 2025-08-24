@@ -10,6 +10,7 @@ use crate::common::harness::FixtureCtx;
 use crate::{BYTES_PER_MB, TestCase, TestError, TestMetrics, TestResult};
 use anyhow::Result;
 use async_trait::async_trait;
+use bitnet_inference::config::GenerationConfig;
 use futures_util::future::join_all;
 use std::time::Instant;
 use tracing::{debug, info, warn};

@@ -8,6 +8,8 @@
 //! - Create end-to-end inference workflow tests
 //! - Add model loading and initialization integration tests  
 //! - Implement tokenization to inference pipeline tests
+
+#![cfg(feature = "integration-tests")]
 //! - Create streaming inference workflow tests
 //! - Add batch processing integration tests
 

@@ -897,7 +897,9 @@ mod tests {
         config.auto_download = false; // Disable auto-download for tests
 
         // Override cache dir with temp dir
-        unsafe { std::env::set_var("BITNET_TEST_CACHE", temp_dir.path()); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_CACHE", temp_dir.path());
+        }
 
         let manager = FixtureManager::new(&config).await.unwrap();
         (manager, temp_dir)

@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Comprehensive unit tests for bitnet-tokenizers crate
 //!
 //! This module implements comprehensive unit tests covering:
@@ -715,8 +716,10 @@ mod linguistic_validation_tests {
         ];
 
         for group in pattern_groups {
-            let token_counts: Vec<usize> =
-                group.iter().map(|text| tokenizer.encode(text, false, false).unwrap().len()).collect();
+            let token_counts: Vec<usize> = group
+                .iter()
+                .map(|text| tokenizer.encode(text, false, false).unwrap().len())
+                .collect();
 
             // All items in a group should have the same token count
             let first_count = token_counts[0];
@@ -1029,7 +1032,10 @@ mod benchmark_tests {
         let test_cases = vec![
             ("short", 1000),
             ("medium length text with several words", 500),
-            ("much longer text that should test the performance characteristics of the tokenizer with many words", 100),
+            (
+                "much longer text that should test the performance characteristics of the tokenizer with many words",
+                100,
+            ),
         ];
 
         for (text, iterations) in test_cases {

@@ -30,7 +30,7 @@ impl Fixtures {
         #[cfg(not(feature = "fixtures"))]
         {
             let _ = cfg;
-            return Ok(Self);
+            Ok(Self)
         }
     }
 
@@ -107,7 +107,7 @@ impl Fixtures {
         #[cfg(not(feature = "fixtures"))]
         {
             // Return unit type when fixtures are disabled
-            ()
+            
         }
     }
 }

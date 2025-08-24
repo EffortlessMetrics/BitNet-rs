@@ -7,7 +7,7 @@
 use anyhow::Result;
 use bitnet_common::{Device, Tensor};
 use bitnet_models::transformer::KVCache;
-use bitnet_models::{load_gguf, BitNetModel, Model};
+use bitnet_models::{BitNetModel, Model, load_gguf};
 use candle_core::{DType, IndexOp};
 use std::path::Path;
 

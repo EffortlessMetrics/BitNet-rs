@@ -8,7 +8,7 @@ use web_sys::console;
 
 use crate::model::WasmBitNetModel;
 use crate::streaming::WasmGenerationStream;
-use crate::utils::{to_js_error, JsError};
+use crate::utils::{JsError, to_js_error};
 
 /// Configuration for inference generation
 #[derive(Debug, Clone, Serialize, Deserialize)]

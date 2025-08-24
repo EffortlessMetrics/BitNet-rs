@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 #![cfg(feature = "crossval")]
 use bitnet_tests::cross_validation::implementation::InferenceConfig;
 use bitnet_tests::cross_validation::{

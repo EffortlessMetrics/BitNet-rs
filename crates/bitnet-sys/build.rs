@@ -239,10 +239,10 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
     let out_path = PathBuf::from(env::var("OUT_DIR")?);
     let bindings_path = out_path.join("bindings.rs");
-    
+
     // Write initial bindings
     bindings.write_to_file(&bindings_path)?;
-    
+
     // Post-process to add unsafe to extern blocks for Rust 2024
     let bindings_content = std::fs::read_to_string(&bindings_path)?;
     let fixed_content = bindings_content.replace("extern \"C\" {", "unsafe extern \"C\" {");

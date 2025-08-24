@@ -43,7 +43,7 @@ impl InferenceEngine {
     pub fn tokenizer(&self) -> Arc<dyn Tokenizer> {
         self.tokenizer.clone()
     }
-    
+
     /// Create a new inference engine
     #[instrument(skip(model, tokenizer))]
     pub fn new(
@@ -86,36 +86,32 @@ impl InferenceEngine {
         engine.config = config;
         Ok(engine)
     }
-    
+
     /// Evaluate token IDs and return logits for deterministic comparison
     /// This is used for cross-validation with C++ implementation
     pub async fn eval_ids(&mut self, ids: &[u32]) -> Result<Vec<f32>> {
         // Start timing
         let start = std::time::Instant::now();
-        
+
         // Convert token IDs to ConcreteTensor
         let device = candle_core::Device::Cpu;
-        let input_tensor = candle_core::Tensor::from_slice(
-            ids,
-            &[1, ids.len()],
-            &device,
-        )?;
+        let input_tensor = candle_core::Tensor::from_slice(ids, &[1, ids.len()], &device)?;
         let input = ConcreteTensor::BitNet(BitNetTensor::new(input_tensor));
-        
+
         // Get cache for forward pass
         let mut cache = self.cache.write().await;
-        
+
         // Run forward pass through model to get logits
         let logits_tensor = self.backend.forward(&input, &mut cache).await?;
-        
+
         // Extract logits as f32 vector
         let flat_logits = match logits_tensor {
             ConcreteTensor::BitNet(ref tensor) => tensor.to_vec()?,
             ConcreteTensor::Mock(_) => vec![0.0; 100], // Mock implementation for testing
         };
-        
+
         debug!("eval_ids: processed {} tokens in {:?}", ids.len(), start.elapsed());
-        
+
         Ok(flat_logits)
     }
 
@@ -218,12 +214,12 @@ impl InferenceEngine {
 
             // Sample next token first
             let next_token = sampling_strategy.sample(&logits, &current_tokens)?;
-            
+
             // Capture logits if requested (after sampling to know chosen_id)
             if let Some(cb) = &config.logits_cb {
                 if (step as usize) < config.logits_tap_steps {
                     let k = config.logits_topk.min(logits.len());
-                    
+
                     // Use partial selection for efficiency on large vocabs
                     let mut indices: Vec<usize> = (0..logits.len()).collect();
                     if k < logits.len() {
@@ -232,16 +228,15 @@ impl InferenceEngine {
                         });
                         indices.truncate(k);
                     }
-                    
+
                     // Sort the top-k for consistent ordering
                     indices.sort_by(|&a, &b| {
                         logits[b].partial_cmp(&logits[a]).unwrap_or(std::cmp::Ordering::Equal)
                     });
-                    
-                    let topk: Vec<(u32, f32)> = indices.into_iter()
-                        .map(|idx| (idx as u32, logits[idx]))
-                        .collect();
-                    
+
+                    let topk: Vec<(u32, f32)> =
+                        indices.into_iter().map(|idx| (idx as u32, logits[idx])).collect();
+
                     // Pass topk and the chosen token
                     (cb)(step as usize, topk, next_token);
                 }
@@ -429,10 +424,7 @@ mod tests {
             Ok(vec![1, 2, 3])
         }
 
-        fn decode(
-            &self,
-            _tokens: &[u32],
-        ) -> bitnet_common::Result<String> {
+        fn decode(&self, _tokens: &[u32]) -> bitnet_common::Result<String> {
             Ok("mock generated text".to_string())
         }
 

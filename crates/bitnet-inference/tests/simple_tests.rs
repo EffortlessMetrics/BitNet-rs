@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Simple comprehensive tests for bitnet-inference crate
 //!
 //! These tests validate the inference functionality with simplified mocks

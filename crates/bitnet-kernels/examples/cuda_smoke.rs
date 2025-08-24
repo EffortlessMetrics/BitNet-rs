@@ -2,8 +2,8 @@
 
 #[cfg(feature = "cuda")]
 fn main() -> anyhow::Result<()> {
-    use bitnet_kernels::gpu::cuda::CudaKernel;
     use bitnet_kernels::KernelProvider;
+    use bitnet_kernels::gpu::cuda::CudaKernel;
 
     println!("CUDA Smoke Test");
     println!("================");

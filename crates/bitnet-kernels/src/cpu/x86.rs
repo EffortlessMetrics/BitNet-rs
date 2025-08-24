@@ -149,7 +149,8 @@ impl Avx2Kernel {
                                     b_col[kk] = b[(l + kk) * n + (j + jj)];
                                 }
                             }
-                            let b_vec = unsafe { _mm256_loadu_si256(b_col.as_ptr() as *const __m256i) };
+                            let b_vec =
+                                unsafe { _mm256_loadu_si256(b_col.as_ptr() as *const __m256i) };
 
                             // Convert to i16 for multiplication
                             {
@@ -183,7 +184,8 @@ impl Avx2Kernel {
                                 let sum_hi = _mm256_extractf128_ps(sum_vec, 1);
                                 let sum_lo = _mm256_castps256_ps128(sum_vec);
                                 let sum_quad = _mm_add_ps(sum_hi, sum_lo);
-                                let sum_dual = _mm_add_ps(sum_quad, _mm_movehl_ps(sum_quad, sum_quad));
+                                let sum_dual =
+                                    _mm_add_ps(sum_quad, _mm_movehl_ps(sum_quad, sum_quad));
                                 let sum_single =
                                     _mm_add_ss(sum_dual, _mm_shuffle_ps(sum_dual, sum_dual, 0x55));
 
@@ -207,7 +209,7 @@ impl Avx2Kernel {
         scales: &mut [f32],
     ) -> Result<()> {
         const BLOCK_SIZE: usize = 128;
-        let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        let num_blocks = input.len().div_ceil(BLOCK_SIZE);
 
         if output.len() < input.len() / 4 {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
@@ -348,7 +350,7 @@ impl Avx2Kernel {
         scales: &mut [f32],
     ) -> Result<()> {
         const BLOCK_SIZE: usize = 32;
-        let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        let num_blocks = input.len().div_ceil(BLOCK_SIZE);
 
         if output.len() < input.len() / 4 {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
@@ -481,7 +483,7 @@ impl Avx2Kernel {
     ) -> Result<()> {
         // Use the same implementation as fallback kernel for TL1
         const BLOCK_SIZE: usize = 64;
-        let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        let num_blocks = input.len().div_ceil(BLOCK_SIZE);
 
         if output.len() < input.len() / 4 {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {

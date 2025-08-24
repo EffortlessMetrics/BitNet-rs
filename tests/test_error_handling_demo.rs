@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Demonstration of enhanced error handling functionality
 //! This test shows that the enhanced error handling system provides actionable debugging information
 

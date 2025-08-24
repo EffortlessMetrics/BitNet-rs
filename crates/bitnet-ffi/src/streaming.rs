@@ -13,6 +13,12 @@ pub struct StreamingManager {
     next_id: Mutex<u32>,
 }
 
+impl Default for StreamingManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StreamingManager {
     pub fn new() -> Self {
         Self { sessions: Mutex::new(HashMap::new()), next_id: Mutex::new(0) }
@@ -100,7 +106,7 @@ static STREAMING_MANAGER: std::sync::OnceLock<StreamingManager> = std::sync::Onc
 
 /// Get the global streaming manager instance
 pub fn get_streaming_manager() -> &'static StreamingManager {
-    STREAMING_MANAGER.get_or_init(|| StreamingManager::new())
+    STREAMING_MANAGER.get_or_init(StreamingManager::new)
 }
 
 /// Store a streaming session and return its ID

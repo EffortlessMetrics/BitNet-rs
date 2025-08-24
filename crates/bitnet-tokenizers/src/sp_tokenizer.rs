@@ -1,9 +1,9 @@
 #[cfg(feature = "spm")]
+use crate::Tokenizer;
+#[cfg(feature = "spm")]
 use bitnet_common::{BitNetError, Result};
 #[cfg(feature = "spm")]
 use sentencepiece::SentencePieceProcessor;
-#[cfg(feature = "spm")]
-use crate::Tokenizer;
 
 #[cfg(feature = "spm")]
 pub struct SpTokenizer {
@@ -24,7 +24,11 @@ impl SpTokenizer {
         Ok(Box::new(Self { sp, bos_token_id: None, eos_token_id: None }))
     }
 
-    pub fn from_gguf_blob(bytes: &[u8], bos: Option<u32>, eos: Option<u32>) -> Result<Box<dyn Tokenizer>> {
+    pub fn from_gguf_blob(
+        bytes: &[u8],
+        bos: Option<u32>,
+        eos: Option<u32>,
+    ) -> Result<Box<dyn Tokenizer>> {
         use std::io::Write;
         let mut tmp = tempfile::NamedTempFile::new()?;
         tmp.write_all(bytes)?;
@@ -42,13 +46,15 @@ impl SpTokenizer {
 impl Tokenizer for SpTokenizer {
     fn encode(&self, text: &str, add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
         // Use encode which returns Vec<PieceWithId>
-        let pieces = self
-            .sp
-            .encode(text)
-            .map_err(|e| BitNetError::Io(std::io::Error::new(std::io::ErrorKind::Other, format!("encode failed: {e}"))))?;
-        
+        let pieces = self.sp.encode(text).map_err(|e| {
+            BitNetError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("encode failed: {e}"),
+            ))
+        })?;
+
         let mut ids: Vec<u32> = pieces.into_iter().map(|p| p.id as u32).collect();
-        
+
         if add_bos {
             if let Some(b) = self.bos_token_id {
                 ids.insert(0, b);
@@ -59,8 +65,12 @@ impl Tokenizer for SpTokenizer {
 
     fn decode(&self, ids: &[u32]) -> Result<String> {
         // Use decode_piece_ids which takes &[u32] directly
-        let s = self.sp.decode_piece_ids(ids)
-            .map_err(|e| BitNetError::Io(std::io::Error::new(std::io::ErrorKind::Other, format!("decode_piece_ids failed: {e}"))))?;
+        let s = self.sp.decode_piece_ids(ids).map_err(|e| {
+            BitNetError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("decode_piece_ids failed: {e}"),
+            ))
+        })?;
         Ok(s)
     }
 
@@ -76,7 +86,7 @@ impl Tokenizer for SpTokenizer {
     fn bos_token_id(&self) -> Option<u32> {
         self.bos_token_id
     }
-    
+
     fn eos_token_id(&self) -> Option<u32> {
         self.eos_token_id
     }

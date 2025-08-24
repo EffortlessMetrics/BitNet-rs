@@ -7,6 +7,8 @@
 //! - Performance and resource management
 //! - Error handling and edge cases
 
+#![cfg(feature = "integration-tests")]
+
 use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device, InferenceError};
 use bitnet_inference::prelude::*;
 use bitnet_models::Model;
@@ -92,7 +94,12 @@ impl MockTokenizer {
 }
 
 impl Tokenizer for MockTokenizer {
-    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>, BitNetError> {
+    fn encode(
+        &self,
+        text: &str,
+        _add_bos: bool,
+        _add_special: bool,
+    ) -> Result<Vec<u32>, BitNetError> {
         if self.should_fail {
             return Err(BitNetError::Inference(
                 bitnet_common::InferenceError::TokenizationFailed {

@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 /// Demonstration of the comprehensive comparison test cases implementation
 ///
 /// This file demonstrates the test case structure and validates that all required

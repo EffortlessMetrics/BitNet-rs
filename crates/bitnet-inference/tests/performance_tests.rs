@@ -7,6 +7,8 @@
 //! - Cache efficiency and optimization
 //! - Backend performance comparison
 
+#![cfg(feature = "integration-tests")]
+
 use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device};
 use bitnet_inference::prelude::*;
 use bitnet_models::Model;
@@ -91,7 +93,12 @@ impl MockTokenizer {
 }
 
 impl Tokenizer for MockTokenizer {
-    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>, BitNetError> {
+    fn encode(
+        &self,
+        text: &str,
+        _add_bos: bool,
+        _add_special: bool,
+    ) -> Result<Vec<u32>, BitNetError> {
         std::thread::sleep(self.processing_delay);
         Ok((0..text.len().min(100)).map(|i| i as u32 + 1).collect())
     }

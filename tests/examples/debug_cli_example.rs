@@ -1,4 +1,4 @@
-use bitnet_tests::debug_cli::{create_debug_cli, DebugCli};
+use bitnet_tests::debug_cli::{DebugCli, create_debug_cli};
 use std::path::PathBuf;
 
 #[tokio::main]

@@ -7,13 +7,13 @@
 #![cfg(feature = "crossval")]
 
 use bitnet_crossval::{
-    cpp_bindings::CppModel,
-    fixtures::{TestFixture, STANDARD_PROMPTS},
     CrossvalConfig,
+    cpp_bindings::CppModel,
+    fixtures::{STANDARD_PROMPTS, TestFixture},
 };
 use criterion::{
-    black_box, criterion_group, criterion_main, AxisScale, BenchmarkId, Criterion,
-    PlotConfiguration, Throughput,
+    AxisScale, BenchmarkId, Criterion, PlotConfiguration, Throughput, black_box, criterion_group,
+    criterion_main,
 };
 use serde::{Deserialize, Serialize};
 use std::fs;

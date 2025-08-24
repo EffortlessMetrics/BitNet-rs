@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 use std::env;
 use std::process::Command;
 use std::thread;
@@ -26,10 +27,18 @@ fn main() {
     let target_duration = Duration::from_secs(15 * 60); // 15 minutes
 
     // Set environment variables for fast execution
-    unsafe { env::set_var("BITNET_TEST_MODE", "fast"); }
-    unsafe { env::set_var("BITNET_LOG_LEVEL", "warn"); }
-    unsafe { env::set_var("RUST_BACKTRACE", "0"); }
-    unsafe { env::set_var("CARGO_TERM_QUIET", "true"); }
+    unsafe {
+        env::set_var("BITNET_TEST_MODE", "fast");
+    }
+    unsafe {
+        env::set_var("BITNET_LOG_LEVEL", "warn");
+    }
+    unsafe {
+        env::set_var("RUST_BACKTRACE", "0");
+    }
+    unsafe {
+        env::set_var("CARGO_TERM_QUIET", "true");
+    }
 
     println!("⚙️ Configuration:");
     println!("   - Target time: {} minutes", target_duration.as_secs() / 60);
@@ -189,7 +198,9 @@ mod tests {
 
     #[test]
     fn test_environment_setup() {
-        unsafe { env::set_var("BITNET_TEST_MODE", "fast"); }
+        unsafe {
+            env::set_var("BITNET_TEST_MODE", "fast");
+        }
         assert_eq!(env::var("BITNET_TEST_MODE").unwrap(), "fast");
     }
 

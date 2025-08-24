@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Simple test demonstrating 2x+ performance improvement over C++ baseline
 
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};

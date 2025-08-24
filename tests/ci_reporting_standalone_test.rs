@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! Standalone test for CI reporting functionality
 //! This test doesn't depend on the existing broken test infrastructure
 

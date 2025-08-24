@@ -132,11 +132,7 @@ pub fn set_last_error(error: BitNetCError) {
 
 /// Get the last error for the current thread
 pub fn get_last_error() -> Option<BitNetCError> {
-    if let Ok(last_error) = LAST_ERROR.lock() {
-        last_error.clone()
-    } else {
-        None
-    }
+    if let Ok(last_error) = LAST_ERROR.lock() { last_error.clone() } else { None }
 }
 
 /// Clear the last error for the current thread

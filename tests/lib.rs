@@ -36,7 +36,7 @@ pub mod units {
 
 // Frequently used items at the crate root for older test code
 pub use common::config::TestConfig; // TestConfig from config module
-pub use common::errors::TestError;
+pub use common::errors::{ErrorSeverity, FixtureError, TestError, collect_environment_info};
 #[cfg(feature = "fixtures")]
 pub use common::fixtures::FixtureManager; // bring FixtureManager to the crate root
 #[cfg(feature = "fixtures")]

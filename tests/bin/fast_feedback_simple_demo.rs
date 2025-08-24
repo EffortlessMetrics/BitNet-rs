@@ -2,7 +2,7 @@ use std::env;
 use std::time::Instant;
 
 // Import the simplified fast feedback system
-use bitnet_tests::fast_feedback_simple::{utils, FastFeedbackSystem};
+use bitnet_tests::fast_feedback_simple::{FastFeedbackSystem, utils};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -57,7 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match system.execute_fast_feedback().await {
         Ok(result) => {
-            let total_time = start_time.elapsed();
+            let _total_time = start_time.elapsed();
 
             println!("Fast feedback completed successfully!");
             println!("Results:");

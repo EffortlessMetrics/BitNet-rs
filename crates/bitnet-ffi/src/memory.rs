@@ -44,11 +44,7 @@ impl MemoryStats {
 
     /// Get number of leaked allocations
     pub fn leaked_allocations(&self) -> usize {
-        if self.allocation_count > self.deallocation_count {
-            self.allocation_count - self.deallocation_count
-        } else {
-            0
-        }
+        self.allocation_count.saturating_sub(self.deallocation_count)
     }
 }
 
@@ -56,6 +52,12 @@ impl MemoryStats {
 pub struct TrackingAllocator {
     inner: System,
     stats: Arc<Mutex<MemoryStats>>,
+}
+
+impl Default for TrackingAllocator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TrackingAllocator {
@@ -91,18 +93,22 @@ impl TrackingAllocator {
 }
 
 unsafe impl GlobalAlloc for TrackingAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 { unsafe {
-        let ptr = self.inner.alloc(layout);
-        if !ptr.is_null() {
-            self.record_allocation(layout.size());
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        unsafe {
+            let ptr = self.inner.alloc(layout);
+            if !ptr.is_null() {
+                self.record_allocation(layout.size());
+            }
+            ptr
         }
-        ptr
-    }}
+    }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) { unsafe {
-        self.record_deallocation(layout.size());
-        self.inner.dealloc(ptr, layout);
-    }}
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        unsafe {
+            self.record_deallocation(layout.size());
+            self.inner.dealloc(ptr, layout);
+        }
+    }
 }
 
 /// Memory pool for efficient allocation of common sizes
@@ -186,6 +192,12 @@ pub struct MemoryManager {
     pool: MemoryPool,
     tracking_enabled: RwLock<bool>,
     memory_limit: RwLock<Option<usize>>,
+}
+
+impl Default for MemoryManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MemoryManager {
@@ -293,13 +305,13 @@ static MEMORY_MANAGER: std::sync::OnceLock<MemoryManager> = std::sync::OnceLock:
 
 /// Initialize the memory manager
 pub fn initialize_memory_manager() -> Result<(), BitNetCError> {
-    MEMORY_MANAGER.get_or_init(|| MemoryManager::new());
+    MEMORY_MANAGER.get_or_init(MemoryManager::new);
     Ok(())
 }
 
 /// Get the global memory manager instance
 pub fn get_memory_manager() -> &'static MemoryManager {
-    MEMORY_MANAGER.get_or_init(|| MemoryManager::new())
+    MEMORY_MANAGER.get_or_init(MemoryManager::new)
 }
 
 /// Cleanup the memory manager

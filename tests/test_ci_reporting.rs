@@ -1,5 +1,7 @@
 //! Tests for CI reporting and notifications functionality
 
+#![cfg(feature = "integration-tests")]
+
 use bitnet_tests::ci_reporting::{
     CIContext, CINotificationManager, GitHubReporter, NotificationConfig,
 };

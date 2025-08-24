@@ -4,11 +4,11 @@
 
 use anyhow::Result;
 use axum::{
+    Router,
     extract::State,
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     response::Response,
     routing::get,
-    Router,
 };
 // Note: PrometheusBuilder removed due to API compatibility issues
 use prometheus::{Encoder, TextEncoder};
@@ -105,8 +105,8 @@ async fn metrics_handler(
 /// Standard ML inference metrics for Prometheus
 pub mod standard_metrics {
     use prometheus::{
-        register_counter, register_counter_vec, register_gauge, register_gauge_vec,
-        register_histogram_vec, Counter, CounterVec, Gauge, GaugeVec, HistogramVec,
+        Counter, CounterVec, Gauge, GaugeVec, HistogramVec, register_counter, register_counter_vec,
+        register_gauge, register_gauge_vec, register_histogram_vec,
     };
     use std::sync::OnceLock;
 

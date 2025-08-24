@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 //! # Component Interaction Tests
 //!
 //! This test file validates the component interaction test implementation

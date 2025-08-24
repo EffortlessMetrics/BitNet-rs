@@ -79,18 +79,24 @@ mod tests {
 
         // Test true values
         for val in &["true", "TRUE", "1", "yes", "YES", "on", "ON", "enabled", "ENABLED"] {
-            unsafe { std::env::set_var("TEST_BOOL", val); }
+            unsafe {
+                std::env::set_var("TEST_BOOL", val);
+            }
             assert!(env_bool("TEST_BOOL"), "Failed to parse '{}' as true", val);
         }
 
         // Test false values
         for val in &["false", "0", "no", "off", "disabled", "random", ""] {
-            unsafe { std::env::set_var("TEST_BOOL", val); }
+            unsafe {
+                std::env::set_var("TEST_BOOL", val);
+            }
             assert!(!env_bool("TEST_BOOL"), "Failed to parse '{}' as false", val);
         }
 
         // Test missing variable
-        unsafe { std::env::remove_var("TEST_BOOL"); }
+        unsafe {
+            std::env::remove_var("TEST_BOOL");
+        }
         assert!(!env_bool("TEST_BOOL"));
     }
 
@@ -98,18 +104,26 @@ mod tests {
     fn test_env_numeric_parsing() {
         let _g = env_guard();
 
-        unsafe { std::env::set_var("TEST_NUM", "42"); }
+        unsafe {
+            std::env::set_var("TEST_NUM", "42");
+        }
         assert_eq!(env_u64("TEST_NUM"), Some(42));
         assert_eq!(env_usize("TEST_NUM"), Some(42));
 
-        unsafe { std::env::set_var("TEST_NUM", "  100  "); }
+        unsafe {
+            std::env::set_var("TEST_NUM", "  100  ");
+        }
         assert_eq!(env_u64("TEST_NUM"), Some(100));
 
-        unsafe { std::env::set_var("TEST_NUM", "not_a_number"); }
+        unsafe {
+            std::env::set_var("TEST_NUM", "not_a_number");
+        }
         assert_eq!(env_u64("TEST_NUM"), None);
         assert_eq!(env_usize("TEST_NUM"), None);
 
-        unsafe { std::env::remove_var("TEST_NUM"); }
+        unsafe {
+            std::env::remove_var("TEST_NUM");
+        }
         assert_eq!(env_u64("TEST_NUM"), None);
     }
 
@@ -117,10 +131,14 @@ mod tests {
     fn test_env_duration_parsing() {
         let _g = env_guard();
 
-        unsafe { std::env::set_var("TEST_DUR", "30"); }
+        unsafe {
+            std::env::set_var("TEST_DUR", "30");
+        }
         assert_eq!(env_duration_secs("TEST_DUR"), Some(Duration::from_secs(30)));
 
-        unsafe { std::env::set_var("TEST_DUR", "invalid"); }
+        unsafe {
+            std::env::set_var("TEST_DUR", "invalid");
+        }
         assert_eq!(env_duration_secs("TEST_DUR"), None);
     }
 
@@ -128,13 +146,19 @@ mod tests {
     fn test_env_string_parsing() {
         let _g = env_guard();
 
-        unsafe { std::env::set_var("TEST_STR", "  hello world  "); }
+        unsafe {
+            std::env::set_var("TEST_STR", "  hello world  ");
+        }
         assert_eq!(env_string("TEST_STR"), Some("hello world".to_string()));
 
-        unsafe { std::env::set_var("TEST_STR", ""); }
+        unsafe {
+            std::env::set_var("TEST_STR", "");
+        }
         assert_eq!(env_string("TEST_STR"), None);
 
-        unsafe { std::env::remove_var("TEST_STR"); }
+        unsafe {
+            std::env::remove_var("TEST_STR");
+        }
         assert_eq!(env_string("TEST_STR"), None);
     }
 }

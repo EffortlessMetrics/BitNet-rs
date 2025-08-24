@@ -73,7 +73,9 @@ fn compile_ffi() {
             #[cfg(target_os = "macos")]
             println!("cargo:rustc-link-lib=dylib=c++");
         } else {
-            println!("cargo:warning=bitnet-crossval: Using mock C wrapper (no recognized libraries found)");
+            println!(
+                "cargo:warning=bitnet-crossval: Using mock C wrapper (no recognized libraries found)"
+            );
         }
     } else {
         println!(

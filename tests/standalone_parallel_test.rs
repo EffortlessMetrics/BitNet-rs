@@ -1,3 +1,4 @@
+#![cfg(feature = "integration-tests")]
 // Standalone test for parallel execution with proper isolation
 // This test doesn't depend on the existing test framework to avoid compilation issues
 
@@ -62,23 +63,41 @@ impl IsolatedEnvironment {
 
     fn setup(&self) {
         // Set test-specific environment variables
-        unsafe { std::env::set_var("BITNET_TEST_NAME", &self.test_name); }
-        unsafe { std::env::set_var("BITNET_TEST_TEMP_DIR", self.temp_dir.path()); }
-        unsafe { std::env::set_var("BITNET_TEST_ISOLATION", "true"); }
-        unsafe { std::env::set_var("BITNET_TEST_ID", format!("{}", std::process::id())); }
+        unsafe {
+            std::env::set_var("BITNET_TEST_NAME", &self.test_name);
+        }
+        unsafe {
+            std::env::set_var("BITNET_TEST_TEMP_DIR", self.temp_dir.path());
+        }
+        unsafe {
+            std::env::set_var("BITNET_TEST_ISOLATION", "true");
+        }
+        unsafe {
+            std::env::set_var("BITNET_TEST_ID", format!("{}", std::process::id()));
+        }
     }
 
     fn cleanup(self) {
         // Restore original environment variables
         for (key, value) in &self.original_env_vars {
-            unsafe { std::env::set_var(key, value); }
+            unsafe {
+                std::env::set_var(key, value);
+            }
         }
 
         // Remove test-specific environment variables
-        unsafe { std::env::remove_var("BITNET_TEST_NAME"); }
-        unsafe { std::env::remove_var("BITNET_TEST_TEMP_DIR"); }
-        unsafe { std::env::remove_var("BITNET_TEST_ISOLATION"); }
-        unsafe { std::env::remove_var("BITNET_TEST_ID"); }
+        unsafe {
+            std::env::remove_var("BITNET_TEST_NAME");
+        }
+        unsafe {
+            std::env::remove_var("BITNET_TEST_TEMP_DIR");
+        }
+        unsafe {
+            std::env::remove_var("BITNET_TEST_ISOLATION");
+        }
+        unsafe {
+            std::env::remove_var("BITNET_TEST_ID");
+        }
 
         // Temp directory is automatically cleaned up when dropped
         drop(self.temp_dir);
@@ -139,7 +158,9 @@ impl SimpleTestCase for IsolationTestCase {
         }
 
         // Set a unique environment variable for this test
-        unsafe { std::env::set_var("UNIQUE_TEST_VAR", &self.unique_value); }
+        unsafe {
+            std::env::set_var("UNIQUE_TEST_VAR", &self.unique_value);
+        }
 
         // Create a unique file in the temp directory
         let unique_file = std::path::Path::new(&temp_dir).join(format!("{}.txt", self.name));
@@ -541,7 +562,9 @@ async fn test_isolation_prevents_interference() {
             }
 
             // Set a test-specific environment variable
-            unsafe { std::env::set_var(&self.env_key, &self.env_value); }
+            unsafe {
+                std::env::set_var(&self.env_key, &self.env_value);
+            }
 
             // Create a file in temp directory
             let temp_dir =

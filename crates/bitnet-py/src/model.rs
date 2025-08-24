@@ -5,7 +5,7 @@
 
 use crate::{device_to_string, parse_device};
 use bitnet_common::Device;
-use bitnet_models::{loader::ModelLoader, Model};
+use bitnet_models::{Model, loader::ModelLoader};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -35,12 +35,12 @@ impl PyBitNetModel {
 impl PyBitNetModel {
     /// Create a new BitNet model from file
     #[new]
-    #[pyo3(signature = (path, device = "cpu", **kwargs))]
+    #[pyo3(signature = (path, device = "cpu", **_kwargs))]
     fn new_py(
         py: Python<'_>,
         path: &str,
         device: &str,
-        kwargs: Option<&pyo3::Bound<'_, PyDict>>,
+        _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
     ) -> PyResult<Self> {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
@@ -48,7 +48,7 @@ impl PyBitNetModel {
 
             rt.block_on(async {
                 let device = parse_device(device)?;
-                let loader = ModelLoader::new(device.clone());
+                let loader = ModelLoader::new(device);
                 let model = loader
                     .load(path)
                     .map_err(|e| PyRuntimeError::new_err(format!("Failed to load model: {}", e)))?;
@@ -191,24 +191,24 @@ impl PyModelLoader {
     }
 
     /// Load a model from file
-    #[pyo3(signature = (path, **kwargs))]
+    #[pyo3(signature = (path, **_kwargs))]
     fn load(
         &self,
         py: Python<'_>,
         path: &str,
-        kwargs: Option<&pyo3::Bound<'_, PyDict>>,
+        _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
     ) -> PyResult<PyBitNetModel> {
         py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 
             rt.block_on(async {
-                let loader = ModelLoader::new(self.device.clone());
+                let loader = ModelLoader::new(self.device);
                 let model = loader
                     .load(path)
                     .map_err(|e| PyRuntimeError::new_err(format!("Failed to load model: {}", e)))?;
 
-                Ok(PyBitNetModel { inner: Arc::from(model), device: self.device.clone() })
+                Ok(PyBitNetModel { inner: Arc::from(model), device: self.device })
             })
         })
     }
@@ -216,7 +216,7 @@ impl PyModelLoader {
     /// Extract metadata from a model file without loading it
     fn extract_metadata(&self, py: Python<'_>, path: &str) -> PyResult<PyObject> {
         let path = path.to_string();
-        let device = self.device.clone();
+        let device = self.device;
 
         let metadata = py.allow_threads(|| {
             let rt = tokio::runtime::Runtime::new()

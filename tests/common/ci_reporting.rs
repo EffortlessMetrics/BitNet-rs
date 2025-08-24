@@ -49,7 +49,7 @@ impl GitHubReporter {
     }
 
     /// Create or update a status check for a commit
-    pub async fn create_status_check(
+    pub(crate) async fn create_status_check(
         &self,
         sha: &str,
         context: &str,

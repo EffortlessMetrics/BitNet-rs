@@ -7,7 +7,7 @@
 //! This is deliberately small: robust error messages, no full schema.
 
 use crate::formats::gguf::GgufTensorType;
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{Context, Result, bail, ensure};
 use bitnet_common::QuantizationType;
 use bitnet_quantization::{I2SLayout, I2SQuantizer, QuantizedTensor};
 use half::f16;
@@ -322,7 +322,7 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
         GgufTensorType::I2_S => {
             // I2_S - BitNet 2-bit quantization
             let layout = I2SLayout::default();
-            let num_blocks = (nelems + layout.block_size - 1) / layout.block_size;
+            let num_blocks = nelems.div_ceil(layout.block_size);
             let need = num_blocks * layout.bytes_per_block;
 
             ensure!(offset + need <= mmap.len(), "{}", i2s_oob!(info, offset, need, mmap.len()));
@@ -332,7 +332,11 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
                 num_blocks * layout.block_size >= nelems
                     && num_blocks * layout.block_size - nelems < layout.block_size,
                 "I2_S blocks/shape mismatch for tensor '{}': nelems={}, blocks={}, block_size={}, shape={:?}",
-                info.name, nelems, num_blocks, layout.block_size, info.dims
+                info.name,
+                nelems,
+                num_blocks,
+                layout.block_size,
+                info.dims
             );
 
             // Extract quantized data and scales
@@ -382,7 +386,7 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
 // ---------- helpers ----------
 
 fn align_up(x: u64, a: u64) -> u64 {
-    ((x + a - 1) / a) * a
+    x.div_ceil(a) * a
 }
 
 fn read_u32<R: Read>(r: &mut R) -> Result<u32> {
@@ -746,7 +750,7 @@ mod tests {
             #[test]
             fn i2s_blocks_never_underflow(nelems in 1usize..10_000_000) {
                 let layout = I2SLayout::default();
-                let blocks = (nelems + layout.block_size - 1) / layout.block_size;
+                let blocks = nelems.div_ceil(layout.block_size);
                 prop_assert!(blocks >= 1);
                 let need = blocks * layout.bytes_per_block;
                 prop_assert!(need >= layout.bytes_per_block);
@@ -757,7 +761,7 @@ mod tests {
             #[test]
             fn i2s_block_alignment_correct(nelems in 1usize..1_000_000) {
                 let layout = I2SLayout::default();
-                let blocks = (nelems + layout.block_size - 1) / layout.block_size;
+                let blocks = nelems.div_ceil(layout.block_size);
                 let padded_elems = blocks * layout.block_size;
                 // Elements should be padded to block boundary
                 prop_assert!(padded_elems >= nelems);

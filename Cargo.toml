@@ -67,6 +67,7 @@ readme = "README.md"
 bitnet-common = { path = "crates/bitnet-common", version = "0.1.0" }
 bitnet-models = { path = "crates/bitnet-models", version = "0.1.0" }
 bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.1.0" }
+bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.1.0", optional = true }
 
 # Optional crates based on features
 bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.1.0", optional = true }
@@ -80,17 +81,23 @@ vergen = { version = "9.0", features = [
     "cargo",
 ] }
 
+# Features section moved to line 126
+
 [dev-dependencies]
+criterion = "0.5"
+candle-core = { version = "0.9", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 tempfile = "3.8"
-serde_json = "1.0"
 toml = "0.9"
 ctor = "0.5.0"
 rand = "0.9"
 async-trait = "0.1.89"
 env_logger = "0.11"
 log = "0.4"
-bitnet-tests = { path = "tests", package = "bitnet-tests", features = ["fixtures","reporting","trend","integration-tests"] }
+bitnet-tests = { path = "tests", package = "bitnet-tests", default-features = false }
 # API snapshot testing
 insta = { version = "1.34", features = ["yaml", "json"] }
 num_cpus = "1.16"
@@ -109,6 +116,18 @@ libc = "0.2"
 
 [features]
 default = []  # Empty default features - must be explicitly enabled
+
+# Test and development features (off by default)
+bench = []
+examples = []                                   # Feature gate for examples
+# Forward features to the dev-dependency bitnet-tests
+integration-tests = [
+    "bitnet-tests/fixtures",
+    "bitnet-tests/reporting", 
+    "bitnet-tests/trend",
+    "bitnet-tests/integration-tests",
+]
+spm = []         # for sentencepiece tokenizer tests
 
 # Core inference features
 cpu = [
@@ -154,12 +173,12 @@ crossval = [] # Enable cross-validation against C++ implementation
 fixtures = ["bitnet-tests/fixtures"]
 reporting = ["bitnet-tests/reporting"]
 trend = ["bitnet-tests/trend"]
-full-framework = ["fixtures", "reporting", "trend"]
+ffi-tests = []
+full-framework = ["fixtures", "reporting", "trend", "spm", "integration-tests", "ffi-tests"]
 
 # Convenience features
 full = ["cpu", "cuda", "avx2", "avx512", "neon"]
 minimal = []                                    # Only core crates, no inference
-examples = []                                   # Feature gate for examples
 
 [package.metadata.docs.rs]
 all-features = true
@@ -298,6 +317,12 @@ pre-release-replacements = [
 
 
 # Workspace metadata for crates.io publication
+# Only build the perf benchmarks when the "bench" feature is explicitly enabled
+[[test]]
+name = "performance_benchmarks"
+path = "tests/performance_benchmarks.rs"
+required-features = ["bench"]
+
 [workspace.metadata.bitnet]
 msrv = "1.89.0"
 categories = [
@@ -314,3 +339,4 @@ keywords = [
     "inference",        # Model inference
     "bitnet",           # BitNet specific
 ]
+
