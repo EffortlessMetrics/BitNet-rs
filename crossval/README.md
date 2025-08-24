@@ -1,5 +1,16 @@
 # BitNet Cross-Validation Framework
 
+> **⚠️ Warning: This Crate is Currently Non-Functional**
+>
+> The cross-validation framework is currently broken and all tests will fail to build. This is due to significant breaking changes in the upstream `microsoft/BitNet` C++ repository, which this crate attempts to validate against.
+>
+> **Root Causes:**
+> 1.  **Outdated Git Dependency:** The build scripts use a `git` tag (`b1-65-ggml`) that no longer exists in the C++ repository.
+> 2.  **Stale FFI Bindings:** The Rust FFI (Foreign Function Interface) code in the `bitnet-sys` crate and the tests in this crate expect a C++ API (e.g., `bitnet_cpp_create_model` function) that no longer exists in the upstream C++ code.
+> 3.  **Build System Mismatch:** The C++ project's build system was refactored. It no longer produces a distinct `libbitnet` library. Instead, the bitnet-related code is compiled directly into `libggml`. Our `build.rs` script has not been updated to reflect this, leading to linker errors.
+>
+> Fixing this issue is a major undertaking. The work is being tracked in [issue #123](https://github.com/microsoft/BitNet/issues/123). Do not attempt to use this crate until this issue is resolved.
+
 This crate provides cross-validation functionality to compare the BitNet Rust implementation against the original C++ implementation for numerical accuracy and performance.
 
 ## Features

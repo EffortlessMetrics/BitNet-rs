@@ -1,6 +1,15 @@
 #!/bin/bash
 # Script to run full parity tests with the BitNet GGUF model
 
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+echo "!!! WARNING: THIS SCRIPT IS CURRENTLY NON-FUNCTIONAL"
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+echo "The cross-validation test suite is broken due to upstream changes in the"
+echo "C++ dependency. See the README.md in the root and in the 'crossval'"
+echo "directory for more details."
+echo "Exiting."
+exit 1
+
 set -e
 
 # Colors for output
@@ -54,7 +63,7 @@ log_info "Model found at $MODEL_FILE"
 log_info "Checking C++ implementation..."
 if [ ! -d "$HOME/.cache/bitnet_cpp" ]; then
     log_info "Building C++ implementation..."
-    ./ci/fetch_bitnet_cpp.sh --tag b1-65-ggml --clean
+    ./ci/fetch_bitnet_cpp.sh
 else
     log_info "C++ implementation already built"
 fi

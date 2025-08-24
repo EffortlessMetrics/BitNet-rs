@@ -435,6 +435,12 @@ For compatibility testing and benchmarking, the original Microsoft BitNet C++ im
 
 ### Cross-Validation Framework
 
+> **⚠️ Warning: Cross-Validation is Currently Broken**
+>
+> The cross-validation framework is currently non-functional due to breaking changes in the upstream `microsoft/BitNet` C++ repository. The test scripts use an outdated `git` tag that no longer exists, and there have been significant API changes in the C++ code that are not reflected in our Rust FFI bindings.
+>
+> As a result, running `cargo test --workspace --features crossval` will fail during the build process. Fixing this will require a significant effort to update the FFI bindings and test framework. This work is being tracked in [issue #123](https://github.com/microsoft/BitNet/issues/123).
+
 BitNet.rs includes comprehensive cross-validation against the original C++ implementation:
 
 - **Numerical accuracy**: Token-level output matching within 1e-6 tolerance

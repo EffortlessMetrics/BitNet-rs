@@ -12,7 +12,7 @@ CACHE_DIR="${BITNET_CPP_DIR:-${BITNET_CPP_CACHE:-$HOME/.cache/bitnet_cpp}}"
 REPO_URL="${BITNET_CPP_REPO:-https://github.com/microsoft/BitNet.git}"
 # Pin to specific commit for reproducibility
 # This is the latest stable release with working llama.cpp integration
-DEFAULT_REV="b1-65-ggml"  # v1.0 release with BitNet b1.58 support
+DEFAULT_REV=""  # v1.0 release with BitNet b1.58 support
 REV="${BITNET_CPP_REV:-$DEFAULT_REV}"
 
 # Colors for output
@@ -63,6 +63,15 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+if [[ "$REV" == "b1-65-ggml" ]] || [[ -z "$REV" ]]; then
+    log_error "The cross-validation framework is currently broken."
+    log_error "The previously used git tag ('b1-65-ggml') for the C++ dependency is no longer valid,"
+    log_error "and the C++ project's API has changed, breaking the FFI bindings."
+    log_error "A specific, known-good commit hash for the C++ dependency is required to proceed."
+    log_error "See the README for more details."
+    exit 1
+fi
 
 # Check if already built (skip expensive operations if possible)
 if [[ -d "$CACHE_DIR/build" ]] && [[ $FORCE -eq 0 ]] && [[ $CLEAN -eq 0 ]]; then
