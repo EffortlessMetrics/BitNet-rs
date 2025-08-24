@@ -119,10 +119,10 @@ impl ModelLoader {
     /// Detect the appropriate format loader for a given path
     fn detect_format_loader(&self, path: &Path) -> Result<&dyn FormatLoader> {
         // First try extension-based detection
-        if let Some(loader) = self.detect_by_extension(path) {
-            if loader.detect_format(path)? {
-                return Ok(loader);
-            }
+        if let Some(loader) = self.detect_by_extension(path)
+            && loader.detect_format(path)?
+        {
+            return Ok(loader);
         }
 
         // Try magic byte detection
@@ -131,10 +131,10 @@ impl ModelLoader {
         }
 
         // Try directory structure detection
-        if let Some(loader) = self.detect_by_structure(path) {
-            if loader.detect_format(path)? {
-                return Ok(loader);
-            }
+        if let Some(loader) = self.detect_by_structure(path)
+            && loader.detect_format(path)?
+        {
+            return Ok(loader);
         }
 
         Err(BitNetError::Model(bitnet_common::ModelError::InvalidFormat {

@@ -124,10 +124,10 @@ impl CliConfig {
             self.logging.level = level;
         }
 
-        if let Ok(threads) = std::env::var("BITNET_CPU_THREADS") {
-            if let Ok(threads) = threads.parse() {
-                self.performance.cpu_threads = Some(threads);
-            }
+        if let Ok(threads) = std::env::var("BITNET_CPU_THREADS")
+            && let Ok(threads) = threads.parse()
+        {
+            self.performance.cpu_threads = Some(threads);
         }
     }
 

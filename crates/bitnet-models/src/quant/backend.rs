@@ -255,7 +255,9 @@ mod tests {
     #[test]
     fn test_backend_selection() {
         let _g = env_guard();
-        unsafe { std::env::remove_var("BITNET_IQ2S_IMPL"); }
+        unsafe {
+            std::env::remove_var("BITNET_IQ2S_IMPL");
+        }
 
         let backend = Iq2sBackend::selected();
         assert_eq!(backend, Iq2sBackend::Rust); // Now defaults to Rust
@@ -264,15 +266,21 @@ mod tests {
     #[test]
     fn test_backend_env_override() {
         let _g = env_guard();
-        unsafe { std::env::set_var("BITNET_IQ2S_IMPL", "ffi"); }
+        unsafe {
+            std::env::set_var("BITNET_IQ2S_IMPL", "ffi");
+        }
         let backend = Iq2sBackend::selected();
         assert_eq!(backend, Iq2sBackend::Ffi);
 
-        unsafe { std::env::set_var("BITNET_IQ2S_IMPL", "rust"); }
+        unsafe {
+            std::env::set_var("BITNET_IQ2S_IMPL", "rust");
+        }
         let backend = Iq2sBackend::selected();
         assert_eq!(backend, Iq2sBackend::Rust);
 
-        unsafe { std::env::remove_var("BITNET_IQ2S_IMPL"); }
+        unsafe {
+            std::env::remove_var("BITNET_IQ2S_IMPL");
+        }
     }
 
     #[cfg(all(test, feature = "iq2s-ffi"))]

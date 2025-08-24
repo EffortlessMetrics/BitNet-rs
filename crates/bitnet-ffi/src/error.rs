@@ -189,7 +189,7 @@ macro_rules! validate_model_id {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bitnet_common::{InferenceError, ModelError};
+    use bitnet_common::ModelError;
 
     #[test]
     fn test_error_conversion() {

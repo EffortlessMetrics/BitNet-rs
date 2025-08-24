@@ -95,10 +95,11 @@ impl Tokenizer for UniversalTokenizer {
         };
 
         // Add BOS if requested and configured
-        if add_bos && self.config.add_bos {
-            if let Some(bos_id) = self.config.bos_token_id {
-                tokens.insert(0, bos_id);
-            }
+        if add_bos
+            && self.config.add_bos
+            && let Some(bos_id) = self.config.bos_token_id
+        {
+            tokens.insert(0, bos_id);
         }
 
         Ok(tokens)

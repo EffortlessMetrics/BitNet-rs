@@ -121,10 +121,8 @@ impl Tokenizer for BasicTokenizer {
         let mut tokens: Vec<u32> = words.iter().enumerate().map(|(i, _)| i as u32).collect();
 
         // Add special tokens if requested
-        if add_special {
-            if let Some(eos_id) = self.eos_token_id {
-                tokens.push(eos_id);
-            }
+        if add_special && let Some(eos_id) = self.eos_token_id {
+            tokens.push(eos_id);
         }
 
         Ok(tokens)

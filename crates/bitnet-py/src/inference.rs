@@ -56,8 +56,8 @@ impl PyInferenceEngine {
                 })?;
 
                 // Create inference engine
-                let engine = InferenceEngine::new(model.inner(), tokenizer, device)
-                    .map_err(|e| {
+                let engine =
+                    InferenceEngine::new(model.inner(), tokenizer, device).map_err(|e| {
                         PyRuntimeError::new_err(format!("Failed to create engine: {}", e))
                     })?;
 

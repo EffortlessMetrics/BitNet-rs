@@ -205,19 +205,19 @@ impl GenerationStream {
     ) -> bool {
         // Check for EOS token from config, fallback to tokenizer default
         let eos_token = config.eos_token_id.or_else(|| tokenizer.eos_token_id());
-        if let Some(eos) = eos_token {
-            if token == eos {
-                return true;
-            }
+        if let Some(eos) = eos_token
+            && token == eos
+        {
+            return true;
         }
 
         // Check for stop sequences
-        if !config.stop_sequences.is_empty() {
-            if let Ok(current_text) = tokenizer.decode(current_tokens) {
-                for stop_seq in &config.stop_sequences {
-                    if current_text.ends_with(stop_seq) {
-                        return true;
-                    }
+        if !config.stop_sequences.is_empty()
+            && let Ok(current_text) = tokenizer.decode(current_tokens)
+        {
+            for stop_seq in &config.stop_sequences {
+                if current_text.ends_with(stop_seq) {
+                    return true;
                 }
             }
         }

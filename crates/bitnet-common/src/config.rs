@@ -469,15 +469,15 @@ impl BitNetConfig {
         if self.inference.temperature <= 0.0 {
             errors.push("temperature must be greater than 0".to_string());
         }
-        if let Some(top_k) = self.inference.top_k {
-            if top_k == 0 {
-                errors.push("top_k must be greater than 0 when specified".to_string());
-            }
+        if let Some(top_k) = self.inference.top_k
+            && top_k == 0
+        {
+            errors.push("top_k must be greater than 0 when specified".to_string());
         }
-        if let Some(top_p) = self.inference.top_p {
-            if top_p <= 0.0 || top_p > 1.0 {
-                errors.push("top_p must be between 0 and 1 when specified".to_string());
-            }
+        if let Some(top_p) = self.inference.top_p
+            && (top_p <= 0.0 || top_p > 1.0)
+        {
+            errors.push("top_p must be between 0 and 1 when specified".to_string());
         }
         if self.inference.repetition_penalty <= 0.0 {
             errors.push("repetition_penalty must be greater than 0".to_string());
@@ -495,10 +495,10 @@ impl BitNetConfig {
         }
 
         // Performance validation
-        if let Some(num_threads) = self.performance.num_threads {
-            if num_threads == 0 {
-                errors.push("num_threads must be greater than 0 when specified".to_string());
-            }
+        if let Some(num_threads) = self.performance.num_threads
+            && num_threads == 0
+        {
+            errors.push("num_threads must be greater than 0 when specified".to_string());
         }
         if self.performance.batch_size == 0 {
             errors.push("batch_size must be greater than 0".to_string());

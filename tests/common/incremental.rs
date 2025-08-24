@@ -217,9 +217,7 @@ impl IncrementalTester {
     async fn save_last_run_time(&self) -> Result<(), TestError> {
         let timestamp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
 
-        fs::write(&self.last_run_file, timestamp.to_string())
-            .await
-            .map_err(TestError::IoError)?;
+        fs::write(&self.last_run_file, timestamp.to_string()).await.map_err(TestError::IoError)?;
 
         Ok(())
     }

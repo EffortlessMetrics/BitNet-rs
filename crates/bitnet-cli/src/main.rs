@@ -780,43 +780,43 @@ async fn run_simple_generation(
         let logits_vec = extract_logits(&logits)?;
 
         // Capture logits if requested
-        if let Some(max_steps) = dump_logit_steps {
-            if step_idx < max_steps {
-                // Helper for deterministic, robust top-k
-                let topk_indices = {
-                    let mut indexed: Vec<(usize, f32)> =
-                        logits_vec.iter().enumerate().map(|(i, &v)| (i, v)).collect();
-                    // Sort by (-logit, token_id) for determinism
-                    indexed.sort_by(|a, b| match (a.1.is_finite(), b.1.is_finite()) {
-                        (false, true) => std::cmp::Ordering::Greater,
-                        (true, false) => std::cmp::Ordering::Less,
-                        _ => {
-                            let cmp = b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal);
-                            if cmp == std::cmp::Ordering::Equal { a.0.cmp(&b.0) } else { cmp }
-                        }
-                    });
-                    indexed.into_iter().take(logits_topk).map(|(i, _)| i).collect::<Vec<_>>()
-                };
+        if let Some(max_steps) = dump_logit_steps
+            && step_idx < max_steps
+        {
+            // Helper for deterministic, robust top-k
+            let topk_indices = {
+                let mut indexed: Vec<(usize, f32)> =
+                    logits_vec.iter().enumerate().map(|(i, &v)| (i, v)).collect();
+                // Sort by (-logit, token_id) for determinism
+                indexed.sort_by(|a, b| match (a.1.is_finite(), b.1.is_finite()) {
+                    (false, true) => std::cmp::Ordering::Greater,
+                    (true, false) => std::cmp::Ordering::Less,
+                    _ => {
+                        let cmp = b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal);
+                        if cmp == std::cmp::Ordering::Equal { a.0.cmp(&b.0) } else { cmp }
+                    }
+                });
+                indexed.into_iter().take(logits_topk).map(|(i, _)| i).collect::<Vec<_>>()
+            };
 
-                let top_logits: Vec<(u32, f32)> =
-                    topk_indices.iter().map(|&i| (i as u32, logits_vec[i])).collect();
+            let top_logits: Vec<(u32, f32)> =
+                topk_indices.iter().map(|&i| (i as u32, logits_vec[i])).collect();
 
-                // Will capture chosen_id after sampling
-                let step = LogitStep {
-                    step: step_idx,
-                    top_logits: top_logits
-                        .iter()
-                        .map(|&(token_id, logit)| {
-                            serde_json::json!({
-                                "token_id": token_id,
-                                "logit": logit
-                            })
+            // Will capture chosen_id after sampling
+            let step = LogitStep {
+                step: step_idx,
+                top_logits: top_logits
+                    .iter()
+                    .map(|&(token_id, logit)| {
+                        serde_json::json!({
+                            "token_id": token_id,
+                            "logit": logit
                         })
-                        .collect(),
-                    chosen_id: None, // Will set after sampling
-                };
-                logits_dump.push(step);
-            }
+                    })
+                    .collect(),
+                chosen_id: None, // Will set after sampling
+            };
+            logits_dump.push(step);
         }
 
         // Sample next token
@@ -843,10 +843,11 @@ async fn run_simple_generation(
         }
 
         // Update chosen token in logits dump
-        if let Some(max_steps) = dump_logit_steps {
-            if step_idx < max_steps && !logits_dump.is_empty() {
-                logits_dump.last_mut().unwrap().chosen_id = Some(next_token);
-            }
+        if let Some(max_steps) = dump_logit_steps
+            && step_idx < max_steps
+            && !logits_dump.is_empty()
+        {
+            logits_dump.last_mut().unwrap().chosen_id = Some(next_token);
         }
 
         tokens.push(next_token);
@@ -863,10 +864,10 @@ async fn run_simple_generation(
         std::io::Write::flush(&mut std::io::stdout())?;
 
         // Check for EOS
-        if let Some(eos) = tokenizer.eos_token_id() {
-            if next_token == eos {
-                break;
-            }
+        if let Some(eos) = tokenizer.eos_token_id()
+            && next_token == eos
+        {
+            break;
         }
     }
 
@@ -903,7 +904,7 @@ async fn run_simple_generation(
         let counts = serde_json::json!({
             "n_kv": n_kv,
             "n_tensors": n_tensors,
-            "unmapped": if strict_mapping { 0 } else { 0 },  // In strict mode this is always 0
+            "unmapped": 0,  // In strict mode this is always 0
         });
 
         let gen_policy = serde_json::json!({
