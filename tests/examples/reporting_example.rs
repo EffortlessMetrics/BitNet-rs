@@ -9,7 +9,9 @@ mod reporting_example {
         ReportConfig, ReportFormat, ReportingManager, TestReporter,
         formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter},
     };
-    use bitnet_tests::results::{TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary};
+    use bitnet_tests::results::{
+        TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary,
+    };
     use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB};
     use std::collections::HashMap;
     use std::path::PathBuf;
@@ -111,20 +113,23 @@ mod reporting_example {
 
         // JSON Report
         let json_reporter = JsonReporter::new();
-        let json_result =
-            json_reporter.generate_report(&test_data, &output_dir.join("example_report.json")).await?;
+        let json_result = json_reporter
+            .generate_report(&test_data, &output_dir.join("example_report.json"))
+            .await?;
         println!("   ✅ JSON: {} bytes", json_result.size_bytes);
 
         // HTML Report (interactive)
         let html_reporter = HtmlReporter::new(true);
-        let html_result =
-            html_reporter.generate_report(&test_data, &output_dir.join("example_report.html")).await?;
+        let html_result = html_reporter
+            .generate_report(&test_data, &output_dir.join("example_report.html"))
+            .await?;
         println!("   ✅ HTML: {} bytes", html_result.size_bytes);
 
         // JUnit XML Report
         let junit_reporter = JunitReporter::new();
-        let junit_result =
-            junit_reporter.generate_report(&test_data, &output_dir.join("example_report.xml")).await?;
+        let junit_result = junit_reporter
+            .generate_report(&test_data, &output_dir.join("example_report.xml"))
+            .await?;
         println!("   ✅ JUnit XML: {} bytes", junit_result.size_bytes);
 
         // Markdown Report
@@ -195,12 +200,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         reporting_example::run_example().await?;
     }
-    
+
     #[cfg(not(feature = "reporting"))]
     {
         println!("Reporting example requires the 'reporting' feature to be enabled.");
         println!("Run with: cargo run --example reporting_example --features reporting");
     }
-    
+
     Ok(())
 }

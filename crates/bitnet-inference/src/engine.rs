@@ -216,30 +216,30 @@ impl InferenceEngine {
             let next_token = sampling_strategy.sample(&logits, &current_tokens)?;
 
             // Capture logits if requested (after sampling to know chosen_id)
-            if let Some(cb) = &config.logits_cb {
-                if (step as usize) < config.logits_tap_steps {
-                    let k = config.logits_topk.min(logits.len());
+            if let Some(cb) = &config.logits_cb
+                && (step as usize) < config.logits_tap_steps
+            {
+                let k = config.logits_topk.min(logits.len());
 
-                    // Use partial selection for efficiency on large vocabs
-                    let mut indices: Vec<usize> = (0..logits.len()).collect();
-                    if k < logits.len() {
-                        indices.select_nth_unstable_by(k.saturating_sub(1), |&a, &b| {
-                            logits[b].partial_cmp(&logits[a]).unwrap_or(std::cmp::Ordering::Equal)
-                        });
-                        indices.truncate(k);
-                    }
-
-                    // Sort the top-k for consistent ordering
-                    indices.sort_by(|&a, &b| {
+                // Use partial selection for efficiency on large vocabs
+                let mut indices: Vec<usize> = (0..logits.len()).collect();
+                if k < logits.len() {
+                    indices.select_nth_unstable_by(k.saturating_sub(1), |&a, &b| {
                         logits[b].partial_cmp(&logits[a]).unwrap_or(std::cmp::Ordering::Equal)
                     });
-
-                    let topk: Vec<(u32, f32)> =
-                        indices.into_iter().map(|idx| (idx as u32, logits[idx])).collect();
-
-                    // Pass topk and the chosen token
-                    (cb)(step as usize, topk, next_token);
+                    indices.truncate(k);
                 }
+
+                // Sort the top-k for consistent ordering
+                indices.sort_by(|&a, &b| {
+                    logits[b].partial_cmp(&logits[a]).unwrap_or(std::cmp::Ordering::Equal)
+                });
+
+                let topk: Vec<(u32, f32)> =
+                    indices.into_iter().map(|idx| (idx as u32, logits[idx])).collect();
+
+                // Pass topk and the chosen token
+                (cb)(step as usize, topk, next_token);
             }
 
             // Check for stop conditions
@@ -324,10 +324,10 @@ impl InferenceEngine {
     fn should_stop(&self, token: u32, generated_tokens: &[u32], config: &GenerationConfig) -> bool {
         // Check for EOS token from config, fallback to tokenizer default
         let eos_token = config.eos_token_id.or_else(|| self.tokenizer.eos_token_id());
-        if let Some(eos) = eos_token {
-            if token == eos {
-                return true;
-            }
+        if let Some(eos) = eos_token
+            && token == eos
+        {
+            return true;
         }
 
         // Check for stop sequences

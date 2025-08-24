@@ -49,21 +49,19 @@ impl super::Tokenizer for HfTokenizer {
         let mut ids = enc.get_ids().to_vec();
 
         // Add BOS if requested and not already added
-        if add_bos {
-            if let Some(bos) = self.bos_id {
-                if ids.is_empty() || ids[0] != bos {
-                    ids.insert(0, bos);
-                }
-            }
+        if add_bos
+            && let Some(bos) = self.bos_id
+            && (ids.is_empty() || ids[0] != bos)
+        {
+            ids.insert(0, bos);
         }
 
         // Add EOS if requested
-        if add_special {
-            if let Some(eos) = self.eos_id {
-                if ids.is_empty() || ids[ids.len() - 1] != eos {
-                    ids.push(eos);
-                }
-            }
+        if add_special
+            && let Some(eos) = self.eos_id
+            && (ids.is_empty() || ids[ids.len() - 1] != eos)
+        {
+            ids.push(eos);
         }
 
         Ok(ids)

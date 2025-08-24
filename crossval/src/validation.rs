@@ -109,7 +109,7 @@ impl ValidationSuite {
     }
 
     /// Gate 3: NLL/Perplexity parity test
-    pub fn validate_nll_parity(&self, dataset: &str) -> Result<NllParityResult> {
+    pub fn validate_nll_parity(&self, _dataset: &str) -> Result<NllParityResult> {
         // This would calculate and compare NLL/PPL
         // For now, return a placeholder
         Ok(NllParityResult {

@@ -6,7 +6,7 @@
 fn main() {
     #[cfg(feature = "integration-tests")]
     run_demo();
-    
+
     #[cfg(not(feature = "integration-tests"))]
     {
         println!("Error handling demo requires 'integration-tests' feature.");
@@ -16,9 +16,9 @@ fn main() {
 
 #[cfg(feature = "integration-tests")]
 fn run_demo() {
-    use std::time::Duration;
     use bitnet_tests::errors::{FixtureError, TestError};
-    
+    use std::time::Duration;
+
     println!("=== BitNet.rs Enhanced Error Handling Demo ===\n");
 
     // Demo 1: Error Severity and Categorization
@@ -45,11 +45,10 @@ fn run_demo() {
 
     // Demo 2: Error Context and Recovery
     println!("\n2. Error Context and Recovery:");
-    let error_with_context = TestError::AssertionError {
-        message: "Value mismatch in tensor operation".to_string(),
-    }
-    .with_context("While processing layer 3 of the model")
-    .with_suggestion("Check tensor dimensions match expected shape");
+    let error_with_context =
+        TestError::AssertionError { message: "Value mismatch in tensor operation".to_string() }
+            .with_context("While processing layer 3 of the model")
+            .with_suggestion("Check tensor dimensions match expected shape");
 
     println!("  Full error: {}", error_with_context);
     if let Some(suggestion) = error_with_context.suggestion() {
@@ -94,8 +93,8 @@ fn run_demo() {
 
     // Demo 5: Error Recovery Strategies
     println!("\n5. Recovery Strategies:");
-    let recoverable_error =
-        TestError::TimeoutError { timeout: Duration::from_secs(10) }.with_recovery_strategy(
+    let recoverable_error = TestError::TimeoutError { timeout: Duration::from_secs(10) }
+        .with_recovery_strategy(
             "Increase timeout duration or run test with fewer parallel workers",
         );
 
@@ -109,7 +108,6 @@ fn run_demo() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     #[cfg(feature = "integration-tests")]

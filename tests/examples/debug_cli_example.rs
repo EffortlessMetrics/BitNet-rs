@@ -1,4 +1,4 @@
-use bitnet_tests::debug_cli::{DebugCli, create_debug_cli};
+use bitnet_tests::debug_cli::create_debug_cli;
 use std::path::PathBuf;
 
 #[tokio::main]
@@ -40,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let report_path = PathBuf::from(&args[2]);
                 match debug_cli.analyze_report(&report_path).await {
-                    Ok(analysis) => {
+                    Ok(_analysis) => {
                         println!("✅ Analysis completed successfully!");
                         // The analysis is printed by the CLI internally
                     }

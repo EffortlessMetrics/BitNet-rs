@@ -106,8 +106,7 @@ pub struct ConfigurationContext {
 }
 
 /// Resource constraints for test execution
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ResourceConstraints {
     pub max_memory_mb: Option<usize>,
     pub max_cpu_cores: Option<usize>,
@@ -115,16 +114,14 @@ pub struct ResourceConstraints {
 }
 
 /// Time constraints for test execution
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct TimeConstraints {
     pub max_total_duration: Option<Duration>,
     pub max_test_duration: Option<Duration>,
 }
 
 /// Quality requirements for test results
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct QualityRequirements {
     pub min_coverage: Option<f64>,
     pub max_flakiness: Option<f64>,
@@ -132,8 +129,7 @@ pub struct QualityRequirements {
 }
 
 /// Platform-specific settings
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct PlatformSettings {
     pub os: Option<String>,
     pub arch: Option<String>,
@@ -362,10 +358,6 @@ impl Default for ConfigurationContext {
         }
     }
 }
-
-
-
-
 
 // Helper functions to create scenario configs
 fn create_unit_config() -> TestConfig {

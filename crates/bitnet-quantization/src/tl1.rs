@@ -143,10 +143,10 @@ impl TL1Quantizer {
                     }
                 } else if line.starts_with("use_asymmetric=") {
                     config.use_asymmetric = line.split('=').nth(1).unwrap_or("false") == "true";
-                } else if line.starts_with("precision_bits=") {
-                    if let Ok(bits) = line.split('=').nth(1).unwrap_or("2").parse() {
-                        config.precision_bits = bits;
-                    }
+                } else if line.starts_with("precision_bits=")
+                    && let Ok(bits) = line.split('=').nth(1).unwrap_or("2").parse()
+                {
+                    config.precision_bits = bits;
                 }
             }
         }

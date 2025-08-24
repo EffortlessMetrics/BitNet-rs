@@ -209,40 +209,40 @@ impl SafeTensorsLoader {
         // Note: SafeTensors crate doesn't expose metadata directly
         let metadata: std::collections::HashMap<String, String> = std::collections::HashMap::new();
 
-        if let Some(vocab_size_str) = metadata.get("vocab_size") {
-            if let Ok(vocab_size) = vocab_size_str.parse::<usize>() {
-                config.model.vocab_size = vocab_size;
-            }
+        if let Some(vocab_size_str) = metadata.get("vocab_size")
+            && let Ok(vocab_size) = vocab_size_str.parse::<usize>()
+        {
+            config.model.vocab_size = vocab_size;
         }
 
-        if let Some(hidden_size_str) = metadata.get("hidden_size") {
-            if let Ok(hidden_size) = hidden_size_str.parse::<usize>() {
-                config.model.hidden_size = hidden_size;
-            }
+        if let Some(hidden_size_str) = metadata.get("hidden_size")
+            && let Ok(hidden_size) = hidden_size_str.parse::<usize>()
+        {
+            config.model.hidden_size = hidden_size;
         }
 
-        if let Some(num_layers_str) = metadata.get("num_layers") {
-            if let Ok(num_layers) = num_layers_str.parse::<usize>() {
-                config.model.num_layers = num_layers;
-            }
+        if let Some(num_layers_str) = metadata.get("num_layers")
+            && let Ok(num_layers) = num_layers_str.parse::<usize>()
+        {
+            config.model.num_layers = num_layers;
         }
 
-        if let Some(num_heads_str) = metadata.get("num_attention_heads") {
-            if let Ok(num_heads) = num_heads_str.parse::<usize>() {
-                config.model.num_heads = num_heads;
-            }
+        if let Some(num_heads_str) = metadata.get("num_attention_heads")
+            && let Ok(num_heads) = num_heads_str.parse::<usize>()
+        {
+            config.model.num_heads = num_heads;
         }
 
-        if let Some(intermediate_size_str) = metadata.get("intermediate_size") {
-            if let Ok(intermediate_size) = intermediate_size_str.parse::<usize>() {
-                config.model.intermediate_size = intermediate_size;
-            }
+        if let Some(intermediate_size_str) = metadata.get("intermediate_size")
+            && let Ok(intermediate_size) = intermediate_size_str.parse::<usize>()
+        {
+            config.model.intermediate_size = intermediate_size;
         }
 
-        if let Some(max_position_embeddings_str) = metadata.get("max_position_embeddings") {
-            if let Ok(max_position_embeddings) = max_position_embeddings_str.parse::<usize>() {
-                config.model.max_position_embeddings = max_position_embeddings;
-            }
+        if let Some(max_position_embeddings_str) = metadata.get("max_position_embeddings")
+            && let Ok(max_position_embeddings) = max_position_embeddings_str.parse::<usize>()
+        {
+            config.model.max_position_embeddings = max_position_embeddings;
         }
 
         // If metadata is not available, try to infer from tensor shapes

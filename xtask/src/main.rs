@@ -155,10 +155,10 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
     fs::rename(&tmp, path)?;
     #[cfg(unix)]
     {
-        if let Some(parent) = path.parent() {
-            if let Ok(dir) = std::fs::File::open(parent) {
-                let _ = dir.sync_all();
-            }
+        if let Some(parent) = path.parent()
+            && let Ok(dir) = std::fs::File::open(parent)
+        {
+            let _ = dir.sync_all();
         }
     }
     Ok(())
@@ -790,20 +790,20 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
         if let Ok(lastmod) = fs::read_to_string(&lastmod_path) {
             probe = probe.header(IF_MODIFIED_SINCE, lastmod.trim());
         }
-        if let Ok(r) = probe.send() {
-            if r.status() == StatusCode::NOT_MODIFIED {
-                println!("✓ File is up to date: {}", dest.display());
-                if let Some(want) = sha256_hex {
-                    if let Err(e) = verify_sha256(&dest, want) {
-                        let _ = fs::remove_file(&dest);
-                        let _ = fs::remove_file(&etag_path);
-                        let _ = fs::remove_file(&lastmod_path);
-                        return Err(e);
-                    }
-                    println!("✓ SHA256 verified");
+        if let Ok(r) = probe.send()
+            && r.status() == StatusCode::NOT_MODIFIED
+        {
+            println!("✓ File is up to date: {}", dest.display());
+            if let Some(want) = sha256_hex {
+                if let Err(e) = verify_sha256(&dest, want) {
+                    let _ = fs::remove_file(&dest);
+                    let _ = fs::remove_file(&etag_path);
+                    let _ = fs::remove_file(&lastmod_path);
+                    return Err(e);
                 }
-                return Ok(());
+                println!("✓ SHA256 verified");
             }
+            return Ok(());
         }
     }
 
@@ -889,15 +889,15 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
     ev!(json, "start", { url: &url, resume: start > 0, start: start });
     let mut resp = loop {
         // If tmp larger than remote size, restart clean
-        if let Some(total) = size {
-            if start > total {
-                println!(
-                    "   Local partial ({:.2} MB) exceeds remote size ({:.2} MB); restarting",
-                    start as f64 / 1_048_576.0,
-                    total as f64 / 1_048_576.0
-                );
-                start = 0;
-            }
+        if let Some(total) = size
+            && start > total
+        {
+            println!(
+                "   Local partial ({:.2} MB) exceeds remote size ({:.2} MB); restarting",
+                start as f64 / 1_048_576.0,
+                total as f64 / 1_048_576.0
+            );
+            start = 0;
         }
 
         let mut rb = client.get(&url);
@@ -962,13 +962,13 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
                 // Check for 304 Not Modified on full GET
                 if start == 0 && resp.status() == StatusCode::NOT_MODIFIED {
                     println!("✓ File is up to date: {}", dest.display());
-                    if let Some(want) = sha256_hex {
-                        if let Err(e) = verify_sha256(&dest, want) {
-                            let _ = fs::remove_file(&dest);
-                            let _ = fs::remove_file(&etag_path);
-                            let _ = fs::remove_file(&lastmod_path);
-                            return Err(e);
-                        }
+                    if let Some(want) = sha256_hex
+                        && let Err(e) = verify_sha256(&dest, want)
+                    {
+                        let _ = fs::remove_file(&dest);
+                        let _ = fs::remove_file(&etag_path);
+                        let _ = fs::remove_file(&lastmod_path);
+                        return Err(e);
                     }
                     return Ok(());
                 }
@@ -1179,10 +1179,10 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
     // fsync parent directory for journaling
     #[cfg(unix)]
     {
-        if let Some(parent) = dest.parent() {
-            if let Ok(dir) = std::fs::File::open(parent) {
-                let _ = dir.sync_all();
-            }
+        if let Some(parent) = dest.parent()
+            && let Ok(dir) = std::fs::File::open(parent)
+        {
+            let _ = dir.sync_all();
         }
     }
 
@@ -1203,17 +1203,17 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
     }
 
     // Verify SHA256 using streamed hash
-    if let Some(want) = sha256_hex {
-        if let Some(h) = hasher {
-            let got = format!("{:x}", h.finalize());
-            if got != want {
-                let _ = fs::remove_file(&dest);
-                let _ = fs::remove_file(&etag_path);
-                let _ = fs::remove_file(&lastmod_path);
-                bail!("SHA256 mismatch: expected {}, got {}", want, got);
-            }
-            println!("✓ SHA256 verified");
+    if let Some(want) = sha256_hex
+        && let Some(h) = hasher
+    {
+        let got = format!("{:x}", h.finalize());
+        if got != want {
+            let _ = fs::remove_file(&dest);
+            let _ = fs::remove_file(&etag_path);
+            let _ = fs::remove_file(&lastmod_path);
+            bail!("SHA256 mismatch: expected {}, got {}", want, got);
         }
+        println!("✓ SHA256 verified");
     }
 
     // Emit JSON completion event
@@ -1254,12 +1254,11 @@ fn resolve_default_model() -> Result<PathBuf> {
 
     // Fallback: scan for first *.gguf file
     for entry in WalkDir::new(&root).into_iter().filter_map(Result::ok) {
-        if entry.file_type().is_file() {
-            if let Some(ext) = entry.path().extension() {
-                if ext == "gguf" {
-                    return Ok(entry.path().to_path_buf());
-                }
-            }
+        if entry.file_type().is_file()
+            && let Some(ext) = entry.path().extension()
+            && ext == "gguf"
+        {
+            return Ok(entry.path().to_path_buf());
         }
     }
 
@@ -1380,11 +1379,11 @@ fn fetch_cpp_cmd(
         let path = entry.path();
         if path.is_file() {
             // Check for library files
-            if let Some(ext) = path.extension() {
-                if lib_extensions.contains(&ext.to_string_lossy().as_ref()) {
-                    found_artifacts = true;
-                    break;
-                }
+            if let Some(ext) = path.extension()
+                && lib_extensions.contains(&ext.to_string_lossy().as_ref())
+            {
+                found_artifacts = true;
+                break;
             }
             // Check for executable files (no extension usually)
             if is_executable(path) && path.file_stem().is_some() {

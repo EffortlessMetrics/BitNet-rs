@@ -10,7 +10,9 @@
 #[cfg(all(feature = "reporting", feature = "trend"))]
 mod ci_example {
     use bitnet_tests::ci_reporting::{CIContext, CINotificationManager, NotificationConfig};
-    use bitnet_tests::results::{TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary};
+    use bitnet_tests::results::{
+        TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary,
+    };
     use bitnet_tests::trend_reporting::{TestRunMetadata, TrendConfig, TrendReporter};
     use std::collections::HashMap;
     use std::time::Duration;
@@ -44,61 +46,59 @@ mod ci_example {
     }
 
     fn create_sample_test_results() -> Vec<TestSuiteResult> {
-        vec![
-            TestSuiteResult {
-                suite_name: "unit_tests".to_string(),
-                total_duration: Duration::from_secs(30),
-                test_results: vec![
-                    TestResult {
-                        test_name: "test_bitnet_quantization".to_string(),
-                        status: TestStatus::Passed,
-                        duration: Duration::from_secs(5),
-                        metrics: TestMetrics {
-                            memory_peak: Some(100 * 1024 * 1024), // 100MB
-                            memory_average: Some(50 * 1024 * 1024),
-                            cpu_time: Some(Duration::from_secs(4)),
-                            wall_time: Duration::from_secs(5),
-                            assertions: 150,
-                            operations: 10000,
-                            custom_metrics: HashMap::from([
-                                ("accuracy".to_string(), 0.9995),
-                                ("throughput_ops_sec".to_string(), 2000.0),
-                            ]),
-                        },
-                        error: None,
-                        stdout: Some("All tests passed".to_string()),
-                        stderr: None,
-                        timestamp: std::time::SystemTime::now(),
+        vec![TestSuiteResult {
+            suite_name: "unit_tests".to_string(),
+            total_duration: Duration::from_secs(30),
+            test_results: vec![
+                TestResult {
+                    test_name: "test_bitnet_quantization".to_string(),
+                    status: TestStatus::Passed,
+                    duration: Duration::from_secs(5),
+                    metrics: TestMetrics {
+                        memory_peak: Some(100 * 1024 * 1024), // 100MB
+                        memory_average: Some(50 * 1024 * 1024),
+                        cpu_time: Some(Duration::from_secs(4)),
+                        wall_time: Duration::from_secs(5),
+                        assertions: 150,
+                        operations: 10000,
+                        custom_metrics: HashMap::from([
+                            ("accuracy".to_string(), 0.9995),
+                            ("throughput_ops_sec".to_string(), 2000.0),
+                        ]),
                     },
-                    TestResult {
-                        test_name: "test_model_loading".to_string(),
-                        status: TestStatus::Failed,
-                        duration: Duration::from_secs(2),
-                        metrics: TestMetrics::default(),
-                        error: Some("Failed to load model: file not found".to_string()),
-                        stdout: None,
-                        stderr: Some("Error: Model file missing".to_string()),
-                        timestamp: std::time::SystemTime::now(),
-                    },
-                ],
-                summary: TestSummary {
-                    total_tests: 2,
-                    passed: 1,
-                    failed: 1,
-                    skipped: 0,
-                    success_rate: 50.0,
+                    error: None,
+                    stdout: Some("All tests passed".to_string()),
+                    stderr: None,
+                    timestamp: std::time::SystemTime::now(),
                 },
-                environment: HashMap::from([
-                    ("ci_provider".to_string(), "github_actions".to_string()),
-                    ("runner_os".to_string(), "ubuntu-22.04".to_string()),
-                ]),
-                configuration: HashMap::new(),
-                metadata: HashMap::from([
-                    ("commit_sha".to_string(), "abc123def456".to_string()),
-                    ("pr_number".to_string(), "42".to_string()),
-                ]),
+                TestResult {
+                    test_name: "test_model_loading".to_string(),
+                    status: TestStatus::Failed,
+                    duration: Duration::from_secs(2),
+                    metrics: TestMetrics::default(),
+                    error: Some("Failed to load model: file not found".to_string()),
+                    stdout: None,
+                    stderr: Some("Error: Model file missing".to_string()),
+                    timestamp: std::time::SystemTime::now(),
+                },
+            ],
+            summary: TestSummary {
+                total_tests: 2,
+                passed: 1,
+                failed: 1,
+                skipped: 0,
+                success_rate: 50.0,
             },
-        ]
+            environment: HashMap::from([
+                ("ci_provider".to_string(), "github_actions".to_string()),
+                ("runner_os".to_string(), "ubuntu-22.04".to_string()),
+            ]),
+            configuration: HashMap::new(),
+            metadata: HashMap::from([
+                ("commit_sha".to_string(), "abc123def456".to_string()),
+                ("pr_number".to_string(), "42".to_string()),
+            ]),
+        }]
     }
 
     async fn process_ci_notifications(
@@ -240,12 +240,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         ci_example::run_example().await?;
     }
-    
+
     #[cfg(not(all(feature = "reporting", feature = "trend")))]
     {
-        println!("CI Reporting example requires both 'reporting' and 'trend' features to be enabled.");
+        println!(
+            "CI Reporting example requires both 'reporting' and 'trend' features to be enabled."
+        );
         println!("Run with: cargo run --example ci_reporting_example --features reporting,trend");
     }
-    
+
     Ok(())
 }

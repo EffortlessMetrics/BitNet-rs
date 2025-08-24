@@ -166,14 +166,14 @@ impl SecureModelDownloader {
         }
 
         // Check content length
-        if let Some(content_length) = response.content_length() {
-            if content_length > self.verifier.config().max_model_size {
-                return Err(anyhow!(
-                    "Model too large: {} bytes (max: {} bytes)",
-                    content_length,
-                    self.verifier.config().max_model_size
-                ));
-            }
+        if let Some(content_length) = response.content_length()
+            && content_length > self.verifier.config().max_model_size
+        {
+            return Err(anyhow!(
+                "Model too large: {} bytes (max: {} bytes)",
+                content_length,
+                self.verifier.config().max_model_size
+            ));
         }
 
         // Write to temporary file first
@@ -279,14 +279,13 @@ pub mod audit {
 
                 if path.is_file() {
                     // Check if it looks like a model file
-                    if let Some(ext) = path.extension() {
-                        if matches!(ext.to_str(), Some("gguf") | Some("safetensors") | Some("bin"))
-                        {
-                            match self.audit_model(&path) {
-                                Ok(result) => results.push(result),
-                                Err(e) => {
-                                    tracing::warn!("Failed to audit {}: {}", path.display(), e);
-                                }
+                    if let Some(ext) = path.extension()
+                        && matches!(ext.to_str(), Some("gguf") | Some("safetensors") | Some("bin"))
+                    {
+                        match self.audit_model(&path) {
+                            Ok(result) => results.push(result),
+                            Err(e) => {
+                                tracing::warn!("Failed to audit {}: {}", path.display(), e);
                             }
                         }
                     }

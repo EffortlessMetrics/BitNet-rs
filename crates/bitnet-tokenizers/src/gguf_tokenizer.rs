@@ -36,10 +36,8 @@ impl Tokenizer for GgufTokenizer {
         // Simple byte-level tokenization (like GPT-2)
         let mut tokens = Vec::new();
 
-        if add_bos {
-            if let Some(bos) = self.bos_token_id {
-                tokens.push(bos);
-            }
+        if add_bos && let Some(bos) = self.bos_token_id {
+            tokens.push(bos);
         }
 
         // Convert text to bytes and lookup in vocab

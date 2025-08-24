@@ -270,7 +270,8 @@ impl TestHarness {
         {
             let ctx = self.fixtures.ctx();
             test_case.setup(ctx)
-        }.await?;
+        }
+        .await?;
 
         Ok(())
     }
@@ -442,7 +443,8 @@ impl TestHarnessClone {
         {
             let ctx = self.fixtures.ctx();
             test_case.setup(ctx)
-        }.await?;
+        }
+        .await?;
 
         Ok(())
     }
