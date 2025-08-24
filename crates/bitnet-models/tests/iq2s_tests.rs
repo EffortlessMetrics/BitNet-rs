@@ -1,5 +1,71 @@
-#![cfg(feature = "integration-tests")]
-//! Tests for IQ2_S quantization support
+//! Tests for IQ2_S quantization support - both native Rust and FFI backends
+
+use bitnet_models::quant::backend::Iq2sBackend;
+
+#[test]
+fn test_iq2s_backend_selection() {
+    // Test default selection (should be Rust)
+    unsafe { std::env::remove_var("BITNET_IQ2S_IMPL"); }
+    let backend = Iq2sBackend::selected();
+    assert_eq!(backend, Iq2sBackend::Rust);
+    assert!(backend.is_available());
+    
+    // Test environment override to FFI
+    unsafe { std::env::set_var("BITNET_IQ2S_IMPL", "ffi"); }
+    let backend = Iq2sBackend::selected();
+    assert_eq!(backend, Iq2sBackend::Ffi);
+    
+    // Test explicit rust selection
+    unsafe { std::env::set_var("BITNET_IQ2S_IMPL", "rust"); }
+    let backend = Iq2sBackend::selected();
+    assert_eq!(backend, Iq2sBackend::Rust);
+    
+    // Clean up
+    unsafe { std::env::remove_var("BITNET_IQ2S_IMPL"); }
+}
+
+#[test]
+fn test_rust_backend_constants() {
+    let backend = Iq2sBackend::Rust;
+    assert_eq!(backend.qk(), 256);
+    assert_eq!(backend.block_bytes(), 66);
+    assert_eq!(backend.name(), "rust");
+}
+
+#[test]
+fn test_rust_backend_basic_dequantization() {
+    use half::f16;
+    
+    // Create test block with known values
+    let mut block = vec![0u8; 66];
+    
+    // Set scale to 0.5
+    let scale = f16::from_f32(0.5);
+    block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
+    
+    // Set all quantized values to pattern 0b11_10_01_00
+    // This gives values [0, 1, 2, 3] which map to [-2, -1, 0, 1]
+    for i in 2..66 {
+        block[i] = 0b11_10_01_00;
+    }
+    
+    // Dequantize using Rust backend
+    let backend = Iq2sBackend::Rust;
+    let result = backend.dequantize(&block, &[256]).unwrap();
+    
+    assert_eq!(result.len(), 256);
+    
+    // Check expected pattern: [-1.0, -0.5, 0.0, 0.5] (after scaling)
+    let expected = [-1.0, -0.5, 0.0, 0.5];
+    for (i, &val) in result.iter().enumerate() {
+        let expected_val = expected[i % 4];
+        assert!(
+            (val - expected_val).abs() < 1e-6,
+            "Mismatch at {}: expected {}, got {}",
+            i, expected_val, val
+        );
+    }
+}
 
 #[cfg(feature = "iq2s-ffi")]
 mod iq2s_ffi_tests {
@@ -121,14 +187,77 @@ mod iq2s_ffi_tests {
     }
 }
 
-// Placeholder for future pure-Rust implementation tests
-#[cfg(all(feature = "iq2s-ffi", feature = "iq2s-rust"))]
+// Test parity between native Rust and FFI implementations
+#[cfg(feature = "iq2s-ffi")]
 mod iq2s_parity_tests {
-    // Future: Test that FFI and Rust implementations produce identical results
-
+    use bitnet_models::quant::backend::Iq2sBackend;
+    use half::f16;
+    
     #[test]
     fn test_ffi_vs_rust_parity() {
-        // TODO: Once iq2s-rust feature is implemented, add parity tests here
-        // This will compare bitwise equality between FFI and Rust paths
+        // Generate test data with random values
+        use rand::{Rng, SeedableRng};
+        let mut rng = rand::rngs::StdRng::seed_from_u64(42);
+        
+        let mut block = vec![0u8; 66];
+        
+        // Random scale
+        let scale = f16::from_f32(rng.gen_range(0.1..2.0));
+        block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
+        
+        // Random quantized values
+        for i in 2..66 {
+            block[i] = rng.r#gen();
+        }
+        
+        // Dequantize with both backends
+        let rust_backend = Iq2sBackend::Rust;
+        let ffi_backend = Iq2sBackend::Ffi;
+        
+        let rust_result = rust_backend.dequantize(&block, &[256]).unwrap();
+        let ffi_result = ffi_backend.dequantize(&block, &[256]).unwrap();
+        
+        // Compare results
+        assert_eq!(rust_result.len(), ffi_result.len());
+        
+        for (i, (&rust_val, &ffi_val)) in rust_result.iter().zip(ffi_result.iter()).enumerate() {
+            assert!(
+                (rust_val - ffi_val).abs() < 1e-5,
+                "Parity mismatch at index {}: Rust={}, FFI={}",
+                i, rust_val, ffi_val
+            );
+        }
+    }
+    
+    #[test]
+    fn test_partial_block_parity() {
+        use rand::{Rng, SeedableRng};
+        let mut rng = rand::rngs::StdRng::seed_from_u64(123);
+        
+        let mut block = vec![0u8; 66];
+        
+        // Random data
+        let scale = f16::from_f32(rng.gen_range(0.5..1.5));
+        block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
+        for i in 2..66 {
+            block[i] = rng.r#gen();
+        }
+        
+        // Test with partial blocks
+        for n in [13, 50, 100, 200, 256] {
+            let rust_result = Iq2sBackend::Rust.dequantize(&block, &[n]).unwrap();
+            let ffi_result = Iq2sBackend::Ffi.dequantize(&block, &[n]).unwrap();
+            
+            assert_eq!(rust_result.len(), n);
+            assert_eq!(ffi_result.len(), n);
+            
+            for i in 0..n {
+                assert!(
+                    (rust_result[i] - ffi_result[i]).abs() < 1e-5,
+                    "Partial block parity failed at n={}, i={}: Rust={}, FFI={}",
+                    n, i, rust_result[i], ffi_result[i]
+                );
+            }
+        }
     }
 }

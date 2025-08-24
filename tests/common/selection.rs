@@ -1,5 +1,7 @@
 use super::config::TestConfig;
 use super::errors::TestError;
+#[cfg(feature = "fixtures")]
+use super::fast_config::fast_config;
 use super::parallel::{TestCategory, TestInfo, TestPriority};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -438,7 +440,10 @@ mod tests {
 
     #[test]
     fn test_categorize_test() {
+        #[cfg(feature = "fixtures")]
         let config = fast_config();
+        #[cfg(not(feature = "fixtures"))]
+        let config = TestConfig::default();
         let selector = TestSelector::new(config);
 
         assert_eq!(
@@ -459,7 +464,10 @@ mod tests {
 
     #[test]
     fn test_affected_crates_detection() {
+        #[cfg(feature = "fixtures")]
         let config = fast_config();
+        #[cfg(not(feature = "fixtures"))]
+        let config = TestConfig::default();
         let selector = TestSelector::new(config);
 
         let changed_files = vec![

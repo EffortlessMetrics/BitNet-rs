@@ -3,181 +3,204 @@
 //! This example shows how to use the comprehensive reporting system
 //! to generate HTML, JSON, JUnit XML, and Markdown reports.
 
-use bitnet_tests::reporting::{
-    ReportConfig, ReportFormat, ReportingManager, TestReporter,
-    formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter},
-};
-use bitnet_tests::results::{TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary};
-use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB};
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::time::Duration;
-use tokio::fs;
+#[cfg(feature = "reporting")]
+mod reporting_example {
+    use bitnet_tests::reporting::{
+        ReportConfig, ReportFormat, ReportingManager, TestReporter,
+        formats::{HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter},
+    };
+    use bitnet_tests::results::{TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary};
+    use bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB};
+    use std::collections::HashMap;
+    use std::path::PathBuf;
+    use std::time::Duration;
+    use tokio::fs;
 
-/// Create example test data
-fn create_example_test_data() -> Vec<TestSuiteResult> {
-    vec![TestSuiteResult {
-        suite_name: "example_test_suite".to_string(),
-        total_duration: Duration::from_secs(8),
-        test_results: vec![
-            TestResult {
-                test_name: "test_successful_operation".to_string(),
-                status: TestStatus::Passed,
-                duration: Duration::from_secs(3),
-                metrics: TestMetrics {
-                    memory_peak: Some(BYTES_PER_MB),          // 1MB
-                    memory_average: Some(512 * BYTES_PER_KB), // 512KB
-                    cpu_time: Some(Duration::from_secs(2)),
-                    wall_time: Duration::from_secs(3),
-                    custom_metrics: {
-                        let mut metrics = HashMap::new();
-                        metrics.insert("operations_per_second".to_string(), 1000.0);
-                        metrics.insert("accuracy".to_string(), 0.98);
-                        metrics
-                    },
-                    assertions: 5,
-                    operations: 10,
-                },
-                error: None,
-                stack_trace: None,
-                artifacts: Vec::new(),
-                start_time: std::time::SystemTime::now() - Duration::from_secs(8),
-                end_time: std::time::SystemTime::now() - Duration::from_secs(5),
-                metadata: HashMap::new(),
-            },
-            TestResult {
-                test_name: "test_error_handling".to_string(),
-                status: TestStatus::Failed,
-                duration: Duration::from_secs(5),
-                metrics: TestMetrics {
-                    memory_peak: Some(2048 * BYTES_PER_KB), // 2MB
-                    memory_average: Some(BYTES_PER_MB),     // 1MB
-                    cpu_time: Some(Duration::from_secs(4)),
-                    wall_time: Duration::from_secs(5),
-                    custom_metrics: HashMap::new(),
-                    assertions: 3,
-                    operations: 5,
-                },
-                error: Some("Expected error condition was not handled correctly".to_string()),
-                stack_trace: Some("at test_error_handling (example.rs:42)".to_string()),
-                artifacts: Vec::new(),
-                start_time: std::time::SystemTime::now() - Duration::from_secs(5),
-                end_time: std::time::SystemTime::now(),
-                metadata: HashMap::new(),
-            },
-        ],
-        summary: TestSummary {
-            total_tests: 2,
-            passed: 1,
-            failed: 1,
-            skipped: 0,
-            timeout: 0,
-            success_rate: 50.0,
+    /// Create example test data
+    pub fn create_example_test_data() -> Vec<TestSuiteResult> {
+        vec![TestSuiteResult {
+            suite_name: "example_test_suite".to_string(),
             total_duration: Duration::from_secs(8),
-            average_duration: Duration::from_secs(4),
-            peak_memory: Some(2048 * BYTES_PER_KB),
-            total_assertions: 8,
-        },
-        environment: {
-            let mut env = HashMap::new();
-            env.insert("rust_version".to_string(), "1.75.0".to_string());
-            env.insert("os".to_string(), "Windows".to_string());
-            env
-        },
-        configuration: {
-            let mut config = HashMap::new();
-            config.insert("mode".to_string(), "example".to_string());
-            config
-        },
-        start_time: std::time::SystemTime::now() - Duration::from_secs(8),
-        end_time: std::time::SystemTime::now(),
-    }]
+            test_results: vec![
+                TestResult {
+                    test_name: "test_successful_operation".to_string(),
+                    status: TestStatus::Passed,
+                    duration: Duration::from_secs(3),
+                    metrics: TestMetrics {
+                        memory_peak: Some(BYTES_PER_MB),          // 1MB
+                        memory_average: Some(512 * BYTES_PER_KB), // 512KB
+                        cpu_time: Some(Duration::from_secs(2)),
+                        wall_time: Duration::from_secs(3),
+                        assertions: 42,
+                        operations: 1000,
+                        custom_metrics: HashMap::from([
+                            ("throughput".to_string(), 333.33),
+                            ("latency_p99".to_string(), 45.5),
+                        ]),
+                    },
+                    error: None,
+                    stdout: Some("Test executed successfully".to_string()),
+                    stderr: None,
+                    timestamp: std::time::SystemTime::now(),
+                },
+                TestResult {
+                    test_name: "test_failed_assertion".to_string(),
+                    status: TestStatus::Failed,
+                    duration: Duration::from_millis(500),
+                    metrics: TestMetrics {
+                        memory_peak: Some(2 * BYTES_PER_MB),
+                        memory_average: Some(BYTES_PER_MB),
+                        cpu_time: Some(Duration::from_millis(400)),
+                        wall_time: Duration::from_millis(500),
+                        assertions: 10,
+                        operations: 50,
+                        custom_metrics: HashMap::new(),
+                    },
+                    error: Some("Assertion failed: expected 42, got 0".to_string()),
+                    stdout: Some("Running test...".to_string()),
+                    stderr: Some("ERROR: Assertion failed at line 42".to_string()),
+                    timestamp: std::time::SystemTime::now(),
+                },
+                TestResult {
+                    test_name: "test_skipped_conditionally".to_string(),
+                    status: TestStatus::Skipped,
+                    duration: Duration::ZERO,
+                    metrics: TestMetrics::default(),
+                    error: None,
+                    stdout: None,
+                    stderr: None,
+                    timestamp: std::time::SystemTime::now(),
+                },
+            ],
+            summary: TestSummary {
+                total_tests: 3,
+                passed: 1,
+                failed: 1,
+                skipped: 1,
+                success_rate: 33.33,
+            },
+            environment: HashMap::from([
+                ("rust_version".to_string(), "1.75.0".to_string()),
+                ("os".to_string(), "Linux".to_string()),
+                ("arch".to_string(), "x86_64".to_string()),
+            ]),
+            configuration: HashMap::from([
+                ("parallel_tests".to_string(), "8".to_string()),
+                ("test_timeout".to_string(), "60s".to_string()),
+            ]),
+            metadata: HashMap::from([
+                ("test_run_id".to_string(), "example-run-001".to_string()),
+                ("branch".to_string(), "main".to_string()),
+                ("commit".to_string(), "abc123def".to_string()),
+            ]),
+        }]
+    }
+
+    pub async fn run_example() -> Result<(), Box<dyn std::error::Error>> {
+        println!("BitNet.rs Reporting System Example");
+        println!("==================================\n");
+
+        // Create output directory
+        let output_dir = PathBuf::from("example_reports");
+        fs::create_dir_all(&output_dir).await?;
+
+        let test_data = create_example_test_data();
+
+        // Example 1: Generate individual reports
+        println!("1. Generating individual reports...");
+
+        // JSON Report
+        let json_reporter = JsonReporter::new();
+        let json_result =
+            json_reporter.generate_report(&test_data, &output_dir.join("example_report.json")).await?;
+        println!("   ✅ JSON: {} bytes", json_result.size_bytes);
+
+        // HTML Report (interactive)
+        let html_reporter = HtmlReporter::new(true);
+        let html_result =
+            html_reporter.generate_report(&test_data, &output_dir.join("example_report.html")).await?;
+        println!("   ✅ HTML: {} bytes", html_result.size_bytes);
+
+        // JUnit XML Report
+        let junit_reporter = JunitReporter::new();
+        let junit_result =
+            junit_reporter.generate_report(&test_data, &output_dir.join("example_report.xml")).await?;
+        println!("   ✅ JUnit XML: {} bytes", junit_result.size_bytes);
+
+        // Markdown Report
+        let markdown_reporter = MarkdownReporter::new();
+        let markdown_result = markdown_reporter
+            .generate_report(&test_data, &output_dir.join("example_report.md"))
+            .await?;
+        println!("   ✅ Markdown: {} bytes", markdown_result.size_bytes);
+
+        println!();
+
+        // Example 2: Use ReportingManager for multiple formats
+        println!("2. Using ReportingManager for multiple formats...");
+
+        let manager_dir = output_dir.join("manager_output");
+        let config = ReportConfig {
+            output_dir: manager_dir.clone(),
+            formats: vec![
+                ReportFormat::Html,
+                ReportFormat::Json,
+                ReportFormat::Junit,
+                ReportFormat::Markdown,
+            ],
+            generate_coverage: false,
+            include_artifacts: true,
+            interactive_html: true,
+        };
+
+        let manager = ReportingManager::new(config);
+        let results = manager.generate_all_reports(&test_data).await?;
+
+        println!("   Generated {} reports:", results.len());
+        for result in &results {
+            println!("   ✅ {}: {} bytes", result.format, result.size_bytes);
+        }
+
+        println!();
+
+        // Example 3: Generate with coverage data
+        println!("3. Generating report with coverage data...");
+
+        let coverage_config = ReportConfig {
+            output_dir: output_dir.join("coverage_output"),
+            formats: vec![ReportFormat::Html],
+            generate_coverage: true,
+            include_artifacts: true,
+            interactive_html: true,
+        };
+
+        let coverage_manager = ReportingManager::new(coverage_config);
+        let coverage_results = coverage_manager.generate_all_reports(&test_data).await?;
+
+        for result in &coverage_results {
+            println!("   ✅ {} with coverage: {} bytes", result.format, result.size_bytes);
+        }
+
+        println!();
+        println!("✅ All reports generated successfully!");
+        println!("📁 Reports saved to: {}", output_dir.display());
+
+        Ok(())
+    }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("BitNet.rs Reporting System Example");
-    println!("==================================\n");
-
-    // Create output directory
-    let output_dir = PathBuf::from("example_reports");
-    fs::create_dir_all(&output_dir).await?;
-
-    let test_data = create_example_test_data();
-
-    // Example 1: Generate individual reports
-    println!("1. Generating individual reports...");
-
-    // JSON Report
-    let json_reporter = JsonReporter::new();
-    let json_result =
-        json_reporter.generate_report(&test_data, &output_dir.join("example_report.json")).await?;
-    println!("   ✅ JSON: {} bytes", json_result.size_bytes);
-
-    // HTML Report (interactive)
-    let html_reporter = HtmlReporter::new(true);
-    let html_result =
-        html_reporter.generate_report(&test_data, &output_dir.join("example_report.html")).await?;
-    println!("   ✅ HTML: {} bytes", html_result.size_bytes);
-
-    // JUnit XML Report
-    let junit_reporter = JunitReporter::new();
-    let junit_result =
-        junit_reporter.generate_report(&test_data, &output_dir.join("example_report.xml")).await?;
-    println!("   ✅ JUnit XML: {} bytes", junit_result.size_bytes);
-
-    // Markdown Report
-    let markdown_reporter = MarkdownReporter::new();
-    let markdown_result = markdown_reporter
-        .generate_report(&test_data, &output_dir.join("example_report.md"))
-        .await?;
-    println!("   ✅ Markdown: {} bytes", markdown_result.size_bytes);
-
-    println!();
-
-    // Example 2: Use ReportingManager for multiple formats
-    println!("2. Using ReportingManager for multiple formats...");
-
-    let manager_dir = output_dir.join("manager_output");
-    let config = ReportConfig {
-        output_dir: manager_dir.clone(),
-        formats: vec![
-            ReportFormat::Html,
-            ReportFormat::Json,
-            ReportFormat::Junit,
-            ReportFormat::Markdown,
-        ],
-        include_artifacts: true,
-        generate_coverage: false,
-        interactive_html: true,
-    };
-
-    let manager = ReportingManager::new(config);
-    let results = manager.generate_all_reports(&test_data).await?;
-
-    for result in results {
-        println!("   ✅ {:?}: {} bytes", result.format, result.size_bytes);
+    #[cfg(feature = "reporting")]
+    {
+        reporting_example::run_example().await?;
     }
-
-    println!();
-    println!("📁 Reports saved to: {}", output_dir.display());
-    println!("   • Individual reports: example_report.*");
-    println!("   • Manager reports: manager_output/test_report.*");
-    println!("   • Summary: manager_output/report_summary.md");
-
-    // Display a sample of the generated content
-    println!("\n3. Sample content from JSON report:");
-    let json_content = fs::read_to_string(output_dir.join("example_report.json")).await?;
-    let json_parsed: serde_json::Value = serde_json::from_str(&json_content)?;
-    println!("   Generator: {}", json_parsed["metadata"]["generator"]);
-    println!("   Total Tests: {}", json_parsed["summary"]["total_tests"]);
-    println!(
-        "   Success Rate: {:.1}%",
-        json_parsed["summary"]["overall_success_rate"].as_f64().unwrap() * 100.0
-    );
-
-    println!("\n🎉 Example completed successfully!");
-    println!("Open the HTML report in your browser to see the interactive features.");
-
+    
+    #[cfg(not(feature = "reporting"))]
+    {
+        println!("Reporting example requires the 'reporting' feature to be enabled.");
+        println!("Run with: cargo run --example reporting_example --features reporting");
+    }
+    
     Ok(())
 }

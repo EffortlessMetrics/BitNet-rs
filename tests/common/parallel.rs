@@ -1,5 +1,7 @@
 use super::config::TestConfig;
 use super::errors::TestError;
+#[cfg(feature = "fixtures")]
+use super::fast_config::fast_config;
 use super::results::{TestResult as TestRecord, TestStatus};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -371,7 +373,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_resource_monitor() {
+        #[cfg(feature = "fixtures")]
         let config = fast_config();
+        #[cfg(not(feature = "fixtures"))]
+        let config = TestConfig::default();
         let monitor = ResourceMonitor::new(config);
 
         let can_start = monitor.can_start_more_tests().await;

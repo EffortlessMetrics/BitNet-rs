@@ -4,11 +4,10 @@ use tokio::time::sleep;
 
 use bitnet_tests::common::{
     config::TestConfig,
-    debug_integration::{DebugTestReporter, create_debug_harness, debug_config_from_env},
+    debug_integration::create_debug_harness,
     debugging::DebugConfig,
     errors::{TestError, TestOpResult},
-    fixtures::FixtureManager,
-    harness::{TestCase, TestSuite},
+    harness::{FixtureCtx, TestCase, TestSuite},
     results::TestMetrics,
 };
 use bitnet_tests::units::BYTES_PER_MB;
@@ -33,7 +32,7 @@ impl TestCase for DebuggableTestCase {
         &self.name
     }
 
-    async fn setup(&self, _fixtures: &FixtureManager) -> TestOpResult<()> {
+    async fn setup(&self, _fixtures: FixtureCtx<'_>) -> TestOpResult<()> {
         println!("Setting up test: {}", self.name);
 
         // Simulate setup work
@@ -67,6 +66,8 @@ impl TestCase for DebuggableTestCase {
             memory_peak: Some(self.memory_usage),
             memory_average: Some(self.memory_usage / 2),
             cpu_time: Some(self.duration / 2),
+            assertions: 0,
+            operations: 0,
             custom_metrics: [
                 ("simulated_metric".to_string(), 42.0),
                 ("test_complexity".to_string(), 3.14),
@@ -241,7 +242,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let debugger = debug_harness.debugger();
 
     // Add debug reporter
-    let mut harness = debug_harness;
+    let harness = debug_harness;
     // Note: We can't easily add reporters to the wrapped harness in this design
     // In a real implementation, we'd need to modify the harness creation
 
