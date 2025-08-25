@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **GGUF Validation API**:
+  - Fast 24-byte header-only validation without loading full model
+  - Production-ready parser with typed errors and non-exhaustive enums
+  - `compat-check` CLI command with stable exit codes for CI automation
+  - `--strict` flag for enforcing version and sanity checks
+  - Early validation in engine before heavy memory allocations
+  - JSON output for programmatic validation scripts
 - **IQ2_S Quantization Support**:
   - Native Rust implementation with optimized dequantization
   - FFI backend via GGML for compatibility
