@@ -1,4 +1,4 @@
-use std::io;
+use std::io::{self, BufReader, Read, Seek, SeekFrom};
 use thiserror::Error;
 
 /// Errors returned when reading/parsing a GGUF header.
@@ -106,141 +106,202 @@ pub struct GgufKv {
     pub value: GgufValue,
 }
 
+// Helper constants and functions for KV reading
+const MAX_KEY_LEN: u64 = 1 * 1024 * 1024; // 1 MiB
+const MAX_STR_LEN: u64 = 10 * 1024 * 1024; // 10 MiB
+const ARRAY_SAMPLE_LIMIT: usize = 256; // cap returned items per array
+
+#[inline]
+fn read_u32_le<R: Read>(r: &mut R) -> Result<u32> {
+    let mut b = [0u8; 4];
+    r.read_exact(&mut b)?;
+    Ok(u32::from_le_bytes(b))
+}
+
+#[inline]
+fn read_u64_le<R: Read>(r: &mut R) -> Result<u64> {
+    let mut b = [0u8; 8];
+    r.read_exact(&mut b)?;
+    Ok(u64::from_le_bytes(b))
+}
+
+#[inline]
+fn read_string<R: Read>(r: &mut R) -> Result<String> {
+    let len = read_u64_le(r)?;
+    if len > MAX_STR_LEN {
+        return Err(GgufError::StringTooLarge(len));
+    }
+    let mut buf = vec![0u8; len as usize];
+    r.read_exact(&mut buf)?;
+    String::from_utf8(buf).map_err(|_| GgufError::Malformed)
+}
+
+#[inline]
+fn value_from_type_scalar<R: Read>(r: &mut R, ty: u32) -> Result<GgufValue> {
+    Ok(match ty {
+        0 => {
+            let mut b = [0];
+            r.read_exact(&mut b)?;
+            GgufValue::U8(b[0])
+        }
+        1 => {
+            let mut b = [0];
+            r.read_exact(&mut b)?;
+            GgufValue::I8(b[0] as i8)
+        }
+        2 => {
+            let mut b = [0; 2];
+            r.read_exact(&mut b)?;
+            GgufValue::U16(u16::from_le_bytes(b))
+        }
+        3 => {
+            let mut b = [0; 2];
+            r.read_exact(&mut b)?;
+            GgufValue::I16(i16::from_le_bytes(b))
+        }
+        4 => {
+            let mut b = [0; 4];
+            r.read_exact(&mut b)?;
+            GgufValue::U32(u32::from_le_bytes(b))
+        }
+        5 => {
+            let mut b = [0; 4];
+            r.read_exact(&mut b)?;
+            GgufValue::I32(i32::from_le_bytes(b))
+        }
+        6 => {
+            let mut b = [0; 4];
+            r.read_exact(&mut b)?;
+            GgufValue::F32(f32::from_le_bytes(b))
+        }
+        7 => {
+            let mut b = [0];
+            r.read_exact(&mut b)?;
+            GgufValue::Bool(b[0] != 0)
+        }
+        10 => {
+            let mut b = [0; 8];
+            r.read_exact(&mut b)?;
+            GgufValue::U64(u64::from_le_bytes(b))
+        }
+        11 => {
+            let mut b = [0; 8];
+            r.read_exact(&mut b)?;
+            GgufValue::I64(i64::from_le_bytes(b))
+        }
+        12 => {
+            let mut b = [0; 8];
+            r.read_exact(&mut b)?;
+            GgufValue::F64(f64::from_le_bytes(b))
+        }
+        _ => return Err(GgufError::InvalidKvType(ty)),
+    })
+}
+
+#[inline]
+fn scalar_size_bytes(ty: u32) -> Option<usize> {
+    match ty {
+        0 | 1 | 7 => Some(1),
+        2 | 3 => Some(2),
+        4 | 5 | 6 => Some(4),
+        10 | 11 | 12 => Some(8),
+        _ => None,
+    }
+}
+
+fn read_array_value<R: Read + Seek>(r: &mut R) -> Result<Vec<GgufValue>> {
+    // element type and length, then elements
+    let elem_ty = read_u32_le(r)?;
+    let len = read_u64_le(r)?;
+
+    // We return at most ARRAY_SAMPLE_LIMIT items to bound memory.
+    let keep = (len as usize).min(ARRAY_SAMPLE_LIMIT);
+    let mut out = Vec::with_capacity(keep);
+
+    if elem_ty == 8 {
+        // string array: each item is [u64 len][bytes]
+        for i in 0..len {
+            let slen = read_u64_le(r)?;
+            if slen > MAX_STR_LEN {
+                return Err(GgufError::StringTooLarge(slen));
+            }
+            if (i as usize) < keep {
+                let mut sbuf = vec![0u8; slen as usize];
+                r.read_exact(&mut sbuf)?;
+                let s = String::from_utf8(sbuf).map_err(|_| GgufError::Malformed)?;
+                out.push(GgufValue::String(s));
+            } else {
+                // skip bytes for the remainder efficiently
+                r.seek(SeekFrom::Current(slen as i64))?;
+            }
+        }
+        return Ok(out);
+    }
+
+    // numeric/bool arrays: fixed-size elements
+    if let Some(sz) = scalar_size_bytes(elem_ty) {
+        for i in 0..len {
+            if (i as usize) < keep {
+                out.push(value_from_type_scalar(r, elem_ty)?);
+            } else {
+                // skip remaining elements in one shot
+                let rem = len - i;
+                let skip = (rem as u128) * (sz as u128); // avoid overflow
+                if skip > i64::MAX as u128 {
+                    // If skip is too large, do it in chunks
+                    let chunk_size = 1_000_000_000; // 1GB chunks
+                    let mut remaining = skip;
+                    while remaining > 0 {
+                        let to_skip = remaining.min(chunk_size as u128) as i64;
+                        r.seek(SeekFrom::Current(to_skip))?;
+                        remaining -= to_skip as u128;
+                    }
+                } else {
+                    r.seek(SeekFrom::Current(skip as i64))?;
+                }
+                break;
+            }
+        }
+        return Ok(out);
+    }
+
+    Err(GgufError::InvalidKvType(elem_ty))
+}
+
 /// Read KV pairs from a GGUF file
 pub fn read_kv_pairs(
     path: impl AsRef<std::path::Path>,
     limit: Option<usize>,
 ) -> Result<Vec<GgufKv>> {
-    use std::io::{Read, Seek, SeekFrom};
+    let f = std::fs::File::open(path)?;
+    let mut r = BufReader::new(f);
 
-    let mut f = std::fs::File::open(path)?;
-
-    // Skip the header we already validated
-    f.seek(SeekFrom::Start(GGUF_HEADER_LEN as u64))?;
-
-    // Read n_kv from header first
+    // read header
     let mut header_buf = [0u8; GGUF_HEADER_LEN];
-    f.seek(SeekFrom::Start(0))?;
-    f.read_exact(&mut header_buf)?;
+    r.read_exact(&mut header_buf)?;
     let header = parse_header(&header_buf)?;
-
-    // Now position after header
-    f.seek(SeekFrom::Start(GGUF_HEADER_LEN as u64))?;
 
     let mut kvs = Vec::new();
     let n_kv = limit.map(|l| l.min(header.n_kv as usize)).unwrap_or(header.n_kv as usize);
 
     for _ in 0..n_kv {
-        // Read key length
-        let mut len_buf = [0u8; 8];
-        f.read_exact(&mut len_buf)?;
-        let key_len = u64::from_le_bytes(len_buf);
-
-        if key_len > 1024 * 1024 {
-            // 1MB sanity limit for keys
+        // key
+        let key_len = read_u64_le(&mut r)?;
+        if key_len > MAX_KEY_LEN {
             return Err(GgufError::StringTooLarge(key_len));
         }
-
-        // Read key
         let mut key_buf = vec![0u8; key_len as usize];
-        f.read_exact(&mut key_buf)?;
+        r.read_exact(&mut key_buf)?;
         let key = String::from_utf8(key_buf).map_err(|_| GgufError::Malformed)?;
 
-        // Read value type
-        let mut type_buf = [0u8; 4];
-        f.read_exact(&mut type_buf)?;
-        let value_type = u32::from_le_bytes(type_buf);
+        // type
+        let value_type = read_u32_le(&mut r)?;
 
-        // Read value based on type
+        // value
         let value = match value_type {
-            0 => {
-                // UINT8
-                let mut buf = [0u8; 1];
-                f.read_exact(&mut buf)?;
-                GgufValue::U8(buf[0])
-            }
-            1 => {
-                // INT8
-                let mut buf = [0u8; 1];
-                f.read_exact(&mut buf)?;
-                GgufValue::I8(buf[0] as i8)
-            }
-            2 => {
-                // UINT16
-                let mut buf = [0u8; 2];
-                f.read_exact(&mut buf)?;
-                GgufValue::U16(u16::from_le_bytes(buf))
-            }
-            3 => {
-                // INT16
-                let mut buf = [0u8; 2];
-                f.read_exact(&mut buf)?;
-                GgufValue::I16(i16::from_le_bytes(buf))
-            }
-            4 => {
-                // UINT32
-                let mut buf = [0u8; 4];
-                f.read_exact(&mut buf)?;
-                GgufValue::U32(u32::from_le_bytes(buf))
-            }
-            5 => {
-                // INT32
-                let mut buf = [0u8; 4];
-                f.read_exact(&mut buf)?;
-                GgufValue::I32(i32::from_le_bytes(buf))
-            }
-            6 => {
-                // FLOAT32
-                let mut buf = [0u8; 4];
-                f.read_exact(&mut buf)?;
-                GgufValue::F32(f32::from_le_bytes(buf))
-            }
-            7 => {
-                // BOOL
-                let mut buf = [0u8; 1];
-                f.read_exact(&mut buf)?;
-                GgufValue::Bool(buf[0] != 0)
-            }
-            8 => {
-                // STRING
-                let mut len_buf = [0u8; 8];
-                f.read_exact(&mut len_buf)?;
-                let str_len = u64::from_le_bytes(len_buf);
-
-                if str_len > 10 * 1024 * 1024 {
-                    // 10MB sanity limit
-                    return Err(GgufError::StringTooLarge(str_len));
-                }
-
-                let mut str_buf = vec![0u8; str_len as usize];
-                f.read_exact(&mut str_buf)?;
-                GgufValue::String(String::from_utf8(str_buf).map_err(|_| GgufError::Malformed)?)
-            }
-            9 => {
-                // ARRAY
-                // For now, skip arrays as they're complex
-                // Would need recursive parsing
-                continue;
-            }
-            10 => {
-                // UINT64
-                let mut buf = [0u8; 8];
-                f.read_exact(&mut buf)?;
-                GgufValue::U64(u64::from_le_bytes(buf))
-            }
-            11 => {
-                // INT64
-                let mut buf = [0u8; 8];
-                f.read_exact(&mut buf)?;
-                GgufValue::I64(i64::from_le_bytes(buf))
-            }
-            12 => {
-                // FLOAT64
-                let mut buf = [0u8; 8];
-                f.read_exact(&mut buf)?;
-                GgufValue::F64(f64::from_le_bytes(buf))
-            }
-            _ => return Err(GgufError::InvalidKvType(value_type)),
+            8 => GgufValue::String(read_string(&mut r)?),
+            9 => GgufValue::Array(read_array_value(&mut r)?),
+            ty => value_from_type_scalar(&mut r, ty)?,
         };
 
         kvs.push(GgufKv { key, value });
