@@ -7,6 +7,7 @@ use serde::{Serialize, Deserialize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::{info, debug, warn};
+use crate::engine::inspect_model;
 
 /// Model loading metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -161,6 +162,16 @@ impl ModelLoader {
     
     fn load_gguf(&self) -> Result<(Arc<dyn Model>, Arc<dyn Tokenizer>, String, Vec<String>)> {
         debug!("Loading GGUF model");
+        
+        // Early header validation before heavy allocations
+        let model_info = inspect_model(&self.model_path)
+            .map_err(|e| anyhow!("GGUF header validation failed: {}", e))?;
+        info!(
+            "GGUF header validated: version={}, tensors={}, kvs={}",
+            model_info.version(),
+            model_info.n_tensors(),
+            model_info.n_kv()
+        );
         
         let loader = gguf::GgufLoader::new(&self.model_path)?;
         let model = loader.load_model()?;
