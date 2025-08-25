@@ -289,6 +289,16 @@ enum Commands {
         #[arg(long, default_value_t = false)]
         json: bool,
     },
+
+    /// Check GGUF file compatibility using header validation
+    CompatCheck {
+        /// Path to .gguf file
+        path: std::path::PathBuf,
+
+        /// Output JSON
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -397,6 +407,7 @@ async fn main() -> Result<()> {
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
         Some(Commands::Info) => show_system_info().await,
         Some(Commands::Inspect { model, json }) => handle_inspect_command(model, json).await,
+        Some(Commands::CompatCheck { path, json }) => handle_compat_check_command(path, json).await,
         None => {
             // No command provided, show help
             let mut cmd = Cli::command();
@@ -594,7 +605,7 @@ async fn run_simple_generation(
     repetition_penalty: f32,
     seed: Option<u64>,
     allow_mock: bool,
-    strict_mapping: bool,
+    _strict_mapping: bool,
     strict_tokenizer: bool,
     json_out: Option<std::path::PathBuf>,
     dump_ids: bool,
@@ -1217,6 +1228,54 @@ async fn handle_inspect_command(model_path: std::path::PathBuf, json: bool) -> R
     } else {
         println!("{}", style("Model Metadata").bold().cyan());
         println!("{:#?}", metadata);
+    }
+
+    Ok(())
+}
+
+/// Check GGUF file compatibility using the new header parser
+async fn handle_compat_check_command(path: std::path::PathBuf, json: bool) -> Result<()> {
+    use bitnet_inference::gguf;
+    use serde_json::json;
+
+    // Use the new blocking reader to avoid runtime requirements
+    let header = gguf::read_header_blocking(&path)
+        .map_err(|e| anyhow::anyhow!("GGUF validation failed: {}", e))?;
+
+    if json {
+        let obj = json!({
+            "path": path.display().to_string(),
+            "status": "valid",
+            "gguf": {
+                "version": header.version,
+                "n_tensors": header.n_tensors,
+                "n_kv": header.n_kv,
+            },
+            "compatibility": {
+                "supported_version": (1..=3).contains(&header.version),
+                "tensors_reasonable": header.n_tensors <= 10_000_000,
+                "kvs_reasonable": header.n_kv <= 10_000_000,
+            }
+        });
+        println!("{}", serde_json::to_string_pretty(&obj)?);
+    } else {
+        println!("File:      {}", path.display());
+        println!("Status:    ✓ Valid GGUF");
+        println!(
+            "Version:   {} {}",
+            header.version,
+            if (1..=3).contains(&header.version) { "(supported)" } else { "(unsupported)" }
+        );
+        println!("Tensors:   {}", header.n_tensors);
+        println!("KV pairs:  {}", header.n_kv);
+
+        // Warnings
+        if header.n_tensors > 10_000_000 || header.n_kv > 10_000_000 {
+            println!("\n⚠ Warning: Unusually high tensor/KV counts detected");
+        }
+        if !(1..=3).contains(&header.version) {
+            println!("\n⚠ Warning: Unsupported GGUF version");
+        }
     }
 
     Ok(())

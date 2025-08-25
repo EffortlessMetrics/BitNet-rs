@@ -8,6 +8,7 @@ use bitnet_common::{BitNetConfig, BitNetTensor, ConcreteTensor, Device, Tensor};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use candle_core::{DType, IndexOp};
+use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, instrument, warn};
@@ -16,9 +17,35 @@ use crate::{
     backends::{Backend, CpuBackend, GpuBackend},
     cache::{CacheConfig, KVCache},
     config::{GenerationConfig, InferenceConfig},
+    gguf,
     sampling::{SamplingConfig, SamplingStrategy},
     streaming::{GenerationStream, StreamingConfig},
 };
+
+/// Lightweight model info from GGUF header
+#[derive(Debug, Clone)]
+pub struct ModelInfo {
+    pub header: gguf::GgufHeader,
+    // TODO: add kvs, tensor overview, quantization hints, etc.
+}
+
+impl ModelInfo {
+    pub fn version(&self) -> u32 {
+        self.header.version
+    }
+    pub fn n_tensors(&self) -> u64 {
+        self.header.n_tensors
+    }
+    pub fn n_kv(&self) -> u64 {
+        self.header.n_kv
+    }
+}
+
+/// Synchronous inspection used before full model initialization.
+pub fn inspect_model(path: &Path) -> gguf::Result<ModelInfo> {
+    let header = gguf::read_header_blocking(path)?;
+    Ok(ModelInfo { header })
+}
 
 /// Result type for inference operations
 #[derive(Debug, Clone)]
