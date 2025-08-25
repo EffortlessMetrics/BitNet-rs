@@ -1,32 +1,41 @@
 # BitNet-rs Makefile - One-click everything
 # Usage: make [target]
 
-.PHONY: help all quick install dev test bench clean gpu docker run serve repl release deploy update fmt lint check fix docs ci setup
-
-# Default target
+# Default goal & common vars
 .DEFAULT_GOAL := quick
+CARGO ?= cargo
 
-# Colors
-RED := \033[0;31m
-GREEN := \033[0;32m
-YELLOW := \033[1;33m
-BLUE := \033[0;34m
-NC := \033[0m # No Color
+# Pretty colors (safe fallbacks if not a TTY)
+GREEN := $(shell tput setaf 2 2>/dev/null || echo "")
+YELLOW := $(shell tput setaf 3 2>/dev/null || echo "")
+BLUE := $(shell tput setaf 4 2>/dev/null || echo "")
+RED := $(shell tput setaf 1 2>/dev/null || echo "")
+NC := $(shell tput sgr0 2>/dev/null || echo "")
+
+# Declare phony targets
+.PHONY: help all quick install dev test bench clean gpu docker run serve repl release deploy update fmt lint check fix docs ci setup \
+        build test-quick test-gpu test-integration gpu-smoke download-model crossval tree loc size \
+        watch flame audit outdated bloat docker-run docker-gpu profile valgrind heaptrack wasm python list verbose \
+        b t r c f l d g bt bf cf cb ct fr ft q a i
 
 # Detect OS and features
 OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ARCH := $(shell uname -m)
-FEATURES := cpu
 
-# Check for GPU
-ifeq ($(shell which nvidia-smi 2>/dev/null),)
-	ifeq ($(OS),darwin)
-		ifeq ($(ARCH),arm64)
-			FEATURES := gpu
-		endif
-	endif
+# Check for GPU availability
+GPU_AVAILABLE := $(shell command -v nvidia-smi 2> /dev/null)
+ifeq ($(GPU_AVAILABLE),)
+  ifeq ($(OS),darwin)
+    ifeq ($(ARCH),arm64)
+      FEATURES ?= gpu
+    else
+      FEATURES ?= cpu
+    endif
+  else
+    FEATURES ?= cpu
+  endif
 else
-	FEATURES := gpu
+  FEATURES ?= gpu
 endif
 
 # Number of parallel jobs
@@ -36,12 +45,12 @@ JOBS := $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 # PRIMARY TARGETS - THE ONES YOU'LL USE MOST
 #############################################################################
 
-## help: Show this help message
+## help: Show annotated targets
 help:
 	@echo "$(BLUE)BitNet-rs One-Click Commands$(NC)"
 	@echo ""
 	@echo "$(GREEN)Primary Commands:$(NC)"
-	@grep -E '^## ' Makefile | sed 's/## /  make /' | column -t -s ':'
+	@awk 'BEGIN {FS = ":.*?## "}; /^[a-zA-Z0-9_ -]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST) | sort
 	@echo ""
 	@echo "$(YELLOW)Quick Examples:$(NC)"
 	@echo "  make              # Quick start (builds and tests)"
@@ -58,7 +67,7 @@ quick:
 ## all: Build everything with all features
 all:
 	@echo "$(GREEN)Building everything...$(NC)"
-	@cargo build --workspace --all-features --release
+	@$(CARGO) build --workspace --all-features --release
 	@echo "$(GREEN)✓ Build complete$(NC)"
 
 ## install: Full installation with all dependencies
@@ -78,13 +87,13 @@ dev:
 ## build: Build with detected features
 build:
 	@echo "$(GREEN)Building with $(FEATURES) features...$(NC)"
-	@cargo build --release --no-default-features --features $(FEATURES)
+	@$(CARGO) build --locked --release --no-default-features --features $(FEATURES)
 
 ## release: Build optimized release
 release:
 	@echo "$(GREEN)Building optimized release...$(NC)"
-	@RUSTFLAGS="-C target-cpu=native -C lto=fat -C embed-bitcode=yes" \
-		cargo build --release --no-default-features --features $(FEATURES)
+	@RUSTFLAGS="-C target-cpu=native -C lto=fat" \
+		$(CARGO) build --locked --release --no-default-features --features $(FEATURES)
 
 ## docker: Build Docker image
 docker:
@@ -98,25 +107,25 @@ docker:
 ## test: Run all tests
 test:
 	@echo "$(GREEN)Running tests...$(NC)"
-	@cargo test --workspace --no-default-features --features $(FEATURES)
+	@$(CARGO) test --locked --workspace --no-default-features --features $(FEATURES)
 
 ## test-quick: Run quick tests only
 test-quick:
-	@cargo test --workspace --lib --no-default-features --features $(FEATURES)
+	@$(CARGO) test --locked --workspace --lib --no-default-features --features $(FEATURES)
 
 ## test-gpu: Run GPU tests (if available)
 test-gpu:
 	@echo "$(GREEN)Running GPU tests...$(NC)"
-	@cargo run -p xtask -- gpu-smoke
+	@$(CARGO) run -p xtask -- gpu-smoke
 
 ## test-integration: Run integration tests
 test-integration:
-	@cargo test --workspace --test '*' --no-default-features --features $(FEATURES)
+	@$(CARGO) test --locked --workspace --test '*' --no-default-features --features $(FEATURES)
 
 ## bench: Run benchmarks
 bench:
 	@echo "$(GREEN)Running benchmarks...$(NC)"
-	@cargo bench --workspace --no-default-features --features $(FEATURES)
+	@$(CARGO) bench --workspace --no-default-features --features $(FEATURES)
 
 #############################################################################
 # RUN TARGETS
@@ -124,19 +133,19 @@ bench:
 
 ## run: Run the CLI
 run:
-	@cargo run --release --no-default-features --features $(FEATURES) -- $(ARGS)
+	@$(CARGO) run --release --no-default-features --features $(FEATURES) -- $(ARGS)
 
 ## serve: Start the server
 serve:
-	@cargo run --release -p bitnet-server --no-default-features --features $(FEATURES)
+	@$(CARGO) run --release -p bitnet-server --no-default-features --features $(FEATURES)
 
 ## repl: Start interactive REPL
 repl:
-	@cargo run --release --no-default-features --features $(FEATURES) -- repl
+	@$(CARGO) run --release --no-default-features --features $(FEATURES) -- repl
 
 ## demo: Run demos
 demo:
-	@cargo run -p xtask -- demo --which all
+	@$(CARGO) run -p xtask -- demo --which all
 
 #############################################################################
 # DEVELOPMENT TARGETS
@@ -145,13 +154,13 @@ demo:
 ## fmt: Format all code
 fmt:
 	@echo "$(GREEN)Formatting code...$(NC)"
-	@cargo fmt --all
+	@$(CARGO) fmt --all
 	@echo "$(GREEN)✓ Code formatted$(NC)"
 
 ## lint: Run clippy lints
 lint:
 	@echo "$(GREEN)Running clippy...$(NC)"
-	@cargo clippy --workspace --all-targets --all-features -- -D warnings
+	@$(CARGO) clippy --workspace --all-targets --all-features -- -D warnings
 
 ## check: Run all checks (fmt, lint, test)
 check: fmt lint test
@@ -160,14 +169,14 @@ check: fmt lint test
 ## fix: Auto-fix issues
 fix:
 	@echo "$(GREEN)Auto-fixing issues...$(NC)"
-	@cargo fix --workspace --allow-dirty --allow-staged
-	@cargo fmt --all
-	@cargo clippy --workspace --fix --allow-dirty --allow-staged -- -D warnings
+	@$(CARGO) fix --workspace --allow-dirty --allow-staged
+	@$(CARGO) fmt --all
+	@$(CARGO) clippy --workspace --fix --allow-dirty --allow-staged -- -D warnings
 
 ## docs: Generate and open documentation
 docs:
 	@echo "$(GREEN)Generating documentation...$(NC)"
-	@cargo doc --workspace --no-deps --open
+	@$(CARGO) doc --workspace --no-deps --open
 
 #############################################################################
 # GPU TARGETS
@@ -175,11 +184,11 @@ docs:
 
 ## gpu: Check GPU availability
 gpu:
-	@cargo run -p xtask -- gpu-preflight
+	@$(CARGO) run -p xtask -- gpu-preflight
 
 ## gpu-smoke: Run GPU smoke tests
 gpu-smoke:
-	@cargo run -p xtask -- gpu-smoke
+	@$(CARGO) run -p xtask -- gpu-smoke
 
 #############################################################################
 # MAINTENANCE TARGETS
@@ -188,14 +197,14 @@ gpu-smoke:
 ## clean: Clean all build artifacts
 clean:
 	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
-	@cargo clean
+	@$(CARGO) clean
 	@rm -rf target/
 	@echo "$(GREEN)✓ Clean complete$(NC)"
 
 ## update: Update all dependencies
 update:
 	@echo "$(GREEN)Updating dependencies...$(NC)"
-	@cargo update
+	@$(CARGO) update
 	@rustup update
 	@echo "$(GREEN)✓ Updates complete$(NC)"
 
@@ -211,9 +220,9 @@ setup:
 ## ci: Run CI checks
 ci:
 	@echo "$(GREEN)Running CI checks...$(NC)"
-	@cargo fmt --all -- --check
-	@cargo clippy --workspace --all-targets --all-features -- -D warnings
-	@cargo test --workspace --no-default-features --features cpu
+	@$(CARGO) fmt --all -- --check
+	@$(CARGO) clippy --workspace --all-targets --all-features -- -D warnings
+	@$(CARGO) test --locked --workspace --no-default-features --features cpu
 	@echo "$(GREEN)✓ CI checks passed$(NC)"
 
 ## deploy: Deploy to production
@@ -227,11 +236,11 @@ deploy:
 
 ## download-model: Download BitNet model
 download-model:
-	@cargo run -p xtask -- download-model
+	@$(CARGO) run -p xtask -- download-model
 
 ## crossval: Run cross-validation tests
 crossval:
-	@cargo run -p xtask -- full-crossval
+	@$(CARGO) run -p xtask -- full-crossval
 
 ## tree: Show project structure
 tree:
@@ -279,23 +288,23 @@ i: install
 
 ## watch: Watch for changes and rebuild
 watch:
-	@cargo watch -x 'build --release --no-default-features --features $(FEATURES)'
+	@$(CARGO) watch -x 'build --locked --release --no-default-features --features $(FEATURES)'
 
 ## flame: Generate flamegraph (requires cargo-flamegraph)
 flame:
-	@cargo flamegraph --release --no-default-features --features $(FEATURES)
+	@$(CARGO) flamegraph --release --no-default-features --features $(FEATURES)
 
 ## audit: Security audit
 audit:
-	@cargo audit
+	@$(CARGO) audit
 
 ## outdated: Check for outdated dependencies
 outdated:
-	@cargo outdated
+	@$(CARGO) outdated
 
 ## bloat: Analyze binary bloat
 bloat:
-	@cargo bloat --release --no-default-features --features $(FEATURES)
+	@$(CARGO) bloat --release --no-default-features --features $(FEATURES)
 
 #############################################################################
 # DOCKER SHORTCUTS
@@ -315,18 +324,18 @@ docker-gpu: docker
 
 ## profile: Profile with perf (Linux only)
 profile:
-	@cargo build --release --no-default-features --features $(FEATURES)
+	@$(CARGO) build --locked --release --no-default-features --features $(FEATURES)
 	@perf record -g target/release/bitnet
 	@perf report
 
 ## valgrind: Run with valgrind (Linux only)
 valgrind:
-	@cargo build --release --no-default-features --features $(FEATURES)
+	@$(CARGO) build --locked --release --no-default-features --features $(FEATURES)
 	@valgrind --leak-check=full --show-leak-kinds=all target/release/bitnet
 
 ## heaptrack: Memory profiling (requires heaptrack)
 heaptrack:
-	@cargo build --release --no-default-features --features $(FEATURES)
+	@$(CARGO) build --locked --release --no-default-features --features $(FEATURES)
 	@heaptrack target/release/bitnet
 
 #############################################################################
@@ -335,7 +344,7 @@ heaptrack:
 
 ## wasm: Build WebAssembly target
 wasm:
-	@cargo build --target wasm32-unknown-unknown -p bitnet-wasm
+	@$(CARGO) build --target wasm32-unknown-unknown -p bitnet-wasm
 
 ## python: Build Python bindings
 python:
@@ -351,6 +360,6 @@ list:
 
 ## verbose: Run with verbose output
 verbose:
-	@RUST_LOG=debug cargo run --release --no-default-features --features $(FEATURES)
+	@RUST_LOG=debug $(CARGO) run --release --no-default-features --features $(FEATURES)
 
 .SILENT: help list
