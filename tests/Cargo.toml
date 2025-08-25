@@ -51,8 +51,18 @@ required-features = ["reporting", "fixtures"]
 
 
 [[bin]]
+name = "demo_reporting_comprehensive"
+path = "demo_reporting_comprehensive.rs"
+required-features = ["reporting"]
+
+[[bin]]
 name = "demo_error_handling"
 path = "demo_error_handling.rs"
+
+[[bin]]
+name = "demo_reporting_system"
+path = "demo_reporting_system.rs"
+required-features = ["reporting"]
 
 [[bin]]
 name = "fast_feedback_simple_demo"

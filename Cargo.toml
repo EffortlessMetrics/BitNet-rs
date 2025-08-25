@@ -197,12 +197,7 @@ name = "streaming_generation"
 required-features = ["cpu", "examples"]
 
 [[example]]
-name = "demo_reporting_comprehensive"
-path = "examples/demo_reporting_comprehensive.rs"
-
-[[example]]
-name = "demo_reporting_system"
-path = "examples/demo_reporting_system.rs"
+name = "simple_demo"
 
 [workspace.dependencies]
 # Core dependencies
