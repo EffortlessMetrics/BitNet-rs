@@ -35,6 +35,12 @@ pub enum ReportFormat {
     Markdown,
 }
 
+impl std::fmt::Display for ReportFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 /// Report generation errors
 #[derive(Debug)]
 pub enum ReportError {
