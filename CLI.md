@@ -43,9 +43,21 @@ bitnet run --model model.gguf --prompt "Hello, world!"
 
 Quickly validate GGUF file compatibility without loading the full model.
 
+**Exit Codes:**
+| Code | Meaning |
+|------|---------|
+| 0 | Valid GGUF file |
+| 1 | I/O error (file not found, permission denied, etc.) |
+| 2 | Malformed file (bad magic, short header, corrupt) |
+| 3 | Unsupported GGUF version |
+| 4 | Strict mode: unsupported version or suspicious counts |
+
 ```bash
 # Human-readable output
 bitnet compat-check model.gguf
+
+# Strict validation (exits 4 if suspicious)
+bitnet compat-check model.gguf --strict
 # Output:
 # File:      model.gguf
 # Status:    ✓ Valid GGUF

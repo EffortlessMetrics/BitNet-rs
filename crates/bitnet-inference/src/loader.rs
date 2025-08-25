@@ -166,11 +166,18 @@ impl ModelLoader {
         // Early header validation before heavy allocations
         let model_info = inspect_model(&self.model_path)
             .map_err(|e| anyhow!("GGUF header validation failed: {}", e))?;
+        
+        // Get file size for trace ID
+        let file_size = std::fs::metadata(&self.model_path)
+            .map(|m| m.len())
+            .unwrap_or(0);
+        
         info!(
-            "GGUF header validated: version={}, tensors={}, kvs={}",
+            "GGUF header validated: version={}, tensors={}, kvs={}, size_bytes={}",
             model_info.version(),
             model_info.n_tensors(),
-            model_info.n_kv()
+            model_info.n_kv(),
+            file_size
         );
         
         // Warn about suspicious counts
