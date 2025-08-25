@@ -298,7 +298,7 @@ impl CINotificationManager {
     async fn send_failure_notifications(
         &self,
         results: &[TestSuiteResult],
-        context: &CIContext,
+        _context: &CIContext,
     ) -> Result<()> {
         let failed_tests: Vec<&TestResult> = results
             .iter()

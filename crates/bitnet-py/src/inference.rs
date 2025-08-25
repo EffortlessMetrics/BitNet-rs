@@ -109,7 +109,7 @@ impl PyInferenceEngine {
     #[pyo3(signature = (prompt, max_tokens = 100, temperature = 0.7, top_p = 0.9, top_k = 50, **_kwargs))]
     fn generate_stream(
         &self,
-        py: Python<'_>,
+        _py: Python<'_>,
         prompt: &str,
         max_tokens: Option<u32>,
         temperature: Option<f32>,
@@ -218,7 +218,7 @@ impl PyStreamingGenerator {
     }
 
     /// Get the next token
-    fn __next__(&mut self, py: Python<'_>) -> PyResult<Option<String>> {
+    fn __next__(&mut self, _py: Python<'_>) -> PyResult<Option<String>> {
         if !self.started {
             self.started = true;
             // In a real implementation, this would start the streaming

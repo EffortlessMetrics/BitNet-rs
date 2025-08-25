@@ -253,7 +253,7 @@ impl FastFeedbackSystem {
             }
 
             // Simulate test execution time
-            let test_duration = self.estimate_test_duration(test_name);
+            let _test_duration = self.estimate_test_duration(test_name);
             tokio::time::sleep(Duration::from_millis(10)).await; // Minimal delay for simulation
 
             results.tests_run += 1;

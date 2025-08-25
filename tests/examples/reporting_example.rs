@@ -41,9 +41,11 @@ mod reporting_example {
                         ]),
                     },
                     error: None,
-                    stdout: Some("Test executed successfully".to_string()),
-                    stderr: None,
-                    timestamp: std::time::SystemTime::now(),
+                    stack_trace: None,
+                    artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now(),
+                    end_time: std::time::SystemTime::now() + Duration::from_secs(3),
+                    metadata: HashMap::new(),
                 },
                 TestResult {
                     test_name: "test_failed_assertion".to_string(),
@@ -59,9 +61,11 @@ mod reporting_example {
                         custom_metrics: HashMap::new(),
                     },
                     error: Some("Assertion failed: expected 42, got 0".to_string()),
-                    stdout: Some("Running test...".to_string()),
-                    stderr: Some("ERROR: Assertion failed at line 42".to_string()),
-                    timestamp: std::time::SystemTime::now(),
+                    stack_trace: Some("ERROR: Assertion failed at line 42\nStack trace...\n".to_string()),
+                    artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now(),
+                    end_time: std::time::SystemTime::now() + Duration::from_millis(500),
+                    metadata: HashMap::new(),
                 },
                 TestResult {
                     test_name: "test_skipped_conditionally".to_string(),
@@ -69,9 +73,11 @@ mod reporting_example {
                     duration: Duration::ZERO,
                     metrics: TestMetrics::default(),
                     error: None,
-                    stdout: None,
-                    stderr: None,
-                    timestamp: std::time::SystemTime::now(),
+                    stack_trace: None,
+                    artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now(),
+                    end_time: std::time::SystemTime::now(),
+                    metadata: HashMap::new(),
                 },
             ],
             summary: TestSummary {
@@ -79,7 +85,12 @@ mod reporting_example {
                 passed: 1,
                 failed: 1,
                 skipped: 1,
+                timeout: 0,
                 success_rate: 33.33,
+                total_duration: Duration::from_secs(8),
+                average_duration: Duration::from_secs(2),
+                peak_memory: Some(2 * BYTES_PER_MB),
+                total_assertions: 52,
             },
             environment: HashMap::from([
                 ("rust_version".to_string(), "1.75.0".to_string()),
@@ -90,11 +101,8 @@ mod reporting_example {
                 ("parallel_tests".to_string(), "8".to_string()),
                 ("test_timeout".to_string(), "60s".to_string()),
             ]),
-            metadata: HashMap::from([
-                ("test_run_id".to_string(), "example-run-001".to_string()),
-                ("branch".to_string(), "main".to_string()),
-                ("commit".to_string(), "abc123def".to_string()),
-            ]),
+            start_time: std::time::SystemTime::now(),
+            end_time: std::time::SystemTime::now() + Duration::from_secs(8),
         }]
     }
 
@@ -163,7 +171,7 @@ mod reporting_example {
 
         println!("   Generated {} reports:", results.len());
         for result in &results {
-            println!("   ✅ {}: {} bytes", result.format, result.size_bytes);
+            println!("   ✅ {:?}: {} bytes", result.format, result.size_bytes);
         }
 
         println!();
@@ -183,7 +191,7 @@ mod reporting_example {
         let coverage_results = coverage_manager.generate_all_reports(&test_data).await?;
 
         for result in &coverage_results {
-            println!("   ✅ {} with coverage: {} bytes", result.format, result.size_bytes);
+            println!("   ✅ {:?} with coverage: {} bytes", result.format, result.size_bytes);
         }
 
         println!();
