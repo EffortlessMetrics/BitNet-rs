@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--strict` flag for enforcing version and sanity checks
   - Early validation in engine before heavy memory allocations
   - JSON output for programmatic validation scripts
+- **GGUF KV Metadata Reader**:
+  - Read and inspect GGUF key-value metadata without full model loading
+  - Support for all GGUF value types (except arrays, deferred)
+  - `--show-kv` flag in CLI to display model metadata
+  - `--kv-limit` flag to control number of displayed KV pairs
+  - JSON output includes metadata when `--show-kv` is used
+  - Safety limits to prevent excessive memory usage
 - **IQ2_S Quantization Support**:
   - Native Rust implementation with optimized dequantization
   - FFI backend via GGML for compatibility
