@@ -1,4 +1,3 @@
-#![cfg(feature = "integration-tests")]
 //! Comprehensive demonstration of the reporting system
 //!
 //! This demo shows all four report formats (HTML, JSON, JUnit XML, Markdown)

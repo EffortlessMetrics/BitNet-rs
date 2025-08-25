@@ -1,4 +1,3 @@
-#![cfg(feature = "integration-tests")]
 //! Demonstration of the reporting system functionality
 //! This shows that the core reporting system works correctly
 
