@@ -285,11 +285,12 @@ vergen = { version = "9.0", features = [
 ] }
 
 [profile.release]
-lto = "fat"
-codegen-units = 1
-panic = "abort"
-strip = true
-# opt-level = 3 is default for release
+lto = "thin"              # Faster than "fat", still good optimization
+codegen-units = 1         # Single codegen unit for best optimization
+panic = "abort"           # Smaller binaries, no unwinding
+strip = "symbols"         # Strip symbols but keep debuginfo
+opt-level = 3             # Maximum optimization (default)
+# overflow-checks = false # Already false in release
 
 [profile.bench]
 debug = true
