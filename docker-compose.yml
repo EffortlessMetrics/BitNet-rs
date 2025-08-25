@@ -16,9 +16,11 @@ services:
     volumes:
       - ./models:/models:ro
       - ./data:/data
+      - bitnet_sccache:/home/bitnet/.cache/sccache
     environment:
       - RUST_LOG=info
       - BITNET_THREADS=4
+      - SCCACHE_DIR=/home/bitnet/.cache/sccache
     command: ["bitnet-server"]
     restart: unless-stopped
     security_opt:
@@ -56,9 +58,11 @@ services:
     volumes:
       - ./models:/models:ro
       - ./data:/data
+      - bitnet_sccache:/home/bitnet/.cache/sccache
     environment:
       - RUST_LOG=info
       - CUDA_VISIBLE_DEVICES=0
+      - SCCACHE_DIR=/home/bitnet/.cache/sccache
     command: ["bitnet-server"]
     restart: unless-stopped
     security_opt:
@@ -131,6 +135,7 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+  bitnet_sccache:
 
 networks:
   default:

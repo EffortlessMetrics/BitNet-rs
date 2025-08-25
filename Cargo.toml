@@ -294,6 +294,10 @@ strip = true
 [profile.bench]
 debug = true
 
+# Speed up dev builds for dependencies
+[profile.dev.package."*"]
+opt-level = 2
+
 # Workspace-level lints for code quality
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }

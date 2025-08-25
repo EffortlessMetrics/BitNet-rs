@@ -1,0 +1,55 @@
+# .dockerignore - Prevent context bloat and protect secrets
+
+# Build artifacts
+target
+**/target
+**/dist
+**/build
+**/.rust-build
+
+# Dependencies
+**/node_modules
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+
+# Version control
+.git
+.gitignore
+.github
+
+# IDE/Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs and temp files
+*.log
+*.tmp
+/tmp
+
+# Environment files (protect secrets)
+*.env
+.env*
+.envrc
+
+# Documentation builds
+docs/_build
+site/
+
+# Test artifacts
+coverage/
+*.profraw
+*.profdata
+
+# Local model files (they should be mounted)
+models/*.gguf
+models/*.safetensors
+
+# Cache directories
+.cache/
+~/.cache/

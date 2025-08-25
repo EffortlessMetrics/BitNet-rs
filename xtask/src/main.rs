@@ -2741,7 +2741,7 @@ fn gpu_preflight_cmd(require: bool, format: &str) -> Result<()> {
                 );
                 println!("  • AMD GPUs: Install ROCm from https://rocm.docs.amd.com");
                 println!("  • Apple Silicon: Metal support is built-in on macOS");
-                println!("  • Other GPUs: WebGPU backend provides compatibility");
+                println!("  • Other GPUs: WebGPU support depends on platform/runtime availability");
                 println!();
                 println!("Set CUDA_HOME or ROCM_PATH environment variables after installation.");
             }
@@ -2883,7 +2883,7 @@ impl GpuInfo {
         }
 
         if self.wgpu {
-            backends.push("WebGPU".to_string());
+            backends.push("WebGPU (platform-dependent)".to_string());
         }
 
         if backends.is_empty() {
