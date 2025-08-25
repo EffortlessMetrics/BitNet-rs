@@ -66,8 +66,9 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN useradd -m -u 1000 -s /bin/bash bitnet
+# Create non-root user with specific UID/GID for security
+RUN groupadd -g 10001 bitnet && \
+    useradd -m -u 10001 -g 10001 -s /bin/bash bitnet
 
 # Copy binary from CPU builder
 COPY --from=builder-cpu /app/target/release/bitnet /usr/local/bin/bitnet
@@ -105,8 +106,9 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN useradd -m -u 1000 -s /bin/bash bitnet
+# Create non-root user with specific UID/GID for security
+RUN groupadd -g 10001 bitnet && \
+    useradd -m -u 10001 -g 10001 -s /bin/bash bitnet
 
 # Copy binary from GPU builder
 COPY --from=builder-gpu /app/target/release/bitnet /usr/local/bin/bitnet

@@ -28,6 +28,10 @@ serde_json.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+
+[build-dependencies]
+vergen = { version = "9.0", features = ["build", "git", "gitcl", "rustc", "cargo"] }
+anyhow = "1.0"
 tracing-appender.workspace = true
 tracing-opentelemetry = { workspace = true, optional = true }
 prometheus = { workspace = true, optional = true }

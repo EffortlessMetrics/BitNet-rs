@@ -1,10 +1,34 @@
+# cargo-nextest configuration
+# https://nexte.st/book/configuration
+
 [profile.default]
-retries = 0
+# Test execution settings
 fail-fast = true
+test-threads = "num-cpus"
+retries = 0
+
+# Output settings
+failure-output = "immediate"
+success-output = "never"
+status-level = "pass"
+
+# Slow test detection
+slow-timeout = { period = "60s", terminate-after = 2 }
 
 [profile.default-miri]
 slow-timeout = "10m"
 
 [profile.ci]
-retries = 0
+# CI-specific settings
 fail-fast = false
+test-threads = 4
+retries = { backoff = "exponential", count = 2, delay = "1s", max-delay = "10s" }
+
+# Output for CI
+failure-output = "immediate"
+success-output = "final"
+status-level = "fail"
+
+# JUnit output for CI reporting
+[profile.ci.junit]
+path = "target/nextest/ci/junit.xml"

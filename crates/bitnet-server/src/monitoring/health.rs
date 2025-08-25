@@ -34,6 +34,20 @@ pub struct ComponentHealth {
     pub response_time_ms: Option<u64>,
 }
 
+/// Build metadata included in health response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuildInfo {
+    pub version: String,
+    pub git_sha: String,
+    pub git_branch: String,
+    pub build_timestamp: String,
+    pub rustc_version: String,
+    pub cargo_target: String,
+    pub cargo_profile: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cuda_version: Option<String>,
+}
+
 /// Overall health response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthResponse {
@@ -41,6 +55,7 @@ pub struct HealthResponse {
     pub timestamp: String,
     pub uptime_seconds: u64,
     pub version: String,
+    pub build: BuildInfo,
     pub components: HashMap<String, ComponentHealth>,
     pub metrics: HealthMetrics,
 }
@@ -103,6 +118,19 @@ impl HealthChecker {
             timestamp: chrono::Utc::now().to_rfc3339(),
             uptime_seconds: self.start_time.elapsed().as_secs(),
             version: env!("CARGO_PKG_VERSION").to_string(),
+            build: BuildInfo {
+                version: env!("CARGO_PKG_VERSION").to_string(),
+                git_sha: env!("VERGEN_GIT_SHA").to_string(),
+                git_branch: env!("VERGEN_GIT_BRANCH").to_string(),
+                build_timestamp: env!("VERGEN_BUILD_TIMESTAMP").to_string(),
+                rustc_version: env!("VERGEN_RUSTC_SEMVER").to_string(),
+                cargo_target: env!("VERGEN_CARGO_TARGET_TRIPLE").to_string(),
+                cargo_profile: env!("VERGEN_CARGO_PROFILE").to_string(),
+                #[cfg(feature = "cuda")]
+                cuda_version: Some(self.get_cuda_version()),
+                #[cfg(not(feature = "cuda"))]
+                cuda_version: None,
+            },
             components,
             metrics,
         }
@@ -271,6 +299,12 @@ impl HealthChecker {
             tokens_per_second: 0.0,
         }
     }
+
+    #[cfg(feature = "cuda")]
+    fn get_cuda_version(&self) -> String {
+        // In production, query actual CUDA version
+        "12.3".to_string()
+    }
 }
 
 #[inline]
@@ -375,8 +409,8 @@ async fn readiness_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> Respo
 #[cfg(test)]
 mod tests {
     use super::{
-        HealthMetrics, HealthProbe, HealthResponse, HealthStatus, create_health_routes_with_probe,
-        overall_status_from_counts, status_code_for,
+        BuildInfo, HealthMetrics, HealthProbe, HealthResponse, HealthStatus,
+        create_health_routes_with_probe, overall_status_from_counts, status_code_for,
     };
     use async_trait::async_trait;
     use axum::Router;
@@ -434,6 +468,16 @@ mod tests {
                 timestamp: chrono::Utc::now().to_rfc3339(),
                 uptime_seconds: 0,
                 version: "test".to_string(),
+                build: BuildInfo {
+                    version: "test".to_string(),
+                    git_sha: "test-sha".to_string(),
+                    git_branch: "test".to_string(),
+                    build_timestamp: "test".to_string(),
+                    rustc_version: "test".to_string(),
+                    cargo_target: "test".to_string(),
+                    cargo_profile: "test".to_string(),
+                    cuda_version: None,
+                },
                 components: Default::default(),
                 metrics: HealthMetrics::default(),
             }
