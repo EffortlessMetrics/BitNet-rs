@@ -68,6 +68,36 @@ See [VALIDATION.md](VALIDATION.md) for detailed validation specifications.
 
 ## Quick Start
 
+### One-Click Commands (Cargo-First)
+
+BitNet-rs uses **cargo as the source of truth**. All commands are pure cargo:
+
+#### 🚀 **CPU Path** (Default)
+```bash
+# Build and test with reproducible dependencies
+cargo build --locked --workspace --no-default-features --features cpu
+cargo test  --locked --workspace --no-default-features --features cpu
+```
+
+#### 🎮 **GPU Path** (CUDA/Metal/ROCm)
+```bash
+# Detect GPU and run smoke tests
+cargo xtask gpu-preflight         # Detects CUDA, prints versions
+cargo xtask gpu-smoke             # Fast CPU↔GPU parity check
+
+# Build with GPU support
+cargo build --locked --workspace --no-default-features --features gpu
+```
+
+#### 🛠️ **Utilities**
+```bash
+cargo xtask download-model        # Download BitNet models
+cargo xtask demo --which all      # Run all demos
+cargo xtask full-crossval         # Cross-validation tests
+```
+
+> **Note:** The `cargo xtask` alias is pre-configured in `.cargo/config.toml`
+
 ### Installation
 
 #### 🦀 **Rust Library**
