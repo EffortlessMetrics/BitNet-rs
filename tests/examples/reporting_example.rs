@@ -61,7 +61,9 @@ mod reporting_example {
                         custom_metrics: HashMap::new(),
                     },
                     error: Some("Assertion failed: expected 42, got 0".to_string()),
-                    stack_trace: Some("ERROR: Assertion failed at line 42\nStack trace...\n".to_string()),
+                    stack_trace: Some(
+                        "ERROR: Assertion failed at line 42\nStack trace...\n".to_string(),
+                    ),
                     artifacts: Vec::new(),
                     start_time: std::time::SystemTime::now(),
                     end_time: std::time::SystemTime::now() + Duration::from_millis(500),
