@@ -234,6 +234,13 @@ cargo test --package bitnet-tests --features integration-tests,fixtures
 cargo run --example reporting_example --features reporting
 cargo run --example ci_reporting_example --features reporting,trend
 cargo run --example debugging_example --features fixtures
+
+# Run GGUF format validation tests
+cargo test -p bitnet-inference --test gguf_header                 # Pure parser test
+cargo test -p bitnet-inference --no-default-features --features rt-tokio --test smoke -- --nocapture  # Async smoke test
+
+# Run verification script for all tests
+./scripts/verify-tests.sh
 ```
 
 ### Test Configuration

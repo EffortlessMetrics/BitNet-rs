@@ -40,7 +40,7 @@ cpu = ["bitnet-kernels/cpu-optimized"]
 gpu = ["bitnet-kernels/cuda"]
 streaming = []
 # Runtime selection
-rt-tokio = []
+rt-tokio = ["tokio/rt-multi-thread", "tokio/fs", "tokio/io-util", "tokio/macros"]
 rt-wasm = ["dep:wasm-bindgen-futures", "dep:gloo-timers"]
 # Only run GPU-dependent tests when requested:
 gpu-tests = []
