@@ -17,6 +17,9 @@ Thumbs.db
 # Logs
 *.log
 
+# Test artifacts
+tests/cache/
+
 # Python
 __pycache__/
 *.py[cod]
