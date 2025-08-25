@@ -1,0 +1,46 @@
+# Minimal Makefile - thin wrapper around cargo commands
+# The project uses cargo as the source of truth
+# This file is optional convenience only
+
+.PHONY: help build test gpu gpu-smoke demo clean
+
+# Default shows available cargo xtask commands
+help:
+	@echo "BitNet-rs - Cargo is the source of truth"
+	@echo "========================================"
+	@echo ""
+	@echo "CPU Commands:"
+	@echo "  cargo build --locked --workspace --no-default-features --features cpu"
+	@echo "  cargo test  --locked --workspace --no-default-features --features cpu"
+	@echo ""
+	@echo "GPU Commands:"
+	@echo "  cargo xtask gpu-preflight    # Detect GPU"
+	@echo "  cargo xtask gpu-smoke        # Quick test"
+	@echo "  cargo build --locked --workspace --no-default-features --features gpu"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  cargo xtask demo --which all"
+	@echo "  cargo xtask download-model"
+	@echo "  cargo xtask full-crossval"
+	@echo ""
+	@echo "Or use these shortcuts:"
+	@cargo --list | grep "^    xtask" | sed 's/^    /  cargo /'
+
+# Thin wrappers - just forward to cargo
+build:
+	cargo build --locked --workspace --no-default-features --features cpu
+
+test:
+	cargo test --locked --workspace --no-default-features --features cpu
+
+gpu:
+	cargo xtask gpu-preflight
+
+gpu-smoke:
+	cargo xtask gpu-smoke
+
+demo:
+	cargo xtask demo --which all
+
+clean:
+	cargo clean

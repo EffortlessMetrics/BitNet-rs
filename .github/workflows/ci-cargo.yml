@@ -1,0 +1,101 @@
+name: CI (Cargo-First)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # CPU path - always runs
+  cpu:
+    name: CPU Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.89.0
+      
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-cpu-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-cpu-
+      
+      - name: Build (CPU)
+        run: cargo build --locked --workspace --no-default-features --features cpu
+      
+      - name: Test (CPU)
+        run: cargo test --locked --workspace --no-default-features --features cpu
+      
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings
+      
+      - name: Format Check
+        run: cargo fmt --all -- --check
+
+  # GPU path - runs on self-hosted or skips gracefully
+  gpu:
+    name: GPU Build & Test
+    runs-on: [self-hosted, linux, gpu]
+    continue-on-error: true  # Don't fail the whole workflow if no GPU runner
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.89.0
+      
+      - name: GPU Preflight
+        run: cargo xtask gpu-preflight
+        continue-on-error: true
+      
+      - name: Build (GPU)
+        run: cargo build --locked --workspace --no-default-features --features gpu
+      
+      - name: GPU Smoke Test
+        run: cargo xtask gpu-smoke
+        env:
+          CUDA_VISIBLE_DEVICES: 0
+      
+      - name: Test (GPU)
+        run: cargo test --locked --workspace --no-default-features --features gpu
+
+  # Utilities & demos
+  utilities:
+    name: Utilities Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.89.0
+      
+      - name: Check xtask
+        run: |
+          cargo xtask --help
+          cargo xtask --version
+      
+      - name: Dry-run download
+        run: cargo xtask download-model --dry-run
+      
+      - name: Check demos availability
+        run: cargo xtask demo --list
