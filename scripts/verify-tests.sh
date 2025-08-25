@@ -3,12 +3,12 @@ set -euo pipefail
 
 echo "=== BitNet-rs Verification Tests ==="
 
-# 1) No Tokio build should work
-echo "Testing build without Tokio..."
+# 1) Base build (no extra features)
+echo "Testing base build (no extra features)..."
 cargo check -p bitnet-inference --no-default-features
 
-# 2) Tokio path compiles
-echo "Testing build with Tokio..."
+# 2) Build with async runtime features
+echo "Testing build with rt-tokio features..."
 cargo check -p bitnet-inference --no-default-features --features rt-tokio
 
 # 3) Pure parser test
