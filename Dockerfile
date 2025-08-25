@@ -5,6 +5,10 @@
 # CPU builder
 FROM rust:1.89-bookworm AS builder-cpu
 
+# Install sccache for faster rebuilds
+RUN cargo install sccache
+ENV RUSTC_WRAPPER=sccache
+
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -37,6 +41,9 @@ RUN apt-get update && apt-get install -y curl build-essential pkg-config libssl-
     rm -rf /var/lib/apt/lists/*
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.89.0
 ENV PATH=/root/.cargo/bin:$PATH
+# Install sccache for faster rebuilds
+RUN /root/.cargo/bin/cargo install sccache
+ENV RUSTC_WRAPPER=sccache
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY crates/ ./crates/

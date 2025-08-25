@@ -15,6 +15,9 @@ on:
       - '.github/workflows/gpu.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   RUSTC_WRAPPER: sccache
@@ -52,7 +55,7 @@ jobs:
       
       - name: GPU Preflight
         run: |
-          cargo run -p xtask -- gpu-preflight
+          cargo xtask gpu-preflight
           # Also log driver/runtime versions for debugging
           nvidia-smi --query-gpu=driver_version --format=csv,noheader || true
           nvcc --version || true
@@ -63,7 +66,7 @@ jobs:
       
       - name: GPU Smoke Test
         run: |
-          cargo run -p xtask -- gpu-smoke
+          cargo xtask gpu-smoke
           cargo test -p bitnet-kernels --test gpu_smoke \
             --no-default-features --features cuda -- --nocapture
         env:
@@ -74,7 +77,7 @@ jobs:
         if: success()
       
       - name: GPU Parity Tests (Optional)
-        run: cargo run -p xtask -- gpu-parity || true
+        run: cargo xtask gpu-parity || true
         continue-on-error: true
       
       - name: Upload GPU Diagnostics

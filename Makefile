@@ -116,7 +116,7 @@ test-quick:
 ## test-gpu: Run GPU tests (if available)
 test-gpu:
 	@echo "$(GREEN)Running GPU tests...$(NC)"
-	@$(CARGO) run -p xtask -- gpu-smoke
+	@$(CARGO) xtask gpu-smoke
 
 ## test-integration: Run integration tests
 test-integration:
@@ -145,7 +145,7 @@ repl:
 
 ## demo: Run demos
 demo:
-	@$(CARGO) run -p xtask -- demo --which all
+	@$(CARGO) xtask demo --which all
 
 #############################################################################
 # DEVELOPMENT TARGETS
@@ -184,11 +184,11 @@ docs:
 
 ## gpu: Check GPU availability
 gpu:
-	@$(CARGO) run -p xtask -- gpu-preflight
+	@$(CARGO) xtask gpu-preflight
 
 ## gpu-smoke: Run GPU smoke tests
 gpu-smoke:
-	@$(CARGO) run -p xtask -- gpu-smoke
+	@$(CARGO) xtask gpu-smoke
 
 #############################################################################
 # MAINTENANCE TARGETS
@@ -236,11 +236,11 @@ deploy:
 
 ## download-model: Download BitNet model
 download-model:
-	@$(CARGO) run -p xtask -- download-model
+	@$(CARGO) xtask download-model
 
 ## crossval: Run cross-validation tests
 crossval:
-	@$(CARGO) run -p xtask -- full-crossval
+	@$(CARGO) xtask full-crossval
 
 ## tree: Show project structure
 tree:

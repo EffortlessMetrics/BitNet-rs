@@ -146,6 +146,23 @@ make clean       # Clean build artifacts
 make update      # Update all dependencies
 ```
 
+### Docker Builds
+For faster Docker builds with BuildKit caching:
+```bash
+# Enable BuildKit for faster builds with cache mounts
+export DOCKER_BUILDKIT=1
+
+# Build CPU version
+docker build --target runtime -t bitnet:cpu .
+
+# Build GPU version  
+docker build --target runtime-gpu -t bitnet:gpu .
+
+# Use docker-compose (BuildKit enabled automatically)
+docker compose up --build bitnet-cpu
+docker compose --profile gpu up --build bitnet-gpu
+```
+
 ## 🔧 Environment Detection
 
 The system automatically detects:
