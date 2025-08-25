@@ -285,10 +285,11 @@ vergen = { version = "9.0", features = [
 ] }
 
 [profile.release]
-lto = true
+lto = "fat"
 codegen-units = 1
 panic = "abort"
 strip = true
+# opt-level = 3 is default for release
 
 [profile.bench]
 debug = true

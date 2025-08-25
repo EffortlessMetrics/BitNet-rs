@@ -1,8 +1,9 @@
-# Multi-stage Docker build for BitNet-rs
+# syntax=docker/dockerfile:1.6
+# Multi-stage Docker build for BitNet-rs (CPU + CUDA)
 # Supports both CPU and GPU backends
 
-# Build stage
-FROM rust:1.89-bookworm AS builder
+# CPU builder
+FROM rust:1.89-bookworm AS builder-cpu
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -24,9 +25,30 @@ COPY xtask/ ./xtask/
 COPY src/ ./src/
 COPY build.rs ./
 
-# Build with CPU features by default
+# Leverage BuildKit caches for faster rebuilds
 ARG FEATURES=cpu
-RUN cargo build --release --no-default-features --features ${FEATURES}
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/app/target \
+    cargo build --locked --release --no-default-features --features ${FEATURES}
+
+# CUDA builder (CUDA toolchain + Rust)
+FROM nvidia/cuda:12.3.1-devel-ubuntu22.04 AS builder-gpu
+RUN apt-get update && apt-get install -y curl build-essential pkg-config libssl-dev ca-certificates git && \
+    rm -rf /var/lib/apt/lists/*
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.89.0
+ENV PATH=/root/.cargo/bin:$PATH
+WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+COPY crates/ ./crates/
+COPY crossval/ ./crossval/
+COPY tests/ ./tests/
+COPY xtask/ ./xtask/
+COPY src/ ./src/
+COPY build.rs ./
+ARG FEATURES=gpu
+RUN --mount=type=cache,target=/root/.cargo/registry \
+    --mount=type=cache,target=/app/target \
+    cargo build --locked --release --no-default-features --features ${FEATURES}
 
 # Runtime stage - minimal image
 FROM debian:bookworm-slim AS runtime
@@ -40,9 +62,9 @@ RUN apt-get update && apt-get install -y \
 # Create non-root user
 RUN useradd -m -u 1000 -s /bin/bash bitnet
 
-# Copy binary from builder
-COPY --from=builder /app/target/release/bitnet /usr/local/bin/bitnet
-COPY --from=builder /app/target/release/bitnet-server /usr/local/bin/bitnet-server
+# Copy binary from CPU builder
+COPY --from=builder-cpu /app/target/release/bitnet /usr/local/bin/bitnet
+COPY --from=builder-cpu /app/target/release/bitnet-server /usr/local/bin/bitnet-server
 
 # Create directories for models and data
 RUN mkdir -p /data /models && \
@@ -79,9 +101,9 @@ RUN apt-get update && apt-get install -y \
 # Create non-root user
 RUN useradd -m -u 1000 -s /bin/bash bitnet
 
-# Copy binary from builder
-COPY --from=builder /app/target/release/bitnet /usr/local/bin/bitnet
-COPY --from=builder /app/target/release/bitnet-server /usr/local/bin/bitnet-server
+# Copy binary from GPU builder
+COPY --from=builder-gpu /app/target/release/bitnet /usr/local/bin/bitnet
+COPY --from=builder-gpu /app/target/release/bitnet-server /usr/local/bin/bitnet-server
 
 # Create directories for models and data
 RUN mkdir -p /data /models && \

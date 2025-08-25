@@ -6,7 +6,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: runtime
+      target: runtime              # copies from builder-cpu stage
       args:
         FEATURES: cpu
     image: bitnet-rs:cpu
@@ -21,6 +21,11 @@ services:
       - BITNET_THREADS=4
     command: ["bitnet-server"]
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
@@ -41,7 +46,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: runtime-gpu
+      target: runtime-gpu          # copies from builder-gpu stage
       args:
         FEATURES: gpu
     image: bitnet-rs:gpu
@@ -56,6 +61,11 @@ services:
       - CUDA_VISIBLE_DEVICES=0
     command: ["bitnet-server"]
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev
     deploy:
       resources:
         limits:
@@ -71,7 +81,7 @@ services:
 
   # Load balancer (optional)
   nginx:
-    image: nginx:alpine
+    image: nginx:1.25-alpine
     container_name: bitnet-lb
     ports:
       - "80:80"
@@ -87,7 +97,7 @@ services:
 
   # Monitoring with Prometheus (optional)
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.53.0
     container_name: bitnet-prometheus
     ports:
       - "9090:9090"
@@ -103,7 +113,7 @@ services:
 
   # Grafana for visualization (optional)
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:10.4.3
     container_name: bitnet-grafana
     ports:
       - "3000:3000"

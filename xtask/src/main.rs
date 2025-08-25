@@ -2909,8 +2909,12 @@ fn get_gpu_info_stub() -> GpuInfo {
             .arg("--version")
             .output()
             .ok()
-            .and_then(|output| {
-                if output.status.success() { String::from_utf8(output.stdout).ok() } else { None }
+            .and_then(|o| {
+                let mut s = String::from_utf8(o.stdout).ok().unwrap_or_default();
+                if s.trim().is_empty() {
+                    s = String::from_utf8(o.stderr).ok().unwrap_or_default();
+                }
+                (!s.trim().is_empty()).then_some(s)
             })
             .and_then(|output| {
                 output.lines().find(|line| line.contains("release")).and_then(|line| {
@@ -2957,6 +2961,6 @@ fn get_gpu_info_stub() -> GpuInfo {
         metal,
         rocm,
         rocm_version,
-        wgpu: true, // Always available as software fallback
+        wgpu: false, // Don't imply a guaranteed fallback
     }
 }
