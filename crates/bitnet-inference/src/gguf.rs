@@ -109,6 +109,9 @@ pub struct GgufKv {
 // Helper constants and functions for KV reading
 const MAX_KEY_LEN: u64 = 1024 * 1024; // 1 MiB
 const MAX_STR_LEN: u64 = 10 * 1024 * 1024; // 10 MiB
+/// Maximum number of array elements to return in samples.
+/// For array-valued KVs, returns at most 256 elements (full payload is consumed
+/// so subsequent KVs parse correctly).
 const ARRAY_SAMPLE_LIMIT: usize = 256; // cap returned items per array
 
 #[inline]

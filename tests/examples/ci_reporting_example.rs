@@ -18,6 +18,28 @@ mod ci_example {
     use std::time::Duration;
     use tempfile::TempDir;
 
+    /// Helper function to create test results with less boilerplate
+    fn example_result(
+        name: &str,
+        status: TestStatus,
+        dur_ms: u64,
+        error: Option<&str>,
+    ) -> TestResult {
+        use std::time::SystemTime;
+        TestResult {
+            test_name: name.into(),
+            status,
+            duration: Duration::from_millis(dur_ms),
+            metrics: TestMetrics::default(),
+            error: error.map(|e| e.into()),
+            stack_trace: error.map(|e| format!("{}\nStack trace...\n", e)),
+            artifacts: Vec::new(),
+            start_time: SystemTime::now(),
+            end_time: SystemTime::now() + Duration::from_millis(dur_ms.max(1)),
+            metadata: Default::default(),
+        }
+    }
+
     pub async fn run_example() -> Result<(), Box<dyn std::error::Error>> {
         // Initialize logging
         tracing_subscriber::fmt::init();

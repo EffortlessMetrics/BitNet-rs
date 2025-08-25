@@ -196,6 +196,14 @@ required-features = ["gpu", "examples"]
 name = "streaming_generation"
 required-features = ["cpu", "examples"]
 
+[[example]]
+name = "demo_reporting_comprehensive"
+path = "examples/demo_reporting_comprehensive.rs"
+
+[[example]]
+name = "demo_reporting_system"
+path = "examples/demo_reporting_system.rs"
+
 [workspace.dependencies]
 # Core dependencies
 anyhow = "1.0.99"
