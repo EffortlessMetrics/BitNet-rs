@@ -1,7 +1,7 @@
 use super::config::TestConfig;
 use super::errors::TestError;
-#[cfg(feature = "fixtures")]
-use super::fast_config::fast_config;
+// #[cfg(feature = "fixtures")]
+// use super::fast_config::fast_config; // TODO: Use when needed
 use super::parallel::{TestCategory, TestInfo, TestPriority};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;

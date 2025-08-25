@@ -67,9 +67,11 @@ mod ci_example {
                         ]),
                     },
                     error: None,
-                    stdout: Some("All tests passed".to_string()),
-                    stderr: None,
-                    timestamp: std::time::SystemTime::now(),
+                    stack_trace: None,
+                    artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now(),
+                    end_time: std::time::SystemTime::now() + Duration::from_secs(5),
+                    metadata: HashMap::new(),
                 },
                 TestResult {
                     test_name: "test_model_loading".to_string(),
@@ -77,9 +79,11 @@ mod ci_example {
                     duration: Duration::from_secs(2),
                     metrics: TestMetrics::default(),
                     error: Some("Failed to load model: file not found".to_string()),
-                    stdout: None,
-                    stderr: Some("Error: Model file missing".to_string()),
-                    timestamp: std::time::SystemTime::now(),
+                    stack_trace: Some("Error: Model file missing\nStack trace...\n".to_string()),
+                    artifacts: Vec::new(),
+                    start_time: std::time::SystemTime::now(),
+                    end_time: std::time::SystemTime::now() + Duration::from_secs(2),
+                    metadata: HashMap::new(),
                 },
             ],
             summary: TestSummary {
@@ -87,17 +91,20 @@ mod ci_example {
                 passed: 1,
                 failed: 1,
                 skipped: 0,
+                timeout: 0,
                 success_rate: 50.0,
+                total_duration: Duration::from_secs(30),
+                average_duration: Duration::from_secs(3),
+                peak_memory: Some(100 * 1024 * 1024),
+                total_assertions: 150,
             },
             environment: HashMap::from([
                 ("ci_provider".to_string(), "github_actions".to_string()),
                 ("runner_os".to_string(), "ubuntu-22.04".to_string()),
             ]),
             configuration: HashMap::new(),
-            metadata: HashMap::from([
-                ("commit_sha".to_string(), "abc123def456".to_string()),
-                ("pr_number".to_string(), "42".to_string()),
-            ]),
+            start_time: std::time::SystemTime::now(),
+            end_time: std::time::SystemTime::now() + Duration::from_secs(30),
         }]
     }
 
@@ -106,39 +113,30 @@ mod ci_example {
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Create CI context
         let context = CIContext {
-            provider: "github_actions".to_string(),
-            repository: "anthropics/bitnet-rs".to_string(),
-            branch: "feature/ci-improvements".to_string(),
-            commit_sha: "abc123def456".to_string(),
+            commit_sha: Some("abc123def456".to_string()),
             pr_number: Some(42),
-            workflow_name: "CI Tests".to_string(),
-            job_name: "test-suite".to_string(),
-            run_id: "12345".to_string(),
-            run_attempt: 1,
+            branch_name: Some("feature/ci-improvements".to_string()),
+            workflow_run_id: Some("12345".to_string()),
+            actor: Some("ci-bot".to_string()),
         };
 
         // Configure notifications
         let config = NotificationConfig {
-            enable_status_checks: true,
-            enable_pr_comments: true,
-            enable_annotations: true,
-            enable_slack: false,
-            slack_webhook_url: None,
-            notification_threshold: TestStatus::Failed,
-            include_performance_metrics: true,
-            include_coverage: false,
+            notify_on_failure: true,
+            notify_on_success: false,
+            check_performance_regression: true,
+            performance_regression_threshold: 1.1,
+            create_status_checks: true,
+            create_pr_comments: true,
         };
 
         // Create notification manager
-        let manager = CINotificationManager::new(context, config);
+        let manager = CINotificationManager::new(config)?;
 
         // Process test results
-        let notification_results = manager.process_test_results(test_results).await?;
+        manager.process_test_results(test_results, &context).await?;
 
-        println!("  📬 Generated {} notifications", notification_results.len());
-        for result in &notification_results {
-            println!("     - {}: {}", result.notification_type, result.status);
-        }
+        println!("  📬 Generated notifications successfully");
 
         Ok(())
     }
@@ -149,48 +147,33 @@ mod ci_example {
 
         // Configure trend reporter
         let config = TrendConfig {
-            data_dir: temp_dir.path().to_path_buf(),
             retention_days: 30,
-            enable_regression_detection: true,
-            regression_threshold: 0.10, // 10% performance regression
-            enable_outlier_detection: true,
-            outlier_std_devs: 3.0,
-            metrics_to_track: vec![
-                "duration".to_string(),
-                "memory_peak".to_string(),
-                "throughput_ops_sec".to_string(),
-            ],
+            min_samples_for_baseline: 5,
+            regression_threshold: 1.10, // 10% performance regression
         };
 
-        let reporter = TrendReporter::new(config);
+        let reporter = TrendReporter::new(temp_dir.path().to_path_buf(), config);
 
         // Create sample historical data
         for i in 0..5 {
             let metadata = TestRunMetadata {
-                run_id: format!("run_{}", i),
-                timestamp: std::time::SystemTime::now(),
-                commit_sha: format!("commit_{}", i),
-                branch: "main".to_string(),
-                tags: HashMap::from([("version".to_string(), format!("v1.{}", i))]),
+                commit_sha: Some(format!("commit_{}", i)),
+                branch: Some("main".to_string()),
+                pr_number: None,
+                environment: HashMap::from([("version".to_string(), format!("v1.{}", i))]),
+                configuration: HashMap::new(),
             };
 
             let results = create_sample_test_results();
-            reporter.record_test_run(&metadata, &results).await?;
+            reporter.record_test_results(&results, &metadata).await?;
         }
 
-        // Analyze trends
-        let trends = reporter.analyze_trends("test_bitnet_quantization").await?;
+        // Generate trend report
+        let report = reporter.generate_trend_report(30, Some("main")).await?;
 
-        if let Some(trend) = trends {
-            println!("  📈 Performance Trend Analysis:");
-            println!("     - Average duration: {:.2}s", trend.average_duration.as_secs_f64());
-            println!("     - Duration trend: {:+.2}%", trend.duration_trend * 100.0);
-            println!("     - Memory trend: {:+.2}%", trend.memory_trend * 100.0);
-
-            if !trend.regressions.is_empty() {
-                println!("  ⚠️  Detected {} regressions!", trend.regressions.len());
-            }
-        }
+        println!("  📈 Performance Trend Analysis:");
+        println!("     - Report period: {} days", report.period_days);
+        println!("     - Total entries: {}", report.total_entries);
 
         Ok(())
     }

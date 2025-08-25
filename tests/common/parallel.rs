@@ -1,7 +1,7 @@
 use super::config::TestConfig;
 use super::errors::TestError;
-#[cfg(feature = "fixtures")]
-use super::fast_config::fast_config;
+// #[cfg(feature = "fixtures")]
+// use super::fast_config::fast_config; // TODO: Use when needed
 use super::results::{TestResult as TestRecord, TestStatus};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
