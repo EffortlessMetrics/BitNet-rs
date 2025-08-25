@@ -21,6 +21,20 @@ cargo build --release --no-default-features --features cpu
 # Run tests (fast, Rust-only)
 cargo test --workspace --no-default-features --features cpu
 
+# Run GGUF validation tests
+cargo test -p bitnet-inference --test gguf_header
+cargo test -p bitnet-inference --test gguf_fuzz
+cargo test -p bitnet-inference --test engine_inspect
+
+# Run async smoke test with synthetic GGUF
+printf "GGUF\x02\x00\x00\x00" > /tmp/t.gguf && \
+printf "\x00\x00\x00\x00\x00\x00\x00\x00" >> /tmp/t.gguf && \
+printf "\x00\x00\x00\x00\x00\x00\x00\x00" >> /tmp/t.gguf && \
+BITNET_GGUF=/tmp/t.gguf cargo test -p bitnet-inference --features rt-tokio --test smoke
+
+# Run verification script
+./scripts/verify-tests.sh
+
 # Run benchmarks
 cargo bench --workspace --no-default-features --features cpu
 
@@ -128,6 +142,7 @@ cargo test --package bitnet-models --no-default-features --features "cpu,iq2s-ff
 ### Testing Strategy
 - **Unit tests**: Each crate has comprehensive tests
 - **Integration tests**: Cross-crate tests in `tests/`
+- **Property-based testing**: Fuzz testing for GGUF parser robustness
 - **Cross-validation**: Automated testing against C++ implementation
 - **CI gates**: Compatibility tests block on every PR
 
@@ -192,6 +207,13 @@ We maintain strict compatibility with llama.cpp:
 ```bash
 # Quick compile & test (CPU, MSRV-accurate)
 rustup run 1.89.0 cargo test --workspace --no-default-features --features cpu
+
+# Validate GGUF file
+cargo run -p bitnet-cli -- compat-check model.gguf
+cargo run -p bitnet-cli -- compat-check model.gguf --json  # JSON output
+
+# Inspect model metadata
+cargo run -p bitnet-cli -- inspect --model model.gguf
 
 # Full cross-validation (deterministic)
 export BITNET_GGUF="$PWD/models/bitnet/ggml-model-i2_s.gguf"

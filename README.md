@@ -21,8 +21,9 @@
 ### 🛡️ **Memory Safety & Reliability**
 - **No segfaults or memory leaks** - guaranteed by Rust's type system
 - **Thread-safe by default** with fearless concurrency
-- **Comprehensive error handling** with detailed error messages
-- **Production-tested** with extensive test coverage
+- **Comprehensive error handling** with typed errors and detailed messages
+- **Early GGUF validation** prevents resource waste on invalid models
+- **Production-tested** with extensive test coverage including property-based testing
 
 ### 🌐 **Cross-Platform Excellence**
 - **Native support** for Linux, macOS, and Windows
@@ -157,16 +158,37 @@ async fn main() -> Result<()> {
 
 ```bash
 # Run inference
-bitnet-cli infer --model model.gguf --prompt "Explain quantum computing"
+bitnet run --model model.gguf --prompt "Explain quantum computing"
+
+# Validate GGUF file compatibility
+bitnet compat-check model.gguf
+bitnet compat-check model.gguf --json  # JSON output for scripting
+
+# Inspect model metadata
+bitnet inspect --model model.gguf
+bitnet inspect --model model.gguf --json
+
+# Tokenize text
+bitnet tokenize --model model.gguf --text "Hello, world!"
+
+# Calculate perplexity
+bitnet score --model model.gguf --file test.txt
+
+# Advanced inference options
+bitnet run --model model.gguf \
+  --prompt "Explain quantum computing" \
+  --max-new-tokens 100 \
+  --temperature 0.7 \
+  --top-k 50
 
 # Start HTTP server
 bitnet-server --port 8080 --model model.gguf
 
 # Convert model formats
-bitnet-cli convert --input model.safetensors --output model.gguf
+bitnet convert --input model.safetensors --output model.gguf
 
 # Benchmark performance
-bitnet-cli benchmark --model model.gguf --compare-cpp
+bitnet benchmark --model model.gguf --compare-cpp
 
 # Test server
 curl -X POST http://localhost:8080/v1/completions \
@@ -203,6 +225,51 @@ cargo build --features full
 ```
 
 See [FEATURES.md](FEATURES.md) for detailed feature documentation.
+
+## GGUF Validation & Model Compatibility
+
+BitNet.rs includes a robust GGUF validation system that ensures model compatibility before loading:
+
+### Early Validation
+- **Header parsing** validates GGUF magic bytes and version (1-3 supported)
+- **Sanity checks** detect corrupted files with unreasonable tensor/KV counts
+- **Typed errors** provide clear, actionable error messages
+- **Fast validation** using memory-mapped I/O for efficiency
+
+### CLI Tools
+```bash
+# Quick compatibility check
+bitnet compat-check model.gguf
+# Output:
+# File:      model.gguf
+# Status:    ✓ Valid GGUF
+# Version:   2 (supported)
+# Tensors:   1234
+# KV pairs:  56
+
+# JSON output for automation
+bitnet compat-check model.gguf --json | jq '.compatibility'
+# {
+#   "supported_version": true,
+#   "tensors_reasonable": true,
+#   "kvs_reasonable": true
+# }
+```
+
+### Library API
+```rust
+use bitnet_inference::{gguf, engine};
+
+// Validate GGUF header
+let header = gguf::read_header_blocking("model.gguf")?;
+println!("GGUF v{} with {} tensors", header.version, header.n_tensors);
+
+// Engine validates automatically on load
+let info = engine::inspect_model(&path)?;
+if info.version() > 3 {
+    eprintln!("Warning: Unsupported GGUF version {}", info.version());
+}
+```
 
 ## Architecture
 
