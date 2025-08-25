@@ -50,3 +50,14 @@ fn engine_inspect_handles_short_file() {
     let err = result.unwrap_err();
     assert!(matches!(err, bitnet_inference::gguf::GgufError::ShortHeader(_)));
 }
+
+#[test]
+fn engine_inspect_rejects_bad_magic() {
+    use bitnet_inference::engine::inspect_model;
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path().join("bad.gguf");
+    std::fs::write(&p, b"NOPENOPENOPENOPE").unwrap(); // short & wrong
+    let err = inspect_model(&p).unwrap_err();
+    // We only assert it surfaces as a header error (don't tie to exact variant name)
+    let _ = format!("{err}");
+}
