@@ -1,7 +1,11 @@
 //! Runtime facade to allow either Tokio (default) or a wasm-friendly executor.
 //! This abstraction allows the inference engine to work on both native and WASM targets.
 
-use std::{future::Future, time::Duration};
+#[cfg(any(feature = "rt-tokio", feature = "rt-wasm"))]
+use std::time::Duration;
+
+#[cfg(feature = "rt-tokio")]
+use std::future::Future;
 
 #[cfg(feature = "rt-tokio")]
 pub mod time {
