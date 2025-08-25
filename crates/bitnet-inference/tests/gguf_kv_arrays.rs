@@ -227,3 +227,82 @@ fn handles_float_arrays() {
         _ => panic!("expected array"),
     }
 }
+
+#[test]
+fn reads_empty_arrays() {
+    use std::io::Write;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("empty_arr.gguf");
+    let mut f = std::fs::File::create(&path).unwrap();
+
+    // Header: v=2, 0 tensors, 2 kvs
+    f.write_all(b"GGUF").unwrap();
+    f.write_all(&2u32.to_le_bytes()).unwrap();
+    f.write_all(&0u64.to_le_bytes()).unwrap();
+    f.write_all(&2u64.to_le_bytes()).unwrap();
+
+    // KV #1: "arr.u8" = ARRAY(U8) len=0
+    let k1 = b"arr.u8";
+    f.write_all(&(k1.len() as u64).to_le_bytes()).unwrap();
+    f.write_all(k1).unwrap();
+    f.write_all(&9u32.to_le_bytes()).unwrap(); // ARRAY
+    f.write_all(&0u32.to_le_bytes()).unwrap(); // U8
+    f.write_all(&0u64.to_le_bytes()).unwrap(); // len=0
+
+    // KV #2: "arr.str" = ARRAY(STRING) len=0
+    let k2 = b"arr.str";
+    f.write_all(&(k2.len() as u64).to_le_bytes()).unwrap();
+    f.write_all(k2).unwrap();
+    f.write_all(&9u32.to_le_bytes()).unwrap(); // ARRAY
+    f.write_all(&8u32.to_le_bytes()).unwrap(); // STRING
+    f.write_all(&0u64.to_le_bytes()).unwrap(); // len=0
+
+    drop(f);
+
+    let kvs = bitnet_inference::gguf::read_kv_pairs(&path, None).unwrap();
+    assert_eq!(kvs.len(), 2);
+    match &kvs[0].value {
+        bitnet_inference::gguf::GgufValue::Array(v) => assert!(v.is_empty()),
+        _ => panic!("expected array"),
+    }
+    match &kvs[1].value {
+        bitnet_inference::gguf::GgufValue::Array(v) => assert!(v.is_empty()),
+        _ => panic!("expected array"),
+    }
+}
+
+#[test]
+fn array_sampling_limit_respected() {
+    use std::io::Write;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("big_arr.gguf");
+    let mut f = std::fs::File::create(&path).unwrap();
+
+    // Header: v=2, 0 tensors, 1 kv
+    f.write_all(b"GGUF").unwrap();
+    f.write_all(&2u32.to_le_bytes()).unwrap();
+    f.write_all(&0u64.to_le_bytes()).unwrap();
+    f.write_all(&1u64.to_le_bytes()).unwrap();
+
+    // KV: "arr.i64" = ARRAY(I64) of 10_000 items
+    let key = b"arr.i64";
+    f.write_all(&(key.len() as u64).to_le_bytes()).unwrap();
+    f.write_all(key).unwrap();
+    f.write_all(&9u32.to_le_bytes()).unwrap(); // ARRAY
+    f.write_all(&11u32.to_le_bytes()).unwrap(); // I64
+    let n = 10_000u64;
+    f.write_all(&n.to_le_bytes()).unwrap();
+    for i in 0..n {
+        f.write_all(&(i as i64).to_le_bytes()).unwrap();
+    }
+    drop(f);
+
+    let kvs = bitnet_inference::gguf::read_kv_pairs(&path, None).unwrap();
+    assert_eq!(kvs.len(), 1);
+    match &kvs[0].value {
+        bitnet_inference::gguf::GgufValue::Array(items) => {
+            assert!(items.len() <= 256, "sample exceeded cap");
+        }
+        _ => panic!("expected array"),
+    }
+}
