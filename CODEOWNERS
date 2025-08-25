@@ -1,0 +1,22 @@
+# Code ownership for BitNet-rs
+# These owners will be requested for review when someone opens a PR affecting their areas
+
+# Core kernels and GPU code require careful review
+/crates/bitnet-kernels/ @maintainers @gpu-team
+/crates/bitnet-quantization/ @maintainers @ml-team
+
+# Infrastructure and CI/CD
+/.github/ @maintainers @devops
+/Dockerfile @maintainers @devops
+/docker-compose.yml @maintainers @devops
+/Makefile @maintainers
+/deploy.sh @maintainers @devops
+
+# Core library interfaces
+/crates/bitnet/src/lib.rs @maintainers
+/crates/bitnet-common/ @maintainers
+/crates/bitnet-ffi/ @maintainers
+
+# Documentation
+/docs/ @maintainers @docs-team
+/*.md @maintainers @docs-team

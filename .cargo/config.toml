@@ -1,4 +1,7 @@
 [alias]
+# Xtask runner
+xtask = "run -p xtask --"
+
 # Coverage collection aliases
 cov = "tarpaulin --workspace --no-default-features --features cpu --exclude bitnet-sys --exclude crossval --exclude xtask --exclude bitnet-cli --timeout 600 --out Xml --out Lcov --output-dir target/coverage"
 cov-all = "tarpaulin --workspace --no-default-features --features cpu --exclude bitnet-sys --exclude crossval --exclude xtask --exclude bitnet-cli --timeout 600 --out Xml --out Lcov --out Html --output-dir target/coverage"
