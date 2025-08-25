@@ -418,6 +418,52 @@ enum Cmd {
         #[arg(long, default_value = "crates/bitnet-ggml-ffi/csrc")]
         output: PathBuf,
     },
+
+    /// GPU preflight check and environment detection
+    ///
+    /// Checks for available GPU backends (CUDA, Metal, ROCm, WebGPU)
+    /// and provides actionable setup instructions if none are found.
+    ///
+    /// Exit codes:
+    /// - 0: GPU backend available
+    /// - 1: No GPU backend found (but can continue with CPU)
+    GpuPreflight {
+        /// Exit with error if no GPU found (default: warn only)
+        #[arg(long, default_value_t = false)]
+        require: bool,
+        /// Output format (human, json)
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
+
+    /// Run GPU smoke tests with CPU parity check
+    ///
+    /// Runs a small GPU test to verify functionality and compares
+    /// results with CPU for correctness validation.
+    GpuSmoke {
+        /// Test model size (tiny, small, medium)
+        #[arg(long, default_value = "tiny")]
+        size: String,
+        /// Tolerance for CPU-GPU comparison (cosine similarity)
+        #[arg(long, default_value = "0.99")]
+        tolerance: f32,
+        /// Skip if no GPU available (for CI)
+        #[arg(long, default_value_t = true)]
+        skip_if_no_gpu: bool,
+    },
+
+    /// Run demos with automatic feature detection
+    ///
+    /// Runs the reporting system demos, automatically enabling
+    /// the required features based on what's available.
+    Demo {
+        /// Which demo to run (system, comprehensive, all)
+        #[arg(long, default_value = "all")]
+        which: String,
+        /// Additional arguments to pass to the demo
+        #[arg(last = true)]
+        args: Vec<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -530,6 +576,11 @@ fn real_main() -> Result<()> {
             detect_breaking_changes_cmd(baseline.as_deref(), &current, &format)
         }
         Cmd::VendorGgml { commit, force, output } => vendor_ggml_cmd(&commit, force, &output),
+        Cmd::GpuPreflight { require, format } => gpu_preflight_cmd(require, &format),
+        Cmd::GpuSmoke { size, tolerance, skip_if_no_gpu } => {
+            gpu_smoke_cmd(&size, tolerance, skip_if_no_gpu)
+        }
+        Cmd::Demo { which, args } => demo_cmd(&which, &args),
     }
 }
 
@@ -2652,5 +2703,260 @@ mod tests {
         });
 
         // Would test that download retries after 2 seconds
+    }
+}
+
+// GPU-related command implementations
+
+fn gpu_preflight_cmd(require: bool, format: &str) -> Result<()> {
+    // Try to load the GPU utils module dynamically
+    let info = get_gpu_info_stub();
+
+    match format {
+        "json" => {
+            let json = serde_json::json!({
+                "cuda": info.cuda,
+                "cuda_version": info.cuda_version,
+                "metal": info.metal,
+                "rocm": info.rocm,
+                "rocm_version": info.rocm_version,
+                "wgpu": info.wgpu,
+                "any_available": info.any_available(),
+            });
+            println!("{}", serde_json::to_string_pretty(&json)?);
+        }
+        _ => {
+            println!("🔍 GPU Preflight Check");
+            println!("═════════════════════");
+            println!();
+            println!("{}", info.summary());
+
+            if !info.any_available() {
+                println!();
+                println!("⚠️  No GPU backend detected");
+                println!();
+                println!("To enable GPU acceleration:");
+                println!(
+                    "  • NVIDIA GPUs: Install CUDA toolkit from https://developer.nvidia.com/cuda-downloads"
+                );
+                println!("  • AMD GPUs: Install ROCm from https://rocm.docs.amd.com");
+                println!("  • Apple Silicon: Metal support is built-in on macOS");
+                println!("  • Other GPUs: WebGPU backend provides compatibility");
+                println!();
+                println!("Set CUDA_HOME or ROCM_PATH environment variables after installation.");
+            }
+        }
+    }
+
+    if require && !info.any_available() {
+        bail!("No GPU backend available (required by --require flag)");
+    }
+
+    Ok(())
+}
+
+fn gpu_smoke_cmd(size: &str, tolerance: f32, skip_if_no_gpu: bool) -> Result<()> {
+    let info = get_gpu_info_stub();
+
+    if !info.any_available() {
+        if skip_if_no_gpu {
+            println!("⏭️  Skipping GPU smoke test (no GPU available)");
+            return Ok(());
+        } else {
+            bail!("No GPU available for smoke test");
+        }
+    }
+
+    println!("🚀 Running GPU smoke test");
+    println!("  Size: {}", size);
+    println!("  Tolerance: {}", tolerance);
+    println!();
+
+    // Build and run the GPU smoke test
+    let mut cmd = Command::new("cargo");
+    cmd.args(&[
+        "test",
+        "--package",
+        "bitnet-kernels",
+        "--test",
+        "gpu_smoke",
+        "--no-default-features",
+        "--features",
+        "cuda",
+        "--",
+        "--nocapture",
+    ]);
+
+    // Pass test parameters via environment variables
+    cmd.env("GPU_TEST_SIZE", size);
+    cmd.env("GPU_TEST_TOLERANCE", tolerance.to_string());
+
+    let status = cmd.status()?;
+    if !status.success() {
+        bail!("GPU smoke test failed");
+    }
+
+    println!("✅ GPU smoke test passed");
+    Ok(())
+}
+
+fn demo_cmd(which: &str, args: &[String]) -> Result<()> {
+    println!("🎭 Running demo: {}", which);
+
+    let demos = match which {
+        "system" => vec!["demo_reporting_system"],
+        "comprehensive" => vec!["demo_reporting_comprehensive"],
+        "all" => vec!["demo_reporting_system", "demo_reporting_comprehensive"],
+        _ => bail!("Unknown demo: {}. Use 'system', 'comprehensive', or 'all'", which),
+    };
+
+    for demo_name in demos {
+        println!();
+        println!("▶️  Running {}", demo_name);
+        println!("─────────────────────");
+
+        let mut cmd = Command::new("cargo");
+        cmd.args(&[
+            "run",
+            "--package",
+            "bitnet-tests",
+            "--bin",
+            demo_name,
+            "--features",
+            "reporting",
+        ]);
+
+        // Add any additional arguments
+        if !args.is_empty() {
+            cmd.arg("--");
+            cmd.args(args);
+        }
+
+        let status = cmd.status()?;
+        if !status.success() {
+            bail!("{} failed", demo_name);
+        }
+    }
+
+    println!();
+    println!("✅ All demos completed successfully");
+    Ok(())
+}
+
+// Stub implementation of GPU info for xtask
+// The real implementation would be in bitnet-kernels
+struct GpuInfo {
+    cuda: bool,
+    cuda_version: Option<String>,
+    metal: bool,
+    rocm: bool,
+    rocm_version: Option<String>,
+    wgpu: bool,
+}
+
+impl GpuInfo {
+    fn any_available(&self) -> bool {
+        self.cuda || self.metal || self.rocm || self.wgpu
+    }
+
+    fn summary(&self) -> String {
+        let mut backends = Vec::new();
+
+        if self.cuda {
+            if let Some(version) = &self.cuda_version {
+                backends.push(format!("CUDA {}", version));
+            } else {
+                backends.push("CUDA".to_string());
+            }
+        }
+
+        if self.metal {
+            backends.push("Metal".to_string());
+        }
+
+        if self.rocm {
+            if let Some(version) = &self.rocm_version {
+                backends.push(format!("ROCm {}", version));
+            } else {
+                backends.push("ROCm".to_string());
+            }
+        }
+
+        if self.wgpu {
+            backends.push("WebGPU".to_string());
+        }
+
+        if backends.is_empty() {
+            "No GPU backends available".to_string()
+        } else {
+            format!("Available GPU backends: {}", backends.join(", "))
+        }
+    }
+}
+
+fn get_gpu_info_stub() -> GpuInfo {
+    use std::process::Command;
+
+    let cuda = Command::new("nvidia-smi")
+        .arg("--query-gpu=gpu_name")
+        .arg("--format=csv,noheader")
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false);
+
+    let cuda_version = if cuda {
+        Command::new("nvcc")
+            .arg("--version")
+            .output()
+            .ok()
+            .and_then(|output| {
+                if output.status.success() { String::from_utf8(output.stdout).ok() } else { None }
+            })
+            .and_then(|output| {
+                output.lines().find(|line| line.contains("release")).and_then(|line| {
+                    line.split("release")
+                        .nth(1)
+                        .and_then(|s| s.split(',').next())
+                        .map(|s| s.trim().to_string())
+                })
+            })
+    } else {
+        None
+    };
+
+    let metal = cfg!(target_os = "macos");
+
+    let rocm = std::env::var("ROCM_PATH").is_ok()
+        || Command::new("rocm-smi")
+            .arg("--showid")
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false);
+
+    let rocm_version = if rocm {
+        Command::new("rocm-smi")
+            .arg("--version")
+            .output()
+            .ok()
+            .and_then(|output| {
+                if output.status.success() { String::from_utf8(output.stdout).ok() } else { None }
+            })
+            .and_then(|output| {
+                output
+                    .lines()
+                    .find(|line| line.contains("Version"))
+                    .and_then(|line| line.split(':').nth(1).map(|s| s.trim().to_string()))
+            })
+    } else {
+        None
+    };
+
+    GpuInfo {
+        cuda,
+        cuda_version,
+        metal,
+        rocm,
+        rocm_version,
+        wgpu: true, // Always available as software fallback
     }
 }

@@ -8,6 +8,8 @@ pub mod cpu;
 pub mod ffi;
 #[cfg(feature = "cuda")]
 pub mod gpu;
+#[cfg(feature = "cuda")]
+pub mod gpu_utils;
 
 /// Kernel provider trait
 pub trait KernelProvider: Send + Sync {
