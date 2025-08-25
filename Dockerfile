@@ -1,102 +1,108 @@
-# Multi-stage Dockerfile for BitNet.rs
-# Optimized for production deployment with minimal attack surface
+# Multi-stage Docker build for BitNet-rs
+# Supports both CPU and GPU backends
 
 # Build stage
-FROM rust:1.89-slim as builder
+FROM rust:1.89-bookworm AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
     pkg-config \
     libssl-dev \
-    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Create app directory
 WORKDIR /app
 
-# Copy dependency manifests
+# Copy workspace files
 COPY Cargo.toml Cargo.lock ./
-COPY crates/*/Cargo.toml ./crates/
+COPY crates/ ./crates/
+COPY crossval/ ./crossval/
+COPY tests/ ./tests/
+COPY xtask/ ./xtask/
+COPY src/ ./src/
+COPY build.rs ./
 
-# Create dummy source files to cache dependencies
-RUN mkdir -p src crates/bitnet-{common,models,quantization,kernels,inference,tokenizers,server,cli,ffi}/src && \
-    echo "fn main() {}" > src/main.rs && \
-    find crates -name Cargo.toml -exec dirname {} \; | xargs -I {} touch {}/src/lib.rs
+# Build with CPU features by default
+ARG FEATURES=cpu
+RUN cargo build --release --no-default-features --features ${FEATURES}
 
-# Build dependencies (cached layer)
-RUN cargo build --release --features server,cli && \
-    rm -rf src crates/*/src
-
-# Copy actual source code
-COPY . .
-
-# Build the application
-RUN cargo build --release --features server,cli
-
-# Runtime stage
-FROM debian:bookworm-slim
+# Runtime stage - minimal image
+FROM debian:bookworm-slim AS runtime
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
-    && rm -rf /var/lib/apt/lists/* \
-    && groupadd -r bitnet \
-    && useradd -r -g bitnet -s /bin/false bitnet
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy binaries from builder
-COPY --from=builder /app/target/release/bitnet /usr/local/bin/
-COPY --from=builder /app/target/release/server /usr/local/bin/bitnet-server
+# Create non-root user
+RUN useradd -m -u 1000 -s /bin/bash bitnet
 
-# Copy configuration and documentation
-COPY --from=builder /app/README.md /app/CHANGELOG.md /usr/share/doc/bitnet/
-COPY --from=builder /app/LICENSE* /usr/share/doc/bitnet/
+# Copy binary from builder
+COPY --from=builder /app/target/release/bitnet /usr/local/bin/bitnet
+COPY --from=builder /app/target/release/bitnet-server /usr/local/bin/bitnet-server
 
-# Create directories for data and configuration
-RUN mkdir -p /etc/bitnet /var/lib/bitnet /var/log/bitnet && \
-    chown -R bitnet:bitnet /var/lib/bitnet /var/log/bitnet
-
-# Create default configuration
-RUN cat > /etc/bitnet/server.toml << 'EOF'
-[server]
-host = "0.0.0.0"
-port = 8080
-workers = 4
-
-[model]
-# Model path should be mounted as volume
-path = "/var/lib/bitnet/model.gguf"
-
-[logging]
-level = "info"
-format = "json"
-
-[metrics]
-enabled = true
-endpoint = "/metrics"
-EOF
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+# Create directories for models and data
+RUN mkdir -p /data /models && \
+    chown -R bitnet:bitnet /data /models
 
 # Switch to non-root user
 USER bitnet
+WORKDIR /home/bitnet
 
-# Expose port
+# Environment variables
+ENV RUST_LOG=info
+ENV BITNET_MODEL_PATH=/models
+ENV BITNET_DATA_PATH=/data
+
+# Expose server port
 EXPOSE 8080
 
-# Set environment variables
-ENV RUST_LOG=info
-ENV BITNET_CONFIG=/etc/bitnet/server.toml
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD bitnet --version || exit 1
 
 # Default command
-CMD ["bitnet-server", "--config", "/etc/bitnet/server.toml"]
+CMD ["bitnet", "--help"]
 
-# Labels for metadata
-LABEL org.opencontainers.image.title="BitNet.rs"
-LABEL org.opencontainers.image.description="High-performance Rust implementation of BitNet 1-bit LLM inference"
-LABEL org.opencontainers.image.vendor="BitNet Contributors"
-LABEL org.opencontainers.image.licenses="MIT OR Apache-2.0"
-LABEL org.opencontainers.image.source="https://github.com/microsoft/BitNet"
-LABEL org.opencontainers.image.documentation="https://docs.rs/bitnet"
+# GPU-enabled runtime stage
+FROM nvidia/cuda:12.3.1-runtime-ubuntu22.04 AS runtime-gpu
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -u 1000 -s /bin/bash bitnet
+
+# Copy binary from builder
+COPY --from=builder /app/target/release/bitnet /usr/local/bin/bitnet
+COPY --from=builder /app/target/release/bitnet-server /usr/local/bin/bitnet-server
+
+# Create directories for models and data
+RUN mkdir -p /data /models && \
+    chown -R bitnet:bitnet /data /models
+
+# Switch to non-root user
+USER bitnet
+WORKDIR /home/bitnet
+
+# Environment variables
+ENV RUST_LOG=info
+ENV BITNET_MODEL_PATH=/models
+ENV BITNET_DATA_PATH=/data
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Expose server port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD bitnet --version || exit 1
+
+# Default command
+CMD ["bitnet", "--help"]

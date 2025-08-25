@@ -1,121 +1,128 @@
-# Docker Compose configuration for BitNet.rs deployment
-# Provides a complete inference service with monitoring
-
 version: '3.8'
 
 services:
-  # Main BitNet inference service
-  bitnet:
-    build: .
-    container_name: bitnet-server
-    restart: unless-stopped
+  # CPU-only service
+  bitnet-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        FEATURES: cpu
+    image: bitnet-rs:cpu
+    container_name: bitnet-cpu
     ports:
       - "8080:8080"
     volumes:
-      # Mount model directory
-      - ./models:/var/lib/bitnet:ro
-      # Mount configuration
-      - ./config/server.toml:/etc/bitnet/server.toml:ro
-      # Mount logs
-      - bitnet-logs:/var/log/bitnet
+      - ./models:/models:ro
+      - ./data:/data
     environment:
       - RUST_LOG=info
-      - BITNET_CONFIG=/etc/bitnet/server.toml
+      - BITNET_THREADS=4
+    command: ["bitnet-server"]
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    depends_on:
-      - prometheus
-      - grafana
-    networks:
-      - bitnet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
 
-  # Prometheus for metrics collection
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: bitnet-prometheus
-    restart: unless-stopped
+  # GPU-enabled service
+  bitnet-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime-gpu
+      args:
+        FEATURES: gpu
+    image: bitnet-rs:gpu
+    container_name: bitnet-gpu
     ports:
-      - "9090:9090"
+      - "8081:8080"
     volumes:
-      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus-data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
-    networks:
-      - bitnet-network
-
-  # Grafana for metrics visualization
-  grafana:
-    image: grafana/grafana:latest
-    container_name: bitnet-grafana
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./config/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./models:/models:ro
+      - ./data:/data
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel
-    networks:
-      - bitnet-network
-
-  # Redis for caching (optional)
-  redis:
-    image: redis:7-alpine
-    container_name: bitnet-redis
+      - RUST_LOG=info
+      - CUDA_VISIBLE_DEVICES=0
+    command: ["bitnet-server"]
     restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    command: redis-server --appendonly yes
-    networks:
-      - bitnet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 16G
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - gpu
 
-  # Nginx reverse proxy with SSL termination
+  # Load balancer (optional)
   nginx:
     image: nginx:alpine
-    container_name: bitnet-nginx
-    restart: unless-stopped
+    container_name: bitnet-lb
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./config/nginx/ssl:/etc/nginx/ssl:ro
-      - nginx-logs:/var/log/nginx
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
     depends_on:
-      - bitnet
-    networks:
-      - bitnet-network
+      - bitnet-cpu
+    restart: unless-stopped
+    profiles:
+      - production
+
+  # Monitoring with Prometheus (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: bitnet-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  # Grafana for visualization (optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: bitnet-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    restart: unless-stopped
+    profiles:
+      - monitoring
 
 volumes:
-  bitnet-logs:
-    driver: local
-  prometheus-data:
-    driver: local
-  grafana-data:
-    driver: local
-  redis-data:
-    driver: local
-  nginx-logs:
-    driver: local
+  prometheus_data:
+  grafana_data:
 
 networks:
-  bitnet-network:
+  default:
+    name: bitnet-network
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
