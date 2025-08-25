@@ -52,7 +52,7 @@ required-features = ["reporting", "fixtures"]
 
 [[bin]]
 name = "demo_reporting_comprehensive"
-path = "demo_reporting_comprehensive.rs"
+path = "bin/demo_reporting_comprehensive.rs"
 required-features = ["reporting"]
 
 [[bin]]
@@ -61,7 +61,7 @@ path = "demo_error_handling.rs"
 
 [[bin]]
 name = "demo_reporting_system"
-path = "demo_reporting_system.rs"
+path = "bin/demo_reporting_system.rs"
 required-features = ["reporting"]
 
 [[bin]]
