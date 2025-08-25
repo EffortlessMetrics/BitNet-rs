@@ -137,15 +137,14 @@ cpu = [
     "bitnet-kernels/cpu-optimized",
     "bitnet-inference/cpu",
 ]
-cuda = [
+gpu = [
     "kernels",
     "inference",
     "tokenizers",
     "bitnet-kernels/cuda",
     "bitnet-inference/gpu",
 ]
-# Alias for backward compatibility
-gpu = ["cuda"]
+cuda = ["gpu"]  # Alias for backward compatibility
 
 # Component features
 kernels = ["dep:bitnet-kernels"]
