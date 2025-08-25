@@ -107,7 +107,7 @@ pub struct GgufKv {
 }
 
 // Helper constants and functions for KV reading
-const MAX_KEY_LEN: u64 = 1 * 1024 * 1024; // 1 MiB
+const MAX_KEY_LEN: u64 = 1024 * 1024; // 1 MiB
 const MAX_STR_LEN: u64 = 10 * 1024 * 1024; // 10 MiB
 const ARRAY_SAMPLE_LIMIT: usize = 256; // cap returned items per array
 
@@ -203,8 +203,8 @@ fn scalar_size_bytes(ty: u32) -> Option<usize> {
     match ty {
         0 | 1 | 7 => Some(1),
         2 | 3 => Some(2),
-        4 | 5 | 6 => Some(4),
-        10 | 11 | 12 => Some(8),
+        4..=6 => Some(4),
+        10..=12 => Some(8),
         _ => None,
     }
 }
