@@ -161,6 +161,10 @@ docker build --target runtime-gpu -t bitnet:gpu .
 # Use docker-compose (BuildKit enabled automatically)
 docker compose up --build bitnet-cpu
 docker compose --profile gpu up --build bitnet-gpu
+
+# Optional: Control sccache cache size (default: 10G)
+export SCCACHE_CACHE_SIZE=20G  # Adjust based on available disk
+docker compose up --build bitnet-cpu
 ```
 
 ## 🔧 Environment Detection

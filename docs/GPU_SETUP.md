@@ -1,6 +1,13 @@
 # GPU Setup Guide
 
-This guide explains how to use the GPU infrastructure in BitNet-rs.
+This guide covers GPU setup for BitNet-rs across different platforms, with special focus on WSL2 CUDA support.
+
+## Table of Contents
+- [Quick Start](#quick-start)
+- [WSL2 CUDA Setup](#wsl2-cuda-setup)
+- [Native Linux Setup](#native-linux-setup)
+- [macOS Metal Setup](#macos-metal-setup)
+- [Verification](#verification)
 
 ## Quick Start
 
@@ -40,25 +47,180 @@ BitNet-rs supports multiple GPU backends:
 - **CUDA** - NVIDIA GPUs (requires CUDA toolkit)
 - **Metal** - Apple Silicon (built-in on macOS)
 - **ROCm** - AMD GPUs (requires ROCm installation)
-- **WebGPU** - Universal fallback (always available)
+- **WebGPU** - Platform-dependent fallback (not guaranteed)
 
-## Setup Instructions
+## WSL2 CUDA Setup
+
+### Prerequisites
+
+1. **Windows 11** or **Windows 10** (version 21H2 or later)
+2. **WSL2** (not WSL1) 
+3. **NVIDIA GPU** with recent Windows driver
+
+### Step 1: Verify WSL2
+
+```powershell
+# In Windows PowerShell (as admin)
+wsl -l -v
+# Should show VERSION 2 for your distro
+```
+
+If you see VERSION 1, upgrade:
+```powershell
+wsl --set-version <distro-name> 2
+```
+
+### Step 2: Install NVIDIA Windows Driver
+
+1. Download from [NVIDIA Driver Downloads](https://www.nvidia.com/Download/index.aspx)
+2. Choose **Game Ready Driver** or **Studio Driver** (both support WSL)
+3. Install and reboot
+
+⚠️ **Important**: Do NOT install Linux NVIDIA drivers inside WSL. The Windows driver provides GPU support automatically.
+
+### Step 3: Verify GPU Access in WSL
+
+```bash
+# Inside your WSL2 distro
+nvidia-smi
+```
+
+You should see your GPU listed. If not:
+- Ensure you have a recent Windows NVIDIA driver (version 470+ for WSL support)
+- Check that `/usr/lib/wsl/lib` exists and contains `libcuda.so.1`
+
+### Step 4: (Optional) Install CUDA Toolkit
+
+The CUDA runtime is provided by the Windows driver, but if you need to compile CUDA code locally:
+
+```bash
+# Ubuntu/Debian in WSL2
+wget https://developer.download.nvidia.com/compute/cuda/repos/wsl-ubuntu/x86_64/cuda-keyring_1.0-1_all.deb
+sudo dpkg -i cuda-keyring_1.0-1_all.deb
+sudo apt-get update
+sudo apt-get -y install cuda-toolkit-12-3
+
+# Or for a minimal install (just nvcc compiler)
+sudo apt-get -y install nvidia-cuda-toolkit
+```
+
+### Step 5: Fix Library Path (if needed)
+
+If you get `libcuda.so.1 not found` errors:
+
+```bash
+# Add WSL library path
+echo "/usr/lib/wsl/lib" | sudo tee /etc/ld.so.conf.d/10-wsl.conf
+sudo ldconfig
+```
+
+### Docker in WSL2
+
+For GPU-enabled Docker containers:
+
+1. Install Docker Desktop with WSL2 backend
+2. Enable WSL integration for your distro in Docker Desktop settings
+3. GPU support works automatically:
+
+```bash
+export DOCKER_BUILDKIT=1
+docker compose --profile gpu up --build bitnet-gpu
+```
+
+## Native Linux Setup
 
 ### NVIDIA GPUs (CUDA)
 
-1. Install CUDA toolkit: https://developer.nvidia.com/cuda-downloads
-2. Set environment variable: `export CUDA_HOME=/usr/local/cuda`
-3. Verify: `cargo xtask gpu-preflight`
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y nvidia-driver-535 nvidia-cuda-toolkit
+
+# Fedora/RHEL
+sudo dnf install -y nvidia-driver cuda
+
+# Arch
+sudo pacman -S nvidia cuda
+
+# Set environment
+export CUDA_HOME=/usr/local/cuda
+export PATH=$CUDA_HOME/bin:$PATH
+
+# Verify
+nvidia-smi
+nvcc --version
+cargo xtask gpu-preflight
+```
 
 ### AMD GPUs (ROCm)
 
-1. Install ROCm: https://rocm.docs.amd.com
-2. Set environment variable: `export ROCM_PATH=/opt/rocm`
-3. Verify: `cargo xtask gpu-preflight`
+```bash
+# Ubuntu 22.04
+wget https://repo.radeon.com/amdgpu-install/latest/ubuntu/jammy/amdgpu-install_6.0.60002-1_all.deb
+sudo apt-get install -y ./amdgpu-install_6.0.60002-1_all.deb
+sudo amdgpu-install --usecase=rocm
 
-### Apple Silicon (Metal)
+# Set environment
+export ROCM_PATH=/opt/rocm
+export PATH=$ROCM_PATH/bin:$PATH
 
-Metal support is built-in on macOS. No additional setup required.
+# Verify
+rocm-smi
+cargo xtask gpu-preflight
+```
+
+## macOS Metal Setup
+
+Metal support is built-in on macOS with Apple Silicon or AMD GPUs:
+
+```bash
+# No installation needed, just verify
+cargo xtask gpu-preflight
+# Should show "Metal" as available
+```
+
+## Verification
+
+### Quick Test
+
+```bash
+# From the BitNet-rs repository root
+# GPU detection
+cargo xtask gpu-preflight
+
+# Should output something like:
+# 🔍 GPU Preflight Check
+# ═════════════════════
+# 
+# Available GPU backends: CUDA 12.3
+```
+
+### Build with GPU Support
+
+```bash
+# Build with GPU features
+cargo build --locked --workspace --no-default-features --features gpu
+
+# Run GPU smoke tests
+cargo xtask gpu-smoke
+
+# Or use Make shortcuts
+make gpu        # Preflight check
+make gpu-smoke  # Smoke tests
+```
+
+### Docker GPU Test
+
+```bash
+# Ensure Docker Desktop has WSL integration enabled (for WSL users)
+export DOCKER_BUILDKIT=1
+
+# Build and run GPU-enabled container
+docker compose --profile gpu up --build bitnet-gpu
+
+# Check logs for GPU initialization
+docker logs bitnet-gpu | grep -i gpu
+```
 
 ## Testing
 
@@ -119,29 +281,33 @@ cuda = ["gpu"]  # Alias for backward compatibility
 
 ## Troubleshooting
 
-### No GPU Detected
+### WSL2 Issues
 
-If `cargo xtask gpu-preflight` doesn't detect your GPU:
+| Problem | Solution |
+|---------|----------|
+| `nvidia-smi` not found | Update Windows NVIDIA driver (needs WSL support) |
+| `libcuda.so.1` not found | Add `/usr/lib/wsl/lib` to ldconfig (see WSL2 Setup Step 5) |
+| Docker can't access GPU | Enable WSL integration in Docker Desktop settings |
+| CUDA version mismatch | Use the CUDA toolkit version matching your driver |
+| Slow file I/O | Store code in Linux filesystem (`/home/...`), not Windows mounts (`/mnt/c/...`) |
 
-1. Check driver installation: `nvidia-smi` (NVIDIA) or `rocm-smi` (AMD)
-2. Verify environment variables: `CUDA_HOME` or `ROCM_PATH`
-3. Ensure the GPU toolkit is in your PATH
+### Native Linux Issues
 
-### Build Errors
+| Problem | Solution |
+|---------|----------|
+| `nvidia-smi` shows error | Check if nouveau is blacklisted, reboot after driver install |
+| CUDA not detected | Set `export CUDA_HOME=/usr/local/cuda` |
+| ROCm not detected | Set `export ROCM_PATH=/opt/rocm` |
+| Permission denied | Add user to `video` and `render` groups: `sudo usermod -aG video,render $USER` |
 
-If you get linker errors when building with GPU features:
+### General Issues
 
-1. Ensure CUDA/ROCm toolkit is properly installed
-2. Check that `nvcc` (CUDA) or `hipcc` (ROCm) is in PATH
-3. Try building with CPU features only: `cargo build --features cpu`
-
-### Test Failures
-
-If GPU tests fail:
-
-1. Check the error message for specific issues
-2. Try running with higher tolerance: `GPU_TEST_TOLERANCE=0.90`
-3. Verify GPU memory is available: `nvidia-smi` or `rocm-smi`
+| Problem | Solution |
+|---------|----------|
+| Build fails with GPU features | Ensure CUDA/ROCm toolkit is installed |
+| GPU tests timeout | Check GPU memory usage, close other GPU apps |
+| Inconsistent results | Set `CUDA_VISIBLE_DEVICES=0` to use specific GPU |
+| Out of memory | Reduce batch size or use smaller test size |
 
 ## Performance Notes
 

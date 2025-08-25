@@ -21,6 +21,7 @@ services:
       - RUST_LOG=info
       - BITNET_THREADS=4
       - SCCACHE_DIR=/home/bitnet/.cache/sccache
+      - SCCACHE_CACHE_SIZE=10G
     command: ["bitnet-server"]
     restart: unless-stopped
     security_opt:
@@ -63,6 +64,7 @@ services:
       - RUST_LOG=info
       - CUDA_VISIBLE_DEVICES=0
       - SCCACHE_DIR=/home/bitnet/.cache/sccache
+      - SCCACHE_CACHE_SIZE=10G
     command: ["bitnet-server"]
     restart: unless-stopped
     security_opt:
@@ -70,6 +72,12 @@ services:
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     deploy:
       resources:
         limits:
