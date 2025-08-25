@@ -298,6 +298,10 @@ enum Commands {
         /// Output JSON
         #[arg(long)]
         json: bool,
+
+        /// Fail on unsupported version or suspicious counts
+        #[arg(long)]
+        strict: bool,
     },
 }
 
@@ -407,7 +411,9 @@ async fn main() -> Result<()> {
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
         Some(Commands::Info) => show_system_info().await,
         Some(Commands::Inspect { model, json }) => handle_inspect_command(model, json).await,
-        Some(Commands::CompatCheck { path, json }) => handle_compat_check_command(path, json).await,
+        Some(Commands::CompatCheck { path, json, strict }) => {
+            handle_compat_check_command(path, json, strict).await
+        }
         None => {
             // No command provided, show help
             let mut cmd = Cli::command();
@@ -1234,13 +1240,42 @@ async fn handle_inspect_command(model_path: std::path::PathBuf, json: bool) -> R
 }
 
 /// Check GGUF file compatibility using the new header parser
-async fn handle_compat_check_command(path: std::path::PathBuf, json: bool) -> Result<()> {
+async fn handle_compat_check_command(
+    path: std::path::PathBuf,
+    json: bool,
+    strict: bool,
+) -> Result<()> {
     use bitnet_inference::gguf;
     use serde_json::json;
 
-    // Use the new blocking reader to avoid runtime requirements
-    let header = gguf::read_header_blocking(&path)
-        .map_err(|e| anyhow::anyhow!("GGUF validation failed: {}", e))?;
+    let header = match gguf::read_header_blocking(&path) {
+        Ok(h) => h,
+        Err(e) => {
+            match &e {
+                gguf::GgufError::Io(_) => {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
+                gguf::GgufError::BadMagic(_)
+                | gguf::GgufError::Malformed
+                | gguf::GgufError::ShortHeader(_) => {
+                    eprintln!("{e}");
+                    std::process::exit(2);
+                }
+                gguf::GgufError::UnsupportedVersion(_) => {
+                    eprintln!("{e}");
+                    std::process::exit(3);
+                }
+                _ => {
+                    eprintln!("{e}");
+                    std::process::exit(2);
+                } // Future variants
+            }
+        }
+    };
+
+    let supported = (1..=3).contains(&header.version);
+    let suspicious = header.n_tensors > 10_000_000 || header.n_kv > 10_000_000;
 
     if json {
         let obj = json!({
@@ -1252,9 +1287,9 @@ async fn handle_compat_check_command(path: std::path::PathBuf, json: bool) -> Re
                 "n_kv": header.n_kv,
             },
             "compatibility": {
-                "supported_version": (1..=3).contains(&header.version),
-                "tensors_reasonable": header.n_tensors <= 10_000_000,
-                "kvs_reasonable": header.n_kv <= 10_000_000,
+                "supported_version": supported,
+                "tensors_reasonable": !suspicious,
+                "kvs_reasonable": !suspicious,
             }
         });
         println!("{}", serde_json::to_string_pretty(&obj)?);
@@ -1264,19 +1299,20 @@ async fn handle_compat_check_command(path: std::path::PathBuf, json: bool) -> Re
         println!(
             "Version:   {} {}",
             header.version,
-            if (1..=3).contains(&header.version) { "(supported)" } else { "(unsupported)" }
+            if supported { "(supported)" } else { "(unsupported)" }
         );
         println!("Tensors:   {}", header.n_tensors);
         println!("KV pairs:  {}", header.n_kv);
-
-        // Warnings
-        if header.n_tensors > 10_000_000 || header.n_kv > 10_000_000 {
-            println!("\n⚠ Warning: Unusually high tensor/KV counts detected");
+        if suspicious {
+            eprintln!("⚠ Unusually high tensor/KV counts detected");
         }
-        if !(1..=3).contains(&header.version) {
-            println!("\n⚠ Warning: Unsupported GGUF version");
+        if !supported {
+            eprintln!("⚠ Unsupported GGUF version");
         }
     }
 
+    if strict && (!supported || suspicious) {
+        std::process::exit(4);
+    }
     Ok(())
 }

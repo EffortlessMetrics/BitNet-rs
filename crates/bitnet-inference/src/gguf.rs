@@ -1,6 +1,8 @@
 use std::io;
 use thiserror::Error;
 
+/// Errors returned when reading/parsing a GGUF header.
+#[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum GgufError {
     #[error("bad magic: {0:02x?}")]
@@ -17,6 +19,8 @@ pub enum GgufError {
 
 pub type Result<T> = std::result::Result<T, GgufError>;
 
+/// Minimal GGUF header (first 24 bytes).
+/// Use `read_header_blocking` for CLIs or `read_header` for async contexts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GgufHeader {
     pub version: u32,
@@ -25,7 +29,6 @@ pub struct GgufHeader {
 }
 
 pub const GGUF_HEADER_LEN: usize = 24;
-const MAX_REASONABLE: u64 = 10_000_000;
 
 /// Parse the first 24 bytes of a GGUF file.
 pub fn parse_header(buf: &[u8]) -> Result<GgufHeader> {
@@ -45,10 +48,6 @@ pub fn parse_header(buf: &[u8]) -> Result<GgufHeader> {
 
     let n_tensors = u64::from_le_bytes(buf[8..16].try_into().map_err(|_| GgufError::Malformed)?);
     let n_kv = u64::from_le_bytes(buf[16..24].try_into().map_err(|_| GgufError::Malformed)?);
-
-    if n_tensors > MAX_REASONABLE || n_kv > MAX_REASONABLE {
-        return Err(GgufError::Malformed);
-    }
 
     Ok(GgufHeader { version, n_tensors, n_kv })
 }

@@ -40,14 +40,16 @@ fn rejects_unsupported_version() {
 }
 
 #[test]
-fn rejects_unreasonable_counts() {
+fn accepts_large_counts() {
+    // Parser is format-only, doesn't reject based on counts
     let mut buf = [0u8; 24];
     buf[0..4].copy_from_slice(b"GGUF");
     buf[4..8].copy_from_slice(2u32.to_le_bytes().as_slice());
-    buf[8..16].copy_from_slice(20_000_000u64.to_le_bytes().as_slice()); // too many tensors
+    buf[8..16].copy_from_slice(20_000_000u64.to_le_bytes().as_slice()); // many tensors
 
-    let err = bitnet_inference::gguf::parse_header(&buf).unwrap_err();
-    assert!(matches!(err, bitnet_inference::gguf::GgufError::Malformed));
+    let header = bitnet_inference::gguf::parse_header(&buf).unwrap();
+    assert_eq!(header.n_tensors, 20_000_000);
+    assert_eq!(header.n_kv, 0);
 }
 
 #[test]

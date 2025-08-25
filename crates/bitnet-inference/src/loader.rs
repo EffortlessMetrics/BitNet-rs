@@ -173,6 +173,15 @@ impl ModelLoader {
             model_info.n_kv()
         );
         
+        // Warn about suspicious counts
+        if model_info.n_tensors() > 10_000_000 || model_info.n_kv() > 10_000_000 {
+            warn!(
+                tensors = model_info.n_tensors(),
+                kvs = model_info.n_kv(),
+                "Suspicious GGUF counts detected - file may be corrupted"
+            );
+        }
+        
         let loader = gguf::GgufLoader::new(&self.model_path)?;
         let model = loader.load_model()?;
         let ignored = loader.get_ignored_tensors();

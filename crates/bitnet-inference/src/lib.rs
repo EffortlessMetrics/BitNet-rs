@@ -8,6 +8,9 @@ pub mod cache;
 pub mod config;
 pub mod engine;
 pub mod gguf; // always available (sync parser)
+
+// Re-export GGUF types for easy access
+pub use gguf::{GGUF_HEADER_LEN, GgufError, GgufHeader};
 pub mod parity;
 pub mod rt;
 pub mod sampling;

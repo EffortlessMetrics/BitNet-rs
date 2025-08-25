@@ -234,7 +234,7 @@ BitNet.rs includes a robust GGUF validation system that ensures model compatibil
 - **Header parsing** validates GGUF magic bytes and version (1-3 supported)
 - **Sanity checks** detect corrupted files with unreasonable tensor/KV counts
 - **Typed errors** provide clear, actionable error messages
-- **Fast validation** using memory-mapped I/O for efficiency
+- **Fast validation** with a tiny 24-byte header read
 
 ### CLI Tools
 ```bash
