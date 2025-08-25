@@ -1,7 +1,8 @@
 /// Tokenizer loading utilities
 use crate::Tokenizer;
-use anyhow::Result;
-use std::path::Path;
+use anyhow::{Context, Result};
+use serde_json::Value;
+use std::{fs, path::Path};
 
 /// Load a tokenizer from a file path
 pub fn load_tokenizer(path: &Path) -> Result<Box<dyn Tokenizer>> {
@@ -14,8 +15,18 @@ pub fn load_tokenizer(path: &Path) -> Result<Box<dyn Tokenizer>> {
             Ok(Box::new(crate::gguf_tokenizer::GgufTokenizer::from_gguf_file(path)?))
         }
         "json" => {
-            // TODO: Load HuggingFace tokenizer.json format
-            anyhow::bail!("JSON tokenizer loading not yet implemented")
+            // Validate JSON structure before loading
+            let data = fs::read_to_string(path).context("Failed to read tokenizer JSON file")?;
+            let value: Value =
+                serde_json::from_str(&data).context("Invalid tokenizer JSON format")?;
+
+            if value.get("model").and_then(|m| m.get("type")).and_then(|t| t.as_str()).is_none() {
+                anyhow::bail!("Unsupported tokenizer JSON structure: missing 'model.type' field");
+            }
+
+            let tokenizer = crate::hf_tokenizer::HfTokenizer::from_file(path)
+                .map_err(|e| anyhow::anyhow!("Failed to load HuggingFace tokenizer: {e}"))?;
+            Ok(Box::new(tokenizer))
         }
         "model" => {
             // Load SentencePiece model directly
