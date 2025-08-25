@@ -65,6 +65,24 @@ bitnet compat-check model.gguf --strict
 # Tensors:   1234
 # KV pairs:  56
 
+# Show key-value metadata
+bitnet compat-check model.gguf --show-kv
+# Output:
+# File:      model.gguf
+# Status:    ✓ Valid GGUF
+# Version:   2 (supported)
+# Tensors:   1234
+# KV pairs:  56
+#
+# Metadata (showing 20 of 56):
+#   model.arch                     = "llama"
+#   model.vocab_size               = 32000
+#   model.layers                   = 12
+#   ...
+
+# Custom KV limit
+bitnet compat-check model.gguf --show-kv --kv-limit 5
+
 # JSON output for scripting
 bitnet compat-check model.gguf --json
 # {
@@ -80,6 +98,20 @@ bitnet compat-check model.gguf --json
 #     "tensors_reasonable": true,
 #     "kvs_reasonable": true
 #   }
+# }
+
+# JSON with metadata
+bitnet compat-check model.gguf --json --show-kv --kv-limit 3
+# {
+#   "path": "model.gguf",
+#   "status": "valid",
+#   "gguf": { ... },
+#   "compatibility": { ... },
+#   "metadata": [
+#     {"key": "model.arch", "value": "llama"},
+#     {"key": "model.vocab_size", "value": 32000},
+#     {"key": "model.layers", "value": 12}
+#   ]
 # }
 ```
 
