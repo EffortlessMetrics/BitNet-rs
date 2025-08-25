@@ -1,4 +1,4 @@
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{Result, anyhow, ensure};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GgufHeader {
@@ -14,8 +14,11 @@ pub fn parse_header(buf: &[u8]) -> Result<GgufHeader> {
     let magic = &buf[0..4];
     ensure!(magic == b"GGUF", "bad magic: {:02x?}", magic);
 
-    let version = u32::from_le_bytes(buf[4..8].try_into().map_err(|_| anyhow!("bad version bytes"))?);
-    let n_tensors = u64::from_le_bytes(buf[8..16].try_into().map_err(|_| anyhow!("bad n_tensors bytes"))?);
+    let version =
+        u32::from_le_bytes(buf[4..8].try_into().map_err(|_| anyhow!("bad version bytes"))?);
+    ensure!((1..=3).contains(&version), "unsupported GGUF version: {version}");
+    let n_tensors =
+        u64::from_le_bytes(buf[8..16].try_into().map_err(|_| anyhow!("bad n_tensors bytes"))?);
     let n_kv = u64::from_le_bytes(buf[16..24].try_into().map_err(|_| anyhow!("bad n_kv bytes"))?);
 
     Ok(GgufHeader { version, n_tensors, n_kv })
@@ -27,7 +30,6 @@ pub async fn read_header(path: impl AsRef<std::path::Path>) -> Result<GgufHeader
 
     let mut f = tokio::fs::File::open(path).await?;
     let mut buf = [0u8; 24];
-    let n = f.read(&mut buf).await?;
-    ensure!(n >= 24, "file too small: read {}", n);
+    f.read_exact(&mut buf).await?; // EOF → clean error
     parse_header(&buf)
 }

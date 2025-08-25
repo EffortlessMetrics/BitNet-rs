@@ -7,7 +7,7 @@ pub mod backends;
 pub mod cache;
 pub mod config;
 pub mod engine;
-pub mod gguf;                 // always available (sync parser)
+pub mod gguf; // always available (sync parser)
 pub mod parity;
 pub mod rt;
 pub mod sampling;
