@@ -10,7 +10,7 @@ pub mod engine;
 pub mod gguf; // always available (sync parser)
 
 // Re-export GGUF types for easy access
-pub use gguf::{GGUF_HEADER_LEN, GgufError, GgufHeader};
+pub use gguf::{GGUF_HEADER_LEN, GgufError, GgufHeader, GgufKv, GgufValue, read_kv_pairs};
 pub mod parity;
 pub mod rt;
 pub mod sampling;

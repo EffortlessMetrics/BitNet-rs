@@ -302,6 +302,14 @@ enum Commands {
         /// Fail on unsupported version or suspicious counts
         #[arg(long)]
         strict: bool,
+
+        /// Show key-value metadata (limit with --kv-limit)
+        #[arg(long)]
+        show_kv: bool,
+
+        /// Limit number of KV pairs to show (default: 20)
+        #[arg(long, default_value_t = 20)]
+        kv_limit: usize,
     },
 }
 
@@ -411,8 +419,8 @@ async fn main() -> Result<()> {
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
         Some(Commands::Info) => show_system_info().await,
         Some(Commands::Inspect { model, json }) => handle_inspect_command(model, json).await,
-        Some(Commands::CompatCheck { path, json, strict }) => {
-            handle_compat_check_command(path, json, strict).await
+        Some(Commands::CompatCheck { path, json, strict, show_kv, kv_limit }) => {
+            handle_compat_check_command(path, json, strict, show_kv, kv_limit).await
         }
         None => {
             // No command provided, show help
@@ -1244,6 +1252,8 @@ async fn handle_compat_check_command(
     path: std::path::PathBuf,
     json: bool,
     strict: bool,
+    show_kv: bool,
+    kv_limit: usize,
 ) -> Result<()> {
     use bitnet_inference::gguf;
     use serde_json::json;
@@ -1277,8 +1287,21 @@ async fn handle_compat_check_command(
     let supported = (1..=3).contains(&header.version);
     let suspicious = header.n_tensors > 10_000_000 || header.n_kv > 10_000_000;
 
+    // Read KV pairs if requested
+    let kvs = if show_kv {
+        match gguf::read_kv_pairs(&path, Some(kv_limit)) {
+            Ok(kvs) => Some(kvs),
+            Err(e) => {
+                eprintln!("Warning: Failed to read KV pairs: {}", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     if json {
-        let obj = json!({
+        let mut obj = json!({
             "path": path.display().to_string(),
             "status": "valid",
             "gguf": {
@@ -1292,6 +1315,32 @@ async fn handle_compat_check_command(
                 "kvs_reasonable": !suspicious,
             }
         });
+        
+        if let Some(kvs) = kvs {
+            let kv_json: Vec<_> = kvs.iter().map(|kv| {
+                let value_str = match &kv.value {
+                    gguf::GgufValue::U8(v) => json!(v),
+                    gguf::GgufValue::I8(v) => json!(v),
+                    gguf::GgufValue::U16(v) => json!(v),
+                    gguf::GgufValue::I16(v) => json!(v),
+                    gguf::GgufValue::U32(v) => json!(v),
+                    gguf::GgufValue::I32(v) => json!(v),
+                    gguf::GgufValue::F32(v) => json!(v),
+                    gguf::GgufValue::Bool(v) => json!(v),
+                    gguf::GgufValue::String(v) => json!(v),
+                    gguf::GgufValue::Array(_) => json!("[array]"),
+                    gguf::GgufValue::U64(v) => json!(v),
+                    gguf::GgufValue::I64(v) => json!(v),
+                    gguf::GgufValue::F64(v) => json!(v),
+                };
+                json!({
+                    "key": kv.key,
+                    "value": value_str
+                })
+            }).collect();
+            obj["metadata"] = json!(kv_json);
+        }
+        
         println!("{}", serde_json::to_string_pretty(&obj)?);
     } else {
         println!("File:      {}", path.display());
@@ -1303,6 +1352,35 @@ async fn handle_compat_check_command(
         );
         println!("Tensors:   {}", header.n_tensors);
         println!("KV pairs:  {}", header.n_kv);
+        
+        if let Some(kvs) = kvs {
+            println!("\nMetadata (showing {} of {}):", kvs.len(), header.n_kv);
+            for kv in kvs.iter().take(kv_limit) {
+                let value_str = match &kv.value {
+                    gguf::GgufValue::U8(v) => format!("{}", v),
+                    gguf::GgufValue::I8(v) => format!("{}", v),
+                    gguf::GgufValue::U16(v) => format!("{}", v),
+                    gguf::GgufValue::I16(v) => format!("{}", v),
+                    gguf::GgufValue::U32(v) => format!("{}", v),
+                    gguf::GgufValue::I32(v) => format!("{}", v),
+                    gguf::GgufValue::F32(v) => format!("{}", v),
+                    gguf::GgufValue::Bool(v) => format!("{}", v),
+                    gguf::GgufValue::String(v) => {
+                        if v.len() > 50 {
+                            format!("\"{}...\"", &v[..47])
+                        } else {
+                            format!("\"{}\"", v)
+                        }
+                    }
+                    gguf::GgufValue::Array(arr) => format!("[{} items]", arr.len()),
+                    gguf::GgufValue::U64(v) => format!("{}", v),
+                    gguf::GgufValue::I64(v) => format!("{}", v),
+                    gguf::GgufValue::F64(v) => format!("{}", v),
+                };
+                println!("  {:<30} = {}", kv.key, value_str);
+            }
+        }
+        
         if suspicious {
             eprintln!("⚠ Unusually high tensor/KV counts detected");
         }
