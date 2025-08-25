@@ -1315,32 +1315,35 @@ async fn handle_compat_check_command(
                 "kvs_reasonable": !suspicious,
             }
         });
-        
+
         if let Some(kvs) = kvs {
-            let kv_json: Vec<_> = kvs.iter().map(|kv| {
-                let value_str = match &kv.value {
-                    gguf::GgufValue::U8(v) => json!(v),
-                    gguf::GgufValue::I8(v) => json!(v),
-                    gguf::GgufValue::U16(v) => json!(v),
-                    gguf::GgufValue::I16(v) => json!(v),
-                    gguf::GgufValue::U32(v) => json!(v),
-                    gguf::GgufValue::I32(v) => json!(v),
-                    gguf::GgufValue::F32(v) => json!(v),
-                    gguf::GgufValue::Bool(v) => json!(v),
-                    gguf::GgufValue::String(v) => json!(v),
-                    gguf::GgufValue::Array(_) => json!("[array]"),
-                    gguf::GgufValue::U64(v) => json!(v),
-                    gguf::GgufValue::I64(v) => json!(v),
-                    gguf::GgufValue::F64(v) => json!(v),
-                };
-                json!({
-                    "key": kv.key,
-                    "value": value_str
+            let kv_json: Vec<_> = kvs
+                .iter()
+                .map(|kv| {
+                    let value_str = match &kv.value {
+                        gguf::GgufValue::U8(v) => json!(v),
+                        gguf::GgufValue::I8(v) => json!(v),
+                        gguf::GgufValue::U16(v) => json!(v),
+                        gguf::GgufValue::I16(v) => json!(v),
+                        gguf::GgufValue::U32(v) => json!(v),
+                        gguf::GgufValue::I32(v) => json!(v),
+                        gguf::GgufValue::F32(v) => json!(v),
+                        gguf::GgufValue::Bool(v) => json!(v),
+                        gguf::GgufValue::String(v) => json!(v),
+                        gguf::GgufValue::Array(_) => json!("[array]"),
+                        gguf::GgufValue::U64(v) => json!(v),
+                        gguf::GgufValue::I64(v) => json!(v),
+                        gguf::GgufValue::F64(v) => json!(v),
+                    };
+                    json!({
+                        "key": kv.key,
+                        "value": value_str
+                    })
                 })
-            }).collect();
+                .collect();
             obj["metadata"] = json!(kv_json);
         }
-        
+
         println!("{}", serde_json::to_string_pretty(&obj)?);
     } else {
         println!("File:      {}", path.display());
@@ -1352,7 +1355,7 @@ async fn handle_compat_check_command(
         );
         println!("Tensors:   {}", header.n_tensors);
         println!("KV pairs:  {}", header.n_kv);
-        
+
         if let Some(kvs) = kvs {
             println!("\nMetadata (showing {} of {}):", kvs.len(), header.n_kv);
             for kv in kvs.iter().take(kv_limit) {
@@ -1380,7 +1383,7 @@ async fn handle_compat_check_command(
                 println!("  {:<30} = {}", kv.key, value_str);
             }
         }
-        
+
         if suspicious {
             eprintln!("⚠ Unusually high tensor/KV counts detected");
         }
