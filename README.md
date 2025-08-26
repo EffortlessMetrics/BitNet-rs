@@ -296,10 +296,17 @@ println!("GGUF v{} with {} tensors", header.version, header.n_tensors);
 
 // Engine validates automatically on load
 let info = engine::inspect_model(&path)?;
+println!("KV cache: {:?}", info.kv_cache);
+println!("Tensor index sample: {:?}", info.tensor_index_overview);
+println!("Quantization hints: {:?}", info.quantization_hints);
 if info.version() > 3 {
     eprintln!("Warning: Unsupported GGUF version {}", info.version());
 }
 ```
+
+`ModelInfo` exposes this metadata without loading the full model, making it easy to
+preview KV cache requirements, inspect a sample of tensor names, or see what
+quantization types are present.
 
 ## Architecture
 
