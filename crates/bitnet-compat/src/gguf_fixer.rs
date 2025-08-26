@@ -1,10 +1,10 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use sha2::{Digest, Sha256};
 use std::{collections::HashSet, fs, path::Path};
 use tracing::{info, warn};
 
 use bitnet_models::formats::gguf::GgufReader;
-use ggus::{GGufFileHeader, GGufFileWriter, GGufMetaDataValueType, GGufWriter, GGuf};
+use ggus::{GGuf, GGufFileHeader, GGufFileWriter, GGufMetaDataValueType, GGufWriter};
 
 /// GGUF compatibility fixer that auto-patches missing metadata
 pub struct GgufCompatibilityFixer;
@@ -105,15 +105,20 @@ impl GgufCompatibilityFixer {
             GGufWriter::new(&mut buf).write_str(s).unwrap();
             buf
         }
-        fn enc_u32(v: u32) -> Vec<u8> { v.to_le_bytes().to_vec() }
-        fn enc_bool(v: bool) -> Vec<u8> { vec![if v {1} else {0}] }
+        fn enc_u32(v: u32) -> Vec<u8> {
+            v.to_le_bytes().to_vec()
+        }
+        fn enc_bool(v: bool) -> Vec<u8> {
+            vec![if v { 1 } else { 0 }]
+        }
 
         let reader = GgufReader::new(&data)?;
-        let tokenizer_model = reader
-            .get_string_metadata("tokenizer.ggml.model")
-            .unwrap_or_default();
+        let tokenizer_model =
+            reader.get_string_metadata("tokenizer.ggml.model").unwrap_or_default();
 
-        if (tokenizer_model == "gpt2" || tokenizer_model == "llama3") && !seen.contains("tokenizer.ggml.pre") {
+        if (tokenizer_model == "gpt2" || tokenizer_model == "llama3")
+            && !seen.contains("tokenizer.ggml.pre")
+        {
             meta.push((
                 "tokenizer.ggml.pre".into(),
                 GGufMetaDataValueType::String,
@@ -161,11 +166,7 @@ impl GgufCompatibilityFixer {
         }
 
         // Mark file as fixed
-        meta.push((
-            "bitnet.compat.fixed".into(),
-            GGufMetaDataValueType::Bool,
-            enc_bool(true),
-        ));
+        meta.push(("bitnet.compat.fixed".into(), GGufMetaDataValueType::Bool, enc_bool(true)));
         meta.push((
             "bitnet.compat.timestamp".into(),
             GGufMetaDataValueType::String,
@@ -173,8 +174,10 @@ impl GgufCompatibilityFixer {
         ));
 
         // Write out new GGUF file
-        let header = GGufFileHeader::new(gguf.header.version, gguf.tensors.len() as _, meta.len() as _);
-        let mut writer = GGufFileWriter::with_alignment(fs::File::create(output_path)?, header, gguf.alignment)?;
+        let header =
+            GGufFileHeader::new(gguf.header.version, gguf.tensors.len() as _, meta.len() as _);
+        let mut writer =
+            GGufFileWriter::with_alignment(fs::File::create(output_path)?, header, gguf.alignment)?;
         for (k, ty, v) in &meta {
             writer.write_meta_kv(k, *ty, v)?;
         }
