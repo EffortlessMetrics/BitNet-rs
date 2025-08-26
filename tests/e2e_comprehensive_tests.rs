@@ -82,7 +82,7 @@ mod happy_path_e2e {
         assert!(i2s_result.is_ok(), "I2S quantization should succeed");
 
         let quantized = i2s_result.unwrap();
-        let dequantized = i2s_quantizer.dequantize(&quantized);
+        let dequantized = i2s_quantizer.dequantize(&quantized, &Device::Cpu);
         assert!(dequantized.is_ok(), "I2S dequantization should succeed");
 
         // Verify round-trip accuracy
@@ -115,7 +115,7 @@ mod happy_path_e2e {
         for quantizer in quantizers {
             let quantized = quantizer.quantize(&tensor).expect("Quantization should succeed");
             let dequantized =
-                quantizer.dequantize(&quantized).expect("Dequantization should succeed");
+                quantizer.dequantize(&quantized, &Device::Cpu).expect("Dequantization should succeed");
 
             // Calculate compression ratio and accuracy
             let original_size = tensor.numel() * 4; // f32 = 4 bytes
@@ -290,7 +290,7 @@ mod integration_tests {
         assert!(kernel_result.is_ok(), "Kernel operation should succeed");
 
         // Step 3: Dequantize
-        let dequantized = quantizer.dequantize(&quantized).expect("Dequantization should succeed");
+        let dequantized = quantizer.dequantize(&quantized, &Device::Cuda(0)).expect("Dequantization should succeed");
 
         // Verify pipeline integrity
         assert_eq!(dequantized.shape(), tensor.shape(), "Shape should be preserved");

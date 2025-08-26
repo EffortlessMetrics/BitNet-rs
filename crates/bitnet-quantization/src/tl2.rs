@@ -5,8 +5,7 @@
 //! on x86 architectures, with runtime CPU feature detection for optimal instruction set selection.
 
 use crate::{QuantizedTensor, QuantizerTrait, utils::*};
-use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
-use candle_core::Device;
+use bitnet_common::{BitNetTensor, Device, QuantizationError, QuantizationType, Result, Tensor};
 use rayon::prelude::*;
 use std::collections::HashMap;
 
@@ -256,7 +255,7 @@ impl TL2Quantizer {
     }
 
     /// Dequantize tensor from TL2 format
-    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::TL2 {
             return Err(
                 QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
@@ -277,9 +276,9 @@ impl TL2Quantizer {
             _ => self.dequantize_scalar(&quantized_data, &tensor.scales)?,
         };
 
-        // Create tensor
-        let device = Device::Cpu; // TODO: Support GPU devices
-        create_tensor_from_f32(dequantized_data, &tensor.shape, &device)
+        // Create tensor on requested device, falling back to CPU if needed
+        create_tensor_from_f32(dequantized_data.clone(), &tensor.shape, device)
+            .or_else(|_| create_tensor_from_f32(dequantized_data, &tensor.shape, &Device::Cpu))
     }
 
     /// Scalar quantization implementation
@@ -537,8 +536,8 @@ impl QuantizerTrait for TL2Quantizer {
         self.quantize_tensor(tensor)
     }
 
-    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
-        self.dequantize_tensor(tensor)
+    fn dequantize_tensor(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor> {
+        TL2Quantizer::dequantize_tensor(self, tensor, device)
     }
 
     fn quantization_type(&self) -> QuantizationType {
@@ -554,7 +553,7 @@ impl QuantizerTrait for TL2Quantizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use candle_core::Device;
+    use bitnet_common::Device;
 
     #[test]
     fn test_cpu_feature_detection() {
@@ -592,7 +591,7 @@ mod tests {
         let quantizer = TL2Quantizer::new();
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         assert_eq!(quantized.qtype, QuantizationType::TL2);
         assert_eq!(quantized.shape, shape);
@@ -620,7 +619,7 @@ mod tests {
         let quantizer = TL2Quantizer::new();
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         assert_eq!(quantized.shape, shape);
         assert_eq!(dequantized.shape(), &shape);

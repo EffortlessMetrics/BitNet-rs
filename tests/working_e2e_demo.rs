@@ -27,7 +27,7 @@ fn test_complete_quantization_pipeline() {
     assert!(i2s_result.is_ok(), "I2S quantization should succeed");
 
     let quantized = i2s_result.unwrap();
-    let dequantized = i2s_quantizer.dequantize_tensor(&quantized);
+    let dequantized = i2s_quantizer.dequantize_tensor(&quantized, &Device::Cpu);
     assert!(dequantized.is_ok(), "I2S dequantization should succeed");
 
     // Verify tensor properties

@@ -1,7 +1,7 @@
 //! Utility functions for quantization operations
 
-use bitnet_common::{BitNetTensor, QuantizationError, Result};
-use candle_core::{DType, Device, Tensor as CandleTensor};
+use bitnet_common::{BitNetTensor, Device, QuantizationError, Result};
+use candle_core::{DType, Device as CandleDevice, Tensor as CandleTensor};
 
 /// Calculate the scale factor for quantization
 pub fn calculate_scale(data: &[f32], bits: u8) -> f32 {
@@ -120,7 +120,7 @@ pub fn extract_f32_data(tensor: &BitNetTensor) -> Result<Vec<f32>> {
     let cpu_tensor = if f32_tensor.device().is_cpu() {
         f32_tensor
     } else {
-        f32_tensor.to_device(&Device::Cpu)?
+        f32_tensor.to_device(&CandleDevice::Cpu)?
     };
 
     // Flatten the tensor to 1D and extract the data
@@ -135,7 +135,10 @@ pub fn create_tensor_from_f32(
     shape: &[usize],
     device: &Device,
 ) -> Result<BitNetTensor> {
-    let tensor = CandleTensor::from_vec(data, shape, device)?;
+    let candle_device = device
+        .to_candle()
+        .map_err(|e| QuantizationError::QuantizationFailed { reason: e.to_string() })?;
+    let tensor = CandleTensor::from_vec(data, shape, &candle_device)?;
     Ok(BitNetTensor::new(tensor))
 }
 

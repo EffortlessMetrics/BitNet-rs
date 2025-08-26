@@ -9,7 +9,7 @@
 //! - Edge cases and error conditions
 //! - Property-based testing for robustness
 
-use bitnet_common::{BitNetTensor, QuantizationType, Tensor};
+use bitnet_common::{BitNetTensor, Device, QuantizationType, Tensor};
 use bitnet_quantization::*;
 use candle_core::{Device as CandleDevice, Tensor as CandleTensor};
 use proptest::prelude::*;
@@ -61,7 +61,7 @@ mod quantization_algorithms {
         assert!(!quantized.scales.is_empty());
 
         // Test dequantization
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
         assert_eq!(dequantized.shape(), &shape);
 
         // Check accuracy (2-bit quantization has limited precision)
@@ -86,7 +86,7 @@ mod quantization_algorithms {
         assert!(!quantized.scales.is_empty());
 
         // Test dequantization
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
         assert_eq!(dequantized.shape(), &shape);
 
         // Check accuracy
@@ -111,7 +111,7 @@ mod quantization_algorithms {
         assert!(!quantized.scales.is_empty());
 
         // Test dequantization
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
         assert_eq!(dequantized.shape(), &shape);
 
         // Check accuracy
@@ -136,7 +136,7 @@ mod quantization_algorithms {
 
         for (name, quantizer) in quantizers {
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
             let dequant_data = extract_tensor_data(&dequantized);
             let mse = calculate_mse(&data, &dequant_data);
@@ -205,7 +205,7 @@ mod parameter_validation {
             assert_eq!(quantized.block_size, block_size);
 
             // Should be able to dequantize
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
             assert_eq!(dequantized.shape(), tensor.shape());
         }
     }
@@ -246,7 +246,7 @@ mod parameter_validation {
             }
 
             // Should be able to dequantize
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
             assert_eq!(dequantized.shape(), tensor.shape());
         }
     }
@@ -287,7 +287,7 @@ mod parameter_validation {
             assert_eq!(quantized.block_size, config.block_size);
 
             // Should be able to dequantize
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
             assert_eq!(dequantized.shape(), tensor.shape());
         }
     }
@@ -322,7 +322,7 @@ mod edge_cases {
 
         let quantizer = I2SQuantizer::new();
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         assert_eq!(quantized.shape, shape);
         assert_eq!(dequantized.shape(), &shape);
@@ -339,7 +339,7 @@ mod edge_cases {
 
         let quantizer = I2SQuantizer::new();
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         let dequant_data = extract_tensor_data(&dequantized);
 
@@ -357,7 +357,7 @@ mod edge_cases {
 
         let quantizer = I2SQuantizer::new();
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         let dequant_data = extract_tensor_data(&dequantized);
 
@@ -388,7 +388,7 @@ mod edge_cases {
             assert!(result.is_ok(), "Should handle extreme values");
 
             let quantized = result.unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
             assert_eq!(dequantized.shape(), &shape);
         }
@@ -408,7 +408,7 @@ mod edge_cases {
         match result {
             Ok(quantized) => {
                 // If it succeeds, should be able to dequantize
-                let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+                let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
                 assert_eq!(dequantized.shape(), &shape);
             }
             Err(_) => {
@@ -438,7 +438,7 @@ mod edge_cases {
 
             for quantizer in quantizers {
                 let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-                let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+                let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
                 assert_eq!(quantized.shape, shape);
                 assert_eq!(dequantized.shape(), &shape);
@@ -502,7 +502,7 @@ mod performance_tests {
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
 
             let start = Instant::now();
-            let result = quantizer.dequantize_tensor(&quantized);
+            let result = quantizer.dequantize_tensor(&quantized, &Device::Cpu);
             let duration = start.elapsed();
 
             assert!(result.is_ok(), "{} dequantization failed", name);
@@ -578,10 +578,10 @@ mod format_compatibility {
         assert_eq!(back_to_i2s.qtype, QuantizationType::I2S);
 
         // All should be dequantizable
-        let _ = i2s_quantized.dequantize().unwrap();
-        let _ = tl1_quantized.dequantize().unwrap();
-        let _ = tl2_quantized.dequantize().unwrap();
-        let _ = back_to_i2s.dequantize().unwrap();
+        let _ = i2s_quantized.dequantize(&Device::Cpu).unwrap();
+        let _ = tl1_quantized.dequantize(&Device::Cpu).unwrap();
+        let _ = tl2_quantized.dequantize(&Device::Cpu).unwrap();
+        let _ = back_to_i2s.dequantize(&Device::Cpu).unwrap();
     }
 
     #[test]
@@ -599,7 +599,7 @@ mod format_compatibility {
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
             assert_eq!(quantized.qtype, qtype);
 
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
             assert_eq!(dequantized.shape(), tensor.shape());
         }
     }
@@ -650,7 +650,7 @@ proptest! {
 
         for quantizer in quantizers {
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
             prop_assert_eq!(quantized.shape, shape.clone());
             prop_assert_eq!(dequantized.shape(), &shape);
@@ -683,7 +683,7 @@ proptest! {
         let quantizer = I2SQuantizer::new();
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         let dequant_data = extract_tensor_data(&dequantized);
 
@@ -768,7 +768,7 @@ mod integration_tests {
 
             // Dequantize
             let start = Instant::now();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
             let dequantize_time = start.elapsed();
 
             // Verify correctness
@@ -816,7 +816,7 @@ mod integration_tests {
 
         for (name, quantizer) in quantizers {
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
             let dequant_data = extract_tensor_data(&dequantized);
             assert_eq!(dequant_data.len(), data.len());

@@ -50,7 +50,7 @@ fn test_quantization_roundtrip_integration() {
         assert!(quantized.data.len() > 0, "{}: Quantized data is empty", name);
 
         // Dequantize
-        let reconstructed = quantizer.dequantize_tensor(&quantized).unwrap();
+        let reconstructed = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
         let reconstructed_data = reconstructed.to_vec().unwrap();
 
         assert_eq!(reconstructed_data.len(), test_data.len());

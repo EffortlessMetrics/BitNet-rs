@@ -3,7 +3,7 @@
 
 #![cfg(feature = "integration-tests")]
 
-use bitnet_common::{BitNetTensor, MockTensor, Tensor};
+use bitnet_common::{BitNetTensor, Device, MockTensor, Tensor};
 use bitnet_quantization::tl1::TL1Config;
 use bitnet_quantization::tl2::TL2Config;
 use bitnet_quantization::*;
@@ -210,7 +210,7 @@ mod algorithm_comprehensive {
             assert!(!quantized.scales.is_empty());
 
             // Test dequantization
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
             assert_eq!(dequantized.shape().iter().product::<usize>(), pattern.len());
 
             // Check that dequantized values are reasonably close to original
@@ -250,7 +250,7 @@ mod algorithm_comprehensive {
             assert!(result.is_ok(), "Block size {} failed", block_size);
 
             let quantized = result.unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
             // Verify round-trip accuracy
             let max_error = data
@@ -294,7 +294,7 @@ mod algorithm_comprehensive {
             assert!(result.is_ok(), "Precision {} failed", precision);
 
             let quantized = result.unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
             // Higher precision should give better accuracy
             let mse: f32 = data
@@ -387,7 +387,7 @@ mod performance_tests {
 
         // Test dequantization performance
         let start = Instant::now();
-        let result = quantizer.dequantize_tensor(&quantized);
+        let result = quantizer.dequantize_tensor(&quantized, &Device::Cpu);
         let duration = start.elapsed();
 
         assert!(result.is_ok());
@@ -436,7 +436,7 @@ mod property_tests {
             let quantizer = I2SQuantizer::new();
 
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
             prop_assert_eq!(dequantized.shape().iter().product::<usize>(), data.len());
         }
@@ -464,7 +464,7 @@ mod property_tests {
             let quantizer = I2SQuantizer::new();
 
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
             // Calculate maximum absolute error
             let max_error = data.iter()
@@ -529,7 +529,7 @@ mod integration_tests {
 
             // Dequantize
             let start = std::time::Instant::now();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
             let dequantize_time = start.elapsed();
 
             // Verify correctness
@@ -583,9 +583,9 @@ mod integration_tests {
         let tl1_result = tl1_quantizer.quantize_tensor(&tensor).unwrap();
         let tl2_result = tl2_quantizer.quantize_tensor(&tensor).unwrap();
 
-        let i2s_deq = i2s_quantizer.dequantize_tensor(&i2s_result).unwrap();
-        let tl1_deq = tl1_quantizer.dequantize_tensor(&tl1_result).unwrap();
-        let tl2_deq = tl2_quantizer.dequantize_tensor(&tl2_result).unwrap();
+        let i2s_deq = i2s_quantizer.dequantize_tensor(&i2s_result, &Device::Cpu).unwrap();
+        let tl1_deq = tl1_quantizer.dequantize_tensor(&tl1_result, &Device::Cpu).unwrap();
+        let tl2_deq = tl2_quantizer.dequantize_tensor(&tl2_result, &Device::Cpu).unwrap();
 
         // All should produce valid results
         assert_eq!(i2s_deq.shape().iter().product::<usize>(), data.len());

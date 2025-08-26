@@ -92,11 +92,13 @@ impl MockTensor {
 #[derive(Debug, Clone)]
 pub struct BitNetTensor {
     inner: CandleTensor,
+    device: Device,
 }
 
 impl BitNetTensor {
     pub fn new(tensor: CandleTensor) -> Self {
-        Self { inner: tensor }
+        let device = Device::from(tensor.device());
+        Self { inner: tensor, device }
     }
 
     pub fn from_slice<T: bytemuck::Pod + candle_core::WithDType>(
@@ -183,9 +185,7 @@ impl Tensor for BitNetTensor {
     }
 
     fn device(&self) -> &Device {
-        // This is a simplified implementation - in practice we'd need to store
-        // the device or convert properly each time
-        &Device::Cpu
+        &self.device
     }
 
     fn as_slice<T: bytemuck::Pod>(&self) -> Result<&[T]> {

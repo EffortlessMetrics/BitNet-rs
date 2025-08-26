@@ -1,6 +1,6 @@
 // Property-based testing for quantization operations
 use proptest::prelude::*;
-use crate::{QuantizationType, Quantize, QuantizedTensor};
+use crate::{QuantizationType, Quantize, QuantizedTensor, Device};
 use std::collections::HashMap;
 
 /// Test that quantization followed by dequantization preserves approximate values
@@ -37,7 +37,7 @@ mod tests {
         fn test_i2s_quantization_roundtrip(data in quantization_roundtrip_property()) {
             let tensor = MockTensor::from_vec(data.clone());
             let quantized = tensor.quantize(QuantizationType::I2S).unwrap();
-            let dequantized = quantized.dequantize().unwrap();
+            let dequantized = quantized.dequantize(&Device::Cpu).unwrap();
             
             // Check that the dequantized values are close to original
             let original_slice = tensor.as_slice::<f32>().unwrap();
@@ -75,7 +75,7 @@ mod tests {
             let quantized = tensor.quantize(QuantizationType::I2S).unwrap();
             prop_assert_eq!(quantized.shape, original_shape);
             
-            let dequantized = quantized.dequantize().unwrap();
+            let dequantized = quantized.dequantize(&Device::Cpu).unwrap();
             prop_assert_eq!(dequantized.shape(), &original_shape[..]);
         }
 
@@ -90,7 +90,7 @@ mod tests {
             match result {
                 Ok(quantized) => {
                     // If successful, dequantization should also work
-                    let _dequantized = quantized.dequantize().unwrap();
+                    let _dequantized = quantized.dequantize(&Device::Cpu).unwrap();
                 }
                 Err(_) => {
                     // Graceful failure is acceptable for edge cases
@@ -137,7 +137,7 @@ mod tests {
         let zeros = vec![0.0f32; 100];
         let tensor = MockTensor::from_vec(zeros);
         let quantized = tensor.quantize(QuantizationType::I2S).unwrap();
-        let dequantized = quantized.dequantize().unwrap();
+        let dequantized = quantized.dequantize(&Device::Cpu).unwrap();
         
         for value in dequantized.as_slice::<f32>().unwrap() {
             assert!((value.abs() < 1e-6), "Zero values should remain close to zero");
@@ -147,7 +147,7 @@ mod tests {
         let alternating: Vec<f32> = (0..100).map(|i| if i % 2 == 0 { 1.0 } else { -1.0 }).collect();
         let tensor = MockTensor::from_vec(alternating);
         let quantized = tensor.quantize(QuantizationType::I2S).unwrap();
-        let _dequantized = quantized.dequantize().unwrap();
+        let _dequantized = quantized.dequantize(&Device::Cpu).unwrap();
         // Should not panic and should produce reasonable results
     }
 
@@ -219,5 +219,9 @@ impl Quantize for MockTensor {
             QuantizationType::TL1 => crate::tl1::quantize_tl1(self),
             QuantizationType::TL2 => crate::tl2::quantize_tl2(self),
         }
+    }
+
+    fn dequantize(&self, device: &Device) -> Result<BitNetTensor, crate::BitNetError> {
+        BitNetTensor::from_slice(&self.data, &self.shape, device)
     }
 }

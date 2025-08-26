@@ -3,6 +3,7 @@
 use libfuzzer_sys::fuzz_target;
 use arbitrary::Arbitrary;
 use bitnet_quantization::{QuantizationType, Quantize};
+use bitnet_common::Device;
 
 #[derive(Arbitrary, Debug)]
 struct FuzzInput {
@@ -46,7 +47,7 @@ fuzz_target!(|input: FuzzInput| {
         assert_eq!(quantized.qtype, QuantizationType::I2S);
         
         // Test dequantization doesn't panic
-        let _ = quantized.dequantize();
+        let _ = quantized.dequantize(&Device::Cpu);
     }
 });
 

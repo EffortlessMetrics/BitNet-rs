@@ -34,7 +34,7 @@ fn bench_i2s_quantization(c: &mut Criterion) {
             let quantizer = I2SQuantizer::new();
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
             b.iter(|| {
-                let result = quantizer.dequantize_tensor(&quantized).unwrap();
+                let result = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
                 black_box(result);
             });
         });
@@ -64,7 +64,7 @@ fn bench_tl1_quantization(c: &mut Criterion) {
             let quantizer = TL1Quantizer::new();
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
             b.iter(|| {
-                let result = quantizer.dequantize_tensor(&quantized).unwrap();
+                let result = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
                 black_box(result);
             });
         });
@@ -94,7 +94,7 @@ fn bench_tl2_quantization(c: &mut Criterion) {
             let quantizer = TL2Quantizer::new();
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
             b.iter(|| {
-                let result = quantizer.dequantize_tensor(&quantized).unwrap();
+                let result = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
                 black_box(result);
             });
         });

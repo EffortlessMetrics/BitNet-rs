@@ -6,17 +6,17 @@
 
 #![cfg(feature = "integration-tests")]
 
-use bitnet_common::{BitNetTensor, QuantizationType, Tensor};
+use bitnet_common::{BitNetTensor, Device, QuantizationType, Tensor};
 use bitnet_quantization::{
     I2SQuantizer, Quantize, QuantizerFactory, QuantizerTrait, TL1Quantizer, TL2Quantizer,
     convert_quantization,
 };
-use candle_core::{Device, Tensor as CandleTensor};
+use candle_core::{Device as CandleDevice, Tensor as CandleTensor};
 use proptest::prelude::*;
 
 /// Helper function to create test tensors
 fn create_test_tensor(data: Vec<f32>, shape: Vec<usize>) -> BitNetTensor {
-    let device = Device::Cpu;
+    let device = CandleDevice::Cpu;
     let tensor = CandleTensor::from_vec(data, shape.as_slice(), &device).unwrap();
     BitNetTensor::new(tensor)
 }
@@ -32,7 +32,7 @@ fn test_all_quantization_round_trips() {
         let quantizer = QuantizerFactory::create(qtype);
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         assert_eq!(quantized.qtype, qtype);
         assert_eq!(quantized.shape, shape);
@@ -67,10 +67,10 @@ fn test_quantization_format_conversion() {
     assert_eq!(back_to_i2s.qtype, QuantizationType::I2S);
 
     // All should be dequantizable
-    let _ = i2s_quantized.dequantize().unwrap();
-    let _ = tl1_quantized.dequantize().unwrap();
-    let _ = tl2_quantized.dequantize().unwrap();
-    let _ = back_to_i2s.dequantize().unwrap();
+    let _ = i2s_quantized.dequantize(&Device::Cpu).unwrap();
+    let _ = tl1_quantized.dequantize(&Device::Cpu).unwrap();
+    let _ = tl2_quantized.dequantize(&Device::Cpu).unwrap();
+    let _ = back_to_i2s.dequantize(&Device::Cpu).unwrap();
 }
 
 /// Test quantization with different tensor shapes
@@ -89,7 +89,7 @@ fn test_different_tensor_shapes() {
 
         for qtype in [QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2] {
             let quantized = tensor.quantize(qtype).unwrap();
-            let dequantized = quantized.dequantize().unwrap();
+            let dequantized = quantized.dequantize(&Device::Cpu).unwrap();
 
             assert_eq!(quantized.shape, shape);
             assert_eq!(dequantized.shape(), &shape);
@@ -106,7 +106,7 @@ fn test_extreme_values() {
 
     for qtype in [QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2] {
         let quantized = tensor.quantize(qtype).unwrap();
-        let dequantized = quantized.dequantize().unwrap();
+        let dequantized = quantized.dequantize(&Device::Cpu).unwrap();
 
         // Should not panic and should maintain shape
         assert_eq!(dequantized.shape(), &[9]);
@@ -123,7 +123,7 @@ fn test_quantization_accuracy() {
 
     for qtype in [QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2] {
         let quantized = tensor.quantize(qtype).unwrap();
-        let dequantized = quantized.dequantize().unwrap();
+        let dequantized = quantized.dequantize(&Device::Cpu).unwrap();
 
         // Extract dequantized data for comparison
         let dequant_candle = dequantized.inner();
@@ -190,7 +190,7 @@ proptest! {
         let tensor = create_test_tensor(data.clone(), shape.clone());
 
         let quantized = tensor.quantize(qtype).unwrap();
-        let dequantized = quantized.dequantize().unwrap();
+        let dequantized = quantized.dequantize(&Device::Cpu).unwrap();
 
         // Basic properties should hold
         prop_assert_eq!(quantized.qtype, qtype);
@@ -237,7 +237,7 @@ proptest! {
         prop_assert_eq!(target_quantized.qtype, target_qtype);
 
         // Should be dequantizable
-        let dequantized = target_quantized.dequantize().unwrap();
+        let dequantized = target_quantized.dequantize(&Device::Cpu).unwrap();
         prop_assert_eq!(target_quantized.shape, shape.clone());
         prop_assert_eq!(dequantized.shape(), &shape);
     }
@@ -256,7 +256,7 @@ proptest! {
         // Test I2_S with different block sizes
         let i2s_quantizer = I2SQuantizer::with_block_size(block_size);
         let quantized = i2s_quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = i2s_quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = i2s_quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         prop_assert_eq!(quantized.block_size, block_size);
         prop_assert_eq!(quantized.shape, shape.clone());
@@ -287,4 +287,17 @@ fn test_quantization_performance_comparison() {
     assert!(i2s_time.as_secs() < 1);
     assert!(tl1_time.as_secs() < 1);
     assert!(tl2_time.as_secs() < 1);
+}
+
+#[test]
+fn test_gpu_dequantization_fallback() {
+    let data = vec![0.5f32; 32];
+    let shape = vec![32];
+    let tensor = create_test_tensor(data, shape.clone());
+    let quantizer = I2SQuantizer::new();
+    let quantized = quantizer.quantize_tensor(&tensor).unwrap();
+    let dequantized = quantizer
+        .dequantize_tensor(&quantized, &Device::Cuda(0))
+        .unwrap();
+    assert_eq!(dequantized.shape(), &shape);
 }

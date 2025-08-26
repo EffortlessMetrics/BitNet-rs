@@ -5,8 +5,7 @@
 //! with configurable block sizes for optimal performance on ARM architectures.
 
 use crate::{QuantizedTensor, QuantizerTrait, utils::*};
-use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
-use candle_core::Device;
+use bitnet_common::{BitNetTensor, Device, QuantizationError, QuantizationType, Result, Tensor};
 use rayon::prelude::*;
 use std::collections::HashMap;
 
@@ -204,7 +203,7 @@ impl TL1Quantizer {
     }
 
     /// Dequantize tensor from TL1 format
-    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::TL1 {
             return Err(
                 QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
@@ -225,9 +224,9 @@ impl TL1Quantizer {
             self.dequantize_scalar(&quantized_data, &tensor.scales, zero_points)?
         };
 
-        // Create tensor
-        let device = Device::Cpu; // TODO: Support GPU devices
-        create_tensor_from_f32(dequantized_data, &tensor.shape, &device)
+        // Create tensor on requested device, falling back to CPU if needed
+        create_tensor_from_f32(dequantized_data.clone(), &tensor.shape, device)
+            .or_else(|_| create_tensor_from_f32(dequantized_data, &tensor.shape, &Device::Cpu))
     }
 
     /// Scalar quantization implementation
@@ -479,8 +478,8 @@ impl QuantizerTrait for TL1Quantizer {
         self.quantize_tensor(tensor)
     }
 
-    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
-        self.dequantize_tensor(tensor)
+    fn dequantize_tensor(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor> {
+        TL1Quantizer::dequantize_tensor(self, tensor, device)
     }
 
     fn quantization_type(&self) -> QuantizationType {
@@ -496,7 +495,7 @@ impl QuantizerTrait for TL1Quantizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use candle_core::Device;
+    use bitnet_common::Device;
 
     #[test]
     fn test_lookup_table_creation() {
@@ -526,7 +525,7 @@ mod tests {
         let quantizer = TL1Quantizer::new();
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         assert_eq!(quantized.qtype, QuantizationType::TL1);
         assert_eq!(quantized.shape, shape);
@@ -564,7 +563,7 @@ mod tests {
         let quantizer = TL1Quantizer::with_config(config);
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         assert!(quantized.zero_points.is_some());
         assert_eq!(dequantized.shape(), &shape);

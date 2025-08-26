@@ -4,7 +4,7 @@
 //! and validate that the Rust implementation meets or exceeds the performance of
 //! the Python baseline.
 
-use bitnet_common::{BitNetTensor, QuantizationType};
+use bitnet_common::{BitNetTensor, Device, QuantizationType};
 use bitnet_quantization::{I2SQuantizer, Quantize, QuantizerTrait, TL1Quantizer, TL2Quantizer};
 use candle_core::{Device, Tensor as CandleTensor};
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
@@ -123,7 +123,7 @@ fn bench_round_trip(c: &mut Criterion) {
             let quantizer = I2SQuantizer::new();
             b.iter(|| {
                 let quantized = quantizer.quantize_tensor(black_box(&tensor)).unwrap();
-                black_box(quantizer.dequantize_tensor(&quantized).unwrap())
+                black_box(quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap())
             })
         });
 
@@ -132,7 +132,7 @@ fn bench_round_trip(c: &mut Criterion) {
             let quantizer = TL1Quantizer::new();
             b.iter(|| {
                 let quantized = quantizer.quantize_tensor(black_box(&tensor)).unwrap();
-                black_box(quantizer.dequantize_tensor(&quantized).unwrap())
+                black_box(quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap())
             })
         });
 
@@ -141,7 +141,7 @@ fn bench_round_trip(c: &mut Criterion) {
             let quantizer = TL2Quantizer::new();
             b.iter(|| {
                 let quantized = quantizer.quantize_tensor(black_box(&tensor)).unwrap();
-                black_box(quantizer.dequantize_tensor(&quantized).unwrap())
+                black_box(quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap())
             })
         });
     }

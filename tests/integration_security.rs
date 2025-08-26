@@ -147,7 +147,8 @@ fn test_memory_safety() {
     // This is a placeholder - in practice, this would use tools like Valgrind or AddressSanitizer
 
     // Test quantization doesn't leak memory
-    use bitnet_quantization::{QuantizationType, Quantize};
+use bitnet_quantization::{QuantizationType, Quantize};
+use bitnet_common::Device;
 
     // Create test data
     let test_data = vec![1.0f32, -1.0, 0.5, -0.5];
@@ -156,7 +157,7 @@ fn test_memory_safety() {
     // Quantize and dequantize multiple times
     for _ in 0..100 {
         if let Ok(quantized) = tensor.quantize(QuantizationType::I2S) {
-            let _ = quantized.dequantize();
+            let _ = quantized.dequantize(&Device::Cpu);
         }
     }
 

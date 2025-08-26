@@ -7,8 +7,12 @@
 //!
 //! All quantization methods support round-trip accuracy validation and
 //! comprehensive benchmarking against reference implementations.
+//!
+//! Dequantization functions accept an explicit [`Device`] so that
+//! reconstructed tensors can be allocated on GPUs when available,
+//! falling back to CPU otherwise.
 
-use bitnet_common::{BitNetTensor, QuantizationType, Result};
+use bitnet_common::{BitNetTensor, Device, QuantizationType, Result};
 // Candle imports removed - not currently used
 
 pub mod i2s;
@@ -28,8 +32,8 @@ pub trait Quantize {
     /// Quantize a tensor using the specified quantization type
     fn quantize(&self, qtype: QuantizationType) -> Result<QuantizedTensor>;
 
-    /// Dequantize back to a full precision tensor
-    fn dequantize(&self) -> Result<BitNetTensor>;
+    /// Dequantize back to a full precision tensor on the given device
+    fn dequantize(&self, device: &Device) -> Result<BitNetTensor>;
 }
 
 /// Quantized tensor representation with compressed data and metadata
@@ -103,15 +107,15 @@ impl Quantize for QuantizedTensor {
         }
 
         // Convert between quantization formats by dequantizing and re-quantizing
-        let dequantized = self.dequantize()?;
+        let dequantized = self.dequantize(&Device::Cpu)?;
         dequantized.quantize(qtype)
     }
 
-    fn dequantize(&self) -> Result<BitNetTensor> {
+    fn dequantize(&self, device: &Device) -> Result<BitNetTensor> {
         match self.qtype {
-            QuantizationType::I2S => I2SQuantizer::new().dequantize_tensor(self),
-            QuantizationType::TL1 => TL1Quantizer::new().dequantize_tensor(self),
-            QuantizationType::TL2 => TL2Quantizer::new().dequantize_tensor(self),
+            QuantizationType::I2S => I2SQuantizer::new().dequantize_tensor(self, device),
+            QuantizationType::TL1 => TL1Quantizer::new().dequantize_tensor(self, device),
+            QuantizationType::TL2 => TL2Quantizer::new().dequantize_tensor(self, device),
         }
     }
 }
@@ -125,7 +129,7 @@ impl Quantize for BitNetTensor {
         }
     }
 
-    fn dequantize(&self) -> Result<BitNetTensor> {
+    fn dequantize(&self, _device: &Device) -> Result<BitNetTensor> {
         // Already dequantized
         Ok(self.clone())
     }
@@ -166,8 +170,8 @@ pub trait QuantizerTrait: Send + Sync {
     /// Quantize a tensor
     fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor>;
 
-    /// Dequantize a tensor
-    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor>;
+    /// Dequantize a tensor onto the specified device
+    fn dequantize_tensor(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor>;
 
     /// Get the quantization type
     fn quantization_type(&self) -> QuantizationType;
@@ -188,7 +192,7 @@ pub fn convert_quantization(
     }
 
     // Dequantize and re-quantize
-    let dequantized = tensor.dequantize()?;
+    let dequantized = tensor.dequantize(&Device::Cpu)?;
     dequantized.quantize(target_qtype)
 }
 
@@ -199,7 +203,7 @@ pub fn validate_round_trip(
     _tolerance: f32,
 ) -> Result<bool> {
     let quantized = original.quantize(qtype)?;
-    let _dequantized = quantized.dequantize()?;
+    let _dequantized = quantized.dequantize(&Device::Cpu)?;
 
     // Compare tensors (simplified - would need proper tensor comparison)
     // This is a placeholder for the actual validation logic
