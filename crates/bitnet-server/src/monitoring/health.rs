@@ -120,12 +120,20 @@ impl HealthChecker {
             version: env!("CARGO_PKG_VERSION").to_string(),
             build: BuildInfo {
                 version: env!("CARGO_PKG_VERSION").to_string(),
-                git_sha: env!("VERGEN_GIT_SHA").to_string(),
-                git_branch: env!("VERGEN_GIT_BRANCH").to_string(),
-                build_timestamp: env!("VERGEN_BUILD_TIMESTAMP").to_string(),
-                rustc_version: env!("VERGEN_RUSTC_SEMVER").to_string(),
-                cargo_target: env!("VERGEN_CARGO_TARGET_TRIPLE").to_string(),
-                cargo_profile: env!("VERGEN_CARGO_PROFILE").to_string(),
+                git_sha: option_env!("VERGEN_GIT_SHA").unwrap_or("unknown").to_string(),
+                git_branch: option_env!("VERGEN_GIT_BRANCH").unwrap_or("unknown").to_string(),
+                build_timestamp: option_env!("VERGEN_BUILD_TIMESTAMP")
+                    .unwrap_or("unknown")
+                    .to_string(),
+                rustc_version: option_env!("VERGEN_RUSTC_SEMVER")
+                    .unwrap_or("unknown")
+                    .to_string(),
+                cargo_target: option_env!("VERGEN_CARGO_TARGET_TRIPLE")
+                    .unwrap_or("unknown")
+                    .to_string(),
+                cargo_profile: option_env!("VERGEN_CARGO_OPT_LEVEL")
+                    .unwrap_or("unknown")
+                    .to_string(),
                 #[cfg(feature = "cuda")]
                 cuda_version: Some(self.get_cuda_version()),
                 #[cfg(not(feature = "cuda"))]

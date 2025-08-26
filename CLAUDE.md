@@ -91,6 +91,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-kernels`**: High-performance SIMD/CUDA kernels
 - **`bitnet-inference`**: Inference engine with streaming support
 - **`bitnet-tokenizers`**: Universal tokenizer support
+- **`bitnet-server`**: HTTP server for BitNet inference with health monitoring
 
 #### Compatibility Layer
 - **`bitnet-compat`**: GGUF compatibility fixes and diagnostics
@@ -162,6 +163,8 @@ We maintain strict compatibility with llama.cpp:
 2. **CUDA Compilation**: Ensure CUDA toolkit is installed and `nvcc` is in PATH
 
 3. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
+
+4. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
 
 ## Development Workflow
 
