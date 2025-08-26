@@ -94,6 +94,7 @@ struct CppPerformanceMetrics {
 }
 
 // External C++ function declarations
+#[cfg_attr(feature = "cpp-ffi", link(name = "bitnet_cpp"))]
 extern "C" {
     fn bitnet_cpp_create() -> *mut BitNetCppHandle;
     fn bitnet_cpp_destroy(handle: *mut BitNetCppHandle);

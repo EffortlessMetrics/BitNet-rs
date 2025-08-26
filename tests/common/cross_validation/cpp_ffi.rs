@@ -1,21 +1,24 @@
-//! Stub implementation of C++ FFI functions for testing
+//! Bindings to the BitNet.cpp FFI used by cross-validation tests.
 //!
-//! This module provides stub implementations of the C++ FFI functions
-//! that would normally be provided by linking against the BitNet.cpp library.
-//! These stubs allow the code to compile and run basic tests without
-//! requiring the actual C++ implementation to be available.
+//! When the `cpp-ffi` feature is enabled, these symbols are expected to be
+//! provided by the real BitNet.cpp library. If the feature is disabled we
+//! compile a lightweight stub so the rest of the test framework can build
+//! without the C++ dependency.
 
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_float, c_int, c_uint};
 use std::ptr;
 
 use super::cpp_implementation::{
-    BitNetCppHandle, CppInferenceConfig, CppInferenceResult, CppModelInfo, CppPerformanceMetrics,
+    BitNetCppHandle, CppInferenceConfig, CppInferenceResult, CppModelInfo,
+    CppPerformanceMetrics,
 };
 
-// Stub implementations of the C++ FFI functions
-// These will be used when the actual C++ library is not available
+// -------------------------------------------------------------------------
+// Stub implementation (used when the C++ library isn't available)
+// -------------------------------------------------------------------------
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_create() -> *mut BitNetCppHandle {
     // Return a non-null pointer to indicate "success"
@@ -23,17 +26,20 @@ pub extern "C" fn bitnet_cpp_create() -> *mut BitNetCppHandle {
     0x1 as *mut BitNetCppHandle
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_destroy(_handle: *mut BitNetCppHandle) {
     // Stub: no-op
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_is_available() -> c_int {
     // Return 0 to indicate not available in stub mode
     0
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_load_model(
     _handle: *mut BitNetCppHandle,
@@ -43,18 +49,21 @@ pub extern "C" fn bitnet_cpp_load_model(
     -1
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_unload_model(_handle: *mut BitNetCppHandle) -> c_int {
     // Return success
     0
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_is_model_loaded(_handle: *mut BitNetCppHandle) -> c_int {
     // Return false (no model loaded)
     0
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_get_model_info(_handle: *mut BitNetCppHandle) -> CppModelInfo {
     // Return empty model info
@@ -68,6 +77,7 @@ pub extern "C" fn bitnet_cpp_get_model_info(_handle: *mut BitNetCppHandle) -> Cp
     }
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_tokenize(
     _handle: *mut BitNetCppHandle,
@@ -83,6 +93,7 @@ pub extern "C" fn bitnet_cpp_tokenize(
     -1 // Error code
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_detokenize(
     _handle: *mut BitNetCppHandle,
@@ -97,6 +108,7 @@ pub extern "C" fn bitnet_cpp_detokenize(
     -1 // Error code
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_inference(
     _handle: *mut BitNetCppHandle,
@@ -116,6 +128,7 @@ pub extern "C" fn bitnet_cpp_inference(
     -1 // Error code
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_get_metrics(_handle: *mut BitNetCppHandle) -> CppPerformanceMetrics {
     // Return empty metrics
@@ -128,49 +141,69 @@ pub extern "C" fn bitnet_cpp_get_metrics(_handle: *mut BitNetCppHandle) -> CppPe
     }
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_reset_metrics(_handle: *mut BitNetCppHandle) {
     // Stub: no-op
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_cleanup(_handle: *mut BitNetCppHandle) -> c_int {
     // Return success
     0
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_free_string(_ptr: *mut c_char) {
     // Stub: no-op (nothing to free in stub mode)
 }
 
+#[cfg(not(feature = "cpp-ffi"))]
 #[no_mangle]
 pub extern "C" fn bitnet_cpp_free_tokens(_ptr: *mut c_uint) {
     // Stub: no-op (nothing to free in stub mode)
 }
 
+// -------------------------------------------------------------------------
+// Tests exercising success and failure paths for the FFI
+// -------------------------------------------------------------------------
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::os::raw::c_char;
+
+    extern "C" {
+        fn bitnet_cpp_create() -> *mut BitNetCppHandle;
+        fn bitnet_cpp_destroy(handle: *mut BitNetCppHandle);
+        fn bitnet_cpp_is_available() -> c_int;
+        fn bitnet_cpp_load_model(handle: *mut BitNetCppHandle, path: *const c_char) -> c_int;
+        fn bitnet_cpp_unload_model(handle: *mut BitNetCppHandle) -> c_int;
+        fn bitnet_cpp_cleanup(handle: *mut BitNetCppHandle) -> c_int;
+    }
 
     #[test]
-    fn test_stub_functions() {
-        // Test that stub functions don't crash
-        let handle = bitnet_cpp_create();
-        assert!(!handle.is_null());
+    fn test_cpp_ffi_bindings_basic() {
+        unsafe {
+            // Always ensure we can create and destroy a handle
+            let handle = bitnet_cpp_create();
+            assert!(!handle.is_null());
 
-        assert_eq!(bitnet_cpp_is_available(), 0);
-        assert_eq!(bitnet_cpp_is_model_loaded(handle), 0);
+            // Call availability check for completeness
+            let _ = bitnet_cpp_is_available();
 
-        let model_info = bitnet_cpp_get_model_info(handle);
-        assert!(model_info.name.is_null());
-        assert_eq!(model_info.size_bytes, 0);
+            // Attempt to load a non-existent model: should fail for both real and stub
+            let path = CString::new("/nonexistent/model.gguf").unwrap();
+            let load_result = bitnet_cpp_load_model(handle, path.as_ptr());
+            assert!(load_result != 0);
 
-        let metrics = bitnet_cpp_get_metrics(handle);
-        assert_eq!(metrics.model_load_time_ms, 0);
-        assert_eq!(metrics.tokens_per_second, 0.0);
-
-        assert_eq!(bitnet_cpp_cleanup(handle), 0);
-        bitnet_cpp_destroy(handle);
+            // Unload/cleanup should succeed regardless of prior failure
+            assert_eq!(bitnet_cpp_unload_model(handle), 0);
+            assert_eq!(bitnet_cpp_cleanup(handle), 0);
+            bitnet_cpp_destroy(handle);
+        }
     }
 }
+

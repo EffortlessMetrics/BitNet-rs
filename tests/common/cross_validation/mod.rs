@@ -1,5 +1,6 @@
 pub mod comparison;
 pub mod cpp_implementation;
+mod cpp_ffi;
 pub mod implementation;
 pub mod rust_implementation;
 pub mod test_cases;
