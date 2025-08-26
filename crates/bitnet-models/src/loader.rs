@@ -125,12 +125,23 @@ impl ModelLoader {
             return Ok(loader);
         }
 
-        // Try magic byte detection
-        if let Some(loader) = self.detect_by_magic_bytes(path)? {
-            return Ok(loader);
+        // If path is a directory, try structure detection before magic bytes
+        if path.is_dir() {
+            if let Some(loader) = self.detect_by_structure(path)
+                && loader.detect_format(path)?
+            {
+                return Ok(loader);
+            }
         }
 
-        // Try directory structure detection
+        // Try magic byte detection for files
+        if !path.is_dir() {
+            if let Some(loader) = self.detect_by_magic_bytes(path)? {
+                return Ok(loader);
+            }
+        }
+
+        // As a final fallback, try directory structure detection
         if let Some(loader) = self.detect_by_structure(path)
             && loader.detect_format(path)?
         {
