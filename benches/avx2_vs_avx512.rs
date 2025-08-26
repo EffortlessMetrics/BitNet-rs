@@ -1,4 +1,4 @@
-#![cfg(feature = "bench")]
+#![cfg(all(feature = "bench", target_arch = "x86_64"))]
 
 use bitnet_kernels::KernelProvider;
 use bitnet_kernels::cpu::x86::{Avx2Kernel, Avx512Kernel};
