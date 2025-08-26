@@ -31,7 +31,7 @@ BitNet.rs has achieved production readiness with **100% validation pass rate** a
 ## Near-Term Goals (Q1 2025)
 
 ### 🔄 Phase 4: Performance Optimization (In Progress)
-- [ ] Complete perplexity scorer with teacher-forcing
+- [x] Complete perplexity scorer with teacher-forcing
 - [ ] GPU kernel optimization for A100/H100
 - [ ] Dynamic batching for server deployments
 - [ ] KV cache optimizations

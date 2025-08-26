@@ -145,7 +145,7 @@ pub struct InferenceEngine {
 impl InferenceEngine {
     /// Create a new inference engine
     pub fn new(model: Model) -> Result<Self, Error>
-    
+
     /// Process a single request
     pub async fn infer(
         &self,
@@ -156,8 +156,11 @@ impl InferenceEngine {
     pub async fn infer_batch(
         &self,
         requests: Vec<InferenceRequest>,
-    ) -> Result<Vec<InferenceResponse>, Error>
-    
+        ) -> Result<Vec<InferenceResponse>, Error>
+
+    /// Evaluate a token prefix and return logits for the next token
+    pub async fn logits(&self, ids: &[u32]) -> Result<Vec<f32>>
+
     /// Get engine metrics
     pub fn metrics(&self) -> EngineMetrics
 }

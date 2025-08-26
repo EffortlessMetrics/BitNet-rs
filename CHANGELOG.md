@@ -45,10 +45,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Deterministic execution environment (SEED=42, THREADS=1)
   - Portable memory profiling with GNU time/gtime
 - **Score/Perplexity Subcommand**:
-  - Teacher-forcing perplexity calculation skeleton
-  - JSON output with tokenizer origin tracking
+  - Teacher-forcing loop computes token-weighted mean NLL and perplexity
+  - JSON output includes `mean_nll`, `ppl`, latency, and tokenizer origin
   - Support for external SentencePiece models
-  - Ready for logits API integration
+- **Inference Engine**:
+  - Public `logits` method with backward-compatible `eval_ids` alias
 - **Strict Mode Enforcement**:
   - Zero unmapped tensors requirement
   - SentencePiece tokenizer validation

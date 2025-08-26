@@ -5,7 +5,7 @@
 ### 1. **Inference Engine** - REAL
 ```rust
 // crates/bitnet-inference/src/engine.rs
-pub async fn eval_ids(&mut self, ids: &[u32]) -> Result<Vec<f32>>
+pub async fn logits(&self, ids: &[u32]) -> Result<Vec<f32>>
 pub async fn generate(&self, prompt: &str) -> Result<String>
 ```
 - Full implementation exists
@@ -16,7 +16,7 @@ pub async fn generate(&self, prompt: &str) -> Result<String>
 ### 2. **CLI Evaluation** - REAL
 ```rust
 // crates/bitnet-cli/src/commands/eval.rs
-let mut logits = engine.eval_ids(&prefix).await
+let mut logits = engine.logits(&prefix).await
 ```
 - Actually calls the real inference engine
 - Implements teacher-forcing

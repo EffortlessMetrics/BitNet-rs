@@ -114,10 +114,14 @@ impl InferenceEngine {
         Ok(engine)
     }
 
-    /// Evaluate token IDs and return logits for deterministic comparison
-    /// This is used for cross-validation with C++ implementation
-    pub async fn eval_ids(&mut self, ids: &[u32]) -> Result<Vec<f32>> {
-        // Start timing
+    /// Evaluate a token prefix and return logits for the next token
+    ///
+    /// Exposes raw logits so higher-level callers (e.g. scoring CLI,
+    /// cross-validation tools) can perform teacher-forcing or custom
+    /// sampling. The public `logits` method is the primary API; `eval_ids`
+    /// remains as a backwards-compatible alias used in some older tests.
+    pub async fn logits(&self, ids: &[u32]) -> Result<Vec<f32>> {
+        // Start timing (mostly useful for debugging parity tests)
         let start = std::time::Instant::now();
 
         // Convert token IDs to ConcreteTensor
@@ -137,9 +141,15 @@ impl InferenceEngine {
             ConcreteTensor::Mock(_) => vec![0.0; 100], // Mock implementation for testing
         };
 
-        debug!("eval_ids: processed {} tokens in {:?}", ids.len(), start.elapsed());
+        debug!("logits: processed {} tokens in {:?}", ids.len(), start.elapsed());
 
         Ok(flat_logits)
+    }
+
+    /// Deprecated alias for [`logits`].
+    #[allow(dead_code)]
+    pub async fn eval_ids(&self, ids: &[u32]) -> Result<Vec<f32>> {
+        self.logits(ids).await
     }
 
     /// Generate text from a prompt

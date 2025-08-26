@@ -1,21 +1,67 @@
-BitNet CLI - High-performance 1-bit LLM inference
-
-Usage: bitnet-cli [OPTIONS] <COMMAND>
-
-Commands:
-  infer      Run inference on a model
-  convert    Convert model between formats
-  benchmark  Run performance benchmarks
-  server     Start inference server
-  help       Print this message or the help of the given subcommand(s)
-
-Options:
-  -v, --verbose  Enable verbose output
-  -h, --help     Print help
-  -V, --version  Print version
+BitNet is a high-performance inference framework for 1-bit Large Language Models.
+This CLI provides comprehensive tools for model inference, conversion, benchmarking,
+and serving with support for multiple quantization formats and hardware acceleration.
 
 Examples:
-  bitnet-cli infer --model model.gguf --prompt "Hello world"
-  bitnet-cli convert --input model.safetensors --output model.gguf
-  bitnet-cli benchmark --model model.gguf --iterations 100
-  bitnet-cli server --model model.gguf --port 8080
+  # Run inference with a model
+  bitnet inference --model model.gguf --prompt "Hello, world!"
+  
+  # Interactive mode
+  bitnet inference --model model.gguf --interactive
+  
+  # Batch processing
+  bitnet inference --model model.gguf --input-file prompts.txt
+  
+  # Convert model formats
+  bitnet convert --input model.safetensors --output model.gguf
+  
+  # Benchmark performance
+  bitnet benchmark --model model.gguf --device cuda
+  
+  # Start inference server
+  bitnet serve --model model.gguf --port 8080
+
+For more information, visit: https://github.com/microsoft/BitNet
+
+
+Usage: bitnet [OPTIONS] [COMMAND]
+
+Commands:
+  run           Run simple text generation
+  tokenize      Tokenize text and output token IDs as JSON
+  score         Calculate perplexity score for a model
+  config        Manage configuration
+  info          Show system information
+  inspect       Inspect model metadata without loading tensors
+  compat-check  Check GGUF file compatibility using header validation
+  help          Print this message or the help of the given subcommand(s)
+
+Options:
+  -c, --config <PATH>
+          Configuration file path
+
+  -d, --device <DEVICE>
+          Device to use (cpu, cuda, auto)
+
+      --log-level <LEVEL>
+          Log level (trace, debug, info, warn, error)
+
+      --threads <N>
+          Number of CPU threads
+
+      --batch-size <SIZE>
+          Batch size for processing
+
+      --completions <SHELL>
+          Generate shell completions
+          
+          [possible values: bash, elvish, fish, powershell, zsh]
+
+      --save-config <PATH>
+          Write the effective configuration to a file and exit
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version

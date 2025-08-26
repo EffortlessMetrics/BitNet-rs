@@ -201,8 +201,9 @@ bitnet inspect --model model.gguf --json
 # Tokenize text
 bitnet tokenize --model model.gguf --text "Hello, world!"
 
-# Calculate perplexity
-bitnet score --model model.gguf --file test.txt
+# Calculate perplexity (mean NLL & PPL)
+bitnet score --model model.gguf --file corpus.txt --json-out score.json
+cat score.json
 
 # Advanced inference options
 bitnet run --model model.gguf \

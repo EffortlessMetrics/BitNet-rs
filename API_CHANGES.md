@@ -44,6 +44,8 @@ Check this file when upgrading to understand what changed and how to migrate.
 - Comprehensive API contract system with baselines
 - Automatic breaking change detection in CI
 - API snapshot testing with insta
+- `InferenceEngine::logits` method exposing next-token logits
+- CLI `score` command reports real `mean_nll` and `ppl`
 
 #### Changed
 - Default features are now empty (was `["cpu"]`)
