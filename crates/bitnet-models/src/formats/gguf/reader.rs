@@ -255,6 +255,24 @@ impl<'a> GgufReader<'a> {
         })
     }
 
+    /// Get an array of strings metadata by key
+    pub fn get_string_array_metadata(&self, key: &str) -> Option<Vec<String>> {
+        self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {
+            GgufValue::Array(arr) => {
+                let mut out = Vec::with_capacity(arr.len());
+                for v in arr {
+                    if let GgufValue::String(s) = v {
+                        out.push(s.clone());
+                    } else {
+                        return None;
+                    }
+                }
+                Some(out)
+            }
+            _ => None,
+        })
+    }
+
     /// Get Array metadata by key (for tokenizer.ggml.model bytes)
     pub fn get_array_metadata(&self, key: &str) -> Option<Vec<u8>> {
         self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {
