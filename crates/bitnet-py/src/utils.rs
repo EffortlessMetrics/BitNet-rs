@@ -4,7 +4,6 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 /// Utility functions for BitNet Python bindings
-
 /// Convert Python kwargs to Rust HashMap
 pub fn kwargs_to_hashmap(
     kwargs: Option<&pyo3::Bound<'_, PyDict>>,
