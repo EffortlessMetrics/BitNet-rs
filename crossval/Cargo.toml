@@ -2,6 +2,7 @@
 name = "bitnet-crossval"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.89"
 description = "Cross-validation framework for BitNet Rust vs C++ implementations"
 license = "MIT"
 publish = false

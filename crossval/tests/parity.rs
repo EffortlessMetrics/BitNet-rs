@@ -175,7 +175,6 @@ mod tests {
                 .iter()
                 .map(|&t| i32::try_from(t).expect("Token ID too large for i32"))
                 .collect();
-
             println!("Prompt: {:?}", prompt);
             println!("C++ tokens: {:?}", cpp_tokens);
             println!("Rust tokens: {:?}", rust_tokens);
