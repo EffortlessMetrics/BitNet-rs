@@ -256,10 +256,14 @@ impl TL2Quantizer {
     }
 
     /// Dequantize tensor from TL2 format
-    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+    pub fn dequantize_tensor_device(
+        &self,
+        tensor: &QuantizedTensor,
+        device: &Device,
+    ) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::TL2 {
             return Err(
-                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
+                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into(),
             );
         }
 
@@ -277,9 +281,12 @@ impl TL2Quantizer {
             _ => self.dequantize_scalar(&quantized_data, &tensor.scales)?,
         };
 
-        // Create tensor
-        let device = Device::Cpu; // TODO: Support GPU devices
-        create_tensor_from_f32(dequantized_data, &tensor.shape, &device)
+        // Create tensor on requested device
+        create_tensor_from_f32(dequantized_data, &tensor.shape, device)
+    }
+
+    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+        self.dequantize_tensor_device(tensor, &Device::Cpu)
     }
 
     /// Scalar quantization implementation
@@ -536,9 +543,12 @@ impl QuantizerTrait for TL2Quantizer {
     fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
         self.quantize_tensor(tensor)
     }
-
-    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
-        self.dequantize_tensor(tensor)
+    fn dequantize_tensor_device(
+        &self,
+        tensor: &QuantizedTensor,
+        device: &Device,
+    ) -> Result<BitNetTensor> {
+        TL2Quantizer::dequantize_tensor_device(self, tensor, device)
     }
 
     fn quantization_type(&self) -> QuantizationType {

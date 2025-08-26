@@ -27,6 +27,7 @@ tempfile.workspace = true
 default = []
 simd = []
 integration-tests = []
+cuda = []
 
 [[bench]]
 name = "quantization"

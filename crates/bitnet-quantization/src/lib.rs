@@ -9,7 +9,7 @@
 //! comprehensive benchmarking against reference implementations.
 
 use bitnet_common::{BitNetTensor, QuantizationType, Result};
-// Candle imports removed - not currently used
+use candle_core::Device;
 
 pub mod i2s;
 pub mod tl1;
@@ -166,8 +166,17 @@ pub trait QuantizerTrait: Send + Sync {
     /// Quantize a tensor
     fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor>;
 
-    /// Dequantize a tensor
-    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor>;
+    /// Dequantize a tensor on a specific device
+    fn dequantize_tensor_device(
+        &self,
+        tensor: &QuantizedTensor,
+        device: &Device,
+    ) -> Result<BitNetTensor>;
+
+    /// Dequantize a tensor on CPU by default
+    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+        self.dequantize_tensor_device(tensor, &Device::Cpu)
+    }
 
     /// Get the quantization type
     fn quantization_type(&self) -> QuantizationType;
