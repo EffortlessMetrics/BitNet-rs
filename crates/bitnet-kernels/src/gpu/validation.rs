@@ -8,7 +8,7 @@
 
 use crate::gpu::cuda::CudaKernel;
 use crate::{KernelProvider, cpu::fallback::FallbackKernel, cpu::x86::Avx2Kernel};
-use bitnet_common::Result;
+use bitnet_common::{KernelError, Result};
 
 use std::time::Instant;
 
@@ -308,13 +308,79 @@ impl GpuValidator {
     }
 
     /// Test memory usage and detect leaks
+    #[cfg(feature = "cuda")]
     fn test_memory_usage(&self) -> Result<MemoryResult> {
+        use cudarc::driver::CudaContext;
+        use cudarc::driver::sys::{cuMemAlloc_v2, cuMemFree_v2, cuMemGetInfo_v2};
+
+        const ALLOC_SIZE: usize = 10 * 1024 * 1024; // 10MB
+        const ITERATIONS: usize = 5;
+
         log::debug!("Testing memory usage and leak detection");
 
-        // TODO: Implement actual GPU memory monitoring
-        // This would require CUDA memory management APIs
-        // For now, return a placeholder result
+        unsafe {
+            // Create context to ensure CUDA API availability
+            let _ctx = CudaContext::new(0).map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to create CUDA context: {:?}", e),
+            })?;
 
+            // Baseline memory
+            let mut free_start: usize = 0;
+            let mut total_mem: usize = 0;
+            if cuMemGetInfo_v2(&mut free_start as *mut usize, &mut total_mem as *mut usize) != 0 {
+                return Err(
+                    KernelError::GpuError { reason: "cuMemGetInfo_v2 failed".into() }.into()
+                );
+            }
+
+            let mut peak_usage = 0usize;
+
+            // Allocate and free memory multiple times to track peak usage
+            for _ in 0..ITERATIONS {
+                let mut ptr: u64 = 0;
+                if cuMemAlloc_v2(&mut ptr as *mut u64, ALLOC_SIZE) != 0 {
+                    return Err(
+                        KernelError::GpuError { reason: "cuMemAlloc_v2 failed".into() }.into()
+                    );
+                }
+
+                let mut free_now: usize = 0;
+                if cuMemGetInfo_v2(&mut free_now as *mut usize, &mut total_mem as *mut usize) != 0 {
+                    return Err(
+                        KernelError::GpuError { reason: "cuMemGetInfo_v2 failed".into() }.into()
+                    );
+                }
+
+                let used = free_start.saturating_sub(free_now);
+                peak_usage = peak_usage.max(used);
+
+                if cuMemFree_v2(ptr) != 0 {
+                    return Err(
+                        KernelError::GpuError { reason: "cuMemFree_v2 failed".into() }.into()
+                    );
+                }
+            }
+
+            // Final memory to detect leaks
+            let mut free_end: usize = 0;
+            if cuMemGetInfo_v2(&mut free_end as *mut usize, &mut total_mem as *mut usize) != 0 {
+                return Err(
+                    KernelError::GpuError { reason: "cuMemGetInfo_v2 failed".into() }.into()
+                );
+            }
+
+            let leaks_detected = free_end < free_start;
+            let efficiency_score =
+                if total_mem > 0 { 1.0 - (peak_usage as f32 / total_mem as f32) } else { 1.0 };
+
+            Ok(MemoryResult { peak_gpu_memory: peak_usage, leaks_detected, efficiency_score })
+        }
+    }
+
+    /// Placeholder memory usage test when CUDA is unavailable
+    #[cfg(not(feature = "cuda"))]
+    fn test_memory_usage(&self) -> Result<MemoryResult> {
+        log::warn!("CUDA feature not enabled; skipping memory usage test");
         Ok(MemoryResult { peak_gpu_memory: 0, leaks_detected: false, efficiency_score: 1.0 })
     }
 }
@@ -412,5 +478,15 @@ mod tests {
                 println!("GPU validation failed (CUDA may not be available): {}", e);
             }
         }
+    }
+
+    #[test]
+    #[cfg(feature = "cuda")]
+    fn test_memory_usage_tracking() {
+        let validator = GpuValidator::new();
+        let result = validator.test_memory_usage().expect("memory usage test failed");
+        assert!(result.peak_gpu_memory > 0);
+        assert!(!result.leaks_detected, "memory leak detected");
+        assert!(result.efficiency_score <= 1.0);
     }
 }
