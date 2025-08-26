@@ -286,6 +286,7 @@ mod safetensors_comprehensive_tests {
 mod huggingface_comprehensive_tests {
     use super::*;
     use bitnet_models::formats::huggingface::*;
+    use bitnet_common::Tensor;
 
     #[test]
     fn test_huggingface_loader_creation() {
@@ -338,14 +339,46 @@ mod huggingface_comprehensive_tests {
         let device = Device::Cpu;
         let config = LoadConfig::default();
 
-        // Create directory with config.json
+        // Create directory with config.json and minimal weights
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("config.json");
-        fs::write(&config_path, r#"{"model_type": "bitnet"}"#).unwrap();
+        fs::write(
+            &config_path,
+            r#"{
+            "model_type": "bitnet",
+            "vocab_size": 2,
+            "hidden_size": 2,
+            "num_hidden_layers": 1,
+            "num_attention_heads": 1,
+            "intermediate_size": 4,
+            "max_position_embeddings": 8
+        }"#,
+        )
+        .unwrap();
 
-        let result = loader.load(temp_dir.path(), &device, &config);
-        // Should succeed with basic model creation
-        assert!(result.is_ok());
+        // Create minimal safetensors weights
+        use safetensors::{tensor::TensorView, Dtype, tensor::serialize_to_file};
+        use std::collections::BTreeMap;
+        let weights_path = temp_dir.path().join("model.safetensors");
+        let embed: Vec<f32> = vec![0.0; 4];
+        let lm: Vec<f32> = vec![0.0; 4];
+        let emb_view =
+            TensorView::new(Dtype::F32, vec![2, 2], bytemuck::cast_slice(&embed)).unwrap();
+        let lm_view =
+            TensorView::new(Dtype::F32, vec![2, 2], bytemuck::cast_slice(&lm)).unwrap();
+        let mut map = BTreeMap::new();
+        map.insert("token_embd.weight", emb_view);
+        map.insert("lm_head.weight", lm_view);
+        serialize_to_file(map, None, &weights_path).unwrap();
+
+        let model = loader.load(temp_dir.path(), &device, &config).unwrap();
+
+        // Verify basic inference shapes
+        let tokens = vec![0u32, 1u32];
+        let embeddings = model.embed(&tokens).unwrap();
+        assert_eq!(embeddings.shape(), &[1, 2, 2]);
+        let logits = model.logits(&embeddings).unwrap();
+        assert_eq!(logits.shape(), &[1, 2, 2]);
     }
 
     #[test]

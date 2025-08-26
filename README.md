@@ -154,6 +154,19 @@ async fn main() -> Result<()> {
 }
 ```
 
+#### Loading a HuggingFace model
+
+Models saved in a standard HuggingFace directory (with a `config.json` and
+SafeTensors weights) can be loaded directly:
+
+```rust
+use bitnet_models::ModelLoader;
+use bitnet_common::Device;
+
+let loader = ModelLoader::new(Device::Cpu);
+let model = loader.load("path/to/hf-model").expect("model");
+```
+
 ### CLI Usage
 
 ```bash
