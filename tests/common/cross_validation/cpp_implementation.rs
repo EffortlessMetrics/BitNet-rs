@@ -780,8 +780,8 @@ impl ImplementationFactory for CppImplementationFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use crate::BYTES_PER_MB;
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_cpp_implementation_creation() {

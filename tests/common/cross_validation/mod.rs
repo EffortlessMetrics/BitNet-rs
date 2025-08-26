@@ -22,5 +22,5 @@ pub use comparison::{
 #[cfg(feature = "cpp")]
 pub use cpp_implementation::{CppImplementation, CppImplementationFactory};
 pub use rust_implementation::{RustImplementation, RustImplementationFactory};
-pub use test_cases::{test_suites, ComparisonTestCaseRegistry, TestCaseCategory};
+pub use test_cases::{ComparisonTestCaseRegistry, TestCaseCategory, test_suites};
 pub use test_runner::{ComparisonTestRunner, CompleteValidationResult, TestSummaryStatistics};

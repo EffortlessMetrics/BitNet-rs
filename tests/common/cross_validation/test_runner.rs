@@ -1,4 +1,6 @@
 use super::test_cases::ModelSize;
+#[cfg(feature = "cpp")]
+use crate::cross_validation::CppImplementation;
 use crate::cross_validation::test_cases::{
     ComparisonTestCaseRegistry, TestCaseCategory, test_suites,
 };
@@ -6,8 +8,6 @@ use crate::cross_validation::{
     ComparisonTestCase, ComparisonTolerance, CrossValidationResult, CrossValidationSuite,
     RustImplementation,
 };
-#[cfg(feature = "cpp")]
-use crate::cross_validation::CppImplementation;
 use crate::errors::{TestError, TestOpResult as TestResultCompat};
 use std::fs;
 use std::path::{Path, PathBuf};

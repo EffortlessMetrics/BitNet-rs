@@ -91,11 +91,7 @@ pub mod trend_reporting;
 pub mod config_validator;
 
 #[cfg(feature = "crossval")]
-pub use cross_validation::{
-    ComparisonTestRunner,
-    CompleteValidationResult,
-    TestSummaryStatistics,
-};
+pub use cross_validation::{ComparisonTestRunner, CompleteValidationResult, TestSummaryStatistics};
 
 /// Current version of the testing framework
 pub const TESTING_FRAMEWORK_VERSION: &str = "0.1.0";
