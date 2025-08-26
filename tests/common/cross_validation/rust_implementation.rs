@@ -309,8 +309,9 @@ impl BitNetImplementation for RustImplementation {
 
         let tokenizer = self.tokenizer.as_ref().ok_or(ImplementationError::ModelNotLoaded)?;
 
-        let tokens =
-            tokenizer.encode(text, true).map_err(|e| ImplementationError::TokenizationError {
+        let tokens = tokenizer
+            .encode(text, true, true)
+            .map_err(|e| ImplementationError::TokenizationError {
                 message: format!("Tokenization failed: {}", e),
             })?;
 
@@ -334,8 +335,9 @@ impl BitNetImplementation for RustImplementation {
     async fn detokenize(&self, tokens: &[u32]) -> ImplementationResult<String> {
         let tokenizer = self.tokenizer.as_ref().ok_or(ImplementationError::ModelNotLoaded)?;
 
-        let text =
-            tokenizer.decode(tokens, true).map_err(|e| ImplementationError::TokenizationError {
+        let text = tokenizer
+            .decode(tokens)
+            .map_err(|e| ImplementationError::TokenizationError {
                 message: format!("Detokenization failed: {}", e),
             })?;
 
@@ -359,8 +361,9 @@ impl BitNetImplementation for RustImplementation {
         // In a real implementation, this would use the loaded model for actual inference
 
         // Convert input tokens to text
-        let input_text =
-            tokenizer.decode(tokens, true).map_err(|e| ImplementationError::InferenceError {
+        let input_text = tokenizer
+            .decode(tokens)
+            .map_err(|e| ImplementationError::InferenceError {
                 message: format!("Failed to decode input tokens: {}", e),
             })?;
 
@@ -369,11 +372,13 @@ impl BitNetImplementation for RustImplementation {
             format!("Generated response to: {}", input_text.chars().take(50).collect::<String>());
 
         // Tokenize the generated text to get output tokens
-        let generated_tokens = tokenizer.encode(&generated_text, false).map_err(|e| {
-            ImplementationError::InferenceError {
-                message: format!("Failed to tokenize generated text: {}", e),
-            }
-        })?;
+        let generated_tokens = tokenizer
+            .encode(&generated_text, false, true)
+            .map_err(|e| {
+                ImplementationError::InferenceError {
+                    message: format!("Failed to tokenize generated text: {}", e),
+                }
+            })?;
 
         let duration = start_time.elapsed();
         let end_memory = self.get_memory_usage();
