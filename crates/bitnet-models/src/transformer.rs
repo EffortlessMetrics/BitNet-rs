@@ -170,9 +170,13 @@ impl MultiHeadAttention {
         let scores = q.matmul(&k.transpose(2, 3)?)?;
         let scores = scores.affine((1.0 / scale) as f64, 0.0)?;
 
-        // Apply causal mask
-        let mask = self.create_causal_mask(seq_len, scores.device())?
-            .unsqueeze(0)?  // Add batch dim
+        // Apply causal mask so queries cannot attend to future positions.
+        // When using a KV cache, k includes past tokens, so the mask must
+        // account for the total key length.
+        let total_len = k.dims()[2];
+        let mask = self
+            .create_causal_mask(seq_len, total_len, scores.device())?
+            .unsqueeze(0)? // Add batch dim
             .unsqueeze(0)?; // Add heads dim
         let scores = scores.broadcast_add(&mask)?;
 
@@ -189,15 +193,19 @@ impl MultiHeadAttention {
         Ok(self.o_proj.forward(&attn_output)?)
     }
 
-    fn create_causal_mask(&self, seq_len: usize, device: &Device) -> Result<Tensor> {
-        // Create a simple causal mask
-        let mut mask_vec = vec![0.0f32; seq_len * seq_len];
-        for i in 0..seq_len {
-            for j in (i + 1)..seq_len {
-                mask_vec[i * seq_len + j] = f32::NEG_INFINITY;
+    fn create_causal_mask(&self, q_len: usize, k_len: usize, device: &Device) -> Result<Tensor> {
+        // Past tokens are stored in the KV cache and increase k_len.
+        // For each query position i, disallow attention to key positions
+        // greater than past_len + i.
+        let past_len = k_len.saturating_sub(q_len);
+        let mut mask_vec = vec![0.0f32; q_len * k_len];
+        for i in 0..q_len {
+            let start = past_len + i + 1;
+            for j in start..k_len {
+                mask_vec[i * k_len + j] = f32::NEG_INFINITY;
             }
         }
-        Ok(Tensor::from_vec(mask_vec, &[seq_len, seq_len], device)?)
+        Ok(Tensor::from_vec(mask_vec, &[q_len, k_len], device)?)
     }
 }
 
@@ -373,8 +381,8 @@ impl TransformerModel {
         // Read transpose flag for embeddings (1-element tensor)
         let embed_transposed = match vb.get((1,), "embed_tokens.transposed") {
             Ok(t) => {
-                let val = t.to_vec0::<f32>()?;
-                val > 0.5
+                let vals = t.to_vec1::<f32>()?;
+                vals.get(0).copied().unwrap_or(0.0) > 0.5
             }
             Err(_) => false, // If flag doesn't exist, assume not transposed
         };
@@ -410,8 +418,8 @@ impl TransformerModel {
                 // Read transpose flag for lm_head
                 let transposed = match vb.get((1,), "lm_head.transposed") {
                     Ok(t) => {
-                        let val = t.to_vec0::<f32>()?;
-                        val > 0.5
+                        let vals = t.to_vec1::<f32>()?;
+                        vals.get(0).copied().unwrap_or(0.0) > 0.5
                     }
                     Err(_) => false, // If flag doesn't exist, assume not transposed
                 };
@@ -481,37 +489,44 @@ impl TransformerModel {
     }
 
     /// Teacher-forcing forward: full sequence [B,T] -> [B,T,V] logits
+    ///
+    /// This implementation mirrors the incremental decoding path by
+    /// processing tokens step-by-step with a KV cache. This ensures that
+    /// rotary (or absolute) positional encodings are applied per layer with
+    /// the correct positions and that a causal mask prevents attending to
+    /// future tokens.
     pub fn forward_full(&self, token_ids: &Tensor) -> Result<Tensor> {
-        // Get dimensions
-        let batch_size = token_ids.dims()[0];
-        let seq_len = token_ids.dims()[1];
+        // Token ids expected shape: [B,T]
+        let (batch_size, seq_len) = token_ids.dims2()?;
 
-        // 1. Embed tokens [B,T] -> [B,T,H]
-        // Note: This is a simplified path that may not handle all edge cases
-        // For production, we should refactor to share code with the main forward path
+        // Embed the entire sequence once.
         let flat_ids = token_ids.flatten_all()?;
         let ids_vec: Vec<u32> = flat_ids.to_vec1()?;
         let hidden = self.embed(&ids_vec)?;
-
-        // Reshape back to [B,T,H]
         let hidden_size = self.config.model.hidden_size;
-        let mut hidden = hidden.reshape(&[batch_size, seq_len, hidden_size])?;
+        let hidden = hidden.reshape(&[batch_size, seq_len, hidden_size])?;
 
-        // 2. Pass through transformer blocks
-        // TODO: This currently doesn't apply proper positional encoding per step
-        // which may cause parity issues. The correct implementation would:
-        // - Apply causal mask properly
-        // - Handle position-dependent rotary embeddings correctly
-        // - Match the exact computation path of incremental decoding
-        for layer in &self.layers {
-            hidden = layer.forward(&hidden, None)?;
+        // Create per-layer KV cache so that rotary/absolute positional
+        // encodings use the proper positions during iterative decoding.
+        let mut kv_cache = KVCache::new(&self.config, batch_size, &self.device)?;
+
+        // Collect logits for each position.
+        let mut logits_steps = Vec::with_capacity(seq_len);
+        for t in 0..seq_len {
+            // Select the current token's embedding: [B,1,H]
+            let step_hidden = hidden.narrow(1, t, 1)?;
+
+            // Run through all layers using the incremental path which applies
+            // positional encoding per layer and causal masking internally.
+            let step_hidden = self.forward(&step_hidden, Some(&mut kv_cache))?;
+
+            // Project to vocabulary logits for this step.
+            let step_logits = self.logits(&step_hidden)?;
+            logits_steps.push(step_logits);
         }
 
-        // 3. Apply final normalization
-        hidden = self.norm.forward(&hidden)?;
-
-        // 4. Project to vocabulary [B,T,H] -> [B,T,V]
-        self.logits(&hidden)
+        // Concatenate logits from all steps: [B,T,V]
+        Ok(Tensor::cat(&logits_steps, 1)?)
     }
 
     pub fn forward(&self, hidden: &Tensor, mut kv_cache: Option<&mut KVCache>) -> Result<Tensor> {
