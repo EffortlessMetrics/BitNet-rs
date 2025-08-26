@@ -81,7 +81,7 @@ pub const GGML_COMMIT: &str = env!("BITNET_GGML_COMMIT");
 pub const GGML_COMMIT: &str = "not-compiled";
 
 /// Dequantizes a row of IQ2_S quantized data back to f32 values.
-/// 
+///
 /// # Safety
 /// - `src` must point to valid IQ2_S block data of at least `n / QK_IQ2_S` blocks
 /// - `dst` must point to an array of at least `n` f32 elements
@@ -92,12 +92,12 @@ pub unsafe fn dequantize_row_iq2_s(src: *const c_void, dst: *mut f32, n: usize) 
 }
 
 /// Quantizes multiple rows of f32 data into IQ2_S format.
-/// 
+///
 /// # Safety
 /// - `src` must point to `nrow * n_per_row` valid f32 values
 /// - `dst` must have space for `nrow * (n_per_row / QK_IQ2_S) * sizeof(block_iq2_s)` bytes
 /// - `n_per_row` must be a multiple of `iq2s_qk()` (256)
-/// 
+///
 /// # Returns
 /// The number of bytes written to `dst`.
 #[cfg(feature = "iq2s-ffi")]
@@ -111,7 +111,7 @@ pub unsafe fn quantize_iq2_s(
 }
 
 /// Dequantizes a row of IQ2_S quantized data back to f32 values.
-/// 
+///
 /// # Panics
 /// Always panics when the `iq2s-ffi` feature is not enabled.
 #[cfg(not(feature = "iq2s-ffi"))]
@@ -120,7 +120,7 @@ pub unsafe fn dequantize_row_iq2_s(_src: *const c_void, _dst: *mut f32, _n: usiz
 }
 
 /// Quantizes multiple rows of f32 data into IQ2_S format.
-/// 
+///
 /// # Panics
 /// Always panics when the `iq2s-ffi` feature is not enabled.
 #[cfg(not(feature = "iq2s-ffi"))]
