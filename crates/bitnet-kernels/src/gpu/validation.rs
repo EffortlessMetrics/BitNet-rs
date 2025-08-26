@@ -340,11 +340,10 @@ impl GpuValidator {
     #[cfg(feature = "cuda")]
     fn test_memory_usage(&self) -> Result<MemoryResult> {
         use cudarc::driver::CudaContext;
-        use cudarc::driver::sys::{CUresult, cuMemAlloc_v2, cuMemFree_v2, cuMemGetInfo_v2};
+        use cudarc::driver::sys::{cuMemAlloc_v2, cuMemFree_v2, cuMemGetInfo_v2};
 
         const ALLOC_SIZE: usize = 10 * 1024 * 1024; // 10MB
         const ITERATIONS: usize = 5;
-        const CUDA_SUCCESS: CUresult = 0;
 
         log::debug!("Testing memory usage and leak detection");
 
@@ -359,9 +358,9 @@ impl GpuValidator {
             let mut total_mem: usize = 0;
             let result =
                 cuMemGetInfo_v2(&mut free_start as *mut usize, &mut total_mem as *mut usize);
-            if result != CUDA_SUCCESS {
+            if result as u32 != 0 {
                 return Err(KernelError::GpuError {
-                    reason: format!("cuMemGetInfo_v2 failed with error code: {}", result),
+                    reason: format!("cuMemGetInfo_v2 failed with error code: {:?}", result),
                 }
                 .into());
             }
@@ -379,14 +378,14 @@ impl GpuValidator {
             for i in 0..ITERATIONS {
                 let mut ptr: u64 = 0;
                 let result = cuMemAlloc_v2(&mut ptr as *mut u64, ALLOC_SIZE);
-                if result != CUDA_SUCCESS {
+                if result as u32 != 0 {
                     // Clean up previously allocated memory before returning error
                     for &prev_ptr in &allocated_ptrs {
                         let _ = cuMemFree_v2(prev_ptr);
                     }
                     return Err(KernelError::GpuError {
                         reason: format!(
-                            "cuMemAlloc_v2 failed at iteration {} with error code: {}",
+                            "cuMemAlloc_v2 failed at iteration {} with error code: {:?}",
                             i, result
                         ),
                     }
@@ -398,14 +397,14 @@ impl GpuValidator {
                 let mut free_now: usize = 0;
                 let result =
                     cuMemGetInfo_v2(&mut free_now as *mut usize, &mut total_mem as *mut usize);
-                if result != CUDA_SUCCESS {
+                if result as u32 != 0 {
                     // Clean up allocated memory before returning error
                     for &prev_ptr in &allocated_ptrs {
                         let _ = cuMemFree_v2(prev_ptr);
                     }
                     return Err(KernelError::GpuError {
                         reason: format!(
-                            "cuMemGetInfo_v2 failed at iteration {} with error code: {}",
+                            "cuMemGetInfo_v2 failed at iteration {} with error code: {:?}",
                             i, result
                         ),
                     }
@@ -425,9 +424,9 @@ impl GpuValidator {
             // Free all allocated memory
             for (i, &ptr) in allocated_ptrs.iter().enumerate() {
                 let result = cuMemFree_v2(ptr);
-                if result != CUDA_SUCCESS {
+                if result as u32 != 0 {
                     log::warn!(
-                        "cuMemFree_v2 failed at iteration {} with error code: {}",
+                        "cuMemFree_v2 failed at iteration {} with error code: {:?}",
                         i,
                         result
                     );
@@ -438,9 +437,9 @@ impl GpuValidator {
             // Final memory to detect leaks
             let mut free_end: usize = 0;
             let result = cuMemGetInfo_v2(&mut free_end as *mut usize, &mut total_mem as *mut usize);
-            if result != CUDA_SUCCESS {
+            if result as u32 != 0 {
                 return Err(KernelError::GpuError {
-                    reason: format!("Final cuMemGetInfo_v2 failed with error code: {}", result),
+                    reason: format!("Final cuMemGetInfo_v2 failed with error code: {:?}", result),
                 }
                 .into());
             }
