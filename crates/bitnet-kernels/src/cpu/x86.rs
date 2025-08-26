@@ -92,6 +92,19 @@ impl KernelProvider for Avx2Kernel {
 #[cfg(target_arch = "x86_64")]
 impl Avx2Kernel {
     /// AVX2 optimized matrix multiplication for i8 x u8 -> f32
+    ///
+    /// # Algorithm
+    /// Uses blocked matrix multiplication with AVX2 SIMD instructions:
+    /// - Processes 8x8 blocks for optimal cache and register usage
+    /// - Sign-extends i8 values and zero-extends u8 values to i16
+    /// - Uses `_mm256_madd_epi16` for efficient multiply-accumulate
+    /// - Maintains per-block floating point accumulators for accuracy
+    ///
+    /// # Correctness
+    /// This implementation has been validated against the fallback kernel
+    /// for various matrix sizes including edge cases. The key fix from the
+    /// original implementation is proper sign extension of i8 values using
+    /// `_mm256_cvtepi8_epi16` instead of incorrect unpacking operations.
     #[target_feature(enable = "avx2")]
     unsafe fn matmul_i2s_avx2(
         &self,
@@ -145,10 +158,20 @@ impl Avx2Kernel {
                                 unsafe { _mm256_loadu_si256(b_col.as_ptr() as *const __m256i) };
 
                             // Convert to i16 for multiplication
-                            let a_lo = _mm256_unpacklo_epi8(a_vec, _mm256_setzero_si256());
-                            let a_hi = _mm256_unpackhi_epi8(a_vec, _mm256_setzero_si256());
-                            let b_lo = _mm256_unpacklo_epi8(b_vec, _mm256_setzero_si256());
-                            let b_hi = _mm256_unpackhi_epi8(b_vec, _mm256_setzero_si256());
+                            // For signed i8, we need sign extension - use cvtepi8_epi16
+                            // Split into low and high 128-bit lanes first
+                            let a_128_lo = _mm256_castsi256_si128(a_vec);
+                            let a_128_hi = _mm256_extracti128_si256(a_vec, 1);
+                            let b_128_lo = _mm256_castsi256_si128(b_vec);
+                            let b_128_hi = _mm256_extracti128_si256(b_vec, 1);
+
+                            // Sign-extend i8 to i16 for A (signed)
+                            let a_lo = _mm256_cvtepi8_epi16(a_128_lo);
+                            let a_hi = _mm256_cvtepi8_epi16(a_128_hi);
+
+                            // Zero-extend u8 to i16 for B (unsigned)
+                            let b_lo = _mm256_cvtepu8_epi16(b_128_lo);
+                            let b_hi = _mm256_cvtepu8_epi16(b_128_hi);
 
                             // Multiply and accumulate
                             let prod_lo = _mm256_madd_epi16(a_lo, b_lo);
@@ -614,6 +637,64 @@ mod tests {
         kernel.matmul_i2s(&a, &b, &mut c, 2, 2, 2).unwrap();
 
         assert_eq!(c, vec![1.0, 2.0, 3.0, 4.0]);
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn test_avx2_matmul_matches_fallback() {
+        let avx2_kernel = Avx2Kernel;
+
+        if !avx2_kernel.is_available() {
+            return; // Skip test if AVX2 not available
+        }
+
+        let fallback_kernel = crate::cpu::fallback::FallbackKernel;
+
+        // Test various matrix sizes to ensure correctness
+        let test_cases = vec![
+            (2, 2, 2),    // Small matrices
+            (8, 8, 8),    // Block-aligned
+            (16, 16, 16), // Multiple blocks
+            (7, 9, 11),   // Non-aligned sizes
+            (32, 32, 32), // Exact block size
+            (33, 33, 33), // Just over block size
+        ];
+
+        for (m, n, k) in test_cases {
+            // Generate test data with predictable values
+            let mut a = vec![0i8; m * k];
+            let mut b = vec![0u8; k * n];
+
+            for i in 0..m * k {
+                a[i] = ((i % 5) as i8) - 2; // Values from -2 to 2
+            }
+            for i in 0..k * n {
+                b[i] = (i % 3) as u8; // Values from 0 to 2  
+            }
+
+            let mut c_avx2 = vec![0.0f32; m * n];
+            let mut c_fallback = vec![0.0f32; m * n];
+
+            // Compute with AVX2
+            avx2_kernel.matmul_i2s(&a, &b, &mut c_avx2, m, n, k).unwrap();
+
+            // Compute with fallback
+            fallback_kernel.matmul_i2s(&a, &b, &mut c_fallback, m, n, k).unwrap();
+
+            // Compare results with tolerance for floating point
+            for i in 0..m * n {
+                assert!(
+                    (c_avx2[i] - c_fallback[i]).abs() < 1e-6,
+                    "Mismatch at position {} for {}x{}x{} matrix: AVX2={}, Fallback={}",
+                    i,
+                    m,
+                    n,
+                    k,
+                    c_avx2[i],
+                    c_fallback[i]
+                );
+            }
+        }
     }
 
     #[cfg(target_arch = "x86_64")]
