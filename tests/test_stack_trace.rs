@@ -7,10 +7,13 @@ use tokio::fs;
 
 #[tokio::test]
 async fn test_stack_trace_is_recorded_and_reported() {
+    unsafe {
+        std::env::set_var("RUST_BACKTRACE", "1");
+    }
     let error = TestError::AssertionError { message: "boom".into() };
     let result = TestResult::failed("failing_test", error, Duration::from_millis(1));
     let trace = result.stack_trace.clone().expect("stack trace captured");
-    assert!(!trace.is_empty());
+    assert!(!trace.is_empty() && !trace.contains("<disabled>"));
     assert!(trace.contains("test_stack_trace_is_recorded_and_reported"));
 
     let suite = TestSuiteResult::new("suite", vec![result.clone()], result.duration);
