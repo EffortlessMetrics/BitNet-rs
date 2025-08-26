@@ -5,6 +5,7 @@
 
 use crate::{BitNetCError, BitNetCInferenceConfig, BitNetCPerformanceMetrics, get_model_manager};
 // use bitnet_common::PerformanceMetrics;
+use bitnet_common::Tensor;
 use bitnet_inference::{InferenceConfig, InferenceEngine};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
@@ -317,6 +318,11 @@ impl StreamingSession {
 }
 
 /// Mock model for inference engine creation
+/// Minimal `bitnet_models::Model` implementation used by FFI tests.
+///
+/// The model only returns placeholder tensors with predictable shapes and does
+/// not perform any real computation. It exists so the C-API can be exercised
+/// without loading an actual model.
 struct MockInferenceModel {
     cfg: bitnet_common::BitNetConfig,
 }
@@ -379,16 +385,27 @@ impl bitnet_models::Model for MockInferenceModel {
         &self.cfg
     }
 
-    fn embed(&self, _tokens: &[u32]) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
-        // If these mocks are never called in the C-API tests, a todo!() is fine
-        todo!("embed not used in bitnet-ffi tests")
+    /// Return a mock embedding tensor with shape `[tokens.len(), hidden_size]`.
+    ///
+    /// This stub ignores the actual token values and is only intended to
+    /// satisfy FFI tests that require a model implementation. The returned
+    /// tensor contains placeholder data and should not be used for real
+    /// inference.
+    fn embed(&self, tokens: &[u32]) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+        Ok(bitnet_common::ConcreteTensor::mock(vec![tokens.len(), self.cfg.model.hidden_size]))
     }
 
+    /// Return a mock logits tensor with shape `[batch, vocab_size]`.
+    ///
+    /// The contents are dummy values that do not correspond to true model
+    /// predictions. This exists solely to allow the C-API tests to run without
+    /// loading a real model.
     fn logits(
         &self,
-        _x: &bitnet_common::ConcreteTensor,
+        x: &bitnet_common::ConcreteTensor,
     ) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
-        todo!("logits not used in bitnet-ffi tests")
+        let batch = x.shape().get(0).copied().unwrap_or(0);
+        Ok(bitnet_common::ConcreteTensor::mock(vec![batch, self.cfg.model.vocab_size]))
     }
 
     fn forward(
@@ -412,6 +429,7 @@ pub fn get_inference_manager() -> &'static InferenceManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bitnet_common::Tensor;
 
     #[test]
     fn test_inference_manager_creation() {
@@ -440,5 +458,23 @@ mod tests {
         use bitnet_models::Model;
         let config = model.config();
         assert_eq!(config.model.vocab_size, 32000); // Default value
+    }
+
+    #[test]
+    fn test_mock_embed_shape() {
+        let model = MockInferenceModel::new();
+        use bitnet_models::Model;
+        let tokens = vec![1u32, 2, 3];
+        let tensor = model.embed(&tokens).expect("embed should succeed");
+        assert_eq!(tensor.shape(), &[tokens.len(), model.config().model.hidden_size]);
+    }
+
+    #[test]
+    fn test_mock_logits_shape() {
+        let model = MockInferenceModel::new();
+        use bitnet_models::Model;
+        let input = bitnet_common::ConcreteTensor::mock(vec![2, model.config().model.hidden_size]);
+        let tensor = model.logits(&input).expect("logits should succeed");
+        assert_eq!(tensor.shape(), &[2, model.config().model.vocab_size]);
     }
 }
