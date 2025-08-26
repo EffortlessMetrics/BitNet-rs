@@ -170,9 +170,13 @@ impl MultiHeadAttention {
         let scores = q.matmul(&k.transpose(2, 3)?)?;
         let scores = scores.affine((1.0 / scale) as f64, 0.0)?;
 
-        // Apply causal mask
-        let mask = self.create_causal_mask(seq_len, scores.device())?
-            .unsqueeze(0)?  // Add batch dim
+        // Apply causal mask so queries cannot attend to future positions.
+        // When using a KV cache, k includes past tokens, so the mask must
+        // account for the total key length.
+        let total_len = k.dims()[2];
+        let mask = self
+            .create_causal_mask(seq_len, total_len, scores.device())?
+            .unsqueeze(0)? // Add batch dim
             .unsqueeze(0)?; // Add heads dim
         let scores = scores.broadcast_add(&mask)?;
 
@@ -189,15 +193,19 @@ impl MultiHeadAttention {
         Ok(self.o_proj.forward(&attn_output)?)
     }
 
-    fn create_causal_mask(&self, seq_len: usize, device: &Device) -> Result<Tensor> {
-        // Create a simple causal mask
-        let mut mask_vec = vec![0.0f32; seq_len * seq_len];
-        for i in 0..seq_len {
-            for j in (i + 1)..seq_len {
-                mask_vec[i * seq_len + j] = f32::NEG_INFINITY;
+    fn create_causal_mask(&self, q_len: usize, k_len: usize, device: &Device) -> Result<Tensor> {
+        // Past tokens are stored in the KV cache and increase k_len.
+        // For each query position i, disallow attention to key positions
+        // greater than past_len + i.
+        let past_len = k_len.saturating_sub(q_len);
+        let mut mask_vec = vec![0.0f32; q_len * k_len];
+        for i in 0..q_len {
+            let start = past_len + i + 1;
+            for j in start..k_len {
+                mask_vec[i * k_len + j] = f32::NEG_INFINITY;
             }
         }
-        Ok(Tensor::from_vec(mask_vec, &[seq_len, seq_len], device)?)
+        Ok(Tensor::from_vec(mask_vec, &[q_len, k_len], device)?)
     }
 }
 
@@ -373,8 +381,8 @@ impl TransformerModel {
         // Read transpose flag for embeddings (1-element tensor)
         let embed_transposed = match vb.get((1,), "embed_tokens.transposed") {
             Ok(t) => {
-                let val = t.to_vec0::<f32>()?;
-                val > 0.5
+                let vals = t.to_vec1::<f32>()?;
+                vals.first().copied().unwrap_or(0.0) > 0.5
             }
             Err(_) => false, // If flag doesn't exist, assume not transposed
         };
@@ -410,8 +418,8 @@ impl TransformerModel {
                 // Read transpose flag for lm_head
                 let transposed = match vb.get((1,), "lm_head.transposed") {
                     Ok(t) => {
-                        let val = t.to_vec0::<f32>()?;
-                        val > 0.5
+                        let vals = t.to_vec1::<f32>()?;
+                        vals.first().copied().unwrap_or(0.0) > 0.5
                     }
                     Err(_) => false, // If flag doesn't exist, assume not transposed
                 };
