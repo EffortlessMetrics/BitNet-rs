@@ -79,31 +79,64 @@ impl CudaKernel {
         })?;
 
         // Get device information
-        let device_info = Self::get_device_info(device_id)?;
+        let device_info = Self::get_device_info(&ctx)?;
         log::info!("CUDA device info: {:?}", device_info);
 
         Ok(Self { ctx, stream, module, matmul_function, device_info })
     }
 
     /// Get detailed device information and capabilities
-    fn get_device_info(device_id: usize) -> Result<CudaDeviceInfo> {
-        // For now, provide reasonable defaults
-        // TODO: Extract actual device properties using cudarc device queries
-        let name = format!("CUDA Device {}", device_id);
-        let total_memory = 8 * 1024 * 1024 * 1024; // 8GB default
-        let compute_capability = (7, 5); // Default to compute capability 7.5
-        let multiprocessor_count = 80; // Default value
-        let max_threads_per_block = 1024;
-        let max_shared_memory_per_block = 48 * 1024; // 48KB
+    fn get_device_info(ctx: &CudaContext) -> Result<CudaDeviceInfo> {
+        use cudarc::driver::{result, sys};
 
-        // Check for mixed precision support (assume modern GPUs support it)
-        let supports_fp16 = compute_capability.0 >= 6;
-        let supports_bf16 = compute_capability.0 >= 8;
+        let device_id = ctx.ordinal();
+
+        // Query device name
+        let name = ctx
+            .name()
+            .map_err(|e| KernelError::GpuError { reason: format!("Failed to get device name: {:?}", e) })?;
+
+        // Total memory in bytes
+        let total_memory = unsafe { result::device::total_mem(ctx.cu_device()) }
+            .map_err(|e| KernelError::GpuError { reason: format!("Failed to get total memory: {:?}", e) })?;
+
+        // Compute capability
+        let major = ctx
+            .attribute(sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get compute capability major: {:?}", e),
+            })?;
+        let minor = ctx
+            .attribute(sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get compute capability minor: {:?}", e),
+            })?;
+
+        // Other device properties
+        let multiprocessor_count = ctx
+            .attribute(sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get multiprocessor count: {:?}", e),
+            })?;
+        let max_threads_per_block = ctx
+            .attribute(sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get max threads per block: {:?}", e),
+            })?;
+        let max_shared_memory_per_block = ctx
+            .attribute(sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get max shared memory per block: {:?}", e),
+            })? as usize;
+
+        // Mixed precision support heuristics based on compute capability
+        let supports_fp16 = major >= 6;
+        let supports_bf16 = major >= 8;
 
         Ok(CudaDeviceInfo {
             device_id,
             name,
-            compute_capability,
+            compute_capability: (major, minor),
             total_memory,
             multiprocessor_count,
             max_threads_per_block,
@@ -276,18 +309,16 @@ impl KernelProvider for CudaKernel {
 
     fn quantize(
         &self,
-        _input: &[f32],
-        _output: &mut [u8],
-        _scales: &mut [f32],
+        input: &[f32],
+        output: &mut [u8],
+        scales: &mut [f32],
         qtype: QuantizationType,
     ) -> Result<()> {
         log::debug!("CUDA quantize: type: {:?}", qtype);
 
-        // TODO: Implement CUDA quantization kernels
-        Err(KernelError::GpuError {
-            reason: "CUDA quantization implementation pending - matmul working".to_string(),
-        }
-        .into())
+        // For now delegate to the CPU fallback implementation to ensure
+        // correctness until dedicated CUDA kernels are available.
+        crate::cpu::fallback::FallbackKernel.quantize(input, output, scales, qtype)
     }
 }
 
@@ -321,10 +352,15 @@ pub fn list_cuda_devices() -> Result<Vec<CudaDeviceInfo>> {
     let mut devices = Vec::new();
 
     for device_id in 0..device_count {
-        match CudaKernel::get_device_info(device_id) {
-            Ok(info) => devices.push(info),
+        match CudaContext::new(device_id) {
+            Ok(ctx) => match CudaKernel::get_device_info(&ctx) {
+                Ok(info) => devices.push(info),
+                Err(e) => {
+                    log::warn!("Failed to get info for device {}: {}", device_id, e);
+                }
+            },
             Err(e) => {
-                log::warn!("Failed to get info for device {}: {}", device_id, e);
+                log::warn!("Failed to create context for device {}: {:?}", device_id, e);
             }
         }
     }
