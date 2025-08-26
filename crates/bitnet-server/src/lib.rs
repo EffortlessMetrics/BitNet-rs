@@ -25,7 +25,7 @@ use monitoring::{
     metrics::MetricsCollector,
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct InferenceRequest {
     pub prompt: String,
     pub max_tokens: Option<usize>,
@@ -36,7 +36,7 @@ pub struct InferenceRequest {
     pub repetition_penalty: Option<f32>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct InferenceResponse {
     pub text: String,
     pub tokens_generated: u64,
@@ -156,15 +156,24 @@ impl BitNetServer {
         let load_config = bitnet_models::loader::LoadConfig::default();
         let model = loader.load(model_path, &device, &load_config)?;
 
-        // Load tokenizer (for now, use a basic tokenizer)
-        // TODO: Implement proper tokenizer loading from tokenizer_path
-        let tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer> =
-            if let Some(_tok_path) = tokenizer_path {
-                // In production, load from file
+        // Load tokenizer from path if provided
+        let tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer> = if let Some(tok_path) =
+            tokenizer_path
+        {
+            let tokenizer = bitnet_tokenizers::loader::load_tokenizer(Path::new(tok_path))?;
+            tokenizer.into()
+        } else {
+            // For debug builds, allow a basic tokenizer fallback
+            #[cfg(debug_assertions)]
+            {
+                tracing::warn!("No tokenizer path provided. Using BasicTokenizer in debug mode.");
                 Arc::new(bitnet_tokenizers::BasicTokenizer::default())
-            } else {
-                Arc::new(bitnet_tokenizers::BasicTokenizer::default())
-            };
+            }
+            #[cfg(not(debug_assertions))]
+            {
+                anyhow::bail!("Tokenizer path is required in release builds");
+            }
+        };
 
         // Create inference engine - model is already a Box<dyn Model>, convert to Arc
         let model: Arc<dyn bitnet_models::Model> = model.into();
@@ -228,6 +237,10 @@ impl BitNetServer {
         tracing::info!("Shutting down BitNet server");
         self.monitoring.shutdown().await?;
         Ok(())
+    }
+
+    pub fn set_engine(&mut self, engine: Arc<RwLock<bitnet_inference::InferenceEngine>>) {
+        self.engine = Some(engine);
     }
 }
 
