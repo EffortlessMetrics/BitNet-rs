@@ -1,12 +1,22 @@
 use super::config::TestConfig;
 use super::errors::TestError;
-// #[cfg(feature = "fixtures")]
-// use super::fast_config::fast_config; // TODO: Use when needed
+#[cfg(feature = "fixtures")]
+use super::fast_config::fast_config;
 use super::parallel::{TestCategory, TestInfo, TestPriority};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use tokio::process::Command;
 use tracing::{debug, info, warn};
+
+#[cfg(feature = "fixtures")]
+fn build_config() -> TestConfig {
+    fast_config()
+}
+
+#[cfg(not(feature = "fixtures"))]
+fn build_config() -> TestConfig {
+    TestConfig::default()
+}
 
 /// Test selector that discovers and prioritizes tests for execution
 pub struct TestSelector {
@@ -412,13 +422,10 @@ impl SelectionStrategy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(feature = "fixtures")]
-    use crate::fast_config::fast_config;
 
     #[tokio::test]
-    #[cfg(feature = "fixtures")]
     async fn test_test_selector_creation() {
-        let config = fast_config();
+        let config = build_config();
         let selector = TestSelector::new(config);
         assert!(selector.test_cache.is_empty());
     }
@@ -440,10 +447,7 @@ mod tests {
 
     #[test]
     fn test_categorize_test() {
-        #[cfg(feature = "fixtures")]
-        let config = fast_config();
-        #[cfg(not(feature = "fixtures"))]
-        let config = TestConfig::default();
+        let config = build_config();
         let selector = TestSelector::new(config);
 
         assert_eq!(
@@ -464,10 +468,7 @@ mod tests {
 
     #[test]
     fn test_affected_crates_detection() {
-        #[cfg(feature = "fixtures")]
-        let config = fast_config();
-        #[cfg(not(feature = "fixtures"))]
-        let config = TestConfig::default();
+        let config = build_config();
         let selector = TestSelector::new(config);
 
         let changed_files = vec![
@@ -478,5 +479,13 @@ mod tests {
         let affected = selector.determine_affected_crates(&changed_files);
         assert!(affected.contains("bitnet-common"));
         assert!(affected.contains("tests"));
+    }
+
+    #[test]
+    #[cfg(feature = "fixtures")]
+    fn test_fast_config_applied_selector() {
+        let config = build_config();
+        assert_eq!(config.max_parallel_tests, 2);
+        assert_eq!(config.log_level, "error");
     }
 }

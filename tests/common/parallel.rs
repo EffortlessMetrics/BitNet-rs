@@ -1,13 +1,23 @@
 use super::config::TestConfig;
 use super::errors::TestError;
-// #[cfg(feature = "fixtures")]
-// use super::fast_config::fast_config; // TODO: Use when needed
+#[cfg(feature = "fixtures")]
+use super::fast_config::fast_config;
 use super::results::{TestResult as TestRecord, TestStatus};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::process::Command;
 use tokio::sync::{RwLock, Semaphore};
 use tracing::{debug, error, info, warn};
+
+#[cfg(feature = "fixtures")]
+fn build_config() -> TestConfig {
+    fast_config()
+}
+
+#[cfg(not(feature = "fixtures"))]
+fn build_config() -> TestConfig {
+    TestConfig::default()
+}
 
 /// Test group for parallel execution
 #[derive(Debug, Clone, Default)]
@@ -348,13 +358,10 @@ impl ExecutionStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(feature = "fixtures")]
-    use crate::fast_config::fast_config;
 
     #[tokio::test]
-    #[cfg(feature = "fixtures")]
     async fn test_parallel_executor_creation() {
-        let config = fast_config();
+        let config = build_config();
         let executor = ParallelExecutor::new(config);
 
         let stats = executor.get_stats().await;
@@ -373,13 +380,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_resource_monitor() {
-        #[cfg(feature = "fixtures")]
-        let config = fast_config();
-        #[cfg(not(feature = "fixtures"))]
-        let config = TestConfig::default();
+        let config = build_config();
         let monitor = ResourceMonitor::new(config);
 
         let can_start = monitor.can_start_more_tests().await;
         assert!(can_start); // Should be true in test environment
+    }
+
+    #[test]
+    #[cfg(feature = "fixtures")]
+    fn test_fast_config_applied_parallel() {
+        let config = build_config();
+        assert_eq!(config.max_parallel_tests, 2);
+        assert_eq!(config.log_level, "error");
     }
 }
