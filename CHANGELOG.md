@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **bitnet-server Build Issues**:
+  - Restored Git metadata support using vergen-gix v1.x
+  - Moved runtime dependencies from build-dependencies to correct section
+  - Made health endpoint robust with option_env! for graceful fallbacks
+
 ### Added
 - **GGUF Validation API**:
   - Fast 24-byte header-only validation without loading full model

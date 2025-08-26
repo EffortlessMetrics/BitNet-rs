@@ -62,6 +62,7 @@ curl -i http://localhost:3000/health/ready
 
 ## Response Format
 
+### Basic Health Response
 ```json
 {
   "status": "healthy",
@@ -72,3 +73,50 @@ curl -i http://localhost:3000/health/ready
   }
 }
 ```
+
+### Detailed Health Response (from `/health`)
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-08-26T10:00:00Z",
+  "uptime_seconds": 3600,
+  "version": "0.1.0",
+  "build": {
+    "version": "0.1.0",
+    "git_sha": "unavailable",
+    "git_branch": "unavailable",
+    "build_timestamp": "2025-08-26T09:00:00Z",
+    "rustc_version": "1.89.0",
+    "cargo_target": "x86_64-unknown-linux-gnu",
+    "cargo_profile": "release",
+    "cuda_version": "12.0"  // Only present when built with CUDA support
+  },
+  "checks": {
+    "memory": {
+      "status": "healthy",
+      "details": {
+        "used_bytes": 1073741824,
+        "total_bytes": 8589934592,
+        "percent_used": 12.5
+      }
+    },
+    "model": {
+      "status": "healthy",
+      "details": {
+        "loaded": true,
+        "name": "bitnet_b1_58-3B"
+      }
+    },
+    "gpu": {
+      "status": "degraded",
+      "details": {
+        "available": true,
+        "memory_used": 2147483648,
+        "memory_total": 8589934592
+      }
+    }
+  }
+}
+```
+
+**Note**: Git SHA and branch information are captured at build time using vergen-gix. If `.git` is not available during build, these fields will show "unknown". You can override by setting `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables during build.

@@ -1,19 +1,15 @@
 use anyhow::Result;
-use vergen::{BuildBuilder, CargoBuilder, Emitter, GitBuilder, RustcBuilder};
+use vergen_gix::{BuildBuilder, CargoBuilder, Emitter, GixBuilder, RustcBuilder};
 
 fn main() -> Result<()> {
     // Emit build metadata as environment variables
     let build = BuildBuilder::default().build_timestamp(true).build_date(true).build()?;
 
-    let cargo = CargoBuilder::default().target_triple(true).profile(true).features(true).build()?;
+    let cargo =
+        CargoBuilder::default().target_triple(true).features(true).opt_level(true).build()?;
 
-    let git = GitBuilder::default()
-        .branch(true)
-        .commit_date(true)
-        .commit_timestamp(true)
-        .describe(true, true, None)
-        .sha(true)
-        .build()?;
+    // Git metadata (branch, sha, describe, timestamps, etc.)
+    let git = GixBuilder::all_git()?;
 
     let rustc = RustcBuilder::default()
         .channel(true)
@@ -22,7 +18,7 @@ fn main() -> Result<()> {
         .semver(true)
         .build()?;
 
-    // Emit all metadata
+    // Emit all metadata including Git info
     Emitter::default()
         .add_instructions(&build)?
         .add_instructions(&cargo)?
