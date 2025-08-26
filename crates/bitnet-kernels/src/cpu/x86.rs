@@ -112,19 +112,18 @@ impl Avx2Kernel {
 
         for i in (0..m).step_by(BLOCK_M) {
             for j in (0..n).step_by(BLOCK_N) {
-                // Accumulator for 8x8 block
-                let mut acc = [_mm256_setzero_ps(); 8];
+                // Accumulator for 8x8 block (per-row, per-column)
+                let mut acc = [[_mm256_setzero_ps(); BLOCK_N]; BLOCK_M];
 
                 for l in (0..k).step_by(BLOCK_K) {
                     let k_end = (l + BLOCK_K).min(k);
                     let k_len = k_end - l;
 
-                    // Process A matrix rows
-                    for ii in 0..(BLOCK_M.min(m - i)) {
-                        if i + ii >= m {
-                            break;
-                        }
+                    let rows = BLOCK_M.min(m - i);
+                    let cols = BLOCK_N.min(n - j);
 
+                    // Process A matrix rows
+                    for ii in 0..rows {
                         // Load A row (i8 values) - 32 bytes = 32 i8 values
                         let a_row = &a[(i + ii) * k + l..];
                         let a_vec = if k_len >= 32 {
@@ -136,62 +135,45 @@ impl Avx2Kernel {
                             unsafe { _mm256_loadu_si256(temp.as_ptr() as *const __m256i) }
                         };
 
-                        // Process B matrix columns
-                        for jj in 0..(BLOCK_N.min(n - j)) {
-                            if j + jj >= n {
-                                break;
-                            }
-
+                        for jj in 0..cols {
                             // Load B column (u8 values)
                             let mut b_col = [0u8; 32];
                             for kk in 0..k_len {
-                                if l + kk < k {
-                                    b_col[kk] = b[(l + kk) * n + (j + jj)];
-                                }
+                                b_col[kk] = b[(l + kk) * n + (j + jj)];
                             }
-                            let b_vec =
-                                unsafe { _mm256_loadu_si256(b_col.as_ptr() as *const __m256i) };
+                            let b_vec = unsafe { _mm256_loadu_si256(b_col.as_ptr() as *const __m256i) };
 
                             // Convert to i16 for multiplication
-                            {
-                                let a_lo = _mm256_unpacklo_epi8(a_vec, _mm256_setzero_si256());
-                                let a_hi = _mm256_unpackhi_epi8(a_vec, _mm256_setzero_si256());
-                                let b_lo = _mm256_unpacklo_epi8(b_vec, _mm256_setzero_si256());
-                                let b_hi = _mm256_unpackhi_epi8(b_vec, _mm256_setzero_si256());
+                            let a_lo = _mm256_unpacklo_epi8(a_vec, _mm256_setzero_si256());
+                            let a_hi = _mm256_unpackhi_epi8(a_vec, _mm256_setzero_si256());
+                            let b_lo = _mm256_unpacklo_epi8(b_vec, _mm256_setzero_si256());
+                            let b_hi = _mm256_unpackhi_epi8(b_vec, _mm256_setzero_si256());
 
-                                // Multiply and accumulate
-                                let prod_lo = _mm256_madd_epi16(a_lo, b_lo);
-                                let prod_hi = _mm256_madd_epi16(a_hi, b_hi);
+                            // Multiply and accumulate
+                            let prod_lo = _mm256_madd_epi16(a_lo, b_lo);
+                            let prod_hi = _mm256_madd_epi16(a_hi, b_hi);
+                            let sum = _mm256_add_epi32(prod_lo, prod_hi);
+                            let sum_f32 = _mm256_cvtepi32_ps(sum);
 
-                                // Sum products
-                                let sum = _mm256_add_epi32(prod_lo, prod_hi);
-
-                                // Convert to float and add to accumulator
-                                let sum_f32 = _mm256_cvtepi32_ps(sum);
-                                acc[jj] = _mm256_add_ps(acc[jj], sum_f32);
-                            }
+                            acc[ii][jj] = _mm256_add_ps(acc[ii][jj], sum_f32);
                         }
                     }
                 }
 
                 // Store results
-                for ii in 0..(BLOCK_M.min(m - i)) {
-                    for jj in 0..(BLOCK_N.min(n - j)) {
-                        if i + ii < m && j + jj < n {
-                            // Horizontal sum of the vector
-                            {
-                                let sum_vec = acc[jj];
-                                let sum_hi = _mm256_extractf128_ps(sum_vec, 1);
-                                let sum_lo = _mm256_castps256_ps128(sum_vec);
-                                let sum_quad = _mm_add_ps(sum_hi, sum_lo);
-                                let sum_dual =
-                                    _mm_add_ps(sum_quad, _mm_movehl_ps(sum_quad, sum_quad));
-                                let sum_single =
-                                    _mm_add_ss(sum_dual, _mm_shuffle_ps(sum_dual, sum_dual, 0x55));
+                let rows = BLOCK_M.min(m - i);
+                let cols = BLOCK_N.min(n - j);
+                for ii in 0..rows {
+                    for jj in 0..cols {
+                        let sum_vec = acc[ii][jj];
+                        let sum_hi = _mm256_extractf128_ps(sum_vec, 1);
+                        let sum_lo = _mm256_castps256_ps128(sum_vec);
+                        let sum_quad = _mm_add_ps(sum_hi, sum_lo);
+                        let sum_dual = _mm_add_ps(sum_quad, _mm_movehl_ps(sum_quad, sum_quad));
+                        let sum_single =
+                            _mm_add_ss(sum_dual, _mm_shuffle_ps(sum_dual, sum_dual, 0x55));
 
-                                c[(i + ii) * n + (j + jj)] += _mm_cvtss_f32(sum_single);
-                            }
-                        }
+                        c[(i + ii) * n + (j + jj)] += _mm_cvtss_f32(sum_single);
                     }
                 }
             }
@@ -542,7 +524,77 @@ impl Avx2Kernel {
     }
 }
 
-// AVX-512 implementation removed due to unstable Rust features
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+pub struct Avx512Kernel;
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl KernelProvider for Avx512Kernel {
+    fn name(&self) -> &'static str {
+        "avx512"
+    }
+
+    fn is_available(&self) -> bool {
+        is_x86_feature_detected!("avx512f")
+    }
+
+    fn matmul_i2s(
+        &self,
+        a: &[i8],
+        b: &[u8],
+        c: &mut [f32],
+        m: usize,
+        n: usize,
+        k: usize,
+    ) -> Result<()> {
+        if a.len() != m * k {
+            return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
+                reason: format!("Matrix A dimension mismatch: expected {}, got {}", m * k, a.len()),
+            }));
+        }
+        if b.len() != k * n {
+            return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
+                reason: format!("Matrix B dimension mismatch: expected {}, got {}", k * n, b.len()),
+            }));
+        }
+        if c.len() != m * n {
+            return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
+                reason: format!("Matrix C dimension mismatch: expected {}, got {}", m * n, c.len()),
+            }));
+        }
+
+        unsafe { self.matmul_i2s_avx512(a, b, c, m, n, k) }
+    }
+
+    fn quantize(
+        &self,
+        input: &[f32],
+        output: &mut [u8],
+        scales: &mut [f32],
+        qtype: QuantizationType,
+    ) -> Result<()> {
+        // Reuse AVX2 implementations for quantization for now
+        let avx2 = Avx2Kernel;
+        avx2.quantize(input, output, scales, qtype)
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl Avx512Kernel {
+    #[target_feature(enable = "avx512f,avx2")]
+    unsafe fn matmul_i2s_avx512(
+        &self,
+        a: &[i8],
+        b: &[u8],
+        c: &mut [f32],
+        m: usize,
+        n: usize,
+        k: usize,
+    ) -> Result<()> {
+        // For now, reuse the AVX2 implementation under AVX-512 feature
+        let avx2 = Avx2Kernel;
+        unsafe { avx2.matmul_i2s_avx2(a, b, c, m, n, k) }
+    }
+}
 
 // Stub implementations for non-x86_64 architectures
 #[cfg(not(target_arch = "x86_64"))]
@@ -585,8 +637,6 @@ impl KernelProvider for Avx2Kernel {
     }
 }
 
-// AVX-512 kernel removed due to unstable Rust features
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -626,11 +676,16 @@ mod tests {
         let b = vec![1u8, 0, 0, 1];
         let mut c = vec![0.0f32; 4];
 
+        // Compute reference result with fallback kernel
+        let fallback = crate::cpu::FallbackKernel;
+        let mut expected = vec![0.0f32; 4];
+        fallback.matmul_i2s(&a, &b, &mut expected, 2, 2, 2).unwrap();
+
         kernel.matmul_i2s(&a, &b, &mut c, 2, 2, 2).unwrap();
 
-        // For now, just verify the kernel runs without error
-        // TODO: Fix the AVX2 matrix multiplication implementation
-        assert!(c.iter().any(|&x| x != 0.0), "Result should not be all zeros");
+        for (exp, got) in expected.iter().zip(&c) {
+            assert!((exp - got).abs() < 1e-5, "mismatch: {} vs {}", exp, got);
+        }
         assert_eq!(c.len(), 4, "Result should have correct dimensions");
     }
 

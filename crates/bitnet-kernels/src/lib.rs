@@ -58,13 +58,13 @@ impl KernelManager {
         }
 
         // Add optimized CPU kernels in order of preference (best first)
-        // Note: AVX-512 is disabled due to unstable Rust features
-        // #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        // {
-        //     if is_x86_feature_detected!("avx512f") {
-        //         providers.insert(-1, Box::new(cpu::Avx512Kernel));
-        //     }
-        // }
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        {
+            if is_x86_feature_detected!("avx512f") {
+                let insert_pos = if providers.len() > 1 { providers.len() - 1 } else { 0 };
+                providers.insert(insert_pos, Box::new(cpu::Avx512Kernel));
+            }
+        }
 
         #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
         {
@@ -156,6 +156,13 @@ pub fn select_cpu_kernel() -> Result<Box<dyn KernelProvider>> {
         }
     }
 
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    {
+        if is_x86_feature_detected!("avx512f") {
+            providers.insert(0, Box::new(cpu::Avx512Kernel));
+        }
+    }
+
     #[cfg(all(target_arch = "aarch64", feature = "neon"))]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
@@ -191,6 +198,8 @@ pub fn select_gpu_kernel(_device_id: usize) -> Result<Box<dyn KernelProvider>> {
 // Re-export commonly used types
 #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
 pub use cpu::Avx2Kernel;
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+pub use cpu::Avx512Kernel;
 pub use cpu::FallbackKernel;
 #[cfg(all(target_arch = "aarch64", feature = "neon"))]
 pub use cpu::NeonKernel;
