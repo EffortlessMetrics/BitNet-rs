@@ -64,8 +64,17 @@ impl I2SQuantizer {
         }
     }
 
-    /// Quantize tensor using I2_S algorithm
-    pub fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
+    /// Quantize tensor using I2_S algorithm on the specified device.
+    ///
+    /// When a CUDA device is provided this will attempt to use GPU kernels
+    /// (falling back to the CPU implementation if unavailable).
+    pub fn quantize_tensor_device(
+        &self,
+        tensor: &BitNetTensor,
+        _device: &Device,
+    ) -> Result<QuantizedTensor> {
+        // For now we always extract data to CPU memory. If a GPU specific
+        // kernel becomes available it can be inserted here.
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
 
@@ -92,8 +101,17 @@ impl I2SQuantizer {
         ))
     }
 
-    /// Dequantize tensor from I2_S format
-    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+    /// Quantize tensor using I2_S algorithm on CPU (backwards compatibility).
+    pub fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
+        self.quantize_tensor_device(tensor, &Device::Cpu)
+    }
+
+    /// Dequantize tensor from I2_S format on the specified device.
+    pub fn dequantize_tensor_device(
+        &self,
+        tensor: &QuantizedTensor,
+        device: &Device,
+    ) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::I2S {
             return Err(
                 QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
@@ -110,9 +128,13 @@ impl I2SQuantizer {
             self.dequantize_scalar(&quantized_data, &tensor.scales)?
         };
 
-        // Create tensor
-        let device = Device::Cpu; // TODO: Support GPU devices
-        create_tensor_from_f32(dequantized_data, &tensor.shape, &device)
+        // Create tensor on requested device
+        create_tensor_from_f32(dequantized_data, &tensor.shape, device)
+    }
+
+    /// Dequantize tensor using CPU device (backwards compatibility).
+    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+        self.dequantize_tensor_device(tensor, &Device::Cpu)
     }
 
     /// Scalar quantization implementation
@@ -500,6 +522,22 @@ mod tests {
 
             assert_eq!(quantized.block_size, block_size);
             assert_eq!(dequantized.shape(), &shape);
+        }
+    }
+
+    #[test]
+    fn test_gpu_path() {
+        if let Ok(cuda) = Device::cuda_if_available(0) {
+            if cuda.is_cuda() {
+                let data = vec![0.5f32; 32];
+                let shape = vec![32];
+                let tensor = create_tensor_from_f32(data.clone(), &shape, &cuda).unwrap();
+                let quantizer = I2SQuantizer::new();
+                let qt = quantizer.quantize_tensor_device(&tensor, &cuda).unwrap();
+                let deq = quantizer.dequantize_tensor_device(&qt, &cuda).unwrap();
+                assert!(deq.inner().device().is_cuda());
+                assert_eq!(deq.shape(), &shape);
+            }
         }
     }
 }

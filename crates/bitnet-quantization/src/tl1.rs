@@ -154,8 +154,14 @@ impl TL1Quantizer {
         Ok(Self::with_config(config))
     }
 
-    /// Quantize tensor using TL1 algorithm
-    pub fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
+    /// Quantize tensor using TL1 algorithm on a specific device.
+    pub fn quantize_tensor_device(
+        &self,
+        tensor: &BitNetTensor,
+        _device: &Device,
+    ) -> Result<QuantizedTensor> {
+        // Currently all computations happen on the CPU. If a CUDA implementation
+        // becomes available this function can dispatch to it based on `device`.
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
 
@@ -203,8 +209,17 @@ impl TL1Quantizer {
         ))
     }
 
-    /// Dequantize tensor from TL1 format
-    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+    /// Backwards compatible CPU quantization entry point.
+    pub fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
+        self.quantize_tensor_device(tensor, &Device::Cpu)
+    }
+
+    /// Dequantize tensor from TL1 format on a specific device.
+    pub fn dequantize_tensor_device(
+        &self,
+        tensor: &QuantizedTensor,
+        device: &Device,
+    ) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::TL1 {
             return Err(
                 QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
@@ -225,9 +240,13 @@ impl TL1Quantizer {
             self.dequantize_scalar(&quantized_data, &tensor.scales, zero_points)?
         };
 
-        // Create tensor
-        let device = Device::Cpu; // TODO: Support GPU devices
-        create_tensor_from_f32(dequantized_data, &tensor.shape, &device)
+        // Create tensor on requested device
+        create_tensor_from_f32(dequantized_data, &tensor.shape, device)
+    }
+
+    /// Backwards compatible CPU dequantization entry point.
+    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+        self.dequantize_tensor_device(tensor, &Device::Cpu)
     }
 
     /// Scalar quantization implementation
@@ -568,5 +587,21 @@ mod tests {
 
         assert!(quantized.zero_points.is_some());
         assert_eq!(dequantized.shape(), &shape);
+    }
+
+    #[test]
+    fn test_gpu_path() {
+        if let Ok(cuda) = Device::cuda_if_available(0) {
+            if cuda.is_cuda() {
+                let data = vec![0.25f32; 64];
+                let shape = vec![64];
+                let tensor = create_tensor_from_f32(data.clone(), &shape, &cuda).unwrap();
+                let quantizer = TL1Quantizer::new();
+                let qt = quantizer.quantize_tensor_device(&tensor, &cuda).unwrap();
+                let deq = quantizer.dequantize_tensor_device(&qt, &cuda).unwrap();
+                assert!(deq.inner().device().is_cuda());
+                assert_eq!(deq.shape(), &shape);
+            }
+        }
     }
 }
