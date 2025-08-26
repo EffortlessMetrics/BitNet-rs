@@ -382,7 +382,7 @@ impl TransformerModel {
         let embed_transposed = match vb.get((1,), "embed_tokens.transposed") {
             Ok(t) => {
                 let vals = t.to_vec1::<f32>()?;
-                vals.get(0).copied().unwrap_or(0.0) > 0.5
+                vals.first().copied().unwrap_or(0.0) > 0.5
             }
             Err(_) => false, // If flag doesn't exist, assume not transposed
         };
@@ -419,7 +419,7 @@ impl TransformerModel {
                 let transposed = match vb.get((1,), "lm_head.transposed") {
                     Ok(t) => {
                         let vals = t.to_vec1::<f32>()?;
-                        vals.get(0).copied().unwrap_or(0.0) > 0.5
+                        vals.first().copied().unwrap_or(0.0) > 0.5
                     }
                     Err(_) => false, // If flag doesn't exist, assume not transposed
                 };
