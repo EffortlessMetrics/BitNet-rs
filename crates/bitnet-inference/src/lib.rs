@@ -25,7 +25,9 @@ pub(crate) use tensor_ext::TensorDeviceExt;
 pub use backends::{Backend, CpuBackend, GpuBackend};
 pub use cache::{CacheConfig, KVCache};
 pub use config::{GenerationConfig, InferenceConfig};
-pub use engine::{InferenceEngine, InferenceResult};
+pub use engine::{
+    InferenceEngine, InferenceResult, KvCacheInfo, ModelInfo, TensorInfo, inspect_model,
+};
 pub use parity::{
     eval_logits_incremental, eval_logits_once, get_model_config, get_model_vocab_size,
 };

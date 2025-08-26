@@ -5,7 +5,7 @@
 
 use anyhow::{Context, Result};
 use bitnet_common::{BitNetConfig, BitNetTensor, ConcreteTensor, Device, Tensor};
-use bitnet_models::Model;
+use bitnet_models::{Model, formats::gguf::GgufTensorType};
 use bitnet_tokenizers::Tokenizer;
 use candle_core::{DType, IndexOp};
 use std::path::Path;
@@ -22,11 +22,34 @@ use crate::{
     streaming::{GenerationStream, StreamingConfig},
 };
 
-/// Lightweight model info from GGUF header
+/// Summary information extracted from GGUF header and metadata
 #[derive(Debug, Clone)]
 pub struct ModelInfo {
+    /// Raw GGUF header
     pub header: gguf::GgufHeader,
-    // TODO: add kvs, tensor overview, quantization hints, etc.
+    /// Estimated KV cache sizes (bytes)
+    pub kv_cache: Option<KvCacheInfo>,
+    /// Overview of the first few tensors
+    pub tensors: Vec<TensorInfo>,
+    /// Quantization hint derived from metadata
+    pub quantization: Option<String>,
+}
+
+/// KV cache size summary
+#[derive(Debug, Clone)]
+pub struct KvCacheInfo {
+    /// Bytes required per layer
+    pub per_layer_bytes: u64,
+    /// Total bytes across all layers
+    pub total_bytes: u64,
+}
+
+/// Minimal tensor description used for model inspection
+#[derive(Debug, Clone)]
+pub struct TensorInfo {
+    pub name: String,
+    pub shape: Vec<u64>,
+    pub dtype: String,
 }
 
 impl ModelInfo {
@@ -43,8 +66,214 @@ impl ModelInfo {
 
 /// Synchronous inspection used before full model initialization.
 pub fn inspect_model(path: &Path) -> gguf::Result<ModelInfo> {
+    use std::collections::HashMap;
+    use std::io::{BufReader, Read, Seek, SeekFrom};
+
+    // helper functions copied from gguf parser
+    fn read_u32_le<R: Read>(r: &mut R) -> gguf::Result<u32> {
+        let mut b = [0u8; 4];
+        r.read_exact(&mut b)?;
+        Ok(u32::from_le_bytes(b))
+    }
+    fn read_u64_le<R: Read>(r: &mut R) -> gguf::Result<u64> {
+        let mut b = [0u8; 8];
+        r.read_exact(&mut b)?;
+        Ok(u64::from_le_bytes(b))
+    }
+    fn read_string<R: Read>(r: &mut R) -> gguf::Result<String> {
+        let len = read_u64_le(r)?;
+        let mut buf = vec![0u8; len as usize];
+        r.read_exact(&mut buf)?;
+        String::from_utf8(buf).map_err(|_| gguf::GgufError::Malformed)
+    }
+    fn value_from_type_scalar<R: Read>(r: &mut R, ty: u32) -> gguf::Result<gguf::GgufValue> {
+        Ok(match ty {
+            0 => {
+                let mut b = [0];
+                r.read_exact(&mut b)?;
+                gguf::GgufValue::U8(b[0])
+            }
+            1 => {
+                let mut b = [0];
+                r.read_exact(&mut b)?;
+                gguf::GgufValue::I8(b[0] as i8)
+            }
+            2 => {
+                let mut b = [0; 2];
+                r.read_exact(&mut b)?;
+                gguf::GgufValue::U16(u16::from_le_bytes(b))
+            }
+            3 => {
+                let mut b = [0; 2];
+                r.read_exact(&mut b)?;
+                gguf::GgufValue::I16(i16::from_le_bytes(b))
+            }
+            4 => {
+                let mut b = [0; 4];
+                r.read_exact(&mut b)?;
+                gguf::GgufValue::U32(u32::from_le_bytes(b))
+            }
+            5 => {
+                let mut b = [0; 4];
+                r.read_exact(&mut b)?;
+                gguf::GgufValue::I32(i32::from_le_bytes(b))
+            }
+            6 => {
+                let mut b = [0; 4];
+                r.read_exact(&mut b)?;
+                gguf::GgufValue::F32(f32::from_le_bytes(b))
+            }
+            7 => {
+                let mut b = [0];
+                r.read_exact(&mut b)?;
+                gguf::GgufValue::Bool(b[0] != 0)
+            }
+            10 => {
+                let mut b = [0; 8];
+                r.read_exact(&mut b)?;
+                gguf::GgufValue::U64(u64::from_le_bytes(b))
+            }
+            11 => {
+                let mut b = [0; 8];
+                r.read_exact(&mut b)?;
+                gguf::GgufValue::I64(i64::from_le_bytes(b))
+            }
+            12 => {
+                let mut b = [0; 8];
+                r.read_exact(&mut b)?;
+                gguf::GgufValue::F64(f64::from_le_bytes(b))
+            }
+            _ => return Err(gguf::GgufError::InvalidKvType(ty)),
+        })
+    }
+    fn read_array_value<R: Read + Seek>(r: &mut R) -> gguf::Result<Vec<gguf::GgufValue>> {
+        let arr_type = read_u32_le(r)?;
+        let arr_len = read_u64_le(r)? as usize;
+        let mut vals = Vec::with_capacity(arr_len.min(256));
+        for i in 0..arr_len {
+            if i >= 256 {
+                // consume without storing
+                match arr_type {
+                    8 => {
+                        let len = read_u64_le(r)?;
+                        r.seek(SeekFrom::Current(len as i64))?;
+                    }
+                    0 | 1 | 7 => {
+                        r.seek(SeekFrom::Current(1))?;
+                    }
+                    2 | 3 => {
+                        r.seek(SeekFrom::Current(2))?;
+                    }
+                    4 | 5 | 6 => {
+                        r.seek(SeekFrom::Current(4))?;
+                    }
+                    10 | 11 | 12 => {
+                        r.seek(SeekFrom::Current(8))?;
+                    }
+                    _ => return Err(gguf::GgufError::InvalidKvType(arr_type)),
+                }
+                continue;
+            }
+            let v = if arr_type == 8 {
+                gguf::GgufValue::String(read_string(r)?)
+            } else {
+                value_from_type_scalar(r, arr_type)?
+            };
+            vals.push(v);
+        }
+        Ok(vals)
+    }
+
     let header = gguf::read_header_blocking(path)?;
-    Ok(ModelInfo { header })
+    let f = std::fs::File::open(path)?;
+    let mut r = BufReader::new(f);
+    r.seek(SeekFrom::Start(gguf::GGUF_HEADER_LEN as u64))?;
+
+    // read kv pairs into a map
+    let mut kv_map: HashMap<String, gguf::GgufValue> = HashMap::new();
+    for _ in 0..header.n_kv {
+        let key_len = read_u64_le(&mut r)?;
+        let mut key_buf = vec![0u8; key_len as usize];
+        r.read_exact(&mut key_buf)?;
+        let key = String::from_utf8(key_buf).map_err(|_| gguf::GgufError::Malformed)?;
+        let value_type = read_u32_le(&mut r)?;
+        let value = match value_type {
+            8 => gguf::GgufValue::String(read_string(&mut r)?),
+            9 => gguf::GgufValue::Array(read_array_value(&mut r)?),
+            ty => value_from_type_scalar(&mut r, ty)?,
+        };
+        kv_map.insert(key, value);
+    }
+
+    // tensor overview (first few tensors)
+    let tensor_limit = 8usize;
+    let mut tensors = Vec::new();
+    for _ in 0..usize::min(tensor_limit, header.n_tensors as usize) {
+        let name_len = read_u64_le(&mut r)?;
+        let mut name_buf = vec![0u8; name_len as usize];
+        r.read_exact(&mut name_buf)?;
+        let name = String::from_utf8(name_buf).map_err(|_| gguf::GgufError::Malformed)?;
+
+        let ndims = read_u32_le(&mut r)? as usize;
+        let mut shape = Vec::with_capacity(ndims);
+        for _ in 0..ndims {
+            shape.push(read_u64_le(&mut r)?);
+        }
+        let tt = read_u32_le(&mut r)?;
+        let _ = read_u64_le(&mut r)?; // offset, unused
+
+        let dtype = match GgufTensorType::from_u32(tt) {
+            Ok(t) => format!("{:?}", t),
+            Err(_) => format!("type_{tt}"),
+        };
+
+        tensors.push(TensorInfo { name, shape, dtype });
+    }
+
+    // quantization hint
+    let quantization = kv_map.get("general.file_type").and_then(|v| match v {
+        gguf::GgufValue::U32(n) => GgufTensorType::from_u32(*n).ok().map(|t| format!("{:?}", t)),
+        gguf::GgufValue::U64(n) => {
+            GgufTensorType::from_u32(*n as u32).ok().map(|t| format!("{:?}", t))
+        }
+        _ => None,
+    });
+
+    // helper to extract numeric value
+    fn as_u64(v: &gguf::GgufValue) -> Option<u64> {
+        match v {
+            gguf::GgufValue::U8(x) => Some(*x as u64),
+            gguf::GgufValue::I8(x) if *x >= 0 => Some(*x as u64),
+            gguf::GgufValue::U16(x) => Some(*x as u64),
+            gguf::GgufValue::I16(x) if *x >= 0 => Some(*x as u64),
+            gguf::GgufValue::U32(x) => Some(*x as u64),
+            gguf::GgufValue::I32(x) if *x >= 0 => Some(*x as u64),
+            gguf::GgufValue::U64(x) => Some(*x),
+            gguf::GgufValue::I64(x) if *x >= 0 => Some(*x as u64),
+            _ => None,
+        }
+    }
+
+    // estimate kv cache sizes
+    let kv_cache = kv_map.get("general.architecture").and_then(|v| match v {
+        gguf::GgufValue::String(arch) => {
+            let ctx = kv_map.get(&format!("{arch}.context_length")).and_then(as_u64);
+            let layers = kv_map.get(&format!("{arch}.block_count")).and_then(as_u64);
+            let kv_heads = kv_map.get(&format!("{arch}.attention.head_count_kv")).and_then(as_u64);
+            let head_dim = kv_map.get(&format!("{arch}.rope.dimension_count")).and_then(as_u64);
+            match (ctx, layers, kv_heads, head_dim) {
+                (Some(ctx), Some(l), Some(kv), Some(dim)) => {
+                    let per_layer = ctx * kv * dim * 2 * 2; // K+V, f16
+                    let total = per_layer * l;
+                    Some(KvCacheInfo { per_layer_bytes: per_layer, total_bytes: total })
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    });
+
+    Ok(ModelInfo { header, kv_cache, tensors, quantization })
 }
 
 /// Result type for inference operations

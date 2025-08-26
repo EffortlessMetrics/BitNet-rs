@@ -408,35 +408,28 @@ pub type Result<T> = std::result::Result<T, BitNetError>;
 
 ### ModelInfo
 
-Information about a loaded model.
+Lightweight summary extracted from a GGUF model during inspection.
 
 ```rust
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct ModelInfo {
-    /// Model name
-    pub name: String,
-    
-    /// Model architecture
-    pub architecture: String,
-    
-    /// Parameter count
-    pub num_parameters: u64,
-    
-    /// Model size in bytes
-    pub model_size: u64,
-    
-    /// Quantization info
-    pub quantization: QuantizationInfo,
-    
-    /// Supported features
-    pub features: Vec<String>,
+    pub header: GgufHeader,
+    pub kv_cache: Option<KvCacheInfo>,
+    pub tensors: Vec<TensorInfo>,
+    pub quantization: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuantizationInfo {
-    pub qtype: QuantizationType,
-    pub bits_per_weight: f32,
-    pub compression_ratio: f32,
+#[derive(Debug, Clone)]
+pub struct KvCacheInfo {
+    pub per_layer_bytes: u64,
+    pub total_bytes: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct TensorInfo {
+    pub name: String,
+    pub shape: Vec<u64>,
+    pub dtype: String,
 }
 ```
 

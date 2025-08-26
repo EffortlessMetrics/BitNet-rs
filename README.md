@@ -299,6 +299,10 @@ let info = engine::inspect_model(&path)?;
 if info.version() > 3 {
     eprintln!("Warning: Unsupported GGUF version {}", info.version());
 }
+println!("Quantization: {:?}", info.quantization);
+if let Some(kv) = &info.kv_cache {
+    println!("KV cache per layer: {} bytes", kv.per_layer_bytes);
+}
 ```
 
 ## Architecture
