@@ -9,6 +9,8 @@ use std::path::Path;
 use std::path::PathBuf;
 
 fn main() {
+    // Inform rustc about our custom cfg to avoid unexpected_cfg warnings
+    println!("cargo:rustc-check-cfg=cfg(bitnet_cpp_unavailable)");
     // If the crate is compiled without `--features bitnet-sys/ffi`,
     // skip all native build steps so the workspace remains green.
     if std::env::var("CARGO_FEATURE_FFI").is_err() {

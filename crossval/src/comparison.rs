@@ -3,12 +3,11 @@
 #![cfg(feature = "crossval")]
 
 use crate::{
-    CrossvalConfig, CrossvalError, Result,
+    CrossvalConfig, Result,
     cpp_bindings::CppModel,
     fixtures::TestFixture,
     utils::{compare_tokens, logging, perf},
 };
-use std::path::Path;
 
 /// Result of a cross-validation comparison
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -119,7 +118,7 @@ impl CrossValidator {
 
     /// Generate tokens using the Rust implementation
     /// This is a placeholder - in real implementation, this would call into bitnet-inference
-    fn generate_rust(&self, prompt: &str) -> Result<Vec<u32>> {
+    fn generate_rust(&self, _prompt: &str) -> Result<Vec<u32>> {
         // Placeholder implementation
         // In real code, this would use the bitnet-inference crate
         Ok(vec![1, 2, 3, 4, 5]) // Dummy tokens
