@@ -102,98 +102,55 @@ impl Avx2Kernel {
         n: usize,
         k: usize,
     ) -> Result<()> {
-        // Initialize output to zero
+        // Initialize output matrix
         c.fill(0.0);
 
-        // Process in blocks optimized for AVX2
-        const BLOCK_M: usize = 8;
-        const BLOCK_N: usize = 8;
-        const BLOCK_K: usize = 32;
+        for i in 0..m {
+            for j in 0..n {
+                let mut sum_vec = _mm256_setzero_si256();
+                let mut kk = 0;
 
-        for i in (0..m).step_by(BLOCK_M) {
-            for j in (0..n).step_by(BLOCK_N) {
-                // Accumulator for 8x8 block
-                let mut acc = [_mm256_setzero_ps(); 8];
+                while kk + 32 <= k {
+                    let a_ptr = unsafe { a.as_ptr().add(i * k + kk) };
+                    let a_lo =
+                        _mm256_cvtepi8_epi16(unsafe { _mm_loadu_si128(a_ptr as *const __m128i) });
+                    let a_hi = _mm256_cvtepi8_epi16(unsafe {
+                        _mm_loadu_si128(a_ptr.add(16) as *const __m128i)
+                    });
 
-                for l in (0..k).step_by(BLOCK_K) {
-                    let k_end = (l + BLOCK_K).min(k);
-                    let k_len = k_end - l;
-
-                    // Process A matrix rows
-                    for ii in 0..(BLOCK_M.min(m - i)) {
-                        if i + ii >= m {
-                            break;
-                        }
-
-                        // Load A row (i8 values) - 32 bytes = 32 i8 values
-                        let a_row = &a[(i + ii) * k + l..];
-                        let a_vec = if k_len >= 32 {
-                            unsafe { _mm256_loadu_si256(a_row.as_ptr() as *const __m256i) }
-                        } else {
-                            // Handle partial loads
-                            let mut temp = [0i8; 32];
-                            temp[..k_len].copy_from_slice(&a_row[..k_len]);
-                            unsafe { _mm256_loadu_si256(temp.as_ptr() as *const __m256i) }
-                        };
-
-                        // Process B matrix columns
-                        for jj in 0..(BLOCK_N.min(n - j)) {
-                            if j + jj >= n {
-                                break;
-                            }
-
-                            // Load B column (u8 values)
-                            let mut b_col = [0u8; 32];
-                            for kk in 0..k_len {
-                                if l + kk < k {
-                                    b_col[kk] = b[(l + kk) * n + (j + jj)];
-                                }
-                            }
-                            let b_vec =
-                                unsafe { _mm256_loadu_si256(b_col.as_ptr() as *const __m256i) };
-
-                            // Convert to i16 for multiplication
-                            {
-                                let a_lo = _mm256_unpacklo_epi8(a_vec, _mm256_setzero_si256());
-                                let a_hi = _mm256_unpackhi_epi8(a_vec, _mm256_setzero_si256());
-                                let b_lo = _mm256_unpacklo_epi8(b_vec, _mm256_setzero_si256());
-                                let b_hi = _mm256_unpackhi_epi8(b_vec, _mm256_setzero_si256());
-
-                                // Multiply and accumulate
-                                let prod_lo = _mm256_madd_epi16(a_lo, b_lo);
-                                let prod_hi = _mm256_madd_epi16(a_hi, b_hi);
-
-                                // Sum products
-                                let sum = _mm256_add_epi32(prod_lo, prod_hi);
-
-                                // Convert to float and add to accumulator
-                                let sum_f32 = _mm256_cvtepi32_ps(sum);
-                                acc[jj] = _mm256_add_ps(acc[jj], sum_f32);
-                            }
-                        }
+                    let mut b_col = [0u8; 32];
+                    for t in 0..32 {
+                        b_col[t] = b[(kk + t) * n + j];
                     }
+                    let b_ptr = b_col.as_ptr();
+                    let b_lo =
+                        _mm256_cvtepu8_epi16(unsafe { _mm_loadu_si128(b_ptr as *const __m128i) });
+                    let b_hi = _mm256_cvtepu8_epi16(unsafe {
+                        _mm_loadu_si128(b_ptr.add(16) as *const __m128i)
+                    });
+
+                    let prod_lo = _mm256_madd_epi16(a_lo, b_lo);
+                    let prod_hi = _mm256_madd_epi16(a_hi, b_hi);
+                    sum_vec = _mm256_add_epi32(sum_vec, prod_lo);
+                    sum_vec = _mm256_add_epi32(sum_vec, prod_hi);
+                    kk += 32;
                 }
 
-                // Store results
-                for ii in 0..(BLOCK_M.min(m - i)) {
-                    for jj in 0..(BLOCK_N.min(n - j)) {
-                        if i + ii < m && j + jj < n {
-                            // Horizontal sum of the vector
-                            {
-                                let sum_vec = acc[jj];
-                                let sum_hi = _mm256_extractf128_ps(sum_vec, 1);
-                                let sum_lo = _mm256_castps256_ps128(sum_vec);
-                                let sum_quad = _mm_add_ps(sum_hi, sum_lo);
-                                let sum_dual =
-                                    _mm_add_ps(sum_quad, _mm_movehl_ps(sum_quad, sum_quad));
-                                let sum_single =
-                                    _mm_add_ss(sum_dual, _mm_shuffle_ps(sum_dual, sum_dual, 0x55));
+                let mut total = {
+                    let sum128 = _mm_add_epi32(
+                        _mm256_castsi256_si128(sum_vec),
+                        _mm256_extracti128_si256(sum_vec, 1),
+                    );
+                    let sum64 = _mm_add_epi32(sum128, _mm_srli_si128(sum128, 8));
+                    let sum32 = _mm_add_epi32(sum64, _mm_srli_si128(sum64, 4));
+                    _mm_cvtsi128_si32(sum32)
+                };
 
-                                c[(i + ii) * n + (j + jj)] += _mm_cvtss_f32(sum_single);
-                            }
-                        }
-                    }
+                for t in kk..k {
+                    total += (a[i * k + t] as i32) * (b[t * n + j] as i32);
                 }
+
+                c[i * n + j] = total as f32;
             }
         }
 
@@ -614,34 +571,28 @@ mod tests {
 
     #[cfg(target_arch = "x86_64")]
     #[test]
-    fn test_avx2_matmul_basic() {
+    fn test_avx2_matmul_matches_fallback() {
         let kernel = Avx2Kernel;
+        assert!(kernel.is_available(), "AVX2 not detected on this CPU");
 
-        if !kernel.is_available() {
-            return; // Skip test if AVX2 not available
-        }
+        let fallback = crate::cpu::fallback::FallbackKernel;
 
-        // Test 2x2 * 2x2 matrix multiplication
         let a = vec![1i8, 2, 3, 4];
-        let b = vec![1u8, 0, 0, 1];
-        let mut c = vec![0.0f32; 4];
+        let b = vec![5u8, 6, 7, 8];
+        let mut c_avx = vec![0.0f32; 4];
+        let mut c_ref = vec![0.0f32; 4];
 
-        kernel.matmul_i2s(&a, &b, &mut c, 2, 2, 2).unwrap();
+        kernel.matmul_i2s(&a, &b, &mut c_avx, 2, 2, 2).unwrap();
+        fallback.matmul_i2s(&a, &b, &mut c_ref, 2, 2, 2).unwrap();
 
-        // For now, just verify the kernel runs without error
-        // TODO: Fix the AVX2 matrix multiplication implementation
-        assert!(c.iter().any(|&x| x != 0.0), "Result should not be all zeros");
-        assert_eq!(c.len(), 4, "Result should have correct dimensions");
+        assert_eq!(c_avx, c_ref);
     }
 
     #[cfg(target_arch = "x86_64")]
     #[test]
     fn test_avx2_quantize_tl2() {
         let kernel = Avx2Kernel;
-
-        if !kernel.is_available() {
-            return;
-        }
+        assert!(kernel.is_available(), "AVX2 not detected on this CPU");
 
         let input = [1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1].repeat(16); // 128 elements
         let mut output = vec![0u8; 32]; // 128 values / 4 per byte = 32 bytes
