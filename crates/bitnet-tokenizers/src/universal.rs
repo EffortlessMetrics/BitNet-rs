@@ -1,5 +1,7 @@
 use bitnet_common::Result;
+use bitnet_models::GgufReader;
 use std::collections::HashMap;
+use std::fs;
 use std::path::Path;
 use tracing::{debug, warn};
 
@@ -27,16 +29,50 @@ impl UniversalTokenizer {
         Ok(Self { backend, config })
     }
 
-    /// Create from GGUF model with auto-fix
-    pub fn from_gguf(_path: &Path) -> Result<Self> {
-        // TODO: Import GgufReader when bitnet-models is added as dependency
-        // For now, create a default config
-        // This would normally:
-        // 1. Read GGUF metadata
-        // 2. Auto-detect tokenizer type (gpt2, llama, etc)
-        // 3. Fix missing pre-tokenizer for GPT-2
-        // 4. Extract vocabulary and merges
-        let config = TokenizerConfig::default();
+    /// Create from GGUF model with auto-detected configuration
+    pub fn from_gguf(path: &Path) -> Result<Self> {
+        // Read GGUF file and parse metadata
+        let data = fs::read(path)?;
+        let reader = GgufReader::new(&data)?;
+
+        // Build tokenizer configuration from GGUF metadata
+        let mut config = TokenizerConfig::default();
+
+        // Model/tokenizer type
+        if let Some(model) = reader.get_string_metadata("tokenizer.ggml.model") {
+            config.model_type = model;
+        }
+
+        // Vocabulary size
+        config.vocab_size = reader
+            .get_u32_metadata("tokenizer.ggml.vocab_size")
+            .or_else(|| reader.get_u32_metadata("tokenizer.ggml.tokens"))
+            .unwrap_or(0) as usize;
+
+        // Special token options
+        config.add_bos = reader
+            .get_bool_metadata("tokenizer.ggml.add_bos")
+            .or_else(|| reader.get_bool_metadata("tokenizer.ggml.add_bos_token"))
+            .unwrap_or(false);
+        config.add_eos = reader
+            .get_bool_metadata("tokenizer.ggml.add_eos")
+            .or_else(|| reader.get_bool_metadata("tokenizer.ggml.add_eos_token"))
+            .unwrap_or(false);
+
+        // Pre-tokenizer prefix handling (auto-fix for GPT-2)
+        config.add_space_prefix = reader
+            .get_bool_metadata("tokenizer.ggml._prefix")
+            .unwrap_or_else(|| config.model_type == "gpt2");
+
+        config.byte_fallback =
+            reader.get_bool_metadata("tokenizer.ggml.byte_fallback").unwrap_or(false);
+
+        // Token IDs
+        config.bos_token_id = reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
+        config.eos_token_id = reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
+        config.pad_token_id = reader.get_u32_metadata("tokenizer.ggml.pad_token_id");
+        config.unk_token_id = reader.get_u32_metadata("tokenizer.ggml.unknown_token_id");
+
         Self::new(config)
     }
 

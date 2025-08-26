@@ -131,6 +131,18 @@ BitNet Rust supports multiple model formats:
 bitnet-cli inference --model path/to/model.gguf --prompt "Hello"
 ```
 
+### GGUF Tokenizer Auto-Detection
+
+When using a GGUF model, the tokenizer configuration is embedded in the same file.
+The `UniversalTokenizer` can automatically detect and load the tokenizer:
+
+```rust
+use bitnet_tokenizers::UniversalTokenizer;
+use std::path::Path;
+
+let tokenizer = UniversalTokenizer::from_gguf(Path::new("model.gguf"))?;
+```
+
 ### SafeTensors Format
 ```bash
 # Load SafeTensors model
