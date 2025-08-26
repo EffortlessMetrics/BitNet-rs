@@ -529,6 +529,14 @@ impl HtmlReporter {
             ));
         }
 
+        if let Some(stack) = &test.stack_trace {
+            html.push_str(&format!(
+                r#"                        <div class="error-details"><strong>Stack trace:</strong><br><pre>{}</pre></div>
+"#,
+                html_escape::encode_text(stack)
+            ));
+        }
+
         html.push_str("                    </div>\n");
         html
     }

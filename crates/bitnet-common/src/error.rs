@@ -58,6 +58,10 @@ pub enum KernelError {
     UnsupportedArchitecture { arch: String },
     #[error("GPU error: {reason}")]
     GpuError { reason: String },
+    #[error("Unsupported hardware: required {required}, available {available}")]
+    UnsupportedHardware { required: String, available: String },
+    #[error("Invalid arguments: {reason}")]
+    InvalidArguments { reason: String },
 }
 
 /// Inference-related errors
