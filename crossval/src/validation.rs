@@ -71,27 +71,37 @@ impl ValidationSuite {
         self
     }
 
-    /// Gate 1: Model compatibility check
-    pub fn validate_model_compatibility(&self) -> Result<ValidationResult> {
-        // This would integrate with the weight mapper
+    /// Gate 1: Verify that all GGUF tensors are mapped by the weight mapper
+    pub fn validate_tensor_mapping(&self) -> Result<ValidationResult> {
+        use bitnet_models::{GgufReader, weight_mapper::dry_run_remap_names};
+
         let mut result = ValidationResult {
-            gate: "model_compatibility".to_string(),
+            gate: "tensor_mapping".to_string(),
             passed: false,
             metrics: HashMap::new(),
             message: String::new(),
         };
 
-        // Check if model file exists
-        if !Path::new(&self.model_path).exists() {
+        let path = Path::new(&self.model_path);
+        if !path.exists() {
             result.message = format!("Model file not found: {}", self.model_path);
             return Ok(result);
         }
 
-        // TODO: Integrate with actual weight mapper
-        // For now, assume success if file exists
-        result.passed = true;
-        result.message = "All tensors mapped successfully".to_string();
-        result.metrics.insert("unmapped_count".to_string(), serde_json::json!(0));
+        let bytes = std::fs::read(path)?;
+        let reader = GgufReader::new(&bytes)?;
+        let names = reader.tensor_names().into_iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let unmapped = dry_run_remap_names(names.clone());
+
+        result.metrics.insert("total_tensors".to_string(), serde_json::json!(names.len()));
+        result.metrics.insert("unmapped_count".to_string(), serde_json::json!(unmapped.len()));
+        if !unmapped.is_empty() {
+            result.metrics.insert("unmapped_tensors".to_string(), serde_json::json!(unmapped));
+            result.message = "Unmapped tensors detected".to_string();
+        } else {
+            result.passed = true;
+            result.message = "All tensors mapped successfully".to_string();
+        }
 
         Ok(result)
     }
@@ -162,8 +172,8 @@ impl ValidationSuite {
     pub fn run_all(&self) -> Result<Vec<ValidationResult>> {
         let mut results = Vec::new();
 
-        // Gate 1: Model compatibility
-        results.push(self.validate_model_compatibility()?);
+        // Gate 1: Tensor mapping
+        results.push(self.validate_tensor_mapping()?);
 
         // Gate 2: Token parity (using default prompts)
         let prompts = vec!["The capital of France is".to_string(), "Once upon a time".to_string()];
@@ -274,8 +284,8 @@ mod tests {
     fn test_validation_suite() {
         let suite = ValidationSuite::new("test_model.gguf");
 
-        // Test model compatibility
-        let result = suite.validate_model_compatibility();
+        // Test tensor mapping
+        let result = suite.validate_tensor_mapping();
         assert!(result.is_ok());
 
         // Test token parity

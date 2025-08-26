@@ -1,6 +1,6 @@
 #[test]
 fn ms_bitnet_names_map_clean() {
-    use bitnet_models::{GgufReader, weight_mapper::dry_run_remap_names};
+    use bitnet_crossval::validation::ValidationSuite;
     use std::path::Path;
 
     let model = std::env::var("BITNET_MS_MODEL")
@@ -11,16 +11,24 @@ fn ms_bitnet_names_map_clean() {
         return;
     }
 
-    let bytes = std::fs::read(path).expect("read gguf");
-    let r = GgufReader::new(&bytes).expect("parse");
-    let names = r.tensor_names().into_iter().map(|s| s.to_string()).collect::<Vec<_>>();
-    let unmapped = dry_run_remap_names(names.clone());
+    let suite = ValidationSuite::new(model);
+    let result = suite.validate_tensor_mapping().expect("tensor mapping");
 
-    println!("Total tensors: {}", names.len());
-    println!("Unmapped tensors: {}", unmapped.len());
-    if !unmapped.is_empty() {
-        println!("First unmapped: {:?}", &unmapped[..unmapped.len().min(10)]);
+    println!(
+        "Total tensors: {}",
+        result.metrics.get("total_tensors").and_then(|v| v.as_u64()).unwrap_or(0)
+    );
+    println!(
+        "Unmapped tensors: {}",
+        result.metrics.get("unmapped_count").and_then(|v| v.as_u64()).unwrap_or(0)
+    );
+    if let Some(unmapped) = result.metrics.get("unmapped_tensors") {
+        let list: Vec<String> = serde_json::from_value(unmapped.clone()).unwrap();
+        if !list.is_empty() {
+            println!("First unmapped: {:?}", &list[..list.len().min(10)]);
+        }
+        assert!(list.is_empty(), "unmapped: {:?}", &list[..list.len().min(10)]);
+    } else {
+        assert!(result.passed);
     }
-
-    assert!(unmapped.is_empty(), "unmapped: {:?}", &unmapped[..unmapped.len().min(10)]);
 }
