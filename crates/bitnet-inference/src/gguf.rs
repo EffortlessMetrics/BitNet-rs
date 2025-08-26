@@ -316,3 +316,87 @@ pub fn read_kv_pairs(
 
     Ok(kvs)
 }
+
+/// Minimal tensor summary extracted from GGUF metadata.
+///
+/// This does not read the tensor data itself - only the name,
+/// shape and type information from the tensor descriptors.
+#[derive(Debug, Clone)]
+pub struct TensorInfo {
+    /// Tensor name as stored in the file
+    pub name: String,
+    /// Tensor shape (in elements)
+    pub shape: Vec<usize>,
+    /// Raw tensor type identifier
+    pub ty: u32,
+}
+
+/// Read a limited set of tensor descriptors from the GGUF file.
+///
+/// This is intended for light-weight inspection and should not
+/// allocate large amounts of memory. Only the first `limit` tensors
+/// are returned (or fewer if the file contains less).
+pub fn read_tensor_infos(
+    path: impl AsRef<std::path::Path>,
+    limit: usize,
+) -> Result<Vec<TensorInfo>> {
+    let f = std::fs::File::open(path)?;
+    let mut r = BufReader::new(f);
+
+    // read header
+    let mut header_buf = [0u8; GGUF_HEADER_LEN];
+    r.read_exact(&mut header_buf)?;
+    let header = parse_header(&header_buf)?;
+
+    // Skip KVs
+    for _ in 0..header.n_kv {
+        let key_len = read_u64_le(&mut r)?;
+        if key_len > MAX_KEY_LEN {
+            return Err(GgufError::StringTooLarge(key_len));
+        }
+        r.seek(SeekFrom::Current(key_len as i64))?;
+        let value_type = read_u32_le(&mut r)?;
+        match value_type {
+            8 => {
+                let _ = read_string(&mut r)?;
+            }
+            9 => {
+                let _ = read_array_value(&mut r)?;
+            }
+            ty => {
+                if let Some(sz) = scalar_size_bytes(ty) {
+                    r.seek(SeekFrom::Current(sz as i64))?;
+                } else {
+                    return Err(GgufError::InvalidKvType(ty));
+                }
+            }
+        }
+    }
+
+    // Now positioned at tensor descriptors
+    let mut infos = Vec::new();
+    let count = limit.min(header.n_tensors as usize);
+    for _ in 0..count {
+        let name_len = read_u64_le(&mut r)?;
+        if name_len > MAX_KEY_LEN {
+            return Err(GgufError::StringTooLarge(name_len));
+        }
+        let mut name_buf = vec![0u8; name_len as usize];
+        r.read_exact(&mut name_buf)?;
+        let name = String::from_utf8(name_buf).map_err(|_| GgufError::Malformed)?;
+
+        let n_dims = read_u32_le(&mut r)? as usize;
+        let mut shape = Vec::with_capacity(n_dims);
+        for _ in 0..n_dims {
+            shape.push(read_u64_le(&mut r)? as usize);
+        }
+
+        let ty = read_u32_le(&mut r)?;
+        // offset - skip
+        let _ = read_u64_le(&mut r)?;
+
+        infos.push(TensorInfo { name, shape, ty });
+    }
+
+    Ok(infos)
+}

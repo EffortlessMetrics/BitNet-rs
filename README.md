@@ -299,6 +299,7 @@ let info = engine::inspect_model(&path)?;
 if info.version() > 3 {
     eprintln!("Warning: Unsupported GGUF version {}", info.version());
 }
+println!("quantization: {:?}", info.quantization.description);
 ```
 
 ## Architecture

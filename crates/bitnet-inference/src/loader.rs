@@ -173,12 +173,31 @@ impl ModelLoader {
             .unwrap_or(0);
         
         info!(
-            "GGUF header validated: version={}, tensors={}, kvs={}, size_bytes={}",
+            "GGUF header validated: version={}, tensors={}, kvs={}, size_bytes={}, quant={}",
             model_info.version(),
             model_info.n_tensors(),
             model_info.n_kv(),
-            file_size
+            file_size,
+            model_info
+                .quantization
+                .description
+                .as_deref()
+                .unwrap_or("unknown")
         );
+
+        if !model_info.tensor_summaries.is_empty() {
+            debug!(
+                first_tensors = ?model_info
+                    .tensor_summaries
+                    .iter()
+                    .take(3)
+                    .collect::<Vec<_>>(),
+                "Sample tensor metadata"
+            );
+        }
+        if !model_info.kv_cache_hints.is_empty() {
+            debug!(kv_cache = ?model_info.kv_cache_hints, "KV-cache hints");
+        }
         
         // Warn about suspicious counts
         if model_info.n_tensors() > 10_000_000 || model_info.n_kv() > 10_000_000 {

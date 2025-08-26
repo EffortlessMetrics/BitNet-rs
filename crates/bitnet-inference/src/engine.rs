@@ -5,11 +5,12 @@
 
 use anyhow::{Context, Result};
 use bitnet_common::{BitNetConfig, BitNetTensor, ConcreteTensor, Device, Tensor};
-use bitnet_models::Model;
+use bitnet_models::{Model, formats::gguf::GgufTensorType};
 use bitnet_tokenizers::Tokenizer;
 use candle_core::{DType, IndexOp};
 use std::path::Path;
 use std::sync::Arc;
+use std::collections::HashMap;
 use tokio::sync::RwLock;
 use tracing::{debug, info, instrument, warn};
 
@@ -22,11 +23,28 @@ use crate::{
     streaming::{GenerationStream, StreamingConfig},
 };
 
-/// Lightweight model info from GGUF header
+/// Summary information about a tensor in the model.
+#[derive(Debug, Clone)]
+pub struct TensorSummary {
+    pub name: String,
+    pub shape: Vec<usize>,
+    pub dtype: String,
+}
+
+/// Quantization metadata extracted from GGUF header/metadata.
+#[derive(Debug, Clone, Default)]
+pub struct QuantizationInfo {
+    pub file_type: Option<u32>,
+    pub description: Option<String>,
+}
+
+/// Lightweight model info from GGUF header and metadata
 #[derive(Debug, Clone)]
 pub struct ModelInfo {
     pub header: gguf::GgufHeader,
-    // TODO: add kvs, tensor overview, quantization hints, etc.
+    pub tensor_summaries: Vec<TensorSummary>,
+    pub kv_cache_hints: HashMap<String, gguf::GgufValue>,
+    pub quantization: QuantizationInfo,
 }
 
 impl ModelInfo {
@@ -44,7 +62,36 @@ impl ModelInfo {
 /// Synchronous inspection used before full model initialization.
 pub fn inspect_model(path: &Path) -> gguf::Result<ModelInfo> {
     let header = gguf::read_header_blocking(path)?;
-    Ok(ModelInfo { header })
+    let kvs = gguf::read_kv_pairs(path, None)?;
+
+    let mut kv_cache_hints = HashMap::new();
+    let mut quantization = QuantizationInfo::default();
+    for kv in &kvs {
+        if kv.key.starts_with("kv_cache") {
+            kv_cache_hints.insert(kv.key.clone(), kv.value.clone());
+        }
+        if kv.key == "general.file_type" {
+            if let gguf::GgufValue::U32(v) = kv.value {
+                quantization.file_type = Some(v);
+                if let Ok(q) = GgufTensorType::from_u32(v) {
+                    quantization.description = Some(format!("{q:?}"));
+                }
+            }
+        }
+    }
+
+    let tensor_infos = gguf::read_tensor_infos(path, 8)?;
+    let tensor_summaries = tensor_infos
+        .into_iter()
+        .map(|t| {
+            let dtype = GgufTensorType::from_u32(t.ty)
+                .map(|d| format!("{d:?}"))
+                .unwrap_or_else(|_| t.ty.to_string());
+            TensorSummary { name: t.name, shape: t.shape, dtype }
+        })
+        .collect();
+
+    Ok(ModelInfo { header, tensor_summaries, kv_cache_hints, quantization })
 }
 
 /// Result type for inference operations
