@@ -3,7 +3,7 @@
 //! Core inference engine with CPU and GPU backend support, streaming generation,
 //! and comprehensive configuration options.
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use bitnet_common::{BitNetConfig, BitNetTensor, ConcreteTensor, Device, Tensor};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
@@ -63,6 +63,8 @@ pub struct InferenceEngine {
     backend: Box<dyn Backend>,
     cache: Arc<RwLock<KVCache>>,
     config: InferenceConfig,
+    last_token: Arc<RwLock<Option<u32>>>,
+    last_logits: Arc<RwLock<Option<Vec<f32>>>>,
 }
 
 impl InferenceEngine {
@@ -99,7 +101,10 @@ impl InferenceEngine {
             }
         };
 
-        Ok(Self { model, tokenizer, backend, cache, config })
+        let last_token = Arc::new(RwLock::new(None));
+        let last_logits = Arc::new(RwLock::new(None));
+
+        Ok(Self { model, tokenizer, backend, cache, config, last_token, last_logits })
     }
 
     /// Create inference engine with custom configuration
@@ -112,6 +117,26 @@ impl InferenceEngine {
         let mut engine = Self::new(model, tokenizer, device)?;
         engine.config = config;
         Ok(engine)
+    }
+
+    /// Prefill the model's KV cache with the given prompt tokens.
+    pub async fn prefill(&self, tokens: &[u32]) -> Result<()> {
+        if tokens.is_empty() {
+            return Ok(());
+        }
+
+        let logits = self.forward_pass(tokens).await?;
+
+        {
+            let mut lt = self.last_token.write().await;
+            *lt = tokens.last().copied();
+        }
+        {
+            let mut ll = self.last_logits.write().await;
+            *ll = Some(logits);
+        }
+
+        Ok(())
     }
 
     /// Evaluate token IDs and return logits for deterministic comparison
@@ -217,14 +242,11 @@ impl InferenceEngine {
     }
 
     /// Generate tokens using the configured backend
-    async fn generate_tokens(
+    pub async fn generate_tokens(
         &self,
         input_tokens: &[u32],
         config: &GenerationConfig,
     ) -> Result<Vec<u32>> {
-        let mut generated_tokens = Vec::new();
-        let mut current_tokens = input_tokens.to_vec();
-
         let sampling_config = SamplingConfig {
             temperature: config.temperature,
             top_k: config.top_k,
@@ -232,15 +254,29 @@ impl InferenceEngine {
             repetition_penalty: config.repetition_penalty,
             seed: config.seed,
         };
-
         let mut sampling_strategy = SamplingStrategy::new(sampling_config);
 
-        for step in 0..config.max_new_tokens {
-            // Forward pass through model
-            let logits = self.forward_pass(&current_tokens).await?;
+        // Determine starting logits and context
+        let mut context_tokens: Vec<u32> = Vec::new();
+        let mut logits = if !input_tokens.is_empty() {
+            self.prefill(input_tokens).await?;
+            context_tokens.extend_from_slice(input_tokens);
+            self.last_logits.write().await.take().unwrap()
+        } else {
+            let stored = self.last_logits.write().await.take();
+            let last = *self.last_token.read().await;
+            if let (Some(l), Some(t)) = (stored, last) {
+                context_tokens.push(t);
+                l
+            } else {
+                return Err(anyhow!("No prefill state available"));
+            }
+        };
 
-            // Sample next token first
-            let next_token = sampling_strategy.sample(&logits, &current_tokens)?;
+        let mut generated_tokens = Vec::new();
+
+        for step in 0..config.max_new_tokens {
+            let next_token = sampling_strategy.sample(&logits, &context_tokens)?;
 
             // Capture logits if requested (after sampling to know chosen_id)
             if let Some(cb) = &config.logits_cb
@@ -248,7 +284,6 @@ impl InferenceEngine {
             {
                 let k = config.logits_topk.min(logits.len());
 
-                // Use partial selection for efficiency on large vocabs
                 let mut indices: Vec<usize> = (0..logits.len()).collect();
                 if k < logits.len() {
                     indices.select_nth_unstable_by(k.saturating_sub(1), |&a, &b| {
@@ -257,7 +292,6 @@ impl InferenceEngine {
                     indices.truncate(k);
                 }
 
-                // Sort the top-k for consistent ordering
                 indices.sort_by(|&a, &b| {
                     logits[b].partial_cmp(&logits[a]).unwrap_or(std::cmp::Ordering::Equal)
                 });
@@ -265,23 +299,29 @@ impl InferenceEngine {
                 let topk: Vec<(u32, f32)> =
                     indices.into_iter().map(|idx| (idx as u32, logits[idx])).collect();
 
-                // Pass topk and the chosen token
                 (cb)(step as usize, topk, next_token);
             }
 
-            // Check for stop conditions
+            context_tokens.push(next_token);
+            generated_tokens.push(next_token);
+
             if self.should_stop(next_token, &generated_tokens, config) {
+                logits = self.forward_pass(&[next_token]).await?;
                 break;
             }
 
-            generated_tokens.push(next_token);
-            current_tokens.push(next_token);
+            logits = self.forward_pass(&[next_token]).await?;
 
             // Limit context length
-            if current_tokens.len() > self.config.max_context_length {
+            if context_tokens.len() > self.config.max_context_length {
                 let keep_length = self.config.max_context_length / 2;
-                current_tokens = current_tokens[current_tokens.len() - keep_length..].to_vec();
+                context_tokens = context_tokens[context_tokens.len() - keep_length..].to_vec();
             }
+        }
+
+        if let Some(&last) = context_tokens.last() {
+            *self.last_token.write().await = Some(last);
+            *self.last_logits.write().await = Some(logits);
         }
 
         Ok(generated_tokens)
