@@ -491,39 +491,42 @@ impl TransformerModel {
     /// Teacher-forcing forward: full sequence [B,T] -> [B,T,V] logits
     ///
     /// This implementation mirrors the incremental decoding path by
-    /// processing one token at a time and maintaining a KV cache. Rotary
-    /// position embeddings are therefore computed for each decoded step,
-    /// ensuring parity with generation.
+    /// processing tokens step-by-step with a KV cache. This ensures that
+    /// rotary (or absolute) positional encodings are applied per layer with
+    /// the correct positions and that a causal mask prevents attending to
+    /// future tokens.
     pub fn forward_full(&self, token_ids: &Tensor) -> Result<Tensor> {
-        // Get dimensions
-        let batch_size = token_ids.dims()[0];
-        let seq_len = token_ids.dims()[1];
+        // Token ids expected shape: [B,T]
+        let (batch_size, seq_len) = token_ids.dims2()?;
 
-        // 1. Embed tokens [B,T] -> [B,T,H]
+        // Embed the entire sequence once.
         let flat_ids = token_ids.flatten_all()?;
         let ids_vec: Vec<u32> = flat_ids.to_vec1()?;
-        let embeddings = self.embed(&ids_vec)?;
-
-        // Reshape back to [B,T,H]
+        let hidden = self.embed(&ids_vec)?;
         let hidden_size = self.config.model.hidden_size;
-        let embeddings = embeddings.reshape(&[batch_size, seq_len, hidden_size])?;
+        let hidden = hidden.reshape(&[batch_size, seq_len, hidden_size])?;
 
-        // 2. Incrementally process tokens so that rotary embeddings and
-        // causal masking are applied per step exactly as in decoding.
+        // Create per-layer KV cache so that rotary/absolute positional
+        // encodings use the proper positions during iterative decoding.
         let mut kv_cache = KVCache::new(&self.config, batch_size, &self.device)?;
-        let mut outputs: Vec<Tensor> = Vec::with_capacity(seq_len);
-        for t in 0..seq_len {
-            // Slice current token [B,1,H]
-            let x_t = embeddings.narrow(1, t, 1)?;
-            // Forward through model with cache (applies rotary per step)
-            let h_t = self.forward(&x_t, Some(&mut kv_cache))?;
-            outputs.push(h_t);
-        }
-        let hidden_refs: Vec<&Tensor> = outputs.iter().collect();
-        let hidden = Tensor::cat(&hidden_refs, 1)?; // [B,T,H]
 
-        // 3. Project to vocabulary [B,T,H] -> [B,T,V]
-        self.logits(&hidden)
+        // Collect logits for each position.
+        let mut logits_steps = Vec::with_capacity(seq_len);
+        for t in 0..seq_len {
+            // Select the current token's embedding: [B,1,H]
+            let step_hidden = hidden.narrow(1, t, 1)?;
+
+            // Run through all layers using the incremental path which applies
+            // positional encoding per layer and causal masking internally.
+            let step_hidden = self.forward(&step_hidden, Some(&mut kv_cache))?;
+
+            // Project to vocabulary logits for this step.
+            let step_logits = self.logits(&step_hidden)?;
+            logits_steps.push(step_logits);
+        }
+
+        // Concatenate logits from all steps: [B,T,V]
+        Ok(Tensor::cat(&logits_steps, 1)?)
     }
 
     pub fn forward(&self, hidden: &Tensor, mut kv_cache: Option<&mut KVCache>) -> Result<Tensor> {
