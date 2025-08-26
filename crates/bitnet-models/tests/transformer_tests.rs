@@ -5,7 +5,7 @@ use bitnet_models::{
     BitNetModel, Model,
     transformer::{KVCache, TransformerModel},
 };
-use candle_core::{DType, IndexOp, Tensor};
+use candle_core::{DType, Tensor};
 use candle_nn::VarBuilder;
 use std::sync::Arc;
 
@@ -133,36 +133,39 @@ fn test_step_vs_full_equivalence() -> anyhow::Result<()> {
     let h_full = model.forward(&emb_full, None)?;
     let logits_full = model.logits(&h_full)?;
 
-    // Extract last step logits from full pass
-    let last_full =
-        logits_full.narrow(1, tokens.len() - 1, 1)?.squeeze(1)?.i(0)?.to_vec1::<f32>()?;
+    // forward_full path
+    let token_tensor =
+        Tensor::from_vec(tokens.clone(), (1, tokens.len()), &candle_core::Device::Cpu)?;
+    let logits_full_fn = model.forward_full(&token_tensor)?;
 
     // Incremental forward pass (token by token with KV cache)
     let mut kv = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
-    let mut last_incremental = Vec::new();
-
-    for (i, &token) in tokens.iter().enumerate() {
-        // For incremental processing, only embed the current token
+    let mut outs = Vec::new();
+    for &token in &tokens {
         let current_token = vec![token];
         let emb = model.embed(&current_token)?;
         let h = model.forward(&emb, Some(&mut kv))?;
-        let logits = model.logits(&h)?;
-
-        if i == tokens.len() - 1 {
-            // Compare last step logits
-            last_incremental = logits
-                .narrow(1, 0, 1)?  // Get the first (and only) position
-                .squeeze(1)?
-                .i(0)?
-                .to_vec1::<f32>()?;
-        }
+        outs.push(model.logits(&h)?);
     }
+    let out_refs: Vec<&Tensor> = outs.iter().collect();
+    let logits_incremental = Tensor::cat(&out_refs, 1)?;
 
-    // Check that they're approximately equal
-    for (a, b) in last_full.iter().zip(last_incremental.iter()) {
-        let diff = (a - b).abs();
-        assert!(diff < 1e-4, "Logits differ: {} vs {}", a, b);
-    }
+    // Compare all paths
+    let diff_ff = (&logits_full - &logits_full_fn)?
+        .abs()?
+        .flatten_all()?
+        .to_vec1::<f32>()?
+        .into_iter()
+        .fold(0f32, |a, b| a.max(b));
+    assert!(diff_ff < 1e-5, "forward_full diff {}", diff_ff);
+
+    let diff_inc = (&logits_full - &logits_incremental)?
+        .abs()?
+        .flatten_all()?
+        .to_vec1::<f32>()?
+        .into_iter()
+        .fold(0f32, |a, b| a.max(b));
+    assert!(diff_inc < 1e-5, "incremental diff {}", diff_inc);
 
     Ok(())
 }

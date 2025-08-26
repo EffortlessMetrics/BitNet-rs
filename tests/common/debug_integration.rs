@@ -360,7 +360,6 @@ impl TestReporter for DebugTestReporter {
 }
 
 /// Utility functions for debug integration
-
 /// Create a debug-enabled test harness from configuration
 pub async fn create_debug_harness(
     test_config: super::config::TestConfig,
