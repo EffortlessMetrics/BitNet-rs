@@ -14,7 +14,7 @@ pub struct BitNetModel {
 }
 
 impl BitNetModel {
-    /// Load a model from a file path
+    /// Load a model from a local GGUF file, SafeTensors file, or HuggingFace directory
     pub async fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, BitNetError>;
     
     /// Load a model from HuggingFace Hub
