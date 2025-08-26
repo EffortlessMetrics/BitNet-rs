@@ -9,6 +9,7 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "High-performance compute kernels for BitNet"
+autotests = false
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common" }
@@ -71,6 +72,11 @@ path = "tests/comprehensive_kernel_unit_tests.rs"
 [[test]]
 name = "gpu_integration"
 path = "tests/gpu_integration.rs"
+required-features = ["cuda"]
+
+[[test]]
+name = "gpu_quantization"
+path = "tests/gpu_quantization.rs"
 required-features = ["cuda"]
 
 [[example]]

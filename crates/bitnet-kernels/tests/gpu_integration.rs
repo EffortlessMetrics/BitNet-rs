@@ -147,19 +147,13 @@ mod cuda_tests {
             }
         }
 
-        // Test quantization error handling (not yet implemented)
+        // Test quantization
         let input = vec![1.0f32; 16];
-        let mut output = vec![0u8; 16];
-        let mut scales = vec![0.0f32; 4];
-
-        match kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S) {
-            Ok(_) => {
-                println!("   Quantization succeeded unexpectedly");
-            }
-            Err(_) => {
-                println!("   Quantization properly reported not implemented");
-            }
-        }
+        let mut output = vec![0u8; 16 / 4];
+        let mut scales = vec![0.0f32; (16 + 31) / 32];
+        kernel
+            .quantize(&input, &mut output, &mut scales, QuantizationType::I2S)
+            .expect("Quantization should succeed");
     }
 
     #[test]

@@ -52,7 +52,7 @@ struct AllocationInfo {
     size: usize,
     timestamp: Instant,
     #[cfg(debug_assertions)]
-    stack_trace: Vec<String>,
+    _stack_trace: Vec<String>,
 }
 
 /// Memory access pattern for optimization
@@ -65,6 +65,7 @@ pub enum AccessPattern {
 
 /// Optimized memory pool for GPU allocations (simplified)
 pub struct OptimizedMemoryPool {
+    #[allow(dead_code)]
     device_id: usize,
     config: MemoryPoolConfig,
     free_buffers: HashMap<usize, Vec<Vec<u8>>>, // Simplified buffer storage
@@ -148,7 +149,7 @@ impl OptimizedMemoryPool {
             size,
             timestamp: Instant::now(),
             #[cfg(debug_assertions)]
-            stack_trace: self.capture_stack_trace(),
+            _stack_trace: self.capture_stack_trace(),
         };
 
         self.allocated_buffers.insert(ptr, info);
@@ -289,20 +290,23 @@ impl MemoryLayoutOptimizer {
             return AccessPattern::Sequential;
         }
 
-        // Check if access is strided
+        // Check if access is strided. If the initial stride would be negative, we treat
+        // the pattern as random to avoid underflow when subtracting unsigned indices.
         if access_indices.len() >= 3 {
-            let stride = access_indices[1] - access_indices[0];
-            let mut is_strided = true;
+            let stride = access_indices[1] as isize - access_indices[0] as isize;
+            if stride > 0 {
+                let mut is_strided = true;
 
-            for i in 2..access_indices.len() {
-                if access_indices[i] - access_indices[i - 1] != stride {
-                    is_strided = false;
-                    break;
+                for i in 2..access_indices.len() {
+                    if access_indices[i] as isize - access_indices[i - 1] as isize != stride {
+                        is_strided = false;
+                        break;
+                    }
                 }
-            }
 
-            if is_strided {
-                return AccessPattern::Strided { stride };
+                if is_strided {
+                    return AccessPattern::Strided { stride: stride as usize };
+                }
             }
         }
 

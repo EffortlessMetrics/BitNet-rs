@@ -11,10 +11,15 @@ use std::sync::Arc;
 
 /// CUDA kernel provider with memory management and stream handling
 pub struct CudaKernel {
+    #[allow(dead_code)]
     ctx: Arc<CudaContext>,
     stream: Arc<CudaStream>,
+    #[allow(dead_code)]
     module: Arc<CudaModule>,
     matmul_function: CudaFunction,
+    quant_i2s_function: CudaFunction,
+    quant_tl1_function: CudaFunction,
+    quant_tl2_function: CudaFunction,
     device_info: CudaDeviceInfo,
 }
 
@@ -63,9 +68,14 @@ impl CudaKernel {
         // Get default stream
         let stream = ctx.default_stream();
 
-        // Compile PTX kernel
-        let ptx = compile_ptx(include_str!("kernels/bitnet_matmul.cu")).map_err(|e| {
-            KernelError::GpuError { reason: format!("Failed to compile PTX: {:?}", e) }
+        // Compile PTX for matmul and quantization kernels
+        let kernel_src = format!(
+            "{}\n{}",
+            include_str!("kernels/bitnet_matmul.cu"),
+            include_str!("kernels/quantization.cu")
+        );
+        let ptx = compile_ptx(&kernel_src).map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to compile PTX: {:?}", e),
         })?;
 
         // Load module
@@ -73,16 +83,37 @@ impl CudaKernel {
             reason: format!("Failed to load CUDA module: {:?}", e),
         })?;
 
-        // Load function
+        // Load functions
         let matmul_function = module.load_function("bitnet_matmul_i2s").map_err(|e| {
             KernelError::GpuError { reason: format!("Failed to load matmul function: {:?}", e) }
         })?;
+        let quant_i2s_function =
+            module.load_function("bitnet_quantize_i2s").map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to load I2S quantize function: {:?}", e),
+            })?;
+        let quant_tl1_function =
+            module.load_function("bitnet_quantize_tl1").map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to load TL1 quantize function: {:?}", e),
+            })?;
+        let quant_tl2_function =
+            module.load_function("bitnet_quantize_tl2").map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to load TL2 quantize function: {:?}", e),
+            })?;
 
         // Get device information
         let device_info = Self::get_device_info(device_id)?;
         log::info!("CUDA device info: {:?}", device_info);
 
-        Ok(Self { ctx, stream, module, matmul_function, device_info })
+        Ok(Self {
+            ctx,
+            stream,
+            module,
+            matmul_function,
+            quant_i2s_function,
+            quant_tl1_function,
+            quant_tl2_function,
+            device_info,
+        })
     }
 
     /// Get detailed device information and capabilities
@@ -202,36 +233,6 @@ impl CudaKernel {
         // Simplified for now
     }
 
-    /// Calculate optimal launch parameters based on device capabilities
-    fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, usize) {
-        // Use device-specific optimization
-        let max_threads = self.device_info.max_threads_per_block as usize;
-        let _multiprocessor_count = self.device_info.multiprocessor_count as usize;
-
-        // Choose block size based on shared memory constraints
-        let max_shared_mem = self.device_info.max_shared_memory_per_block;
-        let shared_mem_per_element = 2 * std::mem::size_of::<i8>(); // A and B tiles
-
-        // Find largest block size that fits in shared memory
-        let mut block_size = 16; // Start with 16x16
-        while block_size <= 32 {
-            let shared_mem_needed = 2 * block_size * block_size * shared_mem_per_element;
-            if shared_mem_needed > max_shared_mem || block_size * block_size > max_threads {
-                block_size /= 2;
-                break;
-            }
-            block_size *= 2;
-        }
-        block_size = block_size.min(32).max(8); // Clamp between 8 and 32
-
-        // Calculate grid dimensions
-        let grid_x = (m + block_size - 1) / block_size;
-        let grid_y = (n + block_size - 1) / block_size;
-
-        log::debug!("Optimal launch params: block_size={}, grid={}x{}", block_size, grid_x, grid_y);
-        (block_size, grid_x, grid_y)
-    }
-
     /// Batch matrix multiplication for multiple concurrent requests
     pub fn batch_matmul_i2s(
         &self,
@@ -276,18 +277,60 @@ impl KernelProvider for CudaKernel {
 
     fn quantize(
         &self,
-        _input: &[f32],
-        _output: &mut [u8],
-        _scales: &mut [f32],
+        input: &[f32],
+        output: &mut [u8],
+        scales: &mut [f32],
         qtype: QuantizationType,
     ) -> Result<()> {
         log::debug!("CUDA quantize: type: {:?}", qtype);
 
-        // TODO: Implement CUDA quantization kernels
-        Err(KernelError::GpuError {
-            reason: "CUDA quantization implementation pending - matmul working".to_string(),
-        }
-        .into())
+        let n = input.len();
+        let input_dev = self.stream.memcpy_stod(input).map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to transfer input to device: {:?}", e),
+        })?;
+        let mut output_dev: CudaSlice<u8> =
+            self.stream.alloc_zeros(output.len()).map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to allocate output on device: {:?}", e),
+            })?;
+        let mut scales_dev: CudaSlice<f32> =
+            self.stream.alloc_zeros(scales.len()).map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to allocate scales on device: {:?}", e),
+            })?;
+
+        let (function, block_size) = match qtype {
+            QuantizationType::I2S => (&self.quant_i2s_function, 32u32),
+            QuantizationType::TL1 => (&self.quant_tl1_function, 64u32),
+            QuantizationType::TL2 => (&self.quant_tl2_function, 128u32),
+        };
+
+        let grid_x = (n as u32 + block_size - 1) / block_size;
+        let cfg = LaunchConfig {
+            grid_dim: (grid_x, 1, 1),
+            block_dim: (block_size, 1, 1),
+            shared_mem_bytes: 0,
+        };
+
+        let mut builder = self.stream.launch_builder(function);
+        builder.arg(&input_dev);
+        builder.arg(&mut output_dev);
+        builder.arg(&mut scales_dev);
+        let n_arg = n as i32;
+        builder.arg(&n_arg);
+
+        unsafe { builder.launch(cfg) }.map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to launch quantization kernel: {:?}", e),
+        })?;
+
+        let output_host: Vec<u8> = self.stream.memcpy_dtov(&output_dev).map_err(|e| {
+            KernelError::GpuError { reason: format!("Failed to copy output from device: {:?}", e) }
+        })?;
+        let scales_host: Vec<f32> = self.stream.memcpy_dtov(&scales_dev).map_err(|e| {
+            KernelError::GpuError { reason: format!("Failed to copy scales from device: {:?}", e) }
+        })?;
+
+        output.copy_from_slice(&output_host);
+        scales.copy_from_slice(&scales_host);
+        Ok(())
     }
 }
 
