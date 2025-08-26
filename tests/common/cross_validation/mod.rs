@@ -1,4 +1,5 @@
 pub mod comparison;
+#[cfg(feature = "cpp")]
 pub mod cpp_implementation;
 pub mod implementation;
 pub mod rust_implementation;
@@ -18,6 +19,7 @@ pub use comparison::{
     CrossValidationResult, CrossValidationSuite, PerformanceComparison, SingleComparisonResult,
     TokenMismatch,
 };
+#[cfg(feature = "cpp")]
 pub use cpp_implementation::{CppImplementation, CppImplementationFactory};
 pub use rust_implementation::{RustImplementation, RustImplementationFactory};
 pub use test_cases::{test_suites, ComparisonTestCaseRegistry, TestCaseCategory};

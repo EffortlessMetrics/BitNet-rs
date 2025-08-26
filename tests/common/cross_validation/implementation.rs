@@ -470,6 +470,7 @@ pub mod utils {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::BYTES_PER_MB;
 
     #[tokio::test]
     async fn test_inference_config_default() {
