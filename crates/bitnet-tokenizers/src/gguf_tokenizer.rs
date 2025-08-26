@@ -89,27 +89,70 @@ impl Tokenizer for GgufTokenizer {
     }
 }
 
-fn read_gguf_metadata(_path: &Path) -> Result<HashMap<String, serde_json::Value>> {
-    // This is a simplified version - in reality we'd use the GGUF reader
-    // For now, return empty metadata
-    tracing::warn!("GGUF metadata reading not yet implemented, using defaults");
+fn read_gguf_metadata(path: &Path) -> Result<HashMap<String, serde_json::Value>> {
+    use bitnet_models::formats::gguf::{GgufHeader, GgufMetadata, GgufValue};
+
+    let data = std::fs::read(path)?;
+
+    // Basic validation using header parsing
+    let mut offset = 0usize;
+    let header = GgufHeader::read(&data, &mut offset)?;
+
     let mut metadata = HashMap::new();
-    metadata.insert("tokenizer.ggml.bos_token_id".to_string(), serde_json::json!(1));
-    metadata.insert("tokenizer.ggml.eos_token_id".to_string(), serde_json::json!(2));
+
+    for _ in 0..header.metadata_kv_count {
+        let GgufMetadata { key, value } = GgufMetadata::read(&data, &mut offset)?;
+        let json_val = match value {
+            GgufValue::U8(v) => serde_json::json!(v),
+            GgufValue::I8(v) => serde_json::json!(v),
+            GgufValue::U16(v) => serde_json::json!(v),
+            GgufValue::I16(v) => serde_json::json!(v),
+            GgufValue::U32(v) => serde_json::json!(v),
+            GgufValue::I32(v) => serde_json::json!(v),
+            GgufValue::F32(v) => serde_json::json!(v),
+            GgufValue::Bool(v) => serde_json::json!(v),
+            GgufValue::String(v) => serde_json::json!(v),
+            GgufValue::Array(arr) => {
+                let vals: Vec<serde_json::Value> = arr
+                    .into_iter()
+                    .filter_map(|v| match v {
+                        GgufValue::String(s) => Some(serde_json::Value::String(s)),
+                        GgufValue::U8(b) => Some(serde_json::json!(b)),
+                        GgufValue::I8(b) => Some(serde_json::json!(b)),
+                        GgufValue::U16(b) => Some(serde_json::json!(b)),
+                        GgufValue::I16(b) => Some(serde_json::json!(b)),
+                        GgufValue::U32(b) => Some(serde_json::json!(b)),
+                        GgufValue::I32(b) => Some(serde_json::json!(b)),
+                        GgufValue::F32(f) => Some(serde_json::json!(f)),
+                        GgufValue::Bool(b) => Some(serde_json::json!(b)),
+                        _ => None,
+                    })
+                    .collect();
+                serde_json::Value::Array(vals)
+            }
+        };
+        metadata.insert(key, json_val);
+    }
+
     Ok(metadata)
 }
 
-fn extract_vocab(_metadata: &HashMap<String, serde_json::Value>) -> Result<HashMap<String, u32>> {
-    // Extract vocabulary from GGUF metadata
-    // For now, create a simple byte-level vocab
-    let mut vocab = HashMap::new();
-
-    // Add byte tokens (like GPT-2)
-    for i in 0..256 {
-        vocab.insert(format!("<0x{:02X}>", i), i);
+fn extract_vocab(metadata: &HashMap<String, serde_json::Value>) -> Result<HashMap<String, u32>> {
+    // Build vocab from tokenizer.ggml.tokens metadata array
+    if let Some(serde_json::Value::Array(tokens)) = metadata.get("tokenizer.ggml.tokens") {
+        let mut vocab = HashMap::new();
+        for (idx, token_val) in tokens.iter().enumerate() {
+            if let Some(token_str) = token_val.as_str() {
+                vocab.insert(token_str.to_string(), idx as u32);
+            }
+        }
+        Ok(vocab)
+    } else {
+        // Fallback: create byte-level vocab
+        let mut vocab = HashMap::new();
+        for i in 0..256 {
+            vocab.insert(format!("<0x{:02X}>", i), i);
+        }
+        Ok(vocab)
     }
-
-    // TODO: Read actual vocab from GGUF metadata
-
-    Ok(vocab)
 }
