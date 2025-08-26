@@ -156,15 +156,17 @@ impl BitNetServer {
         let load_config = bitnet_models::loader::LoadConfig::default();
         let model = loader.load(model_path, &device, &load_config)?;
 
-        // Load tokenizer (for now, use a basic tokenizer)
-        // TODO: Implement proper tokenizer loading from tokenizer_path
-        let tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer> =
-            if let Some(_tok_path) = tokenizer_path {
-                // In production, load from file
-                Arc::new(bitnet_tokenizers::BasicTokenizer::default())
-            } else {
-                Arc::new(bitnet_tokenizers::BasicTokenizer::default())
-            };
+        // Load tokenizer from file when path provided, otherwise use basic tokenizer
+        let tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer> = if let Some(tok_path) = tokenizer_path {
+            let tok_path = Path::new(tok_path);
+            if !tok_path.exists() {
+                anyhow::bail!("Tokenizer file not found: {}", tok_path.display());
+            }
+            let tokenizer = bitnet_tokenizers::loader::load_tokenizer(tok_path)?;
+            tokenizer.into()
+        } else {
+            Arc::new(bitnet_tokenizers::BasicTokenizer::default())
+        };
 
         // Create inference engine - model is already a Box<dyn Model>, convert to Arc
         let model: Arc<dyn bitnet_models::Model> = model.into();
