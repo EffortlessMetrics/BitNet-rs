@@ -33,7 +33,12 @@ pub mod bindings {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
-#[cfg(feature = "ffi")]
+#[cfg(all(feature = "ffi", not(bitnet_cpp_unavailable)))]
+#[cfg_attr(docsrs, doc(cfg(feature = "ffi")))]
+pub mod wrapper;
+
+#[cfg(all(feature = "ffi", bitnet_cpp_unavailable))]
+#[path = "wrapper_stub.rs"]
 #[cfg_attr(docsrs, doc(cfg(feature = "ffi")))]
 pub mod wrapper;
 
@@ -68,9 +73,14 @@ pub mod safe {
     pub type Result<T> = std::result::Result<T, SysError>;
 
     /// Check if the C++ implementation is available
+    #[cfg(bitnet_cpp_unavailable)]
     pub fn is_available() -> bool {
-        // This will be true only when compiled with crossval feature
-        // and C++ library is successfully linked
+        false
+    }
+
+    /// Check if the C++ implementation is available
+    #[cfg(not(bitnet_cpp_unavailable))]
+    pub fn is_available() -> bool {
         true
     }
 

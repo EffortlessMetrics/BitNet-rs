@@ -30,6 +30,7 @@ bitnet-sys = { path = "../crates/bitnet-sys", optional = true }
 # Internal crates for testing
 bitnet-inference = { path = "../crates/bitnet-inference" }
 bitnet-models = { path = "../crates/bitnet-models" }
+bitnet-tokenizers = { path = "../crates/bitnet-tokenizers", features = ["spm"] }
 scopeguard = "1.2"
 dirs = "5.0"
 
