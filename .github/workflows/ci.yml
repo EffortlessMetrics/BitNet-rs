@@ -27,6 +27,11 @@ env:
   CPP_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.cpp_tag || '0e6fbf6d92a7db6a2f44528a41fb1f35d2c223aa' }}
   # CUDA architectures for GPU builds
   CUDA_ARCHS: "80;86"  # A100, RTX 30xx/40xx
+  # Git metadata for vergen-gix (works even without .git)
+  VERGEN_GIT_SHA: ${{ github.sha }}
+  VERGEN_GIT_BRANCH: ${{ github.ref_name }}
+  VERGEN_GIT_DESCRIBE: ${{ github.ref_name }}-${{ github.sha }}
+  VERGEN_IDEMPOTENT: "1"  # Ensures reproducible builds
 
 jobs:
   # Fast primary test suite - Rust only, no cross-validation

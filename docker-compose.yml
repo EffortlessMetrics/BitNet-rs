@@ -9,6 +9,9 @@ services:
       target: runtime              # copies from builder-cpu stage
       args:
         FEATURES: cpu
+        VCS_REF: ${GIT_SHA:-unknown}
+        VCS_BRANCH: ${GIT_BRANCH:-unknown}
+        VCS_DESCRIBE: ${GIT_DESCRIBE:-unknown}
     image: bitnet-rs:cpu
     container_name: bitnet-cpu
     ports:
@@ -56,6 +59,9 @@ services:
       target: runtime-gpu          # copies from builder-gpu stage
       args:
         FEATURES: gpu
+        VCS_REF: ${GIT_SHA:-unknown}
+        VCS_BRANCH: ${GIT_BRANCH:-unknown}
+        VCS_DESCRIBE: ${GIT_DESCRIBE:-unknown}
     image: bitnet-rs:gpu
     container_name: bitnet-gpu
     ports:

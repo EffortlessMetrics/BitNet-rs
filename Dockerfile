@@ -29,6 +29,15 @@ COPY xtask/ ./xtask/
 COPY src/ ./src/
 COPY build.rs ./
 
+# Git metadata build args (injected at build time)
+ARG VCS_REF
+ARG VCS_BRANCH
+ARG VCS_DESCRIBE
+ENV VERGEN_GIT_SHA=${VCS_REF:-unknown} \
+    VERGEN_GIT_BRANCH=${VCS_BRANCH:-unknown} \
+    VERGEN_GIT_DESCRIBE=${VCS_DESCRIBE:-unknown} \
+    VERGEN_IDEMPOTENT=1
+
 # Leverage BuildKit caches for faster rebuilds
 ARG FEATURES=cpu
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
@@ -52,6 +61,16 @@ COPY tests/ ./tests/
 COPY xtask/ ./xtask/
 COPY src/ ./src/
 COPY build.rs ./
+
+# Git metadata build args (injected at build time)
+ARG VCS_REF
+ARG VCS_BRANCH
+ARG VCS_DESCRIBE
+ENV VERGEN_GIT_SHA=${VCS_REF:-unknown} \
+    VERGEN_GIT_BRANCH=${VCS_BRANCH:-unknown} \
+    VERGEN_GIT_DESCRIBE=${VCS_DESCRIBE:-unknown} \
+    VERGEN_IDEMPOTENT=1
+
 ARG FEATURES=gpu
 RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/app/target \
@@ -59,6 +78,11 @@ RUN --mount=type=cache,target=/root/.cargo/registry \
 
 # Runtime stage - minimal image
 FROM debian:bookworm-slim AS runtime
+
+# Git metadata for container labels
+ARG VCS_REF
+ARG VCS_BRANCH
+ARG VCS_DESCRIBE
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
@@ -93,6 +117,14 @@ EXPOSE 8080
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD bitnet --version || exit 1
+
+# OCI standard labels for container registries
+LABEL org.opencontainers.image.revision=${VCS_REF:-unknown} \
+      org.opencontainers.image.version=${VCS_DESCRIBE:-unknown} \
+      org.opencontainers.image.ref.name=${VCS_BRANCH:-unknown} \
+      org.opencontainers.image.source="https://github.com/bitnet-io/bitnet-rs" \
+      org.opencontainers.image.title="BitNet.rs" \
+      org.opencontainers.image.description="High-performance 1-bit LLM inference engine"
 
 # Default command
 CMD ["bitnet", "--help"]
