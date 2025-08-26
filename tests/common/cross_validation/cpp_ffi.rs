@@ -5,8 +5,7 @@
 //! compile a lightweight stub so the rest of the test framework can build
 //! without the C++ dependency.
 
-use std::ffi::{CStr, CString};
-use std::os::raw::{c_char, c_float, c_int, c_uint};
+use std::os::raw::{c_char, c_int, c_uint};
 use std::ptr;
 
 use super::cpp_implementation::{
@@ -19,7 +18,7 @@ use super::cpp_implementation::{
 // -------------------------------------------------------------------------
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_create() -> *mut BitNetCppHandle {
     // Return a non-null pointer to indicate "success"
     // In a real implementation, this would allocate and return a handle
@@ -27,20 +26,20 @@ pub extern "C" fn bitnet_cpp_create() -> *mut BitNetCppHandle {
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_destroy(_handle: *mut BitNetCppHandle) {
     // Stub: no-op
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_is_available() -> c_int {
     // Return 0 to indicate not available in stub mode
     0
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_load_model(
     _handle: *mut BitNetCppHandle,
     _path: *const c_char,
@@ -50,21 +49,21 @@ pub extern "C" fn bitnet_cpp_load_model(
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_unload_model(_handle: *mut BitNetCppHandle) -> c_int {
     // Return success
     0
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_is_model_loaded(_handle: *mut BitNetCppHandle) -> c_int {
     // Return false (no model loaded)
     0
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_get_model_info(_handle: *mut BitNetCppHandle) -> CppModelInfo {
     // Return empty model info
     CppModelInfo {
@@ -78,7 +77,7 @@ pub extern "C" fn bitnet_cpp_get_model_info(_handle: *mut BitNetCppHandle) -> Cp
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_tokenize(
     _handle: *mut BitNetCppHandle,
     _text: *const c_char,
@@ -94,7 +93,7 @@ pub extern "C" fn bitnet_cpp_tokenize(
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_detokenize(
     _handle: *mut BitNetCppHandle,
     _tokens: *const c_uint,
@@ -109,7 +108,7 @@ pub extern "C" fn bitnet_cpp_detokenize(
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_inference(
     _handle: *mut BitNetCppHandle,
     _tokens: *const c_uint,
@@ -129,7 +128,7 @@ pub extern "C" fn bitnet_cpp_inference(
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_get_metrics(_handle: *mut BitNetCppHandle) -> CppPerformanceMetrics {
     // Return empty metrics
     CppPerformanceMetrics {
@@ -142,26 +141,26 @@ pub extern "C" fn bitnet_cpp_get_metrics(_handle: *mut BitNetCppHandle) -> CppPe
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_reset_metrics(_handle: *mut BitNetCppHandle) {
     // Stub: no-op
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_cleanup(_handle: *mut BitNetCppHandle) -> c_int {
     // Return success
     0
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_free_string(_ptr: *mut c_char) {
     // Stub: no-op (nothing to free in stub mode)
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn bitnet_cpp_free_tokens(_ptr: *mut c_uint) {
     // Stub: no-op (nothing to free in stub mode)
 }
@@ -173,9 +172,10 @@ pub extern "C" fn bitnet_cpp_free_tokens(_ptr: *mut c_uint) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::CString;
     use std::os::raw::c_char;
 
-    extern "C" {
+    unsafe extern "C" {
         fn bitnet_cpp_create() -> *mut BitNetCppHandle;
         fn bitnet_cpp_destroy(handle: *mut BitNetCppHandle);
         fn bitnet_cpp_is_available() -> c_int;

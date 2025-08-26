@@ -7,6 +7,9 @@ pub mod prelude;
 #[cfg(feature = "integration-tests")]
 pub mod integration;
 
+#[cfg(feature = "crossval")]
+pub mod cross_validation;
+
 // ===== Back-compat shims for legacy imports =====
 // Many files still do `crate::results`, `crate::fixtures`, etc.
 // These re-export the new locations so those imports work again.
