@@ -13,7 +13,20 @@ And your code will work unchanged with BitNet.rs!
 from typing import Optional, List, Dict, Any, Union
 import ctypes
 from pathlib import Path
-from . import bitnet_py
+import sys
+try:
+    from . import bitnet_py  # type: ignore
+except Exception:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "python"))
+    try:
+        import bitnet_py  # type: ignore
+    except Exception:
+        class _StubModel:
+            def __init__(self, *args, **kwargs):
+                raise FileNotFoundError('bitnet_py module not available')
+        class _StubModule:
+            Model = _StubModel
+        bitnet_py = _StubModule()  # type: ignore
 
 class Llama:
     """Drop-in replacement for llama_cpp.Llama"""
@@ -46,7 +59,7 @@ class Llama:
         
         # Store parameters
         self.model_path = model_path
-        self.n_ctx = n_ctx
+        self._n_ctx = n_ctx
         self.n_batch = n_batch
         self.n_threads = n_threads or 1
         self.n_gpu_layers = n_gpu_layers
@@ -340,7 +353,7 @@ class Llama:
     @property
     def n_ctx(self) -> int:
         """Get context size"""
-        return self._context.max_tokens
+        return getattr(self._context, "max_tokens", self._n_ctx)
     
     @property
     def n_embd(self) -> int:

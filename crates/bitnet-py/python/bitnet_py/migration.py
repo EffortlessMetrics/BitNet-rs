@@ -9,9 +9,8 @@ import json
 import os
 import shutil
 import sys
-import warnings
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 import importlib.util
 
 try:
@@ -193,7 +192,6 @@ class MigrationHelper:
                 ("import model as fast", "import bitnet_py as fast"),
                 ("import model", "import bitnet_py as model"),
                 ("from model import", "from bitnet_py import"),
-                ("import generate", "# import generate  # Not needed with bitnet_py"),
                 ("import stats", "# import stats  # Included in bitnet_py"),
                 ("from xformers", "# from xformers  # Not needed with bitnet_py"),
             ]
@@ -252,21 +250,53 @@ def test_original_implementation():
     """Test original BitNet Python implementation."""
     try:
         import model as fast_orig
-        import generate
         
         print("Testing original implementation...")
-        
-        # TODO: Add original implementation test code
-        # This will depend on your specific setup
-        
+
+        # Load reference model (update paths as needed)
+        gen_args = fast_orig.GenArgs()
+        engine = fast_orig.FastGen.build(
+            ckpt_dir="path/to/reference_checkpoint",  # Update this path
+            gen_args=gen_args,
+            device="cpu",
+            tokenizer_path="path/to/tokenizer.model",  # Update this path
+        )
+
         results = {{
             "implementation": "original",
             "available": True,
             "results": [],
-            "avg_time": 0.0,
-            "tokens_per_second": 0.0,
+            "times": [],
         }}
-        
+
+        total_tokens = 0
+        for prompt in TEST_PROMPTS:
+            tokens = engine.tokenizer.encode(prompt, bos=False, eos=False)
+            start_time = time.time()
+            _, out_tokens = engine.generate_all(
+                [tokens],
+                use_cuda_graphs=False,
+                use_sampling=gen_args.use_sampling,
+            )
+            end_time = time.time()
+
+            response_tokens = out_tokens[0]
+            response_text = engine.tokenizer.decode(response_tokens)
+            total_tokens += len(response_tokens)
+
+            results["results"].append({{
+                "prompt": prompt,
+                "response": response_text,
+                "time": end_time - start_time,
+            }})
+            results["times"].append(end_time - start_time)
+
+        total_time = sum(results["times"]) if results["times"] else 0.0
+        results["avg_time"] = total_time / len(results["times"]) if results["times"] else 0.0
+        results["tokens_per_second"] = (
+            total_tokens / total_time if total_time > 0 else 0.0
+        )
+
         return results
         
     except ImportError as e:
