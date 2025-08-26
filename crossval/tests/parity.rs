@@ -6,7 +6,7 @@
 #![cfg(feature = "integration-tests")]
 
 #[cfg(feature = "crossval")]
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 #[cfg(all(test, feature = "crossval"))]
 mod tests {
@@ -15,6 +15,7 @@ mod tests {
     use bitnet_models::GgufReader;
     use bitnet_sys::wrapper::{self, Session as CppSession};
     use bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader;
+    use std::env;
 
     /// Returns the model path if the required environment and C++ backend are available.
     ///
@@ -170,7 +171,10 @@ mod tests {
 
             // Tokenize with Rust
             let rust_tokens_u32 = tokenizer.encode(prompt, true, true)?;
-            let rust_tokens: Vec<i32> = rust_tokens_u32.iter().map(|&t| t as i32).collect();
+            let rust_tokens: Vec<i32> = rust_tokens_u32
+                .iter()
+                .map(|&t| i32::try_from(t).expect("Token ID too large for i32"))
+                .collect();
 
             println!("Prompt: {:?}", prompt);
             println!("C++ tokens: {:?}", cpp_tokens);
