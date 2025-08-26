@@ -168,24 +168,39 @@ fn test_step_vs_full_equivalence() -> anyhow::Result<()> {
 }
 
 #[test]
-fn test_causal_mask() -> anyhow::Result<()> {
-    let config = test_config();
-    let device = candle_core::Device::Cpu;
-    let vb = VarBuilder::zeros(DType::F32, &device);
+fn test_forward_full_matches_incremental() -> anyhow::Result<()> {
+    let (model, config) = test_model_fp32()?;
+    let tokens = vec![1u32, 2, 3, 4];
 
-    // Create attention layer
-    let attn = bitnet_models::transformer::MultiHeadAttention::new(&config, vb)?;
+    // Prepare token tensor for forward_full path
+    let token_tensor =
+        Tensor::from_vec(tokens.clone(), &[1, tokens.len()], &candle_core::Device::Cpu)?;
 
-    // Create input
-    let batch = 1;
-    let seq_len = 4;
-    let hidden = config.model.hidden_size;
-    let x = Tensor::zeros(&[batch, seq_len, hidden], DType::F32, &device)?;
+    // Compute logits using the teacher-forcing path
+    let logits_full = model.forward_full(&token_tensor)?;
 
-    // Forward pass
-    let _ = attn.forward(&x, None)?;
+    // Compute logits using incremental decoding path
+    let mut kv = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
+    let mut step_logits = Vec::new();
+    for &token in &tokens {
+        let emb = model.embed(&[token])?;
+        let hidden = model.forward(&emb, Some(&mut kv))?;
+        let logits = model.logits(&hidden)?;
+        step_logits.push(logits);
+    }
+    let logits_inc = Tensor::cat(&step_logits, 1)?;
 
-    // Test passes if no error
+    // Ensure shapes match
+    assert_eq!(logits_full.dims(), logits_inc.dims());
+
+    // Compare element-wise
+    let full_vec = logits_full.flatten_all()?.to_vec1::<f32>()?;
+    let inc_vec = logits_inc.flatten_all()?.to_vec1::<f32>()?;
+    for (a, b) in full_vec.iter().zip(inc_vec.iter()) {
+        let diff = (a - b).abs();
+        assert!(diff < 1e-4, "Logits differ: {} vs {}", a, b);
+    }
+
     Ok(())
 }
 

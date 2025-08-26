@@ -127,12 +127,12 @@ indices.truncate(k);
 
 ### 9. **Forward_full Improvements**
 
-**Problem:** Teacher-forcing path didn't match decode computation exactly.
+**Problem:** Teacher-forcing path previously diverged from incremental decoding, skipping per-step positional encoding and causal masking.
 
 **Solution:**
-- Documented limitations of current forward_full
-- Added TODO for proper positional encoding per step
-- Noted need for causal mask and rotary embedding fixes
+- Reimplemented `forward_full` to iterate token-by-token with a KV cache
+- Apply positional encoding and causal masking at each layer
+- Added parity test to ensure outputs match incremental decoding
 
 ### 10. **NLL Computation Fixes**
 
@@ -189,10 +189,7 @@ PARITY_FAILURE_LOG=failures.jsonl \
 
 ## Known Limitations
 
-1. **forward_full** doesn't apply position-dependent rotary embeddings correctly
-2. **Teacher-forcing** path needs refactoring to share exact decode computation
-3. **Causal masking** in batch teacher-forcing needs verification
-4. **Memory-mapped** weight access patterns could be optimized further
+1. **Memory-mapped** weight access patterns could be optimized further
 
 ## Future Improvements
 

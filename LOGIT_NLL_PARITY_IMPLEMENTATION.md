@@ -32,14 +32,16 @@ Output includes a `logits_dump` field in JSON with step-wise top-k tokens and th
 
 ### 3. **Teacher-Forcing Forward (Model)**
 
-Added `forward_full` method to TransformerModel for full-sequence teacher-forcing:
+Reworked `forward_full` in `TransformerModel` to decode tokens step-by-step using a KV cache:
 
 ```rust
 // crates/bitnet-models/src/transformer.rs
 pub fn forward_full(&self, token_ids: &Tensor) -> Result<Tensor> {
-    // [B,T] -> [B,T,V] without sampling
+    // Processes tokens sequentially, applying positional encoding and causal masking per layer
 }
 ```
+
+This mirrors the incremental decoding path exactly, applying rotary/absolute positional encoding and a causal mask at every layer. Outputs from this path are tested to match incremental decoding logits.
 
 Uses the memory-efficient column-gather embedding path to avoid large transposes.
 
