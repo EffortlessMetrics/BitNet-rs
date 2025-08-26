@@ -20,6 +20,7 @@ serde_json.workspace = true
 tokenizers = { version = "0.19", default-features = false, features = ["onig"] }
 tempfile = "3.8"
 base64 = "0.21"
+tiktoken-rs = "0.7"
 
 [features]
 integration-tests = []
