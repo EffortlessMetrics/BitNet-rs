@@ -168,6 +168,43 @@ fn test_step_vs_full_equivalence() -> anyhow::Result<()> {
 }
 
 #[test]
+fn test_forward_full_matches_incremental() -> anyhow::Result<()> {
+    let (model, config) = test_model_fp32()?;
+    let tokens = vec![1u32, 2, 3, 4];
+
+    // Prepare token tensor for forward_full path
+    let token_tensor =
+        Tensor::from_vec(tokens.clone(), &[1, tokens.len()], &candle_core::Device::Cpu)?;
+
+    // Compute logits using the teacher-forcing path
+    let logits_full = model.forward_full(&token_tensor)?;
+
+    // Compute logits using incremental decoding path
+    let mut kv = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
+    let mut step_logits = Vec::new();
+    for &token in &tokens {
+        let emb = model.embed(&[token])?;
+        let hidden = model.forward(&emb, Some(&mut kv))?;
+        let logits = model.logits(&hidden)?;
+        step_logits.push(logits);
+    }
+    let logits_inc = Tensor::cat(&step_logits, 1)?;
+
+    // Ensure shapes match
+    assert_eq!(logits_full.dims(), logits_inc.dims());
+
+    // Compare element-wise
+    let full_vec = logits_full.flatten_all()?.to_vec1::<f32>()?;
+    let inc_vec = logits_inc.flatten_all()?.to_vec1::<f32>()?;
+    for (a, b) in full_vec.iter().zip(inc_vec.iter()) {
+        let diff = (a - b).abs();
+        assert!(diff < 1e-4, "Logits differ: {} vs {}", a, b);
+    }
+
+    Ok(())
+}
+
+#[test]
 fn test_causal_mask() -> anyhow::Result<()> {
     let config = test_config();
     let device = candle_core::Device::Cpu;
