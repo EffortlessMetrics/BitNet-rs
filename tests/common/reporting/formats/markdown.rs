@@ -3,6 +3,7 @@
 use super::super::{ReportError, ReportFormat, ReportResult, TestReporter};
 use crate::results::{TestResult, TestStatus, TestSuiteResult};
 use async_trait::async_trait;
+use html_escape::encode_text;
 use std::path::Path;
 use std::time::Instant;
 use tokio::fs;
@@ -154,7 +155,13 @@ impl MarkdownReporter {
         };
 
         let details = if let Some(error) = &test.error {
-            format!("`{}`", error.chars().take(50).collect::<String>())
+            let mut detail = format!("`{}`", error.chars().take(50).collect::<String>());
+            if let Some(stack) = &test.stack_trace {
+                detail.push_str("<br><strong>Stack trace:</strong><br><pre>");
+                detail.push_str(&encode_text(stack));
+                detail.push_str("</pre>");
+            }
+            detail
         } else {
             "-".to_string()
         };

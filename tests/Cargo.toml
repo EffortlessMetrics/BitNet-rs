@@ -85,6 +85,10 @@ path = "test_reporting_minimal.rs"
 name = "test_ci_reporting_simple"
 path = "test_ci_reporting_simple.rs"
 
+[[test]]
+name = "test_stack_trace"
+path = "test_stack_trace.rs"
+
 [[example]]
 name = "reporting_example"
 path = "examples/reporting_example.rs"
