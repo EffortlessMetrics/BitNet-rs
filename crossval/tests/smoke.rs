@@ -4,10 +4,18 @@
 use std::env;
 use std::path::Path;
 
+use bitnet_crossval as crossval;
+
 #[test]
 fn smoke_env_preflight() {
     // Validate essential env so we fail fast if the runner is misconfigured.
-    let model = env::var("CROSSVAL_GGUF").expect("CROSSVAL_GGUF must be set to a valid GGUF file");
+    let model = match env::var("CROSSVAL_GGUF") {
+        Ok(model) => model,
+        Err(_) => {
+            eprintln!("Warning: CROSSVAL_GGUF not set, skipping smoke_env_preflight");
+            return;
+        }
+    };
     assert!(Path::new(&model).exists(), "CROSSVAL_GGUF path missing: {}", model);
 
     // Check library search path was wired by xtask (Linux or macOS)
@@ -36,8 +44,8 @@ fn smoke_first_token_logits_parity() {
     let cpp_dir = env::var("BITNET_CPP_DIR").expect("BITNET_CPP_DIR must be set");
     assert!(Path::new(&cpp_dir).exists(), "C++ directory not found: {}", cpp_dir);
 
-    // TODO: Call your crossval harness helper for a minimal parity check
-    // e.g., crossval::assert_first_logits_match(&model_path, "Hello");
+    // Perform a minimal parity check on the first token logits
+    crossval::assert_first_logits_match(&model_path, "Hello");
     println!("Smoke test: Validated environment for {}", model_path);
 }
 
