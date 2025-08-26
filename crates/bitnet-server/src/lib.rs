@@ -156,12 +156,14 @@ impl BitNetServer {
         let load_config = bitnet_models::loader::LoadConfig::default();
         let model = loader.load(model_path, &device, &load_config)?;
 
-        // Load tokenizer (for now, use a basic tokenizer)
-        // TODO: Implement proper tokenizer loading from tokenizer_path
+        // Load tokenizer
         let tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer> =
-            if let Some(_tok_path) = tokenizer_path {
-                // In production, load from file
-                Arc::new(bitnet_tokenizers::BasicTokenizer::default())
+            if let Some(tok_path) = tokenizer_path {
+                let tok_path = Path::new(tok_path);
+                if !tok_path.exists() {
+                    anyhow::bail!("Tokenizer file not found: {}", tok_path.display());
+                }
+                Arc::from(bitnet_tokenizers::load_tokenizer(tok_path)?)
             } else {
                 Arc::new(bitnet_tokenizers::BasicTokenizer::default())
             };
