@@ -60,7 +60,8 @@ pub use units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 pub use utils::{format_bytes, format_duration, get_memory_usage, get_peak_memory_usage};
 
 // Cross-validation module temporarily disabled
-// pub mod cross_validation;
+#[cfg(feature = "crossval")]
+pub mod cross_validation;
 
 // Data module - temporarily disabled due to compilation issues
 // #[path = "../data/mod.rs"]
