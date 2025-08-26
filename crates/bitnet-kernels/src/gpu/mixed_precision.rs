@@ -17,7 +17,7 @@ pub enum PrecisionMode {
 
 /// Mixed precision kernel provider (simplified)
 pub struct MixedPrecisionKernel {
-    device_id: usize,
+    _device_id: usize,
     precision_mode: PrecisionMode,
 }
 
@@ -26,7 +26,7 @@ impl MixedPrecisionKernel {
     pub fn new(device_id: usize) -> Result<Self> {
         log::info!("Creating mixed precision kernel for device {}", device_id);
 
-        Ok(Self { device_id, precision_mode: PrecisionMode::Auto })
+        Ok(Self { _device_id: device_id, precision_mode: PrecisionMode::Auto })
     }
 
     /// Set precision mode

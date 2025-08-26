@@ -8,7 +8,8 @@
 
 use crate::gpu::cuda::CudaKernel;
 use crate::{KernelProvider, cpu::fallback::FallbackKernel, cpu::x86::Avx2Kernel};
-use bitnet_common::Result;
+use bitnet_common::{KernelError, Result};
+use cudarc::driver::{CudaContext, result as cuda_result};
 
 use std::time::Instant;
 
@@ -311,11 +312,43 @@ impl GpuValidator {
     fn test_memory_usage(&self) -> Result<MemoryResult> {
         log::debug!("Testing memory usage and leak detection");
 
-        // TODO: Implement actual GPU memory monitoring
-        // This would require CUDA memory management APIs
-        // For now, return a placeholder result
+        // Query initial free memory
+        let (free_before, total_mem) = cuda_result::mem_get_info().map_err(|e| {
+            KernelError::GpuError { reason: format!("Failed to query memory info: {:?}", e) }
+        })?;
 
-        Ok(MemoryResult { peak_gpu_memory: 0, leaks_detected: false, efficiency_score: 1.0 })
+        // Allocate and free a temporary buffer to detect leaks
+        let ctx = CudaContext::new(0).map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to create CUDA context: {:?}", e),
+        })?;
+        let stream = ctx.default_stream();
+
+        let temp = vec![0u8; 10 * 1024 * 1024]; // 10MB
+        let dev_buf = stream.memcpy_stod(&temp).map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to allocate device buffer: {:?}", e),
+        })?;
+        stream.synchronize().map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to synchronize stream: {:?}", e),
+        })?;
+        let (free_after_alloc, _) = cuda_result::mem_get_info().map_err(|e| {
+            KernelError::GpuError { reason: format!("Failed to query memory info: {:?}", e) }
+        })?;
+
+        // Drop buffer and check memory again
+        drop(dev_buf);
+        stream.synchronize().map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to synchronize after free: {:?}", e),
+        })?;
+        let (free_after_free, _) = cuda_result::mem_get_info().map_err(|e| {
+            KernelError::GpuError { reason: format!("Failed to query memory info: {:?}", e) }
+        })?;
+
+        let peak_gpu_memory = free_before.saturating_sub(free_after_alloc);
+        let leaks_detected = free_after_free + 1024 < free_before; // allow small discrepancy
+        let efficiency_score =
+            if total_mem > 0 { peak_gpu_memory as f32 / total_mem as f32 } else { 0.0 };
+
+        Ok(MemoryResult { peak_gpu_memory, leaks_detected, efficiency_score })
     }
 }
 

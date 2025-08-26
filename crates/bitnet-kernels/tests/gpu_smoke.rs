@@ -6,7 +6,7 @@
 
 #![cfg(feature = "cuda")]
 
-use bitnet_kernels::{KernelProvider, cpu};
+use bitnet_kernels::{KernelProvider, CudaKernel, FallbackKernel};
 use std::env;
 
 /// Tolerance for floating-point comparison
@@ -117,8 +117,8 @@ fn gpu_smoke_test() {
     // Convert for GPU (assuming i8 for BitNet)
     let a_i8: Vec<i8> = a.iter().map(|&x| x as i8).collect();
 
-    // Run CPU version
-    let cpu_provider = cpu::CpuKernelProvider::new();
+    // Run CPU version using fallback kernel
+    let cpu_provider = FallbackKernel;
     assert!(cpu_provider.is_available(), "CPU provider should always be available");
 
     eprintln!("Running CPU computation...");
@@ -130,9 +130,7 @@ fn gpu_smoke_test() {
     // Run GPU version
     #[cfg(feature = "cuda")]
     {
-        use bitnet_kernels::gpu;
-
-        let gpu_provider = gpu::GpuKernelProvider::new().expect("Failed to create GPU provider");
+        let gpu_provider = CudaKernel::new().expect("Failed to create GPU provider");
         assert!(gpu_provider.is_available(), "GPU provider should be available");
 
         eprintln!("Running GPU computation...");
@@ -181,9 +179,7 @@ fn gpu_determinism_test() {
 
     #[cfg(feature = "cuda")]
     {
-        use bitnet_kernels::gpu;
-
-        let gpu_provider = gpu::GpuKernelProvider::new().expect("Failed to create GPU provider");
+        let gpu_provider = CudaKernel::new().expect("Failed to create GPU provider");
 
         let mut results = Vec::new();
         for i in 0..3 {

@@ -4,14 +4,13 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::KernelProvider;
     use crate::gpu::{
-        BenchmarkConfig, CudaKernel, GpuBenchmark, MemoryPoolConfig, MixedPrecisionKernel,
-        OptimizedMemoryPool, PrecisionMode, cuda_device_count, is_cuda_available,
+        BenchmarkConfig, CudaKernel, GpuBenchmark, GpuValidator, MemoryPoolConfig,
+        MixedPrecisionKernel, OptimizedMemoryPool, PrecisionMode, ValidationConfig,
+        cuda_device_count, is_cuda_available,
     };
     use bitnet_common::QuantizationType;
-    use std::sync::Arc;
     use std::time::Duration;
 
     #[test]
@@ -177,6 +176,37 @@ mod tests {
     }
 
     #[test]
+    fn test_cuda_memory_monitoring() {
+        if !is_cuda_available() {
+            println!("CUDA not available, skipping test");
+            return;
+        }
+
+        let config = ValidationConfig {
+            tolerance: 1e-6,
+            benchmark_iterations: 1,
+            test_sizes: vec![(16, 16, 16)],
+            check_memory_leaks: true,
+            test_mixed_precision: false,
+        };
+
+        let validator = GpuValidator::with_config(config);
+        match validator.validate() {
+            Ok(results) => {
+                if let Some(mem) = results.memory_results {
+                    println!("Peak memory usage: {} bytes", mem.peak_gpu_memory);
+                    assert!(!mem.leaks_detected);
+                } else {
+                    println!("Memory results unavailable");
+                }
+            }
+            Err(e) => {
+                println!("Memory validation failed: {}", e);
+            }
+        }
+    }
+
+    #[test]
     fn test_mixed_precision() {
         if !is_cuda_available() {
             println!("CUDA not available, skipping test");
@@ -196,9 +226,9 @@ mod tests {
                 let m = 16;
                 let n = 16;
                 let k = 16;
-                let a: Vec<f32> = (0..m * k).map(|i| (i as f32) / (m * k) as f32).collect();
-                let b: Vec<f32> = (0..k * n).map(|i| (i as f32) / (k * n) as f32).collect();
-                let mut c = vec![0.0f32; m * n];
+                let _a: Vec<f32> = (0..m * k).map(|i| (i as f32) / (m * k) as f32).collect();
+                let _b: Vec<f32> = (0..k * n).map(|i| (i as f32) / (k * n) as f32).collect();
+                let _c = vec![0.0f32; m * n];
 
                 // Mixed precision matmul is not yet implemented, skip for now
                 println!("Mixed precision matmul not yet implemented, skipping actual computation");
@@ -288,7 +318,7 @@ mod tests {
             let a: Vec<i8> =
                 (0..m * k).map(|j| (((i * 1000 + j) % 256) as i16 - 128) as i8).collect();
             let b: Vec<u8> = (0..k * n).map(|j| ((i * 2000 + j) % 4) as u8).collect();
-            let mut c = vec![0.0f32; m * n];
+            let c = vec![0.0f32; m * n];
 
             test_data.push((a, b, c));
         }
