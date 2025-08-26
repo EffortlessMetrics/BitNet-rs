@@ -2,6 +2,7 @@
 name = "bitnet-crossval"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.89"
 description = "Cross-validation framework for BitNet Rust vs C++ implementations"
 license = "MIT"
 publish = false
@@ -38,6 +39,7 @@ dirs = "5.0"
 criterion = { version = "0.5", features = ["html_reports"] }
 tempfile = "3.0"
 rand = "0.8"
+bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
 
 [[bench]]
 name = "performance"
