@@ -481,36 +481,40 @@ impl TransformerModel {
     }
 
     /// Teacher-forcing forward: full sequence [B,T] -> [B,T,V] logits
+    ///
+    /// This implementation mirrors the incremental decoding path by
+    /// processing one token at a time and maintaining a KV cache. Rotary
+    /// position embeddings are therefore computed for each decoded step,
+    /// ensuring parity with generation.
     pub fn forward_full(&self, token_ids: &Tensor) -> Result<Tensor> {
         // Get dimensions
         let batch_size = token_ids.dims()[0];
         let seq_len = token_ids.dims()[1];
 
         // 1. Embed tokens [B,T] -> [B,T,H]
-        // Note: This is a simplified path that may not handle all edge cases
-        // For production, we should refactor to share code with the main forward path
         let flat_ids = token_ids.flatten_all()?;
         let ids_vec: Vec<u32> = flat_ids.to_vec1()?;
-        let hidden = self.embed(&ids_vec)?;
+        let embeddings = self.embed(&ids_vec)?;
 
         // Reshape back to [B,T,H]
         let hidden_size = self.config.model.hidden_size;
-        let mut hidden = hidden.reshape(&[batch_size, seq_len, hidden_size])?;
+        let embeddings = embeddings.reshape(&[batch_size, seq_len, hidden_size])?;
 
-        // 2. Pass through transformer blocks
-        // TODO: This currently doesn't apply proper positional encoding per step
-        // which may cause parity issues. The correct implementation would:
-        // - Apply causal mask properly
-        // - Handle position-dependent rotary embeddings correctly
-        // - Match the exact computation path of incremental decoding
-        for layer in &self.layers {
-            hidden = layer.forward(&hidden, None)?;
+        // 2. Incrementally process tokens so that rotary embeddings and
+        // causal masking are applied per step exactly as in decoding.
+        let mut kv_cache = KVCache::new(&self.config, batch_size, &self.device)?;
+        let mut outputs: Vec<Tensor> = Vec::with_capacity(seq_len);
+        for t in 0..seq_len {
+            // Slice current token [B,1,H]
+            let x_t = embeddings.narrow(1, t, 1)?;
+            // Forward through model with cache (applies rotary per step)
+            let h_t = self.forward(&x_t, Some(&mut kv_cache))?;
+            outputs.push(h_t);
         }
+        let hidden_refs: Vec<&Tensor> = outputs.iter().collect();
+        let hidden = Tensor::cat(&hidden_refs, 1)?; // [B,T,H]
 
-        // 3. Apply final normalization
-        hidden = self.norm.forward(&hidden)?;
-
-        // 4. Project to vocabulary [B,T,H] -> [B,T,V]
+        // 3. Project to vocabulary [B,T,H] -> [B,T,V]
         self.logits(&hidden)
     }
 
