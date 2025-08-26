@@ -4,14 +4,13 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::KernelProvider;
     use crate::gpu::{
         BenchmarkConfig, CudaKernel, GpuBenchmark, MemoryPoolConfig, MixedPrecisionKernel,
         OptimizedMemoryPool, PrecisionMode, cuda_device_count, is_cuda_available,
+        list_cuda_devices,
     };
     use bitnet_common::QuantizationType;
-    use std::sync::Arc;
     use std::time::Duration;
 
     #[test]
@@ -23,6 +22,14 @@ mod tests {
             let device_count = cuda_device_count();
             println!("CUDA device count: {}", device_count);
             assert!(device_count > 0);
+
+            if let Ok(devices) = list_cuda_devices() {
+                for d in devices {
+                    assert!(!d.name.is_empty());
+                    assert!(d.total_memory > 0);
+                    assert!(d.multiprocessor_count > 0);
+                }
+            }
         }
     }
 
@@ -36,9 +43,15 @@ mod tests {
         match CudaKernel::new() {
             Ok(kernel) => {
                 println!("CUDA kernel created successfully");
-                println!("Device info: {:?}", kernel.device_info());
+                let info = kernel.device_info();
+                println!("Device info: {:?}", info);
                 assert!(kernel.is_available());
                 assert_eq!(kernel.name(), "CUDA");
+                assert!(!info.name.is_empty());
+                assert!(info.total_memory > 0);
+                assert!(info.multiprocessor_count > 0);
+                assert!(info.max_threads_per_block > 0);
+                assert!(info.max_shared_memory_per_block > 0);
             }
             Err(e) => {
                 println!("Failed to create CUDA kernel: {}", e);
@@ -196,9 +209,9 @@ mod tests {
                 let m = 16;
                 let n = 16;
                 let k = 16;
-                let a: Vec<f32> = (0..m * k).map(|i| (i as f32) / (m * k) as f32).collect();
-                let b: Vec<f32> = (0..k * n).map(|i| (i as f32) / (k * n) as f32).collect();
-                let mut c = vec![0.0f32; m * n];
+                let _a: Vec<f32> = (0..m * k).map(|i| (i as f32) / (m * k) as f32).collect();
+                let _b: Vec<f32> = (0..k * n).map(|i| (i as f32) / (k * n) as f32).collect();
+                let _c = vec![0.0f32; m * n];
 
                 // Mixed precision matmul is not yet implemented, skip for now
                 println!("Mixed precision matmul not yet implemented, skipping actual computation");
@@ -288,7 +301,7 @@ mod tests {
             let a: Vec<i8> =
                 (0..m * k).map(|j| (((i * 1000 + j) % 256) as i16 - 128) as i8).collect();
             let b: Vec<u8> = (0..k * n).map(|j| ((i * 2000 + j) % 4) as u8).collect();
-            let mut c = vec![0.0f32; m * n];
+            let c = vec![0.0f32; m * n];
 
             test_data.push((a, b, c));
         }

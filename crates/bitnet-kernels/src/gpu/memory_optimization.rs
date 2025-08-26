@@ -52,7 +52,7 @@ struct AllocationInfo {
     size: usize,
     timestamp: Instant,
     #[cfg(debug_assertions)]
-    stack_trace: Vec<String>,
+    _stack_trace: Vec<String>,
 }
 
 /// Memory access pattern for optimization
@@ -65,7 +65,7 @@ pub enum AccessPattern {
 
 /// Optimized memory pool for GPU allocations (simplified)
 pub struct OptimizedMemoryPool {
-    device_id: usize,
+    _device_id: usize,
     config: MemoryPoolConfig,
     free_buffers: HashMap<usize, Vec<Vec<u8>>>, // Simplified buffer storage
     allocated_buffers: HashMap<*const u8, AllocationInfo>,
@@ -79,7 +79,7 @@ impl OptimizedMemoryPool {
         log::info!("Creating optimized memory pool for device {}", device_id);
 
         Self {
-            device_id,
+            _device_id: device_id,
             config,
             free_buffers: HashMap::new(),
             allocated_buffers: HashMap::new(),
@@ -148,7 +148,7 @@ impl OptimizedMemoryPool {
             size,
             timestamp: Instant::now(),
             #[cfg(debug_assertions)]
-            stack_trace: self.capture_stack_trace(),
+            _stack_trace: self.capture_stack_trace(),
         };
 
         self.allocated_buffers.insert(ptr, info);
@@ -319,7 +319,7 @@ mod tests {
         let config = MemoryPoolConfig::default();
         let pool = OptimizedMemoryPool::new(0, config);
 
-        assert_eq!(pool.device_id, 0);
+        assert_eq!(pool._device_id, 0);
         assert_eq!(pool.stats.current_usage, 0);
     }
 
