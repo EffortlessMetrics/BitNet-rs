@@ -94,7 +94,7 @@ struct CppPerformanceMetrics {
 }
 
 // External C++ function declarations
-extern "C" {
+unsafe extern "C" {
     fn bitnet_cpp_create() -> *mut BitNetCppHandle;
     fn bitnet_cpp_destroy(handle: *mut BitNetCppHandle);
     fn bitnet_cpp_is_available() -> c_int;
@@ -781,6 +781,7 @@ impl ImplementationFactory for CppImplementationFactory {
 mod tests {
     use super::*;
     use tempfile::TempDir;
+    use crate::BYTES_PER_MB;
 
     #[tokio::test]
     async fn test_cpp_implementation_creation() {
@@ -882,7 +883,7 @@ mod tests {
         let implementation = CppImplementation::new();
         let resource_info = implementation.get_resource_info();
 
-        assert!(resource_info.memory_usage >= 0);
+        assert!(resource_info.memory_usage > 0);
         assert!(resource_info.thread_count > 0);
         assert_eq!(resource_info.file_handles, 1); // Just binary handle
     }
@@ -970,7 +971,7 @@ mod tests {
             model_load_time_ms: 1000,
             tokenization_time_ms: 50,
             inference_time_ms: 200,
-            peak_memory: BYTES_PER_MB, // 1MB
+            peak_memory: BYTES_PER_MB as u32, // 1MB
             tokens_per_second: 100.5,
         };
 
