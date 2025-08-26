@@ -13,8 +13,10 @@ use std::env;
 #[cfg(all(test, feature = "crossval"))]
 mod tests {
     use super::*;
-    use bitnet_inference::{eval_logits_once, get_model_config, get_model_vocab_size};
+    use bitnet_inference::{eval_logits_once, get_model_config};
     use bitnet_sys::wrapper::{self, Session as CppSession};
+    use bitnet_tokenizers::load_tokenizer;
+    use std::path::Path;
 
     /// Tolerance for floating point comparisons
     const LOGIT_TOLERANCE: f32 = 1e-4; // Start with 1e-4, can tighten to 5e-5
@@ -125,8 +127,20 @@ mod tests {
         wrapper::init_backend();
         let _guard = scopeguard::guard((), |_| wrapper::free_backend());
 
-        // Load model
+        // Load model and tokenizer
         let cpp_session = CppSession::load_deterministic(&model_path)?;
+
+        // Derive tokenizer path from model directory
+        let model_dir =
+            Path::new(&model_path).parent().context("Model path has no parent directory")?;
+        let tok_path = if model_dir.join("tokenizer.json").exists() {
+            model_dir.join("tokenizer.json")
+        } else if model_dir.join("tokenizer.model").exists() {
+            model_dir.join("tokenizer.model")
+        } else {
+            anyhow::bail!("Tokenizer file not found next to model")
+        };
+        let tokenizer = load_tokenizer(&tok_path)?;
 
         // Test various prompts
         let test_prompts = [
@@ -139,12 +153,13 @@ mod tests {
 
         for prompt in &test_prompts {
             let cpp_tokens = cpp_session.tokenize(prompt)?;
+            let rust_tokens_u32 = tokenizer.encode(prompt, true, true)?;
+            let rust_tokens: Vec<i32> = rust_tokens_u32.iter().map(|&t| t as i32).collect();
             println!("Prompt: {:?}", prompt);
             println!("C++ tokens: {:?}", cpp_tokens);
+            println!("Rust tokens: {:?}", rust_tokens);
 
-            // TODO: Compare with Rust tokenization
-            // let rust_tokens = rust_model.tokenize(prompt)?;
-            // assert_eq!(rust_tokens, cpp_tokens, "Tokenization mismatch for: {}", prompt);
+            assert_eq!(rust_tokens, cpp_tokens, "Tokenization mismatch for: {}", prompt);
         }
 
         Ok(())
@@ -266,7 +281,7 @@ mod tests {
     }
 
     #[test]
-    fn test_batch_processing_parity() -> Result<()> {
+    fn test_batch_logits_parity() -> Result<()> {
         let model_path =
             env::var("CROSSVAL_GGUF").context("Set CROSSVAL_GGUF to path of test model")?;
 
@@ -290,19 +305,26 @@ mod tests {
         // Evaluate all tokens
         cpp_session.context.eval(&tokens, 0)?;
 
-        // Get logits for each position
+        // Get logits for each position from C++
         let all_cpp_logits = cpp_session.context.get_all_logits(tokens.len())?;
 
         println!("Got logits for {} positions", all_cpp_logits.len());
 
-        // Verify each position
-        for (i, logits) in all_cpp_logits.iter().enumerate() {
-            let next_token = argmax(logits);
-            println!("Position {}: argmax token = {}", i, next_token);
-
-            // TODO: Compare with Rust batch processing
-            // let rust_logits = &all_rust_logits[i];
-            // compare_logits(rust_logits, logits, i)?;
+        // Verify each position by comparing with Rust
+        for (i, cpp_logits) in all_cpp_logits.iter().enumerate() {
+            let rust_logits = eval_logits_once(&model_path, &tokens[..=i])?;
+            compare_logits(&rust_logits, cpp_logits, i)?;
+            let cpp_next = argmax(cpp_logits);
+            let rust_next = argmax(&rust_logits);
+            println!("Position {}: argmax token C++ {} vs Rust {}", i, cpp_next, rust_next);
+            if cpp_next != rust_next {
+                anyhow::bail!(
+                    "Position {}: token mismatch! Rust {} vs C++ {}",
+                    i,
+                    rust_next,
+                    cpp_next
+                );
+            }
         }
 
         Ok(())
