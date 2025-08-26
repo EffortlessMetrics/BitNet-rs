@@ -28,7 +28,7 @@
 ### 🌐 **Cross-Platform Excellence**
 - **Native support** for Linux, macOS, and Windows
 - **Multiple backends**: CPU and GPU (CUDA) inference engines
-- **Universal model formats**: GGUF, SafeTensors, and HuggingFace
+- **Universal model formats**: GGUF, sharded SafeTensors (HuggingFace), and local HuggingFace directories
 - **Language bindings**: C API, Python, and WebAssembly
 
 ### 🔧 **Developer Experience**

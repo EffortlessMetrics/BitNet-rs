@@ -137,6 +137,12 @@ bitnet-cli inference --model path/to/model.gguf --prompt "Hello"
 bitnet-cli inference --model path/to/model.safetensors --prompt "Hello"
 ```
 
+### HuggingFace Directory
+```bash
+# Load a local HuggingFace model directory
+bitnet-cli inference --model path/to/hf-model --prompt "Hello"
+```
+
 ### HuggingFace Hub
 ```bash
 # Load from HuggingFace Hub

@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Made health endpoint robust with option_env! for graceful fallbacks
 
 ### Added
+- **HuggingFace Model Loader**:
+  - Parse `config.json` for model metadata
+  - Load sharded SafeTensors weights into `BitNetModel`
+  - Integration test verifying a forward pass
 - **GGUF Validation API**:
   - Fast 24-byte header-only validation without loading full model
   - Production-ready parser with typed errors and non-exhaustive enums
