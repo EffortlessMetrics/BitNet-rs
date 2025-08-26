@@ -1,4 +1,4 @@
-use bitnet_common::Result;
+use bitnet_common::{BitNetError, ModelError, Result};
 use std::collections::HashMap;
 use std::path::Path;
 use tracing::{debug, warn};
@@ -28,15 +28,47 @@ impl UniversalTokenizer {
     }
 
     /// Create from GGUF model with auto-fix
-    pub fn from_gguf(_path: &Path) -> Result<Self> {
-        // TODO: Import GgufReader when bitnet-models is added as dependency
-        // For now, create a default config
-        // This would normally:
-        // 1. Read GGUF metadata
-        // 2. Auto-detect tokenizer type (gpt2, llama, etc)
-        // 3. Fix missing pre-tokenizer for GPT-2
-        // 4. Extract vocabulary and merges
-        let config = TokenizerConfig::default();
+    pub fn from_gguf(path: &Path) -> Result<Self> {
+        use bitnet_models::{GgufReader, loader::MmapFile};
+
+        let mmap = MmapFile::open(path)?;
+        let reader = GgufReader::new(mmap.as_slice())?;
+
+        let tokens = reader.get_string_array_metadata("tokenizer.ggml.tokens").ok_or(
+            BitNetError::Model(ModelError::LoadingFailed {
+                reason: "GGUF missing tokenizer.ggml.tokens".to_string(),
+            }),
+        )?;
+
+        let merges = reader.get_string_array_metadata("tokenizer.ggml.merges").unwrap_or_default();
+
+        let model_type = reader
+            .get_string_metadata("tokenizer.ggml.model")
+            .unwrap_or_else(|| "gpt2".to_string());
+
+        let bos = reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
+        let eos = reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
+        let add_bos = reader.get_bool_metadata("tokenizer.ggml.add_bos_token").unwrap_or(false);
+        let add_eos = reader.get_bool_metadata("tokenizer.ggml.add_eos_token").unwrap_or(false);
+
+        let vocabulary: Vec<(String, f32)> = tokens.iter().map(|t| (t.clone(), 0.0f32)).collect();
+
+        let mut config = TokenizerConfig {
+            model_type: model_type.clone(),
+            vocab_size: vocabulary.len(),
+            bos_token_id: bos,
+            eos_token_id: eos,
+            add_bos,
+            add_eos,
+            vocabulary: Some(vocabulary),
+            bpe_merges: if merges.is_empty() { None } else { Some(merges) },
+            ..TokenizerConfig::default()
+        };
+
+        if model_type == "gpt2" {
+            config.add_space_prefix = true;
+        }
+
         Self::new(config)
     }
 
@@ -134,38 +166,142 @@ impl Tokenizer for UniversalTokenizer {
 // These would be fully implemented in their respective modules
 
 struct Gpt2Tokenizer {
-    #[allow(dead_code)]
     vocab: HashMap<String, u32>,
-    #[allow(dead_code)]
-    merges: Vec<(String, String)>,
+    reverse_vocab: HashMap<u32, String>,
+    bpe_ranks: HashMap<(String, String), usize>,
     config: TokenizerConfig,
 }
 
 impl Gpt2Tokenizer {
     fn new(config: &TokenizerConfig) -> Result<Self> {
-        // Implementation for GPT-2 BPE tokenizer
-        // This handles Llama 3's 128k vocab GPT-2 variant
-        Ok(Self { vocab: HashMap::new(), merges: vec![], config: config.clone() })
+        let vocab: HashMap<String, u32> = if let Some(v) = &config.vocabulary {
+            v.iter().enumerate().map(|(i, (tok, _))| (tok.clone(), i as u32)).collect()
+        } else {
+            HashMap::new()
+        };
+        let reverse_vocab = vocab.iter().map(|(k, v)| (*v, k.clone())).collect();
+
+        let bpe_ranks: HashMap<(String, String), usize> = if let Some(merges) = &config.bpe_merges {
+            merges
+                .iter()
+                .enumerate()
+                .filter_map(|(i, m)| {
+                    let mut parts = m.split_whitespace();
+                    if let (Some(a), Some(b)) = (parts.next(), parts.next()) {
+                        Some(((a.to_string(), b.to_string()), i))
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        } else {
+            HashMap::new()
+        };
+
+        Ok(Self { vocab, reverse_vocab, bpe_ranks, config: config.clone() })
+    }
+
+    fn get_pairs(word: &[String]) -> Vec<(String, String)> {
+        let mut pairs = Vec::new();
+        for i in 0..word.len().saturating_sub(1) {
+            pairs.push((word[i].clone(), word[i + 1].clone()));
+        }
+        pairs
+    }
+
+    fn bpe(&self, token: &str) -> Vec<String> {
+        let mut word: Vec<String> = token.chars().map(|c| c.to_string()).collect();
+        if word.len() <= 1 {
+            return word;
+        }
+
+        let mut pairs = Self::get_pairs(&word);
+
+        while !pairs.is_empty() {
+            let mut best: Option<(String, String)> = None;
+            let mut best_rank = usize::MAX;
+            for pair in pairs.iter() {
+                if let Some(&rank) = self.bpe_ranks.get(&(pair.0.clone(), pair.1.clone())) {
+                    if rank < best_rank {
+                        best_rank = rank;
+                        best = Some((pair.0.clone(), pair.1.clone()));
+                    }
+                }
+            }
+            if let Some((first, second)) = best {
+                let mut new_word = Vec::new();
+                let mut i = 0;
+                while i < word.len() {
+                    if i < word.len() - 1 && word[i] == first && word[i + 1] == second {
+                        new_word.push(format!("{}{}", first, second));
+                        i += 2;
+                    } else {
+                        new_word.push(word[i].clone());
+                        i += 1;
+                    }
+                }
+                word = new_word;
+                if word.len() == 1 {
+                    break;
+                }
+                pairs = Self::get_pairs(&word);
+            } else {
+                break;
+            }
+        }
+        word
     }
 }
 
 impl Tokenizer for Gpt2Tokenizer {
-    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
-        // Full BPE implementation would go here
-        // For now, return a stub
-        Ok(vec![1, 2, 3])
+    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+        let mut out = Vec::new();
+        if add_bos && self.config.add_bos {
+            if let Some(bos) = self.config.bos_token_id {
+                out.push(bos);
+            }
+        }
+
+        let words: Vec<&str> = text.split_whitespace().collect();
+        for (i, w) in words.iter().enumerate() {
+            for piece in self.bpe(w) {
+                if let Some(&id) = self.vocab.get(&piece) {
+                    out.push(id);
+                } else if let Some(unk) = self.config.unk_token_id {
+                    out.push(unk);
+                }
+            }
+            if i + 1 < words.len() {
+                if let Some(&space_id) = self.vocab.get(" ") {
+                    out.push(space_id);
+                }
+            }
+        }
+
+        if add_special && self.config.add_eos {
+            if let Some(eos) = self.config.eos_token_id {
+                out.push(eos);
+            }
+        }
+        Ok(out)
     }
 
-    fn decode(&self, _tokens: &[u32]) -> Result<String> {
-        Ok("decoded".to_string())
+    fn decode(&self, tokens: &[u32]) -> Result<String> {
+        let mut text = String::new();
+        for token in tokens {
+            if let Some(piece) = self.reverse_vocab.get(token) {
+                text.push_str(piece);
+            }
+        }
+        Ok(text)
     }
 
     fn vocab_size(&self) -> usize {
         self.config.vocab_size
     }
 
-    fn token_to_piece(&self, _token: u32) -> Option<String> {
-        Some("piece".to_string())
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        self.reverse_vocab.get(&token).cloned()
     }
 }
 
