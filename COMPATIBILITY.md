@@ -216,6 +216,26 @@ from bitnet.llama_compat import Llama  # was: from llama_cpp import Llama
 | `-9` | Invalid model ID | Extension |
 | `-10` | Context length exceeded | Extension |
 
+## 🎯 Inference Path Guarantees
+
+### Teacher-Forcing and Incremental Decoding Parity
+
+We guarantee that teacher-forcing (full sequence processing) and incremental decoding produce **identical results**:
+
+```rust
+// These two paths MUST produce identical logits
+let logits_full = model.forward_full(&token_ids)?;      // Teacher-forcing
+let logits_inc = model.forward_incremental(&tokens)?;   // Step-by-step
+
+assert!(logits_full == logits_inc);  // GUARANTEED
+```
+
+This guarantee ensures:
+- Correct causal masking in both paths
+- Identical positional encoding application
+- KV cache consistency
+- Deterministic results regardless of inference path
+
 ## 🏆 Compatibility Advantages
 
 BitNet.rs provides these advantages while maintaining compatibility:
@@ -225,6 +245,7 @@ BitNet.rs provides these advantages while maintaining compatibility:
 3. **Broader model support** - Handles models llama.cpp can't
 4. **Integrated features** - HTTP server, streaming, async/await
 5. **Cross-platform** - Better Windows support
+6. **Inference path parity** - Teacher-forcing matches incremental decoding exactly
 
 ## ✅ Validation Results
 
