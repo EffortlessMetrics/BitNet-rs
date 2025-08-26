@@ -158,10 +158,14 @@ impl TL1Quantizer {
     pub fn quantize_tensor_device(
         &self,
         tensor: &BitNetTensor,
-        _device: &Device,
+        device: &Device,
     ) -> Result<QuantizedTensor> {
-        // Currently all computations happen on the CPU. If a CUDA implementation
-        // becomes available this function can dispatch to it based on `device`.
+        // Currently all computations happen on the CPU. The device parameter is
+        // kept for API symmetry and future GPU kernels.
+        let _ = device;
+
+        // If a CUDA implementation becomes available this function can dispatch
+        // to it based on `device`.
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
 

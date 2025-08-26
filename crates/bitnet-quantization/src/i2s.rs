@@ -71,8 +71,12 @@ impl I2SQuantizer {
     pub fn quantize_tensor_device(
         &self,
         tensor: &BitNetTensor,
-        _device: &Device,
+        device: &Device,
     ) -> Result<QuantizedTensor> {
+        // The quantization kernels currently operate on CPU data. The device
+        // parameter is accepted for API symmetry and future GPU support.
+        let _ = device;
+
         // For now we always extract data to CPU memory. If a GPU specific
         // kernel becomes available it can be inserted here.
         let data = extract_f32_data(tensor)?;

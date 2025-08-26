@@ -217,10 +217,13 @@ impl TL2Quantizer {
     pub fn quantize_tensor_device(
         &self,
         tensor: &BitNetTensor,
-        _device: &Device,
+        device: &Device,
     ) -> Result<QuantizedTensor> {
-        // All computations are currently performed on the CPU. Device is
-        // provided for compatibility with future GPU kernels.
+        // All computations are currently performed on the CPU. The device
+        // parameter is accepted for API symmetry and future GPU kernels.
+        let _ = device;
+
+        // Device is provided for compatibility with future GPU kernels.
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
 
