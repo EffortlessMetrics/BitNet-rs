@@ -5,7 +5,7 @@ use bitnet_ggml_ffi::{dequantize_row_iq2_s, iq2s_bytes_per_block, iq2s_qk, quant
 #[test]
 fn roundtrip_quant_dequant() {
     let n = iq2s_qk();
-    let mut src: Vec<f32> = (0..n).map(|i| (i as f32 * 0.1).sin()).collect();
+    let src: Vec<f32> = (0..n).map(|i| (i as f32 * 0.1).sin()).collect();
     let mut q = vec![0u8; iq2s_bytes_per_block() * (n / iq2s_qk())];
     let mut dst = vec![0f32; n];
     unsafe {
