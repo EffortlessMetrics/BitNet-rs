@@ -48,7 +48,7 @@ log_info "================================================================"
 # Step 1: Fetch and build Microsoft BitNet C++ if needed
 if [[ ! -d "$BITNET_CPP_DIR/build" ]]; then
     log_info "Microsoft BitNet C++ not found, fetching and building..."
-    "$REPO_ROOT/ci/fetch_bitnet_cpp.sh" --tag b1-65-ggml
+    "$REPO_ROOT/ci/fetch_bitnet_cpp.sh"
 else
     log_info "Using existing BitNet C++ at: $BITNET_CPP_DIR"
     log_info "To rebuild, run: rm -rf $BITNET_CPP_DIR && $0"
