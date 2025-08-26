@@ -131,7 +131,7 @@ fn test_tokenizer_detection_priority() {
         ("falcon", "Falcon"),
     ];
 
-    for (model_type, expected_backend) in test_cases {
+    for (model_type, _expected_backend) in test_cases {
         let config = TokenizerConfig {
             model_type: model_type.to_string(),
             vocab_size: 50000,
