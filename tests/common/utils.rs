@@ -297,8 +297,8 @@ mod tests {
     #[test]
     fn test_format_duration() {
         assert_eq!(format_duration(Duration::from_nanos(500)), "500ns");
-        assert_eq!(format_duration(Duration::from_micros(1500)), "1.5μs");
-        assert_eq!(format_duration(Duration::from_millis(1500)), "1.5ms");
+        assert_eq!(format_duration(Duration::from_micros(1500)), "1.5ms");
+        assert_eq!(format_duration(Duration::from_millis(1500)), "1.500s");
         assert_eq!(format_duration(Duration::from_secs(1)), "1.000s");
         assert_eq!(format_duration(Duration::from_secs(65)), "1m 5s");
         assert_eq!(format_duration(Duration::from_secs(3665)), "1h 1m 5s");

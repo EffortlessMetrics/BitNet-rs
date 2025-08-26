@@ -185,9 +185,16 @@ impl JunitReporter {
                     )
                     .map_err(|e| ReportError::XmlError(e.to_string()))?;
 
+                let mut details = String::new();
                 if let Some(error) = &test.error {
+                    details.push_str(&format!("{:#?}\n", error));
+                }
+                if let Some(trace) = &test.stack_trace {
+                    details.push_str(trace);
+                }
+                if !details.is_empty() {
                     writer
-                        .write(XmlEvent::cdata(&format!("{:#?}", error)))
+                        .write(XmlEvent::cdata(&details))
                         .map_err(|e| ReportError::XmlError(e.to_string()))?;
                 }
 

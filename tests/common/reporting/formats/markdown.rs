@@ -120,6 +120,15 @@ impl MarkdownReporter {
                 markdown.push_str(&self.generate_test_case_row(test));
             }
             markdown.push_str("\n");
+
+            for test in &suite.test_results {
+                if let Some(trace) = &test.stack_trace {
+                    markdown.push_str(&format!(
+                        "#### Stack trace for `{}`\n\n```\n{}\n```\n\n",
+                        test.test_name, trace
+                    ));
+                }
+            }
         }
 
         if self.include_metrics && suite.summary.peak_memory.is_some() {

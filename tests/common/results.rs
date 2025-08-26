@@ -1,7 +1,7 @@
 use super::errors::TestError;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
+use std::{backtrace::Backtrace, collections::HashMap};
 
 /// Type alias for backward compatibility with existing test code
 /// This allows existing code using TestResult<T> to continue working
@@ -225,13 +225,14 @@ impl TestResult {
     /// Create a failed test result
     pub fn failed<S: Into<String>>(test_name: S, error: TestError, duration: Duration) -> Self {
         let now = SystemTime::now();
+        let backtrace = Backtrace::force_capture();
         Self {
             test_name: test_name.into(),
             status: TestStatus::Failed,
             duration,
             metrics: TestMetrics::with_duration(duration),
             error: Some(error.to_string()),
-            stack_trace: None, // TODO: Extract stack trace from error
+            stack_trace: Some(backtrace.to_string()),
             artifacts: Vec::new(),
             start_time: now - duration,
             end_time: now,

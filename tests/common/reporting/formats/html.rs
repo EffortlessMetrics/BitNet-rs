@@ -521,11 +521,18 @@ impl HtmlReporter {
             test.duration.as_secs_f64()
         );
 
+        let mut details = String::new();
         if let Some(error) = &test.error {
+            details.push_str(&format!("{:#?}\n", error));
+        }
+        if let Some(trace) = &test.stack_trace {
+            details.push_str(trace);
+        }
+        if !details.is_empty() {
             html.push_str(&format!(
                 r#"                        <div class="error-details">{}</div>
 "#,
-                html_escape::encode_text(&format!("{:#?}", error))
+                html_escape::encode_text(&details)
             ));
         }
 

@@ -150,7 +150,7 @@ impl ReportingManager {
         content.push_str("## Generated Reports\n\n");
         for result in report_results {
             content.push_str(&format!(
-                "- **{:?}**: `{}` ({} bytes, generated in {:?})\n",
+                "- **{}**: `{}` ({} bytes, generated in {:?})\n",
                 result.format,
                 result.output_path.file_name().unwrap().to_string_lossy(),
                 result.size_bytes,

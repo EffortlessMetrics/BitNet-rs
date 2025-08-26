@@ -37,7 +37,13 @@ pub enum ReportFormat {
 
 impl std::fmt::Display for ReportFormat {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        let name = match self {
+            ReportFormat::Html => "HTML",
+            ReportFormat::Json => "JSON",
+            ReportFormat::Junit => "JUnit",
+            ReportFormat::Markdown => "Markdown",
+        };
+        f.write_str(name)
     }
 }
 
