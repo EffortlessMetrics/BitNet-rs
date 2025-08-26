@@ -8,7 +8,7 @@
 
 use crate::gpu::cuda::CudaKernel;
 use crate::{KernelProvider, cpu::fallback::FallbackKernel, cpu::x86::Avx2Kernel};
-use bitnet_common::Result;
+use bitnet_common::{KernelError, Result};
 
 use std::time::Instant;
 
@@ -113,6 +113,35 @@ impl GpuValidator {
     /// Create a new validator with custom configuration
     pub fn with_config(config: ValidationConfig) -> Self {
         Self { config }
+    }
+
+    /// Run a quick memory health check on the GPU
+    ///
+    /// This is useful for detecting memory leaks or GPU memory issues
+    /// in production systems.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(MemoryResult)` with memory statistics if successful,
+    /// or an error if CUDA is not available or memory operations fail.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use bitnet_kernels::gpu::validation::GpuValidator;
+    ///
+    /// let validator = GpuValidator::new();
+    /// match validator.check_memory_health() {
+    ///     Ok(result) => {
+    ///         println!("Peak memory: {} MB", result.peak_gpu_memory / (1024 * 1024));
+    ///         println!("Leaks detected: {}", result.leaks_detected);
+    ///         println!("Memory efficiency: {:.1}%", result.efficiency_score * 100.0);
+    ///     }
+    ///     Err(e) => println!("Memory check failed: {}", e),
+    /// }
+    /// ```
+    pub fn check_memory_health(&self) -> Result<MemoryResult> {
+        self.test_memory_usage()
     }
 
     /// Run comprehensive validation tests
@@ -308,13 +337,141 @@ impl GpuValidator {
     }
 
     /// Test memory usage and detect leaks
+    #[cfg(feature = "cuda")]
     fn test_memory_usage(&self) -> Result<MemoryResult> {
+        use cudarc::driver::CudaContext;
+        use cudarc::driver::sys::{CUresult, cuMemAlloc_v2, cuMemFree_v2, cuMemGetInfo_v2};
+
+        const ALLOC_SIZE: usize = 10 * 1024 * 1024; // 10MB
+        const ITERATIONS: usize = 5;
+        const CUDA_SUCCESS: CUresult = 0;
+
         log::debug!("Testing memory usage and leak detection");
 
-        // TODO: Implement actual GPU memory monitoring
-        // This would require CUDA memory management APIs
-        // For now, return a placeholder result
+        unsafe {
+            // Create context to ensure CUDA API availability
+            let _ctx = CudaContext::new(0).map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to create CUDA context: {:?}", e),
+            })?;
 
+            // Baseline memory
+            let mut free_start: usize = 0;
+            let mut total_mem: usize = 0;
+            let result =
+                cuMemGetInfo_v2(&mut free_start as *mut usize, &mut total_mem as *mut usize);
+            if result != CUDA_SUCCESS {
+                return Err(KernelError::GpuError {
+                    reason: format!("cuMemGetInfo_v2 failed with error code: {}", result),
+                }
+                .into());
+            }
+
+            log::trace!(
+                "Initial GPU memory: free={} MB, total={} MB",
+                free_start / (1024 * 1024),
+                total_mem / (1024 * 1024)
+            );
+
+            let mut peak_usage = 0usize;
+            let mut allocated_ptrs = Vec::with_capacity(ITERATIONS);
+
+            // Allocate and free memory multiple times to track peak usage
+            for i in 0..ITERATIONS {
+                let mut ptr: u64 = 0;
+                let result = cuMemAlloc_v2(&mut ptr as *mut u64, ALLOC_SIZE);
+                if result != CUDA_SUCCESS {
+                    // Clean up previously allocated memory before returning error
+                    for &prev_ptr in &allocated_ptrs {
+                        let _ = cuMemFree_v2(prev_ptr);
+                    }
+                    return Err(KernelError::GpuError {
+                        reason: format!(
+                            "cuMemAlloc_v2 failed at iteration {} with error code: {}",
+                            i, result
+                        ),
+                    }
+                    .into());
+                }
+
+                allocated_ptrs.push(ptr);
+
+                let mut free_now: usize = 0;
+                let result =
+                    cuMemGetInfo_v2(&mut free_now as *mut usize, &mut total_mem as *mut usize);
+                if result != CUDA_SUCCESS {
+                    // Clean up allocated memory before returning error
+                    for &prev_ptr in &allocated_ptrs {
+                        let _ = cuMemFree_v2(prev_ptr);
+                    }
+                    return Err(KernelError::GpuError {
+                        reason: format!(
+                            "cuMemGetInfo_v2 failed at iteration {} with error code: {}",
+                            i, result
+                        ),
+                    }
+                    .into());
+                }
+
+                let used = free_start.saturating_sub(free_now);
+                peak_usage = peak_usage.max(used);
+                log::trace!(
+                    "Iteration {}: allocated {} MB, used {} MB",
+                    i,
+                    ALLOC_SIZE / (1024 * 1024),
+                    used / (1024 * 1024)
+                );
+            }
+
+            // Free all allocated memory
+            for (i, &ptr) in allocated_ptrs.iter().enumerate() {
+                let result = cuMemFree_v2(ptr);
+                if result != CUDA_SUCCESS {
+                    log::warn!(
+                        "cuMemFree_v2 failed at iteration {} with error code: {}",
+                        i,
+                        result
+                    );
+                    // Continue freeing other allocations even if one fails
+                }
+            }
+
+            // Final memory to detect leaks
+            let mut free_end: usize = 0;
+            let result = cuMemGetInfo_v2(&mut free_end as *mut usize, &mut total_mem as *mut usize);
+            if result != CUDA_SUCCESS {
+                return Err(KernelError::GpuError {
+                    reason: format!("Final cuMemGetInfo_v2 failed with error code: {}", result),
+                }
+                .into());
+            }
+
+            // Allow for small variance in memory due to driver overhead
+            const LEAK_THRESHOLD: usize = 1024 * 1024; // 1MB threshold
+            let memory_diff = if free_end < free_start { free_start - free_end } else { 0 };
+            let leaks_detected = memory_diff > LEAK_THRESHOLD;
+
+            if leaks_detected {
+                log::warn!("Memory leak detected: {} bytes", memory_diff);
+            }
+
+            let efficiency_score =
+                if total_mem > 0 { 1.0 - (peak_usage as f32 / total_mem as f32) } else { 1.0 };
+
+            log::debug!(
+                "Memory test complete: peak={} MB, leaks={}, efficiency={:.2}%",
+                peak_usage / (1024 * 1024),
+                leaks_detected,
+                efficiency_score * 100.0
+            );
+
+            Ok(MemoryResult { peak_gpu_memory: peak_usage, leaks_detected, efficiency_score })
+        }
+    }
+
+    /// Placeholder memory usage test when CUDA is unavailable
+    #[cfg(not(feature = "cuda"))]
+    fn test_memory_usage(&self) -> Result<MemoryResult> {
+        log::warn!("CUDA feature not enabled; skipping memory usage test");
         Ok(MemoryResult { peak_gpu_memory: 0, leaks_detected: false, efficiency_score: 1.0 })
     }
 }
@@ -410,6 +567,51 @@ mod tests {
             }
             Err(e) => {
                 println!("GPU validation failed (CUDA may not be available): {}", e);
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "cuda")]
+    fn test_memory_usage_tracking() {
+        // Initialize logger for debugging
+        let _ =
+            env_logger::builder().filter_level(log::LevelFilter::Debug).is_test(true).try_init();
+
+        let validator = GpuValidator::new();
+        match validator.test_memory_usage() {
+            Ok(result) => {
+                // Peak memory should be at least the size we allocated
+                assert!(result.peak_gpu_memory > 0, "Peak memory should be greater than 0");
+
+                // We expect at least 10MB * 5 iterations worth of allocations tracked
+                // But due to memory pooling, actual usage might be less
+                assert!(
+                    result.peak_gpu_memory >= 10 * 1024 * 1024,
+                    "Peak memory {} should be at least 10MB",
+                    result.peak_gpu_memory
+                );
+
+                assert!(!result.leaks_detected, "Memory leak detected in test");
+                assert!(
+                    result.efficiency_score >= 0.0 && result.efficiency_score <= 1.0,
+                    "Efficiency score {} should be between 0 and 1",
+                    result.efficiency_score
+                );
+
+                log::info!(
+                    "Memory test passed: peak={} MB, efficiency={:.2}%",
+                    result.peak_gpu_memory / (1024 * 1024),
+                    result.efficiency_score * 100.0
+                );
+            }
+            Err(e) => {
+                // CUDA might not be available in CI
+                if e.to_string().contains("CUDA") || e.to_string().contains("context") {
+                    log::warn!("Skipping CUDA memory test: {}", e);
+                } else {
+                    panic!("Unexpected error in memory test: {}", e);
+                }
             }
         }
     }

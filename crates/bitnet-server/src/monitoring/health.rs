@@ -125,9 +125,7 @@ impl HealthChecker {
                 build_timestamp: option_env!("VERGEN_BUILD_TIMESTAMP")
                     .unwrap_or("unknown")
                     .to_string(),
-                rustc_version: option_env!("VERGEN_RUSTC_SEMVER")
-                    .unwrap_or("unknown")
-                    .to_string(),
+                rustc_version: option_env!("VERGEN_RUSTC_SEMVER").unwrap_or("unknown").to_string(),
                 cargo_target: option_env!("VERGEN_CARGO_TARGET_TRIPLE")
                     .unwrap_or("unknown")
                     .to_string(),
