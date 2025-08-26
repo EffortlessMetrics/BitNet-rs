@@ -1,5 +1,6 @@
 use bitnet_common::QuantizationType;
 use bitnet_quantization::{I2SLayout, I2SQuantizer, QuantizedTensor};
+use candle_core::Device;
 use criterion::{Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 
@@ -22,7 +23,7 @@ fn bench_i2s_dequant(c: &mut Criterion) {
 
     c.bench_function("i2s_dequant_8k_blocks", |b| {
         b.iter(|| {
-            let tensor = quantizer.dequantize_tensor(black_box(&qt)).unwrap();
+            let tensor = quantizer.dequantize_tensor(black_box(&qt), &Device::Cpu).unwrap();
             black_box(tensor);
         })
     });

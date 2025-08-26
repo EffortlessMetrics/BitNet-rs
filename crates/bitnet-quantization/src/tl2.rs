@@ -255,8 +255,12 @@ impl TL2Quantizer {
         ))
     }
 
-    /// Dequantize tensor from TL2 format
-    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+    /// Dequantize tensor from TL2 format onto the specified device.
+    pub fn dequantize_tensor(
+        &self,
+        tensor: &QuantizedTensor,
+        device: &Device,
+    ) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::TL2 {
             return Err(
                 QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
@@ -277,9 +281,8 @@ impl TL2Quantizer {
             _ => self.dequantize_scalar(&quantized_data, &tensor.scales)?,
         };
 
-        // Create tensor
-        let device = Device::Cpu; // TODO: Support GPU devices
-        create_tensor_from_f32(dequantized_data, &tensor.shape, &device)
+        // Create tensor on target device
+        create_tensor_from_f32(dequantized_data, &tensor.shape, device)
     }
 
     /// Scalar quantization implementation
@@ -534,11 +537,11 @@ impl Default for TL2Quantizer {
 
 impl QuantizerTrait for TL2Quantizer {
     fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
-        self.quantize_tensor(tensor)
+        TL2Quantizer::quantize_tensor(self, tensor)
     }
 
-    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
-        self.dequantize_tensor(tensor)
+    fn dequantize_tensor(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor> {
+        TL2Quantizer::dequantize_tensor(self, tensor, device)
     }
 
     fn quantization_type(&self) -> QuantizationType {
@@ -592,7 +595,7 @@ mod tests {
         let quantizer = TL2Quantizer::new();
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &device).unwrap();
 
         assert_eq!(quantized.qtype, QuantizationType::TL2);
         assert_eq!(quantized.shape, shape);
@@ -620,7 +623,7 @@ mod tests {
         let quantizer = TL2Quantizer::new();
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &device).unwrap();
 
         assert_eq!(quantized.shape, shape);
         assert_eq!(dequantized.shape(), &shape);

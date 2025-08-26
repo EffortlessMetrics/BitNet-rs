@@ -7,9 +7,11 @@ with realistic end-to-end workflows that actually compile and run successfully.
 */
 
 use bitnet_common::{
-    BitNetConfig, BitNetTensor, Device, MockTensor, ModelFormat, QuantizationConfig, Tensor,
+    BitNetConfig, BitNetTensor, Device as BitDevice, MockTensor, ModelFormat, QuantizationConfig,
+    Tensor,
 };
 use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
+use candle_core::Device;
 use std::fs;
 use tempfile::TempDir;
 
@@ -19,7 +21,7 @@ fn test_complete_quantization_pipeline() {
     let mock_tensor = MockTensor::new(vec![64, 64]);
     // Convert MockTensor data to BitNetTensor
     let data = mock_tensor.as_slice::<f32>().unwrap();
-    let tensor = BitNetTensor::from_slice(data, mock_tensor.shape(), &Device::Cpu).unwrap();
+    let tensor = BitNetTensor::from_slice(data, mock_tensor.shape(), &BitDevice::Cpu).unwrap();
 
     // Test I2S quantization workflow
     let i2s_quantizer = I2SQuantizer::new();
@@ -27,7 +29,7 @@ fn test_complete_quantization_pipeline() {
     assert!(i2s_result.is_ok(), "I2S quantization should succeed");
 
     let quantized = i2s_result.unwrap();
-    let dequantized = i2s_quantizer.dequantize_tensor(&quantized);
+    let dequantized = i2s_quantizer.dequantize_tensor(&quantized, &Device::Cpu);
     assert!(dequantized.is_ok(), "I2S dequantization should succeed");
 
     // Verify tensor properties

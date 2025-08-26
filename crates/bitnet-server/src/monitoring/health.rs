@@ -270,19 +270,19 @@ impl HealthChecker {
 
         // Check critical components first
         for component_name in &critical_components {
-            if let Some(component) = components.get(*component_name) {
-                if component.status == HealthStatus::Unhealthy {
-                    return HealthStatus::Unhealthy;
-                }
+            if let Some(component) = components.get(*component_name)
+                && component.status == HealthStatus::Unhealthy
+            {
+                return HealthStatus::Unhealthy;
             }
         }
 
         // If any critical component is degraded, overall status is degraded
         for component_name in &critical_components {
-            if let Some(component) = components.get(*component_name) {
-                if component.status == HealthStatus::Degraded {
-                    return HealthStatus::Degraded;
-                }
+            if let Some(component) = components.get(*component_name)
+                && component.status == HealthStatus::Degraded
+            {
+                return HealthStatus::Degraded;
             }
         }
 

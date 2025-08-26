@@ -9,7 +9,7 @@
 //! comprehensive benchmarking against reference implementations.
 
 use bitnet_common::{BitNetTensor, QuantizationType, Result};
-// Candle imports removed - not currently used
+use candle_core::Device;
 
 pub mod i2s;
 pub mod tl1;
@@ -108,10 +108,11 @@ impl Quantize for QuantizedTensor {
     }
 
     fn dequantize(&self) -> Result<BitNetTensor> {
+        let device = Device::Cpu;
         match self.qtype {
-            QuantizationType::I2S => I2SQuantizer::new().dequantize_tensor(self),
-            QuantizationType::TL1 => TL1Quantizer::new().dequantize_tensor(self),
-            QuantizationType::TL2 => TL2Quantizer::new().dequantize_tensor(self),
+            QuantizationType::I2S => I2SQuantizer::new().dequantize_tensor(self, &device),
+            QuantizationType::TL1 => TL1Quantizer::new().dequantize_tensor(self, &device),
+            QuantizationType::TL2 => TL2Quantizer::new().dequantize_tensor(self, &device),
         }
     }
 }
@@ -166,8 +167,12 @@ pub trait QuantizerTrait: Send + Sync {
     /// Quantize a tensor
     fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor>;
 
-    /// Dequantize a tensor
-    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor>;
+    /// Dequantize a tensor onto the specified [`Device`].
+    ///
+    /// Implementations should ensure the returned tensor resides on the
+    /// given `device`, allowing callers to request either CPU or GPU
+    /// allocations as needed.
+    fn dequantize_tensor(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor>;
 
     /// Get the quantization type
     fn quantization_type(&self) -> QuantizationType;

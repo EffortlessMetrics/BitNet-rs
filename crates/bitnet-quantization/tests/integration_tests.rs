@@ -32,7 +32,7 @@ fn test_all_quantization_round_trips() {
         let quantizer = QuantizerFactory::create(qtype);
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         assert_eq!(quantized.qtype, qtype);
         assert_eq!(quantized.shape, shape);
@@ -256,7 +256,7 @@ proptest! {
         // Test I2_S with different block sizes
         let i2s_quantizer = I2SQuantizer::with_block_size(block_size);
         let quantized = i2s_quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = i2s_quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = i2s_quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         prop_assert_eq!(quantized.block_size, block_size);
         prop_assert_eq!(quantized.shape, shape.clone());

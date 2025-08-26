@@ -58,7 +58,7 @@ fn test_i2s_accuracy() {
 
         // Quantize and dequantize
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let reconstructed = quantizer.dequantize_tensor(&quantized).unwrap();
+        let reconstructed = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         // Extract data
         let reconstructed_candle = reconstructed.to_candle().unwrap();
@@ -94,7 +94,7 @@ fn test_tl1_accuracy() {
 
         // Quantize and dequantize
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let reconstructed = quantizer.dequantize_tensor(&quantized).unwrap();
+        let reconstructed = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         // Extract data
         let reconstructed_candle = reconstructed.to_candle().unwrap();
@@ -129,7 +129,7 @@ fn test_tl2_accuracy() {
 
         // Quantize and dequantize
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let reconstructed = quantizer.dequantize_tensor(&quantized).unwrap();
+        let reconstructed = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         // Extract data
         let reconstructed_candle = reconstructed.to_candle().unwrap();
@@ -169,7 +169,7 @@ fn test_quantization_determinism() {
         let results: Vec<_> = (0..5)
             .map(|_| {
                 let q = quantizer.quantize_tensor(&tensor).unwrap();
-                let d = quantizer.dequantize_tensor(&q).unwrap();
+                let d = quantizer.dequantize_tensor(&q, &Device::Cpu).unwrap();
                 let d_candle = d.to_candle().unwrap();
                 d_candle.flatten_all().unwrap().to_vec1::<f32>().unwrap()
             })
@@ -214,7 +214,7 @@ fn test_edge_cases() {
 
             // Should not panic
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-            let _reconstructed = quantizer.dequantize_tensor(&quantized).unwrap();
+            let _reconstructed = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
             println!("{} handled edge case {} ✓", name, i);
         }

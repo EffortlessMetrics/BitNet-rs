@@ -10,6 +10,7 @@ use crate::formats::gguf::GgufTensorType;
 use anyhow::{Context, Result, bail, ensure};
 use bitnet_common::QuantizationType;
 use bitnet_quantization::{I2SLayout, I2SQuantizer, QuantizedTensor};
+use candle_core::Device;
 use half::f16;
 use memmap2::Mmap;
 use std::{
@@ -371,7 +372,7 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
             // Dequantize using our existing infrastructure
             let quantizer = I2SQuantizer::with_block_size(layout.block_size);
             let tensor = quantizer
-                .dequantize_tensor(&quantized)
+                .dequantize_tensor(&quantized, &Device::Cpu)
                 .with_context(|| format!("Failed to dequantize I2_S tensor {}", info.name))?;
 
             // Extract f32 data from BitNetTensor
@@ -670,7 +671,7 @@ mod tests {
         );
 
         let quantizer = I2SQuantizer::with_block_size(layout.block_size);
-        let out = quantizer.dequantize_tensor(&qt).unwrap().to_vec().unwrap();
+        let out = quantizer.dequantize_tensor(&qt, &Device::Cpu).unwrap().to_vec().unwrap();
 
         assert_eq!(out.len(), layout.block_size);
         assert!(out.iter().any(|&v| v != 0.0), "dequant should produce non-zero values");
@@ -696,7 +697,7 @@ mod tests {
         );
 
         let quantizer = I2SQuantizer::with_block_size(layout.block_size);
-        let tensor = quantizer.dequantize_tensor(&qt).unwrap();
+        let tensor = quantizer.dequantize_tensor(&qt, &Device::Cpu).unwrap();
         let out = tensor.to_vec().unwrap();
 
         assert_eq!(out.len(), layout.block_size * blocks);

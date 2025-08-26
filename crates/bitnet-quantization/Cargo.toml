@@ -27,6 +27,7 @@ tempfile.workspace = true
 default = []
 simd = []
 integration-tests = []
+cuda = ["bitnet-common/cuda", "candle-core/cuda"]
 
 [[bench]]
 name = "quantization"

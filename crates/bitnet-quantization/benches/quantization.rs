@@ -85,21 +85,33 @@ fn bench_dequantization_sizes(c: &mut Criterion) {
         // Benchmark I2_S dequantization
         group.bench_with_input(BenchmarkId::new("I2S_dequantize", size), &size, |b, _| {
             b.iter(|| {
-                black_box(i2s_quantizer.dequantize_tensor(black_box(&i2s_quantized)).unwrap())
+                black_box(
+                    i2s_quantizer
+                        .dequantize_tensor(black_box(&i2s_quantized), &Device::Cpu)
+                        .unwrap(),
+                )
             })
         });
 
         // Benchmark TL1 dequantization
         group.bench_with_input(BenchmarkId::new("TL1_dequantize", size), &size, |b, _| {
             b.iter(|| {
-                black_box(tl1_quantizer.dequantize_tensor(black_box(&tl1_quantized)).unwrap())
+                black_box(
+                    tl1_quantizer
+                        .dequantize_tensor(black_box(&tl1_quantized), &Device::Cpu)
+                        .unwrap(),
+                )
             })
         });
 
         // Benchmark TL2 dequantization
         group.bench_with_input(BenchmarkId::new("TL2_dequantize", size), &size, |b, _| {
             b.iter(|| {
-                black_box(tl2_quantizer.dequantize_tensor(black_box(&tl2_quantized)).unwrap())
+                black_box(
+                    tl2_quantizer
+                        .dequantize_tensor(black_box(&tl2_quantized), &Device::Cpu)
+                        .unwrap(),
+                )
             })
         });
     }
@@ -123,7 +135,7 @@ fn bench_round_trip(c: &mut Criterion) {
             let quantizer = I2SQuantizer::new();
             b.iter(|| {
                 let quantized = quantizer.quantize_tensor(black_box(&tensor)).unwrap();
-                black_box(quantizer.dequantize_tensor(&quantized).unwrap())
+                black_box(quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap())
             })
         });
 
@@ -132,7 +144,7 @@ fn bench_round_trip(c: &mut Criterion) {
             let quantizer = TL1Quantizer::new();
             b.iter(|| {
                 let quantized = quantizer.quantize_tensor(black_box(&tensor)).unwrap();
-                black_box(quantizer.dequantize_tensor(&quantized).unwrap())
+                black_box(quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap())
             })
         });
 
@@ -141,7 +153,7 @@ fn bench_round_trip(c: &mut Criterion) {
             let quantizer = TL2Quantizer::new();
             b.iter(|| {
                 let quantized = quantizer.quantize_tensor(black_box(&tensor)).unwrap();
-                black_box(quantizer.dequantize_tensor(&quantized).unwrap())
+                black_box(quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap())
             })
         });
     }

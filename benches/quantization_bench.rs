@@ -5,8 +5,9 @@
 //! This benchmark compares the performance of scalar vs SIMD implementations
 //! for I2S, TL1, and TL2 quantization methods.
 
-use bitnet_common::{BitNetTensor, Device};
+use bitnet_common::{BitNetTensor, Device as BitDevice};
 use bitnet_quantization::{I2SQuantizer, QuantizerTrait, TL1Quantizer, TL2Quantizer};
+use candle_core::Device;
 use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 
 fn generate_test_data(size: usize) -> Vec<f32> {
@@ -18,7 +19,7 @@ fn bench_i2s_quantization(c: &mut Criterion) {
 
     for size in [1024, 4096, 16384, 65536].iter() {
         let data = generate_test_data(*size);
-        let tensor = BitNetTensor::from_slice(&data, &[*size], &Device::Cpu).unwrap();
+        let tensor = BitNetTensor::from_slice(&data, &[*size], &BitDevice::Cpu).unwrap();
 
         group.throughput(Throughput::Elements(*size as u64));
 
@@ -34,7 +35,7 @@ fn bench_i2s_quantization(c: &mut Criterion) {
             let quantizer = I2SQuantizer::new();
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
             b.iter(|| {
-                let result = quantizer.dequantize_tensor(&quantized).unwrap();
+                let result = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
                 black_box(result);
             });
         });
@@ -48,7 +49,7 @@ fn bench_tl1_quantization(c: &mut Criterion) {
 
     for size in [1024, 4096, 16384, 65536].iter() {
         let data = generate_test_data(*size);
-        let tensor = BitNetTensor::from_slice(&data, &[*size], &Device::Cpu).unwrap();
+        let tensor = BitNetTensor::from_slice(&data, &[*size], &BitDevice::Cpu).unwrap();
 
         group.throughput(Throughput::Elements(*size as u64));
 
@@ -64,7 +65,7 @@ fn bench_tl1_quantization(c: &mut Criterion) {
             let quantizer = TL1Quantizer::new();
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
             b.iter(|| {
-                let result = quantizer.dequantize_tensor(&quantized).unwrap();
+                let result = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
                 black_box(result);
             });
         });
@@ -78,7 +79,7 @@ fn bench_tl2_quantization(c: &mut Criterion) {
 
     for size in [1024, 4096, 16384, 65536].iter() {
         let data = generate_test_data(*size);
-        let tensor = BitNetTensor::from_slice(&data, &[*size], &Device::Cpu).unwrap();
+        let tensor = BitNetTensor::from_slice(&data, &[*size], &BitDevice::Cpu).unwrap();
 
         group.throughput(Throughput::Elements(*size as u64));
 
@@ -94,7 +95,7 @@ fn bench_tl2_quantization(c: &mut Criterion) {
             let quantizer = TL2Quantizer::new();
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
             b.iter(|| {
-                let result = quantizer.dequantize_tensor(&quantized).unwrap();
+                let result = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
                 black_box(result);
             });
         });
@@ -107,7 +108,7 @@ fn bench_simd_vs_scalar(c: &mut Criterion) {
     let mut group = c.benchmark_group("simd_vs_scalar");
     let size = 16384;
     let data = generate_test_data(size);
-    let tensor = BitNetTensor::from_slice(&data, &[size], &Device::Cpu).unwrap();
+    let tensor = BitNetTensor::from_slice(&data, &[size], &BitDevice::Cpu).unwrap();
 
     group.throughput(Throughput::Elements(size as u64));
 

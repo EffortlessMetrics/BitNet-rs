@@ -61,7 +61,7 @@ mod quantization_algorithms {
         assert!(!quantized.scales.is_empty());
 
         // Test dequantization
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
         assert_eq!(dequantized.shape(), &shape);
 
         // Check accuracy (2-bit quantization has limited precision)
@@ -86,7 +86,7 @@ mod quantization_algorithms {
         assert!(!quantized.scales.is_empty());
 
         // Test dequantization
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
         assert_eq!(dequantized.shape(), &shape);
 
         // Check accuracy
@@ -111,7 +111,7 @@ mod quantization_algorithms {
         assert!(!quantized.scales.is_empty());
 
         // Test dequantization
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
         assert_eq!(dequantized.shape(), &shape);
 
         // Check accuracy
@@ -136,7 +136,7 @@ mod quantization_algorithms {
 
         for (name, quantizer) in quantizers {
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
 
             let dequant_data = extract_tensor_data(&dequantized);
             let mse = calculate_mse(&data, &dequant_data);
@@ -147,6 +147,31 @@ mod quantization_algorithms {
             // All quantizers should have reasonable accuracy for 2-bit quantization
             assert!(mse < 5.0, "{} MSE too high: {}", name, mse);
             assert!(max_error < 5.0, "{} max error too high: {}", name, max_error);
+        }
+    }
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn test_gpu_dequantization_paths() {
+        let data = vec![1.0, -2.0, 0.5, -0.5];
+        let shape = vec![4];
+        let tensor = create_test_tensor(data.clone(), shape.clone());
+
+        let quantizers: Vec<Box<dyn QuantizerTrait>> = vec![
+            Box::new(I2SQuantizer::new()),
+            Box::new(TL1Quantizer::new()),
+            Box::new(TL2Quantizer::new()),
+        ];
+
+        if let Ok(device) = CandleDevice::new_cuda(0) {
+            for quantizer in quantizers {
+                let quantized = quantizer.quantize_tensor(&tensor).unwrap();
+                let dequantized = quantizer.dequantize_tensor(&quantized, &device).unwrap();
+                assert_eq!(dequantized.shape(), &shape);
+                assert!(matches!(dequantized.inner().device(), CandleDevice::Cuda(_)));
+            }
+        } else {
+            eprintln!("CUDA device not available - skipping GPU dequantization test");
         }
     }
 
@@ -205,7 +230,7 @@ mod parameter_validation {
             assert_eq!(quantized.block_size, block_size);
 
             // Should be able to dequantize
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
             assert_eq!(dequantized.shape(), tensor.shape());
         }
     }
@@ -246,7 +271,7 @@ mod parameter_validation {
             }
 
             // Should be able to dequantize
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
             assert_eq!(dequantized.shape(), tensor.shape());
         }
     }
@@ -287,7 +312,7 @@ mod parameter_validation {
             assert_eq!(quantized.block_size, config.block_size);
 
             // Should be able to dequantize
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
             assert_eq!(dequantized.shape(), tensor.shape());
         }
     }
@@ -322,7 +347,7 @@ mod edge_cases {
 
         let quantizer = I2SQuantizer::new();
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
 
         assert_eq!(quantized.shape, shape);
         assert_eq!(dequantized.shape(), &shape);
@@ -339,7 +364,7 @@ mod edge_cases {
 
         let quantizer = I2SQuantizer::new();
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
 
         let dequant_data = extract_tensor_data(&dequantized);
 
@@ -357,7 +382,7 @@ mod edge_cases {
 
         let quantizer = I2SQuantizer::new();
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
 
         let dequant_data = extract_tensor_data(&dequantized);
 
@@ -388,7 +413,7 @@ mod edge_cases {
             assert!(result.is_ok(), "Should handle extreme values");
 
             let quantized = result.unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
 
             assert_eq!(dequantized.shape(), &shape);
         }
@@ -408,7 +433,8 @@ mod edge_cases {
         match result {
             Ok(quantized) => {
                 // If it succeeds, should be able to dequantize
-                let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+                let dequantized =
+                    quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
                 assert_eq!(dequantized.shape(), &shape);
             }
             Err(_) => {
@@ -438,7 +464,8 @@ mod edge_cases {
 
             for quantizer in quantizers {
                 let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-                let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+                let dequantized =
+                    quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
 
                 assert_eq!(quantized.shape, shape);
                 assert_eq!(dequantized.shape(), &shape);
@@ -502,7 +529,7 @@ mod performance_tests {
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
 
             let start = Instant::now();
-            let result = quantizer.dequantize_tensor(&quantized);
+            let result = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu);
             let duration = start.elapsed();
 
             assert!(result.is_ok(), "{} dequantization failed", name);
@@ -599,7 +626,7 @@ mod format_compatibility {
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
             assert_eq!(quantized.qtype, qtype);
 
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
             assert_eq!(dequantized.shape(), tensor.shape());
         }
     }
@@ -650,7 +677,7 @@ proptest! {
 
         for quantizer in quantizers {
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
 
             prop_assert_eq!(quantized.shape, shape.clone());
             prop_assert_eq!(dequantized.shape(), &shape);
@@ -683,7 +710,7 @@ proptest! {
         let quantizer = I2SQuantizer::new();
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
 
         let dequant_data = extract_tensor_data(&dequantized);
 
@@ -768,7 +795,7 @@ mod integration_tests {
 
             // Dequantize
             let start = Instant::now();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
             let dequantize_time = start.elapsed();
 
             // Verify correctness
@@ -816,7 +843,7 @@ mod integration_tests {
 
         for (name, quantizer) in quantizers {
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &CandleDevice::Cpu).unwrap();
 
             let dequant_data = extract_tensor_data(&dequantized);
             assert_eq!(dequant_data.len(), data.len());

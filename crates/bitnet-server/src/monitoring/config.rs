@@ -277,10 +277,8 @@ impl ConfigValidator {
             }
         }
 
-        if let Some(max_gpu_mem) = settings.max_gpu_memory_mb {
-            if max_gpu_mem == 0 {
-                self.errors.push("Max GPU memory cannot be 0".to_string());
-            }
+        if let Some(max_gpu_mem) = settings.max_gpu_memory_mb && max_gpu_mem == 0 {
+            self.errors.push("Max GPU memory cannot be 0".to_string());
         }
 
         // Validate CPU threads
