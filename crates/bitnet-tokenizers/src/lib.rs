@@ -82,7 +82,6 @@ pub trait Tokenizer: Send + Sync {
 pub struct BasicTokenizer {
     vocab_size: usize,
     eos_token_id: Option<u32>,
-    #[allow(dead_code)]
     pad_token_id: Option<u32>,
 }
 
@@ -144,6 +143,14 @@ impl Tokenizer for BasicTokenizer {
     fn token_to_piece(&self, token: u32) -> Option<String> {
         // Simple implementation
         Some(format!("<token_{}>", token))
+    }
+
+    fn eos_token_id(&self) -> Option<u32> {
+        self.eos_token_id
+    }
+
+    fn pad_token_id(&self) -> Option<u32> {
+        self.pad_token_id
     }
 }
 

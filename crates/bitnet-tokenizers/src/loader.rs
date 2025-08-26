@@ -14,8 +14,8 @@ pub fn load_tokenizer(path: &Path) -> Result<Box<dyn Tokenizer>> {
             Ok(Box::new(crate::gguf_tokenizer::GgufTokenizer::from_gguf_file(path)?))
         }
         "json" => {
-            // TODO: Load HuggingFace tokenizer.json format
-            anyhow::bail!("JSON tokenizer loading not yet implemented")
+            // Load HuggingFace tokenizer.json format
+            Ok(Box::new(crate::hf_tokenizer::HfTokenizer::from_file(path)?))
         }
         "model" => {
             // Load SentencePiece model directly
