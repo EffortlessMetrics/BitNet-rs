@@ -29,6 +29,16 @@ fn help_mentions_core_subcommands() {
     }
 }
 
+#[test]
+fn infer_help_works() {
+    Command::cargo_bin("bitnet").unwrap().args(["infer", "--help"]).assert().success();
+}
+
+#[test]
+fn score_help_works() {
+    Command::cargo_bin("bitnet").unwrap().args(["score", "--help"]).assert().success();
+}
+
 #[cfg(feature = "full-cli")]
 #[test]
 fn benchmark_help_works() {

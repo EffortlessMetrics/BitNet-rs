@@ -3,7 +3,7 @@
 use anyhow::{Context, Result};
 use clap::Args;
 use console::style;
-use futures::StreamExt;
+use futures::{FutureExt, StreamExt, future::BoxFuture};
 use humansize::{DECIMAL, format_size};
 use humantime::format_duration;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -23,6 +23,17 @@ use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use candle_core::Device;
 
 use crate::config::CliConfig;
+
+/// Extension trait providing prefill capability until native support exists
+pub trait PrefillExt {
+    fn prefill<'a>(&'a mut self, tokens: &'a [u32]) -> BoxFuture<'a, Result<Vec<f32>>>;
+}
+
+impl PrefillExt for InferenceEngine {
+    fn prefill<'a>(&'a mut self, tokens: &'a [u32]) -> BoxFuture<'a, Result<Vec<f32>>> {
+        self.eval_ids(tokens).boxed()
+    }
+}
 
 /// Generation configuration for inference
 #[derive(Debug, Clone)]
@@ -619,8 +630,7 @@ impl InferenceCommand {
 
             // 2. Prefill (measure)
             let t1 = Instant::now();
-            // TODO: Call actual prefill when engine supports it
-            // let _ = engine.prefill(&prompt_ids)?;
+            let _state = engine.prefill(&prompt_ids).await?;
             let t_prefill_ms = t1.elapsed().as_secs_f64() * 1e3;
 
             // 3. Decode loop (measure)
