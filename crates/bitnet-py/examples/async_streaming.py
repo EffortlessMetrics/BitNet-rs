@@ -13,34 +13,22 @@ import time
 import sys
 from typing import AsyncIterator
 
+
 async def stream_tokens(engine: bitnet.SimpleInference, prompt: str) -> AsyncIterator[str]:
-    """
-    Async generator that yields tokens as they are generated.
-    
-    This is a demonstration of how streaming could work - the actual
-    implementation will be provided when the core inference engine
-    supports streaming.
-    """
-    # TODO: Replace with actual streaming when implemented
-    # For now, simulate streaming by yielding the full response
-    response = await engine.generate_stream(prompt)
-    
-    # Simulate token-by-token streaming
-    words = response.split()
-    for i, word in enumerate(words):
-        if i > 0:
-            yield " "
-        yield word
-        await asyncio.sleep(0.1)  # Simulate generation delay
+    """Yield tokens directly from the engine's streaming API."""
+    for token in engine.generate_stream(prompt):
+        yield token
 
 async def generate_with_timeout(engine: bitnet.SimpleInference, prompt: str, timeout: float = 30.0) -> str:
     """Generate text with a timeout to prevent hanging."""
+    async def collect() -> str:
+        tokens = []
+        async for token in stream_tokens(engine, prompt):
+            tokens.append(token)
+        return "".join(tokens)
+
     try:
-        response = await asyncio.wait_for(
-            engine.generate_stream(prompt),
-            timeout=timeout
-        )
-        return response
+        return await asyncio.wait_for(collect(), timeout=timeout)
     except asyncio.TimeoutError:
         return f"[Generation timed out after {timeout} seconds]"
 
@@ -114,8 +102,10 @@ async def benchmark_async_performance(engine: bitnet.SimpleInference, prompts: l
     start_time = time.time()
     sequential_results = []
     for prompt in prompts:
-        result = await engine.generate_stream(prompt)
-        sequential_results.append(result)
+        tokens = []
+        async for token in stream_tokens(engine, prompt):
+            tokens.append(token)
+        sequential_results.append("".join(tokens))
     sequential_time = time.time() - start_time
     
     print(f"  Time: {sequential_time:.2f} seconds")
