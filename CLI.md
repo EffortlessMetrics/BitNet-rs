@@ -115,6 +115,14 @@ bitnet compat-check model.gguf --json --show-kv --kv-limit 3
 # }
 ```
 
+### `compat-fix` - Export Fixed GGUF Metadata
+
+Generate a copy of a GGUF file with missing metadata inserted.
+
+```bash
+bitnet compat-fix model.gguf fixed.gguf
+```
+
 ### `inspect` - Model Metadata
 
 Inspect model metadata without loading tensors.

@@ -11,6 +11,7 @@ use console::style;
 use std::io;
 use tracing::{error, info};
 
+mod cmd;
 #[cfg(feature = "full-cli")]
 mod commands;
 mod config;
@@ -281,7 +282,7 @@ enum Commands {
 
     /// Inspect model metadata without loading tensors
     Inspect {
-        /// Model file path  
+        /// Model file path
         #[arg(long)]
         model: std::path::PathBuf,
 
@@ -310,6 +311,14 @@ enum Commands {
         /// Limit number of KV pairs to show (default: 20)
         #[arg(long, default_value_t = 20)]
         kv_limit: usize,
+    },
+
+    /// Export a fixed GGUF file with missing metadata inserted
+    CompatFix {
+        /// Path to input .gguf file
+        input: std::path::PathBuf,
+        /// Path to output .gguf file
+        output: std::path::PathBuf,
     },
 }
 
@@ -422,6 +431,7 @@ async fn main() -> Result<()> {
         Some(Commands::CompatCheck { path, json, strict, show_kv, kv_limit }) => {
             handle_compat_check_command(path, json, strict, show_kv, kv_limit).await
         }
+        Some(Commands::CompatFix { input, output }) => cmd::compat::compat_fix(&input, &output),
         None => {
             // No command provided, show help
             let mut cmd = Cli::command();

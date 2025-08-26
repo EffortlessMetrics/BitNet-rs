@@ -72,10 +72,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - File preallocation for early ENOSPC detection
   - Force identity encoding for correct ranges
   - BufWriter streaming with atomic rename + parent dir fsync
-  - Atomic writes for `.etag` / `.lastmod` metadata files
-  - RAII lock guard for automatic cleanup
-  - Single-writer `.lock` beside `.part` for concurrency protection
-  - Smarter disk space check (remaining bytes with headroom)
+- Atomic writes for `.etag` / `.lastmod` metadata files
+- RAII lock guard for automatic cleanup
+- Single-writer `.lock` beside `.part` for concurrency protection
+- Smarter disk space check (remaining bytes with headroom)
+
+### Changed
+- `compat-fix` now embeds metadata fixes directly into the exported GGUF file and no longer emits `.compat.json` markers
 
 ### Changed
 - Repository structure now clearly establishes BitNet.rs as primary implementation

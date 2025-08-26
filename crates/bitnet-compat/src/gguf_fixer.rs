@@ -3,6 +3,7 @@ use std::path::Path;
 use tracing::{info, warn};
 
 use bitnet_models::formats::gguf::GgufReader;
+use ggus::{GGuf, GGufFileHeader, GGufFileWriter, GGufMetaDataValueType, GGufMetaMap};
 
 /// GGUF compatibility fixer that auto-patches missing metadata
 pub struct GgufCompatibilityFixer;
@@ -61,7 +62,7 @@ impl GgufCompatibilityFixer {
     }
 
     /// Export a fixed GGUF file with missing metadata (non-destructive)
-    pub fn export_fixed<P: AsRef<Path>>(input_path: P, output_path: P) -> Result<()> {
+    pub fn fix_and_export<P: AsRef<Path>>(input_path: P, output_path: P) -> Result<()> {
         let input_path = input_path.as_ref();
         let output_path = output_path.as_ref();
 
@@ -72,9 +73,12 @@ impl GgufCompatibilityFixer {
 
         let issues = Self::diagnose(input_path)?;
 
+        let bytes = std::fs::read(input_path)?;
+        let gguf = GGuf::new(&bytes)?;
+
         if issues.is_empty() {
             info!("No compatibility issues found, copying as-is");
-            std::fs::copy(input_path, output_path)?;
+            std::fs::write(output_path, bytes)?;
             return Ok(());
         }
 
@@ -83,24 +87,40 @@ impl GgufCompatibilityFixer {
             warn!("Fixing: {}", issue);
         }
 
-        // Copy the file first
-        std::fs::copy(input_path, output_path)?;
+        let mut extra_meta = Vec::new();
+        if gguf.get("tokenizer.ggml.bos_token_id").is_none() {
+            extra_meta.push(("tokenizer.ggml.bos_token_id", 0u32));
+        }
+        if gguf.get("tokenizer.ggml.eos_token_id").is_none() {
+            extra_meta.push(("tokenizer.ggml.eos_token_id", 0u32));
+        }
+        if gguf.get("tokenizer.ggml.vocab_size").is_none() {
+            extra_meta.push(("tokenizer.ggml.vocab_size", 1u32));
+        }
 
-        // TODO: When GGUF writer is available, modify metadata in-place
-        // For now, we'll add a marker file to indicate the fixes that were applied
-        let marker_path = output_path.with_extension("compat.json");
-        let compat_info = serde_json::json!({
-            "compat_fixed": true,
-            "original_file": input_path.to_string_lossy(),
-            "fixed_issues": issues,
-            "timestamp": chrono::Utc::now().to_rfc3339(),
-            "notes": [
-                "Exported by BitNet.rs compatibility fixer",
-                "Metadata fixes will be applied when GGUF writer is available"
-            ]
-        });
+        let header = GGufFileHeader::new(
+            gguf.header.version,
+            gguf.header.tensor_count,
+            (gguf.meta_kvs.len() + extra_meta.len()) as u64,
+        );
+        let mut writer = GGufFileWriter::new(std::fs::File::create(output_path)?, header)?;
 
-        std::fs::write(marker_path, serde_json::to_string_pretty(&compat_info)?)?;
+        for (key, kv) in gguf.meta_kvs.iter() {
+            writer.write_meta_kv(key, kv.ty(), kv.value_bytes())?;
+        }
+        for (key, val) in &extra_meta {
+            writer.write_meta_kv(key, GGufMetaDataValueType::U32, &val.to_le_bytes())?;
+        }
+
+        let mut tensor_writer = writer.finish::<&[u8]>(true);
+        for (name, tensor) in gguf.tensors.iter() {
+            let info = tensor.to_info();
+            let offset = info.offset() as usize;
+            let len = info.ty().size().elements_to_bytes(info.shape());
+            let data = &gguf.data[offset..offset + len];
+            tensor_writer.write_tensor(name, info.ty(), info.shape(), data)?;
+        }
+        tensor_writer.finish()?;
 
         info!("Fixed GGUF exported to: {}", output_path.display());
         Ok(())
@@ -108,27 +128,7 @@ impl GgufCompatibilityFixer {
 
     /// Check if fixes are idempotent (running twice produces same result)
     pub fn verify_idempotent<P: AsRef<Path>>(path: P) -> Result<bool> {
-        let first_issues = Self::diagnose(&path)?;
-
-        // If already has no issues, it's idempotent
-        if first_issues.is_empty() {
-            return Ok(true);
-        }
-
-        // Check if a compat marker exists
-        let marker_path = path.as_ref().with_extension("compat.json");
-        if marker_path.exists() {
-            let marker_content = std::fs::read_to_string(marker_path)?;
-            let compat_info: serde_json::Value = serde_json::from_str(&marker_content)?;
-
-            // If it was already fixed, it's idempotent
-            if compat_info["compat_fixed"].as_bool().unwrap_or(false) {
-                return Ok(true);
-            }
-        }
-
-        // Would need actual fixing to determine idempotency
-        Ok(false)
+        Ok(Self::diagnose(path)?.is_empty())
     }
 
     /// Print compatibility report

@@ -228,7 +228,6 @@ cargo run -p bitnet-cli -- compat-check "$BITNET_GGUF"
 
 # Export fixed GGUF safely (non-destructive)
 cargo run -p bitnet-cli -- compat-fix "$BITNET_GGUF" fixed.gguf
-cat fixed.gguf.compat.json   # audit stamp
 
 # FFI smoke test (build + run)
 cargo build -p bitnet-ffi --release --no-default-features --features cpu

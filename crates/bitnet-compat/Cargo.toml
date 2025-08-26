@@ -12,8 +12,7 @@ bitnet-common = { path = "../bitnet-common" }
 bitnet-models = { path = "../bitnet-models" }
 anyhow = "1.0"
 tracing = "0.1"
-serde_json = "1.0"
-chrono = "0.4"
+ggus = "0.5"
 
 [dev-dependencies]
 tempfile = "3.8"

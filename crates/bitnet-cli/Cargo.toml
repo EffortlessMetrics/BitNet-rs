@@ -21,6 +21,7 @@ bitnet-inference = { path = "../bitnet-inference" }
 bitnet-quantization = { path = "../bitnet-quantization" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers" }
 bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", optional = true }
+bitnet-compat = { path = "../bitnet-compat" }
 candle-core.workspace = true
 anyhow.workspace = true
 clap = { workspace = true, features = ["derive", "env", "color"] }

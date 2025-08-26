@@ -194,6 +194,9 @@ bitnet run --model model.gguf --prompt "Explain quantum computing"
 bitnet compat-check model.gguf
 bitnet compat-check model.gguf --json  # JSON output for scripting
 
+# Export fixed GGUF metadata
+bitnet compat-fix model.gguf fixed.gguf
+
 # Inspect model metadata
 bitnet inspect --model model.gguf
 bitnet inspect --model model.gguf --json

@@ -345,7 +345,7 @@ fn fix_and_load_model(path: &str, device: Device) -> anyhow::Result<Arc<dyn Mode
 
         // Create fixed version
         let fixed_path = format!("{}.fixed", path);
-        GgufCompatibilityFixer::export_fixed(path, &fixed_path)?;
+        GgufCompatibilityFixer::fix_and_export(path, &fixed_path)?;
 
         // Load fixed model
         use bitnet_models::formats::gguf::GgufLoader;
