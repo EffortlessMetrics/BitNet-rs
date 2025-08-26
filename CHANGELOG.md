@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Moved runtime dependencies from build-dependencies to correct section
   - Made health endpoint robust with option_env! for graceful fallbacks
 
+### Enhanced
+- **CI/Docker Git Metadata Support**:
+  - Added Git metadata injection in GitHub Actions CI
+  - Updated Dockerfile with VCS build args for metadata without .git
+  - Added docker-build.sh script for easy builds with Git metadata
+  - Added OCI standard labels for container registries
+  - Environment variable overrides for deterministic builds
+
 ### Added
 - **GGUF Validation API**:
   - Fast 24-byte header-only validation without loading full model

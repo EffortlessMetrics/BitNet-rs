@@ -182,12 +182,19 @@ We maintain strict compatibility with llama.cpp:
 
 ## Environment Variables
 
+### Runtime Variables
 - `BITNET_GGUF` / `CROSSVAL_GGUF`: Path to test model
 - `BITNET_CPP_DIR`: Path to C++ implementation
 - `HF_TOKEN`: Hugging Face token for private repos
 - `BITNET_DETERMINISTIC`: Enable deterministic mode for testing
 - `BITNET_SEED`: Set seed for reproducible runs
 - `RAYON_NUM_THREADS`: Control CPU parallelism
+
+### Build-time Variables (for Git metadata)
+- `VERGEN_GIT_SHA`: Override Git SHA (useful in CI/Docker without .git)
+- `VERGEN_GIT_BRANCH`: Override Git branch
+- `VERGEN_GIT_DESCRIBE`: Override Git describe output
+- `VERGEN_IDEMPOTENT`: Set to "1" for reproducible builds
 
 ## Repository Contracts (for Claude)
 

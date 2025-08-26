@@ -1,9 +1,28 @@
 /// Tokenizer loading utilities
 use crate::Tokenizer;
-use anyhow::Result;
-use std::path::Path;
+use anyhow::{Context, Result};
+use serde_json::Value;
+use std::{fs, path::Path};
 
 /// Load a tokenizer from a file path
+///
+/// Supports multiple tokenizer formats:
+/// - `.gguf` - GGUF model files with embedded tokenizers
+/// - `.json` - Hugging Face tokenizer.json files (requires `model.type` field)
+/// - `.model` - SentencePiece model files (requires `spm` feature)
+///
+/// # Arguments
+/// * `path` - Path to the tokenizer file
+///
+/// # Returns
+/// A boxed tokenizer instance implementing the `Tokenizer` trait
+///
+/// # Errors
+/// Returns an error if:
+/// - The file cannot be read
+/// - The file format is unknown or invalid
+/// - The JSON structure is missing required fields
+/// - The tokenizer fails to load
 pub fn load_tokenizer(path: &Path) -> Result<Box<dyn Tokenizer>> {
     // Check file extension to determine tokenizer type
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
@@ -14,8 +33,18 @@ pub fn load_tokenizer(path: &Path) -> Result<Box<dyn Tokenizer>> {
             Ok(Box::new(crate::gguf_tokenizer::GgufTokenizer::from_gguf_file(path)?))
         }
         "json" => {
-            // TODO: Load HuggingFace tokenizer.json format
-            anyhow::bail!("JSON tokenizer loading not yet implemented")
+            // Validate JSON structure before loading
+            let data = fs::read_to_string(path).context("Failed to read tokenizer JSON file")?;
+            let value: Value =
+                serde_json::from_str(&data).context("Invalid tokenizer JSON format")?;
+
+            if value.get("model").and_then(|m| m.get("type")).and_then(|t| t.as_str()).is_none() {
+                anyhow::bail!("Unsupported tokenizer JSON structure: missing 'model.type' field");
+            }
+
+            let tokenizer = crate::hf_tokenizer::HfTokenizer::from_file(path)
+                .map_err(|e| anyhow::anyhow!("Failed to load HuggingFace tokenizer: {e}"))?;
+            Ok(Box::new(tokenizer))
         }
         "model" => {
             // Load SentencePiece model directly

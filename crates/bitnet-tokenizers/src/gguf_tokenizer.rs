@@ -1,5 +1,6 @@
 use crate::Tokenizer;
-use bitnet_common::Result;
+use bitnet_common::{BitNetError, ModelError, Result};
+use bitnet_models::{GgufReader, loader::MmapFile};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -13,19 +14,13 @@ pub struct GgufTokenizer {
 
 impl GgufTokenizer {
     pub fn from_gguf_file(path: &Path) -> Result<Self> {
-        // Read GGUF metadata to get tokenizer info
-        let metadata = read_gguf_metadata(path)?;
+        // Parse metadata and vocabulary from GGUF file
+        let (tokens, bos_token_id, eos_token_id) = read_gguf_metadata(path)?;
 
         // Extract vocabulary
-        let vocab = extract_vocab(&metadata)?;
+        let vocab = extract_vocab(&tokens);
         let reverse_vocab: HashMap<u32, String> =
             vocab.iter().map(|(k, v)| (*v, k.clone())).collect();
-
-        // Get special tokens
-        let bos_token_id =
-            metadata.get("tokenizer.ggml.bos_token_id").and_then(|v| v.as_u64()).map(|v| v as u32);
-        let eos_token_id =
-            metadata.get("tokenizer.ggml.eos_token_id").and_then(|v| v.as_u64()).map(|v| v as u32);
 
         Ok(Self { vocab, reverse_vocab, bos_token_id, eos_token_id })
     }
@@ -84,32 +79,34 @@ impl Tokenizer for GgufTokenizer {
         self.reverse_vocab.get(&token).cloned()
     }
 
+    fn bos_token_id(&self) -> Option<u32> {
+        self.bos_token_id
+    }
+
     fn eos_token_id(&self) -> Option<u32> {
         self.eos_token_id
     }
 }
 
-fn read_gguf_metadata(_path: &Path) -> Result<HashMap<String, serde_json::Value>> {
-    // This is a simplified version - in reality we'd use the GGUF reader
-    // For now, return empty metadata
-    tracing::warn!("GGUF metadata reading not yet implemented, using defaults");
-    let mut metadata = HashMap::new();
-    metadata.insert("tokenizer.ggml.bos_token_id".to_string(), serde_json::json!(1));
-    metadata.insert("tokenizer.ggml.eos_token_id".to_string(), serde_json::json!(2));
-    Ok(metadata)
+fn read_gguf_metadata(path: &Path) -> Result<(Vec<String>, Option<u32>, Option<u32>)> {
+    let mmap = MmapFile::open(path)?;
+    let reader = GgufReader::new(mmap.as_slice())?;
+
+    let tokens =
+        reader.get_string_array_metadata("tokenizer.ggml.tokens").ok_or(BitNetError::Model(
+            ModelError::LoadingFailed { reason: "GGUF missing tokenizer.ggml.tokens".to_string() },
+        ))?;
+
+    let bos = reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
+    let eos = reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
+
+    Ok((tokens, bos, eos))
 }
 
-fn extract_vocab(_metadata: &HashMap<String, serde_json::Value>) -> Result<HashMap<String, u32>> {
-    // Extract vocabulary from GGUF metadata
-    // For now, create a simple byte-level vocab
-    let mut vocab = HashMap::new();
-
-    // Add byte tokens (like GPT-2)
-    for i in 0..256 {
-        vocab.insert(format!("<0x{:02X}>", i), i);
+fn extract_vocab(tokens: &[String]) -> HashMap<String, u32> {
+    let mut vocab = HashMap::with_capacity(tokens.len());
+    for (i, token) in tokens.iter().enumerate() {
+        vocab.insert(token.clone(), i as u32);
     }
-
-    // TODO: Read actual vocab from GGUF metadata
-
-    Ok(vocab)
+    vocab
 }
