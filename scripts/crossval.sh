@@ -130,8 +130,8 @@ export LLAMA_CUDA_NO_DEVICES=1
 
 # Set model path if provided
 if [[ -n "$MODEL_PATH" ]]; then
-    export CROSSVAL_GGUF="$MODEL_PATH"
-    log_info "Using model: $MODEL_PATH"
+    export CROSSVAL_GGUF="$(realpath "$MODEL_PATH")"
+    log_info "Using model: $CROSSVAL_GGUF"
 else
     log_warn "No model specified. Set CROSSVAL_GGUF or pass model path as argument."
     log_warn "Example: ./scripts/crossval.sh /path/to/model.gguf"
@@ -140,7 +140,7 @@ fi
 # Step 4: Build Rust with crossval feature
 log_info "Building Rust with cross-validation support..."
 cd "$REPO_ROOT"
-cargo build --features crossval --release -p bitnet-crossval
+cargo build --features "integration-tests crossval" --release -p bitnet-crossval
 
 # Step 5: Run cross-validation tests
 log_info "================================================================"
@@ -148,7 +148,7 @@ log_info "Running cross-validation tests..."
 log_info "================================================================"
 
 # Run the tests with verbose output and single thread for determinism
-cargo test --features crossval --release -p bitnet-crossval -- --nocapture --test-threads=1
+cargo test --features "integration-tests crossval" --release -p bitnet-crossval -- --nocapture --test-threads=1
 
 # Store exit code
 TEST_RESULT=$?
@@ -178,6 +178,6 @@ fi
 
 echo ""
 log_info "To run specific tests:"
-log_info "  cargo test --features crossval -p bitnet-crossval test_tokenization_parity -- --nocapture"
-log_info "  cargo test --features crossval -p bitnet-crossval test_single_step_logits -- --nocapture"
-log_info "  cargo test --features crossval -p bitnet-crossval test_multi_step_generation -- --nocapture"
+log_info "  cargo test --features \"integration-tests crossval\" -p bitnet-crossval test_tokenization_parity -- --nocapture"
+log_info "  cargo test --features \"integration-tests crossval\" -p bitnet-crossval test_single_step_logits -- --nocapture"
+log_info "  cargo test --features \"integration-tests crossval\" -p bitnet-crossval test_multi_step_generation -- --nocapture"
