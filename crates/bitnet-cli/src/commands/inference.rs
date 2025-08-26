@@ -619,8 +619,7 @@ impl InferenceCommand {
 
             // 2. Prefill (measure)
             let t1 = Instant::now();
-            // TODO: Call actual prefill when engine supports it
-            // let _ = engine.prefill(&prompt_ids)?;
+            engine.prefill(&prompt_ids)?;
             let t_prefill_ms = t1.elapsed().as_secs_f64() * 1e3;
 
             // 3. Decode loop (measure)
@@ -654,8 +653,8 @@ impl InferenceCommand {
                 gen_config.logits_cb = Some(cb.clone());
             }
 
-            // Generate with the engine
-            let generated_ids = engine.generate_tokens(&prompt_ids, &gen_config).await?;
+            // Generate with the engine using the prefilled cache
+            let generated_ids = engine.generate_tokens(&[], &gen_config).await?;
             let t_decode_ms = t2.elapsed().as_secs_f64() * 1e3;
 
             // 4. Decode to text

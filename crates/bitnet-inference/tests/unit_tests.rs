@@ -47,8 +47,8 @@ impl Model for MockModel {
     }
 
     fn logits(&self, _hidden: &ConcreteTensor) -> Result<ConcreteTensor, BitNetError> {
-        // Create a mock logits tensor with shape [batch, vocab_size]
-        Ok(ConcreteTensor::mock(vec![1, self.config.model.vocab_size]))
+        // Create a mock logits tensor with shape [batch, seq_len, vocab_size]
+        Ok(ConcreteTensor::mock(vec![1, 1, self.config.model.vocab_size]))
     }
 }
 
@@ -874,6 +874,25 @@ mod integration_unit_tests {
         let balanced_config = GenerationConfig::balanced();
         let result = engine.generate_with_config("Test", &balanced_config).await;
         assert!(result.is_ok());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_prefill_then_generate() {
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer::new());
+        let device = Device::Cpu;
+
+        let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
+
+        let prompt_ids = engine
+            .tokenizer()
+            .encode("hello", true, false)
+            .expect("tokenize");
+        engine.prefill(&prompt_ids).expect("prefill");
+
+        let config = GenerationConfig::default().with_max_tokens(3);
+        let generated = engine.generate_tokens(&[], &config).await.unwrap();
+        assert!(!generated.is_empty());
     }
 
     #[tokio::test]
