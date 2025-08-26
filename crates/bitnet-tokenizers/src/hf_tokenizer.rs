@@ -1,9 +1,19 @@
 //! Hugging Face tokenizers.json support
+//!
+//! This module provides support for loading and using tokenizers in the
+//! Hugging Face tokenizer.json format. These tokenizers are commonly used
+//! with modern transformer models and provide sophisticated tokenization
+//! algorithms including WordPiece, BPE, and Unigram.
 
 use anyhow::Result as AnyhowResult;
 use bitnet_common::Result;
 use std::path::Path;
 
+/// Wrapper for Hugging Face tokenizers
+///
+/// This struct wraps the `tokenizers` library Tokenizer and adapts it to
+/// our `Tokenizer` trait interface. It handles special token detection and
+/// management automatically.
 pub struct HfTokenizer {
     inner: tokenizers::Tokenizer,
     bos_id: Option<u32>,
@@ -11,6 +21,19 @@ pub struct HfTokenizer {
 }
 
 impl HfTokenizer {
+    /// Load a tokenizer from a Hugging Face tokenizer.json file
+    ///
+    /// This method loads the tokenizer and automatically detects special tokens
+    /// like BOS (<s>, <bos>) and EOS (</s>, <eos>) from the vocabulary.
+    ///
+    /// # Arguments
+    /// * `path` - Path to the tokenizer.json file
+    ///
+    /// # Returns
+    /// A new HfTokenizer instance
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be read or parsed as a valid tokenizer
     pub fn from_file(path: &Path) -> AnyhowResult<Self> {
         let inner = tokenizers::Tokenizer::from_file(path).map_err(|e| anyhow::anyhow!(e))?;
 
@@ -18,14 +41,22 @@ impl HfTokenizer {
         let mut bos_id = None;
         let mut eos_id = None;
 
-        // Get vocab and look for special tokens
+        // Get vocab and look for common special token patterns
         {
             let vocab = inner.get_vocab(true);
             for (token, id) in vocab {
-                if token.eq_ignore_ascii_case("<s>") || token.eq_ignore_ascii_case("<bos>") {
+                // Check for common BOS token patterns
+                if token.eq_ignore_ascii_case("<s>")
+                    || token.eq_ignore_ascii_case("<bos>")
+                    || token.eq_ignore_ascii_case("<|startoftext|>")
+                {
                     bos_id = Some(id);
                 }
-                if token.eq_ignore_ascii_case("</s>") || token.eq_ignore_ascii_case("<eos>") {
+                // Check for common EOS token patterns
+                if token.eq_ignore_ascii_case("</s>")
+                    || token.eq_ignore_ascii_case("<eos>")
+                    || token.eq_ignore_ascii_case("<|endoftext|>")
+                {
                     eos_id = Some(id);
                 }
             }
