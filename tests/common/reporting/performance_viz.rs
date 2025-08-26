@@ -1325,34 +1325,24 @@ pub fn create_performance_comparison(
 ) -> PerformanceComparison {
     let rust_metrics = PerformanceMetrics {
         implementation_name: "BitNet.rs".to_string(),
-        average_duration: rust_benchmark.summary.avg_duration,
-        min_duration: rust_benchmark.summary.min_duration,
-        max_duration: rust_benchmark.summary.max_duration,
-        memory_peak: rust_benchmark.summary.peak_memory_usage as u64,
-        memory_average: rust_benchmark.summary.avg_memory_usage as u64,
-        throughput_ops_per_sec: rust_benchmark.ops_per_second(),
-        custom_metrics: rust_benchmark
-            .summary
-            .custom_metrics
-            .iter()
-            .map(|(k, v)| (k.clone(), *v))
-            .collect(),
+        average_duration: rust_benchmark.average_duration(),
+        min_duration: rust_benchmark.min_duration(),
+        max_duration: rust_benchmark.max_duration(),
+        memory_peak: rust_benchmark.peak_memory_bytes(),
+        memory_average: rust_benchmark.avg_memory_bytes(),
+        throughput_ops_per_sec: rust_benchmark.throughput_ops_per_sec(),
+        custom_metrics: HashMap::new(),
     };
 
     let cpp_metrics = PerformanceMetrics {
         implementation_name: "BitNet.cpp".to_string(),
-        average_duration: cpp_benchmark.summary.avg_duration,
-        min_duration: cpp_benchmark.summary.min_duration,
-        max_duration: cpp_benchmark.summary.max_duration,
-        memory_peak: cpp_benchmark.summary.peak_memory_usage as u64,
-        memory_average: cpp_benchmark.summary.avg_memory_usage as u64,
-        throughput_ops_per_sec: cpp_benchmark.ops_per_second(),
-        custom_metrics: cpp_benchmark
-            .summary
-            .custom_metrics
-            .iter()
-            .map(|(k, v)| (k.clone(), *v))
-            .collect(),
+        average_duration: cpp_benchmark.average_duration(),
+        min_duration: cpp_benchmark.min_duration(),
+        max_duration: cpp_benchmark.max_duration(),
+        memory_peak: cpp_benchmark.peak_memory_bytes(),
+        memory_average: cpp_benchmark.avg_memory_bytes(),
+        throughput_ops_per_sec: cpp_benchmark.throughput_ops_per_sec(),
+        custom_metrics: HashMap::new(),
     };
 
     // Calculate comparison results

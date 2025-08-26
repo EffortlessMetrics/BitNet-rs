@@ -7,76 +7,89 @@ use super::performance_viz::{
     create_performance_comparison, PerformanceComparison, PerformanceVisualizer,
     VisualizationConfig,
 };
-// Temporary stub for BenchmarkResult
-#[derive(Debug, Clone)]
+use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
+use std::time::Duration;
+
+#[cfg(test)]
+use std::time::Instant;
+use tokio::fs;
+
+/// Result of a benchmark run
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkResult {
-    pub name: String,
-    pub duration: std::time::Duration,
-    pub throughput: f64,
-    // Temporary fields for test compatibility
-    pub iterations: u32,
-    pub warmup_iterations: u32,
-    pub summary: PerformanceSummary,
+    pub test_name: String,
+    pub batch_size: usize,
+    pub sequence_length: usize,
+    pub iterations: Vec<IterationResult>,
+    pub statistics: Statistics,
 }
 
 impl BenchmarkResult {
-    /// Calculate operations per second
-    pub fn ops_per_second(&self) -> f64 {
-        if self.duration.as_secs_f64() > 0.0 {
-            self.iterations as f64 / self.duration.as_secs_f64()
+    pub fn average_duration(&self) -> Duration {
+        Duration::from_millis(self.statistics.mean_latency_ms as u64)
+    }
+
+    pub fn min_duration(&self) -> Duration {
+        Duration::from_millis(self.statistics.min_latency_ms as u64)
+    }
+
+    pub fn max_duration(&self) -> Duration {
+        Duration::from_millis(self.statistics.max_latency_ms as u64)
+    }
+
+    pub fn throughput_ops_per_sec(&self) -> f64 {
+        self.statistics.mean_tokens_per_second
+    }
+
+    pub fn peak_memory_bytes(&self) -> u64 {
+        self.statistics
+            .peak_memory_mb
+            .map(|mb| (mb * 1024.0 * 1024.0) as u64)
+            .unwrap_or(0)
+    }
+
+    pub fn avg_memory_bytes(&self) -> u64 {
+        let mut sum = 0.0;
+        let mut count = 0;
+        for iter in &self.iterations {
+            if let Some(mb) = iter.memory_used_mb {
+                sum += mb;
+                count += 1;
+            }
+        }
+        if count > 0 {
+            ((sum / count as f64) * 1024.0 * 1024.0) as u64
         } else {
-            0.0
-        }
-    }
-
-    /// Builder-style helper (lets tests omit future fields safely)
-    pub fn with_summary(
-        name: String,
-        iterations: u32,
-        duration: Duration,
-        summary: PerformanceSummary,
-    ) -> Self {
-        Self { name, iterations, duration, summary, throughput: 0.0, warmup_iterations: 0 }
-    }
-}
-
-// Performance summary with extended metrics
-#[derive(Debug, Clone)]
-pub struct PerformanceSummary {
-    pub mean: f64,
-    pub std_dev: f64,
-    pub min: f64,
-    pub max: f64,
-    // Extended fields for visualization
-    pub avg_duration: Duration,
-    pub min_duration: Duration,
-    pub max_duration: Duration,
-    pub peak_memory_usage: f64,
-    pub avg_memory_usage: f64,
-    pub custom_metrics: HashMap<String, f64>,
-}
-
-impl Default for PerformanceSummary {
-    fn default() -> Self {
-        Self {
-            mean: 0.0,
-            std_dev: 0.0,
-            min: 0.0,
-            max: 0.0,
-            avg_duration: Duration::ZERO,
-            min_duration: Duration::ZERO,
-            max_duration: Duration::ZERO,
-            peak_memory_usage: 0.0,
-            avg_memory_usage: 0.0,
-            custom_metrics: HashMap::new(),
+            0
         }
     }
 }
 
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::time::Duration;
-use tokio::fs;
+/// Per-iteration benchmark data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IterationResult {
+    pub iteration: usize,
+    pub latency_ms: f64,
+    pub tokens_per_second: f64,
+    pub memory_used_mb: Option<f64>,
+    pub peak_memory_mb: Option<f64>,
+}
+
+/// Summary statistics for a benchmark
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Statistics {
+    pub mean_latency_ms: f64,
+    pub std_latency_ms: f64,
+    pub min_latency_ms: f64,
+    pub max_latency_ms: f64,
+    pub p50_latency_ms: f64,
+    pub p95_latency_ms: f64,
+    pub p99_latency_ms: f64,
+    pub mean_tokens_per_second: f64,
+    pub std_tokens_per_second: f64,
+    pub peak_memory_mb: Option<f64>,
+}
 
 /// Dashboard generator that combines test results with performance visualization
 pub struct PerformanceDashboardGenerator {
@@ -419,90 +432,72 @@ pub fn create_custom_dashboard(
     PerformanceDashboardGenerator::new(output_dir, config)
 }
 
-// Temporarily disabled tests due to missing data module
-/*
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
     use tempfile::TempDir;
+    use tokio::time::{sleep, Duration};
 
-    fn create_test_benchmark_result(
+    async fn run_simple_benchmark(
         name: &str,
-        ops_per_sec: f64,
-        memory_mb: u64,
+        sleep_ms: u64,
+        tokens: usize,
+        memory_mb: f64,
     ) -> BenchmarkResult {
+        let start = Instant::now();
+        let _data = vec![0u8; (memory_mb * 1024.0 * 1024.0) as usize];
+        sleep(Duration::from_millis(sleep_ms)).await;
+        let latency_ms = start.elapsed().as_secs_f64() * 1000.0;
+        let tps = tokens as f64 / (latency_ms / 1000.0);
+        let iteration = IterationResult {
+            iteration: 1,
+            latency_ms,
+            tokens_per_second: tps,
+            memory_used_mb: Some(memory_mb),
+            peak_memory_mb: Some(memory_mb),
+        };
+        let stats = Statistics {
+            mean_latency_ms: latency_ms,
+            std_latency_ms: 0.0,
+            min_latency_ms: latency_ms,
+            max_latency_ms: latency_ms,
+            p50_latency_ms: latency_ms,
+            p95_latency_ms: latency_ms,
+            p99_latency_ms: latency_ms,
+            mean_tokens_per_second: tps,
+            std_tokens_per_second: 0.0,
+            peak_memory_mb: Some(memory_mb),
+        };
         BenchmarkResult {
-            name: name.to_string(),
-            duration: Duration::from_millis((1000.0 / ops_per_sec) as u64),
-            throughput: ops_per_sec,
-            iterations: 10,
-            warmup_iterations: 3,
-            summary: PerformanceSummary::default(),
+            test_name: name.to_string(),
+            batch_size: 1,
+            sequence_length: tokens,
+            iterations: vec![iteration],
+            statistics: stats,
         }
     }
 
     #[tokio::test]
-    async fn test_dashboard_generator_creation() {
-        let temp_dir = TempDir::new().unwrap();
-        let config = DashboardConfig::default();
-        let generator = PerformanceDashboardGenerator::new(temp_dir.path().to_path_buf(), config);
+    async fn generates_dashboard_from_benchmark_data() {
+        let rust_benchmark = run_simple_benchmark("rust_impl", 5, 10, 1.0).await;
+        let cpp_benchmark = run_simple_benchmark("cpp_impl", 8, 10, 2.0).await;
 
-        assert_eq!(generator.output_dir(), temp_dir.path());
-        assert_eq!(generator.dashboard_config.title, "BitNet.rs Performance Dashboard");
-    }
+        assert!(rust_benchmark.throughput_ops_per_sec() > 0.0);
+        assert!(rust_benchmark.peak_memory_bytes() > 0);
 
-    #[tokio::test]
-    async fn test_benchmark_comparison_addition() {
         let temp_dir = TempDir::new().unwrap();
         let mut generator = create_performance_dashboard(temp_dir.path().to_path_buf());
-
-        let rust_benchmark = create_test_benchmark_result("rust_test", 100.0, 512);
-        let cpp_benchmark = create_test_benchmark_result("cpp_test", 80.0, 600);
-
         generator.add_benchmark_comparison(&rust_benchmark, &cpp_benchmark);
+        let output = generator.generate_dashboard().await.expect("dashboard generation");
 
-        // Test passes if no panic occurs
+        for file in [
+            "performance_dashboard.html",
+            "performance_data.json",
+            "performance_data.csv",
+            "performance_summary.md",
+        ] {
+            assert!(temp_dir.path().join(file).exists(), "missing {file}");
+        }
+        assert_eq!(output.generated_files.len(), 4);
     }
-
-    #[tokio::test]
-    async fn test_json_export_generation() {
-        let temp_dir = TempDir::new().unwrap();
-        let generator = create_performance_dashboard(temp_dir.path().to_path_buf());
-
-        let json_data = generator.generate_json_export().await.unwrap();
-
-        assert!(json_data.contains("dashboard_config"));
-        assert!(json_data.contains("performance_metrics"));
-        assert!(json_data.contains("BitNet.rs"));
-    }
-
-    #[tokio::test]
-    async fn test_csv_export_generation() {
-        let temp_dir = TempDir::new().unwrap();
-        let generator = create_performance_dashboard(temp_dir.path().to_path_buf());
-
-        let csv_data = generator.generate_csv_export().await.unwrap();
-
-        assert!(csv_data.contains("timestamp,rust_throughput"));
-        assert!(csv_data.contains("regression_detected"));
-    }
-
-    #[tokio::test]
-    async fn test_summary_report_generation() {
-        let temp_dir = TempDir::new().unwrap();
-        let generator = create_performance_dashboard(temp_dir.path().to_path_buf());
-        let summary_path = temp_dir.path().join("test_summary.md");
-
-        generator.generate_summary_report(&summary_path).await.unwrap();
-
-        assert!(summary_path.exists());
-        let content = fs::read_to_string(&summary_path).await.unwrap();
-        assert!(content.contains("# BitNet.rs Performance Dashboard"));
-        assert!(content.contains("## Overview"));
-        assert!(content.contains("## Key Features"));
-    }
-
-    // Tests temporarily disabled
 }
-*/

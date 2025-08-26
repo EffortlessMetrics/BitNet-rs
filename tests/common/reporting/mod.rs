@@ -5,9 +5,9 @@
 
 // pub mod comparison_analysis;
 // pub mod comparison_html;
-// pub mod dashboard;
+pub mod dashboard;
 pub mod formats;
-// pub mod performance_viz;
+pub mod performance_viz;
 pub mod reporter;
 // pub mod templates;
 
