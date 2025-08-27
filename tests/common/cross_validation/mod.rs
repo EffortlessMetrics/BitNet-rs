@@ -1,5 +1,5 @@
 pub mod comparison;
-#[cfg(feature = "cpp")]
+mod cpp_ffi;
 pub mod cpp_implementation;
 pub mod implementation;
 pub mod rust_implementation;

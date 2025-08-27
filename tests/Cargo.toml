@@ -20,6 +20,7 @@ crossval = []
 cpp = []
 # New: gate the integration suite
 integration-tests = []
+cpp-ffi = []
 
 [[bin]]
 name = "validate_config"

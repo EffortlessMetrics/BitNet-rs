@@ -16,7 +16,7 @@ use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tracing::{debug, info, instrument};
 
@@ -305,7 +305,7 @@ impl BitNetImplementation for RustImplementation {
 
         let tokenizer = self.tokenizer.as_ref().ok_or(ImplementationError::ModelNotLoaded)?;
 
-        let tokens = tokenizer.encode(text, true, false).map_err(|e| {
+        let tokens = tokenizer.encode(text, true, true).map_err(|e| {
             ImplementationError::TokenizationError {
                 message: format!("Tokenization failed: {}", e),
             }
@@ -366,7 +366,7 @@ impl BitNetImplementation for RustImplementation {
             format!("Generated response to: {}", input_text.chars().take(50).collect::<String>());
 
         // Tokenize the generated text to get output tokens
-        let generated_tokens = tokenizer.encode(&generated_text, false, false).map_err(|e| {
+        let generated_tokens = tokenizer.encode(&generated_text, false, true).map_err(|e| {
             ImplementationError::InferenceError {
                 message: format!("Failed to tokenize generated text: {}", e),
             }
