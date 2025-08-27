@@ -42,10 +42,12 @@ fn ffi_dequant_row(_src: *const c_void, _dst: *mut f32, _n: usize) {
 }
 
 // --- Native Rust IQ2_S dequant (qk=256, block=66B: f16 scale + 64 bytes codes)
+// Note: The actual GGML block_iq2_s is 82B with additional unused fields,
+// but the FFI reports 66B, so we match that for compatibility.
 #[inline]
 unsafe fn rust_dequant_row_iq2s(src: *const c_void, dst: *mut f32, n: usize) {
     const QK: usize = 256;
-    const _BLOCK_BYTES: usize = 66;
+
     let mut in_ptr = src as *const u8;
     let out = unsafe { core::slice::from_raw_parts_mut(dst, n) };
     let mut produced = 0usize;
@@ -146,7 +148,7 @@ impl Iq2sBackend {
     #[inline]
     pub fn block_bytes(self) -> usize {
         match self {
-            Iq2sBackend::Rust => 66,
+            Iq2sBackend::Rust => 66, // Match FFI reported size
             Iq2sBackend::Ffi => ffi_block_bytes(),
         }
     }

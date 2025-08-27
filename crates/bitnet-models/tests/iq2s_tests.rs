@@ -36,7 +36,21 @@ fn test_iq2s_backend_selection() {
 fn test_rust_backend_constants() {
     let backend = Iq2sBackend::Rust;
     assert_eq!(backend.qk(), 256);
-    assert_eq!(backend.block_bytes(), 66);
+
+    // Debug: print the actual block bytes
+    let actual_block_bytes = backend.block_bytes();
+    println!("Actual block bytes: {}", actual_block_bytes);
+
+    // Both backends should report 66 bytes (FFI reports this consistently)
+    assert_eq!(actual_block_bytes, 66, "IQ2_S block size should be 66 bytes");
+
+    #[cfg(feature = "iq2s-ffi")]
+    {
+        let ffi_block_bytes = bitnet_ggml_ffi::iq2s_bytes_per_block();
+        println!("FFI block bytes: {}", ffi_block_bytes);
+        assert_eq!(actual_block_bytes, ffi_block_bytes, "Rust backend should match FFI block size");
+    }
+
     assert_eq!(backend.name(), "rust");
 }
 
@@ -44,8 +58,10 @@ fn test_rust_backend_constants() {
 fn test_rust_backend_basic_dequantization() {
     use half::f16;
 
-    // Create test block with known values
-    let mut block = vec![0u8; 66];
+    // Create test block with known values - use correct block size
+    let backend = Iq2sBackend::Rust;
+    let block_bytes = backend.block_bytes();
+    let mut block = vec![0u8; block_bytes];
 
     // Set scale to 0.5
     let scale = f16::from_f32(0.5);
@@ -56,6 +72,7 @@ fn test_rust_backend_basic_dequantization() {
     for i in 2..66 {
         block[i] = 0b11_10_01_00;
     }
+    // qh and scales fields remain zero
 
     // Dequantize using Rust backend
     let backend = Iq2sBackend::Rust;
@@ -209,16 +226,20 @@ mod iq2s_parity_tests {
         use rand::{Rng, SeedableRng};
         let mut rng = rand::rngs::StdRng::seed_from_u64(42);
 
-        let mut block = vec![0u8; 66];
+        // Use dynamic block size based on backend
+        let rust_backend = Iq2sBackend::Rust;
+        let block_bytes = rust_backend.block_bytes();
+        let mut block = vec![0u8; block_bytes];
 
         // Random scale
         let scale = f16::from_f32(rng.gen_range(0.1..2.0));
         block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
 
-        // Random quantized values
+        // Random quantized values (only set the qs field)
         for i in 2..66 {
             block[i] = rng.r#gen();
         }
+        // Leave qh and scales fields as zero
 
         // Dequantize with both backends
         let rust_backend = Iq2sBackend::Rust;
@@ -246,7 +267,8 @@ mod iq2s_parity_tests {
         use rand::{Rng, SeedableRng};
         let mut rng = rand::rngs::StdRng::seed_from_u64(123);
 
-        let mut block = vec![0u8; 66];
+        let block_bytes = Iq2sBackend::Rust.block_bytes();
+        let mut block = vec![0u8; block_bytes];
 
         // Random data
         let scale = f16::from_f32(rng.gen_range(0.5..1.5));
@@ -254,6 +276,7 @@ mod iq2s_parity_tests {
         for i in 2..66 {
             block[i] = rng.r#gen();
         }
+        // Leave qh and scales fields as zero
 
         // Test with partial blocks
         for n in [13, 50, 100, 200, 256] {
