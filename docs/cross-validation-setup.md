@@ -61,6 +61,22 @@ export CARGO_FEATURES="crossval"
 echo 'default-features = ["crossval"]' >> .cargo/config.toml
 ```
 
+### Enabling the C++ FFI in Tests
+
+The cross-validation harness uses stubbed bindings when the C++ library is
+absent. To test against the real BitNet.cpp implementation, build the library
+and enable the `cpp-ffi` feature:
+
+```bash
+# Build the C++ library
+./ci/fetch_bitnet_cpp.sh
+
+# Run tests with real FFI bindings
+cargo test -p bitnet-tests --features crossval,cpp-ffi
+```
+
+Ensure the resulting shared library is on your linker path (e.g., `LD_LIBRARY_PATH`).
+
 ## Prerequisites
 
 ### System Dependencies

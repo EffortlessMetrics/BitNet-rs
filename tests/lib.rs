@@ -54,6 +54,9 @@ pub use common::results::{
 };
 pub use common::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 
+#[cfg(feature = "crossval")]
+pub use common::cross_validation;
+
 // CRITICAL: Integration tests expect TestResult<T> as a type alias, not the struct
 pub type TestResult<T = ()> = Result<T, TestError>;
 
