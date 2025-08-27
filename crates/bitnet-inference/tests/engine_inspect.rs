@@ -9,7 +9,7 @@ fn engine_inspect_reads_header() {
     let mut buf = [0u8; 24];
     buf[0..4].copy_from_slice(b"GGUF");
     buf[4..8].copy_from_slice(2u32.to_le_bytes().as_slice());
-    std::fs::write(&p, &buf).unwrap();
+    std::fs::write(&p, buf).unwrap();
 
     let info = inspect_model(&p).unwrap();
     assert_eq!(info.version(), 2);
@@ -27,7 +27,7 @@ fn engine_inspect_rejects_invalid() {
     let p = dir.path().join("bad.gguf");
     let mut buf = [0u8; 24];
     buf[0..4].copy_from_slice(b"NOPE");
-    std::fs::write(&p, &buf).unwrap();
+    std::fs::write(&p, buf).unwrap();
 
     let result = inspect_model(&p);
     assert!(result.is_err());
