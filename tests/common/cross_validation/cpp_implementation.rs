@@ -25,8 +25,8 @@ use tracing::{debug, info, instrument, warn};
 
 /// FFI bindings to the C++ BitNet implementation
 #[repr(C)]
-struct BitNetCppHandle {
-    _private: [u8; 0],
+pub struct BitNetCppHandle {
+    pub _private: [u8; 0],
 }
 
 /// Thread-safe wrapper for the C++ handle
@@ -54,46 +54,47 @@ impl CppHandleWrapper {
 /// C++ inference configuration
 #[repr(C)]
 #[derive(Debug, Clone)]
-struct CppInferenceConfig {
-    max_tokens: c_uint,
-    temperature: c_float,
-    top_p: c_float,
-    top_k: c_int, // -1 for disabled
-    repetition_penalty: c_float,
-    seed: c_int, // -1 for random
+pub struct CppInferenceConfig {
+    pub max_tokens: c_uint,
+    pub temperature: c_float,
+    pub top_p: c_float,
+    pub top_k: c_int, // -1 for disabled
+    pub repetition_penalty: c_float,
+    pub seed: c_int, // -1 for random
 }
 
 /// C++ inference result
 #[repr(C)]
-struct CppInferenceResult {
-    tokens: *mut c_uint,
-    token_count: c_uint,
-    text: *const c_char,
-    duration_ms: c_uint,
-    memory_usage: c_uint,
+pub struct CppInferenceResult {
+    pub tokens: *mut c_uint,
+    pub token_count: c_uint,
+    pub text: *const c_char,
+    pub duration_ms: c_uint,
+    pub memory_usage: c_uint,
 }
 /// C++ model information
 #[repr(C)]
-struct CppModelInfo {
-    name: *const c_char,
-    format: c_int,
-    size_bytes: c_uint,
-    parameter_count: c_uint,
-    context_length: c_uint,
-    vocabulary_size: c_uint,
+pub struct CppModelInfo {
+    pub name: *const c_char,
+    pub format: c_int,
+    pub size_bytes: c_uint,
+    pub parameter_count: c_uint,
+    pub context_length: c_uint,
+    pub vocabulary_size: c_uint,
 }
 
 /// C++ performance metrics
 #[repr(C)]
-struct CppPerformanceMetrics {
-    model_load_time_ms: c_uint,
-    tokenization_time_ms: c_uint,
-    inference_time_ms: c_uint,
-    peak_memory: c_uint,
-    tokens_per_second: c_float,
+pub struct CppPerformanceMetrics {
+    pub model_load_time_ms: c_uint,
+    pub tokenization_time_ms: c_uint,
+    pub inference_time_ms: c_uint,
+    pub peak_memory: c_uint,
+    pub tokens_per_second: c_float,
 }
 
 // External C++ function declarations
+#[cfg_attr(feature = "cpp-ffi", link(name = "bitnet_cpp"))]
 unsafe extern "C" {
     fn bitnet_cpp_create() -> *mut BitNetCppHandle;
     fn bitnet_cpp_destroy(handle: *mut BitNetCppHandle);
@@ -971,7 +972,7 @@ mod tests {
             model_load_time_ms: 1000,
             tokenization_time_ms: 50,
             inference_time_ms: 200,
-            peak_memory: BYTES_PER_MB as u32, // 1MB
+            peak_memory: 1024 * 1024, // 1MB
             tokens_per_second: 100.5,
         };
 
@@ -981,7 +982,7 @@ mod tests {
         assert_eq!(metrics.tokenization_time, Duration::from_millis(50));
         assert_eq!(metrics.inference_time, Duration::from_millis(200));
         assert_eq!(metrics.total_time, Duration::from_millis(1250));
-        assert_eq!(metrics.peak_memory, BYTES_PER_MB);
+        assert_eq!(metrics.peak_memory, 1024 * 1024);
         assert_eq!(metrics.tokens_per_second, 100.5);
     }
 

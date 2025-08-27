@@ -30,7 +30,7 @@ mod imp {
     use std::ffi::CString;
     use std::os::raw::{c_char, c_int, c_void};
 
-    extern "C" {
+    unsafe extern "C" {
         fn bitnet_cpp_create_model(model_path: *const c_char) -> *mut c_void;
         fn bitnet_cpp_destroy_model(model: *mut c_void);
         fn bitnet_cpp_generate(

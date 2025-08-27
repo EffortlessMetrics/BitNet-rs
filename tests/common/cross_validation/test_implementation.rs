@@ -1,6 +1,5 @@
 use super::implementation::*;
-use crate::BYTES_PER_MB;
-use crate::errors::ImplementationResult;
+use crate::{BYTES_PER_MB, errors::ImplementationResult};
 use async_trait::async_trait;
 use std::path::Path;
 use std::time::Duration;

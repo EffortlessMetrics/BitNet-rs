@@ -90,12 +90,12 @@ impl From<BitNetError> for BitNetCError {
                 }
                 bitnet_common::KernelError::UnsupportedHardware { required, available } => {
                     BitNetCError::UnsupportedOperation(format!(
-                        "Hardware requirements not met: required {}, available {}",
+                        "Unsupported hardware: required {}, available {}",
                         required, available
                     ))
                 }
                 bitnet_common::KernelError::InvalidArguments { reason } => {
-                    BitNetCError::InvalidArgument(format!("Invalid kernel arguments: {}", reason))
+                    BitNetCError::InferenceFailed(format!("Invalid kernel arguments: {}", reason))
                 }
             },
             BitNetError::Inference(inference_error) => match inference_error {
