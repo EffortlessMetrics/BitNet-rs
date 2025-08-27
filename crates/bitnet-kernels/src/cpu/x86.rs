@@ -327,7 +327,7 @@ impl Avx2Kernel {
 
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "sse,avx2")]
-#[allow(unsafe_op_in_unsafe_fn)]
+#[allow(unsafe_op_in_unsafe_fn, dead_code)]
 #[inline]
 unsafe fn horizontal_min_f32(v: __m256) -> f32 {
     // Reduce to 128-bit
