@@ -52,7 +52,7 @@ pub struct CppPerformanceMetrics {
 // Bindings to the real C++ library when available
 #[cfg(feature = "cpp-ffi")]
 #[link(name = "bitnet_cpp")]
-extern "C" {
+unsafe extern "C" {
     pub fn bitnet_cpp_create() -> *mut BitNetCppHandle;
     pub fn bitnet_cpp_destroy(handle: *mut BitNetCppHandle);
     pub fn bitnet_cpp_is_available() -> c_int;
