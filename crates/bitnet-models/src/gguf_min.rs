@@ -618,7 +618,7 @@ mod tests {
         ];
 
         for (nelems, expected_blocks) in test_cases {
-            let num_blocks = (nelems + layout.block_size - 1) / layout.block_size;
+            let num_blocks = (nelems as usize).div_ceil(layout.block_size);
             assert_eq!(
                 num_blocks, expected_blocks,
                 "nelems={} should need {} blocks",

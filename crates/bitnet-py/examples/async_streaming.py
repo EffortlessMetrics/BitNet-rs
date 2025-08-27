@@ -11,27 +11,16 @@ import asyncio
 import bitnet_py as bitnet
 import time
 import sys
-from typing import AsyncIterator
+from typing import Iterator
 
-async def stream_tokens(engine: bitnet.SimpleInference, prompt: str) -> AsyncIterator[str]:
+def stream_tokens(engine: bitnet.InferenceEngine, prompt: str) -> Iterator[str]:
     """
-    Async generator that yields tokens as they are generated.
-    
-    This is a demonstration of how streaming could work - the actual
-    implementation will be provided when the core inference engine
-    supports streaming.
+    Stream tokens from the inference engine using the new streaming API.
     """
-    # TODO: Replace with actual streaming when implemented
-    # For now, simulate streaming by yielding the full response
-    response = await engine.generate_stream(prompt)
-    
-    # Simulate token-by-token streaming
-    words = response.split()
-    for i, word in enumerate(words):
-        if i > 0:
-            yield " "
-        yield word
-        await asyncio.sleep(0.1)  # Simulate generation delay
+    # Use the actual streaming generator
+    stream = engine.generate_stream(prompt)
+    for token in stream:
+        yield token
 
 async def generate_with_timeout(engine: bitnet.SimpleInference, prompt: str, timeout: float = 30.0) -> str:
     """Generate text with a timeout to prevent hanging."""

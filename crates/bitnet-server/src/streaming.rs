@@ -47,9 +47,17 @@ pub(crate) async fn streaming_handler(
 ) -> Sse<Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>>> {
     let stream: Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>> =
         if let Some(engine) = state.engine {
-            Box::pin(real_stream(engine, request).await)
+            Box::pin(real_stream(engine, request).await.map(|result| {
+                result.or_else(|e| {
+                    Ok(Event::default().event("error").data(format!("Stream error: {}", e)))
+                })
+            }))
         } else {
-            Box::pin(mock_stream(request).await)
+            Box::pin(mock_stream(request).await.map(|result| {
+                result.or_else(|e| {
+                    Ok(Event::default().event("error").data(format!("Stream error: {}", e)))
+                })
+            }))
         };
 
     Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(1)))
@@ -59,7 +67,7 @@ pub(crate) async fn streaming_handler(
 async fn real_stream(
     engine: Arc<RwLock<bitnet_inference::InferenceEngine>>,
     request: StreamingRequest,
-) -> impl Stream<Item = Result<Event, Infallible>> {
+) -> impl Stream<Item = Result<Event, anyhow::Error>> {
     let start = std::time::Instant::now();
 
     async_stream::stream! {
@@ -77,11 +85,14 @@ async fn real_stream(
         let _stream_config = bitnet_inference::StreamingConfig {
             buffer_size: 128,
             flush_interval_ms: 100,
+            max_retries: 3,
+            token_timeout_ms: 5000,
+            cancellable: true,
         };
 
         // Get the engine and create a generation stream
         let engine = engine.read().await;
-        let mut gen_stream = engine.generate_stream_with_config(&request.prompt, &config);
+        let mut gen_stream = engine.generate_stream_with_config(&request.prompt, &config)?;
         let mut token_count = 0u64;
 
         while let Some(token_result) = gen_stream.next().await {
@@ -132,7 +143,9 @@ async fn real_stream(
 }
 
 /// Mock streaming for testing without a model
-async fn mock_stream(request: StreamingRequest) -> impl Stream<Item = Result<Event, Infallible>> {
+async fn mock_stream(
+    request: StreamingRequest,
+) -> impl Stream<Item = Result<Event, anyhow::Error>> {
     let start = std::time::Instant::now();
     let tokens = ["Hello", " ", "from", " ", "BitNet", " ", "server", "!"];
     let max_tokens = request.max_tokens.unwrap_or(8).min(tokens.len());

@@ -53,8 +53,8 @@ fn test_rust_backend_basic_dequantization() {
 
     // Set all quantized values to pattern 0b11_10_01_00
     // This gives values [0, 1, 2, 3] which map to [-2, -1, 0, 1]
-    for i in 2..66 {
-        block[i] = 0b11_10_01_00;
+    for block_slot in block.iter_mut().take(66).skip(2) {
+        *block_slot = 0b11_10_01_00;
     }
 
     // Dequantize using Rust backend
