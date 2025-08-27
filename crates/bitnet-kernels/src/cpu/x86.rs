@@ -123,6 +123,7 @@ impl Avx2Kernel {
     /// original implementation is proper sign extension of i8 values using
     /// `_mm256_cvtepi8_epi16` instead of incorrect unpacking operations.
     #[target_feature(enable = "avx2")]
+    #[allow(unsafe_op_in_unsafe_fn)]
     unsafe fn matmul_i2s_avx2(
         &self,
         a: &[i8],
@@ -227,6 +228,7 @@ impl Avx2Kernel {
 
     /// AVX2 optimized TL2 quantization
     #[target_feature(enable = "avx2")]
+    #[allow(unsafe_op_in_unsafe_fn)]
     unsafe fn quantize_tl2_avx2(
         &self,
         input: &[f32],
@@ -281,8 +283,8 @@ impl Avx2Kernel {
             }
 
             // Horizontal min/max
-            let min = horizontal_min_f32(min_vec);
-            let max = horizontal_max_f32(max_vec);
+            let min = unsafe { horizontal_min_f32(min_vec) };
+            let max = unsafe { horizontal_max_f32(max_vec) };
 
             let scale = (max - min) / 3.0;
             scales[block_idx] = scale;
@@ -336,6 +338,8 @@ impl Avx2Kernel {
 }
 
 #[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "sse,avx2")]
+#[allow(unsafe_op_in_unsafe_fn)]
 #[inline]
 unsafe fn horizontal_min_f32(v: __m256) -> f32 {
     // Reduce to 128-bit
@@ -348,6 +352,8 @@ unsafe fn horizontal_min_f32(v: __m256) -> f32 {
 }
 
 #[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "sse,avx2")]
+#[allow(unsafe_op_in_unsafe_fn)]
 #[inline]
 unsafe fn horizontal_max_f32(v: __m256) -> f32 {
     // Reduce to 128-bit
@@ -425,11 +431,11 @@ mod tests {
             let mut a = vec![0i8; m * k];
             let mut b = vec![0u8; k * n];
 
-            for i in 0..m * k {
-                a[i] = ((i % 5) as i8) - 2; // Values from -2 to 2
+            for (i, item) in a.iter_mut().enumerate() {
+                *item = ((i % 5) as i8) - 2; // Values from -2 to 2
             }
-            for i in 0..k * n {
-                b[i] = (i % 3) as u8; // Values from 0 to 2  
+            for (i, item) in b.iter_mut().enumerate() {
+                *item = (i % 3) as u8; // Values from 0 to 2  
             }
 
             let mut c_avx2 = vec![0.0f32; m * n];
@@ -489,8 +495,8 @@ mod tests {
 
         // Create test input with 256 elements (2 blocks)
         let mut input = vec![0.0f32; 256];
-        for i in 0..256 {
-            input[i] = ((i as f32) / 10.0).sin() * 5.0;
+        for (i, item) in input.iter_mut().enumerate() {
+            *item = ((i as f32) / 10.0).sin() * 5.0;
         }
 
         let mut output_avx = vec![0u8; 64];
