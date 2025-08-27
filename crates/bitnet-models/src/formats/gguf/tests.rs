@@ -159,7 +159,7 @@ fn test_gguf_value_types() {
     let metadata = vec![
         ("test_u32", GgufValue::U32(42)),
         ("test_i32", GgufValue::I32(-7)),
-        ("test_f32", GgufValue::F32(3.14)),
+        ("test_f32", GgufValue::F32(std::f32::consts::PI)),
         ("test_bool", GgufValue::Bool(true)),
         ("test_string", GgufValue::String("hello".to_string())),
     ];
@@ -170,7 +170,9 @@ fn test_gguf_value_types() {
     // Test reading values through the reader
     assert_eq!(reader.get_u32_metadata("test_u32"), Some(42));
     assert_eq!(reader.get_i32_metadata("test_i32"), Some(-7));
-    assert!((reader.get_f32_metadata("test_f32").unwrap_or(0.0) - 3.14).abs() < 1e-6);
+    assert!(
+        (reader.get_f32_metadata("test_f32").unwrap_or(0.0) - std::f32::consts::PI).abs() < 1e-6
+    );
     assert_eq!(reader.get_bool_metadata("test_bool"), Some(true));
     assert_eq!(reader.get_string_metadata("test_string").as_deref(), Some("hello"));
 }
@@ -338,14 +340,14 @@ fn test_reader_accepts_v3_header_and_metadata() {
     let bytes = build_gguf_bytes_v3(vec![
         ("u32_key", GgufValue::U32(123)),
         ("i32_key", GgufValue::I32(-7)),
-        ("f32_key", GgufValue::F32(3.14)),
+        ("f32_key", GgufValue::F32(std::f32::consts::PI)),
         ("bool_key", GgufValue::Bool(true)),
         ("str_key", GgufValue::String("hello".into())),
     ]);
     let r = GgufReader::new(&bytes).expect("read gguf v3");
     assert_eq!(r.get_u32_metadata("u32_key"), Some(123));
     assert_eq!(r.get_i32_metadata("i32_key"), Some(-7));
-    assert!((r.get_f32_metadata("f32_key").unwrap_or(0.0) - 3.14).abs() < 1e-6);
+    assert!((r.get_f32_metadata("f32_key").unwrap_or(0.0) - std::f32::consts::PI).abs() < 1e-6);
     assert_eq!(r.get_bool_metadata("bool_key"), Some(true));
     assert_eq!(r.get_string_metadata("str_key").as_deref(), Some("hello"));
     // New getters also work:

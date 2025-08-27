@@ -9,7 +9,7 @@ use pyo3::types::PyDict;
 // use pyo3_asyncio_0_21::tokio::future_into_py;
 // use futures_util::StreamExt;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+// use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::RwLock;
 
 use crate::{PyBitNetModel, parse_device};
@@ -128,7 +128,7 @@ impl PyInferenceEngine {
         let engine = self.inner.clone();
         let prompt = prompt.to_string();
 
-        Ok(PyStreamingGenerator::new(engine, prompt, config))
+        PyStreamingGenerator::new(engine, prompt, config)
     }
 
     /// Get model configuration
@@ -202,11 +202,20 @@ pub struct PyStreamingGenerator {
     prompt: String,
     config: GenerationConfig,
     started: bool,
+    runtime: tokio::runtime::Runtime,
+    stream: Option<bitnet_inference::streaming::GenerationStream>,
 }
 
 impl PyStreamingGenerator {
-    fn new(engine: Arc<RwLock<InferenceEngine>>, prompt: String, config: GenerationConfig) -> Self {
-        Self { engine, prompt, config, started: false }
+    fn new(
+        engine: Arc<RwLock<InferenceEngine>>,
+        prompt: String,
+        config: GenerationConfig,
+    ) -> PyResult<Self> {
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
+
+        Ok(Self { engine, prompt, config, started: false, runtime, stream: None })
     }
 }
 
@@ -221,20 +230,50 @@ impl PyStreamingGenerator {
     fn __next__(&mut self, _py: Python<'_>) -> PyResult<Option<String>> {
         if !self.started {
             self.started = true;
-            // In a real implementation, this would start the streaming
-            // For now, return a mock implementation
-            return Ok(Some("Hello".to_string()));
+            // Initialize the stream
+            let engine = self.engine.clone();
+            let prompt = self.prompt.clone();
+            let config = self.config.clone();
+
+            match self.runtime.block_on(async move {
+                let engine_guard = engine.read().await;
+                engine_guard.generate_stream_with_config(&prompt, &config)
+            }) {
+                Ok(stream) => self.stream = Some(stream),
+                Err(e) => {
+                    return Err(PyRuntimeError::new_err(format!("Failed to create stream: {}", e)));
+                }
+            };
         }
 
-        // Mock streaming - in practice this would use the actual streaming API
-        static COUNTER: AtomicUsize = AtomicUsize::new(0);
-        let count = COUNTER.fetch_add(1, Ordering::Relaxed);
-        if count < 5 {
-            Ok(Some(format!(" token_{}", count + 1)))
+        if let Some(ref mut stream) = self.stream {
+            // Get next token from the stream
+            match self.runtime.block_on(async {
+                use futures_util::StreamExt;
+                stream.next().await
+            }) {
+                Some(Ok(token_text)) => Ok(Some(token_text)),
+                Some(Err(e)) => Err(PyRuntimeError::new_err(format!("Streaming error: {}", e))),
+                None => {
+                    // Stream ended
+                    self.stream = None;
+                    Err(PyStopIteration::new_err(""))
+                }
+            }
         } else {
-            COUNTER.store(0, Ordering::Relaxed);
             Err(PyStopIteration::new_err(""))
         }
+    }
+
+    /// Cancel the streaming generation
+    fn cancel(&mut self) -> PyResult<()> {
+        self.stream = None;
+        Ok(())
+    }
+
+    /// Check if streaming is active
+    fn is_active(&self) -> bool {
+        self.stream.is_some()
     }
 
     /// String representation
@@ -280,8 +319,6 @@ pub fn batch_generate(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_streaming_generator() {
         // Skip this test for now - would need a full mock engine

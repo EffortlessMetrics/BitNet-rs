@@ -190,7 +190,7 @@ impl ScenarioConfigManager {
     fn initialize_environment_overrides(&mut self) {
         // CI environment
         let mut ci_config = TestConfig::default();
-        ci_config.max_parallel_tests = 4;
+        ci_config.max_parallel_tests = 8;
         ci_config.log_level = "debug".to_string();
         ci_config.reporting.output_dir = "/tmp/test-reports".into();
         ci_config.reporting.formats = vec![ReportFormat::Junit, ReportFormat::Html];
@@ -242,9 +242,11 @@ impl ScenarioConfigManager {
         // Merge configs: base -> scenario -> environment
         // Environment overrides take precedence
         TestConfig {
-            max_parallel_tests: env_config
-                .max_parallel_tests
-                .max(scenario_config.max_parallel_tests),
+            max_parallel_tests: if env_config.max_parallel_tests != base.max_parallel_tests {
+                env_config.max_parallel_tests
+            } else {
+                scenario_config.max_parallel_tests
+            },
             test_timeout: scenario_config.test_timeout.max(env_config.test_timeout),
             cache_dir: env_config.cache_dir.clone(),
             log_level: if env_config.log_level != base.log_level {
@@ -467,9 +469,13 @@ fn create_crossval_config() -> TestConfig {
 }
 
 fn create_debug_config() -> TestConfig {
+    // Use environment variable for debug timeout or default to reasonable value
+    let debug_timeout =
+        std::env::var("BITNET_DEBUG_TIMEOUT_SECS").ok().and_then(|s| s.parse().ok()).unwrap_or(120); // Default to 2 minutes instead of 1 hour
+
     TestConfig {
         max_parallel_tests: 1,
-        test_timeout: Duration::from_secs(3600),
+        test_timeout: Duration::from_secs(debug_timeout),
         log_level: "trace".to_string(),
         coverage_threshold: 0.9,
         #[cfg(feature = "fixtures")]

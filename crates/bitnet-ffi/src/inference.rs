@@ -142,6 +142,8 @@ impl InferenceManager {
             _engine_guard.generate_stream(prompt)
         };
 
+        let stream = stream
+            .map_err(|e| BitNetCError::InferenceFailed(format!("Stream creation failed: {}", e)))?;
         Ok(StreamingSession::new(stream))
     }
 

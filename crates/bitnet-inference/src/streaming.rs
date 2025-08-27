@@ -10,9 +10,10 @@ use bitnet_tokenizers::Tokenizer;
 use futures_util::Stream;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::task::{Context as TaskContext, Poll};
 use tokio::sync::{RwLock, mpsc};
-use tracing::{debug, instrument, warn};
+use tracing::{debug, error, instrument, trace, warn};
 
 use crate::{
     backends::Backend,
@@ -28,11 +29,61 @@ pub struct StreamingConfig {
     pub buffer_size: usize,
     /// Interval between token flushes in milliseconds
     pub flush_interval_ms: u64,
+    /// Maximum number of retries on transient errors
+    pub max_retries: usize,
+    /// Timeout for individual token generation (milliseconds)
+    pub token_timeout_ms: u64,
+    /// Enable cancellation support
+    pub cancellable: bool,
 }
 
 impl Default for StreamingConfig {
     fn default() -> Self {
-        Self { buffer_size: 10, flush_interval_ms: 50 }
+        Self {
+            buffer_size: 10,
+            flush_interval_ms: 50,
+            max_retries: 3,
+            token_timeout_ms: 5000, // 5 seconds
+            cancellable: true,
+        }
+    }
+}
+
+impl StreamingConfig {
+    /// Validate the configuration
+    pub fn validate(&self) -> Result<()> {
+        if self.buffer_size == 0 {
+            return Err(anyhow::anyhow!("Buffer size must be greater than 0"));
+        }
+        if self.flush_interval_ms == 0 {
+            return Err(anyhow::anyhow!("Flush interval must be greater than 0"));
+        }
+        if self.token_timeout_ms == 0 {
+            return Err(anyhow::anyhow!("Token timeout must be greater than 0"));
+        }
+        Ok(())
+    }
+
+    /// Create a configuration optimized for low latency
+    pub fn low_latency() -> Self {
+        Self {
+            buffer_size: 1,
+            flush_interval_ms: 10,
+            max_retries: 1,
+            token_timeout_ms: 1000,
+            cancellable: true,
+        }
+    }
+
+    /// Create a configuration optimized for high throughput
+    pub fn high_throughput() -> Self {
+        Self {
+            buffer_size: 50,
+            flush_interval_ms: 200,
+            max_retries: 5,
+            token_timeout_ms: 10000,
+            cancellable: false,
+        }
     }
 }
 
@@ -40,6 +91,35 @@ impl Default for StreamingConfig {
 pub struct GenerationStream {
     receiver: mpsc::Receiver<Result<String>>,
     _handle: tokio::task::JoinHandle<()>,
+    cancellation_token: Arc<AtomicBool>,
+    generation_stats: Arc<GenerationStats>,
+}
+
+/// Statistics for generation streaming
+#[derive(Debug, Default)]
+pub struct GenerationStats {
+    pub tokens_generated: AtomicUsize,
+    pub errors_encountered: AtomicUsize,
+    pub retries_attempted: AtomicUsize,
+    pub cancelled: AtomicBool,
+}
+
+impl GenerationStats {
+    pub fn tokens_generated(&self) -> usize {
+        self.tokens_generated.load(Ordering::Relaxed)
+    }
+
+    pub fn errors_encountered(&self) -> usize {
+        self.errors_encountered.load(Ordering::Relaxed)
+    }
+
+    pub fn retries_attempted(&self) -> usize {
+        self.retries_attempted.load(Ordering::Relaxed)
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::Relaxed)
+    }
 }
 
 impl GenerationStream {
@@ -53,8 +133,16 @@ impl GenerationStream {
         prompt: String,
         generation_config: GenerationConfig,
         streaming_config: StreamingConfig,
-    ) -> Self {
+    ) -> Result<Self> {
+        // Validate streaming configuration
+        streaming_config.validate().context("Invalid streaming configuration")?;
+
         let (sender, receiver) = mpsc::channel(streaming_config.buffer_size);
+        let cancellation_token = Arc::new(AtomicBool::new(false));
+        let generation_stats = Arc::new(GenerationStats::default());
+
+        let cancel_token_clone = cancellation_token.clone();
+        let stats_clone = generation_stats.clone();
 
         let handle = tokio::spawn(async move {
             if let Err(e) = Self::generate_stream_internal(
@@ -66,6 +154,8 @@ impl GenerationStream {
                 generation_config,
                 streaming_config,
                 sender.clone(),
+                cancel_token_clone,
+                stats_clone,
             )
             .await
             {
@@ -74,7 +164,7 @@ impl GenerationStream {
             }
         });
 
-        Self { receiver, _handle: handle }
+        Ok(Self { receiver, _handle: handle, cancellation_token, generation_stats })
     }
 
     /// Internal streaming generation implementation
@@ -87,6 +177,8 @@ impl GenerationStream {
         config: GenerationConfig,
         streaming_config: StreamingConfig,
         sender: mpsc::Sender<Result<String>>,
+        cancellation_token: Arc<AtomicBool>,
+        stats: Arc<GenerationStats>,
     ) -> Result<()> {
         debug!("Starting streaming generation for prompt");
 
@@ -110,14 +202,59 @@ impl GenerationStream {
         let mut last_flush = std::time::Instant::now();
 
         for _ in 0..config.max_new_tokens {
+            // Check for cancellation
+            if streaming_config.cancellable && cancellation_token.load(Ordering::Relaxed) {
+                debug!("Generation cancelled by user");
+                stats.cancelled.store(true, Ordering::Relaxed);
+                break;
+            }
+
             // Check if receiver is closed (client disconnected)
             if sender.is_closed() {
                 debug!("Client disconnected, stopping generation");
                 break;
             }
 
-            // Forward pass through model
-            let logits = Self::forward_pass(&*backend, &current_tokens, &cache, &tokenizer).await?;
+            // Forward pass through model with retries
+            let mut retry_count = 0;
+            let logits = loop {
+                match tokio::time::timeout(
+                    std::time::Duration::from_millis(streaming_config.token_timeout_ms),
+                    Self::forward_pass(&*backend, &current_tokens, &cache, &tokenizer),
+                )
+                .await
+                {
+                    Ok(Ok(logits)) => break logits,
+                    Ok(Err(e)) => {
+                        stats.errors_encountered.fetch_add(1, Ordering::Relaxed);
+
+                        if retry_count >= streaming_config.max_retries {
+                            error!("Forward pass failed after {} retries: {}", retry_count, e);
+                            return Err(e);
+                        }
+
+                        retry_count += 1;
+                        stats.retries_attempted.fetch_add(1, Ordering::Relaxed);
+                        warn!(
+                            "Forward pass failed, retrying ({}/{}): {}",
+                            retry_count, streaming_config.max_retries, e
+                        );
+
+                        // Brief backoff before retry
+                        tokio::time::sleep(std::time::Duration::from_millis(
+                            50 * retry_count as u64,
+                        ))
+                        .await;
+                    }
+                    Err(_) => {
+                        stats.errors_encountered.fetch_add(1, Ordering::Relaxed);
+                        return Err(anyhow::anyhow!(
+                            "Forward pass timed out after {}ms",
+                            streaming_config.token_timeout_ms
+                        ));
+                    }
+                }
+            };
 
             // Sample next token
             let next_token = sampling_strategy.sample(&logits, &current_tokens)?;
@@ -133,6 +270,14 @@ impl GenerationStream {
             token_buffer.push(token_text);
             current_tokens.push(next_token);
             generated_count += 1;
+            stats.tokens_generated.fetch_add(1, Ordering::Relaxed);
+
+            trace!(
+                "Generated token {}: {} (token_id: {})",
+                generated_count,
+                token_buffer.last().unwrap_or(&"<empty>".to_string()),
+                next_token
+            );
 
             // Flush buffer based on size or time
             let should_flush = token_buffer.len() >= streaming_config.buffer_size
@@ -223,6 +368,32 @@ impl GenerationStream {
         }
 
         false
+    }
+
+    /// Cancel the stream generation
+    pub fn cancel(&self) {
+        if self.cancellation_token.load(Ordering::Relaxed) {
+            debug!("Stream already cancelled");
+            return;
+        }
+
+        self.cancellation_token.store(true, Ordering::Relaxed);
+        debug!("Stream cancellation requested");
+    }
+
+    /// Check if the stream is cancelled
+    pub fn is_cancelled(&self) -> bool {
+        self.cancellation_token.load(Ordering::Relaxed)
+    }
+
+    /// Get generation statistics
+    pub fn stats(&self) -> &GenerationStats {
+        &self.generation_stats
+    }
+
+    /// Check if the stream is still active (not finished and not cancelled)
+    pub fn is_active(&self) -> bool {
+        !self.receiver.is_closed() && !self.is_cancelled()
     }
 }
 
@@ -339,7 +510,8 @@ mod tests {
             "Hello".to_string(),
             config,
             streaming_config,
-        );
+        )
+        .unwrap();
 
         let mut token_count = 0;
         while let Some(result) = stream.next().await {
@@ -364,7 +536,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_streaming_config() {
-        let config = StreamingConfig { buffer_size: 5, flush_interval_ms: 100 };
+        let config = StreamingConfig {
+            buffer_size: 5,
+            flush_interval_ms: 100,
+            max_retries: 3,
+            token_timeout_ms: 5000,
+            cancellable: true,
+        };
 
         assert_eq!(config.buffer_size, 5);
         assert_eq!(config.flush_interval_ms, 100);

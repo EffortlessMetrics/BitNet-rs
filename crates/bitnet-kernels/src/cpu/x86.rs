@@ -267,7 +267,7 @@ impl Avx2Kernel {
             }));
         }
 
-        for block_idx in 0..n_blocks {
+        for (block_idx, scale_slot) in scales.iter_mut().enumerate().take(n_blocks) {
             let block_start = block_idx * BLOCK_SIZE;
             let block = &input[block_start..block_start + BLOCK_SIZE];
 
@@ -286,7 +286,7 @@ impl Avx2Kernel {
             let max = horizontal_max_f32(max_vec);
 
             let scale = (max - min) / 3.0;
-            scales[block_idx] = scale;
+            *scale_slot = scale;
 
             // Quantize the block
             let scale_recip = if scale != 0.0 { 1.0 / scale } else { 0.0 };
@@ -426,11 +426,11 @@ mod tests {
             let mut a = vec![0i8; m * k];
             let mut b = vec![0u8; k * n];
 
-            for i in 0..m * k {
-                a[i] = ((i % 5) as i8) - 2; // Values from -2 to 2
+            for (i, a_slot) in a.iter_mut().enumerate().take(m * k) {
+                *a_slot = ((i % 5) as i8) - 2; // Values from -2 to 2
             }
-            for i in 0..k * n {
-                b[i] = (i % 3) as u8; // Values from 0 to 2  
+            for (i, b_slot) in b.iter_mut().enumerate().take(k * n) {
+                *b_slot = (i % 3) as u8; // Values from 0 to 2  
             }
 
             let mut c_avx2 = vec![0.0f32; m * n];
@@ -490,8 +490,8 @@ mod tests {
 
         // Create test input with 256 elements (2 blocks)
         let mut input = vec![0.0f32; 256];
-        for i in 0..256 {
-            input[i] = ((i as f32) / 10.0).sin() * 5.0;
+        for (i, input_slot) in input.iter_mut().enumerate().take(256) {
+            *input_slot = ((i as f32) / 10.0).sin() * 5.0;
         }
 
         let mut output_avx = vec![0u8; 64];

@@ -8,8 +8,12 @@ use crate::common::FixtureManager;
 use crate::common::harness::FixtureCtx;
 use crate::{TestCase, TestError, TestMetrics, TestResult};
 use async_trait::async_trait;
-use bitnet_inference::{GenerationStream, StreamingConfig};
+use bitnet_common::Device;
+use bitnet_inference::{GenerationConfig, GenerationStream, InferenceEngine, StreamingConfig};
+use bitnet_models::Model;
+use bitnet_tokenizers::Tokenizer;
 use futures_util::StreamExt;
+use std::sync::Arc;
 use std::time::Instant;
 use tracing::{debug, info, warn};
 
@@ -62,7 +66,9 @@ impl TestCase for BasicStreamingTest {
         // Test basic streaming generation
         debug!("Testing basic streaming generation");
         let prompt = "Generate streaming text";
-        let mut stream = engine.generate_stream(prompt);
+        let mut stream = engine
+            .generate_stream(prompt)
+            .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
 
         let mut received_chunks = Vec::new();
         let mut total_text = String::new();
@@ -119,7 +125,9 @@ impl TestCase for BasicStreamingTest {
         for (i, test_prompt) in test_prompts.iter().enumerate() {
             debug!("Testing streaming with prompt {}: '{}'", i + 1, test_prompt);
 
-            let mut prompt_stream = engine.generate_stream(test_prompt);
+            let mut prompt_stream = engine.generate_stream(test_prompt).map_err(|e| {
+                TestError::execution(format!("Failed to create prompt stream: {}", e))
+            })?;
             let mut prompt_chunks = 0;
             let mut prompt_text = String::new();
 
@@ -255,7 +263,9 @@ impl TestCase for StreamingConfigurationTest {
             );
 
             let config_start = Instant::now();
-            let mut stream = engine.generate_stream_with_config(prompt, config);
+            let mut stream = engine.generate_stream_with_config(prompt, config).map_err(|e| {
+                TestError::execution(format!("Failed to create stream with config: {}", e))
+            })?;
 
             let mut chunks = 0;
             let mut total_chars = 0;
@@ -333,7 +343,9 @@ impl TestCase for StreamingConfigurationTest {
             // For now, we'll test with default streaming and measure behavior
 
             let stream_start = Instant::now();
-            let mut stream = engine.generate_stream(prompt);
+            let mut stream = engine
+                .generate_stream(prompt)
+                .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
 
             let mut stream_chunks = 0;
             let mut stream_chars = 0;
@@ -445,7 +457,9 @@ impl TestCase for StreamingBackpressureTest {
         // Test slow consumer scenario
         debug!("Testing slow consumer backpressure");
         let prompt = "Backpressure test prompt";
-        let mut stream = engine.generate_stream(prompt);
+        let mut stream = engine
+            .generate_stream(prompt)
+            .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
 
         let mut slow_consumer_chunks = 0;
         let mut processing_times = Vec::new();
@@ -461,8 +475,8 @@ impl TestCase for StreamingBackpressureTest {
                         chunk
                     );
 
-                    // Simulate slow processing
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    // Simulate slow processing (reduced from 100ms to 10ms for faster tests)
+                    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
                     let process_time = process_start.elapsed();
                     processing_times.push(process_time);
@@ -657,7 +671,9 @@ impl TestCase for StreamingCancellationTest {
         // Test early stream termination
         debug!("Testing early stream termination");
         let prompt = "Cancellation test prompt";
-        let mut stream = engine.generate_stream(prompt);
+        let mut stream = engine
+            .generate_stream(prompt)
+            .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
 
         let mut early_termination_chunks = 0;
 
@@ -1032,6 +1048,99 @@ impl TestCase for StreamingPerformanceTest {
     async fn cleanup(&self) -> TestResult<()> {
         debug!("Cleaning up streaming performance test");
         Ok(())
+    }
+}
+
+/// Mock model for streaming tests
+struct MockModel {
+    config: bitnet_common::BitNetConfig,
+    forward_calls: std::sync::atomic::AtomicUsize,
+}
+
+impl MockModel {
+    fn new() -> Self {
+        Self {
+            config: bitnet_common::BitNetConfig::default(),
+            forward_calls: std::sync::atomic::AtomicUsize::new(0),
+        }
+    }
+
+    fn forward_call_count(&self) -> usize {
+        self.forward_calls.load(std::sync::atomic::Ordering::Relaxed)
+    }
+}
+
+impl Model for MockModel {
+    fn config(&self) -> &bitnet_common::BitNetConfig {
+        &self.config
+    }
+
+    fn forward(
+        &self,
+        _input: &bitnet_common::ConcreteTensor,
+        _cache: &mut dyn std::any::Any,
+    ) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+        self.forward_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, 50257]))
+    }
+
+    fn embed(&self, _tokens: &[u32]) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, 10, 768]))
+    }
+
+    fn logits(
+        &self,
+        _hidden: &bitnet_common::ConcreteTensor,
+    ) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, 50257]))
+    }
+}
+
+/// Mock tokenizer for streaming tests
+struct MockTokenizer {
+    encode_calls: std::sync::atomic::AtomicUsize,
+    decode_calls: std::sync::atomic::AtomicUsize,
+}
+
+impl MockTokenizer {
+    fn new() -> Self {
+        Self {
+            encode_calls: std::sync::atomic::AtomicUsize::new(0),
+            decode_calls: std::sync::atomic::AtomicUsize::new(0),
+        }
+    }
+
+    fn encode_call_count(&self) -> usize {
+        self.encode_calls.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    fn decode_call_count(&self) -> usize {
+        self.decode_calls.load(std::sync::atomic::Ordering::Relaxed)
+    }
+}
+
+impl Tokenizer for MockTokenizer {
+    fn encode(
+        &self,
+        _text: &str,
+        _add_bos: bool,
+        _add_special: bool,
+    ) -> bitnet_common::Result<Vec<u32>> {
+        self.encode_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        Ok(vec![1, 2, 3])
+    }
+
+    fn decode(&self, tokens: &[u32]) -> bitnet_common::Result<String> {
+        self.decode_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        Ok(format!("token_{}", tokens.len()))
+    }
+
+    fn vocab_size(&self) -> usize {
+        50257
+    }
+
+    fn token_to_piece(&self, _token: u32) -> Option<String> {
+        Some("<token>".to_string())
     }
 }
 
