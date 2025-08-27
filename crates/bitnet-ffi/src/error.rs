@@ -88,6 +88,15 @@ impl From<BitNetError> for BitNetCError {
                 bitnet_common::KernelError::GpuError { reason } => {
                     BitNetCError::InferenceFailed(format!("GPU error: {}", reason))
                 }
+                bitnet_common::KernelError::UnsupportedHardware { required, available } => {
+                    BitNetCError::UnsupportedOperation(format!(
+                        "Unsupported hardware: required {}, available {}",
+                        required, available
+                    ))
+                }
+                bitnet_common::KernelError::InvalidArguments { reason } => {
+                    BitNetCError::InferenceFailed(format!("Invalid arguments: {}", reason))
+                }
             },
             BitNetError::Inference(inference_error) => match inference_error {
                 bitnet_common::InferenceError::GenerationFailed { reason } => {

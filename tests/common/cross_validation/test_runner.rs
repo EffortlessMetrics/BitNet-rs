@@ -1,6 +1,6 @@
 use super::test_cases::ModelSize;
 use crate::cross_validation::test_cases::{
-    test_suites, ComparisonTestCaseRegistry, TestCaseCategory,
+    ComparisonTestCaseRegistry, TestCaseCategory, test_suites,
 };
 use crate::cross_validation::{
     ComparisonTestCase, ComparisonTolerance, CppImplementation, CrossValidationResult,
