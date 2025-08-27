@@ -1,6 +1,5 @@
 use super::implementation::*;
-use crate::errors::ImplementationResult;
-use crate::units::BYTES_PER_MB;
+use crate::{BYTES_PER_MB, errors::ImplementationResult};
 use async_trait::async_trait;
 use std::path::Path;
 use std::time::Duration;
@@ -177,11 +176,12 @@ impl ImplementationFactory for MockImplementationFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::BYTES_PER_MB;
     use std::path::PathBuf;
 
     #[tokio::test]
     async fn test_mock_implementation_basic() {
-        let mut impl_ = MockImplementation::new("test".to_string(), "1.0".to_string());
+        let impl_ = MockImplementation::new("test".to_string(), "1.0".to_string());
 
         assert_eq!(impl_.implementation_name(), "test");
         assert_eq!(impl_.implementation_version(), "1.0");
@@ -235,7 +235,7 @@ mod tests {
         assert!(result.tokens.len() > tokens.len()); // Should have additional tokens
         assert!(!result.text.is_empty());
         assert!(result.probabilities.is_some());
-        assert!(result.duration.as_millis() >= 0);
+        assert!(result.duration.as_millis() > 0);
         assert_eq!(result.memory_usage, BYTES_PER_MB);
     }
 
@@ -327,7 +327,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_measure_performance() {
-        let (result, duration, memory_delta, peak_memory) = utils::measure_performance(async {
+        let (result, duration, _memory_delta, peak_memory) = utils::measure_performance(async {
             tokio::time::sleep(Duration::from_millis(10)).await;
             42
         })

@@ -1,4 +1,5 @@
 //! x86/x86_64 CPU kernels with AVX2/AVX-512 optimizations
+#![allow(unsafe_op_in_unsafe_fn)]
 
 use crate::{KernelProvider, cpu::fallback::FallbackKernel};
 use bitnet_common::{BitNetError, KernelError, QuantizationType, Result};

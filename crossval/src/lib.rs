@@ -66,3 +66,32 @@ impl Default for CrossvalConfig {
         Self { tolerance: 1e-6, max_tokens: 1000, benchmark: false }
     }
 }
+
+/// Assert that the first token logits match between Rust and C++ implementations
+#[cfg(feature = "crossval")]
+pub fn assert_first_logits_match(model_path: &str, prompt: &str) {
+    use bitnet_inference::eval_logits_once;
+    use bitnet_sys::wrapper::{self, Session as CppSession};
+
+    wrapper::init_backend();
+    let _guard = scopeguard::guard((), |_| wrapper::free_backend());
+
+    let mut cpp_session =
+        CppSession::load_deterministic(model_path).expect("failed to load C++ model");
+    let tokens = cpp_session.tokenize(prompt).expect("tokenize failed");
+    let cpp_logits = cpp_session.eval_and_get_logits(&tokens, 0).expect("C++ inference failed");
+    let rust_logits = eval_logits_once(model_path, &tokens).expect("Rust inference failed");
+
+    assert!(
+        (rust_logits[0] - cpp_logits[0]).abs() < 1e-4,
+        "First token logits diverged: rust={} cpp={}",
+        rust_logits[0],
+        cpp_logits[0]
+    );
+}
+
+/// Stub when crossval feature is disabled
+#[cfg(not(feature = "crossval"))]
+pub fn assert_first_logits_match(_model_path: &str, _prompt: &str) {
+    panic!("crossval feature required for assert_first_logits_match");
+}
