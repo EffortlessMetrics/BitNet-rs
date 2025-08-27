@@ -9,8 +9,7 @@ use std::os::raw::{c_char, c_int, c_uint};
 use std::ptr;
 
 use super::cpp_implementation::{
-    BitNetCppHandle, CppInferenceConfig, CppInferenceResult, CppModelInfo,
-    CppPerformanceMetrics,
+    BitNetCppHandle, CppInferenceConfig, CppInferenceResult, CppModelInfo, CppPerformanceMetrics,
 };
 
 // -------------------------------------------------------------------------
@@ -206,4 +205,3 @@ mod tests {
         }
     }
 }
-
