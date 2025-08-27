@@ -8,10 +8,11 @@ support and cancellation handling.
 """
 
 import asyncio
+import contextlib
 import bitnet_py as bitnet
 import time
 import sys
-from typing import Iterator
+from typing import AsyncIterator, Iterator
 
 def stream_tokens(engine: bitnet.InferenceEngine, prompt: str) -> Iterator[str]:
     """
@@ -22,14 +23,56 @@ def stream_tokens(engine: bitnet.InferenceEngine, prompt: str) -> Iterator[str]:
     for token in stream:
         yield token
 
+async def stream_tokens_async(
+    engine: bitnet.SimpleInference,
+    prompt: str,
+    *,
+    buffer_size: int = 16,
+) -> AsyncIterator[str]:
+    """Yield tokens from the engine's incremental stream with async/await.
+
+    A bounded queue is used for backpressure. Cancelling the consumer task
+    will cancel the underlying generation stream.
+    """
+    queue: asyncio.Queue = asyncio.Queue(maxsize=buffer_size)
+
+    async def producer() -> None:
+        try:
+            async for token in engine.generate_stream(prompt):
+                await queue.put(token)  # backpressure when queue is full
+        except asyncio.CancelledError:
+            pass
+        finally:
+            # signal completion without blocking if consumer is gone
+            with contextlib.suppress(asyncio.QueueFull):
+                queue.put_nowait(None)
+
+    producer_task = asyncio.create_task(producer())
+
+    try:
+        while True:
+            token = await queue.get()
+            if token is None:
+                break
+            yield token
+    except asyncio.CancelledError:
+        producer_task.cancel()
+        raise
+    finally:
+        with contextlib.suppress(asyncio.CancelledError):
+            await producer_task
+
+async def _collect_stream(engine: bitnet.SimpleInference, prompt: str) -> str:
+    """Collect all tokens from a stream into a single string."""
+    parts: list[str] = []
+    async for token in engine.generate_stream(prompt):
+        parts.append(token)
+    return "".join(parts)
+
 async def generate_with_timeout(engine: bitnet.SimpleInference, prompt: str, timeout: float = 30.0) -> str:
     """Generate text with a timeout to prevent hanging."""
     try:
-        response = await asyncio.wait_for(
-            engine.generate_stream(prompt),
-            timeout=timeout
-        )
-        return response
+        return await asyncio.wait_for(_collect_stream(engine, prompt), timeout=timeout)
     except asyncio.TimeoutError:
         return f"[Generation timed out after {timeout} seconds]"
 
@@ -75,16 +118,20 @@ async def interactive_chat(engine: bitnet.SimpleInference, tokenizer: bitnet.Tok
             print("Assistant: ", end="", flush=True)
             
             full_response = ""
-            async for token in stream_tokens(engine, dialog_text):
-                print(token, end="", flush=True)
-                full_response += token
-            
+            try:
+                async for token in stream_tokens(engine, dialog_text):
+                    print(token, end="", flush=True)
+                    full_response += token
+            except asyncio.CancelledError:
+                print("\n[Stream cancelled]")
+                continue
+
             print()  # New line after response
-            
+
             # Add assistant response to history
             assistant_message = bitnet.Message(role="assistant", content=full_response.strip())
             conversation_history.append(assistant_message)
-            
+
         except KeyboardInterrupt:
             print("\n\nChat session interrupted.")
             break
@@ -103,7 +150,7 @@ async def benchmark_async_performance(engine: bitnet.SimpleInference, prompts: l
     start_time = time.time()
     sequential_results = []
     for prompt in prompts:
-        result = await engine.generate_stream(prompt)
+        result = await _collect_stream(engine, prompt)
         sequential_results.append(result)
     sequential_time = time.time() - start_time
     
