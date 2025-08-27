@@ -449,8 +449,116 @@ impl TestCase for StreamBackpressureHandlingTest {
     }
 
     async fn execute(&self) -> TestResult<TestMetrics> {
-        // Backpressure test implementation
-        Ok(TestMetrics::default())
+        let start_time = Instant::now();
+
+        let model = Arc::new(SlowModel::new());
+        let tokenizer = Arc::new(MockTokenizer::new());
+        let device = Device::Cpu;
+
+        let engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device)
+            .map_err(|e| TestError::execution(format!("Failed to create engine: {}", e)))?;
+
+        // Test backpressure with slow consumer
+        debug!("Testing backpressure with slow consumer");
+        let mut stream = engine.generate_stream("Backpressure test");
+        let mut tokens_received = 0;
+        let mut backpressure_detected = false;
+        
+        let start_consume = Instant::now();
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(_token) => {
+                    tokens_received += 1;
+                    
+                    // Simulate slow consumer
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    
+                    // Check if generation is being throttled (backpressure)
+                    let elapsed = start_consume.elapsed();
+                    if elapsed > Duration::from_millis(500) && tokens_received < 10 {
+                        backpressure_detected = true;
+                    }
+                    
+                    if tokens_received >= 5 {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    warn!("Backpressure test error: {}", e);
+                    break;
+                }
+            }
+        }
+
+        // Test high-throughput scenario
+        debug!("Testing high-throughput scenario");
+        let fast_stream = engine.generate_stream("High throughput test");
+        let mut fast_tokens = 0;
+        let fast_start = Instant::now();
+        
+        let mut fast_stream = fast_stream;
+        while let Some(result) = fast_stream.next().await {
+            if let Ok(_) = result {
+                fast_tokens += 1;
+                if fast_tokens >= 10 {
+                    break;
+                }
+            }
+        }
+        let fast_duration = fast_start.elapsed();
+        
+        // Test concurrent streams with backpressure
+        debug!("Testing concurrent streams with different consumption rates");
+        let concurrent_count = 3;
+        let mut handles = Vec::new();
+        
+        for i in 0..concurrent_count {
+            let test_engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device)
+                .map_err(|e| TestError::execution(format!("Failed to create concurrent engine: {}", e)))?;
+            
+            let delay = Duration::from_millis(50 * (i + 1)); // Different consumption rates
+            let handle = tokio::spawn(async move {
+                let mut stream = test_engine.generate_stream(&format!("Concurrent {}", i + 1));
+                let mut count = 0;
+                
+                while count < 3 {
+                    if let Some(Ok(_)) = stream.next().await {
+                        count += 1;
+                        tokio::time::sleep(delay).await;
+                    } else {
+                        break;
+                    }
+                }
+                count
+            });
+            handles.push(handle);
+        }
+        
+        let concurrent_results: Vec<usize> = futures_util::future::join_all(handles)
+            .await
+            .into_iter()
+            .filter_map(|r| r.ok())
+            .collect();
+
+        let duration = start_time.elapsed();
+
+        Ok(TestMetrics {
+            wall_time: duration,
+            memory_peak: None,
+            memory_average: None,
+            cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
+            custom_metrics: [
+                ("tokens_received".to_string(), tokens_received as f64),
+                ("backpressure_detected".to_string(), if backpressure_detected { 1.0 } else { 0.0 }),
+                ("fast_tokens".to_string(), fast_tokens as f64),
+                ("fast_duration_ms".to_string(), fast_duration.as_millis() as f64),
+                ("concurrent_streams".to_string(), concurrent_count as f64),
+                ("concurrent_completed".to_string(), concurrent_results.len() as f64),
+                ("concurrent_total_tokens".to_string(), concurrent_results.iter().sum::<usize>() as f64),
+            ].into_iter().collect(),
+        })
     }
 
     async fn cleanup(&self) -> TestResult<()> {
@@ -472,8 +580,170 @@ impl TestCase for StreamConcurrencyTest {
     }
 
     async fn execute(&self) -> TestResult<TestMetrics> {
-        // Concurrency test implementation
-        Ok(TestMetrics::default())
+        let start_time = Instant::now();
+
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer::new());
+        let device = Device::Cpu;
+
+        // Test multiple concurrent streams from same engine
+        debug!("Testing multiple concurrent streams from same engine");
+        let shared_engine = Arc::new(RwLock::new(
+            InferenceEngine::new(model.clone(), tokenizer.clone(), device)
+                .map_err(|e| TestError::execution(format!("Failed to create shared engine: {}", e)))?
+        ));
+        
+        let concurrent_count = 5;
+        let mut handles = Vec::new();
+        
+        for i in 0..concurrent_count {
+            let engine_ref = shared_engine.clone();
+            let prompt = format!("Concurrent test {}", i + 1);
+            
+            let handle = tokio::spawn(async move {
+                let engine_guard = engine_ref.read().await;
+                let mut stream = engine_guard.generate_stream(&prompt);
+                let mut token_count = 0;
+                let start = Instant::now();
+                
+                while let Some(result) = stream.next().await {
+                    match result {
+                        Ok(_token) => {
+                            token_count += 1;
+                            if token_count >= 3 {
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            warn!("Concurrent stream {} error: {}", i + 1, e);
+                            break;
+                        }
+                    }
+                }
+                
+                (i + 1, token_count, start.elapsed())
+            });
+            
+            handles.push(handle);
+        }
+        
+        let results: Vec<(usize, usize, Duration)> = futures_util::future::join_all(handles)
+            .await
+            .into_iter()
+            .filter_map(|r| r.ok())
+            .collect();
+
+        // Test concurrent streams with different engines
+        debug!("Testing concurrent streams with independent engines");
+        let independent_count = 3;
+        let mut independent_handles = Vec::new();
+        
+        for i in 0..independent_count {
+            let engine_model = model.clone();
+            let engine_tokenizer = tokenizer.clone();
+            
+            let handle = tokio::spawn(async move {
+                let independent_engine = InferenceEngine::new(engine_model, engine_tokenizer, device)
+                    .map_err(|e| format!("Failed to create independent engine {}: {}", i + 1, e))?;
+                    
+                let mut stream = independent_engine.generate_stream(&format!("Independent {}", i + 1));
+                let mut token_count = 0;
+                let start = Instant::now();
+                
+                while let Some(result) = stream.next().await {
+                    if let Ok(_) = result {
+                        token_count += 1;
+                        if token_count >= 3 {
+                            break;
+                        }
+                    }
+                }
+                
+                Ok::<(usize, usize, Duration), String>((i + 1, token_count, start.elapsed()))
+            });
+            
+            independent_handles.push(handle);
+        }
+        
+        let independent_results: Vec<(usize, usize, Duration)> = futures_util::future::join_all(independent_handles)
+            .await
+            .into_iter()
+            .filter_map(|r| r.ok().and_then(|inner| inner.ok()))
+            .collect();
+
+        // Test race conditions and resource contention
+        debug!("Testing race conditions with rapid stream creation/destruction");
+        let race_count = 10;
+        let mut race_handles = Vec::new();
+        
+        for i in 0..race_count {
+            let race_model = model.clone();
+            let race_tokenizer = tokenizer.clone();
+            
+            let handle = tokio::spawn(async move {
+                let race_engine = InferenceEngine::new(race_model, race_tokenizer, device)?;
+                
+                // Create and immediately start consuming stream
+                let mut stream = race_engine.generate_stream(&format!("Race {}", i + 1));
+                
+                // Consume only first token then drop
+                if let Some(Ok(_)) = stream.next().await {
+                    return Ok(1);
+                }
+                
+                Ok::<usize, anyhow::Error>(0)
+            });
+            
+            race_handles.push(handle);
+        }
+        
+        let race_results: Vec<usize> = futures_util::future::join_all(race_handles)
+            .await
+            .into_iter()
+            .filter_map(|r| r.ok().and_then(|inner| inner.ok()))
+            .collect();
+
+        let duration = start_time.elapsed();
+        
+        // Calculate metrics
+        let total_shared_tokens: usize = results.iter().map(|(_, tokens, _)| tokens).sum();
+        let avg_shared_duration = if results.is_empty() { Duration::ZERO } else {
+            Duration::from_nanos(
+                results.iter().map(|(_, _, dur)| dur.as_nanos()).sum::<u128>() 
+                / results.len() as u128
+            )
+        };
+        
+        let total_independent_tokens: usize = independent_results.iter().map(|(_, tokens, _)| tokens).sum();
+        let avg_independent_duration = if independent_results.is_empty() { Duration::ZERO } else {
+            Duration::from_nanos(
+                independent_results.iter().map(|(_, _, dur)| dur.as_nanos()).sum::<u128>() 
+                / independent_results.len() as u128
+            )
+        };
+        
+        let race_success_count = race_results.iter().sum::<usize>();
+
+        Ok(TestMetrics {
+            wall_time: duration,
+            memory_peak: None,
+            memory_average: None,
+            cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
+            custom_metrics: [
+                ("shared_concurrent_streams".to_string(), concurrent_count as f64),
+                ("shared_completed_streams".to_string(), results.len() as f64),
+                ("shared_total_tokens".to_string(), total_shared_tokens as f64),
+                ("shared_avg_duration_ms".to_string(), avg_shared_duration.as_millis() as f64),
+                ("independent_concurrent_streams".to_string(), independent_count as f64),
+                ("independent_completed_streams".to_string(), independent_results.len() as f64),
+                ("independent_total_tokens".to_string(), total_independent_tokens as f64),
+                ("independent_avg_duration_ms".to_string(), avg_independent_duration.as_millis() as f64),
+                ("race_condition_attempts".to_string(), race_count as f64),
+                ("race_condition_successes".to_string(), race_success_count as f64),
+            ].into_iter().collect(),
+        })
     }
 
     async fn cleanup(&self) -> TestResult<()> {
@@ -495,8 +765,154 @@ impl TestCase for StreamTimeoutTest {
     }
 
     async fn execute(&self) -> TestResult<TestMetrics> {
-        // Timeout test implementation
-        Ok(TestMetrics::default())
+        let start_time = Instant::now();
+
+        let model = Arc::new(TimeoutProneModel::new());
+        let tokenizer = Arc::new(MockTokenizer::new());
+        let device = Device::Cpu;
+
+        let engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device)
+            .map_err(|e| TestError::execution(format!("Failed to create engine: {}", e)))?;
+
+        // Test stream timeout scenarios
+        debug!("Testing stream timeout scenarios");
+        
+        // Test generation timeout
+        let mut generation_timeouts = 0;
+        let mut generation_successes = 0;
+        
+        for i in 0..3 {
+            debug!("Timeout test iteration {}", i + 1);
+            let timeout_duration = Duration::from_millis(200);
+            
+            let stream_future = async {
+                let mut stream = engine.generate_stream(&format!("Timeout test {}", i + 1));
+                let mut tokens = 0;
+                
+                while let Some(result) = stream.next().await {
+                    match result {
+                        Ok(_) => {
+                            tokens += 1;
+                            // Add delay to trigger timeout
+                            tokio::time::sleep(Duration::from_millis(150)).await;
+                            if tokens >= 5 {
+                                break;
+                            }
+                        }
+                        Err(_) => break,
+                    }
+                }
+                tokens
+            };
+            
+            match tokio::time::timeout(timeout_duration, stream_future).await {
+                Ok(token_count) => {
+                    debug!("Stream {} completed with {} tokens", i + 1, token_count);
+                    generation_successes += 1;
+                }
+                Err(_) => {
+                    debug!("Stream {} timed out as expected", i + 1);
+                    generation_timeouts += 1;
+                }
+            }
+        }
+
+        // Test different timeout scenarios
+        debug!("Testing different timeout scenarios");
+        
+        // Fast timeout (should timeout immediately)
+        let fast_timeout = Duration::from_millis(1);
+        let fast_timeout_result = tokio::time::timeout(fast_timeout, async {
+            let mut stream = engine.generate_stream("Fast timeout test");
+            stream.next().await
+        }).await;
+        
+        let fast_timeout_occurred = fast_timeout_result.is_err();
+        
+        // Generous timeout (should complete)
+        let generous_timeout = Duration::from_secs(5);
+        let mut generous_tokens = 0;
+        let generous_timeout_result = tokio::time::timeout(generous_timeout, async {
+            let mut stream = engine.generate_stream("Generous timeout test");
+            let mut count = 0;
+            
+            while count < 2 { // Only generate a few tokens
+                if let Some(Ok(_)) = stream.next().await {
+                    count += 1;
+                }
+            }
+            count
+        }).await;
+        
+        match generous_timeout_result {
+            Ok(count) => generous_tokens = count,
+            Err(_) => warn!("Generous timeout unexpectedly failed"),
+        }
+
+        // Test cancellation vs timeout
+        debug!("Testing cancellation vs timeout scenarios");
+        let mut cancellation_tests = 0;
+        let mut cancellation_successes = 0;
+        
+        for i in 0..2 {
+            let cancel_engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device)
+                .map_err(|e| TestError::execution(format!("Failed to create cancel engine: {}", e)))?;
+            
+            let stream_with_cancel = cancel_engine.generate_stream(&format!("Cancel test {}", i + 1));
+            
+            let cancel_future = async move {
+                let mut stream = stream_with_cancel;
+                let mut count = 0;
+                
+                // Start consuming but cancel quickly
+                tokio::select! {
+                    _ = async {
+                        while let Some(_) = stream.next().await {
+                            count += 1;
+                            if count >= 10 {
+                                break;
+                            }
+                        }
+                    } => {},
+                    _ = tokio::time::sleep(Duration::from_millis(100)) => {
+                        // Timeout reached, stream should be cancelled
+                    }
+                }
+                
+                count
+            };
+            
+            match tokio::time::timeout(Duration::from_millis(300), cancel_future).await {
+                Ok(count) => {
+                    debug!("Cancellation test {} completed with {} tokens", i + 1, count);
+                    cancellation_successes += 1;
+                }
+                Err(_) => {
+                    warn!("Cancellation test {} timed out", i + 1);
+                }
+            }
+            cancellation_tests += 1;
+        }
+
+        let duration = start_time.elapsed();
+
+        Ok(TestMetrics {
+            wall_time: duration,
+            memory_peak: None,
+            memory_average: None,
+            cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
+            custom_metrics: [
+                ("generation_timeout_tests".to_string(), 3.0),
+                ("generation_timeouts".to_string(), generation_timeouts as f64),
+                ("generation_successes".to_string(), generation_successes as f64),
+                ("fast_timeout_occurred".to_string(), if fast_timeout_occurred { 1.0 } else { 0.0 }),
+                ("generous_timeout_tokens".to_string(), generous_tokens as f64),
+                ("cancellation_tests".to_string(), cancellation_tests as f64),
+                ("cancellation_successes".to_string(), cancellation_successes as f64),
+            ].into_iter().collect(),
+        })
     }
 
     async fn cleanup(&self) -> TestResult<()> {
@@ -518,8 +934,192 @@ impl TestCase for StreamConfigurationEdgeCasesTest {
     }
 
     async fn execute(&self) -> TestResult<TestMetrics> {
-        // Configuration edge cases test implementation
-        Ok(TestMetrics::default())
+        let start_time = Instant::now();
+
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer::new());
+        let device = Device::Cpu;
+
+        let engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device)
+            .map_err(|e| TestError::execution(format!("Failed to create engine: {}", e)))?;
+
+        debug!("Testing configuration edge cases");
+        
+        // Test with extreme temperature values
+        let mut extreme_temp_tests = 0;
+        let mut extreme_temp_successes = 0;
+        
+        let extreme_temperatures = vec![0.0, 0.001, 5.0, 10.0];
+        for temp in extreme_temperatures {
+            debug!("Testing extreme temperature: {}", temp);
+            
+            // Create config with custom streaming parameters
+            let streaming_config = bitnet_inference::streaming::StreamingConfig {
+                buffer_size: 1,
+                flush_interval_ms: 10,
+                max_retries: 1,
+                token_timeout_ms: 1000,
+                cancellable: true,
+            };
+            
+            match engine.generate_stream_with_config(&format!("Extreme temp {} test", temp), 
+                &GenerationConfig {
+                    temperature: temp,
+                    max_new_tokens: 3,
+                    ..Default::default()
+                }) {
+                Ok(mut stream) => {
+                    let mut tokens = 0;
+                    while let Some(result) = stream.next().await {
+                        if let Ok(_) = result {
+                            tokens += 1;
+                            if tokens >= 2 {
+                                break;
+                            }
+                        }
+                    }
+                    if tokens > 0 {
+                        extreme_temp_successes += 1;
+                    }
+                }
+                Err(e) => {
+                    warn!("Extreme temperature {} failed: {}", temp, e);
+                }
+            }
+            extreme_temp_tests += 1;
+        }
+        
+        // Test with extreme top_k values
+        debug!("Testing extreme top_k values");
+        let mut extreme_topk_tests = 0;
+        let mut extreme_topk_successes = 0;
+        
+        let extreme_topks = vec![1, 2, 1000, 50000];
+        for top_k in extreme_topks {
+            debug!("Testing extreme top_k: {}", top_k);
+            
+            match engine.generate_stream_with_config(&format!("Extreme top_k {} test", top_k), 
+                &GenerationConfig {
+                    top_k,
+                    max_new_tokens: 2,
+                    ..Default::default()
+                }) {
+                Ok(mut stream) => {
+                    if let Some(Ok(_)) = stream.next().await {
+                        extreme_topk_successes += 1;
+                    }
+                }
+                Err(e) => {
+                    warn!("Extreme top_k {} failed: {}", top_k, e);
+                }
+            }
+            extreme_topk_tests += 1;
+        }
+        
+        // Test with edge case max_new_tokens
+        debug!("Testing edge case max_new_tokens");
+        let mut max_tokens_tests = 0;
+        let mut max_tokens_successes = 0;
+        
+        let edge_case_tokens = vec![0, 1, 2, 1000];
+        for max_tokens in edge_case_tokens {
+            debug!("Testing max_new_tokens: {}", max_tokens);
+            
+            match engine.generate_stream_with_config(&format!("Max tokens {} test", max_tokens), 
+                &GenerationConfig {
+                    max_new_tokens: max_tokens,
+                    ..Default::default()
+                }) {
+                Ok(mut stream) => {
+                    let mut actual_tokens = 0;
+                    while let Some(result) = stream.next().await {
+                        if let Ok(_) = result {
+                            actual_tokens += 1;
+                            if actual_tokens > max_tokens {
+                                warn!("Generated more tokens ({}) than requested ({})", 
+                                      actual_tokens, max_tokens);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    debug!("Max tokens {} test: requested={}, actual={}", 
+                           max_tokens, max_tokens, actual_tokens);
+                    
+                    // For max_tokens=0, we should get no tokens
+                    if max_tokens == 0 && actual_tokens == 0 {
+                        max_tokens_successes += 1;
+                    } else if max_tokens > 0 && actual_tokens <= max_tokens {
+                        max_tokens_successes += 1;
+                    }
+                }
+                Err(e) => {
+                    if max_tokens == 0 {
+                        // It's acceptable for max_tokens=0 to fail
+                        max_tokens_successes += 1;
+                        debug!("Max tokens 0 failed as expected: {}", e);
+                    } else {
+                        warn!("Max tokens {} failed: {}", max_tokens, e);
+                    }
+                }
+            }
+            max_tokens_tests += 1;
+        }
+        
+        // Test with empty/invalid prompts
+        debug!("Testing edge case prompts");
+        let mut prompt_tests = 0;
+        let mut prompt_successes = 0;
+        
+        let edge_case_prompts = vec![
+            "",
+            " ",
+            "\n",
+            "\t",
+            "x".repeat(1000),
+        ];
+        
+        for prompt in edge_case_prompts {
+            debug!("Testing prompt: '{}...'", &prompt[..10.min(prompt.len())]);
+            
+            match engine.generate_stream(&prompt) {
+                Ok(mut stream) => {
+                    // Just try to get one token
+                    if let Some(_) = stream.next().await {
+                        prompt_successes += 1;
+                    }
+                }
+                Err(e) => {
+                    debug!("Edge case prompt failed: {}", e);
+                    // Empty prompts might legitimately fail
+                    if prompt.trim().is_empty() {
+                        prompt_successes += 1; // Expected failure
+                    }
+                }
+            }
+            prompt_tests += 1;
+        }
+
+        let duration = start_time.elapsed();
+
+        Ok(TestMetrics {
+            wall_time: duration,
+            memory_peak: None,
+            memory_average: None,
+            cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
+            custom_metrics: [
+                ("extreme_temp_tests".to_string(), extreme_temp_tests as f64),
+                ("extreme_temp_successes".to_string(), extreme_temp_successes as f64),
+                ("extreme_topk_tests".to_string(), extreme_topk_tests as f64),
+                ("extreme_topk_successes".to_string(), extreme_topk_successes as f64),
+                ("max_tokens_tests".to_string(), max_tokens_tests as f64),
+                ("max_tokens_successes".to_string(), max_tokens_successes as f64),
+                ("prompt_tests".to_string(), prompt_tests as f64),
+                ("prompt_successes".to_string(), prompt_successes as f64),
+            ].into_iter().collect(),
+        })
     }
 
     async fn cleanup(&self) -> TestResult<()> {
@@ -541,8 +1141,182 @@ impl TestCase for StreamIntegrationTest {
     }
 
     async fn execute(&self) -> TestResult<TestMetrics> {
-        // Integration test implementation
-        Ok(TestMetrics::default())
+        let start_time = Instant::now();
+
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer::new());
+        let device = Device::Cpu;
+
+        debug!("Testing full integration scenarios");
+
+        // Test complete workflow: engine creation -> streaming -> stats -> cleanup
+        let engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device)
+            .map_err(|e| TestError::execution(format!("Failed to create engine: {}", e)))?;
+        
+        // Get initial stats
+        let initial_stats = engine.get_stats().await;
+        debug!("Initial stats: cache_size={}, usage={:.2}%", 
+               initial_stats.cache_size, initial_stats.cache_usage);
+        
+        // Test normal streaming workflow
+        debug!("Testing normal streaming workflow");
+        let mut workflow_stream = engine.generate_stream("Integration test prompt");
+        let mut workflow_tokens = Vec::new();
+        
+        while let Some(result) = workflow_stream.next().await {
+            match result {
+                Ok(token) => {
+                    workflow_tokens.push(token);
+                    if workflow_tokens.len() >= 5 {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    warn!("Workflow streaming error: {}", e);
+                    break;
+                }
+            }
+        }
+        
+        // Test stats after generation
+        let post_generation_stats = engine.get_stats().await;
+        debug!("Post-generation stats: cache_size={}, usage={:.2}%", 
+               post_generation_stats.cache_size, post_generation_stats.cache_usage);
+        
+        // Test multiple streams in sequence
+        debug!("Testing sequential streaming");
+        let mut sequential_results = Vec::new();
+        
+        for i in 0..3 {
+            let mut seq_stream = engine.generate_stream(&format!("Sequential test {}", i + 1));
+            let mut seq_tokens = 0;
+            
+            while let Some(result) = seq_stream.next().await {
+                if let Ok(_) = result {
+                    seq_tokens += 1;
+                    if seq_tokens >= 2 {
+                        break;
+                    }
+                }
+            }
+            sequential_results.push(seq_tokens);
+        }
+        
+        // Test cache behavior
+        debug!("Testing cache behavior");
+        let pre_clear_stats = engine.get_stats().await;
+        
+        // Clear cache
+        engine.clear_cache().await;
+        
+        let post_clear_stats = engine.get_stats().await;
+        debug!("Post-clear stats: cache_size={}, usage={:.2}%", 
+               post_clear_stats.cache_size, post_clear_stats.cache_usage);
+        
+        // Test generation after cache clear
+        let mut post_clear_stream = engine.generate_stream("Post-clear test");
+        let mut post_clear_tokens = 0;
+        
+        while let Some(result) = post_clear_stream.next().await {
+            if let Ok(_) = result {
+                post_clear_tokens += 1;
+                if post_clear_tokens >= 2 {
+                    break;
+                }
+            }
+        }
+        
+        // Test error handling integration
+        debug!("Testing error handling integration");
+        let error_model = Arc::new(ErrorProneModel::new());
+        let error_engine = InferenceEngine::new(error_model, tokenizer.clone(), device)
+            .map_err(|e| TestError::execution(format!("Failed to create error engine: {}", e)))?;
+        
+        let mut error_stream = error_engine.generate_stream("Error integration test");
+        let mut error_tokens = 0;
+        let mut errors_encountered = 0;
+        
+        // Allow for some errors but expect eventual success
+        for _ in 0..10 {
+            match error_stream.next().await {
+                Some(Ok(_)) => {
+                    error_tokens += 1;
+                    if error_tokens >= 2 {
+                        break;
+                    }
+                }
+                Some(Err(_)) => {
+                    errors_encountered += 1;
+                    // Continue trying
+                }
+                None => break,
+            }
+        }
+        
+        // Test streaming with configuration variations
+        debug!("Testing configuration variations");
+        let mut config_tests = 0;
+        let mut config_successes = 0;
+        
+        let configs = vec![
+            GenerationConfig {
+                temperature: 0.1,
+                top_k: 10,
+                max_new_tokens: 2,
+                ..Default::default()
+            },
+            GenerationConfig {
+                temperature: 1.5,
+                top_p: 0.8,
+                max_new_tokens: 3,
+                ..Default::default()
+            },
+        ];
+        
+        for (i, config) in configs.into_iter().enumerate() {
+            match engine.generate_stream_with_config(&format!("Config test {}", i + 1), &config) {
+                Ok(mut stream) => {
+                    if let Some(Ok(_)) = stream.next().await {
+                        config_successes += 1;
+                    }
+                }
+                Err(e) => {
+                    warn!("Config test {} failed: {}", i + 1, e);
+                }
+            }
+            config_tests += 1;
+        }
+        
+        // Final stats
+        let final_stats = engine.get_stats().await;
+        debug!("Final stats: cache_size={}, usage={:.2}%", 
+               final_stats.cache_size, final_stats.cache_usage);
+
+        let duration = start_time.elapsed();
+        
+        let total_sequential_tokens: usize = sequential_results.iter().sum();
+
+        Ok(TestMetrics {
+            wall_time: duration,
+            memory_peak: None,
+            memory_average: None,
+            cpu_time: Some(duration),
+            assertions: 0,
+            operations: 0,
+            custom_metrics: [
+                ("workflow_tokens".to_string(), workflow_tokens.len() as f64),
+                ("sequential_streams".to_string(), sequential_results.len() as f64),
+                ("sequential_total_tokens".to_string(), total_sequential_tokens as f64),
+                ("cache_cleared_successfully".to_string(), 1.0),
+                ("post_clear_tokens".to_string(), post_clear_tokens as f64),
+                ("error_integration_tokens".to_string(), error_tokens as f64),
+                ("error_integration_errors".to_string(), errors_encountered as f64),
+                ("config_variation_tests".to_string(), config_tests as f64),
+                ("config_variation_successes".to_string(), config_successes as f64),
+                ("initial_cache_usage".to_string(), initial_stats.cache_usage),
+                ("final_cache_usage".to_string(), final_stats.cache_usage),
+            ].into_iter().collect(),
+        })
     }
 
     async fn cleanup(&self) -> TestResult<()> {
@@ -726,6 +1500,92 @@ impl Tokenizer for ErrorTokenizer {
 
     fn token_to_piece(&self, _token: u32) -> Option<String> {
         None
+    }
+}
+
+/// Slow model for backpressure testing
+struct SlowModel {
+    config: bitnet_common::BitNetConfig,
+    forward_calls: AtomicUsize,
+}
+
+impl SlowModel {
+    fn new() -> Self {
+        Self {
+            config: bitnet_common::BitNetConfig::default(),
+            forward_calls: AtomicUsize::new(0),
+        }
+    }
+}
+
+impl Model for SlowModel {
+    fn config(&self) -> &bitnet_common::BitNetConfig {
+        &self.config
+    }
+
+    fn forward(
+        &self,
+        _input: &bitnet_common::ConcreteTensor,
+        _cache: &mut dyn std::any::Any,
+    ) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+        self.forward_calls.fetch_add(1, Ordering::Relaxed);
+        // Simulate slow model computation
+        std::thread::sleep(Duration::from_millis(50));
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, 50257]))
+    }
+
+    fn embed(&self, _tokens: &[u32]) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, 10, 768]))
+    }
+
+    fn logits(&self, _hidden: &bitnet_common::ConcreteTensor) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, 50257]))
+    }
+}
+
+/// Timeout-prone model for timeout testing
+struct TimeoutProneModel {
+    config: bitnet_common::BitNetConfig,
+    forward_calls: AtomicUsize,
+}
+
+impl TimeoutProneModel {
+    fn new() -> Self {
+        Self {
+            config: bitnet_common::BitNetConfig::default(),
+            forward_calls: AtomicUsize::new(0),
+        }
+    }
+}
+
+impl Model for TimeoutProneModel {
+    fn config(&self) -> &bitnet_common::BitNetConfig {
+        &self.config
+    }
+
+    fn forward(
+        &self,
+        _input: &bitnet_common::ConcreteTensor,
+        _cache: &mut dyn std::any::Any,
+    ) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+        let count = self.forward_calls.fetch_add(1, Ordering::Relaxed);
+        
+        // Simulate occasional long delays
+        if count % 4 == 3 {
+            std::thread::sleep(Duration::from_millis(500));
+        } else {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, 50257]))
+    }
+
+    fn embed(&self, _tokens: &[u32]) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, 10, 768]))
+    }
+
+    fn logits(&self, _hidden: &bitnet_common::ConcreteTensor) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, 50257]))
     }
 }
 

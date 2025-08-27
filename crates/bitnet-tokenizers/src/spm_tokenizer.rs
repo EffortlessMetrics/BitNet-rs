@@ -35,20 +35,18 @@ impl super::Tokenizer for SpmTokenizer {
         })?;
         let mut ids: Vec<u32> = pieces.into_iter().map(|p| p.id).collect();
 
-        if add_bos {
-            if let Some(bos) = self.bos_id {
-                if ids.first().copied() != Some(bos) {
-                    ids.insert(0, bos);
-                }
-            }
+        if add_bos
+            && let Some(bos) = self.bos_id
+            && ids.first().copied() != Some(bos)
+        {
+            ids.insert(0, bos);
         }
 
-        if add_special {
-            if let Some(eos) = self.eos_id {
-                if ids.last().copied() != Some(eos) {
-                    ids.push(eos);
-                }
-            }
+        if add_special
+            && let Some(eos) = self.eos_id
+            && ids.last().copied() != Some(eos)
+        {
+            ids.push(eos);
         }
 
         Ok(ids)

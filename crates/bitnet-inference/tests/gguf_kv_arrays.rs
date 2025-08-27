@@ -203,7 +203,7 @@ fn handles_float_arrays() {
     f.write_all(&3u64.to_le_bytes()).unwrap(); // length
     f.write_all(&1.0f32.to_le_bytes()).unwrap();
     f.write_all(&2.5f32.to_le_bytes()).unwrap();
-    f.write_all(&(-3.14f32).to_le_bytes()).unwrap();
+    f.write_all(&(-std::f32::consts::PI).to_le_bytes()).unwrap();
     f.flush().unwrap();
 
     let kvs = bitnet_inference::gguf::read_kv_pairs(&path, None).unwrap();
@@ -220,7 +220,9 @@ fn handles_float_arrays() {
                 _ => panic!("expected f32"),
             }
             match &items[2] {
-                bitnet_inference::gguf::GgufValue::F32(v) => assert!((v + 3.14).abs() < 0.001),
+                bitnet_inference::gguf::GgufValue::F32(v) => {
+                    assert!((v + std::f32::consts::PI).abs() < 0.001)
+                }
                 _ => panic!("expected f32"),
             }
         }
