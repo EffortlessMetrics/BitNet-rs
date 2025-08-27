@@ -379,7 +379,7 @@ pub mod utils {
 
         #[cfg(target_os = "macos")]
         {
-            use libc::{getrusage, rusage, RUSAGE_SELF};
+            use libc::{RUSAGE_SELF, getrusage, rusage};
             unsafe {
                 let mut usage = std::mem::zeroed::<rusage>();
                 if getrusage(RUSAGE_SELF, &mut usage) == 0 {
@@ -424,7 +424,7 @@ pub mod utils {
 
         #[cfg(target_os = "macos")]
         {
-            use libc::{getrusage, rusage, RUSAGE_SELF};
+            use libc::{RUSAGE_SELF, getrusage, rusage};
             unsafe {
                 let mut usage = std::mem::zeroed::<rusage>();
                 if getrusage(RUSAGE_SELF, &mut usage) == 0 {
