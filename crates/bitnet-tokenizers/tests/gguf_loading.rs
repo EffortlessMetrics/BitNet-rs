@@ -39,7 +39,7 @@ fn build_test_gguf(tokens: &[&str], bos: u32, eos: u32) -> Vec<u8> {
     buf.extend(&eos.to_le_bytes());
 
     // align and set data_offset
-    let data_offset = ((buf.len() + 31) / 32) * 32;
+    let data_offset = buf.len().div_ceil(32) * 32;
     buf.resize(data_offset, 0);
     let doff_bytes = (data_offset as u64).to_le_bytes();
     buf[28..36].copy_from_slice(&doff_bytes);

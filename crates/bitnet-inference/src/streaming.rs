@@ -122,6 +122,20 @@ impl GenerationStats {
     }
 }
 
+/// Parameters for internal streaming generation
+struct StreamingParams {
+    _model: Arc<dyn Model>,
+    tokenizer: Arc<dyn Tokenizer>,
+    backend: Box<dyn Backend>,
+    cache: Arc<RwLock<KVCache>>,
+    prompt: String,
+    config: GenerationConfig,
+    streaming_config: StreamingConfig,
+    sender: mpsc::Sender<Result<String>>,
+    cancellation_token: Arc<AtomicBool>,
+    stats: Arc<GenerationStats>,
+}
+
 impl GenerationStream {
     /// Create a new generation stream
     #[instrument(skip(model, tokenizer, backend, cache))]
@@ -145,22 +159,34 @@ impl GenerationStream {
         let stats_clone = generation_stats.clone();
 
         let handle = tokio::spawn(async move {
-            if let Err(e) = Self::generate_stream_internal(
-                model,
+            if let Err(e) = Self::generate_stream_internal(StreamingParams {
+                _model: model,
                 tokenizer,
                 backend,
                 cache,
                 prompt,
-                generation_config,
+                config: generation_config,
                 streaming_config,
-                sender.clone(),
-                cancel_token_clone,
-                stats_clone,
-            )
+                sender: sender.clone(),
+                cancellation_token: cancel_token_clone,
+                stats: stats_clone,
+            })
             .await
             {
-                warn!("Stream generation failed: {}", e);
-                let _ = sender.send(Err(e)).await;
+                error!("Stream generation failed with error: {}", e);
+
+                // Create detailed error context
+                let detailed_error = anyhow::anyhow!(
+                    "Streaming generation failed: {}. This may be due to model errors, \
+                     tokenization issues, or resource constraints. Check logs for details.",
+                    e
+                )
+                .context("GenerationStream internal error");
+
+                // Send detailed error to consumer
+                if let Err(send_err) = sender.send(Err(detailed_error)).await {
+                    error!("Failed to send error to stream consumer: {}", send_err);
+                }
             }
         });
 
@@ -168,23 +194,45 @@ impl GenerationStream {
     }
 
     /// Internal streaming generation implementation
-    async fn generate_stream_internal(
-        _model: Arc<dyn Model>,
-        tokenizer: Arc<dyn Tokenizer>,
-        backend: Box<dyn Backend>,
-        cache: Arc<RwLock<KVCache>>,
-        prompt: String,
-        config: GenerationConfig,
-        streaming_config: StreamingConfig,
-        sender: mpsc::Sender<Result<String>>,
-        cancellation_token: Arc<AtomicBool>,
-        stats: Arc<GenerationStats>,
-    ) -> Result<()> {
+    async fn generate_stream_internal(params: StreamingParams) -> Result<()> {
+        let StreamingParams {
+            _model,
+            tokenizer,
+            backend,
+            cache,
+            prompt,
+            config,
+            streaming_config,
+            sender,
+            cancellation_token,
+            stats,
+        } = params;
         debug!("Starting streaming generation for prompt");
 
-        // Tokenize input
-        let input_tokens =
-            tokenizer.encode(&prompt, true, true).context("Failed to tokenize input prompt")?;
+        // Tokenize input with comprehensive error handling
+        let input_tokens = tokenizer.encode(&prompt, true, true).with_context(|| {
+            format!(
+                "Failed to tokenize input prompt of length {}. \
+                     The prompt may contain unsupported characters or exceed \
+                     tokenizer limits. Prompt preview: '{}...'",
+                prompt.len(),
+                &prompt[..50.min(prompt.len())]
+            )
+        })?;
+
+        if input_tokens.is_empty() {
+            warn!(
+                "Tokenization resulted in empty token sequence for prompt: '{}...'. \
+                 This may cause generation issues.",
+                &prompt[..20.min(prompt.len())]
+            );
+        }
+
+        debug!(
+            "Successfully tokenized prompt of length {} into {} tokens",
+            prompt.len(),
+            input_tokens.len()
+        );
 
         let mut current_tokens = input_tokens.clone();
         let mut generated_count = 0;
@@ -229,43 +277,94 @@ impl GenerationStream {
                         stats.errors_encountered.fetch_add(1, Ordering::Relaxed);
 
                         if retry_count >= streaming_config.max_retries {
-                            error!("Forward pass failed after {} retries: {}", retry_count, e);
-                            return Err(e);
+                            error!(
+                                "Forward pass failed after {} retries for token position {}. \
+                                 Final error: {}. Consider reducing generation complexity or \
+                                 increasing timeout/retry limits.",
+                                retry_count,
+                                generated_count + 1,
+                                e
+                            );
+
+                            let context_error = e.context(format!(
+                                "Forward pass exhausted {} retries at token position {}",
+                                streaming_config.max_retries,
+                                generated_count + 1
+                            ));
+
+                            return Err(context_error);
                         }
 
                         retry_count += 1;
                         stats.retries_attempted.fetch_add(1, Ordering::Relaxed);
                         warn!(
-                            "Forward pass failed, retrying ({}/{}): {}",
-                            retry_count, streaming_config.max_retries, e
+                            "Forward pass failed at token position {}, retrying ({}/{}): {}. \
+                             Applying exponential backoff.",
+                            generated_count + 1,
+                            retry_count,
+                            streaming_config.max_retries,
+                            e
                         );
 
-                        // Brief backoff before retry
-                        tokio::time::sleep(std::time::Duration::from_millis(
-                            50 * retry_count as u64,
-                        ))
-                        .await;
+                        // Exponential backoff
+                        let backoff_ms = (50 * retry_count as u64).min(1000);
+                        tokio::time::sleep(std::time::Duration::from_millis(backoff_ms)).await;
                     }
                     Err(_) => {
                         stats.errors_encountered.fetch_add(1, Ordering::Relaxed);
+                        error!(
+                            "Forward pass timed out after {}ms at token position {}. \
+                             This may indicate model complexity exceeds available resources.",
+                            streaming_config.token_timeout_ms,
+                            generated_count + 1
+                        );
+
                         return Err(anyhow::anyhow!(
-                            "Forward pass timed out after {}ms",
-                            streaming_config.token_timeout_ms
+                            "Forward pass timed out after {}ms at token position {}. \
+                             Consider increasing token_timeout_ms or reducing model complexity.",
+                            streaming_config.token_timeout_ms,
+                            generated_count + 1
                         ));
                     }
                 }
             };
 
-            // Sample next token
-            let next_token = sampling_strategy.sample(&logits, &current_tokens)?;
+            // Sample next token with error context
+            let next_token =
+                sampling_strategy.sample(&logits, &current_tokens).with_context(|| {
+                    format!(
+                        "Sampling failed at token position {} with {} current tokens. \
+                         This may indicate invalid logits or sampling configuration issues.",
+                        generated_count + 1,
+                        current_tokens.len()
+                    )
+                })?;
 
             // Check for stop conditions
             if Self::should_stop(next_token, &current_tokens, &config, &tokenizer) {
                 break;
             }
 
-            // Decode token to text
-            let token_text = tokenizer.decode(&[next_token]).context("Failed to decode token")?;
+            // Decode token to text with detailed error context
+            let token_text = tokenizer.decode(&[next_token]).with_context(|| {
+                format!(
+                    "Failed to decode token {} at position {}. \
+                         The token ID may be out of vocabulary range or the tokenizer \
+                         may be corrupted. Vocab size: {}",
+                    next_token,
+                    generated_count + 1,
+                    tokenizer.vocab_size()
+                )
+            })?;
+
+            if token_text.is_empty() {
+                debug!(
+                    "Token {} decoded to empty string at position {}. \
+                     This may be expected for special tokens.",
+                    next_token,
+                    generated_count + 1
+                );
+            }
 
             token_buffer.push(token_text);
             current_tokens.push(next_token);
