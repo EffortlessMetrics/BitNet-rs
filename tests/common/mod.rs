@@ -59,6 +59,7 @@ pub use env::{env_bool, env_duration_secs, env_guard, env_string, env_u64, env_u
 pub use units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 pub use utils::{format_bytes, format_duration, get_memory_usage, get_peak_memory_usage};
 
+// Cross-validation module (optional)
 #[cfg(feature = "crossval")]
 pub mod cross_validation;
 
@@ -89,8 +90,8 @@ pub mod trend_reporting;
 #[cfg(feature = "fixtures")]
 pub mod config_validator;
 
-// Cross-validation types temporarily disabled
-// pub use cross_validation::{...};
+#[cfg(feature = "crossval")]
+pub use cross_validation::{ComparisonTestRunner, CompleteValidationResult, TestSummaryStatistics};
 
 /// Current version of the testing framework
 pub const TESTING_FRAMEWORK_VERSION: &str = "0.1.0";

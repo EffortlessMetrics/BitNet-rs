@@ -1,30 +1,83 @@
 use super::test_cases::ModelSize;
+#[cfg(feature = "cpp")]
+use crate::cross_validation::CppImplementation;
 use crate::cross_validation::test_cases::{
     ComparisonTestCaseRegistry, TestCaseCategory, test_suites,
 };
 use crate::cross_validation::{
-    ComparisonTestCase, ComparisonTolerance, CppImplementation, CrossValidationResult,
-    CrossValidationSuite, RustImplementation,
+    ComparisonTestCase, ComparisonTolerance, CrossValidationResult, CrossValidationSuite,
+    RustImplementation,
 };
+use crate::errors::{TestError, TestOpResult as TestResultCompat};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::time::Instant;
 
-// Temporary stub for TestModelRegistry
-#[derive(Debug)]
+/// Registry that discovers available GGUF models on disk
+#[derive(Debug, Default)]
 pub struct TestModelRegistry {
-    models: Vec<String>,
+    models: Vec<(ModelSize, PathBuf)>,
 }
 
 impl TestModelRegistry {
+    /// Discover models in the directory specified by the `TEST_MODEL_DIR` env var
+    /// or the current working directory if the variable is not set.
     pub async fn new() -> Result<Self, TestError> {
-        Ok(Self { models: vec!["tiny-model".to_string(), "small-model".to_string()] })
+        let base = std::env::var("TEST_MODEL_DIR").unwrap_or_else(|_| ".".to_string());
+        Self::from_directory(Path::new(&base)).await
     }
 
-    pub fn by_size(&self, _size: ModelSize) -> Vec<&str> {
-        self.models.iter().map(|s| s.as_str()).collect()
+    /// Create a registry from a specific directory
+    pub async fn from_directory(dir: &Path) -> Result<Self, TestError> {
+        let mut models = Vec::new();
+        Self::scan_dir(dir, &mut models).map_err(TestError::IoError)?;
+        Ok(Self { models })
+    }
+
+    /// Recursively scan a directory for `.gguf` files
+    fn scan_dir(dir: &Path, models: &mut Vec<(ModelSize, PathBuf)>) -> Result<(), std::io::Error> {
+        if !dir.exists() {
+            return Ok(());
+        }
+
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                Self::scan_dir(&path, models)?;
+            } else if path.extension().and_then(|s| s.to_str()) == Some("gguf") {
+                let metadata = entry.metadata()?;
+                let size = Self::classify_size(metadata.len());
+                models.push((size, path));
+            }
+        }
+        Ok(())
+    }
+
+    fn classify_size(bytes: u64) -> ModelSize {
+        const MB: u64 = 1024 * 1024;
+        let mb = bytes / MB;
+        match mb {
+            0..=100 => ModelSize::Tiny,
+            101..=1024 => ModelSize::Small,
+            1025..=10240 => ModelSize::Medium,
+            _ => ModelSize::Large,
+        }
+    }
+
+    /// Return all model paths for a given size
+    pub fn by_size(&self, size: ModelSize) -> Vec<PathBuf> {
+        self.models
+            .iter()
+            .filter_map(|(s, p)| if *s == size { Some(p.clone()) } else { None })
+            .collect()
+    }
+
+    /// Return all discovered model paths
+    pub fn all_models(&self) -> Vec<PathBuf> {
+        self.models.iter().map(|(_, p)| p.clone()).collect()
     }
 }
-use crate::errors::{TestError, TestOpResult as TestResultCompat};
-use std::path::Path;
-use std::time::Instant;
 
 /// Comprehensive test runner for cross-implementation comparison
 pub struct ComparisonTestRunner {
@@ -39,7 +92,10 @@ impl ComparisonTestRunner {
     pub async fn new() -> TestResultCompat<Self> {
         let tolerance = ComparisonTolerance::default();
         let rust_impl = Box::new(RustImplementation::new());
+        #[cfg(feature = "cpp")]
         let cpp_impl = Box::new(CppImplementation::new());
+        #[cfg(not(feature = "cpp"))]
+        let cpp_impl = Box::new(RustImplementation::new());
         let suite = CrossValidationSuite::new(rust_impl, cpp_impl, tolerance);
         let test_registry = ComparisonTestCaseRegistry::new();
         let model_registry = TestModelRegistry::new().await?;
@@ -50,7 +106,10 @@ impl ComparisonTestRunner {
     /// Create a new test runner with custom tolerance
     pub async fn with_tolerance(tolerance: ComparisonTolerance) -> TestResultCompat<Self> {
         let rust_impl = Box::new(RustImplementation::new());
+        #[cfg(feature = "cpp")]
         let cpp_impl = Box::new(CppImplementation::new());
+        #[cfg(not(feature = "cpp"))]
+        let cpp_impl = Box::new(RustImplementation::new());
         let suite = CrossValidationSuite::new(rust_impl, cpp_impl, tolerance);
         let test_registry = ComparisonTestCaseRegistry::new();
         let model_registry = TestModelRegistry::new().await?;
@@ -134,11 +193,13 @@ impl ComparisonTestRunner {
     pub async fn run_tests_for_model_size(
         &mut self,
         model_size: ModelSize,
-        model_path: &Path,
     ) -> TestResultCompat<CrossValidationResult> {
+        let model_path = self.model_registry.by_size(model_size).into_iter().next().ok_or(
+            TestError::SetupError { message: format!("No model found for size {:?}", model_size) },
+        )?;
         let test_cases = test_suites::create_suite_for_model_size(model_size);
         let suite_name = format!("Tests for {:?} Models", model_size);
-        self.run_test_suite(&suite_name, test_cases, model_path).await
+        self.run_test_suite(&suite_name, test_cases, &model_path).await
     }
 
     /// Run tests by category
@@ -395,7 +456,8 @@ pub struct CompleteValidationResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
+    use std::fs::File;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_test_runner_creation() {
@@ -443,14 +505,42 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_model_registry_integration() {
+    async fn test_model_registry_discovery() {
+        // create temporary models
+        let dir = tempdir().unwrap();
+        let tiny = dir.path().join("tiny-model.gguf");
+        let tiny_file = File::create(&tiny).unwrap();
+        tiny_file.set_len(1 * 1024 * 1024).unwrap();
+        let small = dir.path().join("small-model.gguf");
+        let small_file = File::create(&small).unwrap();
+        small_file.set_len(110 * 1024 * 1024).unwrap();
+
+        unsafe {
+            std::env::set_var("TEST_MODEL_DIR", dir.path());
+        }
         let runner = ComparisonTestRunner::new().await.unwrap();
 
-        // Test that we can access different model sizes
         let tiny_models = runner.model_registry.by_size(ModelSize::Tiny);
         let small_models = runner.model_registry.by_size(ModelSize::Small);
 
-        assert!(!tiny_models.is_empty());
-        assert!(!small_models.is_empty());
+        assert_eq!(tiny_models.len(), 1);
+        assert_eq!(small_models.len(), 1);
+        unsafe {
+            std::env::remove_var("TEST_MODEL_DIR");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_model_registry_missing_models() {
+        let dir = tempdir().unwrap();
+        unsafe {
+            std::env::set_var("TEST_MODEL_DIR", dir.path());
+        }
+        let mut runner = ComparisonTestRunner::new().await.unwrap();
+        assert!(runner.model_registry.by_size(ModelSize::Tiny).is_empty());
+        assert!(runner.run_tests_for_model_size(ModelSize::Tiny).await.is_err());
+        unsafe {
+            std::env::remove_var("TEST_MODEL_DIR");
+        }
     }
 }

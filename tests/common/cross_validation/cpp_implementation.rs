@@ -20,14 +20,14 @@ use tokio::process::Command as AsyncCommand;
 use tokio::sync::RwLock;
 use tracing::{debug, info, instrument, warn};
 
-use super::cpp_ffi::{
-    BitNetCppHandle, CppInferenceConfig, CppInferenceResult, CppModelInfo, CppPerformanceMetrics,
-    bitnet_cpp_cleanup, bitnet_cpp_create, bitnet_cpp_destroy, bitnet_cpp_detokenize,
-    bitnet_cpp_free_string, bitnet_cpp_free_tokens, bitnet_cpp_get_metrics,
-    bitnet_cpp_get_model_info, bitnet_cpp_inference, bitnet_cpp_is_available,
-    bitnet_cpp_is_model_loaded, bitnet_cpp_load_model, bitnet_cpp_reset_metrics,
-    bitnet_cpp_tokenize, bitnet_cpp_unload_model,
-};
+// Note: FFI functions are expected to be provided by linking against BitNet.cpp
+// In test environments, stub implementations may be needed
+
+/// FFI bindings to the C++ BitNet implementation
+#[repr(C)]
+pub struct BitNetCppHandle {
+    pub _private: [u8; 0],
+}
 
 /// Thread-safe wrapper for the C++ handle
 struct CppHandleWrapper(*mut BitNetCppHandle);
@@ -51,6 +51,83 @@ impl CppHandleWrapper {
     }
 }
 
+/// C++ inference configuration
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct CppInferenceConfig {
+    pub max_tokens: c_uint,
+    pub temperature: c_float,
+    pub top_p: c_float,
+    pub top_k: c_int, // -1 for disabled
+    pub repetition_penalty: c_float,
+    pub seed: c_int, // -1 for random
+}
+
+/// C++ inference result
+#[repr(C)]
+pub struct CppInferenceResult {
+    pub tokens: *mut c_uint,
+    pub token_count: c_uint,
+    pub text: *const c_char,
+    pub duration_ms: c_uint,
+    pub memory_usage: c_uint,
+}
+/// C++ model information
+#[repr(C)]
+pub struct CppModelInfo {
+    pub name: *const c_char,
+    pub format: c_int,
+    pub size_bytes: c_uint,
+    pub parameter_count: c_uint,
+    pub context_length: c_uint,
+    pub vocabulary_size: c_uint,
+}
+
+/// C++ performance metrics
+#[repr(C)]
+pub struct CppPerformanceMetrics {
+    pub model_load_time_ms: c_uint,
+    pub tokenization_time_ms: c_uint,
+    pub inference_time_ms: c_uint,
+    pub peak_memory: c_uint,
+    pub tokens_per_second: c_float,
+}
+
+// External C++ function declarations
+#[cfg_attr(feature = "cpp-ffi", link(name = "bitnet_cpp"))]
+unsafe extern "C" {
+    fn bitnet_cpp_create() -> *mut BitNetCppHandle;
+    fn bitnet_cpp_destroy(handle: *mut BitNetCppHandle);
+    fn bitnet_cpp_is_available() -> c_int;
+    fn bitnet_cpp_load_model(handle: *mut BitNetCppHandle, path: *const c_char) -> c_int;
+    fn bitnet_cpp_unload_model(handle: *mut BitNetCppHandle) -> c_int;
+    fn bitnet_cpp_is_model_loaded(handle: *mut BitNetCppHandle) -> c_int;
+    fn bitnet_cpp_get_model_info(handle: *mut BitNetCppHandle) -> CppModelInfo;
+    fn bitnet_cpp_tokenize(
+        handle: *mut BitNetCppHandle,
+        text: *const c_char,
+        tokens: *mut *mut c_uint,
+        token_count: *mut c_uint,
+    ) -> c_int;
+    fn bitnet_cpp_detokenize(
+        handle: *mut BitNetCppHandle,
+        tokens: *const c_uint,
+        token_count: c_uint,
+        text: *mut *mut c_char,
+    ) -> c_int;
+    fn bitnet_cpp_inference(
+        handle: *mut BitNetCppHandle,
+        tokens: *const c_uint,
+        token_count: c_uint,
+        config: *const CppInferenceConfig,
+        result: *mut CppInferenceResult,
+    ) -> c_int;
+    fn bitnet_cpp_get_metrics(handle: *mut BitNetCppHandle) -> CppPerformanceMetrics;
+    fn bitnet_cpp_reset_metrics(handle: *mut BitNetCppHandle);
+    fn bitnet_cpp_cleanup(handle: *mut BitNetCppHandle) -> c_int;
+    fn bitnet_cpp_free_string(ptr: *mut c_char);
+    fn bitnet_cpp_free_tokens(ptr: *mut c_uint);
+}
 /// C++ implementation wrapper for BitNet.cpp
 pub struct CppImplementation {
     /// Name of this implementation
@@ -704,6 +781,7 @@ impl ImplementationFactory for CppImplementationFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::BYTES_PER_MB;
     use tempfile::TempDir;
 
     #[tokio::test]
@@ -806,7 +884,7 @@ mod tests {
         let implementation = CppImplementation::new();
         let resource_info = implementation.get_resource_info();
 
-        assert!(resource_info.memory_usage >= 0);
+        assert!(resource_info.memory_usage > 0);
         assert!(resource_info.thread_count > 0);
         assert_eq!(resource_info.file_handles, 1); // Just binary handle
     }
@@ -894,7 +972,7 @@ mod tests {
             model_load_time_ms: 1000,
             tokenization_time_ms: 50,
             inference_time_ms: 200,
-            peak_memory: BYTES_PER_MB, // 1MB
+            peak_memory: 1024 * 1024, // 1MB
             tokens_per_second: 100.5,
         };
 
@@ -904,7 +982,7 @@ mod tests {
         assert_eq!(metrics.tokenization_time, Duration::from_millis(50));
         assert_eq!(metrics.inference_time, Duration::from_millis(200));
         assert_eq!(metrics.total_time, Duration::from_millis(1250));
-        assert_eq!(metrics.peak_memory, BYTES_PER_MB);
+        assert_eq!(metrics.peak_memory, 1024 * 1024);
         assert_eq!(metrics.tokens_per_second, 100.5);
     }
 

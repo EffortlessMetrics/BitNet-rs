@@ -95,7 +95,7 @@ impl From<BitNetError> for BitNetCError {
                     ))
                 }
                 bitnet_common::KernelError::InvalidArguments { reason } => {
-                    BitNetCError::InferenceFailed(format!("Invalid arguments: {}", reason))
+                    BitNetCError::InferenceFailed(format!("Invalid kernel arguments: {}", reason))
                 }
             },
             BitNetError::Inference(inference_error) => match inference_error {
