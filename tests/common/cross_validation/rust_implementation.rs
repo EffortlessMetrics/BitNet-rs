@@ -16,7 +16,7 @@ use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tracing::{debug, info, instrument};
 
