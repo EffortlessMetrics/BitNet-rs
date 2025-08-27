@@ -239,6 +239,6 @@ mod tests {
     fn test_diagnose_placeholder() {
         // This is a placeholder test
         // Real tests would require actual GGUF files
-        assert!(true);
+        // Just verify the module compiles
     }
 }

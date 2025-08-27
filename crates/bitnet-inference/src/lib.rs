@@ -51,6 +51,5 @@ mod tests {
     async fn test_inference_engine_creation() {
         // This would require actual model and tokenizer implementations
         // For now, just test that the module compiles
-        assert!(true);
     }
 }

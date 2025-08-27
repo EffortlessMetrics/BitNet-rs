@@ -167,6 +167,7 @@ cli = []    # Handled by bitnet-cli crate
 
 # Cross-validation features
 crossval = [] # Enable cross-validation against C++ implementation
+cpp-ffi = [] # Link tests against BitNet.cpp library
 
 # Test framework features (forward to bitnet-tests)
 fixtures = ["bitnet-tests/fixtures"]

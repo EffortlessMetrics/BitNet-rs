@@ -1,7 +1,9 @@
 //! SentencePiece tokenizer support
 
 #[cfg(feature = "spm")]
-use anyhow::Result;
+use anyhow::Result as AnyhowResult;
+#[cfg(feature = "spm")]
+use bitnet_common::{BitNetError, ModelError, Result};
 #[cfg(feature = "spm")]
 use std::path::Path;
 
@@ -14,13 +16,11 @@ pub struct SpmTokenizer {
 
 #[cfg(feature = "spm")]
 impl SpmTokenizer {
-    pub fn from_file(path: &Path) -> Result<Self> {
-        let mut spp = sentencepiece::SentencePieceProcessor::new();
-        spp.load(path.to_str().ok_or_else(|| anyhow::anyhow!("Invalid path"))?)?;
-
-        let bos_id = spp.bos_id().ok().map(|x| x as u32);
-        let eos_id = spp.eos_id().ok().map(|x| x as u32);
-
+    pub fn from_file(path: &Path) -> AnyhowResult<Self> {
+        let spp =
+            sentencepiece::SentencePieceProcessor::open(path).map_err(|e| anyhow::anyhow!(e))?;
+        let bos_id = spp.bos_id();
+        let eos_id = spp.eos_id();
         Ok(Self { inner: spp, bos_id, eos_id })
     }
 }
@@ -28,39 +28,50 @@ impl SpmTokenizer {
 #[cfg(feature = "spm")]
 impl super::Tokenizer for SpmTokenizer {
     fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
-        let mut ids = self.inner.encode(text).map_err(|e| anyhow::anyhow!(e))?;
+        let pieces = self.inner.encode(text).map_err(|e| {
+            BitNetError::Model(ModelError::LoadingFailed {
+                reason: format!("Tokenizer encode error: {}", e),
+            })
+        })?;
+        let mut ids: Vec<u32> = pieces.into_iter().map(|p| p.id).collect();
 
-        if add_bos {
-            if let Some(bos) = self.bos_id {
-                ids.insert(0, bos as i32);
-            }
+        if add_bos
+            && let Some(bos) = self.bos_id
+            && ids.first().copied() != Some(bos)
+        {
+            ids.insert(0, bos);
         }
 
-        if add_special {
-            if let Some(eos) = self.eos_id {
-                ids.push(eos as i32);
-            }
+        if add_special
+            && let Some(eos) = self.eos_id
+            && ids.last().copied() != Some(eos)
+        {
+            ids.push(eos);
         }
 
-        Ok(ids.into_iter().map(|x| x as u32).collect())
+        Ok(ids)
     }
 
     fn decode(&self, ids: &[u32]) -> Result<String> {
-        let vec_i32: Vec<i32> = ids.iter().map(|x| *x as i32).collect();
-        self.inner.decode(&vec_i32).map_err(|e| anyhow::anyhow!(e))
+        self.inner.decode_piece_ids(ids).map_err(|e| {
+            BitNetError::Model(ModelError::LoadingFailed {
+                reason: format!("Tokenizer decode error: {}", e),
+            })
+        })
     }
 
     fn vocab_size(&self) -> usize {
-        self.inner.vocab_size() as usize
+        self.inner.len()
     }
 
-    fn token_to_piece(&self, token: u32) -> Option<String> {
-        self.inner.id_to_piece(token as i32).ok()
+    fn token_to_piece(&self, _token: u32) -> Option<String> {
+        None
     }
 
     fn bos_token_id(&self) -> Option<u32> {
         self.bos_id
     }
+
     fn eos_token_id(&self) -> Option<u32> {
         self.eos_id
     }

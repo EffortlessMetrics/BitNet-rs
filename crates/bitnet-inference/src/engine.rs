@@ -192,7 +192,7 @@ impl InferenceEngine {
     }
 
     /// Generate streaming tokens
-    pub fn generate_stream(&self, prompt: &str) -> GenerationStream {
+    pub fn generate_stream(&self, prompt: &str) -> Result<GenerationStream> {
         let config = GenerationConfig::default();
         self.generate_stream_with_config(prompt, &config)
     }
@@ -202,8 +202,8 @@ impl InferenceEngine {
         &self,
         prompt: &str,
         config: &GenerationConfig,
-    ) -> GenerationStream {
-        let streaming_config = StreamingConfig { buffer_size: 10, flush_interval_ms: 50 };
+    ) -> Result<GenerationStream> {
+        let streaming_config = StreamingConfig::default();
 
         GenerationStream::new(
             self.model.clone(),

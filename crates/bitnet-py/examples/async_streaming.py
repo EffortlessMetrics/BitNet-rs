@@ -12,20 +12,28 @@ import contextlib
 import bitnet_py as bitnet
 import time
 import sys
-from typing import AsyncIterator
+from typing import AsyncIterator, Iterator
 
-async def stream_tokens(
+def stream_tokens(engine: bitnet.InferenceEngine, prompt: str) -> Iterator[str]:
+    """
+    Stream tokens from the inference engine using the new streaming API.
+    """
+    # Use the actual streaming generator
+    stream = engine.generate_stream(prompt)
+    for token in stream:
+        yield token
+
+async def stream_tokens_async(
     engine: bitnet.SimpleInference,
     prompt: str,
     *,
     buffer_size: int = 16,
 ) -> AsyncIterator[str]:
-    """Yield tokens from the engine's incremental stream.
+    """Yield tokens from the engine's incremental stream with async/await.
 
     A bounded queue is used for backpressure. Cancelling the consumer task
     will cancel the underlying generation stream.
     """
-
     queue: asyncio.Queue = asyncio.Queue(maxsize=buffer_size)
 
     async def producer() -> None:
@@ -53,7 +61,6 @@ async def stream_tokens(
     finally:
         with contextlib.suppress(asyncio.CancelledError):
             await producer_task
-
 
 async def _collect_stream(engine: bitnet.SimpleInference, prompt: str) -> str:
     """Collect all tokens from a stream into a single string."""
