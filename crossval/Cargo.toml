@@ -11,6 +11,7 @@ publish = false
 default = []
 crossval = ["dep:bindgen", "dep:cc", "dep:bitnet-sys", "bitnet-sys/crossval"]
 ffi = ["dep:cc"]
+iq2s-ffi = ["bitnet-models/iq2s-ffi", "bitnet-ggml-ffi/iq2s-ffi"]
 cpp-probe = []
 integration-tests = []
 
@@ -32,6 +33,7 @@ bitnet-sys = { path = "../crates/bitnet-sys", optional = true }
 bitnet-inference = { path = "../crates/bitnet-inference" }
 bitnet-models = { path = "../crates/bitnet-models" }
 bitnet-tokenizers = { path = "../crates/bitnet-tokenizers", features = ["spm"] }
+bitnet-ggml-ffi = { path = "../crates/bitnet-ggml-ffi" }
 scopeguard = "1.2"
 dirs = "5.0"
 
@@ -40,6 +42,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 tempfile = "3.0"
 rand = "0.8"
 bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
+half = "2.0"
 
 [[bench]]
 name = "performance"
@@ -60,6 +63,11 @@ required-features = ["ffi"]
 name = "performance_validation"
 path = "tests/performance_validation.rs"
 required-features = ["ffi"]
+
+[[test]]
+name = "iq2s_validation"
+path = "tests/iq2s_validation.rs"
+required-features = ["iq2s-ffi"]
 
 [build-dependencies]
 bindgen = { version = "0.69", optional = true }
