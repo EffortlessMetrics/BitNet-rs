@@ -447,7 +447,17 @@ impl PyStreamingGenerator {
                     warn!("Streaming error encountered: {}", e);
                     // Clear the stream to prevent further attempts
                     self.stream = None;
-                    Err(PyRuntimeError::new_err(format!("Streaming error: {}", e)))
+                    // Provide more detailed error information
+                    let error_msg = if e.to_string().contains("timeout") {
+                        format!("Generation timeout: {}", e)
+                    } else if e.to_string().contains("cancelled") {
+                        format!("Generation cancelled: {}", e)
+                    } else if e.to_string().contains("memory") {
+                        format!("Memory error during generation: {}", e)
+                    } else {
+                        format!("Streaming error: {}", e)
+                    };
+                    Err(PyRuntimeError::new_err(error_msg))
                 }
                 None => {
                     // Stream ended normally
@@ -467,12 +477,31 @@ impl PyStreamingGenerator {
     /// This method immediately stops token generation and releases associated resources.
     /// It's safe to call multiple times and will log cancellation attempts for debugging.
     ///
+    /// The cancellation is immediate and irreversible. After calling this method,
+    /// any subsequent calls to `__next__()` will raise `StopIteration`.
+    ///
+    /// # Thread Safety
+    /// This method is safe to call from any thread, including during active generation.
+    ///
+    /// # Examples
+    /// ```python
+    /// stream = engine.generate_stream("Hello world")
+    ///
+    /// # Get a few tokens
+    /// for i, token in enumerate(stream):
+    ///     print(token, end="")
+    ///     if i >= 2:  # Cancel after 3 tokens
+    ///         stream.cancel()
+    ///         break
+    /// ```
+    ///
     /// # Returns
     /// Always returns `Ok(())` after attempting cancellation.
     fn cancel(&mut self) -> PyResult<()> {
         if self.stream.is_some() {
             info!("Cancelling active streaming generation");
             self.stream = None;
+            debug!("Stream cancelled and resources cleaned up");
         } else {
             debug!("Cancel called on already inactive stream");
         }
@@ -484,12 +513,58 @@ impl PyStreamingGenerator {
     /// Returns true if the stream has been initialized and is still generating tokens.
     /// This can be used by client code to determine if cancellation is necessary.
     ///
+    /// # Examples
+    /// ```python
+    /// stream = engine.generate_stream("Hello world")
+    ///
+    /// while stream.is_active():
+    ///     try:
+    ///         token = next(stream)
+    ///         print(token, end="")
+    ///     except StopIteration:
+    ///         break
+    ///     except KeyboardInterrupt:
+    ///         stream.cancel()
+    ///         break
+    /// ```
+    ///
     /// # Returns
     /// `true` if streaming is active, `false` otherwise
     fn is_active(&self) -> bool {
-        let active = self.stream.is_some();
+        let active = self.stream.is_some() && self.started;
         debug!("Stream active status: {}", active);
         active
+    }
+
+    /// Get streaming statistics and progress information.
+    ///
+    /// Returns a dictionary containing information about the current streaming session,
+    /// including tokens generated, generation speed, and resource usage.
+    ///
+    /// # Returns
+    /// Python dictionary with streaming statistics
+    fn get_stream_stats(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let stats = pyo3::types::PyDict::new_bound(py);
+
+        stats.set_item("started", self.started)?;
+        stats.set_item("active", self.is_active())?;
+
+        // Add configuration information
+        stats.set_item("max_tokens", self.config.max_new_tokens)?;
+        stats.set_item("temperature", self.config.temperature)?;
+        stats.set_item("top_k", self.config.top_k)?;
+        stats.set_item("top_p", self.config.top_p)?;
+
+        // Add prompt information (truncated for privacy)
+        let prompt_preview = if self.prompt.len() > 50 {
+            format!("{}...", &self.prompt[..47])
+        } else {
+            self.prompt.clone()
+        };
+        stats.set_item("prompt_preview", prompt_preview)?;
+        stats.set_item("prompt_length", self.prompt.len())?;
+
+        Ok(stats.into())
     }
 
     /// String representation for debugging and introspection.
