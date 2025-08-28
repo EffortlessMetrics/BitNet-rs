@@ -54,21 +54,70 @@ cargo test --workspace --no-default-features --features cpu
 ### 3. BitNet.rs Specific Fix Patterns
 
 **Test Failures**:
-- MSRV issues: Use `rustup run 1.89.0 cargo check --workspace --no-default-features --features cpu`
-- Feature flag conflicts: Run `cargo run -p xtask -- check-features`
-- FFI linking: Ensure `LD_LIBRARY_PATH=target/release` (Linux) or `DYLD_LIBRARY_PATH=target/release` (macOS)
-- Model/data issues: Use `cargo run -p xtask -- download-model` and set `BITNET_GGUF` appropriately
+```bash
+# MSRV compliance issues
+rustup run 1.89.0 cargo check --workspace --no-default-features --features cpu
+
+# Feature flag conflicts  
+cargo run -p xtask -- check-features
+
+# FFI linking issues
+export LD_LIBRARY_PATH=target/release  # Linux
+export DYLD_LIBRARY_PATH=target/release  # macOS
+cargo build -p bitnet-ffi --release --no-default-features --features cpu
+
+# Missing test models
+cargo run -p xtask -- download-model
+export BITNET_GGUF="$PWD/models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
+
+# GGUF format issues
+cargo run -p bitnet-cli -- compat-check "$BITNET_GGUF"
+cargo run -p bitnet-cli -- compat-fix "$BITNET_GGUF" fixed.gguf  # If needed
+
+# Cross-validation failures
+cargo run -p xtask -- full-crossval
+```
 
 **Quality Gates**:
-- Clippy: `cargo clippy --workspace --no-default-features --features cpu --fix --allow-dirty`
-- Format: `cargo fmt --all`
-- Security: `cargo audit` followed by manual resolution of vulnerabilities
-- Documentation: Fix warnings from `cargo doc --workspace --no-default-features --features cpu`
+```bash
+# Clippy with auto-fix
+cargo clippy --workspace --no-default-features --features cpu --fix --allow-dirty
+
+# Format check and fix
+cargo fmt --all
+
+# Security audit resolution
+cargo audit
+# Review and update Cargo.toml dependencies as needed
+
+# Documentation build
+cargo doc --workspace --no-default-features --features cpu
+```
+
+**Quantization & IQ2_S Issues**:
+```bash
+# Backend parity testing
+./scripts/test-iq2s-backend.sh
+
+# Manual IQ2_S validation
+cargo test --package bitnet-models --no-default-features --features "cpu,iq2s-ffi" -- iq2s_parity
+
+# FFI vs native comparison
+cargo run -p bitnet-cli -- benchmark-iq2s --compare-backends
+```
 
 **Performance Issues**:
-- Profile with appropriate tools after building with `--release`
-- Validate optimizations don't break correctness using cross-validation
-- Use deterministic testing: `BITNET_DETERMINISTIC=1 BITNET_SEED=42`
+```bash
+# Deterministic performance testing
+export BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1
+cargo bench --workspace --no-default-features --features cpu
+
+# Cross-validation correctness after optimization
+cargo run -p xtask -- crossval
+
+# Validate no regression with verification script
+./scripts/verify-tests.sh
+```
 
 ## GitHub Integration and Communication
 
@@ -132,24 +181,79 @@ For issues that cannot be resolved automatically:
 
 ## Success Criteria and Flow Management
 
-### Completion States
+### Orchestrator Guidance & Completion States
+
+Your final output **MUST** include this format:
 
 **Ready for Re-testing**:
 ```markdown
-## ✅ Cleanup Complete - Ready for Validation
+## 🎯 Next Steps for Orchestrator
 
-**Issues Resolved**: [X/X total]
-**Next Action**: Invoke `pr-test` agent for full re-validation
-**Confidence**: High - all targeted fixes applied and locally validated
+**Cleanup Status**: COMPLETED - NEEDS_VALIDATION
+**Recommended Agent**: `pr-test-validator`
+
+**Issues Addressed**:
+- Fixed: [List of resolved issues with file:line references]
+- Tests Fixed: [Specific test names/categories]  
+- Quality Gates: [clippy: ✅, fmt: ✅, audit: ✅, etc.]
+- Reviewer Feedback: [Addressed comments for @username1, @username2]
+
+**GitHub Actions Taken**:
+- Posted progress updates with resolved issues
+- Updated PR labels: removed "needs-work", added "ready-for-review"
+- Replied to reviewer comments with implementation details
+
+**Validation Required**: 
+- Full test suite with: `--no-default-features --features cpu`
+- Cross-validation: [Required/Not Required] based on changes
+- Performance benchmarks: [Required/Not Required]
+
+**Expected Flow**: pr-test → pr-context → pr-finalize
+**Confidence Level**: [High/Medium] - all issues systematically addressed
 ```
 
-**Ready for Finalization**:
+**Ready for Context Check**:
 ```markdown
-## ✅ All Issues Resolved - Ready to Finalize
+## 🎯 Next Steps for Orchestrator
 
-**Status**: All cleanup complete, quick validation passed
-**Next Action**: Invoke `pr-finalize` agent
-**Quality**: All gates cleared, reviewer feedback addressed
+**Cleanup Status**: COMPLETED - VALIDATION_PASSED  
+**Recommended Agent**: `pr-context-analyzer`
+
+**Validation Summary**:
+- Local tests: ✅ All passing
+- Quality gates: ✅ All clean  
+- Quick smoke tests: ✅ No regressions
+- GitHub status: Updated with completion
+
+**Context Check Needed**:
+- Review any new reviewer comments during cleanup
+- Verify all previous feedback has been addressed
+- Check if additional approvals needed
+
+**Expected Flow**: pr-context → pr-finalize → pr-merge → pr-doc-finalize
+**Priority**: Medium - ready for final review phase
+```
+
+**Ready for Direct Finalization**:
+```markdown
+## 🎯 Next Steps for Orchestrator
+
+**Cleanup Status**: FULLY_COMPLETED  
+**Recommended Agent**: `pr-finalize`
+
+**Complete Validation**:
+- All issues resolved and locally validated
+- Full test suite passing
+- All reviewer feedback addressed with confirmation
+- GitHub status updated and clean
+
+**Finalization Ready**:
+- No additional validation needed
+- No pending reviewer comments
+- All quality gates passed
+
+**Expected Flow**: pr-finalize → pr-merge → pr-doc-finalize  
+**Priority**: High - ready for immediate finalization
 ```
 
 ### Quality Assurance
