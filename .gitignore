@@ -48,6 +48,11 @@ wheels/
 # pyenv
 .python-version
 
+# Virtual environments
+.venv/
+venv/
+env/
+
 # Environment variables
 .env
 .env.local
