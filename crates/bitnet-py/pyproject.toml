@@ -4,6 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "bitnet-py"
+version = "0.1.0"
 description = "High-performance 1-bit LLM inference library - Python bindings"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -47,7 +48,7 @@ Documentation = "https://github.com/microsoft/BitNet/tree/main/docs"
 [tool.maturin]
 features = ["pyo3/extension-module"]
 python-source = "python"
-module-name = "bitnet_py._bitnet_py"
+module-name = "bitnet_py.bitnet_py"
 
 [tool.black]
 line-length = 88

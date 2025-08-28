@@ -100,6 +100,8 @@ for i, prompt in enumerate(prompts):
 
 ### Async Streaming
 
+The library provides comprehensive async streaming support with advanced features:
+
 ```python
 import asyncio
 import bitnet_py as bitnet
@@ -109,11 +111,81 @@ async def main():
     tokenizer = bitnet.create_tokenizer("tokenizer.model")
     engine = bitnet.SimpleInference(model, tokenizer)
     
-    # Streaming generation
-    response = await engine.generate_stream("Tell me about AI")
-    print(response)
+    # Basic streaming generation
+    stream = engine.generate_stream("Tell me about AI")
+    for token in stream:
+        print(token, end="", flush=True)
+    
+    # Advanced streaming with timeout and cancellation
+    async def stream_with_timeout():
+        stream = engine.generate_stream("Long story prompt")
+        tokens = []
+        
+        async def collect_tokens():
+            for token in stream:
+                tokens.append(token)
+                print(token, end="", flush=True)
+                await asyncio.sleep(0.01)  # Simulate processing
+                
+                if len(tokens) >= 20:  # Cancel after 20 tokens
+                    stream.cancel()
+                    break
+        
+        try:
+            await asyncio.wait_for(collect_tokens(), timeout=10.0)
+            print(f"\n✓ Generated {len(tokens)} tokens")
+        except asyncio.TimeoutError:
+            print("\n⚠ Generation timed out")
+            stream.cancel()
+    
+    await stream_with_timeout()
 
 asyncio.run(main())
+```
+
+#### Concurrent Streaming
+
+```python
+async def concurrent_streaming():
+    prompts = ["AI is", "The future of", "Technology will"]
+    semaphore = asyncio.Semaphore(3)  # Limit concurrent streams
+    
+    async def stream_prompt(prompt):
+        async with semaphore:
+            stream = engine.generate_stream(prompt)
+            tokens = []
+            
+            for token in stream:
+                tokens.append(token)
+                if len(tokens) >= 15:  # Limit per stream
+                    break
+            
+            return {"prompt": prompt, "tokens": len(tokens)}
+    
+    tasks = [stream_prompt(p) for p in prompts]
+    results = await asyncio.gather(*tasks)
+    
+    for result in results:
+        print(f"'{result['prompt']}' -> {result['tokens']} tokens")
+
+asyncio.run(concurrent_streaming())
+```
+
+#### Stream Control and Monitoring
+
+```python
+# Check stream status
+stream = engine.generate_stream("Test prompt")
+print(f"Active: {stream.is_active()}")
+
+# Get stream statistics
+if hasattr(stream, 'get_stream_stats'):
+    stats = stream.get_stream_stats()
+    print(f"Config: {stats}")
+
+# Manual cancellation
+stream.cancel()
+print(f"Active after cancel: {stream.is_active()}")
 ```
 
 ### Chat Format
