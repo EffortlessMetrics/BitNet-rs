@@ -290,9 +290,11 @@ mod tests {
     #[test]
     fn test_universal_tokenizer_detection() {
         // Test GPT-2 detection
-        let mut config = TokenizerConfig::default();
-        config.model_type = "gpt2".to_string();
-        config.vocab_size = 50257;
+        let config = TokenizerConfig {
+            model_type: "gpt2".to_string(),
+            vocab_size: 50257,
+            ..Default::default()
+        };
 
         let tokenizer = UniversalTokenizer::new(config).unwrap();
         assert_eq!(tokenizer.vocab_size(), 50257);

@@ -1,4 +1,5 @@
 //! x86/x86_64 CPU kernels with AVX2/AVX-512 optimizations
+#![allow(unsafe_op_in_unsafe_fn)]
 
 use crate::{KernelProvider, cpu::fallback::FallbackKernel};
 use bitnet_common::{BitNetError, KernelError, QuantizationType, Result};
@@ -227,6 +228,10 @@ impl Avx2Kernel {
     }
 
     /// AVX2 optimized TL2 quantization
+    ///
+    /// This implementation matches the fallback TL2 algorithm exactly to ensure
+    /// cross-validation compatibility. Uses lookup table approach with max absolute
+    /// value scaling like the fallback implementation.
     #[target_feature(enable = "avx2")]
     #[allow(unsafe_op_in_unsafe_fn)]
     unsafe fn quantize_tl2_avx2(
@@ -236,100 +241,83 @@ impl Avx2Kernel {
         scales: &mut [f32],
     ) -> Result<()> {
         const BLOCK_SIZE: usize = 128;
+        let num_blocks = input.len().div_ceil(BLOCK_SIZE);
 
-        if input.len() % BLOCK_SIZE != 0 {
+        if output.len() < input.len() / 4 {
             return Err(BitNetError::Kernel(KernelError::InvalidArguments {
                 reason: format!(
-                    "Input length {} must be divisible by block size {}",
-                    input.len(),
-                    BLOCK_SIZE
+                    "Output buffer too small for TL2: expected {}, got {}",
+                    input.len() / 4,
+                    output.len()
                 ),
             }));
         }
 
-        let n_blocks = input.len() / BLOCK_SIZE;
-        if scales.len() != n_blocks {
+        if scales.len() < num_blocks {
             return Err(BitNetError::Kernel(KernelError::InvalidArguments {
                 reason: format!(
-                    "Scales length {} must match number of blocks {}",
-                    scales.len(),
-                    n_blocks
+                    "Scales buffer too small: expected {}, got {}",
+                    num_blocks,
+                    scales.len()
                 ),
             }));
         }
 
-        if output.len() != input.len() / 4 {
-            return Err(BitNetError::Kernel(KernelError::InvalidArguments {
-                reason: format!(
-                    "Output length {} must be input length {} / 4",
-                    output.len(),
-                    input.len()
-                ),
-            }));
-        }
+        // Lookup table for x86 TL2 (same as fallback)
+        let lut = [-1.2f32, -0.4, 0.4, 1.2];
 
-        for block_idx in 0..n_blocks {
-            let block_start = block_idx * BLOCK_SIZE;
-            let block = &input[block_start..block_start + BLOCK_SIZE];
+        for (block_idx, scale_slot) in scales.iter_mut().enumerate().take(num_blocks) {
+            let start = block_idx * BLOCK_SIZE;
+            let end = (start + BLOCK_SIZE).min(input.len());
+            let block = &input[start..end];
 
-            // Find min and max using AVX2
-            let mut min_vec = _mm256_set1_ps(f32::INFINITY);
-            let mut max_vec = _mm256_set1_ps(f32::NEG_INFINITY);
+            // Find max absolute value using AVX2
+            let mut max_abs_vec = _mm256_setzero_ps();
 
-            for i in (0..BLOCK_SIZE).step_by(8) {
-                let vals = _mm256_loadu_ps(&block[i]);
-                min_vec = _mm256_min_ps(min_vec, vals);
-                max_vec = _mm256_max_ps(max_vec, vals);
+            for i in (0..block.len()).step_by(8) {
+                let vals = if i + 8 <= block.len() {
+                    _mm256_loadu_ps(&block[i])
+                } else {
+                    // Handle remainder with partial load
+                    let mut temp = [0.0f32; 8];
+                    temp[..block.len() - i].copy_from_slice(&block[i..]);
+                    _mm256_loadu_ps(temp.as_ptr())
+                };
+
+                // Get absolute values
+                let abs_vals = _mm256_max_ps(vals, _mm256_sub_ps(_mm256_setzero_ps(), vals));
+                max_abs_vec = _mm256_max_ps(max_abs_vec, abs_vals);
             }
 
-            // Horizontal min/max
-            let min = unsafe { horizontal_min_f32(min_vec) };
-            let max = unsafe { horizontal_max_f32(max_vec) };
+            // Horizontal max
+            let max_val = unsafe { horizontal_max_f32(max_abs_vec) };
 
-            let scale = (max - min) / 3.0;
-            scales[block_idx] = scale;
+            // Compute scale (same as fallback)
+            *scale_slot = if max_val > 1e-8 { max_val / 1.5 } else { 1.0 };
 
-            // Quantize the block
-            let scale_recip = if scale != 0.0 { 1.0 / scale } else { 0.0 };
-            let min_vec = _mm256_set1_ps(min);
-            let scale_recip_vec = _mm256_set1_ps(scale_recip);
+            // Quantize using lookup table approach
+            for (i, &val) in block.iter().enumerate() {
+                let normalized = val / *scale_slot;
 
-            let out_start = block_idx * (BLOCK_SIZE / 4);
-            for i in (0..BLOCK_SIZE).step_by(32) {
-                // Process 32 values at a time (8 output bytes)
-                let mut packed = [0u8; 8];
+                // Find closest value in lookup table (same as fallback)
+                let mut best_idx = 0;
+                let mut best_dist = (normalized - lut[0]).abs();
 
-                for j in 0..4 {
-                    let vals = _mm256_loadu_ps(&block[i + j * 8]);
-                    let normalized = _mm256_mul_ps(_mm256_sub_ps(vals, min_vec), scale_recip_vec);
-
-                    // Convert to integer [0, 3] with clamping
-                    let three = _mm256_set1_ps(3.0);
-                    let zero = _mm256_setzero_ps();
-                    let clamped = _mm256_min_ps(_mm256_max_ps(normalized, zero), three);
-
-                    // Convert to integers
-                    let quantized = _mm256_cvtps_epi32(clamped);
-
-                    // Pack into 2-bit values
-                    // We need to extract 8 integers and pack them into 2 bytes
-                    let mut temp = [0u32; 8];
-                    _mm256_storeu_si256(temp.as_mut_ptr() as *mut __m256i, quantized);
-
-                    // Pack 4 values into 1 byte
-                    packed[j * 2] = (temp[0] & 0x3) as u8
-                        | ((temp[1] & 0x3) << 2) as u8
-                        | ((temp[2] & 0x3) << 4) as u8
-                        | ((temp[3] & 0x3) << 6) as u8;
-
-                    packed[j * 2 + 1] = (temp[4] & 0x3) as u8
-                        | ((temp[5] & 0x3) << 2) as u8
-                        | ((temp[6] & 0x3) << 4) as u8
-                        | ((temp[7] & 0x3) << 6) as u8;
+                for (idx, &lut_val) in lut.iter().enumerate().skip(1) {
+                    let dist = (normalized - lut_val).abs();
+                    if dist < best_dist {
+                        best_dist = dist;
+                        best_idx = idx;
+                    }
                 }
 
-                // Copy packed bytes to output
-                output[out_start + i / 4..out_start + i / 4 + 8].copy_from_slice(&packed);
+                // Pack into output (2 bits per value, same as fallback)
+                let byte_idx = (start + i) / 4;
+                let bit_offset = ((start + i) % 4) * 2;
+
+                if byte_idx < output.len() {
+                    output[byte_idx] |= (best_idx as u8) << bit_offset;
+                }
             }
         }
 
@@ -339,7 +327,7 @@ impl Avx2Kernel {
 
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "sse,avx2")]
-#[allow(unsafe_op_in_unsafe_fn)]
+#[allow(unsafe_op_in_unsafe_fn, dead_code)]
 #[inline]
 unsafe fn horizontal_min_f32(v: __m256) -> f32 {
     // Reduce to 128-bit

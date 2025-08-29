@@ -13,7 +13,10 @@ And your code will work unchanged with BitNet.rs!
 from typing import Optional, List, Dict, Any, Union
 import ctypes
 from pathlib import Path
-from . import bitnet_py
+try:  # Prefer package-relative import when available
+    from . import bitnet_py
+except Exception:  # Fallback when running as a script or in tests
+    import bitnet_py
 
 class Llama:
     """Drop-in replacement for llama_cpp.Llama"""

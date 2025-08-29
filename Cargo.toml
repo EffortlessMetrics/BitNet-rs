@@ -165,8 +165,15 @@ ffi = []    # Handled by bitnet-ffi crate
 server = [] # Handled by bitnet-server crate
 cli = []    # Handled by bitnet-cli crate
 
+# Quantization features
+iq2s-ffi = [
+    "bitnet-models/iq2s-ffi",
+    "dep:bitnet_ggml_ffi",
+] # Enable IQ2_S quantization via GGML FFI
+
 # Cross-validation features
 crossval = [] # Enable cross-validation against C++ implementation
+cpp-ffi = [] # Link tests against BitNet.cpp library
 
 # Test framework features (forward to bitnet-tests)
 fixtures = ["bitnet-tests/fixtures"]

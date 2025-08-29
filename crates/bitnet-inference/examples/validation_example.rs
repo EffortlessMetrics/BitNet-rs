@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::Cpu;
 
     // Create model
-    let model: Arc<dyn Model> = Arc::new(BitNetModel::new(model_config, device.clone()));
+    let model: Arc<dyn Model> = Arc::new(BitNetModel::new(model_config, device));
 
     // Create backend
     let _cpu_backend = CpuBackend::new(model.clone())?;

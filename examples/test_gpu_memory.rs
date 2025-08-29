@@ -3,20 +3,10 @@
 //!
 //! Run with: cargo run --example test_gpu_memory --no-default-features --features cuda
 
-// Note: The GPU validation module is internal to bitnet-kernels
-// This example demonstrates the intended API usage
-
 #[cfg(feature = "cuda")]
 use bitnet_kernels::gpu::validation::{GpuValidator, ValidationConfig};
 
-#[cfg(not(feature = "cuda"))]
-fn main() {
-    println!("GPU validation example requires the 'cuda' feature to be enabled.");
-    println!("Run with: cargo run --example test_gpu_memory --features cuda");
-}
-
 #[cfg(feature = "cuda")]
-
 fn main() {
     // Initialize logger
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
@@ -79,4 +69,13 @@ fn main() {
     }
 
     println!("\n=== Test Complete ===");
+}
+
+#[cfg(not(feature = "cuda"))]
+fn main() {
+    println!("=== GPU Memory Validation Example ===");
+    println!("❌ CUDA feature is not enabled");
+    println!("To run this example with GPU support:");
+    println!("  cargo run --example test_gpu_memory --no-default-features --features cuda");
+    println!("Note: CUDA toolkit must be installed on your system");
 }

@@ -8,39 +8,71 @@ support and cancellation handling.
 """
 
 import asyncio
+import contextlib
 import bitnet_py as bitnet
 import time
 import sys
-from typing import AsyncIterator
+from typing import AsyncIterator, Iterator
 
-async def stream_tokens(engine: bitnet.SimpleInference, prompt: str) -> AsyncIterator[str]:
+def stream_tokens(engine: bitnet.InferenceEngine, prompt: str) -> Iterator[str]:
     """
-    Async generator that yields tokens as they are generated.
-    
-    This is a demonstration of how streaming could work - the actual
-    implementation will be provided when the core inference engine
-    supports streaming.
+    Stream tokens from the inference engine using the new streaming API.
     """
-    # TODO: Replace with actual streaming when implemented
-    # For now, simulate streaming by yielding the full response
-    response = await engine.generate_stream(prompt)
-    
-    # Simulate token-by-token streaming
-    words = response.split()
-    for i, word in enumerate(words):
-        if i > 0:
-            yield " "
-        yield word
-        await asyncio.sleep(0.1)  # Simulate generation delay
+    # Use the actual streaming generator
+    stream = engine.generate_stream(prompt)
+    for token in stream:
+        yield token
+
+async def stream_tokens_async(
+    engine: bitnet.SimpleInference,
+    prompt: str,
+    *,
+    buffer_size: int = 16,
+) -> AsyncIterator[str]:
+    """Yield tokens from the engine's incremental stream with async/await.
+
+    A bounded queue is used for backpressure. Cancelling the consumer task
+    will cancel the underlying generation stream.
+    """
+    queue: asyncio.Queue = asyncio.Queue(maxsize=buffer_size)
+
+    async def producer() -> None:
+        try:
+            async for token in engine.generate_stream(prompt):
+                await queue.put(token)  # backpressure when queue is full
+        except asyncio.CancelledError:
+            pass
+        finally:
+            # signal completion without blocking if consumer is gone
+            with contextlib.suppress(asyncio.QueueFull):
+                queue.put_nowait(None)
+
+    producer_task = asyncio.create_task(producer())
+
+    try:
+        while True:
+            token = await queue.get()
+            if token is None:
+                break
+            yield token
+    except asyncio.CancelledError:
+        producer_task.cancel()
+        raise
+    finally:
+        with contextlib.suppress(asyncio.CancelledError):
+            await producer_task
+
+async def _collect_stream(engine: bitnet.SimpleInference, prompt: str) -> str:
+    """Collect all tokens from a stream into a single string."""
+    parts: list[str] = []
+    async for token in engine.generate_stream(prompt):
+        parts.append(token)
+    return "".join(parts)
 
 async def generate_with_timeout(engine: bitnet.SimpleInference, prompt: str, timeout: float = 30.0) -> str:
     """Generate text with a timeout to prevent hanging."""
     try:
-        response = await asyncio.wait_for(
-            engine.generate_stream(prompt),
-            timeout=timeout
-        )
-        return response
+        return await asyncio.wait_for(_collect_stream(engine, prompt), timeout=timeout)
     except asyncio.TimeoutError:
         return f"[Generation timed out after {timeout} seconds]"
 
@@ -48,6 +80,106 @@ async def concurrent_generation(engine: bitnet.SimpleInference, prompts: list[st
     """Generate responses for multiple prompts concurrently."""
     tasks = [generate_with_timeout(engine, prompt) for prompt in prompts]
     return await asyncio.gather(*tasks)
+
+async def stream_with_timeout_and_cancellation(engine: bitnet.SimpleInference, prompt: str, timeout: float = 10.0):
+    """
+    Demonstrate advanced streaming with timeout and cancellation handling.
+    """
+    print(f"\nTesting streaming with timeout ({timeout}s) for prompt: '{prompt[:30]}...'")
+    
+    try:
+        # Create the streaming generator
+        stream = engine.generate_stream(prompt)
+        tokens = []
+        
+        # Stream with timeout using asyncio
+        async def collect_tokens():
+            for token in stream:
+                tokens.append(token)
+                print(token, end="", flush=True)
+                # Simulate some processing time
+                await asyncio.sleep(0.01)
+                
+                # Check if we should cancel early
+                if len(tokens) >= 20:  # Cancel after 20 tokens
+                    print(f"\n[Cancelling after {len(tokens)} tokens]")
+                    stream.cancel()
+                    break
+                    
+        # Apply timeout
+        try:
+            await asyncio.wait_for(collect_tokens(), timeout=timeout)
+            print(f"\n✓ Streaming completed successfully. Generated {len(tokens)} tokens.")
+        except asyncio.TimeoutError:
+            print(f"\n⚠ Streaming timed out after {timeout} seconds")
+            stream.cancel()
+        except Exception as e:
+            print(f"\n✗ Streaming failed: {e}")
+            stream.cancel()
+            
+        # Get final statistics
+        if hasattr(stream, 'get_stream_stats'):
+            stats = stream.get_stream_stats()
+            print(f"Final stream stats: {stats}")
+            
+        return tokens
+        
+    except Exception as e:
+        print(f"Error in streaming setup: {e}")
+        return []
+
+async def demonstrate_concurrent_streaming(engine: bitnet.SimpleInference, prompts: list[str]):
+    """
+    Demonstrate concurrent streaming of multiple prompts with proper resource management.
+    """
+    print(f"\nDemonstrating concurrent streaming for {len(prompts)} prompts...")
+    
+    # Create semaphore to limit concurrent streams
+    semaphore = asyncio.Semaphore(3)  # Max 3 concurrent streams
+    
+    async def stream_single_prompt(prompt_id: int, prompt: str):
+        async with semaphore:
+            print(f"\n[Stream {prompt_id + 1}] Starting: '{prompt[:20]}...'")
+            
+            try:
+                stream = engine.generate_stream(prompt)
+                tokens = []
+                
+                # Collect tokens with a reasonable limit
+                for i, token in enumerate(stream):
+                    if i >= 10:  # Limit to 10 tokens per stream
+                        break
+                    tokens.append(token)
+                    await asyncio.sleep(0.005)  # Small delay to simulate processing
+                
+                print(f"\n[Stream {prompt_id + 1}] ✓ Completed with {len(tokens)} tokens")
+                return {"id": prompt_id, "prompt": prompt[:20], "tokens": len(tokens), "success": True}
+                
+            except Exception as e:
+                print(f"\n[Stream {prompt_id + 1}] ✗ Failed: {e}")
+                return {"id": prompt_id, "prompt": prompt[:20], "error": str(e), "success": False}
+    
+    # Run all streams concurrently
+    tasks = [
+        stream_single_prompt(i, prompt) 
+        for i, prompt in enumerate(prompts)
+    ]
+    
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Analyze results
+    successful = [r for r in results if isinstance(r, dict) and r.get("success", False)]
+    failed = [r for r in results if isinstance(r, dict) and not r.get("success", True)]
+    
+    print(f"\nConcurrent streaming results:")
+    print(f"  ✓ Successful: {len(successful)}")
+    print(f"  ✗ Failed: {len(failed)}")
+    
+    if successful:
+        total_tokens = sum(r["tokens"] for r in successful)
+        print(f"  📊 Total tokens generated: {total_tokens}")
+    
+    return results
 
 async def interactive_chat(engine: bitnet.SimpleInference, tokenizer: bitnet.Tokenizer):
     """Interactive chat session with streaming responses."""
@@ -86,16 +218,20 @@ async def interactive_chat(engine: bitnet.SimpleInference, tokenizer: bitnet.Tok
             print("Assistant: ", end="", flush=True)
             
             full_response = ""
-            async for token in stream_tokens(engine, dialog_text):
-                print(token, end="", flush=True)
-                full_response += token
-            
+            try:
+                async for token in stream_tokens(engine, dialog_text):
+                    print(token, end="", flush=True)
+                    full_response += token
+            except asyncio.CancelledError:
+                print("\n[Stream cancelled]")
+                continue
+
             print()  # New line after response
-            
+
             # Add assistant response to history
             assistant_message = bitnet.Message(role="assistant", content=full_response.strip())
             conversation_history.append(assistant_message)
-            
+
         except KeyboardInterrupt:
             print("\n\nChat session interrupted.")
             break
@@ -114,7 +250,7 @@ async def benchmark_async_performance(engine: bitnet.SimpleInference, prompts: l
     start_time = time.time()
     sequential_results = []
     for prompt in prompts:
-        result = await engine.generate_stream(prompt)
+        result = await _collect_stream(engine, prompt)
         sequential_results.append(result)
     sequential_time = time.time() - start_time
     
@@ -172,8 +308,12 @@ async def main():
             print(token, end="", flush=True)
         print("\n")
         
+        # Test advanced streaming features
+        print("Testing advanced streaming with timeout and cancellation...")
+        await stream_with_timeout_and_cancellation(engine, test_prompt, timeout=5.0)
+        
         # Test concurrent generation
-        print("Testing concurrent generation...")
+        print("Testing concurrent streaming...")
         test_prompts = [
             "Hello, my name is",
             "The capital of France is",
@@ -181,11 +321,15 @@ async def main():
             "Machine learning is",
         ]
         
-        concurrent_results = await concurrent_generation(engine, test_prompts)
+        concurrent_results = await demonstrate_concurrent_streaming(engine, test_prompts)
         
-        for prompt, result in zip(test_prompts, concurrent_results):
+        # Also test the original concurrent generation
+        print("\nTesting original concurrent generation...")
+        original_results = await concurrent_generation(engine, test_prompts)
+        
+        for prompt, result in zip(test_prompts, original_results):
             print(f"Prompt: {prompt}")
-            print(f"Result: {result}")
+            print(f"Result: {result[:50]}..." if len(result) > 50 else f"Result: {result}")
             print("-" * 40)
         
         # Benchmark async performance

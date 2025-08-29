@@ -69,8 +69,8 @@ fn test_rust_backend_basic_dequantization() {
 
     // Set all quantized values to pattern 0b11_10_01_00
     // This gives values [0, 1, 2, 3] which map to [-2, -1, 0, 1]
-    for i in 2..66 {
-        block[i] = 0b11_10_01_00;
+    for block_slot in block.iter_mut().take(66).skip(2) {
+        *block_slot = 0b11_10_01_00;
     }
     // qh and scales fields remain zero
 
@@ -236,8 +236,8 @@ mod iq2s_parity_tests {
         block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
 
         // Random quantized values (only set the qs field)
-        for i in 2..66 {
-            block[i] = rng.r#gen();
+        for block_slot in block.iter_mut().take(66).skip(2) {
+            *block_slot = rng.r#gen();
         }
         // Leave qh and scales fields as zero
 
@@ -273,8 +273,8 @@ mod iq2s_parity_tests {
         // Random data
         let scale = f16::from_f32(rng.gen_range(0.5..1.5));
         block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
-        for i in 2..66 {
-            block[i] = rng.r#gen();
+        for block_slot in block.iter_mut().take(66).skip(2) {
+            *block_slot = rng.r#gen();
         }
         // Leave qh and scales fields as zero
 

@@ -49,12 +49,10 @@ impl Tokenizer for SpTokenizer {
             .encode(text)
             .map_err(|e| BitNetError::Io(std::io::Error::other(format!("encode failed: {e}"))))?;
 
-        let mut ids: Vec<u32> = pieces.into_iter().map(|p| p.id as u32).collect();
+        let mut ids: Vec<u32> = pieces.into_iter().map(|p| p.id).collect();
 
-        if add_bos {
-            if let Some(b) = self.bos_token_id {
-                ids.insert(0, b);
-            }
+        if add_bos && let Some(b) = self.bos_token_id {
+            ids.insert(0, b);
         }
         Ok(ids)
     }

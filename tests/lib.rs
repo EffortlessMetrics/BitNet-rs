@@ -7,6 +7,12 @@ pub mod prelude;
 #[cfg(feature = "integration-tests")]
 pub mod integration;
 
+// Optional cross-validation facade
+#[cfg(feature = "crossval")]
+pub mod cross_validation {
+    pub use crate::common::cross_validation::*;
+}
+
 // ===== Back-compat shims for legacy imports =====
 // Many files still do `crate::results`, `crate::fixtures`, etc.
 // These re-export the new locations so those imports work again.
@@ -47,6 +53,9 @@ pub use common::results::{
     PassCheck, TestMetrics, TestResult as TestResultStruct, TestStatus, TestSuiteResult,
 };
 pub use common::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
+
+#[cfg(feature = "crossval")]
+pub use common::cross_validation;
 
 // CRITICAL: Integration tests expect TestResult<T> as a type alias, not the struct
 pub type TestResult<T = ()> = Result<T, TestError>;
