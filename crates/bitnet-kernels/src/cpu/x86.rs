@@ -69,43 +69,224 @@ impl KernelProvider for Avx2Kernel {
     }
 }
 
-// AVX-512 kernel removed for now due to unstable intrinsics
-// pub struct Avx512Kernel;
-//
-// impl KernelProvider for Avx512Kernel {
-//     fn name(&self) -> &'static str {
-//         "avx512"
-//     }
-//
-//     fn is_available(&self) -> bool {
-//         is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512vl")
-//     }
-//
-//     fn matmul_i2s(
-//         &self,
-//         _a: &[i8],
-//         _b: &[u8],
-//         _c: &mut [f32],
-//         _m: usize,
-//         _n: usize,
-//         _k: usize,
-//     ) -> Result<()> {
-//         // TODO: Implement when AVX-512 intrinsics are stabilized
-//         Err(BitNetError::Kernel(KernelError::NotImplemented))
-//     }
-//
-//     fn quantize(
-//         &self,
-//         _input: &[f32],
-//         _output: &mut [u8],
-//         _scales: &mut [f32],
-//         _qtype: QuantizationType,
-//     ) -> Result<()> {
-//         // TODO: Implement when AVX-512 intrinsics are stabilized
-//         Err(BitNetError::Kernel(KernelError::NotImplemented))
-//     }
-// }
-// TODO: Re-enable when AVX-512 intrinsics are stabilized
+/// AVX-512 optimized CPU kernel for x86_64
+///
+/// Uses AVX-512BW and AVX-512F instructions for wide vector operations. This
+/// backend provides higher throughput than the AVX2 implementation by
+/// processing 64 bytes of data per iteration.
+pub struct Avx512Kernel;
+
+impl KernelProvider for Avx512Kernel {
+    fn name(&self) -> &'static str {
+        "avx512"
+    }
+
+    fn is_available(&self) -> bool {
+        // Requires full width AVX-512 with byte/word support
+        is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512bw")
+    }
+
+    fn matmul_i2s(
+        &self,
+        a: &[i8],
+        b: &[u8],
+        c: &mut [f32],
+        m: usize,
+        n: usize,
+        k: usize,
+    ) -> Result<()> {
+        if !self.is_available() {
+            return Err(BitNetError::Kernel(KernelError::UnsupportedHardware {
+                required: "AVX-512F+BW".to_string(),
+                available: "none".to_string(),
+            }));
+        }
+
+        // Safety: feature availability checked above
+        unsafe { self.matmul_i2s_avx512(a, b, c, m, n, k) }
+    }
+
+    fn quantize(
+        &self,
+        input: &[f32],
+        output: &mut [u8],
+        scales: &mut [f32],
+        qtype: QuantizationType,
+    ) -> Result<()> {
+        if !self.is_available() {
+            return FallbackKernel.quantize(input, output, scales, qtype);
+        }
+
+        match qtype {
+            QuantizationType::TL2 => unsafe { self.quantize_tl2_avx512(input, output, scales) },
+            _ => FallbackKernel.quantize(input, output, scales, qtype),
+        }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Avx512Kernel {
+    /// AVX-512 optimized matrix multiplication for i8 x u8 -> f32
+    ///
+    /// Processes 16x16 blocks and operates on 64 elements of the K dimension
+    /// at a time using 512-bit SIMD instructions.
+    #[target_feature(enable = "avx512f,avx512bw")]
+    #[allow(unsafe_op_in_unsafe_fn)]
+    unsafe fn matmul_i2s_avx512(
+        &self,
+        a: &[i8],
+        b: &[u8],
+        c: &mut [f32],
+        m: usize,
+        n: usize,
+        k: usize,
+    ) -> Result<()> {
+        c.fill(0.0);
+
+        const BLOCK_M: usize = 16;
+        const BLOCK_N: usize = 16;
+        const BLOCK_K: usize = 64;
+
+        for i in (0..m).step_by(BLOCK_M) {
+            for j in (0..n).step_by(BLOCK_N) {
+                let mut acc = [[_mm512_setzero_ps(); BLOCK_N]; BLOCK_M];
+
+                for l in (0..k).step_by(BLOCK_K) {
+                    let k_end = (l + BLOCK_K).min(k);
+                    let k_len = k_end - l;
+
+                    for ii in 0..(BLOCK_M.min(m - i)) {
+                        let a_row = &a[(i + ii) * k + l..];
+                        let a_vec = if k_len >= 64 {
+                            _mm512_loadu_si512(a_row.as_ptr() as *const __m512i)
+                        } else {
+                            let mut temp = [0i8; 64];
+                            temp[..k_len].copy_from_slice(&a_row[..k_len]);
+                            _mm512_loadu_si512(temp.as_ptr() as *const __m512i)
+                        };
+
+                        for jj in 0..(BLOCK_N.min(n - j)) {
+                            let mut b_col = [0u8; 64];
+                            for kk in 0..k_len {
+                                if l + kk < k {
+                                    b_col[kk] = b[(l + kk) * n + (j + jj)];
+                                }
+                            }
+                            let b_vec = _mm512_loadu_si512(b_col.as_ptr() as *const __m512i);
+
+                            // Split into 256-bit lanes for extension
+                            let a_lo256 = _mm512_castsi512_si256(a_vec);
+                            let a_hi256 = _mm512_extracti64x4_epi64(a_vec, 1);
+                            let b_lo256 = _mm512_castsi512_si256(b_vec);
+                            let b_hi256 = _mm512_extracti64x4_epi64(b_vec, 1);
+
+                            let a_lo = _mm512_cvtepi8_epi16(a_lo256);
+                            let a_hi = _mm512_cvtepi8_epi16(a_hi256);
+                            let b_lo = _mm512_cvtepu8_epi16(b_lo256);
+                            let b_hi = _mm512_cvtepu8_epi16(b_hi256);
+
+                            let prod_lo = _mm512_madd_epi16(a_lo, b_lo);
+                            let prod_hi = _mm512_madd_epi16(a_hi, b_hi);
+                            let sum = _mm512_add_epi32(prod_lo, prod_hi);
+
+                            let sum_f32 = _mm512_cvtepi32_ps(sum);
+                            acc[ii][jj] = _mm512_add_ps(acc[ii][jj], sum_f32);
+                        }
+                    }
+                }
+
+                for ii in 0..(BLOCK_M.min(m - i)) {
+                    for jj in 0..(BLOCK_N.min(n - j)) {
+                        let sum_vec = acc[ii][jj];
+                        let total = _mm512_reduce_add_ps(sum_vec);
+                        c[(i + ii) * n + (j + jj)] += total;
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// AVX-512 optimized TL2 quantization
+    #[target_feature(enable = "avx512f")]
+    #[allow(unsafe_op_in_unsafe_fn)]
+    unsafe fn quantize_tl2_avx512(
+        &self,
+        input: &[f32],
+        output: &mut [u8],
+        scales: &mut [f32],
+    ) -> Result<()> {
+        const BLOCK_SIZE: usize = 128;
+        let num_blocks = input.len().div_ceil(BLOCK_SIZE);
+
+        if output.len() < input.len() / 4 {
+            return Err(BitNetError::Kernel(KernelError::InvalidArguments {
+                reason: format!(
+                    "Output buffer too small for TL2: expected {}, got {}",
+                    input.len() / 4,
+                    output.len()
+                ),
+            }));
+        }
+
+        if scales.len() < num_blocks {
+            return Err(BitNetError::Kernel(KernelError::InvalidArguments {
+                reason: format!(
+                    "Scales buffer too small: expected {}, got {}",
+                    num_blocks,
+                    scales.len()
+                ),
+            }));
+        }
+
+        let lut = [-1.2f32, -0.4, 0.4, 1.2];
+
+        for (block_idx, scale_slot) in scales.iter_mut().enumerate().take(num_blocks) {
+            let start = block_idx * BLOCK_SIZE;
+            let end = (start + BLOCK_SIZE).min(input.len());
+            let block = &input[start..end];
+
+            let mut max_abs_vec = _mm512_setzero_ps();
+            for i in (0..block.len()).step_by(16) {
+                let vals = if i + 16 <= block.len() {
+                    _mm512_loadu_ps(block[i..].as_ptr())
+                } else {
+                    let mut temp = [0.0f32; 16];
+                    temp[..block.len() - i].copy_from_slice(&block[i..]);
+                    _mm512_loadu_ps(temp.as_ptr())
+                };
+                let abs_vals = _mm512_max_ps(vals, _mm512_sub_ps(_mm512_setzero_ps(), vals));
+                max_abs_vec = _mm512_max_ps(max_abs_vec, abs_vals);
+            }
+
+            let max_val = _mm512_reduce_max_ps(max_abs_vec);
+            *scale_slot = if max_val > 1e-8 { max_val / 1.5 } else { 1.0 };
+
+            for (i, &val) in block.iter().enumerate() {
+                let normalized = val / *scale_slot;
+                let mut best_idx = 0;
+                let mut best_dist = (normalized - lut[0]).abs();
+
+                for (idx, &lut_val) in lut.iter().enumerate().skip(1) {
+                    let dist = (normalized - lut_val).abs();
+                    if dist < best_dist {
+                        best_dist = dist;
+                        best_idx = idx;
+                    }
+                }
+
+                let byte_idx = (start + i) / 4;
+                let bit_offset = ((start + i) % 4) * 2;
+                if byte_idx < output.len() {
+                    output[byte_idx] |= (best_idx as u8) << bit_offset;
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
 
 #[cfg(target_arch = "x86_64")]
 impl Avx2Kernel {
