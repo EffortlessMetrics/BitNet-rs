@@ -138,5 +138,7 @@ pub mod prelude {
     pub use super::ci_reporting;
 
     // Concurrency control utilities
-    pub use super::concurrency_caps::{init_concurrency_caps, init_and_get_async_limit, get_parallel_limit};
+    pub use super::concurrency_caps::{
+        get_parallel_limit, init_and_get_async_limit, init_concurrency_caps,
+    };
 }

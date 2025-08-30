@@ -1,29 +1,29 @@
 //! Backend abstraction for IQ2_S quantization to support both FFI and pure-Rust implementations
-//! 
+//!
 //! This module provides a unified interface for IQ2_S quantization that can use either:
 //! 1. **Pure Rust implementation** (default): Always available, handles partial blocks
 //! 2. **GGML FFI implementation** (optional): Requires `iq2s-ffi` feature, may have stricter requirements
-//! 
+//!
 //! ## Feature Configuration
-//! 
+//!
 //! To enable IQ2_S FFI support, build with:
 //! ```bash
 //! cargo build --features iq2s-ffi
 //! ```
-//! 
+//!
 //! Or from the root workspace:
 //! ```bash  
 //! cargo build --no-default-features --features iq2s-ffi
 //! ```
-//! 
+//!
 //! ## Backend Selection
-//! 
+//!
 //! The backend is selected at runtime via the `BITNET_IQ2S_IMPL` environment variable:
 //! - `BITNET_IQ2S_IMPL=rust` (default): Use pure Rust implementation
 //! - `BITNET_IQ2S_IMPL=ffi`: Use GGML FFI implementation (if compiled with `iq2s-ffi` feature)
-//! 
+//!
 //! ## Implementation Notes
-//! 
+//!
 //! - The Rust implementation can handle partial blocks and arbitrary element counts
 //! - The FFI implementation requires element counts to be multiples of QK_IQ2_S (256)
 //! - Both implementations should produce similar results for compatible inputs
@@ -328,14 +328,14 @@ mod tests {
                 *slot = 0b11_10_01_00; // Maps to [-1.0, -0.5, 0.0, 0.5] after scaling
             }
         }
-        
+
         // Test partial block handling
         let n = 3 * 256 - 17; // Include a partial tail
         let mut out = vec![0.0f32; n];
         unsafe {
             Iq2sBackend::Rust.dequantize_row(src.as_ptr() as *const c_void, out.as_mut_ptr(), n);
         }
-        
+
         // Check expected pattern for first few elements
         let expected = [-1.0, -0.5, 0.0, 0.5]; // Scaled by 0.5
         for i in 0..std::cmp::min(n, 8) {
@@ -354,7 +354,7 @@ mod tests {
     fn iq2s_rust_matches_ffi() {
         // Use simple deterministic data for comparison
         let mut src = [0u8; 66 * 2]; // 2 blocks for simplicity
-        
+
         // First block
         let d = f16::from_f32(0.5).to_bits();
         src[0..2].copy_from_slice(&u16::to_le_bytes(d));
@@ -362,14 +362,14 @@ mod tests {
         for src_slot in src.iter_mut().take(66).skip(2) {
             *src_slot = 0b11_10_01_00; // Known pattern
         }
-        
+
         // Second block - identical
         let d = f16::from_f32(0.5).to_bits();
         src[66..68].copy_from_slice(&u16::to_le_bytes(d));
         for src_slot in src.iter_mut().take(132).skip(68) {
             *src_slot = 0b11_10_01_00;
         }
-        
+
         let n = 2 * 256; // Use full blocks for FFI compatibility
         let mut a = vec![0.0f32; n];
         let mut b = vec![0.0f32; n];
@@ -377,7 +377,7 @@ mod tests {
             Iq2sBackend::Rust.dequantize_row(src.as_ptr() as *const c_void, a.as_mut_ptr(), n);
             Iq2sBackend::Ffi.dequantize_row(src.as_ptr() as *const c_void, b.as_mut_ptr(), n);
         }
-        
+
         // First check if the patterns are what we expect
         let expected_pattern = [-1.0, -0.5, 0.0, 0.5]; // Scaled by 0.5
         for i in 0..8 {
@@ -389,7 +389,7 @@ mod tests {
                 println!("FFI result[{}] = {} (expected {})", i, b[i], expected);
             }
         }
-        
+
         // For now, just verify that both implementations produce reasonable values
         // The exact bit-level compatibility between our Rust implementation and GGML
         // may need adjustment based on the specific GGML version being used.
@@ -397,10 +397,10 @@ mod tests {
         for i in 0..n {
             assert!(a[i].is_finite(), "Rust output[{}] is not finite: {}", i, a[i]);
             assert!(b[i].is_finite(), "FFI output[{}] is not finite: {}", i, b[i]);
-            assert!(a[i].abs() <= 2.0, "Rust output[{}] too large: {}", i, a[i]);  
+            assert!(a[i].abs() <= 2.0, "Rust output[{}] too large: {}", i, a[i]);
             assert!(b[i].abs() <= 2.0, "FFI output[{}] too large: {}", i, b[i]);
         }
-        
+
         // TODO: Once the exact GGML implementation details are confirmed,
         // enable strict bit-level comparison between Rust and FFI backends.
     }

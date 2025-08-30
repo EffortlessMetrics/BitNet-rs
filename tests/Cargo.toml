@@ -134,6 +134,9 @@ tempfile = "3.0"
 fastrand = "2.0"
 rand = "0.8"
 
+# Parallel processing
+rayon = "1.11"
+
 # Date and time utilities
 chrono = { version = "0.4", features = ["serde"] }
 

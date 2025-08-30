@@ -37,8 +37,11 @@ pub fn init_concurrency_caps() {
         }
 
         // Set environment hints for any spawned processes
-        std::env::set_var("RAYON_NUM_THREADS", rayon_threads.to_string());
-        
+        // In Rust 2024 edition, some functions may require unsafe blocks
+        unsafe {
+            std::env::set_var("RAYON_NUM_THREADS", rayon_threads.to_string());
+        }
+
         tracing::info!(
             "Concurrency caps initialized: RUST_TEST_THREADS={}, RAYON_NUM_THREADS={}",
             rust_test_threads,
@@ -50,7 +53,7 @@ pub fn init_concurrency_caps() {
 /// Initialize concurrency caps and return bounded parallel limit for async operations
 pub fn init_and_get_async_limit() -> usize {
     init_concurrency_caps();
-    
+
     // Use half of Rayon threads for async concurrency to avoid oversubscription
     std::env::var("RAYON_NUM_THREADS")
         .ok()
@@ -84,7 +87,7 @@ mod tests {
     fn test_get_limits() {
         let async_limit = init_and_get_async_limit();
         let parallel_limit = get_parallel_limit();
-        
+
         assert!(async_limit >= 1);
         assert!(parallel_limit >= 1);
     }
