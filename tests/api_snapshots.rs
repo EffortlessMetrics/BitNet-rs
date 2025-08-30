@@ -250,7 +250,7 @@ impl ApiSurface {
                     },
                     MethodSignature {
                         name: "dequantize".to_string(),
-                        signature: "fn dequantize(&self) -> Tensor".to_string(),
+                        signature: "fn dequantize(&self, device: &Device) -> Tensor".to_string(),
                         visibility: "public".to_string(),
                     },
                 ],

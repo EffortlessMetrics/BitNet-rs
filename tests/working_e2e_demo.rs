@@ -7,9 +7,11 @@ with realistic end-to-end workflows that actually compile and run successfully.
 */
 
 use bitnet_common::{
-    BitNetConfig, BitNetTensor, Device, MockTensor, ModelFormat, QuantizationConfig, Tensor,
+    BitNetConfig, BitNetTensor, Device as BNDevice, MockTensor, ModelFormat, QuantizationConfig,
+    Tensor,
 };
 use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
+use candle_core::Device;
 use std::fs;
 use tempfile::TempDir;
 
@@ -19,7 +21,7 @@ fn test_complete_quantization_pipeline() {
     let mock_tensor = MockTensor::new(vec![64, 64]);
     // Convert MockTensor data to BitNetTensor
     let data = mock_tensor.as_slice::<f32>().unwrap();
-    let tensor = BitNetTensor::from_slice(data, mock_tensor.shape(), &Device::Cpu).unwrap();
+    let tensor = BitNetTensor::from_slice(data, mock_tensor.shape(), &BNDevice::Cpu).unwrap();
 
     // Test I2S quantization workflow
     let i2s_quantizer = I2SQuantizer::new();
@@ -27,7 +29,7 @@ fn test_complete_quantization_pipeline() {
     assert!(i2s_result.is_ok(), "I2S quantization should succeed");
 
     let quantized = i2s_result.unwrap();
-    let dequantized = i2s_quantizer.dequantize_tensor(&quantized);
+    let dequantized = i2s_quantizer.dequantize_tensor(&quantized, &Device::Cpu);
     assert!(dequantized.is_ok(), "I2S dequantization should succeed");
 
     // Verify tensor properties
@@ -51,7 +53,7 @@ fn test_complete_quantization_pipeline() {
 fn test_multi_quantizer_comparison() {
     let mock_tensor = MockTensor::new(vec![32, 32]);
     let data = mock_tensor.as_slice::<f32>().unwrap();
-    let tensor = BitNetTensor::from_slice(data, mock_tensor.shape(), &Device::Cpu).unwrap();
+    let tensor = BitNetTensor::from_slice(data, mock_tensor.shape(), &BNDevice::Cpu).unwrap();
 
     // Test all quantization methods
     let quantizers = vec![
@@ -90,7 +92,7 @@ fn test_provider_selection() {
     // Create test tensor
     let mock_tensor = MockTensor::new(vec![16, 16]);
     let data = mock_tensor.as_slice::<f32>().unwrap();
-    let tensor = BitNetTensor::from_slice(data, mock_tensor.shape(), &Device::Cpu).unwrap();
+    let tensor = BitNetTensor::from_slice(data, mock_tensor.shape(), &BNDevice::Cpu).unwrap();
 
     // Test with selected provider
     let quantizer = I2SQuantizer::new();
@@ -166,7 +168,7 @@ fn test_error_handling() {
     // Test quantization with edge cases
     let empty_mock = MockTensor::new(vec![0]);
     let data = empty_mock.as_slice::<f32>().unwrap();
-    let empty_tensor = BitNetTensor::from_slice(data, empty_mock.shape(), &Device::Cpu).unwrap();
+    let empty_tensor = BitNetTensor::from_slice(data, empty_mock.shape(), &BNDevice::Cpu).unwrap();
     let quantizer = I2SQuantizer::new();
 
     // This might succeed (empty tensor) or fail gracefully
@@ -180,7 +182,7 @@ fn test_error_handling() {
 #[test]
 fn test_device_compatibility() {
     // Test different device types
-    let devices = vec![Device::Cpu, Device::Cuda(0)];
+    let devices = vec![BNDevice::Cpu, BNDevice::Cuda(0)];
 
     for device in devices {
         println!("Testing device: {:?}", device);
@@ -191,7 +193,7 @@ fn test_device_compatibility() {
         let tensor =
             BitNetTensor::from_slice(data, mock_tensor.shape(), &device).unwrap_or_else(|_| {
                 // If device is not available, fall back to CPU
-                BitNetTensor::from_slice(data, mock_tensor.shape(), &Device::Cpu).unwrap()
+                BitNetTensor::from_slice(data, mock_tensor.shape(), &BNDevice::Cpu).unwrap()
             });
 
         // Test basic operations
@@ -226,7 +228,7 @@ fn test_memory_management() {
 
         // Convert to BitNetTensor for quantization
         let data = mock_tensor.as_slice::<f32>().unwrap();
-        let tensor = BitNetTensor::from_slice(data, mock_tensor.shape(), &Device::Cpu).unwrap();
+        let tensor = BitNetTensor::from_slice(data, mock_tensor.shape(), &BNDevice::Cpu).unwrap();
         tensors.push(tensor);
     }
 

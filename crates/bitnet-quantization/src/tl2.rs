@@ -256,7 +256,11 @@ impl TL2Quantizer {
     }
 
     /// Dequantize tensor from TL2 format
-    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+    pub fn dequantize_tensor(
+        &self,
+        tensor: &QuantizedTensor,
+        device: &Device,
+    ) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::TL2 {
             return Err(
                 QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
@@ -266,20 +270,19 @@ impl TL2Quantizer {
         // Unpack quantized values
         let quantized_data = self.unpack_tl2_values(&tensor.data, tensor.numel());
 
-        // Select optimal dequantization kernel
-        let dequantized_data = match self.cpu_features.best_kernel() {
-            KernelType::AVX512 if self.config.use_avx512 => {
+        // Select optimal dequantization kernel. SIMD kernels are CPU only.
+        let dequantized_data = match (device, self.cpu_features.best_kernel()) {
+            (Device::Cpu, KernelType::AVX512) if self.config.use_avx512 => {
                 self.dequantize_avx512(&quantized_data, &tensor.scales)?
             }
-            KernelType::AVX2 if self.config.use_avx2 => {
+            (Device::Cpu, KernelType::AVX2) if self.config.use_avx2 => {
                 self.dequantize_avx2(&quantized_data, &tensor.scales)?
             }
             _ => self.dequantize_scalar(&quantized_data, &tensor.scales)?,
         };
 
-        // Create tensor
-        let device = Device::Cpu; // TODO: Support GPU devices
-        create_tensor_from_f32(dequantized_data, &tensor.shape, &device)
+        // Create tensor on the requested device
+        create_tensor_from_f32(dequantized_data, &tensor.shape, device)
     }
 
     /// Scalar quantization implementation
@@ -537,8 +540,8 @@ impl QuantizerTrait for TL2Quantizer {
         self.quantize_tensor(tensor)
     }
 
-    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
-        self.dequantize_tensor(tensor)
+    fn dequantize_tensor(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor> {
+        self.dequantize_tensor(tensor, device)
     }
 
     fn quantization_type(&self) -> QuantizationType {
@@ -592,7 +595,7 @@ mod tests {
         let quantizer = TL2Quantizer::new();
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         assert_eq!(quantized.qtype, QuantizationType::TL2);
         assert_eq!(quantized.shape, shape);
@@ -620,7 +623,7 @@ mod tests {
         let quantizer = TL2Quantizer::new();
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         assert_eq!(quantized.shape, shape);
         assert_eq!(dequantized.shape(), &shape);

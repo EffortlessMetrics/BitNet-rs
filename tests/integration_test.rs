@@ -4,9 +4,10 @@
 //! This test suite validates that the optimized SIMD kernels work correctly
 //! in the full inference pipeline, from model loading to generation.
 
-use bitnet_common::{BitNetTensor, Device, QuantizationType};
+use bitnet_common::{BitNetTensor, Device as BNDevice, QuantizationType};
 use bitnet_models::minimal::{LoadMode, load_minimal};
 use bitnet_quantization::{I2SQuantizer, QuantizerTrait, TL1Quantizer, TL2Quantizer};
+use candle_core::Device;
 
 #[test]
 fn test_minimal_model_loading() {
@@ -43,14 +44,14 @@ fn test_quantization_roundtrip_integration() {
         println!("Testing {} quantizer integration", name);
 
         // Create tensor using BitNetTensor::from_slice
-        let tensor = BitNetTensor::from_slice(&test_data, &[test_size], &Device::Cpu).unwrap();
+        let tensor = BitNetTensor::from_slice(&test_data, &[test_size], &BNDevice::Cpu).unwrap();
 
         // Quantize
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
         assert!(quantized.data.len() > 0, "{}: Quantized data is empty", name);
 
         // Dequantize
-        let reconstructed = quantizer.dequantize_tensor(&quantized).unwrap();
+        let reconstructed = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
         let reconstructed_data = reconstructed.to_vec().unwrap();
 
         assert_eq!(reconstructed_data.len(), test_data.len());
@@ -99,7 +100,7 @@ fn test_quantization_performance() {
 
     // Test I2S quantization performance
     let quantizer = I2SQuantizer::new();
-    let tensor = BitNetTensor::from_slice(&data, &[size], &Device::Cpu).unwrap();
+    let tensor = BitNetTensor::from_slice(&data, &[size], &BNDevice::Cpu).unwrap();
 
     // Warm up
     let _ = quantizer.quantize_tensor(&tensor).unwrap();
@@ -131,7 +132,7 @@ fn test_quantization_consistency() {
     let data = vec![0.1, 0.2, 0.3, 0.4, 0.5, -0.1, -0.2, -0.3];
 
     for quantizer in quantizers {
-        let tensor = BitNetTensor::from_slice(&data, &[data.len()], &Device::Cpu).unwrap();
+        let tensor = BitNetTensor::from_slice(&data, &[data.len()], &BNDevice::Cpu).unwrap();
 
         // Run multiple times
         let q1 = quantizer.quantize_tensor(&tensor).unwrap();

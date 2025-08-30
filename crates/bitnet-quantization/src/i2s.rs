@@ -93,7 +93,11 @@ impl I2SQuantizer {
     }
 
     /// Dequantize tensor from I2_S format
-    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+    pub fn dequantize_tensor(
+        &self,
+        tensor: &QuantizedTensor,
+        device: &Device,
+    ) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::I2S {
             return Err(
                 QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
@@ -103,16 +107,17 @@ impl I2SQuantizer {
         // Unpack 2-bit values
         let quantized_data = unpack_2bit_values(&tensor.data, tensor.numel());
 
-        // Dequantize in parallel blocks
-        let dequantized_data = if self.use_simd {
-            self.dequantize_simd(&quantized_data, &tensor.scales)?
-        } else {
-            self.dequantize_scalar(&quantized_data, &tensor.scales)?
+        // Dequantize in parallel blocks. SIMD is only available on CPU.
+        let dequantized_data = match device {
+            Device::Cpu if self.use_simd => {
+                self.dequantize_simd(&quantized_data, &tensor.scales)?
+            }
+            _ => self.dequantize_scalar(&quantized_data, &tensor.scales)?,
         };
 
-        // Create tensor
-        let device = Device::Cpu; // TODO: Support GPU devices
-        create_tensor_from_f32(dequantized_data, &tensor.shape, &device)
+        // Create tensor on the requested device. This will move the data to
+        // GPU if needed, delegating the transfer to candle's backend.
+        create_tensor_from_f32(dequantized_data, &tensor.shape, device)
     }
 
     /// Scalar quantization implementation
@@ -432,8 +437,8 @@ impl QuantizerTrait for I2SQuantizer {
         self.quantize_tensor(tensor)
     }
 
-    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
-        self.dequantize_tensor(tensor)
+    fn dequantize_tensor(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor> {
+        self.dequantize_tensor(tensor, device)
     }
 
     fn quantization_type(&self) -> QuantizationType {
@@ -460,7 +465,7 @@ mod tests {
         let quantizer = I2SQuantizer::new();
 
         let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
         assert_eq!(quantized.qtype, QuantizationType::I2S);
         assert_eq!(quantized.shape, shape);
@@ -496,7 +501,7 @@ mod tests {
         for block_size in [4, 8, 16] {
             let quantizer = I2SQuantizer::with_block_size(block_size);
             let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &Device::Cpu).unwrap();
 
             assert_eq!(quantized.block_size, block_size);
             assert_eq!(dequantized.shape(), &shape);
