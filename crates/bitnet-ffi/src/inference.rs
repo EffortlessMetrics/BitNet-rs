@@ -5,6 +5,7 @@
 
 use crate::{BitNetCError, BitNetCInferenceConfig, BitNetCPerformanceMetrics, get_model_manager};
 // use bitnet_common::PerformanceMetrics;
+use bitnet_common::Tensor;
 use bitnet_inference::{InferenceConfig, InferenceEngine};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
@@ -381,16 +382,23 @@ impl bitnet_models::Model for MockInferenceModel {
         &self.cfg
     }
 
-    fn embed(&self, _tokens: &[u32]) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
-        // If these mocks are never called in the C-API tests, a todo!() is fine
-        todo!("embed not used in bitnet-ffi tests")
+    fn embed(&self, tokens: &[u32]) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+        let hidden_size = self.cfg.model.hidden_size;
+        let seq_len = tokens.len();
+        // Return a mock tensor with shape [1, seq_len, hidden_size]
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, seq_len, hidden_size]))
     }
 
     fn logits(
         &self,
-        _x: &bitnet_common::ConcreteTensor,
+        x: &bitnet_common::ConcreteTensor,
     ) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
-        todo!("logits not used in bitnet-ffi tests")
+        let shape = x.shape();
+        let batch = *shape.get(0).unwrap_or(&1);
+        let seq_len = *shape.get(1).unwrap_or(&1);
+        let vocab_size = self.cfg.model.vocab_size;
+        // Return a mock tensor with shape [batch, seq_len, vocab_size]
+        Ok(bitnet_common::ConcreteTensor::mock(vec![batch, seq_len, vocab_size]))
     }
 
     fn forward(
@@ -442,5 +450,16 @@ mod tests {
         use bitnet_models::Model;
         let config = model.config();
         assert_eq!(config.model.vocab_size, 32000); // Default value
+    }
+
+    #[test]
+    fn test_mock_inference_model_embed_logits() {
+        let model = MockInferenceModel::new();
+        use bitnet_models::Model;
+        let tokens = [1u32, 2u32];
+        let embeddings = model.embed(&tokens).expect("embed failed");
+        let logits = model.logits(&embeddings).expect("logits failed");
+        assert_eq!(embeddings.shape(), &[1, tokens.len(), model.config().model.hidden_size]);
+        assert_eq!(logits.shape(), &[1, tokens.len(), model.config().model.vocab_size]);
     }
 }
