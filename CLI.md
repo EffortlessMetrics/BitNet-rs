@@ -146,11 +146,15 @@ bitnet tokenize --model model.gguf --text "Hello" --json-out tokens.json
 
 ### `score` - Perplexity Calculation
 
-Calculate perplexity scores for model evaluation.
+Calculate perplexity scores for model evaluation. Supports device and batch
+size selection.
 
 ```bash
-bitnet score --model model.gguf --file test.txt
+bitnet score --model model.gguf --file test.txt --batch-size 8 --device cuda
 ```
+
+- `--batch-size SIZE` - Number of lines to process per batch
+- `--device DEVICE` - Compute device (`cpu`, `cuda`, `metal`, `auto`)
 
 ### `config` - Configuration Management
 
