@@ -15,6 +15,9 @@ fn engine_inspect_reads_header() {
     assert_eq!(info.version(), 2);
     assert_eq!(info.n_tensors(), 0);
     assert_eq!(info.n_kv(), 0);
+    assert!(info.kv().is_empty());
+    assert!(info.tensor_summaries().is_empty());
+    assert!(info.quantization_hints().is_empty());
 }
 
 #[test]
@@ -60,4 +63,51 @@ fn engine_inspect_rejects_bad_magic() {
     let err = inspect_model(&p).unwrap_err();
     // We only assert it surfaces as a header error (don't tie to exact variant name)
     let _ = format!("{err}");
+}
+
+#[test]
+fn engine_inspect_extracts_kv_and_tensors() {
+    use bitnet_inference::engine::inspect_model;
+    use std::io::Write;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("test.gguf");
+    let mut f = std::fs::File::create(&path).unwrap();
+
+    // header: magic, version=2, n_tensors=2, n_kv=1
+    f.write_all(b"GGUF").unwrap();
+    f.write_all(&2u32.to_le_bytes()).unwrap();
+    f.write_all(&2u64.to_le_bytes()).unwrap();
+    f.write_all(&1u64.to_le_bytes()).unwrap();
+
+    // KV pair: key "test.str" = "hello"
+    f.write_all(&8u64.to_le_bytes()).unwrap();
+    f.write_all(b"test.str").unwrap();
+    f.write_all(&8u32.to_le_bytes()).unwrap(); // STRING
+    f.write_all(&5u64.to_le_bytes()).unwrap();
+    f.write_all(b"hello").unwrap();
+
+    // Tensor 1: name "w", 1 dim [4], type 0 (F32), offset 0
+    f.write_all(&1u64.to_le_bytes()).unwrap();
+    f.write_all(b"w").unwrap();
+    f.write_all(&1u32.to_le_bytes()).unwrap();
+    f.write_all(&4u64.to_le_bytes()).unwrap();
+    f.write_all(&0u32.to_le_bytes()).unwrap();
+    f.write_all(&0u64.to_le_bytes()).unwrap();
+
+    // Tensor 2: name "qw", 1 dim [4], type 36 (I2_S), offset 0
+    f.write_all(&2u64.to_le_bytes()).unwrap();
+    f.write_all(b"qw").unwrap();
+    f.write_all(&1u32.to_le_bytes()).unwrap();
+    f.write_all(&4u64.to_le_bytes()).unwrap();
+    f.write_all(&36u32.to_le_bytes()).unwrap();
+    f.write_all(&0u64.to_le_bytes()).unwrap();
+    f.flush().unwrap();
+
+    let info = inspect_model(&path).unwrap();
+    assert_eq!(info.n_kv(), 1);
+    assert_eq!(info.kv()[0].key, "test.str");
+    assert_eq!(info.tensor_summaries().len(), 2);
+    assert_eq!(info.tensor_summaries()[0].name, "w");
+    assert_eq!(info.tensor_summaries()[1].ty, 36);
+    assert_eq!(info.quantization_hints(), &[36u32]);
 }

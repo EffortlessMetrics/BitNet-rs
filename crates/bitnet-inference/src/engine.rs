@@ -8,6 +8,8 @@ use bitnet_common::{BitNetConfig, BitNetTensor, ConcreteTensor, Device, Tensor};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use candle_core::{DType, IndexOp};
+use std::collections::BTreeSet;
+use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -22,11 +24,22 @@ use crate::{
     streaming::{GenerationStream, StreamingConfig},
 };
 
-/// Lightweight model info from GGUF header
+/// Summary information about a tensor from the GGUF header.
+#[derive(Debug, Clone)]
+pub struct TensorSummary {
+    pub name: String,
+    pub shape: Vec<u64>,
+    /// Raw tensor type identifier from GGUF metadata.
+    pub ty: u32,
+}
+
+/// Lightweight model info extracted from a GGUF file.
 #[derive(Debug, Clone)]
 pub struct ModelInfo {
     pub header: gguf::GgufHeader,
-    // TODO: add kvs, tensor overview, quantization hints, etc.
+    kv: Vec<gguf::GgufKv>,
+    quantization_hints: Vec<u32>,
+    tensors: Vec<TensorSummary>,
 }
 
 impl ModelInfo {
@@ -39,12 +52,192 @@ impl ModelInfo {
     pub fn n_kv(&self) -> u64 {
         self.header.n_kv
     }
+    /// Access parsed key/value metadata.
+    pub fn kv(&self) -> &[gguf::GgufKv] {
+        &self.kv
+    }
+    /// Quantization type identifiers discovered in tensor summaries.
+    pub fn quantization_hints(&self) -> &[u32] {
+        &self.quantization_hints
+    }
+    /// Summaries of tensors declared in the GGUF header.
+    pub fn tensor_summaries(&self) -> &[TensorSummary] {
+        &self.tensors
+    }
 }
 
 /// Synchronous inspection used before full model initialization.
 pub fn inspect_model(path: &Path) -> gguf::Result<ModelInfo> {
+    use gguf::{GgufError, GgufKv, GgufValue};
+
+    const MAX_KEY_LEN: u64 = 1024 * 1024; // 1 MiB
+    const MAX_STR_LEN: u64 = 10 * 1024 * 1024; // 10 MiB
+
+    #[inline]
+    fn read_u32_le<R: Read>(r: &mut R) -> gguf::Result<u32> {
+        let mut b = [0u8; 4];
+        r.read_exact(&mut b)?;
+        Ok(u32::from_le_bytes(b))
+    }
+
+    #[inline]
+    fn read_u64_le<R: Read>(r: &mut R) -> gguf::Result<u64> {
+        let mut b = [0u8; 8];
+        r.read_exact(&mut b)?;
+        Ok(u64::from_le_bytes(b))
+    }
+
+    #[inline]
+    fn read_string<R: Read>(r: &mut R) -> gguf::Result<String> {
+        let len = read_u64_le(r)?;
+        if len > MAX_STR_LEN {
+            return Err(GgufError::StringTooLarge(len));
+        }
+        let mut buf = vec![0u8; len as usize];
+        r.read_exact(&mut buf)?;
+        String::from_utf8(buf).map_err(|_| GgufError::Malformed)
+    }
+
+    #[inline]
+    fn scalar_size_bytes(ty: u32) -> Option<usize> {
+        match ty {
+            0 | 1 | 7 => Some(1),
+            2 | 3 => Some(2),
+            4..=6 => Some(4),
+            10..=12 => Some(8),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    fn value_from_type_scalar<R: Read>(r: &mut R, ty: u32) -> gguf::Result<GgufValue> {
+        Ok(match ty {
+            0 => {
+                let mut b = [0];
+                r.read_exact(&mut b)?;
+                GgufValue::U8(b[0])
+            }
+            1 => {
+                let mut b = [0];
+                r.read_exact(&mut b)?;
+                GgufValue::I8(b[0] as i8)
+            }
+            2 => {
+                let mut b = [0; 2];
+                r.read_exact(&mut b)?;
+                GgufValue::U16(u16::from_le_bytes(b))
+            }
+            3 => {
+                let mut b = [0; 2];
+                r.read_exact(&mut b)?;
+                GgufValue::I16(i16::from_le_bytes(b))
+            }
+            4 => {
+                let mut b = [0; 4];
+                r.read_exact(&mut b)?;
+                GgufValue::U32(u32::from_le_bytes(b))
+            }
+            5 => {
+                let mut b = [0; 4];
+                r.read_exact(&mut b)?;
+                GgufValue::I32(i32::from_le_bytes(b))
+            }
+            6 => {
+                let mut b = [0; 4];
+                r.read_exact(&mut b)?;
+                GgufValue::F32(f32::from_le_bytes(b))
+            }
+            7 => {
+                let mut b = [0];
+                r.read_exact(&mut b)?;
+                GgufValue::Bool(b[0] != 0)
+            }
+            10 => {
+                let mut b = [0; 8];
+                r.read_exact(&mut b)?;
+                GgufValue::U64(u64::from_le_bytes(b))
+            }
+            11 => {
+                let mut b = [0; 8];
+                r.read_exact(&mut b)?;
+                GgufValue::I64(i64::from_le_bytes(b))
+            }
+            12 => {
+                let mut b = [0; 8];
+                r.read_exact(&mut b)?;
+                GgufValue::F64(f64::from_le_bytes(b))
+            }
+            _ => return Err(GgufError::InvalidKvType(ty)),
+        })
+    }
+
+    fn read_array_value<R: Read + Seek>(r: &mut R) -> gguf::Result<Vec<GgufValue>> {
+        let elem_ty = read_u32_le(r)?;
+        let len = read_u64_le(r)?;
+        let mut out = Vec::with_capacity(len as usize);
+
+        if elem_ty == 8 {
+            for _ in 0..len {
+                out.push(GgufValue::String(read_string(r)?));
+            }
+            return Ok(out);
+        }
+
+        if scalar_size_bytes(elem_ty).is_some() {
+            for _ in 0..len {
+                out.push(value_from_type_scalar(r, elem_ty)?);
+            }
+            return Ok(out);
+        }
+
+        Err(GgufError::InvalidKvType(elem_ty))
+    }
+
+    // --- actual parsing starts here ---
+    let mut file = std::fs::File::open(path)?;
     let header = gguf::read_header_blocking(path)?;
-    Ok(ModelInfo { header })
+    file.seek(SeekFrom::Start(gguf::GGUF_HEADER_LEN as u64))?;
+
+    // Parse KV section
+    let mut kvs = Vec::new();
+    for _ in 0..header.n_kv {
+        let key_len = read_u64_le(&mut file)?;
+        if key_len > MAX_KEY_LEN {
+            return Err(GgufError::StringTooLarge(key_len));
+        }
+        let mut key_buf = vec![0u8; key_len as usize];
+        file.read_exact(&mut key_buf)?;
+        let key = String::from_utf8(key_buf).map_err(|_| GgufError::Malformed)?;
+
+        let value_type = read_u32_le(&mut file)?;
+        let value = match value_type {
+            8 => GgufValue::String(read_string(&mut file)?),
+            9 => GgufValue::Array(read_array_value(&mut file)?),
+            ty => value_from_type_scalar(&mut file, ty)?,
+        };
+
+        kvs.push(GgufKv { key, value });
+    }
+
+    // Parse tensor infos
+    let mut tensors = Vec::new();
+    let mut qset = BTreeSet::new();
+    for _ in 0..header.n_tensors {
+        let name = read_string(&mut file)?;
+        let n_dims = read_u32_le(&mut file)?;
+        let mut shape = Vec::with_capacity(n_dims as usize);
+        for _ in 0..n_dims {
+            shape.push(read_u64_le(&mut file)?);
+        }
+        let ty = read_u32_le(&mut file)?;
+        let _offset = read_u64_le(&mut file)?;
+        if ty != 0 && ty != 1 {
+            qset.insert(ty);
+        }
+        tensors.push(TensorSummary { name, shape, ty });
+    }
+
+    Ok(ModelInfo { header, kv: kvs, quantization_hints: qset.into_iter().collect(), tensors })
 }
 
 /// Result type for inference operations
