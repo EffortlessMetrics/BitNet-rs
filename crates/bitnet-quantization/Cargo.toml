@@ -17,6 +17,7 @@ thiserror.workspace = true
 bytemuck.workspace = true
 candle-core.workspace = true
 rayon.workspace = true
+bitnet-kernels = { path = "../bitnet-kernels", optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
@@ -27,6 +28,7 @@ tempfile.workspace = true
 default = []
 simd = []
 integration-tests = []
+cuda = ["bitnet-kernels/cuda"]
 
 [[bench]]
 name = "quantization"

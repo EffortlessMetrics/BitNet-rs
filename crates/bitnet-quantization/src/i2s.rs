@@ -6,6 +6,8 @@
 
 use crate::{QuantizedTensor, QuantizerTrait, utils::*};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
+#[cfg(feature = "cuda")]
+use bitnet_kernels::{KernelProvider, select_gpu_kernel};
 use candle_core::Device;
 use rayon::prelude::*;
 
@@ -64,13 +66,45 @@ impl I2SQuantizer {
         }
     }
 
-    /// Quantize tensor using I2_S algorithm
-    pub fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
+    /// Quantize tensor using I2_S algorithm on specified device
+    pub fn quantize_tensor(
+        &self,
+        tensor: &BitNetTensor,
+        device: &Device,
+    ) -> Result<QuantizedTensor> {
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
 
         // Calculate grouped scales for better accuracy
-        let scales = calculate_grouped_scales(&data, self.block_size, 2);
+        let mut scales = calculate_grouped_scales(&data, self.block_size, 2);
+
+        if matches!(device, Device::Cuda(_)) {
+            #[cfg(feature = "cuda")]
+            {
+                let dev_id = match device {
+                    Device::Cuda(id) => *id,
+                    _ => 0,
+                };
+                if let Ok(kernel) = select_gpu_kernel(dev_id) {
+                    let mut packed = vec![0u8; (data.len() + 3) / 4];
+                    let mut gpu_scales = vec![0f32; scales.len()];
+                    if kernel
+                        .quantize(&data, &mut packed, &mut gpu_scales, QuantizationType::I2S)
+                        .is_ok()
+                    {
+                        return Ok(QuantizedTensor::new_with_params(
+                            packed,
+                            gpu_scales,
+                            None,
+                            shape,
+                            QuantizationType::I2S,
+                            self.block_size,
+                        ));
+                    }
+                }
+            }
+            // Fallback to CPU path if kernel unavailable
+        }
 
         // Quantize data in parallel blocks
         let quantized_data = if self.use_simd {
@@ -92,8 +126,12 @@ impl I2SQuantizer {
         ))
     }
 
-    /// Dequantize tensor from I2_S format
-    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+    /// Dequantize tensor from I2_S format on specified device
+    pub fn dequantize_tensor(
+        &self,
+        tensor: &QuantizedTensor,
+        device: &Device,
+    ) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::I2S {
             return Err(
                 QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
@@ -110,9 +148,12 @@ impl I2SQuantizer {
             self.dequantize_scalar(&quantized_data, &tensor.scales)?
         };
 
-        // Create tensor
-        let device = Device::Cpu; // TODO: Support GPU devices
-        create_tensor_from_f32(dequantized_data, &tensor.shape, &device)
+        // Create tensor on requested device (GPU path falls back to CPU)
+        let dev = match device {
+            Device::Cpu => Device::Cpu,
+            _ => Device::Cpu,
+        };
+        create_tensor_from_f32(dequantized_data, &tensor.shape, &dev)
     }
 
     /// Scalar quantization implementation
@@ -428,12 +469,12 @@ impl Default for I2SQuantizer {
 }
 
 impl QuantizerTrait for I2SQuantizer {
-    fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
-        self.quantize_tensor(tensor)
+    fn quantize_tensor(&self, tensor: &BitNetTensor, device: &Device) -> Result<QuantizedTensor> {
+        <I2SQuantizer>::quantize_tensor(self, tensor, device)
     }
 
-    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
-        self.dequantize_tensor(tensor)
+    fn dequantize_tensor(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor> {
+        <I2SQuantizer>::dequantize_tensor(self, tensor, device)
     }
 
     fn quantization_type(&self) -> QuantizationType {
@@ -459,8 +500,8 @@ mod tests {
         let tensor = create_tensor_from_f32(data.clone(), &shape, &device).unwrap();
         let quantizer = I2SQuantizer::new();
 
-        let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let quantized = quantizer.quantize_tensor(&tensor, &device).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &device).unwrap();
 
         assert_eq!(quantized.qtype, QuantizationType::I2S);
         assert_eq!(quantized.shape, shape);
@@ -478,7 +519,7 @@ mod tests {
         let tensor = create_tensor_from_f32(data, &shape, &device).unwrap();
         let quantizer = I2SQuantizer::new();
 
-        let quantized = quantizer.quantize_tensor(&tensor).unwrap();
+        let quantized = quantizer.quantize_tensor(&tensor, &device).unwrap();
         let ratio = quantized.compression_ratio();
 
         // Should achieve significant compression (>8x for large tensors)
@@ -495,8 +536,8 @@ mod tests {
 
         for block_size in [4, 8, 16] {
             let quantizer = I2SQuantizer::with_block_size(block_size);
-            let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let quantized = quantizer.quantize_tensor(&tensor, &device).unwrap();
+            let dequantized = quantizer.dequantize_tensor(&quantized, &device).unwrap();
 
             assert_eq!(quantized.block_size, block_size);
             assert_eq!(dequantized.shape(), &shape);

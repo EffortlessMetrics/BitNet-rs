@@ -6,6 +6,8 @@
 
 use crate::{QuantizedTensor, QuantizerTrait, utils::*};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
+#[cfg(feature = "cuda")]
+use bitnet_kernels::{KernelProvider, select_gpu_kernel};
 use candle_core::Device;
 use rayon::prelude::*;
 use std::collections::HashMap;
@@ -154,8 +156,12 @@ impl TL1Quantizer {
         Ok(Self::with_config(config))
     }
 
-    /// Quantize tensor using TL1 algorithm
-    pub fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
+    /// Quantize tensor using TL1 algorithm on specified device
+    pub fn quantize_tensor(
+        &self,
+        tensor: &BitNetTensor,
+        device: &Device,
+    ) -> Result<QuantizedTensor> {
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
 
@@ -174,8 +180,40 @@ impl TL1Quantizer {
         );
 
         // Calculate grouped scales
-        let scales =
+        let mut scales =
             calculate_grouped_scales(&data, self.config.block_size, self.config.precision_bits);
+
+        if matches!(device, Device::Cuda(_)) {
+            #[cfg(feature = "cuda")]
+            {
+                let dev_id = match device {
+                    Device::Cuda(id) => *id,
+                    _ => 0,
+                };
+                if let Ok(kernel) = select_gpu_kernel(dev_id) {
+                    let mut packed = vec![0u8; (data.len() + 3) / 4];
+                    let mut gpu_scales = vec![0f32; scales.len()];
+                    if kernel
+                        .quantize(&data, &mut packed, &mut gpu_scales, QuantizationType::TL1)
+                        .is_ok()
+                    {
+                        let zp = if self.config.use_asymmetric {
+                            Some(vec![lookup_table.zero_point; gpu_scales.len()])
+                        } else {
+                            None
+                        };
+                        return Ok(QuantizedTensor::new_with_params(
+                            packed,
+                            gpu_scales,
+                            zp,
+                            shape,
+                            QuantizationType::TL1,
+                            self.config.block_size,
+                        ));
+                    }
+                }
+            }
+        }
 
         // Quantize data using lookup tables
         let quantized_data = if self.use_neon {
@@ -203,8 +241,12 @@ impl TL1Quantizer {
         ))
     }
 
-    /// Dequantize tensor from TL1 format
-    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+    /// Dequantize tensor from TL1 format on specified device
+    pub fn dequantize_tensor(
+        &self,
+        tensor: &QuantizedTensor,
+        device: &Device,
+    ) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::TL1 {
             return Err(
                 QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
@@ -225,9 +267,11 @@ impl TL1Quantizer {
             self.dequantize_scalar(&quantized_data, &tensor.scales, zero_points)?
         };
 
-        // Create tensor
-        let device = Device::Cpu; // TODO: Support GPU devices
-        create_tensor_from_f32(dequantized_data, &tensor.shape, &device)
+        let dev = match device {
+            Device::Cpu => Device::Cpu,
+            _ => Device::Cpu,
+        };
+        create_tensor_from_f32(dequantized_data, &tensor.shape, &dev)
     }
 
     /// Scalar quantization implementation
@@ -475,12 +519,12 @@ impl Default for TL1Quantizer {
 }
 
 impl QuantizerTrait for TL1Quantizer {
-    fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
-        self.quantize_tensor(tensor)
+    fn quantize_tensor(&self, tensor: &BitNetTensor, device: &Device) -> Result<QuantizedTensor> {
+        <TL1Quantizer>::quantize_tensor(self, tensor, device)
     }
 
-    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
-        self.dequantize_tensor(tensor)
+    fn dequantize_tensor(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor> {
+        <TL1Quantizer>::dequantize_tensor(self, tensor, device)
     }
 
     fn quantization_type(&self) -> QuantizationType {
@@ -525,8 +569,8 @@ mod tests {
         let tensor = create_tensor_from_f32(data.clone(), &shape, &device).unwrap();
         let quantizer = TL1Quantizer::new();
 
-        let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let quantized = quantizer.quantize_tensor(&tensor, &device).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &device).unwrap();
 
         assert_eq!(quantized.qtype, QuantizationType::TL1);
         assert_eq!(quantized.shape, shape);
@@ -563,8 +607,8 @@ mod tests {
         let config = TL1Config { use_asymmetric: true, ..Default::default() };
         let quantizer = TL1Quantizer::with_config(config);
 
-        let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let quantized = quantizer.quantize_tensor(&tensor, &device).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &device).unwrap();
 
         assert!(quantized.zero_points.is_some());
         assert_eq!(dequantized.shape(), &shape);

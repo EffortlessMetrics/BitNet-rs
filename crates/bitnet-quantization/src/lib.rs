@@ -9,7 +9,7 @@
 //! comprehensive benchmarking against reference implementations.
 
 use bitnet_common::{BitNetTensor, QuantizationType, Result};
-// Candle imports removed - not currently used
+use candle_core::Device;
 
 pub mod i2s;
 pub mod tl1;
@@ -109,9 +109,9 @@ impl Quantize for QuantizedTensor {
 
     fn dequantize(&self) -> Result<BitNetTensor> {
         match self.qtype {
-            QuantizationType::I2S => I2SQuantizer::new().dequantize_tensor(self),
-            QuantizationType::TL1 => TL1Quantizer::new().dequantize_tensor(self),
-            QuantizationType::TL2 => TL2Quantizer::new().dequantize_tensor(self),
+            QuantizationType::I2S => I2SQuantizer::new().dequantize_tensor(self, &Device::Cpu),
+            QuantizationType::TL1 => TL1Quantizer::new().dequantize_tensor(self, &Device::Cpu),
+            QuantizationType::TL2 => TL2Quantizer::new().dequantize_tensor(self, &Device::Cpu),
         }
     }
 }
@@ -119,9 +119,9 @@ impl Quantize for QuantizedTensor {
 impl Quantize for BitNetTensor {
     fn quantize(&self, qtype: QuantizationType) -> Result<QuantizedTensor> {
         match qtype {
-            QuantizationType::I2S => I2SQuantizer::new().quantize_tensor(self),
-            QuantizationType::TL1 => TL1Quantizer::new().quantize_tensor(self),
-            QuantizationType::TL2 => TL2Quantizer::new().quantize_tensor(self),
+            QuantizationType::I2S => I2SQuantizer::new().quantize_tensor(self, &Device::Cpu),
+            QuantizationType::TL1 => TL1Quantizer::new().quantize_tensor(self, &Device::Cpu),
+            QuantizationType::TL2 => TL2Quantizer::new().quantize_tensor(self, &Device::Cpu),
         }
     }
 
@@ -163,11 +163,11 @@ impl QuantizerFactory {
 
 /// Trait for quantizer implementations
 pub trait QuantizerTrait: Send + Sync {
-    /// Quantize a tensor
-    fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor>;
+    /// Quantize a tensor on the specified device
+    fn quantize_tensor(&self, tensor: &BitNetTensor, device: &Device) -> Result<QuantizedTensor>;
 
-    /// Dequantize a tensor
-    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor>;
+    /// Dequantize a tensor on the specified device
+    fn dequantize_tensor(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor>;
 
     /// Get the quantization type
     fn quantization_type(&self) -> QuantizationType;

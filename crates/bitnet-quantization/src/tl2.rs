@@ -6,6 +6,8 @@
 
 use crate::{QuantizedTensor, QuantizerTrait, utils::*};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
+#[cfg(feature = "cuda")]
+use bitnet_kernels::{KernelProvider, select_gpu_kernel};
 use candle_core::Device;
 use rayon::prelude::*;
 use std::collections::HashMap;
@@ -213,8 +215,12 @@ impl TL2Quantizer {
         Ok(Self::with_config(config))
     }
 
-    /// Quantize tensor using TL2 algorithm
-    pub fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
+    /// Quantize tensor using TL2 algorithm on specified device
+    pub fn quantize_tensor(
+        &self,
+        tensor: &BitNetTensor,
+        device: &Device,
+    ) -> Result<QuantizedTensor> {
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
 
@@ -228,8 +234,35 @@ impl TL2Quantizer {
         let lookup_table = VectorizedLookupTable::new(min_val, max_val, self.config.precision_bits);
 
         // Calculate grouped scales for better accuracy
-        let scales =
+        let mut scales =
             calculate_grouped_scales(&data, self.config.block_size, self.config.precision_bits);
+
+        if matches!(device, Device::Cuda(_)) {
+            #[cfg(feature = "cuda")]
+            {
+                let dev_id = match device {
+                    Device::Cuda(id) => *id,
+                    _ => 0,
+                };
+                if let Ok(kernel) = select_gpu_kernel(dev_id) {
+                    let mut packed = vec![0u8; (data.len() + 3) / 4];
+                    let mut gpu_scales = vec![0f32; scales.len()];
+                    if kernel
+                        .quantize(&data, &mut packed, &mut gpu_scales, QuantizationType::TL2)
+                        .is_ok()
+                    {
+                        return Ok(QuantizedTensor::new_with_params(
+                            packed,
+                            gpu_scales,
+                            None,
+                            shape,
+                            QuantizationType::TL2,
+                            self.config.block_size,
+                        ));
+                    }
+                }
+            }
+        }
 
         // Select optimal quantization kernel
         let quantized_data = match self.cpu_features.best_kernel() {
@@ -255,8 +288,12 @@ impl TL2Quantizer {
         ))
     }
 
-    /// Dequantize tensor from TL2 format
-    pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
+    /// Dequantize tensor from TL2 format on specified device
+    pub fn dequantize_tensor(
+        &self,
+        tensor: &QuantizedTensor,
+        device: &Device,
+    ) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::TL2 {
             return Err(
                 QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
@@ -277,9 +314,11 @@ impl TL2Quantizer {
             _ => self.dequantize_scalar(&quantized_data, &tensor.scales)?,
         };
 
-        // Create tensor
-        let device = Device::Cpu; // TODO: Support GPU devices
-        create_tensor_from_f32(dequantized_data, &tensor.shape, &device)
+        let dev = match device {
+            Device::Cpu => Device::Cpu,
+            _ => Device::Cpu,
+        };
+        create_tensor_from_f32(dequantized_data, &tensor.shape, &dev)
     }
 
     /// Scalar quantization implementation
@@ -533,12 +572,12 @@ impl Default for TL2Quantizer {
 }
 
 impl QuantizerTrait for TL2Quantizer {
-    fn quantize_tensor(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
-        self.quantize_tensor(tensor)
+    fn quantize_tensor(&self, tensor: &BitNetTensor, device: &Device) -> Result<QuantizedTensor> {
+        <TL2Quantizer>::quantize_tensor(self, tensor, device)
     }
 
-    fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
-        self.dequantize_tensor(tensor)
+    fn dequantize_tensor(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor> {
+        <TL2Quantizer>::dequantize_tensor(self, tensor, device)
     }
 
     fn quantization_type(&self) -> QuantizationType {
@@ -591,8 +630,8 @@ mod tests {
         let tensor = create_tensor_from_f32(data.clone(), &shape, &device).unwrap();
         let quantizer = TL2Quantizer::new();
 
-        let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let quantized = quantizer.quantize_tensor(&tensor, &device).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &device).unwrap();
 
         assert_eq!(quantized.qtype, QuantizationType::TL2);
         assert_eq!(quantized.shape, shape);
@@ -619,8 +658,8 @@ mod tests {
         let tensor = create_tensor_from_f32(data, &shape, &device).unwrap();
         let quantizer = TL2Quantizer::new();
 
-        let quantized = quantizer.quantize_tensor(&tensor).unwrap();
-        let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+        let quantized = quantizer.quantize_tensor(&tensor, &device).unwrap();
+        let dequantized = quantizer.dequantize_tensor(&quantized, &device).unwrap();
 
         assert_eq!(quantized.shape, shape);
         assert_eq!(dequantized.shape(), &shape);
