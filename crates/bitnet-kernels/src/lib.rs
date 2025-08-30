@@ -58,13 +58,13 @@ impl KernelManager {
         }
 
         // Add optimized CPU kernels in order of preference (best first)
-        // Note: AVX-512 is disabled due to unstable Rust features
-        // #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        // {
-        //     if is_x86_feature_detected!("avx512f") {
-        //         providers.insert(-1, Box::new(cpu::Avx512Kernel));
-        //     }
-        // }
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        {
+            if is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512vl") {
+                let insert_pos = if providers.len() > 1 { providers.len() - 1 } else { 0 };
+                providers.insert(insert_pos, Box::new(cpu::Avx512Kernel));
+            }
+        }
 
         #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
         {

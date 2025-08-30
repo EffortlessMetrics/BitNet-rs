@@ -195,6 +195,37 @@ mod kernel_implementations {
         }
     }
 
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    #[test]
+    fn test_avx512_kernel_comprehensive() {
+        if !(is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512vl")) {
+            return; // Skip if AVX-512 not available
+        }
+
+        let avx512_kernel = cpu::Avx512Kernel;
+        let avx2_kernel = cpu::Avx2Kernel;
+        let fallback = cpu::FallbackKernel;
+
+        assert!(avx512_kernel.is_available());
+        assert_eq!(avx512_kernel.name(), "avx512");
+
+        let size = 8;
+        let a = vec![1i8; size * size];
+        let b = vec![1u8; size * size];
+        let mut c512 = vec![0.0f32; size * size];
+        let mut c2 = vec![0.0f32; size * size];
+        let mut cf = vec![0.0f32; size * size];
+
+        avx512_kernel.matmul_i2s(&a, &b, &mut c512, size, size, size).unwrap();
+        avx2_kernel.matmul_i2s(&a, &b, &mut c2, size, size, size).unwrap();
+        fallback.matmul_i2s(&a, &b, &mut cf, size, size, size).unwrap();
+
+        for i in 0..c512.len() {
+            assert!((c512[i] - c2[i]).abs() < 1e-6);
+            assert!((c512[i] - cf[i]).abs() < 1e-6);
+        }
+    }
+
     #[cfg(all(target_arch = "aarch64", feature = "neon"))]
     #[test]
     fn test_neon_kernel_comprehensive() {
