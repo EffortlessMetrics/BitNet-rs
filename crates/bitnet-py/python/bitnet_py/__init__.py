@@ -67,40 +67,68 @@ Migration from Original Python:
     All existing code should work without modification.
 """
 
-from ._bitnet_py import (
-    # Core classes
-    BitNetModel,
-    InferenceEngine,
-    Tokenizer,
-    ChatFormat,
-    
-    # Configuration classes
-    ModelArgs,
-    GenArgs,
-    InferenceConfig,
-    
-    # Statistics and utilities
-    Stats,
-    Message,
-    
-    # Utility functions
-    load_model,
-    create_tokenizer,
-    benchmark_inference,
-    compare_performance,
-    validate_outputs,
-    get_system_info,
-    
-    # Cache functions (matching original API)
-    make_cache,
-    cache_prefix,
-    
-    # Exception types
-    BitNetError,
-    
-    # Version
-    __version__,
-)
+import warnings
+
+# The high-performance Rust bindings live in the compiled _bitnet_py extension.
+# In minimal environments (e.g. CI or documentation builds) the extension may
+# not be available.  Fall back to lightweight placeholders so that modules that
+# only need the migration helpers can still be imported without raising
+# ImportError at import time.
+try:  # pragma: no cover - optional extension
+    from ._bitnet_py import (
+        # Core classes
+        BitNetModel,
+        InferenceEngine,
+        Tokenizer,
+        ChatFormat,
+
+        # Configuration classes
+        ModelArgs,
+        GenArgs,
+        InferenceConfig,
+
+        # Statistics and utilities
+        Stats,
+        Message,
+
+        # Utility functions
+        load_model,
+        create_tokenizer,
+        benchmark_inference,
+        compare_performance,
+        validate_outputs,
+        get_system_info,
+
+        # Cache functions (matching original API)
+        make_cache,
+        cache_prefix,
+
+        # Exception types
+        BitNetError,
+
+        # Version
+        __version__,
+    )
+except ModuleNotFoundError as e:  # pragma: no cover - graceful fallback
+    warnings.warn(
+        "bitnet_py extension module not found. Only migration helpers are available.",
+        RuntimeWarning,
+    )
+
+    def _missing(*_args, **_kwargs):  # type: ignore
+        raise ModuleNotFoundError(
+            "bitnet_py extension module not installed; build the project to enable full functionality"
+        ) from e
+
+    # Provide minimal stubs so imports succeed; calling them will raise
+    # informative errors via _missing.
+    BitNetModel = InferenceEngine = Tokenizer = ChatFormat = object  # type: ignore
+    ModelArgs = GenArgs = InferenceConfig = object  # type: ignore
+    Stats = Message = object  # type: ignore
+    load_model = create_tokenizer = benchmark_inference = compare_performance = \
+        validate_outputs = get_system_info = make_cache = cache_prefix = _missing  # type: ignore
+    BitNetError = ModuleNotFoundError  # type: ignore
+    __version__ = "0.0.0"  # type: ignore
 
 # Aliases for backward compatibility with original API
 FastGen = InferenceEngine

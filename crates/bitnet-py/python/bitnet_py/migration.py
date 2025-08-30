@@ -14,11 +14,18 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 import importlib.util
 
-try:
-    import bitnet_py as bitnet
-except ImportError:
-    print("Error: bitnet_py not installed. Please install it first.")
-    sys.exit(1)
+# The bitnet_py module provides optimized Rust bindings.  It may not be
+# available in minimal environments, so handle its absence gracefully rather
+# than raising an ImportError at import time.  Tests that rely on it will check
+# for availability explicitly.
+try:  # pragma: no cover - optional dependency
+    import bitnet_py as bitnet  # type: ignore
+except Exception:  # pragma: no cover - best effort
+    bitnet = None  # type: ignore
+    warnings.warn(
+        "bitnet_py not installed. Some migration helpers will be unavailable.",
+        RuntimeWarning,
+    )
 
 class MigrationHelper:
     """Helper class for migrating from original BitNet Python implementation."""
@@ -253,29 +260,47 @@ def test_original_implementation():
     try:
         import model as fast_orig
         import generate
-        
+
         print("Testing original implementation...")
-        
-        # TODO: Add original implementation test code
-        # This will depend on your specific setup
-        
-        results = {{
+
+        # Load legacy model and tokenizer (update paths for your environment)
+        model = fast_orig.load_model("path/to/legacy/model.bin")  # Update this path
+        tokenizer = fast_orig.create_tokenizer("path/to/legacy/tokenizer.model")  # Update this path
+
+        engine = generate.SimpleInference(model, tokenizer)
+
+        results = {
             "implementation": "original",
             "available": True,
             "results": [],
-            "avg_time": 0.0,
-            "tokens_per_second": 0.0,
-        }}
-        
+            "times": [],
+        }
+
+        for prompt in TEST_PROMPTS:
+            start_time = time.time()
+            response = engine.generate(prompt)
+            end_time = time.time()
+
+            results["results"].append({
+                "prompt": prompt,
+                "response": response,
+                "time": end_time - start_time,
+            })
+            results["times"].append(end_time - start_time)
+
+        results["avg_time"] = sum(results["times"]) / len(results["times"])
+        total_tokens = sum(len(r["response"].split()) for r in results["results"])
+        results["tokens_per_second"] = total_tokens / sum(results["times"])
+
         return results
-        
-    except ImportError as e:
-        print(f"Original implementation not available: {{e}}")
-        return {{
+
+    except Exception as e:
+        print(f"Original implementation error: {e}")
+        return {
             "implementation": "original",
             "available": False,
             "error": str(e),
-        }}
+        }
 
 def test_bitnet_py_implementation():
     """Test bitnet_py implementation."""
