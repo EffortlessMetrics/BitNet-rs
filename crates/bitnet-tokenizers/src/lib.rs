@@ -35,6 +35,7 @@ pub struct TokenizerConfig {
     pub unk_token_id: Option<u32>,
     pub vocabulary: Option<Vec<(String, f32)>>,
     pub bpe_merges: Option<Vec<String>>,
+    pub sp_model: Option<Vec<u8>>,
 }
 
 impl TokenizerConfig {

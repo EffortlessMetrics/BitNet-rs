@@ -63,5 +63,11 @@ fn gguf_vocab_and_special_tokens_loaded() -> Result<()> {
     assert_eq!(tokenizer.token_to_piece(bos).as_deref(), Some("<bos>"));
     assert_eq!(tokenizer.token_to_piece(eos).as_deref(), Some("<eos>"));
     assert_eq!(tokenizer.token_to_piece(2).as_deref(), Some("hello"));
+
+    // Round-trip test using raw bytes
+    let text = "hi";
+    let ids = tokenizer.encode(text, false, false)?;
+    let decoded = tokenizer.decode(&ids)?;
+    assert_eq!(decoded, text);
     Ok(())
 }
