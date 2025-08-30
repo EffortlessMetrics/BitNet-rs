@@ -146,10 +146,18 @@ bitnet tokenize --model model.gguf --text "Hello" --json-out tokens.json
 
 ### `score` - Perplexity Calculation
 
-Calculate perplexity scores for model evaluation.
+Calculate mean negative log-likelihood and perplexity over a text file using
+teacher-forced evaluation.
 
 ```bash
-bitnet score --model model.gguf --file test.txt
+bitnet score --model model.gguf --file test.txt --batch-size 4 --device cuda
+
+# Options:
+#   --tokenizer PATH   External tokenizer (overrides embedded)
+#   --max-tokens N     Optional cap on tokens evaluated
+#   --batch-size N     Number of lines to process per batch (default: 1)
+#   --device DEVICE    Device to use: cpu, cuda, metal, auto (default: auto)
+#   --json-out PATH    Output results as JSON
 ```
 
 ### `config` - Configuration Management
