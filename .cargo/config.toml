@@ -15,6 +15,12 @@ tw = "test --workspace --no-default-features --features cpu"
 gpu-tests = "test --workspace --no-default-features --features gpu"
 cpu-tests = "test --workspace --no-default-features --features cpu"
 
+# Concurrency-capped test aliases
+t2 = "test --workspace --no-default-features --features cpu -- --test-threads=2"
+t1 = "test --workspace --no-default-features --features cpu -- --test-threads=1"
+crossval-capped = "test --workspace --features \"cpu,ffi,crossval\" -- --test-threads=2"
+gpu-capped = "test --workspace --no-default-features --features cuda -- --test-threads=2"
+
 # Reporting aliases
 report-demo = "run -p bitnet-tests --bin demo_reporting_comprehensive"
 report-example = "run -p bitnet-tests --example reporting_example"
