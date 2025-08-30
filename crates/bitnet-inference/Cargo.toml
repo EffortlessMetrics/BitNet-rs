@@ -18,7 +18,7 @@ bitnet-kernels = { path = "../bitnet-kernels" }
 anyhow.workspace = true
 futures.workspace = true
 futures-util = "0.3"
-rayon.workspace = true
+rayon = { workspace = true }
 rand = "0.8"
 rand_chacha = "0.3"
 candle-core.workspace = true
