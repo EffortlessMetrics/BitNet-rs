@@ -317,14 +317,17 @@ impl TestCase for StreamingConfigurationTest {
             StreamingConfig {
                 buffer_size: 1, // Immediate streaming
                 flush_interval_ms: 10,
+                ..Default::default()
             },
             StreamingConfig {
                 buffer_size: 5, // Buffered streaming
                 flush_interval_ms: 100,
+                ..Default::default()
             },
             StreamingConfig {
                 buffer_size: 10, // Larger buffer
                 flush_interval_ms: 200,
+                ..Default::default()
             },
         ];
 
@@ -497,7 +500,9 @@ impl TestCase for StreamingBackpressureTest {
 
         // Test fast consumer scenario
         debug!("Testing fast consumer");
-        let mut fast_stream = engine.generate_stream(prompt);
+        let mut fast_stream = engine
+            .generate_stream(prompt)
+            .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
 
         let mut fast_consumer_chunks = 0;
         let fast_start = Instant::now();
@@ -540,7 +545,10 @@ impl TestCase for StreamingBackpressureTest {
             let consumer_prompt = format!("Concurrent consumer {} prompt", i + 1);
 
             let handle = tokio::spawn(async move {
-                let mut stream = engine_clone.generate_stream(&consumer_prompt);
+                let mut stream = match engine_clone.generate_stream(&consumer_prompt) {
+                    Ok(s) => s,
+                    Err(_) => return 0,
+                };
                 let mut chunks = 0;
 
                 while let Some(result) = stream.next().await {
@@ -578,7 +586,9 @@ impl TestCase for StreamingBackpressureTest {
 
         // Test buffer overflow scenarios
         debug!("Testing buffer behavior");
-        let mut buffer_stream = engine.generate_stream("Buffer test");
+        let mut buffer_stream = engine
+            .generate_stream("Buffer test")
+            .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
 
         // Collect several chunks without processing to test buffering
         let mut buffered_chunks = Vec::new();
@@ -705,7 +715,9 @@ impl TestCase for StreamingCancellationTest {
         debug!("Testing timeout behavior");
         let timeout_duration = std::time::Duration::from_millis(500);
 
-        let mut timeout_stream = engine.generate_stream("Timeout test");
+        let mut timeout_stream = engine
+            .generate_stream("Timeout test")
+            .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
         let timeout_start = Instant::now();
         let mut timeout_chunks = 0;
 
@@ -746,7 +758,9 @@ impl TestCase for StreamingCancellationTest {
         for i in 0..stream_count {
             debug!("Creating stream {}", i + 1);
 
-            let mut test_stream = engine.generate_stream(&format!("Stream {} test", i + 1));
+            let mut test_stream = engine
+                .generate_stream(&format!("Stream {} test", i + 1))
+                .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
             created_streams += 1;
 
             // Consume one chunk then cancel
@@ -780,8 +794,9 @@ impl TestCase for StreamingCancellationTest {
 
         // Create and cancel multiple streams
         for i in 0..3 {
-            let mut cleanup_stream =
-                cleanup_engine.generate_stream(&format!("Cleanup test {}", i + 1));
+            let mut cleanup_stream = cleanup_engine
+                .generate_stream(&format!("Cleanup test {}", i + 1))
+                .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
 
             // Consume one chunk
             if let Some(Ok(_)) = cleanup_stream.next().await {
@@ -874,7 +889,9 @@ impl TestCase for StreamingPerformanceTest {
             debug!("TTFT measurement {}", i + 1);
 
             let ttft_start = Instant::now();
-            let mut stream = engine.generate_stream(ttft_prompt);
+        let mut stream = engine
+            .generate_stream(ttft_prompt)
+            .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
 
             if let Some(result) = stream.next().await {
                 let ttft = ttft_start.elapsed();
@@ -894,7 +911,9 @@ impl TestCase for StreamingPerformanceTest {
         // Test throughput (tokens per second)
         debug!("Testing streaming throughput");
         let throughput_prompt = "Throughput test prompt for measuring tokens per second";
-        let mut throughput_stream = engine.generate_stream(throughput_prompt);
+        let mut throughput_stream = engine
+            .generate_stream(throughput_prompt)
+            .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
 
         let throughput_start = Instant::now();
         let mut throughput_chunks = 0;
@@ -934,7 +953,9 @@ impl TestCase for StreamingPerformanceTest {
         // Test latency consistency
         debug!("Testing latency consistency");
         let latency_prompt = "Latency consistency test";
-        let mut latency_stream = engine.generate_stream(latency_prompt);
+        let mut latency_stream = engine
+            .generate_stream(latency_prompt)
+            .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
 
         let mut inter_chunk_latencies = Vec::new();
         let mut last_chunk_time = Instant::now();
@@ -977,7 +998,9 @@ impl TestCase for StreamingPerformanceTest {
             initial_memory_stats.cache_size, initial_memory_stats.cache_usage
         );
 
-        let mut memory_stream = memory_engine.generate_stream("Memory efficiency test");
+        let mut memory_stream = memory_engine
+            .generate_stream("Memory efficiency test")
+            .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
         let mut memory_measurements = Vec::new();
 
         for i in 0..5 {
