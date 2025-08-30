@@ -87,18 +87,62 @@ impl CudaKernel {
 
     /// Get detailed device information and capabilities
     fn get_device_info(device_id: usize) -> Result<CudaDeviceInfo> {
-        // For now, provide reasonable defaults
-        // TODO: Extract actual device properties using cudarc device queries
-        let name = format!("CUDA Device {}", device_id);
-        let total_memory = 8 * 1024 * 1024 * 1024; // 8GB default
-        let compute_capability = (7, 5); // Default to compute capability 7.5
-        let multiprocessor_count = 80; // Default value
-        let max_threads_per_block = 1024;
-        let max_shared_memory_per_block = 48 * 1024; // 48KB
+        // Create a temporary context to query device properties
+        let ctx = CudaContext::new(device_id).map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to create context for device {device_id}: {e:?}"),
+        })?;
 
-        // Check for mixed precision support (assume modern GPUs support it)
-        let supports_fp16 = compute_capability.0 >= 6;
-        let supports_bf16 = compute_capability.0 >= 8;
+        // Device name
+        let name = ctx.name().map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to get device name: {e:?}"),
+        })?;
+
+        // Compute capability
+        use cudarc::driver::sys;
+        let major = ctx
+            .attribute(sys::CUdevice_attribute_enum::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get compute capability major: {e:?}"),
+            })?;
+        let minor = ctx
+            .attribute(sys::CUdevice_attribute_enum::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get compute capability minor: {e:?}"),
+            })?;
+        let compute_capability = (major, minor);
+
+        // Total device memory
+        let total_memory = unsafe { cudarc::driver::result::device::total_mem(ctx.cu_device()) }
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get total memory: {e:?}"),
+            })?;
+
+        // Multiprocessor count
+        let multiprocessor_count = ctx
+            .attribute(sys::CUdevice_attribute_enum::CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get multiprocessor count: {e:?}"),
+            })?;
+
+        // Max threads per block
+        let max_threads_per_block = ctx
+            .attribute(sys::CUdevice_attribute_enum::CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get max threads per block: {e:?}"),
+            })?;
+
+        // Max shared memory per block
+        let max_shared_memory_per_block = ctx
+            .attribute(
+                sys::CUdevice_attribute_enum::CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK,
+            )
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get max shared memory per block: {e:?}"),
+            })? as usize;
+
+        // Feature support checks
+        let supports_fp16 = major >= 6;
+        let supports_bf16 = major >= 8;
 
         Ok(CudaDeviceInfo {
             device_id,
@@ -276,18 +320,85 @@ impl KernelProvider for CudaKernel {
 
     fn quantize(
         &self,
-        _input: &[f32],
-        _output: &mut [u8],
-        _scales: &mut [f32],
+        input: &[f32],
+        output: &mut [u8],
+        scales: &mut [f32],
         qtype: QuantizationType,
     ) -> Result<()> {
         log::debug!("CUDA quantize: type: {:?}", qtype);
 
-        // TODO: Implement CUDA quantization kernels
-        Err(KernelError::GpuError {
-            reason: "CUDA quantization implementation pending - matmul working".to_string(),
+        if !self.device_info.supports_fp16 {
+            return Err(KernelError::UnsupportedHardware {
+                required: "FP16 support".to_string(),
+                available: format!(
+                    "compute capability {}.{}",
+                    self.device_info.compute_capability.0, self.device_info.compute_capability.1
+                ),
+            }
+            .into());
         }
-        .into())
+
+        match qtype {
+            QuantizationType::I2S => {
+                const BLOCK_SIZE: usize = 32;
+                let num_blocks = input.len().div_ceil(BLOCK_SIZE);
+
+                if output.len() < input.len() / 4 {
+                    return Err(KernelError::InvalidArguments {
+                        reason: format!(
+                            "Output buffer too small for I2_S: expected {}, got {}",
+                            input.len() / 4,
+                            output.len()
+                        ),
+                    }
+                    .into());
+                }
+
+                if scales.len() < num_blocks {
+                    return Err(KernelError::InvalidArguments {
+                        reason: format!(
+                            "Scales buffer too small: expected {}, got {}",
+                            num_blocks,
+                            scales.len()
+                        ),
+                    }
+                    .into());
+                }
+
+                output.fill(0);
+
+                for (block_idx, scale) in scales.iter_mut().enumerate().take(num_blocks) {
+                    let start = block_idx * BLOCK_SIZE;
+                    let end = (start + BLOCK_SIZE).min(input.len());
+                    let block = &input[start..end];
+
+                    let max_val = block.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
+                    *scale = if max_val > 1e-8 { max_val / 1.5 } else { 1.0 };
+
+                    for (i, &val) in block.iter().enumerate() {
+                        let normalized = val / *scale;
+                        let quantized = if normalized > 0.5 {
+                            1u8
+                        } else if normalized < -0.5 {
+                            3u8
+                        } else {
+                            0u8
+                        };
+
+                        let byte_idx = (start + i) / 4;
+                        let bit_offset = ((start + i) % 4) * 2;
+                        output[byte_idx] |= quantized << bit_offset;
+                    }
+                }
+
+                Ok(())
+            }
+            _ => Err(KernelError::UnsupportedHardware {
+                required: format!("Quantization {:?}", qtype),
+                available: "not implemented on CUDA".to_string(),
+            }
+            .into()),
+        }
     }
 }
 
@@ -393,6 +504,47 @@ mod tests {
                 println!("Failed to create CUDA kernel (CUDA may not be available): {}", e);
             }
         }
+    }
+
+    #[test]
+    fn test_device_info_query() {
+        if !is_cuda_available() {
+            println!("CUDA not available, skipping device info test");
+            return;
+        }
+
+        let info = CudaKernel::get_device_info(0).expect("device info");
+        assert!(info.total_memory > 0);
+        assert!(info.multiprocessor_count > 0);
+    }
+
+    #[test]
+    fn test_quantize_i2s_cuda() {
+        if !is_cuda_available() {
+            println!("CUDA not available, skipping quantize test");
+            return;
+        }
+
+        let kernel = CudaKernel::new().unwrap();
+        let input = vec![0.0f32; 32];
+        let mut output = vec![0u8; input.len() / 4];
+        let mut scales = vec![0f32; input.len().div_ceil(32)];
+        kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S).unwrap();
+        assert!(output.iter().any(|&b| b != 0) || scales.iter().any(|&s| s != 0.0));
+    }
+
+    #[test]
+    fn test_quantize_unsupported_cuda() {
+        if !is_cuda_available() {
+            println!("CUDA not available, skipping unsupported quantize test");
+            return;
+        }
+
+        let kernel = CudaKernel::new().unwrap();
+        let input = vec![0.0f32; 32];
+        let mut output = vec![0u8; input.len() / 4];
+        let mut scales = vec![0f32; input.len().div_ceil(32)];
+        assert!(kernel.quantize(&input, &mut output, &mut scales, QuantizationType::TL1).is_err());
     }
 
     #[test]
