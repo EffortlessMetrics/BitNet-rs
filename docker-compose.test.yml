@@ -1,0 +1,192 @@
+version: "3.9"
+
+# BitNet-rs Test Environment with Resource Limits
+# Provides isolated test environments with hard resource caps to prevent
+# system overload during parallel test execution
+
+services:
+  # CPU-only test environment
+  rust-cpu-tests:
+    build:
+      context: .
+      dockerfile: .docker/rust-cpu.dockerfile
+    command: >
+      sh -c "
+      source scripts/preflight.sh &&
+      cargo t2 &&
+      cargo test --package bitnet-inference --test gguf_header &&
+      cargo test --package bitnet-inference --test gguf_fuzz
+      "
+    environment:
+      - RUST_TEST_THREADS=2
+      - RAYON_NUM_THREADS=2
+      - BITNET_DETERMINISTIC=1
+      - BITNET_SEED=42
+      - OMP_NUM_THREADS=1
+      - OPENBLAS_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - NUMEXPR_NUM_THREADS=1
+    # Hard resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 16G
+        reservations:
+          cpus: '2'
+          memory: 8G
+    # Container-level limits for processes and file descriptors
+    pids_limit: 1024
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 8192
+      nproc:
+        soft: 256
+        hard: 512
+    volumes:
+      - .:/workspace
+      - target-cache-cpu:/workspace/target
+    working_dir: /workspace
+    networks:
+      - bitnet-test
+
+  # GPU test environment (requires NVIDIA Docker runtime)
+  rust-gpu-tests:
+    build:
+      context: .
+      dockerfile: .docker/rust-gpu.dockerfile
+    command: >
+      sh -c "
+      source scripts/preflight.sh &&
+      cargo gpu-capped &&
+      cargo test --package bitnet-kernels --test gpu_smoke --no-default-features --features cuda
+      "
+    environment:
+      - RUST_TEST_THREADS=2
+      - RAYON_NUM_THREADS=2
+      - BITNET_DETERMINISTIC=1
+      - BITNET_SEED=42
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 16G
+        reservations:
+          cpus: '2'
+          memory: 8G
+    pids_limit: 1024
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 8192
+      nproc:
+        soft: 256
+        hard: 512
+    volumes:
+      - .:/workspace
+      - target-cache-gpu:/workspace/target
+    working_dir: /workspace
+    runtime: nvidia
+    networks:
+      - bitnet-test
+
+  # Cross-validation test environment (includes C++ dependencies)
+  crossval-tests:
+    build:
+      context: .
+      dockerfile: .docker/crossval.dockerfile
+    command: >
+      sh -c "
+      source scripts/preflight.sh &&
+      scripts/e2e-gate.sh cargo crossval-capped &&
+      scripts/e2e-gate.sh cargo run -p xtask -- crossval
+      "
+    environment:
+      - RUST_TEST_THREADS=2
+      - RAYON_NUM_THREADS=2
+      - CROSSVAL_WORKERS=2
+      - BITNET_DETERMINISTIC=1
+      - BITNET_SEED=42
+      - BITNET_CPP_DIR=/workspace/target/bitnet_cpp
+      - OMP_NUM_THREADS=1
+      - OPENBLAS_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - NUMEXPR_NUM_THREADS=1
+    deploy:
+      resources:
+        limits:
+          cpus: '6'
+          memory: 20G
+        reservations:
+          cpus: '4'
+          memory: 12G
+    pids_limit: 2048  # Higher limit for C++ compilation
+    ulimits:
+      nofile:
+        soft: 16384
+        hard: 16384
+      nproc:
+        soft: 512
+        hard: 1024
+    volumes:
+      - .:/workspace
+      - target-cache-crossval:/workspace/target
+      - bitnet-cpp-cache:/workspace/target/bitnet_cpp
+    working_dir: /workspace
+    networks:
+      - bitnet-test
+
+  # Performance benchmark environment (isolated, higher resource limits)
+  benchmark-tests:
+    build:
+      context: .
+      dockerfile: .docker/rust-cpu.dockerfile
+    command: >
+      sh -c "
+      source scripts/preflight.sh &&
+      export RAYON_NUM_THREADS=4 &&
+      cargo bench --workspace --no-default-features --features cpu
+      "
+    environment:
+      - RUST_TEST_THREADS=1  # Benchmarks need stable single-threaded execution
+      - RAYON_NUM_THREADS=4   # But can use more Rayon threads for parallel work
+      - BITNET_DETERMINISTIC=1
+      - BITNET_SEED=42
+      - RUSTFLAGS=-C target-cpu=native
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+          memory: 24G
+        reservations:
+          cpus: '4'
+          memory: 16G
+    pids_limit: 512
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 4096
+    volumes:
+      - .:/workspace
+      - target-cache-bench:/workspace/target
+    working_dir: /workspace
+    networks:
+      - bitnet-test
+
+volumes:
+  target-cache-cpu:
+    driver: local
+  target-cache-gpu:
+    driver: local
+  target-cache-crossval:
+    driver: local
+  target-cache-bench:
+    driver: local
+  bitnet-cpp-cache:
+    driver: local
+
+networks:
+  bitnet-test:
+    driver: bridge

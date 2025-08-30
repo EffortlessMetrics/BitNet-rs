@@ -11,6 +11,7 @@
 #![allow(dead_code)]
 
 // Lightweight, always-on modules
+pub mod concurrency_caps;
 pub mod config;
 pub mod config_scenarios;
 pub mod config_scenarios_simple;
@@ -135,4 +136,7 @@ pub mod prelude {
     // CI reporting re-export when available
     #[cfg(feature = "reporting")]
     pub use super::ci_reporting;
+
+    // Concurrency control utilities
+    pub use super::concurrency_caps::{init_concurrency_caps, init_and_get_async_limit, get_parallel_limit};
 }

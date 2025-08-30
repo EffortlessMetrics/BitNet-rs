@@ -13,6 +13,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Source concurrency caps and preflight checks
+if [[ -f "$SCRIPT_DIR/preflight.sh" ]]; then
+    source "$SCRIPT_DIR/preflight.sh"
+fi
+
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -147,8 +152,10 @@ log_info "================================================================"
 log_info "Running cross-validation tests..."
 log_info "================================================================"
 
-# Run the tests with verbose output and single thread for determinism
-cargo test --features "integration-tests crossval" --release -p bitnet-crossval -- --nocapture --test-threads=1
+# Run the tests with verbose output and capped thread determinism
+# Use CROSSVAL_WORKERS environment variable or default to 2
+CROSSVAL_TEST_THREADS="${CROSSVAL_WORKERS:-2}"
+cargo test --features "integration-tests crossval" --release -p bitnet-crossval -- --nocapture --test-threads="$CROSSVAL_TEST_THREADS"
 
 # Store exit code
 TEST_RESULT=$?

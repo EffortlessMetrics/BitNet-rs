@@ -2,6 +2,11 @@
 # Comprehensive validation suite for BitNet.rs vs llama.cpp
 set -euo pipefail
 
+# Source concurrency caps and preflight checks
+if [[ -f "$(dirname "$0")/preflight.sh" ]]; then
+    source "$(dirname "$0")/preflight.sh"
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
