@@ -889,9 +889,9 @@ impl TestCase for StreamingPerformanceTest {
             debug!("TTFT measurement {}", i + 1);
 
             let ttft_start = Instant::now();
-        let mut stream = engine
-            .generate_stream(ttft_prompt)
-            .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
+            let mut stream = engine
+                .generate_stream(ttft_prompt)
+                .map_err(|e| TestError::execution(format!("Failed to create stream: {}", e)))?;
 
             if let Some(result) = stream.next().await {
                 let ttft = ttft_start.elapsed();
