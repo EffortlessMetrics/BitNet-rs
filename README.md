@@ -27,7 +27,8 @@
 
 ### 🌐 **Cross-Platform Excellence**
 - **Native support** for Linux, macOS, and Windows
-- **Multiple backends**: CPU and GPU (CUDA) inference engines
+- **Multiple backends**: CPU (AVX2/NEON) and GPU (CUDA) inference engines with automatic kernel selection
+- **Advanced GPU features**: Mixed precision (FP16/BF16), memory optimization, and device-specific performance tuning
 - **Universal model formats**: GGUF, sharded SafeTensors (HuggingFace), and local HuggingFace directories
 - **Language bindings**: C API, Python, and WebAssembly
 
@@ -79,14 +80,19 @@ cargo build --locked --workspace --no-default-features --features cpu
 cargo test  --locked --workspace --no-default-features --features cpu
 ```
 
-#### 🎮 **GPU Path** (CUDA/Metal/ROCm)
+#### 🎮 **GPU Path** (CUDA)
 ```bash
-# Detect GPU and run smoke tests
-cargo xtask gpu-preflight         # Detects CUDA, prints versions
-cargo xtask gpu-smoke             # Fast CPU↔GPU parity check
+# Check CUDA availability and device information
+cargo run --example cuda_info --no-default-features --features cuda
 
-# Build with GPU support
-cargo build --locked --workspace --no-default-features --features gpu
+# Build with CUDA GPU support  
+cargo build --locked --workspace --no-default-features --features cuda
+
+# Run GPU validation and performance tests
+cargo test --workspace --no-default-features --features cuda --test cuda_validation
+
+# GPU memory health check (production monitoring)
+cargo test --workspace --no-default-features --features cuda gpu_memory_health
 ```
 
 #### 🛠️ **Utilities**
@@ -231,11 +237,14 @@ curl -X POST http://localhost:8080/v1/completions \
 BitNet.rs uses feature flags to enable optional functionality:
 
 - `cpu`: CPU inference with optimized kernels (not enabled by default)
-- `cuda`: GPU acceleration via CUDA
-- `avx2`: x86_64 AVX2 SIMD optimizations
-- `avx512`: x86_64 AVX-512 SIMD optimizations
-- `neon`: ARM64 NEON SIMD optimizations
-- `ffi`: Enable C++ FFI bridge for cross-validation
+- `cuda`: GPU acceleration via CUDA with memory optimization and mixed precision support  
+- `avx2`: x86_64 AVX2 SIMD optimizations (auto-detected when using `cpu`)
+- `avx512`: x86_64 AVX-512 SIMD optimizations (auto-detected when using `cpu`)
+- `neon`: ARM64 NEON SIMD optimizations (auto-detected when using `cpu`)
+- `ffi`: Enable C++ FFI bridge for cross-validation and migration
+- `iq2s-ffi`: IQ2_S quantization via GGML FFI for llama.cpp compatibility
+- `mixed-precision`: Advanced FP16/BF16 support for modern GPUs (requires `cuda`)
+- `gpu-validation`: Comprehensive GPU validation framework (requires `cuda`)
 - `full`: Enable all features
 
 **Important:** Default features are empty to prevent unintended dependencies. You must explicitly enable features:
@@ -746,6 +755,9 @@ The legacy C++ implementation is automatically downloaded and cached when needed
 - [Examples](examples/) - Real-world usage examples
 
 ### 🔧 **Advanced Usage**
+- [GPU Setup Guide](docs/gpu-setup-guide.md) - Complete GPU acceleration setup
+- [CUDA Configuration](docs/cuda-configuration-guide.md) - Memory optimization and tuning
+- [GPU Kernel Architecture](docs/gpu-kernel-architecture.md) - Design decisions and patterns
 - [Performance Guide](docs/performance-guide.md) - Optimization techniques
 - [Deployment Guide](docs/deployment.md) - Production deployment
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions

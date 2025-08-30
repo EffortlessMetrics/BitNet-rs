@@ -21,6 +21,13 @@ cargo build --release --no-default-features --features cpu
 # Run tests (fast, Rust-only)
 cargo test --workspace --no-default-features --features cpu
 
+# Run GPU tests (requires CUDA)
+cargo test --workspace --no-default-features --features cuda
+
+# Run GPU validation and benchmarks
+cargo test --workspace --no-default-features --features cuda --test gpu_validation
+cargo test --workspace --no-default-features --features cuda gpu_memory_health
+
 # Run GGUF validation tests
 cargo test -p bitnet-inference --test gguf_header
 cargo test -p bitnet-inference --test gguf_fuzz
