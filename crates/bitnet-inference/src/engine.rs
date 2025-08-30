@@ -216,6 +216,15 @@ impl InferenceEngine {
         )
     }
 
+    /// Prefill the model's KV cache with the provided prompt tokens.
+    ///
+    /// This runs a forward pass over the prompt to populate the cache and
+    /// prepare for subsequent decoding steps.
+    pub async fn prefill(&self, prompt_tokens: &[u32]) -> Result<()> {
+        let _ = self.forward_pass(prompt_tokens).await?;
+        Ok(())
+    }
+
     /// Generate tokens using the configured backend
     async fn generate_tokens(
         &self,

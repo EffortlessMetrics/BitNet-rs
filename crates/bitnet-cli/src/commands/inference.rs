@@ -619,8 +619,7 @@ impl InferenceCommand {
 
             // 2. Prefill (measure)
             let t1 = Instant::now();
-            // TODO: Call actual prefill when engine supports it
-            // let _ = engine.prefill(&prompt_ids)?;
+            engine.prefill(&prompt_ids).await?;
             let t_prefill_ms = t1.elapsed().as_secs_f64() * 1e3;
 
             // 3. Decode loop (measure)
