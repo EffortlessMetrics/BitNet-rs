@@ -65,3 +65,19 @@ fn gguf_vocab_and_special_tokens_loaded() -> Result<()> {
     assert_eq!(tokenizer.token_to_piece(2).as_deref(), Some("hello"));
     Ok(())
 }
+
+#[test]
+fn gguf_encode_decode_roundtrip() -> Result<()> {
+    let tokens = ["<bos>", "<eos>", "hello", "world"];
+    let bos = 0u32;
+    let eos = 1u32;
+    let bytes = build_test_gguf(&tokens, bos, eos);
+    let tmp = NamedTempFile::new()?;
+    std::fs::write(tmp.path(), &bytes)?;
+
+    let tokenizer = GgufTokenizer::from_gguf_file(tmp.path())?;
+    let ids = tokenizer.encode("hi", false, false)?;
+    let text = tokenizer.decode(&ids)?;
+    assert_eq!(text, "hi");
+    Ok(())
+}

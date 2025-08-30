@@ -11,30 +11,34 @@ use bitnet_tokenizers::{Tokenizer, TokenizerConfig, UniversalTokenizer};
 fn test_gpt2_tokenizer_contract() {
     let config = TokenizerConfig {
         model_type: "gpt2".to_string(),
-        vocab_size: 50257,
+        vocab_size: 4,
         pre_tokenizer: Some("gpt2".to_string()),
         add_bos: false,
         add_eos: false,
         add_space_prefix: true,
         byte_fallback: false,
-        bos_token_id: Some(50256),
-        eos_token_id: Some(50256),
+        bos_token_id: None,
+        eos_token_id: None,
         pad_token_id: None,
         unk_token_id: None,
-        vocabulary: None,
-        bpe_merges: None,
+        vocabulary: Some(vec![
+            ("a".to_string(), 0.0),
+            ("b".to_string(), 0.0),
+            ("ab".to_string(), 0.0),
+            (" ".to_string(), 0.0),
+        ]),
+        bpe_merges: Some(vec!["a b".to_string()]),
     };
 
     let tokenizer = UniversalTokenizer::new(config).expect("GPT-2 tokenizer should work");
 
     // Test basic tokenization
-    let tokens = tokenizer.encode("Hello world", false, false).expect("Should tokenize");
-    assert!(!tokens.is_empty(), "Should produce tokens");
+    let tokens = tokenizer.encode("ab", false, false).expect("Should tokenize");
+    assert_eq!(tokens, vec![2]);
 
     // Test space prefix behavior
-    let _tokens1 = tokenizer.encode("test", false, false).expect("Should tokenize");
-    let _tokens2 = tokenizer.encode(" test", false, false).expect("Should tokenize");
-    // GPT-2 should add space prefix automatically to first
+    let _tokens1 = tokenizer.encode("ab", false, false).expect("Should tokenize");
+    let _tokens2 = tokenizer.encode(" ab", false, false).expect("Should tokenize");
 }
 
 /// Test Llama 3 tokenizer (GPT-2 variant with 128k vocab)
