@@ -15,6 +15,8 @@ use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
 use tracing::{debug, error, info, warn};
 
+use bitnet_tokenizers::Tokenizer;
+
 use crate::AppState;
 
 /// Request for streaming token generation with timeout configuration
@@ -182,9 +184,16 @@ async fn real_stream(
                     token_count += 1;
                     let elapsed = start.elapsed();
 
+                    let token_id = engine
+                        .tokenizer()
+                        .encode(&token, false, false)
+                        .ok()
+                        .and_then(|ids| ids.first().copied())
+                        .unwrap_or(0);
+
                     let data = StreamingToken {
                         token: token.clone(),
-                        token_id: 0, // TODO: Extract actual token ID from generation
+                        token_id,
                         cumulative_time_ms: elapsed.as_millis() as u64,
                         position: token_count as usize,
                     };
