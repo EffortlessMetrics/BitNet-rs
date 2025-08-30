@@ -39,7 +39,7 @@ pub struct StreamingRequest {
 }
 
 /// Individual token in the streaming response
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct StreamingToken {
     /// The generated token text
     pub token: String,
@@ -173,6 +173,7 @@ async fn real_stream(
 
         // Get the engine and create a generation stream
         let engine = engine.read().await;
+        let tokenizer = engine.tokenizer();
         let mut gen_stream = engine.generate_stream_with_config(&request.prompt, &config)?;
         let mut token_count = 0u64;
 
@@ -182,9 +183,14 @@ async fn real_stream(
                     token_count += 1;
                     let elapsed = start.elapsed();
 
+                    let token_id = tokenizer
+                        .encode(&token, false, false)
+                        .map(|ids| *ids.first().unwrap_or(&0))
+                        .unwrap_or(0);
+
                     let data = StreamingToken {
                         token: token.clone(),
-                        token_id: 0, // TODO: Extract actual token ID from generation
+                        token_id,
                         cumulative_time_ms: elapsed.as_millis() as u64,
                         position: token_count as usize,
                     };
@@ -291,5 +297,55 @@ async fn mock_stream(
             .event("complete")
             .json_data(complete)
             .unwrap());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{body::to_bytes, response::IntoResponse};
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn token_ids_match_model_outputs_in_sse() {
+        let metrics = Arc::new(
+            crate::monitoring::metrics::MetricsCollector::new(
+                &crate::monitoring::MonitoringConfig::default(),
+            )
+            .unwrap(),
+        );
+        let state = AppState { metrics, engine: None };
+
+        let request = StreamingRequest {
+            prompt: "test".into(),
+            max_tokens: Some(8),
+            temperature: None,
+            top_p: None,
+            top_k: None,
+            repetition_penalty: None,
+            timeout_seconds: None,
+            detailed_errors: None,
+        };
+
+        let sse = streaming_handler(State(state), axum::Json(request)).await;
+        let response = sse.into_response();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let text = String::from_utf8(body.to_vec()).unwrap();
+
+        let expected = ["Hello", " ", "from", " ", "BitNet", " ", "server", "!"];
+
+        let mut seen = 0;
+        for event in text.split("\n\n") {
+            if event.starts_with("event: token") {
+                let data_line = event.lines().find(|l| l.starts_with("data: ")).unwrap();
+                let json = &data_line[6..];
+                let token: StreamingToken = serde_json::from_str(json).unwrap();
+                assert_eq!(token.token, expected[seen]);
+                assert_eq!(token.token_id, seen as u32);
+                seen += 1;
+            }
+        }
+
+        assert_eq!(seen, expected.len());
     }
 }
