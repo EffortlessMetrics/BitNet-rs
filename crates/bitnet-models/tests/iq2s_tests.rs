@@ -41,8 +41,8 @@ fn test_rust_backend_constants() {
     let actual_block_bytes = backend.block_bytes();
     println!("Actual block bytes: {}", actual_block_bytes);
 
-    // Both backends should report 66 bytes (FFI reports this consistently)
-    assert_eq!(actual_block_bytes, 66, "IQ2_S block size should be 66 bytes");
+    // Both backends should report 82 bytes (matches GGML's block_iq2_s)
+    assert_eq!(actual_block_bytes, 82, "IQ2_S block size should be 82 bytes");
 
     #[cfg(feature = "iq2s-ffi")]
     {
@@ -61,6 +61,7 @@ fn test_rust_backend_basic_dequantization() {
     // Create test block with known values - use correct block size
     let backend = Iq2sBackend::Rust;
     let block_bytes = backend.block_bytes();
+    let qs_end = 2 + backend.qk() / 4;
     let mut block = vec![0u8; block_bytes];
 
     // Set scale to 0.5
@@ -68,8 +69,8 @@ fn test_rust_backend_basic_dequantization() {
     block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
 
     // Set all quantized values to pattern 0b11_10_01_00
-    // This gives values [0, 1, 2, 3] which map to [-2, -1, 0, 1]
-    for block_slot in block.iter_mut().take(66).skip(2) {
+    // This gives values [0, 1, 2, 3] which map to [-2, -1, 1, 2]
+    for block_slot in block[2..qs_end].iter_mut() {
         *block_slot = 0b11_10_01_00;
     }
     // qh and scales fields remain zero
@@ -80,8 +81,8 @@ fn test_rust_backend_basic_dequantization() {
 
     assert_eq!(result.len(), 256);
 
-    // Check expected pattern: [-1.0, -0.5, 0.0, 0.5] (after scaling)
-    let expected = [-1.0, -0.5, 0.0, 0.5];
+    // Check expected pattern: [-1.0, -0.5, 0.5, 1.0] (after scaling)
+    let expected = [-1.0, -0.5, 0.5, 1.0];
     for (i, &val) in result.iter().enumerate() {
         let expected_val = expected[i % 4];
         assert!(
@@ -110,7 +111,7 @@ mod iq2s_ffi_tests {
         assert!(block_bytes > 0, "Block bytes should be positive");
         assert!(block_bytes <= 256, "Block bytes should be reasonable (<= 256)");
 
-        // Common expectation: QK=256, block_bytes=66 for IQ2_S
+        // Common expectation: QK=256, block_bytes=82 for IQ2_S
         // But we don't hard-code these as they come from GGML
         println!("IQ2_S constants: QK={}, block_bytes={}", qk, block_bytes);
     }
@@ -229,6 +230,7 @@ mod iq2s_parity_tests {
         // Use dynamic block size based on backend
         let rust_backend = Iq2sBackend::Rust;
         let block_bytes = rust_backend.block_bytes();
+        let qs_end = 2 + rust_backend.qk() / 4;
         let mut block = vec![0u8; block_bytes];
 
         // Random scale
@@ -236,7 +238,7 @@ mod iq2s_parity_tests {
         block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
 
         // Random quantized values (only set the qs field)
-        for block_slot in block.iter_mut().take(66).skip(2) {
+        for block_slot in block[2..qs_end].iter_mut() {
             *block_slot = rng.r#gen();
         }
         // Leave qh and scales fields as zero
@@ -268,12 +270,13 @@ mod iq2s_parity_tests {
         let mut rng = rand::rngs::StdRng::seed_from_u64(123);
 
         let block_bytes = Iq2sBackend::Rust.block_bytes();
+        let qs_end = 2 + Iq2sBackend::Rust.qk() / 4;
         let mut block = vec![0u8; block_bytes];
 
         // Random data
         let scale = f16::from_f32(rng.gen_range(0.5..1.5));
         block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
-        for block_slot in block.iter_mut().take(66).skip(2) {
+        for block_slot in block[2..qs_end].iter_mut() {
             *block_slot = rng.r#gen();
         }
         // Leave qh and scales fields as zero

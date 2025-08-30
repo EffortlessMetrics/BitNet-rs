@@ -1,29 +1,29 @@
 //! Backend abstraction for IQ2_S quantization to support both FFI and pure-Rust implementations
-//! 
+//!
 //! This module provides a unified interface for IQ2_S quantization that can use either:
 //! 1. **Pure Rust implementation** (default): Always available, handles partial blocks
 //! 2. **GGML FFI implementation** (optional): Requires `iq2s-ffi` feature, may have stricter requirements
-//! 
+//!
 //! ## Feature Configuration
-//! 
+//!
 //! To enable IQ2_S FFI support, build with:
 //! ```bash
 //! cargo build --features iq2s-ffi
 //! ```
-//! 
+//!
 //! Or from the root workspace:
 //! ```bash  
 //! cargo build --no-default-features --features iq2s-ffi
 //! ```
-//! 
+//!
 //! ## Backend Selection
-//! 
+//!
 //! The backend is selected at runtime via the `BITNET_IQ2S_IMPL` environment variable:
 //! - `BITNET_IQ2S_IMPL=rust` (default): Use pure Rust implementation
 //! - `BITNET_IQ2S_IMPL=ffi`: Use GGML FFI implementation (if compiled with `iq2s-ffi` feature)
-//! 
+//!
 //! ## Implementation Notes
-//! 
+//!
 //! - The Rust implementation can handle partial blocks and arbitrary element counts
 //! - The FFI implementation requires element counts to be multiples of QK_IQ2_S (256)
 //! - Both implementations should produce similar results for compatible inputs
@@ -70,12 +70,13 @@ fn ffi_dequant_row(_src: *const c_void, _dst: *mut f32, _n: usize) {
     unreachable!("built without feature `iq2s-ffi`");
 }
 
-// --- Native Rust IQ2_S dequant (qk=256, block=66B: f16 scale + 64 bytes codes)
-// Note: The actual GGML block_iq2_s is 82B with additional unused fields,
-// but the FFI reports 66B, so we match that for compatibility.
+// --- Native Rust IQ2_S dequant (qk=256, block=82B: f16 scale + 64 bytes codes + 16B padding)
+// Matches GGML's `block_iq2_s` layout (2 byte scale, 64 byte codes, 8 byte qh, 8 byte scales).
 #[inline]
 unsafe fn rust_dequant_row_iq2s(src: *const c_void, dst: *mut f32, n: usize) {
     const QK: usize = 256;
+    const QS: usize = QK / 4; // 64 bytes of codes
+    const PAD: usize = QK / 32 * 2; // qh + scales (8 + 8)
 
     let mut in_ptr = src as *const u8;
     let out = unsafe { core::slice::from_raw_parts_mut(dst, n) };
@@ -90,43 +91,46 @@ unsafe fn rust_dequant_row_iq2s(src: *const c_void, dst: *mut f32, n: usize) {
         in_ptr = unsafe { in_ptr.add(2) };
 
         // 64 bytes of packed 2-bit signed codes; 4 per byte
-        let qs = unsafe { core::slice::from_raw_parts(in_ptr, 64) };
-        in_ptr = unsafe { in_ptr.add(64) };
+        let qs = unsafe { core::slice::from_raw_parts(in_ptr, QS) };
+        in_ptr = unsafe { in_ptr.add(QS) };
+
+        // Skip unused qh and scales fields (16 bytes total)
+        in_ptr = unsafe { in_ptr.add(PAD) };
 
         let take = QK.min(remain);
         let out_blk = &mut out[produced..produced + take];
 
         let mut o = 0usize;
+        const QMAP: [f32; 4] = [-2.0, -1.0, 1.0, 2.0];
         for &b in qs {
             if o >= take {
                 break;
             } // tail block
-            // Bits: (1:0),(3:2),(5:4),(7:6) mapped to -2,-1,0,1
-            let c0 = (b & 0b11) as i8 - 2;
-            let c1 = ((b >> 2) & 0b11) as i8 - 2;
-            let c2 = ((b >> 4) & 0b11) as i8 - 2;
-            let c3 = ((b >> 6) & 0b11) as i8 - 2;
+            let c0 = QMAP[(b & 0b11) as usize];
+            let c1 = QMAP[((b >> 2) & 0b11) as usize];
+            let c2 = QMAP[((b >> 4) & 0b11) as usize];
+            let c3 = QMAP[((b >> 6) & 0b11) as usize];
 
             if o < take {
-                out_blk[o] = d * (c0 as f32);
+                out_blk[o] = d * c0;
                 o += 1;
             }
             if o < take {
-                out_blk[o] = d * (c1 as f32);
+                out_blk[o] = d * c1;
                 o += 1;
             }
             if o < take {
-                out_blk[o] = d * (c2 as f32);
+                out_blk[o] = d * c2;
                 o += 1;
             }
             if o < take {
-                out_blk[o] = d * (c3 as f32);
+                out_blk[o] = d * c3;
                 o += 1;
             }
         }
 
         produced += take;
-        // Note: input pointer already advanced by full block (66B); nothing else for tail.
+        // Input pointer already advanced by full block (82B) including unused fields.
     }
 }
 
@@ -177,7 +181,7 @@ impl Iq2sBackend {
     #[inline]
     pub fn block_bytes(self) -> usize {
         match self {
-            Iq2sBackend::Rust => 66, // Match FFI reported size
+            Iq2sBackend::Rust => 82, // Matches GGML block_iq2_s layout
             Iq2sBackend::Ffi => ffi_block_bytes(),
         }
     }
@@ -248,15 +252,16 @@ mod tests {
 
     #[test]
     fn iq2s_rust_dequant_basic() {
-        let mut blk = [0u8; 66];
+        let mut blk = vec![0u8; 82];
         let d = f16::from_f32(0.5).to_bits();
         blk[0..2].copy_from_slice(&u16::to_le_bytes(d));
-        blk[2..].fill(0b11_10_01_00);
+        let qs_end = 2 + Iq2sBackend::Rust.qk() / 4;
+        blk[2..qs_end].fill(0b11_10_01_00);
         let mut out = vec![0.0f32; 256];
         unsafe {
             Iq2sBackend::Rust.dequantize_row(blk.as_ptr() as *const c_void, out.as_mut_ptr(), 256);
         }
-        let expect = [-1.0, -0.5, 0.0, 0.5];
+        let expect = [-1.0, -0.5, 0.5, 1.0];
         for i in 0..256 {
             assert!(
                 (out[i] - expect[i % 4]).abs() < 1e-7,
@@ -269,15 +274,16 @@ mod tests {
 
     #[test]
     fn iq2s_rust_partial_tail() {
-        let mut blk = [0u8; 66];
+        let mut blk = vec![0u8; 82];
         let d = f16::from_f32(0.5).to_bits();
         blk[0..2].copy_from_slice(&u16::to_le_bytes(d));
-        blk[2..].fill(0b11_10_01_00);
+        let qs_end = 2 + Iq2sBackend::Rust.qk() / 4;
+        blk[2..qs_end].fill(0b11_10_01_00);
         let mut out = vec![0.0f32; 13];
         unsafe {
             Iq2sBackend::Rust.dequantize_row(blk.as_ptr() as *const c_void, out.as_mut_ptr(), 13);
         }
-        let expect = [-1.0, -0.5, 0.0, 0.5, -1.0, -0.5, 0.0, 0.5, -1.0, -0.5, 0.0, 0.5, -1.0];
+        let expect = [-1.0, -0.5, 0.5, 1.0, -1.0, -0.5, 0.5, 1.0, -1.0, -0.5, 0.5, 1.0, -1.0];
         for i in 0..13 {
             assert!((out[i] - expect[i]).abs() < 1e-7);
         }
@@ -317,27 +323,29 @@ mod tests {
     #[test]
     fn iq2s_rust_partial_blocks() {
         // Test that Rust backend can handle partial blocks
-        let mut src = [0u8; 66 * 3]; // 3 blocks
+        let block_bytes = Iq2sBackend::Rust.block_bytes();
+        let qs_end = 2 + Iq2sBackend::Rust.qk() / 4;
+        let mut src = vec![0u8; block_bytes * 3]; // 3 blocks
         // Fill with a known pattern
-        for blk in src.chunks_mut(66) {
+        for blk in src.chunks_mut(block_bytes) {
             // Set scale to 0.5
             let d = f16::from_f32(0.5).to_bits();
             blk[0..2].copy_from_slice(&u16::to_le_bytes(d));
             // Set quantized values to pattern 0b11_10_01_00
-            for slot in &mut blk[2..66] {
-                *slot = 0b11_10_01_00; // Maps to [-1.0, -0.5, 0.0, 0.5] after scaling
+            for slot in &mut blk[2..qs_end] {
+                *slot = 0b11_10_01_00; // Maps to [-1.0, -0.5, 0.5, 1.0] after scaling
             }
         }
-        
+
         // Test partial block handling
         let n = 3 * 256 - 17; // Include a partial tail
         let mut out = vec![0.0f32; n];
         unsafe {
             Iq2sBackend::Rust.dequantize_row(src.as_ptr() as *const c_void, out.as_mut_ptr(), n);
         }
-        
+
         // Check expected pattern for first few elements
-        let expected = [-1.0, -0.5, 0.0, 0.5]; // Scaled by 0.5
+        let expected = [-1.0, -0.5, 0.5, 1.0]; // Scaled by 0.5
         for i in 0..std::cmp::min(n, 8) {
             assert!(
                 (out[i] - expected[i % 4]).abs() < 1e-6,
@@ -350,26 +358,26 @@ mod tests {
 
     #[cfg(all(test, feature = "iq2s-ffi"))]
     #[test]
-    #[ignore] // TODO: Fix FFI data layout compatibility 
     fn iq2s_rust_matches_ffi() {
         // Use simple deterministic data for comparison
-        let mut src = [0u8; 66 * 2]; // 2 blocks for simplicity
-        
+        let block_bytes = Iq2sBackend::Rust.block_bytes();
+        let qs_end = 2 + Iq2sBackend::Rust.qk() / 4;
+        let mut src = vec![0u8; block_bytes * 2]; // 2 blocks for simplicity
+
         // First block
         let d = f16::from_f32(0.5).to_bits();
         src[0..2].copy_from_slice(&u16::to_le_bytes(d));
-        // Fill with simple pattern
-        for src_slot in src.iter_mut().take(66).skip(2) {
-            *src_slot = 0b11_10_01_00; // Known pattern
+        for slot in &mut src[2..qs_end] {
+            *slot = 0b11_10_01_00; // Known pattern
         }
-        
+
         // Second block - identical
-        let d = f16::from_f32(0.5).to_bits();
-        src[66..68].copy_from_slice(&u16::to_le_bytes(d));
-        for src_slot in src.iter_mut().take(132).skip(68) {
-            *src_slot = 0b11_10_01_00;
+        let off = block_bytes;
+        src[off..off + 2].copy_from_slice(&u16::to_le_bytes(d));
+        for slot in &mut src[off + 2..off + qs_end] {
+            *slot = 0b11_10_01_00;
         }
-        
+
         let n = 2 * 256; // Use full blocks for FFI compatibility
         let mut a = vec![0.0f32; n];
         let mut b = vec![0.0f32; n];
@@ -377,31 +385,9 @@ mod tests {
             Iq2sBackend::Rust.dequantize_row(src.as_ptr() as *const c_void, a.as_mut_ptr(), n);
             Iq2sBackend::Ffi.dequantize_row(src.as_ptr() as *const c_void, b.as_mut_ptr(), n);
         }
-        
-        // First check if the patterns are what we expect
-        let expected_pattern = [-1.0, -0.5, 0.0, 0.5]; // Scaled by 0.5
-        for i in 0..8 {
-            let expected = expected_pattern[i % 4];
-            if (a[i] - expected).abs() > 1e-6 {
-                println!("Rust result[{}] = {} (expected {})", i, a[i], expected);
-            }
-            if (b[i] - expected).abs() > 1e-6 {
-                println!("FFI result[{}] = {} (expected {})", i, b[i], expected);
-            }
-        }
-        
-        // For now, just verify that both implementations produce reasonable values
-        // The exact bit-level compatibility between our Rust implementation and GGML
-        // may need adjustment based on the specific GGML version being used.
-        // This test verifies both implementations produce finite, reasonable values.
+
         for i in 0..n {
-            assert!(a[i].is_finite(), "Rust output[{}] is not finite: {}", i, a[i]);
-            assert!(b[i].is_finite(), "FFI output[{}] is not finite: {}", i, b[i]);
-            assert!(a[i].abs() <= 2.0, "Rust output[{}] too large: {}", i, a[i]);  
-            assert!(b[i].abs() <= 2.0, "FFI output[{}] too large: {}", i, b[i]);
+            assert_eq!(a[i].to_bits(), b[i].to_bits(), "mismatch at {i}: {} vs {}", a[i], b[i]);
         }
-        
-        // TODO: Once the exact GGML implementation details are confirmed,
-        // enable strict bit-level comparison between Rust and FFI backends.
     }
 }
