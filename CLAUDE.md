@@ -178,6 +178,22 @@ We maintain strict compatibility with llama.cpp:
 
 4. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
 
+5. **sccache Build Failures**: If experiencing "No such file or directory" errors during compilation, disable sccache:
+   ```bash
+   RUSTC_WRAPPER="" cargo test --workspace --no-default-features --features cpu
+   ```
+
+6. **Test Hangs/Thread Pool Conflicts**: Use thread caps and deterministic execution:
+   ```bash
+   RUST_TEST_THREADS=1 RAYON_NUM_THREADS=2 cargo test -p <crate> --no-default-features --features cpu -- --test-threads=1
+   ```
+
+7. **File Lock Contention**: Kill stray cargo processes and clean build artifacts:
+   ```bash
+   pkill -f 'cargo test' || true
+   cargo clean
+   ```
+
 ## Development Workflow
 
 1. **Making Changes**: Always run tests for affected crates
@@ -337,6 +353,15 @@ cargo clippy --all-targets --all-features -- -D warnings
 ```bash
 # Run all tests with CPU features
 cargo test --workspace --no-default-features --features cpu
+
+# Run tests with thread caps for deterministic execution
+RUST_TEST_THREADS=1 RAYON_NUM_THREADS=2 cargo test --workspace --no-default-features --features cpu -- --nocapture --test-threads=1
+
+# Deterministic single-threaded test execution
+RUST_TEST_THREADS=1 RAYON_NUM_THREADS=1 BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo test --workspace --no-default-features --features cpu -- --nocapture --test-threads=1
+
+# Run tests without sccache if experiencing build issues
+RUSTC_WRAPPER="" cargo test --workspace --no-default-features --features cpu
 
 # Run specific test suites
 cargo test --package bitnet-tests --no-default-features --features fixtures

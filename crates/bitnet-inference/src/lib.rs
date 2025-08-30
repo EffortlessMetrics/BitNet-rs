@@ -16,10 +16,10 @@ pub mod rt;
 pub mod sampling;
 pub mod simple_forward;
 pub mod streaming;
-// Only compile the shim when tests or a GPU feature need it
-#[cfg(any(test, feature = "gpu"))]
+// Only compile the shim when tests need it (GPU implementation pending)
+#[cfg(test)]
 mod tensor_ext;
-#[cfg(any(test, feature = "gpu"))]
+#[cfg(test)]
 pub(crate) use tensor_ext::TensorDeviceExt;
 
 pub use backends::{Backend, CpuBackend, GpuBackend};

@@ -22,6 +22,7 @@ pub mod harness;
 pub mod results;
 pub mod serde_time;
 pub mod tensor_helpers;
+pub mod thread_pool;
 pub mod units;
 pub mod utils;
 
@@ -141,4 +142,7 @@ pub mod prelude {
     pub use super::concurrency_caps::{
         get_parallel_limit, init_and_get_async_limit, init_concurrency_caps,
     };
+
+    // Thread pool management for tests
+    pub use super::thread_pool::{get_test_pool, init_deterministic_test_env, with_test_pool};
 }
