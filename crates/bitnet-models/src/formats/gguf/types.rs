@@ -506,7 +506,7 @@ impl GgufTensorType {
             Self::Q5_K => 176,
             Self::Q6_K => 210,
             Self::Q8_K => 256,
-            Self::IQ2_S => 66, // GGML IQ2_S block size: 256/4 bits + 2 bytes
+            Self::IQ2_S => 82, // GGML IQ2_S block size: 82 bytes
             Self::I2_S => {
                 // Delegate to centralized I2SLayout
                 use bitnet_quantization::I2SLayout;

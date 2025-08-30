@@ -53,7 +53,7 @@ pub fn iq2s_bytes_per_block() -> usize {
 /// This includes the fp16 scale factor, quantized values, and padding.
 #[cfg(not(feature = "iq2s-ffi"))]
 pub fn iq2s_bytes_per_block() -> usize {
-    66 // Default fallback for when FFI is not available
+    82 // Default fallback for when FFI is not available
 }
 
 /// Returns whether the IQ2_S dequantizer requires the element count to be a multiple of QK.

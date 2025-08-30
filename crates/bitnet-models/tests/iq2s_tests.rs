@@ -41,8 +41,8 @@ fn test_rust_backend_constants() {
     let actual_block_bytes = backend.block_bytes();
     println!("Actual block bytes: {}", actual_block_bytes);
 
-    // Both backends should report 66 bytes (FFI reports this consistently)
-    assert_eq!(actual_block_bytes, 66, "IQ2_S block size should be 66 bytes");
+    // Both backends should report 82 bytes (GGML block_iq2_s layout)
+    assert_eq!(actual_block_bytes, 82, "IQ2_S block size should be 82 bytes");
 
     #[cfg(feature = "iq2s-ffi")]
     {
@@ -69,9 +69,7 @@ fn test_rust_backend_basic_dequantization() {
 
     // Set all quantized values to pattern 0b11_10_01_00
     // This gives values [0, 1, 2, 3] which map to [-2, -1, 0, 1]
-    for block_slot in block.iter_mut().take(66).skip(2) {
-        *block_slot = 0b11_10_01_00;
-    }
+    block[2..2 + 64].fill(0b11_10_01_00);
     // qh and scales fields remain zero
 
     // Dequantize using Rust backend
@@ -80,8 +78,8 @@ fn test_rust_backend_basic_dequantization() {
 
     assert_eq!(result.len(), 256);
 
-    // Check expected pattern: [-1.0, -0.5, 0.0, 0.5] (after scaling)
-    let expected = [-1.0, -0.5, 0.0, 0.5];
+    // Check expected pattern: [-1.0, -0.5, 0.5, 1.0] (after scaling)
+    let expected = [-1.0, -0.5, 0.5, 1.0];
     for (i, &val) in result.iter().enumerate() {
         let expected_val = expected[i % 4];
         assert!(
@@ -110,7 +108,7 @@ mod iq2s_ffi_tests {
         assert!(block_bytes > 0, "Block bytes should be positive");
         assert!(block_bytes <= 256, "Block bytes should be reasonable (<= 256)");
 
-        // Common expectation: QK=256, block_bytes=66 for IQ2_S
+        // Common expectation: QK=256, block_bytes=82 for IQ2_S
         // But we don't hard-code these as they come from GGML
         println!("IQ2_S constants: QK={}, block_bytes={}", qk, block_bytes);
     }
@@ -222,42 +220,34 @@ mod iq2s_parity_tests {
 
     #[test]
     fn test_ffi_vs_rust_parity() {
-        // Generate test data with random values
+        // Generate test data with random values across multiple blocks
         use rand::{Rng, SeedableRng};
         let mut rng = rand::rngs::StdRng::seed_from_u64(42);
 
-        // Use dynamic block size based on backend
-        let rust_backend = Iq2sBackend::Rust;
-        let block_bytes = rust_backend.block_bytes();
-        let mut block = vec![0u8; block_bytes];
-
-        // Random scale
-        let scale = f16::from_f32(rng.gen_range(0.1..2.0));
-        block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
-
-        // Random quantized values (only set the qs field)
-        for block_slot in block.iter_mut().take(66).skip(2) {
-            *block_slot = rng.r#gen();
+        let block_bytes = Iq2sBackend::Rust.block_bytes();
+        let blocks = 3;
+        let mut data = vec![0u8; block_bytes * blocks];
+        for blk in data.chunks_mut(block_bytes) {
+            let scale = f16::from_f32(rng.gen_range(0.1..2.0));
+            blk[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
+            for b in &mut blk[2..2 + 64] {
+                *b = rng.r#gen();
+            }
+            for b in &mut blk[2 + 64..block_bytes] {
+                *b = rng.r#gen();
+            }
         }
-        // Leave qh and scales fields as zero
 
-        // Dequantize with both backends
-        let rust_backend = Iq2sBackend::Rust;
-        let ffi_backend = Iq2sBackend::Ffi;
+        let rust_result = Iq2sBackend::Rust.dequantize(&data, &[blocks * 256]).unwrap();
+        let ffi_result = Iq2sBackend::Ffi.dequantize(&data, &[blocks * 256]).unwrap();
 
-        let rust_result = rust_backend.dequantize(&block, &[256]).unwrap();
-        let ffi_result = ffi_backend.dequantize(&block, &[256]).unwrap();
-
-        // Compare results
         assert_eq!(rust_result.len(), ffi_result.len());
-
-        for (i, (&rust_val, &ffi_val)) in rust_result.iter().zip(ffi_result.iter()).enumerate() {
-            assert!(
-                (rust_val - ffi_val).abs() < 1e-5,
-                "Parity mismatch at index {}: Rust={}, FFI={}",
-                i,
-                rust_val,
-                ffi_val
+        for i in 0..rust_result.len() {
+            assert_eq!(
+                rust_result[i].to_bits(),
+                ffi_result[i].to_bits(),
+                "Parity mismatch at index {}",
+                i
             );
         }
     }
@@ -273,10 +263,12 @@ mod iq2s_parity_tests {
         // Random data
         let scale = f16::from_f32(rng.gen_range(0.5..1.5));
         block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
-        for block_slot in block.iter_mut().take(66).skip(2) {
+        for block_slot in block[2..2 + 64].iter_mut() {
             *block_slot = rng.r#gen();
         }
-        // Leave qh and scales fields as zero
+        for block_slot in block[2 + 64..].iter_mut() {
+            *block_slot = rng.r#gen();
+        }
 
         // Test with partial blocks
         for n in [13, 50, 100, 200, 256] {
@@ -287,8 +279,9 @@ mod iq2s_parity_tests {
             assert_eq!(ffi_result.len(), n);
 
             for i in 0..n {
-                assert!(
-                    (rust_result[i] - ffi_result[i]).abs() < 1e-5,
+                assert_eq!(
+                    rust_result[i].to_bits(),
+                    ffi_result[i].to_bits(),
                     "Partial block parity failed at n={}, i={}: Rust={}, FFI={}",
                     n,
                     i,
