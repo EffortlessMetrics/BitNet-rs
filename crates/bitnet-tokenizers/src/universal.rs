@@ -1,7 +1,13 @@
-use bitnet_common::Result;
+use bitnet_common::{BitNetError, ModelError, Result};
+use bitnet_models::{GgufReader, loader::MmapFile};
 use std::collections::HashMap;
+#[cfg(feature = "spm")]
+use std::io::Write;
 use std::path::Path;
 use tracing::{debug, warn};
+
+#[cfg(feature = "spm")]
+use sentencepiece;
 
 use crate::{Tokenizer, TokenizerConfig};
 
@@ -27,16 +33,71 @@ impl UniversalTokenizer {
         Ok(Self { backend, config })
     }
 
-    /// Create from GGUF model with auto-fix
-    pub fn from_gguf(_path: &Path) -> Result<Self> {
-        // TODO: Import GgufReader when bitnet-models is added as dependency
-        // For now, create a default config
-        // This would normally:
-        // 1. Read GGUF metadata
-        // 2. Auto-detect tokenizer type (gpt2, llama, etc)
-        // 3. Fix missing pre-tokenizer for GPT-2
-        // 4. Extract vocabulary and merges
-        let config = TokenizerConfig::default();
+    /// Create a tokenizer directly from a GGUF file.
+    ///
+    /// This reads the tokenizer metadata via [`GgufReader`] and constructs
+    /// the appropriate tokenizer backend. Both BPE based tokenizers (GPT‑2,
+    /// Tiktoken, Falcon, ... ) and SentencePiece models are supported.
+    pub fn from_gguf(path: &Path) -> Result<Self> {
+        // Memory map the file and create a reader
+        let mmap = MmapFile::open(path)?;
+        let reader = GgufReader::new(mmap.as_slice())?;
+
+        // If the GGUF contains a binary `tokenizer.ggml.model` blob we treat
+        // it as a SentencePiece model. Otherwise we fall back to the BPE style
+        // metadata used by GPT‑2 style tokenizers.
+        if let Some(bytes) = reader.get_bin_or_u8_array("tokenizer.ggml.model") {
+            // SentencePiece model
+            let bos = reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
+            let eos = reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
+            let config = TokenizerConfig {
+                model_type: "sentencepiece".to_string(),
+                vocab_size: 0,
+                bos_token_id: bos,
+                eos_token_id: eos,
+                ..Default::default()
+            };
+            let backend = TokenizerBackend::SentencePiece(SentencePieceTokenizer::from_bytes(
+                &bytes,
+                config.clone(),
+            )?);
+            return Ok(Self { backend, config });
+        }
+
+        // BPE/GPT‑2 style tokenizer metadata
+        let tokens = reader.get_string_array_metadata("tokenizer.ggml.tokens").ok_or(
+            BitNetError::Model(ModelError::LoadingFailed {
+                reason: "GGUF missing tokenizer.ggml.tokens".to_string(),
+            }),
+        )?;
+
+        let merges = reader.get_string_array_metadata("tokenizer.ggml.merges");
+        let model_type = reader
+            .get_string_metadata("tokenizer.ggml.model")
+            .unwrap_or_else(|| "gpt2".to_string());
+        let bos = reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
+        let eos = reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
+        let add_space_prefix =
+            reader.get_bool_metadata("tokenizer.ggml.add_space_prefix").unwrap_or(false);
+        let byte_fallback =
+            reader.get_bool_metadata("tokenizer.ggml.byte_fallback").unwrap_or(false);
+
+        let vocab: Vec<(String, f32)> = tokens.into_iter().map(|s| (s, 0.0)).collect();
+
+        let config = TokenizerConfig {
+            model_type,
+            vocab_size: vocab.len(),
+            vocabulary: Some(vocab),
+            bpe_merges: merges,
+            add_bos: bos.is_some(),
+            add_eos: eos.is_some(),
+            add_space_prefix,
+            byte_fallback,
+            bos_token_id: bos,
+            eos_token_id: eos,
+            ..Default::default()
+        };
+
         Self::new(config)
     }
 
@@ -130,156 +191,280 @@ impl Tokenizer for UniversalTokenizer {
     }
 }
 
-// Stub implementations for different tokenizer types
-// These would be fully implemented in their respective modules
+// Actual implementations for different tokenizer backends.
 
+/// GPT‑2 style BPE tokenizer (also used for Tiktoken and Falcon models).
 struct Gpt2Tokenizer {
-    #[allow(dead_code)]
-    vocab: HashMap<String, u32>,
-    #[allow(dead_code)]
-    merges: Vec<(String, String)>,
+    inner: Option<tokenizers::Tokenizer>,
     config: TokenizerConfig,
 }
 
 impl Gpt2Tokenizer {
     fn new(config: &TokenizerConfig) -> Result<Self> {
-        // Implementation for GPT-2 BPE tokenizer
-        // This handles Llama 3's 128k vocab GPT-2 variant
-        Ok(Self { vocab: HashMap::new(), merges: vec![], config: config.clone() })
+        use tokenizers::Tokenizer as HfTokenizer;
+        use tokenizers::models::bpe::BPE;
+        use tokenizers::pre_tokenizers::byte_level::ByteLevel;
+
+        // If we have vocab/merges build a proper BPE tokenizer, otherwise we
+        // fall back to simple byte level encoding.
+        let inner = if let (Some(vocab), Some(merges)) = (&config.vocabulary, &config.bpe_merges) {
+            let vocab_map: HashMap<String, u32> =
+                vocab.iter().enumerate().map(|(i, (s, _))| (s.clone(), i as u32)).collect();
+            let merge_pairs: Vec<(String, String)> = merges
+                .iter()
+                .filter_map(|m| {
+                    let mut parts = m.split_whitespace();
+                    Some((parts.next()?.to_string(), parts.next()?.to_string()))
+                })
+                .collect();
+            let bpe =
+                BPE::builder().vocab_and_merges(vocab_map, merge_pairs).build().map_err(|e| {
+                    BitNetError::Model(ModelError::LoadingFailed {
+                        reason: format!("BPE build error: {e}"),
+                    })
+                })?;
+            let mut tokenizer = HfTokenizer::new(bpe);
+            tokenizer
+                .with_pre_tokenizer(ByteLevel::default().add_prefix_space(config.add_space_prefix));
+            tokenizer.with_decoder(tokenizers::decoders::byte_level::ByteLevel::default());
+            Some(tokenizer)
+        } else {
+            None
+        };
+
+        Ok(Self { inner, config: config.clone() })
     }
 }
 
 impl Tokenizer for Gpt2Tokenizer {
-    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
-        // Full BPE implementation would go here
-        // For now, return a stub
-        Ok(vec![1, 2, 3])
+    fn encode(&self, text: &str, _add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+        use tokenizers::EncodeInput;
+        if let Some(inner) = &self.inner {
+            let enc = inner.encode(EncodeInput::Single(text.into()), add_special).map_err(|e| {
+                BitNetError::Model(ModelError::LoadingFailed {
+                    reason: format!("Tokenizer encode error: {e}"),
+                })
+            })?;
+            Ok(enc.get_ids().to_vec())
+        } else {
+            // simple byte level fallback
+            Ok(text.bytes().map(|b| b as u32).collect())
+        }
     }
 
-    fn decode(&self, _tokens: &[u32]) -> Result<String> {
-        Ok("decoded".to_string())
+    fn decode(&self, tokens: &[u32]) -> Result<String> {
+        if let Some(inner) = &self.inner {
+            inner.decode(tokens, true).map_err(|e| {
+                BitNetError::Model(ModelError::LoadingFailed {
+                    reason: format!("Tokenizer decode error: {e}"),
+                })
+            })
+        } else {
+            Ok(tokens.iter().map(|&t| t as u8 as char).collect())
+        }
     }
 
     fn vocab_size(&self) -> usize {
-        self.config.vocab_size
+        if let Some(inner) = &self.inner {
+            inner.get_vocab_size(false)
+        } else {
+            self.config.vocab_size.max(256)
+        }
     }
 
-    fn token_to_piece(&self, _token: u32) -> Option<String> {
-        Some("piece".to_string())
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        if let Some(inner) = &self.inner {
+            inner.id_to_token(token).map(|s| s.to_string())
+        } else {
+            Some((token as u8 as char).to_string())
+        }
     }
 }
 
-// Similar stub implementations for other tokenizer types
+/// SentencePiece tokenizer backend.
 struct SentencePieceTokenizer {
+    #[cfg(feature = "spm")]
+    processor: Option<sentencepiece::SentencePieceProcessor>,
     config: TokenizerConfig,
 }
 
 impl SentencePieceTokenizer {
     fn new(config: &TokenizerConfig) -> Result<Self> {
-        Ok(Self { config: config.clone() })
+        Ok(Self {
+            #[cfg(feature = "spm")]
+            processor: None,
+            config: config.clone(),
+        })
+    }
+
+    #[cfg(feature = "spm")]
+    #[allow(dead_code)]
+    fn from_bytes(bytes: &[u8], config: TokenizerConfig) -> Result<Self> {
+        let mut tmp = tempfile::NamedTempFile::new()?;
+        tmp.write_all(bytes)?;
+        let processor = sentencepiece::SentencePieceProcessor::open(tmp.path()).map_err(|e| {
+            BitNetError::Model(ModelError::LoadingFailed {
+                reason: format!("Failed to load SentencePiece model: {e}"),
+            })
+        })?;
+        Ok(Self { processor: Some(processor), config })
+    }
+
+    #[cfg(not(feature = "spm"))]
+    fn from_bytes(_bytes: &[u8], _config: TokenizerConfig) -> Result<Self> {
+        Err(BitNetError::Model(ModelError::LoadingFailed {
+            reason: "SentencePiece support not compiled in".to_string(),
+        }))
     }
 }
 
 impl Tokenizer for SentencePieceTokenizer {
-    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
-        Ok(vec![1, 2, 3])
+    fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
+        #[cfg(feature = "spm")]
+        {
+            if let Some(proc) = &self.processor {
+                let pieces = proc.encode(text).map_err(|e| {
+                    BitNetError::Model(ModelError::LoadingFailed {
+                        reason: format!("Tokenizer encode error: {e}"),
+                    })
+                })?;
+                let mut ids: Vec<u32> = pieces.into_iter().map(|p| p.id).collect();
+                if _add_bos {
+                    if let Some(b) = self.config.bos_token_id {
+                        ids.insert(0, b);
+                    }
+                }
+                return Ok(ids);
+            }
+        }
+        Ok(text.bytes().map(|b| b as u32).collect())
     }
 
-    fn decode(&self, _tokens: &[u32]) -> Result<String> {
-        Ok("decoded".to_string())
+    fn decode(&self, tokens: &[u32]) -> Result<String> {
+        #[cfg(feature = "spm")]
+        {
+            if let Some(proc) = &self.processor {
+                return proc.decode_piece_ids(tokens).map_err(|e| {
+                    BitNetError::Model(ModelError::LoadingFailed {
+                        reason: format!("Tokenizer decode error: {e}"),
+                    })
+                });
+            }
+        }
+        Ok(tokens.iter().map(|&t| t as u8 as char).collect())
     }
 
     fn vocab_size(&self) -> usize {
-        self.config.vocab_size
+        #[cfg(feature = "spm")]
+        {
+            if let Some(proc) = &self.processor {
+                return proc.len();
+            }
+        }
+        self.config.vocab_size.max(256)
     }
 
-    fn token_to_piece(&self, _token: u32) -> Option<String> {
-        Some("piece".to_string())
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        #[cfg(feature = "spm")]
+        {
+            if let Some(proc) = &self.processor {
+                return proc.decode_piece_ids(&[token]).ok();
+            }
+        }
+        Some((token as u8 as char).to_string())
     }
 }
 
+/// Llama tokenizer – essentially a SentencePiece tokenizer.
 struct LlamaTokenizer {
-    config: TokenizerConfig,
+    inner: SentencePieceTokenizer,
 }
 
 impl LlamaTokenizer {
     #[allow(dead_code)]
     fn new(config: &TokenizerConfig) -> Result<Self> {
-        Ok(Self { config: config.clone() })
+        Ok(Self { inner: SentencePieceTokenizer::new(config)? })
+    }
+
+    #[allow(dead_code)]
+    fn from_bytes(bytes: &[u8], config: TokenizerConfig) -> Result<Self> {
+        Ok(Self { inner: SentencePieceTokenizer::from_bytes(bytes, config)? })
     }
 }
 
 impl Tokenizer for LlamaTokenizer {
-    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
-        Ok(vec![1, 2, 3])
+    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+        self.inner.encode(text, add_bos, add_special)
     }
 
-    fn decode(&self, _tokens: &[u32]) -> Result<String> {
-        Ok("decoded".to_string())
+    fn decode(&self, tokens: &[u32]) -> Result<String> {
+        self.inner.decode(tokens)
     }
 
     fn vocab_size(&self) -> usize {
-        self.config.vocab_size
+        self.inner.vocab_size()
     }
 
-    fn token_to_piece(&self, _token: u32) -> Option<String> {
-        Some("piece".to_string())
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        self.inner.token_to_piece(token)
     }
 }
 
+/// Tiktoken tokenizer – wrapper around GPT‑2 BPE implementation.
 struct TiktokenTokenizer {
-    config: TokenizerConfig,
+    inner: Gpt2Tokenizer,
 }
 
 impl TiktokenTokenizer {
     fn new(config: &TokenizerConfig) -> Result<Self> {
-        Ok(Self { config: config.clone() })
+        Ok(Self { inner: Gpt2Tokenizer::new(config)? })
     }
 }
 
 impl Tokenizer for TiktokenTokenizer {
-    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
-        Ok(vec![1, 2, 3])
+    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+        self.inner.encode(text, add_bos, add_special)
     }
 
-    fn decode(&self, _tokens: &[u32]) -> Result<String> {
-        Ok("decoded".to_string())
+    fn decode(&self, tokens: &[u32]) -> Result<String> {
+        self.inner.decode(tokens)
     }
 
     fn vocab_size(&self) -> usize {
-        self.config.vocab_size
+        self.inner.vocab_size()
     }
 
-    fn token_to_piece(&self, _token: u32) -> Option<String> {
-        Some("piece".to_string())
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        self.inner.token_to_piece(token)
     }
 }
 
+/// Falcon tokenizer – also GPT‑2 style BPE.
 struct FalconTokenizer {
-    config: TokenizerConfig,
+    inner: Gpt2Tokenizer,
 }
 
 impl FalconTokenizer {
     fn new(config: &TokenizerConfig) -> Result<Self> {
-        Ok(Self { config: config.clone() })
+        Ok(Self { inner: Gpt2Tokenizer::new(config)? })
     }
 }
 
 impl Tokenizer for FalconTokenizer {
-    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
-        Ok(vec![1, 2, 3])
+    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+        self.inner.encode(text, add_bos, add_special)
     }
 
-    fn decode(&self, _tokens: &[u32]) -> Result<String> {
-        Ok("decoded".to_string())
+    fn decode(&self, tokens: &[u32]) -> Result<String> {
+        self.inner.decode(tokens)
     }
 
     fn vocab_size(&self) -> usize {
-        self.config.vocab_size
+        self.inner.vocab_size()
     }
 
-    fn token_to_piece(&self, _token: u32) -> Option<String> {
-        Some("piece".to_string())
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        self.inner.token_to_piece(token)
     }
 }
 
