@@ -39,7 +39,7 @@ pub struct StreamingRequest {
 }
 
 /// Individual token in the streaming response
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct StreamingToken {
     /// The generated token text
     pub token: String,
@@ -173,6 +173,7 @@ async fn real_stream(
 
         // Get the engine and create a generation stream
         let engine = engine.read().await;
+        let tokenizer = engine.tokenizer();
         let mut gen_stream = engine.generate_stream_with_config(&request.prompt, &config)?;
         let mut token_count = 0u64;
 
@@ -182,9 +183,15 @@ async fn real_stream(
                     token_count += 1;
                     let elapsed = start.elapsed();
 
+                    let token_id = tokenizer
+                        .encode(&token, false, false)
+                        .ok()
+                        .and_then(|ids| ids.get(0).copied())
+                        .unwrap_or(0);
+
                     let data = StreamingToken {
                         token: token.clone(),
-                        token_id: 0, // TODO: Extract actual token ID from generation
+                        token_id,
                         cumulative_time_ms: elapsed.as_millis() as u64,
                         position: token_count as usize,
                     };
@@ -291,5 +298,125 @@ async fn mock_stream(
             .event("complete")
             .json_data(complete)
             .unwrap());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::response::IntoResponse;
+    use bitnet_common::{BitNetConfig, ConcreteTensor};
+    use bitnet_inference::InferenceEngine;
+    use bitnet_models::Model;
+    use bitnet_tokenizers::Tokenizer;
+    use http_body_util::BodyExt;
+    use tokio::sync::RwLock;
+
+    use std::any::Any;
+
+    #[derive(Clone)]
+    struct TestTokenizer;
+
+    impl Tokenizer for TestTokenizer {
+        fn encode(
+            &self,
+            text: &str,
+            _add_bos: bool,
+            _add_special: bool,
+        ) -> bitnet_common::Result<Vec<u32>> {
+            if let Some(id) = text.strip_prefix("token_") {
+                Ok(vec![id.parse().unwrap_or(0)])
+            } else {
+                Ok(vec![0])
+            }
+        }
+
+        fn decode(&self, tokens: &[u32]) -> bitnet_common::Result<String> {
+            Ok(format!("token_{}", tokens[0]))
+        }
+
+        fn vocab_size(&self) -> usize {
+            1000
+        }
+
+        fn token_to_piece(&self, token: u32) -> Option<String> {
+            Some(format!("token_{}", token))
+        }
+    }
+
+    struct DummyModel {
+        config: BitNetConfig,
+    }
+
+    impl DummyModel {
+        fn new() -> Self {
+            Self { config: BitNetConfig::default() }
+        }
+    }
+
+    impl Model for DummyModel {
+        fn config(&self) -> &BitNetConfig {
+            &self.config
+        }
+
+        fn forward(
+            &self,
+            _input: &ConcreteTensor,
+            _cache: &mut dyn Any,
+        ) -> bitnet_common::Result<ConcreteTensor> {
+            Ok(ConcreteTensor::mock(vec![1, 50257]))
+        }
+
+        fn embed(&self, tokens: &[u32]) -> bitnet_common::Result<ConcreteTensor> {
+            Ok(ConcreteTensor::mock(vec![1, tokens.len(), 1]))
+        }
+
+        fn logits(&self, _hidden: &ConcreteTensor) -> bitnet_common::Result<ConcreteTensor> {
+            Ok(ConcreteTensor::mock(vec![1, 1, 50257]))
+        }
+    }
+
+    #[tokio::test]
+    async fn sse_token_ids_match_model_outputs() {
+        let model = Arc::new(DummyModel::new());
+        let tokenizer = Arc::new(TestTokenizer);
+        let engine =
+            InferenceEngine::new(model, tokenizer.clone(), bitnet_common::Device::Cpu).unwrap();
+        let app_state = AppState {
+            metrics: Arc::new(
+                crate::monitoring::metrics::MetricsCollector::new(
+                    &crate::monitoring::MonitoringConfig::default(),
+                )
+                .unwrap(),
+            ),
+            engine: Some(Arc::new(RwLock::new(engine))),
+        };
+
+        let request = StreamingRequest {
+            prompt: "test".to_string(),
+            max_tokens: Some(3),
+            temperature: None,
+            top_p: None,
+            top_k: None,
+            repetition_penalty: None,
+            timeout_seconds: None,
+            detailed_errors: None,
+        };
+
+        let sse = streaming_handler(State(app_state), axum::Json(request)).await;
+        let response = sse.into_response();
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body_str = String::from_utf8(body.to_vec()).unwrap();
+
+        for event in body_str.split("\n\n") {
+            if event.starts_with("event: token") {
+                if let Some(data_line) = event.lines().find(|l| l.starts_with("data: ")) {
+                    let json = &data_line[6..];
+                    let token: StreamingToken = serde_json::from_str(json).unwrap();
+                    let expected = tokenizer.encode(&token.token, false, false).unwrap();
+                    assert_eq!(expected[0], token.token_id);
+                }
+            }
+        }
     }
 }
