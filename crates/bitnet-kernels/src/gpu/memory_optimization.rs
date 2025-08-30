@@ -52,6 +52,7 @@ struct AllocationInfo {
     size: usize,
     timestamp: Instant,
     #[cfg(debug_assertions)]
+    #[allow(dead_code)] // Used for debugging memory leaks
     stack_trace: Vec<String>,
 }
 
@@ -65,7 +66,7 @@ pub enum AccessPattern {
 
 /// Optimized memory pool for GPU allocations (simplified)
 pub struct OptimizedMemoryPool {
-    device_id: usize,
+    _device_id: usize,
     config: MemoryPoolConfig,
     free_buffers: HashMap<usize, Vec<Vec<u8>>>, // Simplified buffer storage
     allocated_buffers: HashMap<*const u8, AllocationInfo>,
@@ -79,7 +80,7 @@ impl OptimizedMemoryPool {
         log::info!("Creating optimized memory pool for device {}", device_id);
 
         Self {
-            device_id,
+            _device_id: device_id,
             config,
             free_buffers: HashMap::new(),
             allocated_buffers: HashMap::new(),
@@ -133,10 +134,10 @@ impl OptimizedMemoryPool {
 
     /// Try to reuse an existing buffer
     fn try_reuse_buffer(&mut self, size: usize) -> Option<Vec<u8>> {
-        if let Some(free_list) = self.free_buffers.get_mut(&size) {
-            if let Some(buffer) = free_list.pop() {
-                return Some(buffer);
-            }
+        if let Some(free_list) = self.free_buffers.get_mut(&size)
+            && let Some(buffer) = free_list.pop()
+        {
+            return Some(buffer);
         }
         None
     }

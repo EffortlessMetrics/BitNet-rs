@@ -446,7 +446,7 @@ impl GpuValidator {
 
             // Allow for small variance in memory due to driver overhead
             const LEAK_THRESHOLD: usize = 1024 * 1024; // 1MB threshold
-            let memory_diff = if free_end < free_start { free_start - free_end } else { 0 };
+            let memory_diff = free_start.saturating_sub(free_end);
             let leaks_detected = memory_diff > LEAK_THRESHOLD;
 
             if leaks_detected {

@@ -9,11 +9,14 @@ use cudarc::driver::{
 use cudarc::nvrtc::compile_ptx;
 use std::sync::Arc;
 
+/// Type alias for batch matrix multiplication parameters
+type BatchMatmulParams<'a> = (&'a [i8], &'a [u8], &'a mut [f32], usize, usize, usize);
+
 /// CUDA kernel provider with memory management and stream handling
 pub struct CudaKernel {
-    ctx: Arc<CudaContext>,
+    _ctx: Arc<CudaContext>,
     stream: Arc<CudaStream>,
-    module: Arc<CudaModule>,
+    _module: Arc<CudaModule>,
     matmul_function: CudaFunction,
     device_info: CudaDeviceInfo,
 }
@@ -82,7 +85,7 @@ impl CudaKernel {
         let device_info = Self::get_device_info(device_id)?;
         log::info!("CUDA device info: {:?}", device_info);
 
-        Ok(Self { ctx, stream, module, matmul_function, device_info })
+        Ok(Self { _ctx: ctx, stream, _module: module, matmul_function, device_info })
     }
 
     /// Get detailed device information and capabilities
@@ -140,8 +143,8 @@ impl CudaKernel {
 
         // Configure launch parameters
         const BLOCK_SIZE: u32 = 16;
-        let grid_x = (m as u32 + BLOCK_SIZE - 1) / BLOCK_SIZE;
-        let grid_y = (n as u32 + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        let grid_x = (m as u32).div_ceil(BLOCK_SIZE);
+        let grid_y = (n as u32).div_ceil(BLOCK_SIZE);
 
         let cfg = LaunchConfig {
             grid_dim: (grid_x, grid_y, 1),
@@ -203,6 +206,7 @@ impl CudaKernel {
     }
 
     /// Calculate optimal launch parameters based on device capabilities
+    #[allow(dead_code)] // Will be used when dynamic optimization is implemented
     fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, usize) {
         // Use device-specific optimization
         let max_threads = self.device_info.max_threads_per_block as usize;
@@ -222,21 +226,18 @@ impl CudaKernel {
             }
             block_size *= 2;
         }
-        block_size = block_size.min(32).max(8); // Clamp between 8 and 32
+        block_size = block_size.clamp(8, 32);
 
         // Calculate grid dimensions
-        let grid_x = (m + block_size - 1) / block_size;
-        let grid_y = (n + block_size - 1) / block_size;
+        let grid_x = m.div_ceil(block_size);
+        let grid_y = n.div_ceil(block_size);
 
         log::debug!("Optimal launch params: block_size={}, grid={}x{}", block_size, grid_x, grid_y);
         (block_size, grid_x, grid_y)
     }
 
     /// Batch matrix multiplication for multiple concurrent requests
-    pub fn batch_matmul_i2s(
-        &self,
-        batches: &mut [(&[i8], &[u8], &mut [f32], usize, usize, usize)],
-    ) -> Result<()> {
+    pub fn batch_matmul_i2s(&self, batches: &mut [BatchMatmulParams<'_>]) -> Result<()> {
         if batches.is_empty() {
             return Ok(());
         }
@@ -294,10 +295,7 @@ impl KernelProvider for CudaKernel {
 /// Check if CUDA is available on the system
 pub fn is_cuda_available() -> bool {
     // Try to create a CUDA context
-    match CudaContext::new(0) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    CudaContext::new(0).is_ok()
 }
 
 /// Get the number of available CUDA devices

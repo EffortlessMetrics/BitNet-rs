@@ -85,10 +85,10 @@ impl KernelManager {
         // Add FFI kernel as a fallback option (lower priority than optimized kernels)
         #[cfg(feature = "ffi")]
         {
-            if let Ok(ffi_kernel) = ffi::FfiKernel::new() {
-                if ffi_kernel.is_available() {
-                    providers.push(Box::new(ffi_kernel));
-                }
+            if let Ok(ffi_kernel) = ffi::FfiKernel::new()
+                && ffi_kernel.is_available()
+            {
+                providers.push(Box::new(ffi_kernel));
             }
         }
 
