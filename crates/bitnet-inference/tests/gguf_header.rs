@@ -66,9 +66,9 @@ fn test_kv_types() {
     let bool_val = GgufValue::Bool(true);
     assert_eq!(bool_val, GgufValue::Bool(true));
 
-    let f32_val = GgufValue::F32(3.14);
+    let f32_val = GgufValue::F32(std::f32::consts::PI);
     if let GgufValue::F32(v) = f32_val {
-        assert!((v - 3.14).abs() < 0.001);
+        assert!((v - std::f32::consts::PI).abs() < 0.001);
     }
 }
 
@@ -128,7 +128,7 @@ fn test_blocking_reader() {
     let mut buf = [0u8; 24];
     buf[0..4].copy_from_slice(b"GGUF");
     buf[4..8].copy_from_slice(1u32.to_le_bytes().as_slice());
-    std::fs::write(&path, &buf).unwrap();
+    std::fs::write(&path, buf).unwrap();
 
     let header = bitnet_inference::gguf::read_header_blocking(&path).unwrap();
     assert_eq!(header.version, 1);
