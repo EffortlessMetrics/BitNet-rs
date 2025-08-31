@@ -19,7 +19,7 @@ cpu-tests = "test --workspace --no-default-features --features cpu"
 t2 = "test --workspace --no-default-features --features cpu -- --test-threads=2"
 t1 = "test --workspace --no-default-features --features cpu -- --test-threads=1"
 crossval-capped = "test --workspace --features \"cpu,ffi,crossval\" -- --test-threads=2"
-gpu-capped = "test --workspace --no-default-features --features cuda -- --test-threads=2"
+gpu-capped = "test --workspace --no-default-features --features gpu -- --test-threads=2"
 
 # Reporting aliases
 report-demo = "run -p bitnet-tests --bin demo_reporting_comprehensive"
@@ -28,8 +28,8 @@ demo-sys = "run -p bitnet-tests --bin demo_reporting_system --features reporting
 demo-all = "run -p bitnet-tests --bin demo_reporting_comprehensive --features reporting"
 
 # GPU development aliases
-gpu-smoke = "test --package bitnet-kernels --test gpu_smoke --no-default-features --features cuda"
-gpu-parity = "test --package bitnet-kernels --test gpu_parity --no-default-features --features cuda"
+gpu-smoke = "test --package bitnet-kernels --test gpu_smoke --no-default-features --features gpu"
+gpu-parity = "test --package bitnet-kernels --test gpu_parity --no-default-features --features gpu"
 gpu-build = "build --workspace --no-default-features --features gpu"
 
 # Development quality check aliases

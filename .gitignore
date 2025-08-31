@@ -1,7 +1,10 @@
 # Rust
 /target/
 **/*.rs.bk
-Cargo.lock
+
+# Local crate install metadata
+.crates.toml
+.crates2.json
 
 # IDE
 .vscode/
