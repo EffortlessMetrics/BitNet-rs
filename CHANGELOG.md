@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Cargo Configuration Cleanup** ([#113](https://github.com/EffortlessSteven/BitNet-rs/pull/113)):
+  - Remove tool-generated metadata files (`.crates.toml`, `.crates2.json`) from version control
+  - Commit `Cargo.lock` files for reproducible builds across environments
+  - Standardize GPU feature aliases in cargo config to use `gpu` instead of `cuda`
+
 ### Fixed
 - **bitnet-server Build Issues**:
   - Restored Git metadata support using vergen-gix v1.x
