@@ -21,6 +21,13 @@ cargo build --release --no-default-features --features cpu
 # Run tests (fast, Rust-only)
 cargo test --workspace --no-default-features --features cpu
 
+# Run GPU tests (requires CUDA)
+cargo test --workspace --no-default-features --features cuda
+
+# Run device-aware quantization GPU parity tests
+cargo test --workspace --no-default-features --features cuda gpu_parity
+cargo test -p bitnet-quantization --features cuda --test gpu_parity
+
 # Run GGUF validation tests
 cargo test -p bitnet-inference --test gguf_header
 cargo test -p bitnet-inference --test gguf_fuzz
@@ -122,19 +129,26 @@ Minimum Supported Rust Version: **1.89.0** (uses Rust 2024 edition)
 ### Feature Flags
 Default features are **empty** to prevent unwanted dependencies:
 - `cpu`: CPU inference with SIMD optimizations, includes native I2_S support
-- `cuda`: NVIDIA GPU support
+- `cuda`: NVIDIA GPU support with device-aware quantization and automatic fallback
 - `iq2s-ffi`: IQ2_S quantization via GGML FFI (requires vendored GGML files)
-- `ffi`: C++ FFI bridge (required for cross-validation)
+- `ffi`: C++ FFI bridge (required for cross-validation) with enhanced safety documentation
 - `crossval`: Cross-validation against C++ (increases build time)
 
 ### Quantization Support
-BitNet-rs supports multiple quantization formats:
-- **I2_S**: Native Rust implementation, always available with `cpu` feature
+BitNet-rs supports multiple quantization formats with device-aware acceleration:
+- **I2_S**: Native Rust implementation with device-aware GPU/CPU selection
+- **TL1**: Table lookup quantization optimized for ARM with GPU fallback support  
+- **TL2**: Advanced table lookup quantization with device-aware acceleration
 - **IQ2_S**: Dual implementation:
   - Native Rust: Optimized implementation with SIMD support
   - GGML FFI: Via `iq2s-ffi` feature for llama.cpp compatibility
   - Backend parity testing ensures both implementations produce identical results
 - **Standard formats**: Q4_0, Q5_0, Q8_0, etc. (planned)
+
+All quantizers support device-aware operations:
+- Automatic GPU detection and acceleration when available
+- Transparent fallback to CPU when GPU operations fail
+- Consistent results across devices via comprehensive parity testing
 
 To test IQ2_S implementations:
 ```bash

@@ -20,16 +20,15 @@
 //! use bitnet::prelude::*;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! // Load a BitNet model
+//! // Create a BitNet model with default config
 //! let device = Device::Cpu;
-//! let model = BitNetModel::load("model.gguf", &device)?;
+//! let config = BitNetConfig::default();
+//! let model = BitNetModel::new(config, device);
 //!
-//! // Create inference engine
-//! let mut engine = InferenceEngine::new(model)?;
-//!
-//! // Generate text
-//! let response = engine.generate("Hello, world!")?;
-//! println!("{}", response);
+//! // Note: This is a simplified example. In practice, you would load
+//! // tensors from a model file using the model loader.
+//! 
+//! println!("BitNet model created successfully!");
 //! # Ok(())
 //! # }
 //! ```
