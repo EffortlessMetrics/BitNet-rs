@@ -203,6 +203,11 @@ impl OptimizedMemoryPool {
         &self.stats
     }
 
+    /// Get device ID
+    pub fn device_id(&self) -> usize {
+        self._device_id
+    }
+
     /// Reset statistics
     pub fn reset_stats(&mut self) {
         self.stats = MemoryStats::default();
@@ -320,7 +325,7 @@ mod tests {
         let config = MemoryPoolConfig::default();
         let pool = OptimizedMemoryPool::new(0, config);
 
-        assert_eq!(pool.device_id, 0);
+        assert_eq!(pool.device_id(), 0);
         assert_eq!(pool.stats.current_usage, 0);
     }
 
