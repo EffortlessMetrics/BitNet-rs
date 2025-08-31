@@ -89,10 +89,10 @@ cargo run --example cuda_info --no-default-features --features cuda
 cargo build --locked --workspace --no-default-features --features cuda
 
 # Run GPU validation and performance tests
-cargo test --workspace --no-default-features --features cuda --test cuda_validation
+cargo test -p bitnet-kernels --no-default-features --features cuda --test gpu_integration
 
 # GPU memory health check (production monitoring)
-cargo test --workspace --no-default-features --features cuda gpu_memory_health
+cargo run --example test_gpu_memory --no-default-features --features cuda
 
 # Deterministic GPU testing (enhanced in PR #108)
 BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo test --workspace --no-default-features --features cuda -- --test-threads=1

@@ -25,8 +25,15 @@ cargo test --workspace --no-default-features --features cpu
 cargo test --workspace --no-default-features --features cuda
 
 # Run GPU validation and benchmarks
-cargo test --workspace --no-default-features --features cuda --test gpu_validation
-cargo test --workspace --no-default-features --features cuda gpu_memory_health
+cargo test -p bitnet-kernels --no-default-features --features cuda --test gpu_integration
+cargo test -p bitnet-kernels --no-default-features --features cuda --test gpu_smoke
+
+# Run GPU integration tests (comprehensive validation)
+cargo test -p bitnet-kernels --no-default-features --features cuda --test gpu_integration --ignored
+
+# Run GPU examples
+cargo run -p bitnet-kernels --example gpu_validation --no-default-features --features cuda
+cargo run -p bitnet-kernels --example simple_gpu_test --no-default-features --features cuda
 
 # Run GGUF validation tests
 cargo test -p bitnet-inference --test gguf_header
@@ -129,9 +136,9 @@ Minimum Supported Rust Version: **1.89.0** (uses Rust 2024 edition)
 ### Feature Flags
 Default features are **empty** to prevent unwanted dependencies:
 - `cpu`: CPU inference with SIMD optimizations, includes native I2_S support
-- `cuda`: NVIDIA GPU support
+- `cuda`: NVIDIA GPU support with device-aware quantization and automatic fallback
 - `iq2s-ffi`: IQ2_S quantization via GGML FFI (requires vendored GGML files)
-- `ffi`: C++ FFI bridge (required for cross-validation)
+- `ffi`: C++ FFI bridge (required for cross-validation) with enhanced safety documentation
 - `crossval`: Cross-validation against C++ (increases build time)
 
 ### Quantization Support
@@ -172,7 +179,7 @@ We maintain strict compatibility with llama.cpp:
 
 1. **FFI Linker Errors**: Either disable FFI (`--no-default-features --features cpu`) or build C++ (`cargo xtask fetch-cpp`)
 
-2. **CUDA Compilation**: Ensure CUDA toolkit is installed and `nvcc` is in PATH
+2. **CUDA Compilation**: Ensure CUDA toolkit is installed and `nvcc` is in PATH. For device-aware quantization, CUDA 11.0+ is recommended
 
 3. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
 
@@ -192,6 +199,21 @@ We maintain strict compatibility with llama.cpp:
    ```bash
    pkill -f 'cargo test' || true
    cargo clean
+   ```
+
+8. **GPU Memory Issues**: For CUDA out-of-memory errors during quantization:
+   ```bash
+   # Test GPU memory health
+   cargo test -p bitnet-kernels --no-default-features --features cuda gpu_memory_health
+   
+   # Use single-threaded GPU tests to reduce memory pressure
+   CUDA_VISIBLE_DEVICES=0 cargo test -p bitnet-kernels --no-default-features --features cuda -- --test-threads=1
+   ```
+
+9. **Device-aware Quantization Fallback**: If GPU quantization fails, verify automatic CPU fallback:
+   ```bash
+   # Enable debug logging to see fallback behavior
+   RUST_LOG=bitnet_kernels=debug cargo test -p bitnet-kernels --no-default-features --features cuda
    ```
 
 ## Development Workflow
@@ -217,6 +239,8 @@ We maintain strict compatibility with llama.cpp:
 - `BITNET_DETERMINISTIC`: Enable deterministic mode for testing
 - `BITNET_SEED`: Set seed for reproducible runs
 - `RAYON_NUM_THREADS`: Control CPU parallelism
+- `CUDA_VISIBLE_DEVICES`: Control which GPU devices are visible (e.g., `0,1` or `0`)
+- `RUST_LOG`: Enable debug logging for GPU operations (e.g., `bitnet_kernels=debug`)
 
 ### Build-time Variables (for Git metadata)
 - `VERGEN_GIT_SHA`: Override Git SHA (useful in CI/Docker without .git)
@@ -245,7 +269,8 @@ BitNet-rs implements a comprehensive concurrency capping strategy to prevent res
    - `t2`: Run tests with 2-thread cap
    - `t1`: Run tests with 1-thread (deterministic mode)
    - `crossval-capped`: Cross-validation with thread caps
-   - `gpu-capped`: GPU tests with concurrency limits
+   - `gpu-integration`: GPU integration tests with CUDA features
+   - `gpu-smoke`: Basic GPU smoke tests
 
 4. **Test Infrastructure** (`tests/common/concurrency_caps.rs`):
    - Rayon thread pool initialization with caps
@@ -274,6 +299,10 @@ NUMEXPR_NUM_THREADS=1
 # BitNet deterministic execution
 BITNET_DETERMINISTIC=1
 BITNET_SEED=42
+
+# GPU control
+CUDA_VISIBLE_DEVICES=0   # Single GPU for testing
+RUST_LOG=bitnet_kernels=debug  # GPU debug logging
 ```
 
 ### Usage Examples
@@ -290,6 +319,12 @@ docker-compose -f docker-compose.test.yml up rust-cpu-tests
 
 # CI/deterministic mode
 RUST_TEST_THREADS=1 RAYON_NUM_THREADS=1 cargo t1
+
+# GPU tests with memory constraints
+CUDA_VISIBLE_DEVICES=0 cargo test -p bitnet-kernels --no-default-features --features cuda -- --test-threads=1
+
+# GPU integration tests with debug logging
+RUST_LOG=bitnet_kernels=debug cargo test -p bitnet-kernels --no-default-features --features cuda --test gpu_integration --ignored
 ```
 
 ## Repository Contracts (for Claude)

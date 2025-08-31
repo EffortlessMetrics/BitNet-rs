@@ -29,8 +29,8 @@ demo-all = "run -p bitnet-tests --bin demo_reporting_comprehensive --features re
 
 # GPU development aliases
 gpu-smoke = "test --package bitnet-kernels --test gpu_smoke --no-default-features --features cuda"
-gpu-parity = "test --package bitnet-kernels --test gpu_parity --no-default-features --features cuda"
-gpu-build = "build --workspace --no-default-features --features gpu"
+gpu-integration = "test --package bitnet-kernels --test gpu_integration --no-default-features --features cuda"
+gpu-build = "build --workspace --no-default-features --features cuda"
 
 # Development quality check aliases
 check-all = "fmt --all && clippy -p bitnet-cli --all-targets -- -D warnings && clippy -p bitnet-server --all-targets -- -D warnings && test -p bitnet-server --all-targets && test -p bitnet-server --all-targets --features degraded-ok"

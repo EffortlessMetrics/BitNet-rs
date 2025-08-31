@@ -5,7 +5,7 @@
 use bitnet::prelude::*;
 use std::{env, sync::Arc};
 
-#[cfg(all(feature = "gpu", feature = "examples"))]
+#[cfg(all(feature = "cuda", feature = "examples"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt::init();
@@ -43,9 +43,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut engine = InferenceEngine::new(Arc::new(model), tokenizer, device.clone())?;
     println!("Inference engine created");
 
-    // GPU optimizations are enabled automatically for CUDA devices
+    // GPU optimizations and device-aware quantization are enabled automatically for CUDA devices
     if matches!(device, Device::Cuda(_)) {
         println!("GPU optimizations enabled automatically");
+        println!("Device-aware quantization with automatic CPU fallback active");
     }
 
     // Configure generation parameters optimized for GPU
@@ -78,10 +79,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(all(not(feature = "gpu"), feature = "examples"))]
+#[cfg(all(not(feature = "cuda"), feature = "examples"))]
 fn main() {
-    eprintln!("This example requires the 'gpu' feature to be enabled.");
-    eprintln!("Run with: cargo run --example gpu_inference --features gpu");
+    eprintln!("This example requires the 'cuda' feature to be enabled.");
+    eprintln!("Run with: cargo run --example gpu_inference --features cuda");
     std::process::exit(1);
 }
 
