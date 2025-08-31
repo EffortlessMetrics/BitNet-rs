@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **FFI Safety and Validation Improvements**:
+  - Enhanced FFI functions with `unsafe fn` signatures for Rust 2024 safety compliance
+  - Fixed clippy warnings in test infrastructure and removed unneeded unit expressions
+  - Added proper unsafe blocks for raw pointer operations in C API layer
+  - Maintained full API compatibility with existing C clients while improving memory safety
 - **bitnet-server Build Issues**:
   - Restored Git metadata support using vergen-gix v1.x
   - Moved runtime dependencies from build-dependencies to correct section

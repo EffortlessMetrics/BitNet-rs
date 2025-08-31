@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude (claude.ai) when working with the BitNet.rs codebase.
 
-## Build and Development Commands
+## Command Reference
 
 ### Core Development Commands
 ```bash
@@ -97,7 +97,7 @@ cargo run -p xtask -- full-crossval
 cargo run -p xtask -- check-features
 ```
 
-## High-Level Architecture
+## Architecture Overview (Explanation)
 
 ### Workspace Structure
 BitNet.rs is organized as a Rust workspace with specialized crates:
@@ -138,7 +138,7 @@ Default features are **empty** to prevent unwanted dependencies:
 - `cpu`: CPU inference with SIMD optimizations, includes native I2_S support
 - `cuda`: NVIDIA GPU support with device-aware quantization and automatic fallback
 - `iq2s-ffi`: IQ2_S quantization via GGML FFI (requires vendored GGML files)
-- `ffi`: C++ FFI bridge (required for cross-validation) with enhanced safety documentation
+- `ffi`: C++ FFI bridge (required for cross-validation) with Rust 2024 safety compliance and enhanced documentation
 - `crossval`: Cross-validation against C++ (increases build time)
 
 ### Quantization Support
@@ -173,35 +173,37 @@ We maintain strict compatibility with llama.cpp:
 - We handle models that llama.cpp fails on (e.g., GPT-2 without pre-tokenizer)
 - See COMPATIBILITY.md for detailed guarantees
 
-## Troubleshooting
+## Troubleshooting (How-To Guide)
 
 ### Common Build Issues
 
 1. **FFI Linker Errors**: Either disable FFI (`--no-default-features --features cpu`) or build C++ (`cargo xtask fetch-cpp`)
 
-2. **CUDA Compilation**: Ensure CUDA toolkit is installed and `nvcc` is in PATH. For device-aware quantization, CUDA 11.0+ is recommended
+2. **FFI Safety (Rust 2024)**: All FFI functions are marked as `unsafe fn` for proper memory safety. C clients are unaffected, but Rust callers must use `unsafe` blocks
 
-3. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
+3. **CUDA Compilation**: Ensure CUDA toolkit is installed and `nvcc` is in PATH. For device-aware quantization, CUDA 11.0+ is recommended
 
-4. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
+4. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
 
-5. **sccache Build Failures**: If experiencing "No such file or directory" errors during compilation, disable sccache:
+5. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
+
+6. **sccache Build Failures**: If experiencing "No such file or directory" errors during compilation, disable sccache:
    ```bash
    RUSTC_WRAPPER="" cargo test --workspace --no-default-features --features cpu
    ```
 
-6. **Test Hangs/Thread Pool Conflicts**: Use thread caps and deterministic execution:
+7. **Test Hangs/Thread Pool Conflicts**: Use thread caps and deterministic execution:
    ```bash
    RUST_TEST_THREADS=1 RAYON_NUM_THREADS=2 cargo test -p <crate> --no-default-features --features cpu -- --test-threads=1
    ```
 
-7. **File Lock Contention**: Kill stray cargo processes and clean build artifacts:
+8. **File Lock Contention**: Kill stray cargo processes and clean build artifacts:
    ```bash
    pkill -f 'cargo test' || true
    cargo clean
    ```
 
-8. **GPU Memory Issues**: For CUDA out-of-memory errors during quantization:
+9. **GPU Memory Issues**: For CUDA out-of-memory errors during quantization:
    ```bash
    # Test GPU memory health
    cargo test -p bitnet-kernels --no-default-features --features cuda gpu_memory_health
@@ -210,11 +212,11 @@ We maintain strict compatibility with llama.cpp:
    CUDA_VISIBLE_DEVICES=0 cargo test -p bitnet-kernels --no-default-features --features cuda -- --test-threads=1
    ```
 
-9. **Device-aware Quantization Fallback**: If GPU quantization fails, verify automatic CPU fallback:
-   ```bash
-   # Enable debug logging to see fallback behavior
-   RUST_LOG=bitnet_kernels=debug cargo test -p bitnet-kernels --no-default-features --features cuda
-   ```
+10. **Device-aware Quantization Fallback**: If GPU quantization fails, verify automatic CPU fallback:
+    ```bash
+    # Enable debug logging to see fallback behavior
+    RUST_LOG=bitnet_kernels=debug cargo test -p bitnet-kernels --no-default-features --features cuda
+    ```
 
 ## Development Workflow
 
@@ -269,8 +271,10 @@ BitNet-rs implements a comprehensive concurrency capping strategy to prevent res
    - `t2`: Run tests with 2-thread cap
    - `t1`: Run tests with 1-thread (deterministic mode)
    - `crossval-capped`: Cross-validation with thread caps
+   - `gpu-capped`: GPU tests with concurrency caps and CUDA features
    - `gpu-integration`: GPU integration tests with CUDA features
    - `gpu-smoke`: Basic GPU smoke tests
+   - `gpu-build`: Build workspace with CUDA features
 
 4. **Test Infrastructure** (`tests/common/concurrency_caps.rs`):
    - Rayon thread pool initialization with caps
@@ -325,6 +329,12 @@ CUDA_VISIBLE_DEVICES=0 cargo test -p bitnet-kernels --no-default-features --feat
 
 # GPU integration tests with debug logging
 RUST_LOG=bitnet_kernels=debug cargo test -p bitnet-kernels --no-default-features --features cuda --test gpu_integration --ignored
+
+# Use GPU-specific aliases for convenience
+cargo gpu-smoke         # Quick GPU smoke tests
+cargo gpu-integration   # Full GPU integration tests  
+cargo gpu-capped        # GPU tests with concurrency limits
+cargo gpu-build         # Build with CUDA support
 ```
 
 ## Repository Contracts (for Claude)
@@ -343,7 +353,7 @@ RUST_LOG=bitnet_kernels=debug cargo test -p bitnet-kernels --no-default-features
 - macOS FFI: set `DYLD_LIBRARY_PATH=target/release`
 - Linux FFI: set `LD_LIBRARY_PATH=target/release`
 
-## Fast Recipes
+## Quick Start Recipes (Tutorial)
 
 ```bash
 # Quick compile & test (CPU, MSRV-accurate)
@@ -497,3 +507,12 @@ scripts/nll-parity.sh
 3. **Deterministic Top-K**: Stable sorting with tie-breaking by token ID, NaN demotion
 4. **Logit Dumping**: Capture top-k logits at each generation step for analysis
 5. **Tau-b Correlation**: Score-aware rank correlation for quantization robustness
+
+### Validation Infrastructure Improvements
+
+Recent enhancements to the validation framework include:
+- **FFI Safety Validation**: Enhanced memory safety checks for C API layer
+- **MSRV Compliance**: Automated testing against minimum supported Rust version (1.89.0)
+- **Resource-Aware Testing**: Concurrency caps and system resource monitoring
+- **Comprehensive Test Coverage**: GGUF parser validation, async smoke tests, and synthetic model generation
+- **Build Matrix Validation**: Cross-platform testing with feature flag combinations
