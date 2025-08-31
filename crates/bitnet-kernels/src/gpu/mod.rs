@@ -6,7 +6,7 @@ pub mod memory_optimization;
 pub mod mixed_precision;
 pub mod validation;
 
-#[cfg(all(test, feature = "cuda"))]
+#[cfg(all(test, feature = "gpu"))]
 mod tests;
 
 pub use benchmark::*;

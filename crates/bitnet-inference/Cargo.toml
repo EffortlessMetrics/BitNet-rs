@@ -40,7 +40,7 @@ tempfile = "3.8"
 [features]
 default = ["cpu", "rt-tokio"]
 cpu = ["bitnet-kernels/cpu-optimized"]
-gpu = ["bitnet-kernels/cuda"]
+gpu = ["bitnet-kernels/gpu"]
 streaming = []
 # Runtime selection
 rt-tokio = ["tokio/rt-multi-thread", "tokio/fs", "tokio/io-util", "tokio/macros"]

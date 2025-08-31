@@ -4,7 +4,7 @@
 //! to ensure correctness. The test is designed to be fast and reliable,
 //! suitable for CI/CD pipelines.
 
-#![cfg(feature = "cuda")]
+#![cfg(feature = "gpu")]
 
 use bitnet_kernels::{KernelProvider, cpu};
 use std::env;
@@ -24,12 +24,12 @@ fn get_test_config() -> (String, f32) {
 
 /// Check if GPU is available (skip test if not)
 fn check_gpu_available() -> bool {
-    #[cfg(feature = "cuda")]
+    #[cfg(feature = "gpu")]
     {
         use bitnet_kernels::gpu_utils;
         gpu_utils::gpu_available()
     }
-    #[cfg(not(feature = "cuda"))]
+    #[cfg(not(feature = "gpu"))]
     {
         false
     }
@@ -128,7 +128,7 @@ fn gpu_smoke_test() {
     eprintln!("CPU time: {:?}", cpu_time);
 
     // Run GPU version
-    #[cfg(feature = "cuda")]
+    #[cfg(feature = "gpu")]
     {
         use bitnet_kernels::gpu;
 
@@ -179,7 +179,7 @@ fn gpu_determinism_test() {
     let (a, b, _, m, n, k) = generate_test_data("tiny");
     let a_i8: Vec<i8> = a.iter().map(|&x| x as i8).collect();
 
-    #[cfg(feature = "cuda")]
+    #[cfg(feature = "gpu")]
     {
         use bitnet_kernels::gpu;
 

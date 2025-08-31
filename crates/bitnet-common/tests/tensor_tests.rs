@@ -146,6 +146,8 @@ fn test_tensor_error_handling() {
     // This should fail when GPU features are not enabled
     #[cfg(not(feature = "gpu"))]
     assert!(result.is_err());
+    #[cfg(feature = "gpu")]
+    let _ = result; // Suppress unused variable warning when GPU features are enabled
 
     // Test Metal device
     let device = Device::Metal;
@@ -153,6 +155,8 @@ fn test_tensor_error_handling() {
 
     #[cfg(not(feature = "gpu"))]
     assert!(result.is_err());
+    #[cfg(feature = "gpu")]
+    let _ = result; // Suppress unused variable warning when GPU features are enabled
 }
 
 #[test]

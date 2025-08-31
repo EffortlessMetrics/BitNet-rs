@@ -1,6 +1,6 @@
 //! Comprehensive GPU kernel tests
 
-#![cfg(all(test, feature = "cuda"))]
+#![cfg(all(test, feature = "gpu"))]
 
 #[cfg(test)]
 mod tests {
@@ -11,7 +11,6 @@ mod tests {
         OptimizedMemoryPool, PrecisionMode, cuda_device_count, is_cuda_available,
     };
     use bitnet_common::QuantizationType;
-    use std::sync::Arc;
     use std::time::Duration;
 
     #[test]
