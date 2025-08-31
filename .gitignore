@@ -1,7 +1,10 @@
 # Rust
 /target/
 **/*.rs.bk
-Cargo.lock
+# Cargo metadata
+.crates.toml
+.crates2.json
+fixture_test/Cargo.lock
 
 # IDE
 .vscode/
