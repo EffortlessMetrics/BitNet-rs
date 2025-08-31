@@ -27,7 +27,7 @@
 //!
 //! // Note: This is a simplified example. In practice, you would load
 //! // tensors from a model file using the model loader.
-//! 
+//!
 //! println!("BitNet model created successfully!");
 //! # Ok(())
 //! # }
