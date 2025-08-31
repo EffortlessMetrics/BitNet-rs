@@ -1,6 +1,6 @@
 //! Comprehensive GPU kernel tests
 
-#![cfg(all(test, feature = "cuda"))]
+#![cfg(all(test, feature = "gpu"))]
 
 #[cfg(test)]
 mod tests {

@@ -30,8 +30,8 @@ serial_test = "3.0"
 [features]
 integration-tests = []
 default = []
-gpu = []
-cuda = ["candle-core/cuda"]
+gpu = ["candle-core/cuda"]
+cuda = ["candle-core/cuda"]  # Keep cuda as direct feature for now
 # Do NOT enable Candle's Metal feature on non-Apple hosts.
 # We keep a local "metal" feature for code cfgs, but wire Candle's "metal"
 # only on macOS via a target-specific dependency (see below).

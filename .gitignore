@@ -1,7 +1,10 @@
 # Rust
 /target/
 **/*.rs.bk
-Cargo.lock
+
+# Tool-generated metadata
+.crates.toml
+.crates2.json
 
 # IDE
 .vscode/
@@ -79,8 +82,9 @@ models/
 *.so
 *.dylib
 *.a
-*.lib# Exter
-nal dependency cache
+*.lib
+
+# External dependency cache
 .cache/
 **/bitnet_cpp/
 

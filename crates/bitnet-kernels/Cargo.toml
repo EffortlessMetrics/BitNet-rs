@@ -45,7 +45,8 @@ cpu-optimized = ["avx2", "neon"]
 avx2 = []
 avx512 = []
 neon = []
-cuda = ["dep:cudarc", "dep:half"]
+gpu = ["dep:cudarc", "dep:half"]
+cuda = ["gpu"]  # Alias for backward compatibility
 ffi = ["dep:cc", "dep:bindgen"]
 
 [[bench]]
@@ -71,19 +72,19 @@ path = "tests/comprehensive_kernel_unit_tests.rs"
 [[test]]
 name = "gpu_integration"
 path = "tests/gpu_integration.rs"
-required-features = ["cuda"]
+required-features = ["gpu"]
 
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
-required-features = ["cuda"]
+required-features = ["gpu"]
 
 [[example]]
 name = "simple_gpu_test"
 path = "examples/simple_gpu_test.rs"
-required-features = ["cuda"]
+required-features = ["gpu"]
 
 [[example]]
 name = "cuda_smoke"
 path = "examples/cuda_smoke.rs"
-required-features = ["cuda"]
+required-features = ["gpu"]

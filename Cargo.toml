@@ -141,7 +141,7 @@ gpu = [
     "kernels",
     "inference",
     "tokenizers",
-    "bitnet-kernels/cuda",
+    "bitnet-kernels/gpu",
     "bitnet-inference/gpu",
 ]
 cuda = ["gpu"]  # Alias for backward compatibility

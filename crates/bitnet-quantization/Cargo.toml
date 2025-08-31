@@ -28,7 +28,8 @@ tempfile.workspace = true
 default = []
 simd = []
 integration-tests = []
-cuda = ["bitnet-kernels/cuda"]
+gpu = ["bitnet-kernels/gpu"]
+cuda = ["gpu"]  # Alias for backward compatibility
 
 [[bench]]
 name = "quantization"

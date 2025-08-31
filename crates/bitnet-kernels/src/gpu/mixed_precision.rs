@@ -17,6 +17,7 @@ pub enum PrecisionMode {
 
 /// Mixed precision kernel provider (simplified)
 pub struct MixedPrecisionKernel {
+    #[allow(dead_code)] // Reserved for multi-GPU support
     device_id: usize,
     precision_mode: PrecisionMode,
 }
