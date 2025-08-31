@@ -28,10 +28,10 @@ bitnet-kernels/src/gpu/
 
 ### Key Architectural Components
 
-1. **CudaKernel**: Core CUDA implementation using cudarc 0.17 API
-2. **OptimizedMemoryPool**: Device-specific GPU memory management
+1. **CudaKernel**: Core CUDA implementation using cudarc 0.17 API with enhanced error handling
+2. **OptimizedMemoryPool**: Device-specific GPU memory management with device_id() access method
 3. **MixedPrecisionKernel**: Infrastructure for FP16/BF16 operations
-4. **GpuValidator**: Comprehensive validation and benchmarking
+4. **GpuValidator**: Comprehensive validation and benchmarking framework
 5. **FfiKernel**: C++ integration bridge for cross-validation
 
 ## Design Principles
@@ -203,16 +203,19 @@ fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, 
 
 ### Hierarchical Memory Pool Design
 
-**Decision**: Implement a hierarchical memory pool with size-based caching.
+**Decision**: Implement a hierarchical memory pool with size-based caching and device tracking.
 
-**Architecture**:
+**Architecture** (Enhanced in PR #108):
 ```
 OptimizedMemoryPool
+├── _device_id: usize                           # Device tracking (new)
 ├── free_buffers: HashMap<usize, Vec<Vec<u8>>>  # Size -> Buffer list
 ├── allocated_buffers: HashMap<*const u8, AllocationInfo>
 ├── stats: MemoryStats
 └── config: MemoryPoolConfig
 ```
+
+**New in PR #108**: The `device_id()` method provides access to the device ID for debugging and multi-device scenarios.
 
 **Benefits**:
 - **Reduced Allocation Overhead**: Reuse buffers of the same size

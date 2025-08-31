@@ -126,6 +126,9 @@ let config = MemoryPoolConfig {
 };
 
 let mut memory_pool = OptimizedMemoryPool::new(device_id, config);
+
+// New in PR #108: Access device ID from memory pool
+println!("Memory pool created for device: {}", memory_pool.device_id());
 ```
 
 ### Dynamic Memory Management
@@ -149,6 +152,9 @@ println!("  Cache hit rate: {:.1}%",
 
 // Return buffer to pool for reuse
 memory_pool.deallocate(buffer);
+
+// Device-aware memory management (New in PR #108)
+println!("Managing memory for device: {}", memory_pool.device_id());
 
 // Periodic maintenance
 if memory_pool.stats().current_usage > config.max_pool_size / 2 {

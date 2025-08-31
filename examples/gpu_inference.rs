@@ -3,7 +3,7 @@
 //! This example demonstrates how to use GPU acceleration for faster inference.
 
 use bitnet::prelude::*;
-use std::env;
+use std::{env, sync::Arc};
 
 #[cfg(all(feature = "gpu", feature = "examples"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -22,76 +22,56 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Loading BitNet model from: {}", model_path);
 
     // Try to create CUDA device, fall back to CPU if not available
-    let device = match Device::new_cuda(0) {
-        Ok(device) => {
-            println!("Using CUDA device: {:?}", device);
-            device
-        }
-        Err(e) => {
-            println!("CUDA not available ({}), falling back to CPU", e);
-            Device::Cpu
-        }
+    let device = if cfg!(feature = "cuda") {
+        println!("Using CUDA device");
+        Device::Cuda(0)
+    } else {
+        println!("CUDA not available, using CPU");
+        Device::Cpu
     };
 
-    // Load the model
+    // Load the model and tokenizer
     let loader = ModelLoader::new(device.clone());
     let model = loader.load(model_path)?;
     println!("Model loaded successfully");
 
-    // Create inference engine with GPU optimization
-    let mut engine = InferenceEngine::new(model)?;
+    // Create a default tokenizer for demonstration
+    // In practice, you would load the appropriate tokenizer for your model
+    let tokenizer = Arc::new(bitnet_tokenizers::create_default_tokenizer()?);
 
-    // Enable GPU-specific optimizations if available
-    if device.is_cuda() {
-        engine.enable_gpu_optimizations(true)?;
-        println!("GPU optimizations enabled");
+    // Create inference engine
+    let mut engine = InferenceEngine::new(Arc::new(model), tokenizer, device.clone())?;
+    println!("Inference engine created");
+
+    // GPU optimizations are enabled automatically for CUDA devices
+    if matches!(device, Device::Cuda(_)) {
+        println!("GPU optimizations enabled automatically");
     }
 
     // Configure generation parameters optimized for GPU
-    let config = GenerationConfig {
-        max_new_tokens: 100,
-        temperature: 0.8,
-        top_p: 0.95,
-        top_k: Some(50),
-        repetition_penalty: 1.05,
-        batch_size: 4, // GPU can handle larger batches efficiently
-        ..Default::default()
-    };
-    engine.set_generation_config(config);
+    let config = GenerationConfig { do_sample: true, seed: Some(42), ..Default::default() };
 
-    // Batch inference example
-    let prompts = vec![
-        "The future of GPU computing in AI is",
-        "CUDA acceleration enables",
-        "High-performance inference requires",
-        "Parallel processing allows us to",
-    ];
+    // Single inference example
+    let prompt = "The future of GPU computing in AI is";
 
-    println!("\n--- Batch Inference ---");
+    println!("\n--- GPU Inference Example ---");
     let start_time = std::time::Instant::now();
 
-    let responses = engine.generate_batch(&prompts)?;
+    let response = engine.generate(prompt, &config)?;
 
     let elapsed = start_time.elapsed();
-    println!("Batch inference completed in: {:?}", elapsed);
-    println!(
-        "Throughput: {:.2} tokens/second",
-        (responses.iter().map(|r| r.len()).sum::<usize>() as f64) / elapsed.as_secs_f64()
-    );
+    println!("Inference completed in: {:?}", elapsed);
+    println!("Throughput: {:.2} tokens/second", response.len() as f64 / elapsed.as_secs_f64());
 
     // Display results
-    for (prompt, response) in prompts.iter().zip(responses.iter()) {
-        println!("\nPrompt: {}", prompt);
-        println!("Response: {}", response);
-    }
+    println!("\nPrompt: {}", prompt);
+    println!("Response: {}", response);
 
-    // Memory usage statistics
-    if device.is_cuda() {
-        let memory_info = engine.get_memory_info()?;
-        println!("\n--- GPU Memory Usage ---");
-        println!("Allocated: {} MB", memory_info.allocated_mb);
-        println!("Cached: {} MB", memory_info.cached_mb);
-        println!("Reserved: {} MB", memory_info.reserved_mb);
+    // GPU-specific information
+    if let Device::Cuda(device_id) = device {
+        println!("\n--- GPU Device Information ---");
+        println!("Using CUDA device: {}", device_id);
+        println!("GPU acceleration enabled for optimal performance");
     }
 
     println!("\nGPU inference completed successfully!");

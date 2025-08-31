@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Enhanced
 - **GPU Kernel Refactoring** (PR #108):
   - **CUDA Implementation**: Enhanced cudarc 0.17 API compatibility with performance tracking and error handling
-  - **Memory Management**: Implemented OptimizedMemoryPool with device-specific allocation, caching, and leak detection  
+  - **Memory Management**: Implemented OptimizedMemoryPool with device-specific allocation, caching, leak detection, and device_id() access method  
   - **Mixed Precision Infrastructure**: Added PrecisionMode support for FP16/BF16 operations on modern GPUs
   - **Comprehensive Validation**: GpuValidator with numerical accuracy, performance benchmarking, and memory health checks
   - **FFI Bridge Improvements**: Enhanced C++ kernel integration with feature gating and performance comparison tools

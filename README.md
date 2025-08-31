@@ -93,6 +93,9 @@ cargo test --workspace --no-default-features --features cuda --test cuda_validat
 
 # GPU memory health check (production monitoring)
 cargo test --workspace --no-default-features --features cuda gpu_memory_health
+
+# Deterministic GPU testing (enhanced in PR #108)
+BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo test --workspace --no-default-features --features cuda -- --test-threads=1
 ```
 
 #### 🛠️ **Utilities**
