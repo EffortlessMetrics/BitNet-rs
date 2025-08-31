@@ -107,7 +107,6 @@ impl Fixtures {
         #[cfg(not(feature = "fixtures"))]
         {
             // Return unit type when fixtures are disabled
-            ()
         }
     }
 }

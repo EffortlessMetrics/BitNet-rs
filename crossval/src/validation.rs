@@ -133,24 +133,24 @@ impl ValidationSuite {
         };
 
         // Load baseline if available
-        if let Some(baseline) = baseline_path {
-            if baseline.exists() {
-                let content = std::fs::read_to_string(baseline)?;
-                let baseline_data: serde_json::Value = serde_json::from_str(&content)?;
+        if let Some(baseline) = baseline_path
+            && baseline.exists()
+        {
+            let content = std::fs::read_to_string(baseline)?;
+            let baseline_data: serde_json::Value = serde_json::from_str(&content)?;
 
-                if let Some(cpu_data) = baseline_data.get("cpu") {
-                    if let Some(model_data) = cpu_data.get("model_default") {
-                        result.baseline_tok_s = model_data.get("tok_s").and_then(|v| v.as_f64());
-                        result.baseline_rss_mb = model_data.get("rss_mb").and_then(|v| v.as_f64());
+            if let Some(cpu_data) = baseline_data.get("cpu")
+                && let Some(model_data) = cpu_data.get("model_default")
+            {
+                result.baseline_tok_s = model_data.get("tok_s").and_then(|v| v.as_f64());
+                result.baseline_rss_mb = model_data.get("rss_mb").and_then(|v| v.as_f64());
 
-                        // Calculate ratios
-                        if let Some(base_tok) = result.baseline_tok_s {
-                            result.throughput_ratio = Some(result.tokens_per_second / base_tok);
-                        }
-                        if let Some(base_rss) = result.baseline_rss_mb {
-                            result.memory_ratio = Some(result.rss_mb / base_rss);
-                        }
-                    }
+                // Calculate ratios
+                if let Some(base_tok) = result.baseline_tok_s {
+                    result.throughput_ratio = Some(result.tokens_per_second / base_tok);
+                }
+                if let Some(base_rss) = result.baseline_rss_mb {
+                    result.memory_ratio = Some(result.rss_mb / base_rss);
                 }
             }
         }

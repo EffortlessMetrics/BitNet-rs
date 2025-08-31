@@ -4,7 +4,6 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::KernelProvider;
     use crate::gpu::{
         BenchmarkConfig, CudaKernel, GpuBenchmark, MemoryPoolConfig, MixedPrecisionKernel,
@@ -188,7 +187,7 @@ mod tests {
                 println!("Precision mode: {:?}", kernel.precision_mode());
 
                 // Test precision mode setting
-                let _ = kernel.set_precision_mode(PrecisionMode::FP32);
+                kernel.set_precision_mode(PrecisionMode::FP32);
                 assert_eq!(kernel.precision_mode(), PrecisionMode::FP32);
 
                 // Test small matrix multiplication
@@ -197,7 +196,7 @@ mod tests {
                 let k = 16;
                 let a: Vec<f32> = (0..m * k).map(|i| (i as f32) / (m * k) as f32).collect();
                 let b: Vec<f32> = (0..k * n).map(|i| (i as f32) / (k * n) as f32).collect();
-                let mut c = vec![0.0f32; m * n];
+                let _c = vec![0.0f32; m * n];
 
                 // Mixed precision matmul is not yet implemented, skip for now
                 println!("Mixed precision matmul not yet implemented, skipping actual computation");

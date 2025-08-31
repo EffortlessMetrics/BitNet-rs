@@ -170,10 +170,10 @@ async fn main() -> Result<()> {
     // Load a BitNet model
     let model = BitNetModel::from_file("model.gguf").await?;
     
-    // Create inference engine with CPU backend
+    // Create inference engine with device-aware backend selection
     let engine = InferenceEngine::builder()
         .model(model)
-        .backend(Backend::Cpu)
+        .backend(Backend::Auto) // Automatically selects GPU if available, falls back to CPU
         .build()?;
     
     // Run inference
@@ -182,6 +182,20 @@ async fn main() -> Result<()> {
     
     Ok(())
 }
+```
+
+#### Device-Aware Quantization
+
+BitNet.rs automatically selects the best available device for quantization operations:
+
+```rust
+use bitnet_quantization::I2SQuantizer;
+use candle_core::Device;
+
+// Automatic GPU acceleration with CPU fallback
+let quantizer = I2SQuantizer::new();
+let device = Device::new_cuda(0).unwrap_or(Device::Cpu); // Auto-fallback
+let quantized = quantizer.quantize(&tensor, &device)?;
 ```
 
 ### CLI Usage
@@ -231,11 +245,11 @@ curl -X POST http://localhost:8080/v1/completions \
 BitNet.rs uses feature flags to enable optional functionality:
 
 - `cpu`: CPU inference with optimized kernels (not enabled by default)
-- `cuda`: GPU acceleration via CUDA
+- `cuda`: GPU acceleration via CUDA with device-aware quantization
 - `avx2`: x86_64 AVX2 SIMD optimizations
 - `avx512`: x86_64 AVX-512 SIMD optimizations
 - `neon`: ARM64 NEON SIMD optimizations
-- `ffi`: Enable C++ FFI bridge for cross-validation
+- `ffi`: Enable C++ FFI bridge for cross-validation (with enhanced safety documentation)
 - `full`: Enable all features
 
 **Important:** Default features are empty to prevent unintended dependencies. You must explicitly enable features:
@@ -255,6 +269,94 @@ cargo build --features full
 ```
 
 See [FEATURES.md](FEATURES.md) for detailed feature documentation.
+
+## Device-Aware Quantization Guide
+
+BitNet.rs includes advanced device-aware quantization that automatically leverages GPU acceleration while providing robust CPU fallback. This ensures optimal performance across different hardware configurations.
+
+### How-to: Use Device-Aware Quantization
+
+#### Basic Usage with Automatic Device Selection
+
+```rust
+use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
+use candle_core::Device;
+
+// Create quantizers - they automatically detect device capabilities
+let i2s_quantizer = I2SQuantizer::new();
+let tl1_quantizer = TL1Quantizer::new(); 
+let tl2_quantizer = TL2Quantizer::new();
+
+// Device selection with fallback
+let device = Device::new_cuda(0).unwrap_or(Device::Cpu);
+
+// All quantizers support device-aware operations
+let quantized_i2s = i2s_quantizer.quantize(&tensor, &device)?;
+let quantized_tl1 = tl1_quantizer.quantize(&tensor, &device)?;
+let quantized_tl2 = tl2_quantizer.quantize(&tensor, &device)?;
+```
+
+#### Explicit Device Control
+
+```rust
+use candle_core::Device;
+use bitnet_quantization::I2SQuantizer;
+
+// Force CPU quantization
+let cpu = Device::Cpu;
+let quantized_cpu = quantizer.quantize(&tensor, &cpu)?;
+
+// Use specific GPU device (if available)
+if let Ok(gpu) = Device::new_cuda(0) {
+    let quantized_gpu = quantizer.quantize(&tensor, &gpu)?;
+} else {
+    println!("CUDA not available, falling back to CPU");
+}
+```
+
+#### Error Handling and Fallback Patterns
+
+```rust
+use bitnet_quantization::I2SQuantizer;
+use candle_core::Device;
+
+fn quantize_with_fallback(
+    quantizer: &I2SQuantizer, 
+    tensor: &BitNetTensor
+) -> Result<QuantizedTensor> {
+    // Try GPU first if available
+    #[cfg(feature = "cuda")]
+    {
+        if let Ok(gpu) = Device::new_cuda(0) {
+            if let Ok(result) = quantizer.quantize(tensor, &gpu) {
+                return Ok(result);
+            }
+        }
+    }
+    
+    // Fallback to CPU
+    quantizer.quantize(tensor, &Device::Cpu)
+}
+```
+
+### GPU Acceleration Details
+
+- **Automatic Detection**: Quantizers automatically detect CUDA availability
+- **Transparent Fallback**: Operations seamlessly fall back to CPU when GPU fails
+- **Device Affinity**: Tensors maintain device affinity throughout quantization pipeline
+- **Memory Safety**: All GPU operations include proper error handling and cleanup
+
+### Testing Device Parity
+
+BitNet.rs includes comprehensive GPU parity tests to ensure identical results across devices:
+
+```bash
+# Run GPU parity tests (requires CUDA)
+cargo test --workspace --no-default-features --features cuda gpu_parity
+
+# Test specific quantizer GPU behavior
+cargo test -p bitnet-quantization --features cuda --test gpu_parity
+```
 
 ## GGUF Validation & Model Compatibility
 

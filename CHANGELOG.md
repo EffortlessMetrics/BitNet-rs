@@ -28,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Environment variable overrides for deterministic builds
 
 ### Added
+- **Device-Aware Quantization with GPU Fallback** ([#106](https://github.com/EffortlessSteven/BitNet-rs/pull/106)):
+  - Enhanced TL1, TL2, and I2S quantizers with device-aware capabilities
+  - Automatic GPU acceleration with CPU fallback for robustness
+  - CUDA kernel integration for improved quantization performance
+  - FFI safety documentation for all unsafe functions (30+ functions)
+  - Comprehensive test coverage for device switching and fallback behavior
 - **HuggingFace Model Loader**:
   - Parse `config.json` for model metadata
   - Load sharded SafeTensors weights into `BitNetModel`
