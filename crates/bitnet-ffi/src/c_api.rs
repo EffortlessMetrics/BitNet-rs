@@ -128,13 +128,19 @@ pub extern "C" fn bitnet_cleanup() -> c_int {
 /// Loads a BitNet model from the specified file path. The model format is
 /// automatically detected based on the file extension and content.
 ///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `path` must be a valid pointer to a null-terminated C string
+/// - The string must be valid UTF-8
+/// - The caller must ensure the string remains valid for the duration of this call
+///
 /// # Arguments
 /// * `path` - Null-terminated string containing the path to the model file
 ///
 /// # Returns
 /// Model ID (>= 0) on success, negative error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_model_load(path: *const c_char) -> c_int {
+pub unsafe extern "C" fn bitnet_model_load(path: *const c_char) -> c_int {
     clear_last_error();
 
     if path.is_null() {
@@ -169,6 +175,13 @@ pub extern "C" fn bitnet_model_load(path: *const c_char) -> c_int {
 /// Loads a BitNet model with the specified configuration. This provides more
 /// control over the loading process than bitnet_model_load().
 ///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `path` must be a valid pointer to a null-terminated C string
+/// - `config` must be a valid pointer to a properly initialized BitNetCConfig structure
+/// - Both pointers must remain valid for the duration of this call
+/// - The string must be valid UTF-8
+///
 /// # Arguments
 /// * `path` - Null-terminated string containing the path to the model file
 /// * `config` - Pointer to model configuration structure
@@ -176,7 +189,7 @@ pub extern "C" fn bitnet_model_load(path: *const c_char) -> c_int {
 /// # Returns
 /// Model ID (>= 0) on success, negative error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_model_load_with_config(
+pub unsafe extern "C" fn bitnet_model_load_with_config(
     path: *const c_char,
     config: *const BitNetCConfig,
 ) -> c_int {
@@ -252,6 +265,13 @@ pub extern "C" fn bitnet_model_free(model_id: c_int) -> c_int {
 /// Generates text from the given prompt using the specified model.
 /// The output buffer must be large enough to hold the generated text.
 ///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `prompt` must be a valid pointer to a null-terminated C string with valid UTF-8
+/// - `output` must be a valid pointer to a writable buffer of at least `max_len` bytes
+/// - The caller must ensure both pointers remain valid for the duration of this call
+/// - The caller must ensure the output buffer is large enough for the generated text plus null terminator
+///
 /// # Arguments
 /// * `model_id` - Model ID returned by bitnet_model_load()
 /// * `prompt` - Null-terminated input prompt string
@@ -261,7 +281,7 @@ pub extern "C" fn bitnet_model_free(model_id: c_int) -> c_int {
 /// # Returns
 /// Number of characters written (excluding null terminator) on success, negative error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_inference(
+pub unsafe extern "C" fn bitnet_inference(
     model_id: c_int,
     prompt: *const c_char,
     output: *mut c_char,
@@ -329,6 +349,14 @@ pub extern "C" fn bitnet_inference(
 /// Generates text from the given prompt using the specified model and configuration.
 /// This provides more control over the generation process than bitnet_inference().
 ///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `prompt` must be a valid pointer to a null-terminated C string with valid UTF-8
+/// - `config` must be a valid pointer to a properly initialized BitNetCInferenceConfig structure
+/// - `output` must be a valid pointer to a writable buffer of at least `max_len` bytes
+/// - All pointers must remain valid for the duration of this call
+/// - The caller must ensure the output buffer is large enough for the generated text plus null terminator
+///
 /// # Arguments
 /// * `model_id` - Model ID returned by bitnet_model_load()
 /// * `prompt` - Null-terminated input prompt string
@@ -339,7 +367,7 @@ pub extern "C" fn bitnet_inference(
 /// # Returns
 /// Number of characters written (excluding null terminator) on success, negative error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_inference_with_config(
+pub unsafe extern "C" fn bitnet_inference_with_config(
     model_id: c_int,
     prompt: *const c_char,
     config: *const BitNetCInferenceConfig,
@@ -490,6 +518,11 @@ pub extern "C" fn bitnet_model_is_loaded(model_id: c_int) -> c_int {
 ///
 /// Retrieves information about a loaded model.
 ///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `info` must be a valid pointer to a writable BitNetCModel structure
+/// - The caller must ensure the pointer remains valid for the duration of this call
+///
 /// # Arguments
 /// * `model_id` - Model ID
 /// * `info` - Pointer to structure to fill with model information
@@ -497,7 +530,7 @@ pub extern "C" fn bitnet_model_is_loaded(model_id: c_int) -> c_int {
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_model_get_info(model_id: c_int, info: *mut BitNetCModel) -> c_int {
+pub unsafe extern "C" fn bitnet_model_get_info(model_id: c_int, info: *mut BitNetCModel) -> c_int {
     clear_last_error();
 
     if model_id < 0 {
@@ -607,6 +640,16 @@ pub extern "C" fn bitnet_is_gpu_available() -> c_int {
 /// Processes multiple prompts concurrently for improved throughput.
 /// All prompts use the same inference configuration.
 ///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `prompts` must be a valid pointer to an array of `num_prompts` valid C string pointers
+/// - `config` must be a valid pointer to a properly initialized BitNetCInferenceConfig structure
+/// - `outputs` must be a valid pointer to an array of `num_prompts` writable buffer pointers
+/// - `max_lens` must be a valid pointer to an array of `num_prompts` size values
+/// - All string pointers must be null-terminated and contain valid UTF-8
+/// - All output buffers must be large enough for the generated text plus null terminators
+/// - All pointers must remain valid for the duration of this call
+///
 /// # Arguments
 /// * `model_id` - Model ID returned by bitnet_model_load()
 /// * `prompts` - Array of null-terminated prompt strings
@@ -618,7 +661,7 @@ pub extern "C" fn bitnet_is_gpu_available() -> c_int {
 /// # Returns
 /// Number of successful inferences on success, negative error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_batch_inference(
+pub unsafe extern "C" fn bitnet_batch_inference(
     model_id: c_int,
     prompts: *const *const c_char,
     num_prompts: usize,
@@ -732,6 +775,14 @@ pub extern "C" fn bitnet_batch_inference(
 /// Begins streaming text generation that yields tokens incrementally.
 /// The callback function is called for each generated token.
 ///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `prompt` must be a valid pointer to a null-terminated C string with valid UTF-8
+/// - `config` must be a valid pointer to a properly initialized BitNetCInferenceConfig structure
+/// - `stream_config` must be a valid pointer to a properly initialized BitNetCStreamConfig structure
+/// - All pointers must remain valid for the duration of this call
+/// - Any callback function pointers in the config structures must be valid
+///
 /// # Arguments
 /// * `model_id` - Model ID returned by bitnet_model_load()
 /// * `prompt` - Null-terminated input prompt string
@@ -741,7 +792,7 @@ pub extern "C" fn bitnet_batch_inference(
 /// # Returns
 /// Stream ID (>= 0) on success, negative error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_start_streaming(
+pub unsafe extern "C" fn bitnet_start_streaming(
     model_id: c_int,
     prompt: *const c_char,
     config: *const BitNetCInferenceConfig,
@@ -839,6 +890,12 @@ pub extern "C" fn bitnet_stop_streaming(stream_id: c_int) -> c_int {
 /// Retrieves the next token from an active streaming session.
 /// Returns 0 when the stream is finished.
 ///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `token` must be a valid pointer to a writable buffer of at least `max_len` bytes
+/// - The caller must ensure the buffer remains valid for the duration of this call
+/// - The buffer must be large enough for the token string plus null terminator
+///
 /// # Arguments
 /// * `stream_id` - Stream ID returned by bitnet_start_streaming()
 /// * `token` - Buffer to store the token (null-terminated)
@@ -847,7 +904,7 @@ pub extern "C" fn bitnet_stop_streaming(stream_id: c_int) -> c_int {
 /// # Returns
 /// Length of token on success, 0 if stream finished, negative error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_stream_next_token(
+pub unsafe extern "C" fn bitnet_stream_next_token(
     stream_id: c_int,
     token: *mut c_char,
     max_len: usize,
@@ -890,6 +947,11 @@ pub extern "C" fn bitnet_stream_next_token(
 ///
 /// Retrieves detailed performance metrics for the specified model.
 ///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `metrics` must be a valid pointer to a writable BitNetCPerformanceMetrics structure
+/// - The caller must ensure the pointer remains valid for the duration of this call
+///
 /// # Arguments
 /// * `model_id` - Model ID
 /// * `metrics` - Pointer to structure to fill with performance metrics
@@ -897,7 +959,7 @@ pub extern "C" fn bitnet_stream_next_token(
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_get_performance_metrics(
+pub unsafe extern "C" fn bitnet_get_performance_metrics(
     model_id: c_int,
     metrics: *mut BitNetCPerformanceMetrics,
 ) -> c_int {
@@ -1021,6 +1083,11 @@ pub extern "C" fn bitnet_garbage_collect() -> c_int {
 ///
 /// Switches the inference backend for a loaded model between CPU and GPU.
 ///
+/// # Safety
+/// This function is safe to call with integer parameters, but care must be taken:
+/// - The model_id must be valid and correspond to a loaded model
+/// - The backend_preference must be a valid backend identifier
+///
 /// # Arguments
 /// * `model_id` - Model ID
 /// * `backend_preference` - Backend preference (0=auto, 1=cpu, 2=gpu)
@@ -1028,7 +1095,7 @@ pub extern "C" fn bitnet_garbage_collect() -> c_int {
 /// # Returns
 /// BITNET_SUCCESS on success, error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_switch_model_backend(
+pub unsafe extern "C" fn bitnet_switch_model_backend(
     model_id: c_int,
     backend_preference: c_uint,
 ) -> c_int {

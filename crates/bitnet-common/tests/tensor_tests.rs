@@ -141,18 +141,18 @@ fn test_bitnet_tensor_inner_access() {
 fn test_tensor_error_handling() {
     // Test invalid device conversion (when GPU features are not available)
     let device = Device::Cuda(0);
-    let result = BitNetTensor::zeros(&[2, 2], DType::F32, &device);
+    let _result = BitNetTensor::zeros(&[2, 2], DType::F32, &device);
 
     // This should fail when GPU features are not enabled
     #[cfg(not(feature = "gpu"))]
-    assert!(result.is_err());
+    assert!(_result.is_err());
 
     // Test Metal device
     let device = Device::Metal;
-    let result = BitNetTensor::zeros(&[2, 2], DType::F32, &device);
+    let _result = BitNetTensor::zeros(&[2, 2], DType::F32, &device);
 
     #[cfg(not(feature = "gpu"))]
-    assert!(result.is_err());
+    assert!(_result.is_err());
 }
 
 #[test]

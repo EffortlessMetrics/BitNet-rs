@@ -69,8 +69,14 @@ pub struct llama_context_params {
 }
 
 /// Load model from file - 100% compatible with llama_load_model_from_file
+///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `path_model` must be a valid pointer to a null-terminated C string
+/// - The string must be valid UTF-8 and the file must exist
+/// - The caller must ensure the pointer remains valid for the duration of this call
 #[unsafe(no_mangle)]
-pub extern "C" fn llama_load_model_from_file(
+pub unsafe extern "C" fn llama_load_model_from_file(
     path_model: *const c_char,
     params: llama_model_params,
 ) -> *mut llama_model {
@@ -130,8 +136,15 @@ pub extern "C" fn llama_load_model_from_file(
 }
 
 /// Free model - matches llama_free_model
+/// Free a model - 100% compatible with llama_free_model
+///
+/// # Safety
+/// This function takes ownership of a raw pointer and must be called with valid arguments:
+/// - `model` must be a valid pointer previously returned by llama_load_model_from_file
+/// - The model must not be used after this call
+/// - This function must not be called twice with the same pointer
 #[unsafe(no_mangle)]
-pub extern "C" fn llama_free_model(model: *mut llama_model) {
+pub unsafe extern "C" fn llama_free_model(model: *mut llama_model) {
     if !model.is_null() {
         unsafe {
             drop(Box::from_raw(model));
@@ -140,8 +153,14 @@ pub extern "C" fn llama_free_model(model: *mut llama_model) {
 }
 
 /// Create context from model - matches llama_new_context_with_model
+/// Create new context with model - 100% compatible with llama_new_context_with_model
+///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `model` must be a valid pointer to a model previously loaded with llama_load_model_from_file
+/// - The model must remain valid for the lifetime of the returned context
 #[unsafe(no_mangle)]
-pub extern "C" fn llama_new_context_with_model(
+pub unsafe extern "C" fn llama_new_context_with_model(
     model: *mut llama_model,
     _params: llama_context_params,
 ) -> *mut llama_context {
@@ -166,8 +185,15 @@ pub extern "C" fn llama_new_context_with_model(
 }
 
 /// Free context - matches llama_free
+/// Free a context - 100% compatible with llama_free
+///
+/// # Safety
+/// This function takes ownership of a raw pointer and must be called with valid arguments:
+/// - `ctx` must be a valid pointer previously returned by llama_new_context_with_model
+/// - The context must not be used after this call
+/// - This function must not be called twice with the same pointer
 #[unsafe(no_mangle)]
-pub extern "C" fn llama_free(ctx: *mut llama_context) {
+pub unsafe extern "C" fn llama_free(ctx: *mut llama_context) {
     if !ctx.is_null() {
         unsafe {
             drop(Box::from_raw(ctx));
@@ -178,8 +204,16 @@ pub extern "C" fn llama_free(ctx: *mut llama_context) {
 /// Tokenize text - 100% compatible with llama_tokenize
 /// Returns number of tokens, or negative value on error
 /// If return value > n_max_tokens, call again with larger buffer
+/// Tokenize text - 100% compatible with llama_tokenize
+///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `model` must be a valid pointer to a loaded model
+/// - `text` must be a valid pointer to a null-terminated C string
+/// - `tokens` must be a valid pointer to a writable array of at least `n_max_tokens` elements
+/// - All pointers must remain valid for the duration of this call
 #[unsafe(no_mangle)]
-pub extern "C" fn llama_tokenize(
+pub unsafe extern "C" fn llama_tokenize(
     model: *const llama_model,
     text: *const c_char,
     text_len: c_int,
@@ -248,8 +282,15 @@ pub extern "C" fn llama_tokenize(
 }
 
 /// Evaluate tokens - matches llama_eval
+/// Evaluate tokens - 100% compatible with llama_eval
+///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `ctx` must be a valid pointer to a context
+/// - `tokens` must be a valid pointer to a readable array of at least `n_tokens` elements
+/// - All pointers must remain valid for the duration of this call
 #[unsafe(no_mangle)]
-pub extern "C" fn llama_eval(
+pub unsafe extern "C" fn llama_eval(
     ctx: *mut llama_context,
     tokens: *const c_int,
     n_tokens: c_int,
@@ -280,8 +321,14 @@ pub extern "C" fn llama_eval(
 }
 
 /// Get logits pointer - matches llama_get_logits
+/// Get logits - 100% compatible with llama_get_logits
+///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `ctx` must be a valid pointer to a context
+/// - The returned pointer is valid only until the next call to llama_eval
 #[unsafe(no_mangle)]
-pub extern "C" fn llama_get_logits(ctx: *mut llama_context) -> *mut c_float {
+pub unsafe extern "C" fn llama_get_logits(ctx: *mut llama_context) -> *mut c_float {
     if ctx.is_null() {
         return ptr::null_mut();
     }
@@ -291,8 +338,15 @@ pub extern "C" fn llama_get_logits(ctx: *mut llama_context) -> *mut c_float {
 }
 
 /// Get logits for specific token - matches llama_get_logits_ith
+/// Get logits at specific position - 100% compatible with llama_get_logits_ith
+///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `ctx` must be a valid pointer to a context
+/// - `i` must be a valid token index
+/// - The returned pointer is valid only until the next call to llama_eval
 #[unsafe(no_mangle)]
-pub extern "C" fn llama_get_logits_ith(ctx: *mut llama_context, i: c_int) -> *mut c_float {
+pub unsafe extern "C" fn llama_get_logits_ith(ctx: *mut llama_context, i: c_int) -> *mut c_float {
     if ctx.is_null() || i < 0 {
         return ptr::null_mut();
     }
@@ -308,8 +362,13 @@ pub extern "C" fn llama_get_logits_ith(ctx: *mut llama_context, i: c_int) -> *mu
 }
 
 /// Get vocabulary size
+/// Get vocabulary size - 100% compatible with llama_n_vocab
+///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `model` must be a valid pointer to a loaded model
 #[unsafe(no_mangle)]
-pub extern "C" fn llama_n_vocab(model: *const llama_model) -> c_int {
+pub unsafe extern "C" fn llama_n_vocab(model: *const llama_model) -> c_int {
     if model.is_null() {
         return 0;
     }
@@ -319,8 +378,13 @@ pub extern "C" fn llama_n_vocab(model: *const llama_model) -> c_int {
 }
 
 /// Get context size
+/// Get context size - 100% compatible with llama_n_ctx
+///
+/// # Safety
+/// This function dereferences raw pointers and must be called with valid arguments:
+/// - `ctx` must be a valid pointer to a context
 #[unsafe(no_mangle)]
-pub extern "C" fn llama_n_ctx(ctx: *const llama_context) -> c_int {
+pub unsafe extern "C" fn llama_n_ctx(ctx: *const llama_context) -> c_int {
     if ctx.is_null() {
         return 0;
     }

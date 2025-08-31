@@ -55,7 +55,7 @@ fn compile_ffi() {
                     || name.starts_with("libggml"))
                     && (path
                         .extension()
-                        .map_or(false, |ext| ext == "so" || ext == "dylib" || ext == "a"))
+                        .is_some_and(|ext| ext == "so" || ext == "dylib" || ext == "a"))
                 {
                     let lib_name = name.strip_prefix("lib").unwrap_or(name);
                     println!("cargo:rustc-link-lib=dylib={}", lib_name);

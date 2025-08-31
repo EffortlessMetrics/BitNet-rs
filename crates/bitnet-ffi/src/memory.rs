@@ -150,7 +150,13 @@ impl MemoryPool {
     }
 
     /// Deallocate memory from system
-    pub fn deallocate(&self, ptr: *mut u8, size: usize) -> Result<(), BitNetCError> {
+    ///
+    /// # Safety
+    /// This function must be called with valid arguments:
+    /// - `ptr` must be a valid pointer previously allocated by this allocator or null
+    /// - `size` must match the size used during allocation
+    /// - The memory region must not be accessed after this call
+    pub unsafe fn deallocate(&self, ptr: *mut u8, size: usize) -> Result<(), BitNetCError> {
         if ptr.is_null() {
             return Ok(());
         }
@@ -254,8 +260,16 @@ impl MemoryManager {
     }
 
     /// Deallocate memory
-    pub fn deallocate(&self, ptr: *mut u8, size: usize) -> Result<(), BitNetCError> {
-        self.pool.deallocate(ptr, size)
+    ///
+    /// # Safety
+    /// This function must be called with valid arguments:
+    /// - `ptr` must be a valid pointer previously allocated by this allocator or null
+    /// - `size` must match the size used during allocation
+    /// - The memory region must not be accessed after this call
+    pub unsafe fn deallocate(&self, ptr: *mut u8, size: usize) -> Result<(), BitNetCError> {
+        // SAFETY: This function is marked unsafe and requires the caller to ensure
+        // the pointer is valid and was previously allocated by this allocator
+        unsafe { self.pool.deallocate(ptr, size) }
     }
 
     /// Enable or disable memory tracking
@@ -393,7 +407,7 @@ mod tests {
         assert!(!ptr.is_null());
 
         // Test deallocation
-        assert!(pool.deallocate(ptr, 1024).is_ok());
+        assert!(unsafe { pool.deallocate(ptr, 1024) }.is_ok());
 
         // Test stats
         let stats = pool.get_stats().unwrap();
