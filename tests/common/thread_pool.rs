@@ -7,7 +7,6 @@ use std::sync::{Arc, OnceLock};
 /// - Global thread pool reconfiguration conflicts
 /// - Oversubscription during parallel test execution
 /// - Thread pool deadlocks between tests
-
 static TEST_POOL: OnceLock<Arc<ThreadPool>> = OnceLock::new();
 
 /// Get or initialize a test-specific thread pool

@@ -134,7 +134,7 @@ pub extern "C" fn bitnet_cleanup() -> c_int {
 /// # Returns
 /// Model ID (>= 0) on success, negative error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_model_load(path: *const c_char) -> c_int {
+pub unsafe extern "C" fn bitnet_model_load(path: *const c_char) -> c_int {
     clear_last_error();
 
     if path.is_null() {
@@ -176,7 +176,7 @@ pub extern "C" fn bitnet_model_load(path: *const c_char) -> c_int {
 /// # Returns
 /// Model ID (>= 0) on success, negative error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_model_load_with_config(
+pub unsafe extern "C" fn bitnet_model_load_with_config(
     path: *const c_char,
     config: *const BitNetCConfig,
 ) -> c_int {
@@ -261,7 +261,7 @@ pub extern "C" fn bitnet_model_free(model_id: c_int) -> c_int {
 /// # Returns
 /// Number of characters written (excluding null terminator) on success, negative error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_inference(
+pub unsafe extern "C" fn bitnet_inference(
     model_id: c_int,
     prompt: *const c_char,
     output: *mut c_char,
@@ -339,7 +339,7 @@ pub extern "C" fn bitnet_inference(
 /// # Returns
 /// Number of characters written (excluding null terminator) on success, negative error code on failure
 #[unsafe(no_mangle)]
-pub extern "C" fn bitnet_inference_with_config(
+pub unsafe extern "C" fn bitnet_inference_with_config(
     model_id: c_int,
     prompt: *const c_char,
     config: *const BitNetCInferenceConfig,
