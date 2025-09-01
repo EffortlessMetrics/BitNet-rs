@@ -12,10 +12,10 @@ pub fn kwargs_to_hashmap(
 
     if let Some(kwargs) = kwargs {
         for (key, value) in kwargs {
-            if let (Ok(key_str), Ok(value_str)) = (key.extract::<String>(), value.str()) {
-                if let Ok(value_string) = value_str.extract::<String>() {
-                    map.insert(key_str, value_string);
-                }
+            if let (Ok(key_str), Ok(value_str)) = (key.extract::<String>(), value.str())
+                && let Ok(value_string) = value_str.extract::<String>()
+            {
+                map.insert(key_str, value_string);
             }
         }
     }
