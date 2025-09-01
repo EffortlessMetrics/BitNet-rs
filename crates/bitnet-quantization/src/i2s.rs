@@ -76,7 +76,7 @@ impl I2SQuantizer {
         let shape = tensor.shape().to_vec();
 
         // Calculate grouped scales for better accuracy
-        let mut scales = calculate_grouped_scales(&data, self.block_size, 2);
+        let scales = calculate_grouped_scales(&data, self.block_size, 2);
 
         if matches!(device, Device::Cuda(_)) {
             #[cfg(feature = "cuda")]

@@ -234,7 +234,7 @@ impl TL2Quantizer {
         let lookup_table = VectorizedLookupTable::new(min_val, max_val, self.config.precision_bits);
 
         // Calculate grouped scales for better accuracy
-        let mut scales =
+        let scales =
             calculate_grouped_scales(&data, self.config.block_size, self.config.precision_bits);
 
         if matches!(device, Device::Cuda(_)) {

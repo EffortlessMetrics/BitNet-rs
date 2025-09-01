@@ -180,7 +180,7 @@ impl TL1Quantizer {
         );
 
         // Calculate grouped scales
-        let mut scales =
+        let scales =
             calculate_grouped_scales(&data, self.config.block_size, self.config.precision_bits);
 
         if matches!(device, Device::Cuda(_)) {
