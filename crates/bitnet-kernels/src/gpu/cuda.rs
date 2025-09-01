@@ -200,14 +200,14 @@ impl CudaKernel {
         })?;
 
         // Allocate output arrays on device
-        let output_size = (input.len() + 3) / 4; // 4 values per byte for 2-bit quantization
+        let output_size = input.len().div_ceil(4); // 4 values per byte for 2-bit quantization
         let mut output_dev: CudaSlice<u8> =
             self.stream.alloc_zeros(output_size).map_err(|e| KernelError::GpuError {
                 reason: format!("Failed to allocate output on device: {:?}", e),
             })?;
 
         // Allocate scale array (one scale per block of 128 elements)
-        let scale_blocks = (input.len() + 127) / 128;
+        let scale_blocks = input.len().div_ceil(128);
         let mut scales_dev: CudaSlice<f32> =
             self.stream.alloc_zeros(scale_blocks).map_err(|e| KernelError::GpuError {
                 reason: format!("Failed to allocate scales on device: {:?}", e),

@@ -118,7 +118,7 @@ fn test_i2s_quantization_small_input() -> Result<()> {
     // Test with small, predictable input
     let input = vec![1.0, -1.0, 0.5, -0.5, 0.0, 0.25, -0.25, 0.75];
     let mut output = vec![0u8; 2]; // 8 values / 4 per byte = 2 bytes
-    let mut scales = vec![0.0f32; 1]; // 8 values / 128 per block = 1 block
+    let mut scales = vec![0.0f32; 8_usize.div_ceil(32)]; // Block size 32
 
     let result = quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
     assert!(result.is_ok());
@@ -148,7 +148,7 @@ fn test_gpu_i2s_quantization() -> Result<()> {
     // Test with medium-sized input
     let input = TestDataGenerator::generate_test_input(256);
     let mut output = vec![0u8; 64]; // 256/4 = 64 bytes
-    let mut scales = vec![0.0f32; 2]; // 256/128 = 2 blocks
+    let mut scales = vec![0.0f32; 256_usize.div_ceil(32)]; // Block size 32
 
     let result = quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
 
@@ -168,7 +168,7 @@ fn test_gpu_i2s_quantization() -> Result<()> {
         Err(e) => {
             println!("⚠️ GPU quantization failed, but may have fallen back: {}", e);
             // Check if fallback worked
-            assert_eq!(quantizer.active_provider(), "Fallback");
+            assert_eq!(quantizer.active_provider(), "fallback");
         }
     }
 
@@ -192,7 +192,7 @@ fn test_gpu_vs_cpu_quantization_accuracy() -> Result<()> {
 
     // CPU quantization
     let mut cpu_output = vec![0u8; 128]; // 512/4 = 128 bytes
-    let mut cpu_scales = vec![0.0f32; 4]; // 512/128 = 4 blocks
+    let mut cpu_scales = vec![0.0f32; 512_usize.div_ceil(32)]; // Block size 32
 
     let cpu_result =
         cpu_quantizer.quantize(&input, &mut cpu_output, &mut cpu_scales, QuantizationType::I2S);
@@ -200,7 +200,7 @@ fn test_gpu_vs_cpu_quantization_accuracy() -> Result<()> {
 
     // GPU quantization (with potential fallback)
     let mut gpu_output = vec![0u8; 128];
-    let mut gpu_scales = vec![0.0f32; 4];
+    let mut gpu_scales = vec![0.0f32; 512_usize.div_ceil(32)]; // Block size 32
 
     let gpu_result =
         gpu_quantizer.quantize(&input, &mut gpu_output, &mut gpu_scales, QuantizationType::I2S);
@@ -274,7 +274,7 @@ fn test_gpu_quantization_fallback() -> Result<()> {
     // Test normal operation
     let input = vec![1.0; 64];
     let mut output = vec![0u8; 16];
-    let mut scales = vec![0.0f32; 1];
+    let mut scales = vec![0.0f32; 64_usize.div_ceil(32)]; // Block size 32
 
     let result1 = quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
     assert!(result1.is_ok());

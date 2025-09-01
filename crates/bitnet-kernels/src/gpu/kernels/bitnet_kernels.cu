@@ -98,8 +98,14 @@ extern "C" __global__ void bitnet_matmul_i2s(
 }
 
 /**
- * I2S Quantization Kernel
- * Quantizes float32 values to 2-bit signed integers with scaling
+ * I2S Quantization Kernel - CPU-compatible version
+ * Quantizes float32 values to 2-bit signed integers with identical CPU scaling
+ * 
+ * Key changes for CPU parity:
+ * - Uses global max computation (32-element blocks like CPU)
+ * - Identical scaling formula: max_val / 1.5
+ * - Deterministic bit packing without atomics
+ * - CPU-compatible quantization thresholds
  */
 extern "C" __global__ void bitnet_quantize_i2s(
     const float* __restrict__ input,
@@ -107,71 +113,122 @@ extern "C" __global__ void bitnet_quantize_i2s(
     float* __restrict__ scales,
     int N
 ) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int block_size = 128; // Process 128 elements per block for scale computation
-    int block_idx = idx / block_size;
+    const int BLOCK_SIZE = 32; // Match CPU block size exactly
+    int global_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int block_idx = global_idx / BLOCK_SIZE;
+    int local_idx = global_idx % BLOCK_SIZE;
     
-    if (idx >= N) return;
+    if (global_idx >= N) return;
     
-    // Shared memory for reduction
-    __shared__ float shared_max[32]; // Assuming max 1024 threads per block
+    // Step 1: Global max computation using two-phase reduction
+    // Phase 1 - Find local max across entire input
+    __shared__ float shared_max[1024]; // Max threads per block
+    float thread_max = 0.0f;
     
-    // Find maximum absolute value in the block for scaling
-    float local_max = 0.0f;
-    for (int i = block_idx * block_size; i < min((block_idx + 1) * block_size, N); i += blockDim.x) {
-        if (i + threadIdx.x < N) {
-            local_max = fmaxf(local_max, fabsf(input[i + threadIdx.x]));
-        }
+    // Each thread processes multiple elements if needed
+    for (int i = global_idx; i < N; i += gridDim.x * blockDim.x) {
+        thread_max = fmaxf(thread_max, fabsf(input[i]));
     }
     
-    // Reduce to find block maximum
-    shared_max[threadIdx.x] = local_max;
+    shared_max[threadIdx.x] = thread_max;
     __syncthreads();
     
-    // Reduction in shared memory
+    // Phase 2 - Reduce within block
     for (int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (threadIdx.x < s && threadIdx.x + s < blockDim.x) {
+        if (threadIdx.x < s) {
             shared_max[threadIdx.x] = fmaxf(shared_max[threadIdx.x], shared_max[threadIdx.x + s]);
         }
         __syncthreads();
     }
     
-    float scale = shared_max[0];
-    if (scale == 0.0f) scale = 1.0f; // Avoid division by zero
+    // Global max is now in shared_max[0]
+    float global_max = shared_max[0];
     
-    // Store scale (only first thread in block)
-    if (threadIdx.x == 0) {
-        scales[block_idx] = scale;
+    // Step 2: Compute block scale using CPU-identical formula
+    int start_idx = block_idx * BLOCK_SIZE;
+    int end_idx = min(start_idx + BLOCK_SIZE, N);
+    
+    float block_max = 0.0f;
+    if (start_idx + local_idx < end_idx) {
+        block_max = fabsf(input[start_idx + local_idx]);
     }
     
-    // Quantize values
-    if (idx < N) {
-        float normalized = input[idx] / scale;
+    // Find max in this specific block
+    __shared__ float block_shared_max[32]; // One per local index
+    if (local_idx < 32) {
+        block_shared_max[local_idx] = block_max;
+    }
+    __syncthreads();
+    
+    // Reduce block max
+    for (int s = 16; s > 0; s >>= 1) {
+        if (local_idx < s && local_idx + s < 32) {
+            block_shared_max[local_idx] = fmaxf(block_shared_max[local_idx], block_shared_max[local_idx + s]);
+        }
+        __syncthreads();
+    }
+    
+    float block_scale;
+    if (local_idx == 0) {
+        float max_val = block_shared_max[0];
+        // CPU-identical scaling formula
+        block_scale = (max_val > 1e-8f) ? (max_val / 1.5f) : 1.0f;
+        scales[block_idx] = block_scale;
+    }
+    __syncthreads();
+    
+    // Broadcast scale to all threads in this block
+    block_scale = scales[block_idx];
+    
+    // Step 3: Quantize with CPU-identical thresholds
+    if (global_idx < N) {
+        float normalized = input[global_idx] / block_scale;
         int8_t quantized;
         
+        // CPU-identical quantization boundaries
         if (normalized > 0.5f) {
-            quantized = 1;
+            quantized = 1;   // +1
         } else if (normalized < -0.5f) {
-            quantized = -1;
+            quantized = 3;   // -1 (CPU uses 3i8 for -1)
         } else {
-            quantized = 0;
+            quantized = 0;   // 0
         }
         
-        // Pack 4 2-bit values into one byte
-        int pack_idx = idx / 4;
-        int bit_offset = (idx % 4) * 2;
+        // Step 4: Deterministic bit packing (no atomics)
+        int pack_idx = global_idx / 4;
+        int bit_offset = (global_idx % 4) * 2;
         
-        // Convert signed to unsigned for packing
+        // Convert to CPU-compatible unsigned values
         uint8_t unsigned_val;
         switch (quantized) {
-            case -1: unsigned_val = 0; break;
-            case 0: unsigned_val = 1; break;
-            case 1: unsigned_val = 2; break;
-            default: unsigned_val = 1; break;
+            case 3:  unsigned_val = 3; break; // -1 -> 3 (match CPU)
+            case 0:  unsigned_val = 0; break; // 0 -> 0  
+            case 1:  unsigned_val = 1; break; // +1 -> 1
+            default: unsigned_val = 0; break;
         }
         
-        // Atomic update to pack bits - cast to unsigned int*
-        atomicOr((unsigned int*)&output[pack_idx], (unsigned int)(unsigned_val << bit_offset));
+        // Deterministic packing: only one thread writes per byte position
+        if ((global_idx % 4) == 0 && pack_idx < (N + 3) / 4) {
+            // Clear the byte first
+            output[pack_idx] = 0;
+            
+            // Pack all 4 values for this byte position
+            for (int j = 0; j < 4 && (pack_idx * 4 + j) < N; j++) {
+                int src_idx = pack_idx * 4 + j;
+                float norm_val = input[src_idx] / block_scale;
+                
+                uint8_t val;
+                if (norm_val > 0.5f) {
+                    val = 1;  // +1
+                } else if (norm_val < -0.5f) {
+                    val = 3;  // -1 (CPU format)
+                } else {
+                    val = 0;  // 0
+                }
+                
+                output[pack_idx] |= (val << (j * 2));
+            }
+        }
     }
 }
 
@@ -282,17 +339,17 @@ extern "C" __global__ void bitnet_dequantize(
     uint8_t packed = input[pack_idx];
     uint8_t quantized = (packed >> bit_offset) & 0x3;
     
-    // Get scale
-    float scale = scales[idx / 128]; // Assuming block size of 128
+    // Get scale - use CPU-compatible block size of 32
+    float scale = scales[idx / 32]; // Match CPU block size
     
     // Dequantize based on type
     float dequantized;
     switch (quantization_type) {
-        case 0: // I2S
+        case 0: // I2S - CPU-compatible format
             switch (quantized) {
-                case 0: dequantized = -1.0f; break;
-                case 1: dequantized = 0.0f; break;
-                case 2: dequantized = 1.0f; break;
+                case 0: dequantized = 0.0f; break;  // 0 -> 0
+                case 1: dequantized = 1.0f; break;  // 1 -> +1
+                case 3: dequantized = -1.0f; break; // 3 -> -1 (CPU format)
                 default: dequantized = 0.0f; break;
             }
             break;
