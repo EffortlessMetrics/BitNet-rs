@@ -151,7 +151,8 @@ impl GenerationStream {
         // Validate streaming configuration
         streaming_config.validate().context("Invalid streaming configuration")?;
 
-        let (sender, receiver) = mpsc::channel::<Result<StreamResponse>>(streaming_config.buffer_size);
+        let (sender, receiver) =
+            mpsc::channel::<Result<StreamResponse>>(streaming_config.buffer_size);
         let cancellation_token = Arc::new(AtomicBool::new(false));
         let generation_stats = Arc::new(GenerationStats::default());
 
