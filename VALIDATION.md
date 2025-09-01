@@ -2,7 +2,7 @@
 
 ## Overview
 
-The BitNet.rs validation framework provides comprehensive testing and benchmarking tools to ensure correctness and performance of the 1-bit LLM implementation. It includes tokenizer parity testing, logit correlation analysis, perplexity evaluation, and performance benchmarking.
+The BitNet.rs validation framework provides comprehensive testing and benchmarking tools to ensure correctness and performance of the 1-bit LLM implementation. It includes tokenizer parity testing, logit correlation analysis, perplexity evaluation, performance benchmarking, and enhanced GGUF metadata inspection capabilities.
 
 ## Components
 
@@ -102,6 +102,30 @@ bitnet eval --model model.gguf --tokenizer tokenizer.json \
   --logits-topk 10 \
   --json-out eval.json
 ```
+
+### Inspect Command (Enhanced GGUF Metadata)
+```bash
+# Comprehensive GGUF metadata inspection
+bitnet inspect --model model.gguf --json              # JSON output for automation
+
+# Human-readable format with categorized metadata
+cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- model.gguf
+
+# Quick header validation in tests
+cargo test -p bitnet-inference --test engine_inspect
+```
+
+**Key Features:**
+- **Memory Efficient**: Only reads GGUF header, not tensor data
+- **Comprehensive Extraction**: KV pairs, quantization hints, tensor summaries
+- **Error Resilient**: Handles malformed GGUF files with detailed error messages
+- **CI/CD Ready**: Fast inspection suitable for automated pipelines
+
+**Validation Benefits:**
+- **Pre-flight Checks**: Validate model format before expensive loading
+- **Quantization Analysis**: Understand compression schemes and data types
+- **Tensor Mapping**: Preview tensor structure for compatibility verification
+- **Debugging Support**: Inspect GGUF structure for troubleshooting
 
 ## Validation Thresholds
 

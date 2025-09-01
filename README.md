@@ -220,6 +220,43 @@ println!("Active provider: {}", quantizer.active_provider());
 println!("GPU active: {}", quantizer.is_gpu_active());
 ```
 
+#### Enhanced GGUF Metadata Inspection
+
+BitNet.rs provides comprehensive GGUF metadata inspection capabilities that allow you to examine model files without loading them into memory:
+
+```rust
+use bitnet_inference::engine::inspect_model;
+
+// Lightweight inspection - only reads GGUF header
+let model_info = inspect_model("model.gguf")?;
+
+// Access comprehensive metadata
+println!("GGUF version: {}", model_info.version());
+println!("Number of tensors: {}", model_info.n_tensors());
+
+// Extract all key-value metadata
+for kv in model_info.kv_specs() {
+    println!("{}: {:?}", kv.key, kv.value);
+}
+
+// Get quantization hints
+for hint in model_info.quantization_hints() {
+    println!("Quantization: {}: {:?}", hint.key, hint.value);
+}
+
+// Examine tensor summaries without loading data
+for tensor in model_info.tensor_summaries() {
+    println!("Tensor: {} [{:?}] (dtype: {})", 
+             tensor.name, tensor.shape, tensor.dtype);
+}
+```
+
+**Key Features:**
+- **Memory efficient**: Only reads GGUF header, not tensor data
+- **Comprehensive metadata**: KV pairs, quantization info, tensor summaries
+- **Error resilient**: Handles malformed GGUF files gracefully
+- **Performance optimized**: Fast inspection for CI/CD pipelines
+
 ### CLI Usage
 
 ```bash
@@ -230,9 +267,12 @@ bitnet run --model model.gguf --prompt "Explain quantum computing"
 bitnet compat-check model.gguf
 bitnet compat-check model.gguf --json  # JSON output for scripting
 
-# Inspect model metadata
-bitnet inspect --model model.gguf
-bitnet inspect --model model.gguf --json
+# Inspect comprehensive GGUF metadata (enhanced in v0.1.0+)
+bitnet inspect --model model.gguf                     # Human-readable format
+bitnet inspect --model model.gguf --json              # JSON for scripting
+
+# Inspect with detailed metadata extraction
+cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- model.gguf
 
 # Tokenize text
 bitnet tokenize --model model.gguf --text "Hello, world!"

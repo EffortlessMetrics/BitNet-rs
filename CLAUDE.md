@@ -317,6 +317,52 @@ RUST_TEST_THREADS=1 RAYON_NUM_THREADS=1 cargo t1
 - macOS FFI: set `DYLD_LIBRARY_PATH=target/release`
 - Linux FFI: set `LD_LIBRARY_PATH=target/release`
 
+## GGUF Metadata Inspection (Enhanced)
+
+BitNet.rs provides comprehensive GGUF metadata inspection capabilities that allow detailed analysis without loading tensors into memory:
+
+### Core Features
+
+1. **Lightweight Header Parsing**: Only reads GGUF header for fast analysis
+2. **Comprehensive Metadata Extraction**: KV pairs, quantization hints, tensor summaries
+3. **Memory Efficient**: No tensor data loading required
+4. **Error Resilient**: Handles malformed GGUF files gracefully
+5. **Performance Optimized**: Suitable for CI/CD pipelines and automation
+
+### API Usage
+
+```rust
+use bitnet_inference::engine::inspect_model;
+
+// Lightweight inspection
+let model_info = inspect_model("model.gguf")?;
+
+// Access metadata categories
+let kv_specs = model_info.kv_specs();           // All key-value metadata
+let quant_hints = model_info.quantization_hints(); // Quantization-related metadata
+let tensors = model_info.tensor_summaries();    // Tensor names, shapes, dtypes
+```
+
+### Commands
+
+```bash
+# Enhanced CLI inspection
+cargo run -p bitnet-cli -- inspect --model model.gguf --json
+
+# Detailed example with categorized output
+cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- model.gguf
+
+# Quick header validation (fast path)
+cargo test -p bitnet-inference --test engine_inspect
+```
+
+### Use Cases
+
+- **CI/CD**: Fast model validation in deployment pipelines  
+- **Model Analysis**: Understand quantization schemes without full loading
+- **Debugging**: Inspect GGUF structure for compatibility issues
+- **Automation**: Extract metadata for model cataloging systems
+
 ## Fast Recipes
 
 ```bash
@@ -340,6 +386,11 @@ cargo run -p xtask -- full-crossval
 
 # Check model compatibility (read-only)
 cargo run -p bitnet-cli -- compat-check "$BITNET_GGUF"
+
+# Inspect comprehensive GGUF metadata (enhanced)
+cargo run -p bitnet-cli -- inspect --model "$BITNET_GGUF"           # Human-readable
+cargo run -p bitnet-cli -- inspect --model "$BITNET_GGUF" --json    # JSON output
+cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- "$BITNET_GGUF"
 
 # Export fixed GGUF safely (non-destructive)
 cargo run -p bitnet-cli -- compat-fix "$BITNET_GGUF" fixed.gguf

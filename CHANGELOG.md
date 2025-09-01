@@ -48,6 +48,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Environment variable overrides for deterministic builds
 
 ### Added
+- **Enhanced GGUF Metadata Inspection** (Post-PR #105):
+  - **Comprehensive ModelInfo API**: Added `kv_specs()`, `quantization_hints()`, and `tensor_summaries()` methods
+  - **TensorSummary Structure**: Provides tensor names, shapes, and dtype information without loading data
+  - **Memory-Efficient Parsing**: Lightweight header-only inspection for CI/CD pipelines
+  - **Error-Resilient Handling**: Robust parsing of malformed GGUF files with detailed error messages
+  - **New Example**: `inspect_gguf_metadata.rs` demonstrating comprehensive metadata extraction with categorized output
+  - **Enhanced CLI Integration**: Updated `bitnet inspect` command documentation with JSON output capabilities
+  - **Validation Framework Integration**: Added GGUF inspection capabilities to validation workflows
 - **Advanced Device-Aware Quantization with GPU Fallback** ([#106](https://github.com/EffortlessSteven/BitNet-rs/pull/106)):
   - **New `gpu` feature flag** with `cuda` backward-compatible alias for clearer GPU functionality
   - **DeviceAwareQuantizer** with intelligent automatic GPU detection and CPU fallback
