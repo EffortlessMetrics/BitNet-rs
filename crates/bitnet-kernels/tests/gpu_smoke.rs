@@ -4,12 +4,9 @@
 //! to ensure correctness. The test is designed to be fast and reliable,
 //! suitable for CI/CD pipelines.
 
-#![cfg(feature = "cuda")]
-#![allow(unused_imports)] // KernelProvider trait needed for method calls on trait objects
+#![cfg(feature = "gpu")]
 
-#[cfg(feature = "cuda")]
-use bitnet_kernels::select_gpu_kernel;
-use bitnet_kernels::{KernelProvider, select_cpu_kernel};
+use bitnet_kernels::{KernelProvider, cpu};
 use std::env;
 
 /// Tolerance for floating-point comparison
@@ -27,12 +24,12 @@ fn get_test_config() -> (String, f32) {
 
 /// Check if GPU is available (skip test if not)
 fn check_gpu_available() -> bool {
-    #[cfg(feature = "cuda")]
+    #[cfg(feature = "gpu")]
     {
         use bitnet_kernels::gpu_utils;
         gpu_utils::gpu_available()
     }
-    #[cfg(not(feature = "cuda"))]
+    #[cfg(not(feature = "gpu"))]
     {
         false
     }
@@ -53,12 +50,12 @@ fn generate_test_data(size: &str) -> (Vec<f32>, Vec<u8>, Vec<f32>, usize, usize,
     let c = vec![0.0f32; m * n];
 
     // Fill with simple patterns for reproducibility
-    for (i, item) in a.iter_mut().enumerate() {
-        *item = ((i % 3) as i8) - 1; // -1, 0, 1 pattern
+    for i in 0..a.len() {
+        a[i] = ((i % 3) as i8) - 1; // -1, 0, 1 pattern
     }
 
-    for (i, item) in b.iter_mut().enumerate() {
-        *item = (i % 256) as u8;
+    for i in 0..b.len() {
+        b[i] = (i % 256) as u8;
     }
 
     // Convert i8 to f32 for CPU computation
@@ -121,7 +118,7 @@ fn gpu_smoke_test() {
     let a_i8: Vec<i8> = a.iter().map(|&x| x as i8).collect();
 
     // Run CPU version
-    let cpu_provider = select_cpu_kernel().expect("Failed to select CPU kernel");
+    let cpu_provider = cpu::CpuKernelProvider::new();
     assert!(cpu_provider.is_available(), "CPU provider should always be available");
 
     eprintln!("Running CPU computation...");
@@ -131,9 +128,11 @@ fn gpu_smoke_test() {
     eprintln!("CPU time: {:?}", cpu_time);
 
     // Run GPU version
-    #[cfg(feature = "cuda")]
+    #[cfg(feature = "gpu")]
     {
-        let gpu_provider = select_gpu_kernel(0).expect("Failed to select GPU kernel");
+        use bitnet_kernels::gpu;
+
+        let gpu_provider = gpu::GpuKernelProvider::new().expect("Failed to create GPU provider");
         assert!(gpu_provider.is_available(), "GPU provider should be available");
 
         eprintln!("Running GPU computation...");
@@ -180,9 +179,11 @@ fn gpu_determinism_test() {
     let (a, b, _, m, n, k) = generate_test_data("tiny");
     let a_i8: Vec<i8> = a.iter().map(|&x| x as i8).collect();
 
-    #[cfg(feature = "cuda")]
+    #[cfg(feature = "gpu")]
     {
-        let gpu_provider = select_gpu_kernel(0).expect("Failed to select GPU kernel");
+        use bitnet_kernels::gpu;
+
+        let gpu_provider = gpu::GpuKernelProvider::new().expect("Failed to create GPU provider");
 
         let mut results = Vec::new();
         for i in 0..3 {

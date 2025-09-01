@@ -16,7 +16,8 @@ anyhow.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true
 candle-core.workspace = true
-rayon = { workspace = true }
+rayon.workspace = true
+bitnet-kernels = { path = "../bitnet-kernels", optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
@@ -27,6 +28,8 @@ tempfile.workspace = true
 default = []
 simd = []
 integration-tests = []
+gpu = ["bitnet-kernels/gpu"]
+cuda = ["gpu"]  # Alias for backward compatibility
 
 [[bench]]
 name = "quantization"

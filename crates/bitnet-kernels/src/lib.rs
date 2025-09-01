@@ -4,11 +4,12 @@ use bitnet_common::{QuantizationType, Result};
 use std::sync::OnceLock;
 
 pub mod cpu;
+pub mod device_aware;
 #[cfg(feature = "ffi")]
 pub mod ffi;
-#[cfg(feature = "cuda")]
+#[cfg(feature = "gpu")]
 pub mod gpu;
-#[cfg(feature = "cuda")]
+#[cfg(feature = "gpu")]
 pub mod gpu_utils;
 
 /// Kernel provider trait
@@ -45,7 +46,7 @@ impl KernelManager {
         let mut providers: Vec<Box<dyn KernelProvider>> = vec![Box::new(cpu::FallbackKernel)];
 
         // Add GPU kernels first (highest priority)
-        #[cfg(feature = "cuda")]
+        #[cfg(feature = "gpu")]
         {
             if let Ok(cuda_kernel) = gpu::CudaKernel::new() {
                 if cuda_kernel.is_available() {
@@ -85,10 +86,10 @@ impl KernelManager {
         // Add FFI kernel as a fallback option (lower priority than optimized kernels)
         #[cfg(feature = "ffi")]
         {
-            if let Ok(ffi_kernel) = ffi::FfiKernel::new()
-                && ffi_kernel.is_available()
-            {
-                providers.push(Box::new(ffi_kernel));
+            if let Ok(ffi_kernel) = ffi::FfiKernel::new() {
+                if ffi_kernel.is_available() {
+                    providers.push(Box::new(ffi_kernel));
+                }
             }
         }
 
@@ -173,7 +174,7 @@ pub fn select_cpu_kernel() -> Result<Box<dyn KernelProvider>> {
 }
 
 /// Select the best GPU kernel provider
-#[cfg(feature = "cuda")]
+#[cfg(feature = "gpu")]
 pub fn select_gpu_kernel(device_id: usize) -> Result<Box<dyn KernelProvider>> {
     let cuda_kernel = gpu::CudaKernel::new_with_device(device_id)?;
     if cuda_kernel.is_available() {
@@ -183,7 +184,7 @@ pub fn select_gpu_kernel(device_id: usize) -> Result<Box<dyn KernelProvider>> {
     }
 }
 
-#[cfg(not(feature = "cuda"))]
+#[cfg(not(feature = "gpu"))]
 pub fn select_gpu_kernel(_device_id: usize) -> Result<Box<dyn KernelProvider>> {
     Err(bitnet_common::BitNetError::Kernel(bitnet_common::KernelError::NoProvider))
 }
@@ -194,5 +195,6 @@ pub use cpu::Avx2Kernel;
 pub use cpu::FallbackKernel;
 #[cfg(all(target_arch = "aarch64", feature = "neon"))]
 pub use cpu::NeonKernel;
-#[cfg(feature = "cuda")]
+pub use device_aware::{DeviceAwareQuantizer, DeviceAwareQuantizerFactory};
+#[cfg(feature = "gpu")]
 pub use gpu::CudaKernel;

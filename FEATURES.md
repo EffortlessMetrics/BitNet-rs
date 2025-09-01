@@ -13,7 +13,7 @@ BitNet.rs uses Cargo feature flags to control compilation of optional functional
 cargo build --no-default-features --features cpu
 
 # GPU-enabled build
-cargo build --no-default-features --features gpu
+cargo build --no-default-features --features cuda
 
 # Full feature set
 cargo build --features full
@@ -37,34 +37,39 @@ Enables:
 - Automatic CPU feature detection
 
 ### `gpu`
-**Purpose:** Enable NVIDIA GPU acceleration  
+**Purpose:** Enable advanced GPU acceleration with device-aware quantization  
 **Dependencies:** CUDA toolkit 11.0+, cudarc crate  
-**When to use:** For GPU-accelerated inference on NVIDIA hardware
+**When to use:** For GPU-accelerated inference with automatic CPU fallback
 
 ```bash
 cargo build --no-default-features --features gpu
 ```
 
-### `cuda`
-**Purpose:** Backward-compatible alias for `gpu` feature  
-**Dependencies:** Same as `gpu`  
-**When to use:** For backward compatibility (deprecated, use `gpu`)
-
-```bash
-cargo build --no-default-features --features cuda  # Works but deprecated
-```
-
 Enables:
-- CUDA kernel compilation and execution
-- GPU memory management
-- Mixed-precision computation (FP16/BF16)
-- Multi-GPU support
-- Async GPU operations
+- Device-aware quantization with automatic GPU detection
+- Comprehensive GPU quantization kernels (I2S, TL1, TL2)
+- Intelligent fallback to optimized CPU kernels
+- CUDA kernel compilation with bit-packing optimizations
+- GPU memory management with automatic cleanup
+- Multi-GPU device selection and management
+- Thread-safe concurrent GPU operations
+- Performance monitoring and device statistics
 
 Requirements:
 - NVIDIA GPU with compute capability 6.0+
-- CUDA toolkit installed
+- CUDA toolkit installed and `nvcc` in PATH
 - Set `LD_LIBRARY_PATH` to include CUDA libraries
+
+### `cuda`
+**Purpose:** Backward-compatible alias for `gpu` feature  
+**Dependencies:** Same as `gpu` feature  
+**When to use:** For backward compatibility with existing build scripts
+
+```bash
+cargo build --no-default-features --features cuda
+```
+
+Note: This is an alias for the `gpu` feature. New projects should use `gpu` for clarity.
 
 ### `ffi`
 **Purpose:** Enable C++ FFI bridge for cross-validation  
@@ -128,17 +133,17 @@ cargo build --features full
 cargo build --release --no-default-features --features cpu
 ```
 
-**Production GPU deployment:**
+**Production GPU deployment with device-aware quantization:**
 ```bash
 cargo build --release --no-default-features --features "cpu,gpu"
 ```
 
-**Development with validation:**
+**Development with GPU validation:**
 ```bash
 cargo build --features "cpu,gpu,ffi,crossval"
 ```
 
-**Maximum performance:**
+**Maximum performance with GPU acceleration:**
 ```bash
 cargo build --release --features "cpu,gpu,avx512"
 ```
@@ -146,15 +151,15 @@ cargo build --release --features "cpu,gpu,avx512"
 ## Workspace Crate Features
 
 ### bitnet-kernels
-- `cpu`: CPU kernel implementations
-- `gpu`: GPU kernels (replaces `cuda`)
+- `cpu`: CPU kernel implementations with SIMD optimizations
+- `gpu`: Advanced GPU kernels with device-aware quantization
 - `cuda`: Backward-compatible alias for `gpu`
 - `ffi`: FFI bridge to C++ kernels
 - `ffi-bridge`: Build-time FFI compilation
 
 ### bitnet-inference
-- `cpu`: CPU inference engine
-- `gpu`: GPU inference engine (replaces `cuda`)
+- `cpu`: CPU inference engine with optimized kernels
+- `gpu`: GPU inference engine with device-aware quantization
 - `cuda`: Backward-compatible alias for `gpu`
 - `async`: Async/await support (always enabled)
 
@@ -164,7 +169,7 @@ cargo build --release --features "cpu,gpu,avx512"
 
 ### bitnet-server
 - `cpu`: CPU inference endpoints
-- `gpu`: GPU inference endpoints (replaces `cuda`)
+- `gpu`: GPU inference endpoints with device-aware quantization
 - `cuda`: Backward-compatible alias for `gpu`
 
 ## Feature Resolution
@@ -216,31 +221,66 @@ cargo build --no-default-features --features cpu
 
 ## Platform Support Matrix
 
-| Platform | CPU | CUDA | AVX2 | AVX512 | NEON | FFI |
-|----------|-----|------|------|--------|------|-----|
-| Linux x86_64 | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
-| Linux ARM64 | ✅ | ✅* | ❌ | ❌ | ✅ | ✅ |
-| macOS x86_64 | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ |
-| macOS ARM64 | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Windows x86_64 | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ |
+| Platform | CPU | GPU/CUDA | AVX2 | AVX512 | NEON | FFI | Device-Aware |
+|----------|-----|----------|------|--------|------|-----|---------------|
+| Linux x86_64 | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Linux ARM64 | ✅ | ✅* | ❌ | ❌ | ✅ | ✅ | ✅ |
+| macOS x86_64 | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅** |
+| macOS ARM64 | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅** |
+| Windows x86_64 | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ | ✅ |
 
 ✅ Supported  
 ❌ Not supported  
 ⚠️ Experimental  
-\* CUDA on ARM64 requires NVIDIA Jetson or similar
+\* CUDA on ARM64 requires NVIDIA Jetson or similar  
+\*\* Device-aware on macOS falls back to optimized CPU kernels
+
+## Device-Aware Quantization Features
+
+The `gpu` feature enables advanced device-aware quantization with the following capabilities:
+
+### Supported Quantization Algorithms
+- **I2S (2-bit Signed)**: Native GPU kernels with optimized bit-packing
+- **TL1 (Table Lookup 1)**: GPU-accelerated table lookup quantization
+- **TL2 (Table Lookup 2)**: Advanced table lookup with GPU optimization
+
+### Device Selection and Fallback
+- **Automatic Device Detection**: Scans for available CUDA devices at runtime
+- **Graceful Fallback**: Seamlessly falls back to optimized CPU kernels on GPU failure
+- **Device Affinity**: Maintains consistent device usage throughout quantization pipeline
+- **Error Recovery**: Comprehensive error handling with detailed failure reporting
+
+### Performance Optimizations
+- **CUDA Kernel Integration**: Custom CUDA kernels with atomic operations
+- **Memory Management**: Automatic GPU memory allocation and cleanup
+- **Concurrent Operations**: Thread-safe GPU operations with proper synchronization
+- **Performance Monitoring**: Built-in statistics and device usage tracking
+
+### Testing and Validation
+```bash
+# Test device-aware quantization
+cargo test -p bitnet-kernels --features gpu --test gpu_quantization
+
+# Test GPU vs CPU accuracy
+cargo test -p bitnet-kernels --features gpu test_gpu_vs_cpu_quantization_accuracy --ignored
+
+# Test automatic fallback
+cargo test -p bitnet-kernels --features gpu test_gpu_quantization_fallback --ignored
+```
 
 ## Performance Impact
 
 Enabling features affects performance and binary size:
 
-| Feature | Performance Impact | Binary Size Impact |
-|---------|-------------------|-------------------|
-| `cpu` | Baseline | +2 MB |
-| `cuda` | 2-10x faster | +8 MB |
-| `avx2` | 1.5-2x faster | +0.5 MB |
-| `avx512` | 2-3x faster | +1 MB |
-| `neon` | 1.5-2x faster | +0.5 MB |
-| `ffi` | No impact | +4 MB |
+| Feature | Performance Impact | Binary Size Impact | Notes |
+|---------|-------------------|--------------------|-------|
+| `cpu` | Baseline | +2 MB | Optimized SIMD kernels |
+| `gpu` | 2-15x faster | +12 MB | Device-aware quantization |
+| `cuda` | Same as `gpu` | Same as `gpu` | Backward-compatible alias |
+| `avx2` | 1.5-2x faster | +0.5 MB | x86_64 SIMD optimization |
+| `avx512` | 2-3x faster | +1 MB | High-end Intel CPUs |
+| `neon` | 1.5-2x faster | +0.5 MB | ARM64 SIMD optimization |
+| `ffi` | No impact | +4 MB | Cross-validation only |
 
 ## Best Practices
 

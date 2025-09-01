@@ -318,7 +318,7 @@ impl PerformanceComparison {
         qtype: QuantizationType,
     ) -> Result<Self> {
         let output_len = input.len() / 4;
-        let scales_len = input.len().div_ceil(32); // Assuming 32-element blocks
+        let scales_len = (input.len() + 31) / 32; // Assuming 32-element blocks
 
         let mut rust_output = vec![0u8; output_len];
         let mut rust_scales = vec![0.0f32; scales_len];

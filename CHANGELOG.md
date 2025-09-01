@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Cargo Configuration Cleanup** ([#113](https://github.com/EffortlessSteven/BitNet-rs/pull/113)):
+  - Remove tool-generated metadata files (`.crates.toml`, `.crates2.json`) from version control
+  - Commit `Cargo.lock` files for reproducible builds across environments
+  - Standardize GPU feature aliases in cargo config to use `gpu` instead of `cuda`
+
 ### Fixed
 - **FFI Safety and Validation Improvements**:
   - Enhanced FFI functions with `unsafe fn` signatures for Rust 2024 safety compliance
@@ -42,6 +48,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Environment variable overrides for deterministic builds
 
 ### Added
+- **Advanced Device-Aware Quantization with GPU Fallback** ([#106](https://github.com/EffortlessSteven/BitNet-rs/pull/106)):
+  - **New `gpu` feature flag** with `cuda` backward-compatible alias for clearer GPU functionality
+  - **DeviceAwareQuantizer** with intelligent automatic GPU detection and CPU fallback
+  - **DeviceAwareQuantizerFactory** for streamlined device selection and auto-detection
+  - **Comprehensive GPU quantization kernels** for I2S, TL1, and TL2 algorithms with optimized CUDA implementations
+  - **Automatic CPU fallback** with graceful degradation and detailed error reporting
+  - **Thread-safe concurrent GPU operations** with proper memory management and cleanup
+  - **Performance monitoring** with device statistics and operation tracking
+  - **Enhanced error handling** with new QuantizationFailed and MatmulFailed error types
+  - **Comprehensive test suite** with 12 specialized test cases for GPU/CPU accuracy comparison, fallback validation, memory management, and concurrent operations
+  - **FFI safety enhancements** with documentation for all 30+ unsafe functions for Rust 2024 compliance
 - **HuggingFace Model Loader**:
   - Parse `config.json` for model metadata
   - Load sharded SafeTensors weights into `BitNetModel`

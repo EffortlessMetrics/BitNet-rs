@@ -15,7 +15,7 @@ bitnet-common = { path = "../bitnet-common" }
 anyhow.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true
-rayon = { workspace = true }
+rayon.workspace = true
 log.workspace = true
 cudarc = { version = "0.17", optional = true, features = ["cuda-12000"] }
 cc = { version = "1.0", optional = true }
@@ -45,7 +45,8 @@ cpu-optimized = ["avx2", "neon"]
 avx2 = []
 avx512 = []
 neon = []
-cuda = ["dep:cudarc", "dep:half"]
+gpu = ["dep:cudarc", "dep:half"]
+cuda = ["gpu"]  # Alias for backward compatibility
 ffi = ["dep:cc", "dep:bindgen"]
 
 [[bench]]
@@ -71,19 +72,24 @@ path = "tests/comprehensive_kernel_unit_tests.rs"
 [[test]]
 name = "gpu_integration"
 path = "tests/gpu_integration.rs"
-required-features = ["cuda"]
+required-features = ["gpu"]
 
 [[example]]
 name = "gpu_validation"
 path = "examples/gpu_validation.rs"
-required-features = ["cuda"]
+required-features = ["gpu"]
 
 [[example]]
 name = "simple_gpu_test"
 path = "examples/simple_gpu_test.rs"
-required-features = ["cuda"]
+required-features = ["gpu"]
 
 [[example]]
 name = "cuda_smoke"
 path = "examples/cuda_smoke.rs"
-required-features = ["cuda"]
+required-features = ["gpu"]
+
+[[test]]
+name = "gpu_quantization"
+path = "tests/gpu_quantization.rs"
+required-features = ["gpu"]

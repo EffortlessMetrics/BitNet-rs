@@ -13,6 +13,7 @@ members = [
     "crates/bitnet-server",
     "crates/bitnet-cli",
     "crates/bitnet-ffi",
+    "crates/bitnet-py",
     "crates/bitnet-wasm",
     "crates/bitnet-sys",
     "crossval",
@@ -31,9 +32,6 @@ default-members = [
     "crates/bitnet-cli",
     "crates/bitnet-server",
 ]
-
-# Commented out Python bindings during test
-# members = [x for x in members if x != "crates/bitnet-py"]
 
 [package]
 name = "bitnet"
@@ -144,7 +142,7 @@ gpu = [
     "kernels",
     "inference",
     "tokenizers",
-    "bitnet-kernels/cuda",
+    "bitnet-kernels/gpu",
     "bitnet-inference/gpu",
 ]
 cuda = ["gpu"]  # Alias for backward compatibility

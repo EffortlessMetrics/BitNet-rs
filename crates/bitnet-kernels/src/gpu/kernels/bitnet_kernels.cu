@@ -7,9 +7,9 @@
  * - Dequantization operations
  */
 
-#include <cuda_runtime.h>
-#include <cuda_fp16.h>
-#include <mma.h>
+// Type definitions for NVRTC compilation
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
 
 // Constants
 #define WARP_SIZE 32
@@ -110,7 +110,6 @@ extern "C" __global__ void bitnet_quantize_i2s(
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int block_size = 128; // Process 128 elements per block for scale computation
     int block_idx = idx / block_size;
-    int local_idx = idx % block_size;
     
     if (idx >= N) return;
     
@@ -171,8 +170,8 @@ extern "C" __global__ void bitnet_quantize_i2s(
             default: unsigned_val = 1; break;
         }
         
-        // Atomic update to pack bits
-        atomicOr(&output[pack_idx], unsigned_val << bit_offset);
+        // Atomic update to pack bits - cast to unsigned int*
+        atomicOr((unsigned int*)&output[pack_idx], (unsigned int)(unsigned_val << bit_offset));
     }
 }
 
@@ -212,7 +211,7 @@ extern "C" __global__ void bitnet_quantize_tl1(
     // Pack into output
     int pack_idx = idx / 4;
     int bit_offset = (idx % 4) * 2;
-    atomicOr(&output[pack_idx], quantized << bit_offset);
+    atomicOr((unsigned int*)&output[pack_idx], (unsigned int)(quantized << bit_offset));
     
     // Store scale
     if (idx == 0) {
@@ -254,7 +253,7 @@ extern "C" __global__ void bitnet_quantize_tl2(
     // Pack into output
     int pack_idx = idx / 4;
     int bit_offset = (idx % 4) * 2;
-    atomicOr(&output[pack_idx], quantized << bit_offset);
+    atomicOr((unsigned int*)&output[pack_idx], (unsigned int)(quantized << bit_offset));
     
     // Store scale
     if (idx == 0) {
@@ -312,65 +311,23 @@ extern "C" __global__ void bitnet_dequantize(
 }
 
 /**
- * Mixed Precision Matrix Multiplication (FP16)
- * High-performance matrix multiplication using Tensor Cores when available
+ * Mixed Precision Matrix Multiplication (FP32)
+ * Standard matrix multiplication for completeness
  */
-extern "C" __global__ void bitnet_matmul_fp16(
-    const __half* __restrict__ A,
-    const __half* __restrict__ B,
-    __half* __restrict__ C,
+extern "C" __global__ void bitnet_matmul_fp32(
+    const float* __restrict__ A,
+    const float* __restrict__ B,
+    float* __restrict__ C,
     int M, int N, int K
 ) {
-    // Use Tensor Cores if available (compute capability 7.0+)
-    #if __CUDA_ARCH__ >= 700
-    using namespace nvcuda;
-    
-    // Tensor Core fragment declarations
-    wmma::fragment<wmma::matrix_a, 16, 16, 16, __half, wmma::row_major> a_frag;
-    wmma::fragment<wmma::matrix_b, 16, 16, 16, __half, wmma::col_major> b_frag;
-    wmma::fragment<wmma::accumulator, 16, 16, 16, __half> c_frag;
-    
-    // Initialize accumulator
-    wmma::fill_fragment(c_frag, 0.0f);
-    
-    // Compute tile indices
-    int warpM = (blockIdx.x * blockDim.x + threadIdx.x) / 32;
-    int warpN = (blockIdx.y * blockDim.y + threadIdx.y);
-    
-    // Perform matrix multiplication using Tensor Cores
-    for (int i = 0; i < K; i += 16) {
-        int aRow = warpM * 16;
-        int aCol = i;
-        int bRow = i;
-        int bCol = warpN * 16;
-        
-        if (aRow < M && aCol < K && bRow < K && bCol < N) {
-            // Load fragments
-            wmma::load_matrix_sync(a_frag, A + aRow * K + aCol, K);
-            wmma::load_matrix_sync(b_frag, B + bRow * N + bCol, N);
-            
-            // Perform matrix multiplication
-            wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
-        }
-    }
-    
-    // Store result
-    int cRow = warpM * 16;
-    int cCol = warpN * 16;
-    if (cRow < M && cCol < N) {
-        wmma::store_matrix_sync(C + cRow * N + cCol, c_frag, N, wmma::mem_row_major);
-    }
-    #else
-    // Fallback for older architectures
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
     
     if (row < M && col < N) {
-        __half sum = 0.0f;
+        float sum = 0.0f;
         for (int k = 0; k < K; ++k) {
             sum += A[row * K + k] * B[k * N + col];
         }
         C[row * N + col] = sum;
     }
-    #endif
 }

@@ -97,6 +97,15 @@ impl From<BitNetError> for BitNetCError {
                 bitnet_common::KernelError::InvalidArguments { reason } => {
                     BitNetCError::InferenceFailed(format!("Invalid kernel arguments: {}", reason))
                 }
+                bitnet_common::KernelError::QuantizationFailed { reason } => {
+                    BitNetCError::InferenceFailed(format!("Quantization failed: {}", reason))
+                }
+                bitnet_common::KernelError::MatmulFailed { reason } => {
+                    BitNetCError::InferenceFailed(format!(
+                        "Matrix multiplication failed: {}",
+                        reason
+                    ))
+                }
             },
             BitNetError::Inference(inference_error) => match inference_error {
                 bitnet_common::InferenceError::GenerationFailed { reason } => {

@@ -52,7 +52,7 @@ struct AllocationInfo {
     size: usize,
     timestamp: Instant,
     #[cfg(debug_assertions)]
-    #[allow(dead_code)] // Used for debugging memory leaks
+    #[allow(dead_code)] // Used for debugging allocation issues
     stack_trace: Vec<String>,
 }
 
@@ -66,7 +66,8 @@ pub enum AccessPattern {
 
 /// Optimized memory pool for GPU allocations (simplified)
 pub struct OptimizedMemoryPool {
-    _device_id: usize,
+    #[allow(dead_code)] // Reserved for multi-GPU support
+    device_id: usize,
     config: MemoryPoolConfig,
     free_buffers: HashMap<usize, Vec<Vec<u8>>>, // Simplified buffer storage
     allocated_buffers: HashMap<*const u8, AllocationInfo>,
@@ -80,7 +81,7 @@ impl OptimizedMemoryPool {
         log::info!("Creating optimized memory pool for device {}", device_id);
 
         Self {
-            _device_id: device_id,
+            device_id,
             config,
             free_buffers: HashMap::new(),
             allocated_buffers: HashMap::new(),
@@ -203,11 +204,6 @@ impl OptimizedMemoryPool {
         &self.stats
     }
 
-    /// Get device ID
-    pub fn device_id(&self) -> usize {
-        self._device_id
-    }
-
     /// Reset statistics
     pub fn reset_stats(&mut self) {
         self.stats = MemoryStats::default();
@@ -325,7 +321,7 @@ mod tests {
         let config = MemoryPoolConfig::default();
         let pool = OptimizedMemoryPool::new(0, config);
 
-        assert_eq!(pool.device_id(), 0);
+        assert_eq!(pool.device_id, 0);
         assert_eq!(pool.stats.current_usage, 0);
     }
 
