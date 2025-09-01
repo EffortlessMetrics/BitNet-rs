@@ -210,7 +210,7 @@ impl PyInferenceEngine {
             let engine = self.inner.read().await;
             let config = engine.model_config();
 
-            let py_config = PyDict::new_bound(py);
+            let py_config = PyDict::new(py);
             py_config.set_item("vocab_size", config.model.vocab_size)?;
             py_config.set_item("hidden_size", config.model.hidden_size)?;
             py_config.set_item("num_layers", config.model.num_layers)?;
@@ -250,7 +250,7 @@ impl PyInferenceEngine {
             let engine = self.inner.read().await;
             let stats = engine.get_stats().await;
 
-            let py_stats = PyDict::new_bound(py);
+            let py_stats = PyDict::new(py);
             py_stats.set_item("cache_size", stats.cache_size)?;
             py_stats.set_item("cache_usage", stats.cache_usage)?;
             py_stats.set_item("backend_type", stats.backend_type)?;
@@ -439,9 +439,9 @@ impl PyStreamingGenerator {
                 use futures_util::StreamExt;
                 stream.next().await
             }) {
-                Some(Ok(token_text)) => {
-                    debug!("Generated token: '{}'", token_text);
-                    Ok(Some(token_text))
+                Some(Ok(stream_response)) => {
+                    debug!("Generated token: '{}'", stream_response.text);
+                    Ok(Some(stream_response.text))
                 }
                 Some(Err(e)) => {
                     warn!("Streaming error encountered: {}", e);
@@ -544,7 +544,7 @@ impl PyStreamingGenerator {
     /// # Returns
     /// Python dictionary with streaming statistics
     fn get_stream_stats(&self, py: Python<'_>) -> PyResult<PyObject> {
-        let stats = pyo3::types::PyDict::new_bound(py);
+        let stats = pyo3::types::PyDict::new(py);
 
         stats.set_item("started", self.started)?;
         stats.set_item("active", self.is_active())?;

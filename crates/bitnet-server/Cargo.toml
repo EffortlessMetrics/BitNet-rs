@@ -48,6 +48,10 @@ num_cpus.workspace = true
 vergen-gix = { version = "1", features = ["build", "cargo", "rustc"] }
 anyhow = "1.0"
 
+[dev-dependencies]
+hyper = "1"
+http-body-util = "0.1"
+
 [[bin]]
 name = "server"
 path = "src/bin/server.rs"

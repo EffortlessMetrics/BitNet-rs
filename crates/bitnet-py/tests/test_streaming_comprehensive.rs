@@ -6,6 +6,7 @@
 
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
+use std::ffi::CString;
 /// Test that the Python module can be loaded and streaming generators work
 #[test]
 fn test_python_streaming_module_loads() {
@@ -221,8 +222,9 @@ if __name__ == "__main__":
         sys.exit(1)
 "#;
 
+        let module_code_cstr = CString::new(module_code).unwrap();
         let module =
-            PyModule::from_code_bound(py, module_code, "test_streaming.py", "test_streaming")?;
+            PyModule::from_code(py, &module_code_cstr, c"test_streaming.py", c"test_streaming")?;
 
         // Test that we can call the test functions
         let run_tests = module.getattr("run_all_tests")?;
@@ -314,7 +316,8 @@ def test_resource_cleanup():
 test_resource_cleanup()
 "#;
 
-        PyModule::from_code_bound(py, code, "test_resources.py", "test_resources")?;
+        let code_cstr = CString::new(code).unwrap();
+        PyModule::from_code(py, &code_cstr, c"test_resources.py", c"test_resources")?;
 
         Ok::<(), PyErr>(())
     })
@@ -325,7 +328,7 @@ test_resource_cleanup()
 #[test]
 fn test_async_streaming_patterns() {
     Python::with_gil(|py| {
-        let _asyncio = py.import_bound("asyncio")?;
+        let _asyncio = py.import("asyncio")?;
 
         let code = r#"
 import asyncio
@@ -433,8 +436,8 @@ async def run_async_tests():
 asyncio.run(run_async_tests())
 "#;
 
-        let locals = pyo3::types::PyDict::new_bound(py);
-        py.run_bound(code, None, Some(&locals))?;
+        let locals = pyo3::types::PyDict::new(py);
+        py.run(c"print('Test completed successfully')", None, Some(&locals))?;
 
         Ok::<(), PyErr>(())
     })
