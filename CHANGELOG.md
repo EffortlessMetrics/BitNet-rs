@@ -27,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **FFI Bridge Improvements**: Enhanced C++ kernel integration with feature gating and performance comparison tools
   - **Device Information**: Detailed CudaDeviceInfo with compute capability, memory, and precision support detection
   - **Launch Parameter Optimization**: Dynamic kernel configuration based on device capabilities and workload characteristics
+- **Documentation Synchronization** (Post-PR #113):
+  - Updated all documentation to use standardized `gpu` feature flag instead of `cuda`
+  - Maintained backward compatibility by documenting `cuda` as an alias for `gpu`
+  - Synchronized build commands across CLAUDE.md, README.md, FEATURES.md, and GPU setup guides
+  - Updated cargo aliases in `.cargo/config.toml` to use `gpu` feature consistently
+  - Enhanced lockfile tracking for reproducible builds (Cargo.lock now versioned)
+  - Enhanced Diátaxis framework compliance with clearer tutorial/reference categorization
 - **CI/Docker Git Metadata Support**:
   - Added Git metadata injection in GitHub Actions CI
   - Updated Dockerfile with VCS build args for metadata without .git

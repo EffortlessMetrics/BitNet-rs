@@ -19,7 +19,7 @@ cpu-tests = "test --workspace --no-default-features --features cpu"
 t2 = "test --workspace --exclude bitnet-py --exclude bitnet-wasm --exclude bitnet-ffi --no-default-features --features cpu -- --test-threads=2"
 t1 = "test --workspace --exclude bitnet-py --exclude bitnet-wasm --exclude bitnet-ffi --no-default-features --features cpu -- --test-threads=1"
 crossval-capped = "test --workspace --exclude bitnet-py --exclude bitnet-wasm --features \"cpu,ffi,crossval\" -- --test-threads=2"
-gpu-capped = "test --workspace --exclude bitnet-py --exclude bitnet-wasm --exclude bitnet-ffi --no-default-features --features cuda -- --test-threads=2"
+gpu-capped = "test --workspace --exclude bitnet-py --exclude bitnet-wasm --exclude bitnet-ffi --no-default-features --features gpu -- --test-threads=2"
 
 # Reporting aliases
 report-demo = "run -p bitnet-tests --bin demo_reporting_comprehensive"
@@ -28,9 +28,9 @@ demo-sys = "run -p bitnet-tests --bin demo_reporting_system --features reporting
 demo-all = "run -p bitnet-tests --bin demo_reporting_comprehensive --features reporting"
 
 # GPU development aliases
-gpu-smoke = "test --package bitnet-kernels --test gpu_smoke --no-default-features --features cuda"
-gpu-integration = "test --package bitnet-kernels --test gpu_integration --no-default-features --features cuda"
-gpu-build = "build --workspace --no-default-features --features cuda"
+gpu-smoke = "test --package bitnet-kernels --test gpu_smoke --no-default-features --features gpu"
+gpu-integration = "test --package bitnet-kernels --test gpu_integration --no-default-features --features gpu"
+gpu-build = "build --workspace --no-default-features --features gpu"
 
 # Development quality check aliases
 check-all = "fmt --all && clippy -p bitnet-cli --all-targets -- -D warnings && clippy -p bitnet-server --all-targets -- -D warnings && test -p bitnet-server --all-targets && test -p bitnet-server --all-targets --features degraded-ok"

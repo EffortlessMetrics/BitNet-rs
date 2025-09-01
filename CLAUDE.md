@@ -10,7 +10,7 @@ This file provides guidance to Claude (claude.ai) when working with the BitNet.r
 cargo build --release --no-default-features --features cpu
 
 # Build with GPU/CUDA support
-cargo build --release --no-default-features --features cuda
+cargo build --release --no-default-features --features gpu
 
 # Build with IQ2_S quantization support (requires GGML FFI)
 cargo build --release --no-default-features --features "cpu,iq2s-ffi"
@@ -22,18 +22,18 @@ cargo build --release --no-default-features --features cpu
 cargo test --workspace --no-default-features --features cpu
 
 # Run GPU tests (requires CUDA)
-cargo test --workspace --no-default-features --features cuda
+cargo test --workspace --no-default-features --features gpu
 
 # Run GPU validation and benchmarks
-cargo test -p bitnet-kernels --no-default-features --features cuda --test gpu_integration
-cargo test -p bitnet-kernels --no-default-features --features cuda --test gpu_smoke
+cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_integration
+cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_smoke
 
 # Run GPU integration tests (comprehensive validation)
-cargo test -p bitnet-kernels --no-default-features --features cuda --test gpu_integration --ignored
+cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_integration --ignored
 
 # Run GPU examples
-cargo run -p bitnet-kernels --example gpu_validation --no-default-features --features cuda
-cargo run -p bitnet-kernels --example simple_gpu_test --no-default-features --features cuda
+cargo run -p bitnet-kernels --example gpu_validation --no-default-features --features gpu
+cargo run -p bitnet-kernels --example simple_gpu_test --no-default-features --features gpu
 
 # Run GGUF validation tests
 cargo test -p bitnet-inference --test gguf_header
@@ -136,7 +136,8 @@ Minimum Supported Rust Version: **1.89.0** (uses Rust 2024 edition)
 ### Feature Flags
 Default features are **empty** to prevent unwanted dependencies:
 - `cpu`: CPU inference with SIMD optimizations, includes native I2_S support
-- `cuda`: NVIDIA GPU support with device-aware quantization and automatic fallback
+- `gpu`: NVIDIA GPU support with device-aware quantization and automatic fallback (replaces `cuda`)
+- `cuda`: Backward-compatible alias for `gpu` feature
 - `iq2s-ffi`: IQ2_S quantization via GGML FFI (requires vendored GGML files)
 - `ffi`: C++ FFI bridge (required for cross-validation) with Rust 2024 safety compliance and enhanced documentation
 - `crossval`: Cross-validation against C++ (increases build time)
@@ -206,16 +207,16 @@ We maintain strict compatibility with llama.cpp:
 9. **GPU Memory Issues**: For CUDA out-of-memory errors during quantization:
    ```bash
    # Test GPU memory health
-   cargo test -p bitnet-kernels --no-default-features --features cuda gpu_memory_health
+   cargo test -p bitnet-kernels --no-default-features --features gpu gpu_memory_health
    
    # Use single-threaded GPU tests to reduce memory pressure
-   CUDA_VISIBLE_DEVICES=0 cargo test -p bitnet-kernels --no-default-features --features cuda -- --test-threads=1
+   CUDA_VISIBLE_DEVICES=0 cargo test -p bitnet-kernels --no-default-features --features gpu -- --test-threads=1
    ```
 
 10. **Device-aware Quantization Fallback**: If GPU quantization fails, verify automatic CPU fallback:
     ```bash
     # Enable debug logging to see fallback behavior
-    RUST_LOG=bitnet_kernels=debug cargo test -p bitnet-kernels --no-default-features --features cuda
+    RUST_LOG=bitnet_kernels=debug cargo test -p bitnet-kernels --no-default-features --features gpu
     ```
 
 ## Development Workflow
@@ -271,10 +272,10 @@ BitNet-rs implements a comprehensive concurrency capping strategy to prevent res
    - `t2`: Run tests with 2-thread cap
    - `t1`: Run tests with 1-thread (deterministic mode)
    - `crossval-capped`: Cross-validation with thread caps
-   - `gpu-capped`: GPU tests with concurrency caps and CUDA features
-   - `gpu-integration`: GPU integration tests with CUDA features
+   - `gpu-capped`: GPU tests with concurrency caps and GPU features
+   - `gpu-integration`: GPU integration tests with GPU features
    - `gpu-smoke`: Basic GPU smoke tests
-   - `gpu-build`: Build workspace with CUDA features
+   - `gpu-build`: Build workspace with GPU features
 
 4. **Test Infrastructure** (`tests/common/concurrency_caps.rs`):
    - Rayon thread pool initialization with caps
@@ -325,22 +326,22 @@ docker-compose -f docker-compose.test.yml up rust-cpu-tests
 RUST_TEST_THREADS=1 RAYON_NUM_THREADS=1 cargo t1
 
 # GPU tests with memory constraints
-CUDA_VISIBLE_DEVICES=0 cargo test -p bitnet-kernels --no-default-features --features cuda -- --test-threads=1
+CUDA_VISIBLE_DEVICES=0 cargo test -p bitnet-kernels --no-default-features --features gpu -- --test-threads=1
 
 # GPU integration tests with debug logging
-RUST_LOG=bitnet_kernels=debug cargo test -p bitnet-kernels --no-default-features --features cuda --test gpu_integration --ignored
+RUST_LOG=bitnet_kernels=debug cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_integration --ignored
 
 # Use GPU-specific aliases for convenience
 cargo gpu-smoke         # Quick GPU smoke tests
 cargo gpu-integration   # Full GPU integration tests  
 cargo gpu-capped        # GPU tests with concurrency limits
-cargo gpu-build         # Build with CUDA support
+cargo gpu-build         # Build with GPU support
 ```
 
 ## Repository Contracts (for Claude)
 
 ### Safe Operations
-- **Default features are empty** → always pass `--no-default-features --features cpu|cuda`
+- **Default features are empty** → always pass `--no-default-features --features cpu|gpu`
 - **Never mutate large binaries or GGUF in place** → use `bitnet-compat export-fixed` for new files
 - **Prefer `xtask` over ad-hoc scripts** for downloads/crossval/build steps
 - **Print commands before long operations** → use `--dry-run` where available

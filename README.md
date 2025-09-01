@@ -83,19 +83,19 @@ cargo test  --locked --workspace --no-default-features --features cpu
 #### 🎮 **GPU Path** (CUDA)
 ```bash
 # Check CUDA availability and device information
-cargo run --example cuda_info --no-default-features --features cuda
+cargo run --example cuda_info --no-default-features --features gpu
 
 # Build with CUDA GPU support  
-cargo build --locked --workspace --no-default-features --features cuda
+cargo build --locked --workspace --no-default-features --features gpu
 
 # Run GPU validation and performance tests
-cargo test -p bitnet-kernels --no-default-features --features cuda --test gpu_integration
+cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_integration
 
 # GPU memory health check (production monitoring)
-cargo run --example test_gpu_memory --no-default-features --features cuda
+cargo run --example test_gpu_memory --no-default-features --features gpu
 
 # Deterministic GPU testing (enhanced in PR #108)
-BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo test --workspace --no-default-features --features cuda -- --test-threads=1
+BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo test --workspace --no-default-features --features gpu -- --test-threads=1
 ```
 
 #### 🛠️ **Utilities**
@@ -240,14 +240,15 @@ curl -X POST http://localhost:8080/v1/completions \
 BitNet.rs uses feature flags to enable optional functionality:
 
 - `cpu`: CPU inference with optimized kernels (not enabled by default)
-- `cuda`: GPU acceleration via CUDA with memory optimization and mixed precision support  
+- `gpu`: GPU acceleration via CUDA with memory optimization and mixed precision support
+- `cuda`: Backward-compatible alias for `gpu` feature (deprecated, use `gpu`)  
 - `avx2`: x86_64 AVX2 SIMD optimizations (auto-detected when using `cpu`)
 - `avx512`: x86_64 AVX-512 SIMD optimizations (auto-detected when using `cpu`)
 - `neon`: ARM64 NEON SIMD optimizations (auto-detected when using `cpu`)
 - `ffi`: Enable C++ FFI bridge for cross-validation and migration
 - `iq2s-ffi`: IQ2_S quantization via GGML FFI for llama.cpp compatibility
-- `mixed-precision`: Advanced FP16/BF16 support for modern GPUs (requires `cuda`)
-- `gpu-validation`: Comprehensive GPU validation framework (requires `cuda`)
+- `mixed-precision`: Advanced FP16/BF16 support for modern GPUs (requires `gpu`)
+- `gpu-validation`: Comprehensive GPU validation framework (requires `gpu`)
 - `full`: Enable all features
 
 **Important:** Default features are empty to prevent unintended dependencies. You must explicitly enable features:
@@ -257,10 +258,10 @@ BitNet.rs uses feature flags to enable optional functionality:
 cargo build --no-default-features --features cpu
 
 # GPU-enabled build
-cargo build --no-default-features --features cuda
+cargo build --no-default-features --features gpu
 
 # Both CPU and GPU
-cargo build --no-default-features --features "cpu,cuda"
+cargo build --no-default-features --features "cpu,gpu"
 
 # Full feature set
 cargo build --features full
@@ -441,10 +442,10 @@ console.log(response);
 cargo build --release --no-default-features --features cpu
 
 # Build with GPU support
-cargo build --release --no-default-features --features cuda
+cargo build --release --no-default-features --features gpu
 
 # Build with both CPU and GPU
-cargo build --release --no-default-features --features "cpu,cuda"
+cargo build --release --no-default-features --features "cpu,gpu"
 
 # Build with all optimizations
 cargo build --release --features full
@@ -453,7 +454,7 @@ cargo build --release --features full
 cargo test --workspace --no-default-features --features cpu
 
 # Run GPU tests
-cargo test --workspace --no-default-features --features cuda
+cargo test --workspace --no-default-features --features gpu
 
 # Run benchmarks
 cargo bench --workspace --no-default-features --features cpu
@@ -487,7 +488,7 @@ identifier "int8_t" is undefined
 ```
 the package 'bitnet-kernels' does not contain this feature: gpu
 ```
-**Solution:** Use `cuda` instead of `gpu`: `cargo build --features cuda`
+**Solution:** Use `gpu` instead of `cuda`: `cargo build --features gpu` (or use `cuda` alias for backward compatibility)
 
 **4. No default features warning**
 ```

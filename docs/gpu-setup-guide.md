@@ -47,7 +47,7 @@ nvcc --version
 nvidia-smi
 
 # Test CUDA runtime
-cargo run --example cuda_info --no-default-features --features cuda
+cargo run --example cuda_info --no-default-features --features gpu
 ```
 
 Expected output:
@@ -67,10 +67,10 @@ Device 0: NVIDIA GeForce RTX 4080
 ### Basic CUDA Build
 ```bash
 # Build with CUDA support
-cargo build --release --no-default-features --features cuda
+cargo build --release --no-default-features --features gpu
 
 # Run tests to verify GPU functionality
-cargo test --workspace --no-default-features --features cuda
+cargo test --workspace --no-default-features --features gpu
 ```
 
 ### Advanced GPU Features
@@ -226,13 +226,13 @@ Run comprehensive GPU validation tests:
 
 ```bash
 # Run numerical accuracy validation
-cargo test --no-default-features --features cuda gpu_numerical_accuracy
+cargo test --no-default-features --features gpu gpu_numerical_accuracy
 
 # Run performance benchmarks  
-cargo test --no-default-features --features cuda gpu_performance_benchmark
+cargo test --no-default-features --features gpu gpu_performance_benchmark
 
 # Run memory leak detection
-cargo test --no-default-features --features cuda gpu_memory_leaks
+cargo test --no-default-features --features gpu gpu_memory_leaks
 ```
 
 ### Custom Validation
@@ -286,7 +286,7 @@ error: out of memory
 ```
 **Solution:**
 - Reduce batch size or model size
-- Enable memory optimization: `--features cuda,memory-pool`
+- Enable memory optimization: `--features gpu,memory-pool`
 - Check GPU memory usage: `nvidia-smi`
 
 #### 3. Kernel Compilation Errors
@@ -359,7 +359,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Copy source and build with GPU support
 COPY . /app
 WORKDIR /app
-RUN cargo build --release --no-default-features --features cuda
+RUN cargo build --release --no-default-features --features gpu
 
 # Run with GPU access
 CMD ["./target/release/bitnet-server", "--gpu", "0"]

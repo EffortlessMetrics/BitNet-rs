@@ -13,7 +13,7 @@ BitNet.rs uses Cargo feature flags to control compilation of optional functional
 cargo build --no-default-features --features cpu
 
 # GPU-enabled build
-cargo build --no-default-features --features cuda
+cargo build --no-default-features --features gpu
 
 # Full feature set
 cargo build --features full
@@ -36,13 +36,22 @@ Enables:
 - Multi-threaded CPU inference
 - Automatic CPU feature detection
 
-### `cuda`
+### `gpu`
 **Purpose:** Enable NVIDIA GPU acceleration  
 **Dependencies:** CUDA toolkit 11.0+, cudarc crate  
 **When to use:** For GPU-accelerated inference on NVIDIA hardware
 
 ```bash
-cargo build --no-default-features --features cuda
+cargo build --no-default-features --features gpu
+```
+
+### `cuda`
+**Purpose:** Backward-compatible alias for `gpu` feature  
+**Dependencies:** Same as `gpu`  
+**When to use:** For backward compatibility (deprecated, use `gpu`)
+
+```bash
+cargo build --no-default-features --features cuda  # Works but deprecated
 ```
 
 Enables:
@@ -121,30 +130,32 @@ cargo build --release --no-default-features --features cpu
 
 **Production GPU deployment:**
 ```bash
-cargo build --release --no-default-features --features "cpu,cuda"
+cargo build --release --no-default-features --features "cpu,gpu"
 ```
 
 **Development with validation:**
 ```bash
-cargo build --features "cpu,cuda,ffi,crossval"
+cargo build --features "cpu,gpu,ffi,crossval"
 ```
 
 **Maximum performance:**
 ```bash
-cargo build --release --features "cpu,cuda,avx512"
+cargo build --release --features "cpu,gpu,avx512"
 ```
 
 ## Workspace Crate Features
 
 ### bitnet-kernels
 - `cpu`: CPU kernel implementations
-- `cuda`: CUDA GPU kernels
+- `gpu`: GPU kernels (replaces `cuda`)
+- `cuda`: Backward-compatible alias for `gpu`
 - `ffi`: FFI bridge to C++ kernels
 - `ffi-bridge`: Build-time FFI compilation
 
 ### bitnet-inference
 - `cpu`: CPU inference engine
-- `cuda`: GPU inference engine
+- `gpu`: GPU inference engine (replaces `cuda`)
+- `cuda`: Backward-compatible alias for `gpu`
 - `async`: Async/await support (always enabled)
 
 ### bitnet-cli
@@ -153,7 +164,8 @@ cargo build --release --features "cpu,cuda,avx512"
 
 ### bitnet-server
 - `cpu`: CPU inference endpoints
-- `cuda`: GPU inference endpoints
+- `gpu`: GPU inference endpoints (replaces `cuda`)
+- `cuda`: Backward-compatible alias for `gpu`
 
 ## Feature Resolution
 
