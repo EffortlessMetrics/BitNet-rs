@@ -4,11 +4,11 @@
 //! GPU kernel validation and performance benchmarking.
 //!
 //! Usage:
-//!   cargo run --example gpu_validation --features cuda
-//!   cargo run --example gpu_validation --features cuda -- --benchmark-only
-//!   cargo run --example gpu_validation --features cuda -- --validation-only
+//!   cargo run --example gpu_validation --features gpu
+//!   cargo run --example gpu_validation --features gpu -- --benchmark-only
+//!   cargo run --example gpu_validation --features gpu -- --validation-only
 
-#[cfg(feature = "cuda")]
+#[cfg(feature = "gpu")]
 use bitnet_kernels::gpu::{
     BenchmarkConfig, CudaKernel, GpuBenchmark, GpuValidator, ValidationConfig, cuda_device_count,
     is_cuda_available, print_benchmark_results, print_validation_results,
@@ -16,18 +16,18 @@ use bitnet_kernels::gpu::{
 use std::env;
 
 fn main() {
-    #[cfg(not(feature = "cuda"))]
+    #[cfg(not(feature = "gpu"))]
     {
-        println!("❌ This example requires the 'cuda' feature to be enabled");
-        println!("Run with: cargo run --example gpu_validation --features cuda");
+        println!("❌ This example requires the 'gpu' feature to be enabled");
+        println!("Run with: cargo run --example gpu_validation --features gpu");
         std::process::exit(1);
     }
 
-    #[cfg(feature = "cuda")]
+    #[cfg(feature = "gpu")]
     run_gpu_validation();
 }
 
-#[cfg(feature = "cuda")]
+#[cfg(feature = "gpu")]
 fn run_gpu_validation() {
     // Initialize logging
     env_logger::Builder::from_default_env().filter_level(log::LevelFilter::Info).init();
@@ -82,7 +82,7 @@ fn run_gpu_validation() {
 
     println!("\n🎉 GPU validation and benchmarking completed!");
     println!("\nFor more detailed testing, run:");
-    println!("  cargo test --features cuda --ignored gpu_integration");
+    println!("  cargo test --features gpu --ignored gpu_integration");
 }
 
 fn run_validation(quick_mode: bool) {
