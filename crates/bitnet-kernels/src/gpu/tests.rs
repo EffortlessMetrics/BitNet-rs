@@ -8,6 +8,7 @@ mod tests {
     use crate::gpu::{
         BenchmarkConfig, CudaKernel, GpuBenchmark, MemoryPoolConfig, MixedPrecisionKernel,
         OptimizedMemoryPool, PrecisionMode, cuda_device_count, is_cuda_available,
+        list_cuda_devices,
     };
     use bitnet_common::QuantizationType;
     use std::time::Duration;
@@ -41,6 +42,29 @@ mod tests {
             Err(e) => {
                 println!("Failed to create CUDA kernel: {}", e);
                 // Don't fail the test if CUDA setup fails
+            }
+        }
+    }
+
+    #[test]
+    fn test_cuda_device_info_query() {
+        if !is_cuda_available() {
+            println!("CUDA not available, skipping test");
+            return;
+        }
+
+        match list_cuda_devices() {
+            Ok(devs) => {
+                assert!(!devs.is_empty());
+                let info = &devs[0];
+                assert!(info.total_memory > 0);
+                assert!(info.multiprocessor_count > 0);
+                assert!(info.max_threads_per_block > 0);
+                assert!(!info.name.is_empty());
+                println!("Device info: {:?}", info);
+            }
+            Err(e) => {
+                panic!("Failed to list CUDA devices: {}", e);
             }
         }
     }
