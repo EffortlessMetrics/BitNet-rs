@@ -8,6 +8,8 @@ use bitnet_common::{BitNetConfig, BitNetTensor, ConcreteTensor, Device, Tensor};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use candle_core::{DType, IndexOp};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 use std::sync::Arc;
@@ -24,7 +26,7 @@ use crate::{
 };
 
 /// Summary information about a tensor in the GGUF header
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TensorSummary {
     /// Tensor name
     pub name: String,
@@ -32,15 +34,67 @@ pub struct TensorSummary {
     pub shape: Vec<u64>,
     /// Underlying GGML dtype identifier
     pub dtype: u32,
+    /// Human-readable dtype name
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dtype_name: Option<String>,
+    /// Tensor category (weight, embedding, bias, etc.)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
+    /// Parameter count for this tensor
+    pub parameter_count: u64,
 }
 
-/// Lightweight model info from GGUF header
-#[derive(Debug, Clone)]
+/// Categorized metadata for better organization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategorizedMetadata {
+    /// Model configuration parameters (vocab_size, context_length, etc.)
+    pub model_params: HashMap<String, String>,
+    /// Architecture details (attention, layer info, etc.)
+    pub architecture: HashMap<String, String>,
+    /// Tokenizer configuration
+    pub tokenizer: HashMap<String, String>,
+    /// Training and generation metadata
+    pub training: HashMap<String, String>,
+    /// Quantization-specific metadata
+    pub quantization: HashMap<String, String>,
+    /// Other uncategorized metadata
+    pub other: HashMap<String, String>,
+}
+
+/// Enhanced tensor statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TensorStatistics {
+    /// Total number of parameters across all tensors
+    pub total_parameters: u64,
+    /// Parameter count by tensor category
+    pub parameters_by_category: HashMap<String, u64>,
+    /// Unique data types present
+    pub unique_dtypes: Vec<u32>,
+    /// Data type distribution
+    pub dtype_distribution: HashMap<String, usize>,
+    /// Largest tensor by parameter count
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub largest_tensor: Option<String>,
+    /// Memory footprint estimate in bytes
+    pub estimated_memory_bytes: u64,
+}
+
+/// Lightweight model info from GGUF header with enhanced categorization
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelInfo {
     pub header: gguf::GgufHeader,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     kv_specs: Vec<gguf::GgufKv>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     quantization_hints: Vec<gguf::GgufKv>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     tensor_summaries: Vec<TensorSummary>,
+    /// Categorized metadata for easy access
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub categorized_metadata: Option<CategorizedMetadata>,
+    /// Enhanced tensor statistics
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tensor_statistics: Option<TensorStatistics>,
 }
 
 impl ModelInfo {
@@ -67,6 +121,119 @@ impl ModelInfo {
     /// Summary information for tensors described in the GGUF header
     pub fn tensor_summaries(&self) -> &[TensorSummary] {
         &self.tensor_summaries
+    }
+
+    /// Serialize to JSON string
+    pub fn to_json(&self) -> Result<String> {
+        serde_json::to_string_pretty(self).context("Failed to serialize ModelInfo to JSON")
+    }
+
+    /// Serialize to compact JSON string
+    pub fn to_json_compact(&self) -> Result<String> {
+        serde_json::to_string(self).context("Failed to serialize ModelInfo to compact JSON")
+    }
+
+    /// Get categorized metadata, computing it if not already available
+    pub fn get_categorized_metadata(&mut self) -> &CategorizedMetadata {
+        if self.categorized_metadata.is_none() {
+            self.categorized_metadata = Some(self.compute_categorized_metadata());
+        }
+        self.categorized_metadata.as_ref().unwrap()
+    }
+
+    /// Get tensor statistics, computing them if not already available
+    pub fn get_tensor_statistics(&mut self) -> &TensorStatistics {
+        if self.tensor_statistics.is_none() {
+            self.tensor_statistics = Some(self.compute_tensor_statistics());
+        }
+        self.tensor_statistics.as_ref().unwrap()
+    }
+
+    /// Compute categorized metadata from raw KV pairs
+    fn compute_categorized_metadata(&self) -> CategorizedMetadata {
+        let mut metadata = CategorizedMetadata {
+            model_params: HashMap::new(),
+            architecture: HashMap::new(),
+            tokenizer: HashMap::new(),
+            training: HashMap::new(),
+            quantization: HashMap::new(),
+            other: HashMap::new(),
+        };
+
+        for kv in &self.kv_specs {
+            let value_str = format_gguf_value(&kv.value);
+            let category = categorize_kv_key(&kv.key);
+
+            match category {
+                "model" => {
+                    metadata.model_params.insert(kv.key.clone(), value_str);
+                }
+                "architecture" => {
+                    metadata.architecture.insert(kv.key.clone(), value_str);
+                }
+                "tokenizer" => {
+                    metadata.tokenizer.insert(kv.key.clone(), value_str);
+                }
+                "training" => {
+                    metadata.training.insert(kv.key.clone(), value_str);
+                }
+                "quantization" => {
+                    metadata.quantization.insert(kv.key.clone(), value_str);
+                }
+                _ => {
+                    metadata.other.insert(kv.key.clone(), value_str);
+                }
+            }
+        }
+
+        metadata
+    }
+
+    /// Compute tensor statistics
+    fn compute_tensor_statistics(&self) -> TensorStatistics {
+        let total_parameters: u64 =
+            self.tensor_summaries.iter().map(|t| t.shape.iter().product::<u64>()).sum();
+
+        let mut parameters_by_category = HashMap::new();
+        let mut dtype_distribution = HashMap::new();
+        let mut largest_tensor = None;
+        let mut max_params = 0;
+        let mut estimated_memory_bytes = 0u64;
+
+        for tensor in &self.tensor_summaries {
+            let params = tensor.shape.iter().product::<u64>();
+            let category = tensor.category.as_deref().unwrap_or("other");
+            *parameters_by_category.entry(category.to_string()).or_insert(0) += params;
+
+            let dtype_name = format_dtype(tensor.dtype);
+            *dtype_distribution.entry(dtype_name).or_insert(0) += 1;
+
+            if params > max_params {
+                max_params = params;
+                largest_tensor = Some(tensor.name.clone());
+            }
+
+            // Estimate memory usage based on dtype
+            let bytes_per_param = estimate_bytes_per_param(tensor.dtype);
+            estimated_memory_bytes += params * bytes_per_param as u64;
+        }
+
+        let unique_dtypes: Vec<u32> = self
+            .tensor_summaries
+            .iter()
+            .map(|t| t.dtype)
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect();
+
+        TensorStatistics {
+            total_parameters,
+            parameters_by_category,
+            unique_dtypes,
+            dtype_distribution,
+            largest_tensor,
+            estimated_memory_bytes,
+        }
     }
 }
 
@@ -252,12 +419,35 @@ pub fn inspect_model(path: &Path) -> gguf::Result<ModelInfo> {
         kv_specs.push(gguf::GgufKv { key, value });
     }
 
-    // collect quantization hints
+    // collect quantization hints with enhanced detection
     let quantization_hints = kv_specs
         .iter()
         .filter(|kv| {
             let k = kv.key.to_lowercase();
-            k.contains("quant") || k.contains("file_type")
+            // Enhanced quantization detection patterns
+            k.contains("quant")
+                || k.contains("file_type")
+                || k.contains("bitnet")
+                || k.contains("iq2_s")
+                || k.contains("i2_s")
+                || k.contains("tl1")
+                || k.contains("tl2")
+                || k.contains("q4_0")
+                || k.contains("q4_1")
+                || k.contains("q5_0")
+                || k.contains("q5_1")
+                || k.contains("q8_0")
+                || k.contains("q8_1")
+                || k.contains("q2_k")
+                || k.contains("q3_k")
+                || k.contains("q4_k")
+                || k.contains("q5_k")
+                || k.contains("q6_k")
+                || k.contains("q8_k")
+                || k.contains("precision")
+                || k.contains("dtype")
+                || k.contains("data_type")
+                || k.ends_with("_bits")
         })
         .cloned()
         .collect();
@@ -274,10 +464,27 @@ pub fn inspect_model(path: &Path) -> gguf::Result<ModelInfo> {
         let dtype = read_u32_le(&mut r)?;
         // skip offset
         let _ = read_u64_le(&mut r)?;
-        tensor_summaries.push(TensorSummary { name, shape, dtype });
+        let parameter_count = shape.iter().product::<u64>();
+        let dtype_name = Some(format_dtype(dtype));
+        let category = Some(categorize_tensor_name(&name));
+        tensor_summaries.push(TensorSummary {
+            name,
+            shape,
+            dtype,
+            dtype_name,
+            category,
+            parameter_count,
+        });
     }
 
-    Ok(ModelInfo { header, kv_specs, quantization_hints, tensor_summaries })
+    Ok(ModelInfo {
+        header,
+        kv_specs,
+        quantization_hints,
+        tensor_summaries,
+        categorized_metadata: None,
+        tensor_statistics: None,
+    })
 }
 
 /// Result type for inference operations
@@ -631,6 +838,206 @@ pub struct InferenceStats {
     pub cache_size: usize,
     pub cache_usage: f64,
     pub backend_type: String,
+}
+
+/// Enhanced categorization function for KV metadata keys
+pub fn categorize_kv_key(key: &str) -> &'static str {
+    let key_lower = key.to_lowercase();
+
+    // Model parameters
+    if key_lower.contains("vocab_size")
+        || key_lower.contains("context_length")
+        || key_lower.contains("embedding_length")
+        || key_lower.contains("block_count")
+        || key_lower.contains("feed_forward_length")
+        || key_lower.contains("attention.head_count")
+        || key_lower.contains("n_vocab")
+        || key_lower.contains("n_ctx")
+        || key_lower.contains("n_embd")
+        || key_lower.contains("n_layer")
+        || key_lower.contains("n_ff")
+        || key_lower.contains("n_head")
+    {
+        "model"
+    }
+    // Architecture details
+    else if key_lower.contains("architecture")
+        || key_lower.contains("attention")
+        || key_lower.contains("rope")
+        || key_lower.contains("layer")
+        || key_lower.contains("norm")
+        || key_lower.contains("activation")
+        || key_lower.contains("gelu")
+        || key_lower.contains("silu")
+    {
+        "architecture"
+    }
+    // Tokenizer configuration
+    else if key_lower.contains("tokenizer")
+        || key_lower.contains("bos_token")
+        || key_lower.contains("eos_token")
+        || key_lower.contains("pad_token")
+        || key_lower.contains("unk_token")
+        || key_lower.contains("vocab")
+        || key_lower.contains("token")
+    {
+        "tokenizer"
+    }
+    // Training and generation metadata
+    else if key_lower.contains("training")
+        || key_lower.contains("finetuning")
+        || key_lower.contains("dataset")
+        || key_lower.contains("epoch")
+        || key_lower.contains("learning_rate")
+        || key_lower.contains("batch_size")
+        || key_lower.contains("temperature")
+        || key_lower.contains("top_p")
+        || key_lower.contains("top_k")
+    {
+        "training"
+    }
+    // Quantization metadata
+    else if key_lower.contains("quant")
+        || key_lower.contains("file_type")
+        || key_lower.contains("bitnet")
+        || key_lower.contains("iq2_s")
+        || key_lower.contains("i2_s")
+        || key_lower.contains("tl1")
+        || key_lower.contains("tl2")
+    {
+        "quantization"
+    }
+    // Everything else
+    else {
+        "other"
+    }
+}
+
+/// Categorize tensor names for better organization
+pub fn categorize_tensor_name(name: &str) -> String {
+    let name_lower = name.to_lowercase();
+
+    // Check specific component types first (highest priority)
+    if name_lower.contains("bias") || name_lower.contains(".b") || name_lower.ends_with("b") {
+        "bias".to_string()
+    } else if name_lower.contains("embed") || name_lower.contains("token") {
+        "embedding".to_string()
+    } else if name_lower.contains("norm") || name_lower.contains("ln") {
+        "normalization".to_string()
+    } else if name_lower.contains("head") || name_lower.contains("lm_head") {
+        "output_head".to_string()
+    }
+    // Check for generic weight patterns (medium priority)
+    else if name_lower.contains("weight") {
+        "weight".to_string()
+    }
+    // Check for layer/module location indicators (lowest priority)
+    else if name_lower.contains("attention") || name_lower.contains("attn") {
+        "attention".to_string()
+    } else if name_lower.contains("mlp")
+        || name_lower.contains("feed_forward")
+        || name_lower.contains("ffn")
+    {
+        "feed_forward".to_string()
+    } else {
+        "other".to_string()
+    }
+}
+
+/// Enhanced dtype formatting with comprehensive coverage
+pub fn format_dtype(dtype: u32) -> String {
+    match dtype {
+        0 => "F32".to_string(),
+        1 => "F16".to_string(),
+        2 => "Q4_0".to_string(),
+        3 => "Q4_1".to_string(),
+        4 => "Q5_0".to_string(),
+        5 => "Q5_1".to_string(),
+        6 => "Q8_0".to_string(),
+        7 => "Q8_1".to_string(),
+        8 => "Q2_K".to_string(),
+        9 => "Q3_K".to_string(),
+        10 => "Q4_K".to_string(),
+        11 => "Q5_K".to_string(),
+        12 => "Q6_K".to_string(),
+        13 => "Q8_K".to_string(),
+        14 => "IQ2_XXS".to_string(),
+        15 => "IQ2_XS".to_string(),
+        16 => "IQ3_XXS".to_string(),
+        17 => "I2_S".to_string(),  // BitNet native format
+        18 => "IQ2_S".to_string(), // BitNet extended format
+        19 => "TL1".to_string(),   // Table lookup 1
+        20 => "TL2".to_string(),   // Table lookup 2
+        21 => "IQ1_S".to_string(),
+        22 => "IQ4_NL".to_string(),
+        23 => "IQ3_S".to_string(),
+        24 => "IQ2_S_NEW".to_string(),
+        25 => "IQ4_XS".to_string(),
+        _ => format!("Unknown({})", dtype),
+    }
+}
+
+/// Estimate bytes per parameter for memory calculation
+pub fn estimate_bytes_per_param(dtype: u32) -> usize {
+    match dtype {
+        0 => 4,     // F32
+        1 => 2,     // F16
+        2 | 3 => 3, // Q4_0, Q4_1 (roughly 4 bits per param + overhead)
+        4 | 5 => 3, // Q5_0, Q5_1
+        6 | 7 => 1, // Q8_0, Q8_1
+        8 => 3,     // Q2_K (roughly 2.25 bits)
+        9 => 3,     // Q3_K
+        10 => 3,    // Q4_K
+        11 => 4,    // Q5_K
+        12 => 4,    // Q6_K
+        13 => 1,    // Q8_K
+        17 => 1,    // I2_S (BitNet 2-bit)
+        18 => 3,    // IQ2_S
+        19 => 1,    // TL1 (table lookup)
+        20 => 1,    // TL2
+        _ => 2,     // Unknown, assume 2 bytes
+    }
+}
+
+/// Format GGUF values for display
+pub fn format_gguf_value(value: &gguf::GgufValue) -> String {
+    match value {
+        gguf::GgufValue::U8(v) => v.to_string(),
+        gguf::GgufValue::I8(v) => v.to_string(),
+        gguf::GgufValue::U16(v) => v.to_string(),
+        gguf::GgufValue::I16(v) => v.to_string(),
+        gguf::GgufValue::U32(v) => v.to_string(),
+        gguf::GgufValue::I32(v) => v.to_string(),
+        gguf::GgufValue::F32(v) => {
+            if v.fract() == 0.0 {
+                format!("{:.0}", v)
+            } else {
+                format!("{:.6}", v)
+            }
+        }
+        gguf::GgufValue::Bool(v) => v.to_string(),
+        gguf::GgufValue::String(v) => v.clone(),
+        gguf::GgufValue::Array(arr) => {
+            if arr.len() <= 3 {
+                format!("[{}]", arr.iter().map(format_gguf_value).collect::<Vec<_>>().join(", "))
+            } else {
+                format!(
+                    "[{}, ... +{} more]",
+                    arr.iter().take(2).map(format_gguf_value).collect::<Vec<_>>().join(", "),
+                    arr.len() - 2
+                )
+            }
+        }
+        gguf::GgufValue::U64(v) => v.to_string(),
+        gguf::GgufValue::I64(v) => v.to_string(),
+        gguf::GgufValue::F64(v) => {
+            if v.fract() == 0.0 {
+                format!("{:.0}", v)
+            } else {
+                format!("{:.6}", v)
+            }
+        }
+    }
 }
 
 // MockTensor is now defined in bitnet_common

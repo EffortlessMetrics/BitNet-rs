@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::io::{self, BufReader, Read, Seek, SeekFrom};
 use thiserror::Error;
 
@@ -25,7 +26,7 @@ pub type Result<T> = std::result::Result<T, GgufError>;
 
 /// Minimal GGUF header (first 24 bytes).
 /// Use `read_header_blocking` for CLIs or `read_header` for async contexts.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GgufHeader {
     pub version: u32,
     pub n_tensors: u64,
@@ -82,7 +83,7 @@ pub fn read_header_blocking(path: impl AsRef<std::path::Path>) -> Result<GgufHea
 }
 
 /// GGUF value types according to the spec
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GgufValue {
     U8(u8),
     I8(i8),
@@ -100,7 +101,7 @@ pub enum GgufValue {
 }
 
 /// A key-value pair from the GGUF metadata
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GgufKv {
     pub key: String,
     pub value: GgufValue,

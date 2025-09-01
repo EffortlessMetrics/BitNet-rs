@@ -13,58 +13,84 @@
 //! ## Usage
 //!
 //! ```bash
-//! # Inspect a GGUF model
+//! # Inspect a GGUF model (human-readable output)
 //! cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- path/to/model.gguf
 //!
-//! # Example with actual model file
+//! # Get JSON output for programmatic processing
+//! cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- --json path/to/model.gguf
+//!
+//! # Example with environment variable
 //! BITNET_GGUF=models/bitnet/model.gguf cargo run --example inspect_gguf_metadata --no-default-features --features cpu
+//!
+//! # JSON output with environment variable
+//! BITNET_GGUF=models/bitnet/model.gguf cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- --json
 //! ```
 
 use anyhow::{Context, Result};
-use bitnet_inference::engine::{ModelInfo, TensorSummary, inspect_model};
-use bitnet_inference::gguf::{GgufKv, GgufValue};
+use bitnet_inference::engine::{ModelInfo, TensorSummary, format_dtype, inspect_model};
+use bitnet_inference::gguf::GgufValue;
 use std::env;
 
 fn main() -> Result<()> {
     // Initialize tracing for detailed logging
     tracing_subscriber::fmt::init();
 
+    // Parse command line arguments
+    let args: Vec<String> = env::args().collect();
+    let json_output = args.contains(&"--json".to_string());
+
     // Get model path from command line or environment
     let model_path = get_model_path()?;
 
-    println!("🔍 Inspecting GGUF model: {}", model_path.display());
-    println!("{}", "=".repeat(60));
-
     // Perform lightweight inspection
-    let model_info = inspect_model(&model_path)
+    let mut model_info = inspect_model(&model_path)
         .with_context(|| format!("Failed to inspect model: {}", model_path.display()))?;
 
-    // Display basic header information
-    display_header_info(&model_info);
+    if json_output {
+        // Force computation of enhanced metadata for JSON output
+        let _ = model_info.get_categorized_metadata();
+        let _ = model_info.get_tensor_statistics();
 
-    // Display key-value metadata
-    display_kv_metadata(&model_info);
+        // Output JSON
+        let json = model_info.to_json()?;
+        println!("{}", json);
+    } else {
+        // Human-readable output
+        println!("🔍 Inspecting GGUF model: {}", model_path.display());
+        println!("{}", "=".repeat(60));
 
-    // Display quantization information
-    display_quantization_hints(&model_info);
+        // Display basic header information
+        display_header_info(&model_info);
 
-    // Display tensor summaries
-    display_tensor_summaries(&model_info);
+        // Pre-compute enhanced metadata to avoid borrowing conflicts
+        let categorized = model_info.get_categorized_metadata().clone();
+        let stats = model_info.get_tensor_statistics().clone();
 
-    println!("\n✅ Inspection completed successfully!");
-    println!(
-        "💡 Tip: Use `cargo run -p bitnet-cli -- inspect --model {}` for JSON output",
-        model_path.display()
-    );
+        // Display enhanced key-value metadata with categorization
+        display_enhanced_kv_metadata(&model_info, &categorized);
+
+        // Display quantization information
+        display_quantization_hints(&model_info);
+
+        // Display tensor summaries with enhanced categorization
+        display_enhanced_tensor_summaries(&model_info, &stats);
+
+        println!("\n✅ Inspection completed successfully!");
+        println!(
+            "💡 Tip: Use --json flag for JSON output or `cargo run -p bitnet-cli -- inspect --model {}` for CLI integration",
+            model_path.display()
+        );
+    }
 
     Ok(())
 }
 
 fn get_model_path() -> Result<std::path::PathBuf> {
-    // Try command line argument first
+    // Try command line argument first (skip --json flag if present)
     let args: Vec<String> = env::args().collect();
-    if args.len() > 1 {
-        return Ok(args[1].clone().into());
+    let model_arg = args.iter().skip(1).find(|arg| !arg.starts_with("--"));
+    if let Some(path) = model_arg {
+        return Ok(path.clone().into());
     }
 
     // Try environment variable
@@ -77,8 +103,13 @@ fn get_model_path() -> Result<std::path::PathBuf> {
     }
 
     anyhow::bail!(
-        "Please provide a model path as argument or set BITNET_GGUF environment variable\n\
-         Example: cargo run --example inspect_gguf_metadata -- path/to/model.gguf"
+        "Please provide a model path as argument or set BITNET_GGUF environment variable\n\n\
+         Examples:\n\
+         cargo run --example inspect_gguf_metadata -- path/to/model.gguf\n\
+         cargo run --example inspect_gguf_metadata -- --json path/to/model.gguf\n\
+         BITNET_GGUF=path/to/model.gguf cargo run --example inspect_gguf_metadata\n\n\
+         Flags:\n\
+         --json    Output results in JSON format for programmatic processing"
     );
 }
 
@@ -90,8 +121,11 @@ fn display_header_info(model_info: &ModelInfo) {
     println!();
 }
 
-fn display_kv_metadata(model_info: &ModelInfo) {
-    println!("🔑 **Key-Value Metadata** ({} entries)", model_info.kv_specs().len());
+fn display_enhanced_kv_metadata(
+    model_info: &ModelInfo,
+    categorized: &bitnet_inference::engine::CategorizedMetadata,
+) {
+    println!("🔑 **Enhanced Key-Value Metadata** ({} entries)", model_info.kv_specs().len());
 
     if model_info.kv_specs().is_empty() {
         println!("   (No KV metadata found)");
@@ -99,65 +133,24 @@ fn display_kv_metadata(model_info: &ModelInfo) {
         return;
     }
 
-    // Group metadata by category for better readability
-    let mut model_params = Vec::new();
-    let mut architecture_info = Vec::new();
-    let mut tokenizer_info = Vec::new();
-    let mut other_metadata = Vec::new();
-
-    for kv in model_info.kv_specs() {
-        let category = categorize_kv_key(&kv.key);
-        match category {
-            "model" => model_params.push(kv),
-            "architecture" => architecture_info.push(kv),
-            "tokenizer" => tokenizer_info.push(kv),
-            _ => other_metadata.push(kv),
-        }
-    }
-
-    display_kv_category("Model Parameters", &model_params);
-    display_kv_category("Architecture", &architecture_info);
-    display_kv_category("Tokenizer", &tokenizer_info);
-    display_kv_category("Other Metadata", &other_metadata);
+    // Display each category with enhanced formatting
+    display_enhanced_kv_category("📊 Model Parameters", &categorized.model_params);
+    display_enhanced_kv_category("🏗️  Architecture", &categorized.architecture);
+    display_enhanced_kv_category("🔤 Tokenizer", &categorized.tokenizer);
+    display_enhanced_kv_category("🎯 Training", &categorized.training);
+    display_enhanced_kv_category("⚖️  Quantization", &categorized.quantization);
+    display_enhanced_kv_category("📝 Other", &categorized.other);
     println!();
 }
 
-fn categorize_kv_key(key: &str) -> &'static str {
-    let key_lower = key.to_lowercase();
-
-    if key_lower.contains("vocab_size")
-        || key_lower.contains("context_length")
-        || key_lower.contains("embedding_length")
-        || key_lower.contains("block_count")
-        || key_lower.contains("feed_forward_length")
-        || key_lower.contains("attention.head_count")
-    {
-        "model"
-    } else if key_lower.contains("architecture")
-        || key_lower.contains("attention")
-        || key_lower.contains("rope")
-        || key_lower.contains("layer")
-    {
-        "architecture"
-    } else if key_lower.contains("tokenizer")
-        || key_lower.contains("bos_token")
-        || key_lower.contains("eos_token")
-        || key_lower.contains("pad_token")
-    {
-        "tokenizer"
-    } else {
-        "other"
-    }
-}
-
-fn display_kv_category(title: &str, kvs: &[&GgufKv]) {
+fn display_enhanced_kv_category(title: &str, kvs: &std::collections::HashMap<String, String>) {
     if kvs.is_empty() {
         return;
     }
 
-    println!("   📁 {title}:");
-    for kv in kvs {
-        println!("      {}: {}", kv.key, format_value(&kv.value));
+    println!("   {}:", title);
+    for (key, value) in kvs {
+        println!("      {}: {}", key, value);
     }
 }
 
@@ -176,8 +169,11 @@ fn display_quantization_hints(model_info: &ModelInfo) {
     println!();
 }
 
-fn display_tensor_summaries(model_info: &ModelInfo) {
-    println!("📊 **Tensor Summary** ({} tensors)", model_info.tensor_summaries().len());
+fn display_enhanced_tensor_summaries(
+    model_info: &ModelInfo,
+    stats: &bitnet_inference::engine::TensorStatistics,
+) {
+    println!("📊 **Enhanced Tensor Summary** ({} tensors)", model_info.tensor_summaries().len());
 
     if model_info.tensor_summaries().is_empty() {
         println!("   (No tensor information found)");
@@ -185,84 +181,67 @@ fn display_tensor_summaries(model_info: &ModelInfo) {
         return;
     }
 
-    // Group tensors by type for better organization
-    let mut embeddings = Vec::new();
-    let mut weights = Vec::new();
-    let mut biases = Vec::new();
-    let mut other_tensors = Vec::new();
-
-    for tensor in model_info.tensor_summaries() {
-        let category = categorize_tensor_name(&tensor.name);
-        match category {
-            "embedding" => embeddings.push(tensor),
-            "weight" => weights.push(tensor),
-            "bias" => biases.push(tensor),
-            _ => other_tensors.push(tensor),
-        }
-    }
-
-    display_tensor_category("Embeddings", &embeddings);
-    display_tensor_category("Weights", &weights);
-    display_tensor_category("Biases", &biases);
-    display_tensor_category("Other Tensors", &other_tensors);
-
-    // Display summary statistics
-    display_tensor_statistics(model_info.tensor_summaries());
-    println!();
-}
-
-fn categorize_tensor_name(name: &str) -> &'static str {
-    let name_lower = name.to_lowercase();
-
-    if name_lower.contains("embed") || name_lower.contains("token") {
-        "embedding"
-    } else if name_lower.contains("weight") || name_lower.contains(".w") {
-        "weight"
-    } else if name_lower.contains("bias") || name_lower.contains(".b") {
-        "bias"
-    } else {
-        "other"
-    }
-}
-
-fn display_tensor_category(title: &str, tensors: &[&TensorSummary]) {
-    if tensors.is_empty() {
-        return;
-    }
-
-    println!("   📁 {title} ({} tensors):", tensors.len());
-    for tensor in tensors.iter().take(10) {
-        // Limit display for readability
-        let shape_str = tensor.shape.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(" × ");
-        println!(
-            "      📐 {} [{}] (dtype: {})",
-            tensor.name,
-            shape_str,
-            format_dtype(tensor.dtype)
-        );
-    }
-
-    if tensors.len() > 10 {
-        println!("      ... and {} more tensors", tensors.len() - 10);
-    }
-}
-
-fn display_tensor_statistics(tensors: &[TensorSummary]) {
-    if tensors.is_empty() {
-        return;
-    }
-
-    let total_params: u64 = tensors.iter().map(|t| t.shape.iter().product::<u64>()).sum();
-
-    let unique_dtypes: std::collections::HashSet<u32> = tensors.iter().map(|t| t.dtype).collect();
-
-    println!("   📊 Statistics:");
-    println!("      Total Parameters: {:.2}M", total_params as f64 / 1_000_000.0);
+    // Display statistics overview
+    println!("   📈 **Statistics Overview**:");
+    println!("      Total Parameters: {:.2}M", stats.total_parameters as f64 / 1_000_000.0);
+    println!("      Estimated Memory: {:.2} MB", stats.estimated_memory_bytes as f64 / 1_000_000.0);
     println!(
         "      Unique Data Types: {} ({})",
-        unique_dtypes.len(),
-        unique_dtypes.iter().map(|dt| format_dtype(*dt)).collect::<Vec<_>>().join(", ")
+        stats.unique_dtypes.len(),
+        stats.unique_dtypes.iter().map(|dt| format_dtype(*dt)).collect::<Vec<_>>().join(", ")
     );
+    if let Some(ref largest) = stats.largest_tensor {
+        println!("      Largest Tensor: {}", largest);
+    }
+    println!();
+
+    // Group tensors by category with enhanced display
+    let mut categories: std::collections::HashMap<String, Vec<&TensorSummary>> =
+        std::collections::HashMap::new();
+    for tensor in model_info.tensor_summaries() {
+        let category = tensor.category.as_deref().unwrap_or("other");
+        categories.entry(category.to_string()).or_insert_with(Vec::new).push(tensor);
+    }
+
+    // Display each category
+    for (category, tensors) in categories {
+        if !tensors.is_empty() {
+            let params_in_category = stats.parameters_by_category.get(&category).unwrap_or(&0);
+            println!(
+                "   📁 **{}** ({} tensors, {:.2}M params):",
+                capitalize(&category),
+                tensors.len(),
+                *params_in_category as f64 / 1_000_000.0
+            );
+
+            for tensor in tensors.iter().take(10) {
+                // Limit display for readability
+                let shape_str =
+                    tensor.shape.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(" × ");
+                let dtype_name = tensor.dtype_name.as_deref().unwrap_or("Unknown");
+                println!(
+                    "      📐 {} [{}] ({}, {:.1}K params)",
+                    tensor.name,
+                    shape_str,
+                    dtype_name,
+                    tensor.parameter_count as f64 / 1000.0
+                );
+            }
+
+            if tensors.len() > 10 {
+                println!("      ... and {} more tensors", tensors.len() - 10);
+            }
+            println!();
+        }
+    }
+}
+
+fn capitalize(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        None => String::new(),
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+    }
 }
 
 fn format_value(value: &GgufValue) -> String {
@@ -290,29 +269,5 @@ fn format_value(value: &GgufValue) -> String {
         GgufValue::U64(v) => v.to_string(),
         GgufValue::I64(v) => v.to_string(),
         GgufValue::F64(v) => format!("{:.6}", v),
-    }
-}
-
-fn format_dtype(dtype: u32) -> String {
-    match dtype {
-        0 => "F32".to_string(),
-        1 => "F16".to_string(),
-        2 => "Q4_0".to_string(),
-        3 => "Q4_1".to_string(),
-        6 => "Q5_0".to_string(),
-        7 => "Q5_1".to_string(),
-        8 => "Q8_0".to_string(),
-        9 => "Q8_1".to_string(),
-        10 => "Q2_K".to_string(),
-        11 => "Q3_K".to_string(),
-        12 => "Q4_K".to_string(),
-        13 => "Q5_K".to_string(),
-        14 => "Q6_K".to_string(),
-        15 => "Q8_K".to_string(),
-        17 => "I2_S".to_string(),  // BitNet native format
-        18 => "IQ2_S".to_string(), // BitNet extended format
-        19 => "TL1".to_string(),   // Table lookup 1
-        20 => "TL2".to_string(),   // Table lookup 2
-        _ => format!("Unknown({})", dtype),
     }
 }
