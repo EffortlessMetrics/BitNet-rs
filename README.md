@@ -200,6 +200,54 @@ async fn main() -> Result<()> {
 }
 ```
 
+#### Streaming API with Token IDs
+
+BitNet.rs supports real-time streaming generation with access to both generated text and token IDs:
+
+```rust
+use bitnet::prelude::*;
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let model = BitNetModel::from_file("model.gguf").await?;
+    let engine = InferenceEngine::builder()
+        .model(model)
+        .backend(Backend::Auto)
+        .build()?;
+    
+    // Create streaming generation with custom configuration
+    let config = GenerationConfig {
+        max_new_tokens: 100,
+        temperature: 0.7,
+        ..Default::default()
+    };
+    
+    let mut stream = engine.generate_stream_with_config("Explain quantum computing", &config);
+    
+    // Process tokens as they arrive
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(stream_response) => {
+                // Display generated text
+                print!("{}", stream_response.text);
+                
+                // Access token IDs for analysis or debugging (new in v0.1.0)
+                for &token_id in &stream_response.token_ids {
+                    eprintln!("[DEBUG] Generated token ID: {}", token_id);
+                }
+            }
+            Err(e) => {
+                eprintln!("Generation error: {}", e);
+                break;
+            }
+        }
+    }
+    
+    Ok(())
+}
+```
+
 #### Device-Aware Quantization
 
 BitNet.rs features advanced device-aware quantization that automatically leverages GPU acceleration while providing robust CPU fallback. The system includes comprehensive error handling and performance optimization:
@@ -305,10 +353,16 @@ bitnet convert --input model.safetensors --output model.gguf
 # Benchmark performance
 bitnet benchmark --model model.gguf --compare-cpp
 
-# Test server
+# Test server with standard completions API
 curl -X POST http://localhost:8080/v1/completions \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Hello, world!", "max_tokens": 50}'
+
+# Test streaming API with Server-Sent Events (SSE) and token IDs
+curl -X POST http://localhost:8080/v1/stream \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Explain quantum computing", "max_tokens": 100, "temperature": 0.7}' \
+  --no-buffer
 ```
 
 ## Feature Flags

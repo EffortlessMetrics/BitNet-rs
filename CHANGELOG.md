@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Streaming Token ID Support** ([#107](https://github.com/EffortlessSteven/BitNet-rs/pull/107)):
+  - Enhanced `StreamResponse` struct with `token_ids: Vec<u32>` field for real-time token ID access
+  - Server-Sent Events (SSE) streaming endpoint with JSON token metadata at `/v1/stream`
+  - Token-by-token streaming with configurable buffering and error handling
+  - Comprehensive test coverage for streaming functionality and token ID accuracy
+  - Updated examples and documentation to demonstrate token ID streaming usage
+
 ### Changed
 - **Cargo Configuration Cleanup** ([#113](https://github.com/EffortlessSteven/BitNet-rs/pull/113)):
   - Remove tool-generated metadata files (`.crates.toml`, `.crates2.json`) from version control
@@ -14,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Standardize GPU feature aliases in cargo config to use `gpu` instead of `cuda`
 
 ### Fixed
+- **Security Vulnerability Resolution** ([#107](https://github.com/EffortlessSteven/BitNet-rs/pull/107)):
+  - Updated PyO3 from v0.21.2 to v0.25.1 to resolve CVE-2024-9979 buffer overflow vulnerability
+  - Updated related Python binding dependencies (numpy, pyo3-async-runtimes) for compatibility
+  - Enhanced security posture of Python bindings and server components
 - **FFI Safety and Validation Improvements**:
   - Enhanced FFI functions with `unsafe fn` signatures for Rust 2024 safety compliance
   - Fixed clippy warnings in test infrastructure and removed unneeded unit expressions

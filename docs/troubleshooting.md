@@ -344,6 +344,54 @@ bitnet-cli inference --model model.gguf --prompt "Hello" --stream
 bitnet-cli inference --model model.gguf --prompt "Hello" --optimize-latency
 ```
 
+#### 4. Streaming Issues
+
+**Problem:** Streaming generation fails or produces incorrect token IDs
+
+**Symptoms:**
+```
+Error: Stream error: Channel disconnected
+Error: Token ID mismatch in streaming response
+```
+
+**Solutions:**
+```bash
+# Test streaming with debug output
+RUST_LOG=debug bitnet-cli inference \
+  --model model.gguf \
+  --prompt "Hello" \
+  --stream
+
+# Verify token ID accuracy (new in v0.1.0)
+bitnet-cli inference \
+  --model model.gguf \
+  --prompt "Hello" \
+  --stream \
+  --debug-tokens
+
+# Check buffer configuration
+bitnet-cli inference \
+  --model model.gguf \
+  --prompt "Hello" \
+  --stream \
+  --buffer-size 10 \
+  --flush-interval 50ms
+
+# Server streaming troubleshooting
+curl -X POST http://localhost:8080/v1/stream \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Hello", "max_tokens": 10, "detailed_errors": true}' \
+  --no-buffer
+```
+
+**Common streaming issues:**
+
+1. **Token ID mismatch**: Ensure tokenizer is properly loaded and consistent
+2. **Client disconnection**: Handle stream cancellation gracefully
+3. **Buffer overflow**: Adjust buffer size and flush intervals
+4. **Server timeout**: Increase timeout settings for longer generations
+5. **PyO3 security warnings**: Update to PyO3 v0.25.1+ for CVE-2024-9979 fix
+
 ### API Issues
 
 #### 1. Python API Errors

@@ -1,6 +1,12 @@
 //! Streaming generation example using BitNet.rs
 //!
 //! This example demonstrates how to use streaming generation for real-time text output.
+//!
+//! Features demonstrated:
+//! - Real-time token streaming with `StreamResponse`
+//! - Access to token IDs alongside generated text (added in v0.1.0)
+//! - Generation statistics and performance monitoring
+//! - Interactive prompt handling
 
 use bitnet::prelude::*;
 use futures::StreamExt;
@@ -84,11 +90,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Process tokens as they arrive
         while let Some(token_result) = stream.next().await {
             match token_result {
-                Ok(token) => {
-                    print!("{}", token);
+                Ok(stream_response) => {
+                    // Display the generated text
+                    print!("{}", stream_response.text);
                     io::stdout().flush()?;
-                    full_response.push_str(&token);
-                    token_count += 1;
+                    full_response.push_str(&stream_response.text);
+
+                    // Access token IDs for debugging or analysis (new in v0.1.0)
+                    if !stream_response.token_ids.is_empty() {
+                        eprintln!(
+                            "[DEBUG] Generated {} token(s) with IDs: {:?}",
+                            stream_response.token_ids.len(),
+                            stream_response.token_ids
+                        );
+                    }
+
+                    token_count += stream_response.token_ids.len();
                 }
                 Err(e) => {
                     eprintln!("\nError during generation: {}", e);
