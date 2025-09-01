@@ -89,7 +89,7 @@ impl StreamingConfig {
 
 /// A stream of generated tokens
 pub struct GenerationStream {
-    receiver: mpsc::Receiver<Result<String>>,
+    receiver: mpsc::Receiver<Result<StreamResponse>>,
     _handle: tokio::task::JoinHandle<()>,
     cancellation_token: Arc<AtomicBool>,
     generation_stats: Arc<GenerationStats>,
@@ -131,7 +131,7 @@ struct StreamingParams {
     prompt: String,
     config: GenerationConfig,
     streaming_config: StreamingConfig,
-    sender: mpsc::Sender<Result<String>>,
+    sender: mpsc::Sender<Result<StreamResponse>>,
     cancellation_token: Arc<AtomicBool>,
     stats: Arc<GenerationStats>,
 }
@@ -151,7 +151,7 @@ impl GenerationStream {
         // Validate streaming configuration
         streaming_config.validate().context("Invalid streaming configuration")?;
 
-        let (sender, receiver) = mpsc::channel(streaming_config.buffer_size);
+        let (sender, receiver) = mpsc::channel::<Result<StreamResponse>>(streaming_config.buffer_size);
         let cancellation_token = Arc::new(AtomicBool::new(false));
         let generation_stats = Arc::new(GenerationStats::default());
 
