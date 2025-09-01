@@ -248,7 +248,7 @@ impl DeviceAwareQuantizerFactory {
             }
             devices
         }
-        
+
         #[cfg(not(feature = "gpu"))]
         {
             vec![Device::Cpu]
