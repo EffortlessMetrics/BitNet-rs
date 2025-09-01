@@ -247,6 +247,7 @@ impl GenerationStream {
 
         let mut sampling_strategy = SamplingStrategy::new(sampling_config);
         let mut token_buffer = Vec::new();
+        let mut token_ids_buffer = Vec::new();
         let mut last_flush = std::time::Instant::now();
 
         for _ in 0..config.max_new_tokens {
@@ -367,6 +368,7 @@ impl GenerationStream {
             }
 
             token_buffer.push(token_text);
+            token_ids_buffer.push(next_token);
             current_tokens.push(next_token);
             generated_count += 1;
             stats.tokens_generated.fetch_add(1, Ordering::Relaxed);
@@ -384,11 +386,17 @@ impl GenerationStream {
 
             if should_flush && !token_buffer.is_empty() {
                 let buffered_text = token_buffer.join("");
-                if sender.send(Ok(buffered_text)).await.is_err() {
+                let buffered_token_ids = token_ids_buffer.clone();
+                if sender
+                    .send(Ok(StreamResponse { text: buffered_text, token_ids: buffered_token_ids }))
+                    .await
+                    .is_err()
+                {
                     debug!("Client disconnected during send");
                     break;
                 }
                 token_buffer.clear();
+                token_ids_buffer.clear();
                 last_flush = std::time::Instant::now();
             }
 
@@ -402,7 +410,10 @@ impl GenerationStream {
         // Flush remaining tokens
         if !token_buffer.is_empty() {
             let remaining_text = token_buffer.join("");
-            let _ = sender.send(Ok(remaining_text)).await;
+            let remaining_token_ids = token_ids_buffer.clone();
+            let _ = sender
+                .send(Ok(StreamResponse { text: remaining_text, token_ids: remaining_token_ids }))
+                .await;
         }
 
         debug!("Streaming generation completed: {} tokens", generated_count);
@@ -496,8 +507,15 @@ impl GenerationStream {
     }
 }
 
+/// Enhanced streaming response with token text and token ID
+#[derive(Debug)]
+pub struct StreamResponse {
+    pub text: String,
+    pub token_ids: Vec<u32>,
+}
+
 impl Stream for GenerationStream {
-    type Item = Result<String>;
+    type Item = Result<StreamResponse>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut TaskContext<'_>) -> Poll<Option<Self::Item>> {
         self.receiver.poll_recv(cx)
@@ -615,8 +633,9 @@ mod tests {
         let mut token_count = 0;
         while let Some(result) = stream.next().await {
             match result {
-                Ok(token_text) => {
-                    assert!(!token_text.is_empty());
+                Ok(stream_response) => {
+                    assert!(!stream_response.text.is_empty());
+                    assert!(!stream_response.token_ids.is_empty());
                     token_count += 1;
                 }
                 Err(e) => {
@@ -645,5 +664,62 @@ mod tests {
 
         assert_eq!(config.buffer_size, 5);
         assert_eq!(config.flush_interval_ms, 100);
+    }
+
+    #[tokio::test]
+    async fn test_token_id_streaming() {
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer);
+        let backend = Box::new(MockBackend);
+        let cache = Arc::new(RwLock::new(KVCache::new(Default::default()).unwrap()));
+
+        let config = GenerationConfig {
+            max_new_tokens: 5,
+            seed: Some(42), // Ensure reproducible token generation
+            ..Default::default()
+        };
+
+        let streaming_config = StreamingConfig::default();
+
+        let mut stream = GenerationStream::new(
+            model,
+            tokenizer,
+            backend,
+            cache,
+            "Hello".to_string(),
+            config,
+            streaming_config,
+        )
+        .unwrap();
+
+        let mut total_tokens = 0;
+        let mut total_token_ids = Vec::new();
+
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(stream_response) => {
+                    assert!(!stream_response.text.is_empty());
+                    assert!(!stream_response.token_ids.is_empty());
+                    total_tokens += stream_response.text.len();
+                    total_token_ids.extend(stream_response.token_ids);
+                }
+                Err(e) => {
+                    panic!("Stream error: {}", e);
+                }
+            }
+
+            // Prevent infinite loop
+            if total_tokens > 100 {
+                break;
+            }
+        }
+
+        assert!(total_tokens > 0, "No tokens generated");
+        assert!(total_token_ids.len() > 0, "No token IDs generated");
+        assert_eq!(
+            total_tokens,
+            total_token_ids.len(),
+            "Number of token IDs and tokens must match"
+        );
     }
 }
