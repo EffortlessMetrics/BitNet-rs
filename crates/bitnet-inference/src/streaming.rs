@@ -716,7 +716,7 @@ mod tests {
         }
 
         assert!(total_responses > 0, "No streaming responses generated");
-        assert!(total_token_ids.len() > 0, "No token IDs generated");
+        assert!(!total_token_ids.is_empty(), "No token IDs generated");
         // Each streaming response should have at least one token ID
         assert!(
             total_token_ids.len() >= total_responses,

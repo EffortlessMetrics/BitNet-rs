@@ -409,13 +409,13 @@ mod tests {
         let body_str = String::from_utf8(body.to_vec()).unwrap();
 
         for event in body_str.split("\n\n") {
-            if event.starts_with("event: token") {
-                if let Some(data_line) = event.lines().find(|l| l.starts_with("data: ")) {
-                    let json = &data_line[6..];
-                    let token: StreamingToken = serde_json::from_str(json).unwrap();
-                    let expected = tokenizer.encode(&token.token, false, false).unwrap();
-                    assert_eq!(expected[0], token.token_id);
-                }
+            if event.starts_with("event: token")
+                && let Some(data_line) = event.lines().find(|l| l.starts_with("data: "))
+            {
+                let json = &data_line[6..];
+                let token: StreamingToken = serde_json::from_str(json).unwrap();
+                let expected = tokenizer.encode(&token.token, false, false).unwrap();
+                assert_eq!(expected[0], token.token_id);
             }
         }
     }

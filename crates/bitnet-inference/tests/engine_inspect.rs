@@ -310,7 +310,7 @@ fn engine_inspect_categorization_functions() {
 
     // Test GGUF value formatting
     assert_eq!(format_gguf_value(&GgufValue::U32(42)), "42");
-    assert_eq!(format_gguf_value(&GgufValue::F32(3.14159)), "3.141590");
+    assert_eq!(format_gguf_value(&GgufValue::F32(std::f32::consts::PI)), "3.141593");
     assert_eq!(format_gguf_value(&GgufValue::F32(3.0)), "3");
     assert_eq!(format_gguf_value(&GgufValue::Bool(true)), "true");
     assert_eq!(format_gguf_value(&GgufValue::String("test".to_string())), "test");
