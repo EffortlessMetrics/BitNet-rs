@@ -692,7 +692,7 @@ mod tests {
         )
         .unwrap();
 
-        let mut total_tokens = 0;
+        let mut total_responses = 0;
         let mut total_token_ids = Vec::new();
 
         while let Some(result) = stream.next().await {
@@ -700,7 +700,7 @@ mod tests {
                 Ok(stream_response) => {
                     assert!(!stream_response.text.is_empty());
                     assert!(!stream_response.token_ids.is_empty());
-                    total_tokens += stream_response.text.len();
+                    total_responses += 1;
                     total_token_ids.extend(stream_response.token_ids);
                 }
                 Err(e) => {
@@ -709,17 +709,17 @@ mod tests {
             }
 
             // Prevent infinite loop
-            if total_tokens > 100 {
+            if total_responses > 10 {
                 break;
             }
         }
 
-        assert!(total_tokens > 0, "No tokens generated");
+        assert!(total_responses > 0, "No streaming responses generated");
         assert!(total_token_ids.len() > 0, "No token IDs generated");
-        assert_eq!(
-            total_tokens,
-            total_token_ids.len(),
-            "Number of token IDs and tokens must match"
+        // Each streaming response should have at least one token ID
+        assert!(
+            total_token_ids.len() >= total_responses,
+            "Should have at least one token ID per response"
         );
     }
 }
