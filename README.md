@@ -86,8 +86,11 @@ cargo test  --locked --workspace --no-default-features --features cpu
 cargo xtask gpu-preflight         # Detects CUDA, prints versions
 cargo xtask gpu-smoke             # Fast CPU↔GPU parity check
 
-# Check CUDA availability and device information
+# Check CUDA availability and comprehensive device information
 cargo run --example cuda_info --no-default-features --features gpu
+
+# Test real CUDA device property querying (compute capability, memory, multiprocessors)
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_device_info_query
 
 # Build with GPU support and device-aware quantization
 cargo build --locked --workspace --no-default-features --features gpu

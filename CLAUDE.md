@@ -33,6 +33,9 @@ cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_qua
 # Run GPU quantization integration tests (comprehensive validation)
 cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_quantization --ignored
 
+# Test real CUDA device property querying (compute capability, memory, multiprocessors)
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_device_info_query
+
 # Test GPU vs CPU quantization accuracy
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy --ignored
 
@@ -164,9 +167,11 @@ BitNet-rs supports multiple quantization formats with device-aware acceleration:
 - **Standard formats**: Q4_0, Q5_0, Q8_0, etc. (planned)
 
 All quantizers support device-aware operations:
-- Automatic GPU detection and acceleration when available
-- Transparent fallback to CPU when GPU operations fail
-- Consistent results across devices via comprehensive parity testing
+- **Production-Ready GPU Detection**: Real CUDA device property querying using cudarc API
+- **Comprehensive Device Information**: Compute capability, memory size, multiprocessor count, thread limits
+- **Hardware-Aware Optimization**: Feature detection for FP16/BF16 support based on compute capability
+- **Automatic GPU acceleration** when available with transparent CPU fallback
+- **Consistent results across devices** via comprehensive parity testing
 
 To test IQ2_S implementations:
 ```bash
@@ -199,9 +204,16 @@ We maintain strict compatibility with llama.cpp:
 
 2. **CUDA Compilation**: Ensure CUDA toolkit is installed and `nvcc` is in PATH
 
-3. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
+3. **CUDA Device Query Failures**: If CUDA device information queries fail:
+   - Verify CUDA runtime is properly installed: `nvidia-smi` and `nvcc --version`
+   - Check driver compatibility: Ensure CUDA driver supports the installed toolkit
+   - Test device access: `cargo test -p bitnet-kernels --features gpu test_cuda_device_info_query`
+   - For permission issues on Linux, add user to `video` group: `sudo usermod -a -G video $USER`
+   - Verify cudarc compatibility: Requires CUDA 11.0+ and compute capability 6.0+
 
-4. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
+4. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
+
+5. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
 
 ## Development Workflow
 
