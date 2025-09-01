@@ -102,8 +102,8 @@ pub fn inspect_model(path: &Path) -> gguf::Result<ModelInfo> {
         match ty {
             0 | 1 => Some(1),
             2 | 3 => Some(2),
-            4 | 5 | 6 => Some(4),
-            10 | 11 | 12 => Some(8),
+            4..=6 => Some(4),
+            10..=12 => Some(8),
             7 => Some(1),
             _ => None,
         }
