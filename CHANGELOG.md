@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Restored Git metadata support using vergen-gix v1.x
   - Moved runtime dependencies from build-dependencies to correct section
   - Made health endpoint robust with option_env! for graceful fallbacks
+- **CUDA Device Information Querying** (PR #102):
+  - Real device property querying using cudarc's CUdevice_attribute API
+  - Comprehensive device information extraction (compute capability, memory, multiprocessor count)
+  - Enhanced error handling for device query failures
+  - Enhanced test coverage for device information validation
 
 ### Enhanced
 - **GPU Kernel Refactoring** (PR #108):

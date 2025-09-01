@@ -5,6 +5,7 @@ use crate::KernelProvider;
 use bitnet_common::{KernelError, QuantizationType, Result};
 use cudarc::driver::{
     CudaContext, CudaFunction, CudaModule, CudaSlice, CudaStream, LaunchConfig, PushKernelArg,
+    result::device as cu_device, sys::CUdevice_attribute,
 };
 use cudarc::nvrtc::compile_ptx;
 use std::sync::Arc;
@@ -117,18 +118,58 @@ impl CudaKernel {
 
     /// Get detailed device information and capabilities
     fn get_device_info(device_id: usize) -> Result<CudaDeviceInfo> {
-        // For now, provide reasonable defaults
-        // TODO: Extract actual device properties using cudarc device queries
-        let name = format!("CUDA Device {}", device_id);
-        let total_memory = 8 * 1024 * 1024 * 1024; // 8GB default
-        let compute_capability = (7, 5); // Default to compute capability 7.5
-        let multiprocessor_count = 80; // Default value
-        let max_threads_per_block = 1024;
-        let max_shared_memory_per_block = 48 * 1024; // 48KB
+        // Create temporary context to query device properties
+        let ctx = CudaContext::new(device_id).map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to create CUDA context for device {}: {:?}", device_id, e),
+        })?;
 
-        // Check for mixed precision support (assume modern GPUs support it)
-        let supports_fp16 = compute_capability.0 >= 6;
-        let supports_bf16 = compute_capability.0 >= 8;
+        // Query basic properties
+        let name = ctx.name().map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to get device name for {}: {:?}", device_id, e),
+        })?;
+
+        let major = ctx
+            .attribute(CUdevice_attribute::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get compute capability major: {:?}", e),
+            })?;
+        let minor = ctx
+            .attribute(CUdevice_attribute::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get compute capability minor: {:?}", e),
+            })?;
+        let compute_capability = (major, minor);
+
+        // Memory and resource limits
+        let total_memory = unsafe { cu_device::total_mem(ctx.cu_device()) }.map_err(|e| {
+            KernelError::GpuError { reason: format!("Failed to get total memory: {:?}", e) }
+        })?;
+
+        let multiprocessor_count = ctx
+            .attribute(CUdevice_attribute::CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get multiprocessor count: {:?}", e),
+            })?;
+
+        let max_threads_per_block = ctx
+            .attribute(CUdevice_attribute::CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK)
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get max threads per block: {:?}", e),
+            })?;
+
+        // Prefer opt-in shared memory size if available
+        let max_shared_memory_per_block = ctx
+            .attribute(CUdevice_attribute::CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN)
+            .or_else(|_| {
+                ctx.attribute(CUdevice_attribute::CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK)
+            })
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to get max shared memory per block: {:?}", e),
+            })? as usize;
+
+        // Feature support derived from compute capability
+        let supports_fp16 = major >= 6;
+        let supports_bf16 = major >= 8;
 
         Ok(CudaDeviceInfo {
             device_id,
