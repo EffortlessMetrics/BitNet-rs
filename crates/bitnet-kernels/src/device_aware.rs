@@ -239,17 +239,20 @@ impl DeviceAwareQuantizerFactory {
 
     /// List available devices
     pub fn list_available_devices() -> Vec<Device> {
-        let mut devices = vec![Device::Cpu];
-
         #[cfg(feature = "gpu")]
         {
+            let mut devices = vec![Device::Cpu];
             let cuda_count = gpu::cuda_device_count();
             for i in 0..cuda_count {
                 devices.push(Device::Cuda(i));
             }
+            devices
         }
-
-        devices
+        
+        #[cfg(not(feature = "gpu"))]
+        {
+            vec![Device::Cpu]
+        }
     }
 }
 
