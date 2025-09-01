@@ -133,7 +133,6 @@ impl DeviceAwareQuantizer {
         qtype: QuantizationType,
     ) -> Result<()> {
         let start_time = Instant::now();
-        let mut used_gpu = false;
 
         // Try primary provider (GPU) first
         if let Some(ref primary) = self.primary_provider {
@@ -141,7 +140,6 @@ impl DeviceAwareQuantizer {
             match primary.quantize(input, output, scales, qtype) {
                 Ok(()) => {
                     let elapsed = gpu_start.elapsed().as_secs_f64() * 1000.0;
-                    used_gpu = true;
 
                     if let Ok(mut stats) = self.stats.lock() {
                         stats.quantization_operations += 1;
@@ -196,11 +194,10 @@ impl DeviceAwareQuantizer {
                 }
 
                 log::trace!(
-                    "CPU quantization succeeded for {} elements in {:.3}ms (total: {:.3}ms, used_gpu_first: {})",
+                    "CPU quantization succeeded for {} elements in {:.3}ms (total: {:.3}ms)",
                     input.len(),
                     elapsed,
-                    total_elapsed,
-                    used_gpu
+                    total_elapsed
                 );
                 Ok(())
             }
@@ -236,7 +233,7 @@ impl DeviceAwareQuantizer {
         k: usize,
     ) -> Result<()> {
         let start_time = Instant::now();
-        let mut used_gpu = false;
+        let _used_gpu = false;
 
         // Try primary provider (GPU) first
         if let Some(ref primary) = self.primary_provider {
@@ -244,7 +241,6 @@ impl DeviceAwareQuantizer {
             match primary.matmul_i2s(a, b, c, m, n, k) {
                 Ok(()) => {
                     let elapsed = gpu_start.elapsed().as_secs_f64() * 1000.0;
-                    used_gpu = true;
 
                     if let Ok(mut stats) = self.stats.lock() {
                         stats.matmul_operations += 1;
@@ -287,13 +283,12 @@ impl DeviceAwareQuantizer {
                 }
 
                 log::trace!(
-                    "CPU matmul succeeded for {}x{}x{} in {:.3}ms (total: {:.3}ms, used_gpu_first: {})",
+                    "CPU matmul succeeded for {}x{}x{} in {:.3}ms (total: {:.3}ms)",
                     m,
                     n,
                     k,
                     elapsed,
-                    total_elapsed,
-                    used_gpu
+                    total_elapsed
                 );
                 Ok(())
             }
@@ -432,7 +427,7 @@ pub struct DeviceAwareQuantizerFactory;
 impl DeviceAwareQuantizerFactory {
     /// Create the best quantizer for the given device preference
     pub fn create_best(preferred_device: Option<Device>) -> Result<DeviceAwareQuantizer> {
-        let device = preferred_device.unwrap_or_else(|| {
+        let device = preferred_device.unwrap_or({
             // Auto-detect best device
             #[cfg(feature = "gpu")]
             {
