@@ -9,7 +9,10 @@ This file provides guidance to Claude (claude.ai) when working with the BitNet.r
 # Build with CPU support (no default features)
 cargo build --release --no-default-features --features cpu
 
-# Build with GPU/CUDA support
+# Build with GPU support and device-aware quantization
+cargo build --release --no-default-features --features gpu
+
+# Backward compatibility with cuda alias
 cargo build --release --no-default-features --features cuda
 
 # Build with IQ2_S quantization support (requires GGML FFI)
@@ -21,12 +24,26 @@ cargo build --release --no-default-features --features cpu
 # Run tests (fast, Rust-only)
 cargo test --workspace --no-default-features --features cpu
 
-# Run GPU tests (requires CUDA)
-cargo test --workspace --no-default-features --features cuda
+# Run GPU tests with device-aware quantization (requires CUDA)
+cargo test --workspace --no-default-features --features gpu
 
-# Run device-aware quantization GPU parity tests
+# Run comprehensive GPU quantization tests
+cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_quantization
+
+# Run GPU quantization integration tests (comprehensive validation)
+cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_quantization --ignored
+
+# Test GPU vs CPU quantization accuracy
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy --ignored
+
+# Test automatic GPU fallback mechanism
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
+
+# Test concurrent GPU operations
+cargo test -p bitnet-kernels --no-default-features --features gpu test_concurrent_gpu_operations --ignored
+
+# Legacy GPU parity tests (backward compatibility)
 cargo test --workspace --no-default-features --features cuda gpu_parity
-cargo test -p bitnet-quantization --features cuda --test gpu_parity
 
 # Run GGUF validation tests
 cargo test -p bitnet-inference --test gguf_header
@@ -129,16 +146,17 @@ Minimum Supported Rust Version: **1.89.0** (uses Rust 2024 edition)
 ### Feature Flags
 Default features are **empty** to prevent unwanted dependencies:
 - `cpu`: CPU inference with SIMD optimizations, includes native I2_S support
-- `cuda`: NVIDIA GPU support with device-aware quantization and automatic fallback
+- `gpu`: NVIDIA GPU support with advanced device-aware quantization and automatic fallback
+- `cuda`: Backward-compatible alias for `gpu` feature
 - `iq2s-ffi`: IQ2_S quantization via GGML FFI (requires vendored GGML files)
 - `ffi`: C++ FFI bridge (required for cross-validation) with enhanced safety documentation
 - `crossval`: Cross-validation against C++ (increases build time)
 
 ### Quantization Support
 BitNet-rs supports multiple quantization formats with device-aware acceleration:
-- **I2_S**: Native Rust implementation with device-aware GPU/CPU selection
-- **TL1**: Table lookup quantization optimized for ARM with GPU fallback support  
-- **TL2**: Advanced table lookup quantization with device-aware acceleration
+- **I2_S**: Native Rust implementation with intelligent GPU/CPU selection and automatic fallback
+- **TL1**: Table lookup quantization with GPU acceleration and CPU fallback
+- **TL2**: Advanced table lookup quantization with optimized GPU kernels and device-aware execution
 - **IQ2_S**: Dual implementation:
   - Native Rust: Optimized implementation with SIMD support
   - GGML FFI: Via `iq2s-ffi` feature for llama.cpp compatibility

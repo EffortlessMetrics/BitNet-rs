@@ -186,16 +186,25 @@ async fn main() -> Result<()> {
 
 #### Device-Aware Quantization
 
-BitNet.rs automatically selects the best available device for quantization operations:
+BitNet.rs features advanced device-aware quantization that automatically leverages GPU acceleration while providing robust CPU fallback. The system includes comprehensive error handling and performance optimization:
 
 ```rust
-use bitnet_quantization::I2SQuantizer;
-use candle_core::Device;
+use bitnet_kernels::device_aware::DeviceAwareQuantizer;
+use bitnet_common::Device;
 
-// Automatic GPU acceleration with CPU fallback
-let quantizer = I2SQuantizer::new();
-let device = Device::new_cuda(0).unwrap_or(Device::Cpu); // Auto-fallback
-let quantized = quantizer.quantize(&tensor, &device)?;
+// Create a device-aware quantizer with automatic GPU detection
+let quantizer = DeviceAwareQuantizer::new(Device::Cuda(0))?;
+
+// The quantizer automatically handles GPU/CPU fallback
+let input = vec![1.0, -1.0, 0.5, -0.5];
+let mut output = vec![0u8; 1];
+let mut scales = vec![0.0f32; 1];
+
+let result = quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S)?;
+
+// Check which device is actually being used
+println!("Active provider: {}", quantizer.active_provider());
+println!("GPU active: {}", quantizer.is_gpu_active());
 ```
 
 ### CLI Usage
@@ -245,7 +254,8 @@ curl -X POST http://localhost:8080/v1/completions \
 BitNet.rs uses feature flags to enable optional functionality:
 
 - `cpu`: CPU inference with optimized kernels (not enabled by default)
-- `cuda`: GPU acceleration via CUDA with device-aware quantization
+- `gpu`: GPU acceleration via CUDA with advanced device-aware quantization and automatic CPU fallback
+- `cuda`: Backward-compatible alias for `gpu` feature
 - `avx2`: x86_64 AVX2 SIMD optimizations
 - `avx512`: x86_64 AVX-512 SIMD optimizations
 - `neon`: ARM64 NEON SIMD optimizations
@@ -258,7 +268,10 @@ BitNet.rs uses feature flags to enable optional functionality:
 # CPU-only build
 cargo build --no-default-features --features cpu
 
-# GPU-enabled build
+# GPU-enabled build with device-aware quantization
+cargo build --no-default-features --features gpu
+
+# Or use the backward-compatible alias
 cargo build --no-default-features --features cuda
 
 # Both CPU and GPU
@@ -279,83 +292,124 @@ BitNet.rs includes advanced device-aware quantization that automatically leverag
 #### Basic Usage with Automatic Device Selection
 
 ```rust
-use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
-use candle_core::Device;
+use bitnet_kernels::device_aware::{DeviceAwareQuantizer, DeviceAwareQuantizerFactory};
+use bitnet_common::{Device, QuantizationType};
 
-// Create quantizers - they automatically detect device capabilities
-let i2s_quantizer = I2SQuantizer::new();
-let tl1_quantizer = TL1Quantizer::new(); 
-let tl2_quantizer = TL2Quantizer::new();
+// Auto-detect the best available device
+let quantizer = DeviceAwareQuantizerFactory::auto_detect()?;
+println!("Using device: {:?}", quantizer.device());
 
-// Device selection with fallback
-let device = Device::new_cuda(0).unwrap_or(Device::Cpu);
+// Or explicitly specify a preferred device
+let gpu_quantizer = DeviceAwareQuantizer::new(Device::Cuda(0))?;
+let cpu_quantizer = DeviceAwareQuantizer::new(Device::Cpu)?;
 
-// All quantizers support device-aware operations
-let quantized_i2s = i2s_quantizer.quantize(&tensor, &device)?;
-let quantized_tl1 = tl1_quantizer.quantize(&tensor, &device)?;
-let quantized_tl2 = tl2_quantizer.quantize(&tensor, &device)?;
+// All quantization types supported with device-aware acceleration
+let input = vec![1.0, -1.0, 0.5, -0.5, 0.1, -0.1, 0.0, 0.25];
+let mut output = vec![0u8; 2];  // 8 values / 4 per byte
+let mut scales = vec![0.0f32; 1]; // Block scaling factors
+
+// I2S quantization with automatic GPU/CPU selection
+quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S)?;
+
+// TL1 and TL2 quantization also supported
+quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::TL1)?;
+quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::TL2)?;
 ```
 
-#### Explicit Device Control
+#### Explicit Device Control and Factory Methods
 
 ```rust
-use candle_core::Device;
-use bitnet_quantization::I2SQuantizer;
+use bitnet_kernels::device_aware::{DeviceAwareQuantizer, DeviceAwareQuantizerFactory};
+use bitnet_common::Device;
 
-// Force CPU quantization
-let cpu = Device::Cpu;
-let quantized_cpu = quantizer.quantize(&tensor, &cpu)?;
+// List all available devices
+let devices = DeviceAwareQuantizerFactory::list_available_devices();
+println!("Available devices: {:?}", devices);
 
-// Use specific GPU device (if available)
-if let Ok(gpu) = Device::new_cuda(0) {
-    let quantized_gpu = quantizer.quantize(&tensor, &gpu)?;
-} else {
-    println!("CUDA not available, falling back to CPU");
+// Create quantizer for specific device
+let cpu_quantizer = DeviceAwareQuantizer::new(Device::Cpu)?;
+assert_eq!(cpu_quantizer.device(), Device::Cpu);
+assert!(!cpu_quantizer.is_gpu_active());
+
+// Try GPU with specific device ID
+if devices.contains(&Device::Cuda(0)) {
+    let gpu_quantizer = DeviceAwareQuantizer::new(Device::Cuda(0))?;
+    println!("GPU quantizer active: {}", gpu_quantizer.is_gpu_active());
+    
+    // Get performance statistics
+    if let Some(stats) = gpu_quantizer.get_stats() {
+        println!("Device stats: {:?}", stats);
+    }
 }
 ```
 
-#### Error Handling and Fallback Patterns
+#### Advanced Error Handling and Fallback Control
 
 ```rust
-use bitnet_quantization::I2SQuantizer;
-use candle_core::Device;
+use bitnet_kernels::device_aware::DeviceAwareQuantizer;
+use bitnet_common::{Device, QuantizationType, Result};
 
-fn quantize_with_fallback(
-    quantizer: &I2SQuantizer, 
-    tensor: &BitNetTensor
-) -> Result<QuantizedTensor> {
-    // Try GPU first if available
-    #[cfg(feature = "cuda")]
-    {
-        if let Ok(gpu) = Device::new_cuda(0) {
-            if let Ok(result) = quantizer.quantize(tensor, &gpu) {
-                return Ok(result);
-            }
+fn robust_quantization(
+    input: &[f32], 
+    output: &mut [u8], 
+    scales: &mut [f32]
+) -> Result<String> {
+    // Try GPU quantization first
+    let mut quantizer = DeviceAwareQuantizer::new(Device::Cuda(0))?;
+    
+    match quantizer.quantize(input, output, scales, QuantizationType::I2S) {
+        Ok(()) => {
+            return Ok(format!("Quantization succeeded with: {}", quantizer.active_provider()));
+        }
+        Err(e) => {
+            println!("GPU quantization failed: {}", e);
         }
     }
     
-    // Fallback to CPU
-    quantizer.quantize(tensor, &Device::Cpu)
+    // Force CPU fallback for reliability
+    quantizer.force_cpu_fallback();
+    quantizer.quantize(input, output, scales, QuantizationType::I2S)?;
+    
+    Ok(format!("Quantization succeeded after fallback: {}", quantizer.active_provider()))
+}
+
+// Usage with comprehensive error handling
+let input = vec![1.0; 256];
+let mut output = vec![0u8; 64];
+let mut scales = vec![0.0f32; 2];
+
+match robust_quantization(&input, &mut output, &mut scales) {
+    Ok(msg) => println!("{}", msg),
+    Err(e) => eprintln!("Quantization failed: {}", e),
 }
 ```
 
-### GPU Acceleration Details
+### Advanced GPU Acceleration Features
 
-- **Automatic Detection**: Quantizers automatically detect CUDA availability
-- **Transparent Fallback**: Operations seamlessly fall back to CPU when GPU fails
-- **Device Affinity**: Tensors maintain device affinity throughout quantization pipeline
-- **Memory Safety**: All GPU operations include proper error handling and cleanup
+- **Device-Aware Architecture**: Intelligent device selection with automatic GPU detection
+- **Transparent Fallback**: Seamless fallback to optimized CPU kernels when GPU operations fail
+- **Multi-Algorithm Support**: GPU acceleration for I2S, TL1, and TL2 quantization algorithms
+- **CUDA Kernel Integration**: Optimized CUDA kernels with bit-packing and atomic operations
+- **Memory Safety**: Comprehensive error handling with automatic GPU memory cleanup
+- **Concurrent Operations**: Thread-safe GPU operations with proper synchronization
+- **Performance Monitoring**: Built-in device statistics and performance tracking
 
-### Testing Device Parity
+### Testing Device-Aware Quantization
 
-BitNet.rs includes comprehensive GPU parity tests to ensure identical results across devices:
+BitNet.rs includes comprehensive test suites for device-aware quantization:
 
 ```bash
-# Run GPU parity tests (requires CUDA)
-cargo test --workspace --no-default-features --features cuda gpu_parity
+# Run GPU quantization tests (requires CUDA)
+cargo test --workspace --no-default-features --features gpu gpu_quantization
 
-# Test specific quantizer GPU behavior
-cargo test -p bitnet-quantization --features cuda --test gpu_parity
+# Run device-aware quantization integration tests
+cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_quantization --ignored
+
+# Test GPU vs CPU accuracy comparison
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy --ignored
+
+# Test automatic fallback mechanism
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
 ```
 
 ## GGUF Validation & Model Compatibility
@@ -530,11 +584,11 @@ console.log(response);
 # Build with CPU support
 cargo build --release --no-default-features --features cpu
 
-# Build with GPU support
-cargo build --release --no-default-features --features cuda
+# Build with GPU support and device-aware quantization
+cargo build --release --no-default-features --features gpu
 
-# Build with both CPU and GPU
-cargo build --release --no-default-features --features "cpu,cuda"
+# Build with both CPU and GPU capabilities
+cargo build --release --no-default-features --features "cpu,gpu"
 
 # Build with all optimizations
 cargo build --release --features full
@@ -542,8 +596,8 @@ cargo build --release --features full
 # Run tests (Rust-only, fast)
 cargo test --workspace --no-default-features --features cpu
 
-# Run GPU tests
-cargo test --workspace --no-default-features --features cuda
+# Run GPU tests with device-aware quantization
+cargo test --workspace --no-default-features --features gpu
 
 # Run benchmarks
 cargo bench --workspace --no-default-features --features cpu
@@ -573,11 +627,11 @@ identifier "int8_t" is undefined
 ```
 **Solution:** This was fixed in the latest version. Pull the latest changes or use `signed char`/`unsigned char` in CUDA kernels.
 
-**3. Feature resolution issues**
+**3. Legacy feature flag usage**
 ```
 the package 'bitnet-kernels' does not contain this feature: gpu
 ```
-**Solution:** Use `cuda` instead of `gpu`: `cargo build --features cuda`
+**Solution:** Update to use the new `gpu` feature flag: `cargo build --no-default-features --features gpu`. The `cuda` alias is maintained for backward compatibility.
 
 **4. No default features warning**
 ```
