@@ -58,7 +58,7 @@ pub fn init_and_get_async_limit() -> usize {
     std::env::var("RAYON_NUM_THREADS")
         .ok()
         .and_then(|s| s.parse::<usize>().ok())
-        .map(|n| (n + 1) / 2) // Round up division
+        .map(|n| n.div_ceil(2)) // Round up division
         .unwrap_or(1)
         .max(1)
 }

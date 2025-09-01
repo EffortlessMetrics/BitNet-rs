@@ -186,7 +186,7 @@ async fn real_stream(
                     let token_id = tokenizer
                         .encode(&stream_response.text, false, false)
                         .ok()
-                        .and_then(|ids| ids.get(0).copied())
+                        .and_then(|ids| ids.first().copied())
                         .unwrap_or(0);
 
                     let data = StreamingToken {
