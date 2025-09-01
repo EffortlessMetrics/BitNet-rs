@@ -1,7 +1,7 @@
 ---
 name: pr-initial-reviewer
 description: Use this agent when a pull request is first opened or when new commits are pushed to an existing PR, before running more comprehensive review processes. This agent provides fast, cost-effective initial analysis to catch obvious issues early. <example>Context: User has just opened a new PR with code changes. user: "I've just opened PR #123 with some quantization improvements" assistant: "I'll use the pr-initial-reviewer agent to provide an initial quick review of the quantization changes" <commentary>Since a new PR was opened, use the pr-initial-reviewer agent to perform fast T1 analysis before more expensive comprehensive reviews.</commentary></example> <example>Context: New commits were pushed to an existing PR. user: "Just pushed 3 new commits to address the cross-validation feedback" assistant: "Let me run the pr-initial-reviewer agent to quickly analyze the new cross-validation changes" <commentary>Since new commits were added, use the pr-initial-reviewer agent for quick initial analysis of the updates.</commentary></example>
-model: haiku
+model: sonnet
 color: blue
 ---
 
