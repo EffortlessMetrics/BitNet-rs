@@ -88,3 +88,8 @@ required-features = ["gpu"]
 name = "cuda_smoke"
 path = "examples/cuda_smoke.rs"
 required-features = ["gpu"]
+
+[[test]]
+name = "gpu_quantization"
+path = "tests/gpu_quantization.rs"
+required-features = ["gpu"]

@@ -18,6 +18,9 @@ pub struct CudaKernel {
     stream: Arc<CudaStream>,
     module: Arc<CudaModule>,
     matmul_function: CudaFunction,
+    quantize_i2s_function: CudaFunction,
+    quantize_tl1_function: CudaFunction,
+    quantize_tl2_function: CudaFunction,
     device_info: CudaDeviceInfo,
 }
 
@@ -67,7 +70,7 @@ impl CudaKernel {
         let stream = ctx.default_stream();
 
         // Compile PTX kernel
-        let ptx = compile_ptx(include_str!("kernels/bitnet_matmul.cu")).map_err(|e| {
+        let ptx = compile_ptx(include_str!("kernels/bitnet_kernels.cu")).map_err(|e| {
             KernelError::GpuError { reason: format!("Failed to compile PTX: {:?}", e) }
         })?;
 
@@ -76,16 +79,40 @@ impl CudaKernel {
             reason: format!("Failed to load CUDA module: {:?}", e),
         })?;
 
-        // Load function
+        // Load functions
         let matmul_function = module.load_function("bitnet_matmul_i2s").map_err(|e| {
             KernelError::GpuError { reason: format!("Failed to load matmul function: {:?}", e) }
         })?;
+
+        let quantize_i2s_function =
+            module.load_function("bitnet_quantize_i2s").map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to load I2S quantization function: {:?}", e),
+            })?;
+
+        let quantize_tl1_function =
+            module.load_function("bitnet_quantize_tl1").map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to load TL1 quantization function: {:?}", e),
+            })?;
+
+        let quantize_tl2_function =
+            module.load_function("bitnet_quantize_tl2").map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to load TL2 quantization function: {:?}", e),
+            })?;
 
         // Get device information
         let device_info = Self::get_device_info(device_id)?;
         log::info!("CUDA device info: {:?}", device_info);
 
-        Ok(Self { ctx, stream, module, matmul_function, device_info })
+        Ok(Self {
+            ctx,
+            stream,
+            module,
+            matmul_function,
+            quantize_i2s_function,
+            quantize_tl1_function,
+            quantize_tl2_function,
+            device_info,
+        })
     }
 
     /// Get detailed device information and capabilities
@@ -114,6 +141,84 @@ impl CudaKernel {
             supports_fp16,
             supports_bf16,
         })
+    }
+
+    /// Launch quantization kernel with proper cudarc 0.17 API
+    fn launch_quantization(
+        &self,
+        input: &[f32],
+        output: &mut [u8],
+        scales: &mut [f32],
+        qtype: QuantizationType,
+    ) -> Result<()> {
+        log::debug!("Launching CUDA quantization: type={:?}, len={}", qtype, input.len());
+
+        // Transfer input data to device
+        let input_dev = self.stream.memcpy_stod(input).map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to transfer input to device: {:?}", e),
+        })?;
+
+        // Allocate output arrays on device
+        let output_size = (input.len() + 3) / 4; // 4 values per byte for 2-bit quantization
+        let mut output_dev: CudaSlice<u8> =
+            self.stream.alloc_zeros(output_size).map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to allocate output on device: {:?}", e),
+            })?;
+
+        // Allocate scale array (one scale per block of 128 elements)
+        let scale_blocks = (input.len() + 127) / 128;
+        let mut scales_dev: CudaSlice<f32> =
+            self.stream.alloc_zeros(scale_blocks).map_err(|e| KernelError::GpuError {
+                reason: format!("Failed to allocate scales on device: {:?}", e),
+            })?;
+
+        // Configure launch parameters
+        const BLOCK_SIZE: u32 = 256;
+        let grid_size = (input.len() as u32).div_ceil(BLOCK_SIZE);
+
+        let cfg = LaunchConfig {
+            grid_dim: (grid_size, 1, 1),
+            block_dim: (BLOCK_SIZE, 1, 1),
+            shared_mem_bytes: 0,
+        };
+
+        // Select the appropriate kernel function based on quantization type
+        let kernel_function = match qtype {
+            QuantizationType::I2S => &self.quantize_i2s_function,
+            QuantizationType::TL1 => &self.quantize_tl1_function,
+            QuantizationType::TL2 => &self.quantize_tl2_function,
+        };
+
+        // Launch kernel
+        let mut builder = self.stream.launch_builder(kernel_function);
+        builder.arg(&input_dev);
+        builder.arg(&mut output_dev);
+        builder.arg(&mut scales_dev);
+        let n_arg = input.len() as i32;
+        builder.arg(&n_arg);
+
+        unsafe { builder.launch(cfg) }.map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to launch quantization kernel: {:?}", e),
+        })?;
+
+        // Transfer results back to host
+        let output_host: Vec<u8> = self.stream.memcpy_dtov(&output_dev).map_err(|e| {
+            KernelError::GpuError { reason: format!("Failed to transfer output back: {:?}", e) }
+        })?;
+
+        let scales_host: Vec<f32> = self.stream.memcpy_dtov(&scales_dev).map_err(|e| {
+            KernelError::GpuError { reason: format!("Failed to transfer scales back: {:?}", e) }
+        })?;
+
+        // Copy results to output slices
+        let copy_len = output.len().min(output_host.len());
+        output[..copy_len].copy_from_slice(&output_host[..copy_len]);
+
+        let scales_copy_len = scales.len().min(scales_host.len());
+        scales[..scales_copy_len].copy_from_slice(&scales_host[..scales_copy_len]);
+
+        log::debug!("CUDA quantization completed successfully");
+        Ok(())
     }
 
     /// Launch matrix multiplication kernel with proper cudarc 0.17 API
@@ -276,18 +381,18 @@ impl KernelProvider for CudaKernel {
 
     fn quantize(
         &self,
-        _input: &[f32],
-        _output: &mut [u8],
-        _scales: &mut [f32],
+        input: &[f32],
+        output: &mut [u8],
+        scales: &mut [f32],
         qtype: QuantizationType,
     ) -> Result<()> {
-        log::debug!("CUDA quantize: type: {:?}", qtype);
+        log::debug!("CUDA quantize: type: {:?}, input_len: {}", qtype, input.len());
 
-        // TODO: Implement CUDA quantization kernels
-        Err(KernelError::GpuError {
-            reason: "CUDA quantization implementation pending - matmul working".to_string(),
+        if input.is_empty() {
+            return Ok(());
         }
-        .into())
+
+        self.launch_quantization(input, output, scales, qtype)
     }
 }
 

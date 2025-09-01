@@ -62,6 +62,10 @@ pub enum KernelError {
     UnsupportedHardware { required: String, available: String },
     #[error("Invalid arguments: {reason}")]
     InvalidArguments { reason: String },
+    #[error("Quantization failed: {reason}")]
+    QuantizationFailed { reason: String },
+    #[error("Matrix multiplication failed: {reason}")]
+    MatmulFailed { reason: String },
 }
 
 /// Inference-related errors

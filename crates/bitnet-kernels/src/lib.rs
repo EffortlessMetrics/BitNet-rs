@@ -4,6 +4,7 @@ use bitnet_common::{QuantizationType, Result};
 use std::sync::OnceLock;
 
 pub mod cpu;
+pub mod device_aware;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 #[cfg(feature = "gpu")]
@@ -194,5 +195,6 @@ pub use cpu::Avx2Kernel;
 pub use cpu::FallbackKernel;
 #[cfg(all(target_arch = "aarch64", feature = "neon"))]
 pub use cpu::NeonKernel;
+pub use device_aware::{DeviceAwareQuantizer, DeviceAwareQuantizerFactory};
 #[cfg(feature = "gpu")]
 pub use gpu::CudaKernel;
