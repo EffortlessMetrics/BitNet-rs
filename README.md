@@ -225,38 +225,43 @@ println!("GPU active: {}", quantizer.is_gpu_active());
 
 #### Enhanced GGUF Metadata Inspection
 
-BitNet.rs provides comprehensive GGUF metadata inspection capabilities that allow you to examine model files without loading them into memory:
+BitNet.rs provides comprehensive GGUF metadata inspection capabilities with advanced categorization and JSON serialization for detailed analysis without loading tensors into memory:
 
 ```rust
 use bitnet_inference::engine::inspect_model;
 
 // Lightweight inspection - only reads GGUF header
-let model_info = inspect_model("model.gguf")?;
+let mut model_info = inspect_model("model.gguf")?;
 
-// Access comprehensive metadata
+// Access basic header information
 println!("GGUF version: {}", model_info.version());
 println!("Number of tensors: {}", model_info.n_tensors());
 
-// Extract all key-value metadata
-for kv in model_info.kv_specs() {
-    println!("{}: {:?}", kv.key, kv.value);
-}
+// Get categorized metadata for organized access
+let categorized = model_info.get_categorized_metadata();
+println!("Model params: {:?}", categorized.model_params);
+println!("Architecture: {:?}", categorized.architecture);
+println!("Tokenizer: {:?}", categorized.tokenizer);
+println!("Quantization: {:?}", categorized.quantization);
 
-// Get quantization hints
-for hint in model_info.quantization_hints() {
-    println!("Quantization: {}: {:?}", hint.key, hint.value);
-}
+// Get comprehensive tensor statistics
+let stats = model_info.get_tensor_statistics();
+println!("Total parameters: {:.2}M", stats.total_parameters as f64 / 1_000_000.0);
+println!("Estimated memory: {:.2} MB", stats.estimated_memory_bytes as f64 / 1_000_000.0);
+println!("Parameter distribution: {:?}", stats.parameters_by_category);
 
-// Examine tensor summaries without loading data
-for tensor in model_info.tensor_summaries() {
-    println!("Tensor: {} [{:?}] (dtype: {})", 
-             tensor.name, tensor.shape, tensor.dtype);
-}
+// JSON serialization for automation and scripting
+let json_compact = model_info.to_json_compact()?;
+let json_pretty = model_info.to_json()?;
+println!("Compact JSON: {}", json_compact);
 ```
 
-**Key Features:**
+**Enhanced Features:**
 - **Memory efficient**: Only reads GGUF header, not tensor data
-- **Comprehensive metadata**: KV pairs, quantization info, tensor summaries
+- **Categorized metadata**: Organized by model params, architecture, tokenizer, training, quantization
+- **Tensor statistics**: Parameter counts, memory estimates, data type distribution
+- **JSON serialization**: Both compact and pretty-printed formats for automation
+- **Enhanced categorization**: Automatic classification of metadata by purpose
 - **Error resilient**: Handles malformed GGUF files gracefully
 - **Performance optimized**: Fast inspection for CI/CD pipelines
 
@@ -270,12 +275,13 @@ bitnet run --model model.gguf --prompt "Explain quantum computing"
 bitnet compat-check model.gguf
 bitnet compat-check model.gguf --json  # JSON output for scripting
 
-# Inspect comprehensive GGUF metadata (enhanced in v0.1.0+)
-bitnet inspect --model model.gguf                     # Human-readable format
-bitnet inspect --model model.gguf --json              # JSON for scripting
+# Inspect comprehensive GGUF metadata with categorization and statistics
+bitnet inspect --model model.gguf                     # Human-readable categorized format
+bitnet inspect --model model.gguf --json              # Structured JSON with statistics
 
-# Inspect with detailed metadata extraction
-cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- model.gguf
+# Enhanced example with JSON output support
+cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- model.gguf        # Human-readable
+cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- --json model.gguf  # JSON output
 
 # Tokenize text
 bitnet tokenize --model model.gguf --text "Hello, world!"

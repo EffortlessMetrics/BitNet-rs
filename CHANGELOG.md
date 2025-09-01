@@ -53,9 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Environment variable overrides for deterministic builds
 
 ### Added
-- **Enhanced GGUF Metadata Inspection** (Post-PR #105):
+- **Enhanced GGUF Metadata Inspection with Categorization** (PR #97):
   - **Comprehensive ModelInfo API**: Added `kv_specs()`, `quantization_hints()`, and `tensor_summaries()` methods
-  - **TensorSummary Structure**: Provides tensor names, shapes, and dtype information without loading data
+  - **Advanced Categorization**: Added `get_categorized_metadata()` organizing KV pairs by purpose (model params, architecture, tokenizer, training, quantization)
+  - **Tensor Statistics**: Added `get_tensor_statistics()` with parameter counts, memory estimates, and data type distribution
+  - **JSON Serialization**: Added `to_json()` and `to_json_compact()` methods for automation and scripting
+  - **Enhanced TensorSummary**: Includes tensor categories, parameter counts, and dtype names for comprehensive analysis
   - **Memory-Efficient Parsing**: Lightweight header-only inspection for CI/CD pipelines
   - **Error-Resilient Handling**: Robust parsing of malformed GGUF files with detailed error messages
   - **New Example**: `inspect_gguf_metadata.rs` demonstrating comprehensive metadata extraction with categorized output

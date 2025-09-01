@@ -117,14 +117,20 @@ bitnet compat-check model.gguf --json --show-kv --kv-limit 3
 
 ### `inspect` - Model Metadata
 
-Inspect model metadata without loading tensors.
+Inspect model metadata without loading tensors, with enhanced categorization and statistics.
 
 ```bash
+# Categorized human-readable output with tensor statistics
 bitnet inspect --model model.gguf
 
-# JSON output with detailed metadata
+# Structured JSON output with comprehensive metadata and statistics
 bitnet inspect --model model.gguf --json
 ```
+
+**Features:**
+- **Categorized metadata**: Organized by model params, architecture, tokenizer, training, quantization
+- **Tensor statistics**: Parameter counts, memory estimates, data type distribution
+- **JSON serialization**: Pretty-printed JSON for automation and scripting
 
 ### `tokenize` - Text Tokenization
 

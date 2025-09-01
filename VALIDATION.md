@@ -103,29 +103,34 @@ bitnet eval --model model.gguf --tokenizer tokenizer.json \
   --json-out eval.json
 ```
 
-### Inspect Command (Enhanced GGUF Metadata)
+### Inspect Command (Enhanced GGUF Metadata with Categorization)
 ```bash
-# Comprehensive GGUF metadata inspection
-bitnet inspect --model model.gguf --json              # JSON output for automation
+# Comprehensive GGUF metadata inspection with categorization and statistics
+bitnet inspect --model model.gguf                     # Categorized human-readable format
+bitnet inspect --model model.gguf --json              # Structured JSON with tensor statistics
 
-# Human-readable format with categorized metadata
-cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- model.gguf
+# Enhanced example with JSON support
+cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- model.gguf        # Human-readable
+cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- --json model.gguf  # JSON output
 
-# Quick header validation in tests
+# Quick header validation in tests (enhanced)
 cargo test -p bitnet-inference --test engine_inspect
 ```
 
-**Key Features:**
+**Enhanced Features:**
 - **Memory Efficient**: Only reads GGUF header, not tensor data
-- **Comprehensive Extraction**: KV pairs, quantization hints, tensor summaries
+- **Categorized Metadata**: Organized by model params, architecture, tokenizer, training, quantization
+- **Tensor Statistics**: Parameter counts, memory estimates, data type distribution
+- **JSON Serialization**: Both compact and pretty-printed formats for automation
 - **Error Resilient**: Handles malformed GGUF files with detailed error messages
 - **CI/CD Ready**: Fast inspection suitable for automated pipelines
 
 **Validation Benefits:**
-- **Pre-flight Checks**: Validate model format before expensive loading
-- **Quantization Analysis**: Understand compression schemes and data types
-- **Tensor Mapping**: Preview tensor structure for compatibility verification
-- **Debugging Support**: Inspect GGUF structure for troubleshooting
+- **Pre-flight Checks**: Validate model format before expensive loading with enhanced categorization
+- **Quantization Analysis**: Understand compression schemes with automated classification
+- **Tensor Statistics**: Get parameter counts and memory estimates without loading
+- **Architecture Inspection**: Examine model structure through categorized metadata
+- **Debugging Support**: Inspect GGUF structure with organized output for troubleshooting
 
 ## Validation Thresholds
 
