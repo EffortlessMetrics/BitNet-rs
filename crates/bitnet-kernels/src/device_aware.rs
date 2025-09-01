@@ -75,9 +75,9 @@ impl DeviceAwareQuantizer {
             }
         };
 
-        Ok(Self { 
-            primary_provider, 
-            fallback_provider, 
+        Ok(Self {
+            primary_provider,
+            fallback_provider,
             target_device: device,
             stats: Arc::new(Mutex::new(DeviceStatsInternal::default())),
         })
@@ -134,7 +134,7 @@ impl DeviceAwareQuantizer {
     ) -> Result<()> {
         let start_time = Instant::now();
         let mut used_gpu = false;
-        
+
         // Try primary provider (GPU) first
         if let Some(ref primary) = self.primary_provider {
             let gpu_start = Instant::now();
@@ -142,26 +142,31 @@ impl DeviceAwareQuantizer {
                 Ok(()) => {
                     let elapsed = gpu_start.elapsed().as_secs_f64() * 1000.0;
                     used_gpu = true;
-                    
+
                     if let Ok(mut stats) = self.stats.lock() {
                         stats.quantization_operations += 1;
                         stats.gpu_operations += 1;
                         stats.total_quantization_time_ms += elapsed;
                     }
-                    
+
                     log::trace!(
-                        "GPU quantization succeeded for {} elements in {:.3}ms (qtype: {:?})", 
-                        input.len(), elapsed, qtype
+                        "GPU quantization succeeded for {} elements in {:.3}ms (qtype: {:?})",
+                        input.len(),
+                        elapsed,
+                        qtype
                     );
                     return Ok(());
                 }
                 Err(e) => {
                     let error_msg = format!(
-                        "GPU quantization failed for {} elements: {} (device: {:?}, qtype: {:?})", 
-                        input.len(), e, self.target_device, qtype
+                        "GPU quantization failed for {} elements: {} (device: {:?}, qtype: {:?})",
+                        input.len(),
+                        e,
+                        self.target_device,
+                        qtype
                     );
                     log::warn!("{}", error_msg);
-                    
+
                     if let Ok(mut stats) = self.stats.lock() {
                         stats.fallback_count += 1;
                         stats.last_gpu_error = Some(error_msg);
@@ -173,39 +178,49 @@ impl DeviceAwareQuantizer {
 
         // Use CPU fallback
         let cpu_start = Instant::now();
-        log::debug!("Using CPU fallback for quantization (input_len: {}, qtype: {:?})", input.len(), qtype);
-        
+        log::debug!(
+            "Using CPU fallback for quantization (input_len: {}, qtype: {:?})",
+            input.len(),
+            qtype
+        );
+
         match self.fallback_provider.quantize(input, output, scales, qtype) {
             Ok(()) => {
                 let elapsed = cpu_start.elapsed().as_secs_f64() * 1000.0;
                 let total_elapsed = start_time.elapsed().as_secs_f64() * 1000.0;
-                
+
                 if let Ok(mut stats) = self.stats.lock() {
                     stats.quantization_operations += 1;
                     stats.cpu_operations += 1;
                     stats.total_quantization_time_ms += total_elapsed;
                 }
-                
+
                 log::trace!(
                     "CPU quantization succeeded for {} elements in {:.3}ms (total: {:.3}ms, used_gpu_first: {})",
-                    input.len(), elapsed, total_elapsed, used_gpu
+                    input.len(),
+                    elapsed,
+                    total_elapsed,
+                    used_gpu
                 );
                 Ok(())
             }
             Err(e) => {
                 let error_msg = format!(
-                    "CPU quantization failed for {} elements: {} (qtype: {:?})", 
-                    input.len(), e, qtype
+                    "CPU quantization failed for {} elements: {} (qtype: {:?})",
+                    input.len(),
+                    e,
+                    qtype
                 );
                 log::error!("{}", error_msg);
-                
+
                 if let Ok(mut stats) = self.stats.lock() {
                     stats.last_cpu_error = Some(error_msg.clone());
                 }
-                
+
                 Err(KernelError::QuantizationFailed {
                     reason: format!("Both GPU and CPU quantization failed: {}", error_msg),
-                }.into())
+                }
+                .into())
             }
         }
     }
@@ -222,7 +237,7 @@ impl DeviceAwareQuantizer {
     ) -> Result<()> {
         let start_time = Instant::now();
         let mut used_gpu = false;
-        
+
         // Try primary provider (GPU) first
         if let Some(ref primary) = self.primary_provider {
             let gpu_start = Instant::now();
@@ -230,26 +245,23 @@ impl DeviceAwareQuantizer {
                 Ok(()) => {
                     let elapsed = gpu_start.elapsed().as_secs_f64() * 1000.0;
                     used_gpu = true;
-                    
+
                     if let Ok(mut stats) = self.stats.lock() {
                         stats.matmul_operations += 1;
                         stats.gpu_operations += 1;
                         stats.total_matmul_time_ms += elapsed;
                     }
-                    
-                    log::trace!(
-                        "GPU matmul succeeded for {}x{}x{} in {:.3}ms", 
-                        m, n, k, elapsed
-                    );
+
+                    log::trace!("GPU matmul succeeded for {}x{}x{} in {:.3}ms", m, n, k, elapsed);
                     return Ok(());
                 }
                 Err(e) => {
                     let error_msg = format!(
-                        "GPU matmul failed for {}x{}x{}: {} (device: {:?})", 
+                        "GPU matmul failed for {}x{}x{}: {} (device: {:?})",
                         m, n, k, e, self.target_device
                     );
                     log::warn!("{}", error_msg);
-                    
+
                     if let Ok(mut stats) = self.stats.lock() {
                         stats.fallback_count += 1;
                         stats.last_gpu_error = Some(error_msg);
@@ -262,38 +274,41 @@ impl DeviceAwareQuantizer {
         // Use CPU fallback
         let cpu_start = Instant::now();
         log::debug!("Using CPU fallback for matrix multiplication ({}x{}x{})", m, n, k);
-        
+
         match self.fallback_provider.matmul_i2s(a, b, c, m, n, k) {
             Ok(()) => {
                 let elapsed = cpu_start.elapsed().as_secs_f64() * 1000.0;
                 let total_elapsed = start_time.elapsed().as_secs_f64() * 1000.0;
-                
+
                 if let Ok(mut stats) = self.stats.lock() {
                     stats.matmul_operations += 1;
                     stats.cpu_operations += 1;
                     stats.total_matmul_time_ms += total_elapsed;
                 }
-                
+
                 log::trace!(
                     "CPU matmul succeeded for {}x{}x{} in {:.3}ms (total: {:.3}ms, used_gpu_first: {})",
-                    m, n, k, elapsed, total_elapsed, used_gpu
+                    m,
+                    n,
+                    k,
+                    elapsed,
+                    total_elapsed,
+                    used_gpu
                 );
                 Ok(())
             }
             Err(e) => {
-                let error_msg = format!(
-                    "CPU matmul failed for {}x{}x{}: {}", 
-                    m, n, k, e
-                );
+                let error_msg = format!("CPU matmul failed for {}x{}x{}: {}", m, n, k, e);
                 log::error!("{}", error_msg);
-                
+
                 if let Ok(mut stats) = self.stats.lock() {
                     stats.last_cpu_error = Some(error_msg.clone());
                 }
-                
-                Err(KernelError::MatmulFailed { 
-                    reason: format!("Both GPU and CPU matmul failed: {}", error_msg) 
-                }.into())
+
+                Err(KernelError::MatmulFailed {
+                    reason: format!("Both GPU and CPU matmul failed: {}", error_msg),
+                }
+                .into())
             }
         }
     }
@@ -309,12 +324,10 @@ impl DeviceAwareQuantizer {
     /// Get comprehensive performance statistics
     pub fn get_stats(&self) -> Option<DeviceStats> {
         if let Ok(stats) = self.stats.lock() {
-            let primary_device_type = self.primary_provider
-                .as_ref()
-                .map(|p| p.name())
-                .unwrap_or("None");
+            let primary_device_type =
+                self.primary_provider.as_ref().map(|p| p.name()).unwrap_or("None");
             let fallback_device_type = self.fallback_provider.name();
-            
+
             Some(DeviceStats {
                 device_type: format!("{}+{}", primary_device_type, fallback_device_type),
                 target_device: self.target_device,
@@ -328,13 +341,14 @@ impl DeviceAwareQuantizer {
                 cpu_operations: stats.cpu_operations,
                 fallback_count: stats.fallback_count,
                 gpu_efficiency: if stats.gpu_operations + stats.cpu_operations > 0 {
-                    stats.gpu_operations as f64 / (stats.gpu_operations + stats.cpu_operations) as f64
+                    stats.gpu_operations as f64
+                        / (stats.gpu_operations + stats.cpu_operations) as f64
                 } else {
                     0.0
                 },
                 last_gpu_error: stats.last_gpu_error.clone(),
                 last_cpu_error: stats.last_cpu_error.clone(),
-                memory_used_bytes: 0, // TODO: Implement memory tracking
+                memory_used_bytes: 0,  // TODO: Implement memory tracking
                 memory_total_bytes: 0, // TODO: Implement memory tracking
             })
         } else {
@@ -342,7 +356,7 @@ impl DeviceAwareQuantizer {
             None
         }
     }
-    
+
     /// Reset performance statistics (useful for benchmarking)
     pub fn reset_stats(&self) {
         if let Ok(mut stats) = self.stats.lock() {
@@ -382,7 +396,7 @@ impl DeviceStats {
             0.0
         }
     }
-    
+
     /// Get average matrix multiplication time per operation
     pub fn avg_matmul_time_ms(&self) -> f64 {
         if self.matmul_operations > 0 {
@@ -391,12 +405,12 @@ impl DeviceStats {
             0.0
         }
     }
-    
+
     /// Check if GPU is effectively being used (low fallback rate)
     pub fn is_gpu_effective(&self) -> bool {
         self.gpu_operations > 0 && self.gpu_efficiency > 0.8
     }
-    
+
     /// Get human-readable summary
     pub fn summary(&self) -> String {
         format!(
@@ -522,40 +536,40 @@ mod tests {
                 assert!(stats.quantization_operations > 0);
                 println!("GPU efficiency: {:.2}%", stats.gpu_efficiency * 100.0);
             }
-            
+
             // Test matrix multiplication
             let a = vec![1i8; 64];
             let b = vec![255u8; 64];
             let mut c = vec![0.0f32; 16];
-            
+
             let result = quantizer.matmul_i2s(&a, &b, &mut c, 4, 4, 16);
             assert!(result.is_ok());
-            
+
             if let Some(stats) = quantizer.get_stats() {
                 assert!(stats.matmul_operations > 0);
                 println!("Final stats: {}", stats.summary());
             }
         }
     }
-    
+
     #[test]
     fn test_performance_tracking() {
         let quantizer = DeviceAwareQuantizer::new(Device::Cpu).unwrap();
-        
+
         // Initially no stats
         if let Some(stats) = quantizer.get_stats() {
             assert_eq!(stats.total_operations, 0);
             assert_eq!(stats.total_time_ms, 0.0);
         }
-        
+
         // Perform some operations
         let input = vec![1.0f32, -1.0f32, 0.5f32, -0.5f32];
         let mut output = vec![0u8; 1];
         let mut scales = vec![0.0f32; 1];
-        
+
         let result = quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
         assert!(result.is_ok());
-        
+
         // Check stats updated
         if let Some(stats) = quantizer.get_stats() {
             assert_eq!(stats.quantization_operations, 1);
@@ -563,7 +577,7 @@ mod tests {
             assert!(stats.cpu_operations > 0);
             println!("CPU quantization stats: {}", stats.summary());
         }
-        
+
         // Reset stats
         quantizer.reset_stats();
         if let Some(stats) = quantizer.get_stats() {
