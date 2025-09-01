@@ -27,7 +27,8 @@
 
 ### 🌐 **Cross-Platform Excellence**
 - **Native support** for Linux, macOS, and Windows
-- **Multiple backends**: CPU and GPU (CUDA) inference engines
+- **Multiple backends**: CPU (AVX2/NEON) and GPU (CUDA) inference engines with automatic kernel selection and device-aware quantization
+- **Advanced GPU features**: Mixed precision (FP16/BF16), memory optimization, and device-specific performance tuning
 - **Universal model formats**: GGUF, sharded SafeTensors (HuggingFace), and local HuggingFace directories
 - **Language bindings**: C API, Python, and WebAssembly
 
@@ -79,14 +80,26 @@ cargo build --locked --workspace --no-default-features --features cpu
 cargo test  --locked --workspace --no-default-features --features cpu
 ```
 
-#### 🎮 **GPU Path** (CUDA/Metal/ROCm)
+#### 🎮 **GPU Path** (CUDA with Device-Aware Quantization)
 ```bash
-# Detect GPU and run smoke tests
+# Detect GPU and run smoke tests with device-aware quantization
 cargo xtask gpu-preflight         # Detects CUDA, prints versions
 cargo xtask gpu-smoke             # Fast CPU↔GPU parity check
 
-# Build with GPU support
+# Check CUDA availability and device information
+cargo run --example cuda_info --no-default-features --features gpu
+
+# Build with GPU support and device-aware quantization
 cargo build --locked --workspace --no-default-features --features gpu
+
+# Run GPU validation and performance tests
+cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_integration
+
+# GPU memory health check (production monitoring)
+cargo run --example test_gpu_memory --no-default-features --features gpu
+
+# Deterministic GPU testing with device-aware quantization
+BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo test --workspace --no-default-features --features gpu -- --test-threads=1
 ```
 
 #### 🛠️ **Utilities**
@@ -254,12 +267,15 @@ curl -X POST http://localhost:8080/v1/completions \
 BitNet.rs uses feature flags to enable optional functionality:
 
 - `cpu`: CPU inference with optimized kernels (not enabled by default)
-- `gpu`: GPU acceleration via CUDA with advanced device-aware quantization and automatic CPU fallback
+- `gpu`: GPU acceleration via CUDA with advanced device-aware quantization, automatic CPU fallback, memory optimization and mixed precision support
 - `cuda`: Backward-compatible alias for `gpu` feature
-- `avx2`: x86_64 AVX2 SIMD optimizations
-- `avx512`: x86_64 AVX-512 SIMD optimizations
-- `neon`: ARM64 NEON SIMD optimizations
-- `ffi`: Enable C++ FFI bridge for cross-validation (with enhanced safety documentation)
+- `avx2`: x86_64 AVX2 SIMD optimizations (auto-detected when using `cpu`)
+- `avx512`: x86_64 AVX-512 SIMD optimizations (auto-detected when using `cpu`)
+- `neon`: ARM64 NEON SIMD optimizations (auto-detected when using `cpu`)
+- `ffi`: Enable C++ FFI bridge for cross-validation and migration (with enhanced safety documentation)
+- `iq2s-ffi`: IQ2_S quantization via GGML FFI for llama.cpp compatibility
+- `mixed-precision`: Advanced FP16/BF16 support for modern GPUs (requires `gpu`)
+- `gpu-validation`: Comprehensive GPU validation framework (requires `gpu`)
 - `full`: Enable all features
 
 **Important:** Default features are empty to prevent unintended dependencies. You must explicitly enable features:
@@ -275,7 +291,7 @@ cargo build --no-default-features --features gpu
 cargo build --no-default-features --features cuda
 
 # Both CPU and GPU
-cargo build --no-default-features --features "cpu,cuda"
+cargo build --no-default-features --features "cpu,gpu"
 
 # Full feature set
 cargo build --features full
@@ -411,7 +427,6 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cp
 # Test automatic fallback mechanism
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
 ```
-
 ## GGUF Validation & Model Compatibility
 
 BitNet.rs includes a robust GGUF validation system that ensures model compatibility before loading:
@@ -627,7 +642,7 @@ identifier "int8_t" is undefined
 ```
 **Solution:** This was fixed in the latest version. Pull the latest changes or use `signed char`/`unsigned char` in CUDA kernels.
 
-**3. Legacy feature flag usage**
+**3. Feature resolution issues (Legacy feature flag usage)**
 ```
 the package 'bitnet-kernels' does not contain this feature: gpu
 ```
@@ -902,6 +917,9 @@ The legacy C++ implementation is automatically downloaded and cached when needed
 - [Examples](examples/) - Real-world usage examples
 
 ### 🔧 **Advanced Usage**
+- [GPU Setup Guide](docs/gpu-setup-guide.md) - Complete GPU acceleration setup
+- [CUDA Configuration](docs/cuda-configuration-guide.md) - Memory optimization and tuning
+- [GPU Kernel Architecture](docs/gpu-kernel-architecture.md) - Design decisions and patterns
 - [Performance Guide](docs/performance-guide.md) - Optimization techniques
 - [Deployment Guide](docs/deployment.md) - Production deployment
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions

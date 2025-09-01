@@ -113,6 +113,7 @@ fastrand = "2.0"
 filetime = "0.2"
 html-escape = "0.2"
 libc = "0.2"
+rayon = "1.11"
 
 [features]
 default = []  # Empty default features - must be explicitly enabled

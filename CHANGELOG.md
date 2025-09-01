@@ -14,12 +14,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Standardize GPU feature aliases in cargo config to use `gpu` instead of `cuda`
 
 ### Fixed
+- **FFI Safety and Validation Improvements**:
+  - Enhanced FFI functions with `unsafe fn` signatures for Rust 2024 safety compliance
+  - Fixed clippy warnings in test infrastructure and removed unneeded unit expressions
+  - Added proper unsafe blocks for raw pointer operations in C API layer
+  - Maintained full API compatibility with existing C clients while improving memory safety
 - **bitnet-server Build Issues**:
   - Restored Git metadata support using vergen-gix v1.x
   - Moved runtime dependencies from build-dependencies to correct section
   - Made health endpoint robust with option_env! for graceful fallbacks
 
 ### Enhanced
+- **GPU Kernel Refactoring** (PR #108):
+  - **CUDA Implementation**: Enhanced cudarc 0.17 API compatibility with performance tracking and error handling
+  - **Memory Management**: Implemented OptimizedMemoryPool with device-specific allocation, caching, leak detection, and device_id() access method  
+  - **Mixed Precision Infrastructure**: Added PrecisionMode support for FP16/BF16 operations on modern GPUs
+  - **Comprehensive Validation**: GpuValidator with numerical accuracy, performance benchmarking, and memory health checks
+  - **FFI Bridge Improvements**: Enhanced C++ kernel integration with feature gating and performance comparison tools
+  - **Device Information**: Detailed CudaDeviceInfo with compute capability, memory, and precision support detection
+  - **Launch Parameter Optimization**: Dynamic kernel configuration based on device capabilities and workload characteristics
+- **Documentation Synchronization** (Post-PR #113):
+  - Updated all documentation to use standardized `gpu` feature flag instead of `cuda`
+  - Maintained backward compatibility by documenting `cuda` as an alias for `gpu`
+  - Synchronized build commands across CLAUDE.md, README.md, FEATURES.md, and GPU setup guides
+  - Updated cargo aliases in `.cargo/config.toml` to use `gpu` feature consistently
+  - Enhanced lockfile tracking for reproducible builds (Cargo.lock now versioned)
+  - Enhanced Diátaxis framework compliance with clearer tutorial/reference categorization
 - **CI/Docker Git Metadata Support**:
   - Added Git metadata injection in GitHub Actions CI
   - Updated Dockerfile with VCS build args for metadata without .git
