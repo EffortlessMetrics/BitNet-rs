@@ -676,6 +676,8 @@ dependencies = [
  "chrono",
  "clap",
  "futures",
+ "http-body-util",
+ "hyper",
  "metrics",
  "metrics-prometheus",
  "num_cpus",

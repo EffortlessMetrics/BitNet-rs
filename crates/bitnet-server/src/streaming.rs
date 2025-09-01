@@ -179,24 +179,24 @@ async fn real_stream(
 
         while let Some(token_result) = gen_stream.next().await {
             match token_result {
-                Ok(token) => {
+                Ok(stream_response) => {
                     token_count += 1;
                     let elapsed = start.elapsed();
 
                     let token_id = tokenizer
-                        .encode(&token, false, false)
+                        .encode(&stream_response.text, false, false)
                         .ok()
                         .and_then(|ids| ids.get(0).copied())
                         .unwrap_or(0);
 
                     let data = StreamingToken {
-                        token: token.clone(),
+                        token: stream_response.text.clone(),
                         token_id,
                         cumulative_time_ms: elapsed.as_millis() as u64,
                         position: token_count as usize,
                     };
 
-                    debug!("Streaming token {}: '{}'", token_count, token);
+                    debug!("Streaming token {}: '{}'", token_count, stream_response.text);
 
                     yield Ok(Event::default()
                         .event("token")

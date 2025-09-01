@@ -439,9 +439,9 @@ impl PyStreamingGenerator {
                 use futures_util::StreamExt;
                 stream.next().await
             }) {
-                Some(Ok(token_text)) => {
-                    debug!("Generated token: '{}'", token_text);
-                    Ok(Some(token_text))
+                Some(Ok(stream_response)) => {
+                    debug!("Generated token: '{}'", stream_response.text);
+                    Ok(Some(stream_response.text))
                 }
                 Some(Err(e)) => {
                     warn!("Streaming error encountered: {}", e);
