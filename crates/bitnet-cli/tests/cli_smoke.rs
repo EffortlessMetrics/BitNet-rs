@@ -24,7 +24,7 @@ fn help_mentions_core_subcommands() {
     let s = String::from_utf8(out).unwrap();
 
     // Looser contract: presence of key verbs without snapshot churn.
-    for needle in ["serve", "infer", "--model", "--config"] {
+    for needle in ["serve", "infer", "score", "--model", "--config"] {
         assert!(s.contains(needle), "help missing `{needle}`");
     }
 }
@@ -33,6 +33,24 @@ fn help_mentions_core_subcommands() {
 #[test]
 fn benchmark_help_works() {
     Command::cargo_bin("bitnet").unwrap().args(["benchmark", "--help"]).assert().success();
+}
+
+#[test]
+fn score_help_works() {
+    Command::cargo_bin("bitnet").unwrap().args(["score", "--help"]).assert().success();
+}
+
+#[test]
+fn score_command_validates_args() {
+    // Score command should fail gracefully with missing required args
+    Command::cargo_bin("bitnet").unwrap().args(["score"]).assert().failure();
+
+    // Score command should show error for missing model
+    Command::cargo_bin("bitnet")
+        .unwrap()
+        .args(["score", "--file", "/nonexistent"])
+        .assert()
+        .failure();
 }
 
 #[test]

@@ -330,7 +330,7 @@ fn test_async_streaming_patterns() {
     Python::with_gil(|py| {
         let _asyncio = py.import("asyncio")?;
 
-        let code = r#"
+        let _code = r#"
 import asyncio
 from typing import AsyncGenerator
 
