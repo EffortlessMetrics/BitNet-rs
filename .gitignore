@@ -91,3 +91,78 @@ models/
 # Cross-validation builds
 crossval/target/
 legacy/
+
+# =============================================================================
+# OVERSIZED PR PREVENTION GUARDRAILS
+# =============================================================================
+
+# Test fixture artifacts (prevent massive test data commits)
+**/fixtures/target/
+**/fixture_test/target/
+**/test_fixtures/
+**/large_fixtures/
+fixtures/models/
+fixtures/datasets/
+**/fixtures/**/*.gguf
+**/fixtures/**/*.safetensors
+**/fixtures/**/*.bin
+**/fixtures/**/*.json.bz2
+**/fixtures/**/*.json.gz
+test_data/large/
+
+# Vendored dependencies (prevent accidentally committing large C++ codebases)
+3rdparty/**/target/
+3rdparty/**/build/
+3rdparty/**/.git/
+vendor/llama.cpp/
+vendor/ggml/
+vendor/build/
+thirdparty/
+
+# Generated documentation and artifacts
+docs/_build/
+docs/build/
+site/
+_site/
+public/
+
+# Temporary build and development artifacts
+tmp/
+temp/
+.tmp/
+**/*.tmp.rs
+**/*.backup.rs
+*.backup
+scratch/
+experiments/
+
+# Large log files and debug dumps
+*.log.*
+debug_dump/
+trace_*.txt
+profile_*.txt
+benchmark_results/
+
+# CI cache and artifacts (prevent accidental commit of CI state)
+.github/cache/
+.github/artifacts/
+.github/runners/
+
+# Package manager artifacts
+.cargo/registry/
+.cargo/git/
+.cargo/.package-cache
+node_modules/
+package-lock.json.backup
+
+# Development containers and virtualization
+.devcontainer/tmp/
+docker-compose.override.yml
+.docker/tmp/
+vagrant/
+
+# PREVENT SPECIFIC PAST ISSUES:
+# - Build artifacts in fixture directories (PR #92)
+# - Massive JSON test fixtures (PR #103)  
+# - Vendored GGML C code without .gitignore (PR #101)
+# - Branch merge artifacts (PR #104)

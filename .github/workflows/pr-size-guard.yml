@@ -1,0 +1,233 @@
+name: PR Size Guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-pr-size:
+    name: Check PR Size
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout PR
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Get PR Size Information
+      id: pr-size
+      run: |
+        # Get the base branch (usually main)
+        BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+        HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
+        
+        # Get diff statistics
+        ADDITIONS=$(git diff --numstat origin/$BASE_BRANCH...HEAD | awk '{sum += $1} END {print sum}')
+        DELETIONS=$(git diff --numstat origin/$BASE_BRANCH...HEAD | awk '{sum += $2} END {print sum}')
+        FILES_CHANGED=$(git diff --name-only origin/$BASE_BRANCH...HEAD | wc -l)
+        
+        # Handle empty values
+        ADDITIONS=${ADDITIONS:-0}
+        DELETIONS=${DELETIONS:-0}
+        FILES_CHANGED=${FILES_CHANGED:-0}
+        
+        TOTAL_CHANGES=$((ADDITIONS + DELETIONS))
+        
+        echo "additions=${ADDITIONS}" >> $GITHUB_OUTPUT
+        echo "deletions=${DELETIONS}" >> $GITHUB_OUTPUT
+        echo "total_changes=${TOTAL_CHANGES}" >> $GITHUB_OUTPUT
+        echo "files_changed=${FILES_CHANGED}" >> $GITHUB_OUTPUT
+        
+        echo "📊 PR Size Analysis:"
+        echo "  Additions: ${ADDITIONS}"
+        echo "  Deletions: ${DELETIONS}"
+        echo "  Total changes: ${TOTAL_CHANGES}"
+        echo "  Files changed: ${FILES_CHANGED}"
+
+    - name: Check for Large Files
+      id: large-files
+      run: |
+        # Check for files over 100KB
+        LARGE_FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD | xargs -I {} du -b {} 2>/dev/null | awk '$1 > 102400 {print $2}' | head -10)
+        
+        if [ ! -z "$LARGE_FILES" ]; then
+          echo "large_files_found=true" >> $GITHUB_OUTPUT
+          echo "large_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$LARGE_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "large_files_found=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Check for Suspicious Patterns
+      id: suspicious-patterns
+      run: |
+        # Check for potentially problematic patterns
+        SUSPICIOUS_FILES=""
+        
+        # Check for fixture/test data directories
+        if git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD | grep -E "(fixtures?|test_data|testdata)" | grep -E "\.(gguf|safetensors|bin|json|txt)$" | head -5; then
+          SUSPICIOUS_FILES="${SUSPICIOUS_FILES}Test fixtures or large data files detected.\n"
+        fi
+        
+        # Check for vendored dependencies
+        if git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD | grep -E "(vendor/|3rdparty/|thirdparty/)" | head -5; then
+          SUSPICIOUS_FILES="${SUSPICIOUS_FILES}Vendored dependencies detected.\n"  
+        fi
+        
+        # Check for build artifacts
+        if git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD | grep -E "target/|build/|\.cargo/" | head -5; then
+          SUSPICIOUS_FILES="${SUSPICIOUS_FILES}Build artifacts detected.\n"
+        fi
+        
+        if [ ! -z "$SUSPICIOUS_FILES" ]; then
+          echo "suspicious_found=true" >> $GITHUB_OUTPUT
+          echo "suspicious_files<<EOF" >> $GITHUB_OUTPUT  
+          echo -e "$SUSPICIOUS_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "suspicious_found=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Evaluate PR Size
+      id: evaluate
+      run: |
+        TOTAL_CHANGES=${{ steps.pr-size.outputs.total_changes }}
+        FILES_CHANGED=${{ steps.pr-size.outputs.files_changed }}
+        
+        # Size thresholds
+        LARGE_THRESHOLD=5000     # 5k lines = large
+        OVERSIZED_THRESHOLD=50000 # 50k lines = oversized
+        MASSIVE_THRESHOLD=100000  # 100k+ lines = massive
+        
+        if [ $TOTAL_CHANGES -ge $MASSIVE_THRESHOLD ]; then
+          echo "size_category=massive" >> $GITHUB_OUTPUT
+          echo "should_block=true" >> $GITHUB_OUTPUT
+        elif [ $TOTAL_CHANGES -ge $OVERSIZED_THRESHOLD ]; then
+          echo "size_category=oversized" >> $GITHUB_OUTPUT
+          echo "should_block=true" >> $GITHUB_OUTPUT  
+        elif [ $TOTAL_CHANGES -ge $LARGE_THRESHOLD ]; then
+          echo "size_category=large" >> $GITHUB_OUTPUT
+          echo "should_block=false" >> $GITHUB_OUTPUT
+        else
+          echo "size_category=normal" >> $GITHUB_OUTPUT
+          echo "should_block=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Comment on PR
+      if: steps.evaluate.outputs.size_category != 'normal'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const size_category = '${{ steps.evaluate.outputs.size_category }}';
+          const additions = '${{ steps.pr-size.outputs.additions }}';
+          const deletions = '${{ steps.pr-size.outputs.deletions }}';
+          const total_changes = '${{ steps.pr-size.outputs.total_changes }}';
+          const files_changed = '${{ steps.pr-size.outputs.files_changed }}';
+          const large_files_found = '${{ steps.large-files.outputs.large_files_found }}';
+          const suspicious_found = '${{ steps.suspicious-patterns.outputs.suspicious_found }}';
+          
+          let emoji, title, severity;
+          
+          if (size_category === 'massive') {
+            emoji = '🚨';
+            title = 'MASSIVE PR DETECTED';
+            severity = 'CRITICAL';
+          } else if (size_category === 'oversized') {
+            emoji = '⚠️';
+            title = 'Oversized PR Warning';
+            severity = 'HIGH';
+          } else {
+            emoji = '📊';
+            title = 'Large PR Notice';
+            severity = 'MEDIUM';
+          }
+          
+          let comment = `# ${emoji} ${title}
+          
+          **Size Analysis:**
+          - **Total Changes:** ${total_changes} lines
+          - **Additions:** ${additions}
+          - **Deletions:** ${deletions}
+          - **Files Changed:** ${files_changed}
+          - **Severity:** ${severity}
+          
+          `;
+          
+          if (size_category === 'massive' || size_category === 'oversized') {
+            comment += `
+          ## 🚫 PR Review Required
+          
+          This PR is ${size_category} and requires special attention:
+          
+          ### Common Causes of Oversized PRs:
+          - **Build artifacts** in \`target/\`, \`fixtures/target/\`, etc.
+          - **Large test fixtures** (GGUF files, JSON datasets)
+          - **Vendored dependencies** (C++ code, external libraries)
+          - **Scope creep** - multiple unrelated features mixed together
+          - **Branch merge issues** - accidentally including other changes
+          
+          ### Recommended Actions:
+          1. **Review changed files** - identify which files are actually necessary
+          2. **Check .gitignore** - ensure build artifacts are excluded
+          3. **Split the PR** - separate unrelated changes into focused PRs
+          4. **Use synthetic test data** - avoid committing large fixtures
+          5. **Clean the branch** - remove unintended files and changes
+          
+          ### BitNet.rs Best Practices:
+          - **Target:** <1,000 lines per PR for new features
+          - **Maximum:** <5,000 lines (requires justification)
+          - **Oversized threshold:** 50,000+ lines (requires review and likely splitting)
+          
+          `;
+          }
+          
+          if (large_files_found === 'true') {
+            comment += `
+          ## 📁 Large Files Detected
+          Large files (>100KB) found in this PR. Consider if these are necessary:
+          \`\`\`
+          ${{ steps.large-files.outputs.large_files }}
+          \`\`\`
+          `;
+          }
+          
+          if (suspicious_found === 'true') {
+            comment += `
+          ## 🔍 Suspicious Patterns Detected
+          ${{ steps.suspicious-patterns.outputs.suspicious_files }}
+          
+          Please verify these files should be included in version control.
+          `;
+          }
+          
+          comment += `
+          ## 📋 Next Steps
+          - [ ] Review all changed files for necessity
+          - [ ] Confirm no build artifacts or test fixtures included
+          - [ ] Consider splitting into smaller, focused PRs
+          - [ ] Update .gitignore if needed
+          - [ ] Re-push with clean, minimal changes
+          
+          **Reference:** This check was added after PRs #92, #101, #103, #104 grew to 300k+ lines due to scope creep.
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+    - name: Block Massive PRs
+      if: steps.evaluate.outputs.should_block == 'true'
+      run: |
+        echo "❌ PR is too large and should be reviewed before merging"
+        echo "Size: ${{ steps.pr-size.outputs.total_changes }} lines"
+        echo "Category: ${{ steps.evaluate.outputs.size_category }}"
+        echo ""
+        echo "This is a warning - the PR is not blocked but requires manual review."
+        echo "Consider splitting this PR into smaller, focused changes."
+        # Note: We don't exit 1 here to avoid breaking the workflow completely
+        # The comment above will alert reviewers to the issue
