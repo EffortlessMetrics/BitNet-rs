@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Standardize GPU feature aliases in cargo config to use `gpu` instead of `cuda`
 
 ### Fixed
+- **IQ2_S Quantization Layout Alignment** ([#132](https://github.com/EffortlessSteven/BitNet-rs/pull/132)):
+  - Updated IQ2_S block layout from 66B to 82B to match GGML specification exactly
+  - Corrected QMAP values from `[-2,-1,0,1]` to `[-2,-1,1,2]` eliminating zero mapping
+  - Updated test expectations to match new quantization mapping pattern
+  - Ensures bit-exact compatibility between Rust and GGML backends
+  - Fixed unsafe code warnings with proper unsafe blocks for Rust 2024 compliance
 - **Security Vulnerability Resolution** ([#107](https://github.com/EffortlessSteven/BitNet-rs/pull/107)):
   - Updated PyO3 from v0.21.2 to v0.25.1 to resolve CVE-2024-9979 buffer overflow vulnerability
   - Updated related Python binding dependencies (numpy, pyo3-async-runtimes) for compatibility
