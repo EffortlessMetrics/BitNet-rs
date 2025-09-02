@@ -335,8 +335,11 @@ cargo run --example inspect_gguf_metadata --no-default-features --features cpu -
 # Tokenize text
 bitnet tokenize --model model.gguf --text "Hello, world!"
 
-# Calculate perplexity
+# Calculate perplexity with teacher-forcing evaluation
 bitnet score --model model.gguf --file test.txt
+
+# Advanced scoring with device selection and batching
+bitnet score --model model.gguf --file validation.txt --device cuda --batch-size 8 --json-out results.json
 
 # Advanced inference options
 bitnet run --model model.gguf \

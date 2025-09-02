@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Teacher-Forcing Scoring and Perplexity Calculation** ([#134](https://github.com/EffortlessSteven/BitNet-rs/pull/134)):
+  - New `score` CLI command with real teacher-forcing evaluation using inference engine
+  - Device selection support (`--device cpu|cuda|metal|auto`) with automatic fallback
+  - Batch processing (`--batch-size`) for improved throughput on large datasets
+  - JSON output with detailed metrics (tokens, mean_nll, perplexity, latency)
+  - External tokenizer support (`--tokenizer`) and token limit controls (`--max-tokens`)
+  - Comprehensive CLI documentation with usage examples and troubleshooting guides
+- **Python Binding Environment Documentation** ([#134](https://github.com/EffortlessSteven/BitNet-rs/pull/134)):
+  - New `PYTHON_BINDING_ENVIRONMENT.md` documenting PyO3 linking requirements
+  - Workspace configuration explanation for optional Python binding tests
+  - System package installation instructions for Ubuntu/Debian, CentOS/RHEL/Fedora, and macOS
+  - CI/CD recommendations for environment-dependent testing
 - **Streaming Token ID Support** ([#107](https://github.com/EffortlessSteven/BitNet-rs/pull/107)):
   - Enhanced `StreamResponse` struct with `token_ids: Vec<u32>` field for real-time token ID access
   - Server-Sent Events (SSE) streaming endpoint with JSON token metadata at `/v1/stream`

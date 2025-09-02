@@ -218,6 +218,13 @@ cargo run --example inspect_gguf_metadata --no-default-features --features cpu -
 # Export model metadata as JSON
 cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- --json model.gguf
 
+# Teacher-forcing evaluation with perplexity calculation
+cargo run -p bitnet-cli -- score --model model.gguf --file test.txt
+cargo run -p bitnet-cli -- score --model model.gguf --file validation.txt --device cuda --batch-size 8 --json-out results.json
+
+# Model evaluation with external tokenizer and token limits
+cargo run -p bitnet-cli -- score --model model.gguf --file large-dataset.txt --tokenizer tokenizer.json --max-tokens 1000
+
 # Full cross-validation (deterministic)
 export BITNET_GGUF="$PWD/models/bitnet/ggml-model-i2_s.gguf"
 export BITNET_DETERMINISTIC=1 BITNET_SEED=42

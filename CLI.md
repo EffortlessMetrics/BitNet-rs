@@ -144,17 +144,117 @@ bitnet tokenize --model model.gguf --text "Hello" --bos
 bitnet tokenize --model model.gguf --text "Hello" --json-out tokens.json
 ```
 
-### `score` - Perplexity Calculation
+### `score` - Teacher-Forcing Evaluation and Perplexity
 
-Calculate perplexity scores for model evaluation. Supports device and batch
-size selection.
+Perform teacher-forcing evaluation with perplexity and negative log-likelihood (NLL) calculation. This command evaluates model quality by computing the probability the model assigns to ground truth text sequences.
+
+**Core Functionality:**
+- Real teacher-forcing evaluation using the inference engine
+- Negative Log-Likelihood (NLL) and Perplexity (PPL) calculation
+- Device-aware processing with automatic fallback
+- Batch processing for improved throughput
+- Structured JSON output for automation
 
 ```bash
-bitnet score --model model.gguf --file test.txt --batch-size 8 --device cuda
+# Basic perplexity calculation
+bitnet score --model model.gguf --file test.txt
+
+# Device selection with batch processing
+bitnet score --model model.gguf --file test.txt --device cuda --batch-size 8
+
+# Use external tokenizer
+bitnet score --model model.gguf --file test.txt --tokenizer tokenizer.json
+
+# Limit evaluation to first 1000 tokens
+bitnet score --model model.gguf --file test.txt --max-tokens 1000
+
+# Save results to JSON file
+bitnet score --model model.gguf --file test.txt --json-out results.json
 ```
 
-- `--batch-size SIZE` - Number of lines to process per batch
-- `--device DEVICE` - Compute device (`cpu`, `cuda`, `metal`, `auto`)
+**Arguments:**
+- `--model PATH` - GGUF model file (required)
+- `--file PATH` - Text file with one prompt per line (required)
+- `--tokenizer PATH` - External SentencePiece tokenizer (overrides embedded)
+- `--max-tokens N` - Cap on tokens evaluated (0 = unlimited, default: 0)
+- `--device DEVICE` - Compute device: `cpu`, `cuda`, `metal`, `auto` (default: auto)
+- `--batch-size SIZE` - Lines processed per batch (default: 1)
+- `--json-out PATH` - Output JSON file (stdout if omitted)
+
+**Device Selection:**
+- `cpu` - Force CPU computation
+- `cuda` / `gpu` - Force CUDA GPU (fails if unavailable) 
+- `metal` - Force Metal GPU (not currently supported)
+- `auto` - Try CUDA, fallback to CPU (recommended)
+
+**Input Format:**
+The input file should contain one text sequence per line:
+```
+The quick brown fox jumps over the lazy dog.
+To be or not to be, that is the question.
+Machine learning is a subset of artificial intelligence.
+```
+
+**Output Format:**
+```json
+{
+  "type": "score",
+  "model": "model.gguf", 
+  "dataset": "test.txt",
+  "tokens": 1234,
+  "mean_nll": 2.345,
+  "ppl": 10.42,
+  "latency": {
+    "total_ms": 1500.0
+  },
+  "tokenizer": {
+    "type": "sentencepiece",
+    "origin": "embedded"
+  },
+  "gen_policy": {
+    "bos": false,
+    "temperature": 0.0,
+    "seed": null
+  },
+  "counts": {
+    "n_kv": 56,
+    "n_tensors": 1234,
+    "unmapped": 0
+  }
+}
+```
+
+**Key Metrics:**
+- `tokens` - Total number of tokens evaluated (T-1, where T is sequence length)
+- `mean_nll` - Mean negative log-likelihood per token
+- `ppl` - Perplexity (exp(mean_nll))
+- `latency.total_ms` - Total evaluation time in milliseconds
+
+**Examples:**
+
+```bash
+# Evaluate multiple models on the same dataset
+for model in *.gguf; do
+  echo "Evaluating $model..."
+  bitnet score --model "$model" --file validation.txt --json-out "${model%.gguf}_scores.json"
+done
+
+# Compare CPU vs GPU performance
+bitnet score --model model.gguf --file test.txt --device cpu --json-out cpu_results.json
+bitnet score --model model.gguf --file test.txt --device cuda --json-out gpu_results.json
+
+# Large dataset processing with batching
+bitnet score --model large-model.gguf \
+  --file large-dataset.txt \
+  --batch-size 16 \
+  --device cuda \
+  --max-tokens 10000 \
+  --json-out evaluation.json
+
+# Extract specific metrics with jq
+bitnet score --model model.gguf --file test.txt | jq '.ppl'
+bitnet score --model model.gguf --file test.txt | jq '.latency.total_ms'
+```
 
 ### `config` - Configuration Management
 
