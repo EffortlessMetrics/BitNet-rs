@@ -41,6 +41,19 @@ fn score_help_works() {
 }
 
 #[test]
+fn score_command_validates_args() {
+    // Score command should fail gracefully with missing required args
+    Command::cargo_bin("bitnet").unwrap().args(["score"]).assert().failure();
+
+    // Score command should show error for missing model
+    Command::cargo_bin("bitnet")
+        .unwrap()
+        .args(["score", "--file", "/nonexistent"])
+        .assert()
+        .failure();
+}
+
+#[test]
 fn invalid_command_fails() {
     Command::cargo_bin("bitnet").unwrap().arg("nonexistent-command").assert().failure();
 }
