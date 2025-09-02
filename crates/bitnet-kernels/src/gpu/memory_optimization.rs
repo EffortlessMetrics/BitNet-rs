@@ -57,10 +57,23 @@ struct AllocationInfo {
 }
 
 /// Memory access pattern for optimization
+///
+/// Represents different patterns of memory access that can be optimized differently:
+/// - Sequential: Access indices increase by 1 each step (optimal for cache performance)
+/// - Random: No discernible pattern in access indices
+/// - Strided: Access indices follow a regular stride pattern (both forward and reverse)
+///
+/// The stride in Strided patterns represents the absolute difference between consecutive
+/// indices, regardless of whether they're increasing or decreasing.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AccessPattern {
+    /// Sequential access pattern: indices are consecutive (0, 1, 2, 3, ...)
     Sequential,
+    /// Random access pattern: no predictable pattern in indices
     Random,
+    /// Strided access pattern: regular stride between indices
+    /// The stride value represents the absolute difference between consecutive accesses
+    /// Works for both forward strides (0, 2, 4, 6) and reverse strides (10, 7, 4, 1)
     Strided { stride: usize },
 }
 
@@ -272,7 +285,45 @@ impl MemoryLayoutOptimizer {
         }
     }
 
-    /// Suggest memory coalescing improvements
+    /// Analyze memory access pattern to suggest coalescing improvements
+    ///
+    /// This function examines a sequence of memory access indices to determine the access pattern.
+    /// It uses safe arithmetic operations to prevent integer overflow/underflow that could occur
+    /// with mixed forward/reverse access patterns or large index values.
+    ///
+    /// # Arguments
+    /// * `access_indices` - Slice of memory access indices to analyze
+    ///
+    /// # Returns
+    /// * `AccessPattern::Sequential` - if indices are consecutive (optimal for caching)
+    /// * `AccessPattern::Strided { stride }` - if indices follow a regular pattern
+    /// * `AccessPattern::Random` - if no pattern is detected
+    ///
+    /// # Examples
+    /// ```
+    /// use bitnet_kernels::gpu::memory_optimization::{MemoryLayoutOptimizer, AccessPattern};
+    ///
+    /// // Sequential pattern
+    /// let sequential = vec![0, 1, 2, 3, 4];
+    /// assert_eq!(
+    ///     MemoryLayoutOptimizer::analyze_access_pattern(&sequential),
+    ///     AccessPattern::Sequential
+    /// );
+    ///
+    /// // Forward strided pattern  
+    /// let strided = vec![0, 2, 4, 6];
+    /// if let AccessPattern::Strided { stride } =
+    ///     MemoryLayoutOptimizer::analyze_access_pattern(&strided) {
+    ///     assert_eq!(stride, 2);
+    /// }
+    ///
+    /// // Reverse strided pattern
+    /// let reverse = vec![10, 7, 4, 1];
+    /// if let AccessPattern::Strided { stride } =
+    ///     MemoryLayoutOptimizer::analyze_access_pattern(&reverse) {
+    ///     assert_eq!(stride, 3);
+    /// }
+    /// ```
     pub fn analyze_access_pattern(access_indices: &[usize]) -> AccessPattern {
         if access_indices.is_empty() {
             return AccessPattern::Sequential;
@@ -291,20 +342,47 @@ impl MemoryLayoutOptimizer {
             return AccessPattern::Sequential;
         }
 
-        // Check if access is strided
+        // Check if access is strided - use safe arithmetic to handle all cases
         if access_indices.len() >= 3 {
-            let stride = access_indices[1] - access_indices[0];
-            let mut is_strided = true;
+            // Calculate stride using checked arithmetic to handle potential underflow
+            let first_diff = if access_indices[1] >= access_indices[0] {
+                access_indices[1] - access_indices[0]
+            } else {
+                // Handle reverse stride (decreasing indices) by checking if pattern is consistent
+                let potential_reverse_stride = access_indices[0] - access_indices[1];
 
+                // Check if all subsequent differences match this reverse pattern
+                let mut is_reverse_strided = true;
+                for i in 2..access_indices.len() {
+                    if access_indices[i - 1] < access_indices[i]
+                        || access_indices[i - 1] - access_indices[i] != potential_reverse_stride
+                    {
+                        is_reverse_strided = false;
+                        break;
+                    }
+                }
+
+                if is_reverse_strided {
+                    return AccessPattern::Strided { stride: potential_reverse_stride };
+                } else {
+                    // Not a consistent reverse pattern, so it's random
+                    return AccessPattern::Random;
+                }
+            };
+
+            // Check if remaining elements follow the forward stride pattern
+            let mut is_strided = true;
             for i in 2..access_indices.len() {
-                if access_indices[i] - access_indices[i - 1] != stride {
+                if access_indices[i] < access_indices[i - 1]
+                    || access_indices[i] - access_indices[i - 1] != first_diff
+                {
                     is_strided = false;
                     break;
                 }
             }
 
             if is_strided {
-                return AccessPattern::Strided { stride };
+                return AccessPattern::Strided { stride: first_diff };
             }
         }
 
@@ -346,7 +424,7 @@ mod tests {
         let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&sequential);
         assert_eq!(pattern, AccessPattern::Sequential);
 
-        // Strided access
+        // Strided access (forward)
         let strided = vec![0, 2, 4, 6, 8];
         let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&strided);
         if let AccessPattern::Strided { stride } = pattern {
@@ -355,9 +433,56 @@ mod tests {
             panic!("Expected strided pattern");
         }
 
-        // Random access
+        // Random access (this was causing the overflow)
         let random = vec![5, 1, 8, 3, 9];
         let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&random);
         assert_eq!(pattern, AccessPattern::Random);
+
+        // Edge case: empty array
+        let empty: Vec<usize> = vec![];
+        let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&empty);
+        assert_eq!(pattern, AccessPattern::Sequential);
+
+        // Edge case: single element
+        let single = vec![42];
+        let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&single);
+        assert_eq!(pattern, AccessPattern::Sequential);
+
+        // Edge case: two elements (should be random since we need >=3 for stride)
+        let two_elements = vec![10, 5];
+        let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&two_elements);
+        assert_eq!(pattern, AccessPattern::Random);
+
+        // Reverse strided access (decreasing)
+        let reverse_strided = vec![10, 7, 4, 1];
+        let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&reverse_strided);
+        if let AccessPattern::Strided { stride } = pattern {
+            assert_eq!(stride, 3);
+        } else {
+            panic!("Expected reverse strided pattern, got {:?}", pattern);
+        }
+
+        // Large indices to test overflow scenarios
+        let large_indices = vec![usize::MAX - 10, usize::MAX - 8, usize::MAX - 6];
+        let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&large_indices);
+        if let AccessPattern::Strided { stride } = pattern {
+            assert_eq!(stride, 2);
+        } else {
+            panic!("Expected strided pattern for large indices");
+        }
+
+        // Mixed pattern that starts strided but becomes random
+        let mixed = vec![0, 2, 4, 7, 10];
+        let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&mixed);
+        assert_eq!(pattern, AccessPattern::Random);
+
+        // Potential underflow case that was causing the original bug
+        let underflow_test = vec![100, 50, 0];
+        let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&underflow_test);
+        if let AccessPattern::Strided { stride } = pattern {
+            assert_eq!(stride, 50);
+        } else {
+            panic!("Expected reverse strided pattern for decreasing sequence");
+        }
     }
 }
