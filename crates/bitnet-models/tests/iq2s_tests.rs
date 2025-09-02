@@ -41,8 +41,8 @@ fn test_rust_backend_constants() {
     let actual_block_bytes = backend.block_bytes();
     println!("Actual block bytes: {}", actual_block_bytes);
 
-    // Both backends should report 66 bytes (FFI reports this consistently)
-    assert_eq!(actual_block_bytes, 66, "IQ2_S block size should be 66 bytes");
+    // Both backends should report 82 bytes (GGML layout)
+    assert_eq!(actual_block_bytes, 82, "IQ2_S block size should be 82 bytes");
 
     #[cfg(feature = "iq2s-ffi")]
     {
@@ -68,11 +68,11 @@ fn test_rust_backend_basic_dequantization() {
     block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
 
     // Set all quantized values to pattern 0b11_10_01_00
-    // This gives values [0, 1, 2, 3] which map to [-2, -1, 0, 1]
+    // This gives values [0, 1, 2, 3] which map to [-2, -1, 1, 2] (new QMAP)
     for block_slot in block.iter_mut().take(66).skip(2) {
         *block_slot = 0b11_10_01_00;
     }
-    // qh and scales fields remain zero
+    // qh and scales fields remain zero (bytes 66-82)
 
     // Dequantize using Rust backend
     let backend = Iq2sBackend::Rust;
@@ -80,8 +80,9 @@ fn test_rust_backend_basic_dequantization() {
 
     assert_eq!(result.len(), 256);
 
-    // Check expected pattern: [-1.0, -0.5, 0.0, 0.5] (after scaling)
-    let expected = [-1.0, -0.5, 0.0, 0.5];
+    // Check expected pattern: [-1.0, -0.5, 0.5, 1.0] (after scaling by 0.5)
+    // Mapping: [0,1,2,3] -> [-2,-1,1,2] * 0.5 -> [-1.0, -0.5, 0.5, 1.0]
+    let expected = [-1.0, -0.5, 0.5, 1.0];
     for (i, &val) in result.iter().enumerate() {
         let expected_val = expected[i % 4];
         assert!(
@@ -110,7 +111,7 @@ mod iq2s_ffi_tests {
         assert!(block_bytes > 0, "Block bytes should be positive");
         assert!(block_bytes <= 256, "Block bytes should be reasonable (<= 256)");
 
-        // Common expectation: QK=256, block_bytes=66 for IQ2_S
+        // Common expectation: QK=256, block_bytes=82 for IQ2_S (GGML layout)
         // But we don't hard-code these as they come from GGML
         println!("IQ2_S constants: QK={}, block_bytes={}", qk, block_bytes);
     }
