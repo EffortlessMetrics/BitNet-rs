@@ -77,23 +77,23 @@ unsafe fn rust_dequant_row_iq2s(src: *const c_void, dst: *mut f32, n: usize) {
     const QMAP: [f32; 4] = [-2.0, -1.0, 1.0, 2.0];
 
     let mut in_ptr = src as *const u8;
-    let out = core::slice::from_raw_parts_mut(dst, n);
+    let out = unsafe { core::slice::from_raw_parts_mut(dst, n) };
     let mut produced = 0usize;
 
     while produced < n {
         let remain = n - produced;
 
         // f16 scale (2 bytes, little endian)
-        let d_bits = *(in_ptr as *const u16);
+        let d_bits = unsafe { *(in_ptr as *const u16) };
         let d = f16::from_bits(u16::from_le(d_bits)).to_f32();
-        in_ptr = in_ptr.add(2);
+        in_ptr = unsafe { in_ptr.add(2) };
 
         // 64 bytes of packed 2-bit signed codes; 4 per byte
-        let qs = core::slice::from_raw_parts(in_ptr, 64);
-        in_ptr = in_ptr.add(64);
+        let qs = unsafe { core::slice::from_raw_parts(in_ptr, 64) };
+        in_ptr = unsafe { in_ptr.add(64) };
 
         // Skip unused qh and scales fields (8 bytes each)
-        in_ptr = in_ptr.add(16);
+        in_ptr = unsafe { in_ptr.add(16) };
 
         let take = QK.min(remain);
         let out_blk = &mut out[produced..produced + take];
