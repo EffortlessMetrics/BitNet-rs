@@ -75,7 +75,43 @@ RUST_LOG=debug bitnet-cli inference --model model.gguf --prompt "Hello" 2>&1 | g
 
 # Benchmark different SIMD levels
 bitnet-cli benchmark --model model.gguf --simd-level sse,avx,avx2,avx512
+
+# Verify AVX-512 availability and usage
+cargo run --example check_cpu_features --no-default-features --features cpu
 ```
+
+#### 5. AVX-512 Optimization (Intel CPUs)
+
+For Intel CPUs with AVX-512 support (Skylake-X, Ice Lake, Tiger Lake and newer):
+
+```bash
+# Build with AVX-512 support
+cargo build --release --no-default-features --features "cpu" 
+# Note: AVX-512 is automatically detected at runtime
+
+# Verify AVX-512 detection
+cargo run --example kernel_selection --no-default-features --features cpu
+```
+
+**AVX-512 Performance Tips:**
+- **Thermal Management**: AVX-512 can cause CPU frequency throttling on some systems
+- **Power Configuration**: Ensure adequate cooling and power delivery  
+- **Workload Size**: AVX-512 benefits are most pronounced with larger matrix operations
+- **Memory Bandwidth**: Ensure sufficient memory bandwidth to feed AVX-512 units
+
+```bash
+# Monitor CPU frequency during AVX-512 workloads
+watch -n 1 'cat /proc/cpuinfo | grep "cpu MHz"'
+
+# Check thermal throttling
+sudo dmesg | grep -i thermal
+```
+
+**Hardware Requirements for AVX-512:**
+- Intel Skylake-X (2017+), Ice Lake (2019+), or Tiger Lake (2020+) architectures
+- Both AVX-512F (Foundation) and AVX-512BW (Byte and Word) instruction sets required
+- Adequate cooling to prevent thermal throttling
+- High-bandwidth memory (DDR4-3200+ recommended)
 
 ### GPU Optimization
 

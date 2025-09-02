@@ -15,7 +15,8 @@
 ### 🚀 **Superior Performance**
 - **2-5x faster inference** than the original C++ implementation
 - **Zero-cost abstractions** with compile-time optimizations
-- **Advanced SIMD kernels** for x86_64 (AVX2/AVX-512) and ARM64 (NEON)
+- **Advanced SIMD kernels** for x86_64 (AVX2/AVX-512) and ARM64 (NEON) with runtime feature detection
+- **AVX-512 acceleration** delivers up to 2x theoretical throughput on compatible Intel hardware
 - **Efficient memory management** with zero-copy operations
 
 ### 🛡️ **Memory Safety & Reliability**

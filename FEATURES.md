@@ -96,8 +96,24 @@ Note: Requires building or linking the C++ BitNet library.
 
 ### `avx512`
 **Purpose:** Enable x86_64 AVX-512 SIMD optimizations  
-**Dependencies:** x86_64 CPU with AVX-512F support  
-**When to use:** For Intel server/workstation CPUs
+**Dependencies:** x86_64 CPU with AVX-512F and AVX-512BW support  
+**When to use:** For Intel server/workstation CPUs (Skylake-X, Ice Lake, and newer)
+
+```bash
+cargo build --no-default-features --features "cpu,avx512"
+```
+
+Enables:
+- AVX-512 matrix multiplication kernels with vectorized quantization
+- 64-element K-dimension processing in 16x16 blocks
+- Runtime feature detection with automatic AVX2 fallback
+- Masked loads for tail handling and memory-safe bounds checking
+- Up to 2x theoretical throughput improvement over AVX2
+
+Requirements:
+- x86_64 CPU with AVX-512F (Foundation) and AVX-512BW (Byte and Word) instruction sets
+- Intel Skylake-X, Ice Lake, Tiger Lake, or newer architecture
+- Automatic runtime detection - no manual configuration needed
 
 ### `neon`
 **Purpose:** Enable ARM NEON SIMD optimizations  

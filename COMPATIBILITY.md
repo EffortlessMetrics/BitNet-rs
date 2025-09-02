@@ -136,6 +136,41 @@ While not breaking compatibility, we guarantee:
    - Model loading (memory-mapped)
    - Tokenization (especially GPT-2)
    - SIMD operations (hand-optimized)
+   - AVX-512 acceleration on compatible Intel hardware
+
+## 🖥️ Hardware Compatibility
+
+### CPU Support
+
+**Base Requirements:**
+- x86_64 with SSE2 (2001+) or ARM64 with NEON
+- Minimum 2GB RAM for small models (1-3B parameters)
+- 64-bit operating system (Linux, macOS, Windows)
+
+**SIMD Acceleration:**
+- **AVX2 (Intel Haswell 2013+, AMD Excavator 2015+)**: Automatic detection, ~2x speedup
+- **AVX-512 (Intel Skylake-X 2017+, Ice Lake 2019+)**: Runtime detection, up to 2x additional speedup
+  - Requires both AVX-512F (Foundation) and AVX-512BW (Byte and Word) instruction sets
+  - Automatic fallback to AVX2 if thermal throttling detected
+- **NEON (ARM64/AArch64)**: Automatic detection on compatible ARM processors
+
+**GPU Support:**
+- NVIDIA GPUs with compute capability 6.0+ (Pascal architecture, GTX 10 series and newer)
+- CUDA 11.0+ toolkit for compilation
+- Minimum 4GB VRAM for inference
+
+### Operating System Support
+
+**Supported Platforms:**
+- Linux (x86_64, ARM64): Full support with SIMD optimizations
+- macOS (Intel, Apple Silicon): Full support with Metal backend planning
+- Windows (x86_64): Full support with MSVC or GNU toolchains
+
+**Verified Configurations:**
+- Ubuntu 20.04+ LTS with GCC 9.0+
+- CentOS/RHEL 8+ with GCC 8.0+
+- macOS 11+ (Big Sur) with Xcode 12+
+- Windows 10/11 with Visual Studio 2019+ or MinGW-w64
 
 ## 🚫 What We DON'T Guarantee
 
