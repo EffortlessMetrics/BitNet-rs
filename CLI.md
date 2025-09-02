@@ -117,20 +117,14 @@ bitnet compat-check model.gguf --json --show-kv --kv-limit 3
 
 ### `inspect` - Model Metadata
 
-Inspect model metadata without loading tensors, with enhanced categorization and statistics.
+Inspect model metadata without loading tensors.
 
 ```bash
-# Categorized human-readable output with tensor statistics
 bitnet inspect --model model.gguf
 
-# Structured JSON output with comprehensive metadata and statistics
+# JSON output with detailed metadata
 bitnet inspect --model model.gguf --json
 ```
-
-**Features:**
-- **Categorized metadata**: Organized by model params, architecture, tokenizer, training, quantization
-- **Tensor statistics**: Parameter counts, memory estimates, data type distribution
-- **JSON serialization**: Pretty-printed JSON for automation and scripting
 
 ### `tokenize` - Text Tokenization
 
@@ -152,11 +146,15 @@ bitnet tokenize --model model.gguf --text "Hello" --json-out tokens.json
 
 ### `score` - Perplexity Calculation
 
-Calculate perplexity scores for model evaluation.
+Calculate perplexity scores for model evaluation. Supports device and batch
+size selection.
 
 ```bash
-bitnet score --model model.gguf --file test.txt
+bitnet score --model model.gguf --file test.txt --batch-size 8 --device cuda
 ```
+
+- `--batch-size SIZE` - Number of lines to process per batch
+- `--device DEVICE` - Compute device (`cpu`, `cuda`, `metal`, `auto`)
 
 ### `config` - Configuration Management
 
