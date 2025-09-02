@@ -189,6 +189,64 @@ sudo mkswap /swapfile
 sudo swapon /swapfile
 ```
 
+#### 5. IQ2_S Quantization Issues
+
+**Problem:** IQ2_S quantization fails or produces incorrect results
+
+**Symptoms:**
+- `Unsupported quantization format: IQ2_S` error
+- GGML compatibility errors
+- Quantization result mismatch between backends
+- Block layout validation failures
+
+**Diagnostics:**
+```bash
+# Check IQ2_S feature availability
+cargo build --no-default-features --features "cpu,iq2s-ffi"
+
+# Test IQ2_S backend validation
+cargo test --package bitnet-models --no-default-features --features "cpu,iq2s-ffi" iq2s
+
+# Validate GGUF model with IQ2_S quantization
+bitnet compat-check model.gguf --verbose
+```
+
+**Solutions:**
+
+**Enable IQ2_S Support:**
+```bash
+# Build with IQ2_S FFI support
+cargo build --release --no-default-features --features "cpu,iq2s-ffi"
+
+# Download GGML compatibility files if needed
+cargo run -p xtask -- vendor-ggml --commit <llama.cpp-commit>
+```
+
+**Validate Model Compatibility:**
+```bash
+# Check model quantization format
+cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- model.gguf
+
+# Expected output for IQ2_S models:
+# - Block size: 82 bytes (not 66 bytes)
+# - Quantization mapping: [-2,-1,1,2] (not [-2,-1,0,1])
+```
+
+**Backend Parity Testing:**
+```bash
+# Run IQ2_S backend validation
+./scripts/test-iq2s-backend.sh
+
+# Verify bit-exact compatibility
+cargo test --workspace --features "cpu,iq2s-ffi" --test iq2s_parity
+```
+
+**Common IQ2_S Issues:**
+- **Old models**: Models quantized before v0.1.0 may use 66-byte blocks instead of 82-byte
+- **Zero mapping**: Models with [-2,-1,0,1] mapping instead of [-2,-1,1,2] 
+- **FFI dependency**: IQ2_S requires `iq2s-ffi` feature for GGML compatibility
+- **Block alignment**: Ensure tensor data aligns with 82-byte block boundaries
+
 ### Performance Issues
 
 #### 1. Slow Inference Speed

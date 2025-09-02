@@ -230,6 +230,11 @@ pub enum QuantizationType {
     None,
     /// 2-bit signed quantization
     I2S,
+    /// IQ2_S quantization with 82-byte block layout (GGML-compatible)
+    /// - Block Layout: 82-byte blocks matching GGML specification
+    /// - Quantization Mapping: 4-level [-2,-1,1,2] mapping
+    /// - Dual implementation: Native Rust + GGML FFI
+    IQ2_S,
     /// Table lookup quantization (ARM optimized)
     TL1,
     /// Table lookup quantization (x86 optimized)

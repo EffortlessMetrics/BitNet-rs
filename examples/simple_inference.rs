@@ -81,17 +81,42 @@ fn main() -> Result<()> {
             let mut output = vec![0u8; size / 4]; // 2-bit packing
             let mut scales = vec![0.0f32; size / 32]; // One scale per 32 elements
 
+            // Test I2S quantization
             let start = Instant::now();
             kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S)?;
-            let quant_time = start.elapsed();
+            let i2s_time = start.elapsed();
+            let i2s_throughput = size as f64 / i2s_time.as_secs_f64();
 
-            let throughput = size as f64 / quant_time.as_secs_f64();
+            // Test IQ2_S quantization (if available)
+            let iq2s_result = if cfg!(feature = "iq2s-ffi") {
+                let start = Instant::now();
+                match kernel.quantize(&input, &mut output, &mut scales, QuantizationType::IQ2_S) {
+                    Ok(_) => {
+                        let time = start.elapsed();
+                        let throughput = size as f64 / time.as_secs_f64();
+                        Some((time, throughput))
+                    }
+                    Err(_) => None, // IQ2_S not supported in this kernel
+                }
+            } else {
+                None
+            };
+
             println!(
-                "   {} elements: {:.2}M elem/s ({:.3}ms)",
+                "   {} elements I2S: {:.2}M elem/s ({:.3}ms)",
                 size,
-                throughput / 1_000_000.0,
-                quant_time.as_millis()
+                i2s_throughput / 1_000_000.0,
+                i2s_time.as_millis()
             );
+
+            if let Some((iq2s_time, iq2s_throughput)) = iq2s_result {
+                println!(
+                    "   {} elements IQ2_S: {:.2}M elem/s ({:.3}ms) [82B blocks]",
+                    size,
+                    iq2s_throughput / 1_000_000.0,
+                    iq2s_time.as_millis()
+                );
+            }
         }
 
         // Test matrix multiplication

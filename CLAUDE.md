@@ -160,10 +160,13 @@ BitNet-rs supports multiple quantization formats with device-aware acceleration:
 - **I2_S**: Native Rust implementation with intelligent GPU/CPU selection and automatic fallback
 - **TL1**: Table lookup quantization with GPU acceleration and CPU fallback
 - **TL2**: Advanced table lookup quantization with optimized GPU kernels and device-aware execution
-- **IQ2_S**: Dual implementation:
+- **IQ2_S**: GGML-compatible quantization with 82-byte block layout:
+  - Block Layout: 82-byte blocks matching GGML specification exactly (updated from 66B in v0.1.0)
+  - Quantization Mapping: 4-level [-2,-1,1,2] mapping eliminating zero (corrected from [-2,-1,0,1])
   - Native Rust: Optimized implementation with SIMD support
   - GGML FFI: Via `iq2s-ffi` feature for llama.cpp compatibility
   - Backend parity testing ensures both implementations produce identical results
+  - Bit-exact compatibility between Rust and GGML backends for cross-validation
 - **Standard formats**: Q4_0, Q5_0, Q8_0, etc. (planned)
 
 All quantizers support device-aware operations:
