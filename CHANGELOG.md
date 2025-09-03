@@ -60,6 +60,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced test coverage for device information validation
 
 ### Enhanced
+- **Weight Mapper Model Compatibility Validation** ([#144](https://github.com/EffortlessSteven/BitNet-rs/pull/144)):
+  - Enhanced `validate_model_compatibility()` to use weight mapper for GGUF tensor validation
+  - Replaced TODO placeholder with actual GGUF parsing and tensor name mapping
+  - Added detection of unmapped tensors with detailed error reporting and debugging metrics
+  - Comprehensive test coverage with fixture support for both success and corruption scenarios
+  - Improved fallback handling in universal tokenizer with SpmTokenizer typo fixes
 - **GPU Kernel Refactoring** (PR #108):
   - **CUDA Implementation**: Enhanced cudarc 0.17 API compatibility with performance tracking and error handling
   - **Memory Management**: Implemented OptimizedMemoryPool with device-specific allocation, caching, leak detection, and device_id() access method  
