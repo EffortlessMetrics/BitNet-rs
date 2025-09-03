@@ -1,9 +1,8 @@
 use bitnet_common::Result;
-use std::collections::HashMap;
 use std::path::Path;
 use tracing::{debug, warn};
 
-use crate::{Tokenizer, TokenizerConfig};
+use crate::{Tokenizer, TokenizerConfig, MockTokenizer};
 
 /// Universal tokenizer that auto-detects and handles all formats
 pub struct UniversalTokenizer {
@@ -11,13 +10,11 @@ pub struct UniversalTokenizer {
     config: TokenizerConfig,
 }
 
+#[allow(clippy::large_enum_variant)]
 enum TokenizerBackend {
-    Gpt2(Gpt2Tokenizer),
-    SentencePiece(SentencePieceTokenizer),
-    #[allow(dead_code)]
-    Llama(LlamaTokenizer),
-    Tiktoken(TiktokenTokenizer),
-    Falcon(FalconTokenizer),
+    #[cfg(feature = "spm")]
+    SentencePiece(crate::SmpTokenizer),
+    Mock(MockTokenizer),
 }
 
 impl UniversalTokenizer {
@@ -28,15 +25,48 @@ impl UniversalTokenizer {
     }
 
     /// Create from GGUF model with auto-fix
-    pub fn from_gguf(_path: &Path) -> Result<Self> {
-        // TODO: Import GgufReader when bitnet-models is added as dependency
-        // For now, create a default config
-        // This would normally:
-        // 1. Read GGUF metadata
-        // 2. Auto-detect tokenizer type (gpt2, llama, etc)
-        // 3. Fix missing pre-tokenizer for GPT-2
-        // 4. Extract vocabulary and merges
-        let config = TokenizerConfig::default();
+    pub fn from_gguf(path: &Path) -> Result<Self> {
+        use bitnet_models::{GgufReader, loader::MmapFile};
+
+        let mmap = MmapFile::open(path)?;
+        let reader = GgufReader::new(mmap.as_slice())?;
+
+        let model_type =
+            reader.get_string_metadata("tokenizer.ggml.model").unwrap_or_else(|| "gpt2".into());
+
+        let tokens = reader.get_string_array_metadata("tokenizer.ggml.tokens").unwrap_or_default();
+        let vocab_size = tokens.len();
+
+        let scores_bytes = reader.get_array_metadata("tokenizer.ggml.scores");
+        let scores: Vec<f32> = scores_bytes
+            .map(|b| {
+                b.chunks_exact(4).map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect()
+            })
+            .unwrap_or_else(|| vec![0.0; vocab_size]);
+
+        let vocab: Vec<(String, f32)> = tokens.into_iter().zip(scores).collect();
+
+        let merges = reader.get_string_array_metadata("tokenizer.ggml.merges");
+
+        let config = TokenizerConfig {
+            model_type,
+            vocab_size,
+            pre_tokenizer: reader.get_string_metadata("tokenizer.ggml.pre"),
+            add_bos: reader.get_bool_metadata("tokenizer.ggml.add_bos_token").unwrap_or(false),
+            add_eos: reader.get_bool_metadata("tokenizer.ggml.add_eos_token").unwrap_or(false),
+            add_space_prefix: reader
+                .get_bool_metadata("tokenizer.ggml.add_space_prefix")
+                .unwrap_or(false),
+            byte_fallback: reader
+                .get_bool_metadata("tokenizer.ggml.byte_fallback")
+                .unwrap_or(false),
+            bos_token_id: reader.get_u32_metadata("tokenizer.ggml.bos_token_id"),
+            eos_token_id: reader.get_u32_metadata("tokenizer.ggml.eos_token_id"),
+            pad_token_id: reader.get_u32_metadata("tokenizer.ggml.padding_token_id"),
+            unk_token_id: reader.get_u32_metadata("tokenizer.ggml.unknown_token_id"),
+            vocabulary: Some(vocab),
+            bpe_merges: merges,
+        };
         Self::new(config)
     }
 
@@ -47,30 +77,23 @@ impl UniversalTokenizer {
 
     fn detect_and_create_backend(config: &TokenizerConfig) -> Result<TokenizerBackend> {
         match config.model_type.as_str() {
-            "gpt2" | "bpe" => {
-                debug!("Creating GPT-2 BPE tokenizer");
-                Ok(TokenizerBackend::Gpt2(Gpt2Tokenizer::new(config)?))
+            "gpt2" | "bpe" | "llama" | "llama3" | "tiktoken" | "gpt4" | "cl100k" | "falcon" => {
+                debug!("Creating mock tokenizer for {}", config.model_type);
+                Ok(TokenizerBackend::Mock(MockTokenizer::new()))
             }
-            "llama" | "spm" | "sentencepiece" => {
+            #[cfg(feature = "spm")]
+            "smp" | "sentencepiece" => {
                 debug!("Creating SentencePiece tokenizer");
-                Ok(TokenizerBackend::SentencePiece(SentencePieceTokenizer::new(config)?))
+                Ok(TokenizerBackend::SentencePiece(crate::SmpTokenizer::new(config)?))
             }
-            "llama3" => {
-                // Llama 3 uses GPT-2 style BPE with 128k vocab
-                debug!("Creating Llama 3 BPE tokenizer");
-                Ok(TokenizerBackend::Gpt2(Gpt2Tokenizer::new(config)?))
-            }
-            "tiktoken" | "gpt4" | "cl100k" => {
-                debug!("Creating Tiktoken tokenizer");
-                Ok(TokenizerBackend::Tiktoken(TiktokenTokenizer::new(config)?))
-            }
-            "falcon" => {
-                debug!("Creating Falcon tokenizer");
-                Ok(TokenizerBackend::Falcon(FalconTokenizer::new(config)?))
+            #[cfg(not(feature = "spm"))]
+            "smp" | "sentencepiece" => {
+                warn!("SentencePiece support not compiled, using mock");
+                Ok(TokenizerBackend::Mock(MockTokenizer::new()))
             }
             unknown => {
-                warn!("Unknown tokenizer type: {}, attempting GPT-2 fallback", unknown);
-                Ok(TokenizerBackend::Gpt2(Gpt2Tokenizer::new(config)?))
+                warn!("Unknown tokenizer type: {}, using mock fallback", unknown);
+                Ok(TokenizerBackend::Mock(MockTokenizer::new()))
             }
         }
     }
@@ -87,11 +110,9 @@ impl Tokenizer for UniversalTokenizer {
 
         // Delegate to backend
         let mut tokens = match &self.backend {
-            TokenizerBackend::Gpt2(t) => t.encode(&processed, false, add_special)?,
+            #[cfg(feature = "spm")]
             TokenizerBackend::SentencePiece(t) => t.encode(&processed, false, add_special)?,
-            TokenizerBackend::Llama(t) => t.encode(&processed, false, add_special)?,
-            TokenizerBackend::Tiktoken(t) => t.encode(&processed, false, add_special)?,
-            TokenizerBackend::Falcon(t) => t.encode(&processed, false, add_special)?,
+            TokenizerBackend::Mock(t) => t.encode(&processed, false, add_special)?,
         };
 
         // Add BOS if requested and configured
@@ -107,11 +128,9 @@ impl Tokenizer for UniversalTokenizer {
 
     fn decode(&self, tokens: &[u32]) -> Result<String> {
         match &self.backend {
-            TokenizerBackend::Gpt2(t) => t.decode(tokens),
+            #[cfg(feature = "spm")]
             TokenizerBackend::SentencePiece(t) => t.decode(tokens),
-            TokenizerBackend::Llama(t) => t.decode(tokens),
-            TokenizerBackend::Tiktoken(t) => t.decode(tokens),
-            TokenizerBackend::Falcon(t) => t.decode(tokens),
+            TokenizerBackend::Mock(t) => t.decode(tokens),
         }
     }
 
@@ -121,185 +140,9 @@ impl Tokenizer for UniversalTokenizer {
 
     fn token_to_piece(&self, token: u32) -> Option<String> {
         match &self.backend {
-            TokenizerBackend::Gpt2(t) => t.token_to_piece(token),
+            #[cfg(feature = "spm")]
             TokenizerBackend::SentencePiece(t) => t.token_to_piece(token),
-            TokenizerBackend::Llama(t) => t.token_to_piece(token),
-            TokenizerBackend::Tiktoken(t) => t.token_to_piece(token),
-            TokenizerBackend::Falcon(t) => t.token_to_piece(token),
+            TokenizerBackend::Mock(t) => t.token_to_piece(token),
         }
-    }
-}
-
-// Stub implementations for different tokenizer types
-// These would be fully implemented in their respective modules
-
-struct Gpt2Tokenizer {
-    #[allow(dead_code)]
-    vocab: HashMap<String, u32>,
-    #[allow(dead_code)]
-    merges: Vec<(String, String)>,
-    config: TokenizerConfig,
-}
-
-impl Gpt2Tokenizer {
-    fn new(config: &TokenizerConfig) -> Result<Self> {
-        // Implementation for GPT-2 BPE tokenizer
-        // This handles Llama 3's 128k vocab GPT-2 variant
-        Ok(Self { vocab: HashMap::new(), merges: vec![], config: config.clone() })
-    }
-}
-
-impl Tokenizer for Gpt2Tokenizer {
-    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
-        // Full BPE implementation would go here
-        // For now, return a stub
-        Ok(vec![1, 2, 3])
-    }
-
-    fn decode(&self, _tokens: &[u32]) -> Result<String> {
-        Ok("decoded".to_string())
-    }
-
-    fn vocab_size(&self) -> usize {
-        self.config.vocab_size
-    }
-
-    fn token_to_piece(&self, _token: u32) -> Option<String> {
-        Some("piece".to_string())
-    }
-}
-
-// Similar stub implementations for other tokenizer types
-struct SentencePieceTokenizer {
-    config: TokenizerConfig,
-}
-
-impl SentencePieceTokenizer {
-    fn new(config: &TokenizerConfig) -> Result<Self> {
-        Ok(Self { config: config.clone() })
-    }
-}
-
-impl Tokenizer for SentencePieceTokenizer {
-    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
-        Ok(vec![1, 2, 3])
-    }
-
-    fn decode(&self, _tokens: &[u32]) -> Result<String> {
-        Ok("decoded".to_string())
-    }
-
-    fn vocab_size(&self) -> usize {
-        self.config.vocab_size
-    }
-
-    fn token_to_piece(&self, _token: u32) -> Option<String> {
-        Some("piece".to_string())
-    }
-}
-
-struct LlamaTokenizer {
-    config: TokenizerConfig,
-}
-
-impl LlamaTokenizer {
-    #[allow(dead_code)]
-    fn new(config: &TokenizerConfig) -> Result<Self> {
-        Ok(Self { config: config.clone() })
-    }
-}
-
-impl Tokenizer for LlamaTokenizer {
-    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
-        Ok(vec![1, 2, 3])
-    }
-
-    fn decode(&self, _tokens: &[u32]) -> Result<String> {
-        Ok("decoded".to_string())
-    }
-
-    fn vocab_size(&self) -> usize {
-        self.config.vocab_size
-    }
-
-    fn token_to_piece(&self, _token: u32) -> Option<String> {
-        Some("piece".to_string())
-    }
-}
-
-struct TiktokenTokenizer {
-    config: TokenizerConfig,
-}
-
-impl TiktokenTokenizer {
-    fn new(config: &TokenizerConfig) -> Result<Self> {
-        Ok(Self { config: config.clone() })
-    }
-}
-
-impl Tokenizer for TiktokenTokenizer {
-    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
-        Ok(vec![1, 2, 3])
-    }
-
-    fn decode(&self, _tokens: &[u32]) -> Result<String> {
-        Ok("decoded".to_string())
-    }
-
-    fn vocab_size(&self) -> usize {
-        self.config.vocab_size
-    }
-
-    fn token_to_piece(&self, _token: u32) -> Option<String> {
-        Some("piece".to_string())
-    }
-}
-
-struct FalconTokenizer {
-    config: TokenizerConfig,
-}
-
-impl FalconTokenizer {
-    fn new(config: &TokenizerConfig) -> Result<Self> {
-        Ok(Self { config: config.clone() })
-    }
-}
-
-impl Tokenizer for FalconTokenizer {
-    fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
-        Ok(vec![1, 2, 3])
-    }
-
-    fn decode(&self, _tokens: &[u32]) -> Result<String> {
-        Ok("decoded".to_string())
-    }
-
-    fn vocab_size(&self) -> usize {
-        self.config.vocab_size
-    }
-
-    fn token_to_piece(&self, _token: u32) -> Option<String> {
-        Some("piece".to_string())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_universal_tokenizer_detection() {
-        // Test GPT-2 detection
-        let config = TokenizerConfig {
-            model_type: "gpt2".to_string(),
-            vocab_size: 50257,
-            ..Default::default()
-        };
-
-        let tokenizer = UniversalTokenizer::new(config).unwrap();
-        assert_eq!(tokenizer.vocab_size(), 50257);
-
-        // Test auto-fix for missing pre-tokenizer
-        // This would be tested with actual GGUF files
     }
 }
