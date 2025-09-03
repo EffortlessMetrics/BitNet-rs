@@ -7,7 +7,7 @@
 
 use anyhow::Result as AnyhowResult;
 use bitnet_common::Result;
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 /// Wrapper for Hugging Face tokenizers
 ///
@@ -63,6 +63,44 @@ impl HfTokenizer {
         }
 
         Ok(Self { inner, bos_id, eos_id })
+    }
+
+    /// Create a tokenizer directly from vocabulary and BPE merge rules
+    ///
+    /// This constructor is useful when models embed their tokenizer
+    /// definitions (like GGUF) and we need to construct a tokenizer at
+    /// runtime without an intermediate JSON file. The vocabulary vector
+    /// should contain tokens in their desired id order, while `merges`
+    /// should follow the standard `token1 token2` merge format.
+    pub fn from_vocab_and_merges(vocab: &[(String, f32)], merges: &[String]) -> AnyhowResult<Self> {
+        use tokenizers::{decoders::byte_level::ByteLevel, models::bpe::BPE};
+
+        // Build vocabulary map preserving provided ids
+        let vocab_map: HashMap<String, u32> =
+            vocab.iter().enumerate().map(|(i, (tok, _))| (tok.clone(), i as u32)).collect();
+
+        // Parse merges in "token1 token2" form into pairs
+        let merges_vec: Vec<(String, String)> = merges
+            .iter()
+            .filter_map(|m| {
+                let mut parts = m.split_whitespace();
+                let a = parts.next()?.to_string();
+                let b = parts.next()?.to_string();
+                Some((a, b))
+            })
+            .collect();
+
+        let bpe = BPE::builder()
+            .vocab_and_merges(vocab_map, merges_vec)
+            .build()
+            .map_err(|e| anyhow::anyhow!(e))?;
+
+        let mut inner = tokenizers::Tokenizer::new(bpe);
+        // Use byte-level pre-tokenizer/decoder similar to GPT-2
+        inner.with_pre_tokenizer(tokenizers::pre_tokenizers::byte_level::ByteLevel::default());
+        inner.with_decoder(ByteLevel::default());
+
+        Ok(Self { inner, bos_id: None, eos_id: None })
     }
 }
 
