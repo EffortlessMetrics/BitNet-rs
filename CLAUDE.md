@@ -106,6 +106,13 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 - **Memory Leak Detection**: Automatic GPU memory monitoring and leak prevention
 - **Error Handling Validation**: Comprehensive error path testing with recovery verification
 
+#### Model Compatibility Validation System
+- **Weight Mapper Integration**: GGUF tensor validation using weight mapper for compatibility checks
+- **Unmapped Tensor Detection**: Detailed reporting of unmapped tensors with debugging metrics
+- **Fixture-Based Testing**: Comprehensive test coverage for both success and corruption scenarios
+- **Enhanced Error Reporting**: ValidationResult metrics include `unmapped_count` and `unmapped_tensors`
+- **GGUF Parsing Integration**: Direct model file analysis for compatibility validation
+
 #### Universal Tokenizer Architecture
 - **Auto-Detection**: Automatic backend selection based on GGUF model metadata
 - **GGUF Integration**: Direct extraction of tokenizer configuration from model files
@@ -299,6 +306,10 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memor
 
 # Test universal tokenizer with automatic GGUF integration
 cargo test -p bitnet-tokenizers --no-default-features test_universal_tokenizer_gguf_integration
+
+# Model compatibility validation with weight mapper
+cargo test -p crossval --no-default-features test_validate_model_compatibility
+cargo test -p crossval --no-default-features test_validate_model_compatibility_reports_unmapped
 
 # Full cross-validation (deterministic)
 export BITNET_GGUF="$PWD/models/bitnet/ggml-model-i2_s.gguf"
