@@ -3,7 +3,7 @@
 use anyhow::{Context, Result};
 use clap::Args;
 use console::style;
-use futures::StreamExt;
+use futures::{StreamExt, future::BoxFuture};
 use humansize::{DECIMAL, format_size};
 use humantime::format_duration;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -34,7 +34,7 @@ pub struct GenerationConfig {
 }
 
 /// Inference command arguments
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Default)]
 pub struct InferenceCommand {
     /// Path to the model file
     #[arg(short, long, value_name = "PATH")]
@@ -230,6 +230,46 @@ pub struct ModelInfo {
     pub hidden_size: Option<usize>,
 }
 
+/// Engine abstraction to allow mocking in tests
+pub trait PrefillEngine {
+    /// Access the tokenizer
+    fn tokenizer(&self) -> Arc<dyn bitnet_tokenizers::Tokenizer>;
+    /// Run the engine prefill phase
+    fn prefill(&mut self, tokens: &[u32]) -> Result<()>;
+    /// Generate tokens from the engine
+    fn generate_tokens<'a>(
+        &'a mut self,
+        tokens: &'a [u32],
+        config: &'a GenerationConfig,
+    ) -> BoxFuture<'a, Result<Vec<u32>>>;
+}
+
+impl PrefillEngine for InferenceEngine {
+    fn tokenizer(&self) -> Arc<dyn bitnet_tokenizers::Tokenizer> {
+        self.tokenizer()
+    }
+
+    fn prefill(&mut self, tokens: &[u32]) -> Result<()> {
+        #[allow(unused)]
+        {
+            // If the engine exposes prefill, call it; otherwise, no-op
+            #[cfg(feature = "has_prefill")]
+            {
+                self.prefill(tokens)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn generate_tokens<'a>(
+        &'a mut self,
+        tokens: &'a [u32],
+        config: &'a GenerationConfig,
+    ) -> BoxFuture<'a, Result<Vec<u32>>> {
+        Box::pin(async move { self.generate_tokens(tokens, config).await })
+    }
+}
+
 /// Performance metrics
 #[derive(Debug, Default)]
 pub struct PerformanceMetrics {
@@ -241,6 +281,7 @@ pub struct PerformanceMetrics {
     pub cache_misses: usize,
 }
 
+#[cfg(feature = "full-cli")]
 impl InferenceCommand {
     /// Execute the inference command
     pub async fn execute(&self, config: &CliConfig) -> Result<()> {
@@ -545,9 +586,9 @@ impl InferenceCommand {
     }
 
     /// Run batch inference
-    async fn run_batch_inference(
+    async fn run_batch_inference<E: PrefillEngine + Send>(
         &self,
-        engine: &mut InferenceEngine,
+        engine: &mut E,
         prompts: &[String],
         config: &GenerationConfig,
     ) -> Result<Vec<InferenceResult>> {
@@ -602,9 +643,9 @@ impl InferenceCommand {
     }
 
     /// Process batch sequentially with proper timing
-    async fn process_batch_sequential(
+    async fn process_batch_sequential<E: PrefillEngine + Send>(
         &self,
-        engine: &mut InferenceEngine,
+        engine: &mut E,
         batch: &[String],
         config: &GenerationConfig,
     ) -> Result<Vec<InferenceResult>> {
@@ -619,8 +660,7 @@ impl InferenceCommand {
 
             // 2. Prefill (measure)
             let t1 = Instant::now();
-            // TODO: Call actual prefill when engine supports it
-            // let _ = engine.prefill(&prompt_ids)?;
+            engine.prefill(&prompt_ids)?;
             let t_prefill_ms = t1.elapsed().as_secs_f64() * 1e3;
 
             // 3. Decode loop (measure)
@@ -707,9 +747,9 @@ impl InferenceCommand {
     }
 
     /// Process batch in parallel (placeholder - would need thread-safe engine)
-    async fn process_batch_parallel(
+    async fn process_batch_parallel<E: PrefillEngine + Send>(
         &self,
-        engine: &mut InferenceEngine,
+        engine: &mut E,
         batch: &[String],
         config: &GenerationConfig,
         _workers: usize,
@@ -1027,5 +1067,57 @@ impl InferenceCommand {
         println!("  /exit     - Exit interactive mode");
         println!("  Ctrl+C    - Exit");
         println!("  Ctrl+D    - New session");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bitnet_tokenizers::BasicTokenizer;
+    use futures::future::BoxFuture;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+
+    struct MockEngine {
+        tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
+        called: Arc<AtomicBool>,
+    }
+
+    impl PrefillEngine for MockEngine {
+        fn tokenizer(&self) -> Arc<dyn bitnet_tokenizers::Tokenizer> {
+            self.tokenizer.clone()
+        }
+
+        fn prefill(&mut self, _tokens: &[u32]) -> Result<()> {
+            self.called.store(true, Ordering::SeqCst);
+            Ok(())
+        }
+
+        fn generate_tokens<'a>(
+            &'a mut self,
+            _tokens: &'a [u32],
+            _config: &'a GenerationConfig,
+        ) -> BoxFuture<'a, Result<Vec<u32>>> {
+            Box::pin(async move { Ok(vec![0]) })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_prefill_invoked() {
+        let tokenizer = Arc::new(BasicTokenizer::new());
+        let flag = Arc::new(AtomicBool::new(false));
+        let mut engine = MockEngine { tokenizer, called: flag.clone() };
+        let cmd = InferenceCommand::default();
+        let config = GenerationConfig {
+            max_new_tokens: 1,
+            sampling: SamplingConfig::default(),
+            stop_sequences: vec![],
+            stream: false,
+        };
+        let _ =
+            cmd.process_batch_sequential(&mut engine, &["hi".to_string()], &config).await.unwrap();
+        assert!(flag.load(Ordering::SeqCst));
     }
 }
