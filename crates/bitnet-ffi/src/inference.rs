@@ -6,6 +6,7 @@
 use crate::{BitNetCError, BitNetCInferenceConfig, BitNetCPerformanceMetrics, get_model_manager};
 // use bitnet_common::PerformanceMetrics;
 use bitnet_inference::{InferenceConfig, InferenceEngine};
+use bitnet_common::Tensor;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
@@ -381,16 +382,25 @@ impl bitnet_models::Model for MockInferenceModel {
         &self.cfg
     }
 
-    fn embed(&self, _tokens: &[u32]) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
-        // If these mocks are never called in the C-API tests, a todo!() is fine
-        todo!("embed not used in bitnet-ffi tests")
+    fn embed(&self, tokens: &[u32]) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+        // Create a mock tensor [1, seq_len, hidden_size] filled with deterministic values
+        let seq_len = tokens.len();
+        let hidden = self.cfg.model.hidden_size;
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, seq_len, hidden]))
     }
 
     fn logits(
         &self,
-        _x: &bitnet_common::ConcreteTensor,
+        x: &bitnet_common::ConcreteTensor,
     ) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
-        todo!("logits not used in bitnet-ffi tests")
+        // Produce logits tensor [1, seq_len, vocab_size] matching the input sequence length
+        let seq_len = match x.shape() {
+            [_, s, _] => *s,
+            [s, _] => *s,
+            shape => shape.last().copied().unwrap_or(1),
+        };
+        let vocab = self.cfg.model.vocab_size;
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, seq_len, vocab]))
     }
 
     fn forward(
@@ -442,5 +452,22 @@ mod tests {
         use bitnet_models::Model;
         let config = model.config();
         assert_eq!(config.model.vocab_size, 32000); // Default value
+    }
+
+    #[test]
+    fn test_mock_model_tensors() {
+        use bitnet_common::Tensor;
+        use bitnet_models::Model;
+
+        let model = MockInferenceModel::new();
+        let tokens = vec![1u32, 2, 3];
+
+        let emb = model.embed(&tokens).expect("embedding");
+        assert_eq!(emb.shape(), &[1, tokens.len(), model.config().model.hidden_size]);
+        assert!(emb.as_slice::<f32>().unwrap().iter().all(|&v| (v - 0.1).abs() < f32::EPSILON));
+
+        let logits = model.logits(&emb).expect("logits");
+        assert_eq!(logits.shape(), &[1, tokens.len(), model.config().model.vocab_size]);
+        assert!(logits.as_slice::<f32>().unwrap().iter().all(|&v| (v - 0.1).abs() < f32::EPSILON));
     }
 }
