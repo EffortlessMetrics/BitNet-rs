@@ -31,6 +31,8 @@ struct DeviceStatsInternal {
     fallback_count: u64,
     last_gpu_error: Option<String>,
     last_cpu_error: Option<String>,
+    memory_used_bytes: u64,
+    memory_total_bytes: u64,
 }
 
 impl DeviceAwareQuantizer {
@@ -135,6 +137,10 @@ impl DeviceAwareQuantizer {
     ) -> Result<()> {
         let start_time = Instant::now();
 
+        if let Ok(mut stats) = self.stats.lock() {
+            Self::update_memory_stats(&mut stats);
+        }
+
         // Try primary provider (GPU) first
         if let Some(ref primary) = self.primary_provider {
             let gpu_start = Instant::now();
@@ -235,6 +241,10 @@ impl DeviceAwareQuantizer {
     ) -> Result<()> {
         let start_time = Instant::now();
         let _used_gpu = false;
+
+        if let Ok(mut stats) = self.stats.lock() {
+            Self::update_memory_stats(&mut stats);
+        }
 
         // Try primary provider (GPU) first
         if let Some(ref primary) = self.primary_provider {
@@ -360,23 +370,27 @@ impl DeviceAwareQuantizer {
         }
     }
 
+    fn update_memory_stats(stats: &mut DeviceStatsInternal) {
+        use memory_stats::memory_stats;
+        use sysinfo::System;
+
+        let mut sys = System::new();
+        sys.refresh_memory();
+        stats.memory_total_bytes = sys.total_memory() * 1024;
+
+        if let Some(usage) = memory_stats() {
+            stats.memory_used_bytes = usage.physical_mem as u64;
+        }
+    }
+
     /// Get comprehensive performance statistics
     pub fn get_stats(&self) -> Option<DeviceStats> {
-        if let Ok(stats) = self.stats.lock() {
+        if let Ok(mut stats) = self.stats.lock() {
+            Self::update_memory_stats(&mut stats);
+
             let primary_device_type =
                 self.primary_provider.as_ref().map(|p| p.name()).unwrap_or("None");
             let fallback_device_type = self.fallback_provider.name();
-
-            // Get device-specific memory usage
-            let (memory_used_bytes, memory_total_bytes) =
-                Self::get_device_memory_stats(self.target_device);
-
-            log::debug!(
-                "Memory usage for {:?}: {}/{} bytes",
-                self.target_device,
-                memory_used_bytes,
-                memory_total_bytes
-            );
 
             Some(DeviceStats {
                 device_type: format!("{}+{}", primary_device_type, fallback_device_type),
@@ -398,8 +412,8 @@ impl DeviceAwareQuantizer {
                 },
                 last_gpu_error: stats.last_gpu_error.clone(),
                 last_cpu_error: stats.last_cpu_error.clone(),
-                memory_used_bytes,
-                memory_total_bytes,
+                memory_used_bytes: stats.memory_used_bytes,
+                memory_total_bytes: stats.memory_total_bytes,
             })
         } else {
             log::warn!("Failed to acquire stats lock");
