@@ -66,7 +66,7 @@ pub mod cpp {
                     k as c_int,
                 )
             };
-            if rc == 0 { Ok(()) } else { Err("cpp matmul failed") }
+            if rc == 0 { Ok(()) } else { Err(get_last_error()) }
         }
 
         pub fn quantize(
@@ -86,7 +86,7 @@ pub mod cpp {
                     qtype as c_int,
                 )
             };
-            if rc == 0 { Ok(()) } else { Err("cpp quantize failed") }
+            if rc == 0 { Ok(()) } else { Err(get_last_error()) }
         }
 
         pub fn get_last_error() -> &'static str {
@@ -410,7 +410,7 @@ mod tests {
         };
 
         assert!(comparison_slow.performance_improvement() < 0.0); // Rust is slower
-        assert!(comparison_slow.migration_recommended()); // But still within tolerance
+        assert!(!comparison_slow.migration_recommended()); // Slower beyond tolerance
 
         let comparison_inaccurate = PerformanceComparison {
             rust_time_ns: 800,
