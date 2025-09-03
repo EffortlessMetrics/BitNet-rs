@@ -187,8 +187,10 @@
 #    define GGML_API extern
 #endif
 
-// TODO: support for clang
-#ifdef __GNUC__
+// compiler-specific macros
+#if defined(__clang__)
+#    define GGML_DEPRECATED(func, hint) func __attribute__((deprecated(hint)))
+#elif defined(__GNUC__)
 #    define GGML_DEPRECATED(func, hint) func __attribute__((deprecated(hint)))
 #elif defined(_MSC_VER)
 #    define GGML_DEPRECATED(func, hint) __declspec(deprecated(hint)) func
