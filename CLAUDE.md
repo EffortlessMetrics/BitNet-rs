@@ -93,6 +93,32 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 2. **Zero-Copy Operations**: Memory-mapped models, careful lifetime management
 3. **SIMD Abstraction**: Unified interface over platform-specific instructions
 4. **Cross-Validation**: Systematic comparison with C++ for correctness
+5. **Enhanced Validation Framework**: Comprehensive GPU/CPU validation with performance metrics and error tolerance
+
+### Enhanced Quality Assurance Framework
+
+BitNet.rs includes a comprehensive quality assurance system designed for production reliability:
+
+#### Kernel Validation System
+- **GPU/CPU Parity Testing**: Systematic validation between GPU and CPU implementations
+- **Performance Benchmarking**: Built-in performance measurement with speedup calculations
+- **Numerical Accuracy Testing**: Configurable tolerance testing for quantization operations
+- **Memory Leak Detection**: Automatic GPU memory monitoring and leak prevention
+- **Error Handling Validation**: Comprehensive error path testing with recovery verification
+
+#### Universal Tokenizer Architecture
+- **Auto-Detection**: Automatic backend selection based on GGUF model metadata
+- **GGUF Integration**: Direct extraction of tokenizer configuration from model files
+- **Fallback Strategy**: Graceful degradation to mock tokenizer for unsupported formats
+- **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external dependencies
+- **Cross-Format Support**: BPE, SentencePiece, and custom tokenizer formats
+
+#### Code Quality Enforcement
+- **Comprehensive Clippy Integration**: Zero-tolerance policy for clippy warnings
+- **Type Safety Improvements**: Enhanced type annotations and error handling
+- **Documentation Standards**: Comprehensive inline documentation with examples
+- **Test Coverage**: Extensive test suites with property-based testing
+- **Performance Regression Testing**: Automated performance monitoring and validation
 
 ## Important Considerations
 
@@ -261,6 +287,18 @@ cargo test -p bitnet-tokenizers --no-default-features
 
 # Test BPE tokenizer round-trip functionality (includes new BPE tests)
 cargo test -p bitnet-tokenizers --test universal_roundtrip --no-default-features --features integration-tests
+
+# Enhanced GPU validation with performance metrics and error handling
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
+
+# GPU kernel validation with numerical accuracy testing
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy
+
+# GPU memory leak detection and performance benchmarking
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+
+# Test universal tokenizer with automatic GGUF integration
+cargo test -p bitnet-tokenizers --no-default-features test_universal_tokenizer_gguf_integration
 
 # Full cross-validation (deterministic)
 export BITNET_GGUF="$PWD/models/bitnet/ggml-model-i2_s.gguf"
