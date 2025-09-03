@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 /// Helper to pick non-empty PathBuf or fallback to default
-pub fn pick_dir(env: &PathBuf, scenario: &PathBuf) -> PathBuf {
-    if !env.as_os_str().is_empty() { env.clone() } else { scenario.clone() }
+pub fn pick_dir(env: &Path, scenario: &Path) -> PathBuf {
+    if !env.as_os_str().is_empty() { env.to_path_buf() } else { scenario.to_path_buf() }
 }
 
 /// Main configuration for the testing framework
@@ -346,15 +346,14 @@ pub fn validate_config(config: &TestConfig) -> TestResultCompat<()> {
     }
 
     // Validate cache directory (only check if it's an absolute path with non-existent parent)
-    if config.cache_dir.is_absolute() {
-        if let Some(parent) = config.cache_dir.parent() {
-            if !parent.exists() {
-                return Err(TestError::config(format!(
-                    "Cache directory parent {:?} does not exist",
-                    parent
-                )));
-            }
-        }
+    if config.cache_dir.is_absolute()
+        && let Some(parent) = config.cache_dir.parent()
+        && !parent.exists()
+    {
+        return Err(TestError::config(format!(
+            "Cache directory parent {:?} does not exist",
+            parent
+        )));
     }
 
     // Validate cross-validation config
@@ -432,15 +431,14 @@ pub fn validate_config(config: &TestConfig) -> TestResultCompat<()> {
     }
 
     // Validate output directory parent exists (only for absolute paths)
-    if config.reporting.output_dir.is_absolute() {
-        if let Some(parent) = config.reporting.output_dir.parent() {
-            if !parent.exists() {
-                return Err(TestError::config(format!(
-                    "Report output directory parent {:?} does not exist",
-                    parent
-                )));
-            }
-        }
+    if config.reporting.output_dir.is_absolute()
+        && let Some(parent) = config.reporting.output_dir.parent()
+        && !parent.exists()
+    {
+        return Err(TestError::config(format!(
+            "Report output directory parent {:?} does not exist",
+            parent
+        )));
     }
 
     Ok(())
@@ -472,16 +470,12 @@ pub fn ci_config() -> TestConfig {
 
 /// Create a test configuration optimized for development
 pub fn dev_config() -> TestConfig {
-    let mut config = TestConfig::default();
-
-    // Use more parallel tests for faster local development
-    config.max_parallel_tests = get_optimal_parallel_tests();
-
-    // Longer timeout for debugging
-    config.test_timeout = Duration::from_secs(600);
-
-    // Less verbose logging for cleaner output
-    config.log_level = "info".to_string();
+    let mut config = TestConfig {
+        max_parallel_tests: get_optimal_parallel_tests(),
+        test_timeout: Duration::from_secs(600),
+        log_level: "info".to_string(),
+        ..Default::default()
+    };
 
     // Skip coverage by default in dev mode for speed
     config.reporting.generate_coverage = false;
@@ -494,16 +488,12 @@ pub fn dev_config() -> TestConfig {
 
 /// Create a test configuration optimized for minimal resource usage
 pub fn minimal_config() -> TestConfig {
-    let mut config = TestConfig::default();
-
-    // Use minimal parallel tests
-    config.max_parallel_tests = 1;
-
-    // Shorter timeout for quick feedback
-    config.test_timeout = Duration::from_secs(60);
-
-    // Minimal logging
-    config.log_level = "warn".to_string();
+    let mut config = TestConfig {
+        max_parallel_tests: 1,
+        test_timeout: Duration::from_secs(60),
+        log_level: "warn".to_string(),
+        ..Default::default()
+    };
 
     // Disable coverage and performance reporting
     config.reporting.generate_coverage = false;

@@ -364,23 +364,22 @@ impl TestDebugger {
 
         let mut debug_data = self.debug_data.write().await;
 
-        if let Some(test_trace) = debug_data.test_traces.get_mut(test_name) {
-            if let Some(phase) = test_trace
+        if let Some(test_trace) = debug_data.test_traces.get_mut(test_name)
+            && let Some(phase) = test_trace
                 .phases
                 .iter_mut()
                 .rev()
                 .find(|p| p.name == phase_name && p.end_time.is_none())
-            {
-                phase.end_time = Some(SystemTime::now());
-                phase.status = if success {
-                    PhaseStatus::Completed
-                } else {
-                    PhaseStatus::Failed("Phase failed".to_string())
-                };
+        {
+            phase.end_time = Some(SystemTime::now());
+            phase.status = if success {
+                PhaseStatus::Completed
+            } else {
+                PhaseStatus::Failed("Phase failed".to_string())
+            };
 
-                if let Some(details) = details {
-                    phase.details.extend(details);
-                }
+            if let Some(details) = details {
+                phase.details.extend(details);
             }
         }
 
@@ -439,22 +438,22 @@ impl TestDebugger {
         debug_data.error_reports.push(error_report.clone());
 
         // Add to test trace if test name provided
-        if let Some(test_name) = test_name {
-            if let Some(test_trace) = debug_data.test_traces.get_mut(test_name) {
-                test_trace.artifacts.push(DebugArtifact {
-                    name: "error_report".to_string(),
-                    artifact_type: ArtifactType::ErrorReport,
-                    path: error_file,
-                    size: 0, // Will be filled when file is written
-                    created_at: SystemTime::now(),
-                    description: format!("Error report for {}: {}", test_name, error),
-                });
+        if let Some(test_name) = test_name
+            && let Some(test_trace) = debug_data.test_traces.get_mut(test_name)
+        {
+            test_trace.artifacts.push(DebugArtifact {
+                name: "error_report".to_string(),
+                artifact_type: ArtifactType::ErrorReport,
+                path: error_file,
+                size: 0, // Will be filled when file is written
+                created_at: SystemTime::now(),
+                description: format!("Error report for {}: {}", test_name, error),
+            });
 
-                // Capture stack trace if enabled
-                if self.debug_config.capture_stack_traces {
-                    let stack_trace = self.capture_stack_trace("error_capture").await;
-                    test_trace.stack_traces.push(stack_trace);
-                }
+            // Capture stack trace if enabled
+            if self.debug_config.capture_stack_traces {
+                let stack_trace = self.capture_stack_trace("error_capture").await;
+                test_trace.stack_traces.push(stack_trace);
             }
         }
 
@@ -858,21 +857,20 @@ impl TestDebugger {
         }
 
         // Check for high memory usage
-        if let Some(peak) = test_trace.resource_usage.iter().map(|r| r.memory_usage).max() {
-            if peak > BYTES_PER_MB * 1024 {
-                // > 1GB
-                issues.push(format!("High memory usage: {} MB", peak / (BYTES_PER_MB)));
-            }
+        if let Some(peak) = test_trace.resource_usage.iter().map(|r| r.memory_usage).max()
+            && peak > BYTES_PER_MB * 1024
+        {
+            // > 1GB
+            issues.push(format!("High memory usage: {} MB", peak / (BYTES_PER_MB)));
         }
 
         // Check for long duration
         if let Some(duration) =
             test_trace.end_time.and_then(|end| end.duration_since(test_trace.start_time).ok())
+            && duration > Duration::from_secs(300)
         {
-            if duration > Duration::from_secs(300) {
-                // > 5 minutes
-                issues.push(format!("Long execution time: {:?}", duration));
-            }
+            // > 5 minutes
+            issues.push(format!("Long execution time: {:?}", duration));
         }
 
         issues
