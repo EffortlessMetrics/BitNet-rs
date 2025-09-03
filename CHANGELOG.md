@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Standardize GPU feature aliases in cargo config to use `gpu` instead of `cuda`
 
 ### Fixed
+- **IQ2_S FFI Layout Enhancement and Parity Testing** ([#142](https://github.com/EffortlessSteven/BitNet-rs/pull/142)):
+  - Enhanced `BlockIq2S` struct with perfect GGML `block_iq2_s` layout compatibility (82 bytes)
+  - Added compile-time size and alignment assertions for layout parity verification
+  - Enabled previously ignored `iq2s_rust_matches_ffi` parity test with precise element-by-element comparison
+  - Replaced hardcoded block size with compile-time `size_of::<BlockIq2S>()` for consistency
+  - Zero API breaking changes, maintaining full backward compatibility
 - **IQ2_S Quantization Layout Alignment** ([#132](https://github.com/EffortlessSteven/BitNet-rs/pull/132)):
   - Updated IQ2_S block layout from 66B to 82B to match GGML specification exactly
   - Corrected QMAP values from `[-2,-1,0,1]` to `[-2,-1,1,2]` eliminating zero mapping
