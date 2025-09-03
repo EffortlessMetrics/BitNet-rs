@@ -40,6 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated test expectations to match new quantization mapping pattern
   - Ensures bit-exact compatibility between Rust and GGML backends
   - Fixed unsafe code warnings with proper unsafe blocks for Rust 2024 compliance
+- **IQ2_S FFI Layout Alignment and Parity Testing** ([#142](https://github.com/EffortlessSteven/BitNet-rs/pull/142)):
+  - Aligned `BlockIq2S` struct layout with GGML's `block_iq2_s` for perfect FFI compatibility
+  - Added compile-time size and alignment assertions ensuring 82-byte GGML layout consistency
+  - Enabled and fixed `iq2s_rust_matches_ffi` parity test validating Rust/FFI backend equivalence
+  - Updated block size constants across test suite to reflect correct 82-byte GGML layout
+  - Enhanced cross-validation framework with IQ2_S-specific backend comparison tests
 - **Security Vulnerability Resolution** ([#107](https://github.com/EffortlessSteven/BitNet-rs/pull/107)):
   - Updated PyO3 from v0.21.2 to v0.25.1 to resolve CVE-2024-9979 buffer overflow vulnerability
   - Updated related Python binding dependencies (numpy, pyo3-async-runtimes) for compatibility
