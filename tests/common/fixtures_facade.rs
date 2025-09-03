@@ -25,7 +25,7 @@ impl Fixtures {
         #[cfg(feature = "fixtures")]
         {
             let inner = fixtures::FixtureManager::new(&cfg.fixtures).await?;
-            return Ok(Self(Arc::new(inner)));
+            Ok(Self(Arc::new(inner)))
         }
         #[cfg(not(feature = "fixtures"))]
         {
@@ -102,7 +102,7 @@ impl Fixtures {
         #[cfg(feature = "fixtures")]
         {
             // Return &FixtureManager when fixtures are enabled
-            &*self.0
+            &self.0
         }
         #[cfg(not(feature = "fixtures"))]
         {

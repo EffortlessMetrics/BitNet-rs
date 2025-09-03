@@ -4,10 +4,10 @@ use bitnet_tokenizers::{Tokenizer, TokenizerConfig, UniversalTokenizer};
 
 #[test]
 fn gpt2_bpe_roundtrip() {
-    // Test with minimal mock tokenizer behavior
+    // Minimal BPE tokenizer with vocab and merges using tokenizers crate
     let config = TokenizerConfig {
         model_type: "gpt2".to_string(),
-        vocab_size: 50257, // Standard GPT-2 vocab size
+        vocab_size: 3,
         pre_tokenizer: None,
         add_bos: false,
         add_eos: false,
@@ -17,17 +17,21 @@ fn gpt2_bpe_roundtrip() {
         eos_token_id: None,
         pad_token_id: None,
         unk_token_id: None,
-        vocabulary: None, // Let mock tokenizer handle this
-        bpe_merges: None,
+        vocabulary: Some(vec![
+            ("a".to_string(), 0.0),
+            ("b".to_string(), 0.0),
+            ("ab".to_string(), 0.0),
+        ]),
+        bpe_merges: Some(vec!["a b".to_string()]),
     };
 
     let tokenizer = UniversalTokenizer::new(config).expect("build gpt2 tokenizer");
     let ids = tokenizer.encode("ab", false, false).expect("encode");
-    assert!(!ids.is_empty(), "Should produce tokens");
+    assert_eq!(ids, vec![2]);
 
-    // Test that we can decode back
+    // Test round trip
     let text = tokenizer.decode(&ids).expect("decode");
-    assert!(!text.is_empty(), "Should decode to non-empty text");
+    assert_eq!(text, "ab");
 }
 
 #[cfg(feature = "spm")]

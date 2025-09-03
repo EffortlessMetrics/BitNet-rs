@@ -104,7 +104,18 @@ cargo run --example test_gpu_memory --no-default-features --features gpu
 
 # Deterministic GPU testing with device-aware quantization
 BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo test --workspace --no-default-features --features gpu -- --test-threads=1
+
+# Enhanced GPU validation with performance metrics and error handling
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
 ```
+
+**Enhanced GPU Validation Features:**
+- **Comprehensive Device Querying**: Automatic CUDA device detection with compute capability analysis
+- **Performance Benchmarking**: Built-in kernel performance measurement with speedup calculations
+- **Numerical Accuracy Validation**: Systematic comparison between GPU and CPU implementations
+- **Memory Leak Detection**: Automatic GPU memory monitoring and leak prevention
+- **Mixed Precision Support**: FP16/BF16 validation with error tolerance configuration
+- **Graceful Error Handling**: Robust error reporting with recovery suggestions
 
 #### 🛠️ **Utilities**
 ```bash
@@ -271,6 +282,42 @@ let result = quantizer.quantize(&input, &mut output, &mut scales, QuantizationTy
 println!("Active provider: {}", quantizer.active_provider());
 println!("GPU active: {}", quantizer.is_gpu_active());
 ```
+
+#### Universal Tokenizer with GGUF Integration
+
+BitNet.rs features a comprehensive universal tokenizer system with automatic backend selection, GGUF metadata integration, and BPE support. The tokenizer automatically handles multiple formats with graceful fallback for unsupported models:
+
+```rust
+use bitnet_tokenizers::{UniversalTokenizer, TokenizerConfig};
+use std::path::Path;
+
+// Create tokenizer directly from GGUF model with automatic configuration
+let tokenizer = UniversalTokenizer::from_gguf(Path::new("model.gguf"))?;
+
+// Tokenize text with automatic backend selection
+let text = "Hello, world! This is BitNet.rs.";
+let tokens = tokenizer.encode(text, true)?; // true = add_special_tokens
+println!("Tokens: {:?}", tokens);
+
+// Decode tokens back to text
+let decoded = tokenizer.decode(&tokens, true)?; // true = skip_special_tokens
+println!("Decoded: {}", decoded);
+
+// Access tokenizer configuration extracted from GGUF
+let config = tokenizer.config();
+println!("Vocab size: {}", config.vocab_size);
+println!("BOS token: {:?}", config.bos_token);
+println!("EOS token: {:?}", config.eos_token);
+```
+
+**Enhanced Universal Tokenizer Features:**
+- **Automatic Backend Detection**: Chooses BPE, SentencePiece, or Mock backend based on model metadata
+- **GGUF Metadata Integration**: Extracts tokenizer configuration directly from GGUF model files
+- **BPE Backend Support**: Full GPT-2 compatible BPE tokenization with merge rules
+- **Graceful Fallback**: Mock tokenizer for unsupported formats ensures testing compatibility
+- **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external files
+- **Special Token Handling**: Automatic BOS, EOS, PAD, and UNK token configuration
+- **Byte-Level Processing**: GPT-2 compatible pre-tokenization and decoding
 
 #### Enhanced GGUF Metadata Inspection
 

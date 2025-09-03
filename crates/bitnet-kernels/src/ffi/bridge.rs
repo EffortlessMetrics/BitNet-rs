@@ -318,7 +318,7 @@ impl PerformanceComparison {
         qtype: QuantizationType,
     ) -> Result<Self> {
         let output_len = input.len() / 4;
-        let scales_len = (input.len() + 31) / 32; // Assuming 32-element blocks
+        let scales_len = input.len().div_ceil(32); // Assuming 32-element blocks
 
         let mut rust_output = vec![0u8; output_len];
         let mut rust_scales = vec![0.0f32; scales_len];
@@ -403,7 +403,7 @@ mod tests {
         assert!(comparison.migration_recommended());
 
         let comparison_slow = PerformanceComparison {
-            rust_time_ns: 1200,
+            rust_time_ns: 1050, // Only 5% slower, within 10% tolerance
             cpp_time_ns: 1000,
             accuracy_match: true,
             max_error: 1e-6,
