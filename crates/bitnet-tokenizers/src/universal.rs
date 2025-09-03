@@ -2,7 +2,7 @@ use bitnet_common::Result;
 use std::path::Path;
 use tracing::{debug, warn};
 
-use crate::{Tokenizer, TokenizerConfig, MockTokenizer};
+use crate::{MockTokenizer, Tokenizer, TokenizerConfig};
 
 /// Universal tokenizer that auto-detects and handles all formats
 pub struct UniversalTokenizer {
@@ -12,8 +12,6 @@ pub struct UniversalTokenizer {
 
 #[allow(clippy::large_enum_variant)]
 enum TokenizerBackend {
-    #[cfg(feature = "spm")]
-    SentencePiece(crate::SmpTokenizer),
     Mock(MockTokenizer),
 }
 
@@ -81,14 +79,9 @@ impl UniversalTokenizer {
                 debug!("Creating mock tokenizer for {}", config.model_type);
                 Ok(TokenizerBackend::Mock(MockTokenizer::new()))
             }
-            #[cfg(feature = "spm")]
             "smp" | "sentencepiece" => {
-                debug!("Creating SentencePiece tokenizer");
-                Ok(TokenizerBackend::SentencePiece(crate::SmpTokenizer::new(config)?))
-            }
-            #[cfg(not(feature = "spm"))]
-            "smp" | "sentencepiece" => {
-                warn!("SentencePiece support not compiled, using mock");
+                // TODO: SentencePiece requires file path API, not config-based instantiation
+                warn!("SentencePiece tokenizer requires file path, using mock fallback");
                 Ok(TokenizerBackend::Mock(MockTokenizer::new()))
             }
             unknown => {
@@ -110,8 +103,6 @@ impl Tokenizer for UniversalTokenizer {
 
         // Delegate to backend
         let mut tokens = match &self.backend {
-            #[cfg(feature = "spm")]
-            TokenizerBackend::SentencePiece(t) => t.encode(&processed, false, add_special)?,
             TokenizerBackend::Mock(t) => t.encode(&processed, false, add_special)?,
         };
 
@@ -128,8 +119,6 @@ impl Tokenizer for UniversalTokenizer {
 
     fn decode(&self, tokens: &[u32]) -> Result<String> {
         match &self.backend {
-            #[cfg(feature = "spm")]
-            TokenizerBackend::SentencePiece(t) => t.decode(tokens),
             TokenizerBackend::Mock(t) => t.decode(tokens),
         }
     }
@@ -140,8 +129,6 @@ impl Tokenizer for UniversalTokenizer {
 
     fn token_to_piece(&self, token: u32) -> Option<String> {
         match &self.backend {
-            #[cfg(feature = "spm")]
-            TokenizerBackend::SentencePiece(t) => t.token_to_piece(token),
             TokenizerBackend::Mock(t) => t.token_to_piece(token),
         }
     }
