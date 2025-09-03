@@ -388,10 +388,12 @@ mod tests {
 
     #[test]
     fn test_memory_stats() {
-        let mut stats = MemoryStats::default();
-        stats.total_allocated = 1024 * 1024; // 1 MB
-        stats.current_usage = 512 * 1024; // 512 KB
-        stats.peak_usage = 2 * 1024 * 1024; // 2 MB
+        let stats = MemoryStats {
+            total_allocated: 1024 * 1024, // 1 MB
+            current_usage: 512 * 1024,    // 512 KB
+            peak_usage: 2 * 1024 * 1024,  // 2 MB
+            ..Default::default()
+        };
 
         assert_eq!(stats.current_usage_mb(), 0.5);
         assert_eq!(stats.peak_usage_mb(), 2.0);
@@ -446,9 +448,8 @@ mod tests {
 
     #[test]
     fn test_leak_detection() {
-        let mut stats = MemoryStats::default();
-        stats.allocation_count = 5;
-        stats.deallocation_count = 3;
+        let stats =
+            MemoryStats { allocation_count: 5, deallocation_count: 3, ..Default::default() };
 
         assert!(stats.has_leaks());
         assert_eq!(stats.leaked_allocations(), 2);
