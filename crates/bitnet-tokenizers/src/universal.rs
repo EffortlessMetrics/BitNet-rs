@@ -10,10 +10,9 @@ pub struct UniversalTokenizer {
     config: TokenizerConfig,
 }
 
-#[allow(clippy::large_enum_variant)]
+#[allow(clippy::large_enum_variant, dead_code)]
 enum TokenizerBackend {
     #[cfg(feature = "spm")]
-    #[allow(dead_code)]
     SentencePiece(crate::SpmTokenizer),
     Hf(HfTokenizer),
     Mock(MockTokenizer),
