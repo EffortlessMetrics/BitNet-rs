@@ -190,7 +190,7 @@ fn test_iq2s_constants_match() {
 
     // Verify expected values
     assert_eq!(rust_backend.qk(), 256, "Unexpected QK value");
-    assert_eq!(rust_backend.block_bytes(), 66, "IQ2_S block bytes should be 66");
+    assert_eq!(rust_backend.block_bytes(), 82, "IQ2_S block bytes should be 82 (GGML layout)");
 }
 
 /// Test edge cases for IQ2_S quantization
@@ -200,17 +200,17 @@ fn test_iq2s_edge_cases() -> Result<()> {
     let block_bytes = if cfg!(feature = "iq2s-ffi") {
         bitnet_ggml_ffi::iq2s_bytes_per_block()
     } else {
-        66 // Default fallback
+        82 // Default fallback (2 + 64 + 8 + 8 = 82 bytes for GGML layout)
     };
     let mut minimal_block = vec![0u8; block_bytes];
 
     // Zero scale
     minimal_block[0..2].copy_from_slice(&0u16.to_le_bytes());
-    // All codes as zero (only set the qs field)
+    // All codes as zero (set the qs field: bytes 2-65)
     for i in 2..66 {
         minimal_block[i] = 0;
     }
-    // qh and scales fields already zero-initialized
+    // qh (bytes 66-73) and scales (bytes 74-81) fields already zero-initialized
 
     let result = Iq2sBackend::Rust.dequantize(&minimal_block, &[256])?;
     assert_eq!(result.len(), 256);
@@ -223,10 +223,11 @@ fn test_iq2s_edge_cases() -> Result<()> {
     let mut max_block = vec![0u8; block_bytes];
     let max_scale = f16::from_f32(65000.0); // Near f16 max
     max_block[0..2].copy_from_slice(&max_scale.to_bits().to_le_bytes());
-    // Set all codes to maximum value (0b11 = 3, maps to +1)
+    // Set all codes to maximum value (0b11 = 3, maps to +2) in qs field
     for i in 2..66 {
         max_block[i] = 0xFF; // All bits set
     }
+    // qh and scales fields remain zero
 
     let result = Iq2sBackend::Rust.dequantize(&max_block, &[256])?;
     assert_eq!(result.len(), 256);
