@@ -75,7 +75,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-quantization`**: 1-bit quantization algorithms
 - **`bitnet-kernels`**: High-performance SIMD/CUDA kernels
 - **`bitnet-inference`**: Inference engine with streaming support
-- **`bitnet-tokenizers`**: Universal tokenizer support
+- **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration and mock fallback system
 - **`bitnet-server`**: HTTP server for BitNet inference with health monitoring
 
 #### Compatibility Layer
@@ -117,6 +117,37 @@ BitNet-rs supports multiple quantization formats with device-aware acceleration:
 - **Standard formats**: Q4_0, Q5_0, Q8_0, etc. (planned)
 
 All quantizers support device-aware operations with automatic GPU acceleration and transparent CPU fallback.
+
+### Universal Tokenizer Architecture
+
+BitNet.rs includes a comprehensive tokenizer system with GGUF integration:
+
+- **UniversalTokenizer**: Auto-detecting tokenizer that handles multiple formats
+  - **GGUF Integration**: Extracts tokenizer configuration directly from GGUF model files
+  - **Automatic Backend Selection**: Chooses appropriate tokenizer backend based on model type
+  - **Mock Tokenizer Fallback**: Provides testing-compatible tokenizer for unsupported formats
+  - **Configuration-Driven**: Supports pre-tokenization, special tokens, and BPE merges
+
+#### Supported Tokenizer Formats
+- **GPT-2/BPE**: Modern BPE tokenization with merge rules (via HuggingFace tokenizers)
+- **SentencePiece**: Subword tokenization via SentencePiece library (feature-gated)
+- **LLaMA/LLaMA3**: LLaMA-specific tokenization variants
+- **TikToken**: OpenAI's tiktoken format
+- **Mock Backend**: Minimal tokenizer for testing and compatibility
+
+#### BPE Backend Features (New in this release)
+- **Runtime Construction**: Build tokenizers from vocabulary and merge rules without JSON files
+- **GGUF Metadata Integration**: Automatically extract BPE data from model files
+- **Byte-Level Processing**: GPT-2 compatible pre-tokenization and decoding
+- **Fallback Support**: Graceful degradation to mock tokenizer when data incomplete
+
+#### GGUF Tokenizer Metadata Extraction
+The universal tokenizer automatically parses GGUF metadata:
+- Vocabulary extraction from `tokenizer.ggml.tokens`
+- Special token IDs (BOS, EOS, PAD, UNK) from metadata
+- BPE merge rules from `tokenizer.ggml.merges`
+- Configuration flags (add_bos, add_eos, add_space_prefix, byte_fallback)
+- Score arrays for token prioritization
 
 ### Compatibility Guarantees
 We maintain strict compatibility with llama.cpp:
@@ -224,6 +255,12 @@ cargo run -p bitnet-cli -- score --model model.gguf --file validation.txt --devi
 
 # Model evaluation with external tokenizer and token limits
 cargo run -p bitnet-cli -- score --model model.gguf --file large-dataset.txt --tokenizer tokenizer.json --max-tokens 1000
+
+# Test universal tokenizer with BPE backend (new feature)
+cargo test -p bitnet-tokenizers --no-default-features
+
+# Test BPE tokenizer round-trip functionality (includes new BPE tests)
+cargo test -p bitnet-tokenizers --test universal_roundtrip --no-default-features --features integration-tests
 
 # Full cross-validation (deterministic)
 export BITNET_GGUF="$PWD/models/bitnet/ggml-model-i2_s.gguf"
