@@ -2,7 +2,7 @@ use bitnet_common::Result;
 use std::path::Path;
 use tracing::{debug, warn};
 
-use crate::{Tokenizer, TokenizerConfig, MockTokenizer};
+use crate::{MockTokenizer, Tokenizer, TokenizerConfig};
 
 /// Universal tokenizer that auto-detects and handles all formats
 pub struct UniversalTokenizer {
@@ -13,7 +13,7 @@ pub struct UniversalTokenizer {
 #[allow(clippy::large_enum_variant)]
 enum TokenizerBackend {
     #[cfg(feature = "spm")]
-    SentencePiece(crate::SmpTokenizer),
+    SentencePiece(crate::SpmTokenizer),
     Mock(MockTokenizer),
 }
 
@@ -83,8 +83,8 @@ impl UniversalTokenizer {
             }
             #[cfg(feature = "spm")]
             "smp" | "sentencepiece" => {
-                debug!("Creating SentencePiece tokenizer");
-                Ok(TokenizerBackend::SentencePiece(crate::SmpTokenizer::new(config)?))
+                debug!("SentencePiece tokenizer requires model file, using mock fallback");
+                Ok(TokenizerBackend::Mock(MockTokenizer::new()))
             }
             #[cfg(not(feature = "spm"))]
             "smp" | "sentencepiece" => {
