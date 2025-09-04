@@ -15,8 +15,10 @@ type BatchOperation<'a> = (&'a [i8], &'a [u8], &'a mut [f32], usize, usize, usiz
 
 /// CUDA kernel provider with memory management and stream handling
 pub struct CudaKernel {
+    #[allow(dead_code)]
     ctx: Arc<CudaContext>,
     stream: Arc<CudaStream>,
+    #[allow(dead_code)]
     module: Arc<CudaModule>,
     matmul_function: CudaFunction,
     quantize_i2s_function: CudaFunction,
@@ -352,6 +354,7 @@ impl CudaKernel {
     }
 
     /// Calculate optimal launch parameters based on device capabilities
+    #[allow(dead_code)]
     fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, usize) {
         // Use device-specific optimization
         let max_threads = self.device_info.max_threads_per_block as usize;

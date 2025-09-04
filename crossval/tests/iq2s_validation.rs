@@ -190,7 +190,7 @@ fn test_iq2s_constants_match() {
 
     // Verify expected values
     assert_eq!(rust_backend.qk(), 256, "Unexpected QK value");
-    assert_eq!(rust_backend.block_bytes(), 66, "IQ2_S block bytes should be 66");
+    assert_eq!(rust_backend.block_bytes(), 82, "IQ2_S block bytes should be 82 (GGML layout)");
 }
 
 /// Test edge cases for IQ2_S quantization
@@ -200,7 +200,7 @@ fn test_iq2s_edge_cases() -> Result<()> {
     let block_bytes = if cfg!(feature = "iq2s-ffi") {
         bitnet_ggml_ffi::iq2s_bytes_per_block()
     } else {
-        66 // Default fallback
+        82 // Default fallback - matches GGML layout
     };
     let mut minimal_block = vec![0u8; block_bytes];
 

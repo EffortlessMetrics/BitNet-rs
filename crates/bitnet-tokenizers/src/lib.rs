@@ -159,6 +159,7 @@ impl Tokenizer for BasicTokenizer {
 pub enum TokenizerFileKind {
     HfJson,
     #[cfg(feature = "spm")]
+    #[allow(dead_code)]
     Spm,
 }
 

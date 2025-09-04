@@ -72,7 +72,7 @@ impl MarkdownReporter {
         summary.push_str(&format!("| Success Rate | {:.1}% |\n", success_rate));
         summary.push_str(&format!("| Total Duration | {:.2}s |\n", total_duration));
         summary.push_str(&format!("| Test Suites | {} |\n", results.len()));
-        summary.push_str("\n");
+        summary.push('\n');
 
         summary
     }
@@ -119,7 +119,7 @@ impl MarkdownReporter {
             for test in &suite.test_results {
                 markdown.push_str(&self.generate_test_case_row(test));
             }
-            markdown.push_str("\n");
+            markdown.push('\n');
         }
 
         if self.include_metrics && suite.summary.peak_memory.is_some() {
@@ -137,7 +137,7 @@ impl MarkdownReporter {
                 "| Average Duration | {:.3}s |\n",
                 suite.summary.average_duration.as_secs_f64()
             ));
-            markdown.push_str("\n");
+            markdown.push('\n');
         }
 
         markdown

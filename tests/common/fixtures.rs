@@ -133,7 +133,7 @@ impl FixtureManager {
         url: &str,
         checksum: &str,
     ) -> FixtureResult<()> {
-        let filename = url.split('/').last().unwrap_or(name).to_string();
+        let filename = url.split('/').next_back().unwrap_or(name).to_string();
 
         let fixture_info = FixtureInfo {
             name: name.to_string(),
@@ -231,18 +231,18 @@ impl FixtureManager {
         while let Some(entry) = entries.next_entry().await? {
             if entry.file_type().await?.is_file() {
                 let metadata = entry.metadata().await?;
-                if let Ok(modified) = metadata.modified() {
-                    if modified < cutoff {
-                        let file_size = metadata.len();
-                        match fs::remove_file(entry.path()).await {
-                            Ok(_) => {
-                                removed_count += 1;
-                                removed_size += file_size;
-                                debug!("Removed old fixture: {:?}", entry.path());
-                            }
-                            Err(e) => {
-                                warn!("Failed to remove old fixture {:?}: {}", entry.path(), e);
-                            }
+                if let Ok(modified) = metadata.modified()
+                    && modified < cutoff
+                {
+                    let file_size = metadata.len();
+                    match fs::remove_file(entry.path()).await {
+                        Ok(_) => {
+                            removed_count += 1;
+                            removed_size += file_size;
+                            debug!("Removed old fixture: {:?}", entry.path());
+                        }
+                        Err(e) => {
+                            warn!("Failed to remove old fixture {:?}: {}", entry.path(), e);
                         }
                     }
                 }
@@ -483,13 +483,11 @@ impl FixtureManager {
                     // For certain errors, don't retry
                     if let FixtureError::DownloadError { reason, .. } =
                         &last_error.as_ref().unwrap()
-                    {
-                        if reason.contains("404")
+                        && (reason.contains("404")
                             || reason.contains("403")
-                            || reason.contains("401")
-                        {
-                            break; // Don't retry on client errors
-                        }
+                            || reason.contains("401"))
+                    {
+                        break; // Don't retry on client errors
                     }
 
                     if attempt < 5 {
@@ -678,7 +676,7 @@ impl FixtureManager {
                 filename: custom_fixture
                     .url
                     .split('/')
-                    .last()
+                    .next_back()
                     .unwrap_or(&custom_fixture.name)
                     .to_string(),
                 checksum: custom_fixture.checksum.clone(),
@@ -711,10 +709,7 @@ impl FixtureManager {
     /// Check if a file is currently in use (basic heuristic)
     async fn is_file_in_use(&self, path: &std::path::Path) -> bool {
         // Try to open the file exclusively to see if it's in use
-        match std::fs::OpenOptions::new().write(true).truncate(false).open(path) {
-            Ok(_) => false, // File is not in use
-            Err(_) => true, // File might be in use or we don't have permissions
-        }
+        std::fs::OpenOptions::new().write(true).truncate(false).open(path).is_err()
     }
 
     /// Perform automatic cleanup based on configuration

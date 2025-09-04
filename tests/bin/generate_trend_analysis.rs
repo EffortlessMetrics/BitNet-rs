@@ -211,11 +211,11 @@ async fn generate_summary_report(
         );
     }
 
-    if unstable_suites.len() > 0 {
+    if !unstable_suites.is_empty() {
         summary.push_str("- 🟡 **Some test suites are unstable** - investigate flaky tests\n");
     }
 
-    if degrading_tests.len() > 0 {
+    if !degrading_tests.is_empty() {
         summary
             .push_str("- 🟡 **Some tests show performance degradation** - optimize slow tests\n");
     }

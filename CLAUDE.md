@@ -21,6 +21,11 @@ cargo test --workspace --no-default-features --features cpu
 # Run GPU tests with device-aware quantization (requires CUDA)
 cargo test --workspace --no-default-features --features gpu
 
+# Run GGUF validation tests
+cargo test -p bitnet-inference --test gguf_header
+cargo test -p bitnet-inference --test gguf_fuzz
+cargo test -p bitnet-inference --test engine_inspect
+
 # Run verification script
 ./scripts/verify-tests.sh
 
@@ -46,6 +51,9 @@ cargo audit
 scripts/preflight.sh && cargo t2                     # 2-thread CPU tests
 scripts/preflight.sh && cargo crossval-capped        # Cross-validation with caps
 scripts/e2e-gate.sh cargo test --features crossval   # Gate heavy E2E tests
+
+# Generate code coverage
+cargo llvm-cov --workspace --features cpu --html
 ```
 
 ### Development Tools (xtask)
@@ -53,9 +61,14 @@ scripts/e2e-gate.sh cargo test --features crossval   # Gate heavy E2E tests
 # Download BitNet model from Hugging Face
 cargo run -p xtask -- download-model
 
+# Vendor GGML quantization files for IQ2_S support
+cargo run -p xtask -- vendor-ggml --commit <llama.cpp-commit>
+
 # Fetch and build Microsoft BitNet C++ for cross-validation
 cargo run -p xtask -- fetch-cpp
 
+# Run cross-validation tests
+cargo run -p xtask -- crossval
 # Full workflow (download + fetch + test)
 cargo run -p xtask -- full-crossval
 
@@ -75,7 +88,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-quantization`**: 1-bit quantization algorithms
 - **`bitnet-kernels`**: High-performance SIMD/CUDA kernels
 - **`bitnet-inference`**: Inference engine with streaming support
-- **`bitnet-tokenizers`**: Universal tokenizer support
+- **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration and mock fallback system
 - **`bitnet-server`**: HTTP server for BitNet inference with health monitoring
 
 #### Compatibility Layer
@@ -93,6 +106,39 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 2. **Zero-Copy Operations**: Memory-mapped models, careful lifetime management
 3. **SIMD Abstraction**: Unified interface over platform-specific instructions
 4. **Cross-Validation**: Systematic comparison with C++ for correctness
+5. **Enhanced Validation Framework**: Comprehensive GPU/CPU validation with performance metrics and error tolerance
+
+### Enhanced Quality Assurance Framework
+
+BitNet.rs includes a comprehensive quality assurance system designed for production reliability:
+
+#### Kernel Validation System
+- **GPU/CPU Parity Testing**: Systematic validation between GPU and CPU implementations
+- **Performance Benchmarking**: Built-in performance measurement with speedup calculations
+- **Numerical Accuracy Testing**: Configurable tolerance testing for quantization operations
+- **Memory Leak Detection**: Automatic GPU memory monitoring and leak prevention
+- **Error Handling Validation**: Comprehensive error path testing with recovery verification
+
+#### Model Compatibility Validation System
+- **Weight Mapper Integration**: GGUF tensor validation using weight mapper for compatibility checks
+- **Unmapped Tensor Detection**: Detailed reporting of unmapped tensors with debugging metrics
+- **Fixture-Based Testing**: Comprehensive test coverage for both success and corruption scenarios
+- **Enhanced Error Reporting**: ValidationResult metrics include `unmapped_count` and `unmapped_tensors`
+- **GGUF Parsing Integration**: Direct model file analysis for compatibility validation
+
+#### Universal Tokenizer Architecture
+- **Auto-Detection**: Automatic backend selection based on GGUF model metadata
+- **GGUF Integration**: Direct extraction of tokenizer configuration from model files
+- **Fallback Strategy**: Graceful degradation to mock tokenizer for unsupported formats
+- **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external dependencies
+- **Cross-Format Support**: BPE, SentencePiece, and custom tokenizer formats
+
+#### Code Quality Enforcement
+- **Comprehensive Clippy Integration**: Zero-tolerance policy for clippy warnings
+- **Type Safety Improvements**: Enhanced type annotations and error handling
+- **Documentation Standards**: Comprehensive inline documentation with examples
+- **Test Coverage**: Extensive test suites with property-based testing
+- **Performance Regression Testing**: Automated performance monitoring and validation
 
 ## Important Considerations
 
@@ -118,6 +164,37 @@ BitNet-rs supports multiple quantization formats with device-aware acceleration:
 
 All quantizers support device-aware operations with automatic GPU acceleration and transparent CPU fallback.
 
+### Universal Tokenizer Architecture
+
+BitNet.rs includes a comprehensive tokenizer system with GGUF integration:
+
+- **UniversalTokenizer**: Auto-detecting tokenizer that handles multiple formats
+  - **GGUF Integration**: Extracts tokenizer configuration directly from GGUF model files
+  - **Automatic Backend Selection**: Chooses appropriate tokenizer backend based on model type
+  - **Mock Tokenizer Fallback**: Provides testing-compatible tokenizer for unsupported formats
+  - **Configuration-Driven**: Supports pre-tokenization, special tokens, and BPE merges
+
+#### Supported Tokenizer Formats
+- **GPT-2/BPE**: Modern BPE tokenization with merge rules (via HuggingFace tokenizers)
+- **SentencePiece**: Subword tokenization via SentencePiece library (feature-gated)
+- **LLaMA/LLaMA3**: LLaMA-specific tokenization variants
+- **TikToken**: OpenAI's tiktoken format
+- **Mock Backend**: Minimal tokenizer for testing and compatibility
+
+#### BPE Backend Features (New in this release)
+- **Runtime Construction**: Build tokenizers from vocabulary and merge rules without JSON files
+- **GGUF Metadata Integration**: Automatically extract BPE data from model files
+- **Byte-Level Processing**: GPT-2 compatible pre-tokenization and decoding
+- **Fallback Support**: Graceful degradation to mock tokenizer when data incomplete
+
+#### GGUF Tokenizer Metadata Extraction
+The universal tokenizer automatically parses GGUF metadata:
+- Vocabulary extraction from `tokenizer.ggml.tokens`
+- Special token IDs (BOS, EOS, PAD, UNK) from metadata
+- BPE merge rules from `tokenizer.ggml.merges`
+- Configuration flags (add_bos, add_eos, add_space_prefix, byte_fallback)
+- Score arrays for token prioritization
+
 ### Compatibility Guarantees
 We maintain strict compatibility with llama.cpp:
 - C API functions have exact signature matches
@@ -131,13 +208,25 @@ We maintain strict compatibility with llama.cpp:
 
 1. **FFI Linker Errors**: Either disable FFI (`--no-default-features --features cpu`) or build C++ (`cargo xtask fetch-cpp`)
 
-2. **CUDA Compilation**: Ensure CUDA toolkit is installed and `nvcc` is in PATH
+2. **Compiler Compatibility**: The FFI components support both GCC and Clang. Set `CC` and `CXX` environment variables to specify compiler:
+   - GCC: `export CC=gcc CXX=g++`
+   - Clang: `export CC=clang CXX=clang++`
+   - CI tests both compilers automatically via matrix builds
 
-3. **CUDA Device Query Failures**: See [GPU Development Guide](docs/gpu-development.md#advanced-gpucuda-troubleshooting) for comprehensive troubleshooting
+3. **CUDA Compilation**: Ensure CUDA toolkit is installed and `nvcc` is in PATH
 
-4. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
+4. **CUDA Device Query Failures**: See [GPU Development Guide](docs/gpu-development.md#advanced-gpucuda-troubleshooting) for comprehensive troubleshooting
 
-5. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
+5. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
+
+6. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
+
+## Development Workflow
+
+1. **Making Changes**: Always run tests for affected crates
+2. **Before Committing**: Run `cargo fmt` and `cargo clippy`
+3. **Cross-Validation**: Run `cargo xtask crossval` for inference changes
+4. **Compatibility**: Check COMPATIBILITY.md before changing public APIs
 
 ## Key Files
 
@@ -155,7 +244,6 @@ For detailed information on specific topics, see:
 - **[GGUF Inspection Guide](docs/gguf-inspection.md)**: Metadata inspection, categorization, and JSON serialization
 - **[Streaming API Guide](docs/streaming-api.md)**: Real-time token streaming with Server-Sent Events
 - **[Concurrency Caps Guide](docs/concurrency-caps.md)**: Resource management and concurrency control
-
 ## Environment Variables
 
 ### Runtime Variables
@@ -172,21 +260,12 @@ For detailed information on specific topics, see:
 - `VERGEN_GIT_DESCRIBE`: Override Git describe output
 - `VERGEN_IDEMPOTENT`: Set to "1" for reproducible builds
 
-## Development Workflow
-
-### Standard Development Process
-1. **Making Changes**: Always run tests for affected crates
-2. **Before Committing**: Run `cargo fmt` and `cargo clippy`
-3. **Cross-Validation**: Run `cargo xtask crossval` for inference changes
-4. **Compatibility**: Check COMPATIBILITY.md before changing public APIs
-
 ### GPU/CUDA Development
 For GPU development best practices, PR management, and hardware-dependent testing strategies, see the [GPU Development Guide](docs/gpu-development.md).
-
 ## Repository Contracts (for Claude)
 
 ### Safe Operations
-- **Default features are empty** → always pass `--no-default-features --features cpu|cuda`
+- **Default features are empty** → always pass `--no-default-features --features cpu|gpu`
 - **Never mutate large binaries or GGUF in place** → use `bitnet-compat export-fixed` for new files
 - **Prefer `xtask` over ad-hoc scripts** for downloads/crossval/build steps
 - **Print commands before long operations** → use `--dry-run` where available
@@ -220,21 +299,47 @@ cargo run --example inspect_gguf_metadata --no-default-features --features cpu -
 
 # Teacher-forcing evaluation with perplexity calculation
 cargo run -p bitnet-cli -- score --model model.gguf --file test.txt
-cargo run -p bitnet-cli -- score --model model.gguf --file validation.txt --device cuda --batch-size 8 --json-out results.json
+cargo run -p bitnet-cli -- score --model model.gguf --file validation.txt --device gpu --batch-size 8 --json-out results.json
 
 # Model evaluation with external tokenizer and token limits
 cargo run -p bitnet-cli -- score --model model.gguf --file large-dataset.txt --tokenizer tokenizer.json --max-tokens 1000
+
+# Test universal tokenizer with BPE backend (new feature)
+cargo test -p bitnet-tokenizers --no-default-features
+
+# Test BPE tokenizer round-trip functionality (includes new BPE tests)
+cargo test -p bitnet-tokenizers --test universal_roundtrip --no-default-features --features integration-tests
+
+# Enhanced GPU validation with performance metrics and error handling
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
+
+# GPU kernel validation with numerical accuracy testing
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy
+
+# GPU memory leak detection and performance benchmarking
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+
+# Test universal tokenizer with automatic GGUF integration
+cargo test -p bitnet-tokenizers --no-default-features test_universal_tokenizer_gguf_integration
+
+# Model compatibility validation with weight mapper
+cargo test -p crossval --no-default-features test_validate_model_compatibility
+cargo test -p crossval --no-default-features test_validate_model_compatibility_reports_unmapped
 
 # Full cross-validation (deterministic)
 export BITNET_GGUF="$PWD/models/bitnet/ggml-model-i2_s.gguf"
 export BITNET_DETERMINISTIC=1 BITNET_SEED=42
 cargo run -p xtask -- full-crossval
 
+# Check model compatibility (read-only)
+cargo run -p bitnet-cli -- compat-check "$BITNET_GGUF"
+
 # Export fixed GGUF safely (non-destructive)
 cargo run -p bitnet-cli -- compat-fix "$BITNET_GGUF" fixed.gguf
 cat fixed.gguf.compat.json   # audit stamp
 
-# FFI smoke test (build + run)
+# FFI smoke test (build + run) - supports both GCC and Clang
+export CC=gcc CXX=g++  # or CC=clang CXX=clang++
 cargo build -p bitnet-ffi --release --no-default-features --features cpu
 export LD_LIBRARY_PATH=target/release  # or DYLD_LIBRARY_PATH on macOS
 ./scripts/ffi_smoke.sh
@@ -243,3 +348,117 @@ export LD_LIBRARY_PATH=target/release  # or DYLD_LIBRARY_PATH on macOS
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 ```
+
+## Test Suite
+
+### Running Tests
+
+```bash
+# Run all tests with CPU features
+cargo test --workspace --no-default-features --features cpu
+
+# Run all tests with GPU features
+cargo test --workspace --no-default-features --features gpu
+
+# Test device-aware quantization for all quantizers (I2S, TL1, TL2)
+cargo test -p bitnet-quantization --no-default-features --features gpu test_dequantize_cpu_and_gpu_paths
+
+# Run specific test suites
+cargo test --package bitnet-tests --no-default-features --features fixtures
+cargo test --package bitnet-tests --features reporting,trend
+
+# Run integration tests
+cargo test --package bitnet-tests --features integration-tests,fixtures
+
+# Run examples
+cargo run --example reporting_example --features reporting
+cargo run --example ci_reporting_example --features reporting,trend
+cargo run --example debugging_example --features fixtures
+
+# Run GGUF format validation tests
+cargo test -p bitnet-inference --test gguf_header                 # Pure parser test
+cargo test -p bitnet-inference --no-default-features --features rt-tokio --test smoke -- --nocapture  # Async smoke test
+
+# Run verification script for all tests
+./scripts/verify-tests.sh
+```
+
+### Test Configuration
+
+The test suite uses a feature-gated configuration system:
+- `fixtures`: Enables fixture management and test data generation
+- `reporting`: Enables test reporting (JSON, HTML, Markdown, JUnit)
+- `trend`: Enables trend analysis and performance tracking
+- `integration-tests`: Enables full integration test suite
+
+### Test Features
+
+- **Parallel Test Execution**: Configurable parallelism with resource limits
+- **Fixture Management**: Automatic test data generation and caching
+- **CI Integration**: JUnit output, exit codes, and CI-specific optimizations
+- **Error Reporting**: Detailed error messages with recovery suggestions
+- **Performance Tracking**: Benchmark results and regression detection
+
+## Validation Framework
+
+### Evaluation Commands
+
+```bash
+# Evaluate perplexity on a corpus (token-weighted NLL)
+target/release/bitnet eval \
+  --model models/bitnet/model.gguf \
+  --tokenizer models/bitnet/tokenizer.json \
+  --text-file crossval/data/ppl_smoke.txt
+
+# Teacher-forcing with explicit token IDs + logit dump
+target/release/bitnet eval \
+  --model models/bitnet/model.gguf \
+  --tokenizer models/bitnet/tokenizer.json \
+  --teacher-force-ids 1,2,3,4,5,6 \
+  --dump-logit-steps 6 --logits-topk 10 \
+  --json-out /tmp/tf_eval.json
+
+# Deterministic greedy generation with logit tapping
+target/release/bitnet run \
+  --model models/bitnet/model.gguf \
+  --tokenizer models/bitnet/tokenizer.json \
+  --prompt "Define entropy." \
+  --max-new-tokens 32 --greedy \
+  --deterministic --threads 1 \
+  --dump-logit-steps 8 --logits-topk 10 \
+  --json-out /tmp/run.json
+```
+
+### Validation Tests
+
+```bash
+# Tokenizer parity check
+BITNET_BIN=target/release/bitnet \
+MODEL_PATH=models/bitnet/model.gguf \
+TOKENIZER=models/bitnet/tokenizer.json \
+HF_MODEL_ID=1bitLLM/bitnet_b1_58-3B \
+scripts/test-tokenizer-parity.py --smoke
+
+# Logit parity with tau-b correlation
+PROP_EXAMPLES=10 TAU_STEPS=24 LOGIT_TOPK=10 TAU_MIN=0.60 \
+MODEL_PATH=models/bitnet/model.gguf \
+TOKENIZER=models/bitnet/tokenizer.json \
+HF_MODEL_ID=1bitLLM/bitnet_b1_58-3B \
+scripts/logit-parity.sh
+
+# NLL parity (token-weighted)
+DELTA_NLL_MAX=1e-2 \
+MODEL_PATH=models/bitnet/model.gguf \
+TOKENIZER=models/bitnet/tokenizer.json \
+HF_MODEL_ID=1bitLLM/bitnet_b1_58-3B \
+PPL_FILE=crossval/data/ppl_smoke.txt \
+scripts/nll-parity.sh
+```
+
+### Key Validation Features
+
+1. **Token-Weighted NLL**: Proper corpus perplexity using `Σ(token_nlls) / Σ(predicted_tokens)`
+2. **Teacher-Forcing**: Exact decode path with causal masking and position encoding
+3. **Deterministic Top-K**: Stable sorting with tie-breaking by token ID, NaN demotion
+4. **Logit Dumping**: Capture top-k logits at each generation step for analysis
+5. **Tau-b Correlation**: Score-aware rank correlation for quantization robustness

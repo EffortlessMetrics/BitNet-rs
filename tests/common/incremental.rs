@@ -443,6 +443,7 @@ mod tests {
         // With no changes, should not use incremental
         let should_use = tester.should_use_incremental(100).await;
         // This might be false if no changes detected
-        assert!(should_use || !should_use); // Either is valid depending on state
+        // Either value (should_use == true or false) is valid depending on state
+        // No assertion needed since both outcomes are valid
     }
 }

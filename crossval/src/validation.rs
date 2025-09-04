@@ -3,6 +3,7 @@
 //! This module provides validation gates for accuracy, performance, and compatibility.
 
 use anyhow::Result;
+use bitnet_models::{GgufReader, weight_mapper::dry_run_remap_names};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -73,7 +74,6 @@ impl ValidationSuite {
 
     /// Gate 1: Model compatibility check
     pub fn validate_model_compatibility(&self) -> Result<ValidationResult> {
-        // This would integrate with the weight mapper
         let mut result = ValidationResult {
             gate: "model_compatibility".to_string(),
             passed: false,
@@ -81,17 +81,43 @@ impl ValidationSuite {
             message: String::new(),
         };
 
-        // Check if model file exists
+        // Ensure model exists
         if !Path::new(&self.model_path).exists() {
             result.message = format!("Model file not found: {}", self.model_path);
             return Ok(result);
         }
 
-        // TODO: Integrate with actual weight mapper
-        // For now, assume success if file exists
-        result.passed = true;
-        result.message = "All tensors mapped successfully".to_string();
-        result.metrics.insert("unmapped_count".to_string(), serde_json::json!(0));
+        // Load and parse GGUF model
+        let bytes = match std::fs::read(&self.model_path) {
+            Ok(b) => b,
+            Err(e) => {
+                result.message = format!("Failed to read model: {e}");
+                return Ok(result);
+            }
+        };
+
+        let reader = match GgufReader::new(&bytes) {
+            Ok(r) => r,
+            Err(e) => {
+                result.message = format!("Failed to parse model: {e}");
+                return Ok(result);
+            }
+        };
+
+        // Map tensor names and detect unmapped tensors
+        let names = reader.tensor_names().into_iter().map(|s| s.to_string());
+        let unmapped = dry_run_remap_names(names);
+
+        let count = unmapped.len();
+        result.metrics.insert("unmapped_count".to_string(), serde_json::json!(count));
+
+        if count == 0 {
+            result.passed = true;
+            result.message = "All tensors mapped successfully".to_string();
+        } else {
+            result.message = format!("{} unmapped tensors", count);
+            result.metrics.insert("unmapped_tensors".to_string(), serde_json::json!(unmapped));
+        }
 
         Ok(result)
     }
@@ -269,6 +295,12 @@ pub fn generate_report(results: &[ValidationResult]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::NamedTempFile;
+
+    fn fixture_model() -> Option<std::path::PathBuf> {
+        let path = std::path::Path::new("crossval/fixtures/minimal_model.gguf");
+        path.exists().then(|| path.to_path_buf())
+    }
 
     #[test]
     fn test_validation_suite() {
@@ -304,5 +336,50 @@ mod tests {
         let report = generate_report(&results);
         assert!(report.contains("✓ PASS"));
         assert!(report.contains("All validation gates PASSED"));
+    }
+
+    #[test]
+    fn validate_model_compatibility_success() -> Result<()> {
+        let Some(model_path) = fixture_model() else {
+            eprintln!("fixture missing; skipping test");
+            return Ok(());
+        };
+        let suite = ValidationSuite::new(model_path.to_string_lossy());
+        let result = suite.validate_model_compatibility()?;
+        assert!(result.passed);
+        assert_eq!(result.metrics.get("unmapped_count").and_then(|v| v.as_u64()), Some(0));
+        Ok(())
+    }
+
+    #[test]
+    fn validate_model_compatibility_reports_unmapped() -> Result<()> {
+        let Some(model_path) = fixture_model() else {
+            eprintln!("fixture missing; skipping test");
+            return Ok(());
+        };
+
+        // Copy and corrupt one tensor name
+        let bytes = std::fs::read(&model_path)?;
+        let reader = GgufReader::new(&bytes)?;
+        let first_name = match reader.tensor_names().first() {
+            Some(n) => n.as_bytes(),
+            None => return Ok(()),
+        };
+        let mut corrupt_bytes = bytes.clone();
+        if let Some(pos) = corrupt_bytes.windows(first_name.len()).position(|w| w == first_name) {
+            corrupt_bytes[pos] = b'x';
+        } else {
+            eprintln!("could not corrupt tensor name; skipping test");
+            return Ok(());
+        }
+        let tmp = NamedTempFile::new()?;
+        std::fs::write(tmp.path(), &corrupt_bytes)?;
+
+        let suite = ValidationSuite::new(tmp.path().to_string_lossy());
+        let result = suite.validate_model_compatibility()?;
+        assert!(!result.passed);
+        let count = result.metrics.get("unmapped_count").and_then(|v| v.as_u64()).unwrap_or(0);
+        assert!(count > 0);
+        Ok(())
     }
 }
