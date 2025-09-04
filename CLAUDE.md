@@ -88,11 +88,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-quantization`**: 1-bit quantization algorithms
 - **`bitnet-kernels`**: High-performance SIMD/CUDA kernels
 - **`bitnet-inference`**: Inference engine with streaming support
-<<<<<<< HEAD
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration and mock fallback system
-=======
-- **`bitnet-tokenizers`**: Universal tokenizer support
->>>>>>> codex/add-gpu-support-for-tensors
 - **`bitnet-server`**: HTTP server for BitNet inference with health monitoring
 
 #### Compatibility Layer
@@ -198,37 +194,6 @@ The universal tokenizer automatically parses GGUF metadata:
 - BPE merge rules from `tokenizer.ggml.merges`
 - Configuration flags (add_bos, add_eos, add_space_prefix, byte_fallback)
 - Score arrays for token prioritization
-=======
-- `cuda`: NVIDIA GPU support with device-aware quantization and automatic CPU fallback
-- `iq2s-ffi`: IQ2_S quantization via GGML FFI (requires vendored GGML files)
-- `ffi`: C++ FFI bridge (required for cross-validation)
-- `crossval`: Cross-validation against C++ (increases build time)
-
-### Quantization Support
-BitNet-rs supports multiple quantization formats:
-- **I2_S**: Native Rust implementation, always available with `cpu` feature
-- **IQ2_S**: Dual implementation:
-  - Native Rust: Optimized implementation with SIMD support
-  - GGML FFI: Via `iq2s-ffi` feature for llama.cpp compatibility
-  - Backend parity testing ensures both implementations produce identical results
-- **Standard formats**: Q4_0, Q5_0, Q8_0, etc. (planned)
-
-To test IQ2_S implementations:
-```bash
-# Run IQ2_S backend validation
-./scripts/test-iq2s-backend.sh
-
-# Run unit tests
-cargo test --package bitnet-models --no-default-features --features "cpu,iq2s-ffi"
-```
-
-### Testing Strategy
-- **Unit tests**: Each crate has comprehensive tests
-- **Integration tests**: Cross-crate tests in `tests/`
-- **Property-based testing**: Fuzz testing for GGUF parser robustness
-- **Cross-validation**: Automated testing against C++ implementation
-- **CI gates**: Compatibility tests block on every PR
->>>>>>> codex/add-gpu-support-for-tensors
 
 ### Compatibility Guarantees
 We maintain strict compatibility with llama.cpp:
@@ -245,16 +210,11 @@ We maintain strict compatibility with llama.cpp:
 
 2. **CUDA Compilation**: Ensure CUDA toolkit is installed and `nvcc` is in PATH
 
-<<<<<<< HEAD
 3. **CUDA Device Query Failures**: See [GPU Development Guide](docs/gpu-development.md#advanced-gpucuda-troubleshooting) for comprehensive troubleshooting
 
 4. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
 
 5. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
-=======
-3. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
-
-4. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
 
 ## Development Workflow
 
@@ -262,7 +222,6 @@ We maintain strict compatibility with llama.cpp:
 2. **Before Committing**: Run `cargo fmt` and `cargo clippy`
 3. **Cross-Validation**: Run `cargo xtask crossval` for inference changes
 4. **Compatibility**: Check COMPATIBILITY.md before changing public APIs
->>>>>>> codex/add-gpu-support-for-tensors
 
 ## Key Files
 
@@ -271,7 +230,6 @@ We maintain strict compatibility with llama.cpp:
 - `.github/workflows/compatibility.yml`: CI compatibility tests
 - `crossval/`: Cross-validation test suite
 
-<<<<<<< HEAD
 ## Specialized Documentation
 
 For detailed information on specific topics, see:
@@ -281,9 +239,6 @@ For detailed information on specific topics, see:
 - **[GGUF Inspection Guide](docs/gguf-inspection.md)**: Metadata inspection, categorization, and JSON serialization
 - **[Streaming API Guide](docs/streaming-api.md)**: Real-time token streaming with Server-Sent Events
 - **[Concurrency Caps Guide](docs/concurrency-caps.md)**: Resource management and concurrency control
-
-=======
->>>>>>> codex/add-gpu-support-for-tensors
 ## Environment Variables
 
 ### Runtime Variables
@@ -300,24 +255,12 @@ For detailed information on specific topics, see:
 - `VERGEN_GIT_DESCRIBE`: Override Git describe output
 - `VERGEN_IDEMPOTENT`: Set to "1" for reproducible builds
 
-<<<<<<< HEAD
-## Development Workflow
-
-### Standard Development Process
-1. **Making Changes**: Always run tests for affected crates
-2. **Before Committing**: Run `cargo fmt` and `cargo clippy`
-3. **Cross-Validation**: Run `cargo xtask crossval` for inference changes
-4. **Compatibility**: Check COMPATIBILITY.md before changing public APIs
-
 ### GPU/CUDA Development
 For GPU development best practices, PR management, and hardware-dependent testing strategies, see the [GPU Development Guide](docs/gpu-development.md).
-
-=======
->>>>>>> codex/add-gpu-support-for-tensors
 ## Repository Contracts (for Claude)
 
 ### Safe Operations
-- **Default features are empty** → always pass `--no-default-features --features cpu|cuda`
+- **Default features are empty** → always pass `--no-default-features --features cpu|gpu`
 - **Never mutate large binaries or GGUF in place** → use `bitnet-compat export-fixed` for new files
 - **Prefer `xtask` over ad-hoc scripts** for downloads/crossval/build steps
 - **Print commands before long operations** → use `--dry-run` where available
@@ -336,17 +279,13 @@ For GPU development best practices, PR management, and hardware-dependent testin
 # Quick compile & test (CPU, MSRV-accurate)
 rustup run 1.89.0 cargo test --workspace --no-default-features --features cpu
 
-<<<<<<< HEAD
 # Quick compile & test with concurrency caps
 scripts/preflight.sh && cargo t2
 
-=======
->>>>>>> codex/add-gpu-support-for-tensors
 # Validate GGUF file
 cargo run -p bitnet-cli -- compat-check model.gguf
 cargo run -p bitnet-cli -- compat-check model.gguf --json  # JSON output
 
-<<<<<<< HEAD
 # Inspect model metadata (human-readable with categorization)
 cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- model.gguf
 
@@ -355,7 +294,7 @@ cargo run --example inspect_gguf_metadata --no-default-features --features cpu -
 
 # Teacher-forcing evaluation with perplexity calculation
 cargo run -p bitnet-cli -- score --model model.gguf --file test.txt
-cargo run -p bitnet-cli -- score --model model.gguf --file validation.txt --device cuda --batch-size 8 --json-out results.json
+cargo run -p bitnet-cli -- score --model model.gguf --file validation.txt --device gpu --batch-size 8 --json-out results.json
 
 # Model evaluation with external tokenizer and token limits
 cargo run -p bitnet-cli -- score --model model.gguf --file large-dataset.txt --tokenizer tokenizer.json --max-tokens 1000
@@ -381,22 +320,15 @@ cargo test -p bitnet-tokenizers --no-default-features test_universal_tokenizer_g
 # Model compatibility validation with weight mapper
 cargo test -p crossval --no-default-features test_validate_model_compatibility
 cargo test -p crossval --no-default-features test_validate_model_compatibility_reports_unmapped
-=======
-# Inspect model metadata
-cargo run -p bitnet-cli -- inspect --model model.gguf
->>>>>>> codex/add-gpu-support-for-tensors
 
 # Full cross-validation (deterministic)
 export BITNET_GGUF="$PWD/models/bitnet/ggml-model-i2_s.gguf"
 export BITNET_DETERMINISTIC=1 BITNET_SEED=42
 cargo run -p xtask -- full-crossval
 
-<<<<<<< HEAD
-=======
 # Check model compatibility (read-only)
 cargo run -p bitnet-cli -- compat-check "$BITNET_GGUF"
 
->>>>>>> codex/add-gpu-support-for-tensors
 # Export fixed GGUF safely (non-destructive)
 cargo run -p bitnet-cli -- compat-fix "$BITNET_GGUF" fixed.gguf
 cat fixed.gguf.compat.json   # audit stamp
@@ -409,9 +341,6 @@ export LD_LIBRARY_PATH=target/release  # or DYLD_LIBRARY_PATH on macOS
 # Quick lint check
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
-<<<<<<< HEAD
-```
-=======
 ```
 
 ## Test Suite
@@ -423,10 +352,10 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test --workspace --no-default-features --features cpu
 
 # Run all tests with GPU features
-cargo test --workspace --no-default-features --features cuda
+cargo test --workspace --no-default-features --features gpu
 
 # Test device-aware quantization for all quantizers (I2S, TL1, TL2)
-cargo test -p bitnet-quantization --no-default-features --features cuda test_dequantize_cpu_and_gpu_paths
+cargo test -p bitnet-quantization --no-default-features --features gpu test_dequantize_cpu_and_gpu_paths
 
 # Run specific test suites
 cargo test --package bitnet-tests --no-default-features --features fixtures
@@ -527,4 +456,3 @@ scripts/nll-parity.sh
 3. **Deterministic Top-K**: Stable sorting with tie-breaking by token ID, NaN demotion
 4. **Logit Dumping**: Capture top-k logits at each generation step for analysis
 5. **Tau-b Correlation**: Score-aware rank correlation for quantization robustness
->>>>>>> codex/add-gpu-support-for-tensors
