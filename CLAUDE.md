@@ -15,6 +15,9 @@ cargo build --release --no-default-features --features gpu
 # Build with IQ2_S quantization support (requires GGML FFI)
 cargo build --release --no-default-features --features "cpu,iq2s-ffi"
 
+# Build with FFI quantization bridge support (requires C++ library)
+cargo build --release --no-default-features --features "cpu,ffi"
+
 # Run tests (fast, Rust-only)
 cargo test --workspace --no-default-features --features cpu
 
@@ -34,6 +37,9 @@ cargo bench --workspace --no-default-features --features cpu
 
 # Cross-validation testing (requires C++ dependencies)
 cargo test --workspace --features "cpu,ffi,crossval"
+
+# FFI quantization bridge tests (compares FFI vs Rust implementations)
+cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
 ```
 
 ### Code Quality Commands
@@ -86,7 +92,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-common`**: Shared types, traits, and utilities
 - **`bitnet-models`**: Model loading and format handling (GGUF, SafeTensors)
 - **`bitnet-quantization`**: 1-bit quantization algorithms
-- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels
+- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with FFI bridge for gradual C++ migration
 - **`bitnet-inference`**: Inference engine with streaming support
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration and mock fallback system
 - **`bitnet-server`**: HTTP server for BitNet inference with health monitoring
@@ -107,6 +113,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 3. **SIMD Abstraction**: Unified interface over platform-specific instructions
 4. **Cross-Validation**: Systematic comparison with C++ for correctness
 5. **Enhanced Validation Framework**: Comprehensive GPU/CPU validation with performance metrics and error tolerance
+6. **FFI Bridge Architecture**: Safe C++ kernel integration for gradual migration with comprehensive testing and error handling
 
 ### Enhanced Quality Assurance Framework
 
@@ -133,6 +140,14 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 - **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external dependencies
 - **Cross-Format Support**: BPE, SentencePiece, and custom tokenizer formats
 
+#### FFI Bridge System (New in PR #137)
+- **Gradual Migration Support**: Safe C++ kernel integration enabling gradual transition to pure Rust
+- **Quantization Bridge**: Complete FFI quantization support for I2S, TL1, and TL2 types
+- **Performance Comparison Framework**: Built-in tools for comparing FFI vs Rust implementations
+- **Error Handling Integration**: Enhanced C++ error propagation with `get_last_error()` bridge
+- **Feature-Gated Safety**: Proper conditional compilation and graceful fallback when FFI unavailable
+- **Migration Decision Support**: Automated recommendations based on performance and accuracy metrics
+
 #### Code Quality Enforcement
 - **Comprehensive Clippy Integration**: Zero-tolerance policy for clippy warnings
 - **Type Safety Improvements**: Enhanced type annotations and error handling
@@ -151,7 +166,7 @@ Default features are **empty** to prevent unwanted dependencies:
 - `gpu`: NVIDIA GPU support with advanced device-aware quantization and automatic fallback
 - `cuda`: Backward-compatible alias for `gpu` feature
 - `iq2s-ffi`: IQ2_S quantization via GGML FFI (requires vendored GGML files)
-- `ffi`: C++ FFI bridge (required for cross-validation) with enhanced safety documentation
+- `ffi`: C++ FFI bridge with quantization support for gradual migration (includes FfiKernel with I2S/TL1/TL2 quantization)
 - `crossval`: Cross-validation against C++ (increases build time)
 
 ### Quantization Support
@@ -174,6 +189,17 @@ All quantizers support device-aware operations with:
 - **Transparent CPU fallback**: Graceful degradation with maintained accuracy
 - **Memory optimization**: GPU memory leak detection and efficient allocation
 - **Feature gating**: Proper `#[cfg(feature = "gpu")]` guards for CPU-only builds
+- **FFI Bridge Support**: C++ kernel integration for I2S, TL1, and TL2 quantization (requires `--features ffi`)
+
+### FFI Quantization Bridge (New)
+
+The FFI bridge enables gradual migration from C++ to Rust while maintaining functionality:
+
+- **Quantization Types**: Full support for I2S, TL1, and TL2 via C++ kernels
+- **Performance Comparison**: Built-in tools to compare FFI vs Rust quantization
+- **Migration Path**: Systematic approach to replace C++ kernels with native Rust
+- **Safety**: Safe Rust wrappers with proper error handling and memory management
+- **Testing**: Comprehensive test suite ensuring FFI/Rust quantization parity
 
 ### Universal Tokenizer Architecture
 
@@ -231,6 +257,12 @@ We maintain strict compatibility with llama.cpp:
 5. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
 
 6. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
+
+7. **FFI Quantization Issues**: 
+   - Ensure C++ library is built: `cargo xtask fetch-cpp`
+   - Test FFI availability: `cargo test -p bitnet-kernels --features ffi test_ffi_kernel_creation`
+   - Compare FFI vs Rust: `cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust`
+   - Check C++ errors: Look for detailed error messages from `get_last_error()` bridge
 
 ## Development Workflow
 
@@ -342,6 +374,15 @@ cargo test -p bitnet-tokenizers --no-default-features test_universal_tokenizer_g
 # Model compatibility validation with weight mapper
 cargo test -p crossval --no-default-features test_validate_model_compatibility
 cargo test -p crossval --no-default-features test_validate_model_compatibility_reports_unmapped
+
+# FFI quantization bridge validation (compares FFI vs Rust implementations)
+cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
+
+# FFI kernel creation and availability testing
+cargo test -p bitnet-kernels --features ffi test_ffi_kernel_creation
+
+# FFI performance comparison (if C++ library available)
+cargo test -p bitnet-kernels --features ffi --release test_performance_comparison_structure
 
 # Full cross-validation (deterministic)
 export BITNET_GGUF="$PWD/models/bitnet/ggml-model-i2_s.gguf"
