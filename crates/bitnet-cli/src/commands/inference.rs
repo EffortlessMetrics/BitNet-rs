@@ -181,7 +181,7 @@ pub struct InferenceResult {
 }
 
 /// Logit information for a single decode step
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogitStep {
     pub step: usize,
     /// Top-k tokens with their logits: [(token_id, logit)]

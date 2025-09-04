@@ -314,8 +314,8 @@ mod streaming_tests {
         while let Ok(Some(result)) = timeout(Duration::from_secs(5), stream.next()).await {
             match result {
                 Ok(text_chunk) => {
-                    assert!(!text_chunk.is_empty());
-                    total_text.push_str(&text_chunk);
+                    assert!(!text_chunk.text.is_empty());
+                    total_text.push_str(&text_chunk.text);
                     token_count += 1;
                 }
                 Err(e) => {

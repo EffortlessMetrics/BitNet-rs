@@ -357,7 +357,7 @@ mod sampling_unit_tests {
 
         // Token should be one of the top 3 (indices 7, 8, 9)
         let token_id = token.unwrap();
-        assert!(token_id >= 7 && token_id <= 9);
+        assert!((7..=9).contains(&token_id));
     }
 
     #[test]
@@ -543,7 +543,7 @@ mod cache_unit_tests {
 
         // Usage should be within bounds
         let usage = cache.usage_percent();
-        assert!(usage >= 0.0 && usage <= 100.0);
+        assert!((0.0..=100.0).contains(&usage));
     }
 }
 
@@ -622,7 +622,7 @@ mod backend_unit_tests {
         // Test GPU availability check
         let is_available = GpuBackend::is_available();
         // This depends on compile-time features, so we just check it doesn't panic
-        assert!(is_available == true || is_available == false);
+        assert!(is_available || !is_available);
     }
 
     #[tokio::test]
@@ -765,9 +765,9 @@ mod error_handling_unit_tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::field_reassign_with_default)]
     fn test_config_validation_errors() {
         let mut config = InferenceConfig::default();
-
         config.max_context_length = 0;
         let error = config.validate().unwrap_err();
         assert!(error.contains("max_context_length"));
@@ -789,6 +789,7 @@ mod error_handling_unit_tests {
     }
 
     #[test]
+    #[allow(clippy::field_reassign_with_default)]
     fn test_generation_config_validation_errors() {
         let mut config = GenerationConfig::default();
 
@@ -829,6 +830,7 @@ mod error_handling_unit_tests {
     }
 
     #[test]
+    #[allow(clippy::field_reassign_with_default)]
     fn test_error_message_quality() {
         let mut config = InferenceConfig::default();
         config.max_context_length = 0;
