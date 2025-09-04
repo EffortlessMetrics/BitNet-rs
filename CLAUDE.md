@@ -208,13 +208,18 @@ We maintain strict compatibility with llama.cpp:
 
 1. **FFI Linker Errors**: Either disable FFI (`--no-default-features --features cpu`) or build C++ (`cargo xtask fetch-cpp`)
 
-2. **CUDA Compilation**: Ensure CUDA toolkit is installed and `nvcc` is in PATH
+2. **Compiler Compatibility**: The FFI components support both GCC and Clang. Set `CC` and `CXX` environment variables to specify compiler:
+   - GCC: `export CC=gcc CXX=g++`
+   - Clang: `export CC=clang CXX=clang++`
+   - CI tests both compilers automatically via matrix builds
 
-3. **CUDA Device Query Failures**: See [GPU Development Guide](docs/gpu-development.md#advanced-gpucuda-troubleshooting) for comprehensive troubleshooting
+3. **CUDA Compilation**: Ensure CUDA toolkit is installed and `nvcc` is in PATH
 
-4. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
+4. **CUDA Device Query Failures**: See [GPU Development Guide](docs/gpu-development.md#advanced-gpucuda-troubleshooting) for comprehensive troubleshooting
 
-5. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
+5. **Cross-Validation Path**: Set `BITNET_GGUF` environment variable to model path
+
+6. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
 
 ## Development Workflow
 
@@ -333,7 +338,8 @@ cargo run -p bitnet-cli -- compat-check "$BITNET_GGUF"
 cargo run -p bitnet-cli -- compat-fix "$BITNET_GGUF" fixed.gguf
 cat fixed.gguf.compat.json   # audit stamp
 
-# FFI smoke test (build + run)
+# FFI smoke test (build + run) - supports both GCC and Clang
+export CC=gcc CXX=g++  # or CC=clang CXX=clang++
 cargo build -p bitnet-ffi --release --no-default-features --features cpu
 export LD_LIBRARY_PATH=target/release  # or DYLD_LIBRARY_PATH on macOS
 ./scripts/ffi_smoke.sh
