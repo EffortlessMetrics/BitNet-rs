@@ -8,11 +8,7 @@ use candle_core::Device;
 fn prepare_devices() -> Option<Device> {
     #[cfg(feature = "cuda")]
     {
-        if candle_core::utils::cuda_is_available() {
-            return Device::new_cuda(0).ok();
-        } else {
-            return None;
-        }
+        if candle_core::utils::cuda_is_available() { Device::new_cuda(0).ok() } else { None }
     }
     #[cfg(not(feature = "cuda"))]
     {

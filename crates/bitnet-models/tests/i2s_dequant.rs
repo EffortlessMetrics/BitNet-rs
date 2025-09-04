@@ -19,8 +19,8 @@ fn pack_2bit(vals: &[u8]) -> [u8; 64] {
 fn i2s_single_block() {
     // Pattern: 0,1,2,3 repeating -> qi={-2,-1,0,1} with scale=0.5
     let mut qvals = [0u8; 256];
-    for i in 0..256 {
-        qvals[i] = (i % 4) as u8;
+    for (i, item) in qvals.iter_mut().enumerate() {
+        *item = (i % 4) as u8;
     }
     let qbits = pack_2bit(&qvals);
     let scale = f16::from_f32(0.5).to_bits().to_le_bytes();
@@ -123,13 +123,13 @@ fn i2s_partial_block() {
     assert_eq!(out.len(), 300);
 
     // First 256 should be zeros
-    for i in 0..256 {
-        assert_eq!(out[i], 0.0, "Element {i} should be 0");
+    for (i, item) in out.iter().enumerate().take(256) {
+        assert_eq!(*item, 0.0, "Element {i} should be 0");
     }
 
     // Next 44 should be scale2 * 1 = 3.0
-    for i in 256..300 {
-        assert!((out[i] - 3.0).abs() < 1e-5, "Element {i} should be 3.0");
+    for (i, item) in out.iter().enumerate().take(300).skip(256) {
+        assert!((*item - 3.0).abs() < 1e-5, "Element {i} should be 3.0");
     }
 }
 

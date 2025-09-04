@@ -106,7 +106,7 @@ mod cuda_tests {
     fn test_memory_management() {
         // Test multiple kernel creations don't leak memory
         for i in 0..20 {
-            let mut kernel = CudaKernel::new().expect("Should be able to create CUDA kernel");
+            let kernel = CudaKernel::new().expect("Should be able to create CUDA kernel");
 
             // Test with various matrix sizes
             let sizes = [(16, 16, 16), (64, 64, 64), (128, 128, 128)];
@@ -128,7 +128,7 @@ mod cuda_tests {
     }
 
     fn test_error_handling() {
-        let mut kernel = CudaKernel::new().expect("Should be able to create CUDA kernel");
+        let kernel = CudaKernel::new().expect("Should be able to create CUDA kernel");
 
         // Test invalid matrix dimensions
         let a = vec![1i8; 16];
@@ -186,7 +186,7 @@ mod cuda_tests {
 
         println!("🔢 Testing large matrix performance");
 
-        let mut kernel = CudaKernel::new().expect("Should be able to create CUDA kernel");
+        let kernel = CudaKernel::new().expect("Should be able to create CUDA kernel");
 
         // Test progressively larger matrices
         let sizes = [(512, 512, 512), (1024, 1024, 1024), (2048, 1024, 512)];
@@ -228,7 +228,6 @@ mod cuda_tests {
 
         println!("🔄 Testing concurrent kernel usage");
 
-        use std::sync::Arc;
         use std::thread;
 
         // Note: CUDA contexts are not thread-safe by default
@@ -237,7 +236,7 @@ mod cuda_tests {
         let handles: Vec<_> = (0..4)
             .map(|i| {
                 thread::spawn(move || match CudaKernel::new() {
-                    Ok(mut kernel) => {
+                    Ok(kernel) => {
                         let a = vec![1i8; 64];
                         let b = vec![1u8; 64];
                         let mut c = vec![0.0f32; 64];
