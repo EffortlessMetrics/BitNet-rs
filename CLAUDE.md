@@ -117,7 +117,7 @@ Minimum Supported Rust Version: **1.89.0** (uses Rust 2024 edition)
 ### Feature Flags
 Default features are **empty** to prevent unwanted dependencies:
 - `cpu`: CPU inference with SIMD optimizations, includes native I2_S support
-- `cuda`: NVIDIA GPU support
+- `cuda`: NVIDIA GPU support with device-aware quantization and automatic CPU fallback
 - `iq2s-ffi`: IQ2_S quantization via GGML FFI (requires vendored GGML files)
 - `ffi`: C++ FFI bridge (required for cross-validation)
 - `crossval`: Cross-validation against C++ (increases build time)
@@ -254,6 +254,12 @@ cargo clippy --all-targets --all-features -- -D warnings
 ```bash
 # Run all tests with CPU features
 cargo test --workspace --no-default-features --features cpu
+
+# Run all tests with GPU features
+cargo test --workspace --no-default-features --features cuda
+
+# Test device-aware quantization for all quantizers (I2S, TL1, TL2)
+cargo test -p bitnet-quantization --no-default-features --features cuda test_dequantize_cpu_and_gpu_paths
 
 # Run specific test suites
 cargo test --package bitnet-tests --no-default-features --features fixtures

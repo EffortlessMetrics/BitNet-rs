@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Device-Aware GPU Quantization Support**:
+  - Enhanced I2S, TL1, and TL2 quantizers with automatic GPU acceleration
+  - Device-aware dequantization with intelligent CPU fallback
+  - GPU memory optimization and mixed precision support
+  - Comprehensive GPU vs CPU validation tests with configurable tolerance
+- **Enhanced CUDA Kernel Infrastructure**:
+  - Improved CUDA kernel provider with better error handling
+  - Memory management optimization with automatic leak detection
+  - Performance monitoring with built-in kernel execution timing
+  - Device information extraction and capability detection
+
 ### Fixed
+- **Code Quality and Security Improvements**:
+  - Fixed critical PyO3 security vulnerability (RUSTSEC-2025-0020)
+  - Resolved 45+ clippy warnings across workspace for better code quality
+  - Updated dependencies (atty→is-terminal, removed wee_alloc)
+  - Enhanced type safety and error handling documentation
 - **bitnet-server Build Issues**:
   - Restored Git metadata support using vergen-gix v1.x
   - Moved runtime dependencies from build-dependencies to correct section

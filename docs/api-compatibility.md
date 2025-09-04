@@ -108,7 +108,7 @@ result = model.generate("Hello world", max_tokens=100)
 | **SafeTensors** | ✅ | ❌ | ❌ | BitNet.rs exclusive |
 | **Streaming Generation** | ✅ | ❌ | ❌ | BitNet.rs exclusive |
 | **Batch Processing** | ✅ | ❌ | ❌ | BitNet.rs exclusive |
-| **GPU Acceleration** | ✅ | ✅ | ❌ | Improved in BitNet.rs |
+| **GPU Acceleration** | ✅ Device-aware | ✅ Basic CUDA | ❌ | Automatic GPU/CPU selection |
 | **Quantization (I2S)** | ✅ | ✅ | ❌ | Enhanced algorithms |
 | **Quantization (TL1/TL2)** | ✅ | ❌ | ❌ | BitNet.rs exclusive |
 | **Cross-platform** | ✅ | ⚠️ | ❌ | Better Windows support |
@@ -203,6 +203,24 @@ public:
 | **BitNet-3B** | 4.2 GB | 2.8 GB | 33% less |
 | **BitNet-7B** | 8.5 GB | 5.7 GB | 33% less |
 | **BitNet-13B** | 15.2 GB | 10.1 GB | 34% less |
+
+### GPU Acceleration Improvements
+
+BitNet.rs features advanced device-aware GPU acceleration:
+
+| Feature | Legacy C++ | BitNet.rs | Enhancement |
+|---------|------------|-----------|-------------|
+| **Device Selection** | Manual CUDA setup | Automatic device detection | Seamless acceleration |
+| **CPU Fallback** | Manual implementation | Intelligent automatic fallback | Robust operation |
+| **Mixed Precision** | Basic support | Advanced FP16/BF16 optimization | Better performance |
+| **Memory Management** | Manual allocation | Automatic leak detection | More reliable |
+| **Performance Monitoring** | None | Built-in kernel timing | Better optimization |
+
+**Device-Aware Quantization:**
+- All quantizers (I2S, TL1, TL2) support automatic GPU acceleration
+- Transparent fallback to CPU for unsupported operations  
+- Memory-efficient GPU memory allocation with automatic cleanup
+- Performance metrics and optimization hints
 
 ### Build and Deployment Improvements
 

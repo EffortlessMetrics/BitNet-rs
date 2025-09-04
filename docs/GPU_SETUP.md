@@ -42,12 +42,23 @@ The following aliases are available for quick testing:
 
 ## GPU Backend Support
 
-BitNet-rs supports multiple GPU backends:
+BitNet-rs supports multiple GPU backends with device-aware quantization:
 
 - **CUDA** - NVIDIA GPUs (requires CUDA toolkit)
+  - Device-aware dequantization with automatic GPU acceleration
+  - Intelligent CPU fallback for unsupported operations
+  - Memory optimization and mixed precision support
 - **Metal** - Apple Silicon (built-in on macOS)
 - **ROCm** - AMD GPUs (requires ROCm installation)
 - **WebGPU** - Platform-dependent fallback (not guaranteed)
+
+### Device-Aware Quantization Features
+
+The GPU backend includes intelligent device-aware operations:
+- **Automatic Acceleration**: GPU operations with transparent CPU fallback
+- **Memory Management**: Efficient GPU memory allocation and cleanup
+- **Mixed Precision**: Support for FP16/BF16 operations where available
+- **Performance Monitoring**: Built-in kernel execution timing and optimization
 
 ## WSL2 CUDA Setup
 
@@ -241,12 +252,30 @@ Test sizes:
 - `small` - 64x64 matrices
 - `medium` - 256x256 matrices
 
+### Device-Aware Quantization Testing
+
+Test device-aware dequantization with automatic GPU/CPU selection:
+
+```bash
+# Test device-aware quantization for all quantizers (I2S, TL1, TL2)
+cargo test -p bitnet-quantization --no-default-features --features cuda test_dequantize_cpu_and_gpu_paths
+
+# Test GPU kernel validation with performance metrics
+cargo test -p bitnet-kernels --no-default-features --features cuda test_cuda_validation_comprehensive
+
+# Test GPU vs CPU quantization accuracy
+cargo test -p bitnet-kernels --no-default-features --features cuda test_gpu_vs_cpu_quantization_accuracy
+```
+
 ### Parity Testing
 
 Compares GPU and CPU results to ensure correctness:
 
 ```bash
 cargo test --package bitnet-kernels --test gpu_smoke --features cuda
+
+# Test comprehensive GPU memory management
+cargo test -p bitnet-kernels --no-default-features --features cuda test_gpu_memory_management
 ```
 
 ## CI/CD Integration
