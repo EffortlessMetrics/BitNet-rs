@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Device-Aware GPU Quantization Support**:
+  - Enhanced I2S, TL1, and TL2 quantizers with automatic GPU acceleration
+  - Device-aware dequantization with intelligent CPU fallback
+  - GPU memory optimization and mixed precision support
+  - Comprehensive GPU vs CPU validation tests with configurable tolerance
+- **Enhanced CUDA Kernel Infrastructure**:
+  - Improved CUDA kernel provider with better error handling
+  - Memory management optimization with automatic leak detection
+  - Performance monitoring with built-in kernel execution timing
+  - Device information extraction and capability detection
 - **Teacher-Forcing Scoring and Perplexity Calculation** ([#134](https://github.com/EffortlessSteven/BitNet-rs/pull/134)):
   - New `score` CLI command with real teacher-forcing evaluation using inference engine
   - Device selection support (`--device cpu|cuda|metal|auto`) with automatic fallback
@@ -26,6 +36,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Token-by-token streaming with configurable buffering and error handling
   - Comprehensive test coverage for streaming functionality and token ID accuracy
   - Updated examples and documentation to demonstrate token ID streaming usage
+- **GGUF Validation API**:
+  - Fast 24-byte header-only validation without loading full model
+  - Production-ready parser with typed errors and non-exhaustive enums
+  - `compat-check` CLI command with stable exit codes for CI automation
+  - `--strict` flag for enforcing version and sanity checks
+  - Early validation in engine before heavy memory allocations
+  - JSON output for programmatic validation scripts
+- **GGUF KV Metadata Reader**:
+  - Read and inspect GGUF key-value metadata without full model loading
+  - Support for all GGUF value types (except arrays, deferred)
+  - `--show-kv` flag in CLI to display model metadata
+  - `--kv-limit` flag to control number of displayed KV pairs
+  - JSON output includes metadata when `--show-kv` is used
+  - Safety limits to prevent excessive memory usage
+- **Enhanced GGUF Metadata Inspection with Categorization** (PR #97):
+  - **Comprehensive ModelInfo API**: Added `kv_specs()`, `quantization_hints()`, and `tensor_summaries()` methods
+  - **Advanced Categorization**: Added `get_categorized_metadata()` organizing KV pairs by purpose (model params, architecture, tokenizer, training, quantization)
+  - **Tensor Statistics**: Added `get_tensor_statistics()` with parameter counts, memory estimates, and data type distribution
+  - **JSON Serialization**: Added `to_json()` and `to_json_compact()` methods for automation and scripting
+  - **Enhanced TensorSummary**: Includes tensor categories, parameter counts, and dtype names for comprehensive analysis
+  - **Memory-Efficient Parsing**: Lightweight header-only inspection for CI/CD pipelines
+  - **Error-Resilient Handling**: Robust parsing of malformed GGUF files with detailed error messages
+  - **New Example**: `inspect_gguf_metadata.rs` demonstrating comprehensive metadata extraction with categorized output
+  - **Enhanced CLI Integration**: Updated `bitnet inspect` command documentation with JSON output capabilities
+  - **Validation Framework Integration**: Added GGUF inspection capabilities to validation workflows
+- **Advanced Device-Aware Quantization with GPU Fallback** ([#106](https://github.com/EffortlessSteven/BitNet-rs/pull/106)):
+  - **New `gpu` feature flag** with `cuda` backward-compatible alias for clearer GPU functionality
+  - **DeviceAwareQuantizer** with intelligent automatic GPU detection and CPU fallback
+  - **DeviceAwareQuantizerFactory** for streamlined device selection and auto-detection
+  - **Comprehensive GPU quantization kernels** for I2S, TL1, and TL2 algorithms with optimized CUDA implementations
+  - **Automatic CPU fallback** with graceful degradation and detailed error reporting
+  - **Thread-safe concurrent GPU operations** with proper memory management and cleanup
+  - **Performance monitoring** with device statistics and operation tracking
+  - **Enhanced error handling** with new QuantizationFailed and MatmulFailed error types
+  - **Comprehensive test suite** with 12 specialized test cases for GPU/CPU accuracy comparison, fallback validation, memory management, and concurrent operations
+  - **FFI safety enhancements** with documentation for all 30+ unsafe functions for Rust 2024 compliance
 
 ### Changed
 - **Cargo Configuration Cleanup** ([#113](https://github.com/EffortlessSteven/BitNet-rs/pull/113)):
@@ -34,13 +80,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Standardize GPU feature aliases in cargo config to use `gpu` instead of `cuda`
 
 ### Fixed
-- **Code Quality and Clippy Compliance** (current improvements):
+- **Code Quality and Security Improvements**:
+  - Fixed critical PyO3 security vulnerability (RUSTSEC-2025-0020)
+  - Resolved 45+ clippy warnings across workspace for better code quality
+  - Updated dependencies (atty→is-terminal, removed wee_alloc)
+  - Enhanced type safety and error handling documentation
   - Resolved all clippy warnings across the codebase with proper type improvements
   - Enhanced kernel validation system with improved error handling and performance metrics
   - Fixed FFI bridge test tolerance calculations for accurate migration recommendations
   - Improved universal tokenizer documentation and error handling
   - Enhanced model loading with better GGUF handling and error propagation
   - Standardized code formatting and documentation strings throughout
+- **bitnet-server Build Issues**:
+  - Restored Git metadata support using vergen-gix v1.x
+  - Moved runtime dependencies from build-dependencies to correct section
+  - Made health endpoint robust with option_env! for graceful fallbacks
 - **IQ2_S FFI Layout Enhancement and Parity Testing** ([#142](https://github.com/EffortlessSteven/BitNet-rs/pull/142)):
   - Enhanced `BlockIq2S` struct with perfect GGML `block_iq2_s` layout compatibility (82 bytes)
   - Added compile-time size and alignment assertions for layout parity verification
@@ -62,10 +116,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed clippy warnings in test infrastructure and removed unneeded unit expressions
   - Added proper unsafe blocks for raw pointer operations in C API layer
   - Maintained full API compatibility with existing C clients while improving memory safety
-- **bitnet-server Build Issues**:
-  - Restored Git metadata support using vergen-gix v1.x
-  - Moved runtime dependencies from build-dependencies to correct section
-  - Made health endpoint robust with option_env! for graceful fallbacks
 - **CUDA Device Information Querying** (PR #102):
   - Real device property querying using cudarc's CUdevice_attribute API
   - Comprehensive device information extraction (compute capability, memory, multiprocessor count)
@@ -101,47 +151,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added OCI standard labels for container registries
   - Environment variable overrides for deterministic builds
 
+## [0.3.0] - 2025-01-03
+
 ### Added
-- **Enhanced GGUF Metadata Inspection with Categorization** (PR #97):
-  - **Comprehensive ModelInfo API**: Added `kv_specs()`, `quantization_hints()`, and `tensor_summaries()` methods
-  - **Advanced Categorization**: Added `get_categorized_metadata()` organizing KV pairs by purpose (model params, architecture, tokenizer, training, quantization)
-  - **Tensor Statistics**: Added `get_tensor_statistics()` with parameter counts, memory estimates, and data type distribution
-  - **JSON Serialization**: Added `to_json()` and `to_json_compact()` methods for automation and scripting
-  - **Enhanced TensorSummary**: Includes tensor categories, parameter counts, and dtype names for comprehensive analysis
-  - **Memory-Efficient Parsing**: Lightweight header-only inspection for CI/CD pipelines
-  - **Error-Resilient Handling**: Robust parsing of malformed GGUF files with detailed error messages
-  - **New Example**: `inspect_gguf_metadata.rs` demonstrating comprehensive metadata extraction with categorized output
-  - **Enhanced CLI Integration**: Updated `bitnet inspect` command documentation with JSON output capabilities
-  - **Validation Framework Integration**: Added GGUF inspection capabilities to validation workflows
-- **Advanced Device-Aware Quantization with GPU Fallback** ([#106](https://github.com/EffortlessSteven/BitNet-rs/pull/106)):
-  - **New `gpu` feature flag** with `cuda` backward-compatible alias for clearer GPU functionality
-  - **DeviceAwareQuantizer** with intelligent automatic GPU detection and CPU fallback
-  - **DeviceAwareQuantizerFactory** for streamlined device selection and auto-detection
-  - **Comprehensive GPU quantization kernels** for I2S, TL1, and TL2 algorithms with optimized CUDA implementations
-  - **Automatic CPU fallback** with graceful degradation and detailed error reporting
-  - **Thread-safe concurrent GPU operations** with proper memory management and cleanup
-  - **Performance monitoring** with device statistics and operation tracking
-  - **Enhanced error handling** with new QuantizationFailed and MatmulFailed error types
-  - **Comprehensive test suite** with 12 specialized test cases for GPU/CPU accuracy comparison, fallback validation, memory management, and concurrent operations
-  - **FFI safety enhancements** with documentation for all 30+ unsafe functions for Rust 2024 compliance
-- **HuggingFace Model Loader**:
-  - Parse `config.json` for model metadata
-  - Load sharded SafeTensors weights into `BitNetModel`
-  - Integration test verifying a forward pass
-- **GGUF Validation API**:
-  - Fast 24-byte header-only validation without loading full model
-  - Production-ready parser with typed errors and non-exhaustive enums
-  - `compat-check` CLI command with stable exit codes for CI automation
-  - `--strict` flag for enforcing version and sanity checks
-  - Early validation in engine before heavy memory allocations
-  - JSON output for programmatic validation scripts
-- **GGUF KV Metadata Reader**:
-  - Read and inspect GGUF key-value metadata without full model loading
-  - Support for all GGUF value types (except arrays, deferred)
-  - `--show-kv` flag in CLI to display model metadata
-  - `--kv-limit` flag to control number of displayed KV pairs
-  - JSON output includes metadata when `--show-kv` is used
-  - Safety limits to prevent excessive memory usage
 - **IQ2_S Quantization Support**:
   - Native Rust implementation with optimized dequantization
   - FFI backend via GGML for compatibility
@@ -170,223 +182,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Deterministic tie-breaking (lowest ID)
 - Cross-validation framework for numerical accuracy testing
 - Performance benchmarking suite with automated regression detection
-- Version management system for external C++ dependency
-- Comprehensive migration documentation and guides
-- API compatibility matrix for legacy implementations
-- **`xtask download-model` enhancements**:
-  - `--rev/--ref` flag for reproducible version pinning
-  - `--no-progress` and `--verbose` flags for CI/debugging
-  - `--base-url` flag for mirror repository support
-  - `--json` flag for structured CI/CD output
-  - `--retries` and `--timeout` flags for customization
-  - Conditional full GET when `start==0` (304 optimization)
-  - 429 `Retry-After` handling with HTTP-date support
-  - 412/416 explicit handling with clean restart
-  - Streamed SHA256 verification (avoids re-read)
-  - File preallocation for early ENOSPC detection
-  - Force identity encoding for correct ranges
-  - BufWriter streaming with atomic rename + parent dir fsync
-  - Atomic writes for `.etag` / `.lastmod` metadata files
-  - RAII lock guard for automatic cleanup
-  - Single-writer `.lock` beside `.part` for concurrency protection
-  - Smarter disk space check (remaining bytes with headroom)
-
-### Changed
-- Repository structure now clearly establishes BitNet.rs as primary implementation
-- Documentation rewritten to focus on Rust implementation
-- Legacy C++ implementation moved to external dependency system
-- Build system optimized for Rust-first development
-- Updated to Rust 2024 edition with MSRV 1.89.0
 
 ### Fixed
-- **Test Suite Compilation Issues**:
-  - Fixed missing return value in `fixtures_facade.rs` for disabled features
-  - Added proper feature gating for `fast_config` imports
-  - Corrected `ReportConfig` field names (`include_artifacts`, `interactive_html`)
-  - Fixed feature flag naming from `ci_reporting` to `reporting`
-  - Resolved main function wrapping in `run_configuration_tests.rs`
-  - Updated `FixtureCtx` usage across test harness
-- **IQ2_S Quantization**:
-  - Fixed weight indexing issues in `dequantize_row_iq2s`
-  - Corrected bit manipulation for proper weight extraction
+- Model loading edge cases and error handling improvements
+- Memory management optimizations for large models
+- Cross-platform compatibility improvements
 
-### Improved
-- **`fetch-cpp`**: Now verifies built binary exists after compilation
-- **`full-crossval`**: Better model auto-discovery with helpful errors
-- **`clean-cache`**: Interactive mode with size reporting
-- **`gen-fixtures`**: Generates realistic GGUF-like metadata + weights
+### Changed
+- Improved API ergonomics and error messages
+- Enhanced documentation with more examples
+- Streamlined build process and dependency management
 
-## [0.2.0] - Repository Restructure (Major Milestone)
+## [0.2.0] - 2024-12-15
 
-This release represents a major restructuring of the BitNet repository to establish **BitNet.rs as the primary, production-ready implementation** while maintaining the original C++ implementation as a legacy benchmark target.
+### Added
+- Basic quantization support (I2_S, TL1, TL2)
+- GGUF format compatibility
+- Python bindings with PyO3
+- C API for llama.cpp compatibility
+- Streaming inference capabilities
+- Initial CUDA support
 
-### 🎯 **Primary Implementation Status**
+### Fixed
+- Memory safety improvements
+- Performance optimizations
+- Cross-validation accuracy
 
-BitNet.rs is now officially the **primary, actively maintained implementation** with:
-- **Superior performance**: 2-5x faster inference than legacy C++ implementation
-- **Memory safety**: Guaranteed by Rust's type system - no segfaults or memory leaks
-- **Production readiness**: Comprehensive testing, monitoring, and deployment tools
-- **Active development**: Regular updates, new features, and community support
+## [0.1.0] - 2024-11-01
 
-### 🏗️ **Repository Restructure**
-
-#### Added
-- **External dependency system** for legacy C++ implementation
-  - Automated download and build scripts (`ci/fetch_bitnet_cpp.sh/.ps1`)
-  - Version management with pinning and checksum verification
-  - Patch application system for minimal compatibility fixes
-- **Cross-validation framework** (`crossval/` crate)
-  - Token-level equivalence testing with 1e-6 tolerance
-  - Performance benchmarking with automated regression detection
-  - Feature-gated compilation (only enabled with `--features crossval`)
-- **FFI bindings crate** (`crates/bitnet-sys/`)
-  - Safe Rust wrappers around C++ implementation
-  - Conditional compilation with helpful error messages
-  - Clang detection and bindgen integration
-- **Comprehensive documentation**
-  - Migration guides from C++ to Rust
-  - API compatibility matrices
-  - Cross-validation methodology and usage guides
-  - Troubleshooting guides focused on Rust implementation
-
-#### Changed
-- **Repository focus**: BitNet.rs is now the primary implementation
-- **Documentation**: Rewritten to emphasize Rust advantages and migration paths
-- **Build system**: Optimized for Rust development with optional legacy testing
-- **CI/CD**: Primary focus on Rust builds with optional cross-validation
-- **README**: Updated to clearly establish BitNet.rs as production-ready choice
-
-#### Removed
-- **C++ source code** from main repository (now external dependency)
-- **C++ build dependencies** from root workspace
-- **Mixed documentation** that confused implementation priorities
-
-### 🚀 **Performance Improvements**
-
-| Metric | Legacy C++ | BitNet.rs | Improvement |
-|--------|------------|-----------|-------------|
-| **Inference Speed** | 520 tok/s | 1,250 tok/s | **2.4x faster** |
-| **Memory Usage** | 3.2 GB | 2.1 GB | **34% less** |
-| **Cold Start** | 2.1s | 0.8s | **2.6x faster** |
-| **Binary Size** | 45 MB | 12 MB | **73% smaller** |
-| **Build Time** | 5m 20s | 30s | **10.7x faster** |
-
-### 🛡️ **Safety and Reliability**
-
-- **Memory safety**: Zero segfaults or memory leaks guaranteed by Rust
-- **Thread safety**: Fearless concurrency with compile-time guarantees
-- **Error handling**: Comprehensive error types with detailed messages
-- **Testing**: Extensive test coverage including property-based testing
-
-### 🔄 **Migration Support**
-
-- **Comprehensive migration guides** for C++ and Python users
-- **API compatibility layer** for gradual migration
-- **Cross-validation tools** to ensure identical outputs
-- **Performance comparison** tools to measure improvements
-
-### 🏭 **Production Readiness**
-
-- **Single binary deployment** with no system dependencies
-- **Cross-platform support** with consistent behavior
-- **Monitoring and observability** built-in
-- **Professional support** available for enterprise users
-
-### ⚠️ **Legacy Implementation Status**
-
-The original C++ implementation is now **legacy/compatibility only**:
-- **Not recommended** for new projects
-- **Maintenance mode** - critical bug fixes only
-- **External dependency** - downloaded on-demand for cross-validation
-- **Migration encouraged** - see [Migration Guide](crates/bitnet-py/MIGRATION_GUIDE.md)
-
-### 📚 **Documentation Updates**
-
-- **New focus**: All documentation emphasizes BitNet.rs as primary choice
-- **Migration guides**: Comprehensive guides for moving from legacy implementations
-- **API compatibility**: Detailed compatibility matrices and migration paths
-- **Cross-validation**: Complete documentation for validation methodology
-- **Troubleshooting**: Rust-focused troubleshooting with better error messages
-
-### 🔧 **Developer Experience**
-
-- **Modern tooling**: Cargo package manager and Rust ecosystem integration
-- **Better errors**: Clear, actionable error messages from Rust compiler
-- **Rich ecosystem**: Integration with crates.io and Rust ML libraries
-- **Easy deployment**: Single binary with no complex dependencies
-
-### Breaking Changes
-
-- **Repository structure**: C++ source code moved to external dependency
-- **Build process**: Cross-validation requires explicit `--features crossval`
-- **Documentation**: Legacy implementation documentation moved to `legacy/`
-
-### Migration Guide
-
-**For existing C++ users:**
-1. Read the [Migration Guide](crates/bitnet-py/MIGRATION_GUIDE.md)
-2. Install BitNet.rs: `cargo add bitnet`
-3. Update API calls (minimal changes needed)
-4. Validate with cross-validation: `cargo test --features crossval`
-5. Deploy with confidence - BitNet.rs is production-ready
-
-**For Python users:**
-1. Install Rust-based Python bindings: `pip install bitnet-rs`
-2. Update imports (API remains largely the same)
-3. Enjoy 2-5x performance improvement automatically
-
-### Security
-- **Supply chain security**: External dependencies verified with checksums
-- **Minimal attack surface**: No C++ code in main repository
-- **Automated auditing**: Regular security audits of Rust dependencies
-- **Safe FFI**: Cross-validation FFI is feature-gated and well-isolated
-
-## [0.1.0] - TBD
-
-Initial release of BitNet.rs with full feature parity to the original Python/C++ implementation.
-
-### Highlights
-
-- **Performance**: 2-5x faster inference than Python baseline
-- **Safety**: Memory-safe implementation with minimal unsafe code
-- **Compatibility**: Drop-in replacement for existing BitNet.cpp deployments
-- **Ecosystem**: Full integration with Rust ML ecosystem (Candle, tokenizers, etc.)
-- **Production**: Ready for production deployment with monitoring and observability
-
-### Breaking Changes
-
-- N/A (initial release)
-
-### Migration Guide
-
-For users migrating from the Python/C++ implementation, see [MIGRATION_GUIDE.md](crates/bitnet-py/MIGRATION_GUIDE.md).
-
----
-
-## Release Process
-
-This project follows semantic versioning:
-
-- **MAJOR** version for incompatible API changes
-- **MINOR** version for backwards-compatible functionality additions
-- **PATCH** version for backwards-compatible bug fixes
-
-### Pre-release Versions
-
-- **alpha**: Early development versions with incomplete features
-- **beta**: Feature-complete versions undergoing testing
-- **rc**: Release candidates ready for production testing
-
-### Release Checklist
-
-- [ ] Update version numbers in all Cargo.toml files
-- [ ] Update CHANGELOG.md with release notes
-- [ ] Run full test suite across all platforms
-- [ ] Verify cross-validation against baseline implementations
-- [ ] Run security audit and dependency checks
-- [ ] Update documentation and examples
-- [ ] Create GitHub release with signed binaries
-- [ ] Publish to crates.io
-- [ ] Update Python wheels on PyPI
-- [ ] Update Docker images
-- [ ] Announce release on relevant channels
+### Added
+- Initial release
+- Basic BitNet model loading and inference
+- CPU-only quantization support
+- Core API design and architecture
