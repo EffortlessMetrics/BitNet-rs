@@ -6,18 +6,19 @@
 [![Build Status](https://github.com/microsoft/BitNet/workflows/CI/badge.svg)](https://github.com/microsoft/BitNet/actions)
 [![MSRV](https://img.shields.io/badge/MSRV-1.89.0-blue.svg)](https://github.com/microsoft/BitNet)
 
-**BitNet.rs is the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.** Built from the ground up in Rust, it delivers superior performance, memory safety, and developer experience compared to the original C++ implementation.
+**BitNet.rs is the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.** Built from the ground up in Rust, it delivers memory safety, developer experience advantages, and aims for superior performance compared to the original C++ implementation.
 
 > **✅ Validated Drop-in Replacement**: BitNet.rs is a proven **drop-in replacement** for bitnet.cpp. The Microsoft BitNet 1.2GB model (GGUF v3 early variant) loads successfully in BOTH BitNet.rs and bitnet.cpp's llama-cli, demonstrating full compatibility. Additionally, BitNet.rs handles edge cases that crash certain C++ diagnostic tools (llama-gguf).
 
 ## Why BitNet.rs?
 
-### 🚀 **Superior Performance**
-- **2-5x faster inference** than the original C++ implementation
+### 🚀 **Performance-Focused Design**
+- **Designed for high performance** with advanced optimization strategies
 - **Zero-cost abstractions** with compile-time optimizations
 - **Advanced SIMD kernels** for x86_64 (AVX2/AVX-512) and ARM64 (NEON) with runtime feature detection
 - **AVX-512 acceleration** delivers up to 2x theoretical throughput on compatible Intel hardware
 - **Efficient memory management** with zero-copy operations
+- **Note**: Performance benchmarking framework is under development - see [GOALS_VS_REALITY_ANALYSIS.md](GOALS_VS_REALITY_ANALYSIS.md)
 
 ### 🛡️ **Memory Safety & Reliability**
 - **No segfaults or memory leaks** - guaranteed by Rust's type system
@@ -681,19 +682,21 @@ cargo run -p xtask -- full-crossval
 
 This integration ensures compatibility and allows performance comparisons with the reference implementation.
 
-## Performance Comparison
+## Performance Status
 
-BitNet.rs significantly outperforms the original implementations:
+**Current Status**: BitNet.rs is designed for high performance with advanced optimization strategies, but comprehensive performance validation is under development.
 
-| Metric | BitNet.rs | Original C++ | Improvement |
-|--------|-----------|--------------|-------------|
-| **Inference Speed** | 1,250 tok/s | 520 tok/s | **2.4x faster** |
-| **Memory Usage** | 2.1 GB | 3.2 GB | **34% less** |
-| **Cold Start** | 0.8s | 2.1s | **2.6x faster** |
-| **Binary Size** | 12 MB | 45 MB | **73% smaller** |
-| **Build Time** | 45s | 7min | **9.3x faster** |
+**Design Goals vs. Reality**: As documented in [GOALS_VS_REALITY_ANALYSIS.md](GOALS_VS_REALITY_ANALYSIS.md), the project shows strong engineering quality but lacks verified performance benchmarks against the C++ implementation.
 
-*mock benchmarks. Need to be replaced with real. Build times include cached dependencies.*
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **Performance Design** | ✅ Excellent | Zero-cost abstractions, SIMD, efficient memory |
+| **Benchmark Framework** | 🔄 In Development | Cross-validation infrastructure exists |
+| **Verified Performance Claims** | ❌ Pending | Requires functional benchmarking tools |
+| **Build System** | ✅ Superior | Significantly faster than C++ builds |
+| **Memory Safety** | ✅ Guaranteed | Rust type system prevents common C++ issues |
+
+*See [benchmark_comparison.py](benchmark_comparison.py) for the benchmarking framework under development.*
 
 ### Key Performance Features
 
@@ -1150,6 +1153,8 @@ This project is licensed under the MIT OR Apache-2.0 license. See [LICENSE](LICE
 ## Project Status
 
 **✅ Production Ready**: BitNet.rs is the primary implementation, actively maintained and recommended for production use.
+
+**⚠️ Performance Validation**: While the architecture is designed for high performance, comprehensive benchmarking framework is under development. See [GOALS_VS_REALITY_ANALYSIS.md](GOALS_VS_REALITY_ANALYSIS.md) for current status.
 
 **🔄 Legacy Support**: The original C++ implementation is available through our cross-validation framework for compatibility testing.
 

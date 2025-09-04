@@ -2,7 +2,9 @@
 
 ## Overview
 
-The BitNet.rs validation framework provides comprehensive testing and benchmarking tools to ensure correctness and performance of the 1-bit LLM implementation. It includes tokenizer parity testing, logit correlation analysis, perplexity evaluation, performance benchmarking, and enhanced GGUF metadata inspection capabilities.
+The BitNet.rs validation framework provides comprehensive testing and benchmarking tools to ensure correctness and performance of the 1-bit LLM implementation. It includes tokenizer parity testing, logit correlation analysis, perplexity evaluation, performance benchmarking infrastructure, and enhanced GGUF metadata inspection capabilities.
+
+⚠️ **Performance Benchmarking Status**: As documented in [GOALS_VS_REALITY_ANALYSIS.md](GOALS_VS_REALITY_ANALYSIS.md), the performance benchmarking framework requires development to provide verified performance comparisons against the C++ implementation.
 
 ## Components
 
