@@ -4,14 +4,12 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::KernelProvider;
     use crate::gpu::{
         BenchmarkConfig, CudaKernel, GpuBenchmark, MemoryPoolConfig, MixedPrecisionKernel,
         OptimizedMemoryPool, PrecisionMode, cuda_device_count, is_cuda_available,
     };
     use bitnet_common::QuantizationType;
-    use std::sync::Arc;
     use std::time::Duration;
 
     #[test]
@@ -196,9 +194,9 @@ mod tests {
                 let m = 16;
                 let n = 16;
                 let k = 16;
-                let a: Vec<f32> = (0..m * k).map(|i| (i as f32) / (m * k) as f32).collect();
-                let b: Vec<f32> = (0..k * n).map(|i| (i as f32) / (k * n) as f32).collect();
-                let mut c = vec![0.0f32; m * n];
+                let _a: Vec<f32> = (0..m * k).map(|i| (i as f32) / (m * k) as f32).collect();
+                let _b: Vec<f32> = (0..k * n).map(|i| (i as f32) / (k * n) as f32).collect();
+                let _c = vec![0.0f32; m * n];
 
                 // Mixed precision matmul is not yet implemented, skip for now
                 println!("Mixed precision matmul not yet implemented, skipping actual computation");
@@ -288,7 +286,7 @@ mod tests {
             let a: Vec<i8> =
                 (0..m * k).map(|j| (((i * 1000 + j) % 256) as i16 - 128) as i8).collect();
             let b: Vec<u8> = (0..k * n).map(|j| ((i * 2000 + j) % 4) as u8).collect();
-            let mut c = vec![0.0f32; m * n];
+            let c = vec![0.0f32; m * n];
 
             test_data.push((a, b, c));
         }

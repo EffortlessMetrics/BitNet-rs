@@ -52,6 +52,7 @@ struct AllocationInfo {
     size: usize,
     timestamp: Instant,
     #[cfg(debug_assertions)]
+    #[allow(dead_code)] // Used for debugging leak detection in debug builds
     stack_trace: Vec<String>,
 }
 
@@ -65,6 +66,7 @@ pub enum AccessPattern {
 
 /// Optimized memory pool for GPU allocations (simplified)
 pub struct OptimizedMemoryPool {
+    #[allow(dead_code)] // Used for device-specific optimizations, keeping for future use
     device_id: usize,
     config: MemoryPoolConfig,
     free_buffers: HashMap<usize, Vec<Vec<u8>>>, // Simplified buffer storage
@@ -133,11 +135,10 @@ impl OptimizedMemoryPool {
 
     /// Try to reuse an existing buffer
     fn try_reuse_buffer(&mut self, size: usize) -> Option<Vec<u8>> {
-        if let Some(free_list) = self.free_buffers.get_mut(&size) {
-            if let Some(buffer) = free_list.pop() {
+        if let Some(free_list) = self.free_buffers.get_mut(&size)
+            && let Some(buffer) = free_list.pop() {
                 return Some(buffer);
             }
-        }
         None
     }
 
@@ -291,11 +292,16 @@ impl MemoryLayoutOptimizer {
 
         // Check if access is strided
         if access_indices.len() >= 3 {
-            let stride = access_indices[1] - access_indices[0];
+            let stride = if access_indices[1] >= access_indices[0] {
+                access_indices[1] - access_indices[0]
+            } else {
+                return AccessPattern::Random; // Negative stride treated as random
+            };
             let mut is_strided = true;
 
             for i in 2..access_indices.len() {
-                if access_indices[i] - access_indices[i - 1] != stride {
+                let expected_next = access_indices[i - 1].wrapping_add(stride);
+                if access_indices[i] != expected_next {
                     is_strided = false;
                     break;
                 }
