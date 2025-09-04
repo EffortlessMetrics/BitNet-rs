@@ -92,7 +92,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-common`**: Shared types, traits, and utilities
 - **`bitnet-models`**: Model loading and format handling (GGUF, SafeTensors)
 - **`bitnet-quantization`**: 1-bit quantization algorithms
-- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with FFI bridge for gradual C++ migration
+- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
 - **`bitnet-inference`**: Inference engine with streaming support
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration and mock fallback system
 - **`bitnet-server`**: HTTP server for BitNet inference with health monitoring
@@ -114,6 +114,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 4. **Cross-Validation**: Systematic comparison with C++ for correctness
 5. **Enhanced Validation Framework**: Comprehensive GPU/CPU validation with performance metrics and error tolerance
 6. **FFI Bridge Architecture**: Safe C++ kernel integration for gradual migration with comprehensive testing and error handling
+7. **Multi-Backend GPU Detection**: System-aware GPU detection with automatic fallback, supporting CUDA, Metal, ROCm, and WebGPU with mock testing capabilities
 
 ### Enhanced Quality Assurance Framework
 
@@ -296,6 +297,7 @@ For detailed information on specific topics, see:
 - `BITNET_DETERMINISTIC`: Enable deterministic mode for testing
 - `BITNET_SEED`: Set seed for reproducible runs
 - `RAYON_NUM_THREADS`: Control CPU parallelism
+- `BITNET_GPU_FAKE`: Mock GPU backend detection for testing (e.g., "cuda", "metal", "cuda,rocm")
 
 ### Build-time Variables (for Git metadata)
 - `VERGEN_GIT_SHA`: Override Git SHA (useful in CI/Docker without .git)
@@ -305,6 +307,20 @@ For detailed information on specific topics, see:
 
 ### GPU/CUDA Development
 For GPU development best practices, PR management, and hardware-dependent testing strategies, see the [GPU Development Guide](docs/gpu-development.md).
+
+#### GPU Detection Commands
+```bash
+# Test GPU backend detection 
+cargo test -p bitnet-kernels --no-default-features test_gpu_info_summary
+
+# Mock GPU scenarios for testing
+BITNET_GPU_FAKE="cuda" cargo test -p bitnet-kernels test_gpu_info_mocked_scenarios
+BITNET_GPU_FAKE="metal" cargo run -p xtask -- download-model --dry-run
+BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels --features gpu
+
+# GPU validation example (includes preflight-style checks)
+cargo run --example gpu_validation --no-default-features --features gpu
+```
 ## Repository Contracts (for Claude)
 
 ### Safe Operations
@@ -346,6 +362,10 @@ cargo run -p bitnet-cli -- score --model model.gguf --file validation.txt --devi
 
 # Model evaluation with external tokenizer and token limits
 cargo run -p bitnet-cli -- score --model model.gguf --file large-dataset.txt --tokenizer tokenizer.json --max-tokens 1000
+
+# Test GPU backend detection and mock scenarios
+cargo test -p bitnet-kernels --no-default-features test_gpu_info_summary
+BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels test_gpu_info_mocked_scenarios
 
 # Test universal tokenizer with BPE backend (new feature)
 cargo test -p bitnet-tokenizers --no-default-features
