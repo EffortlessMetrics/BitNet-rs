@@ -125,9 +125,7 @@ impl HealthChecker {
                 build_timestamp: option_env!("VERGEN_BUILD_TIMESTAMP")
                     .unwrap_or("unknown")
                     .to_string(),
-                rustc_version: option_env!("VERGEN_RUSTC_SEMVER")
-                    .unwrap_or("unknown")
-                    .to_string(),
+                rustc_version: option_env!("VERGEN_RUSTC_SEMVER").unwrap_or("unknown").to_string(),
                 cargo_target: option_env!("VERGEN_CARGO_TARGET_TRIPLE")
                     .unwrap_or("unknown")
                     .to_string(),
@@ -270,19 +268,19 @@ impl HealthChecker {
 
         // Check critical components first
         for component_name in &critical_components {
-            if let Some(component) = components.get(*component_name) {
-                if component.status == HealthStatus::Unhealthy {
-                    return HealthStatus::Unhealthy;
-                }
+            if let Some(component) = components.get(*component_name)
+                && component.status == HealthStatus::Unhealthy
+            {
+                return HealthStatus::Unhealthy;
             }
         }
 
         // If any critical component is degraded, overall status is degraded
         for component_name in &critical_components {
-            if let Some(component) = components.get(*component_name) {
-                if component.status == HealthStatus::Degraded {
-                    return HealthStatus::Degraded;
-                }
+            if let Some(component) = components.get(*component_name)
+                && component.status == HealthStatus::Degraded
+            {
+                return HealthStatus::Degraded;
             }
         }
 

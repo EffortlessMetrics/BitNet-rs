@@ -52,8 +52,7 @@ thiserror = { workspace = true }
 futures = { workspace = true }
 wasm-streams = "0.3"
 
-# Memory management
-wee_alloc = { version = "0.4", optional = true }
+# Memory management - modern WASM environments use the default allocator
 
 # Logging for WASM
 console_error_panic_hook = { version = "0.1", optional = true }
@@ -63,7 +62,7 @@ wasm-logger = "0.2"
 [features]
 integration-tests = []
 default = ["browser"]           # builds without inference, compiles on wasm32
-browser = ["wee_alloc"]
+browser = []
 # Opt-in to enable the Rust inference engine on wasm once the runtime is ready.
 # Use 'dep:' to activate the optional dependency and forward engine features.
 inference = [

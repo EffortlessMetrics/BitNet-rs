@@ -573,22 +573,22 @@ impl ScenarioConfigManager {
         let mut cfg = self.resolve(&ctx.scenario, &ctx.environment);
 
         // Platform heuristics (match the expectations in the test file)
-        if let Some(ref platform) = ctx.platform_settings {
-            if let Some(ref os) = platform.os {
-                match os.as_str() {
-                    "windows" => {
-                        if cfg.max_parallel_tests > 8 {
-                            cfg.max_parallel_tests = 8;
-                        }
+        if let Some(ref platform) = ctx.platform_settings
+            && let Some(ref os) = platform.os
+        {
+            match os.as_str() {
+                "windows" => {
+                    if cfg.max_parallel_tests > 8 {
+                        cfg.max_parallel_tests = 8;
                     }
-                    "macos" => {
-                        if cfg.max_parallel_tests > 6 {
-                            cfg.max_parallel_tests = 6;
-                        }
-                    }
-                    // linux / generic: do not tighten beyond scenario defaults
-                    _ => {}
                 }
+                "macos" => {
+                    if cfg.max_parallel_tests > 6 {
+                        cfg.max_parallel_tests = 6;
+                    }
+                }
+                // linux / generic: do not tighten beyond scenario defaults
+                _ => {}
             }
         }
 

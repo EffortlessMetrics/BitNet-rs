@@ -61,10 +61,10 @@ impl TestFixture {
             let entry = entry?;
             let path = entry.path();
 
-            if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
-                    fixtures.push(name.to_string());
-                }
+            if path.extension().and_then(|s| s.to_str()) == Some("json")
+                && let Some(name) = path.file_stem().and_then(|s| s.to_str())
+            {
+                fixtures.push(name.to_string());
             }
         }
 

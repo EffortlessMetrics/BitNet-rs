@@ -6,7 +6,7 @@
 use pyo3::exceptions::{PyRuntimeError, PyStopIteration};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-// use pyo3_asyncio_0_21::tokio::future_into_py;
+// use pyo3_async_runtimes::tokio::future_into_py;
 // use futures_util::StreamExt;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -141,7 +141,7 @@ impl PyInferenceEngine {
             let engine = self.inner.read().await;
             let config = engine.model_config();
 
-            let py_config = PyDict::new_bound(py);
+            let py_config = PyDict::new(py);
             py_config.set_item("vocab_size", config.model.vocab_size)?;
             py_config.set_item("hidden_size", config.model.hidden_size)?;
             py_config.set_item("num_layers", config.model.num_layers)?;
@@ -166,7 +166,7 @@ impl PyInferenceEngine {
             let engine = self.inner.read().await;
             let stats = engine.get_stats().await;
 
-            let py_stats = PyDict::new_bound(py);
+            let py_stats = PyDict::new(py);
             py_stats.set_item("cache_size", stats.cache_size)?;
             py_stats.set_item("cache_usage", stats.cache_usage)?;
             py_stats.set_item("backend_type", stats.backend_type)?;
@@ -198,6 +198,7 @@ impl PyInferenceEngine {
 /// Python streaming generator for token generation
 #[pyclass(name = "StreamingGenerator")]
 pub struct PyStreamingGenerator {
+    #[allow(dead_code)] // Reserved for future streaming implementation
     engine: Arc<RwLock<InferenceEngine>>,
     prompt: String,
     config: GenerationConfig,

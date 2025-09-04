@@ -263,7 +263,7 @@ impl TL2Quantizer {
     ) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::TL2 {
             return Err(
-                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into(),
+                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
             );
         }
 

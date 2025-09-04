@@ -364,10 +364,10 @@ impl DependencyGraph {
         }
 
         // Default: if it's a source file, run tests for that crate
-        if file_str.starts_with("crates/") {
-            if let Some(crate_name) = file_str.split('/').nth(1) {
-                return vec![crate_name.to_string()];
-            }
+        if file_str.starts_with("crates/")
+            && let Some(crate_name) = file_str.split('/').nth(1)
+        {
+            return vec![crate_name.to_string()];
         }
 
         // If no specific mapping, run a minimal set

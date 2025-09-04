@@ -31,10 +31,9 @@ pub fn init_logger() {
     wasm_logger::init(wasm_logger::Config::default());
 }
 
-// Memory allocator optimization for WebAssembly
-#[cfg(feature = "browser")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+// Modern WASM environments use the default allocator which is more efficient
+// than wee_alloc. The default allocator provides better performance and is
+// well-supported in current browsers.
 
 // For now, comment out modules that have compilation issues on wasm32
 // These will need to be fixed properly in a future PR

@@ -4,6 +4,9 @@
 //! for the existing BitNet C++ bindings. It maintains exact signature compatibility
 //! while providing enhanced error handling, thread safety, and performance monitoring.
 
+// Allow FFI raw pointer dereferences as this is intentional for C API compatibility
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+
 pub mod c_api;
 pub mod config;
 pub mod error;

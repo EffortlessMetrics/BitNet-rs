@@ -58,7 +58,7 @@ fn bitnet_py(py: Python<'_>, m: &pyo3::Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_cuda_device_count, m)?)?;
 
     // Add quantization types
-    let quantization_types = PyDict::new_bound(py);
+    let quantization_types = PyDict::new(py);
     quantization_types.set_item("I2S", "i2s")?;
     quantization_types.set_item("TL1", "tl1")?;
     quantization_types.set_item("TL2", "tl2")?;
@@ -137,12 +137,11 @@ fn list_available_models(path: &str) -> PyResult<Vec<String>> {
             let entry = entry.map_err(|e| PyIOError::new_err(e.to_string()))?;
             let path = entry.path();
 
-            if let Some(ext) = path.extension() {
-                if matches!(ext.to_str(), Some("gguf") | Some("safetensors") | Some("bin")) {
-                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                        models.push(name.to_string());
-                    }
-                }
+            if let Some(ext) = path.extension()
+                && matches!(ext.to_str(), Some("gguf") | Some("safetensors") | Some("bin"))
+                && let Some(name) = path.file_name().and_then(|n| n.to_str())
+            {
+                models.push(name.to_string());
             }
         }
     }
@@ -154,16 +153,16 @@ fn list_available_models(path: &str) -> PyResult<Vec<String>> {
 /// Get device information
 #[pyfunction]
 fn get_device_info(py: Python<'_>) -> PyResult<PyObject> {
-    let info = PyDict::new_bound(py);
+    let info = PyDict::new(py);
 
     // CPU information
-    let cpu_info = PyDict::new_bound(py);
+    let cpu_info = PyDict::new(py);
     cpu_info.set_item("cores", num_cpus::get())?;
     cpu_info.set_item("available", true)?;
     info.set_item("cpu", cpu_info)?;
 
     // GPU information
-    let gpu_info = PyDict::new_bound(py);
+    let gpu_info = PyDict::new(py);
     gpu_info.set_item("cuda_available", is_cuda_available())?;
     gpu_info.set_item("metal_available", is_metal_available())?;
     gpu_info.set_item("cuda_devices", get_cuda_device_count())?;

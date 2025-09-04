@@ -1,5 +1,5 @@
-use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer, QuantizerTrait};
 use bitnet_common::{BitNetTensor, Tensor};
+use bitnet_quantization::{I2SQuantizer, QuantizerTrait, TL1Quantizer, TL2Quantizer};
 use candle_core::{Device, Tensor as CandleTensor};
 
 fn sample_tensor() -> BitNetTensor {
@@ -29,7 +29,7 @@ fn test_dequantize_cpu_and_gpu_paths() {
             let gpu = q.dequantize_tensor_device(&q_data, &cuda).unwrap();
             assert_eq!(gpu.shape(), &[32]);
             match gpu.inner().device() {
-                Device::Cuda(_) => {},
+                Device::Cuda(_) => {}
                 _ => panic!("tensor not on cuda"),
             }
         }

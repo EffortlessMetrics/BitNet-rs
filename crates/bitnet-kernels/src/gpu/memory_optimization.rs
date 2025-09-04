@@ -136,9 +136,10 @@ impl OptimizedMemoryPool {
     /// Try to reuse an existing buffer
     fn try_reuse_buffer(&mut self, size: usize) -> Option<Vec<u8>> {
         if let Some(free_list) = self.free_buffers.get_mut(&size)
-            && let Some(buffer) = free_list.pop() {
-                return Some(buffer);
-            }
+            && let Some(buffer) = free_list.pop()
+        {
+            return Some(buffer);
+        }
         None
     }
 

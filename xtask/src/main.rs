@@ -4,6 +4,7 @@ use fs2::FileExt;
 use fs2::available_space;
 use httpdate::parse_http_date;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use is_terminal::IsTerminal;
 use reqwest::StatusCode;
 use reqwest::blocking::Client;
 use reqwest::header::{
@@ -1113,7 +1114,7 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
     }
 
     // Setup progress bar (hide if not a TTY or if --no-progress)
-    let pb = if !no_progress && atty::is(atty::Stream::Stderr) {
+    let pb = if !no_progress && std::io::stderr().is_terminal() {
         if let Some(total) = size {
             let pb = ProgressBar::new(total);
             pb.set_style(
@@ -2774,7 +2775,7 @@ fn gpu_smoke_cmd(size: &str, tolerance: f32, skip_if_no_gpu: bool) -> Result<()>
 
     // Build and run the GPU smoke test
     let mut cmd = Command::new("cargo");
-    cmd.args(&[
+    cmd.args([
         "test",
         "--package",
         "bitnet-kernels",
@@ -2816,7 +2817,7 @@ fn demo_cmd(which: &str, args: &[String]) -> Result<()> {
         println!("─────────────────────");
 
         let mut cmd = Command::new("cargo");
-        cmd.args(&[
+        cmd.args([
             "run",
             "--package",
             "bitnet-tests",

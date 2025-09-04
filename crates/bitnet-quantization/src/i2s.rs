@@ -100,7 +100,7 @@ impl I2SQuantizer {
     ) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::I2S {
             return Err(
-                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into(),
+                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
             );
         }
 

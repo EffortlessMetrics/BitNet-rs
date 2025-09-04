@@ -211,7 +211,7 @@ impl TL1Quantizer {
     ) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::TL1 {
             return Err(
-                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into(),
+                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() }.into()
             );
         }
 

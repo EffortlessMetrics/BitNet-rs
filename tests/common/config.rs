@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 /// Helper to pick non-empty PathBuf or fallback to default
-pub fn pick_dir(env: &PathBuf, scenario: &PathBuf) -> PathBuf {
-    if !env.as_os_str().is_empty() { env.clone() } else { scenario.clone() }
+pub fn pick_dir(env: &Path, scenario: &PathBuf) -> PathBuf {
+    if !env.as_os_str().is_empty() { env.to_path_buf() } else { scenario.clone() }
 }
 
 /// Main configuration for the testing framework
@@ -346,15 +346,14 @@ pub fn validate_config(config: &TestConfig) -> TestResultCompat<()> {
     }
 
     // Validate cache directory (only check if it's an absolute path with non-existent parent)
-    if config.cache_dir.is_absolute() {
-        if let Some(parent) = config.cache_dir.parent() {
-            if !parent.exists() {
-                return Err(TestError::config(format!(
-                    "Cache directory parent {:?} does not exist",
-                    parent
-                )));
-            }
-        }
+    if config.cache_dir.is_absolute()
+        && let Some(parent) = config.cache_dir.parent()
+        && !parent.exists()
+    {
+        return Err(TestError::config(format!(
+            "Cache directory parent {:?} does not exist",
+            parent
+        )));
     }
 
     // Validate cross-validation config
@@ -432,15 +431,14 @@ pub fn validate_config(config: &TestConfig) -> TestResultCompat<()> {
     }
 
     // Validate output directory parent exists (only for absolute paths)
-    if config.reporting.output_dir.is_absolute() {
-        if let Some(parent) = config.reporting.output_dir.parent() {
-            if !parent.exists() {
-                return Err(TestError::config(format!(
-                    "Report output directory parent {:?} does not exist",
-                    parent
-                )));
-            }
-        }
+    if config.reporting.output_dir.is_absolute()
+        && let Some(parent) = config.reporting.output_dir.parent()
+        && !parent.exists()
+    {
+        return Err(TestError::config(format!(
+            "Report output directory parent {:?} does not exist",
+            parent
+        )));
     }
 
     Ok(())

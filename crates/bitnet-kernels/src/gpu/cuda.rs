@@ -239,10 +239,7 @@ impl CudaKernel {
     }
 
     /// Batch matrix multiplication for multiple concurrent requests
-    pub fn batch_matmul_i2s(
-        &self,
-        batches: &mut [BatchOperation],
-    ) -> Result<()> {
+    pub fn batch_matmul_i2s(&self, batches: &mut [BatchOperation]) -> Result<()> {
         if batches.is_empty() {
             return Ok(());
         }

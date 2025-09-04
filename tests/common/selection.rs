@@ -189,18 +189,18 @@ impl TestSelector {
         // Parse test list output
         for line in stdout.lines() {
             if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
-                if let Some(test_name) = json.get("name").and_then(|n| n.as_str()) {
-                    if test_name.ends_with(": test") {
-                        let clean_name = test_name.trim_end_matches(": test");
-                        let test_info = TestInfo {
-                            name: clean_name.to_string(),
-                            crate_name: crate_name.to_string(),
-                            file_path: self.infer_test_file_path(crate_name, clean_name),
-                            category: self.categorize_test(clean_name, crate_name),
-                            priority: TestPriority::Medium, // Will be updated later
-                        };
-                        tests.push(test_info);
-                    }
+                if let Some(test_name) = json.get("name").and_then(|n| n.as_str())
+                    && test_name.ends_with(": test")
+                {
+                    let clean_name = test_name.trim_end_matches(": test");
+                    let test_info = TestInfo {
+                        name: clean_name.to_string(),
+                        crate_name: crate_name.to_string(),
+                        file_path: self.infer_test_file_path(crate_name, clean_name),
+                        category: self.categorize_test(clean_name, crate_name),
+                        priority: TestPriority::Medium, // Will be updated later
+                    };
+                    tests.push(test_info);
                 }
             } else {
                 // Fallback: parse simple text output
