@@ -155,14 +155,25 @@ Default features are **empty** to prevent unwanted dependencies:
 - `crossval`: Cross-validation against C++ (increases build time)
 
 ### Quantization Support
-BitNet-rs supports multiple quantization formats with device-aware acceleration:
+BitNet-rs supports multiple quantization formats with advanced device-aware acceleration:
 - **I2_S**: Native Rust implementation with intelligent GPU/CPU selection and automatic fallback
+  - Device-aware dequantization with CUDA kernel acceleration
+  - Automatic CPU fallback for unsupported hardware or initialization failures
+  - 2-bit signed quantization with optimized bit-packing (4 values per byte)
 - **TL1**: Table lookup quantization with GPU acceleration and CPU fallback
+  - Device-aware table lookup with GPU memory optimization
+  - Parallel processing with configurable block sizes
 - **TL2**: Advanced table lookup quantization with optimized GPU kernels and device-aware execution
+  - Enhanced vectorized operations for large tensor processing
+  - CPU feature detection with SIMD optimization fallbacks
 - **IQ2_S**: GGML-compatible quantization with 82-byte block layout and 4-level [-2,-1,1,2] mapping
 - **Standard formats**: Q4_0, Q5_0, Q8_0, etc. (planned)
 
-All quantizers support device-aware operations with automatic GPU acceleration and transparent CPU fallback.
+All quantizers support device-aware operations with:
+- **Automatic GPU acceleration**: CUDA kernels with performance monitoring
+- **Transparent CPU fallback**: Graceful degradation with maintained accuracy
+- **Memory optimization**: GPU memory leak detection and efficient allocation
+- **Feature gating**: Proper `#[cfg(feature = "gpu")]` guards for CPU-only builds
 
 ### Universal Tokenizer Architecture
 
@@ -318,6 +329,12 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cp
 
 # GPU memory leak detection and performance benchmarking
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+
+# Device-aware quantization validation (I2S, TL1, TL2)
+cargo test -p bitnet-quantization --no-default-features --features gpu test_dequantize_cpu_and_gpu_paths
+
+# Comprehensive GPU integration tests
+cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_integration
 
 # Test universal tokenizer with automatic GGUF integration
 cargo test -p bitnet-tokenizers --no-default-features test_universal_tokenizer_gguf_integration

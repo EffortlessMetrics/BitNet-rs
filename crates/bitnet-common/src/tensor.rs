@@ -165,7 +165,7 @@ impl BitNetTensor {
         self.inner
     }
 
-    /// Get the tensor data as a Vec<f32> for testing purposes
+    /// Get the tensor data as a `Vec<f32>` for testing purposes
     pub fn to_vec(&self) -> Result<Vec<f32>> {
         self.inner
             .to_vec1::<f32>()

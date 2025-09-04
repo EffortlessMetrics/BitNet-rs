@@ -10,14 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Device-Aware GPU Quantization Support**:
   - Enhanced I2S, TL1, and TL2 quantizers with automatic GPU acceleration
-  - Device-aware dequantization with intelligent CPU fallback
+  - Device-aware dequantization with intelligent CPU fallback  
   - GPU memory optimization and mixed precision support
   - Comprehensive GPU vs CPU validation tests with configurable tolerance
+  - Proper feature gating with `#[cfg(feature = "gpu")]` for CPU-only builds
 - **Enhanced CUDA Kernel Infrastructure**:
   - Improved CUDA kernel provider with better error handling
   - Memory management optimization with automatic leak detection
   - Performance monitoring with built-in kernel execution timing
   - Device information extraction and capability detection
+  - Advanced validation framework with numerical accuracy testing
+- **Documentation Quality Improvements**:
+  - Fixed HTML tag warnings in API documentation
+  - Enhanced quantization documentation with device-aware capabilities
+  - Updated CLAUDE.md with comprehensive GPU validation commands
+  - Improved inline documentation with proper backtick formatting
+  - Fixed broken intra-doc links and reference formatting
 - **Teacher-Forcing Scoring and Perplexity Calculation** ([#134](https://github.com/EffortlessSteven/BitNet-rs/pull/134)):
   - New `score` CLI command with real teacher-forcing evaluation using inference engine
   - Device selection support (`--device cpu|cuda|metal|auto`) with automatic fallback
