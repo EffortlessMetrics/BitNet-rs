@@ -5,7 +5,7 @@ use libc::c_int;
 use libc::c_void;
 
 #[cfg(feature = "iq2s-ffi")]
-extern "C" {
+unsafe extern "C" {
     // Exposed by our shim; wraps GGML's reference dequantizer for IQ2_S.
     fn bitnet_dequantize_row_iq2_s(src: *const c_void, dst: *mut f32, n: c_int);
 
@@ -58,7 +58,7 @@ pub const GGML_COMMIT: &str = "not-compiled";
 
 #[cfg(feature = "iq2s-ffi")]
 pub unsafe fn dequantize_row_iq2_s(src: *const c_void, dst: *mut f32, n: usize) {
-    bitnet_dequantize_row_iq2_s(src, dst, n as c_int)
+    unsafe { bitnet_dequantize_row_iq2_s(src, dst, n as c_int) }
 }
 
 #[cfg(not(feature = "iq2s-ffi"))]
