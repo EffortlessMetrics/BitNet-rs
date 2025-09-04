@@ -6,6 +6,7 @@
 
 use crate::{QuantizedTensor, QuantizerTrait, utils::*};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
+#[cfg(feature = "gpu")]
 use bitnet_kernels::KernelProvider;
 use candle_core::Device;
 use rayon::prelude::*;
