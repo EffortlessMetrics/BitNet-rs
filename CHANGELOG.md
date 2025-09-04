@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated CLAUDE.md with comprehensive GPU validation commands
   - Improved inline documentation with proper backtick formatting
   - Fixed broken intra-doc links and reference formatting
+  - Added comprehensive project analysis in `GOALS_VS_REALITY_ANALYSIS.md` with goal-by-goal assessment ([#152](https://github.com/EffortlessSteven/BitNet-rs/pull/152))
 - **Teacher-Forcing Scoring and Perplexity Calculation** ([#134](https://github.com/EffortlessSteven/BitNet-rs/pull/134)):
   - New `score` CLI command with real teacher-forcing evaluation using inference engine
   - Device selection support (`--device cpu|cuda|metal|auto`) with automatic fallback
