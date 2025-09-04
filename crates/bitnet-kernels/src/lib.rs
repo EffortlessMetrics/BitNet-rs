@@ -3,6 +3,7 @@
 use bitnet_common::{QuantizationType, Result};
 use std::sync::OnceLock;
 
+pub mod convolution;
 pub mod cpu;
 pub mod device_aware;
 #[cfg(feature = "ffi")]
