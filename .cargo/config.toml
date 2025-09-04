@@ -27,16 +27,11 @@ demo-sys = "run -p bitnet-tests --bin demo_reporting_system --features reporting
 demo-all = "run -p bitnet-tests --bin demo_reporting_comprehensive --features reporting"
 
 # GPU development aliases
-<<<<<<< HEAD
 gpu-capped = "test --workspace --no-default-features --features gpu -- --test-threads=2"
 
 # GPU test aliases
 gpu-smoke = "test --package bitnet-kernels --test gpu_smoke --no-default-features --features gpu"
 gpu-parity = "test --package bitnet-kernels --test gpu_parity --no-default-features --features gpu"
-=======
-gpu-smoke = "test --package bitnet-kernels --test gpu_smoke --no-default-features --features cuda"
-gpu-parity = "test --package bitnet-kernels --test gpu_parity --no-default-features --features cuda"
->>>>>>> codex/add-gpu-support-for-tensors
 gpu-build = "build --workspace --no-default-features --features gpu"
 
 # Development quality check aliases
