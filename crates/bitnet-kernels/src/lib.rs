@@ -9,7 +9,6 @@ pub mod device_aware;
 pub mod ffi;
 #[cfg(feature = "gpu")]
 pub mod gpu;
-#[cfg(feature = "gpu")]
 pub mod gpu_utils;
 
 /// Kernel provider trait

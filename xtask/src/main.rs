@@ -1,4 +1,5 @@
 use anyhow::{Context, Result, anyhow, bail};
+use bitnet_kernels::gpu_utils::get_gpu_info;
 use clap::{Parser, Subcommand};
 use fs2::FileExt;
 use fs2::available_space;
@@ -2477,8 +2478,8 @@ fn vendor_ggml_cmd(commit: &str, force: bool, output_dir: &Path) -> Result<()> {
 // GPU-related command implementations
 
 fn gpu_preflight_cmd(require: bool, format: &str) -> Result<()> {
-    // Try to load the GPU utils module dynamically
-    let info = get_gpu_info_stub();
+    // Query GPU information using the kernels crate
+    let info = get_gpu_info();
 
     match format {
         "json" => {
@@ -2524,7 +2525,7 @@ fn gpu_preflight_cmd(require: bool, format: &str) -> Result<()> {
 }
 
 fn gpu_smoke_cmd(size: &str, tolerance: f32, skip_if_no_gpu: bool) -> Result<()> {
-    let info = get_gpu_info_stub();
+    let info = get_gpu_info();
 
     if !info.any_available() {
         if skip_if_no_gpu {
@@ -2611,128 +2612,6 @@ fn demo_cmd(which: &str, args: &[String]) -> Result<()> {
     Ok(())
 }
 
-// Stub implementation of GPU info for xtask
-// The real implementation would be in bitnet-kernels
-struct GpuInfo {
-    cuda: bool,
-    cuda_version: Option<String>,
-    metal: bool,
-    rocm: bool,
-    rocm_version: Option<String>,
-    wgpu: bool,
-}
-
-impl GpuInfo {
-    fn any_available(&self) -> bool {
-        self.cuda || self.metal || self.rocm || self.wgpu
-    }
-
-    fn summary(&self) -> String {
-        let mut backends = Vec::new();
-
-        if self.cuda {
-            if let Some(version) = &self.cuda_version {
-                backends.push(format!("CUDA {}", version));
-            } else {
-                backends.push("CUDA".to_string());
-            }
-        }
-
-        if self.metal {
-            backends.push("Metal".to_string());
-        }
-
-        if self.rocm {
-            if let Some(version) = &self.rocm_version {
-                backends.push(format!("ROCm {}", version));
-            } else {
-                backends.push("ROCm".to_string());
-            }
-        }
-
-        if self.wgpu {
-            backends.push("WebGPU (platform-dependent)".to_string());
-        }
-
-        if backends.is_empty() {
-            "No GPU backends available".to_string()
-        } else {
-            format!("Available GPU backends: {}", backends.join(", "))
-        }
-    }
-}
-
-fn get_gpu_info_stub() -> GpuInfo {
-    use std::process::Command;
-
-    let cuda = Command::new("nvidia-smi")
-        .arg("--query-gpu=gpu_name")
-        .arg("--format=csv,noheader")
-        .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false);
-
-    let cuda_version = if cuda {
-        Command::new("nvcc")
-            .arg("--version")
-            .output()
-            .ok()
-            .and_then(|o| {
-                let mut s = String::from_utf8(o.stdout).ok().unwrap_or_default();
-                if s.trim().is_empty() {
-                    s = String::from_utf8(o.stderr).ok().unwrap_or_default();
-                }
-                (!s.trim().is_empty()).then_some(s)
-            })
-            .and_then(|output| {
-                output.lines().find(|line| line.contains("release")).and_then(|line| {
-                    line.split("release")
-                        .nth(1)
-                        .and_then(|s| s.split(',').next())
-                        .map(|s| s.trim().to_string())
-                })
-            })
-    } else {
-        None
-    };
-
-    let metal = cfg!(target_os = "macos");
-
-    let rocm = std::env::var("ROCM_PATH").is_ok()
-        || Command::new("rocm-smi")
-            .arg("--showid")
-            .output()
-            .map(|output| output.status.success())
-            .unwrap_or(false);
-
-    let rocm_version = if rocm {
-        Command::new("rocm-smi")
-            .arg("--version")
-            .output()
-            .ok()
-            .and_then(|output| {
-                if output.status.success() { String::from_utf8(output.stdout).ok() } else { None }
-            })
-            .and_then(|output| {
-                output
-                    .lines()
-                    .find(|line| line.contains("Version"))
-                    .and_then(|line| line.split(':').nth(1).map(|s| s.trim().to_string()))
-            })
-    } else {
-        None
-    };
-
-    GpuInfo {
-        cuda,
-        cuda_version,
-        metal,
-        rocm,
-        rocm_version,
-        wgpu: false, // Don't imply a guaranteed fallback
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2745,6 +2624,40 @@ mod tests {
         port: u16,
         #[allow(dead_code)]
         requests: Arc<Mutex<Vec<String>>>,
+    }
+
+    #[test]
+    fn test_gpu_preflight_with_no_gpu() {
+        unsafe {
+            std::env::set_var("BITNET_GPU_FAKE", "none");
+        }
+        let err = gpu_preflight_cmd(true, "text").unwrap_err();
+        assert!(err.to_string().contains("No GPU backend"));
+        unsafe {
+            std::env::remove_var("BITNET_GPU_FAKE");
+        }
+    }
+
+    #[test]
+    fn test_gpu_preflight_with_gpu() {
+        unsafe {
+            std::env::set_var("BITNET_GPU_FAKE", "cuda");
+        }
+        assert!(gpu_preflight_cmd(true, "text").is_ok());
+        unsafe {
+            std::env::remove_var("BITNET_GPU_FAKE");
+        }
+    }
+
+    #[test]
+    fn test_gpu_smoke_skips_without_gpu() {
+        unsafe {
+            std::env::set_var("BITNET_GPU_FAKE", "none");
+        }
+        assert!(gpu_smoke_cmd("small", 0.01, true).is_ok());
+        unsafe {
+            std::env::remove_var("BITNET_GPU_FAKE");
+        }
     }
 
     impl TestServer {
