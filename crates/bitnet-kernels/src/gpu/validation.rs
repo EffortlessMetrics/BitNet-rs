@@ -8,9 +8,7 @@
 
 use crate::gpu::cuda::CudaKernel;
 use crate::{KernelProvider, cpu::fallback::FallbackKernel, cpu::x86::Avx2Kernel};
-#[cfg(feature = "cuda")]
-use bitnet_common::KernelError;
-use bitnet_common::Result;
+use bitnet_common::{KernelError, Result};
 
 use std::time::Instant;
 
