@@ -1,14 +1,18 @@
-#![allow(clippy::missing_safety_doc)]
-
 use core::ffi::c_void;
 
 #[cfg(feature = "iq2s-ffi")]
 use libc::{c_int, size_t};
 
 #[cfg(feature = "iq2s-ffi")]
+// FFI bindings to the C shim exposing GGML's IQ2_S helpers.
 unsafe extern "C" {
-    // Exposed by our shim; wraps GGML's reference quantizer/dequantizer for IQ2_S.
-    fn bitnet_dequantize_row_iq2_s(src: *const c_void, dst: *mut f32, n: c_int);
+    /// # Safety
+    /// - `src` and `dst` must be valid for reads and writes of `n` elements respectively.
+    /// - Behavior is undefined if the pointers are null and `n` is non-zero.
+    fn bitnet_dequantize_row_iq2_s(src: *const c_void, dst: *mut f32, n: i64);
+
+    /// # Safety
+    /// See GGML's `quantize_iq2_s` implementation for requirements on the pointers and sizes.
     fn bitnet_quantize_iq2_s(
         src: *const f32,
         dst: *mut c_void,
@@ -88,7 +92,7 @@ pub const GGML_COMMIT: &str = "not-compiled";
 /// - `n` must be a multiple of `iq2s_qk()` (256) for correctness
 #[cfg(feature = "iq2s-ffi")]
 pub unsafe fn dequantize_row_iq2_s(src: *const c_void, dst: *mut f32, n: usize) {
-    unsafe { bitnet_dequantize_row_iq2_s(src, dst, n as c_int) };
+    unsafe { bitnet_dequantize_row_iq2_s(src, dst, n as i64) };
 }
 
 /// Quantizes multiple rows of f32 data into IQ2_S format.
@@ -132,3 +136,4 @@ pub unsafe fn quantize_iq2_s(
 ) -> usize {
     panic!("IQ2_S support not compiled: enable feature `iq2s-ffi`");
 }
+
