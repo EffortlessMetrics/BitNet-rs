@@ -5,73 +5,58 @@
 
 use std::env;
 use std::process::Command;
+use sysinfo::System;
 
 /// Check if any GPU backend is available
 pub fn gpu_available() -> bool {
-    cuda_available() || metal_available() || rocm_available() || wgpu_available()
-}
-
-/// Check if NVIDIA CUDA is available
-pub fn cuda_available() -> bool {
-    // Check common CUDA environment variables
-    if env::var("CUDA_HOME").is_ok() || env::var("CUDA_PATH").is_ok() {
-        return true;
-    }
-
-    // Try to run nvidia-smi to check for NVIDIA GPU
-    Command::new("nvidia-smi")
-        .arg("--query-gpu=gpu_name")
-        .arg("--format=csv,noheader")
-        .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false)
-}
-
-/// Check if Apple Metal is available (macOS only)
-pub fn metal_available() -> bool {
-    #[cfg(target_os = "macos")]
-    {
-        // Metal is available on all modern macOS systems
-        true
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        false
-    }
-}
-
-/// Check if AMD ROCm is available
-pub fn rocm_available() -> bool {
-    // Check ROCm environment variable
-    if env::var("ROCM_PATH").is_ok() {
-        return true;
-    }
-
-    // Try to run rocm-smi to check for AMD GPU
-    Command::new("rocm-smi")
-        .arg("--showid")
-        .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false)
-}
-
-/// Check if WebGPU/wgpu backend is available
-pub fn wgpu_available() -> bool {
-    // wgpu is a software fallback that's always available
-    // but we should check for actual GPU devices
-    true // In production, this would query wgpu for available adapters
+    get_gpu_info().any_available()
 }
 
 /// Get information about available GPU backends
 pub fn get_gpu_info() -> GpuInfo {
-    GpuInfo {
-        cuda: cuda_available(),
-        cuda_version: get_cuda_version(),
-        metal: metal_available(),
-        rocm: rocm_available(),
-        rocm_version: get_rocm_version(),
-        wgpu: wgpu_available(),
+    if let Ok(fake) = env::var("BITNET_GPU_FAKE") {
+        let lower = fake.to_lowercase();
+        return GpuInfo {
+            cuda: lower.contains("cuda"),
+            cuda_version: None,
+            metal: lower.contains("metal"),
+            rocm: lower.contains("rocm"),
+            rocm_version: None,
+            wgpu: lower.contains("wgpu")
+                || lower.contains("cuda")
+                || lower.contains("rocm")
+                || lower.contains("metal"),
+        };
     }
+
+    let _sys = System::new_all();
+
+    let mut metal = System::name().unwrap_or_default().to_lowercase().contains("mac");
+
+    let cuda = Command::new("nvidia-smi")
+        .arg("--query-gpu=gpu_name")
+        .arg("--format=csv,noheader")
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false);
+
+    let cuda_version = if cuda { get_cuda_version() } else { None };
+
+    let rocm = Command::new("rocm-smi")
+        .arg("--showid")
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false);
+
+    let rocm_version = if rocm { get_rocm_version() } else { None };
+
+    if cfg!(target_os = "macos") {
+        metal = true;
+    }
+
+    let wgpu = cuda || rocm || metal;
+
+    GpuInfo { cuda, cuda_version, metal, rocm, rocm_version, wgpu }
 }
 
 /// Information about available GPU backends
