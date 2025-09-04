@@ -273,16 +273,20 @@ impl EvalCommand {
 
         // Set deterministic mode if requested
         if self.deterministic {
-            std::env::set_var("BITNET_DETERMINISTIC", "1");
-            std::env::set_var("RAYON_NUM_THREADS", "1");
-            std::env::set_var("OMP_NUM_THREADS", "1");
-            std::env::set_var("MKL_NUM_THREADS", "1");
-            std::env::set_var("BLAS_NUM_THREADS", "1");
+            unsafe {
+                std::env::set_var("BITNET_DETERMINISTIC", "1");
+                std::env::set_var("RAYON_NUM_THREADS", "1");
+                std::env::set_var("OMP_NUM_THREADS", "1");
+                std::env::set_var("MKL_NUM_THREADS", "1");
+                std::env::set_var("BLAS_NUM_THREADS", "1");
+            }
         }
 
         // Set thread count
         if self.threads > 0 {
-            std::env::set_var("RAYON_NUM_THREADS", self.threads.to_string());
+            unsafe {
+                std::env::set_var("RAYON_NUM_THREADS", self.threads.to_string());
+            }
         }
 
         info!("Starting model evaluation");
@@ -373,11 +377,11 @@ impl EvalCommand {
         match self.device.as_str() {
             "cpu" => Ok(Device::Cpu),
             "cuda" | "gpu" => Device::cuda_if_available(0).context("CUDA not available"),
-            "metal" => Device::metal_if_available().context("Metal not available"),
+            "metal" => Device::new_metal(0).context("Metal not available"),
             "auto" => {
                 if let Ok(device) = Device::cuda_if_available(0) {
                     Ok(device)
-                } else if let Ok(device) = Device::metal_if_available() {
+                } else if let Ok(device) = Device::new_metal(0) {
                     Ok(device)
                 } else {
                     Ok(Device::Cpu)

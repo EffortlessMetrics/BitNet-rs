@@ -717,7 +717,13 @@ mod streaming_unit_tests {
 
     #[test]
     fn test_streaming_config_creation() {
-        let config = StreamingConfig { buffer_size: 10, flush_interval_ms: 50 };
+        let config = StreamingConfig {
+            buffer_size: 10,
+            flush_interval_ms: 50,
+            max_retries: 3,
+            token_timeout_ms: 5000,
+            cancellable: true,
+        };
 
         assert_eq!(config.buffer_size, 10);
         assert_eq!(config.flush_interval_ms, 50);
@@ -733,11 +739,23 @@ mod streaming_unit_tests {
     #[test]
     fn test_streaming_config_validation() {
         // Test various buffer sizes
-        let config = StreamingConfig { buffer_size: 1, flush_interval_ms: 1 };
+        let config = StreamingConfig {
+            buffer_size: 1,
+            flush_interval_ms: 1,
+            max_retries: 3,
+            token_timeout_ms: 5000,
+            cancellable: true,
+        };
         assert_eq!(config.buffer_size, 1);
         assert_eq!(config.flush_interval_ms, 1);
 
-        let config = StreamingConfig { buffer_size: 1000, flush_interval_ms: 1000 };
+        let config = StreamingConfig {
+            buffer_size: 1000,
+            flush_interval_ms: 1000,
+            max_retries: 3,
+            token_timeout_ms: 5000,
+            cancellable: true,
+        };
         assert_eq!(config.buffer_size, 1000);
         assert_eq!(config.flush_interval_ms, 1000);
     }

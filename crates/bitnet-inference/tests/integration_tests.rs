@@ -305,7 +305,7 @@ mod streaming_tests {
         let device = Device::Cpu;
 
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
-        let mut stream = engine.generate_stream("Hello, world!");
+        let mut stream = engine.generate_stream("Hello, world!").unwrap();
 
         let mut token_count = 0;
         let mut total_text = String::new();
@@ -343,7 +343,7 @@ mod streaming_tests {
 
         let config = GenerationConfig::default().with_max_tokens(10).with_temperature(0.5);
 
-        let mut stream = engine.generate_stream_with_config("Test prompt", &config);
+        let mut stream = engine.generate_stream_with_config("Test prompt", &config).unwrap();
 
         let mut received_tokens = 0;
         while let Ok(Some(result)) = timeout(Duration::from_secs(3), stream.next()).await {

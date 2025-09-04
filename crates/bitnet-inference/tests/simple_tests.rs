@@ -192,7 +192,13 @@ async fn test_streaming_config() {
     assert!(config.buffer_size > 0);
     assert!(config.flush_interval_ms > 0);
 
-    let custom_config = StreamingConfig { buffer_size: 5, flush_interval_ms: 100 };
+    let custom_config = StreamingConfig {
+        buffer_size: 5,
+        flush_interval_ms: 100,
+        max_retries: 3,
+        token_timeout_ms: 5000,
+        cancellable: true,
+    };
     assert_eq!(custom_config.buffer_size, 5);
     assert_eq!(custom_config.flush_interval_ms, 100);
 }
