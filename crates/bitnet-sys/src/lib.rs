@@ -153,8 +153,25 @@ pub mod disabled {
         Err(DisabledError)
     }
 
+    /// Placeholder model handle when ffi feature is disabled
+    pub struct ModelHandle;
+
     /// Load model (returns error without ffi)
-    pub fn load_model(_path: &str) -> Result<(), DisabledError> {
+    pub fn load_model(_path: &str) -> Result<ModelHandle, DisabledError> {
+        Err(DisabledError)
+    }
+
+    /// Generate tokens (returns error without ffi)
+    pub fn generate(
+        _model: &mut ModelHandle,
+        _prompt: &str,
+        _max_tokens: usize,
+    ) -> Result<Vec<u32>, DisabledError> {
+        Err(DisabledError)
+    }
+
+    /// Cleanup (returns error without ffi)
+    pub fn cleanup() -> Result<(), DisabledError> {
         Err(DisabledError)
     }
 }
