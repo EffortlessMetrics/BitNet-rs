@@ -255,18 +255,35 @@ def test_original_implementation():
         import generate
         
         print("Testing original implementation...")
-        
-        # TODO: Add original implementation test code
-        # This will depend on your specific setup
-        
+        # Load model and tokenizer (update paths for your environment)
+        model = fast_orig.load_model("path/to/model.bin")  # Update this path
+        tokenizer = fast_orig.Tokenizer("path/to/tokenizer.model")  # Update this path
+
+        engine = generate.SimpleInference(model, tokenizer)
+
         results = {{
             "implementation": "original",
             "available": True,
             "results": [],
-            "avg_time": 0.0,
-            "tokens_per_second": 0.0,
+            "times": [],
         }}
-        
+
+        for prompt in TEST_PROMPTS:
+            start_time = time.time()
+            response = engine.generate(prompt)
+            end_time = time.time()
+
+            results["results"].append({{
+                "prompt": prompt,
+                "response": response,
+                "time": end_time - start_time,
+            }})
+            results["times"].append(end_time - start_time)
+
+        results["avg_time"] = sum(results["times"]) / len(results["times"])
+        total_tokens = sum(len(r["response"].split()) for r in results["results"])
+        results["tokens_per_second"] = total_tokens / sum(results["times"])
+
         return results
         
     except ImportError as e:
