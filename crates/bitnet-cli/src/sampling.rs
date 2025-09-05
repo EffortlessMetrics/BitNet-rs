@@ -247,4 +247,28 @@ mod tests {
         assert_eq!(filtered[1], 3.0);
         assert_eq!(filtered[2], 2.0);
     }
+
+    #[test]
+    fn test_top_k_filter_with_nan() {
+        let sampler = Sampler::new(1.0, 2, 1.0, 1.0, Some(42));
+        let logits = vec![1.0, f32::NAN, 3.0];
+        let filtered = sampler.top_k_filter(logits);
+        assert_eq!(filtered.len(), 3);
+    }
+
+    #[test]
+    fn test_top_p_filter_with_nan() {
+        let sampler = Sampler::new(1.0, 0, 0.9, 1.0, Some(42));
+        let logits = vec![1.0, f32::NAN, 3.0];
+        let filtered = sampler.top_p_filter(logits);
+        assert_eq!(filtered.len(), 3);
+    }
+
+    #[test]
+    fn test_sample_with_nan_logits() {
+        let mut sampler = Sampler::new(1.0, 0, 1.0, 1.0, Some(42));
+        let logits = vec![f32::NAN, 0.0, 1.0];
+        let token = sampler.sample(&logits, &[]);
+        assert!(token < logits.len() as u32);
+    }
 }
