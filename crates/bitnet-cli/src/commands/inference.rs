@@ -617,8 +617,7 @@ impl InferenceCommand {
 
             // 2. Prefill (measure)
             let t1 = Instant::now();
-            // Run prefill to process prompt tokens and populate cache
-            engine.eval_ids(&prompt_ids).await?;
+            engine.prefill(&prompt_ids).await?;
             let t_prefill_ms = t1.elapsed().as_secs_f64() * 1e3;
 
             // 3. Decode loop (measure)
@@ -1025,5 +1024,144 @@ impl InferenceCommand {
         println!("  /exit     - Exit interactive mode");
         println!("  Ctrl+C    - Exit");
         println!("  Ctrl+D    - New session");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device};
+    use bitnet_models::Model;
+    use bitnet_tokenizers::Tokenizer;
+    use std::{sync::Arc, thread::sleep, time::Duration};
+
+    struct MockModel {
+        config: BitNetConfig,
+    }
+
+    impl MockModel {
+        fn new() -> Self {
+            Self { config: BitNetConfig::default() }
+        }
+    }
+
+    impl Model for MockModel {
+        fn config(&self) -> &BitNetConfig {
+            &self.config
+        }
+
+        fn forward(
+            &self,
+            _input: &ConcreteTensor,
+            _cache: &mut dyn std::any::Any,
+        ) -> Result<ConcreteTensor, BitNetError> {
+            // Introduce delay to make prefill latency measurable
+            sleep(Duration::from_millis(10));
+            Ok(ConcreteTensor::mock(vec![1, self.config.model.vocab_size]))
+        }
+
+        fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor, BitNetError> {
+            let seq_len = tokens.len();
+            let hidden_dim = self.config.model.hidden_size;
+            Ok(ConcreteTensor::mock(vec![seq_len, hidden_dim]))
+        }
+
+        fn logits(&self, _hidden: &ConcreteTensor) -> Result<ConcreteTensor, BitNetError> {
+            Ok(ConcreteTensor::mock(vec![1, self.config.model.vocab_size]))
+        }
+    }
+
+    struct MockTokenizer;
+    impl MockTokenizer {
+        fn new() -> Self {
+            Self
+        }
+    }
+
+    impl Tokenizer for MockTokenizer {
+        fn encode(
+            &self,
+            text: &str,
+            _add_bos: bool,
+            _add_special: bool,
+        ) -> Result<Vec<u32>, BitNetError> {
+            Ok((0..text.len().min(10)).map(|i| i as u32 + 1).collect())
+        }
+
+        fn decode(&self, tokens: &[u32]) -> Result<String, BitNetError> {
+            Ok(format!("decoded_{}_tokens", tokens.len()))
+        }
+
+        fn vocab_size(&self) -> usize {
+            50257
+        }
+
+        fn eos_token_id(&self) -> Option<u32> {
+            Some(50256)
+        }
+
+        fn pad_token_id(&self) -> Option<u32> {
+            Some(50257)
+        }
+
+        fn token_to_piece(&self, token: u32) -> Option<String> {
+            Some(format!("<token_{}>", token))
+        }
+    }
+
+    #[tokio::test]
+    async fn prefill_is_executed() {
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer::new());
+        let mut engine = InferenceEngine::new(model, tokenizer, Device::Cpu).unwrap();
+
+        let cmd = InferenceCommand {
+            model: None,
+            model_format: "auto".into(),
+            prompt: None,
+            input_file: None,
+            output: None,
+            device: None,
+            quantization: None,
+            max_tokens: 16,
+            temperature: 0.7,
+            top_k: None,
+            top_p: None,
+            repetition_penalty: 1.1,
+            seed: None,
+            greedy: false,
+            deterministic: false,
+            threads: None,
+            stream: false,
+            batch_size: 1,
+            workers: None,
+            interactive: false,
+            metrics: false,
+            verbose: false,
+            format: "text".into(),
+            system_prompt: None,
+            chat_template: None,
+            tokenizer: None,
+            no_bos: false,
+            no_eos: false,
+            stop: Vec::new(),
+            timeout: None,
+            dump_logits: None,
+            logits_topk: 10,
+        };
+
+        let gen_config = GenerationConfig {
+            max_new_tokens: 1,
+            sampling: SamplingConfig::default(),
+            stop_sequences: vec![],
+            stream: false,
+        };
+
+        let results = cmd
+            .process_batch_sequential(&mut engine, &["hello".to_string()], &gen_config)
+            .await
+            .unwrap();
+
+        assert!(results[0].timing_ms.prefill >= 5.0, "prefill should record latency");
     }
 }
