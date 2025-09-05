@@ -945,8 +945,21 @@ impl InferenceEngine {
         Ok((tokens, first_token_latency))
     }
 
+    /// Prefill the model's cache with the provided prompt tokens.
+    ///
+    /// This runs a forward pass over the entire prompt to populate any
+    /// internal state required for subsequent token generation. The logits
+    /// from this pass are discarded since prefill is only used for warming
+    /// the model and measuring latency.
+    pub async fn prefill(&mut self, tokens: &[u32]) -> Result<()> {
+        // Perform a forward pass to populate the cache. Ignore the returned
+        // logits since we're only interested in the side effects and timing.
+        let _ = self.forward_pass(tokens).await?;
+        Ok(())
+    }
+
     /// Generate tokens using the configured backend
-    async fn generate_tokens(
+    pub async fn generate_tokens(
         &self,
         input_tokens: &[u32],
         config: &GenerationConfig,
