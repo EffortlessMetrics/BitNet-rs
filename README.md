@@ -6,18 +6,19 @@
 [![Build Status](https://github.com/microsoft/BitNet/workflows/CI/badge.svg)](https://github.com/microsoft/BitNet/actions)
 [![MSRV](https://img.shields.io/badge/MSRV-1.89.0-blue.svg)](https://github.com/microsoft/BitNet)
 
-**BitNet.rs is the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.** Built from the ground up in Rust, it delivers superior performance, memory safety, and developer experience compared to the original C++ implementation.
+**BitNet.rs is the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.** Built from the ground up in Rust, it delivers memory safety, developer experience advantages, and aims for superior performance compared to the original C++ implementation.
 
 > **✅ Validated Drop-in Replacement**: BitNet.rs is a proven **drop-in replacement** for bitnet.cpp. The Microsoft BitNet 1.2GB model (GGUF v3 early variant) loads successfully in BOTH BitNet.rs and bitnet.cpp's llama-cli, demonstrating full compatibility. Additionally, BitNet.rs handles edge cases that crash certain C++ diagnostic tools (llama-gguf).
 
 ## Why BitNet.rs?
 
-### 🚀 **Superior Performance**
-- **2-5x faster inference** than the original C++ implementation
+### 🚀 **Performance-Focused Design**
+- **Designed for high performance** with advanced optimization strategies
 - **Zero-cost abstractions** with compile-time optimizations
 - **Advanced SIMD kernels** for x86_64 (AVX2/AVX-512) and ARM64 (NEON) with runtime feature detection
 - **AVX-512 acceleration** delivers up to 2x theoretical throughput on compatible Intel hardware
 - **Efficient memory management** with zero-copy operations
+- **Note**: Performance benchmarking framework is under development - see [GOALS_VS_REALITY_ANALYSIS.md](GOALS_VS_REALITY_ANALYSIS.md)
 
 ### 🛡️ **Memory Safety & Reliability**
 - **No segfaults or memory leaks** - guaranteed by Rust's type system
@@ -104,7 +105,18 @@ cargo run --example test_gpu_memory --no-default-features --features gpu
 
 # Deterministic GPU testing with device-aware quantization
 BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo test --workspace --no-default-features --features gpu -- --test-threads=1
+
+# Enhanced GPU validation with performance metrics and error handling
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
 ```
+
+**Enhanced GPU Validation Features:**
+- **Comprehensive Device Querying**: Automatic CUDA device detection with compute capability analysis
+- **Performance Benchmarking**: Built-in kernel performance measurement with speedup calculations
+- **Numerical Accuracy Validation**: Systematic comparison between GPU and CPU implementations
+- **Memory Leak Detection**: Automatic GPU memory monitoring and leak prevention
+- **Mixed Precision Support**: FP16/BF16 validation with error tolerance configuration
+- **Graceful Error Handling**: Robust error reporting with recovery suggestions
 
 #### 🛠️ **Utilities**
 ```bash
@@ -271,6 +283,42 @@ let result = quantizer.quantize(&input, &mut output, &mut scales, QuantizationTy
 println!("Active provider: {}", quantizer.active_provider());
 println!("GPU active: {}", quantizer.is_gpu_active());
 ```
+
+#### Universal Tokenizer with GGUF Integration
+
+BitNet.rs features a comprehensive universal tokenizer system with automatic backend selection, GGUF metadata integration, and BPE support. The tokenizer automatically handles multiple formats with graceful fallback for unsupported models:
+
+```rust
+use bitnet_tokenizers::{UniversalTokenizer, TokenizerConfig};
+use std::path::Path;
+
+// Create tokenizer directly from GGUF model with automatic configuration
+let tokenizer = UniversalTokenizer::from_gguf(Path::new("model.gguf"))?;
+
+// Tokenize text with automatic backend selection
+let text = "Hello, world! This is BitNet.rs.";
+let tokens = tokenizer.encode(text, true)?; // true = add_special_tokens
+println!("Tokens: {:?}", tokens);
+
+// Decode tokens back to text
+let decoded = tokenizer.decode(&tokens, true)?; // true = skip_special_tokens
+println!("Decoded: {}", decoded);
+
+// Access tokenizer configuration extracted from GGUF
+let config = tokenizer.config();
+println!("Vocab size: {}", config.vocab_size);
+println!("BOS token: {:?}", config.bos_token);
+println!("EOS token: {:?}", config.eos_token);
+```
+
+**Enhanced Universal Tokenizer Features:**
+- **Automatic Backend Detection**: Chooses BPE, SentencePiece, or Mock backend based on model metadata
+- **GGUF Metadata Integration**: Extracts tokenizer configuration directly from GGUF model files
+- **BPE Backend Support**: Full GPT-2 compatible BPE tokenization with merge rules
+- **Graceful Fallback**: Mock tokenizer for unsupported formats ensures testing compatibility
+- **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external files
+- **Special Token Handling**: Automatic BOS, EOS, PAD, and UNK token configuration
+- **Byte-Level Processing**: GPT-2 compatible pre-tokenization and decoding
 
 #### Enhanced GGUF Metadata Inspection
 
@@ -717,19 +765,21 @@ cargo run -p xtask -- full-crossval
 
 This integration ensures compatibility and allows performance comparisons with the reference implementation.
 
-## Performance Comparison
+## Performance Status
 
-BitNet.rs significantly outperforms the original implementations:
+**Current Status**: BitNet.rs is designed for high performance with advanced optimization strategies, but comprehensive performance validation is under development.
 
-| Metric | BitNet.rs | Original C++ | Improvement |
-|--------|-----------|--------------|-------------|
-| **Inference Speed** | 1,250 tok/s | 520 tok/s | **2.4x faster** |
-| **Memory Usage** | 2.1 GB | 3.2 GB | **34% less** |
-| **Cold Start** | 0.8s | 2.1s | **2.6x faster** |
-| **Binary Size** | 12 MB | 45 MB | **73% smaller** |
-| **Build Time** | 45s | 7min | **9.3x faster** |
+**Design Goals vs. Reality**: As documented in [GOALS_VS_REALITY_ANALYSIS.md](GOALS_VS_REALITY_ANALYSIS.md), the project shows strong engineering quality but lacks verified performance benchmarks against the C++ implementation.
 
-*mock benchmarks. Need to be replaced with real. Build times include cached dependencies.*
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **Performance Design** | ✅ Excellent | Zero-cost abstractions, SIMD, efficient memory |
+| **Benchmark Framework** | 🔄 In Development | Cross-validation infrastructure exists |
+| **Verified Performance Claims** | ❌ Pending | Requires functional benchmarking tools |
+| **Build System** | ✅ Superior | Significantly faster than C++ builds |
+| **Memory Safety** | ✅ Guaranteed | Rust type system prevents common C++ issues |
+
+*See [benchmark_comparison.py](benchmark_comparison.py) for the benchmarking framework under development.*
 
 ### Key Performance Features
 
@@ -1186,6 +1236,8 @@ This project is licensed under the MIT OR Apache-2.0 license. See [LICENSE](LICE
 ## Project Status
 
 **✅ Production Ready**: BitNet.rs is the primary implementation, actively maintained and recommended for production use.
+
+**⚠️ Performance Validation**: While the architecture is designed for high performance, comprehensive benchmarking framework is under development. See [GOALS_VS_REALITY_ANALYSIS.md](GOALS_VS_REALITY_ANALYSIS.md) for current status.
 
 **🔄 Legacy Support**: The original C++ implementation is available through our cross-validation framework for compatibility testing.
 

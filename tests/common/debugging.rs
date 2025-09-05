@@ -191,8 +191,8 @@ impl TestDebugger {
         // Create debug output directory
         tokio::fs::create_dir_all(&output_dir).await?;
 
-        let mut debug_session = DebugSession::default();
-        debug_session.start_time = Some(SystemTime::now());
+        let debug_session =
+            DebugSession { start_time: Some(SystemTime::now()), ..Default::default() };
 
         let debugger = Self {
             debug_config: config,
@@ -316,11 +316,11 @@ impl TestDebugger {
 
         if let Some(test_trace) = debug_data.test_traces.get_mut(test_name) {
             // Complete previous phase
-            if let Some(last_phase) = test_trace.phases.last_mut() {
-                if last_phase.end_time.is_none() {
-                    last_phase.end_time = Some(SystemTime::now());
-                    last_phase.status = PhaseStatus::Completed;
-                }
+            if let Some(last_phase) = test_trace.phases.last_mut()
+                && last_phase.end_time.is_none()
+            {
+                last_phase.end_time = Some(SystemTime::now());
+                last_phase.status = PhaseStatus::Completed;
             }
 
             // Start new phase

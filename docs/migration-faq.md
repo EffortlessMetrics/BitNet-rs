@@ -8,13 +8,15 @@ This document answers frequently asked questions about migrating from legacy Bit
 
 **A:** BitNet.rs offers significant advantages over legacy implementations:
 
-- **2-5x faster inference** through optimized Rust implementation
+- **Performance-focused design** with advanced optimizations (benchmarking in development)*
 - **Memory safety guarantees** - no segfaults or memory leaks
-- **34% less memory usage** with efficient memory management
+- **Efficient memory management** with zero-copy operations
 - **Active development** with regular updates and new features
 - **Production-ready** with comprehensive testing and monitoring
 - **Better error handling** with detailed error messages
 - **Cross-platform consistency** across Linux, macOS, and Windows
+
+*See [GOALS_VS_REALITY_ANALYSIS.md](../GOALS_VS_REALITY_ANALYSIS.md) for current benchmarking status
 
 ### Q: How much effort is required to migrate?
 
@@ -156,7 +158,7 @@ import bitnet
 
 model = bitnet.BitNetModel("model.gguf")
 result = model.generate("Hello, world!")
-# 2-5x faster than original Python implementation
+# Performance improvements under benchmarking validation
 ```
 
 ### Q: How do I handle configuration migration?
@@ -242,7 +244,7 @@ cargo xtask performance-report --compare-cpp
 
 **A:** Most users see immediate improvements:
 
-- **Inference speed**: 2-5x faster out of the box
+- **Inference speed**: Designed for performance (benchmarking in development)
 - **Memory usage**: 30-50% reduction
 - **Cold start time**: 60-80% faster
 - **Build times**: 10x faster (Rust vs C++)

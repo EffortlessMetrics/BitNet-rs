@@ -8,7 +8,6 @@ use clap::Parser;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use tokio;
 
 #[derive(Parser)]
 #[command(name = "ci_status_integration")]
@@ -237,13 +236,13 @@ impl CIStatusIntegrator {
         let successful = workflows
             .iter()
             .filter(|w| {
-                w.status == "completed" && w.conclusion.as_ref().map_or(false, |c| c == "success")
+                w.status == "completed" && w.conclusion.as_ref().is_some_and(|c| c == "success")
             })
             .count();
         let failed = workflows
             .iter()
             .filter(|w| {
-                w.status == "completed" && w.conclusion.as_ref().map_or(false, |c| c == "failure")
+                w.status == "completed" && w.conclusion.as_ref().is_some_and(|c| c == "failure")
             })
             .count();
 
@@ -254,7 +253,7 @@ impl CIStatusIntegrator {
         } else if successful == total {
             ("success".to_string(), format!("All {} workflows passed", total))
         } else {
-            ("error".to_string(), format!("Unexpected workflow states"))
+            ("error".to_string(), "Unexpected workflow states".to_string())
         }
     }
 
@@ -264,13 +263,13 @@ impl CIStatusIntegrator {
         let successful = workflow_statuses
             .iter()
             .filter(|w| {
-                w.status == "completed" && w.conclusion.as_ref().map_or(false, |c| c == "success")
+                w.status == "completed" && w.conclusion.as_ref().is_some_and(|c| c == "success")
             })
             .count();
         let failed = workflow_statuses
             .iter()
             .filter(|w| {
-                w.status == "completed" && w.conclusion.as_ref().map_or(false, |c| c == "failure")
+                w.status == "completed" && w.conclusion.as_ref().is_some_and(|c| c == "failure")
             })
             .count();
 
@@ -295,13 +294,13 @@ impl CIStatusIntegrator {
         let successful = workflow_statuses
             .iter()
             .filter(|w| {
-                w.status == "completed" && w.conclusion.as_ref().map_or(false, |c| c == "success")
+                w.status == "completed" && w.conclusion.as_ref().is_some_and(|c| c == "success")
             })
             .count();
         let failed = workflow_statuses
             .iter()
             .filter(|w| {
-                w.status == "completed" && w.conclusion.as_ref().map_or(false, |c| c == "failure")
+                w.status == "completed" && w.conclusion.as_ref().is_some_and(|c| c == "failure")
             })
             .count();
         let pending = workflow_statuses.iter().filter(|w| w.status != "completed").count();
@@ -406,7 +405,7 @@ impl CIStatusIntegrator {
                 check.context, state_emoji, check.state, check.description
             ));
         }
-        md.push_str("\n");
+        md.push('\n');
 
         // Workflow details
         md.push_str("## Workflow Details\n\n");

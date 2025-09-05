@@ -711,7 +711,7 @@ mod integration_tests {
             .map(|i| {
                 let loader_clone = Arc::clone(&loader);
                 thread::spawn(move || {
-                    let result = loader_clone.load(&format!("non_existent_{}.gguf", i));
+                    let result = loader_clone.load(format!("non_existent_{}.gguf", i));
                     assert!(result.is_err()); // Expected to fail
                 })
             })

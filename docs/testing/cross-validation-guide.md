@@ -10,6 +10,7 @@ The cross-validation system compares:
 - **Accuracy**: Token-level output comparison between implementations
 - **Performance**: Speed and memory usage comparison
 - **Behavior**: Error handling and edge case behavior
+- **Model Compatibility**: GGUF tensor mapping validation using weight mapper integration
 
 ## Prerequisites
 
@@ -180,6 +181,56 @@ description = "Large model for comprehensive testing"
 ```
 
 ## Advanced Usage
+
+### ValidationResult Structure and Weight Mapper Integration
+
+The cross-validation framework includes enhanced model compatibility validation using weight mapper integration. The `ValidationResult` structure provides detailed metrics:
+
+```rust
+use crossval::validation::{ValidationSuite, ValidationResult};
+
+// Create validation suite
+let suite = ValidationSuite::new("model.gguf");
+
+// Run model compatibility check
+let result = suite.validate_model_compatibility()?;
+
+// Examine result metrics
+if result.passed {
+    println!("✓ All tensors mapped successfully");
+} else {
+    // Access new metrics for unmapped tensors
+    if let Some(count) = result.metrics.get("unmapped_count").and_then(|v| v.as_u64()) {
+        println!("✗ {} unmapped tensors detected", count);
+    }
+    
+    if let Some(tensors) = result.metrics.get("unmapped_tensors") {
+        println!("Unmapped tensor names: {:?}", tensors);
+    }
+}
+```
+
+#### ValidationResult Metrics
+
+The enhanced `ValidationResult` structure includes the following new metrics:
+
+- **`unmapped_count`** (u64): Number of tensors that could not be mapped by the weight mapper
+- **`unmapped_tensors`** (array): List of tensor names that failed mapping
+- **`gate`** (string): Validation gate identifier ("model_compatibility")
+- **`passed`** (bool): Overall validation success status
+- **`message`** (string): Human-readable validation summary
+
+#### Weight Mapper Validation Testing
+
+Test the weight mapper validation with fixtures:
+
+```bash
+# Test successful model compatibility
+cargo test -p crossval --no-default-features validate_model_compatibility_success
+
+# Test unmapped tensor detection
+cargo test -p crossval --no-default-features validate_model_compatibility_reports_unmapped
+```
 
 ### Custom Cross-Validation Tests
 

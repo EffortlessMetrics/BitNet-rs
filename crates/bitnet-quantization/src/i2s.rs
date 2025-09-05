@@ -6,6 +6,9 @@
 
 use crate::{QuantizedTensor, QuantizerTrait, utils::*};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
+#[cfg(feature = "gpu")]
+#[allow(unused_imports)]
+use bitnet_kernels::KernelProvider;
 use candle_core::Device;
 use rayon::prelude::*;
 
@@ -69,10 +72,11 @@ impl I2SQuantizer {
         if !device.is_cpu() {
             #[cfg(feature = "cuda")]
             {
-                if device.is_cuda() && bitnet_kernels::gpu::cuda::is_cuda_available() {
-                    if let Ok(res) = self.quantize_cuda(tensor) {
-                        return Ok(res);
-                    }
+                if device.is_cuda()
+                    && bitnet_kernels::gpu::cuda::is_cuda_available()
+                    && let Ok(res) = self.quantize_cuda(tensor)
+                {
+                    return Ok(res);
                 }
             }
         }
@@ -142,9 +146,9 @@ impl I2SQuantizer {
         let shape = tensor.shape().to_vec();
         let num_blocks = data.len().div_ceil(self.block_size);
         let mut scales = vec![0f32; num_blocks];
-        let packed_len = (data.len() * 2 + 7) / 8;
+        let packed_len = (data.len() * 2).div_ceil(8);
         let mut packed_data = vec![0u8; packed_len];
-        let kernel = CudaKernel::new(0)?;
+        let kernel = CudaKernel::new()?;
         kernel.quantize(&data, &mut packed_data, &mut scales, QuantizationType::I2S)?;
         Ok(QuantizedTensor::new_with_params(
             packed_data,

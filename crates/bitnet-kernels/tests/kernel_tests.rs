@@ -242,7 +242,7 @@ fn benchmark_quantization(kernel: &dyn KernelProvider) -> Result<Vec<Performance
         for size in &test_sizes {
             let input = TestDataGenerator::generate_quantization_input(*size, 33333);
             let mut output = vec![0u8; size / 4];
-            let mut scales = vec![0.0f32; (size + 31) / 32];
+            let mut scales = vec![0.0f32; size.div_ceil(32)];
 
             // Warm up
             for _ in 0..3 {
@@ -432,7 +432,7 @@ fn test_ffi_kernel_integration() {
 #[test]
 fn test_performance_comparison_with_ffi() {
     use bitnet_kernels::cpu::FallbackKernel;
-    use bitnet_kernels::ffi::{FfiKernel, PerformanceComparison};
+    use bitnet_kernels::ffi::FfiKernel;
 
     let ffi_kernel = match FfiKernel::new() {
         Ok(k) if k.is_available() => k,
@@ -453,7 +453,6 @@ fn test_performance_comparison_with_ffi() {
         // The old `compare_matmul` API was removed; skip perf comparison for now.
         let _ = (&rust_kernel, &ffi_kernel, &a, &b);
         println!("Skipping compare_matmul test: API was removed");
-        assert!(true);
     }
 
     #[cfg(not(feature = "ffi"))]

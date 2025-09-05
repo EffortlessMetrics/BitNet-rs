@@ -21,3 +21,6 @@ pub use loader::*;
 
 // Export GGUF reader for tokenizer loading
 pub use formats::gguf::GgufReader;
+
+// Export weight mapper utilities for crossval tests
+pub use weight_mapper::dry_run_remap_names;

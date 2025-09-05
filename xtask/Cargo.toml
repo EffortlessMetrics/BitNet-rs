@@ -23,6 +23,7 @@ httpdate = "1"
 tempfile = "3"
 chrono = "0.4"
 bitnet-models = { path = "../crates/bitnet-models", default-features = false }
+bitnet-kernels = { path = "../crates/bitnet-kernels", default-features = false }
 
 [dev-dependencies]
 tiny_http = "0.12"
