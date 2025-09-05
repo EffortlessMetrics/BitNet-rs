@@ -96,10 +96,10 @@ impl Backend for CpuBackend {
         debug!("CPU forward pass with input shape: {:?}", input.shape());
 
         // Set thread count for this operation
-        rayon::ThreadPoolBuilder::new()
+        // Ignore errors if the global thread pool has already been initialized
+        let _ = rayon::ThreadPoolBuilder::new()
             .num_threads(self.num_threads)
-            .build_global()
-            .context("Failed to set thread pool")?;
+            .build_global();
 
         // Forward pass through model
         let output = tokio::task::spawn_blocking({

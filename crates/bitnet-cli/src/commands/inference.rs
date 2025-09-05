@@ -456,7 +456,9 @@ impl InferenceCommand {
 
         // Try GGUF-embedded tokenizer (placeholder for now)
         if let Some(tokenizer) = bitnet_tokenizers::try_from_gguf_metadata(|| {
-            anyhow::bail!("GGUF tokenizer not implemented")
+            Err(bitnet_common::BitNetError::Validation(
+                "GGUF tokenizer not implemented".into(),
+            ))
         }) {
             debug!("Using GGUF-embedded tokenizer");
             return Ok(tokenizer);
@@ -619,42 +621,29 @@ impl InferenceCommand {
 
             // 2. Prefill (measure)
             let t1 = Instant::now();
-            engine.prefill(&prompt_ids)?;
+            engine.prefill(&prompt_ids).await?;
             let t_prefill_ms = t1.elapsed().as_secs_f64() * 1e3;
 
             // 3. Decode loop (measure)
             let t2 = Instant::now();
 
-            // Setup logits capture
-            let logits_collector = if self.dump_logits.is_some() {
-                let collector = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
-                let collector_clone = collector.clone();
-                let logits_topk = self.logits_topk;
-
-                // Create callback that captures chosen tokens
-                let cb =
-                    std::sync::Arc::new(move |step: usize, topk: Vec<(u32, f32)>, chosen: u32| {
-                        if let Ok(mut sink) = collector_clone.lock() {
-                            sink.push(LogitStep { step, topk, chosen_id: Some(chosen) });
-                        }
-                    })
-                        as std::sync::Arc<dyn Fn(usize, Vec<(u32, f32)>, u32) + Send + Sync>;
-
-                Some((collector, cb))
-            } else {
-                None
+            // Map CLI generation config to engine config
+            let engine_config = bitnet_inference::GenerationConfig {
+                max_new_tokens: config.max_new_tokens as u32,
+                temperature: config.sampling.temperature,
+                top_k: config.sampling.top_k,
+                top_p: config.sampling.top_p,
+                repetition_penalty: config.sampling.repetition_penalty,
+                stop_sequences: config.stop_sequences.clone(),
+                seed: config.sampling.seed,
+                skip_special_tokens: true,
+                eos_token_id: None,
+                logits_tap_steps: 0,
+                logits_topk: self.logits_topk,
+                logits_cb: None,
             };
 
-            // Create generation config with logits callback
-            let mut gen_config = config.clone();
-            if let Some((_, cb)) = &logits_collector {
-                gen_config.logits_tap_steps = self.dump_logits.unwrap_or(0);
-                gen_config.logits_topk = self.logits_topk;
-                gen_config.logits_cb = Some(cb.clone());
-            }
-
-            // Generate with the engine
-            let generated_ids = engine.generate_tokens(&prompt_ids, &gen_config).await?;
+            let generated_ids = engine.generate_tokens(&prompt_ids, &engine_config).await?;
             let t_decode_ms = t2.elapsed().as_secs_f64() * 1e3;
 
             // 4. Decode to text
@@ -672,13 +661,6 @@ impl InferenceCommand {
                 if t_decode_ms > 0.0 { generated_tokens as f64 / (t_decode_ms / 1e3) } else { 0.0 };
             let e2e_tps =
                 if t_total_ms > 0.0 { total_tokens as f64 / (t_total_ms / 1e3) } else { 0.0 };
-
-            // Collect logits if requested
-            let logits_dump = if let Some((collector, _)) = logits_collector {
-                if let Ok(sink) = collector.lock() { Some(sink.clone()) } else { None }
-            } else {
-                None
-            };
 
             results.push(InferenceResult {
                 prompt: prompt.clone(),
@@ -698,7 +680,7 @@ impl InferenceCommand {
                 memory_used: self.get_memory_usage(),
                 model_info: self.get_model_info(),
                 tokenizer_info: self.get_tokenizer_info(tokenizer.as_ref()),
-                logits_dump,
+                logits_dump: None,
             });
         }
 
@@ -1059,7 +1041,7 @@ mod tests {
         ) -> Result<ConcreteTensor, BitNetError> {
             // Introduce delay to make prefill latency measurable
             sleep(Duration::from_millis(10));
-            Ok(ConcreteTensor::mock(vec![1, self.config.model.vocab_size]))
+            Ok(ConcreteTensor::mock(vec![1, 1, self.config.model.hidden_size]))
         }
 
         fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor, BitNetError> {
@@ -1069,7 +1051,7 @@ mod tests {
         }
 
         fn logits(&self, _hidden: &ConcreteTensor) -> Result<ConcreteTensor, BitNetError> {
-            Ok(ConcreteTensor::mock(vec![1, self.config.model.vocab_size]))
+            Ok(ConcreteTensor::mock(vec![1, 1, self.config.model.vocab_size]))
         }
     }
 
