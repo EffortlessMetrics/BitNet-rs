@@ -9,6 +9,7 @@ use crate::{KernelProvider, cpu};
 use bitnet_common::{Device, KernelError, QuantizationType, Result};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use sysinfo::System;
 
 /// Device-aware quantization provider with automatic fallback
 pub struct DeviceAwareQuantizer {
@@ -323,6 +324,35 @@ impl DeviceAwareQuantizer {
                 self.primary_provider.as_ref().map(|p| p.name()).unwrap_or("None");
             let fallback_device_type = self.fallback_provider.name();
 
+            let (memory_used_bytes, memory_total_bytes) = match self.target_device {
+                #[cfg(feature = "gpu")]
+                Device::Cuda(_) => unsafe {
+                    use cudarc::driver::sys::cuMemGetInfo_v2;
+                    let mut free: usize = 0;
+                    let mut total: usize = 0;
+                    let result = cuMemGetInfo_v2(&mut free as *mut usize, &mut total as *mut usize);
+                    if result != 0 {
+                        log::warn!("Failed to get CUDA memory info: {:?}", result);
+                        (0, 0)
+                    } else {
+                        (total.saturating_sub(free) as u64, total as u64)
+                    }
+                },
+                _ => {
+                    let sys = System::new_all();
+                    let total = sys.total_memory();
+                    let used = sys.used_memory();
+                    (used as u64, total as u64)
+                }
+            };
+
+            log::debug!(
+                "Memory usage for {:?}: {}/{} bytes",
+                self.target_device,
+                memory_used_bytes,
+                memory_total_bytes
+            );
+
             Some(DeviceStats {
                 device_type: format!("{}+{}", primary_device_type, fallback_device_type),
                 target_device: self.target_device,
@@ -343,8 +373,8 @@ impl DeviceAwareQuantizer {
                 },
                 last_gpu_error: stats.last_gpu_error.clone(),
                 last_cpu_error: stats.last_cpu_error.clone(),
-                memory_used_bytes: 0,  // TODO: Implement memory tracking
-                memory_total_bytes: 0, // TODO: Implement memory tracking
+                memory_used_bytes,
+                memory_total_bytes,
             })
         } else {
             log::warn!("Failed to acquire stats lock");
@@ -577,6 +607,17 @@ mod tests {
         quantizer.reset_stats();
         if let Some(stats) = quantizer.get_stats() {
             assert_eq!(stats.total_operations, 0);
+        }
+    }
+
+    #[test]
+    fn test_memory_stats_cpu() {
+        let quantizer = DeviceAwareQuantizer::new(Device::Cpu).unwrap();
+        if let Some(stats) = quantizer.get_stats() {
+            assert!(stats.memory_total_bytes > 0);
+            assert!(stats.memory_used_bytes <= stats.memory_total_bytes);
+        } else {
+            panic!("No stats returned");
         }
     }
 }
