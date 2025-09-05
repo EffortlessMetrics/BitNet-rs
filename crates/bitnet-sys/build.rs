@@ -5,13 +5,12 @@
 
 use std::env;
 #[cfg(feature = "ffi")]
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn main() {
     // If the crate is compiled without `--features bitnet-sys/ffi`,
     // skip all native build steps so the workspace remains green.
-    if std::env::var("CARGO_FEATURE_FFI").is_err() {
+    if env::var("CARGO_FEATURE_FFI").is_err() {
         // No native build needed when FFI is disabled, but still ensure the build
         // script reruns if relevant inputs change.
         println!("cargo:rerun-if-changed=build.rs");
@@ -65,17 +64,6 @@ fn main() {
         // Generate bindings - fail on error
         generate_bindings(&cpp_dir)
             .expect("Failed to generate FFI bindings from Microsoft BitNet headers");
-    }
-
-    #[cfg(not(feature = "ffi"))]
-    {
-        // When ffi is disabled, create minimal bindings
-        let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-        std::fs::write(
-            out_path.join("bindings.rs"),
-            "// Bindings disabled - ffi feature not enabled\n",
-        )
-        .unwrap();
     }
 }
 
