@@ -342,7 +342,7 @@ impl DeviceAwareQuantizer {
                     let sys = System::new_all();
                     let total = sys.total_memory();
                     let used = sys.used_memory();
-                    (used as u64, total as u64)
+                    (used, total)
                 }
             };
 
