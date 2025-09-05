@@ -113,7 +113,7 @@ Common build errors and solutions:
 
 # Or set custom path
 export BITNET_CPP_DIR=/path/to/bitnet.cpp
-cargo build -p bitnet-sys --features ffi
+cargo build -p bitnet-sys --features bitnet-sys/ffi
 ```
 
 #### "clang not found"
@@ -170,8 +170,8 @@ If you get "BitNet C++ bindings not available" errors:
 
 ```bash
 # Make sure to enable the ffi feature
-cargo test -p bitnet-sys --features ffi
-cargo bench -p bitnet-sys --features ffi
+cargo test -p bitnet-sys --features bitnet-sys/ffi
+cargo bench -p bitnet-sys --features bitnet-sys/ffi
 ```
 
 ### Library Linking Issues
