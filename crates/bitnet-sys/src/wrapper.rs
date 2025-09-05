@@ -291,13 +291,22 @@ impl Context {
 
     /// Sample a token from logits using greedy sampling
     pub fn sample_greedy(&self, logits: &[f32]) -> i32 {
-        // Simple argmax
-        logits
-            .iter()
-            .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .map(|(idx, _)| idx as i32)
-            .unwrap_or(0)
+        // Manual argmax that gracefully handles NaN values instead of
+        // relying on `partial_cmp` which would panic on NaN.
+        let mut max_i = 0;
+        let mut max_val = f32::NEG_INFINITY;
+
+        for (i, &val) in logits.iter().enumerate() {
+            if val.is_nan() {
+                continue;
+            }
+            if val > max_val {
+                max_val = val;
+                max_i = i;
+            }
+        }
+
+        max_i as i32
     }
 }
 
