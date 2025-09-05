@@ -41,3 +41,9 @@ integration-tests = []
 default = ["cpu"]
 cpu = ["bitnet-inference/cpu"]
 gpu = ["bitnet-inference/gpu"]
+
+[[test]]
+name = "streaming_comprehensive"
+path = "tests/integration/streaming_comprehensive.rs"
+required-features = ["integration-tests"]
+
