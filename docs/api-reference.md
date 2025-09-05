@@ -257,6 +257,126 @@ impl Default for QuantizationConfig {
 }
 ```
 
+## Convolution Kernels
+
+### Conv2DParams
+
+Configuration parameters for 2D convolution operations.
+
+```rust
+#[derive(Clone, Copy, Debug)]
+pub struct Conv2DParams {
+    /// Stride along (height, width)
+    pub stride: (usize, usize),
+    
+    /// Padding along (height, width)
+    pub padding: (usize, usize),
+    
+    /// Dilation along (height, width)
+    pub dilation: (usize, usize),
+}
+
+impl Default for Conv2DParams {
+    fn default() -> Self {
+        Self {
+            stride: (1, 1),
+            padding: (0, 0),
+            dilation: (1, 1),
+        }
+    }
+}
+```
+
+### conv2d
+
+Perform 2D convolution with full-precision weights.
+
+```rust
+pub fn conv2d(
+    input: &[f32],
+    weight: &[f32],
+    bias: Option<&[f32]>,
+    output: &mut [f32],
+    params: Conv2DParams,
+    input_dims: (usize, usize, usize, usize),  // (N, C, H, W)
+    weight_dims: (usize, usize, usize, usize), // (O, I, H, W)
+) -> Result<()>
+```
+
+**Parameters:**
+- `input`: Input tensor data in NCHW format (batch, channels, height, width)
+- `weight`: Convolution kernel weights in OIHW format (out_channels, in_channels, height, width)
+- `bias`: Optional bias vector with length equal to output channels
+- `output`: Output buffer to store convolution results
+- `params`: Convolution parameters (stride, padding, dilation)
+- `input_dims`: Input tensor dimensions (N, C, H, W)
+- `weight_dims`: Weight tensor dimensions (O, I, H, W)
+
+**Features:**
+- Supports stride, padding, and dilation operations
+- NCHW input format and OIHW weight format
+- Optional bias addition
+- Comprehensive input validation
+- Efficient memory access patterns
+
+### conv2d_quantized
+
+Perform 2D convolution with quantized weights.
+
+```rust
+pub fn conv2d_quantized(
+    input: &[f32],
+    weight_quantized: &[u8],
+    weight_scales: &[f32],
+    bias: Option<&[f32]>,
+    output: &mut [f32],
+    params: Conv2DParams,
+    input_dims: (usize, usize, usize, usize),
+    weight_dims: (usize, usize, usize, usize),
+    qtype: QuantizationType,
+) -> Result<()>
+```
+
+**Parameters:**
+- `input`: Input tensor data in NCHW format
+- `weight_quantized`: Quantized convolution kernel weights
+- `weight_scales`: Scale factors for dequantizing weights per output channel
+- `bias`: Optional bias vector
+- `output`: Output buffer to store results
+- `params`: Convolution parameters
+- `input_dims`: Input tensor dimensions
+- `weight_dims`: Weight tensor dimensions
+- `qtype`: Quantization type (I2S, TL1, TL2)
+
+**Quantization Support:**
+- **I2S**: 2-bit signed quantization with values [-2, -1, 1, 2], packed 4 values per byte
+- **TL1**: Table lookup quantization with linear mapping from [0,255] to [-1,1]
+- **TL2**: Advanced table lookup quantization with non-linear mapping
+- On-the-fly dequantization during convolution
+- Per-channel scaling factors
+
+**Example:**
+```rust
+use bitnet_kernels::convolution::{conv2d, Conv2DParams};
+
+// Basic convolution
+let input = vec![1.0, 2.0, 3.0, 4.0]; // 1x1x2x2
+let weight = vec![1.0, 0.0, 0.0, 1.0]; // 1x1x2x2
+let mut output = vec![0.0; 1]; // 1x1x1x1
+
+let result = conv2d(
+    &input,
+    &weight,
+    None, // No bias
+    &mut output,
+    Conv2DParams::default(),
+    (1, 1, 2, 2), // Input: 1 batch, 1 channel, 2x2
+    (1, 1, 2, 2), // Weight: 1 out_ch, 1 in_ch, 2x2
+);
+
+assert!(result.is_ok());
+```
+
 ## Inference Engine
 
 ### InferenceEngine

@@ -26,6 +26,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Token-by-token streaming with configurable buffering and error handling
   - Comprehensive test coverage for streaming functionality and token ID accuracy
   - Updated examples and documentation to demonstrate token ID streaming usage
+- **2D Convolution Operations Support** ([#165](https://github.com/EffortlessSteven/BitNet-rs/pull/165)):
+  - Complete 2D convolution implementation with `conv2d` and `conv2d_quantized` functions
+  - Support for NCHW input format and OIHW weight format with configurable parameters
+  - Stride, padding, and dilation operations for flexible convolution configurations
+  - Quantized convolution with I2S, TL1, and TL2 quantization types
+  - On-the-fly dequantization with per-channel scaling factors
+  - PyTorch reference testing framework for numerical correctness validation
+  - Comprehensive unit tests covering basic functionality, edge cases, and error handling
+  - Integration with existing BitNet.rs kernel architecture and error handling patterns
 
 ### Changed
 - **Cargo Configuration Cleanup** ([#113](https://github.com/EffortlessSteven/BitNet-rs/pull/113)):

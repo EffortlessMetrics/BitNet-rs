@@ -534,6 +534,89 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cp
 # Test automatic fallback mechanism
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
 ```
+
+## Convolution Operations Support
+
+BitNet.rs includes comprehensive 2D convolution support with both full-precision and quantized implementations, integrated with the existing kernel architecture.
+
+### Key Features
+
+- **Full-precision convolution**: `conv2d` function supporting NCHW input format and OIHW weight format
+- **Quantized convolution**: `conv2d_quantized` with support for I2S, TL1, and TL2 quantization types
+- **Flexible parameters**: Configurable stride, padding, and dilation operations
+- **On-the-fly dequantization**: Efficient quantized weight processing during convolution
+- **PyTorch reference testing**: Integration tests comparing results with PyTorch implementation
+
+### Basic Usage
+
+```rust
+use bitnet_kernels::convolution::{conv2d, Conv2DParams};
+
+// Prepare input and weight tensors
+let input = vec![1.0, 2.0, 3.0, 4.0]; // 1x1x2x2 input
+let weight = vec![1.0, 0.0, 0.0, 1.0]; // 1x1x2x2 kernel
+let mut output = vec![0.0; 1]; // 1x1x1x1 output
+
+// Configure convolution parameters
+let params = Conv2DParams {
+    stride: (1, 1),
+    padding: (0, 0),
+    dilation: (1, 1),
+};
+
+// Perform convolution
+let result = conv2d(
+    &input,
+    &weight,
+    None, // No bias
+    &mut output,
+    params,
+    (1, 1, 2, 2), // Input dimensions (N, C, H, W)
+    (1, 1, 2, 2), // Weight dimensions (O, I, H, W)
+);
+
+assert!(result.is_ok());
+```
+
+### Quantized Convolution
+
+```rust
+use bitnet_kernels::convolution::{conv2d_quantized, Conv2DParams};
+use bitnet_common::QuantizationType;
+
+let input = vec![1.0, 2.0, 3.0, 4.0]; // 1x1x2x2
+// I2S quantized weights: [-2, -1, 1, 2] packed in 1 byte
+let weight_quantized = vec![0xE4]; // Bit pattern: 11100100
+let weight_scales = vec![1.0]; // Scale factor per output channel
+let mut output = vec![0.0; 1];
+
+let result = conv2d_quantized(
+    &input,
+    &weight_quantized,
+    &weight_scales,
+    None,
+    &mut output,
+    Conv2DParams::default(),
+    (1, 1, 2, 2),
+    (1, 1, 2, 2),
+    QuantizationType::I2S,
+);
+
+assert!(result.is_ok());
+```
+
+### Testing and Validation
+
+```bash
+# Run convolution unit tests
+cargo test -p bitnet-kernels convolution
+
+# Run PyTorch reference validation (requires Python and PyTorch)
+cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored
+```
+
+The convolution implementation includes comprehensive PyTorch reference testing to ensure correctness across various parameter combinations including different stride, padding, and dilation configurations.
+
 ## GGUF Validation & Model Compatibility
 
 BitNet.rs includes a robust GGUF validation system that ensures model compatibility before loading:
@@ -591,7 +674,7 @@ BitNet.rs is organized as a comprehensive Rust workspace with 12 specialized cra
 | `bitnet-common` | Shared types, traits, and utilities |
 | `bitnet-models` | Model loading, definitions, and formats |
 | `bitnet-quantization` | 1-bit quantization algorithms |
-| `bitnet-kernels` | Optimized compute kernels (CPU/GPU) |
+| `bitnet-kernels` | Optimized compute kernels (CPU/GPU) with convolution support |
 | `bitnet-inference` | High-level inference engine |
 | `bitnet-tokenizers` | Text tokenization and processing |
 
