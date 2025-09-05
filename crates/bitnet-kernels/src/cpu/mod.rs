@@ -1,9 +1,17 @@
 //! CPU kernel implementations
 
-pub mod arm;
 pub mod fallback;
+
+#[cfg(target_arch = "x86_64")]
 pub mod x86;
 
-pub use arm::*;
+#[cfg(target_arch = "aarch64")]
+pub mod arm;
+
 pub use fallback::*;
+
+#[cfg(target_arch = "x86_64")]
 pub use x86::*;
+
+#[cfg(target_arch = "aarch64")]
+pub use arm::*;
