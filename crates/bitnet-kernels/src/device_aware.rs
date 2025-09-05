@@ -9,6 +9,7 @@ use crate::{KernelProvider, cpu};
 use bitnet_common::{Device, KernelError, QuantizationType, Result};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use sysinfo::System;
 
 /// Device-aware quantization provider with automatic fallback
 pub struct DeviceAwareQuantizer {
@@ -323,6 +324,9 @@ impl DeviceAwareQuantizer {
                 self.primary_provider.as_ref().map(|p| p.name()).unwrap_or("None");
             let fallback_device_type = self.fallback_provider.name();
 
+            let mut system = System::new();
+            system.refresh_memory();
+
             Some(DeviceStats {
                 device_type: format!("{}+{}", primary_device_type, fallback_device_type),
                 target_device: self.target_device,
@@ -343,8 +347,9 @@ impl DeviceAwareQuantizer {
                 },
                 last_gpu_error: stats.last_gpu_error.clone(),
                 last_cpu_error: stats.last_cpu_error.clone(),
-                memory_used_bytes: 0,  // TODO: Implement memory tracking
-                memory_total_bytes: 0, // TODO: Implement memory tracking
+                // sysinfo reports memory in kilobytes, convert to bytes
+                memory_used_bytes: system.used_memory() * 1024,
+                memory_total_bytes: system.total_memory() * 1024,
             })
         } else {
             log::warn!("Failed to acquire stats lock");
@@ -378,7 +383,9 @@ pub struct DeviceStats {
     pub gpu_efficiency: f64, // Ratio of GPU operations to total operations
     pub last_gpu_error: Option<String>,
     pub last_cpu_error: Option<String>,
+    /// Host memory currently used in bytes
     pub memory_used_bytes: u64,
+    /// Total host memory available in bytes
     pub memory_total_bytes: u64,
 }
 
@@ -555,6 +562,9 @@ mod tests {
         if let Some(stats) = quantizer.get_stats() {
             assert_eq!(stats.total_operations, 0);
             assert_eq!(stats.total_time_ms, 0.0);
+            // Memory metrics should be populated
+            assert!(stats.memory_total_bytes > 0);
+            assert!(stats.memory_used_bytes > 0);
         }
 
         // Perform some operations
@@ -570,6 +580,8 @@ mod tests {
             assert_eq!(stats.quantization_operations, 1);
             assert!(stats.total_time_ms > 0.0);
             assert!(stats.cpu_operations > 0);
+            assert!(stats.memory_total_bytes > 0);
+            assert!(stats.memory_used_bytes > 0);
             println!("CPU quantization stats: {}", stats.summary());
         }
 
