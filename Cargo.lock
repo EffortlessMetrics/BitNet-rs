@@ -486,6 +486,7 @@ dependencies = [
  "bitnet-models",
  "chrono",
  "ggus",
+ "serde",
  "serde_json",
  "sha2",
  "tempfile",
