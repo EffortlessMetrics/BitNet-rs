@@ -11,9 +11,9 @@ use std::path::Path;
 /// Minimal weights containing only embedding and output layers
 #[derive(Debug)]
 pub struct MinimalWeights {
-    /// Token embeddings flattened: [vocab*dim]
+    /// Token embeddings flattened: \[vocab*dim\]
     pub tok_embeddings: Vec<f32>,
-    /// Language model head flattened: [dim*vocab]
+    /// Language model head flattened: \[dim*vocab\]
     pub lm_head: Vec<f32>,
     /// Vocabulary size
     pub vocab: usize,

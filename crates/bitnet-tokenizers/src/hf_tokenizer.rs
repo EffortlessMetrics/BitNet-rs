@@ -24,7 +24,7 @@ impl HfTokenizer {
     /// Load a tokenizer from a Hugging Face tokenizer.json file
     ///
     /// This method loads the tokenizer and automatically detects special tokens
-    /// like BOS (<s>, <bos>) and EOS (</s>, <eos>) from the vocabulary.
+    /// like BOS (`<s>`, `<bos>`) and EOS (`</s>`, `<eos>`) from the vocabulary.
     ///
     /// # Arguments
     /// * `path` - Path to the tokenizer.json file

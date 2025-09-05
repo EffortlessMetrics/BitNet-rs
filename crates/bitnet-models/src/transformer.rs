@@ -488,7 +488,7 @@ impl TransformerModel {
         }
     }
 
-    /// Teacher-forcing forward: full sequence [B,T] -> [B,T,V] logits
+    /// Teacher-forcing forward: full sequence \[B,T\] -> \[B,T,V\] logits
     ///
     /// This implementation mirrors the incremental decoding path by
     /// processing tokens step-by-step with a KV cache. This ensures that

@@ -91,6 +91,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Restored Git metadata support using vergen-gix v1.x
   - Moved runtime dependencies from build-dependencies to correct section
   - Made health endpoint robust with option_env! for graceful fallbacks
+- **Memory Safety and Environment Variable Handling** ([#181](https://github.com/EffortlessSteven/BitNet-rs/pull/181)):
+  - Enhanced BitNetTensor with proper device tracking and memory leak prevention
+  - Replaced unsafe `Box::leak()` with safe `OnceLock<Vec<f32>>` caching for host data
+  - Safe type conversion using `bytemuck::cast_slice` instead of manual transmutation  
+  - Removed redundant `DeviceType` enum in favor of unified `Device` enum
+  - Rust 2024 compliance: marked environment variable manipulations as `unsafe`
+  - Improved Clone trait implementation for BitNetTensor with proper data handling
 - **IQ2_S FFI Layout Enhancement and Parity Testing** ([#142](https://github.com/EffortlessSteven/BitNet-rs/pull/142)):
   - Enhanced `BlockIq2S` struct with perfect GGML `block_iq2_s` layout compatibility (82 bytes)
   - Added compile-time size and alignment assertions for layout parity verification
@@ -191,6 +198,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Restored Git metadata support using vergen-gix v1.x
   - Moved runtime dependencies from build-dependencies to correct section
   - Made health endpoint robust with option_env! for graceful fallbacks
+- **Memory Safety and Environment Variable Handling** ([#181](https://github.com/EffortlessSteven/BitNet-rs/pull/181)):
+  - Enhanced BitNetTensor with proper device tracking and memory leak prevention
+  - Replaced unsafe `Box::leak()` with safe `OnceLock<Vec<f32>>` caching for host data
+  - Safe type conversion using `bytemuck::cast_slice` instead of manual transmutation  
+  - Removed redundant `DeviceType` enum in favor of unified `Device` enum
+  - Rust 2024 compliance: marked environment variable manipulations as `unsafe`
+  - Improved Clone trait implementation for BitNetTensor with proper data handling
 - **IQ2_S FFI Layout Enhancement and Parity Testing** ([#142](https://github.com/EffortlessSteven/BitNet-rs/pull/142)):
   - Enhanced `BlockIq2S` struct with perfect GGML `block_iq2_s` layout compatibility (82 bytes)
   - Added compile-time size and alignment assertions for layout parity verification
