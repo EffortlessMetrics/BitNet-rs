@@ -190,6 +190,7 @@ The CUDA device querying integrates with BitNet's quantization system:
 - **Automatic GPU Acceleration**: Falls back to CPU when GPU is unavailable or insufficient
 - **Memory-Constrained Operation**: Adjusts quantization batch sizes based on available memory
 - **Performance Monitoring**: Tracks GPU utilization and performance across operations
+- **Host Memory Tracking**: Real-time monitoring of system memory usage with detailed statistics
 
 ## GPU Testing Strategy
 
@@ -309,6 +310,97 @@ GPU/CUDA tests require special handling due to hardware dependencies:
    - Provide clear error messages when GPU is unavailable
    - Include CPU fallback path testing in all scenarios
 
+## Memory Tracking and Performance Monitoring
+
+### Host Memory Statistics
+
+BitNet.rs now includes comprehensive host memory tracking using the `sysinfo` crate, providing real-time monitoring of system memory usage alongside GPU operations.
+
+#### DeviceStats with Memory Tracking
+
+The `DeviceStats` structure now includes actual memory usage statistics:
+
+```rust
+use bitnet_kernels::device_aware::DeviceAwareQuantizer;
+
+let quantizer = DeviceAwareQuantizer::new(Device::Cpu)?;
+
+// Perform some operations
+let input = vec![1.0f32; 1024];
+let mut output = vec![0u8; 256];
+let mut scales = vec![0.0f32; 8];
+quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S)?;
+
+// Get comprehensive statistics including memory usage
+if let Some(stats) = quantizer.get_stats() {
+    println!("Device stats: {}", stats.summary());
+    println!("Memory used: {:.2} MB", stats.memory_used_bytes as f64 / (1024.0 * 1024.0));
+    println!("Memory total: {:.2} MB", stats.memory_total_bytes as f64 / (1024.0 * 1024.0));
+    println!("Memory usage: {:.1}%", 
+        (stats.memory_used_bytes as f64 / stats.memory_total_bytes as f64) * 100.0);
+}
+```
+
+#### Memory Tracking Features
+
+- **Real-time Monitoring**: Memory statistics are updated on each request using `sysinfo::System`
+- **Byte-accurate Reporting**: Both used and total memory reported in bytes for precise tracking
+- **Human-readable Display**: The `summary()` method includes memory usage with percentage
+- **Performance Integration**: Memory tracking integrated with existing performance statistics
+
+#### Platform-Specific CPU Kernel Selection
+
+The device-aware quantizer now automatically selects the best CPU kernel based on platform architecture:
+
+```rust
+// Automatic platform detection and optimization
+let quantizer = DeviceAwareQuantizer::new(Device::Cpu)?;
+println!("Active kernel: {}", quantizer.active_provider());
+
+// Expected outputs:
+// - x86_64 with AVX2: "AVX2Kernel"  
+// - aarch64 with NEON: "NeonKernel"
+// - Fallback systems: "FallbackKernel"
+```
+
+#### Memory Tracking Commands
+
+```bash
+# Test comprehensive memory tracking implementation
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+
+# Test platform-specific kernel selection
+cargo test -p bitnet-kernels --no-default-features --features cpu test_platform_kernel_selection
+
+# Test CPU provider creation across architectures
+cargo test -p bitnet-kernels --no-default-features --features cpu test_cpu_provider_creation
+
+# Architecture-specific feature detection tests
+cargo test -p bitnet-kernels --no-default-features --features cpu test_x86_64_feature_detection  # x86_64 only
+cargo test -p bitnet-kernels --no-default-features --features cpu test_aarch64_feature_detection  # aarch64 only
+```
+
+#### Memory and Performance Analysis
+
+The enhanced statistics provide comprehensive monitoring capabilities:
+
+```rust
+#[derive(Debug, Clone)]
+pub struct DeviceStats {
+    pub memory_used_bytes: u64,      // Host memory currently used in bytes
+    pub memory_total_bytes: u64,     // Total host memory available in bytes
+    pub gpu_efficiency: f64,         // Ratio of GPU operations to total operations
+    pub fallback_count: u64,         // Number of times fallback to CPU occurred
+    // ... existing fields
+}
+```
+
+Key statistics methods:
+- `summary()`: Human-readable summary with memory usage percentage
+- `is_gpu_effective()`: Checks if GPU is being used effectively (>80% efficiency)
+- `avg_quantization_time_ms()`: Average time per quantization operation
+- `avg_matmul_time_ms()`: Average time per matrix multiplication operation
+
 ## Advanced GPU/CUDA Troubleshooting
 
 ### GPU Backend Detection Issues
@@ -386,6 +478,9 @@ GPU/CUDA tests require special handling due to hardware dependencies:
    
    # Check for memory leaks
    cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_cleanup --ignored
+   
+   # Test host memory tracking and statistics
+   cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
    ```
 
 3. **Compute Capability Issues**:
