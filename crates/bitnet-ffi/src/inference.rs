@@ -3,9 +3,12 @@
 //! This module provides thread-safe inference operations, streaming support,
 //! and performance monitoring for the C API.
 
-use crate::{BitNetCError, BitNetCInferenceConfig, BitNetCPerformanceMetrics};
+use crate::{
+    get_model_manager, BitNetCError, BitNetCInferenceConfig, BitNetCPerformanceMetrics,
+};
 // use bitnet_common::PerformanceMetrics;
 use bitnet_inference::{InferenceConfig, InferenceEngine};
+use bitnet_common::Tensor;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
