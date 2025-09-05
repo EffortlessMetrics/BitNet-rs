@@ -29,6 +29,12 @@ cargo test -p bitnet-inference --test gguf_header
 cargo test -p bitnet-inference --test gguf_fuzz
 cargo test -p bitnet-inference --test engine_inspect
 
+# Run convolution kernel tests
+cargo test -p bitnet-kernels --no-default-features --features cpu convolution
+
+# Run PyTorch reference convolution tests (requires Python and PyTorch)
+cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored
+
 # Run verification script
 ./scripts/verify-tests.sh
 
@@ -92,7 +98,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-common`**: Shared types, traits, and utilities
 - **`bitnet-models`**: Model loading and format handling (GGUF, SafeTensors)
 - **`bitnet-quantization`**: 1-bit quantization algorithms
-- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
+- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with 2D convolution support, FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
 - **`bitnet-inference`**: Inference engine with streaming support
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration and mock fallback system
 - **`bitnet-server`**: HTTP server for BitNet inference with health monitoring

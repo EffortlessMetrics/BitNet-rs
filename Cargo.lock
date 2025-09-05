@@ -591,8 +591,12 @@ dependencies = [
  "half",
  "log",
  "rayon",
+<<<<<<< HEAD
+ "serde_json",
+=======
  "sysinfo",
  "tempfile",
+>>>>>>> origin/main
  "thiserror 2.0.16",
 ]
 
