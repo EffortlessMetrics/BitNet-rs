@@ -1,38 +1,41 @@
 {
-  "pr_number": 177,
-  "title": "feat: add memory stats and platform gating in kernels",
-  "branch": "codex/analyze-bitnet-kernels-crate-for-issues",
-  "commit_sha": "4c6eb5f",
+  "pr_number": 181,
   "status": "merged",
-  "merged_at": "2025-09-05T13:39:04Z",
-  "validation_timestamp": "2025-09-05T13:35:00Z",
+  "commit_sha": "0504c06",
   "merge_strategy": "squash",
-  "priority": "medium",
+  "merged_at": "2025-09-05T17:08:44Z",
+  "merged_by": "EffortlessSteven",
+  "title": "Improve tensor safety and cleanup env tests",
+  "branch": "codex/analyze-bitnet-common-for-issues",
+  "validation_report": "/home/steven/code/Rust/BitNet-rs/.claude/finalization-report-pr-181.md",
+  "validation_timestamp": "2025-09-05T17:08:00Z",
+  "key_changes": [
+    "Tensor device tracking to prevent memory leaks",
+    "OnceLock caching for host data",
+    "Safe bytemuck::cast_slice instead of unsafe transmutation",
+    "Removed redundant DeviceType enum",
+    "Rust 2024 unsafe environment variable handling"
+  ],
+  "impact": {
+    "memory_safety": "improved",
+    "performance": "improved",
+    "api_breaking": false,
+    "security": "improved"
+  },
   "validation_details": {
     "format_check": "passed",
     "code_quality": "passed",
-    "memory_tracking": "implemented",
-    "platform_gating": "implemented",
-    "test_coverage": "comprehensive",
-    "pre_commit_hooks": "passed",
-    "merge_conflicts": "resolved",
-    "resource_constraints": "workaround_applied"
+    "build_validation": "passed",
+    "test_suite": "passed",
+    "tensor_safety": "validated",
+    "parity_tests": "passed"
   },
-  "features_implemented": [
-    "actual_memory_tracking",
-    "platform_specific_kernel_selection",
-    "comprehensive_test_coverage",
-    "enhanced_device_stats",
-    "architecture_gating"
-  ],
   "technical_metrics": {
-    "total_additions": "~460 lines",
-    "files_modified": 3,
-    "final_additions": 226,
-    "final_deletions": 8,
-    "test_functions_added": 8
+    "files_modified": 4,
+    "crates_affected": ["bitnet-common"],
+    "unsafe_code_reduction": true,
+    "memory_leak_fixes": true
   },
-  "next_agent": "pr-doc-finalizer",
   "finalization_complete": true,
   "merge_successful": true
 }
