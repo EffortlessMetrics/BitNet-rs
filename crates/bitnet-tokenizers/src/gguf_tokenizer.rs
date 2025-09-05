@@ -8,6 +8,8 @@ use std::path::Path;
 pub struct GgufTokenizer {
     vocab: HashMap<String, u32>,
     reverse_vocab: HashMap<u32, String>,
+    byte_to_id: [Option<u32>; 256],
+    id_to_byte: HashMap<u32, u8>,
     bos_token_id: Option<u32>,
     eos_token_id: Option<u32>,
 }
@@ -17,12 +19,25 @@ impl GgufTokenizer {
         // Parse metadata and vocabulary from GGUF file
         let (tokens, bos_token_id, eos_token_id) = read_gguf_metadata(path)?;
 
-        // Extract vocabulary
+        // Extract vocabulary and byte-level mappings
         let vocab = extract_vocab(&tokens);
-        let reverse_vocab: HashMap<u32, String> =
-            vocab.iter().map(|(k, v)| (*v, k.clone())).collect();
+        let mut reverse_vocab: HashMap<u32, String> = HashMap::with_capacity(vocab.len());
+        let mut byte_to_id = [None; 256];
+        let mut id_to_byte = HashMap::new();
 
-        Ok(Self { vocab, reverse_vocab, bos_token_id, eos_token_id })
+        for (token, &id) in &vocab {
+            reverse_vocab.insert(id, token.clone());
+            if token.len() == 6
+                && token.starts_with("<0x")
+                && token.ends_with('>')
+                && let Ok(byte) = u8::from_str_radix(&token[3..5], 16)
+            {
+                byte_to_id[byte as usize] = Some(id);
+                id_to_byte.insert(id, byte);
+            }
+        }
+
+        Ok(Self { vocab, reverse_vocab, byte_to_id, id_to_byte, bos_token_id, eos_token_id })
     }
 }
 
@@ -35,11 +50,10 @@ impl Tokenizer for GgufTokenizer {
             tokens.push(bos);
         }
 
-        // Convert text to bytes and lookup in vocab
+        // Convert text to bytes and lookup in byte mapping
         for byte in text.bytes() {
-            let byte_str = format!("<0x{:02X}>", byte);
-            if let Some(&token_id) = self.vocab.get(&byte_str) {
-                tokens.push(token_id);
+            if let Some(id) = self.byte_to_id[byte as usize] {
+                tokens.push(id);
             } else {
                 // Fallback to direct byte value if not in vocab
                 tokens.push(byte as u32);
@@ -51,21 +65,25 @@ impl Tokenizer for GgufTokenizer {
 
     fn decode(&self, tokens: &[u32]) -> Result<String> {
         let mut text = String::new();
+        let mut byte_buf: Vec<u8> = Vec::new();
 
         for &token in tokens {
-            if let Some(token_str) = self.reverse_vocab.get(&token) {
-                // Handle byte tokens
-                if token_str.starts_with("<0x") && token_str.ends_with(">") {
-                    if let Ok(byte_val) = u8::from_str_radix(&token_str[3..5], 16) {
-                        text.push(byte_val as char);
-                    }
-                } else {
-                    text.push_str(token_str);
-                }
+            if let Some(&byte) = self.id_to_byte.get(&token) {
+                byte_buf.push(byte);
             } else if token < 256 {
                 // Direct byte value
-                text.push(token as u8 as char);
+                byte_buf.push(token as u8);
+            } else if let Some(token_str) = self.reverse_vocab.get(&token) {
+                if !byte_buf.is_empty() {
+                    text.push_str(&String::from_utf8_lossy(&byte_buf));
+                    byte_buf.clear();
+                }
+                text.push_str(token_str);
             }
+        }
+
+        if !byte_buf.is_empty() {
+            text.push_str(&String::from_utf8_lossy(&byte_buf));
         }
 
         Ok(text)
@@ -76,7 +94,15 @@ impl Tokenizer for GgufTokenizer {
     }
 
     fn token_to_piece(&self, token: u32) -> Option<String> {
-        self.reverse_vocab.get(&token).cloned()
+        if let Some(&byte) = self.id_to_byte.get(&token) {
+            Some(String::from_utf8_lossy(&[byte]).to_string())
+        } else if let Some(piece) = self.reverse_vocab.get(&token) {
+            Some(piece.clone())
+        } else if token < 256 {
+            Some(String::from_utf8_lossy(&[token as u8]).to_string())
+        } else {
+            None
+        }
     }
 
     fn bos_token_id(&self) -> Option<u32> {
