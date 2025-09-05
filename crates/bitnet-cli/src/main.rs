@@ -848,22 +848,28 @@ async fn run_simple_generation(
         let next_token = sampler.sample(&logits_vec, &generated_tokens);
 
         // Assert greedy invariant if requested
-        if assert_greedy
-            && greedy
-            && dump_logit_steps.is_some()
-            && step_idx < dump_logit_steps.unwrap()
-        {
-            let (mut best_i, mut best_v) = (0usize, f32::NEG_INFINITY);
-            for (i, &v) in logits_vec.iter().enumerate() {
-                if v.is_finite() && v > best_v {
-                    best_v = v;
-                    best_i = i;
+        if assert_greedy && greedy {
+            if let Some(max_steps) = dump_logit_steps {
+                if step_idx < max_steps {
+                    let (mut best_i, mut best_v) = (0usize, f32::NEG_INFINITY);
+                    for (i, &v) in logits_vec.iter().enumerate() {
+                        if v.is_finite() && v > best_v {
+                            best_v = v;
+                            best_i = i;
+                        }
+                    }
+                    if next_token as usize != best_i {
+                        eprintln!(
+                            "ERROR: Non-argmax token chosen in --greedy at step {}",
+                            step_idx
+                        );
+                        eprintln!(
+                            "  argmax={} (logit={:.4}) but chosen={}",
+                            best_i, best_v, next_token
+                        );
+                        std::process::exit(EXIT_ARGMAX_MISMATCH);
+                    }
                 }
-            }
-            if next_token as usize != best_i {
-                eprintln!("ERROR: Non-argmax token chosen in --greedy at step {}", step_idx);
-                eprintln!("  argmax={} (logit={:.4}) but chosen={}", best_i, best_v, next_token);
-                std::process::exit(EXIT_ARGMAX_MISMATCH);
             }
         }
 
