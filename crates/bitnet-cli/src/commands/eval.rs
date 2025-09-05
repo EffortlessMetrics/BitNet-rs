@@ -295,7 +295,11 @@ impl EvalCommand {
         let (engine, tokenizer) = self.load_model_and_tokenizer(config).await?;
 
         // Friendly guardrail for accidental empty top-k
-        if self.dump_logit_steps.unwrap_or(0) > 0 && self.logits_topk == 0 {
+        if self
+            .dump_logit_steps
+            .is_some_and(|steps| steps > 0)
+            && self.logits_topk == 0
+        {
             warn!("--dump-logit-steps > 0 but --logits-topk == 0: no tokens will be recorded.");
         }
 
