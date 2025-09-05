@@ -4,6 +4,7 @@ use crate::Model;
 use bitnet_common::{BitNetError, Device, ModelMetadata, Result};
 use memmap2::Mmap;
 use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 use std::sync::Arc;
 use tracing::{debug, info};
@@ -155,30 +156,21 @@ impl ModelLoader {
 
     /// Detect format by magic bytes
     fn detect_by_magic_bytes(&self, path: &Path) -> Result<Option<&dyn FormatLoader>> {
-        let file = File::open(path).map_err(BitNetError::Io)?;
+        let mut file = File::open(path).map_err(BitNetError::Io)?;
 
-        // Read first few bytes to check magic numbers
-        let mmap = unsafe { Mmap::map(&file) }.map_err(BitNetError::Io)?;
-
-        if mmap.len() < 8 {
+        let mut magic = [0u8; 8];
+        let n = file.read(&mut magic).map_err(BitNetError::Io)?;
+        if n < 4 {
             return Ok(None);
         }
 
-        let magic = &mmap[0..8];
-
         // GGUF magic: "GGUF" (0x47475546)
-        if magic.starts_with(b"GGUF") {
+        if &magic[0..4] == b"GGUF" {
             return Ok(self.find_loader("GGUF"));
         }
 
-        // SafeTensors magic: starts with JSON header length
-        if magic[0] == b'{'
-            || (magic.len() >= 8
-                && u64::from_le_bytes([
-                    magic[0], magic[1], magic[2], magic[3], magic[4], magic[5], magic[6], magic[7],
-                ]) < 1024 * 1024)
-        {
-            // Likely SafeTensors format
+        // SafeTensors magic: starts with JSON header length or '{'
+        if magic[0] == b'{' || (n >= 8 && u64::from_le_bytes(magic) < 1024 * 1024) {
             return Ok(self.find_loader("SafeTensors"));
         }
 
