@@ -359,12 +359,12 @@ impl Session {
 
     /// Generate tokens greedily
     pub fn generate_greedy(&mut self, prompt: &str, max_tokens: usize) -> Result<Vec<i32>> {
-        // Tokenize prompt
-        let mut tokens = self.tokenize(prompt)?;
-        let prompt_len = tokens.len();
+        // Tokenize and evaluate the prompt
+        let prompt_tokens = self.tokenize(prompt)?;
+        let prompt_len = prompt_tokens.len();
+        self.context.eval(&prompt_tokens, 0)?;
 
-        // Evaluate prompt
-        self.context.eval(&tokens, 0)?;
+        let mut generated = Vec::new();
 
         // Generate new tokens
         for i in 0..max_tokens {
@@ -377,12 +377,12 @@ impl Session {
                 break;
             }
 
-            tokens.push(next_token);
+            generated.push(next_token);
 
             // Evaluate the new token
             self.context.eval(&[next_token], (prompt_len + i) as i32)?;
         }
 
-        Ok(tokens)
+        Ok(generated)
     }
 }

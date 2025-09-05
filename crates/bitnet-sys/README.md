@@ -63,7 +63,7 @@ fn example() -> Result<(), Box<dyn std::error::Error>> {
     initialize()?;
     let mut model = load_model("path/to/model.gguf")?;
 
-    // Generate tokens
+    // Generate tokens (prompt excluded)
     let tokens = generate(&mut model, "Hello, world!", 100)?;
 
     // Clean up global resources

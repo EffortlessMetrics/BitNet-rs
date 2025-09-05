@@ -115,7 +115,8 @@ pub mod safe {
         Ok(ModelHandle(session))
     }
 
-    /// Generate tokens using a loaded model
+    /// Generate up to `max_tokens` tokens and return their IDs
+    /// (excluding the prompt).
     pub fn generate(model: &mut ModelHandle, prompt: &str, max_tokens: usize) -> Result<Vec<u32>> {
         if max_tokens == 0 {
             return Err(SysError::InvalidParameter("max_tokens must be > 0".to_string()));
