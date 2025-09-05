@@ -6,8 +6,8 @@
 //!
 //! Run with: cargo run --example device_stats_demo --no-default-features --features cpu
 
-use bitnet_kernels::device_aware::{DeviceAwareQuantizer, DeviceAwareQuantizerFactory};
 use bitnet_common::{Device, QuantizationType};
+use bitnet_kernels::device_aware::{DeviceAwareQuantizer, DeviceAwareQuantizerFactory};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logger to see kernel selection details
@@ -42,8 +42,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("   {}", stats.summary());
         println!("   Memory used: {:.2} MB", stats.memory_used_bytes as f64 / (1024.0 * 1024.0));
         println!("   Memory total: {:.2} MB", stats.memory_total_bytes as f64 / (1024.0 * 1024.0));
-        println!("   Memory utilization: {:.1}%", 
-            (stats.memory_used_bytes as f64 / stats.memory_total_bytes as f64) * 100.0);
+        println!(
+            "   Memory utilization: {:.1}%",
+            (stats.memory_used_bytes as f64 / stats.memory_total_bytes as f64) * 100.0
+        );
     }
 
     println!("\n🔧 Performing quantization operations...");
@@ -54,7 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let input: Vec<f32> = (0..size).map(|j| (j as f32).sin()).collect();
         let mut output = vec![0u8; size / 4]; // I2S packs 4 values per byte
         let mut scales = vec![0.0f32; (size + 127) / 128]; // 128-element blocks
-        
+
         println!("   Operation {}: {} elements", i, size);
         quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S)?;
     }
@@ -66,7 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let a = vec![1i8; size * size];
         let b = vec![255u8; size * size];
         let mut c = vec![0.0f32; size * size];
-        
+
         println!("   MatMul {}: {}x{} matrix", i, size, size);
         quantizer.matmul_i2s(&a, &b, &mut c, size, size, size)?;
     }
@@ -75,7 +77,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(stats) = quantizer.get_stats() {
         println!("\n📈 Final statistics:");
         println!("   {}", stats.summary());
-        
+
         println!("\n📊 Detailed breakdown:");
         println!("   Total operations: {}", stats.total_operations);
         println!("   - Quantization ops: {}", stats.quantization_operations);
@@ -90,15 +92,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("   - GPU efficiency: {:.1}%", stats.gpu_efficiency * 100.0);
         println!("   - Fallback count: {}", stats.fallback_count);
         println!("   Memory tracking:");
-        println!("   - Memory used: {:.2} MB ({} bytes)", 
-            stats.memory_used_bytes as f64 / (1024.0 * 1024.0), 
-            stats.memory_used_bytes);
-        println!("   - Memory total: {:.2} MB ({} bytes)", 
+        println!(
+            "   - Memory used: {:.2} MB ({} bytes)",
+            stats.memory_used_bytes as f64 / (1024.0 * 1024.0),
+            stats.memory_used_bytes
+        );
+        println!(
+            "   - Memory total: {:.2} MB ({} bytes)",
             stats.memory_total_bytes as f64 / (1024.0 * 1024.0),
-            stats.memory_total_bytes);
-        println!("   - Memory utilization: {:.1}%", 
-            (stats.memory_used_bytes as f64 / stats.memory_total_bytes as f64) * 100.0);
-        
+            stats.memory_total_bytes
+        );
+        println!(
+            "   - Memory utilization: {:.1}%",
+            (stats.memory_used_bytes as f64 / stats.memory_total_bytes as f64) * 100.0
+        );
+
         // Check GPU effectiveness
         if stats.is_gpu_effective() {
             println!("   ✅ GPU is being used effectively");
@@ -111,7 +119,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n🔄 Demonstrating statistics reset...");
     quantizer.reset_stats();
-    
+
     if let Some(stats) = quantizer.get_stats() {
         println!("   After reset: {}", stats.summary());
         assert_eq!(stats.total_operations, 0);
@@ -136,7 +144,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("   ℹ️  AVX2 feature not enabled, using fallback kernel");
         }
     }
-    
+
     #[cfg(target_arch = "aarch64")]
     {
         println!("   Architecture: aarch64");
@@ -153,7 +161,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("   ℹ️  NEON feature not enabled, using fallback kernel");
         }
     }
-    
+
     #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
     {
         println!("   Architecture: {} (using fallback kernel)", std::env::consts::ARCH);
