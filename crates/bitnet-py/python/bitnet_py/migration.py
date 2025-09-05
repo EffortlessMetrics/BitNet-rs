@@ -5,17 +5,16 @@ This module provides tools and utilities to help users migrate from the original
 BitNet Python implementation to the new Rust-based bitnet_py library.
 """
 
-import json
 import os
 import shutil
 import sys
-import warnings
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 import importlib.util
 
 try:
-    import bitnet_py as bitnet
+    import bitnet_py
+    _ = bitnet_py.__version__
 except ImportError:
     print("Error: bitnet_py not installed. Please install it first.")
     sys.exit(1)
@@ -404,6 +403,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 '''
         
         test_path = os.path.join(output_dir, "side_by_side_test.py")
@@ -674,7 +674,7 @@ See MIGRATION_REPORT.md for detailed analysis and recommendations.
         with open(os.path.join(output_path, "SETUP.md"), 'w') as f:
             f.write(setup_instructions)
         
-        helper.log(f"Migration completed successfully!")
+        helper.log("Migration completed successfully!")
         helper.log(f"Migrated project: {output_path}")
         helper.log(f"Files migrated: {len(migrated_files)}")
         helper.log(f"Migration report: {report_path}")
@@ -709,7 +709,7 @@ def main():
     migrate_parser.add_argument('--test-prompts', nargs='+', help='Custom test prompts')
     
     # Check command
-    check_parser = subparsers.add_parser('check', help='Check original installation')
+    subparsers.add_parser('check', help='Check original installation')
     
     args = parser.parse_args()
     
@@ -741,7 +741,7 @@ def main():
         )
         
         if success:
-            print(f"Migration completed successfully!")
+            print("Migration completed successfully!")
             print(f"Check {args.output}/MIGRATION_REPORT.md for details")
         else:
             print("Migration failed. Check the logs for details.")

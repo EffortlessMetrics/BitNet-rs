@@ -20,7 +20,7 @@ bitnet-inference = { path = "../bitnet-inference" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers" }
 bitnet-quantization = { path = "../bitnet-quantization" }
 
-pyo3 = { version = "0.25", features = ["extension-module"] }
+pyo3 = { version = "0.25", features = ["extension-module", "abi3-py312"] }
 pyo3-async-runtimes = { version = "0.25", features = ["tokio-runtime"] }
 tokio = { version = "1.0", features = ["full"] }
 futures-util = "0.3"
