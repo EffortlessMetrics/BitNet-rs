@@ -35,8 +35,8 @@ impl Default for ThreadPoolConfig {
 
 /// Thread pool for managing concurrent operations
 pub struct ThreadPool {
-    workers: Vec<Worker>,
     sender: std::sync::mpsc::SyncSender<Job>,
+    workers: Vec<Worker>,
     config: ThreadPoolConfig,
     active_jobs: Arc<AtomicUsize>,
 }
@@ -62,7 +62,7 @@ impl ThreadPool {
             workers.push(worker);
         }
 
-        Ok(ThreadPool { workers, sender, config, active_jobs })
+        Ok(ThreadPool { sender, workers, config, active_jobs })
     }
 
     /// Execute a job on the thread pool

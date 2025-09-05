@@ -140,7 +140,7 @@ impl From<BitNetError> for BitNetCError {
 
 // Thread-safe error state management
 thread_local! {
-    static LAST_ERROR: RefCell<Option<BitNetCError>> = RefCell::new(None);
+    static LAST_ERROR: RefCell<Option<BitNetCError>> = const { RefCell::new(None) };
 }
 
 /// Set the last error for the current thread
