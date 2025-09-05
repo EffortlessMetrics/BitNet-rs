@@ -1,9 +1,11 @@
 //! Tensor abstractions and utilities
 
 use crate::{BitNetError, Device, Result};
+use bytemuck::cast_slice;
 #[cfg(all(target_os = "macos", feature = "gpu"))]
 use candle_core::backend::BackendDevice;
 use candle_core::{DType, Tensor as CandleTensor};
+use std::sync::OnceLock;
 
 /// Tensor trait for unified tensor operations
 pub trait Tensor: Send + Sync {
@@ -89,14 +91,30 @@ impl MockTensor {
 }
 
 /// Tensor implementation wrapping Candle tensors
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct BitNetTensor {
     inner: CandleTensor,
+    device: Device,
+    host_data: OnceLock<Vec<f32>>,
+}
+
+impl Clone for BitNetTensor {
+    fn clone(&self) -> Self {
+        let host_data = if let Some(data) = self.host_data.get() {
+            let cell = OnceLock::new();
+            let _ = cell.set(data.clone());
+            cell
+        } else {
+            OnceLock::new()
+        };
+        Self { inner: self.inner.clone(), device: self.device, host_data }
+    }
 }
 
 impl BitNetTensor {
     pub fn new(tensor: CandleTensor) -> Self {
-        Self { inner: tensor }
+        let device = Device::from(tensor.device());
+        Self { inner: tensor, device, host_data: OnceLock::new() }
     }
 
     pub fn from_slice<T: bytemuck::Pod + candle_core::WithDType>(
@@ -183,29 +201,23 @@ impl Tensor for BitNetTensor {
     }
 
     fn device(&self) -> &Device {
-        // This is a simplified implementation - in practice we'd need to store
-        // the device or convert properly each time
-        &Device::Cpu
+        &self.device
     }
 
     fn as_slice<T: bytemuck::Pod>(&self) -> Result<&[T]> {
-        // For now, we'll implement a basic version that works with f32 on CPU
-        // In a full implementation, this would handle device transfers and type conversions
-        if std::any::TypeId::of::<T>() == std::any::TypeId::of::<f32>() {
-            match self.inner.to_vec1::<f32>() {
-                Ok(vec) => {
-                    // This is unsafe but necessary for the current test setup
-                    // In production, we'd need a better approach to lifetime management
-                    let leaked: &'static [f32] = Box::leak(vec.into_boxed_slice());
-                    Ok(unsafe { std::mem::transmute::<&'static [f32], &'static [T]>(leaked) })
-                }
-                Err(e) => Err(BitNetError::Validation(format!(
-                    "Failed to convert tensor to slice: {}",
-                    e
-                ))),
-            }
+        if std::any::TypeId::of::<T>() != std::any::TypeId::of::<f32>() {
+            return Err(BitNetError::Validation(
+                "Only f32 slice access is currently supported".to_string(),
+            ));
+        }
+        if let Some(data) = self.host_data.get() {
+            Ok(cast_slice(data.as_slice()))
         } else {
-            Err(BitNetError::Validation("Only f32 slice access is currently supported".to_string()))
+            let vec = self.inner.to_vec1::<f32>().map_err(|e| {
+                BitNetError::Validation(format!("Failed to convert tensor to slice: {}", e))
+            })?;
+            let _ = self.host_data.set(vec);
+            Ok(cast_slice(self.host_data.get().unwrap().as_slice()))
         }
     }
 
@@ -228,11 +240,7 @@ impl Tensor for MockTensor {
     }
 
     fn as_slice<T: bytemuck::Pod>(&self) -> Result<&[T]> {
-        unsafe {
-            let ptr = self.data.as_ptr() as *const T;
-            let slice = std::slice::from_raw_parts(ptr, self.data.len());
-            Ok(slice)
-        }
+        Ok(cast_slice(&self.data))
     }
 
     fn to_candle(&self) -> Result<CandleTensor> {
