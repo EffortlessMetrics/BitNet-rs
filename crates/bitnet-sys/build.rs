@@ -4,7 +4,7 @@
 //! the crossval feature is enabled. It fails fast if dependencies are missing.
 
 use std::env;
-#[allow(unused_imports)]
+#[cfg(feature = "ffi")]
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -12,7 +12,11 @@ fn main() {
     // If the crate is compiled without `--features bitnet-sys/ffi`,
     // skip all native build steps so the workspace remains green.
     if std::env::var("CARGO_FEATURE_FFI").is_err() {
-        println!("cargo:warning=bitnet-sys: 'ffi' feature not enabled; skipping native build");
+        // No native build needed when FFI is disabled, but still ensure the build
+        // script reruns if relevant inputs change.
+        println!("cargo:rerun-if-changed=build.rs");
+        println!("cargo:rerun-if-env-changed=BITNET_CPP_DIR");
+        println!("cargo:rerun-if-env-changed=BITNET_CPP_PATH");
         return;
     }
 
@@ -52,8 +56,8 @@ fn main() {
             );
         }
 
-        println!("cargo:warning=bitnet-sys: Building with cross-validation support");
-        println!("cargo:warning=bitnet-sys: Using BitNet C++ from: {}", cpp_dir.display());
+        eprintln!("bitnet-sys: Building with cross-validation support");
+        eprintln!("bitnet-sys: Using BitNet C++ from: {}", cpp_dir.display());
 
         // Link against the C++ implementation - fail on error
         link_cpp_implementation(&cpp_dir).expect("Failed to link Microsoft BitNet C++ libraries");
@@ -184,10 +188,10 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let bitnet_h = cpp_dir.join("include/ggml-bitnet.h");
     let use_bitnet = bitnet_h.exists();
 
-    println!("cargo:warning=bitnet-sys: Generating bindings from {}", llama_h.display());
+    eprintln!("bitnet-sys: Generating bindings from {}", llama_h.display());
     if use_bitnet {
-        println!(
-            "cargo:warning=bitnet-sys: Also including BitNet-specific APIs from {}",
+        eprintln!(
+            "bitnet-sys: Also including BitNet-specific APIs from {}",
             bitnet_h.display()
         );
     }
@@ -247,6 +251,6 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let fixed_content = bindings_content.replace("extern \"C\" {", "unsafe extern \"C\" {");
     std::fs::write(&bindings_path, fixed_content)?;
 
-    println!("cargo:warning=bitnet-sys: Generated C++ bindings successfully");
+    eprintln!("bitnet-sys: Generated C++ bindings successfully");
     Ok(())
 }
