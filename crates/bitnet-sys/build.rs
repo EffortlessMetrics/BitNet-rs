@@ -9,8 +9,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 fn main() {
-    // Inform rustc about our custom cfg to avoid unexpected_cfg warnings
-    println!("cargo:rustc-check-cfg=cfg(bitnet_cpp_unavailable)");
     // If the crate is compiled without `--features bitnet-sys/ffi`,
     // skip all native build steps so the workspace remains green.
     if std::env::var("CARGO_FEATURE_FFI").is_err() {
@@ -29,20 +27,19 @@ fn main() {
             .or_else(|_| env::var("BITNET_CPP_PATH")) // Try legacy env var
             .or_else(|_| env::var("HOME").map(|h| format!("{}/.cache/bitnet_cpp", h)))
             .map(PathBuf::from)
-            .unwrap_or_default();
+            .unwrap_or_else(|_| {
+                panic!(
+                    "bitnet-sys: BITNET_CPP_DIR not set. \n\
+                     Set BITNET_CPP_DIR to the path of the built BitNet C++ sources or disable the 'ffi' feature."
+                )
+            });
 
-        if cpp_dir.as_os_str().is_empty() || !cpp_dir.exists() {
-            println!("cargo:warning=BITNET_CPP_DIR not set/invalid; building without C++ bridge");
-            println!("cargo:rustc-cfg=bitnet_cpp_unavailable");
-
-            // Create minimal bindings file
-            let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-            std::fs::write(
-                out_path.join("bindings.rs"),
-                "// C++ bridge unavailable - BITNET_CPP_DIR not set\n",
-            )
-            .unwrap();
-            return;
+        if !cpp_dir.exists() {
+            panic!(
+                "bitnet-sys: BitNet C++ directory not found: {}\n\
+                 Run: ./ci/fetch_bitnet_cpp.sh",
+                cpp_dir.display()
+            );
         }
 
         // Verify the C++ implementation is built

@@ -8,7 +8,8 @@ This crate provides unsafe FFI bindings to the original BitNet C++ implementatio
 
 ## Features
 
-- `crossval`: Enables FFI bindings (requires C++ dependencies and clang)
+- `ffi`: Enables FFI bindings (requires C++ dependencies and clang)
+- `crossval`: Backwards compatibility alias for `ffi`
 
 ## Requirements
 
@@ -28,7 +29,7 @@ The C++ implementation must be available and built:
 ./ci/fetch_bitnet_cpp.sh
 
 # Or set custom path
-export BITNET_CPP_PATH=/path/to/bitnet.cpp
+export BITNET_CPP_DIR=/path/to/bitnet.cpp  # BITNET_CPP_PATH is also accepted
 ```
 
 ## Usage
@@ -48,21 +49,25 @@ let validator = CrossValidator::new(config);
 If you need direct access to the FFI bindings:
 
 ```rust
-#[cfg(feature = "crossval")]
-use bitnet_sys::{load_model, generate};
+#[cfg(feature = "ffi")]
+use bitnet_sys::{cleanup, generate, initialize, load_model};
 
-#[cfg(feature = "crossval")]
+#[cfg(feature = "ffi")]
 fn example() -> Result<(), Box<dyn std::error::Error>> {
     // Check if C++ implementation is available
     if !bitnet_sys::is_available() {
         return Err("C++ implementation not available".into());
     }
-    
-    // Load a model
-    let model = load_model("path/to/model.gguf")?;
-    
+
+    // Initialize backend and load a model
+    initialize()?;
+    let mut model = load_model("path/to/model.gguf")?;
+
     // Generate tokens
-    let tokens = generate(&model, "Hello, world!", 100)?;
+    let tokens = generate(&mut model, "Hello, world!", 100)?;
+
+    // Clean up global resources
+    cleanup()?;
     
     println!("Generated {} tokens", tokens.len());
     Ok(())
@@ -85,13 +90,16 @@ However, you must still ensure:
 
 ## Build Process
 
-When the `crossval` feature is enabled, the build script:
+When the `ffi` feature is enabled, the build script:
 
-1. **Locates C++ implementation**: Uses `BITNET_CPP_PATH` or default cache location
+1. **Locates C++ implementation**: Uses `BITNET_CPP_DIR` (or legacy `BITNET_CPP_PATH`) or default cache location
 2. **Checks dependencies**: Verifies clang is available
 3. **Sets up paths**: Configures include and library paths
 4. **Generates bindings**: Uses bindgen to create Rust bindings from C++ headers
 5. **Links libraries**: Links against the built C++ libraries
+
+If the C++ implementation cannot be located, the build now fails with a clear
+error instead of generating stub bindings.
 
 ### Build Errors
 
@@ -104,8 +112,8 @@ Common build errors and solutions:
 ./ci/fetch_bitnet_cpp.sh
 
 # Or set custom path
-export BITNET_CPP_PATH=/path/to/bitnet.cpp
-cargo build --features crossval
+export BITNET_CPP_DIR=/path/to/bitnet.cpp
+cargo build -p bitnet-sys --features ffi
 ```
 
 #### "clang not found"
@@ -136,7 +144,7 @@ make
 
 ## Environment Variables
 
-- `BITNET_CPP_PATH`: Path to BitNet C++ implementation (default: `~/.cache/bitnet_cpp`)
+- `BITNET_CPP_DIR`: Path to BitNet C++ implementation (default: `~/.cache/bitnet_cpp`). `BITNET_CPP_PATH` is also recognized.
 - `BITNET_CPP_INCLUDE_PATH`: Path to C++ headers (auto-detected)
 - `BITNET_CPP_LIB_PATH`: Path to C++ libraries (auto-detected)
 
@@ -161,9 +169,9 @@ let results = validate_all_fixtures(config)?;
 If you get "BitNet C++ bindings not available" errors:
 
 ```bash
-# Make sure to enable the crossval feature
-cargo test --features crossval
-cargo bench --features crossval
+# Make sure to enable the ffi feature
+cargo test -p bitnet-sys --features ffi
+cargo bench -p bitnet-sys --features ffi
 ```
 
 ### Library Linking Issues
@@ -193,5 +201,5 @@ When contributing to this crate:
 1. Maintain the feature gate for all C++ dependencies
 2. Provide helpful error messages for missing dependencies
 3. Ensure safety guarantees are maintained
-4. Test with and without the crossval feature
+4. Test with and without the ffi feature
 5. Update documentation for any API changes
