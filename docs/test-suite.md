@@ -30,6 +30,28 @@ cargo test -p bitnet-inference --no-default-features --features rt-tokio --test 
 ./scripts/verify-tests.sh
 ```
 
+### Convolution Tests
+
+```bash
+# Run convolution unit tests
+cargo test -p bitnet-kernels --no-default-features --features cpu convolution
+
+# Run PyTorch reference convolution tests (requires Python and PyTorch)
+cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored
+
+# Test specific convolution functionality
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_basic_functionality
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_with_bias
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_stride
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_padding
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_dilation
+
+# Test quantized convolution
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_quantized_i2s
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_quantized_tl1
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_quantized_with_bias
+```
+
 ### GPU-Specific Tests
 
 ```bash
@@ -120,6 +142,74 @@ printf "GGUF\x02\x00\x00\x00" > /tmp/t.gguf && \
 printf "\x00\x00\x00\x00\x00\x00\x00\x00" >> /tmp/t.gguf && \
 printf "\x00\x00\x00\x00\x00\x00\x00\x00" >> /tmp/t.gguf && \
 BITNET_GGUF=/tmp/t.gguf cargo test -p bitnet-inference --features rt-tokio --test smoke
+```
+
+### Convolution Testing Framework
+
+The convolution testing framework includes comprehensive validation against PyTorch reference implementations and extensive unit testing for various parameter combinations.
+
+#### PyTorch Reference Testing
+
+The convolution implementation includes optional PyTorch reference tests that validate correctness by comparing outputs with PyTorch's `F.conv2d` implementation:
+
+```bash
+# Prerequisites: Install Python and PyTorch
+pip install torch
+
+# Run PyTorch reference tests (ignored by default)
+cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored
+
+# Verbose output to see test details
+cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored --nocapture
+```
+
+The reference tests cover:
+- **Basic convolution**: Simple 2D convolution operations
+- **Stride operations**: Various stride configurations (1x1, 2x2)
+- **Padding operations**: Zero padding with different configurations
+- **Dilation operations**: Dilated convolutions for expanded receptive fields
+- **Parameter combinations**: Mixed stride, padding, and dilation
+
+#### Quantization Testing
+
+Comprehensive testing of quantized convolution operations:
+
+```bash
+# Test I2S quantization (2-bit signed)
+cargo test -p bitnet-kernels test_conv2d_quantized_i2s
+
+# Test TL1 quantization (table lookup)
+cargo test -p bitnet-kernels test_conv2d_quantized_tl1
+
+# Test TL2 quantization (advanced table lookup)  
+cargo test -p bitnet-kernels test_conv2d_quantized_tl2
+
+# Test quantization with bias
+cargo test -p bitnet-kernels test_conv2d_quantized_with_bias
+
+# Test scale factor application
+cargo test -p bitnet-kernels test_conv2d_quantized_scale_factor
+```
+
+#### Error Handling and Validation
+
+The convolution tests include comprehensive error handling validation:
+
+```bash
+# Test dimension mismatch errors
+cargo test -p bitnet-kernels test_conv2d_dimension_mismatch
+
+# Test invalid input size errors
+cargo test -p bitnet-kernels test_conv2d_invalid_input_size
+
+# Test invalid bias size errors
+cargo test -p bitnet-kernels test_conv2d_invalid_bias_size
+
+# Test quantized weight size validation
+cargo test -p bitnet-kernels test_conv2d_quantized_invalid_weight_size
+
+# Test scale size validation
+cargo test -p bitnet-kernels test_conv2d_quantized_invalid_scale_size
 ```
 
 ### IQ2_S Backend Tests
