@@ -1,41 +1,30 @@
 {
-  "pr_number": 181,
-  "status": "merged",
-  "commit_sha": "0504c06",
-  "merge_strategy": "squash",
-  "merged_at": "2025-09-05T17:08:44Z",
-  "merged_by": "EffortlessSteven",
-  "title": "Improve tensor safety and cleanup env tests",
-  "branch": "codex/analyze-bitnet-common-for-issues",
-  "validation_report": "/home/steven/code/Rust/BitNet-rs/.claude/finalization-report-pr-181.md",
-  "validation_timestamp": "2025-09-05T17:08:00Z",
-  "key_changes": [
-    "Tensor device tracking to prevent memory leaks",
-    "OnceLock caching for host data",
-    "Safe bytemuck::cast_slice instead of unsafe transmutation",
-    "Removed redundant DeviceType enum",
-    "Rust 2024 unsafe environment variable handling"
-  ],
-  "impact": {
-    "memory_safety": "improved",
-    "performance": "improved",
+  "pr_number": 180,
+  "title": "Fix GGUF idempotence verification and stamp",
+  "branch": "codex/analyze-bitnet-compat-crate-for-issues",
+  "status": "MERGED",
+  "merge_commit": "fafca30ba2b4f3c1e82b79a7f2341e5deabc7ff",
+  "merge_strategy": "rebase",
+  "merge_date": "2025-09-05",
+  "validation_status": "PASSED",
+  "validation_environment": "isolated_worktree",
+  "quality_gates": {
+    "format_check": "PASSED",
+    "clippy": "PASSED",
+    "tests": "PASSED",
+    "msrv_compatibility": "PASSED", 
+    "security_audit": "PASSED"
+  },
+  "changes_summary": {
+    "files_changed": 5,
+    "crates_affected": ["bitnet-compat", "bitnet-quantization"],
+    "change_type": "internal_improvements",
     "api_breaking": false,
-    "security": "improved"
+    "performance_impact": "none"
   },
-  "validation_details": {
-    "format_check": "passed",
-    "code_quality": "passed",
-    "build_validation": "passed",
-    "test_suite": "passed",
-    "tensor_safety": "validated",
-    "parity_tests": "passed"
-  },
-  "technical_metrics": {
-    "files_modified": 4,
-    "crates_affected": ["bitnet-common"],
-    "unsafe_code_reduction": true,
-    "memory_leak_fixes": true
-  },
-  "finalization_complete": true,
-  "merge_successful": true
+  "finalization_agent": "pr-finalize",
+  "artifacts": [
+    ".claude/finalization-report-pr-180.md",
+    ".claude/pr-state.json"
+  ]
 }
