@@ -1,8 +1,8 @@
 //! Low-level FFI bindings to BitNet C++ implementation
 //!
 //! This crate provides unsafe FFI bindings to the BitNet C++ implementation
-//! for cross-validation purposes. It is only available when the `crossval`
-//! feature is enabled.
+//! for cross-validation purposes. It is only available when the `ffi`
+//! feature is enabled (`crossval` is a deprecated alias).
 //!
 //! # Safety
 //!
@@ -11,7 +11,8 @@
 //!
 //! # Features
 //!
-//! - `crossval`: Enables FFI bindings (requires C++ dependencies)
+//! - `ffi`: Enables FFI bindings (requires C++ dependencies)
+//! - `crossval`: Backwards compatibility alias for `ffi`
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
@@ -46,7 +47,6 @@ pub mod safe {
     //! with proper error handling and memory management.
 
     use crate::wrapper;
-    use std::ffi::CString;
     use std::ops::{Deref, DerefMut};
     use std::panic;
 
@@ -55,12 +55,6 @@ pub mod safe {
     pub enum SysError {
         #[error("Null pointer returned from C++")]
         NullPointer,
-
-        #[error("Invalid string encoding: {0}")]
-        InvalidString(#[from] std::ffi::NulError),
-
-        #[error("C++ function returned error code: {0}")]
-        CppError(i32),
 
         #[error("Wrapper error: {0}")]
         Wrapper(#[from] wrapper::CppError),
@@ -123,8 +117,6 @@ pub mod safe {
 
     /// Generate tokens using a loaded model
     pub fn generate(model: &mut ModelHandle, prompt: &str, max_tokens: usize) -> Result<Vec<u32>> {
-        CString::new(prompt)?; // validate string
-
         if max_tokens == 0 {
             return Err(SysError::InvalidParameter("max_tokens must be > 0".to_string()));
         }

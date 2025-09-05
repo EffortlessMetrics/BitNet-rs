@@ -1,7 +1,7 @@
 //! Build script for bitnet-sys crate
 //!
 //! This script links against the Microsoft BitNet C++ implementation when
-//! the crossval feature is enabled. It fails fast if dependencies are missing.
+//! the `ffi` feature is enabled. It fails fast if dependencies are missing.
 
 use std::env;
 #[cfg(feature = "ffi")]
@@ -26,7 +26,7 @@ fn main() {
 
     #[cfg(feature = "ffi")]
     {
-        // When crossval feature is enabled, try to find the C++ implementation
+        // When the ffi feature is enabled, try to find the C++ implementation
         let cpp_dir = env::var("BITNET_CPP_DIR")
             .or_else(|_| env::var("BITNET_CPP_PATH")) // Try legacy env var
             .or_else(|_| env::var("HOME").map(|h| format!("{}/.cache/bitnet_cpp", h)))
@@ -190,10 +190,7 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
     eprintln!("bitnet-sys: Generating bindings from {}", llama_h.display());
     if use_bitnet {
-        eprintln!(
-            "bitnet-sys: Also including BitNet-specific APIs from {}",
-            bitnet_h.display()
-        );
+        eprintln!("bitnet-sys: Also including BitNet-specific APIs from {}", bitnet_h.display());
     }
 
     let mut builder = bindgen::Builder::default().header(llama_h.to_string_lossy());
