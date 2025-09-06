@@ -127,6 +127,42 @@ scripts/e2e-gate.sh cargo test --features crossval   # Gate heavy E2E tests
 
 See [Concurrency Caps Guide](concurrency-caps.md) for detailed information on preflight scripts, e2e gates, and resource management strategies.
 
+### Performance Tracking Tests
+
+The performance tracking infrastructure includes comprehensive test coverage for metrics collection, validation, and environment configuration:
+
+```bash
+# Run all performance tracking tests
+cargo test -p bitnet-inference --features integration-tests --test performance_tracking_tests
+
+# Run specific performance test categories
+cargo test --test performance_tracking_tests performance_metrics_tests
+cargo test --test performance_tracking_tests performance_tracker_tests  
+cargo test --test performance_tracking_tests environment_variable_tests
+
+# Test InferenceEngine performance integration
+cargo test -p bitnet-inference --features integration-tests test_engine_performance_tracking_integration
+
+# Test platform-specific memory and performance tracking
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+
+# GPU performance validation with comprehensive metrics
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+```
+
+#### Performance Test Categories
+
+1. **Performance Metrics Tests**: Validate metric computation, validation, and accuracy
+2. **Performance Tracker Tests**: Test state management and metrics aggregation  
+3. **Environment Variable Tests**: Validate configuration through environment variables
+4. **Integration Tests**: End-to-end performance tracking with InferenceEngine
+5. **Platform-Specific Tests**: Memory tracking and CPU kernel selection monitoring
+6. **GPU Performance Tests**: GPU memory management and performance benchmarking
+
+See [Performance Tracking Guide](performance-tracking.md) for detailed usage examples and configuration options.
+
 ## Specialized Test Commands
 
 ### GGUF Validation Tests

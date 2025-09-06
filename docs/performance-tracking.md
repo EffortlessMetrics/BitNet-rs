@@ -355,6 +355,16 @@ cargo test --package bitnet-inference \
 cargo test --test performance_tracking_tests performance_metrics_tests
 cargo test --test performance_tracking_tests performance_tracker_tests
 cargo test --test performance_tracking_tests environment_variable_tests
+
+# Test InferenceEngine performance integration
+cargo test -p bitnet-inference --features integration-tests test_engine_performance_tracking_integration
+
+# Test platform-specific performance tracking
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+
+# GPU performance validation with comprehensive metrics
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
 ```
 
 ## Best Practices

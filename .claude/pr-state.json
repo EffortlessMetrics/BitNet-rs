@@ -1,38 +1,33 @@
 {
-  "pr_number": 185,
-  "title": "Track device memory usage in stats",
-  "branch": "codex/modify-device-memory-usage-reporting",
-  "status": "MERGED",
-  "merge_commit": "4160f05",
-  "merge_strategy": "squash",
-  "merge_date": "2025-09-06",
-  "validation_status": "PASSED",
-  "validation_environment": "isolated_worktree",
+  "pr_status": "VALIDATION_COMPLETE",
+  "commit_sha": "58ed1cb",
+  "branch": "main", 
+  "validation_timestamp": "2025-09-06T11:00:00Z",
   "quality_gates": {
-    "format_check": "PASSED",
-    "clippy": "PASSED (CPU), MINOR_WARNINGS (GPU)",
-    "tests": "PASSED",
-    "security_audit": "PASSED (warnings only)",
-    "merge_conflicts": "RESOLVED"
+    "build_cpu": "PASSED",
+    "build_gpu": "PASSED", 
+    "clippy": "PASSED",
+    "formatting": "PASSED",
+    "audit": "PASSED_WITH_WARNINGS",
+    "tests_core": "PASSED",
+    "tests_integration": "PASSED"
   },
-  "changes_summary": {
-    "files_changed": 1,
-    "crates_affected": ["bitnet-kernels"],
-    "change_type": "feature_enhancement",
-    "api_breaking": false,
-    "performance_impact": "minimal",
-    "lines_added": 35,
-    "lines_deleted": 2,
-    "features_added": [
-      "Device memory tracking for CPU and GPU",
-      "CUDA memory reporting with cuMemGetInfo_v2",
-      "Enhanced sysinfo memory statistics",
-      "Comprehensive memory validation tests"
-    ]
+  "test_results": {
+    "gguf_header": "8/8 PASSED",
+    "memory_tracking": "PASSED",
+    "performance_tracking": "PASSED", 
+    "kernel_tests": "PASSED"
   },
-  "finalization_agent": "pr-finalize",
-  "artifacts": [
-    ".claude/finalization-report-pr-185.md",
-    ".claude/pr-state.json"
-  ]
+  "merge_strategy": "SQUASH",
+  "files_changed": [
+    "crates/bitnet-inference/src/engine.rs",
+    "crates/bitnet-inference/tests/performance_tracking_tests.rs", 
+    "crates/bitnet-kernels/src/convolution.rs",
+    "crates/bitnet-kernels/src/gpu/validation.rs",
+    "docs/performance-tracking.md"
+  ],
+  "api_impact": "NONE",
+  "breaking_changes": "NONE",
+  "documentation_status": "COMPLETE",
+  "ready_for_merge": true
 }

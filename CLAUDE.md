@@ -300,6 +300,7 @@ For detailed information on specific topics, see:
 - **[GGUF Inspection Guide](docs/gguf-inspection.md)**: Metadata inspection, categorization, and JSON serialization
 - **[Streaming API Guide](docs/streaming-api.md)**: Real-time token streaming with Server-Sent Events
 - **[Concurrency Caps Guide](docs/concurrency-caps.md)**: Resource management and concurrency control
+- **[Performance Tracking Guide](docs/performance-tracking.md)**: Comprehensive performance monitoring, metrics collection, and optimization analysis
 ## Environment Variables
 
 ### Runtime Variables
@@ -310,6 +311,11 @@ For detailed information on specific topics, see:
 - `BITNET_SEED`: Set seed for reproducible runs
 - `RAYON_NUM_THREADS`: Control CPU parallelism
 - `BITNET_GPU_FAKE`: Mock GPU backend detection for testing (e.g., "cuda", "metal", "cuda,rocm")
+
+### Performance Configuration Variables
+- `BITNET_BATCH_SIZE`: Configure inference batch size (e.g., "4", "8")
+- `BITNET_MEMORY_LIMIT`: Set memory usage limits (e.g., "1GB", "512MB")
+- `BITNET_NUM_THREADS`: Control inference thread count for parallel processing
 
 ### Build-time Variables (for Git metadata)
 - `VERGEN_GIT_SHA`: Override Git SHA (useful in CI/Docker without .git)
@@ -435,6 +441,17 @@ cargo test -p bitnet-kernels --features ffi test_ffi_kernel_creation
 
 # FFI mock model testing (validates C-API infrastructure)
 cargo test -p bitnet-ffi test_mock_model_embed_and_logits
+
+# Performance tracking infrastructure tests (validates comprehensive metrics collection)
+cargo test -p bitnet-inference --features integration-tests --test performance_tracking_tests
+
+# Run specific performance tracking test categories
+cargo test --test performance_tracking_tests performance_metrics_tests
+cargo test --test performance_tracking_tests performance_tracker_tests  
+cargo test --test performance_tracking_tests environment_variable_tests
+
+# Test InferenceEngine performance integration
+cargo test -p bitnet-inference --features integration-tests test_engine_performance_tracking_integration
 
 # FFI performance comparison (if C++ library available)
 cargo test -p bitnet-kernels --features ffi --release test_performance_comparison_structure

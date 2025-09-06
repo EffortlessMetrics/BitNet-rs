@@ -716,32 +716,98 @@ pub struct QuantizationInfo {
 ### Performance Monitoring
 
 ```rust
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PerformanceMetrics {
-    /// Tokens generated per second
+    /// Backend type (CPU/GPU)
+    pub backend_type: String,
+    
+    /// Total tokens generated
+    pub tokens_generated: u64,
+    
+    /// Tokens per second throughput
     pub tokens_per_second: f64,
     
-    /// Time to first token (ms)
-    pub time_to_first_token: f64,
+    /// Total inference latency (ms)
+    pub total_latency_ms: u64,
     
-    /// Average latency per token (ms)
-    pub avg_latency_per_token: f64,
+    /// First token latency (ms) - critical for streaming
+    pub first_token_latency_ms: Option<u64>,
+    
+    /// Average per-token latency (ms)
+    pub average_token_latency_ms: Option<u64>,
+    
+    /// Cache hit rate (0.0-1.0)
+    pub cache_hit_rate: Option<f64>,
     
     /// Memory usage (bytes)
-    pub memory_usage: usize,
+    pub memory_usage_bytes: Option<u64>,
     
-    /// GPU utilization (0.0-1.0)
-    pub gpu_utilization: Option<f32>,
+    /// Component timing breakdown
+    pub tokenizer_encode_time_ms: Option<u64>,
+    pub tokenizer_decode_time_ms: Option<u64>,
+    pub forward_pass_time_ms: Option<u64>,
+    pub sampling_time_ms: Option<u64>,
+    
+    /// Error count and rates
+    pub error_count: u64,
+    pub error_rate: f64,
 }
 
-impl BitNetModel {
-    /// Get performance metrics for the last generation
-    pub fn last_metrics(&self) -> Option<PerformanceMetrics>;
+impl PerformanceMetrics {
+    /// Validate metrics for consistency
+    pub fn validate(&self) -> Result<(), String>;
     
-    /// Reset performance metrics
-    pub fn reset_metrics(&self);
+    /// Calculate efficiency ratio (tokens per millisecond)
+    pub fn efficiency_ratio(&self) -> f64;
+}
+
+#[derive(Debug, Default)]
+pub struct PerformanceTracker {
+    // Internal fields for tracking metrics
+}
+
+impl PerformanceTracker {
+    /// Create new performance tracker
+    pub fn new() -> Self;
+    
+    /// Record inference operation
+    pub fn record_inference(&mut self, tokens: u64, duration_ms: u64);
+    
+    /// Record cache hit
+    pub fn record_cache_hit(&mut self);
+    
+    /// Record cache miss
+    pub fn record_cache_miss(&mut self);
+    
+    /// Get cache hit rate
+    pub fn get_cache_hit_rate(&self) -> Option<f64>;
+    
+    /// Get average tokens per second
+    pub fn get_average_tokens_per_second(&self) -> f64;
+}
+
+impl InferenceEngine {
+    /// Get comprehensive performance metrics
+    pub async fn get_performance_metrics(&self) -> Result<PerformanceMetrics, anyhow::Error>;
+    
+    /// Reset performance tracking for clean benchmarking
+    pub fn reset_performance_tracking(&self) -> Result<(), anyhow::Error>;
+    
+    /// Apply environment variable performance configuration
+    pub async fn apply_env_performance_config(&mut self) -> Result<(), anyhow::Error>;
 }
 ```
+
+#### Environment Variables
+
+Performance behavior can be controlled via environment variables:
+
+- `BITNET_DETERMINISTIC=1`: Enable deterministic execution mode
+- `BITNET_SEED=<number>`: Set random seed for reproducible results  
+- `BITNET_BATCH_SIZE=<number>`: Configure inference batch size
+- `BITNET_MEMORY_LIMIT=<size>`: Set memory usage limits
+- `BITNET_NUM_THREADS=<number>`: Control inference thread count
+- `RAYON_NUM_THREADS=<number>`: Control CPU parallelism
 
 ## Feature Flags
 
