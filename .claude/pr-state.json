@@ -1,0 +1,30 @@
+{
+  "pr_number": 180,
+  "title": "Fix GGUF idempotence verification and stamp",
+  "branch": "codex/analyze-bitnet-compat-crate-for-issues",
+  "status": "MERGED",
+  "merge_commit": "fafca30ba2b4f3c1e82b79a7f2341e5deabc7ff",
+  "merge_strategy": "rebase",
+  "merge_date": "2025-09-05",
+  "validation_status": "PASSED",
+  "validation_environment": "isolated_worktree",
+  "quality_gates": {
+    "format_check": "PASSED",
+    "clippy": "PASSED",
+    "tests": "PASSED",
+    "msrv_compatibility": "PASSED", 
+    "security_audit": "PASSED"
+  },
+  "changes_summary": {
+    "files_changed": 5,
+    "crates_affected": ["bitnet-compat", "bitnet-quantization"],
+    "change_type": "internal_improvements",
+    "api_breaking": false,
+    "performance_impact": "none"
+  },
+  "finalization_agent": "pr-finalize",
+  "artifacts": [
+    ".claude/finalization-report-pr-180.md",
+    ".claude/pr-state.json"
+  ]
+}

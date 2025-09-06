@@ -5,8 +5,8 @@
 
 use crate::{BitNetCError, BitNetCInferenceConfig, BitNetCPerformanceMetrics, get_model_manager};
 // use bitnet_common::PerformanceMetrics;
-use bitnet_inference::{InferenceConfig, InferenceEngine};
 use bitnet_common::Tensor;
+use bitnet_inference::{InferenceConfig, InferenceEngine};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
@@ -319,7 +319,10 @@ impl StreamingSession {
     }
 }
 
-/// Mock model for inference engine creation
+/// Mock model used to satisfy the inference engine during C-API tests.
+///
+/// The model's methods provide minimal mock tensors and do not perform
+/// real inference.
 struct MockInferenceModel {
     cfg: bitnet_common::BitNetConfig,
 }
@@ -382,6 +385,9 @@ impl bitnet_models::Model for MockInferenceModel {
         &self.cfg
     }
 
+    /// Mock implementation used only for C-API testing.
+    ///
+    /// Returns a dummy embedding tensor shaped `[1, tokens.len(), hidden_size]`.
     fn embed(&self, tokens: &[u32]) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
         // Create a mock tensor [1, seq_len, hidden_size] filled with deterministic values
         let seq_len = tokens.len();
@@ -389,6 +395,10 @@ impl bitnet_models::Model for MockInferenceModel {
         Ok(bitnet_common::ConcreteTensor::mock(vec![1, seq_len, hidden]))
     }
 
+    /// Mock implementation used only for C-API testing.
+    ///
+    /// Produces a logits tensor shaped `[1, seq_len, vocab_size]` where `seq_len`
+    /// matches the second dimension of the input tensor.
     fn logits(
         &self,
         x: &bitnet_common::ConcreteTensor,
@@ -455,7 +465,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mock_model_tensors() {
+    fn test_mock_model_embed_and_logits() {
         use bitnet_common::Tensor;
         use bitnet_models::Model;
 

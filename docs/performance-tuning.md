@@ -302,19 +302,15 @@ let creative_config = GenerationConfig {
 #### 2. Streaming Optimization
 
 ```rust
-use bitnet::{BitNetModel, StreamingConfig};
+use bitnet_inference::StreamingConfig;
 
 let streaming_config = StreamingConfig {
     // Buffer size affects latency vs throughput
     buffer_size: 4, // Smaller = lower latency
-    
-    // Batch streaming requests
-    batch_streaming: true,
-    
-    // Enable speculative decoding
-    speculative_decoding: true,
-    
-    ..Default::default()
+    flush_interval_ms: 25, // Faster flushing for low latency
+    max_retries: 1, // Fewer retries for speed
+    token_timeout_ms: 1000, // 1 second timeout
+    cancellable: true, // Enable cancellation for responsiveness
 };
 ```
 

@@ -510,7 +510,7 @@ mod cpu_kernel_tests {
 #[cfg(feature = "cuda")]
 mod gpu_kernel_tests {
     use super::*;
-    use bitnet_kernels::gpu::*;
+    use bitnet_kernels::gpu::CudaKernel;
 
     #[test]
     fn test_cuda_kernel_availability() {
@@ -902,7 +902,7 @@ mod ffi_kernel_tests {
             }
         };
 
-        let input = vec![1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1].repeat(4);
+        let input = [1.5, -1.0, 0.5, -0.5, 0.0, 2.0, -2.0, 0.1].repeat(4);
         let mut output = vec![0u8; 8];
         let mut scales = vec![0.0f32; 1];
 

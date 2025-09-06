@@ -2,6 +2,92 @@
 
 This document covers GPU/CUDA development practices, testing strategies, and troubleshooting for BitNet.rs.
 
+## GPU Backend Detection and Hardware Querying
+
+BitNet.rs provides comprehensive GPU detection utilities supporting multiple backends (CUDA, Metal, ROCm, WebGPU) alongside production-ready CUDA device querying using the cudarc API to enable intelligent GPU acceleration and automatic fallback mechanisms.
+
+### GPU Detection API
+
+The new GPU detection utilities provide backend-agnostic GPU availability checking:
+
+```rust
+use bitnet_kernels::gpu_utils::{gpu_available, get_gpu_info, preflight_check};
+
+// Quick availability check
+if gpu_available() {
+    println!("GPU acceleration available");
+}
+
+// Detailed backend information
+let gpu_info = get_gpu_info();
+println!("{}", gpu_info.summary());
+
+// Available backends:
+println!("CUDA: {}", gpu_info.cuda);
+println!("Metal: {}", gpu_info.metal); 
+println!("ROCm: {}", gpu_info.rocm);
+println!("WebGPU: {}", gpu_info.wgpu);
+
+// Version information (when available)
+if let Some(version) = gpu_info.cuda_version {
+    println!("CUDA Version: {}", version);
+}
+
+// Preflight check with helpful error messages
+match preflight_check() {
+    Ok(()) => println!("GPU ready for acceleration"),
+    Err(msg) => eprintln!("GPU setup issue: {}", msg),
+}
+```
+
+### GPU Detection Commands
+
+```bash
+# Test GPU detection functionality
+cargo test -p bitnet-kernels --no-default-features test_gpu_info_summary
+
+# Run xtask commands with GPU detection
+cargo run -p xtask -- download-model  # Uses GPU detection for optimizations
+
+# Mock GPU scenarios for testing (see Testing section)
+BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels test_gpu_info_mocked_scenarios
+```
+
+### Backend-Specific Detection
+
+1. **CUDA Detection**:
+   - Uses `nvidia-smi` to query available GPUs
+   - Extracts CUDA version from `nvcc --version`
+   - Provides compute capability and memory information
+
+2. **Metal Detection**:
+   - Automatic detection on macOS systems
+   - Uses system information to identify Apple Silicon
+
+3. **ROCm Detection**:
+   - Uses `rocm-smi` to query AMD GPUs
+   - Extracts ROCm version information
+   - Supports multiple AMD GPU configurations
+
+4. **WebGPU Detection**:
+   - Available when any other backend is present
+   - Provides fallback compatibility for unsupported hardware
+
+### Mock Testing Support
+
+The GPU detection system includes comprehensive mock testing capabilities:
+
+```bash
+# Test scenarios without actual GPU hardware
+export BITNET_GPU_FAKE="cuda"        # Mock CUDA-only
+export BITNET_GPU_FAKE="metal"       # Mock Metal-only  
+export BITNET_GPU_FAKE="cuda,rocm"   # Mock multiple backends
+export BITNET_GPU_FAKE=""            # Mock no GPU available
+
+# Run tests with mocked GPU environments
+cargo test -p bitnet-kernels test_gpu_info_mocked_scenarios
+```
+
 ## CUDA Device Querying and Hardware Detection
 
 BitNet.rs implements production-ready CUDA device querying using the cudarc API to enable intelligent GPU acceleration and automatic fallback mechanisms.
@@ -104,6 +190,7 @@ The CUDA device querying integrates with BitNet's quantization system:
 - **Automatic GPU Acceleration**: Falls back to CPU when GPU is unavailable or insufficient
 - **Memory-Constrained Operation**: Adjusts quantization batch sizes based on available memory
 - **Performance Monitoring**: Tracks GPU utilization and performance across operations
+- **Host Memory Tracking**: Real-time monitoring of system memory usage with detailed statistics
 
 ## GPU Testing Strategy
 
@@ -223,7 +310,149 @@ GPU/CUDA tests require special handling due to hardware dependencies:
    - Provide clear error messages when GPU is unavailable
    - Include CPU fallback path testing in all scenarios
 
+## Memory Tracking and Performance Monitoring
+
+### Host Memory Statistics
+
+BitNet.rs now includes comprehensive host memory tracking using the `sysinfo` crate, providing real-time monitoring of system memory usage alongside GPU operations.
+
+#### DeviceStats with Memory Tracking
+
+The `DeviceStats` structure now includes actual memory usage statistics:
+
+```rust
+use bitnet_kernels::device_aware::DeviceAwareQuantizer;
+
+let quantizer = DeviceAwareQuantizer::new(Device::Cpu)?;
+
+// Perform some operations
+let input = vec![1.0f32; 1024];
+let mut output = vec![0u8; 256];
+let mut scales = vec![0.0f32; 8];
+quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S)?;
+
+// Get comprehensive statistics including memory usage
+if let Some(stats) = quantizer.get_stats() {
+    println!("Device stats: {}", stats.summary());
+    println!("Memory used: {:.2} MB", stats.memory_used_bytes as f64 / (1024.0 * 1024.0));
+    println!("Memory total: {:.2} MB", stats.memory_total_bytes as f64 / (1024.0 * 1024.0));
+    println!("Memory usage: {:.1}%", 
+        (stats.memory_used_bytes as f64 / stats.memory_total_bytes as f64) * 100.0);
+}
+```
+
+#### Memory Tracking Features
+
+- **Real-time Monitoring**: Memory statistics are updated on each request using `sysinfo::System`
+- **Byte-accurate Reporting**: Both used and total memory reported in bytes for precise tracking
+- **Human-readable Display**: The `summary()` method includes memory usage with percentage
+- **Performance Integration**: Memory tracking integrated with existing performance statistics
+
+#### Platform-Specific CPU Kernel Selection
+
+The device-aware quantizer now automatically selects the best CPU kernel based on platform architecture:
+
+```rust
+// Automatic platform detection and optimization
+let quantizer = DeviceAwareQuantizer::new(Device::Cpu)?;
+println!("Active kernel: {}", quantizer.active_provider());
+
+// Expected outputs:
+// - x86_64 with AVX2: "AVX2Kernel"  
+// - aarch64 with NEON: "NeonKernel"
+// - Fallback systems: "FallbackKernel"
+```
+
+#### Memory Tracking Commands
+
+```bash
+# Test comprehensive memory tracking implementation
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+
+# Test platform-specific kernel selection
+cargo test -p bitnet-kernels --no-default-features --features cpu test_platform_kernel_selection
+
+# Test CPU provider creation across architectures
+cargo test -p bitnet-kernels --no-default-features --features cpu test_cpu_provider_creation
+
+# Architecture-specific feature detection tests
+cargo test -p bitnet-kernels --no-default-features --features cpu test_x86_64_feature_detection  # x86_64 only
+cargo test -p bitnet-kernels --no-default-features --features cpu test_aarch64_feature_detection  # aarch64 only
+```
+
+#### Memory and Performance Analysis
+
+The enhanced statistics provide comprehensive monitoring capabilities:
+
+```rust
+#[derive(Debug, Clone)]
+pub struct DeviceStats {
+    pub memory_used_bytes: u64,      // Host memory currently used in bytes
+    pub memory_total_bytes: u64,     // Total host memory available in bytes
+    pub gpu_efficiency: f64,         // Ratio of GPU operations to total operations
+    pub fallback_count: u64,         // Number of times fallback to CPU occurred
+    // ... existing fields
+}
+```
+
+Key statistics methods:
+- `summary()`: Human-readable summary with memory usage percentage
+- `is_gpu_effective()`: Checks if GPU is being used effectively (>80% efficiency)
+- `avg_quantization_time_ms()`: Average time per quantization operation
+- `avg_matmul_time_ms()`: Average time per matrix multiplication operation
+
 ## Advanced GPU/CUDA Troubleshooting
+
+### GPU Backend Detection Issues
+
+1. **GPU Detection Fails**:
+   ```bash
+   # Test GPU detection manually
+   cargo test -p bitnet-kernels --no-default-features test_gpu_info_summary
+   
+   # Check system tools availability
+   which nvidia-smi rocm-smi
+   
+   # Test with mock environment
+   BITNET_GPU_FAKE="cuda" cargo run -p xtask -- download-model --dry-run
+   ```
+
+2. **Incorrect Backend Detection**:
+   ```bash
+   # Verify system detection (using existing GPU validation example)
+   cargo run --example gpu_validation --no-default-features --features gpu
+   
+   # Override detection for testing
+   export BITNET_GPU_FAKE="cuda,metal"
+   cargo test -p bitnet-kernels test_gpu_info_mocked_scenarios
+   ```
+
+3. **Version Detection Issues**:
+   ```bash
+   # Check CUDA toolkit installation
+   nvcc --version
+   which nvcc
+   
+   # Check ROCm installation  
+   rocm-smi --version
+   which rocm-smi
+   
+   # Test GPU detection functionality
+   cargo test -p bitnet-kernels --no-default-features test_gpu_info_summary
+   ```
+
+4. **Missing System Commands**:
+   ```bash
+   # Install missing NVIDIA tools
+   sudo apt-get install nvidia-utils-* nvidia-cuda-toolkit
+   
+   # Install missing AMD tools
+   sudo apt-get install rocm-smi-lib rocm-dev
+   
+   # Verify installation
+   nvidia-smi --query-gpu=gpu_name --format=csv,noheader
+   rocm-smi --showid
+   ```
 
 ### GPU Detection and Initialization Issues
 
@@ -249,6 +478,9 @@ GPU/CUDA tests require special handling due to hardware dependencies:
    
    # Check for memory leaks
    cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_cleanup --ignored
+   
+   # Test host memory tracking and statistics
+   cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
    ```
 
 3. **Compute Capability Issues**:
@@ -344,6 +576,12 @@ GPU/CUDA tests require special handling due to hardware dependencies:
 ## GPU Development Recipes
 
 ```bash
+# GPU backend detection and availability
+cargo test -p bitnet-kernels --no-default-features test_gpu_info_summary
+
+# Mock GPU testing scenarios
+BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels test_gpu_info_mocked_scenarios
+
 # GPU smoke test (basic availability)
 cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_smoke
 

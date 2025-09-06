@@ -13,14 +13,13 @@ static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 ///
 /// # Example
 /// ```rust
-/// #[test]
 /// fn my_env_test() {
 ///     let _g = env_guard();
 ///     unsafe { std::env::set_var("BITNET_NO_NETWORK", "true"); }
 ///     // Test code here...
 /// }
 /// ```
-#[must_use]
+#[must_use = "Environment guard must be held to prevent race conditions"]
 pub fn env_guard() -> std::sync::MutexGuard<'static, ()> {
     ENV_LOCK.get_or_init(|| Mutex::new(())).lock().expect("env guard poisoned")
 }

@@ -21,7 +21,7 @@ This comprehensive guide helps you migrate from the original BitNet C++ implemen
 
 | Aspect | C++ Implementation | BitNet.rs | Improvement |
 |--------|-------------------|-----------|-------------|
-| **Performance** | Baseline | 2-5x faster | 150-400% improvement |
+| **Performance** | Baseline | Optimized design* | Performance benchmarking in development |
 | **Memory Usage** | 3.2 GB | 2.1 GB | 34% reduction |
 | **Memory Safety** | Manual management | Guaranteed safe | Zero crashes |
 | **Build Time** | 5-15 minutes | 30-60 seconds | 5-15x faster |

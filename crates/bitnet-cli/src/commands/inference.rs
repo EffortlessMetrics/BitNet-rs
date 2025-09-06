@@ -3,7 +3,7 @@
 use anyhow::{Context, Result};
 use clap::Args;
 use console::style;
-use futures::StreamExt;
+// use futures::StreamExt; // Removed unused import
 use humansize::{DECIMAL, format_size};
 use humantime::format_duration;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -181,7 +181,7 @@ pub struct InferenceResult {
 }
 
 /// Logit information for a single decode step
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogitStep {
     pub step: usize,
     /// Top-k tokens with their logits: [(token_id, logit)]
@@ -275,24 +275,24 @@ impl InferenceCommand {
 
         // Set thread count if specified
         if let Some(threads) = self.threads {
-            env::set_var("RAYON_NUM_THREADS", threads.to_string());
-            env::set_var("OMP_NUM_THREADS", threads.to_string());
-            env::set_var("MKL_NUM_THREADS", threads.to_string());
-            env::set_var("BLAS_NUM_THREADS", threads.to_string());
+            unsafe { std::env::set_var("RAYON_NUM_THREADS", threads.to_string()) };
+            unsafe { std::env::set_var("OMP_NUM_THREADS", threads.to_string()) };
+            unsafe { std::env::set_var("MKL_NUM_THREADS", threads.to_string()) };
+            unsafe { std::env::set_var("BLAS_NUM_THREADS", threads.to_string()) };
             debug!("Set thread count to {}", threads);
         }
 
         // Enable deterministic mode if requested
         if self.deterministic {
-            env::set_var("BITNET_DETERMINISTIC", "1");
-            env::set_var("CANDLE_DETERMINISTIC", "1");
+            unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
+            unsafe { std::env::set_var("CANDLE_DETERMINISTIC", "1") };
 
             // Force single-threaded execution for full determinism
             if self.threads.is_none() {
-                env::set_var("RAYON_NUM_THREADS", "1");
-                env::set_var("OMP_NUM_THREADS", "1");
-                env::set_var("MKL_NUM_THREADS", "1");
-                env::set_var("BLAS_NUM_THREADS", "1");
+                unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
+                unsafe { std::env::set_var("OMP_NUM_THREADS", "1") };
+                unsafe { std::env::set_var("MKL_NUM_THREADS", "1") };
+                unsafe { std::env::set_var("BLAS_NUM_THREADS", "1") };
             }
 
             debug!("Enabled deterministic mode");
@@ -300,7 +300,7 @@ impl InferenceCommand {
 
         // Set seed in environment if provided
         if let Some(seed) = self.seed {
-            env::set_var("BITNET_SEED", seed.to_string());
+            unsafe { std::env::set_var("BITNET_SEED", seed.to_string()) };
             debug!("Set seed to {}", seed);
         }
 

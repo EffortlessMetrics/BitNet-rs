@@ -60,12 +60,12 @@ impl DebugCli {
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            if path.is_file() && path.extension().is_some_and(|ext| ext == "json") {
-                if let Ok(content) = tokio::fs::read_to_string(&path).await {
-                    if let Ok(report) = serde_json::from_str::<DebugReport>(&content) {
-                        reports.push((path, report));
-                    }
-                }
+            if path.is_file()
+                && path.extension().is_some_and(|ext| ext == "json")
+                && let Ok(content) = tokio::fs::read_to_string(&path).await
+                && let Ok(report) = serde_json::from_str::<DebugReport>(&content)
+            {
+                reports.push((path, report));
             }
         }
 
@@ -454,14 +454,13 @@ impl DebugCli {
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            if path.is_file() && path.extension().is_some_and(|ext| ext == "json") {
-                if let Ok(content) = tokio::fs::read_to_string(&path).await {
-                    if let Ok(report) = serde_json::from_str::<DebugReport>(&content) {
-                        if report.test_summaries.iter().any(|t| t.test_name == test_name) {
-                            reports.push(report);
-                        }
-                    }
-                }
+            if path.is_file()
+                && path.extension().is_some_and(|ext| ext == "json")
+                && let Ok(content) = tokio::fs::read_to_string(&path).await
+                && let Ok(report) = serde_json::from_str::<DebugReport>(&content)
+                && report.test_summaries.iter().any(|t| t.test_name == test_name)
+            {
+                reports.push(report);
             }
         }
 
@@ -504,13 +503,13 @@ impl DebugCli {
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            if path.is_file() && path.extension().is_some_and(|ext| ext == "json") {
-                if let Ok(content) = tokio::fs::read_to_string(&path).await {
-                    if let Ok(report) = serde_json::from_str::<DebugReport>(&content) {
-                        let summary = self.generate_report_summary(&report);
-                        reports.push((path, summary));
-                    }
-                }
+            if path.is_file()
+                && path.extension().is_some_and(|ext| ext == "json")
+                && let Ok(content) = tokio::fs::read_to_string(&path).await
+                && let Ok(report) = serde_json::from_str::<DebugReport>(&content)
+            {
+                let summary = self.generate_report_summary(&report);
+                reports.push((path, summary));
             }
         }
 

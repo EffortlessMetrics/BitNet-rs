@@ -3,6 +3,7 @@
 use bitnet_common::{ConcreteTensor, Device, Result};
 
 /// Extension trait for tensor device operations
+#[allow(dead_code)]
 pub trait TensorDeviceExt {
     /// Create a new tensor on the specified device
     fn with_device(&self, device: Device) -> Result<ConcreteTensor>;

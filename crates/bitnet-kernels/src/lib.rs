@@ -3,13 +3,13 @@
 use bitnet_common::{QuantizationType, Result};
 use std::sync::OnceLock;
 
+pub mod convolution;
 pub mod cpu;
 pub mod device_aware;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 #[cfg(feature = "gpu")]
 pub mod gpu;
-#[cfg(feature = "gpu")]
 pub mod gpu_utils;
 
 /// Kernel provider trait
@@ -86,10 +86,10 @@ impl KernelManager {
         // Add FFI kernel as a fallback option (lower priority than optimized kernels)
         #[cfg(feature = "ffi")]
         {
-            if let Ok(ffi_kernel) = ffi::FfiKernel::new() {
-                if ffi_kernel.is_available() {
-                    providers.push(Box::new(ffi_kernel));
-                }
+            if let Ok(ffi_kernel) = ffi::FfiKernel::new()
+                && ffi_kernel.is_available()
+            {
+                providers.push(Box::new(ffi_kernel));
             }
         }
 

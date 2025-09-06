@@ -98,20 +98,20 @@ impl ConfigValidator {
         }
 
         // Check available disk space
-        if let Ok(metadata) = std::fs::metadata(&self.config.cache_dir) {
-            if metadata.is_dir() {
-                // Try to get available space (platform-specific)
-                if let Some(available_space) = get_available_disk_space(&self.config.cache_dir) {
-                    if self.config.fixtures.max_cache_size > available_space {
-                        result.add_warning(ValidationWarning::new(
-                            "fixtures.max_cache_size",
-                            format!(
-                                "Cache size limit ({} bytes) exceeds available disk space ({} bytes)",
-                                self.config.fixtures.max_cache_size, available_space
-                            ),
-                        ));
-                    }
-                }
+        if let Ok(metadata) = std::fs::metadata(&self.config.cache_dir)
+            && metadata.is_dir()
+        {
+            // Try to get available space (platform-specific)
+            if let Some(available_space) = get_available_disk_space(&self.config.cache_dir)
+                && self.config.fixtures.max_cache_size > available_space
+            {
+                result.add_warning(ValidationWarning::new(
+                    "fixtures.max_cache_size",
+                    format!(
+                        "Cache size limit ({} bytes) exceeds available disk space ({} bytes)",
+                        self.config.fixtures.max_cache_size, available_space
+                    ),
+                ));
             }
         }
     }

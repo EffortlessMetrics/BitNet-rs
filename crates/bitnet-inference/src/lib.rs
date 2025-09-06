@@ -20,6 +20,7 @@ pub mod streaming;
 #[cfg(any(test, feature = "gpu"))]
 mod tensor_ext;
 #[cfg(any(test, feature = "gpu"))]
+#[allow(unused_imports)]
 pub(crate) use tensor_ext::TensorDeviceExt;
 
 pub use backends::{Backend, CpuBackend, GpuBackend};

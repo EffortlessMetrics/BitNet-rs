@@ -415,65 +415,29 @@ fn test_env_variable_overrides() {
         "BITNET_NUM_THREADS",
         "BITNET_BATCH_SIZE",
     ];
-    for var in &env_vars {
-        unsafe {
+    unsafe {
+        for var in &env_vars {
             env::remove_var(var);
         }
-    }
 
-    // Set environment variables
-    unsafe {
+        // Set environment variables
         env::set_var("BITNET_VOCAB_SIZE", "60000");
-    }
-    unsafe {
         env::set_var("BITNET_TEMPERATURE", "0.7");
-    }
-    unsafe {
         env::set_var("BITNET_USE_GPU", "true");
-    }
-    unsafe {
         env::set_var("BITNET_QUANTIZATION_TYPE", "TL2");
-    }
-    unsafe {
         env::set_var("BITNET_MEMORY_LIMIT", "2GB");
-    }
-    unsafe {
         env::set_var("BITNET_MODEL_FORMAT", "safetensors");
-    }
-    unsafe {
         env::set_var("BITNET_MODEL_PATH", "/test/path");
-    }
-    unsafe {
         env::set_var("BITNET_HIDDEN_SIZE", "8192");
-    }
-    unsafe {
         env::set_var("BITNET_NUM_LAYERS", "48");
-    }
-    unsafe {
         env::set_var("BITNET_NUM_HEADS", "64");
-    }
-    unsafe {
         env::set_var("BITNET_MAX_LENGTH", "4096");
-    }
-    unsafe {
         env::set_var("BITNET_MAX_NEW_TOKENS", "1024");
-    }
-    unsafe {
         env::set_var("BITNET_TOP_K", "30");
-    }
-    unsafe {
         env::set_var("BITNET_TOP_P", "0.85");
-    }
-    unsafe {
         env::set_var("BITNET_SEED", "123");
-    }
-    unsafe {
         env::set_var("BITNET_BLOCK_SIZE", "128");
-    }
-    unsafe {
         env::set_var("BITNET_NUM_THREADS", "16");
-    }
-    unsafe {
         env::set_var("BITNET_BATCH_SIZE", "8");
     }
 
@@ -499,8 +463,8 @@ fn test_env_variable_overrides() {
     assert_eq!(config.performance.batch_size, 8);
 
     // Clean up
-    for var in &env_vars {
-        unsafe {
+    unsafe {
+        for var in &env_vars {
             env::remove_var(var);
         }
     }
@@ -513,17 +477,9 @@ fn test_env_variable_special_values() {
     // Test "none" values
     unsafe {
         env::set_var("BITNET_TOP_K", "none");
-    }
-    unsafe {
         env::set_var("BITNET_TOP_P", "none");
-    }
-    unsafe {
         env::set_var("BITNET_SEED", "none");
-    }
-    unsafe {
         env::set_var("BITNET_NUM_THREADS", "auto");
-    }
-    unsafe {
         env::set_var("BITNET_MEMORY_LIMIT", "none");
     }
 
@@ -538,17 +494,9 @@ fn test_env_variable_special_values() {
     // Clean up
     unsafe {
         env::remove_var("BITNET_TOP_K");
-    }
-    unsafe {
         env::remove_var("BITNET_TOP_P");
-    }
-    unsafe {
         env::remove_var("BITNET_SEED");
-    }
-    unsafe {
         env::remove_var("BITNET_NUM_THREADS");
-    }
-    unsafe {
         env::remove_var("BITNET_MEMORY_LIMIT");
     }
 }
@@ -619,8 +567,6 @@ fn test_config_loader_precedence() {
     // Clean up env vars
     unsafe {
         env::remove_var("BITNET_VOCAB_SIZE");
-    }
-    unsafe {
         env::remove_var("BITNET_TEMPERATURE");
     }
 

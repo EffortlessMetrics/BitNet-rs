@@ -6,8 +6,10 @@
 //! - Memory usage profiling and leak detection
 //! - Mixed precision validation
 
+#[cfg(target_arch = "x86_64")]
+use crate::cpu::x86::Avx2Kernel;
 use crate::gpu::cuda::CudaKernel;
-use crate::{KernelProvider, cpu::fallback::FallbackKernel, cpu::x86::Avx2Kernel};
+use crate::{KernelProvider, cpu::fallback::FallbackKernel};
 use bitnet_common::Result;
 
 use std::time::Instant;
@@ -446,7 +448,7 @@ impl GpuValidator {
 
             // Allow for small variance in memory due to driver overhead
             const LEAK_THRESHOLD: usize = 1024 * 1024; // 1MB threshold
-            let memory_diff = if free_end < free_start { free_start - free_end } else { 0 };
+            let memory_diff = free_start.saturating_sub(free_end);
             let leaks_detected = memory_diff > LEAK_THRESHOLD;
 
             if leaks_detected {
