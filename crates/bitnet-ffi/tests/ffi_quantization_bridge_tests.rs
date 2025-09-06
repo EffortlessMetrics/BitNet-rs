@@ -3,7 +3,7 @@
 //! This module tests the FFI quantization bridge that enables gradual migration
 //! from C++ to Rust while maintaining functionality and performance.
 
-#[cfg(feature = "ffi")]
+#[cfg(feature = "ffi-tests")]
 mod ffi_bridge_tests {
     use bitnet_common::QuantizationType;
     use bitnet_kernels::Kernel;
@@ -358,7 +358,7 @@ mod ffi_bridge_tests {
     }
 }
 
-#[cfg(not(feature = "ffi"))]
+#[cfg(not(feature = "ffi-tests"))]
 mod ffi_bridge_disabled_tests {
     #[test]
     fn test_ffi_bridge_disabled() {

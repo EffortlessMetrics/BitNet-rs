@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Production-Ready Streaming Inference** ([#182](https://github.com/EffortlessSteven/BitNet-rs/pull/182)):
+  - Real async streaming implementation using `GenerationStream` with futures and `StreamExt::next()`
+  - Enhanced NaN-safe sampling operations with hardened floating-point comparisons in `top_k_filter` and `top_p_filter`
+  - Accurate performance metrics collection during streaming with proper prefill execution via `engine.eval_ids()`
+  - Integration tests enabled by default (removed feature gates) for comprehensive test coverage
+  - Futures crate dependency reintroduced for async stream processing with `StreamExt::next()` support
+  - Robust error handling with `.unwrap_or(std::cmp::Ordering::Equal)` for NaN-resilient sorting operations
 - **Device-Aware GPU Quantization Support**:
   - Enhanced I2S, TL1, and TL2 quantizers with automatic GPU acceleration
   - Device-aware dequantization with intelligent CPU fallback  

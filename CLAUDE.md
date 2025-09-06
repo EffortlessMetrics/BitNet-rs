@@ -426,6 +426,21 @@ cargo run --example inspect_gguf_metadata --no-default-features --features cpu -
 # Export model metadata as JSON
 cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- --json model.gguf
 
+# Real-time streaming inference with production-ready async streaming
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Explain quantum computing" --stream
+
+# Batch inference with streaming output
+cargo run -p bitnet-cli -- run --input-file prompts.txt --stream --batch-size 4
+
+# Interactive mode with streaming responses
+cargo run -p bitnet-cli -- run --interactive --stream --temperature 0.7
+
+# Deterministic streaming generation with performance metrics
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Hello world" --stream --deterministic --seed 42 --metrics
+
+# Advanced streaming with sampling parameters and NaN-safe operations
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Explain AI" --stream --temperature 0.8 --top-k 50 --top-p 0.95
+
 # Teacher-forcing evaluation with perplexity calculation
 cargo run -p bitnet-cli -- score --model model.gguf --file test.txt
 cargo run -p bitnet-cli -- score --model model.gguf --file validation.txt --device gpu --batch-size 8 --json-out results.json
@@ -640,3 +655,65 @@ scripts/nll-parity.sh
 3. **Deterministic Top-K**: Stable sorting with tie-breaking by token ID, NaN demotion
 4. **Logit Dumping**: Capture top-k logits at each generation step for analysis
 5. **Tau-b Correlation**: Score-aware rank correlation for quantization robustness
+
+## Streaming Inference
+
+BitNet.rs includes production-ready streaming inference capabilities (enhanced in PR #182):
+
+### Real-Time Async Streaming
+
+- **GenerationStream**: True async streaming using futures with `StreamExt::next()`
+- **NaN-Safe Sampling**: Hardened floating-point comparisons in `top_k_filter` and `top_p_filter`
+- **Performance Metrics**: Accurate timing and throughput metrics during streaming
+- **Error Handling**: Comprehensive error recovery and graceful degradation
+
+### Streaming Commands
+
+```bash
+# Basic streaming inference
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Hello world" --stream
+
+# Interactive streaming mode with chat interface
+cargo run -p bitnet-cli -- run --interactive --stream
+
+# Batch streaming with multiple prompts
+cargo run -p bitnet-cli -- run --input-file prompts.txt --stream --batch-size 4
+
+# Deterministic streaming for reproducible results
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" --stream --deterministic --seed 42
+
+# Streaming with advanced sampling and performance metrics
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Explain AI" \
+  --stream --temperature 0.8 --top-k 50 --top-p 0.95 --metrics
+
+# Streaming with logit dumping for analysis
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Debug test" \
+  --stream --dump-logits 10 --logits-topk 5
+```
+
+### Streaming Features
+
+- **Async Token Generation**: Real-time token streaming with futures-based architecture
+- **Performance Tracking**: Built-in timing and throughput measurement
+- **Interactive Mode**: Chat-style interface with streaming responses
+- **Batch Processing**: Streaming support for multiple prompts
+- **Deterministic Mode**: Reproducible streaming with seed control
+- **Error Resilience**: NaN-safe operations with robust error handling
+- **Logit Analysis**: Optional top-k logit capture for debugging and analysis
+
+### Testing Streaming Implementation
+
+```bash
+# Test CLI streaming functionality
+cargo test -p bitnet-cli --test cli_smoke
+
+# Validate streaming with integration tests (enabled by default in PR #182)
+cargo test -p bitnet-cli
+
+# Test NaN-safe sampling operations
+cargo test -p bitnet-cli sampling
+
+# Performance test with streaming metrics
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Performance test" \
+  --stream --metrics --max-tokens 100
+```

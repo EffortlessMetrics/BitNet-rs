@@ -215,7 +215,7 @@ async fn main() -> Result<()> {
 
 #### Streaming API with Token IDs
 
-BitNet.rs supports real-time streaming generation with access to both generated text and token IDs:
+BitNet.rs supports production-ready real-time streaming generation with access to both generated text and token IDs (enhanced in PR #182):
 
 ```rust
 use bitnet::prelude::*;
@@ -238,14 +238,14 @@ async fn main() -> Result<()> {
     
     let mut stream = engine.generate_stream_with_config("Explain quantum computing", &config);
     
-    // Process tokens as they arrive
+    // Process tokens as they arrive with real async streaming
     while let Some(result) = stream.next().await {
         match result {
             Ok(stream_response) => {
-                // Display generated text
+                // Display generated text in real-time
                 print!("{}", stream_response.text);
                 
-                // Access token IDs for analysis or debugging (new in v0.1.0)
+                // Access token IDs for analysis or debugging
                 for &token_id in &stream_response.token_ids {
                     eprintln!("[DEBUG] Generated token ID: {}", token_id);
                 }
@@ -260,6 +260,12 @@ async fn main() -> Result<()> {
     Ok(())
 }
 ```
+
+**Enhanced Streaming Features (PR #182)**:
+- **Real Async Streaming**: True GenerationStream using futures with `StreamExt::next()`
+- **NaN-Safe Operations**: Hardened floating-point comparisons in sampling operations
+- **Performance Metrics**: Accurate timing and throughput measurement during streaming
+- **Error Recovery**: Comprehensive error handling with graceful degradation
 
 #### Device-Aware Quantization
 
@@ -365,7 +371,23 @@ println!("Compact JSON: {}", json_compact);
 ### CLI Usage
 
 ```bash
-# Run inference
+# Run inference with real-time streaming (enhanced in PR #182)
+bitnet run --model model.gguf --prompt "Explain quantum computing" --stream
+
+# Interactive streaming mode with chat interface
+bitnet run --interactive --stream --temperature 0.7
+
+# Batch processing with streaming output
+bitnet run --input-file prompts.txt --stream --batch-size 4
+
+# Deterministic streaming inference for reproducible results
+bitnet run --model model.gguf --prompt "Test prompt" --stream --deterministic --seed 42 --metrics
+
+# Advanced streaming with NaN-safe sampling parameters
+bitnet run --model model.gguf --prompt "Complex analysis" \
+  --stream --temperature 0.8 --top-k 50 --top-p 0.95
+
+# Non-streaming inference (traditional mode)
 bitnet run --model model.gguf --prompt "Explain quantum computing"
 
 # Validate GGUF file compatibility
@@ -389,12 +411,13 @@ bitnet score --model model.gguf --file test.txt
 # Advanced scoring with device selection and batching
 bitnet score --model model.gguf --file validation.txt --device cuda --batch-size 8 --json-out results.json
 
-# Advanced inference options
+# Advanced inference options with streaming
 bitnet run --model model.gguf \
   --prompt "Explain quantum computing" \
   --max-new-tokens 100 \
   --temperature 0.7 \
-  --top-k 50
+  --top-k 50 \
+  --stream
 
 # Start HTTP server
 bitnet-server --port 8080 --model model.gguf
@@ -410,7 +433,7 @@ curl -X POST http://localhost:8080/v1/completions \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Hello, world!", "max_tokens": 50}'
 
-# Test streaming API with Server-Sent Events (SSE) and token IDs
+# Test streaming API with Server-Sent Events (SSE) and token IDs (enhanced streaming in PR #182)
 curl -X POST http://localhost:8080/v1/stream \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Explain quantum computing", "max_tokens": 100, "temperature": 0.7}' \
