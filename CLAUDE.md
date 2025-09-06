@@ -46,6 +46,9 @@ cargo test --workspace --features "cpu,ffi,crossval"
 
 # FFI quantization bridge tests (compares FFI vs Rust implementations)
 cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
+
+# FFI mock model tests (validates C-API testing infrastructure)
+cargo test -p bitnet-ffi test_mock_model_embed_and_logits
 ```
 
 ### Code Quality Commands
@@ -149,13 +152,14 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 - **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external dependencies
 - **Cross-Format Support**: BPE, SentencePiece, and custom tokenizer formats
 
-#### FFI Bridge System (New in PR #137)
+#### FFI Bridge System (Enhanced in PR #186)
 - **Gradual Migration Support**: Safe C++ kernel integration enabling gradual transition to pure Rust
 - **Quantization Bridge**: Complete FFI quantization support for I2S, TL1, and TL2 types
 - **Performance Comparison Framework**: Built-in tools for comparing FFI vs Rust implementations
 - **Error Handling Integration**: Enhanced C++ error propagation with `get_last_error()` bridge
 - **Feature-Gated Safety**: Proper conditional compilation and graceful fallback when FFI unavailable
 - **Migration Decision Support**: Automated recommendations based on performance and accuracy metrics
+- **Mock Testing Infrastructure**: Comprehensive C-API testing with mock embed/logits implementations
 
 #### Code Quality Enforcement
 - **Comprehensive Clippy Integration**: Zero-tolerance policy for clippy warnings
@@ -425,6 +429,9 @@ cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
 
 # FFI kernel creation and availability testing
 cargo test -p bitnet-kernels --features ffi test_ffi_kernel_creation
+
+# FFI mock model testing (validates C-API infrastructure)
+cargo test -p bitnet-ffi test_mock_model_embed_and_logits
 
 # FFI performance comparison (if C++ library available)
 cargo test -p bitnet-kernels --features ffi --release test_performance_comparison_structure
