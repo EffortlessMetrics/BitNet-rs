@@ -9,8 +9,10 @@ The performance tracking infrastructure includes:
 - **Real-time metrics collection**: Tracks latency, throughput, memory usage
 - **Detailed timing breakdown**: Separate tracking for tokenization, forward pass, sampling
 - **Cache performance monitoring**: Hit rates and memory efficiency tracking  
+- **Device memory tracking**: Comprehensive host and GPU memory monitoring
 - **Environment-based configuration**: Support for deterministic testing and optimization
 - **Validation and error handling**: Ensures metrics integrity and proper error reporting
+- **Thread-safe statistics**: Concurrent access to performance data with Arc<Mutex> safety
 
 ## Core Components
 
@@ -98,6 +100,106 @@ println!("Cache hit rate: {:.2}", metrics.cache_hit_rate.unwrap_or(0.0));
 // Reset tracking for benchmarking
 engine.reset_performance_tracking()?;
 ```
+
+### Device Memory Tracking
+
+BitNet.rs provides comprehensive device-aware memory tracking through the `DeviceAwareQuantizer`:
+
+```rust
+use bitnet_kernels::device_aware::{DeviceAwareQuantizer, DeviceStats};
+use bitnet_common::Device;
+
+// Create quantizer with memory tracking
+let quantizer = DeviceAwareQuantizer::new(Device::Cuda(0))?;
+
+// Perform operations with automatic memory tracking
+let input = vec![1.0, 2.0, 3.0, 4.0];
+let result = quantizer.quantize(&input, QuantizationType::I2S)?;
+
+// Get comprehensive device statistics
+if let Some(stats) = quantizer.get_stats() {
+    // Memory usage information
+    println!("Host Memory: {} MB used / {} MB total", 
+        stats.memory_used_bytes / (1024 * 1024),
+        stats.memory_total_bytes / (1024 * 1024)
+    );
+    
+    // Operation counts and performance
+    println!("Operations: {} GPU, {} CPU, {} fallbacks",
+        stats.gpu_operations, stats.cpu_operations, stats.fallback_count);
+        
+    println!("Performance: {:.2} ms total quantization, {:.2} ms total matmul",
+        stats.performance.total_quantization_time_ms,
+        stats.performance.total_matmul_time_ms);
+    
+    // Memory efficiency metrics
+    if let Some(efficiency) = stats.memory_efficiency() {
+        println!("Memory Efficiency: {:.1}%", efficiency * 100.0);
+    }
+}
+```
+
+#### Memory Tracking Features
+
+- **Process-Specific Memory**: Uses `memory-stats` crate for accurate current process memory usage
+- **System Memory Monitoring**: Uses `sysinfo` crate with optimized memory refresh for total system memory
+- **GPU Memory Integration**: CUDA cuMemGetInfo_v2 for device memory statistics (when available)
+- **Thread-Safe Access**: All memory statistics protected by Arc<Mutex<DeviceStatsInternal>>
+- **Real-Time Updates**: Memory stats automatically updated during quantization and matrix operations
+- **Memory Efficiency Calculation**: Derived metrics like usage percentages and efficiency ratios
+
+#### Memory Tracking Dependencies
+
+The memory tracking functionality relies on two key dependencies:
+
+- **`memory-stats`**: Cross-platform process memory statistics
+  - Provides accurate current process physical memory usage
+  - Minimal overhead suitable for real-time tracking
+  - Works on Windows, macOS, and Linux
+  
+- **`sysinfo`**: System information and monitoring
+  - Provides total system memory information
+  - Optimized memory refresh to avoid unnecessary system calls
+  - Cross-platform compatibility with consistent API
+
+### Practical Memory Tracking Example
+
+Here's a complete example demonstrating memory tracking in practice:
+
+```bash
+# Run the comprehensive device stats demo
+cargo run --example device_stats_demo --no-default-features --features cpu
+
+# For GPU memory tracking (requires CUDA)
+cargo run --example device_stats_demo --no-default-features --features gpu
+```
+
+The example output includes:
+
+```
+=== BitNet.rs Device-Aware Quantization with Memory Tracking ===
+
+📊 Initial statistics:
+   Memory used: 45.23 MB
+   Memory total: 16384.00 MB
+   Memory utilization: 0.3%
+
+🔧 Performing quantization operations...
+   Operation 1: 1024 elements
+   Operation 2: 2048 elements
+   ...
+
+📈 Final statistics:
+   Total operations: 8
+   - Quantization ops: 5
+   - MatMul ops: 3
+   Memory tracking:
+   - Memory used: 47.85 MB (50,175,942 bytes)
+   - Memory total: 16384.00 MB (17,179,869,184 bytes)
+   - Memory utilization: 0.3%
+```
+
+This demonstrates how memory tracking integrates seamlessly with quantization operations, providing real-time insights into memory consumption patterns.
 
 ## Environment Variable Configuration
 
@@ -362,6 +464,13 @@ cargo test -p bitnet-inference --features integration-tests test_engine_performa
 # Test platform-specific performance tracking
 cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
 cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+
+# Test comprehensive memory tracking with device awareness
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
+cargo test -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
+
+# Test memory efficiency metrics
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_efficiency_tracking
 
 # GPU performance validation with comprehensive metrics
 cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive

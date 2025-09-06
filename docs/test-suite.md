@@ -69,6 +69,39 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cp
 
 # GPU fallback mechanism testing
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
+
+# GPU memory management and leak detection
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+
+# CUDA device information and memory tracking
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_device_info_query
+cargo test -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
+```
+
+### Memory Tracking Tests
+
+```bash
+# Basic CPU memory tracking tests
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+
+# Comprehensive memory tracking with device awareness
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_efficiency_tracking
+
+# GPU memory tracking tests (requires CUDA)
+cargo test -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+
+# Memory tracking integration with device-aware quantization
+cargo test -p bitnet-kernels --no-default-features --features cpu test_device_aware_quantizer_memory_stats
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_quantizer_memory_integration
+
+# Host memory vs system memory validation
+cargo test -p bitnet-kernels --no-default-features --features cpu test_host_vs_system_memory_tracking
+
+# Thread-safe memory statistics access
+cargo test -p bitnet-kernels --no-default-features --features cpu test_concurrent_memory_stats_access
 ```
 
 ### Cross-Validation Tests

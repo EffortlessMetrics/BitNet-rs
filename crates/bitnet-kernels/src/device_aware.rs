@@ -9,7 +9,7 @@ use crate::{KernelProvider, cpu};
 use bitnet_common::{Device, KernelError, QuantizationType, Result};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use sysinfo::{MemoryRefreshKind, RefreshKind, System};
+use sysinfo;
 
 /// Device-aware quantization provider with automatic fallback
 pub struct DeviceAwareQuantizer {
@@ -31,6 +31,8 @@ struct DeviceStatsInternal {
     fallback_count: u64,
     last_gpu_error: Option<String>,
     last_cpu_error: Option<String>,
+    memory_used_bytes: u64,
+    memory_total_bytes: u64,
 }
 
 impl DeviceAwareQuantizer {
@@ -135,6 +137,10 @@ impl DeviceAwareQuantizer {
     ) -> Result<()> {
         let start_time = Instant::now();
 
+        if let Ok(mut stats) = self.stats.lock() {
+            Self::update_memory_stats(&mut stats);
+        }
+
         // Try primary provider (GPU) first
         if let Some(ref primary) = self.primary_provider {
             let gpu_start = Instant::now();
@@ -236,6 +242,10 @@ impl DeviceAwareQuantizer {
         let start_time = Instant::now();
         let _used_gpu = false;
 
+        if let Ok(mut stats) = self.stats.lock() {
+            Self::update_memory_stats(&mut stats);
+        }
+
         // Try primary provider (GPU) first
         if let Some(ref primary) = self.primary_provider {
             let gpu_start = Instant::now();
@@ -317,66 +327,28 @@ impl DeviceAwareQuantizer {
         }
     }
 
-    /// Get system memory statistics using sysinfo
-    fn get_memory_stats() -> (u64, u64) {
-        let mut system = System::new_with_specifics(
-            RefreshKind::new().with_memory(MemoryRefreshKind::everything()),
-        );
+    fn update_memory_stats(stats: &mut DeviceStatsInternal) {
+        use memory_stats::memory_stats;
 
-        // Refresh memory information
-        system.refresh_memory();
-
-        // Get used and total memory in bytes
-        let memory_total_bytes = system.total_memory();
-        let memory_used_bytes = system.used_memory();
-
-        log::trace!(
-            "Memory stats: used={:.2}MB, total={:.2}MB",
-            memory_used_bytes as f64 / (1024.0 * 1024.0),
-            memory_total_bytes as f64 / (1024.0 * 1024.0)
-        );
-
-        (memory_used_bytes, memory_total_bytes)
-    }
-
-    /// Get device-specific memory statistics (GPU or CPU)
-    fn get_device_memory_stats(device: Device) -> (u64, u64) {
-        match device {
-            #[cfg(feature = "gpu")]
-            Device::Cuda(_) => unsafe {
-                use cudarc::driver::sys::cuMemGetInfo_v2;
-                let mut free: usize = 0;
-                let mut total: usize = 0;
-                let result = cuMemGetInfo_v2(&mut free as *mut usize, &mut total as *mut usize);
-                if result as u32 != 0 {
-                    log::warn!("Failed to get CUDA memory info: {:?}", result);
-                    // Fallback to system memory stats
-                    Self::get_memory_stats()
-                } else {
-                    (total.saturating_sub(free) as u64, total as u64)
-                }
-            },
-            _ => Self::get_memory_stats(),
+        // Use memory-stats for more accurate process-specific memory
+        if let Some(usage) = memory_stats() {
+            stats.memory_used_bytes = usage.physical_mem as u64;
         }
+
+        // Use sysinfo for total system memory
+        let mut sys = sysinfo::System::new();
+        sys.refresh_memory();
+        stats.memory_total_bytes = sys.total_memory();
     }
 
     /// Get comprehensive performance statistics
     pub fn get_stats(&self) -> Option<DeviceStats> {
-        if let Ok(stats) = self.stats.lock() {
+        if let Ok(mut stats) = self.stats.lock() {
+            Self::update_memory_stats(&mut stats);
+
             let primary_device_type =
                 self.primary_provider.as_ref().map(|p| p.name()).unwrap_or("None");
             let fallback_device_type = self.fallback_provider.name();
-
-            // Get device-specific memory usage
-            let (memory_used_bytes, memory_total_bytes) =
-                Self::get_device_memory_stats(self.target_device);
-
-            log::debug!(
-                "Memory usage for {:?}: {}/{} bytes",
-                self.target_device,
-                memory_used_bytes,
-                memory_total_bytes
-            );
 
             Some(DeviceStats {
                 device_type: format!("{}+{}", primary_device_type, fallback_device_type),
@@ -398,8 +370,8 @@ impl DeviceAwareQuantizer {
                 },
                 last_gpu_error: stats.last_gpu_error.clone(),
                 last_cpu_error: stats.last_cpu_error.clone(),
-                memory_used_bytes,
-                memory_total_bytes,
+                memory_used_bytes: stats.memory_used_bytes,
+                memory_total_bytes: stats.memory_total_bytes,
             })
         } else {
             log::warn!("Failed to acquire stats lock");
@@ -710,7 +682,7 @@ mod tests {
         assert!(!name.is_empty(), "Provider should have a name");
 
         // Verify it's one of the expected CPU kernel types
-        let valid_names = ["AVX2Kernel", "NeonKernel", "FallbackKernel"];
+        let valid_names = ["avx2", "neon", "fallback"];
         assert!(
             valid_names.iter().any(|&valid_name| name.contains(valid_name)),
             "Provider name '{}' should be one of the valid CPU kernel types",
@@ -732,13 +704,13 @@ mod tests {
         {
             if is_x86_feature_detected!("avx2") {
                 assert!(
-                    provider_name.contains("AVX2"),
+                    provider_name.contains("avx2"),
                     "Should use AVX2 kernel when feature is available: {}",
                     provider_name
                 );
             } else {
                 assert!(
-                    provider_name.contains("Fallback"),
+                    provider_name.contains("fallback"),
                     "Should use fallback when AVX2 not available: {}",
                     provider_name
                 );
@@ -748,7 +720,7 @@ mod tests {
         #[cfg(not(feature = "avx2"))]
         {
             assert!(
-                provider_name.contains("Fallback"),
+                provider_name.contains("fallback"),
                 "Should use fallback when AVX2 feature not enabled: {}",
                 provider_name
             );
@@ -767,13 +739,13 @@ mod tests {
         {
             if std::arch::is_aarch64_feature_detected!("neon") {
                 assert!(
-                    provider_name.contains("NEON"),
+                    provider_name.contains("neon"),
                     "Should use NEON kernel when feature is available: {}",
                     provider_name
                 );
             } else {
                 assert!(
-                    provider_name.contains("Fallback"),
+                    provider_name.contains("fallback"),
                     "Should use fallback when NEON not available: {}",
                     provider_name
                 );
@@ -783,7 +755,7 @@ mod tests {
         #[cfg(not(feature = "neon"))]
         {
             assert!(
-                provider_name.contains("Fallback"),
+                provider_name.contains("fallback"),
                 "Should use fallback when NEON feature not enabled: {}",
                 provider_name
             );
