@@ -1,33 +1,38 @@
 {
-  "pr_number": 141,
-  "title": "Replace `todo!()` placeholders in FFI mock model with deterministic mock tensors",
-  "branch": "codex/replace-todo-with-mock-tensors",
+  "pr_number": 185,
+  "title": "Track device memory usage in stats",
+  "branch": "codex/modify-device-memory-usage-reporting",
   "status": "MERGED",
-  "merge_commit": "b3294f3",
+  "merge_commit": "4160f05",
   "merge_strategy": "squash",
   "merge_date": "2025-09-06",
   "validation_status": "PASSED",
   "validation_environment": "isolated_worktree",
   "quality_gates": {
     "format_check": "PASSED",
-    "clippy": "PARTIAL (unrelated errors)",
+    "clippy": "PASSED (CPU), MINOR_WARNINGS (GPU)",
     "tests": "PASSED",
-    "security_audit": "PASSED",
+    "security_audit": "PASSED (warnings only)",
     "merge_conflicts": "RESOLVED"
   },
   "changes_summary": {
     "files_changed": 1,
-    "crates_affected": ["bitnet-ffi"],
-    "change_type": "testing_infrastructure",
+    "crates_affected": ["bitnet-kernels"],
+    "change_type": "feature_enhancement",
     "api_breaking": false,
     "performance_impact": "minimal",
-    "lines_added": 32,
-    "lines_deleted": 5
+    "lines_added": 35,
+    "lines_deleted": 2,
+    "features_added": [
+      "Device memory tracking for CPU and GPU",
+      "CUDA memory reporting with cuMemGetInfo_v2",
+      "Enhanced sysinfo memory statistics",
+      "Comprehensive memory validation tests"
+    ]
   },
   "finalization_agent": "pr-finalize",
   "artifacts": [
-    ".claude/pr-141-finalization-report.md",
-    ".claude/pr-141-merge-log.md",
+    ".claude/finalization-report-pr-185.md",
     ".claude/pr-state.json"
   ]
 }
