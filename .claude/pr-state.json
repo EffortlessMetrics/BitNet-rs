@@ -1,30 +1,33 @@
 {
-  "pr_number": 180,
-  "title": "Fix GGUF idempotence verification and stamp",
-  "branch": "codex/analyze-bitnet-compat-crate-for-issues",
+  "pr_number": 141,
+  "title": "Replace `todo!()` placeholders in FFI mock model with deterministic mock tensors",
+  "branch": "codex/replace-todo-with-mock-tensors",
   "status": "MERGED",
-  "merge_commit": "fafca30ba2b4f3c1e82b79a7f2341e5deabc7ff",
-  "merge_strategy": "rebase",
-  "merge_date": "2025-09-05",
+  "merge_commit": "b3294f3",
+  "merge_strategy": "squash",
+  "merge_date": "2025-09-06",
   "validation_status": "PASSED",
   "validation_environment": "isolated_worktree",
   "quality_gates": {
     "format_check": "PASSED",
-    "clippy": "PASSED",
+    "clippy": "PARTIAL (unrelated errors)",
     "tests": "PASSED",
-    "msrv_compatibility": "PASSED", 
-    "security_audit": "PASSED"
+    "security_audit": "PASSED",
+    "merge_conflicts": "RESOLVED"
   },
   "changes_summary": {
-    "files_changed": 5,
-    "crates_affected": ["bitnet-compat", "bitnet-quantization"],
-    "change_type": "internal_improvements",
+    "files_changed": 1,
+    "crates_affected": ["bitnet-ffi"],
+    "change_type": "testing_infrastructure",
     "api_breaking": false,
-    "performance_impact": "none"
+    "performance_impact": "minimal",
+    "lines_added": 32,
+    "lines_deleted": 5
   },
   "finalization_agent": "pr-finalize",
   "artifacts": [
-    ".claude/finalization-report-pr-180.md",
+    ".claude/pr-141-finalization-report.md",
+    ".claude/pr-141-merge-log.md",
     ".claude/pr-state.json"
   ]
 }
