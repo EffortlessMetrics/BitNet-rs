@@ -339,6 +339,27 @@ impl DeviceAwareQuantizer {
         (memory_used_bytes, memory_total_bytes)
     }
 
+    /// Get device-specific memory statistics (GPU or CPU)
+    fn get_device_memory_stats(device: Device) -> (u64, u64) {
+        match device {
+            #[cfg(feature = "gpu")]
+            Device::Cuda(_) => unsafe {
+                use cudarc::driver::sys::cuMemGetInfo_v2;
+                let mut free: usize = 0;
+                let mut total: usize = 0;
+                let result = cuMemGetInfo_v2(&mut free as *mut usize, &mut total as *mut usize);
+                if result as u32 != 0 {
+                    log::warn!("Failed to get CUDA memory info: {:?}", result);
+                    // Fallback to system memory stats
+                    Self::get_memory_stats()
+                } else {
+                    (total.saturating_sub(free) as u64, total as u64)
+                }
+            },
+            _ => Self::get_memory_stats(),
+        }
+    }
+
     /// Get comprehensive performance statistics
     pub fn get_stats(&self) -> Option<DeviceStats> {
         if let Ok(stats) = self.stats.lock() {
@@ -346,8 +367,16 @@ impl DeviceAwareQuantizer {
                 self.primary_provider.as_ref().map(|p| p.name()).unwrap_or("None");
             let fallback_device_type = self.fallback_provider.name();
 
-            // Get current memory usage
-            let (memory_used_bytes, memory_total_bytes) = Self::get_memory_stats();
+            // Get device-specific memory usage
+            let (memory_used_bytes, memory_total_bytes) =
+                Self::get_device_memory_stats(self.target_device);
+
+            log::debug!(
+                "Memory usage for {:?}: {}/{} bytes",
+                self.target_device,
+                memory_used_bytes,
+                memory_total_bytes
+            );
 
             Some(DeviceStats {
                 device_type: format!("{}+{}", primary_device_type, fallback_device_type),
@@ -645,6 +674,8 @@ mod tests {
             // Verify summary includes memory info
             let summary = stats.summary();
             assert!(summary.contains("Memory:"), "Summary should include memory information");
+        } else {
+            panic!("No stats returned");
         }
     }
 
