@@ -82,14 +82,14 @@ pub fn conv2d(
     }
 
     // Validate bias dimensions if provided
-    if let Some(bias_data) = bias {
-        if bias_data.len() != oc {
-            return Err(bitnet_common::BitNetError::Kernel(
-                bitnet_common::KernelError::InvalidArguments {
-                    reason: format!("bias size mismatch: expected {}, got {}", oc, bias_data.len()),
-                },
-            ));
-        }
+    if let Some(bias_data) = bias
+        && bias_data.len() != oc
+    {
+        return Err(bitnet_common::BitNetError::Kernel(
+            bitnet_common::KernelError::InvalidArguments {
+                reason: format!("bias size mismatch: expected {}, got {}", oc, bias_data.len()),
+            },
+        ));
     }
 
     // Calculate output dimensions
@@ -115,6 +115,7 @@ pub fn conv2d(
     // Apply bias if provided
     if let Some(bias_data) = bias {
         for batch in 0..n {
+            #[allow(clippy::needless_range_loop)]
             for out_ch in 0..oc {
                 let bias_val = bias_data[out_ch];
                 for y in 0..oh {
@@ -189,6 +190,7 @@ pub fn conv2d(
 /// * `input_dims` - Input tensor dimensions (N, C, H, W)
 /// * `weight_dims` - Weight tensor dimensions (O, I, H, W)
 /// * `qtype` - Quantization type for the weights
+#[allow(clippy::too_many_arguments)]
 pub fn conv2d_quantized(
     input: &[f32],
     weight_quantized: &[u8],
@@ -228,7 +230,7 @@ pub fn conv2d_quantized(
     // Calculate expected quantized weight size based on quantization type
     let elements_per_weight = kic * kh * kw;
     let expected_weight_size = match qtype {
-        QuantizationType::I2S => (oc * elements_per_weight + 3) / 4, // 2 bits per element, packed
+        QuantizationType::I2S => (oc * elements_per_weight).div_ceil(4), // 2 bits per element, packed
         QuantizationType::TL1 | QuantizationType::TL2 => oc * elements_per_weight, // 1 byte per element
     };
 
@@ -258,14 +260,14 @@ pub fn conv2d_quantized(
         ));
     }
 
-    if let Some(bias_data) = bias {
-        if bias_data.len() != oc {
-            return Err(bitnet_common::BitNetError::Kernel(
-                bitnet_common::KernelError::InvalidArguments {
-                    reason: format!("bias size mismatch: expected {}, got {}", oc, bias_data.len()),
-                },
-            ));
-        }
+    if let Some(bias_data) = bias
+        && bias_data.len() != oc
+    {
+        return Err(bitnet_common::BitNetError::Kernel(
+            bitnet_common::KernelError::InvalidArguments {
+                reason: format!("bias size mismatch: expected {}, got {}", oc, bias_data.len()),
+            },
+        ));
     }
 
     // Calculate output dimensions
@@ -291,6 +293,7 @@ pub fn conv2d_quantized(
     // Apply bias if provided
     if let Some(bias_data) = bias {
         for batch in 0..n {
+            #[allow(clippy::needless_range_loop)]
             for out_ch in 0..oc {
                 let bias_val = bias_data[out_ch];
                 for y in 0..oh {
@@ -305,6 +308,7 @@ pub fn conv2d_quantized(
 
     // Perform quantized convolution with dequantization on-the-fly
     for batch in 0..n {
+        #[allow(clippy::needless_range_loop)]
         for out_ch in 0..oc {
             let scale = weight_scales[out_ch];
 
