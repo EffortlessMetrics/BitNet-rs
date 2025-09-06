@@ -133,6 +133,47 @@ pub struct CudaDeviceInfo {
 }
 ```
 
+### Device Memory Tracking
+
+BitNet.rs provides comprehensive memory tracking capabilities for both CPU and GPU devices:
+
+```rust
+use bitnet_kernels::device_aware::{DeviceAwareQuantizer, DeviceStats};
+use bitnet_common::Device;
+
+// Create device-aware quantizer with memory tracking
+let quantizer = DeviceAwareQuantizer::new(Device::Cuda(0))?;
+
+// Perform operations with automatic memory tracking
+let result = quantizer.quantize(&input, QuantizationType::I2S)?;
+
+// Get comprehensive device statistics including memory usage
+if let Some(stats) = quantizer.get_stats() {
+    println!("Memory Usage: {:.1} MB / {:.1} MB ({:.1}%)", 
+        stats.memory_used_bytes as f64 / (1024.0 * 1024.0),
+        stats.memory_total_bytes as f64 / (1024.0 * 1024.0),
+        (stats.memory_used_bytes as f64 / stats.memory_total_bytes as f64) * 100.0
+    );
+    
+    println!("Operations: {} GPU, {} CPU, {} fallbacks",
+        stats.gpu_operations, stats.cpu_operations, stats.fallback_count);
+    
+    // Check memory efficiency
+    if let Some(efficiency) = stats.memory_efficiency() {
+        println!("Memory Efficiency: {:.2}%", efficiency * 100.0);
+    }
+}
+```
+
+#### Memory Tracking Features
+
+- **Real-time Host Memory**: Uses `memory-stats` crate for accurate process-specific memory usage
+- **System Memory Monitoring**: Uses `sysinfo` crate for total system memory tracking
+- **GPU Memory Integration**: CUDA cuMemGetInfo_v2 for GPU memory statistics (when available)
+- **Thread-Safe Tracking**: Arc<Mutex<DeviceStatsInternal>> for safe concurrent access
+- **Memory Efficiency Metrics**: Calculated ratios and usage percentages
+- **Automatic Updates**: Memory stats updated during quantization and matrix operations
+
 ### Device Querying Commands
 
 ```bash
@@ -147,6 +188,15 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_avai
 
 # Validate device capabilities for BitNet quantization
 cargo test -p bitnet-kernels --no-default-features --features gpu test_device_capability_validation
+
+# Test comprehensive memory tracking on GPU devices
+cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_tracking_comprehensive
+
+# Test device-aware memory statistics collection
+cargo test -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
+
+# Test GPU memory management and leak detection
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
 ```
 
 ### Hardware-Aware Optimization

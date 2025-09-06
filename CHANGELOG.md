@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - GPU memory optimization and mixed precision support
   - Comprehensive GPU vs CPU validation tests with configurable tolerance
   - Proper feature gating with `#[cfg(feature = "gpu")]` for CPU-only builds
+- **Device Memory Tracking Infrastructure** ([#185](https://github.com/EffortlessSteven/BitNet-rs/pull/185)):
+  - Real-time host memory monitoring via `memory-stats` crate for process-specific usage
+  - System memory tracking via `sysinfo` crate with optimized refresh calls
+  - Thread-safe memory statistics with Arc<Mutex<DeviceStatsInternal>> protection
+  - Memory efficiency metrics and usage percentage calculations in DeviceStats
+  - Comprehensive test coverage for memory tracking functionality
+  - Integration with device-aware quantization for automatic memory monitoring
 - **Enhanced CUDA Kernel Infrastructure**:
   - Improved CUDA kernel provider with better error handling
   - Memory management optimization with automatic leak detection

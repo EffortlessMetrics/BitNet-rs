@@ -101,7 +101,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-common`**: Shared types, traits, and utilities
 - **`bitnet-models`**: Model loading and format handling (GGUF, SafeTensors)
 - **`bitnet-quantization`**: 1-bit quantization algorithms
-- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with 2D convolution support, comprehensive memory statistics tracking, platform-specific kernel selection (x86_64 AVX2/aarch64 NEON), FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
+- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with 2D convolution support, comprehensive memory statistics tracking with real-time host/GPU memory monitoring, platform-specific kernel selection (x86_64 AVX2/aarch64 NEON), FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
 - **`bitnet-inference`**: Inference engine with streaming support
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration and mock fallback system
 - **`bitnet-server`**: HTTP server for BitNet inference with health monitoring
@@ -134,7 +134,9 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 - **Performance Benchmarking**: Built-in performance measurement with speedup calculations
 - **Numerical Accuracy Testing**: Configurable tolerance testing for quantization operations
 - **Memory Leak Detection**: Automatic GPU memory monitoring and leak prevention
-- **Host Memory Tracking**: Real-time host memory usage monitoring with sysinfo integration
+- **Host Memory Tracking**: Real-time host memory usage monitoring with memory-stats and sysinfo integration
+- **Device Memory Statistics**: Comprehensive memory tracking for both GPU and CPU with efficiency metrics
+- **Thread-Safe Memory Monitoring**: Arc<Mutex<DeviceStatsInternal>> for safe concurrent memory access
 - **Platform-Specific Selection**: Automatic AVX2/NEON kernel selection based on CPU architecture
 - **Error Handling Validation**: Comprehensive error path testing with recovery verification
 
@@ -301,6 +303,42 @@ For detailed information on specific topics, see:
 - **[Streaming API Guide](docs/streaming-api.md)**: Real-time token streaming with Server-Sent Events
 - **[Concurrency Caps Guide](docs/concurrency-caps.md)**: Resource management and concurrency control
 - **[Performance Tracking Guide](docs/performance-tracking.md)**: Comprehensive performance monitoring, metrics collection, and optimization analysis
+## Key Dependencies
+
+### Memory Tracking Dependencies
+
+BitNet.rs uses specialized crates for cross-platform memory monitoring:
+
+- **`memory-stats` (1.1)**: Process-specific memory statistics
+  - Provides accurate current process physical memory usage
+  - Cross-platform support (Windows, macOS, Linux)
+  - Minimal overhead suitable for real-time tracking
+  - Used for `DeviceStats::memory_used_bytes` in device-aware quantization
+
+- **`sysinfo` (0.30)**: System information and monitoring
+  - Comprehensive system memory information
+  - Optimized memory refresh to minimize system calls  
+  - Cross-platform API consistency
+  - Used for `DeviceStats::memory_total_bytes` and GPU detection
+
+### GPU/CUDA Dependencies
+
+- **`cudarc` (0.12)**: Rust CUDA bindings for GPU acceleration
+  - Safe CUDA memory management and kernel execution
+  - Device querying and capability detection
+  - Used for GPU memory tracking via `cuMemGetInfo_v2`
+
+- **`half` (2.3)**: Half-precision floating point support
+  - FP16 and BF16 operations for modern GPU architectures
+  - Required for tensor core operations on CC 6.1+ devices
+
+### Cross-Platform Compatibility
+
+- **FFI Dependencies**: Optional C++ library integration
+  - **`cc`**: C++ compilation for FFI bridge
+  - **`bindgen`**: Automatic binding generation
+  - **`pkg-config`**: Library discovery on Unix systems
+
 ## Environment Variables
 
 ### Runtime Variables
@@ -343,8 +381,12 @@ cargo run --example gpu_validation --no-default-features --features gpu
 cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
 cargo test -p bitnet-kernels --no-default-features --features cpu test_platform_kernel_selection
 
-# Test device-aware quantizer with memory statistics
+# Test device-aware quantizer with comprehensive memory statistics
 cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
+
+# Test device-aware memory tracking for both CPU and GPU
+cargo test -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
 ```
 ## Repository Contracts (for Claude)
 
@@ -367,6 +409,9 @@ cargo test -p bitnet-kernels --no-default-features --features cpu test_performan
 ```bash
 # Quick compile & test (CPU, MSRV-accurate)
 rustup run 1.89.0 cargo test --workspace --no-default-features --features cpu
+
+# Run comprehensive memory tracking demo
+cargo run --example device_stats_demo --no-default-features --features cpu
 
 # Quick compile & test with concurrency caps
 scripts/preflight.sh && cargo t2
@@ -411,8 +456,11 @@ cargo test -p bitnet-kernels --no-default-features --features cpu test_aarch64_f
 # Test comprehensive memory tracking with actual system memory usage
 cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
 
-# Test device-aware performance tracking with memory statistics
+# Test device-aware performance tracking with comprehensive memory statistics
 cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+
+# Test memory efficiency metrics and host memory monitoring
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_efficiency_tracking
 
 # GPU kernel validation with numerical accuracy testing
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy
