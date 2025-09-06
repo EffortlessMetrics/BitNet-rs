@@ -1,4 +1,5 @@
 use anyhow::{Result, anyhow};
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{collections::HashSet, fs, path::Path};
 use tracing::{info, warn};
@@ -53,8 +54,7 @@ impl GgufCompatibilityFixer {
         }
 
         // Check for vocabulary
-        let vocab_size = reader.get_u32_metadata("tokenizer.ggml.vocab_size").unwrap_or(0);
-        if vocab_size == 0 {
+        if reader.get_u32_metadata("tokenizer.ggml.vocab_size").is_none() {
             issues.push("No vocabulary found".to_string());
         }
 
@@ -81,6 +81,7 @@ impl GgufCompatibilityFixer {
             let _ = GgufReader::new(&out)?;
             let checksum = Sha256::digest(&out);
             info!("Output checksum: {:x}", checksum);
+            Self::write_stamp(output_path, &issues)?;
             return Ok(());
         }
 
@@ -197,6 +198,27 @@ impl GgufCompatibilityFixer {
         let checksum = Sha256::digest(&out);
         info!("Fixed GGUF exported to: {}", output_path.display());
         info!("Output checksum: {:x}", checksum);
+        Self::write_stamp(output_path, &issues)?;
+        Ok(())
+    }
+
+    fn write_stamp(output_path: &Path, issues: &[String]) -> Result<()> {
+        #[derive(Serialize)]
+        struct Stamp<'a> {
+            timestamp: String,
+            version: &'static str,
+            fixes_applied: &'a [String],
+        }
+
+        let stamp = Stamp {
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            version: env!("CARGO_PKG_VERSION"),
+            fixes_applied: issues,
+        };
+
+        let stamp_path = output_path.with_extension("gguf.compat.json");
+        let json = serde_json::to_string_pretty(&stamp)?;
+        fs::write(stamp_path, json)?;
         Ok(())
     }
 
@@ -204,9 +226,8 @@ impl GgufCompatibilityFixer {
     pub fn verify_idempotent<P: AsRef<Path>>(path: P) -> Result<bool> {
         let first_issues = Self::diagnose(&path)?;
 
-        // If already has no issues, it's idempotent
-        if first_issues.is_empty() {
-            return Ok(true);
+        if !first_issues.is_empty() {
+            return Ok(false);
         }
 
         // Look for embedded compat flag
@@ -235,10 +256,23 @@ impl GgufCompatibilityFixer {
 
 #[cfg(test)]
 mod tests {
+    use super::GgufCompatibilityFixer;
+    use std::fs;
+    use tempfile::TempDir;
+
     #[test]
-    fn test_diagnose_placeholder() {
-        // This is a placeholder test
-        // Real tests would require actual GGUF files
-        // Just verify the module compiles
+    fn diagnose_detects_missing_metadata() {
+        let tmp = TempDir::new().unwrap();
+        let path = tmp.path().join("mini.gguf");
+
+        let mut data = Vec::new();
+        data.extend_from_slice(b"GGUF");
+        data.extend_from_slice(&3u32.to_le_bytes());
+        data.extend_from_slice(&0u64.to_le_bytes());
+        data.extend_from_slice(&0u64.to_le_bytes());
+        fs::write(&path, &data).unwrap();
+
+        let issues = GgufCompatibilityFixer::diagnose(&path).unwrap();
+        assert!(issues.iter().any(|i| i.contains("BOS")));
     }
 }

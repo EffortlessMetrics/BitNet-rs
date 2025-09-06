@@ -29,6 +29,12 @@ cargo test -p bitnet-inference --test gguf_header
 cargo test -p bitnet-inference --test gguf_fuzz
 cargo test -p bitnet-inference --test engine_inspect
 
+# Run convolution kernel tests
+cargo test -p bitnet-kernels --no-default-features --features cpu convolution
+
+# Run PyTorch reference convolution tests (requires Python and PyTorch)
+cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored
+
 # Run verification script
 ./scripts/verify-tests.sh
 
@@ -40,6 +46,9 @@ cargo test --workspace --features "cpu,ffi,crossval"
 
 # FFI quantization bridge tests (compares FFI vs Rust implementations)
 cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
+
+# FFI mock model tests (validates C-API testing infrastructure)
+cargo test -p bitnet-ffi test_mock_model_embed_and_logits
 ```
 
 ### Code Quality Commands
@@ -92,7 +101,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-common`**: Shared types, traits, and utilities
 - **`bitnet-models`**: Model loading and format handling (GGUF, SafeTensors)
 - **`bitnet-quantization`**: 1-bit quantization algorithms
-- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
+- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with 2D convolution support, comprehensive memory statistics tracking, platform-specific kernel selection (x86_64 AVX2/aarch64 NEON), FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
 - **`bitnet-inference`**: Inference engine with streaming support
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration and mock fallback system
 - **`bitnet-server`**: HTTP server for BitNet inference with health monitoring
@@ -125,6 +134,8 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 - **Performance Benchmarking**: Built-in performance measurement with speedup calculations
 - **Numerical Accuracy Testing**: Configurable tolerance testing for quantization operations
 - **Memory Leak Detection**: Automatic GPU memory monitoring and leak prevention
+- **Host Memory Tracking**: Real-time host memory usage monitoring with sysinfo integration
+- **Platform-Specific Selection**: Automatic AVX2/NEON kernel selection based on CPU architecture
 - **Error Handling Validation**: Comprehensive error path testing with recovery verification
 
 #### Model Compatibility Validation System
@@ -141,13 +152,14 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 - **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external dependencies
 - **Cross-Format Support**: BPE, SentencePiece, and custom tokenizer formats
 
-#### FFI Bridge System (New in PR #137)
+#### FFI Bridge System (Enhanced in PR #186)
 - **Gradual Migration Support**: Safe C++ kernel integration enabling gradual transition to pure Rust
 - **Quantization Bridge**: Complete FFI quantization support for I2S, TL1, and TL2 types
 - **Performance Comparison Framework**: Built-in tools for comparing FFI vs Rust implementations
 - **Error Handling Integration**: Enhanced C++ error propagation with `get_last_error()` bridge
 - **Feature-Gated Safety**: Proper conditional compilation and graceful fallback when FFI unavailable
 - **Migration Decision Support**: Automated recommendations based on performance and accuracy metrics
+- **Mock Testing Infrastructure**: Comprehensive C-API testing with mock embed/logits implementations
 
 #### Code Quality Enforcement
 - **Comprehensive Clippy Integration**: Zero-tolerance policy for clippy warnings
@@ -320,6 +332,13 @@ BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels --features gpu
 
 # GPU validation example (includes preflight-style checks)
 cargo run --example gpu_validation --no-default-features --features gpu
+
+# Test memory tracking and platform-specific kernel selection
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+cargo test -p bitnet-kernels --no-default-features --features cpu test_platform_kernel_selection
+
+# Test device-aware quantizer with memory statistics
+cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
 ```
 ## Repository Contracts (for Claude)
 
@@ -376,6 +395,16 @@ cargo test -p bitnet-tokenizers --test universal_roundtrip --no-default-features
 # Enhanced GPU validation with performance metrics and error handling
 cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
 
+# Test platform-specific CPU kernel selection (x86_64 AVX2 / aarch64 NEON)
+cargo test -p bitnet-kernels --no-default-features --features cpu test_cpu_provider_creation
+
+# Test architecture-specific feature detection
+cargo test -p bitnet-kernels --no-default-features --features cpu test_x86_64_feature_detection  # x86_64 only
+cargo test -p bitnet-kernels --no-default-features --features cpu test_aarch64_feature_detection  # aarch64 only
+
+# Test comprehensive memory tracking with actual system memory usage
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+
 # GPU kernel validation with numerical accuracy testing
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy
 
@@ -400,6 +429,9 @@ cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
 
 # FFI kernel creation and availability testing
 cargo test -p bitnet-kernels --features ffi test_ffi_kernel_creation
+
+# FFI mock model testing (validates C-API infrastructure)
+cargo test -p bitnet-ffi test_mock_model_embed_and_logits
 
 # FFI performance comparison (if C++ library available)
 cargo test -p bitnet-kernels --features ffi --release test_performance_comparison_structure

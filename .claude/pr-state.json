@@ -1,46 +1,33 @@
 {
-  "status": "INTEGRATION_COMPLETE",
-  "integration_commit": "398926c",
-  "timestamp": "2025-09-04T16:50:00Z",
-  "final_validation": {
-    "compilation_check": "PASSED",
-    "code_format": "PASSED", 
-    "clippy_warnings": "PASSED",
-    "feature_flags": "VALIDATED",
-    "documentation": "SYNCHRONIZED",
-    "repository_state": "CLEAN"
+  "pr_number": 141,
+  "title": "Replace `todo!()` placeholders in FFI mock model with deterministic mock tensors",
+  "branch": "codex/replace-todo-with-mock-tensors",
+  "status": "MERGED",
+  "merge_commit": "b3294f3",
+  "merge_strategy": "squash",
+  "merge_date": "2025-09-06",
+  "validation_status": "PASSED",
+  "validation_environment": "isolated_worktree",
+  "quality_gates": {
+    "format_check": "PASSED",
+    "clippy": "PARTIAL (unrelated errors)",
+    "tests": "PASSED",
+    "security_audit": "PASSED",
+    "merge_conflicts": "RESOLVED"
   },
-  "integration_summary": {
-    "total_commits": 6,
-    "cleanup_commits": 3,
-    "documentation_commits": 2,
-    "feature_commits": 1,
-    "files_modified": 15,
-    "lines_changed": "~500"
+  "changes_summary": {
+    "files_changed": 1,
+    "crates_affected": ["bitnet-ffi"],
+    "change_type": "testing_infrastructure",
+    "api_breaking": false,
+    "performance_impact": "minimal",
+    "lines_added": 32,
+    "lines_deleted": 5
   },
-  "workflow_completion": {
-    "pr_analysis": "COMPLETED",
-    "code_review": "COMPLETED",
-    "testing": "COMPLETED", 
-    "cleanup": "COMPLETED",
-    "documentation": "COMPLETED",
-    "integration": "COMPLETED"
-  },
-  "issues_resolved": [
-    "Manual range contains warnings",
-    "Boolean comparison warnings", 
-    "Field reassignment warnings",
-    "StreamResponse API usage",
-    "Missing Clone derives",
-    "Documentation synchronization",
-    "FFI quantization bridge documentation"
-  ],
-  "quality_gates_passed": [
-    "Compilation with CPU features",
-    "Clippy warnings (zero tolerance)",
-    "Code formatting",
-    "Feature flag consistency", 
-    "Documentation completeness",
-    "Repository cleanliness"
+  "finalization_agent": "pr-finalize",
+  "artifacts": [
+    ".claude/pr-141-finalization-report.md",
+    ".claude/pr-141-merge-log.md",
+    ".claude/pr-state.json"
   ]
 }

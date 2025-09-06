@@ -193,7 +193,7 @@ enum Cmd {
     ///
     /// Environment:
     /// - HF_TOKEN: Authentication token for private repositories
-    /// - HTTP[S]_PROXY: Automatically respected for proxy connections
+    /// - HTTP\[S\]_PROXY: Automatically respected for proxy connections
     DownloadModel {
         /// HF repo id (e.g., microsoft/bitnet-b1.58-2B-4T-gguf)
         #[arg(long, default_value = DEFAULT_MODEL_ID)]

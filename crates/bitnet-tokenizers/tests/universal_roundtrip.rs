@@ -7,7 +7,7 @@ fn gpt2_bpe_roundtrip() {
     // Minimal BPE tokenizer with vocab and merges using tokenizers crate
     let config = TokenizerConfig {
         model_type: "gpt2".to_string(),
-        vocab_size: 3,
+        vocab_size: 3, // Test vocab size
         pre_tokenizer: None,
         add_bos: false,
         add_eos: false,
