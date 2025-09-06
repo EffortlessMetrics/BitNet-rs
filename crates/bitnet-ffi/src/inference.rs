@@ -387,21 +387,30 @@ impl bitnet_models::Model for MockInferenceModel {
 
     /// Mock implementation used only for C-API testing.
     ///
-    /// Returns a dummy embedding tensor shaped `[1, tokens.len(), 1]`.
+    /// Returns a dummy embedding tensor shaped `[1, tokens.len(), hidden_size]`.
     fn embed(&self, tokens: &[u32]) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
-        Ok(bitnet_common::ConcreteTensor::mock(vec![1, tokens.len(), 1]))
+        // Create a mock tensor [1, seq_len, hidden_size] filled with deterministic values
+        let seq_len = tokens.len();
+        let hidden = self.cfg.model.hidden_size;
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, seq_len, hidden]))
     }
 
     /// Mock implementation used only for C-API testing.
     ///
-    /// Produces a logits tensor shaped `[1, seq_len, 1]` where `seq_len`
+    /// Produces a logits tensor shaped `[1, seq_len, vocab_size]` where `seq_len`
     /// matches the second dimension of the input tensor.
     fn logits(
         &self,
         x: &bitnet_common::ConcreteTensor,
     ) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
-        let seq_len = x.shape().get(1).copied().unwrap_or(1);
-        Ok(bitnet_common::ConcreteTensor::mock(vec![1, seq_len, 1]))
+        // Produce logits tensor [1, seq_len, vocab_size] matching the input sequence length
+        let seq_len = match x.shape() {
+            [_, s, _] => *s,
+            [s, _] => *s,
+            shape => shape.last().copied().unwrap_or(1),
+        };
+        let vocab = self.cfg.model.vocab_size;
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, seq_len, vocab]))
     }
 
     fn forward(
@@ -425,7 +434,6 @@ pub fn get_inference_manager() -> &'static InferenceManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bitnet_common::Tensor;
 
     #[test]
     fn test_inference_manager_creation() {
@@ -458,14 +466,18 @@ mod tests {
 
     #[test]
     fn test_mock_model_embed_and_logits() {
-        let model = MockInferenceModel::new();
+        use bitnet_common::Tensor;
         use bitnet_models::Model;
 
-        let tokens = vec![1, 2, 3];
-        let embeddings = model.embed(&tokens).expect("embed");
-        assert_eq!(embeddings.shape(), &[1, tokens.len(), 1]);
+        let model = MockInferenceModel::new();
+        let tokens = vec![1u32, 2, 3];
 
-        let logits = model.logits(&embeddings).expect("logits");
-        assert_eq!(logits.shape(), &[1, tokens.len(), 1]);
+        let emb = model.embed(&tokens).expect("embedding");
+        assert_eq!(emb.shape(), &[1, tokens.len(), model.config().model.hidden_size]);
+        assert!(emb.as_slice::<f32>().unwrap().iter().all(|&v| (v - 0.1).abs() < f32::EPSILON));
+
+        let logits = model.logits(&emb).expect("logits");
+        assert_eq!(logits.shape(), &[1, tokens.len(), model.config().model.vocab_size]);
+        assert!(logits.as_slice::<f32>().unwrap().iter().all(|&v| (v - 0.1).abs() < f32::EPSILON));
     }
 }
