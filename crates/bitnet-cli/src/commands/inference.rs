@@ -3,7 +3,7 @@
 use anyhow::{Context, Result};
 use clap::Args;
 use console::style;
-// use futures::StreamExt; // Removed unused import
+use futures::StreamExt;
 use humansize::{DECIMAL, format_size};
 use humantime::format_duration;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -509,32 +509,30 @@ impl InferenceCommand {
         prompt: &str,
         config: &GenerationConfig,
     ) -> Result<()> {
-        // Placeholder implementation - would use actual streaming
-        println!("{}", style("Streaming inference not yet fully implemented").yellow());
-        // Placeholder implementation - would use actual streaming
-        let result =
-            "This is a placeholder response. Streaming inference not yet fully implemented."
-                .to_string();
+        let mut stream = engine.generate_stream_with_config(prompt, config)?;
 
         print!("{}", style("Generated: ").bold());
         io::stdout().flush()?;
 
-        // Simulate streaming by printing character by character
         let start_time = Instant::now();
-        for (i, char) in result.chars().enumerate() {
-            print!("{}", char);
-            io::stdout().flush()?;
+        let mut token_count = 0usize;
 
-            // Small delay to simulate streaming
-            tokio::time::sleep(Duration::from_millis(50)).await;
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk?;
+            token_count += chunk.token_ids.len();
+            print!("{}", chunk.text);
+            io::stdout().flush()?;
         }
 
-        println!(); // New line after generation
+        println!();
 
         if self.metrics {
             let elapsed = start_time.elapsed();
-            let token_count = result.split_whitespace().count();
-            let tokens_per_sec = token_count as f64 / elapsed.as_secs_f64();
+            let tokens_per_sec = if elapsed.as_secs_f64() > 0.0 {
+                token_count as f64 / elapsed.as_secs_f64()
+            } else {
+                0.0
+            };
             println!("\n{}", style("Performance:").bold());
             println!("  Tokens generated: {}", token_count);
             println!("  Time taken: {}", format_duration(elapsed));
@@ -619,8 +617,8 @@ impl InferenceCommand {
 
             // 2. Prefill (measure)
             let t1 = Instant::now();
-            // TODO: Call actual prefill when engine supports it
-            // let _ = engine.prefill(&prompt_ids)?;
+            // Run prefill to process prompt tokens and populate cache
+            engine.eval_ids(&prompt_ids).await?;
             let t_prefill_ms = t1.elapsed().as_secs_f64() * 1e3;
 
             // 3. Decode loop (measure)

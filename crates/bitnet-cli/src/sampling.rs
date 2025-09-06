@@ -100,7 +100,7 @@ impl Sampler {
         }
 
         let mut indexed: Vec<(usize, f32)> = logits.iter().copied().enumerate().collect();
-        indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         let mut filtered = vec![f32::NEG_INFINITY; logits.len()];
         for (idx, val) in indexed.iter().take(self.top_k.min(indexed.len())) {
@@ -116,7 +116,7 @@ impl Sampler {
         }
 
         let mut indexed: Vec<(usize, f32)> = logits.iter().copied().enumerate().collect();
-        indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         let probs = softmax(&logits);
         let sorted_probs: Vec<_> = indexed.iter().map(|&(i, _)| probs[i]).collect();
