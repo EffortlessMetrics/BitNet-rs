@@ -405,6 +405,9 @@ cargo test -p bitnet-kernels --no-default-features --features cpu test_aarch64_f
 # Test comprehensive memory tracking with actual system memory usage
 cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
 
+# Test device-aware performance tracking with memory statistics
+cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+
 # GPU kernel validation with numerical accuracy testing
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy
 

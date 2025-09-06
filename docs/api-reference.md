@@ -200,6 +200,154 @@ pub struct DeviceCapabilities {
     pub max_threads: usize,
     pub compute_capability: Option<(u32, u32)>, // For CUDA
 }
+
+#[derive(Debug, Clone)]
+pub struct DeviceStats {
+    /// Device type description (e.g., "CudaKernel+FallbackKernel")
+    pub device_type: String,
+    /// Target device for operations
+    pub target_device: Device,
+    /// Total operations performed
+    pub total_operations: u64,
+    /// Number of quantization operations
+    pub quantization_operations: u64,
+    /// Number of matrix multiplication operations
+    pub matmul_operations: u64,
+    /// Total time spent on operations (ms)
+    pub total_time_ms: f64,
+    /// Time spent on quantization operations (ms)
+    pub quantization_time_ms: f64,
+    /// Time spent on matrix multiplication operations (ms)
+    pub matmul_time_ms: f64,
+    /// Operations performed on GPU
+    pub gpu_operations: u64,
+    /// Operations performed on CPU
+    pub cpu_operations: u64,
+    /// Number of GPU->CPU fallbacks
+    pub fallback_count: u64,
+    /// GPU efficiency ratio (0.0-1.0)
+    pub gpu_efficiency: f64,
+    /// Last GPU error message
+    pub last_gpu_error: Option<String>,
+    /// Last CPU error message
+    pub last_cpu_error: Option<String>,
+    /// Host memory currently used (bytes)
+    pub memory_used_bytes: u64,
+    /// Total host memory available (bytes)
+    pub memory_total_bytes: u64,
+}
+
+impl DeviceStats {
+    /// Get average quantization time per operation
+    pub fn avg_quantization_time_ms(&self) -> f64;
+    
+    /// Get average matrix multiplication time per operation
+    pub fn avg_matmul_time_ms(&self) -> f64;
+    
+    /// Check if GPU is effectively being used (>80% efficiency)
+    pub fn is_gpu_effective(&self) -> bool;
+    
+    /// Get human-readable summary with memory usage
+    pub fn summary(&self) -> String;
+}
+```
+
+### Device-Aware Quantization
+
+#### DeviceAwareQuantizer
+
+Device-aware quantization provider with automatic GPU/CPU fallback and performance tracking.
+
+```rust
+use bitnet_kernels::device_aware::DeviceAwareQuantizer;
+
+impl DeviceAwareQuantizer {
+    /// Create a new device-aware quantizer for the specified device
+    pub fn new(device: Device) -> Result<Self>;
+    
+    /// Get the currently active provider name
+    pub fn active_provider(&self) -> &'static str;
+    
+    /// Check if GPU acceleration is currently active
+    pub fn is_gpu_active(&self) -> bool;
+    
+    /// Get device information
+    pub fn device(&self) -> Device;
+    
+    /// Perform quantization with automatic fallback
+    pub fn quantize(
+        &self,
+        input: &[f32],
+        output: &mut [u8],
+        scales: &mut [f32],
+        qtype: QuantizationType,
+    ) -> Result<()>;
+    
+    /// Matrix multiplication with device awareness
+    pub fn matmul_i2s(
+        &self,
+        a: &[i8],
+        b: &[u8],
+        c: &mut [f32],
+        m: usize,
+        n: usize,
+        k: usize,
+    ) -> Result<()>;
+    
+    /// Force fallback to CPU (for testing or reliability)
+    pub fn force_cpu_fallback(&mut self);
+    
+    /// Get comprehensive performance statistics with memory tracking
+    pub fn get_stats(&self) -> Option<DeviceStats>;
+    
+    /// Reset performance statistics (useful for benchmarking)
+    pub fn reset_stats(&self);
+}
+```
+
+#### DeviceAwareQuantizerFactory
+
+Factory for creating device-aware quantizers with automatic device detection.
+
+```rust
+use bitnet_kernels::device_aware::DeviceAwareQuantizerFactory;
+
+impl DeviceAwareQuantizerFactory {
+    /// Create the best quantizer for the given device preference
+    pub fn create_best(preferred_device: Option<Device>) -> Result<DeviceAwareQuantizer>;
+    
+    /// Create a quantizer with automatic GPU detection
+    pub fn auto_detect() -> Result<DeviceAwareQuantizer>;
+    
+    /// List available devices
+    pub fn list_available_devices() -> Vec<Device>;
+}
+```
+
+**Example Usage:**
+
+```rust
+use bitnet_kernels::device_aware::DeviceAwareQuantizer;
+use bitnet_common::{Device, QuantizationType};
+
+// Auto-detect best device and create quantizer
+let quantizer = DeviceAwareQuantizer::new(Device::Cuda(0))?;
+
+// Perform quantization (automatically falls back to CPU if GPU fails)
+let input = vec![1.0f32, -1.0f32, 0.5f32, -0.5f32];
+let mut output = vec![0u8; 1];
+let mut scales = vec![0.0f32; 1];
+
+quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S)?;
+
+// Get performance statistics with memory tracking
+if let Some(stats) = quantizer.get_stats() {
+    println!("Device stats: {}", stats.summary());
+    println!("GPU efficiency: {:.1}%", stats.gpu_efficiency * 100.0);
+    println!("Memory usage: {:.1} MB / {:.1} MB", 
+        stats.memory_used_bytes as f64 / (1024.0 * 1024.0),
+        stats.memory_total_bytes as f64 / (1024.0 * 1024.0));
+}
 ```
 
 ## Quantization

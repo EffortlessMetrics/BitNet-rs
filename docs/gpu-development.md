@@ -366,10 +366,13 @@ println!("Active kernel: {}", quantizer.active_provider());
 #### Memory Tracking Commands
 
 ```bash
-# Test comprehensive memory tracking implementation
+# Test comprehensive memory tracking implementation with device-aware stats
 cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
 
-# Test platform-specific kernel selection
+# Test device-aware performance tracking with integrated memory statistics
+cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+
+# Test platform-specific kernel selection with memory monitoring
 cargo test -p bitnet-kernels --no-default-features --features cpu test_platform_kernel_selection
 
 # Test CPU provider creation across architectures
@@ -387,11 +390,22 @@ The enhanced statistics provide comprehensive monitoring capabilities:
 ```rust
 #[derive(Debug, Clone)]
 pub struct DeviceStats {
+    pub device_type: String,
+    pub target_device: Device,
+    pub total_operations: u64,
+    pub quantization_operations: u64,
+    pub matmul_operations: u64,
+    pub total_time_ms: f64,
+    pub quantization_time_ms: f64,
+    pub matmul_time_ms: f64,
+    pub gpu_operations: u64,
+    pub cpu_operations: u64,
+    pub fallback_count: u64,
+    pub gpu_efficiency: f64,         // Ratio of GPU operations to total operations
+    pub last_gpu_error: Option<String>,
+    pub last_cpu_error: Option<String>,
     pub memory_used_bytes: u64,      // Host memory currently used in bytes
     pub memory_total_bytes: u64,     // Total host memory available in bytes
-    pub gpu_efficiency: f64,         // Ratio of GPU operations to total operations
-    pub fallback_count: u64,         // Number of times fallback to CPU occurred
-    // ... existing fields
 }
 ```
 
@@ -479,8 +493,11 @@ Key statistics methods:
    # Check for memory leaks
    cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_cleanup --ignored
    
-   # Test host memory tracking and statistics
+   # Test host memory tracking and comprehensive device statistics
    cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+   
+   # Test performance tracking with memory integration
+   cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
    ```
 
 3. **Compute Capability Issues**:
