@@ -389,6 +389,14 @@ cargo run -p bitnet-cli -- score --model model.gguf --file large-dataset.txt --t
 cargo run -p bitnet-cli -- run --input-file prompts.txt --batch-size 4 --metrics --format json
 cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test prefill performance" --metrics --deterministic --seed 42
 
+# Prefill performance testing with detailed metrics export
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Analyze prefill performance" --metrics --output-json performance.json
+cargo run -p bitnet-cli -- run --input-file batch_prompts.txt --batch-size 8 --metrics --prefill-explicit --format json
+
+# Performance comparison: prefill vs standard inference
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Compare performance" --metrics --prefill-warm --timing-breakdown
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Standard inference" --metrics --no-prefill --timing-breakdown
+
 # Test GPU backend detection and mock scenarios
 cargo test -p bitnet-kernels --no-default-features test_gpu_info_summary
 BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels test_gpu_info_mocked_scenarios

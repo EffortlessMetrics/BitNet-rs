@@ -261,6 +261,64 @@ async fn main() -> Result<()> {
 }
 ```
 
+#### Explicit Prefill with Performance Metrics
+
+BitNet.rs provides explicit prefill functionality for cache warming and comprehensive performance monitoring:
+
+```rust
+use bitnet::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let model = BitNetModel::from_file("model.gguf").await?;
+    let mut engine = InferenceEngine::builder()
+        .model(model)
+        .backend(Backend::Auto)
+        .build()?;
+    
+    let prompt = "Explain quantum computing in simple terms";
+    
+    // Tokenize prompt
+    let prompt_tokens = tokenizer.encode(prompt, true, true)?;
+    
+    // Explicit prefill for cache warming and latency measurement
+    let prefill_start = std::time::Instant::now();
+    engine.prefill(&prompt_tokens).await?;
+    let prefill_time = prefill_start.elapsed();
+    
+    println!("Prefill completed in {:.2}ms", prefill_time.as_secs_f64() * 1000.0);
+    
+    // Generate with structured performance metrics
+    let config = GenerationConfig {
+        max_new_tokens: 100,
+        enable_metrics: true,
+        ..Default::default()
+    };
+    
+    let response = engine.generate_with_config(prompt, &config).await?;
+    
+    // Access detailed performance metrics
+    if let Some(metrics) = response.metrics {
+        println!("Performance Breakdown:");
+        println!("  Tokenize: {:.2}ms", metrics.timing.tokenize);
+        println!("  Prefill: {:.2}ms", metrics.timing.prefill);
+        println!("  Decode: {:.2}ms", metrics.timing.decode);
+        println!("  Total: {:.2}ms", metrics.timing.total);
+        
+        println!("Throughput:");
+        println!("  Prefill: {:.1} tokens/sec", metrics.throughput.prefill);
+        println!("  Decode: {:.1} tokens/sec", metrics.throughput.decode);
+        println!("  E2E: {:.1} tokens/sec", metrics.throughput.e2e);
+        
+        // Export metrics for analysis
+        let json_metrics = serde_json::to_string_pretty(&metrics)?;
+        std::fs::write("performance_metrics.json", json_metrics)?;
+    }
+    
+    Ok(())
+}
+```
+
 #### Enhanced Performance Metrics and Monitoring
 
 BitNet.rs provides comprehensive performance monitoring with structured metrics collection, including detailed timing breakdowns and throughput measurements:

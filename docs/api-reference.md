@@ -40,11 +40,64 @@ impl BitNetModel {
         config: &GenerationConfig,
     ) -> impl Stream<Item = Result<String, BitNetError>>;
     
+    /// Prefill the model cache with given tokens for performance optimization
+    pub async fn prefill(&mut self, tokens: &[u32]) -> Result<(), BitNetError>;
+    
     /// Get model information
     pub fn model_info(&self) -> &ModelInfo;
     
     /// Get model configuration
     pub fn config(&self) -> &ModelConfig;
+}
+```
+
+### Performance Metrics
+
+BitNet.rs provides structured performance metrics for comprehensive monitoring:
+
+#### TimingMetrics
+
+```rust
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TimingMetrics {
+    /// Tokenization time in milliseconds
+    pub tokenize: f64,
+    /// Prefill cache warming time in milliseconds
+    pub prefill: f64,
+    /// Token decoding time in milliseconds
+    pub decode: f64,
+    /// Total inference time in milliseconds
+    pub total: f64,
+}
+```
+
+#### ThroughputMetrics
+
+```rust
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ThroughputMetrics {
+    /// Prefill throughput (tokens per second)
+    pub prefill: f64,
+    /// Decode throughput (tokens per second)
+    pub decode: f64,
+    /// End-to-end throughput (tokens per second)
+    pub e2e: f64,
+}
+```
+
+#### TokenizerInfo
+
+```rust
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TokenizerInfo {
+    /// Tokenizer source description
+    pub source: String,
+    /// Vocabulary size
+    pub vocab_size: usize,
+    /// Beginning of sequence token ID
+    pub bos_id: Option<u32>,
+    /// End of sequence token ID
+    pub eos_id: Option<u32>,
 }
 ```
 

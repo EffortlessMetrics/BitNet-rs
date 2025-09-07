@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Safe Sorting Operations**: Prevents panics from NaN comparisons with deterministic tie-breaking
   - **Comprehensive Test Coverage**: New tests for `test_top_k_filter_with_nan`, `test_top_p_filter_with_nan`, and `test_sample_with_nan_logits`
   - **Production Reliability**: Prevents runtime crashes from model output anomalies while maintaining streaming inference
+- **Explicit Prefill Functionality in Batch Inference** ([#187](https://github.com/EffortlessSteven/BitNet-rs/pull/187)):
+  - **Explicit prefill method**: New `engine.prefill()` API for cache warming and precise latency measurement
+  - **Structured performance metrics**: Enhanced `TimingMetrics` and `ThroughputMetrics` with dedicated prefill timing
+  - **Batch inference optimization**: Proper prefill integration in CLI batch processing with comprehensive performance tracking
+  - **Safe environment handling**: Improved unsafe environment variable management with proper scoping
+  - **Mock infrastructure**: Enhanced testing with comprehensive mock model and tokenizer implementations
 - **Production-Ready Streaming Inference** ([#182](https://github.com/EffortlessSteven/BitNet-rs/pull/182)):
   - Real async streaming implementation using `GenerationStream` with futures and `StreamExt::next()`
   - Enhanced NaN-safe sampling operations with hardened floating-point comparisons in `top_k_filter` and `top_p_filter`
