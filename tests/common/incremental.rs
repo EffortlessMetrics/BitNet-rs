@@ -441,7 +441,7 @@ mod tests {
         let tester = IncrementalTester::new();
 
         // With no changes, should not use incremental
-        let should_use = tester.should_use_incremental(100).await;
+        let _should_use = tester.should_use_incremental(100).await;
         // This might be false if no changes detected
         // Either value (should_use == true or false) is valid depending on state
         // No assertion needed since both outcomes are valid
