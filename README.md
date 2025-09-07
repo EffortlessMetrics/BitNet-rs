@@ -383,7 +383,7 @@ bitnet run --input-file prompts.txt --stream --batch-size 4
 # Deterministic streaming inference for reproducible results
 bitnet run --model model.gguf --prompt "Test prompt" --stream --deterministic --seed 42 --metrics
 
-# Advanced streaming with NaN-safe sampling parameters
+# Advanced streaming with NaN-safe sampling parameters (enhanced robustness in PR #184)
 bitnet run --model model.gguf --prompt "Complex analysis" \
   --stream --temperature 0.8 --top-k 50 --top-p 0.95
 

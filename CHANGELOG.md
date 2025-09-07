@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Comprehensive NaN-Safe Sampling Pipeline** ([#184](https://github.com/EffortlessSteven/BitNet-rs/pull/184)):
+  - **Automatic NaN Sanitization**: Converts NaN logits to negative infinity for predictable behavior
+  - **Enhanced Top-K Filtering**: Pre-filters NaN values and uses safe partial_cmp() with fallback to Ordering::Equal
+  - **Robust Top-P Filtering**: Sanitizes logits before probability calculation with graceful edge case handling
+  - **Safe Sorting Operations**: Prevents panics from NaN comparisons with deterministic tie-breaking
+  - **Comprehensive Test Coverage**: New tests for `test_top_k_filter_with_nan`, `test_top_p_filter_with_nan`, and `test_sample_with_nan_logits`
+  - **Production Reliability**: Prevents runtime crashes from model output anomalies while maintaining streaming inference
 - **Production-Ready Streaming Inference** ([#182](https://github.com/EffortlessSteven/BitNet-rs/pull/182)):
   - Real async streaming implementation using `GenerationStream` with futures and `StreamExt::next()`
   - Enhanced NaN-safe sampling operations with hardened floating-point comparisons in `top_k_filter` and `top_p_filter`

@@ -450,6 +450,76 @@ curl -X POST http://localhost:8080/v1/stream \
 4. **Server timeout**: Increase timeout settings for longer generations
 5. **PyO3 security warnings**: Update to PyO3 v0.25.1+ for CVE-2024-9979 fix
 
+#### 5. NaN Logits and Sampling Issues (Enhanced in PR #184)
+
+**Problem:** Model generates NaN (Not a Number) values in logits, causing sampling failures
+
+**Symptoms:**
+```
+Error: NaN encountered in logits during sampling
+Warning: Invalid floating-point values detected in model output
+Error: Sampling failed due to numerical instability
+Generation stops unexpectedly with empty outputs
+```
+
+**Root Causes:**
+- Model quantization issues or corruption
+- Numerical overflow in transformer calculations
+- Invalid model weights or precision loss
+- Hardware-specific floating-point anomalies
+
+**Solutions:**
+
+BitNet.rs automatically handles NaN logits with robust error recovery (PR #184):
+
+```bash
+# Test NaN handling with deterministic generation
+bitnet-cli inference \
+  --model model.gguf \
+  --prompt "Test NaN robustness" \
+  --deterministic \
+  --seed 42 \
+  --temperature 0.8
+
+# Enable debug logging to see NaN handling in action
+RUST_LOG=debug bitnet-cli inference \
+  --model model.gguf \
+  --prompt "Debug NaN handling" \
+  --stream
+
+# Validate model integrity if NaN issues persist
+bitnet-cli compat-check model.gguf --verbose
+
+# Test sampling robustness with various parameters
+bitnet-cli inference \
+  --model model.gguf \
+  --prompt "Sampling test" \
+  --top-k 50 \
+  --top-p 0.95 \
+  --temperature 0.7
+```
+
+**Advanced Diagnostics:**
+
+```bash
+# Test NaN-safe sampling operations
+cargo test -p bitnet-cli sampling
+
+# Validate streaming with NaN handling
+cargo test -p bitnet-cli --test cli_smoke
+
+# Run comprehensive sampling tests
+cargo test -p bitnet-cli test_sample_with_nan_logits
+cargo test -p bitnet-cli test_top_k_filter_with_nan
+cargo test -p bitnet-cli test_top_p_filter_with_nan
+```
+
+**What BitNet.rs does automatically:**
+- **NaN Sanitization**: Converts NaN logits to negative infinity for predictable behavior
+- **Safe Sorting**: Uses fallback ordering for NaN values in top-k/top-p filtering
+- **Graceful Degradation**: Maintains deterministic behavior with proper fallback logic
+- **No Crashes**: Prevents runtime crashes from model output anomalies
+
 ### API Issues
 
 #### 1. Python API Errors

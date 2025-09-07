@@ -102,7 +102,7 @@ impl Default for ModelConfig {
 
 ### GenerationConfig
 
-Configuration for text generation.
+Configuration for text generation with enhanced robustness (NaN-safe sampling in PR #184).
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -111,12 +111,15 @@ pub struct GenerationConfig {
     pub max_new_tokens: u32,
     
     /// Sampling temperature (0.0 = deterministic)
+    /// Note: NaN values automatically sanitized to prevent crashes
     pub temperature: f32,
     
     /// Top-p (nucleus) sampling threshold
+    /// Note: Enhanced NaN-safe filtering with graceful degradation
     pub top_p: f32,
     
-    /// Top-k sampling limit
+    /// Top-k sampling limit  
+    /// Note: Robust sorting with NaN-safe comparisons
     pub top_k: u32,
     
     /// Repetition penalty
@@ -592,6 +595,77 @@ pub struct InferenceConfig {
     pub use_mixed_precision: bool,
 }
 ```
+
+## Sampling API (Enhanced in PR #184)
+
+### Enhanced NaN-Safe Sampling
+
+BitNet.rs provides robust sampling with comprehensive NaN handling to prevent crashes from model output anomalies.
+
+```rust
+use bitnet_cli::sampling::Sampler;
+
+/// NaN-safe sampling utilities for text generation
+pub struct Sampler {
+    // Internal fields for temperature, top-k, top-p, repetition penalty, etc.
+}
+
+impl Sampler {
+    /// Create a new sampler with given parameters
+    pub fn new(
+        temperature: f32,
+        top_k: usize,
+        top_p: f32,
+        repetition_penalty: f32,
+        seed: Option<u64>,
+    ) -> Self;
+    
+    /// Sample next token from logits with NaN safety
+    /// - Automatically sanitizes NaN logits to negative infinity
+    /// - Prevents crashes from numerical edge cases
+    /// - Maintains deterministic behavior with proper fallback logic
+    pub fn sample(&mut self, logits: &[f32], generated_tokens: &[u32]) -> u32;
+    
+    /// Apply top-k filtering with NaN awareness
+    /// - Filters out NaN values before processing
+    /// - Uses safe partial_cmp() with fallback ordering
+    /// - Maintains stable sorting for reproducible results
+    fn top_k_filter(&self, logits: Vec<f32>) -> Vec<f32>;
+    
+    /// Apply top-p (nucleus) filtering with NaN safety
+    /// - Sanitizes NaN values to negative infinity
+    /// - Handles cumulative probability calculation safely
+    /// - Graceful degradation for numerical anomalies
+    fn top_p_filter(&self, logits: Vec<f32>) -> Vec<f32>;
+}
+
+/// Enhanced utility functions with NaN safety
+pub fn softmax(logits: &[f32]) -> Vec<f32>;
+pub fn argmax(logits: &[f32]) -> u32;
+
+/// NaN-Safe Sampling Configuration
+#[derive(Debug, Clone)]
+pub struct SamplingConfig {
+    /// Sampling temperature (NaN values automatically sanitized)
+    pub temperature: f32,
+    /// Top-k limit with NaN-safe filtering
+    pub top_k: usize,
+    /// Top-p threshold with robust numerical handling
+    pub top_p: f32,
+    /// Repetition penalty
+    pub repetition_penalty: f32,
+    /// Random seed for reproducible generation
+    pub seed: Option<u64>,
+}
+```
+
+**Key Enhancements (PR #184):**
+
+- **Automatic NaN Sanitization**: Converts NaN logits to `-inf` for predictable behavior
+- **Safe Sorting Operations**: Uses `partial_cmp().unwrap_or(Ordering::Equal)` for robust comparisons
+- **Graceful Error Recovery**: Maintains sampling functionality even with model output anomalies
+- **Deterministic Fallbacks**: Consistent behavior across different hardware and edge cases
+- **No Runtime Crashes**: Prevents sampling failures from numerical instabilities
 
 ## Tokenization
 

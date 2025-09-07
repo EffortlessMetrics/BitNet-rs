@@ -1672,9 +1672,7 @@ fn crossval_cmd(
     apply_deterministic_env(&mut cmd);
 
     // Set other required environment variables
-    cmd.env("BITNET_CPP_DIR", &cpp)
-        .env("CROSSVAL_GGUF", &abs_model)
-        .env("RUST_BACKTRACE", "1");
+    cmd.env("BITNET_CPP_DIR", &cpp).env("CROSSVAL_GGUF", &abs_model).env("RUST_BACKTRACE", "1");
 
     // Add test runner args
     cmd.arg("--").args(["--nocapture", "--test-threads=1"]).args(extra);

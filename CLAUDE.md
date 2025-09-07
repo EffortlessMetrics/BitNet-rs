@@ -130,6 +130,11 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 5. **Enhanced Validation Framework**: Comprehensive GPU/CPU validation with performance metrics and error tolerance
 6. **FFI Bridge Architecture**: Safe C++ kernel integration for gradual migration with comprehensive testing and error handling
 7. **Multi-Backend GPU Detection**: System-aware GPU detection with automatic fallback, supporting CUDA, Metal, ROCm, and WebGPU with mock testing capabilities
+8. **Robust Sampling Pipeline**: NaN-safe sampling with comprehensive error handling (PR #184)
+   - **NaN Sanitization**: Automatic conversion of NaN logits to negative infinity
+   - **Safe Numerical Operations**: Fallback ordering for partial_cmp() operations
+   - **Graceful Degradation**: Maintains functionality with model output anomalies
+   - **Deterministic Behavior**: Consistent results across hardware platforms
 
 ### Enhanced Quality Assurance Framework
 
@@ -225,6 +230,44 @@ The FFI bridge enables gradual migration from C++ to Rust while maintaining func
 - **Migration Path**: Systematic approach to replace C++ kernels with native Rust
 - **Safety**: Safe Rust wrappers with proper error handling and memory management
 - **Testing**: Comprehensive test suite ensuring FFI/Rust quantization parity
+
+### Enhanced Sampling Architecture (PR #184)
+
+BitNet.rs implements a robust sampling system designed for production-level reliability:
+
+#### NaN-Safe Sampling Pipeline
+
+- **Automatic NaN Detection and Sanitization**
+  - Converts NaN logits to negative infinity before processing
+  - Prevents downstream numerical issues in softmax and sampling operations
+  - Maintains predictable behavior across different model outputs
+
+- **Robust Comparison Operations**  
+  - Uses `partial_cmp().unwrap_or(Ordering::Equal)` for safe floating-point comparisons
+  - Handles edge cases in top-k and top-p filtering without panics
+  - Preserves deterministic sorting with consistent tie-breaking
+
+- **Graceful Error Recovery**
+  - Maintains sampling functionality even with model anomalies
+  - Provides fallback behavior for numerical edge cases
+  - Ensures streaming inference continues without interruption
+
+#### Sampling Algorithm Enhancements
+
+- **Top-K Filtering with NaN Awareness**
+  - Pre-filters NaN values before sorting operations
+  - Maintains stable sorting for reproducible results
+  - Handles empty or invalid input gracefully
+
+- **Top-P (Nucleus) Filtering Robustness**
+  - Sanitizes logits before probability calculation
+  - Handles cumulative probability edge cases
+  - Prevents division by zero and overflow conditions
+
+- **Temperature Scaling Safety**
+  - Validates temperature parameters before application
+  - Handles extreme temperature values (0.0, infinity) correctly
+  - Maintains numerical stability in softmax operations
 
 ### Universal Tokenizer Architecture
 
@@ -497,6 +540,9 @@ cargo run -p bitnet-cli -- run --model model.gguf --prompt "Hello world" --strea
 # Advanced streaming with sampling parameters and NaN-safe operations
 cargo run -p bitnet-cli -- run --model model.gguf --prompt "Explain AI" --stream --temperature 0.8 --top-k 50 --top-p 0.95
 
+# Robust streaming inference with NaN-safe sampling (handles model output anomalies)
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test robustness" --stream --deterministic --seed 42
+
 # Teacher-forcing evaluation with perplexity calculation
 cargo run -p bitnet-cli -- score --model model.gguf --file test.txt
 cargo run -p bitnet-cli -- score --model model.gguf --file validation.txt --device gpu --batch-size 8 --json-out results.json
@@ -714,12 +760,15 @@ scripts/nll-parity.sh
 
 ## Streaming Inference
 
-BitNet.rs includes production-ready streaming inference capabilities (enhanced in PR #182):
+BitNet.rs includes production-ready streaming inference capabilities (enhanced in PR #182 and #184):
 
-### Real-Time Async Streaming
+### Real-Time Async Streaming with NaN Safety
 
 - **GenerationStream**: True async streaming using futures with `StreamExt::next()`
-- **NaN-Safe Sampling**: Hardened floating-point comparisons in `top_k_filter` and `top_p_filter`
+- **NaN-Safe Sampling**: Comprehensive NaN logit sanitization and robust filtering (PR #184)
+  - Automatic NaN-to-negative-infinity conversion for predictable behavior
+  - Enhanced top-k and top-p filtering with NaN awareness
+  - Safe partial_cmp() operations with fallback to Ordering::Equal
 - **Performance Metrics**: Accurate timing and throughput metrics during streaming
 - **Error Handling**: Comprehensive error recovery and graceful degradation
 
@@ -754,7 +803,10 @@ cargo run -p bitnet-cli -- run --model model.gguf --prompt "Debug test" \
 - **Interactive Mode**: Chat-style interface with streaming responses
 - **Batch Processing**: Streaming support for multiple prompts
 - **Deterministic Mode**: Reproducible streaming with seed control
-- **Error Resilience**: NaN-safe operations with robust error handling
+- **Enhanced Error Resilience**: Comprehensive NaN-safe operations with robust error handling (PR #184)
+  - Automatic handling of model output anomalies
+  - Prevents runtime crashes from numerical edge cases
+  - Maintains deterministic behavior with proper fallback logic
 - **Logit Analysis**: Optional top-k logit capture for debugging and analysis
 
 ### Testing Streaming Implementation
@@ -766,7 +818,7 @@ cargo test -p bitnet-cli --test cli_smoke
 # Validate streaming with integration tests (enabled by default in PR #182)
 cargo test -p bitnet-cli
 
-# Test NaN-safe sampling operations
+# Test NaN-safe sampling operations (enhanced in PR #184)
 cargo test -p bitnet-cli sampling
 
 # Performance test with streaming metrics
