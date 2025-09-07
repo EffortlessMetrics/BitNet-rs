@@ -206,6 +206,10 @@ required-features = ["cpu", "examples"]
 [[example]]
 name = "simple_demo"
 
+[[example]]
+name = "ffi_threading_demo"
+required-features = ["cpu", "ffi"]
+
 [workspace.dependencies]
 # Core dependencies
 anyhow = "1.0.99"

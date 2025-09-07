@@ -760,9 +760,39 @@ BitNet.rs is organized as a comprehensive Rust workspace with 12 specialized cra
 
 | Crate | Description |
 |-------|-------------|
-| `bitnet-ffi` | C API for language interoperability |
+| `bitnet-ffi` | C API for language interoperability with production-ready threading (PR #179) |
 | `bitnet-py` | Python bindings via PyO3 |
 | `bitnet-wasm` | WebAssembly bindings |
+
+#### FFI Threading Enhancements (PR #179)
+
+The `bitnet-ffi` crate includes production-ready threading utilities:
+
+- **Deadlock Prevention**: Bounded channels and proper drop order safety
+- **Resource Control**: Configurable thread pools with queue size limits
+- **RAII Job Tracking**: Automatic job counter management
+- **Async Runtime Support**: Smart context detection with fallback handling
+- **Comprehensive Error Handling**: Enhanced error propagation and recovery
+
+```rust
+use bitnet_ffi::threading::{ThreadPoolConfig, get_thread_manager};
+
+// Configure robust thread pool
+let config = ThreadPoolConfig {
+    num_threads: 4,
+    max_queue_size: 1000,  // Prevents resource exhaustion
+    stack_size: Some(2 * 1024 * 1024),
+    thread_name_prefix: "bitnet-worker".to_string(),
+};
+
+// Execute FFI operations safely
+let manager = get_thread_manager();
+manager.execute(|| {
+    // Thread-safe FFI operation
+})?;
+```
+
+See [`docs/ffi-threading-architecture.md`](docs/ffi-threading-architecture.md) for detailed threading patterns and [`examples/ffi_threading_demo.rs`](examples/ffi_threading_demo.rs) for usage examples.
 
 ### Cross-Validation (Optional)
 

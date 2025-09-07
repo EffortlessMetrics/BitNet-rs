@@ -520,6 +520,86 @@ cargo test -p bitnet-cli test_top_p_filter_with_nan
 - **Graceful Degradation**: Maintains deterministic behavior with proper fallback logic
 - **No Crashes**: Prevents runtime crashes from model output anomalies
 
+### FFI Threading and Concurrency Issues (Enhanced in PR #179)
+
+**Problem:** FFI operations experience deadlocks, resource exhaustion, or async runtime conflicts
+
+**Symptoms:**
+```
+Error: Thread safety violation: Failed to send job to thread pool
+Error: ThreadSafety: Thread pool not initialized
+Application hangs during inference with FFI enabled
+Memory usage grows unbounded during concurrent FFI calls
+Async runtime panic: Cannot start a runtime from within a runtime
+```
+
+**Root Causes:**
+- Unbounded channel usage leading to memory exhaustion
+- Job counter increment/decrement mismatches causing desynchronization  
+- Improper worker thread cleanup during shutdown
+- Multiple async runtime initialization conflicts
+- Thread pool resource contention
+
+**Solutions:**
+
+BitNet.rs now includes production-ready threading utilities with robust error handling:
+
+```bash
+# Test thread pool robustness (validates PR #179 fixes)
+cargo test -p bitnet-ffi test_thread_pool_creation
+cargo test -p bitnet-ffi test_thread_pool_execution
+
+# Validate threading deadlock prevention  
+cargo test -p bitnet-ffi test_thread_manager
+cargo test -p bitnet-ffi test_thread_safe_ref_counter
+
+# Test async runtime initialization improvements
+cargo test -p bitnet-ffi test_inference_manager_creation
+
+# Validate error handling enhancements
+cargo test -p bitnet-ffi test_error_state_management
+```
+
+**Configuration Options:**
+
+```rust
+// Custom thread pool configuration
+use bitnet_ffi::threading::ThreadPoolConfig;
+
+let config = ThreadPoolConfig {
+    num_threads: 4,                    // Worker thread count
+    max_queue_size: 1000,             // Bounded channel limit (prevents exhaustion)
+    stack_size: Some(2 * 1024 * 1024), // 2MB stack per thread
+    thread_name_prefix: "bitnet-worker".to_string(),
+};
+```
+
+**Advanced Diagnostics:**
+
+```bash
+# Monitor thread pool statistics
+RUST_LOG=debug bitnet-cli inference \
+  --model model.gguf \
+  --prompt "Threading test" \
+  --features ffi
+
+# Test concurrent FFI operations
+cargo test -p bitnet-ffi test_concurrent_inference_requests
+
+# Validate cleanup and resource management
+cargo test -p bitnet-ffi test_cleanup_thread_pool
+
+# Check thread-local storage management
+cargo test -p bitnet-ffi test_thread_local_storage
+```
+
+**What PR #179 Fixed:**
+- **Bounded Channels**: Changed from unbounded `mpsc::channel()` to bounded `sync_channel(max_queue_size)`
+- **RAII Job Tracking**: Fixed increment/decrement order preventing counter desynchronization
+- **Drop Order Safety**: Reordered ThreadPool struct fields (sender before workers) preventing shutdown deadlocks
+- **Smart Async Context**: Improved runtime detection with proper fallback handling
+- **Enhanced Error Propagation**: Better error messages and recovery patterns
+
 ### API Issues
 
 #### 1. Python API Errors

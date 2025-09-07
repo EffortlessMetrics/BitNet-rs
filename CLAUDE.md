@@ -50,6 +50,11 @@ cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
 # FFI mock model tests (validates C-API testing infrastructure)
 cargo test -p bitnet-ffi test_mock_model_embed_and_logits
 
+# Enhanced FFI threading utilities tests (validates deadlock fixes from PR #179)
+cargo test -p bitnet-ffi --features ffi test_thread_pool_creation
+cargo test -p bitnet-ffi --features ffi test_threading_deadlock_prevention
+cargo test -p bitnet-ffi --features ffi test_async_runtime_initialization
+
 # Enhanced bitnet-sys FFI validation (requires C++ implementation)
 cargo test -p bitnet-sys --features ffi  # Fail-fast C++ presence validation
 cargo check -p bitnet-sys --features ffi  # Build-time FFI validation
@@ -165,7 +170,7 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 - **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external dependencies
 - **Cross-Format Support**: BPE, SentencePiece, and custom tokenizer formats
 
-#### Enhanced FFI Bridge System (Enhanced in PR #172 and #186)
+#### Enhanced FFI Bridge System (Enhanced in PR #172, #186, and #179)
 - **Fail-Fast Validation**: Enhanced bitnet-sys with immediate C++ dependency validation (PR #172)
 - **Unified API Architecture**: Simplified load_model/generate functions at crate root for consistency
 - **Enhanced Header Discovery**: Recursive search with fallback to static locations for improved reliability
@@ -177,6 +182,12 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 - **Feature-Gated Safety**: Proper conditional compilation with clear error messages when FFI unavailable
 - **Migration Decision Support**: Automated recommendations based on performance and accuracy metrics
 - **Mock Testing Infrastructure**: Comprehensive C-API testing with mock embed/logits implementations
+- **Production-Ready Threading** (PR #179): Robust threading synchronization with deadlock prevention
+  - **Bounded Channel Architecture**: Prevents resource exhaustion with configurable queue limits
+  - **RAII Job Tracking**: Automatic job counter management preventing desynchronization
+  - **Drop Order Safety**: Proper cleanup sequence preventing shutdown deadlocks
+  - **Smart Async Runtime**: Context-aware async runtime initialization with fallback support
+  - **Thread Pool Management**: Configurable worker threads with stack size and naming support
 
 #### Code Quality Enforcement
 - **Comprehensive Clippy Integration**: Zero-tolerance policy for clippy warnings
@@ -343,7 +354,25 @@ We maintain strict compatibility with llama.cpp:
    - Compare FFI vs Rust: `cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust`
    - Check C++ errors: Look for detailed error messages from `get_last_error()` bridge
 
-9. **Cross-Validation Pipeline Issues (PR #190)**:
+9. **FFI Threading and Synchronization Issues (PR #179)**:
+   - **Threading deadlocks**: Enhanced FFI utilities now use bounded channels with configurable limits
+   - **Job counter desynchronization**: RAII-style tracking prevents increment/decrement mismatches
+   - **Async runtime conflicts**: Smart context detection handles multiple runtime scenarios
+   - **Resource exhaustion**: Thread pool configuration prevents unbounded queue growth
+   - **Diagnostic commands**:
+     ```bash
+     # Test thread pool robustness
+     cargo test -p bitnet-ffi test_thread_pool_creation
+     cargo test -p bitnet-ffi test_thread_manager
+     
+     # Validate async runtime handling
+     cargo test -p bitnet-ffi test_inference_manager_creation
+     
+     # Check error handling improvements
+     cargo test -p bitnet-ffi test_error_state_management
+     ```
+
+10. **Cross-Validation Pipeline Issues (PR #190)**:
    - **Command failure**: `cargo xtask full-crossval` fails → infrastructure fixes applied in PR #190
    - **C++ build issues**: Enhanced cmake flags support and OpenMP linking (`-lgomp`) now handled automatically
    - **Path resolution**: Fixed absolute path resolution in xtask commands preventing model file not found errors
