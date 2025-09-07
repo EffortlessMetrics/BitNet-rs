@@ -29,14 +29,12 @@ cargo test -p bitnet-inference --test gguf_header
 cargo test -p bitnet-inference --test gguf_fuzz
 cargo test -p bitnet-inference --test engine_inspect
 
-# Run convolution kernel tests
-cargo test -p bitnet-kernels --no-default-features --features cpu convolution
-
-# Run PyTorch reference convolution tests (requires Python and PyTorch)
-cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored
-
 # Run verification script
 ./scripts/verify-tests.sh
+
+# Test enhanced prefill functionality and batch inference
+cargo test -p bitnet-cli --test inference_commands
+cargo test -p bitnet-inference test_prefill_timing
 
 # Run benchmarks
 cargo bench --workspace --no-default-features --features cpu
@@ -46,19 +44,6 @@ cargo test --workspace --features "cpu,ffi,crossval"
 
 # FFI quantization bridge tests (compares FFI vs Rust implementations)
 cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
-
-# FFI mock model tests (validates C-API testing infrastructure)
-cargo test -p bitnet-ffi test_mock_model_embed_and_logits
-
-# Enhanced FFI threading utilities tests (validates deadlock fixes from PR #179)
-cargo test -p bitnet-ffi --features ffi test_thread_pool_creation
-cargo test -p bitnet-ffi --features ffi test_threading_deadlock_prevention
-cargo test -p bitnet-ffi --features ffi test_async_runtime_initialization
-
-# Enhanced bitnet-sys FFI validation (requires C++ implementation)
-cargo test -p bitnet-sys --features ffi  # Fail-fast C++ presence validation
-cargo check -p bitnet-sys --features ffi  # Build-time FFI validation
-cargo test -p bitnet-sys --test disabled  # Test FFI disabled behavior
 ```
 
 ### Code Quality Commands
@@ -111,7 +96,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-common`**: Shared types, traits, and utilities
 - **`bitnet-models`**: Model loading and format handling (GGUF, SafeTensors)
 - **`bitnet-quantization`**: 1-bit quantization algorithms
-- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with 2D convolution support, comprehensive memory statistics tracking with real-time host/GPU memory monitoring, platform-specific kernel selection (x86_64 AVX2/aarch64 NEON), FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
+- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
 - **`bitnet-inference`**: Inference engine with streaming support
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration and mock fallback system
 - **`bitnet-server`**: HTTP server for BitNet inference with health monitoring
@@ -122,7 +107,6 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-py`**: Python bindings compatible with llama-cpp-python
 
 #### Cross-Validation
-- **`bitnet-sys`**: Low-level FFI bindings to BitNet C++ implementation with fail-fast validation
 - **`crossval`**: Framework for testing against C++ implementation
 - Tests use `BITNET_GGUF` or `CROSSVAL_GGUF` environment variable for model path
 
@@ -135,11 +119,6 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 5. **Enhanced Validation Framework**: Comprehensive GPU/CPU validation with performance metrics and error tolerance
 6. **FFI Bridge Architecture**: Safe C++ kernel integration for gradual migration with comprehensive testing and error handling
 7. **Multi-Backend GPU Detection**: System-aware GPU detection with automatic fallback, supporting CUDA, Metal, ROCm, and WebGPU with mock testing capabilities
-8. **Robust Sampling Pipeline**: NaN-safe sampling with comprehensive error handling (PR #184)
-   - **NaN Sanitization**: Automatic conversion of NaN logits to negative infinity
-   - **Safe Numerical Operations**: Fallback ordering for partial_cmp() operations
-   - **Graceful Degradation**: Maintains functionality with model output anomalies
-   - **Deterministic Behavior**: Consistent results across hardware platforms
 
 ### Enhanced Quality Assurance Framework
 
@@ -150,10 +129,6 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 - **Performance Benchmarking**: Built-in performance measurement with speedup calculations
 - **Numerical Accuracy Testing**: Configurable tolerance testing for quantization operations
 - **Memory Leak Detection**: Automatic GPU memory monitoring and leak prevention
-- **Host Memory Tracking**: Real-time host memory usage monitoring with memory-stats and sysinfo integration
-- **Device Memory Statistics**: Comprehensive memory tracking for both GPU and CPU with efficiency metrics
-- **Thread-Safe Memory Monitoring**: Arc<Mutex<DeviceStatsInternal>> for safe concurrent memory access
-- **Platform-Specific Selection**: Automatic AVX2/NEON kernel selection based on CPU architecture
 - **Error Handling Validation**: Comprehensive error path testing with recovery verification
 
 #### Model Compatibility Validation System
@@ -170,24 +145,13 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 - **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external dependencies
 - **Cross-Format Support**: BPE, SentencePiece, and custom tokenizer formats
 
-#### Enhanced FFI Bridge System (Enhanced in PR #172, #186, and #179)
-- **Fail-Fast Validation**: Enhanced bitnet-sys with immediate C++ dependency validation (PR #172)
-- **Unified API Architecture**: Simplified load_model/generate functions at crate root for consistency
-- **Enhanced Header Discovery**: Recursive search with fallback to static locations for improved reliability
-- **Cross-Platform Build Support**: GCC and Clang compatibility with enhanced error handling
+#### FFI Bridge System (New in PR #137)
 - **Gradual Migration Support**: Safe C++ kernel integration enabling gradual transition to pure Rust
 - **Quantization Bridge**: Complete FFI quantization support for I2S, TL1, and TL2 types
 - **Performance Comparison Framework**: Built-in tools for comparing FFI vs Rust implementations
 - **Error Handling Integration**: Enhanced C++ error propagation with `get_last_error()` bridge
-- **Feature-Gated Safety**: Proper conditional compilation with clear error messages when FFI unavailable
+- **Feature-Gated Safety**: Proper conditional compilation and graceful fallback when FFI unavailable
 - **Migration Decision Support**: Automated recommendations based on performance and accuracy metrics
-- **Mock Testing Infrastructure**: Comprehensive C-API testing with mock embed/logits implementations
-- **Production-Ready Threading** (PR #179): Robust threading synchronization with deadlock prevention
-  - **Bounded Channel Architecture**: Prevents resource exhaustion with configurable queue limits
-  - **RAII Job Tracking**: Automatic job counter management preventing desynchronization
-  - **Drop Order Safety**: Proper cleanup sequence preventing shutdown deadlocks
-  - **Smart Async Runtime**: Context-aware async runtime initialization with fallback support
-  - **Thread Pool Management**: Configurable worker threads with stack size and naming support
 
 #### Code Quality Enforcement
 - **Comprehensive Clippy Integration**: Zero-tolerance policy for clippy warnings
@@ -242,43 +206,22 @@ The FFI bridge enables gradual migration from C++ to Rust while maintaining func
 - **Safety**: Safe Rust wrappers with proper error handling and memory management
 - **Testing**: Comprehensive test suite ensuring FFI/Rust quantization parity
 
-### Enhanced Sampling Architecture (PR #184)
+### Enhanced Inference Engine Architecture
 
-BitNet.rs implements a robust sampling system designed for production-level reliability:
+BitNet.rs features a production-ready inference engine with comprehensive performance monitoring:
 
-#### NaN-Safe Sampling Pipeline
+#### Core Inference Features
+- **Explicit Prefill Support**: Dedicated `engine.prefill()` method for cache warming and latency measurement
+- **Structured Performance Metrics**: Comprehensive timing breakdown including prefill, decode, and end-to-end metrics
+- **Batch Inference Optimization**: Enhanced batch processing with proper prefill integration
+- **Mock Infrastructure**: Comprehensive mock model and tokenizer implementations for testing
+- **Safe Environment Management**: Proper unsafe block handling for environment variable operations
 
-- **Automatic NaN Detection and Sanitization**
-  - Converts NaN logits to negative infinity before processing
-  - Prevents downstream numerical issues in softmax and sampling operations
-  - Maintains predictable behavior across different model outputs
-
-- **Robust Comparison Operations**  
-  - Uses `partial_cmp().unwrap_or(Ordering::Equal)` for safe floating-point comparisons
-  - Handles edge cases in top-k and top-p filtering without panics
-  - Preserves deterministic sorting with consistent tie-breaking
-
-- **Graceful Error Recovery**
-  - Maintains sampling functionality even with model anomalies
-  - Provides fallback behavior for numerical edge cases
-  - Ensures streaming inference continues without interruption
-
-#### Sampling Algorithm Enhancements
-
-- **Top-K Filtering with NaN Awareness**
-  - Pre-filters NaN values before sorting operations
-  - Maintains stable sorting for reproducible results
-  - Handles empty or invalid input gracefully
-
-- **Top-P (Nucleus) Filtering Robustness**
-  - Sanitizes logits before probability calculation
-  - Handles cumulative probability edge cases
-  - Prevents division by zero and overflow conditions
-
-- **Temperature Scaling Safety**
-  - Validates temperature parameters before application
-  - Handles extreme temperature values (0.0, infinity) correctly
-  - Maintains numerical stability in softmax operations
+#### Performance Monitoring and Metrics
+- **TimingMetrics**: Structured performance measurement with prefill, decode, tokenization, and total timing
+- **ThroughputMetrics**: Tokens per second calculation for prefill, decode, and end-to-end performance
+- **Latency Tracking**: Detailed latency measurement for each inference stage
+- **Memory Monitoring**: Optional memory usage tracking throughout inference operations
 
 ### Universal Tokenizer Architecture
 
@@ -289,6 +232,7 @@ BitNet.rs includes a comprehensive tokenizer system with GGUF integration:
   - **Automatic Backend Selection**: Chooses appropriate tokenizer backend based on model type
   - **Mock Tokenizer Fallback**: Provides testing-compatible tokenizer for unsupported formats
   - **Configuration-Driven**: Supports pre-tokenization, special tokens, and BPE merges
+  - **Arc<dyn Tokenizer> Architecture**: Enhanced tokenizer builder pattern using `TokenizerBuilder::from_file()`
 
 #### Supported Tokenizer Formats
 - **GPT-2/BPE**: Modern BPE tokenization with merge rules (via HuggingFace tokenizers)
@@ -297,7 +241,7 @@ BitNet.rs includes a comprehensive tokenizer system with GGUF integration:
 - **TikToken**: OpenAI's tiktoken format
 - **Mock Backend**: Minimal tokenizer for testing and compatibility
 
-#### BPE Backend Features (New in this release)
+#### BPE Backend Features
 - **Runtime Construction**: Build tokenizers from vocabulary and merge rules without JSON files
 - **GGUF Metadata Integration**: Automatically extract BPE data from model files
 - **Byte-Level Processing**: GPT-2 compatible pre-tokenization and decoding
@@ -322,11 +266,7 @@ We maintain strict compatibility with llama.cpp:
 
 ### Common Build Issues
 
-1. **FFI Build Errors**: Enhanced bitnet-sys now enforces C++ presence with fail-fast validation
-   - Build failure: `cargo build -p bitnet-sys --features ffi` → requires C++ implementation
-   - Solution: `cargo run -p xtask -- fetch-cpp` → downloads and builds BitNet C++
-   - Alternative: Disable FFI entirely (`--no-default-features --features cpu` for CPU-only builds)
-   - Environment: Set `BITNET_CPP_DIR` to specify custom C++ installation path
+1. **FFI Linker Errors**: Either disable FFI (`--no-default-features --features cpu`) or build C++ (`cargo xtask fetch-cpp`)
 
 2. **Compiler Compatibility**: The FFI components support both GCC and Clang. Set `CC` and `CXX` environment variables to specify compiler:
    - GCC: `export CC=gcc CXX=g++`
@@ -341,48 +281,11 @@ We maintain strict compatibility with llama.cpp:
 
 6. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
 
-7. **Enhanced bitnet-sys Validation Issues (PR #172)**:
-   - **Build-time validation**: `cargo check -p bitnet-sys --features ffi` enforces C++ presence
-   - **Unified API access**: Use `bitnet_sys::{load_model, generate, is_available}` at crate root
-   - **Feature detection**: Call `bitnet_sys::is_available()` to check C++ implementation
-   - **Setup solution**: `cargo run -p xtask -- fetch-cpp` downloads and builds BitNet C++
-   - **Environment config**: Set `BITNET_CPP_DIR` or legacy `BITNET_CPP_PATH` for custom locations
-
-8. **FFI Quantization Bridge Issues**: 
+7. **FFI Quantization Issues**: 
    - Ensure C++ library is built: `cargo xtask fetch-cpp`
    - Test FFI availability: `cargo test -p bitnet-kernels --features ffi test_ffi_kernel_creation`
    - Compare FFI vs Rust: `cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust`
    - Check C++ errors: Look for detailed error messages from `get_last_error()` bridge
-
-9. **FFI Threading and Synchronization Issues (PR #179)**:
-   - **Threading deadlocks**: Enhanced FFI utilities now use bounded channels with configurable limits
-   - **Job counter desynchronization**: RAII-style tracking prevents increment/decrement mismatches
-   - **Async runtime conflicts**: Smart context detection handles multiple runtime scenarios
-   - **Resource exhaustion**: Thread pool configuration prevents unbounded queue growth
-   - **Diagnostic commands**:
-     ```bash
-     # Test thread pool robustness
-     cargo test -p bitnet-ffi test_thread_pool_creation
-     cargo test -p bitnet-ffi test_thread_manager
-     
-     # Validate async runtime handling
-     cargo test -p bitnet-ffi test_inference_manager_creation
-     
-     # Check error handling improvements
-     cargo test -p bitnet-ffi test_error_state_management
-     ```
-
-10. **Cross-Validation Pipeline Issues (PR #190)**:
-   - **Command failure**: `cargo xtask full-crossval` fails → infrastructure fixes applied in PR #190
-   - **C++ build issues**: Enhanced cmake flags support and OpenMP linking (`-lgomp`) now handled automatically
-   - **Path resolution**: Fixed absolute path resolution in xtask commands preventing model file not found errors
-   - **Static library validation**: Build script now properly validates both shared (`.so`) and static (`.a`) libraries
-   - **Testing infrastructure**: Cross-validation test suite hardened with better error reporting and CI integration
-
-10. **Launch Readiness Validation**:
-    - **Test runner hangs**: Some environments may experience test runner hanging after execution (environmental issue)
-    - **Pipeline robustness**: Use enhanced cross-validation commands that include comprehensive error handling
-    - **CI/CD hardening**: Cross-validation pipeline now includes automated regression detection and enhanced reporting
 
 ## Development Workflow
 
@@ -391,33 +294,10 @@ We maintain strict compatibility with llama.cpp:
 3. **Cross-Validation**: Run `cargo xtask crossval` for inference changes
 4. **Compatibility**: Check COMPATIBILITY.md before changing public APIs
 
-### Launch Readiness Considerations
-
-Based on the comprehensive analysis in `LAUNCH_READINESS_REPORT.md`, the project includes the following quality assurance measures:
-
-#### Core Quality Indicators
-- **High-quality codebase**: The Rust implementation demonstrates exceptional code quality
-- **Comprehensive test coverage**: Well-designed test suites with mature testing strategies
-- **Numerical accuracy**: Cross-validation achieves parity with C++ reference implementation
-- **Robust CLI functionality**: Tools demonstrate resilience and proper error handling
-
-#### Infrastructure Hardening (Enhanced in PR #190)
-- **Enhanced C++ Build Integration**: Improved cmake flags support and static library validation
-- **OpenMP Linking**: Automatic handling of OpenMP library dependencies (`-lgomp`) for proper C++ integration
-- **Path Resolution**: Fixed absolute path handling in cross-validation commands
-- **Error Reporting**: Enhanced diagnostic capabilities throughout the testing pipeline
-
-#### CI/CD Pipeline Requirements
-- **Automated Cross-Validation**: `full-crossval` command must run successfully in CI
-- **Complete Test Suite**: All `cargo test` variants must pass without hanging
-- **Regression Detection**: Cross-validation metrics tracking with baseline comparison
-- **Multi-Platform Validation**: Testing across different OS and architecture combinations
-
 ## Key Files
 
 - `COMPATIBILITY.md`: API stability guarantees and truth tables
 - `MIGRATION.md`: Step-by-step migration guide from llama.cpp
-- `LAUNCH_READINESS_REPORT.md`: Comprehensive launch readiness analysis and infrastructure assessment
 - `.github/workflows/compatibility.yml`: CI compatibility tests
 - `crossval/`: Cross-validation test suite
 
@@ -430,43 +310,6 @@ For detailed information on specific topics, see:
 - **[GGUF Inspection Guide](docs/gguf-inspection.md)**: Metadata inspection, categorization, and JSON serialization
 - **[Streaming API Guide](docs/streaming-api.md)**: Real-time token streaming with Server-Sent Events
 - **[Concurrency Caps Guide](docs/concurrency-caps.md)**: Resource management and concurrency control
-- **[Performance Tracking Guide](docs/performance-tracking.md)**: Comprehensive performance monitoring, metrics collection, and optimization analysis
-## Key Dependencies
-
-### Memory Tracking Dependencies
-
-BitNet.rs uses specialized crates for cross-platform memory monitoring:
-
-- **`memory-stats` (1.1)**: Process-specific memory statistics
-  - Provides accurate current process physical memory usage
-  - Cross-platform support (Windows, macOS, Linux)
-  - Minimal overhead suitable for real-time tracking
-  - Used for `DeviceStats::memory_used_bytes` in device-aware quantization
-
-- **`sysinfo` (0.30)**: System information and monitoring
-  - Comprehensive system memory information
-  - Optimized memory refresh to minimize system calls  
-  - Cross-platform API consistency
-  - Used for `DeviceStats::memory_total_bytes` and GPU detection
-
-### GPU/CUDA Dependencies
-
-- **`cudarc` (0.12)**: Rust CUDA bindings for GPU acceleration
-  - Safe CUDA memory management and kernel execution
-  - Device querying and capability detection
-  - Used for GPU memory tracking via `cuMemGetInfo_v2`
-
-- **`half` (2.3)**: Half-precision floating point support
-  - FP16 and BF16 operations for modern GPU architectures
-  - Required for tensor core operations on CC 6.1+ devices
-
-### Cross-Platform Compatibility
-
-- **FFI Dependencies**: Optional C++ library integration
-  - **`cc`**: C++ compilation for FFI bridge
-  - **`bindgen`**: Automatic binding generation
-  - **`pkg-config`**: Library discovery on Unix systems
-
 ## Environment Variables
 
 ### Runtime Variables
@@ -477,11 +320,6 @@ BitNet.rs uses specialized crates for cross-platform memory monitoring:
 - `BITNET_SEED`: Set seed for reproducible runs
 - `RAYON_NUM_THREADS`: Control CPU parallelism
 - `BITNET_GPU_FAKE`: Mock GPU backend detection for testing (e.g., "cuda", "metal", "cuda,rocm")
-
-### Performance Configuration Variables
-- `BITNET_BATCH_SIZE`: Configure inference batch size (e.g., "4", "8")
-- `BITNET_MEMORY_LIMIT`: Set memory usage limits (e.g., "1GB", "512MB")
-- `BITNET_NUM_THREADS`: Control inference thread count for parallel processing
 
 ### Build-time Variables (for Git metadata)
 - `VERGEN_GIT_SHA`: Override Git SHA (useful in CI/Docker without .git)
@@ -504,17 +342,6 @@ BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels --features gpu
 
 # GPU validation example (includes preflight-style checks)
 cargo run --example gpu_validation --no-default-features --features gpu
-
-# Test memory tracking and platform-specific kernel selection
-cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
-cargo test -p bitnet-kernels --no-default-features --features cpu test_platform_kernel_selection
-
-# Test device-aware quantizer with comprehensive memory statistics
-cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
-cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
-
-# Test device-aware memory tracking for both CPU and GPU
-cargo test -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
 ```
 ## Repository Contracts (for Claude)
 
@@ -538,9 +365,6 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_device_me
 # Quick compile & test (CPU, MSRV-accurate)
 rustup run 1.89.0 cargo test --workspace --no-default-features --features cpu
 
-# Run comprehensive memory tracking demo
-cargo run --example device_stats_demo --no-default-features --features cpu
-
 # Quick compile & test with concurrency caps
 scripts/preflight.sh && cargo t2
 
@@ -554,30 +378,16 @@ cargo run --example inspect_gguf_metadata --no-default-features --features cpu -
 # Export model metadata as JSON
 cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- --json model.gguf
 
-# Real-time streaming inference with production-ready async streaming
-cargo run -p bitnet-cli -- run --model model.gguf --prompt "Explain quantum computing" --stream
-
-# Batch inference with streaming output
-cargo run -p bitnet-cli -- run --input-file prompts.txt --stream --batch-size 4
-
-# Interactive mode with streaming responses
-cargo run -p bitnet-cli -- run --interactive --stream --temperature 0.7
-
-# Deterministic streaming generation with performance metrics
-cargo run -p bitnet-cli -- run --model model.gguf --prompt "Hello world" --stream --deterministic --seed 42 --metrics
-
-# Advanced streaming with sampling parameters and NaN-safe operations
-cargo run -p bitnet-cli -- run --model model.gguf --prompt "Explain AI" --stream --temperature 0.8 --top-k 50 --top-p 0.95
-
-# Robust streaming inference with NaN-safe sampling (handles model output anomalies)
-cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test robustness" --stream --deterministic --seed 42
-
 # Teacher-forcing evaluation with perplexity calculation
 cargo run -p bitnet-cli -- score --model model.gguf --file test.txt
 cargo run -p bitnet-cli -- score --model model.gguf --file validation.txt --device gpu --batch-size 8 --json-out results.json
 
 # Model evaluation with external tokenizer and token limits
 cargo run -p bitnet-cli -- score --model model.gguf --file large-dataset.txt --tokenizer tokenizer.json --max-tokens 1000
+
+# Enhanced batch inference with prefill timing and structured performance metrics  
+cargo run -p bitnet-cli -- run --input-file prompts.txt --batch-size 4 --metrics --format json
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test prefill performance" --metrics --deterministic --seed 42
 
 # Test GPU backend detection and mock scenarios
 cargo test -p bitnet-kernels --no-default-features test_gpu_info_summary
@@ -591,22 +401,6 @@ cargo test -p bitnet-tokenizers --test universal_roundtrip --no-default-features
 
 # Enhanced GPU validation with performance metrics and error handling
 cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
-
-# Test platform-specific CPU kernel selection (x86_64 AVX2 / aarch64 NEON)
-cargo test -p bitnet-kernels --no-default-features --features cpu test_cpu_provider_creation
-
-# Test architecture-specific feature detection
-cargo test -p bitnet-kernels --no-default-features --features cpu test_x86_64_feature_detection  # x86_64 only
-cargo test -p bitnet-kernels --no-default-features --features cpu test_aarch64_feature_detection  # aarch64 only
-
-# Test comprehensive memory tracking with actual system memory usage
-cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
-
-# Test device-aware performance tracking with comprehensive memory statistics
-cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
-
-# Test memory efficiency metrics and host memory monitoring
-cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_efficiency_tracking
 
 # GPU kernel validation with numerical accuracy testing
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy
@@ -633,24 +427,10 @@ cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
 # FFI kernel creation and availability testing
 cargo test -p bitnet-kernels --features ffi test_ffi_kernel_creation
 
-# FFI mock model testing (validates C-API infrastructure)
-cargo test -p bitnet-ffi test_mock_model_embed_and_logits
-
-# Performance tracking infrastructure tests (validates comprehensive metrics collection)
-cargo test -p bitnet-inference --features integration-tests --test performance_tracking_tests
-
-# Run specific performance tracking test categories
-cargo test --test performance_tracking_tests performance_metrics_tests
-cargo test --test performance_tracking_tests performance_tracker_tests  
-cargo test --test performance_tracking_tests environment_variable_tests
-
-# Test InferenceEngine performance integration
-cargo test -p bitnet-inference --features integration-tests test_engine_performance_tracking_integration
-
 # FFI performance comparison (if C++ library available)
 cargo test -p bitnet-kernels --features ffi --release test_performance_comparison_structure
 
-# Full cross-validation (deterministic) - enhanced with PR #190 infrastructure fixes
+# Full cross-validation (deterministic)
 export BITNET_GGUF="$PWD/models/bitnet/ggml-model-i2_s.gguf"
 export BITNET_DETERMINISTIC=1 BITNET_SEED=42
 cargo run -p xtask -- full-crossval
@@ -786,71 +566,3 @@ scripts/nll-parity.sh
 3. **Deterministic Top-K**: Stable sorting with tie-breaking by token ID, NaN demotion
 4. **Logit Dumping**: Capture top-k logits at each generation step for analysis
 5. **Tau-b Correlation**: Score-aware rank correlation for quantization robustness
-
-## Streaming Inference
-
-BitNet.rs includes production-ready streaming inference capabilities (enhanced in PR #182 and #184):
-
-### Real-Time Async Streaming with NaN Safety
-
-- **GenerationStream**: True async streaming using futures with `StreamExt::next()`
-- **NaN-Safe Sampling**: Comprehensive NaN logit sanitization and robust filtering (PR #184)
-  - Automatic NaN-to-negative-infinity conversion for predictable behavior
-  - Enhanced top-k and top-p filtering with NaN awareness
-  - Safe partial_cmp() operations with fallback to Ordering::Equal
-- **Performance Metrics**: Accurate timing and throughput metrics during streaming
-- **Error Handling**: Comprehensive error recovery and graceful degradation
-
-### Streaming Commands
-
-```bash
-# Basic streaming inference
-cargo run -p bitnet-cli -- run --model model.gguf --prompt "Hello world" --stream
-
-# Interactive streaming mode with chat interface
-cargo run -p bitnet-cli -- run --interactive --stream
-
-# Batch streaming with multiple prompts
-cargo run -p bitnet-cli -- run --input-file prompts.txt --stream --batch-size 4
-
-# Deterministic streaming for reproducible results
-cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" --stream --deterministic --seed 42
-
-# Streaming with advanced sampling and performance metrics
-cargo run -p bitnet-cli -- run --model model.gguf --prompt "Explain AI" \
-  --stream --temperature 0.8 --top-k 50 --top-p 0.95 --metrics
-
-# Streaming with logit dumping for analysis
-cargo run -p bitnet-cli -- run --model model.gguf --prompt "Debug test" \
-  --stream --dump-logits 10 --logits-topk 5
-```
-
-### Streaming Features
-
-- **Async Token Generation**: Real-time token streaming with futures-based architecture
-- **Performance Tracking**: Built-in timing and throughput measurement
-- **Interactive Mode**: Chat-style interface with streaming responses
-- **Batch Processing**: Streaming support for multiple prompts
-- **Deterministic Mode**: Reproducible streaming with seed control
-- **Enhanced Error Resilience**: Comprehensive NaN-safe operations with robust error handling (PR #184)
-  - Automatic handling of model output anomalies
-  - Prevents runtime crashes from numerical edge cases
-  - Maintains deterministic behavior with proper fallback logic
-- **Logit Analysis**: Optional top-k logit capture for debugging and analysis
-
-### Testing Streaming Implementation
-
-```bash
-# Test CLI streaming functionality
-cargo test -p bitnet-cli --test cli_smoke
-
-# Validate streaming with integration tests (enabled by default in PR #182)
-cargo test -p bitnet-cli
-
-# Test NaN-safe sampling operations (enhanced in PR #184)
-cargo test -p bitnet-cli sampling
-
-# Performance test with streaming metrics
-cargo run -p bitnet-cli -- run --model model.gguf --prompt "Performance test" \
-  --stream --metrics --max-tokens 100
-```

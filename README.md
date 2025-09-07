@@ -215,7 +215,7 @@ async fn main() -> Result<()> {
 
 #### Streaming API with Token IDs
 
-BitNet.rs supports production-ready real-time streaming generation with access to both generated text and token IDs (enhanced in PR #182):
+BitNet.rs supports real-time streaming generation with access to both generated text and token IDs:
 
 ```rust
 use bitnet::prelude::*;
@@ -238,14 +238,14 @@ async fn main() -> Result<()> {
     
     let mut stream = engine.generate_stream_with_config("Explain quantum computing", &config);
     
-    // Process tokens as they arrive with real async streaming
+    // Process tokens as they arrive
     while let Some(result) = stream.next().await {
         match result {
             Ok(stream_response) => {
-                // Display generated text in real-time
+                // Display generated text
                 print!("{}", stream_response.text);
                 
-                // Access token IDs for analysis or debugging
+                // Access token IDs for analysis or debugging (new in v0.1.0)
                 for &token_id in &stream_response.token_ids {
                     eprintln!("[DEBUG] Generated token ID: {}", token_id);
                 }
@@ -261,11 +261,61 @@ async fn main() -> Result<()> {
 }
 ```
 
-**Enhanced Streaming Features (PR #182)**:
-- **Real Async Streaming**: True GenerationStream using futures with `StreamExt::next()`
-- **NaN-Safe Operations**: Hardened floating-point comparisons in sampling operations
-- **Performance Metrics**: Accurate timing and throughput measurement during streaming
-- **Error Recovery**: Comprehensive error handling with graceful degradation
+#### Enhanced Performance Metrics and Monitoring
+
+BitNet.rs provides comprehensive performance monitoring with structured metrics collection, including detailed timing breakdowns and throughput measurements:
+
+```rust
+use bitnet::prelude::*;
+use serde_json;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let model = BitNetModel::from_file("model.gguf").await?;
+    let engine = InferenceEngine::builder()
+        .model(model)
+        .backend(Backend::Auto)
+        .build()?;
+    
+    // Configure generation with performance metrics enabled
+    let config = GenerationConfig {
+        max_new_tokens: 100,
+        temperature: 0.7,
+        enable_metrics: true,
+        ..Default::default()
+    };
+    
+    // Run inference with detailed performance tracking
+    let response = engine.generate_with_config("Explain machine learning", &config).await?;
+    
+    // Access structured performance metrics
+    if let Some(metrics) = response.metrics {
+        println!("Tokenization time: {:.2}ms", metrics.timing.tokenize);
+        println!("Prefill time: {:.2}ms", metrics.timing.prefill);
+        println!("Decode time: {:.2}ms", metrics.timing.decode);
+        println!("Total time: {:.2}ms", metrics.timing.total);
+        
+        // Throughput measurements
+        println!("Prefill throughput: {:.2} tokens/sec", metrics.throughput.prefill);
+        println!("Decode throughput: {:.2} tokens/sec", metrics.throughput.decode);
+        println!("End-to-end throughput: {:.2} tokens/sec", metrics.throughput.e2e);
+        
+        // Export metrics as JSON for analysis
+        let json_metrics = serde_json::to_string_pretty(&metrics)?;
+        println!("Metrics JSON:\n{}", json_metrics);
+    }
+    
+    Ok(())
+}
+```
+
+The performance monitoring system includes:
+
+- **Structured Timing Metrics**: Detailed breakdown of tokenization, prefill, decode, and total inference time
+- **Throughput Calculations**: Tokens per second for prefill, decode, and end-to-end performance
+- **Memory Usage Tracking**: Optional memory consumption monitoring
+- **JSON Export**: Structured metrics for analysis and integration with monitoring systems
+- **Batch Processing Metrics**: Performance tracking for batch inference workloads
 
 #### Device-Aware Quantization
 
@@ -371,23 +421,7 @@ println!("Compact JSON: {}", json_compact);
 ### CLI Usage
 
 ```bash
-# Run inference with real-time streaming (enhanced in PR #182)
-bitnet run --model model.gguf --prompt "Explain quantum computing" --stream
-
-# Interactive streaming mode with chat interface
-bitnet run --interactive --stream --temperature 0.7
-
-# Batch processing with streaming output
-bitnet run --input-file prompts.txt --stream --batch-size 4
-
-# Deterministic streaming inference for reproducible results
-bitnet run --model model.gguf --prompt "Test prompt" --stream --deterministic --seed 42 --metrics
-
-# Advanced streaming with NaN-safe sampling parameters (enhanced robustness in PR #184)
-bitnet run --model model.gguf --prompt "Complex analysis" \
-  --stream --temperature 0.8 --top-k 50 --top-p 0.95
-
-# Non-streaming inference (traditional mode)
+# Run inference
 bitnet run --model model.gguf --prompt "Explain quantum computing"
 
 # Validate GGUF file compatibility
@@ -411,13 +445,22 @@ bitnet score --model model.gguf --file test.txt
 # Advanced scoring with device selection and batching
 bitnet score --model model.gguf --file validation.txt --device cuda --batch-size 8 --json-out results.json
 
-# Advanced inference options with streaming
+# Advanced inference options with performance metrics
 bitnet run --model model.gguf \
   --prompt "Explain quantum computing" \
   --max-new-tokens 100 \
   --temperature 0.7 \
   --top-k 50 \
-  --stream
+  --metrics \
+  --format json
+
+# Batch inference with prefill timing and structured metrics
+bitnet run --input-file prompts.txt \
+  --batch-size 4 \
+  --metrics \
+  --format json \
+  --deterministic \
+  --seed 42
 
 # Start HTTP server
 bitnet-server --port 8080 --model model.gguf
@@ -433,7 +476,7 @@ curl -X POST http://localhost:8080/v1/completions \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Hello, world!", "max_tokens": 50}'
 
-# Test streaming API with Server-Sent Events (SSE) and token IDs (enhanced streaming in PR #182)
+# Test streaming API with Server-Sent Events (SSE) and token IDs
 curl -X POST http://localhost:8080/v1/stream \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Explain quantum computing", "max_tokens": 100, "temperature": 0.7}' \
@@ -605,89 +648,6 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cp
 # Test automatic fallback mechanism
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
 ```
-
-## Convolution Operations Support
-
-BitNet.rs includes comprehensive 2D convolution support with both full-precision and quantized implementations, integrated with the existing kernel architecture.
-
-### Key Features
-
-- **Full-precision convolution**: `conv2d` function supporting NCHW input format and OIHW weight format
-- **Quantized convolution**: `conv2d_quantized` with support for I2S, TL1, and TL2 quantization types
-- **Flexible parameters**: Configurable stride, padding, and dilation operations
-- **On-the-fly dequantization**: Efficient quantized weight processing during convolution
-- **PyTorch reference testing**: Integration tests comparing results with PyTorch implementation
-
-### Basic Usage
-
-```rust
-use bitnet_kernels::convolution::{conv2d, Conv2DParams};
-
-// Prepare input and weight tensors
-let input = vec![1.0, 2.0, 3.0, 4.0]; // 1x1x2x2 input
-let weight = vec![1.0, 0.0, 0.0, 1.0]; // 1x1x2x2 kernel
-let mut output = vec![0.0; 1]; // 1x1x1x1 output
-
-// Configure convolution parameters
-let params = Conv2DParams {
-    stride: (1, 1),
-    padding: (0, 0),
-    dilation: (1, 1),
-};
-
-// Perform convolution
-let result = conv2d(
-    &input,
-    &weight,
-    None, // No bias
-    &mut output,
-    params,
-    (1, 1, 2, 2), // Input dimensions (N, C, H, W)
-    (1, 1, 2, 2), // Weight dimensions (O, I, H, W)
-);
-
-assert!(result.is_ok());
-```
-
-### Quantized Convolution
-
-```rust
-use bitnet_kernels::convolution::{conv2d_quantized, Conv2DParams};
-use bitnet_common::QuantizationType;
-
-let input = vec![1.0, 2.0, 3.0, 4.0]; // 1x1x2x2
-// I2S quantized weights: [-2, -1, 1, 2] packed in 1 byte
-let weight_quantized = vec![0xE4]; // Bit pattern: 11100100
-let weight_scales = vec![1.0]; // Scale factor per output channel
-let mut output = vec![0.0; 1];
-
-let result = conv2d_quantized(
-    &input,
-    &weight_quantized,
-    &weight_scales,
-    None,
-    &mut output,
-    Conv2DParams::default(),
-    (1, 1, 2, 2),
-    (1, 1, 2, 2),
-    QuantizationType::I2S,
-);
-
-assert!(result.is_ok());
-```
-
-### Testing and Validation
-
-```bash
-# Run convolution unit tests
-cargo test -p bitnet-kernels convolution
-
-# Run PyTorch reference validation (requires Python and PyTorch)
-cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored
-```
-
-The convolution implementation includes comprehensive PyTorch reference testing to ensure correctness across various parameter combinations including different stride, padding, and dilation configurations.
-
 ## GGUF Validation & Model Compatibility
 
 BitNet.rs includes a robust GGUF validation system that ensures model compatibility before loading:
@@ -745,7 +705,7 @@ BitNet.rs is organized as a comprehensive Rust workspace with 12 specialized cra
 | `bitnet-common` | Shared types, traits, and utilities |
 | `bitnet-models` | Model loading, definitions, and formats |
 | `bitnet-quantization` | 1-bit quantization algorithms |
-| `bitnet-kernels` | Optimized compute kernels (CPU/GPU) with convolution support |
+| `bitnet-kernels` | Optimized compute kernels (CPU/GPU) |
 | `bitnet-inference` | High-level inference engine |
 | `bitnet-tokenizers` | Text tokenization and processing |
 
@@ -760,39 +720,9 @@ BitNet.rs is organized as a comprehensive Rust workspace with 12 specialized cra
 
 | Crate | Description |
 |-------|-------------|
-| `bitnet-ffi` | C API for language interoperability with production-ready threading (PR #179) |
+| `bitnet-ffi` | C API for language interoperability |
 | `bitnet-py` | Python bindings via PyO3 |
 | `bitnet-wasm` | WebAssembly bindings |
-
-#### FFI Threading Enhancements (PR #179)
-
-The `bitnet-ffi` crate includes production-ready threading utilities:
-
-- **Deadlock Prevention**: Bounded channels and proper drop order safety
-- **Resource Control**: Configurable thread pools with queue size limits
-- **RAII Job Tracking**: Automatic job counter management
-- **Async Runtime Support**: Smart context detection with fallback handling
-- **Comprehensive Error Handling**: Enhanced error propagation and recovery
-
-```rust
-use bitnet_ffi::threading::{ThreadPoolConfig, get_thread_manager};
-
-// Configure robust thread pool
-let config = ThreadPoolConfig {
-    num_threads: 4,
-    max_queue_size: 1000,  // Prevents resource exhaustion
-    stack_size: Some(2 * 1024 * 1024),
-    thread_name_prefix: "bitnet-worker".to_string(),
-};
-
-// Execute FFI operations safely
-let manager = get_thread_manager();
-manager.execute(|| {
-    // Thread-safe FFI operation
-})?;
-```
-
-See [`docs/ffi-threading-architecture.md`](docs/ffi-threading-architecture.md) for detailed threading patterns and [`examples/ffi_threading_demo.rs`](examples/ffi_threading_demo.rs) for usage examples.
 
 ### Cross-Validation (Optional)
 
@@ -1176,8 +1106,7 @@ For compatibility testing and benchmarking, the original Microsoft BitNet C++ im
 BitNet.rs includes comprehensive cross-validation against the original C++ implementation:
 
 - **Numerical accuracy**: Token-level output matching within 1e-6 tolerance
-- **Performance benchmarking**: Automated speed and memory comparisons
-- **Infrastructure hardening**: Enhanced pipeline robustness and error reporting (see `LAUNCH_READINESS_REPORT.md`)  
+- **Performance benchmarking**: Automated speed and memory comparisons  
 - **API compatibility**: Ensures migration path from legacy code
 - **Continuous testing**: Validates against upstream changes
 - **Cached builds**: Pre-built C++ libraries reduce CI time from 7min to <1min
