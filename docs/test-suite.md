@@ -28,6 +28,14 @@ cargo test -p bitnet-inference --no-default-features --features rt-tokio --test 
 
 # Run verification script for all tests
 ./scripts/verify-tests.sh
+
+# Test enhanced prefill functionality and batch inference
+cargo test -p bitnet-cli --test inference_commands
+cargo test -p bitnet-inference test_prefill_timing
+
+# Test mock infrastructure and tokenizer architecture  
+cargo test -p bitnet-inference --test mock_infrastructure
+cargo test -p bitnet-tokenizers --test tokenizer_builder_pattern
 ```
 
 ### GPU-Specific Tests
@@ -78,6 +86,8 @@ The test suite uses a feature-gated configuration system:
 - **CI Integration**: JUnit output, exit codes, and CI-specific optimizations
 - **Error Reporting**: Detailed error messages with recovery suggestions
 - **Performance Tracking**: Benchmark results and regression detection
+- **Mock Infrastructure**: Comprehensive mock model and tokenizer implementations for testing
+- **Enhanced Performance Testing**: Structured metrics collection with prefill timing validation
 
 ## Testing Strategy
 
@@ -87,6 +97,46 @@ The test suite uses a feature-gated configuration system:
 - **Property-based testing**: Fuzz testing for GGUF parser robustness
 - **Cross-validation**: Automated testing against C++ implementation
 - **CI gates**: Compatibility tests block on every PR
+
+### Enhanced Mock Infrastructure and Tokenizer Testing
+
+BitNet.rs includes comprehensive mock infrastructure for robust testing without external dependencies:
+
+#### Mock Model and Tokenizer Testing
+
+```bash
+# Test mock model implementation with prefill functionality
+cargo test -p bitnet-inference test_mock_model_prefill
+cargo test -p bitnet-inference test_mock_model_embed_and_logits
+
+# Test tokenizer builder pattern and Arc<dyn Tokenizer> architecture
+cargo test -p bitnet-tokenizers test_tokenizer_builder_from_file
+cargo test -p bitnet-tokenizers test_universal_tokenizer_mock_fallback
+
+# Validate performance metrics with mock infrastructure  
+cargo test -p bitnet-cli test_inference_metrics_collection
+cargo test -p bitnet-cli test_batch_inference_with_mock_model
+```
+
+#### Safe Environment Variable Handling Tests
+
+```bash
+# Test enhanced environment variable management with proper unsafe blocks
+cargo test -p bitnet-cli test_safe_environment_setup
+cargo test -p bitnet-cli test_deterministic_configuration
+
+# Validate environment variable handling in different scenarios
+BITNET_DETERMINISTIC=1 cargo test -p bitnet-cli test_deterministic_inference
+BITNET_SEED=42 cargo test -p bitnet-cli test_seeded_generation
+```
+
+#### Mock Infrastructure Features
+
+- **Mock Model Implementation**: Complete model interface with configurable responses
+- **Mock Tokenizer**: Testing-compatible tokenizer with predictable behavior  
+- **Arc<dyn Tokenizer> Support**: Enhanced tokenizer architecture using `TokenizerBuilder::from_file()`
+- **Performance Metrics Validation**: Structured testing of timing and throughput metrics
+- **Safe Environment Handling**: Proper unsafe block usage for environment variable operations
 
 ### GPU Testing Strategy
 

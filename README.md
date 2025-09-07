@@ -261,6 +261,62 @@ async fn main() -> Result<()> {
 }
 ```
 
+#### Enhanced Performance Metrics and Monitoring
+
+BitNet.rs provides comprehensive performance monitoring with structured metrics collection, including detailed timing breakdowns and throughput measurements:
+
+```rust
+use bitnet::prelude::*;
+use serde_json;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let model = BitNetModel::from_file("model.gguf").await?;
+    let engine = InferenceEngine::builder()
+        .model(model)
+        .backend(Backend::Auto)
+        .build()?;
+    
+    // Configure generation with performance metrics enabled
+    let config = GenerationConfig {
+        max_new_tokens: 100,
+        temperature: 0.7,
+        enable_metrics: true,
+        ..Default::default()
+    };
+    
+    // Run inference with detailed performance tracking
+    let response = engine.generate_with_config("Explain machine learning", &config).await?;
+    
+    // Access structured performance metrics
+    if let Some(metrics) = response.metrics {
+        println!("Tokenization time: {:.2}ms", metrics.timing.tokenize);
+        println!("Prefill time: {:.2}ms", metrics.timing.prefill);
+        println!("Decode time: {:.2}ms", metrics.timing.decode);
+        println!("Total time: {:.2}ms", metrics.timing.total);
+        
+        // Throughput measurements
+        println!("Prefill throughput: {:.2} tokens/sec", metrics.throughput.prefill);
+        println!("Decode throughput: {:.2} tokens/sec", metrics.throughput.decode);
+        println!("End-to-end throughput: {:.2} tokens/sec", metrics.throughput.e2e);
+        
+        // Export metrics as JSON for analysis
+        let json_metrics = serde_json::to_string_pretty(&metrics)?;
+        println!("Metrics JSON:\n{}", json_metrics);
+    }
+    
+    Ok(())
+}
+```
+
+The performance monitoring system includes:
+
+- **Structured Timing Metrics**: Detailed breakdown of tokenization, prefill, decode, and total inference time
+- **Throughput Calculations**: Tokens per second for prefill, decode, and end-to-end performance
+- **Memory Usage Tracking**: Optional memory consumption monitoring
+- **JSON Export**: Structured metrics for analysis and integration with monitoring systems
+- **Batch Processing Metrics**: Performance tracking for batch inference workloads
+
 #### Device-Aware Quantization
 
 BitNet.rs features advanced device-aware quantization that automatically leverages GPU acceleration while providing robust CPU fallback. The system includes comprehensive error handling and performance optimization:
@@ -389,12 +445,22 @@ bitnet score --model model.gguf --file test.txt
 # Advanced scoring with device selection and batching
 bitnet score --model model.gguf --file validation.txt --device cuda --batch-size 8 --json-out results.json
 
-# Advanced inference options
+# Advanced inference options with performance metrics
 bitnet run --model model.gguf \
   --prompt "Explain quantum computing" \
   --max-new-tokens 100 \
   --temperature 0.7 \
-  --top-k 50
+  --top-k 50 \
+  --metrics \
+  --format json
+
+# Batch inference with prefill timing and structured metrics
+bitnet run --input-file prompts.txt \
+  --batch-size 4 \
+  --metrics \
+  --format json \
+  --deterministic \
+  --seed 42
 
 # Start HTTP server
 bitnet-server --port 8080 --model model.gguf

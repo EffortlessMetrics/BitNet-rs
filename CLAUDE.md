@@ -32,6 +32,10 @@ cargo test -p bitnet-inference --test engine_inspect
 # Run verification script
 ./scripts/verify-tests.sh
 
+# Test enhanced prefill functionality and batch inference
+cargo test -p bitnet-cli --test inference_commands
+cargo test -p bitnet-inference test_prefill_timing
+
 # Run benchmarks
 cargo bench --workspace --no-default-features --features cpu
 
@@ -202,6 +206,23 @@ The FFI bridge enables gradual migration from C++ to Rust while maintaining func
 - **Safety**: Safe Rust wrappers with proper error handling and memory management
 - **Testing**: Comprehensive test suite ensuring FFI/Rust quantization parity
 
+### Enhanced Inference Engine Architecture
+
+BitNet.rs features a production-ready inference engine with comprehensive performance monitoring:
+
+#### Core Inference Features
+- **Explicit Prefill Support**: Dedicated `engine.prefill()` method for cache warming and latency measurement
+- **Structured Performance Metrics**: Comprehensive timing breakdown including prefill, decode, and end-to-end metrics
+- **Batch Inference Optimization**: Enhanced batch processing with proper prefill integration
+- **Mock Infrastructure**: Comprehensive mock model and tokenizer implementations for testing
+- **Safe Environment Management**: Proper unsafe block handling for environment variable operations
+
+#### Performance Monitoring and Metrics
+- **TimingMetrics**: Structured performance measurement with prefill, decode, tokenization, and total timing
+- **ThroughputMetrics**: Tokens per second calculation for prefill, decode, and end-to-end performance
+- **Latency Tracking**: Detailed latency measurement for each inference stage
+- **Memory Monitoring**: Optional memory usage tracking throughout inference operations
+
 ### Universal Tokenizer Architecture
 
 BitNet.rs includes a comprehensive tokenizer system with GGUF integration:
@@ -211,6 +232,7 @@ BitNet.rs includes a comprehensive tokenizer system with GGUF integration:
   - **Automatic Backend Selection**: Chooses appropriate tokenizer backend based on model type
   - **Mock Tokenizer Fallback**: Provides testing-compatible tokenizer for unsupported formats
   - **Configuration-Driven**: Supports pre-tokenization, special tokens, and BPE merges
+  - **Arc<dyn Tokenizer> Architecture**: Enhanced tokenizer builder pattern using `TokenizerBuilder::from_file()`
 
 #### Supported Tokenizer Formats
 - **GPT-2/BPE**: Modern BPE tokenization with merge rules (via HuggingFace tokenizers)
@@ -219,7 +241,7 @@ BitNet.rs includes a comprehensive tokenizer system with GGUF integration:
 - **TikToken**: OpenAI's tiktoken format
 - **Mock Backend**: Minimal tokenizer for testing and compatibility
 
-#### BPE Backend Features (New in this release)
+#### BPE Backend Features
 - **Runtime Construction**: Build tokenizers from vocabulary and merge rules without JSON files
 - **GGUF Metadata Integration**: Automatically extract BPE data from model files
 - **Byte-Level Processing**: GPT-2 compatible pre-tokenization and decoding
@@ -362,6 +384,10 @@ cargo run -p bitnet-cli -- score --model model.gguf --file validation.txt --devi
 
 # Model evaluation with external tokenizer and token limits
 cargo run -p bitnet-cli -- score --model model.gguf --file large-dataset.txt --tokenizer tokenizer.json --max-tokens 1000
+
+# Enhanced batch inference with prefill timing and structured performance metrics  
+cargo run -p bitnet-cli -- run --input-file prompts.txt --batch-size 4 --metrics --format json
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test prefill performance" --metrics --deterministic --seed 42
 
 # Test GPU backend detection and mock scenarios
 cargo test -p bitnet-kernels --no-default-features test_gpu_info_summary
