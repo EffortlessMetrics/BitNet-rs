@@ -49,6 +49,11 @@ cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
 
 # FFI mock model tests (validates C-API testing infrastructure)
 cargo test -p bitnet-ffi test_mock_model_embed_and_logits
+
+# Enhanced bitnet-sys FFI validation (requires C++ implementation)
+cargo test -p bitnet-sys --features ffi  # Fail-fast C++ presence validation
+cargo check -p bitnet-sys --features ffi  # Build-time FFI validation
+cargo test -p bitnet-sys --test disabled  # Test FFI disabled behavior
 ```
 
 ### Code Quality Commands
@@ -112,6 +117,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-py`**: Python bindings compatible with llama-cpp-python
 
 #### Cross-Validation
+- **`bitnet-sys`**: Low-level FFI bindings to BitNet C++ implementation with fail-fast validation
 - **`crossval`**: Framework for testing against C++ implementation
 - Tests use `BITNET_GGUF` or `CROSSVAL_GGUF` environment variable for model path
 
@@ -154,12 +160,16 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 - **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external dependencies
 - **Cross-Format Support**: BPE, SentencePiece, and custom tokenizer formats
 
-#### FFI Bridge System (Enhanced in PR #186)
+#### Enhanced FFI Bridge System (Enhanced in PR #172 and #186)
+- **Fail-Fast Validation**: Enhanced bitnet-sys with immediate C++ dependency validation (PR #172)
+- **Unified API Architecture**: Simplified load_model/generate functions at crate root for consistency
+- **Enhanced Header Discovery**: Recursive search with fallback to static locations for improved reliability
+- **Cross-Platform Build Support**: GCC and Clang compatibility with enhanced error handling
 - **Gradual Migration Support**: Safe C++ kernel integration enabling gradual transition to pure Rust
 - **Quantization Bridge**: Complete FFI quantization support for I2S, TL1, and TL2 types
 - **Performance Comparison Framework**: Built-in tools for comparing FFI vs Rust implementations
 - **Error Handling Integration**: Enhanced C++ error propagation with `get_last_error()` bridge
-- **Feature-Gated Safety**: Proper conditional compilation and graceful fallback when FFI unavailable
+- **Feature-Gated Safety**: Proper conditional compilation with clear error messages when FFI unavailable
 - **Migration Decision Support**: Automated recommendations based on performance and accuracy metrics
 - **Mock Testing Infrastructure**: Comprehensive C-API testing with mock embed/logits implementations
 
@@ -258,7 +268,11 @@ We maintain strict compatibility with llama.cpp:
 
 ### Common Build Issues
 
-1. **FFI Linker Errors**: Either disable FFI (`--no-default-features --features cpu`) or build C++ (`cargo xtask fetch-cpp`)
+1. **FFI Build Errors**: Enhanced bitnet-sys now enforces C++ presence with fail-fast validation
+   - Build failure: `cargo build -p bitnet-sys --features ffi` → requires C++ implementation
+   - Solution: `cargo run -p xtask -- fetch-cpp` → downloads and builds BitNet C++
+   - Alternative: Disable FFI entirely (`--no-default-features --features cpu` for CPU-only builds)
+   - Environment: Set `BITNET_CPP_DIR` to specify custom C++ installation path
 
 2. **Compiler Compatibility**: The FFI components support both GCC and Clang. Set `CC` and `CXX` environment variables to specify compiler:
    - GCC: `export CC=gcc CXX=g++`
@@ -273,7 +287,14 @@ We maintain strict compatibility with llama.cpp:
 
 6. **Git Metadata in Builds**: The `bitnet-server` crate uses `vergen-gix` v1.x to capture Git metadata. Ensure `.git` is available during builds or set `VERGEN_GIT_SHA` and `VERGEN_GIT_BRANCH` environment variables
 
-7. **FFI Quantization Issues**: 
+7. **Enhanced bitnet-sys Validation Issues (PR #172)**:
+   - **Build-time validation**: `cargo check -p bitnet-sys --features ffi` enforces C++ presence
+   - **Unified API access**: Use `bitnet_sys::{load_model, generate, is_available}` at crate root
+   - **Feature detection**: Call `bitnet_sys::is_available()` to check C++ implementation
+   - **Setup solution**: `cargo run -p xtask -- fetch-cpp` downloads and builds BitNet C++
+   - **Environment config**: Set `BITNET_CPP_DIR` or legacy `BITNET_CPP_PATH` for custom locations
+
+8. **FFI Quantization Bridge Issues**: 
    - Ensure C++ library is built: `cargo xtask fetch-cpp`
    - Test FFI availability: `cargo test -p bitnet-kernels --features ffi test_ffi_kernel_creation`
    - Compare FFI vs Rust: `cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust`

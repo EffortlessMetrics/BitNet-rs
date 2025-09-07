@@ -53,7 +53,7 @@ The cross-validation framework requires access to the original BitNet C++ implem
 
 ```bash
 # Download and build C++ implementation
-./ci/fetch_bitnet_cpp.sh
+cargo run -p xtask -- fetch-cpp
 ```
 
 This downloads the official Microsoft BitNet.cpp to `~/.cache/bitnet_cpp/` and builds it.

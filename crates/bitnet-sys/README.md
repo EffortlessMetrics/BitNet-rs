@@ -26,7 +26,7 @@ The C++ implementation must be available and built:
 
 ```bash
 # Download and build C++ implementation
-./ci/fetch_bitnet_cpp.sh
+cargo run -p xtask -- fetch-cpp
 
 # Or set custom path
 export BITNET_CPP_DIR=/path/to/bitnet.cpp  # BITNET_CPP_PATH is also accepted
@@ -109,7 +109,7 @@ Common build errors and solutions:
 
 ```bash
 # Download the C++ implementation
-./ci/fetch_bitnet_cpp.sh
+cargo run -p xtask -- fetch-cpp
 
 # Or set custom path
 export BITNET_CPP_DIR=/path/to/bitnet.cpp
