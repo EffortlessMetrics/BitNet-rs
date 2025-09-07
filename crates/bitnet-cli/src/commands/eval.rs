@@ -512,9 +512,9 @@ impl EvalCommand {
 
         // Set seed if provided
         if let Some(seed) = self.seed {
-            // Environment variable manipulation is marked unsafe on some platforms
-            // so wrap the call to satisfy `#![forbid(unsafe_code)]` policies.
-            unsafe { std::env::set_var("BITNET_SEED", seed.to_string()); }
+            unsafe {
+                std::env::set_var("BITNET_SEED", seed.to_string());
+            }
         }
 
         for (i, line) in lines.iter().enumerate() {

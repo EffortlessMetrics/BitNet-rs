@@ -275,32 +275,37 @@ impl InferenceCommand {
 
         // Set thread count if specified
         if let Some(threads) = self.threads {
-            unsafe { std::env::set_var("RAYON_NUM_THREADS", threads.to_string()) };
-            unsafe { std::env::set_var("OMP_NUM_THREADS", threads.to_string()) };
-            unsafe { std::env::set_var("MKL_NUM_THREADS", threads.to_string()) };
-            unsafe { std::env::set_var("BLAS_NUM_THREADS", threads.to_string()) };
+            unsafe {
+                std::env::set_var("RAYON_NUM_THREADS", threads.to_string());
+                std::env::set_var("OMP_NUM_THREADS", threads.to_string());
+                std::env::set_var("MKL_NUM_THREADS", threads.to_string());
+                std::env::set_var("BLAS_NUM_THREADS", threads.to_string());
+            }
             debug!("Set thread count to {}", threads);
         }
 
         // Enable deterministic mode if requested
         if self.deterministic {
-            unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
-            unsafe { std::env::set_var("CANDLE_DETERMINISTIC", "1") };
+            unsafe {
+                std::env::set_var("BITNET_DETERMINISTIC", "1");
+                std::env::set_var("CANDLE_DETERMINISTIC", "1");
 
-            // Force single-threaded execution for full determinism
-            if self.threads.is_none() {
-                unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
-                unsafe { std::env::set_var("OMP_NUM_THREADS", "1") };
-                unsafe { std::env::set_var("MKL_NUM_THREADS", "1") };
-                unsafe { std::env::set_var("BLAS_NUM_THREADS", "1") };
+                // Force single-threaded execution for full determinism
+                if self.threads.is_none() {
+                    std::env::set_var("RAYON_NUM_THREADS", "1");
+                    std::env::set_var("OMP_NUM_THREADS", "1");
+                    std::env::set_var("MKL_NUM_THREADS", "1");
+                    std::env::set_var("BLAS_NUM_THREADS", "1");
+                }
             }
-
             debug!("Enabled deterministic mode");
         }
 
         // Set seed in environment if provided
         if let Some(seed) = self.seed {
-            unsafe { std::env::set_var("BITNET_SEED", seed.to_string()) };
+            unsafe {
+                std::env::set_var("BITNET_SEED", seed.to_string());
+            }
             debug!("Set seed to {}", seed);
         }
 
@@ -454,15 +459,9 @@ impl InferenceCommand {
                 .context("Failed to load tokenizer from file");
         }
 
-        // Try GGUF-embedded tokenizer (placeholder for now)
-        if let Some(tokenizer) = bitnet_tokenizers::try_from_gguf_metadata(|| {
-            Err(bitnet_common::BitNetError::Validation(
-                "GGUF tokenizer not implemented".into(),
-            ))
-        }) {
-            debug!("Using GGUF-embedded tokenizer");
-            return Ok(tokenizer);
-        }
+        // Try GGUF-embedded tokenizer if available
+        // Note: GGUF tokenizer extraction is not yet fully implemented
+        // This will fall through to the directory-based tokenizer search below
 
         // Try to load tokenizer from model directory
         let tokenizer_path =
