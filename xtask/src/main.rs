@@ -1644,11 +1644,11 @@ fn crossval_cmd(
     }
 
     println!("🧪 Running cross-validation tests");
+    let abs_model = model.canonicalize().with_context(|| {
+        format!("Could not resolve absolute path for model: {}", model.display())
+    })?;
     println!("   Model: {}", model.display());
-    // Echo the absolute path so users know exactly what was picked
-    if let Ok(abs_model) = model.canonicalize() {
-        println!("   Absolute: {}", abs_model.display());
-    }
+    println!("   Absolute: {}", abs_model.display());
     println!("   C++ dir: {}", cpp.display());
     println!("   Release: {}", release);
     println!("   Deterministic: yes (single-threaded)");
@@ -1672,7 +1672,9 @@ fn crossval_cmd(
     apply_deterministic_env(&mut cmd);
 
     // Set other required environment variables
-    cmd.env("BITNET_CPP_DIR", &cpp).env("CROSSVAL_GGUF", model).env("RUST_BACKTRACE", "1");
+    cmd.env("BITNET_CPP_DIR", &cpp)
+        .env("CROSSVAL_GGUF", &abs_model)
+        .env("RUST_BACKTRACE", "1");
 
     // Add test runner args
     cmd.arg("--").args(["--nocapture", "--test-threads=1"]).args(extra);
