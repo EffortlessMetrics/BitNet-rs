@@ -36,6 +36,7 @@ log_error() {
 # Parse arguments
 CLEAN=0
 FORCE=0
+CMAKE_FLAGS=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --rev|--tag)
@@ -54,12 +55,17 @@ while [[ $# -gt 0 ]]; do
             FORCE=1
             shift
             ;;
+        --cmake-flags)
+            CMAKE_FLAGS="$2"
+            shift 2
+            ;;
         --help)
-            echo "Usage: $0 [--tag TAG] [--repo URL] [--clean] [--force]"
+            echo "Usage: $0 [--tag TAG] [--repo URL] [--clean] [--force] [--cmake-flags \"...\"]"
             echo "  --tag TAG    Git revision/branch to checkout (default: $DEFAULT_REV)"
             echo "  --repo URL   Git repository URL (default: $REPO_URL)"
             echo "  --clean      Clean build before compiling"
             echo "  --force      Force rebuild even if already built"
+            echo "  --cmake-flags  Additional flags to pass to cmake"
             exit 0
             ;;
         --print-setup)
@@ -251,7 +257,8 @@ cmake .. \
     -DBITNET_BUILD_EXAMPLES=ON \
     -DBITNET_CUDA=OFF \
     -DBITNET_METAL=OFF \
-    -DBITNET_BLAS=OFF
+    -DBITNET_BLAS=OFF \
+    $CMAKE_FLAGS
 
 log_info "Building BitNet (this may take a few minutes)..."
 cmake --build . -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
@@ -259,20 +266,20 @@ cmake --build . -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4
 # Post-build verification
 log_info "Verifying build artifacts..."
 
-# Check for the main shared libraries
+# Check for the main static libraries (since we build with LLAMA_STATIC=ON)
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    LLAMA_LIB="$BUILD_DIR/3rdparty/llama.cpp/src/libllama.so"
-    GGML_LIB="$BUILD_DIR/3rdparty/llama.cpp/ggml/src/libggml.so"
-    LIB_EXT="so"
+    LLAMA_LIB="$BUILD_DIR/3rdparty/llama.cpp/src/libllama.a"
+    GGML_LIB="$BUILD_DIR/3rdparty/llama.cpp/ggml/src/libggml.a"
+    LIB_EXT="a"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    LLAMA_LIB="$BUILD_DIR/3rdparty/llama.cpp/src/libllama.dylib"
-    GGML_LIB="$BUILD_DIR/3rdparty/llama.cpp/ggml/src/libggml.dylib"
-    LIB_EXT="dylib"
+    LLAMA_LIB="$BUILD_DIR/3rdparty/llama.cpp/src/libllama.a"
+    GGML_LIB="$BUILD_DIR/3rdparty/llama.cpp/ggml/src/libggml.a"
+    LIB_EXT="a"
 else
     log_warn "Unknown OS type: $OSTYPE, assuming Linux"
-    LLAMA_LIB="$BUILD_DIR/3rdparty/llama.cpp/src/libllama.so"
-    GGML_LIB="$BUILD_DIR/3rdparty/llama.cpp/ggml/src/libggml.so"
-    LIB_EXT="so"
+    LLAMA_LIB="$BUILD_DIR/3rdparty/llama.cpp/src/libllama.a"
+    GGML_LIB="$BUILD_DIR/3rdparty/llama.cpp/ggml/src/libggml.a"
+    LIB_EXT="a"
 fi
 
 # Find actual library locations (build paths can vary)
@@ -294,9 +301,9 @@ for search_dir in "$BUILD_DIR" "$BUILD_DIR/3rdparty/llama.cpp/ggml" "$BUILD_DIR/
 done
 
 if [[ ${#FOUND_LIBS[@]} -eq 0 ]]; then
-    log_error "FATAL: No shared libraries found after build!"
+    log_error "FATAL: No static libraries found after build!"
     log_error "Expected at least libllama.$LIB_EXT"
-    log_error "Build may have failed or produced static libraries only."
+    log_error "Build may have failed. Check CMake output above."
     exit 1
 fi
 

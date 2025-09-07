@@ -136,6 +136,7 @@ fn link_cpp_implementation(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Err
         println!("cargo:rustc-link-lib=dylib=pthread");
         println!("cargo:rustc-link-lib=dylib=dl");
         println!("cargo:rustc-link-lib=dylib=m");
+        println!("cargo:rustc-link-lib=dylib=gomp");
     }
 
     #[cfg(target_os = "macos")]
