@@ -97,9 +97,7 @@ impl Backend for CpuBackend {
 
         // Set thread count for this operation
         // Ignore errors if the global thread pool has already been initialized
-        let _ = rayon::ThreadPoolBuilder::new()
-            .num_threads(self.num_threads)
-            .build_global();
+        let _ = rayon::ThreadPoolBuilder::new().num_threads(self.num_threads).build_global();
 
         // Forward pass through model
         let output = tokio::task::spawn_blocking({
