@@ -300,6 +300,18 @@ We maintain strict compatibility with llama.cpp:
    - Compare FFI vs Rust: `cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust`
    - Check C++ errors: Look for detailed error messages from `get_last_error()` bridge
 
+9. **Cross-Validation Pipeline Issues (PR #190)**:
+   - **Command failure**: `cargo xtask full-crossval` fails → infrastructure fixes applied in PR #190
+   - **C++ build issues**: Enhanced cmake flags support and OpenMP linking (`-lgomp`) now handled automatically
+   - **Path resolution**: Fixed absolute path resolution in xtask commands preventing model file not found errors
+   - **Static library validation**: Build script now properly validates both shared (`.so`) and static (`.a`) libraries
+   - **Testing infrastructure**: Cross-validation test suite hardened with better error reporting and CI integration
+
+10. **Launch Readiness Validation**:
+    - **Test runner hangs**: Some environments may experience test runner hanging after execution (environmental issue)
+    - **Pipeline robustness**: Use enhanced cross-validation commands that include comprehensive error handling
+    - **CI/CD hardening**: Cross-validation pipeline now includes automated regression detection and enhanced reporting
+
 ## Development Workflow
 
 1. **Making Changes**: Always run tests for affected crates
@@ -307,10 +319,33 @@ We maintain strict compatibility with llama.cpp:
 3. **Cross-Validation**: Run `cargo xtask crossval` for inference changes
 4. **Compatibility**: Check COMPATIBILITY.md before changing public APIs
 
+### Launch Readiness Considerations
+
+Based on the comprehensive analysis in `LAUNCH_READINESS_REPORT.md`, the project includes the following quality assurance measures:
+
+#### Core Quality Indicators
+- **High-quality codebase**: The Rust implementation demonstrates exceptional code quality
+- **Comprehensive test coverage**: Well-designed test suites with mature testing strategies
+- **Numerical accuracy**: Cross-validation achieves parity with C++ reference implementation
+- **Robust CLI functionality**: Tools demonstrate resilience and proper error handling
+
+#### Infrastructure Hardening (Enhanced in PR #190)
+- **Enhanced C++ Build Integration**: Improved cmake flags support and static library validation
+- **OpenMP Linking**: Automatic handling of OpenMP library dependencies (`-lgomp`) for proper C++ integration
+- **Path Resolution**: Fixed absolute path handling in cross-validation commands
+- **Error Reporting**: Enhanced diagnostic capabilities throughout the testing pipeline
+
+#### CI/CD Pipeline Requirements
+- **Automated Cross-Validation**: `full-crossval` command must run successfully in CI
+- **Complete Test Suite**: All `cargo test` variants must pass without hanging
+- **Regression Detection**: Cross-validation metrics tracking with baseline comparison
+- **Multi-Platform Validation**: Testing across different OS and architecture combinations
+
 ## Key Files
 
 - `COMPATIBILITY.md`: API stability guarantees and truth tables
 - `MIGRATION.md`: Step-by-step migration guide from llama.cpp
+- `LAUNCH_READINESS_REPORT.md`: Comprehensive launch readiness analysis and infrastructure assessment
 - `.github/workflows/compatibility.yml`: CI compatibility tests
 - `crossval/`: Cross-validation test suite
 
@@ -540,7 +575,7 @@ cargo test -p bitnet-inference --features integration-tests test_engine_performa
 # FFI performance comparison (if C++ library available)
 cargo test -p bitnet-kernels --features ffi --release test_performance_comparison_structure
 
-# Full cross-validation (deterministic)
+# Full cross-validation (deterministic) - enhanced with PR #190 infrastructure fixes
 export BITNET_GGUF="$PWD/models/bitnet/ggml-model-i2_s.gguf"
 export BITNET_DETERMINISTIC=1 BITNET_SEED=42
 cargo run -p xtask -- full-crossval
