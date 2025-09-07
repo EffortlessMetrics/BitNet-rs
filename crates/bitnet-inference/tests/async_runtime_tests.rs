@@ -125,7 +125,7 @@ async fn test_concurrent_spawn_blocking_operations() {
 #[tokio::test]
 async fn test_error_handling() {
     let result = spawn_blocking_with_fallback(|| -> Result<()> {
-        Err(bitnet_common::BitNetError::Validation("test error".to_string()).into())
+        Err(bitnet_common::BitNetError::Validation("test error".to_string()))
     })
     .await;
 

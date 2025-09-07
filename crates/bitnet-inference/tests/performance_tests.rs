@@ -372,7 +372,9 @@ mod throughput_tests {
         let config = GenerationConfig::default().with_max_tokens(20);
 
         let start_time = Instant::now();
-        let mut stream = engine.generate_stream_with_config("Streaming throughput test", &config);
+        let mut stream = engine
+            .generate_stream_with_config("Streaming throughput test", &config)
+            .expect("Stream creation failed");
 
         let mut token_count = 0;
         while let Ok(Some(result)) = timeout(Duration::from_secs(5), stream.next()).await {

@@ -271,19 +271,14 @@ impl ModelManager {
             ModelFormat::Gguf => {
                 use bitnet_models::gguf_min::load_two;
                 let tensors = load_two(path).map_err(|e| {
-                    BitNetCError::ModelLoadFailed(format!(
-                        "Failed to load GGUF model: {}",
-                        e
-                    ))
+                    BitNetCError::ModelLoadFailed(format!("Failed to load GGUF model: {}", e))
                 })?;
                 Ok(Arc::new(SimpleGgufModel::new(config.clone(), tensors)))
             }
-            ModelFormat::SafeTensors => Err(BitNetCError::ModelLoadFailed(
-                "SafeTensors format not supported".to_string(),
-            )),
-            _ => Err(BitNetCError::ModelLoadFailed(
-                "Unsupported model format".to_string(),
-            )),
+            ModelFormat::SafeTensors => {
+                Err(BitNetCError::ModelLoadFailed("SafeTensors format not supported".to_string()))
+            }
+            _ => Err(BitNetCError::ModelLoadFailed("Unsupported model format".to_string())),
         }
     }
 

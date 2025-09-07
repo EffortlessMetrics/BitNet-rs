@@ -109,15 +109,9 @@ impl InferenceManager {
             })?;
 
             // Decode input tokens into a prompt string
-            let prompt = engine_guard
-                .tokenizer()
-                .decode(input_tokens)
-                .map_err(|e| {
-                    BitNetCError::InvalidArgument(format!(
-                        "Failed to decode input tokens: {}",
-                        e
-                    ))
-                })?;
+            let prompt = engine_guard.tokenizer().decode(input_tokens).map_err(|e| {
+                BitNetCError::InvalidArgument(format!("Failed to decode input tokens: {}", e))
+            })?;
 
             // Generate text using the public API
             let generated = futures::executor::block_on(
@@ -126,15 +120,9 @@ impl InferenceManager {
             .map_err(|e| BitNetCError::InferenceFailed(format!("Generation failed: {}", e)))?;
 
             // Convert generated text back to tokens
-            engine_guard
-                .tokenizer()
-                .encode(&generated, true, true)
-                .map_err(|e| {
-                    BitNetCError::InferenceFailed(format!(
-                        "Failed to encode output tokens: {}",
-                        e
-                    ))
-                })?
+            engine_guard.tokenizer().encode(&generated, true, true).map_err(|e| {
+                BitNetCError::InferenceFailed(format!("Failed to encode output tokens: {}", e))
+            })?
         };
 
         Ok(tokens)

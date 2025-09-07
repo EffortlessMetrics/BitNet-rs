@@ -13,6 +13,7 @@ pub mod gguf; // always available (sync parser)
 pub use gguf::{GGUF_HEADER_LEN, GgufError, GgufHeader, GgufKv, GgufValue, read_kv_pairs};
 pub mod parity;
 pub mod rt;
+pub mod runtime_utils;
 pub mod sampling;
 pub mod simple_forward;
 pub mod streaming;
