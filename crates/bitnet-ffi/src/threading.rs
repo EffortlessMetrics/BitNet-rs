@@ -35,8 +35,8 @@ impl Default for ThreadPoolConfig {
 
 /// Thread pool for managing concurrent operations
 pub struct ThreadPool {
+    sender: std::sync::mpsc::SyncSender<Job>,
     workers: Vec<Worker>,
-    sender: std::sync::mpsc::Sender<Job>,
     config: ThreadPoolConfig,
     active_jobs: Arc<AtomicUsize>,
 }
@@ -51,7 +51,7 @@ impl ThreadPool {
 
     /// Create a new thread pool with custom configuration
     pub fn with_config(config: ThreadPoolConfig) -> Result<Self, BitNetCError> {
-        let (sender, receiver) = std::sync::mpsc::channel();
+        let (sender, receiver) = std::sync::mpsc::sync_channel(config.max_queue_size);
         let receiver = Arc::new(Mutex::new(receiver));
         let active_jobs = Arc::new(AtomicUsize::new(0));
 
@@ -62,7 +62,7 @@ impl ThreadPool {
             workers.push(worker);
         }
 
-        Ok(ThreadPool { workers, sender, config, active_jobs })
+        Ok(ThreadPool { sender, workers, config, active_jobs })
     }
 
     /// Execute a job on the thread pool
@@ -72,11 +72,14 @@ impl ThreadPool {
     {
         let job = Box::new(job);
 
-        self.sender.send(job).map_err(|_| {
-            BitNetCError::ThreadSafety("Failed to send job to thread pool".to_string())
-        })?;
-
         self.active_jobs.fetch_add(1, Ordering::SeqCst);
+
+        if self.sender.send(job).is_err() {
+            self.active_jobs.fetch_sub(1, Ordering::SeqCst);
+            return Err(BitNetCError::ThreadSafety(
+                "Failed to send job to thread pool".to_string(),
+            ));
+        }
         Ok(())
     }
 

@@ -5,8 +5,8 @@
 //! the existing C++ API error handling patterns.
 
 use bitnet_common::BitNetError;
+use std::cell::RefCell;
 use std::fmt;
-use std::sync::Mutex;
 
 /// C API error types
 #[derive(Debug, Clone)]
@@ -138,26 +138,28 @@ impl From<BitNetError> for BitNetCError {
     }
 }
 
-/// Thread-safe error state management
-static LAST_ERROR: Mutex<Option<BitNetCError>> = Mutex::new(None);
+// Thread-safe error state management
+thread_local! {
+    static LAST_ERROR: RefCell<Option<BitNetCError>> = const { RefCell::new(None) };
+}
 
 /// Set the last error for the current thread
 pub fn set_last_error(error: BitNetCError) {
-    if let Ok(mut last_error) = LAST_ERROR.lock() {
-        *last_error = Some(error);
-    }
+    LAST_ERROR.with(|last| {
+        *last.borrow_mut() = Some(error);
+    });
 }
 
 /// Get the last error for the current thread
 pub fn get_last_error() -> Option<BitNetCError> {
-    if let Ok(last_error) = LAST_ERROR.lock() { last_error.clone() } else { None }
+    LAST_ERROR.with(|last| last.borrow().clone())
 }
 
 /// Clear the last error for the current thread
 pub fn clear_last_error() {
-    if let Ok(mut last_error) = LAST_ERROR.lock() {
-        *last_error = None;
-    }
+    LAST_ERROR.with(|last| {
+        *last.borrow_mut() = None;
+    });
 }
 
 /// Convert a Rust Result to a C API result with error handling

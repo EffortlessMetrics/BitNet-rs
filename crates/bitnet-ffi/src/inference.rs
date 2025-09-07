@@ -90,7 +90,7 @@ impl InferenceManager {
     pub fn generate_tokens(
         &self,
         model_id: u32,
-        _input_tokens: &[u32],
+        input_tokens: &[u32],
         config: &BitNetCInferenceConfig,
     ) -> Result<Vec<u32>, BitNetCError> {
         // Validate configuration
@@ -100,21 +100,44 @@ impl InferenceManager {
         let engine = self.get_or_create_engine(model_id)?;
 
         // Convert C config to Rust config
-        let _generation_config = config.to_generation_config();
+        let generation_config = config.to_generation_config();
 
         // Perform token generation
-        let result = {
-            let _engine_guard = engine.lock().map_err(|_| {
+        let tokens = {
+            let engine_guard = engine.lock().map_err(|_| {
                 BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
             })?;
 
-            // Note: generate_tokens is now private. We need to use the public API.
-            // For now, return a placeholder until we can properly implement this
-            // using the async generate methods
-            vec![1, 2, 3] // Placeholder tokens
+            // Decode input tokens into a prompt string
+            let prompt = engine_guard
+                .tokenizer()
+                .decode(input_tokens)
+                .map_err(|e| {
+                    BitNetCError::InvalidArgument(format!(
+                        "Failed to decode input tokens: {}",
+                        e
+                    ))
+                })?;
+
+            // Generate text using the public API
+            let generated = futures::executor::block_on(
+                engine_guard.generate_with_config(&prompt, &generation_config),
+            )
+            .map_err(|e| BitNetCError::InferenceFailed(format!("Generation failed: {}", e)))?;
+
+            // Convert generated text back to tokens
+            engine_guard
+                .tokenizer()
+                .encode(&generated, true, true)
+                .map_err(|e| {
+                    BitNetCError::InferenceFailed(format!(
+                        "Failed to encode output tokens: {}",
+                        e
+                    ))
+                })?
         };
 
-        Ok(result)
+        Ok(tokens)
     }
 
     /// Start streaming generation
