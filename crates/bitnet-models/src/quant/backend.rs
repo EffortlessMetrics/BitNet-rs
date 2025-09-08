@@ -64,13 +64,6 @@ fn ffi_dequant_row(src: *const c_void, dst: *mut f32, n: usize) {
     unsafe { bitnet_ggml_ffi::dequantize_row_iq2_s(src, dst, n) }
 }
 
-#[cfg(not(feature = "iq2s-ffi"))]
-#[inline]
-#[allow(dead_code)]
-fn ffi_dequant_row(_src: *const c_void, _dst: *mut f32, _n: usize) {
-    unreachable!("built without feature `iq2s-ffi`");
-}
-
 /// Rust representation of the C `block_iq2_s` used by the GGML backend.
 ///
 /// The C struct has the following fields for `QK_IQ2_S = 256`:
