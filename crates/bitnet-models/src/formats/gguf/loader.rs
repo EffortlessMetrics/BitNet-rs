@@ -229,6 +229,9 @@ impl GgufLoader {
             let tensor_info = reader.get_tensor_info(i)?;
             let tensor_data = reader.get_tensor_data(i)?;
 
+            #[cfg(any(test, feature = "validation"))]
+            self.validate_tensor_data(&tensor_info, tensor_data)?;
+
             debug!(
                 "Loading tensor '{}' with shape {:?} and type {:?}",
                 tensor_info.name, tensor_info.shape, tensor_info.tensor_type
@@ -335,7 +338,6 @@ impl GgufLoader {
 
     /// Validate tensor data integrity
     #[cfg(any(test, feature = "validation"))]
-    #[allow(dead_code)]
     fn validate_tensor_data(
         &self,
         info: &crate::formats::gguf::TensorInfo,
