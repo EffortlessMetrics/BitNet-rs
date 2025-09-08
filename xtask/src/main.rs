@@ -2620,9 +2620,7 @@ mod tests {
     use std::thread;
 
     struct TestServer {
-        #[allow(dead_code)]
         port: u16,
-        #[allow(dead_code)]
         requests: Arc<Mutex<Vec<String>>>,
     }
 
@@ -2687,10 +2685,23 @@ mod tests {
             TestServer { port, requests }
         }
 
-        #[allow(dead_code)]
         fn url(&self, path: &str) -> String {
             format!("http://127.0.0.1:{}{}", self.port, path)
         }
+    }
+
+    #[test]
+    fn test_server_records_requests() {
+        let server = TestServer::new(|_rq| tiny_http::Response::from_string("ok"));
+
+        let url = server.url("/hello");
+        assert!(url.contains(&server.port.to_string()));
+
+        let resp = reqwest::blocking::get(&url).unwrap();
+        assert!(resp.status().is_success());
+
+        let requests = server.requests.lock().unwrap();
+        assert_eq!(requests.as_slice(), &["/hello".to_string()]);
     }
 
     #[test]
