@@ -50,14 +50,14 @@ use indicatif::{ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
 use std::{
     io::{self, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Arc,
     time::{Duration, Instant},
 };
-use tokio::{fs, time::timeout};
+use tokio::fs;
 use tracing::{debug, error, info, warn};
 
-use bitnet_inference::{InferenceConfig, InferenceEngine, SamplingConfig};
+use bitnet_inference::{InferenceEngine, SamplingConfig};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use candle_core::Device;
@@ -313,7 +313,10 @@ impl PrefillEngine for InferenceEngine {
             logits_topk: 10,
             logits_cb: None,
         };
-        Box::pin(async move { self.generate_tokens(tokens, &engine_config).await })
+        Box::pin(async move { 
+            // Use explicit InferenceEngine method to avoid recursion
+            InferenceEngine::generate_tokens(self, tokens, &engine_config).await
+        })
     }
 }
 
@@ -591,6 +594,24 @@ impl InferenceCommand {
         Ok(())
     }
 
+    /// Convert CLI GenerationConfig to engine GenerationConfig
+    fn to_engine_config(&self, config: &GenerationConfig) -> bitnet_inference::GenerationConfig {
+        bitnet_inference::GenerationConfig {
+            max_new_tokens: config.max_new_tokens as u32,
+            temperature: config.sampling.temperature,
+            top_k: config.sampling.top_k,
+            top_p: config.sampling.top_p,
+            repetition_penalty: config.sampling.repetition_penalty,
+            stop_sequences: config.stop_sequences.clone(),
+            seed: config.sampling.seed,
+            skip_special_tokens: true,
+            eos_token_id: None,
+            logits_tap_steps: 0,
+            logits_topk: self.logits_topk,
+            logits_cb: None,
+        }
+    }
+
     /// Run streaming inference
     async fn run_streaming_inference(
         &self,
@@ -598,7 +619,8 @@ impl InferenceCommand {
         prompt: &str,
         config: &GenerationConfig,
     ) -> Result<()> {
-        let mut stream = engine.generate_stream_with_config(prompt, config)?;
+        let engine_config = self.to_engine_config(config);
+        let mut stream = engine.generate_stream_with_config(prompt, &engine_config)?;
 
         print!("{}", style("Generated: ").bold());
         io::stdout().flush()?;
@@ -742,23 +764,8 @@ impl InferenceCommand {
             // The cache is now populated from prefill, making this phase pure generation
             let t2 = Instant::now();
 
-            // Map CLI generation config to engine config
-            let engine_config = bitnet_inference::GenerationConfig {
-                max_new_tokens: config.max_new_tokens as u32,
-                temperature: config.sampling.temperature,
-                top_k: config.sampling.top_k,
-                top_p: config.sampling.top_p,
-                repetition_penalty: config.sampling.repetition_penalty,
-                stop_sequences: config.stop_sequences.clone(),
-                seed: config.sampling.seed,
-                skip_special_tokens: true,
-                eos_token_id: None,
-                logits_tap_steps: 0,
-                logits_topk: self.logits_topk,
-                logits_cb: None,
-            };
-
-            let generated_ids = engine.generate_tokens(&prompt_ids, &engine_config).await?;
+            // Generate with the engine using the trait method
+            let generated_ids = engine.generate_tokens(&prompt_ids, config).await?;
             let t_decode_ms = t2.elapsed().as_secs_f64() * 1e3;
 
             // 4. Decode to text
