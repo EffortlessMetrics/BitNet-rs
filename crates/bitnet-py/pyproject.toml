@@ -7,7 +7,7 @@ name = "bitnet-py"
 version = "0.1.0"
 description = "High-performance 1-bit LLM inference library - Python bindings"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 license = { text = "MIT OR Apache-2.0" }
 keywords = ["machine-learning", "llm", "inference", "quantization", "bitnet"]
 classifiers = [
@@ -17,10 +17,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -52,10 +48,10 @@ module-name = "bitnet_py.bitnet_py"
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py312']
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

@@ -22,10 +22,15 @@ pip install bitnet-py
 
 ### From Source
 
+**Requirements**: Python 3.12+ (required for PyO3 ABI3-py312 compatibility)
+
 ```bash
 # Clone the repository
 git clone https://github.com/microsoft/BitNet.git
 cd BitNet/crates/bitnet-py
+
+# Verify Python version
+python --version  # Should show 3.12+
 
 # Install maturin for building
 pip install maturin
@@ -382,19 +387,23 @@ See the `examples/` directory for comprehensive examples:
 ### Building from Source
 
 ```bash
-# Install development dependencies
+# Verify Python 3.12+ is active
+python --version  # Should show 3.12+
+
+# Install development dependencies  
 pip install maturin pytest pytest-asyncio black mypy
 
-# Build in development mode
+# Build in development mode with PyO3 ABI3-py312 support
 maturin develop
 
-# Run tests
+# Run tests including integration tests
 pytest tests/
+pytest tests/integration/ -v --requires-integration  # Feature-gated integration tests
 
 # Format code
 black python/ examples/
 
-# Type checking
+# Type checking with Python 3.12 settings
 mypy python/bitnet_py/
 ```
 
@@ -409,8 +418,16 @@ pytest tests/test_model.py -v
 pytest tests/test_inference.py -v
 pytest tests/test_compatibility.py -v
 
+# Run integration tests (feature-gated)
+pytest tests/integration/ -v --requires-integration
+
 # Run with coverage
 pytest tests/ --cov=bitnet_py --cov-report=html
+
+# Test structure improvements in PR #175:
+# - Integration tests now properly gated with required-features
+# - Enhanced streaming comprehensive test organization
+# - Improved test helper implementations
 ```
 
 ## Troubleshooting

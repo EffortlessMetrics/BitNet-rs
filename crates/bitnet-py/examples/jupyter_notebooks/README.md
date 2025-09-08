@@ -50,22 +50,29 @@ This directory contains comprehensive Jupyter notebook examples for migrating fr
 
 ## Quick Start
 
-1. **Install bitnet_py:**
+**Requirements**: Python 3.12+ (required for PyO3 ABI3-py312 compatibility)
+
+1. **Verify Python version:**
+   ```bash
+   python --version  # Should show 3.12+
+   ```
+
+2. **Install bitnet_py:**
    ```bash
    pip install bitnet-py
    ```
 
-2. **Install Jupyter:**
+3. **Install Jupyter:**
    ```bash
    pip install jupyter notebook
    ```
 
-3. **Start Jupyter:**
+4. **Start Jupyter:**
    ```bash
    jupyter notebook
    ```
 
-4. **Open the notebooks in order:**
+5. **Open the notebooks in order:**
    - Start with `01_basic_migration.ipynb`
    - Progress to `02_advanced_features.ipynb`
    - Finish with `03_production_deployment.ipynb`

@@ -113,7 +113,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 #### Compatibility Layer
 - **`bitnet-compat`**: GGUF compatibility fixes and diagnostics
 - **`bitnet-ffi`**: C API for llama.cpp drop-in replacement
-- **`bitnet-py`**: Python bindings compatible with llama-cpp-python
+- **`bitnet-py`**: Python 3.12+ bindings compatible with llama-cpp-python (PyO3 ABI3-py312)
 
 #### Cross-Validation
 - **`crossval`**: Framework for testing against C++ implementation
