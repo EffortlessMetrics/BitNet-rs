@@ -287,7 +287,7 @@ impl InferenceCommand {
         self.setup_environment()?;
 
         // Setup logging and progress reporting
-        let _guard = self.setup_logging(config)?;
+        self.setup_logging(config)?;
 
         // Validate arguments
         self.validate_args()?;
@@ -402,11 +402,10 @@ impl InferenceCommand {
         }
 
         // Validate top_p
-        if let Some(top_p) = self.top_p {
-            if !(0.0..=1.0).contains(&top_p) {
+        if let Some(top_p) = self.top_p
+            && !(0.0..=1.0).contains(&top_p) {
                 anyhow::bail!("Top-p must be between 0.0 and 1.0");
             }
-        }
 
         // Validate repetition penalty
         if self.repetition_penalty <= 0.0 {
@@ -459,7 +458,7 @@ impl InferenceCommand {
 
         // Create inference engine
         let model_arc: Arc<dyn bitnet_models::Model> = model.into();
-        let tokenizer_arc: Arc<dyn Tokenizer> = tokenizer.clone().into();
+        let tokenizer_arc: Arc<dyn Tokenizer> = tokenizer.clone();
         let bn_device = bitnet_common::Device::from(&device);
         let engine = InferenceEngine::new(model_arc, tokenizer_arc, bn_device)
             .context("Failed to create inference engine")?;
@@ -489,7 +488,7 @@ impl InferenceCommand {
     /// Load tokenizer
     async fn load_tokenizer(
         &self,
-        model_path: &PathBuf,
+        model_path: &Path,
     ) -> Result<Arc<dyn bitnet_tokenizers::Tokenizer>> {
         // If explicit tokenizer path provided, use it
         if let Some(tokenizer_path) = &self.tokenizer {
@@ -1025,9 +1024,9 @@ impl InferenceCommand {
         // Determine source from tokenizer type or path
         let source = if self.tokenizer.is_some() {
             let path = self.tokenizer.as_ref().unwrap();
-            if path.extension().map_or(false, |e| e == "json") {
+            if path.extension().is_some_and(|e| e == "json") {
                 "hf_json".to_string()
-            } else if path.extension().map_or(false, |e| e == "model") {
+            } else if path.extension().is_some_and(|e| e == "model") {
                 "spm".to_string()
             } else {
                 "unknown".to_string()

@@ -338,9 +338,10 @@ async fn test_sampling_edge_cases() {
 #[tokio::test]
 async fn test_error_handling() {
     // Test config validation errors
-    let mut config = InferenceConfig::default();
-
-    config.max_context_length = 0;
+    let mut config = InferenceConfig {
+        max_context_length: 0,
+        ..Default::default()
+    };
     let error = config.validate().unwrap_err();
     assert!(error.contains("max_context_length"));
 

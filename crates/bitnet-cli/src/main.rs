@@ -253,7 +253,7 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Run inference on a model
     #[command(alias = "infer")]
-    Inference(InferenceCommand),
+    Inference(Box<InferenceCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Convert between model formats
@@ -405,7 +405,7 @@ async fn main() -> Result<()> {
             .await
         }
         #[cfg(feature = "full-cli")]
-        Some(Commands::Inference(cmd)) => cmd.execute(&config).await,
+        Some(Commands::Inference(cmd)) => (*cmd).execute(&config).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "cli-bench")]
