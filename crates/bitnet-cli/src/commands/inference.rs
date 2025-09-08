@@ -230,12 +230,12 @@ pub struct ModelInfo {
     pub hidden_size: Option<usize>,
 }
 
-/// Engine abstraction to allow mocking in tests
+/// Engine abstraction to allow mocking in tests with async prefill support
 pub trait PrefillEngine {
     /// Access the tokenizer
     fn tokenizer(&self) -> Arc<dyn bitnet_tokenizers::Tokenizer>;
-    /// Run the engine prefill phase
-    fn prefill(&mut self, tokens: &[u32]) -> Result<()>;
+    /// Run the engine prefill phase (async to match InferenceEngine API)
+    fn prefill<'a>(&'a mut self, tokens: &'a [u32]) -> BoxFuture<'a, Result<()>>;
     /// Generate tokens from the engine
     fn generate_tokens<'a>(
         &'a mut self,
@@ -249,16 +249,8 @@ impl PrefillEngine for InferenceEngine {
         self.tokenizer()
     }
 
-    fn prefill(&mut self, tokens: &[u32]) -> Result<()> {
-        #[allow(unused)]
-        {
-            // If the engine exposes prefill, call it; otherwise, no-op
-            #[cfg(feature = "has_prefill")]
-            {
-                self.prefill(tokens)?;
-            }
-        }
-        Ok(())
+    fn prefill<'a>(&'a mut self, tokens: &'a [u32]) -> BoxFuture<'a, Result<()>> {
+        Box::pin(async move { self.prefill(tokens).await })
     }
 
     fn generate_tokens<'a>(
@@ -266,7 +258,22 @@ impl PrefillEngine for InferenceEngine {
         tokens: &'a [u32],
         config: &'a GenerationConfig,
     ) -> BoxFuture<'a, Result<Vec<u32>>> {
-        Box::pin(async move { self.generate_tokens(tokens, config).await })
+        // Map CLI GenerationConfig to engine GenerationConfig
+        let engine_config = bitnet_inference::GenerationConfig {
+            max_new_tokens: config.max_new_tokens as u32,
+            temperature: config.sampling.temperature,
+            top_k: config.sampling.top_k,
+            top_p: config.sampling.top_p,
+            repetition_penalty: config.sampling.repetition_penalty,
+            stop_sequences: config.stop_sequences.clone(),
+            seed: config.sampling.seed,
+            skip_special_tokens: true,
+            eos_token_id: None,
+            logits_tap_steps: 0,
+            logits_topk: 10,
+            logits_cb: None,
+        };
+        Box::pin(async move { self.generate_tokens(tokens, &engine_config).await })
     }
 }
 
@@ -316,32 +323,37 @@ impl InferenceCommand {
 
         // Set thread count if specified
         if let Some(threads) = self.threads {
-            env::set_var("RAYON_NUM_THREADS", threads.to_string());
-            env::set_var("OMP_NUM_THREADS", threads.to_string());
-            env::set_var("MKL_NUM_THREADS", threads.to_string());
-            env::set_var("BLAS_NUM_THREADS", threads.to_string());
+            unsafe {
+                env::set_var("RAYON_NUM_THREADS", threads.to_string());
+                env::set_var("OMP_NUM_THREADS", threads.to_string());
+                env::set_var("MKL_NUM_THREADS", threads.to_string());
+                env::set_var("BLAS_NUM_THREADS", threads.to_string());
+            }
             debug!("Set thread count to {}", threads);
         }
 
         // Enable deterministic mode if requested
         if self.deterministic {
-            env::set_var("BITNET_DETERMINISTIC", "1");
-            env::set_var("CANDLE_DETERMINISTIC", "1");
+            unsafe {
+                env::set_var("BITNET_DETERMINISTIC", "1");
+                env::set_var("CANDLE_DETERMINISTIC", "1");
 
-            // Force single-threaded execution for full determinism
-            if self.threads.is_none() {
-                env::set_var("RAYON_NUM_THREADS", "1");
-                env::set_var("OMP_NUM_THREADS", "1");
-                env::set_var("MKL_NUM_THREADS", "1");
-                env::set_var("BLAS_NUM_THREADS", "1");
+                // Force single-threaded execution for full determinism
+                if self.threads.is_none() {
+                    env::set_var("RAYON_NUM_THREADS", "1");
+                    env::set_var("OMP_NUM_THREADS", "1");
+                    env::set_var("MKL_NUM_THREADS", "1");
+                    env::set_var("BLAS_NUM_THREADS", "1");
+                }
             }
-
             debug!("Enabled deterministic mode");
         }
 
         // Set seed in environment if provided
         if let Some(seed) = self.seed {
-            env::set_var("BITNET_SEED", seed.to_string());
+            unsafe {
+                env::set_var("BITNET_SEED", seed.to_string());
+            }
             debug!("Set seed to {}", seed);
         }
 
@@ -660,7 +672,7 @@ impl InferenceCommand {
 
             // 2. Prefill (measure)
             let t1 = Instant::now();
-            engine.prefill(&prompt_ids)?;
+            engine.prefill(&prompt_ids).await?;
             let t_prefill_ms = t1.elapsed().as_secs_f64() * 1e3;
 
             // 3. Decode loop (measure)
@@ -1090,9 +1102,9 @@ mod tests {
             self.tokenizer.clone()
         }
 
-        fn prefill(&mut self, _tokens: &[u32]) -> Result<()> {
+        fn prefill<'a>(&'a mut self, _tokens: &'a [u32]) -> BoxFuture<'a, Result<()>> {
             self.called.store(true, Ordering::SeqCst);
-            Ok(())
+            Box::pin(async move { Ok(()) })
         }
 
         fn generate_tokens<'a>(
