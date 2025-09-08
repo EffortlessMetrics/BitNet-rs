@@ -313,7 +313,7 @@ impl PrefillEngine for InferenceEngine {
             logits_topk: 10,
             logits_cb: None,
         };
-        Box::pin(async move { 
+        Box::pin(async move {
             // Use explicit InferenceEngine method to avoid recursion
             InferenceEngine::generate_tokens(self, tokens, &engine_config).await
         })
