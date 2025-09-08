@@ -97,7 +97,86 @@ pip install bitnet-py --no-binary bitnet-py
 
 ### Model Loading Issues
 
-#### 1. Model File Not Found
+#### 1. GGUF Tensor Alignment Errors (Enhanced in PR #210)
+
+**Problem:** Model loading fails due to tensor alignment validation errors
+
+**Symptoms:**
+```
+Error: tensor 'tok_embeddings.weight' offset 12345 not aligned to 32
+Error: tensor 'lm_head.weight' dims mismatch
+Error: data section not aligned to 32  
+Error: Model error: Tensor alignment validation failed
+```
+
+**Root Causes:**
+- **Corrupted GGUF file**: File corruption during download or storage
+- **Non-standard alignment**: Model created with non-standard alignment values
+- **Metadata inconsistency**: n_dims field doesn't match actual dimensions array
+- **Invalid tensor offsets**: Tensor data offsets not properly aligned to boundaries
+
+**Solutions:**
+
+**Validate and Diagnose Model:**
+```bash
+# Check model compatibility and alignment
+cargo run -p bitnet-cli -- compat-check model.gguf --verbose
+
+# Detailed GGUF metadata inspection
+cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- model.gguf
+
+# JSON output for programmatic analysis
+cargo run -p bitnet-cli -- compat-check model.gguf --json > model_validation.json
+```
+
+**Automatic Model Recovery:**
+```bash
+# Export corrected GGUF file with proper alignment
+cargo run -p bitnet-cli -- compat-fix model.gguf fixed_model.gguf
+
+# Verify the fix worked
+cargo run -p bitnet-cli -- compat-check fixed_model.gguf
+
+# Check the compatibility audit stamp
+cat fixed_model.gguf.compat.json
+```
+
+**Manual Validation Testing:**
+```bash
+# Test tensor alignment validation specifically
+cargo test -p bitnet-models -- gguf_min::tests::loads_two_tensors
+
+# Run comprehensive GGUF parsing tests
+cargo test -p bitnet-models -- gguf_min
+```
+
+**Advanced Diagnostics:**
+```bash
+# Enable debug logging for detailed alignment checking
+RUST_LOG=debug cargo run -p bitnet-cli -- compat-check model.gguf 2>&1 | grep -i align
+
+# Inspect raw GGUF structure (requires hex viewer)
+hexdump -C model.gguf | head -100
+
+# Check file integrity
+sha256sum model.gguf
+stat model.gguf  # Check file size and permissions
+```
+
+**What BitNet.rs Validates (Enhanced in PR #210):**
+- **Tensor Offset Alignment**: All tensor offsets must align to `general.alignment` (typically 32 bytes)
+- **Data Section Alignment**: The tensor data section must be properly aligned
+- **Metadata Consistency**: The n_dims field must match the actual dimensions array length  
+- **Memory Bounds**: Prevents out-of-bounds access with detailed tensor information
+- **Robust Error Messages**: Clear error messages with tensor names and offset values
+
+**Prevention:**
+- Always verify model integrity after download: `cargo run -p bitnet-cli -- compat-check model.gguf`
+- Use the official model repositories and validated downloads
+- Avoid manual editing of GGUF files without proper tools
+- Store models on reliable storage with error-correcting filesystems
+
+#### 2. Model File Not Found
 
 **Problem:** Model fails to load
 

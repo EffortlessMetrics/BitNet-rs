@@ -119,13 +119,14 @@ The FFI bridge ensures that:
 
 ### GGUF Format Support
 
-- **GGUF v2 and v3 headers**: BitNet.rs accepts both versions with defensive parsing
-  - **v2**: Full support with 32-byte default alignment
-  - **v3 Standard**: Full support with alignment and data_offset fields
+- **GGUF v2 and v3 headers**: BitNet.rs accepts both versions with enhanced validation and defensive parsing
+  - **v2**: Full support with 32-byte default alignment and comprehensive tensor alignment validation
+  - **v3 Standard**: Full support with alignment and data_offset fields plus enhanced metadata consistency checks
   - **v3 Early Variant**: ✅ **NEW** - Handles files missing alignment/data_offset fields (e.g., Microsoft BitNet models)
   - For v3, invalid `alignment` values (0 or non-power-of-two) are clamped to 32
   - For v3, invalid `data_offset` values (past EOF, misaligned, or backwards) fall back to `align_up(kv_end, alignment)`
   - Automatically detects format variant using header-only heuristics (bounded ASCII check with OOB guard, no tensor mmap needed)
+  - **Enhanced Tensor Validation**: All tensor offsets validated against alignment, data section boundary checks, n_dims consistency verification
   - **Superior GGUF v3 early variant handling**: Loads models with this specific format variant that crash the C++ implementation (proven with 1.2GB Microsoft BitNet model)
 
 ## 🧪 Test Coverage Requirements

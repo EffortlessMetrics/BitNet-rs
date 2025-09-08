@@ -24,10 +24,14 @@ cargo test --workspace --no-default-features --features cpu
 # Run GPU tests with device-aware quantization (requires CUDA)
 cargo test --workspace --no-default-features --features gpu
 
-# Run GGUF validation tests
+# Run GGUF validation tests (includes tensor alignment validation)
 cargo test -p bitnet-inference --test gguf_header
 cargo test -p bitnet-inference --test gguf_fuzz
 cargo test -p bitnet-inference --test engine_inspect
+
+# Test enhanced GGUF tensor alignment validation
+cargo test -p bitnet-models --test gguf_min -- test_tensor_alignment
+cargo test -p bitnet-models -- gguf_min::tests::loads_two_tensors
 
 # Run verification script
 ./scripts/verify-tests.sh
@@ -265,10 +269,12 @@ The universal tokenizer automatically parses GGUF metadata:
 - Score arrays for token prioritization
 
 ### Compatibility Guarantees
-We maintain strict compatibility with llama.cpp:
+We maintain strict compatibility with llama.cpp while providing enhanced validation:
 - C API functions have exact signature matches
 - Python API is drop-in compatible
 - We handle models that llama.cpp fails on (e.g., GPT-2 without pre-tokenizer)
+- Enhanced GGUF parsing with tensor alignment validation for better error detection
+- Robust handling of malformed GGUF files with detailed error messages
 - See COMPATIBILITY.md for detailed guarantees
 
 ## Troubleshooting
@@ -295,6 +301,13 @@ We maintain strict compatibility with llama.cpp:
    - Test FFI availability: `cargo test -p bitnet-kernels --features ffi test_ffi_kernel_creation`
    - Compare FFI vs Rust: `cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust`
    - Check C++ errors: Look for detailed error messages from `get_last_error()` bridge
+
+8. **GGUF Tensor Alignment Errors**: Enhanced validation detects misaligned tensors and metadata inconsistencies:
+   - **Tensor offset not aligned**: Indicates corrupted GGUF file or non-standard alignment. Error format: `tensor 'name' offset X not aligned to Y`
+   - **Data section not aligned**: GGUF data section must be aligned to `general.alignment` value (typically 32 bytes)
+   - **Tensor dims mismatch**: n_dims field doesn't match actual dimensions array length, indicates parsing corruption
+   - **Debugging**: Use `cargo run -p bitnet-cli -- compat-check model.gguf --json` for detailed validation report
+   - **Recovery**: Try exporting fixed GGUF with `cargo run -p bitnet-cli -- compat-fix model.gguf fixed.gguf`
 
 ## Development Workflow
 

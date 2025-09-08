@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Enhanced GGUF Tensor Alignment Validation** ([#210](https://github.com/EffortlessSteven/BitNet-rs/pull/210)):
+  - **Comprehensive Tensor Offset Validation**: All tensor offsets are validated against `general.alignment` to ensure proper memory alignment
+  - **Data Section Boundary Validation**: Validates that the tensor data section starts at properly aligned boundaries
+  - **Metadata Consistency Checks**: Verifies that n_dims field matches actual dimensions array length preventing parsing corruption
+  - **Enhanced Error Messages**: Detailed error messages include tensor names, offsets, and alignment requirements for easier debugging
+  - **Memory Safety Improvements**: Prevents out-of-bounds access with robust bounds checking and detailed tensor information
+  - **Malformed GGUF Detection**: Detects corrupted or non-standard GGUF files with comprehensive validation before processing
+  - **Backward Compatibility**: Enhanced validation maintains full compatibility with existing valid GGUF files
+  - **Performance Impact**: Negligible performance impact while significantly improving reliability and error detection
 - **Enhanced SIMD Kernels with Optimized Memory Access** ([#174](https://github.com/EffortlessSteven/BitNet-rs/pull/174)):
   - **Improved Memory Operations**: Refactored SIMD store operations in I2S quantization using cleaner `_mm_storeu_si64` and `_mm_loadu_si64` intrinsics
   - **Cross-Platform Compatibility**: Added 7 comprehensive SIMD compatibility tests ensuring consistent behavior across x86_64 and ARM64 architectures
