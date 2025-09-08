@@ -47,14 +47,11 @@ pub enum EvictionPolicy {
 
 /// Key-Value cache entry
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 struct CacheEntry {
     /// Key tensor data
     key: Vec<f32>,
     /// Value tensor data
     value: Vec<f32>,
-    /// Sequence position
-    position: usize,
     /// Last access timestamp
     last_accessed: std::time::Instant,
     /// Access count for LFU
@@ -64,11 +61,10 @@ struct CacheEntry {
 }
 
 impl CacheEntry {
-    fn new(key: Vec<f32>, value: Vec<f32>, position: usize) -> Self {
+    fn new(key: Vec<f32>, value: Vec<f32>) -> Self {
         Self {
             key,
             value,
-            position,
             last_accessed: std::time::Instant::now(),
             access_count: 1,
             compressed: false,
@@ -128,12 +124,30 @@ impl KVCache {
             self.evict_entry()?;
         }
 
+        // Allocate memory from pool and copy data
+        let mut key_storage = self.memory_pool.allocate();
+        if key.len() > key_storage.len() {
+            key_storage.resize(key.len(), 0.0);
+        }
+        key_storage[..key.len()].copy_from_slice(&key);
+        key_storage.truncate(key.len());
+
+        let mut value_storage = self.memory_pool.allocate();
+        if value.len() > value_storage.len() {
+            value_storage.resize(value.len(), 0.0);
+        }
+        value_storage[..value.len()].copy_from_slice(&value);
+        value_storage.truncate(value.len());
+
         // Create new entry
-        let entry = CacheEntry::new(key, value, position);
+        let entry = CacheEntry::new(key_storage, value_storage);
 
         // Remove old entry if it exists
         if let Some(old_entry) = self.cache.remove(&entry_key) {
-            self.current_size -= old_entry.size_bytes();
+            let old_size = old_entry.size_bytes();
+            self.memory_pool.deallocate(old_entry.key);
+            self.memory_pool.deallocate(old_entry.value);
+            self.current_size -= old_size;
             self.access_order.retain(|&x| x != entry_key);
         }
 
@@ -174,7 +188,10 @@ impl KVCache {
 
     /// Clear all cache entries
     pub fn clear(&mut self) {
-        self.cache.clear();
+        for (_, entry) in self.cache.drain() {
+            self.memory_pool.deallocate(entry.key);
+            self.memory_pool.deallocate(entry.value);
+        }
         self.access_order.clear();
         self.current_size = 0;
         self.memory_pool.reset();
@@ -188,7 +205,10 @@ impl KVCache {
 
         for key in keys_to_remove {
             if let Some(entry) = self.cache.remove(&key) {
-                self.current_size -= entry.size_bytes();
+                let entry_size = entry.size_bytes();
+                self.memory_pool.deallocate(entry.key);
+                self.memory_pool.deallocate(entry.value);
+                self.current_size -= entry_size;
                 self.access_order.retain(|&x| x != key);
             }
         }
@@ -233,7 +253,10 @@ impl KVCache {
 
         if let Some(key) = entry_to_evict {
             if let Some(entry) = self.cache.remove(&key) {
-                self.current_size -= entry.size_bytes();
+                let entry_size = entry.size_bytes();
+                self.memory_pool.deallocate(entry.key);
+                self.memory_pool.deallocate(entry.value);
+                self.current_size -= entry_size;
                 self.access_order.retain(|&x| x != key);
                 debug!("Evicted cache entry {:?}", key);
             }
@@ -282,35 +305,40 @@ pub struct CacheStats {
 }
 
 /// Memory pool for efficient allocation
-#[allow(dead_code)]
 struct MemoryPool {
     block_size: usize,
     blocks: Vec<Vec<f32>>,
-    free_blocks: Vec<usize>,
+    capacity: usize,
 }
 
-#[allow(dead_code)]
 impl MemoryPool {
     fn new(block_size: usize, max_size: usize) -> Result<Self> {
-        let num_blocks = max_size / (block_size * std::mem::size_of::<f32>());
-        let blocks = Vec::with_capacity(num_blocks);
-        let free_blocks = (0..num_blocks).collect();
+        let capacity = max_size / (block_size * std::mem::size_of::<f32>());
+        let mut blocks = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            blocks.push(vec![0.0; block_size]);
+        }
 
-        Ok(Self { block_size, blocks, free_blocks })
+        Ok(Self { block_size, blocks, capacity })
     }
 
-    fn allocate(&mut self) -> Option<usize> {
-        self.free_blocks.pop()
+    fn allocate(&mut self) -> Vec<f32> {
+        self.blocks.pop().unwrap_or_else(|| vec![0.0; self.block_size])
     }
 
-    fn deallocate(&mut self, block_id: usize) {
-        if block_id < self.blocks.len() {
-            self.free_blocks.push(block_id);
+    fn deallocate(&mut self, mut block: Vec<f32>) {
+        if self.blocks.len() < self.capacity {
+            block.clear();
+            block.resize(self.block_size, 0.0);
+            self.blocks.push(block);
         }
     }
 
     fn reset(&mut self) {
-        self.free_blocks = (0..self.blocks.capacity()).collect();
+        self.blocks.clear();
+        for _ in 0..self.capacity {
+            self.blocks.push(vec![0.0; self.block_size]);
+        }
     }
 }
 

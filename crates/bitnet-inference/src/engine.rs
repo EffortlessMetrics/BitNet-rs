@@ -40,6 +40,8 @@
 //! use bitnet_common::Device;
 //!
 //! # async fn example() -> anyhow::Result<()> {
+//! # let model = todo!();
+//! # let tokenizer = todo!();
 //! let engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
 //!
 //! // Generate with performance tracking
