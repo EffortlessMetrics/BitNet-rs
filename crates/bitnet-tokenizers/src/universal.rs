@@ -2,7 +2,7 @@ use bitnet_common::Result;
 use std::path::Path;
 use tracing::{debug, warn};
 
-use crate::{Tokenizer, TokenizerConfig, MockTokenizer};
+use crate::{MockTokenizer, Tokenizer, TokenizerConfig};
 
 /// Universal tokenizer that auto-detects and handles all formats
 pub struct UniversalTokenizer {
