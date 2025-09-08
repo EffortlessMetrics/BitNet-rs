@@ -33,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Mock Testing Infrastructure**: Comprehensive mock model and tokenizer with realistic timing for accurate performance validation
   - **Documentation Enhancement**: Detailed inline documentation with usage examples, performance benefits, and troubleshooting guides
   - **Backward Compatibility**: Zero breaking changes to existing API while adding enhanced functionality
+- **PrefillEngine Trait Abstraction** ([#139](https://github.com/EffortlessSteven/BitNet-rs/pull/139)):
+  - **Clean Dependency Injection**: Added PrefillEngine trait to enable proper mocking in CLI inference tests
+  - **Async Support**: Trait methods support async/await pattern matching InferenceEngine API
+  - **Test Infrastructure**: MockEngine implementation for isolated unit testing of inference pipelines
+  - **Backward Compatible**: InferenceEngine implements PrefillEngine with existing functionality preserved
+  - **Enhanced Testability**: Enables comprehensive unit testing of CLI batch inference without external dependencies
 - **Production-Ready Streaming Inference** ([#182](https://github.com/EffortlessSteven/BitNet-rs/pull/182)):
   - Real async streaming implementation using `GenerationStream` with futures and `StreamExt::next()`
   - Enhanced NaN-safe sampling operations with hardened floating-point comparisons in `top_k_filter` and `top_p_filter`

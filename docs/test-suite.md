@@ -30,8 +30,8 @@ cargo test -p bitnet-inference --no-default-features --features rt-tokio --test 
 ./scripts/verify-tests.sh
 
 # Test enhanced prefill functionality and batch inference
-cargo test -p bitnet-cli --test inference_commands
-cargo test -p bitnet-inference test_prefill_timing
+cargo test -p bitnet-cli --test cli_smoke
+cargo test -p bitnet-inference --test batch_prefill
 
 # Test mock infrastructure and tokenizer architecture  
 cargo test -p bitnet-inference --test mock_infrastructure
@@ -161,8 +161,8 @@ BitNet.rs includes comprehensive mock infrastructure for robust testing without 
 
 ```bash
 # Test mock model implementation with prefill functionality
-cargo test -p bitnet-inference test_mock_model_prefill
-cargo test -p bitnet-inference test_mock_model_embed_and_logits
+cargo test -p bitnet-inference --test batch_prefill
+cargo test -p bitnet-inference --no-default-features --features cpu
 
 # Test tokenizer builder pattern and Arc<dyn Tokenizer> architecture
 cargo test -p bitnet-tokenizers test_tokenizer_builder_from_file

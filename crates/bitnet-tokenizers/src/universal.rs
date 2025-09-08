@@ -81,7 +81,7 @@ impl UniversalTokenizer {
                 debug!("Creating mock tokenizer for {}", config.model_type);
                 Ok(TokenizerBackend::Mock(MockTokenizer::new()))
             }
-            #[cfg(feature = "smp")]
+            #[cfg(feature = "spm")]
             "smp" | "sentencepiece" => {
                 debug!("SentencePiece tokenizer requires file path, using mock fallback");
                 Ok(TokenizerBackend::Mock(MockTokenizer::new()))

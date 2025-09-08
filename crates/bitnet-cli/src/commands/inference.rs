@@ -270,13 +270,56 @@ pub struct ModelInfo {
     pub hidden_size: Option<usize>,
 }
 
-/// Engine abstraction to allow mocking in tests with async prefill support
+/// Engine abstraction for dependency injection in CLI inference operations.
+///
+/// This trait enables proper mocking and testing of the inference pipeline by abstracting
+/// the core engine functionality. Implemented by `InferenceEngine` for production use and
+/// by `MockEngine` for testing scenarios.
+///
+/// # Purpose
+/// - **Clean Dependency Injection**: Allows CLI commands to work with any engine implementation
+/// - **Enhanced Testability**: Enables comprehensive unit testing without external model dependencies
+/// - **Async Support**: All methods support async/await patterns for non-blocking operations
+///
+/// # Usage
+/// ```rust
+/// async fn run_inference<T: PrefillEngine>(engine: &mut T, tokens: &[u32]) -> Result<Vec<u32>> {
+///     engine.prefill(tokens).await?;
+///     engine.generate_tokens(tokens, &config).await
+/// }
+/// ```
 pub trait PrefillEngine {
-    /// Access the tokenizer
+    /// Access the underlying tokenizer for encoding/decoding operations.
+    ///
+    /// Returns an Arc-wrapped tokenizer that can be shared across operations.
     fn tokenizer(&self) -> Arc<dyn bitnet_tokenizers::Tokenizer>;
-    /// Run the engine prefill phase (async to match InferenceEngine API)
+
+    /// Execute the prefill phase to warm the KV cache with input tokens.
+    ///
+    /// This method processes the input tokens to populate the key-value cache
+    /// before generation begins, enabling accurate performance measurement of
+    /// the prefill vs. decode phases.
+    ///
+    /// # Arguments
+    /// * `tokens` - Input token IDs to prefill into the cache
+    ///
+    /// # Returns
+    /// * `Ok(())` on successful prefill
+    /// * `Err(...)` if prefill fails due to context length or model errors
     fn prefill<'a>(&'a mut self, tokens: &'a [u32]) -> BoxFuture<'a, Result<()>>;
-    /// Generate tokens from the engine
+
+    /// Generate new tokens from the engine using the specified configuration.
+    ///
+    /// This method performs the actual token generation, typically called after
+    /// prefill has warmed the cache with the input prompt.
+    ///
+    /// # Arguments
+    /// * `tokens` - Input context tokens (typically same as prefill tokens)
+    /// * `config` - Generation parameters (temperature, top_k, etc.)
+    ///
+    /// # Returns
+    /// * `Ok(generated_tokens)` with the newly generated token IDs
+    /// * `Err(...)` if generation fails
     fn generate_tokens<'a>(
         &'a mut self,
         tokens: &'a [u32],
