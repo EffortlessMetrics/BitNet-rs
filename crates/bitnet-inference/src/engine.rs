@@ -662,11 +662,66 @@ impl InferenceEngine {
     /// internal state required for subsequent token generation. The logits
     /// from this pass are discarded since prefill is only used for warming
     /// the model and measuring latency.
+    ///
+    /// # Arguments
+    /// * `tokens` - The prompt tokens to prefill with. Can be empty.
+    ///
+    /// # Errors
+    /// Returns an error if:
+    /// - Token sequence is too long for the model's context
+    /// - Forward pass fails due to model or backend issues
+    /// - Cache operations fail
     pub async fn prefill(&mut self, tokens: &[u32]) -> Result<()> {
+        debug!("Starting prefill with {} tokens", tokens.len());
+
+        // Handle empty token sequence gracefully
+        if tokens.is_empty() {
+            debug!("Prefill with empty tokens - skipping forward pass");
+            return Ok(());
+        }
+
+        // Check if sequence length exceeds model limits
+        if tokens.len() > self.config.max_context_length {
+            return Err(anyhow::anyhow!(
+                "Token sequence length {} exceeds maximum context length {}",
+                tokens.len(),
+                self.config.max_context_length
+            ));
+        }
+
+        // Validate tokens are within vocabulary range
+        let vocab_size = self.tokenizer.vocab_size() as u32;
+        for (i, &token) in tokens.iter().enumerate() {
+            if token >= vocab_size {
+                return Err(anyhow::anyhow!(
+                    "Invalid token {} at position {}: exceeds vocabulary size {}",
+                    token,
+                    i,
+                    vocab_size
+                ));
+            }
+        }
+
         // Perform a forward pass to populate the cache. Ignore the returned
         // logits since we're only interested in the side effects and timing.
-        let _ = self.forward_pass(tokens).await?;
-        Ok(())
+        let start_time = std::time::Instant::now();
+        let result = self.forward_pass(tokens).await;
+        let prefill_time = start_time.elapsed();
+
+        match result {
+            Ok(_) => {
+                debug!(
+                    "Prefill completed successfully in {:?} ({:.2} tokens/sec)",
+                    prefill_time,
+                    tokens.len() as f64 / prefill_time.as_secs_f64()
+                );
+                Ok(())
+            }
+            Err(e) => {
+                warn!("Prefill failed after {:?}: {}", prefill_time, e);
+                Err(e.context("Prefill forward pass failed"))
+            }
+        }
     }
 
     /// Generate tokens using the configured backend
@@ -1133,6 +1188,144 @@ mod tests {
 
         let engine = InferenceEngine::new(model, tokenizer, device);
         assert!(engine.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_prefill_functionality() {
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer);
+        let device = Device::Cpu;
+
+        let mut engine = InferenceEngine::new(model, tokenizer, device).unwrap();
+        let tokens = vec![1, 2, 3, 4, 5];
+
+        // Test that prefill executes without error
+        let result = engine.prefill(&tokens).await;
+        assert!(result.is_ok(), "Prefill should execute successfully");
+    }
+
+    #[tokio::test]
+    async fn test_prefill_with_empty_tokens() {
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer);
+        let device = Device::Cpu;
+
+        let mut engine = InferenceEngine::new(model, tokenizer, device).unwrap();
+        let empty_tokens = vec![];
+
+        // Test that prefill handles empty input gracefully
+        let result = engine.prefill(&empty_tokens).await;
+        assert!(result.is_ok(), "Prefill should handle empty input gracefully");
+    }
+
+    #[tokio::test]
+    async fn test_prefill_with_large_sequence() {
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer);
+        let device = Device::Cpu;
+
+        let mut engine = InferenceEngine::new(model, tokenizer, device).unwrap();
+        let large_tokens: Vec<u32> = (0..1000).collect();
+
+        // Test that prefill handles large sequences
+        let result = engine.prefill(&large_tokens).await;
+        assert!(result.is_ok(), "Prefill should handle large sequences");
+    }
+
+    #[tokio::test]
+    async fn test_prefill_multiple_calls() {
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer);
+        let device = Device::Cpu;
+
+        let mut engine = InferenceEngine::new(model, tokenizer, device).unwrap();
+        let tokens1 = vec![1, 2, 3];
+        let tokens2 = vec![4, 5, 6];
+
+        // Test multiple prefill calls
+        let result1 = engine.prefill(&tokens1).await;
+        let result2 = engine.prefill(&tokens2).await;
+
+        assert!(result1.is_ok(), "First prefill should succeed");
+        assert!(result2.is_ok(), "Second prefill should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_prefill_timing_measurable() {
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer);
+        let device = Device::Cpu;
+
+        let mut engine = InferenceEngine::new(model, tokenizer, device).unwrap();
+        let tokens = vec![1, 2, 3, 4, 5];
+
+        // Measure prefill timing
+        let start = std::time::Instant::now();
+        let result = engine.prefill(&tokens).await;
+        let elapsed = start.elapsed();
+
+        assert!(result.is_ok(), "Prefill should succeed");
+        // Since MockModel doesn't have timing delay, we just ensure it's measurable
+        assert!(elapsed.as_nanos() > 0, "Prefill should have measurable timing");
+    }
+
+    #[tokio::test]
+    async fn test_prefill_invalid_tokens() {
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer);
+        let device = Device::Cpu;
+
+        let vocab_size = tokenizer.vocab_size() as u32;
+        let mut engine = InferenceEngine::new(model, tokenizer, device).unwrap();
+        let invalid_tokens = vec![1, 2, vocab_size + 10]; // Include token beyond vocab
+
+        // Should fail with invalid token error
+        let result = engine.prefill(&invalid_tokens).await;
+        assert!(result.is_err(), "Prefill should fail with invalid tokens");
+
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("Invalid token"), "Error should mention invalid token");
+        assert!(
+            error_msg.contains("exceeds vocabulary size"),
+            "Error should mention vocabulary limit"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_prefill_context_length_exceeded() {
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer);
+        let device = Device::Cpu;
+
+        let mut engine = InferenceEngine::new(model, tokenizer, device).unwrap();
+
+        // Create tokens that exceed the default context length
+        let context_limit = engine.config.max_context_length;
+        let too_many_tokens: Vec<u32> = (0..context_limit + 100).map(|i| i as u32 % 1000).collect();
+
+        // Should fail with context length error
+        let result = engine.prefill(&too_many_tokens).await;
+        assert!(result.is_err(), "Prefill should fail when context length exceeded");
+
+        let error_msg = result.unwrap_err().to_string();
+        assert!(
+            error_msg.contains("exceeds maximum context length"),
+            "Error should mention context length limit"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_prefill_edge_case_single_token() {
+        let model = Arc::new(MockModel::new());
+        let tokenizer = Arc::new(MockTokenizer);
+        let device = Device::Cpu;
+
+        let mut engine = InferenceEngine::new(model, tokenizer, device).unwrap();
+        let single_token = vec![1];
+
+        // Should handle single token gracefully
+        let result = engine.prefill(&single_token).await;
+        assert!(result.is_ok(), "Prefill should handle single token");
     }
 
     // Test requires full engine implementation

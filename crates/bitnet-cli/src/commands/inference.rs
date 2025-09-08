@@ -1,4 +1,44 @@
-//! Inference command implementation
+//! Inference command implementation with enhanced prefill functionality.
+//!
+//! This module provides the inference command for BitNet-rs with comprehensive
+//! batch processing and explicit prefill integration. The implementation follows
+//! a multi-phase approach for optimal performance measurement and debugging.
+//!
+//! # Prefill Integration (PR #187)
+//!
+//! The inference pipeline now includes an explicit prefill phase:
+//!
+//! ```text
+//! Input Text → Tokenize → Prefill → Generate → Detokenize → Output
+//!      ↓           ↓         ↓         ↓          ↓
+//!   Timing     Timing   Timing   Timing    Final Result
+//! ```
+//!
+//! ## Key Benefits
+//! - **Separate Timing**: Prefill and generation latencies are measured independently
+//! - **Cache Warming**: KV cache is explicitly populated before generation starts
+//! - **Better Metrics**: Accurate throughput calculation for both prefill and decode phases
+//! - **Performance Analysis**: Clear visibility into each inference phase
+//! - **Batch Consistency**: Each prompt in a batch follows the same pipeline
+//!
+//! ## Performance Metrics
+//! The enhanced implementation provides detailed performance metrics:
+//! - `prefill_tps`: Prompt processing throughput (tokens/second)
+//! - `decode_tps`: New token generation throughput (tokens/second)  
+//! - `e2e_tps`: End-to-end throughput including all phases
+//! - Timing breakdown for tokenization, prefill, decode, and total
+//!
+//! ## Usage Examples
+//! ```bash
+//! # Single inference with metrics
+//! bitnet-cli run --model model.gguf --prompt "Hello" --metrics
+//!
+//! # Batch inference with prefill timing
+//! bitnet-cli run --input-file prompts.txt --batch-size 4 --metrics --format json
+//!
+//! # Performance analysis with detailed breakdown
+//! bitnet-cli run --prompt "Test" --metrics --format json > performance.json
+//! ```
 
 use anyhow::{Context, Result};
 use clap::Args;
@@ -601,7 +641,30 @@ impl InferenceCommand {
         Ok(results)
     }
 
-    /// Process batch sequentially with proper timing
+    /// Process batch sequentially with comprehensive prefill integration and timing.
+    ///
+    /// This method implements the enhanced batch inference pipeline with explicit prefill:
+    /// 1. **Tokenization**: Convert text to token IDs with timing measurement
+    /// 2. **Prefill**: Warm the model's cache with prompt tokens (NEW: explicit prefill step)
+    /// 3. **Generation**: Generate new tokens with the pre-warmed cache
+    /// 4. **Detokenization**: Convert generated tokens back to text
+    /// 5. **Metrics**: Calculate comprehensive performance metrics including prefill timing
+    ///
+    /// # Prefill Integration Benefits
+    /// - **Accurate Timing**: Separate prefill timing from generation for better metrics
+    /// - **Cache Warming**: Ensures KV cache is properly populated before generation
+    /// - **Performance Measurement**: Enables precise prefill throughput calculation
+    /// - **Debugging Support**: Clear separation of inference phases for profiling
+    ///
+    /// # Performance Metrics
+    /// The returned `InferenceResult` includes detailed timing breakdown:
+    /// - `timing_ms.prefill`: Time spent in prefill phase (warming cache)
+    /// - `timing_ms.decode`: Time spent generating new tokens
+    /// - `timing_ms.tokenize`: Time spent in tokenization
+    /// - `timing_ms.total`: End-to-end inference time
+    /// - `throughput_tps.prefill`: Prompt processing speed (tokens/second)
+    /// - `throughput_tps.decode`: Generation speed (tokens/second)
+    /// - `throughput_tps.e2e`: Overall throughput (tokens/second)
     async fn process_batch_sequential(
         &self,
         engine: &mut InferenceEngine,
@@ -612,17 +675,24 @@ impl InferenceCommand {
         let tokenizer = engine.tokenizer();
 
         for prompt in batch {
-            // 1. Tokenize (measure)
+            // 1. Tokenization Phase: Convert text to token IDs
+            // This measures pure tokenization overhead separate from model operations
             let t0 = Instant::now();
             let prompt_ids = tokenizer.encode(prompt, !self.no_bos, false)?;
             let t_tok_ms = t0.elapsed().as_secs_f64() * 1e3;
 
-            // 2. Prefill (measure)
+            // 2. Prefill Phase: Warm model cache with prompt tokens
+            // CRITICAL: This is the new explicit prefill step that:
+            // - Runs a forward pass through the entire prompt sequence
+            // - Populates the KV cache for subsequent generation
+            // - Measures prefill latency separately from generation latency
+            // - Enables accurate prefill throughput calculation
             let t1 = Instant::now();
             engine.prefill(&prompt_ids).await?;
             let t_prefill_ms = t1.elapsed().as_secs_f64() * 1e3;
 
-            // 3. Decode loop (measure)
+            // 3. Generation Phase: Generate new tokens using pre-warmed cache
+            // The cache is now populated from prefill, making this phase pure generation
             let t2 = Instant::now();
 
             // Map CLI generation config to engine config
