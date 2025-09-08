@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Enhanced SIMD Kernels with Optimized Memory Access** ([#174](https://github.com/EffortlessSteven/BitNet-rs/pull/174)):
+  - **Improved Memory Operations**: Refactored SIMD store operations in I2S quantization using cleaner `_mm_storeu_si64` and `_mm_loadu_si64` intrinsics
+  - **Cross-Platform Compatibility**: Added 7 comprehensive SIMD compatibility tests ensuring consistent behavior across x86_64 and ARM64 architectures
+  - **Performance Validation**: Implemented SIMD/scalar parity validation for all quantization types with comprehensive accuracy testing
+  - **Architecture-Specific Testing**: Enhanced data alignment scenario testing for robust SIMD operations across different memory layouts
+  - **Benchmark Infrastructure**: Added 9 specialized benchmark suites for performance comparison between SIMD implementations
+  - **Microbenchmark Framework**: Comprehensive performance baseline validation with automated SIMD optimization verification
+  - **Enhanced Error Handling**: Improved cross-architecture support with proper CPU feature detection and graceful scalar fallback
 - **Comprehensive NaN-Safe Sampling Pipeline** ([#184](https://github.com/EffortlessSteven/BitNet-rs/pull/184)):
   - **Automatic NaN Sanitization**: Converts NaN logits to negative infinity for predictable behavior
   - **Enhanced Top-K Filtering**: Pre-filters NaN values and uses safe partial_cmp() with fallback to Ordering::Equal

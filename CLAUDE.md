@@ -39,11 +39,20 @@ cargo test -p bitnet-inference test_prefill_timing
 # Run benchmarks
 cargo bench --workspace --no-default-features --features cpu
 
+# SIMD optimization benchmarks
+cargo bench -p bitnet-quantization --bench simd_comparison --no-default-features --features cpu
+cargo bench -p bitnet-quantization simd_vs_scalar --no-default-features --features cpu
+
 # Cross-validation testing (requires C++ dependencies)
 cargo test --workspace --features "cpu,ffi,crossval"
 
 # FFI quantization bridge tests (compares FFI vs Rust implementations)
 cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
+
+# SIMD kernel compatibility and performance tests  
+cargo test -p bitnet-quantization --test simd_compatibility
+cargo test -p bitnet-quantization test_i2s_simd_scalar_parity
+cargo test -p bitnet-quantization test_simd_performance_baseline
 ```
 
 ### Code Quality Commands
@@ -436,6 +445,10 @@ cargo test -p bitnet-kernels --features ffi test_ffi_kernel_creation
 
 # FFI performance comparison (if C++ library available)
 cargo test -p bitnet-kernels --features ffi --release test_performance_comparison_structure
+
+# SIMD kernel validation and performance testing
+cargo test -p bitnet-quantization --test simd_compatibility --no-default-features --features cpu
+cargo bench -p bitnet-quantization --bench simd_comparison --no-default-features --features cpu
 
 # Full cross-validation (deterministic)
 export BITNET_GGUF="$PWD/models/bitnet/ggml-model-i2_s.gguf"

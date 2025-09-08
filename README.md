@@ -683,7 +683,9 @@ match robust_quantization(&input, &mut output, &mut scales) {
 
 - **Device-Aware Architecture**: Intelligent device selection with automatic GPU detection
 - **Transparent Fallback**: Seamless fallback to optimized CPU kernels when GPU operations fail
-- **Multi-Algorithm Support**: GPU acceleration for I2S, TL1, and TL2 quantization algorithms
+- **Multi-Algorithm Support**: GPU acceleration for I2S, TL1, and TL2 quantization algorithms with enhanced SIMD kernels
+- **Optimized SIMD Operations**: Enhanced memory access patterns using `_mm_storeu_si64` and `_mm_loadu_si64` for improved performance
+- **Cross-Platform SIMD Compatibility**: Comprehensive testing ensures consistent behavior across x86_64 (AVX2/AVX-512) and ARM64 (NEON) architectures
 - **CUDA Kernel Integration**: Optimized CUDA kernels with bit-packing and atomic operations
 - **Memory Safety**: Comprehensive error handling with automatic GPU memory cleanup
 - **Concurrent Operations**: Thread-safe GPU operations with proper synchronization
@@ -705,6 +707,10 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cp
 
 # Test automatic fallback mechanism
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
+
+# Test SIMD kernel compatibility and performance
+cargo test -p bitnet-quantization --test simd_compatibility --no-default-features --features cpu
+cargo bench -p bitnet-quantization --bench simd_comparison --no-default-features --features cpu
 ```
 ## GGUF Validation & Model Compatibility
 
