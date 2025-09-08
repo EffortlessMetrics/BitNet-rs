@@ -269,23 +269,16 @@ impl ModelManager {
         // Try to load using the actual model loader
         match format {
             ModelFormat::Gguf => {
-                // Use the gguf_min loader for now
                 use bitnet_models::gguf_min::load_two;
-                match load_two(path) {
-                    Ok(tensors) => {
-                        // Create a simple model wrapper around the loaded tensors
-                        Ok(Arc::new(SimpleGgufModel::new(config.clone(), tensors)))
-                    }
-                    Err(_) => {
-                        // Fall back to mock model if real loading fails
-                        Ok(Arc::new(MockModel::new(config.clone())))
-                    }
-                }
+                let tensors = load_two(path).map_err(|e| {
+                    BitNetCError::ModelLoadFailed(format!("Failed to load GGUF model: {}", e))
+                })?;
+                Ok(Arc::new(SimpleGgufModel::new(config.clone(), tensors)))
             }
-            _ => {
-                // For other formats, use mock for now
-                Ok(Arc::new(MockModel::new(config.clone())))
+            ModelFormat::SafeTensors => {
+                Err(BitNetCError::ModelLoadFailed("SafeTensors format not supported".to_string()))
             }
+            _ => Err(BitNetCError::ModelLoadFailed("Unsupported model format".to_string())),
         }
     }
 
@@ -341,17 +334,6 @@ impl ModelManager {
     }
 }
 
-/// Mock model implementation for testing
-struct MockModel {
-    config: BitNetConfig,
-}
-
-impl MockModel {
-    fn new(config: BitNetConfig) -> Self {
-        Self { config }
-    }
-}
-
 /// Simple GGUF model wrapper for real loaded tensors
 struct SimpleGgufModel {
     config: BitNetConfig,
@@ -370,71 +352,6 @@ impl SimpleGgufModel {
             vocab_size: tensors.vocab,
             hidden_size: tensors.dim,
         }
-    }
-}
-
-impl Model for MockModel {
-    // No associated type anymore
-
-    fn config(&self) -> &BitNetConfig {
-        &self.config
-    }
-
-    fn embed(&self, tokens: &[u32]) -> bitnet_common::Result<ConcreteTensor> {
-        // Create a simple embedding tensor with correct shape
-        let vocab_size = self.config.model.vocab_size;
-        let hidden_size = self.config.model.hidden_size;
-        let batch_size = tokens.len();
-
-        // Create embeddings tensor [batch_size, hidden_size]
-        let mut data = vec![0.0f32; batch_size * hidden_size];
-
-        // Simple embedding: use token id modulo to create variations
-        for (i, &token) in tokens.iter().enumerate() {
-            let offset = i * hidden_size;
-            for j in 0..hidden_size {
-                data[offset + j] = ((token as usize % vocab_size) as f32) / (vocab_size as f32);
-            }
-        }
-
-        // Create a Candle tensor and wrap it in ConcreteTensor
-        let tensor = CandleTensor::from_vec(data, &[batch_size, hidden_size], &CDevice::Cpu)
-            .map_err(bitnet_common::BitNetError::Candle)?;
-
-        Ok(ConcreteTensor::bitnet(tensor))
-    }
-
-    fn logits(&self, x: &ConcreteTensor) -> bitnet_common::Result<ConcreteTensor> {
-        // Simple logits: project to vocab size
-        let vocab_size = self.config.model.vocab_size;
-        let batch_size = x.shape()[0];
-
-        // Create logits tensor [batch_size, vocab_size]
-        let data = vec![0.0f32; batch_size * vocab_size];
-
-        // Create a Candle tensor and wrap it in ConcreteTensor
-        let tensor = CandleTensor::from_vec(data, &[batch_size, vocab_size], &CDevice::Cpu)
-            .map_err(bitnet_common::BitNetError::Candle)?;
-
-        Ok(ConcreteTensor::bitnet(tensor))
-    }
-
-    fn forward(
-        &self,
-        x: &ConcreteTensor,
-        _state: &mut dyn std::any::Any,
-    ) -> bitnet_common::Result<ConcreteTensor> {
-        // Simple forward: return tensor with same batch size but hidden_size dimensions
-        let batch_size = x.shape()[0];
-        let hidden_size = self.config.model.hidden_size;
-
-        let data = vec![0.1f32; batch_size * hidden_size];
-
-        // Create a Candle tensor and wrap it in ConcreteTensor
-        let tensor = CandleTensor::from_vec(data, &[batch_size, hidden_size], &CDevice::Cpu)
-            .map_err(bitnet_common::BitNetError::Candle)?;
-
-        Ok(ConcreteTensor::bitnet(tensor))
     }
 }
 

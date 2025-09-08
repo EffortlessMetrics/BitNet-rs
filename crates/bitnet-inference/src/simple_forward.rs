@@ -19,7 +19,7 @@ pub struct Weights<'a> {
 /// Compute logits for a single token using minimal forward pass
 ///
 /// This performs:
-/// 1. Token embedding lookup: e = tok_embeddings[token_id]
+/// 1. Token embedding lookup: e = tok_embeddings\[token_id\]
 /// 2. Matrix multiplication: logits = e @ lm_head
 ///
 /// # Arguments

@@ -32,6 +32,7 @@ bitnet-kernels/src/cpu/
 ├── x86.rs              # x86_64 SIMD implementations (AVX2/AVX-512)
 ├── arm.rs              # ARM64 NEON implementation
 ├── fallback.rs         # Universal scalar fallback
+├── convolution.rs      # 2D convolution operations with quantization support
 └── selection.rs        # Runtime kernel selection logic
 ```
 
@@ -322,6 +323,87 @@ mod tests {
 3. **Loop Unrolling**: Balance between performance and code size
 4. **Branch Prediction**: Minimize conditional branches in hot paths
 5. **Register Pressure**: Manage register allocation in hand-optimized code
+
+## Convolution Operations
+
+### 2D Convolution Implementation
+
+BitNet.rs includes comprehensive 2D convolution support integrated with the CPU kernel architecture. The convolution implementation supports both full-precision and quantized operations with configurable stride, padding, and dilation parameters.
+
+#### Core Features
+
+```rust
+// Full-precision convolution
+pub fn conv2d(
+    input: &[f32],           // NCHW format input
+    weight: &[f32],          // OIHW format weights  
+    bias: Option<&[f32]>,    // Optional bias per output channel
+    output: &mut [f32],      // Output buffer
+    params: Conv2DParams,    // Stride, padding, dilation
+    input_dims: (usize, usize, usize, usize),   // (N, C, H, W)
+    weight_dims: (usize, usize, usize, usize),  // (O, I, H, W)
+) -> Result<()>
+
+// Quantized convolution with on-the-fly dequantization
+pub fn conv2d_quantized(
+    input: &[f32],
+    weight_quantized: &[u8],     // Packed quantized weights
+    weight_scales: &[f32],       // Per-channel scale factors
+    bias: Option<&[f32]>,
+    output: &mut [f32],
+    params: Conv2DParams,
+    input_dims: (usize, usize, usize, usize),
+    weight_dims: (usize, usize, usize, usize),
+    qtype: QuantizationType,     // I2S, TL1, or TL2
+) -> Result<()>
+```
+
+#### Quantization Support
+
+The convolution implementation supports BitNet.rs quantization schemes:
+
+- **I2S Quantization**: 2-bit signed quantization with values [-2, -1, 1, 2], packed 4 values per byte
+- **TL1 Quantization**: Table lookup with linear mapping from [0, 255] to [-1, 1]  
+- **TL2 Quantization**: Advanced table lookup with non-linear mapping for enhanced precision
+
+#### Memory Layout and Optimization
+
+1. **NCHW Input Format**: Optimized for sequential memory access patterns
+2. **OIHW Weight Format**: Channel-first weight layout for efficient kernel iteration
+3. **Cache-Friendly Access**: Inner loops organized to maximize spatial locality
+4. **Bounds Checking**: Comprehensive validation with detailed error messages
+
+#### Performance Characteristics
+
+- **Naive Implementation**: Focus on correctness and compatibility over raw performance
+- **Memory Efficient**: Minimal temporary allocations during computation
+- **Validation Heavy**: Extensive input validation prevents undefined behavior
+- **PyTorch Compatible**: Reference testing ensures numerical correctness
+
+#### Integration with Kernel Architecture
+
+The convolution operations integrate seamlessly with the existing kernel selection system:
+
+```rust
+// Convolution operations use the same error handling patterns
+impl KernelProvider for ConvolutionKernel {
+    fn conv2d_operation(&self, ...) -> Result<()> {
+        // Validation and computation logic
+        validate_dimensions(...)?;
+        perform_convolution(...)?;
+        Ok(())
+    }
+}
+```
+
+#### Testing and Validation
+
+Convolution operations include comprehensive testing:
+
+1. **Unit Tests**: Basic functionality, edge cases, error conditions
+2. **PyTorch Reference Tests**: Comparison against PyTorch `F.conv2d` implementation
+3. **Quantization Tests**: Verification of dequantization accuracy
+4. **Parameter Validation**: Comprehensive bounds and dimension checking
 
 ### Future Enhancements
 

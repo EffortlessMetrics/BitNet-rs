@@ -1,46 +1,26 @@
 {
-  "status": "INTEGRATION_COMPLETE",
-  "integration_commit": "398926c",
-  "timestamp": "2025-09-04T16:50:00Z",
-  "final_validation": {
-    "compilation_check": "PASSED",
-    "code_format": "PASSED", 
-    "clippy_warnings": "PASSED",
-    "feature_flags": "VALIDATED",
-    "documentation": "SYNCHRONIZED",
-    "repository_state": "CLEAN"
-  },
-  "integration_summary": {
-    "total_commits": 6,
-    "cleanup_commits": 3,
-    "documentation_commits": 2,
-    "feature_commits": 1,
-    "files_modified": 15,
-    "lines_changed": "~500"
-  },
-  "workflow_completion": {
-    "pr_analysis": "COMPLETED",
-    "code_review": "COMPLETED",
-    "testing": "COMPLETED", 
-    "cleanup": "COMPLETED",
-    "documentation": "COMPLETED",
-    "integration": "COMPLETED"
-  },
-  "issues_resolved": [
-    "Manual range contains warnings",
-    "Boolean comparison warnings", 
-    "Field reassignment warnings",
-    "StreamResponse API usage",
-    "Missing Clone derives",
-    "Documentation synchronization",
-    "FFI quantization bridge documentation"
-  ],
-  "quality_gates_passed": [
-    "Compilation with CPU features",
-    "Clippy warnings (zero tolerance)",
-    "Code formatting",
-    "Feature flag consistency", 
-    "Documentation completeness",
-    "Repository cleanliness"
-  ]
+  "pr_number": 187,
+  "title": "Call engine prefill during batch inference",
+  "author": "EffortlessSteven",
+  "head_ref": "codex/implement-prefill-in-run_batch",
+  "base_ref": "main",
+  "status": "VALIDATION_COMPLETE",
+  "mergeable": true,
+  "merge_strategy": "squash",
+  "validation_date": "2025-09-07",
+  "commits": 6,
+  "additions": 627,
+  "deletions": 123,
+  "changed_files": 18,
+  "breaking_changes": false,
+  "tests_passed": true,
+  "security_audit_passed": true,
+  "formatting_applied": true,
+  "ready_for_merge": true,
+  "next_agent": "pr-doc-finalizer",
+  "artifacts": {
+    "validation_report": ".claude/finalization-report.md",
+    "test_results": ".claude/artifacts/pr-187/nextest-results.txt",
+    "worktree_location": "/tmp/bitnet-validate-mucy"
+  }
 }

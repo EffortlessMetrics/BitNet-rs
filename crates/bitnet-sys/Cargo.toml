@@ -20,7 +20,7 @@ ffi = ["dep:bindgen", "dep:cc"]  # Enable native/C++ build only when requested
 crossval = ["ffi"]  # Keep backward compatibility
 
 [dependencies]
-# Only include FFI dependencies when crossval feature is enabled
+# Only include FFI dependencies when the ffi feature is enabled
 bindgen = { version = "0.69", optional = true }
 cc = { version = "1.0", optional = true }
 thiserror = "1.0"
@@ -31,7 +31,7 @@ bindgen = { version = "0.69", optional = true }
 cc = { version = "1.0", optional = true }
 
 [package.metadata.docs.rs]
-features = ["crossval"]
+features = ["ffi"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [lib]

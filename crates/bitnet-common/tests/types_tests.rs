@@ -43,37 +43,6 @@ fn test_quantization_type_serialization() {
 }
 
 #[test]
-fn test_device_type_variants() {
-    let cpu = DeviceType::Cpu;
-    let cuda0 = DeviceType::Cuda(0);
-    let cuda1 = DeviceType::Cuda(1);
-    let metal = DeviceType::Metal;
-
-    assert_ne!(cpu, cuda0);
-    assert_ne!(cuda0, cuda1);
-    assert_ne!(cpu, metal);
-    assert_eq!(cuda0, DeviceType::Cuda(0));
-}
-
-#[test]
-fn test_device_type_default() {
-    assert_eq!(DeviceType::default(), DeviceType::Cpu);
-}
-
-#[test]
-fn test_device_type_serialization() {
-    let cpu = DeviceType::Cpu;
-    let json = serde_json::to_string(&cpu).unwrap();
-    let deserialized: DeviceType = serde_json::from_str(&json).unwrap();
-    assert_eq!(cpu, deserialized);
-
-    let cuda = DeviceType::Cuda(2);
-    let json = serde_json::to_string(&cuda).unwrap();
-    let deserialized: DeviceType = serde_json::from_str(&json).unwrap();
-    assert_eq!(cuda, deserialized);
-}
-
-#[test]
 fn test_device_variants() {
     let cpu = Device::Cpu;
     let cuda0 = Device::Cuda(0);
@@ -379,7 +348,6 @@ fn test_send_sync_traits() {
     fn assert_send_sync<T: Send + Sync>() {}
 
     assert_send_sync::<QuantizationType>();
-    assert_send_sync::<DeviceType>();
     assert_send_sync::<Device>();
     assert_send_sync::<GenerationConfig>();
     assert_send_sync::<ModelMetadata>();

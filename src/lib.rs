@@ -149,7 +149,10 @@ mod tests {
 
     #[test]
     fn test_version() {
-        assert!(!VERSION.is_empty());
+        #[allow(clippy::const_is_empty)]
+        {
+            assert!(!VERSION.is_empty());
+        }
         assert_eq!(VERSION, "0.1.0");
     }
 

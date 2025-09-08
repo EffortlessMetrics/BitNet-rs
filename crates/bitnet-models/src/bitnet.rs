@@ -5,7 +5,6 @@ use bitnet_common::{
     BitNetConfig, BitNetError, BitNetTensor, ConcreteTensor, Device, Result, Tensor,
 };
 use candle_core::{DType, Tensor as CandleTensor};
-use candle_nn::VarBuilder;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -64,16 +63,10 @@ impl BitNetModel {
             ));
         }
 
-        // Try to build transformer model if we have weights
-        let transformer = match Self::build_transformer(&config, &tensors, &device) {
-            Ok(t) => Some(t),
-            Err(e) => {
-                tracing::warn!("Failed to build transformer model: {}", e);
-                None
-            }
-        };
+        // Try to build transformer model; propagate errors so missing weights fail fast
+        let transformer = Self::build_transformer(&config, &tensors, &device)?;
 
-        Ok(Self { config, device, tensors, transformer })
+        Ok(Self { config, device, tensors, transformer: Some(transformer) })
     }
 
     /// Build transformer model from loaded tensors
@@ -95,43 +88,38 @@ impl BitNetModel {
             }
         };
 
-        // If we have tensors, try to use them
-        let vb = if !tensors.is_empty() {
-            // Remap tensor names to match our transformer module structure
-            let mut mapped = remap_gguf_weights(tensors)?;
+        if tensors.is_empty() {
+            return Err(BitNetError::Validation("No model tensors provided".to_string()));
+        }
 
-            // Normalize embeddings and lm_head tensors, detect vocab size and hidden size
-            let (detected_vocab, detected_hidden) =
-                normalize_model_tensors(&mut mapped, config.model.hidden_size)?;
+        // Remap tensor names to match our transformer module structure
+        let mut mapped = remap_gguf_weights(tensors)?;
 
-            // Update config with detected values
-            let mut updated_config = config.clone();
-            if updated_config.model.vocab_size != detected_vocab {
-                tracing::info!(
-                    "Updating vocab_size from {} to {} based on tensor shapes",
-                    updated_config.model.vocab_size,
-                    detected_vocab
-                );
-                updated_config.model.vocab_size = detected_vocab;
-            }
-            if updated_config.model.hidden_size != detected_hidden {
-                tracing::info!(
-                    "Updating hidden_size from {} to {} based on tensor shapes",
-                    updated_config.model.hidden_size,
-                    detected_hidden
-                );
-                updated_config.model.hidden_size = detected_hidden;
-            }
+        // Normalize embeddings and lm_head tensors, detect vocab size and hidden size
+        let (detected_vocab, detected_hidden) =
+            normalize_model_tensors(&mut mapped, config.model.hidden_size)?;
 
-            let vb = create_var_builder(mapped, DType::F32, &device)?;
-            let model = TransformerModel::new(updated_config, vb)?;
-            return Ok(Arc::new(model));
-        } else {
-            // Fallback to zeros for testing
-            VarBuilder::zeros(DType::F32, &device)
-        };
+        // Update config with detected values
+        let mut updated_config = config.clone();
+        if updated_config.model.vocab_size != detected_vocab {
+            tracing::info!(
+                "Updating vocab_size from {} to {} based on tensor shapes",
+                updated_config.model.vocab_size,
+                detected_vocab
+            );
+            updated_config.model.vocab_size = detected_vocab;
+        }
+        if updated_config.model.hidden_size != detected_hidden {
+            tracing::info!(
+                "Updating hidden_size from {} to {} based on tensor shapes",
+                updated_config.model.hidden_size,
+                detected_hidden
+            );
+            updated_config.model.hidden_size = detected_hidden;
+        }
 
-        let model = TransformerModel::new(config.clone(), vb)?;
+        let vb = create_var_builder(mapped, DType::F32, &device)?;
+        let model = TransformerModel::new(updated_config, vb)?;
         Ok(Arc::new(model))
     }
 

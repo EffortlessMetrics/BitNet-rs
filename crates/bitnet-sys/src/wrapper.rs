@@ -291,13 +291,22 @@ impl Context {
 
     /// Sample a token from logits using greedy sampling
     pub fn sample_greedy(&self, logits: &[f32]) -> i32 {
-        // Simple argmax
-        logits
-            .iter()
-            .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .map(|(idx, _)| idx as i32)
-            .unwrap_or(0)
+        // Manual argmax that gracefully handles NaN values instead of
+        // relying on `partial_cmp` which would panic on NaN.
+        let mut max_i = 0;
+        let mut max_val = f32::NEG_INFINITY;
+
+        for (i, &val) in logits.iter().enumerate() {
+            if val.is_nan() {
+                continue;
+            }
+            if val > max_val {
+                max_val = val;
+                max_i = i;
+            }
+        }
+
+        max_i as i32
     }
 }
 
@@ -350,12 +359,12 @@ impl Session {
 
     /// Generate tokens greedily
     pub fn generate_greedy(&mut self, prompt: &str, max_tokens: usize) -> Result<Vec<i32>> {
-        // Tokenize prompt
-        let mut tokens = self.tokenize(prompt)?;
-        let prompt_len = tokens.len();
+        // Tokenize and evaluate the prompt
+        let prompt_tokens = self.tokenize(prompt)?;
+        let prompt_len = prompt_tokens.len();
+        self.context.eval(&prompt_tokens, 0)?;
 
-        // Evaluate prompt
-        self.context.eval(&tokens, 0)?;
+        let mut generated = Vec::new();
 
         // Generate new tokens
         for i in 0..max_tokens {
@@ -368,12 +377,12 @@ impl Session {
                 break;
             }
 
-            tokens.push(next_token);
+            generated.push(next_token);
 
             // Evaluate the new token
             self.context.eval(&[next_token], (prompt_len + i) as i32)?;
         }
 
-        Ok(tokens)
+        Ok(generated)
     }
 }

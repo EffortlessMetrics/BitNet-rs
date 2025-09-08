@@ -369,10 +369,11 @@ mod streaming_tests {
         let device = Device::Cpu;
 
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
-        let mut stream = engine.generate_stream("Test prompt");
+        let mut stream = engine.generate_stream("Test prompt").unwrap();
 
         // Take only first few tokens then drop stream
-        let first_result = timeout(Duration::from_secs(2), stream.next()).await;
+        let first_result =
+            timeout(Duration::from_secs(2), stream.expect("Stream creation failed").next()).await;
         assert!(first_result.is_ok());
 
         // Drop the stream (simulating client disconnect)
@@ -383,7 +384,13 @@ mod streaming_tests {
 
     #[tokio::test]
     async fn test_streaming_config_validation() {
-        let config = StreamingConfig { buffer_size: 5, flush_interval_ms: 100 };
+        let config = StreamingConfig {
+            buffer_size: 5,
+            flush_interval_ms: 100,
+            cancellable: true,
+            max_retries: 3,
+            token_timeout_ms: 1000,
+        };
 
         assert_eq!(config.buffer_size, 5);
         assert_eq!(config.flush_interval_ms, 100);

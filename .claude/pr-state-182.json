@@ -1,0 +1,34 @@
+{
+  "pr_number": 182,
+  "title": "Implement streaming inference using futures",
+  "status": "merged",
+  "merge_commit": "3dbb967",
+  "merge_strategy": "squash",
+  "merged_at": "2025-09-06T22:11:43Z",
+  "merged_by": "EffortlessSteven",
+  "branch": "codex/analyze-bitnet-cli-crate-for-issues",
+  "author": "Steven Zimmerman",
+  "files_changed": [
+    "crates/bitnet-cli/Cargo.toml",
+    "crates/bitnet-cli/src/commands/inference.rs", 
+    "crates/bitnet-cli/src/sampling.rs",
+    "crates/bitnet-cli/tests/cli_smoke.rs"
+  ],
+  "validation_status": "passed",
+  "validation_date": "2025-09-06T22:11:00Z",
+  "quality_gates": {
+    "format_check": "passed",
+    "clippy": "passed", 
+    "tests": "passed",
+    "build": "passed"
+  },
+  "test_results": {
+    "bitnet_cli_tests": "11/11 passed"
+  },
+  "technical_changes": {
+    "streaming_inference": "Implemented real GenerationStream using futures",
+    "nan_handling": "Hardened sorting operations in sampling logic",
+    "integration_tests": "Enabled by default (removed feature gate)",
+    "performance": "Real prefill execution for accurate metrics"
+  }
+}

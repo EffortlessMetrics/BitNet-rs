@@ -23,20 +23,6 @@ impl std::fmt::Display for QuantizationType {
     }
 }
 
-/// Device types for computation
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum DeviceType {
-    Cpu,
-    Cuda(usize),
-    Metal,
-}
-
-impl Default for DeviceType {
-    fn default() -> Self {
-        Self::Cpu
-    }
-}
-
 /// Device abstraction for computation
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Device {

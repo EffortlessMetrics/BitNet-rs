@@ -1,8 +1,8 @@
 //! Low-level FFI bindings to BitNet C++ implementation
 //!
 //! This crate provides unsafe FFI bindings to the BitNet C++ implementation
-//! for cross-validation purposes. It is only available when the `crossval`
-//! feature is enabled.
+//! for cross-validation purposes. It is only available when the `ffi`
+//! feature is enabled (`crossval` is a deprecated alias).
 //!
 //! # Safety
 //!
@@ -11,7 +11,8 @@
 //!
 //! # Features
 //!
-//! - `crossval`: Enables FFI bindings (requires C++ dependencies)
+//! - `ffi`: Enables FFI bindings (requires C++ dependencies)
+//! - `crossval`: Backwards compatibility alias for `ffi`
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
@@ -33,12 +34,7 @@ pub mod bindings {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
-#[cfg(all(feature = "ffi", not(bitnet_cpp_unavailable)))]
-#[cfg_attr(docsrs, doc(cfg(feature = "ffi")))]
-pub mod wrapper;
-
-#[cfg(all(feature = "ffi", bitnet_cpp_unavailable))]
-#[path = "wrapper_stub.rs"]
+#[cfg(feature = "ffi")]
 #[cfg_attr(docsrs, doc(cfg(feature = "ffi")))]
 pub mod wrapper;
 
@@ -50,9 +46,9 @@ pub mod safe {
     //! This module provides safer abstractions over the raw C++ bindings
     //! with proper error handling and memory management.
 
-    use std::ffi::CString;
-    use std::os::raw::{c_int, c_void};
-    use std::ptr;
+    use crate::wrapper;
+    use std::ops::{Deref, DerefMut};
+    use std::panic;
 
     /// Error types for FFI operations
     #[derive(Debug, thiserror::Error)]
@@ -60,11 +56,8 @@ pub mod safe {
         #[error("Null pointer returned from C++")]
         NullPointer,
 
-        #[error("Invalid string encoding: {0}")]
-        InvalidString(#[from] std::ffi::NulError),
-
-        #[error("C++ function returned error code: {0}")]
-        CppError(i32),
+        #[error("Wrapper error: {0}")]
+        Wrapper(#[from] wrapper::CppError),
 
         #[error("Invalid parameter: {0}")]
         InvalidParameter(String),
@@ -72,118 +65,65 @@ pub mod safe {
 
     pub type Result<T> = std::result::Result<T, SysError>;
 
-    /// Check if the C++ implementation is available
-    #[cfg(bitnet_cpp_unavailable)]
+    /// Check if the C++ implementation is available by calling into the
+    /// underlying library. If the symbols are missing or the call panics,
+    /// this will return `false`.
     pub fn is_available() -> bool {
-        false
-    }
-
-    /// Check if the C++ implementation is available
-    #[cfg(not(bitnet_cpp_unavailable))]
-    pub fn is_available() -> bool {
-        true
+        panic::catch_unwind(|| {
+            // Try calling a simple function to ensure the library is linked.
+            wrapper::get_version();
+        })
+        .is_ok()
     }
 
     /// Get version information from the C++ implementation
     pub fn version() -> Result<String> {
-        // Placeholder implementation
-        // In real code, this would call into C++ to get version info
-        Ok("BitNet.cpp (external)".to_string())
+        Ok(wrapper::get_version())
     }
 
     /// Initialize the C++ library
     pub fn initialize() -> Result<()> {
-        // Placeholder for C++ library initialization
-        // In real code, this might call bitnet_cpp_init() or similar
+        wrapper::init_backend();
         Ok(())
     }
 
     /// Cleanup the C++ library
     pub fn cleanup() -> Result<()> {
-        // Placeholder for C++ library cleanup
-        // In real code, this might call bitnet_cpp_cleanup() or similar
+        wrapper::free_backend();
         Ok(())
     }
 
-    /// Raw model handle from C++
-    #[repr(transparent)]
-    pub struct ModelHandle(*mut c_void);
+    /// Handle for a loaded model/session
+    pub struct ModelHandle(wrapper::Session);
 
-    impl ModelHandle {
-        /// Create a new model handle from a raw pointer
-        ///
-        /// # Safety
-        ///
-        /// The pointer must be valid and point to a valid C++ model object
-        pub unsafe fn from_raw(ptr: *mut c_void) -> Option<Self> {
-            if ptr.is_null() { None } else { Some(ModelHandle(ptr)) }
-        }
-
-        /// Get the raw pointer
-        ///
-        /// # Safety
-        ///
-        /// The returned pointer is only valid as long as this handle exists
-        pub unsafe fn as_raw(&self) -> *mut c_void {
-            self.0
+    impl Deref for ModelHandle {
+        type Target = wrapper::Session;
+        fn deref(&self) -> &Self::Target {
+            &self.0
         }
     }
 
-    // Safety: ModelHandle is only used in single-threaded cross-validation contexts
-    unsafe impl Send for ModelHandle {}
-
-    impl Drop for ModelHandle {
-        fn drop(&mut self) {
-            // In real implementation, this would call the C++ destructor
-            // For now, just mark as dropped
-            self.0 = ptr::null_mut();
+    impl DerefMut for ModelHandle {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
         }
     }
 
-    /// Load a model from file
+    /// Load a model from file using deterministic settings
     pub fn load_model(path: &str) -> Result<ModelHandle> {
-        let _c_path = CString::new(path)?;
-
-        // Placeholder implementation
-        // In real code, this would call bitnet_cpp_load_model(c_path.as_ptr())
-        let raw_ptr = ptr::null_mut(); // Placeholder
-
-        unsafe { ModelHandle::from_raw(raw_ptr).ok_or(SysError::NullPointer) }
+        let session = wrapper::Session::load_deterministic(path)?;
+        Ok(ModelHandle(session))
     }
 
-    /// Generate tokens using a loaded model
-    pub fn generate(_model: &ModelHandle, prompt: &str, max_tokens: usize) -> Result<Vec<u32>> {
-        let _c_prompt = CString::new(prompt)?;
-
+    /// Generate up to `max_tokens` tokens and return their IDs
+    /// (excluding the prompt).
+    pub fn generate(model: &mut ModelHandle, prompt: &str, max_tokens: usize) -> Result<Vec<u32>> {
         if max_tokens == 0 {
             return Err(SysError::InvalidParameter("max_tokens must be > 0".to_string()));
         }
 
-        let mut tokens = vec![0u32; max_tokens];
-        let actual_count: c_int = 0;
-
-        // Placeholder implementation
-        // In real code, this would call:
-        // let result = bitnet_cpp_generate(
-        //     model.as_raw(),
-        //     c_prompt.as_ptr(),
-        //     max_tokens as c_int,
-        //     tokens.as_mut_ptr(),
-        //     &mut actual_count,
-        // );
-
-        let result = 0; // Placeholder success
-
-        if result != 0 {
-            return Err(SysError::CppError(result));
-        }
-
-        if actual_count < 0 {
-            return Err(SysError::InvalidParameter("Invalid token count".to_string()));
-        }
-
-        tokens.truncate(actual_count as usize);
-        Ok(tokens)
+        let tokens = model.generate_greedy(prompt, max_tokens)?;
+        Ok(tokens.into_iter().map(|t| t as u32).collect())
     }
 }
 
@@ -214,15 +154,34 @@ pub mod disabled {
         Err(DisabledError)
     }
 
+    /// Placeholder model handle when ffi feature is disabled
+    pub struct ModelHandle;
+
     /// Load model (returns error without ffi)
-    pub fn load_model(_path: &str) -> Result<(), DisabledError> {
+    pub fn load_model(_path: &str) -> Result<ModelHandle, DisabledError> {
+        Err(DisabledError)
+    }
+
+    /// Generate tokens (returns error without ffi)
+    pub fn generate(
+        _model: &mut ModelHandle,
+        _prompt: &str,
+        _max_tokens: usize,
+    ) -> Result<Vec<u32>, DisabledError> {
+        Err(DisabledError)
+    }
+
+    /// Cleanup (returns error without ffi)
+    pub fn cleanup() -> Result<(), DisabledError> {
         Err(DisabledError)
     }
 }
 
 // Re-export the appropriate module based on feature
 #[cfg(feature = "ffi")]
-pub use safe::{ModelHandle, SysError, cleanup, initialize, is_available, version};
+pub use safe::{
+    ModelHandle, SysError, cleanup, generate, initialize, is_available, load_model, version,
+};
 
 #[cfg(feature = "ffi")]
 pub use wrapper::{Context, CppError, Model, Session, free_backend, get_version, init_backend};
