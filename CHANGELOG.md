@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Enhanced Prefill Functionality for Batch Inference** ([#187](https://github.com/EffortlessSteven/BitNet-rs/pull/187)):
+  - **Explicit Prefill Integration**: Added `engine.prefill()` method for explicit cache warming and latency measurement in batch inference operations
+  - **Structured Performance Metrics**: Enhanced `TimingMetrics` with separate measurement for prefill, decode, tokenization, and total inference time
+  - **Comprehensive Throughput Calculations**: New `ThroughputMetrics` with tokens-per-second for prefill, decode, and end-to-end performance
+  - **Production-Ready Error Handling**: Robust error handling for empty tokens, invalid tokens, and context length exceeded scenarios
+  - **Comprehensive Test Coverage**: 13 specialized tests (8 unit + 5 integration) covering batch prefill operations, performance consistency, and error recovery
+  - **Enhanced CLI Integration**: Updated inference commands with prefill timing support and structured JSON metrics output
+  - **Mock Testing Infrastructure**: Comprehensive mock model and tokenizer with realistic timing for accurate performance validation
+  - **Documentation Enhancement**: Detailed inline documentation with usage examples, performance benefits, and troubleshooting guides
+  - **Backward Compatibility**: Zero breaking changes to existing API while adding enhanced functionality
 - **Device-Aware GPU Quantization Support**:
   - Enhanced I2S, TL1, and TL2 quantizers with automatic GPU acceleration
   - Device-aware dequantization with intelligent CPU fallback  
