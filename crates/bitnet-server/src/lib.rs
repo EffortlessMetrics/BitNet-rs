@@ -85,7 +85,7 @@ impl BitNetServer {
         let monitoring = Arc::new(MonitoringSystem::new(config.monitoring.clone()).await?);
 
         // Initialize health checker
-        let health_checker = Arc::new(HealthChecker::new(monitoring.metrics()));
+        let health_checker = Arc::new(HealthChecker::new());
 
         // Initialize Prometheus exporter if enabled
         #[cfg(feature = "prometheus")]

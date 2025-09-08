@@ -12,9 +12,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
-
-use super::metrics::MetricsCollector;
 
 /// Health check status
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -71,22 +68,21 @@ pub struct HealthMetrics {
     pub tokens_per_second: f64,
 }
 
+#[cfg(feature = "cuda")]
+struct GpuStatus {
+    name: String,
+    memory_total: u64,
+    memory_used: u64,
+}
+
 /// Health checker that monitors system components
 pub struct HealthChecker {
     start_time: Instant,
-    #[allow(dead_code)]
-    metrics: Arc<MetricsCollector>,
-    #[allow(dead_code)]
-    component_checks: Arc<RwLock<HashMap<String, ComponentHealth>>>,
 }
 
 impl HealthChecker {
-    pub fn new(metrics: Arc<MetricsCollector>) -> Self {
-        Self {
-            start_time: Instant::now(),
-            metrics,
-            component_checks: Arc::new(RwLock::new(HashMap::new())),
-        }
+    pub fn new() -> Self {
+        Self { start_time: Instant::now() }
     }
 
     /// Perform comprehensive health check
@@ -227,14 +223,32 @@ impl HealthChecker {
         }
     }
 
-    #[allow(dead_code)]
     #[cfg(feature = "cuda")]
     async fn check_gpu_health(&self) -> ComponentHealth {
         let start = Instant::now();
 
-        // Check GPU availability and memory
         let (status, message) = match self.check_gpu_status().await {
-            Ok(gpu_info) => (HealthStatus::Healthy, format!("GPU available: {}", gpu_info)),
+            Ok(info) => {
+                let usage = if info.memory_total > 0 {
+                    info.memory_used as f64 / info.memory_total as f64 * 100.0
+                } else {
+                    0.0
+                };
+                let status = if usage > 90.0 {
+                    HealthStatus::Unhealthy
+                } else if usage > 80.0 {
+                    HealthStatus::Degraded
+                } else {
+                    HealthStatus::Healthy
+                };
+                (
+                    status,
+                    format!(
+                        "{} - memory: {} / {} MiB ({:.1}% in use)",
+                        info.name, info.memory_used, info.memory_total, usage
+                    ),
+                )
+            }
             Err(e) => (HealthStatus::Degraded, format!("GPU check failed: {}", e)),
         };
 
@@ -246,11 +260,31 @@ impl HealthChecker {
         }
     }
 
-    #[allow(dead_code)]
     #[cfg(feature = "cuda")]
-    async fn check_gpu_status(&self) -> Result<String, String> {
-        // Placeholder GPU check - in production, use actual CUDA queries
-        Ok("CUDA device 0 available".to_string())
+    async fn check_gpu_status(&self) -> Result<GpuStatus, String> {
+        use tokio::process::Command;
+
+        let output = Command::new("nvidia-smi")
+            .arg("--query-gpu=name,memory.total,memory.used")
+            .arg("--format=csv,noheader,nounits")
+            .output()
+            .await
+            .map_err(|e| format!("failed to execute nvidia-smi: {e}"))?;
+
+        if !output.status.success() {
+            return Err(format!("nvidia-smi exited with {}", output.status));
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let line = stdout.lines().next().ok_or("no GPU detected")?;
+        let mut parts = line.split(',').map(|s| s.trim());
+        let name = parts.next().ok_or("missing name")?.to_string();
+        let memory_total: u64 =
+            parts.next().ok_or("missing total memory")?.parse().map_err(|e| e.to_string())?;
+        let memory_used: u64 =
+            parts.next().ok_or("missing used memory")?.parse().map_err(|e| e.to_string())?;
+
+        Ok(GpuStatus { name, memory_total, memory_used })
     }
 
     async fn check_basic_functionality(&self) -> Result<(), String> {
