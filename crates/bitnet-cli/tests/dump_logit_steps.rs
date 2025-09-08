@@ -6,10 +6,7 @@ fn greedy_check_skipped_without_dump_logit_steps() {
     let step_idx = 0;
 
     let mut executed = false;
-    if assert_greedy
-        && greedy
-        && dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps)
-    {
+    if assert_greedy && greedy && dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps) {
         executed = true;
     }
 
