@@ -20,7 +20,7 @@ bitnet-inference = { path = "../bitnet-inference" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers" }
 bitnet-quantization = { path = "../bitnet-quantization" }
 
-pyo3 = { version = "0.25", features = ["extension-module", "abi3-py38"] }
+pyo3 = { version = "0.25", features = ["extension-module", "abi3-py312"] }
 pyo3-async-runtimes = { version = "0.25", features = ["tokio-runtime"] }
 tokio = { version = "1.0", features = ["full"] }
 futures-util = "0.3"
@@ -41,3 +41,9 @@ integration-tests = []
 default = ["cpu"]
 cpu = ["bitnet-inference/cpu"]
 gpu = ["bitnet-inference/gpu"]
+
+[[test]]
+name = "streaming_comprehensive"
+path = "tests/integration/streaming_comprehensive.rs"
+required-features = ["integration-tests"]
+
