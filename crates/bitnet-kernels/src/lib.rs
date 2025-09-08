@@ -3,14 +3,15 @@
 use bitnet_common::{QuantizationType, Result};
 use std::sync::OnceLock;
 
+pub mod convolution;
 pub mod cpu;
 pub mod device_aware;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 #[cfg(feature = "gpu")]
 pub mod gpu;
-#[cfg(feature = "gpu")]
 pub mod gpu_utils;
+mod stubs;
 
 /// Kernel provider trait
 pub trait KernelProvider: Send + Sync {
@@ -86,10 +87,10 @@ impl KernelManager {
         // Add FFI kernel as a fallback option (lower priority than optimized kernels)
         #[cfg(feature = "ffi")]
         {
-            if let Ok(ffi_kernel) = ffi::FfiKernel::new() {
-                if ffi_kernel.is_available() {
-                    providers.push(Box::new(ffi_kernel));
-                }
+            if let Ok(ffi_kernel) = ffi::FfiKernel::new()
+                && ffi_kernel.is_available()
+            {
+                providers.push(Box::new(ffi_kernel));
             }
         }
 
@@ -190,11 +191,21 @@ pub fn select_gpu_kernel(_device_id: usize) -> Result<Box<dyn KernelProvider>> {
 }
 
 // Re-export commonly used types
-#[cfg(all(target_arch = "x86_64", feature = "avx2"))]
-pub use cpu::Avx2Kernel;
 pub use cpu::FallbackKernel;
-#[cfg(all(target_arch = "aarch64", feature = "neon"))]
+
+// Platform-specific kernel re-exports with stubs
+#[cfg(target_arch = "x86_64")]
+pub use cpu::Avx2Kernel;
+
+#[cfg(target_arch = "aarch64")]
 pub use cpu::NeonKernel;
+
+// Use stub implementations from stubs module for unavailable kernels
+#[cfg(not(target_arch = "x86_64"))]
+pub use stubs::Avx2Kernel;
+
 pub use device_aware::{DeviceAwareQuantizer, DeviceAwareQuantizerFactory};
 #[cfg(feature = "gpu")]
 pub use gpu::CudaKernel;
+#[cfg(not(target_arch = "aarch64"))]
+pub use stubs::NeonKernel;

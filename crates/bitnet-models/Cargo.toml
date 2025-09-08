@@ -30,6 +30,7 @@ reqwest = { workspace = true, features = ["stream"] }
 futures.workspace = true
 rand = "0.8"
 rand_chacha = "0.3"
+url = "2"
 
 [dev-dependencies]
 tempfile.workspace = true

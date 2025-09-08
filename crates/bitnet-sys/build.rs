@@ -1,20 +1,21 @@
 //! Build script for bitnet-sys crate
 //!
 //! This script links against the Microsoft BitNet C++ implementation when
-//! the crossval feature is enabled. It fails fast if dependencies are missing.
+//! the `ffi` feature is enabled. It fails fast if dependencies are missing.
 
 use std::env;
-#[allow(unused_imports)]
-use std::path::Path;
-use std::path::PathBuf;
+#[cfg(feature = "ffi")]
+use std::path::{Path, PathBuf};
 
 fn main() {
-    // Inform rustc about our custom cfg to avoid unexpected_cfg warnings
-    println!("cargo:rustc-check-cfg=cfg(bitnet_cpp_unavailable)");
     // If the crate is compiled without `--features bitnet-sys/ffi`,
     // skip all native build steps so the workspace remains green.
-    if std::env::var("CARGO_FEATURE_FFI").is_err() {
-        println!("cargo:warning=bitnet-sys: 'ffi' feature not enabled; skipping native build");
+    if env::var("CARGO_FEATURE_FFI").is_err() {
+        // No native build needed when FFI is disabled, but still ensure the build
+        // script reruns if relevant inputs change.
+        println!("cargo:rerun-if-changed=build.rs");
+        println!("cargo:rerun-if-env-changed=BITNET_CPP_DIR");
+        println!("cargo:rerun-if-env-changed=BITNET_CPP_PATH");
         return;
     }
 
@@ -24,25 +25,24 @@ fn main() {
 
     #[cfg(feature = "ffi")]
     {
-        // When crossval feature is enabled, try to find the C++ implementation
+        // When the ffi feature is enabled, try to find the C++ implementation
         let cpp_dir = env::var("BITNET_CPP_DIR")
             .or_else(|_| env::var("BITNET_CPP_PATH")) // Try legacy env var
             .or_else(|_| env::var("HOME").map(|h| format!("{}/.cache/bitnet_cpp", h)))
             .map(PathBuf::from)
-            .unwrap_or_default();
+            .unwrap_or_else(|_| {
+                panic!(
+                    "bitnet-sys: BITNET_CPP_DIR not set. \n\
+                     Set BITNET_CPP_DIR to the path of the built BitNet C++ sources or disable the 'ffi' feature."
+                )
+            });
 
-        if cpp_dir.as_os_str().is_empty() || !cpp_dir.exists() {
-            println!("cargo:warning=BITNET_CPP_DIR not set/invalid; building without C++ bridge");
-            println!("cargo:rustc-cfg=bitnet_cpp_unavailable");
-
-            // Create minimal bindings file
-            let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-            std::fs::write(
-                out_path.join("bindings.rs"),
-                "// C++ bridge unavailable - BITNET_CPP_DIR not set\n",
-            )
-            .unwrap();
-            return;
+        if !cpp_dir.exists() {
+            panic!(
+                "bitnet-sys: BitNet C++ directory not found: {}\n\
+                 Run: ./ci/fetch_bitnet_cpp.sh",
+                cpp_dir.display()
+            );
         }
 
         // Verify the C++ implementation is built
@@ -55,8 +55,8 @@ fn main() {
             );
         }
 
-        println!("cargo:warning=bitnet-sys: Building with cross-validation support");
-        println!("cargo:warning=bitnet-sys: Using BitNet C++ from: {}", cpp_dir.display());
+        eprintln!("bitnet-sys: Building with cross-validation support");
+        eprintln!("bitnet-sys: Using BitNet C++ from: {}", cpp_dir.display());
 
         // Link against the C++ implementation - fail on error
         link_cpp_implementation(&cpp_dir).expect("Failed to link Microsoft BitNet C++ libraries");
@@ -64,17 +64,6 @@ fn main() {
         // Generate bindings - fail on error
         generate_bindings(&cpp_dir)
             .expect("Failed to generate FFI bindings from Microsoft BitNet headers");
-    }
-
-    #[cfg(not(feature = "ffi"))]
-    {
-        // When ffi is disabled, create minimal bindings
-        let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-        std::fs::write(
-            out_path.join("bindings.rs"),
-            "// Bindings disabled - ffi feature not enabled\n",
-        )
-        .unwrap();
     }
 }
 
@@ -136,6 +125,7 @@ fn link_cpp_implementation(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Err
         println!("cargo:rustc-link-lib=dylib=pthread");
         println!("cargo:rustc-link-lib=dylib=dl");
         println!("cargo:rustc-link-lib=dylib=m");
+        println!("cargo:rustc-link-lib=dylib=gomp");
     }
 
     #[cfg(target_os = "macos")]
@@ -187,12 +177,9 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let bitnet_h = cpp_dir.join("include/ggml-bitnet.h");
     let use_bitnet = bitnet_h.exists();
 
-    println!("cargo:warning=bitnet-sys: Generating bindings from {}", llama_h.display());
+    eprintln!("bitnet-sys: Generating bindings from {}", llama_h.display());
     if use_bitnet {
-        println!(
-            "cargo:warning=bitnet-sys: Also including BitNet-specific APIs from {}",
-            bitnet_h.display()
-        );
+        eprintln!("bitnet-sys: Also including BitNet-specific APIs from {}", bitnet_h.display());
     }
 
     let mut builder = bindgen::Builder::default().header(llama_h.to_string_lossy());
@@ -250,6 +237,6 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let fixed_content = bindings_content.replace("extern \"C\" {", "unsafe extern \"C\" {");
     std::fs::write(&bindings_path, fixed_content)?;
 
-    println!("cargo:warning=bitnet-sys: Generated C++ bindings successfully");
+    eprintln!("bitnet-sys: Generated C++ bindings successfully");
     Ok(())
 }

@@ -273,16 +273,20 @@ impl EvalCommand {
 
         // Set deterministic mode if requested
         if self.deterministic {
-            std::env::set_var("BITNET_DETERMINISTIC", "1");
-            std::env::set_var("RAYON_NUM_THREADS", "1");
-            std::env::set_var("OMP_NUM_THREADS", "1");
-            std::env::set_var("MKL_NUM_THREADS", "1");
-            std::env::set_var("BLAS_NUM_THREADS", "1");
+            unsafe {
+                std::env::set_var("BITNET_DETERMINISTIC", "1");
+                std::env::set_var("RAYON_NUM_THREADS", "1");
+                std::env::set_var("OMP_NUM_THREADS", "1");
+                std::env::set_var("MKL_NUM_THREADS", "1");
+                std::env::set_var("BLAS_NUM_THREADS", "1");
+            }
         }
 
         // Set thread count
         if self.threads > 0 {
-            std::env::set_var("RAYON_NUM_THREADS", self.threads.to_string());
+            unsafe {
+                std::env::set_var("RAYON_NUM_THREADS", self.threads.to_string());
+            }
         }
 
         info!("Starting model evaluation");
@@ -291,7 +295,7 @@ impl EvalCommand {
         let (engine, tokenizer) = self.load_model_and_tokenizer(config).await?;
 
         // Friendly guardrail for accidental empty top-k
-        if self.dump_logit_steps.unwrap_or(0) > 0 && self.logits_topk == 0 {
+        if self.dump_logit_steps.is_some_and(|steps| steps > 0) && self.logits_topk == 0 {
             warn!("--dump-logit-steps > 0 but --logits-topk == 0: no tokens will be recorded.");
         }
 
@@ -357,10 +361,8 @@ impl EvalCommand {
 
         // Create inference engine
         let model_arc: std::sync::Arc<dyn bitnet_models::Model> = model.into();
-        let tokenizer_arc: std::sync::Arc<dyn bitnet_tokenizers::Tokenizer> =
-            tokenizer.clone().into();
         let bn_device = bitnet_common::Device::from(&device);
-        let engine = InferenceEngine::new(model_arc, tokenizer_arc, bn_device)
+        let engine = InferenceEngine::new(model_arc, tokenizer.clone(), bn_device)
             .context("Failed to create inference engine")?;
 
         Ok((engine, tokenizer))
@@ -373,11 +375,11 @@ impl EvalCommand {
         match self.device.as_str() {
             "cpu" => Ok(Device::Cpu),
             "cuda" | "gpu" => Device::cuda_if_available(0).context("CUDA not available"),
-            "metal" => Device::metal_if_available().context("Metal not available"),
+            "metal" => Device::new_metal(0).context("Metal not available"),
             "auto" => {
                 if let Ok(device) = Device::cuda_if_available(0) {
                     Ok(device)
-                } else if let Ok(device) = Device::metal_if_available() {
+                } else if let Ok(device) = Device::new_metal(0) {
                     Ok(device)
                 } else {
                     Ok(Device::Cpu)
@@ -394,13 +396,12 @@ impl EvalCommand {
     async fn load_tokenizer(
         &self,
         model_path: &PathBuf,
-    ) -> Result<Box<dyn bitnet_tokenizers::Tokenizer>> {
-        use bitnet_tokenizers::UniversalTokenizer;
+    ) -> Result<std::sync::Arc<dyn bitnet_tokenizers::Tokenizer>> {
+        use bitnet_tokenizers::TokenizerBuilder;
 
         if let Some(tokenizer_path) = &self.tokenizer {
             info!("Loading tokenizer from: {}", tokenizer_path.display());
-            UniversalTokenizer::from_file(tokenizer_path)
-                .map(|t| Box::new(t) as Box<dyn bitnet_tokenizers::Tokenizer>)
+            Ok(TokenizerBuilder::from_file(tokenizer_path)?)
         } else {
             // Try to find tokenizer in model directory
             let model_dir = model_path.parent().unwrap_or(std::path::Path::new("."));
@@ -409,12 +410,10 @@ impl EvalCommand {
 
             if tokenizer_json.exists() {
                 info!("Using tokenizer.json from model directory");
-                UniversalTokenizer::from_file(&tokenizer_json)
-                    .map(|t| Box::new(t) as Box<dyn bitnet_tokenizers::Tokenizer>)
+                Ok(TokenizerBuilder::from_file(&tokenizer_json)?)
             } else if tokenizer_model.exists() {
                 info!("Using tokenizer.model from model directory");
-                UniversalTokenizer::from_file(&tokenizer_model)
-                    .map(|t| Box::new(t) as Box<dyn bitnet_tokenizers::Tokenizer>)
+                Ok(TokenizerBuilder::from_file(&tokenizer_model)?)
             } else {
                 anyhow::bail!("No tokenizer found. Use --tokenizer to specify path")
             }
@@ -513,7 +512,9 @@ impl EvalCommand {
 
         // Set seed if provided
         if let Some(seed) = self.seed {
-            std::env::set_var("BITNET_SEED", seed.to_string());
+            unsafe {
+                std::env::set_var("BITNET_SEED", seed.to_string());
+            }
         }
 
         for (i, line) in lines.iter().enumerate() {
@@ -567,6 +568,7 @@ impl EvalCommand {
             scoring_policy: Some(ScoringPolicy { add_bos: true, append_eos: true, mask_pad: true }),
             tf_path_head: None,
             totals: Some(EvalTotals { lines: lines.len(), predicted_tokens: predicted }),
+            meta: None,
         })
     }
 
@@ -651,6 +653,7 @@ impl EvalCommand {
             }),
             tf_path_head,
             totals: Some(EvalTotals { lines: 1, predicted_tokens: predicted }),
+            meta: None,
         })
     }
 

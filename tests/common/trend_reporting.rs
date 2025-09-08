@@ -190,24 +190,23 @@ impl TrendReporter {
         let mut dir_entries = fs::read_dir(&self.storage_path).await?;
         while let Some(entry) = dir_entries.next_entry().await? {
             let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                if let Ok(content) = fs::read_to_string(&path).await {
-                    if let Ok(trend_entry) = serde_json::from_str::<TrendEntry>(&content) {
-                        // Filter by date
-                        if trend_entry.timestamp < cutoff_date {
-                            continue;
-                        }
-
-                        // Filter by branch if specified
-                        if let Some(branch) = branch_filter {
-                            if trend_entry.branch.as_deref() != Some(branch) {
-                                continue;
-                            }
-                        }
-
-                        entries.push(trend_entry);
-                    }
+            if path.extension().and_then(|s| s.to_str()) == Some("json")
+                && let Ok(content) = fs::read_to_string(&path).await
+                && let Ok(trend_entry) = serde_json::from_str::<TrendEntry>(&content)
+            {
+                // Filter by date
+                if trend_entry.timestamp < cutoff_date {
+                    continue;
                 }
+
+                // Filter by branch if specified
+                if let Some(branch) = branch_filter
+                    && trend_entry.branch.as_deref() != Some(branch)
+                {
+                    continue;
+                }
+
+                entries.push(trend_entry);
             }
         }
 
@@ -458,17 +457,15 @@ impl TrendReporter {
         let mut dir_entries = fs::read_dir(&self.storage_path).await?;
         while let Some(entry) = dir_entries.next_entry().await? {
             let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                if let Ok(content) = fs::read_to_string(&path).await {
-                    if let Ok(trend_entry) = serde_json::from_str::<TrendEntry>(&content) {
-                        if trend_entry.timestamp < cutoff_date {
-                            if let Err(e) = fs::remove_file(&path).await {
-                                warn!("Failed to remove old trend entry {:?}: {}", path, e);
-                            } else {
-                                removed_count += 1;
-                            }
-                        }
-                    }
+            if path.extension().and_then(|s| s.to_str()) == Some("json")
+                && let Ok(content) = fs::read_to_string(&path).await
+                && let Ok(trend_entry) = serde_json::from_str::<TrendEntry>(&content)
+                && trend_entry.timestamp < cutoff_date
+            {
+                if let Err(e) = fs::remove_file(&path).await {
+                    warn!("Failed to remove old trend entry {:?}: {}", path, e);
+                } else {
+                    removed_count += 1;
                 }
             }
         }

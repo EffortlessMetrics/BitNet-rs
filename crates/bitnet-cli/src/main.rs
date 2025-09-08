@@ -253,7 +253,7 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Run inference on a model
     #[command(alias = "infer")]
-    Inference(InferenceCommand),
+    Inference(Box<InferenceCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Convert between model formats
@@ -405,7 +405,7 @@ async fn main() -> Result<()> {
             .await
         }
         #[cfg(feature = "full-cli")]
-        Some(Commands::Inference(cmd)) => cmd.execute(&config).await,
+        Some(Commands::Inference(cmd)) => (*cmd).execute(&config).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "cli-bench")]
@@ -805,9 +805,7 @@ async fn run_simple_generation(
         let logits_vec = extract_logits(&logits)?;
 
         // Capture logits if requested
-        if let Some(max_steps) = dump_logit_steps
-            && step_idx < max_steps
-        {
+        if dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps) {
             // Helper for deterministic, robust top-k
             let topk_indices = {
                 let mut indexed: Vec<(usize, f32)> =
@@ -848,10 +846,7 @@ async fn run_simple_generation(
         let next_token = sampler.sample(&logits_vec, &generated_tokens);
 
         // Assert greedy invariant if requested
-        if assert_greedy
-            && greedy
-            && dump_logit_steps.is_some()
-            && step_idx < dump_logit_steps.unwrap()
+        if assert_greedy && greedy && dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps)
         {
             let (mut best_i, mut best_v) = (0usize, f32::NEG_INFINITY);
             for (i, &v) in logits_vec.iter().enumerate() {
@@ -868,9 +863,7 @@ async fn run_simple_generation(
         }
 
         // Update chosen token in logits dump
-        if let Some(max_steps) = dump_logit_steps
-            && step_idx < max_steps
-            && !logits_dump.is_empty()
+        if dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps) && !logits_dump.is_empty()
         {
             logits_dump.last_mut().unwrap().chosen_id = Some(next_token);
         }

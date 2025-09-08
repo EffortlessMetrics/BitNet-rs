@@ -244,7 +244,7 @@ mod latency_tests {
 
         // Measure time to first token in streaming
         let start_time = Instant::now();
-        let mut stream = engine.generate_stream("Test prompt for first token latency");
+        let mut stream = engine.generate_stream("Test prompt for first token latency").unwrap();
 
         if let Ok(Some(result)) = timeout(Duration::from_secs(1), stream.next()).await {
             let first_token_latency = start_time.elapsed();
@@ -372,7 +372,8 @@ mod throughput_tests {
         let config = GenerationConfig::default().with_max_tokens(20);
 
         let start_time = Instant::now();
-        let mut stream = engine.generate_stream_with_config("Streaming throughput test", &config);
+        let mut stream =
+            engine.generate_stream_with_config("Streaming throughput test", &config).unwrap();
 
         let mut token_count = 0;
         while let Ok(Some(result)) = timeout(Duration::from_secs(5), stream.next()).await {

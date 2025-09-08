@@ -6,6 +6,9 @@
 
 use crate::{QuantizedTensor, QuantizerTrait, utils::*};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
+#[cfg(feature = "gpu")]
+#[allow(unused_imports)]
+use bitnet_kernels::KernelProvider;
 use candle_core::Device;
 use rayon::prelude::*;
 
@@ -69,10 +72,11 @@ impl I2SQuantizer {
         if !device.is_cpu() {
             #[cfg(feature = "cuda")]
             {
-                if device.is_cuda() && bitnet_kernels::gpu::cuda::is_cuda_available() {
-                    if let Ok(res) = self.quantize_cuda(tensor) {
-                        return Ok(res);
-                    }
+                if device.is_cuda()
+                    && bitnet_kernels::gpu::cuda::is_cuda_available()
+                    && let Ok(res) = self.quantize_cuda(tensor)
+                {
+                    return Ok(res);
                 }
             }
         }
@@ -142,9 +146,9 @@ impl I2SQuantizer {
         let shape = tensor.shape().to_vec();
         let num_blocks = data.len().div_ceil(self.block_size);
         let mut scales = vec![0f32; num_blocks];
-        let packed_len = (data.len() * 2 + 7) / 8;
+        let packed_len = (data.len() * 2).div_ceil(8);
         let mut packed_data = vec![0u8; packed_len];
-        let kernel = CudaKernel::new(0)?;
+        let kernel = CudaKernel::new()?;
         kernel.quantize(&data, &mut packed_data, &mut scales, QuantizationType::I2S)?;
         Ok(QuantizedTensor::new_with_params(
             packed_data,
@@ -295,12 +299,8 @@ impl I2SQuantizer {
                 let i8_vec = _mm256_packs_epi16(i16_vec, i16_vec);
 
                 // Store 8 bytes
-                let result = _mm256_extract_epi64::<0>(i8_vec) as i64;
-                std::ptr::copy_nonoverlapping(
-                    &result as *const i64 as *const i8,
-                    output.as_mut_ptr().add(i * 8),
-                    8,
-                );
+                let low = _mm256_castsi256_si128(i8_vec);
+                _mm_storeu_si64(output.as_mut_ptr().add(i * 8) as *mut u8, low);
             }
         }
 
@@ -325,8 +325,7 @@ impl I2SQuantizer {
         for (i, chunk) in chunks.enumerate() {
             unsafe {
                 // Load 8 i8 values
-                let i8_data = std::ptr::read_unaligned(chunk.as_ptr() as *const i64);
-                let i8_vec = _mm_set1_epi64x(i8_data);
+                let i8_vec = _mm_loadu_si64(chunk.as_ptr() as *const u8);
 
                 // Convert to i32 and then to f32
                 let i32_vec = _mm256_cvtepi8_epi32(i8_vec);
@@ -441,8 +440,7 @@ impl I2SQuantizer {
         for (i, chunk) in chunks.enumerate() {
             unsafe {
                 // Load 4 i8 values
-                let i8_data = std::ptr::read_unaligned(chunk.as_ptr() as *const u32);
-                let i8_vec = vreinterpret_s8_u32(vdup_n_u32(i8_data));
+                let i8_vec = vreinterpret_s8_u32(vld1_dup_u32(chunk.as_ptr() as *const u32));
 
                 // Convert to i32 and then to f32
                 let i16_vec = vmovl_s8(i8_vec);

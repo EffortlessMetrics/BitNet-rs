@@ -2,7 +2,6 @@
 ///
 /// This demo shows the key features of the enhanced error handling system
 /// without relying on complex dependencies that have compilation issues.
-
 fn main() {
     #[cfg(feature = "integration-tests")]
     run_demo();

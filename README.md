@@ -6,18 +6,19 @@
 [![Build Status](https://github.com/microsoft/BitNet/workflows/CI/badge.svg)](https://github.com/microsoft/BitNet/actions)
 [![MSRV](https://img.shields.io/badge/MSRV-1.89.0-blue.svg)](https://github.com/microsoft/BitNet)
 
-**BitNet.rs is the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.** Built from the ground up in Rust, it delivers superior performance, memory safety, and developer experience compared to the original C++ implementation.
+**BitNet.rs is the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.** Built from the ground up in Rust, it delivers memory safety, developer experience advantages, and aims for superior performance compared to the original C++ implementation.
 
 > **✅ Validated Drop-in Replacement**: BitNet.rs is a proven **drop-in replacement** for bitnet.cpp. The Microsoft BitNet 1.2GB model (GGUF v3 early variant) loads successfully in BOTH BitNet.rs and bitnet.cpp's llama-cli, demonstrating full compatibility. Additionally, BitNet.rs handles edge cases that crash certain C++ diagnostic tools (llama-gguf).
 
 ## Why BitNet.rs?
 
-### 🚀 **Superior Performance**
-- **2-5x faster inference** than the original C++ implementation
+### 🚀 **Performance-Focused Design**
+- **Designed for high performance** with advanced optimization strategies
 - **Zero-cost abstractions** with compile-time optimizations
 - **Advanced SIMD kernels** for x86_64 (AVX2/AVX-512) and ARM64 (NEON) with runtime feature detection
 - **AVX-512 acceleration** delivers up to 2x theoretical throughput on compatible Intel hardware
 - **Efficient memory management** with zero-copy operations
+- **Note**: Performance benchmarking framework is under development - see [GOALS_VS_REALITY_ANALYSIS.md](GOALS_VS_REALITY_ANALYSIS.md)
 
 ### 🛡️ **Memory Safety & Reliability**
 - **No segfaults or memory leaks** - guaranteed by Rust's type system
@@ -104,7 +105,18 @@ cargo run --example test_gpu_memory --no-default-features --features gpu
 
 # Deterministic GPU testing with device-aware quantization
 BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo test --workspace --no-default-features --features gpu -- --test-threads=1
+
+# Enhanced GPU validation with performance metrics and error handling
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
 ```
+
+**Enhanced GPU Validation Features:**
+- **Comprehensive Device Querying**: Automatic CUDA device detection with compute capability analysis
+- **Performance Benchmarking**: Built-in kernel performance measurement with speedup calculations
+- **Numerical Accuracy Validation**: Systematic comparison between GPU and CPU implementations
+- **Memory Leak Detection**: Automatic GPU memory monitoring and leak prevention
+- **Mixed Precision Support**: FP16/BF16 validation with error tolerance configuration
+- **Graceful Error Handling**: Robust error reporting with recovery suggestions
 
 #### 🛠️ **Utilities**
 ```bash
@@ -249,6 +261,120 @@ async fn main() -> Result<()> {
 }
 ```
 
+#### Explicit Prefill with Performance Metrics
+
+BitNet.rs provides explicit prefill functionality for cache warming and comprehensive performance monitoring:
+
+```rust
+use bitnet::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let model = BitNetModel::from_file("model.gguf").await?;
+    let mut engine = InferenceEngine::builder()
+        .model(model)
+        .backend(Backend::Auto)
+        .build()?;
+    
+    let prompt = "Explain quantum computing in simple terms";
+    
+    // Tokenize prompt
+    let prompt_tokens = tokenizer.encode(prompt, true, true)?;
+    
+    // Explicit prefill for cache warming and latency measurement
+    let prefill_start = std::time::Instant::now();
+    engine.prefill(&prompt_tokens).await?;
+    let prefill_time = prefill_start.elapsed();
+    
+    println!("Prefill completed in {:.2}ms", prefill_time.as_secs_f64() * 1000.0);
+    
+    // Generate with structured performance metrics
+    let config = GenerationConfig {
+        max_new_tokens: 100,
+        enable_metrics: true,
+        ..Default::default()
+    };
+    
+    let response = engine.generate_with_config(prompt, &config).await?;
+    
+    // Access detailed performance metrics
+    if let Some(metrics) = response.metrics {
+        println!("Performance Breakdown:");
+        println!("  Tokenize: {:.2}ms", metrics.timing.tokenize);
+        println!("  Prefill: {:.2}ms", metrics.timing.prefill);
+        println!("  Decode: {:.2}ms", metrics.timing.decode);
+        println!("  Total: {:.2}ms", metrics.timing.total);
+        
+        println!("Throughput:");
+        println!("  Prefill: {:.1} tokens/sec", metrics.throughput.prefill);
+        println!("  Decode: {:.1} tokens/sec", metrics.throughput.decode);
+        println!("  E2E: {:.1} tokens/sec", metrics.throughput.e2e);
+        
+        // Export metrics for analysis
+        let json_metrics = serde_json::to_string_pretty(&metrics)?;
+        std::fs::write("performance_metrics.json", json_metrics)?;
+    }
+    
+    Ok(())
+}
+```
+
+#### Enhanced Performance Metrics and Monitoring
+
+BitNet.rs provides comprehensive performance monitoring with structured metrics collection, including detailed timing breakdowns and throughput measurements:
+
+```rust
+use bitnet::prelude::*;
+use serde_json;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let model = BitNetModel::from_file("model.gguf").await?;
+    let engine = InferenceEngine::builder()
+        .model(model)
+        .backend(Backend::Auto)
+        .build()?;
+    
+    // Configure generation with performance metrics enabled
+    let config = GenerationConfig {
+        max_new_tokens: 100,
+        temperature: 0.7,
+        enable_metrics: true,
+        ..Default::default()
+    };
+    
+    // Run inference with detailed performance tracking
+    let response = engine.generate_with_config("Explain machine learning", &config).await?;
+    
+    // Access structured performance metrics
+    if let Some(metrics) = response.metrics {
+        println!("Tokenization time: {:.2}ms", metrics.timing.tokenize);
+        println!("Prefill time: {:.2}ms", metrics.timing.prefill);
+        println!("Decode time: {:.2}ms", metrics.timing.decode);
+        println!("Total time: {:.2}ms", metrics.timing.total);
+        
+        // Throughput measurements
+        println!("Prefill throughput: {:.2} tokens/sec", metrics.throughput.prefill);
+        println!("Decode throughput: {:.2} tokens/sec", metrics.throughput.decode);
+        println!("End-to-end throughput: {:.2} tokens/sec", metrics.throughput.e2e);
+        
+        // Export metrics as JSON for analysis
+        let json_metrics = serde_json::to_string_pretty(&metrics)?;
+        println!("Metrics JSON:\n{}", json_metrics);
+    }
+    
+    Ok(())
+}
+```
+
+The performance monitoring system includes:
+
+- **Structured Timing Metrics**: Detailed breakdown of tokenization, prefill, decode, and total inference time
+- **Throughput Calculations**: Tokens per second for prefill, decode, and end-to-end performance
+- **Memory Usage Tracking**: Optional memory consumption monitoring
+- **JSON Export**: Structured metrics for analysis and integration with monitoring systems
+- **Batch Processing Metrics**: Performance tracking for batch inference workloads
+
 #### Device-Aware Quantization
 
 BitNet.rs features advanced device-aware quantization that automatically leverages GPU acceleration while providing robust CPU fallback. The system includes comprehensive error handling and performance optimization:
@@ -271,6 +397,42 @@ let result = quantizer.quantize(&input, &mut output, &mut scales, QuantizationTy
 println!("Active provider: {}", quantizer.active_provider());
 println!("GPU active: {}", quantizer.is_gpu_active());
 ```
+
+#### Universal Tokenizer with GGUF Integration
+
+BitNet.rs features a comprehensive universal tokenizer system with automatic backend selection, GGUF metadata integration, and BPE support. The tokenizer automatically handles multiple formats with graceful fallback for unsupported models:
+
+```rust
+use bitnet_tokenizers::{UniversalTokenizer, TokenizerConfig};
+use std::path::Path;
+
+// Create tokenizer directly from GGUF model with automatic configuration
+let tokenizer = UniversalTokenizer::from_gguf(Path::new("model.gguf"))?;
+
+// Tokenize text with automatic backend selection
+let text = "Hello, world! This is BitNet.rs.";
+let tokens = tokenizer.encode(text, true)?; // true = add_special_tokens
+println!("Tokens: {:?}", tokens);
+
+// Decode tokens back to text
+let decoded = tokenizer.decode(&tokens, true)?; // true = skip_special_tokens
+println!("Decoded: {}", decoded);
+
+// Access tokenizer configuration extracted from GGUF
+let config = tokenizer.config();
+println!("Vocab size: {}", config.vocab_size);
+println!("BOS token: {:?}", config.bos_token);
+println!("EOS token: {:?}", config.eos_token);
+```
+
+**Enhanced Universal Tokenizer Features:**
+- **Automatic Backend Detection**: Chooses BPE, SentencePiece, or Mock backend based on model metadata
+- **GGUF Metadata Integration**: Extracts tokenizer configuration directly from GGUF model files
+- **BPE Backend Support**: Full GPT-2 compatible BPE tokenization with merge rules
+- **Graceful Fallback**: Mock tokenizer for unsupported formats ensures testing compatibility
+- **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external files
+- **Special Token Handling**: Automatic BOS, EOS, PAD, and UNK token configuration
+- **Byte-Level Processing**: GPT-2 compatible pre-tokenization and decoding
 
 #### Enhanced GGUF Metadata Inspection
 
@@ -341,12 +503,22 @@ bitnet score --model model.gguf --file test.txt
 # Advanced scoring with device selection and batching
 bitnet score --model model.gguf --file validation.txt --device cuda --batch-size 8 --json-out results.json
 
-# Advanced inference options
+# Advanced inference options with performance metrics
 bitnet run --model model.gguf \
   --prompt "Explain quantum computing" \
   --max-new-tokens 100 \
   --temperature 0.7 \
-  --top-k 50
+  --top-k 50 \
+  --metrics \
+  --format json
+
+# Batch inference with prefill timing and structured metrics
+bitnet run --input-file prompts.txt \
+  --batch-size 4 \
+  --metrics \
+  --format json \
+  --deterministic \
+  --seed 42
 
 # Start HTTP server
 bitnet-server --port 8080 --model model.gguf
@@ -511,7 +683,9 @@ match robust_quantization(&input, &mut output, &mut scales) {
 
 - **Device-Aware Architecture**: Intelligent device selection with automatic GPU detection
 - **Transparent Fallback**: Seamless fallback to optimized CPU kernels when GPU operations fail
-- **Multi-Algorithm Support**: GPU acceleration for I2S, TL1, and TL2 quantization algorithms
+- **Multi-Algorithm Support**: GPU acceleration for I2S, TL1, and TL2 quantization algorithms with enhanced SIMD kernels
+- **Optimized SIMD Operations**: Enhanced memory access patterns using `_mm_storeu_si64` and `_mm_loadu_si64` for improved performance
+- **Cross-Platform SIMD Compatibility**: Comprehensive testing ensures consistent behavior across x86_64 (AVX2/AVX-512) and ARM64 (NEON) architectures
 - **CUDA Kernel Integration**: Optimized CUDA kernels with bit-packing and atomic operations
 - **Memory Safety**: Comprehensive error handling with automatic GPU memory cleanup
 - **Concurrent Operations**: Thread-safe GPU operations with proper synchronization
@@ -533,6 +707,10 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cp
 
 # Test automatic fallback mechanism
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
+
+# Test SIMD kernel compatibility and performance
+cargo test -p bitnet-quantization --test simd_compatibility --no-default-features --features cpu
+cargo bench -p bitnet-quantization --bench simd_comparison --no-default-features --features cpu
 ```
 ## GGUF Validation & Model Compatibility
 
@@ -634,19 +812,21 @@ cargo run -p xtask -- full-crossval
 
 This integration ensures compatibility and allows performance comparisons with the reference implementation.
 
-## Performance Comparison
+## Performance Status
 
-BitNet.rs significantly outperforms the original implementations:
+**Current Status**: BitNet.rs is designed for high performance with advanced optimization strategies, but comprehensive performance validation is under development.
 
-| Metric | BitNet.rs | Original C++ | Improvement |
-|--------|-----------|--------------|-------------|
-| **Inference Speed** | 1,250 tok/s | 520 tok/s | **2.4x faster** |
-| **Memory Usage** | 2.1 GB | 3.2 GB | **34% less** |
-| **Cold Start** | 0.8s | 2.1s | **2.6x faster** |
-| **Binary Size** | 12 MB | 45 MB | **73% smaller** |
-| **Build Time** | 45s | 7min | **9.3x faster** |
+**Design Goals vs. Reality**: As documented in [GOALS_VS_REALITY_ANALYSIS.md](GOALS_VS_REALITY_ANALYSIS.md), the project shows strong engineering quality but lacks verified performance benchmarks against the C++ implementation.
 
-*mock benchmarks. Need to be replaced with real. Build times include cached dependencies.*
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **Performance Design** | ✅ Excellent | Zero-cost abstractions, SIMD, efficient memory |
+| **Benchmark Framework** | 🔄 In Development | Cross-validation infrastructure exists |
+| **Verified Performance Claims** | ❌ Pending | Requires functional benchmarking tools |
+| **Build System** | ✅ Superior | Significantly faster than C++ builds |
+| **Memory Safety** | ✅ Guaranteed | Rust type system prevents common C++ issues |
+
+*See [benchmark_comparison.py](benchmark_comparison.py) for the benchmarking framework under development.*
 
 ### Key Performance Features
 
@@ -1103,6 +1283,8 @@ This project is licensed under the MIT OR Apache-2.0 license. See [LICENSE](LICE
 ## Project Status
 
 **✅ Production Ready**: BitNet.rs is the primary implementation, actively maintained and recommended for production use.
+
+**⚠️ Performance Validation**: While the architecture is designed for high performance, comprehensive benchmarking framework is under development. See [GOALS_VS_REALITY_ANALYSIS.md](GOALS_VS_REALITY_ANALYSIS.md) for current status.
 
 **🔄 Legacy Support**: The original C++ implementation is available through our cross-validation framework for compatibility testing.
 

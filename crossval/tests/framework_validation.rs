@@ -477,6 +477,6 @@ mod no_crossval_tests {
         println!("To run cross-validation tests, use: cargo test --features crossval");
 
         // This test always passes and serves as documentation
-        assert!(true, "Cross-validation tests are feature-gated");
+        // Cross-validation tests are feature-gated - nothing to assert
     }
 }

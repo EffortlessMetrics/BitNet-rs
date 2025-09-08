@@ -4,14 +4,16 @@ This document provides detailed compatibility information between BitNet.rs and 
 
 ## Overview
 
-BitNet.rs is designed to be the **primary, production-ready implementation** with superior performance and safety. Legacy implementations are maintained only for compatibility testing and migration purposes.
+BitNet.rs is designed to be the **primary, production-ready implementation** with memory safety and design optimizations for performance. Legacy implementations are maintained only for compatibility testing and migration purposes.
+
+⚠️ **Performance Claims**: As documented in [GOALS_VS_REALITY_ANALYSIS.md](../GOALS_VS_REALITY_ANALYSIS.md), performance claims require verification through proper benchmarking infrastructure.
 
 ## Implementation Comparison
 
 | Aspect | BitNet.rs (Primary) | BitNet C++ (Legacy) | BitNet Python (Legacy) |
 |--------|---------------------|---------------------|-------------------------|
 | **Status** | ✅ Production Ready | ⚠️ Legacy/Testing Only | ⚠️ Deprecated |
-| **Performance** | 2-5x faster | Baseline | 2-10x slower |
+| **Performance** | Designed for performance* | Baseline | Known slower |
 | **Memory Safety** | ✅ Guaranteed | ❌ Manual management | ❌ C++ dependencies |
 | **Maintenance** | ✅ Active development | ⚠️ Compatibility only | ❌ No longer maintained |
 | **Documentation** | ✅ Comprehensive | ⚠️ Limited | ❌ Outdated |
@@ -96,7 +98,7 @@ result = model.generate("Hello world", max_tokens=100)
 import bitnet
 model = bitnet.BitNetModel("model.gguf")
 result = model.generate("Hello world", max_tokens=100)
-# 2-5x faster with better error handling
+# *Performance claims require benchmarking verification - see GOALS_VS_REALITY_ANALYSIS.md
 ```
 
 ## Feature Compatibility Matrix

@@ -28,6 +28,36 @@ cargo test -p bitnet-inference --no-default-features --features rt-tokio --test 
 
 # Run verification script for all tests
 ./scripts/verify-tests.sh
+
+# Test enhanced prefill functionality and batch inference
+cargo test -p bitnet-cli --test inference_commands
+cargo test -p bitnet-inference test_prefill_timing
+
+# Test mock infrastructure and tokenizer architecture  
+cargo test -p bitnet-inference --test mock_infrastructure
+cargo test -p bitnet-tokenizers --test tokenizer_builder_pattern
+```
+
+### Convolution Tests
+
+```bash
+# Run convolution unit tests
+cargo test -p bitnet-kernels --no-default-features --features cpu convolution
+
+# Run PyTorch reference convolution tests (requires Python and PyTorch)
+cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored
+
+# Test specific convolution functionality
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_basic_functionality
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_with_bias
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_stride
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_padding
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_dilation
+
+# Test quantized convolution
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_quantized_i2s
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_quantized_tl1
+cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_quantized_with_bias
 ```
 
 ### GPU-Specific Tests
@@ -47,6 +77,39 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cp
 
 # GPU fallback mechanism testing
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
+
+# GPU memory management and leak detection
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+
+# CUDA device information and memory tracking
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_device_info_query
+cargo test -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
+```
+
+### Memory Tracking Tests
+
+```bash
+# Basic CPU memory tracking tests
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+
+# Comprehensive memory tracking with device awareness
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_efficiency_tracking
+
+# GPU memory tracking tests (requires CUDA)
+cargo test -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+
+# Memory tracking integration with device-aware quantization
+cargo test -p bitnet-kernels --no-default-features --features cpu test_device_aware_quantizer_memory_stats
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_quantizer_memory_integration
+
+# Host memory vs system memory validation
+cargo test -p bitnet-kernels --no-default-features --features cpu test_host_vs_system_memory_tracking
+
+# Thread-safe memory statistics access
+cargo test -p bitnet-kernels --no-default-features --features cpu test_concurrent_memory_stats_access
 ```
 
 ### Cross-Validation Tests
@@ -78,6 +141,8 @@ The test suite uses a feature-gated configuration system:
 - **CI Integration**: JUnit output, exit codes, and CI-specific optimizations
 - **Error Reporting**: Detailed error messages with recovery suggestions
 - **Performance Tracking**: Benchmark results and regression detection
+- **Mock Infrastructure**: Comprehensive mock model and tokenizer implementations for testing
+- **Enhanced Performance Testing**: Structured metrics collection with prefill timing validation
 
 ## Testing Strategy
 
@@ -87,6 +152,46 @@ The test suite uses a feature-gated configuration system:
 - **Property-based testing**: Fuzz testing for GGUF parser robustness
 - **Cross-validation**: Automated testing against C++ implementation
 - **CI gates**: Compatibility tests block on every PR
+
+### Enhanced Mock Infrastructure and Tokenizer Testing
+
+BitNet.rs includes comprehensive mock infrastructure for robust testing without external dependencies:
+
+#### Mock Model and Tokenizer Testing
+
+```bash
+# Test mock model implementation with prefill functionality
+cargo test -p bitnet-inference test_mock_model_prefill
+cargo test -p bitnet-inference test_mock_model_embed_and_logits
+
+# Test tokenizer builder pattern and Arc<dyn Tokenizer> architecture
+cargo test -p bitnet-tokenizers test_tokenizer_builder_from_file
+cargo test -p bitnet-tokenizers test_universal_tokenizer_mock_fallback
+
+# Validate performance metrics with mock infrastructure  
+cargo test -p bitnet-cli test_inference_metrics_collection
+cargo test -p bitnet-cli test_batch_inference_with_mock_model
+```
+
+#### Safe Environment Variable Handling Tests
+
+```bash
+# Test enhanced environment variable management with proper unsafe blocks
+cargo test -p bitnet-cli test_safe_environment_setup
+cargo test -p bitnet-cli test_deterministic_configuration
+
+# Validate environment variable handling in different scenarios
+BITNET_DETERMINISTIC=1 cargo test -p bitnet-cli test_deterministic_inference
+BITNET_SEED=42 cargo test -p bitnet-cli test_seeded_generation
+```
+
+#### Mock Infrastructure Features
+
+- **Mock Model Implementation**: Complete model interface with configurable responses
+- **Mock Tokenizer**: Testing-compatible tokenizer with predictable behavior  
+- **Arc<dyn Tokenizer> Support**: Enhanced tokenizer architecture using `TokenizerBuilder::from_file()`
+- **Performance Metrics Validation**: Structured testing of timing and throughput metrics
+- **Safe Environment Handling**: Proper unsafe block usage for environment variable operations
 
 ### GPU Testing Strategy
 
@@ -105,6 +210,42 @@ scripts/e2e-gate.sh cargo test --features crossval   # Gate heavy E2E tests
 
 See [Concurrency Caps Guide](concurrency-caps.md) for detailed information on preflight scripts, e2e gates, and resource management strategies.
 
+### Performance Tracking Tests
+
+The performance tracking infrastructure includes comprehensive test coverage for metrics collection, validation, and environment configuration:
+
+```bash
+# Run all performance tracking tests
+cargo test -p bitnet-inference --features integration-tests --test performance_tracking_tests
+
+# Run specific performance test categories
+cargo test --test performance_tracking_tests performance_metrics_tests
+cargo test --test performance_tracking_tests performance_tracker_tests  
+cargo test --test performance_tracking_tests environment_variable_tests
+
+# Test InferenceEngine performance integration
+cargo test -p bitnet-inference --features integration-tests test_engine_performance_tracking_integration
+
+# Test platform-specific memory and performance tracking
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+
+# GPU performance validation with comprehensive metrics
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+```
+
+#### Performance Test Categories
+
+1. **Performance Metrics Tests**: Validate metric computation, validation, and accuracy
+2. **Performance Tracker Tests**: Test state management and metrics aggregation  
+3. **Environment Variable Tests**: Validate configuration through environment variables
+4. **Integration Tests**: End-to-end performance tracking with InferenceEngine
+5. **Platform-Specific Tests**: Memory tracking and CPU kernel selection monitoring
+6. **GPU Performance Tests**: GPU memory management and performance benchmarking
+
+See [Performance Tracking Guide](performance-tracking.md) for detailed usage examples and configuration options.
+
 ## Specialized Test Commands
 
 ### GGUF Validation Tests
@@ -120,6 +261,74 @@ printf "GGUF\x02\x00\x00\x00" > /tmp/t.gguf && \
 printf "\x00\x00\x00\x00\x00\x00\x00\x00" >> /tmp/t.gguf && \
 printf "\x00\x00\x00\x00\x00\x00\x00\x00" >> /tmp/t.gguf && \
 BITNET_GGUF=/tmp/t.gguf cargo test -p bitnet-inference --features rt-tokio --test smoke
+```
+
+### Convolution Testing Framework
+
+The convolution testing framework includes comprehensive validation against PyTorch reference implementations and extensive unit testing for various parameter combinations.
+
+#### PyTorch Reference Testing
+
+The convolution implementation includes optional PyTorch reference tests that validate correctness by comparing outputs with PyTorch's `F.conv2d` implementation:
+
+```bash
+# Prerequisites: Install Python and PyTorch
+pip install torch
+
+# Run PyTorch reference tests (ignored by default)
+cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored
+
+# Verbose output to see test details
+cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored --nocapture
+```
+
+The reference tests cover:
+- **Basic convolution**: Simple 2D convolution operations
+- **Stride operations**: Various stride configurations (1x1, 2x2)
+- **Padding operations**: Zero padding with different configurations
+- **Dilation operations**: Dilated convolutions for expanded receptive fields
+- **Parameter combinations**: Mixed stride, padding, and dilation
+
+#### Quantization Testing
+
+Comprehensive testing of quantized convolution operations:
+
+```bash
+# Test I2S quantization (2-bit signed)
+cargo test -p bitnet-kernels test_conv2d_quantized_i2s
+
+# Test TL1 quantization (table lookup)
+cargo test -p bitnet-kernels test_conv2d_quantized_tl1
+
+# Test TL2 quantization (advanced table lookup)  
+cargo test -p bitnet-kernels test_conv2d_quantized_tl2
+
+# Test quantization with bias
+cargo test -p bitnet-kernels test_conv2d_quantized_with_bias
+
+# Test scale factor application
+cargo test -p bitnet-kernels test_conv2d_quantized_scale_factor
+```
+
+#### Error Handling and Validation
+
+The convolution tests include comprehensive error handling validation:
+
+```bash
+# Test dimension mismatch errors
+cargo test -p bitnet-kernels test_conv2d_dimension_mismatch
+
+# Test invalid input size errors
+cargo test -p bitnet-kernels test_conv2d_invalid_input_size
+
+# Test invalid bias size errors
+cargo test -p bitnet-kernels test_conv2d_invalid_bias_size
+
+# Test quantized weight size validation
+cargo test -p bitnet-kernels test_conv2d_quantized_invalid_weight_size
+
+# Test scale size validation
+cargo test -p bitnet-kernels test_conv2d_quantized_invalid_scale_size
 ```
 
 ### IQ2_S Backend Tests

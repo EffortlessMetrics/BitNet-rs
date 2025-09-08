@@ -170,7 +170,7 @@ impl TestHarness {
 
         // Setup phase with isolation
         println!("Setting up test: {}", test_name);
-        if let Err(e) = self.setup_test_with_isolation(&test_case, &isolated_env).await {
+        if let Err(e) = self.setup_test_with_isolation(test_case.as_ref(), &isolated_env).await {
             eprintln!("Test setup failed for '{}': {}", test_name, e);
             self.cleanup_isolated_environment(isolated_env).await;
             return TestRecord::failed(test_name, e, start_time.elapsed());
@@ -180,7 +180,7 @@ impl TestHarness {
         println!("Executing test: {}", test_name);
         let execute_result = timeout(
             self.config.test_timeout,
-            self.execute_test_with_isolation(&test_case, &isolated_env),
+            self.execute_test_with_isolation(test_case.as_ref(), &isolated_env),
         )
         .await;
 
@@ -188,7 +188,7 @@ impl TestHarness {
 
         // Cleanup phase (always run, even if test failed)
         println!("Cleaning up test: {}", test_name);
-        if let Err(e) = self.cleanup_test_with_isolation(&test_case, &isolated_env).await {
+        if let Err(e) = self.cleanup_test_with_isolation(test_case.as_ref(), &isolated_env).await {
             eprintln!("Test cleanup failed for '{}': {}", test_name, e);
         }
 
@@ -245,7 +245,7 @@ impl TestHarness {
     /// Setup test with proper isolation
     async fn setup_test_with_isolation(
         &self,
-        test_case: &Box<dyn TestCase>,
+        test_case: &dyn TestCase,
         env: &IsolatedEnvironment,
     ) -> TestResultCompat<()> {
         // Set isolated environment variables
@@ -267,11 +267,7 @@ impl TestHarness {
         }
 
         // Call the test's setup method with stable API
-        {
-            let ctx = self.fixtures.ctx();
-            test_case.setup(ctx)
-        }
-        .await?;
+        test_case.setup(self.fixtures.ctx()).await?;
 
         Ok(())
     }
@@ -279,7 +275,7 @@ impl TestHarness {
     /// Execute test with proper isolation
     async fn execute_test_with_isolation(
         &self,
-        test_case: &Box<dyn TestCase>,
+        test_case: &dyn TestCase,
         _env: &IsolatedEnvironment,
     ) -> TestResultCompat<TestMetrics> {
         // Execute the test in the isolated environment
@@ -289,7 +285,7 @@ impl TestHarness {
     /// Cleanup test with proper isolation
     async fn cleanup_test_with_isolation(
         &self,
-        test_case: &Box<dyn TestCase>,
+        test_case: &dyn TestCase,
         _env: &IsolatedEnvironment,
     ) -> TestResultCompat<()> {
         // Call the test's cleanup method
@@ -369,7 +365,7 @@ impl TestHarnessClone {
         let isolated_env = self.create_isolated_environment(&test_name).await;
 
         // Setup phase with isolation
-        if let Err(e) = self.setup_test_with_isolation(&test_case, &isolated_env).await {
+        if let Err(e) = self.setup_test_with_isolation(test_case.as_ref(), &isolated_env).await {
             self.cleanup_isolated_environment(isolated_env).await;
             return TestRecord::failed(test_name, e, start_time.elapsed());
         }
@@ -377,14 +373,14 @@ impl TestHarnessClone {
         // Execute phase with timeout and isolation
         let execute_result = timeout(
             self.config.test_timeout,
-            self.execute_test_with_isolation(&test_case, &isolated_env),
+            self.execute_test_with_isolation(test_case.as_ref(), &isolated_env),
         )
         .await;
 
         let duration = start_time.elapsed();
 
         // Cleanup phase
-        let _ = self.cleanup_test_with_isolation(&test_case, &isolated_env).await;
+        let _ = self.cleanup_test_with_isolation(test_case.as_ref(), &isolated_env).await;
         self.cleanup_isolated_environment(isolated_env).await;
 
         // Process result
@@ -418,7 +414,7 @@ impl TestHarnessClone {
     /// Setup test with proper isolation
     async fn setup_test_with_isolation(
         &self,
-        test_case: &Box<dyn TestCase>,
+        test_case: &dyn TestCase,
         env: &IsolatedEnvironment,
     ) -> TestResultCompat<()> {
         // Set isolated environment variables
@@ -440,11 +436,7 @@ impl TestHarnessClone {
         }
 
         // Call the test's setup method with stable API
-        {
-            let ctx = self.fixtures.ctx();
-            test_case.setup(ctx)
-        }
-        .await?;
+        test_case.setup(self.fixtures.ctx()).await?;
 
         Ok(())
     }
@@ -452,7 +444,7 @@ impl TestHarnessClone {
     /// Execute test with proper isolation
     async fn execute_test_with_isolation(
         &self,
-        test_case: &Box<dyn TestCase>,
+        test_case: &dyn TestCase,
         _env: &IsolatedEnvironment,
     ) -> TestResultCompat<TestMetrics> {
         // Execute the test in the isolated environment
@@ -462,7 +454,7 @@ impl TestHarnessClone {
     /// Cleanup test with proper isolation
     async fn cleanup_test_with_isolation(
         &self,
-        test_case: &Box<dyn TestCase>,
+        test_case: &dyn TestCase,
         _env: &IsolatedEnvironment,
     ) -> TestResultCompat<()> {
         // Call the test's cleanup method

@@ -9,6 +9,7 @@ use crate::{KernelProvider, cpu};
 use bitnet_common::{Device, KernelError, QuantizationType, Result};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use sysinfo;
 
 /// Device-aware quantization provider with automatic fallback
 pub struct DeviceAwareQuantizer {
@@ -30,6 +31,8 @@ struct DeviceStatsInternal {
     fallback_count: u64,
     last_gpu_error: Option<String>,
     last_cpu_error: Option<String>,
+    memory_used_bytes: u64,
+    memory_total_bytes: u64,
 }
 
 impl DeviceAwareQuantizer {
@@ -134,6 +137,10 @@ impl DeviceAwareQuantizer {
     ) -> Result<()> {
         let start_time = Instant::now();
 
+        if let Ok(mut stats) = self.stats.lock() {
+            Self::update_memory_stats(&mut stats);
+        }
+
         // Try primary provider (GPU) first
         if let Some(ref primary) = self.primary_provider {
             let gpu_start = Instant::now();
@@ -235,6 +242,10 @@ impl DeviceAwareQuantizer {
         let start_time = Instant::now();
         let _used_gpu = false;
 
+        if let Ok(mut stats) = self.stats.lock() {
+            Self::update_memory_stats(&mut stats);
+        }
+
         // Try primary provider (GPU) first
         if let Some(ref primary) = self.primary_provider {
             let gpu_start = Instant::now();
@@ -316,9 +327,25 @@ impl DeviceAwareQuantizer {
         }
     }
 
+    fn update_memory_stats(stats: &mut DeviceStatsInternal) {
+        use memory_stats::memory_stats;
+
+        // Use memory-stats for more accurate process-specific memory
+        if let Some(usage) = memory_stats() {
+            stats.memory_used_bytes = usage.physical_mem as u64;
+        }
+
+        // Use sysinfo for total system memory
+        let mut sys = sysinfo::System::new();
+        sys.refresh_memory();
+        stats.memory_total_bytes = sys.total_memory();
+    }
+
     /// Get comprehensive performance statistics
     pub fn get_stats(&self) -> Option<DeviceStats> {
-        if let Ok(stats) = self.stats.lock() {
+        if let Ok(mut stats) = self.stats.lock() {
+            Self::update_memory_stats(&mut stats);
+
             let primary_device_type =
                 self.primary_provider.as_ref().map(|p| p.name()).unwrap_or("None");
             let fallback_device_type = self.fallback_provider.name();
@@ -343,8 +370,8 @@ impl DeviceAwareQuantizer {
                 },
                 last_gpu_error: stats.last_gpu_error.clone(),
                 last_cpu_error: stats.last_cpu_error.clone(),
-                memory_used_bytes: 0,  // TODO: Implement memory tracking
-                memory_total_bytes: 0, // TODO: Implement memory tracking
+                memory_used_bytes: stats.memory_used_bytes,
+                memory_total_bytes: stats.memory_total_bytes,
             })
         } else {
             log::warn!("Failed to acquire stats lock");
@@ -378,7 +405,9 @@ pub struct DeviceStats {
     pub gpu_efficiency: f64, // Ratio of GPU operations to total operations
     pub last_gpu_error: Option<String>,
     pub last_cpu_error: Option<String>,
+    /// Host memory currently used in bytes
     pub memory_used_bytes: u64,
+    /// Total host memory available in bytes
     pub memory_total_bytes: u64,
 }
 
@@ -408,15 +437,26 @@ impl DeviceStats {
 
     /// Get human-readable summary
     pub fn summary(&self) -> String {
+        let memory_used_mb = self.memory_used_bytes as f64 / (1024.0 * 1024.0);
+        let memory_total_mb = self.memory_total_bytes as f64 / (1024.0 * 1024.0);
+        let memory_usage_percent = if self.memory_total_bytes > 0 {
+            (self.memory_used_bytes as f64 / self.memory_total_bytes as f64) * 100.0
+        } else {
+            0.0
+        };
+
         format!(
-            "Device: {} | Total: {} ops ({} quantize, {} matmul) | Time: {:.2}ms | GPU: {:.1}% | Fallbacks: {}",
+            "Device: {} | Total: {} ops ({} quantize, {} matmul) | Time: {:.2}ms | GPU: {:.1}% | Fallbacks: {} | Memory: {:.1}/{:.1}MB ({:.1}%)",
             self.device_type,
             self.total_operations,
             self.quantization_operations,
             self.matmul_operations,
             self.total_time_ms,
             self.gpu_efficiency * 100.0,
-            self.fallback_count
+            self.fallback_count,
+            memory_used_mb,
+            memory_total_mb,
+            memory_usage_percent
         )
     }
 }
@@ -555,6 +595,9 @@ mod tests {
         if let Some(stats) = quantizer.get_stats() {
             assert_eq!(stats.total_operations, 0);
             assert_eq!(stats.total_time_ms, 0.0);
+            // Memory metrics should be populated
+            assert!(stats.memory_total_bytes > 0);
+            assert!(stats.memory_used_bytes > 0);
         }
 
         // Perform some operations
@@ -570,6 +613,8 @@ mod tests {
             assert_eq!(stats.quantization_operations, 1);
             assert!(stats.total_time_ms > 0.0);
             assert!(stats.cpu_operations > 0);
+            assert!(stats.memory_total_bytes > 0);
+            assert!(stats.memory_used_bytes > 0);
             println!("CPU quantization stats: {}", stats.summary());
         }
 
@@ -578,5 +623,171 @@ mod tests {
         if let Some(stats) = quantizer.get_stats() {
             assert_eq!(stats.total_operations, 0);
         }
+    }
+
+    #[test]
+    fn test_memory_tracking() {
+        let quantizer = DeviceAwareQuantizer::new(Device::Cpu).unwrap();
+
+        if let Some(stats) = quantizer.get_stats() {
+            // Memory tracking should now be implemented
+            assert!(stats.memory_total_bytes > 0, "Total memory should be greater than 0");
+            assert!(
+                stats.memory_used_bytes <= stats.memory_total_bytes,
+                "Used memory should not exceed total memory"
+            );
+
+            println!(
+                "Memory tracking: used={}MB, total={}MB",
+                stats.memory_used_bytes / (1024 * 1024),
+                stats.memory_total_bytes / (1024 * 1024)
+            );
+
+            // Verify summary includes memory info
+            let summary = stats.summary();
+            assert!(summary.contains("Memory:"), "Summary should include memory information");
+        } else {
+            panic!("No stats returned");
+        }
+    }
+
+    #[test]
+    fn test_platform_kernel_selection() {
+        // Test that the best CPU provider is selected based on platform
+        let quantizer = DeviceAwareQuantizer::new(Device::Cpu).unwrap();
+        let provider_name = quantizer.active_provider();
+
+        // Verify we get a valid provider name
+        assert!(!provider_name.is_empty(), "Provider name should not be empty");
+
+        // Test that provider works
+        let input = vec![1.0f32, -1.0f32, 0.5f32, -0.5f32];
+        let mut output = vec![0u8; 1];
+        let mut scales = vec![0.0f32; 1];
+
+        let result = quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S);
+        assert!(result.is_ok(), "Quantization with platform-specific kernel should succeed");
+
+        println!("Selected CPU kernel: {}", provider_name);
+    }
+
+    #[test]
+    fn test_cpu_provider_creation() {
+        // Test that we can create CPU providers across different build configurations
+        let result = DeviceAwareQuantizer::create_best_cpu_provider();
+        assert!(result.is_ok(), "Should be able to create CPU provider");
+
+        let provider = result.unwrap();
+        let name = provider.name();
+        assert!(!name.is_empty(), "Provider should have a name");
+
+        // Verify it's one of the expected CPU kernel types
+        let valid_names = ["avx2", "neon", "fallback"];
+        assert!(
+            valid_names.iter().any(|&valid_name| name.contains(valid_name)),
+            "Provider name '{}' should be one of the valid CPU kernel types",
+            name
+        );
+
+        println!("Created CPU provider: {}", name);
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn test_x86_64_feature_detection() {
+        // Test x86_64 specific feature detection
+        let quantizer = DeviceAwareQuantizer::new(Device::Cpu).unwrap();
+        let provider_name = quantizer.active_provider();
+
+        // On x86_64, we should either get AVX2 or fallback
+        #[cfg(feature = "avx2")]
+        {
+            if is_x86_feature_detected!("avx2") {
+                assert!(
+                    provider_name.contains("avx2"),
+                    "Should use AVX2 kernel when feature is available: {}",
+                    provider_name
+                );
+            } else {
+                assert!(
+                    provider_name.contains("fallback"),
+                    "Should use fallback when AVX2 not available: {}",
+                    provider_name
+                );
+            }
+        }
+
+        #[cfg(not(feature = "avx2"))]
+        {
+            assert!(
+                provider_name.contains("fallback"),
+                "Should use fallback when AVX2 feature not enabled: {}",
+                provider_name
+            );
+        }
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    #[test]
+    fn test_aarch64_feature_detection() {
+        // Test aarch64 specific feature detection
+        let quantizer = DeviceAwareQuantizer::new(Device::Cpu).unwrap();
+        let provider_name = quantizer.active_provider();
+
+        // On aarch64, we should either get NEON or fallback
+        #[cfg(feature = "neon")]
+        {
+            if std::arch::is_aarch64_feature_detected!("neon") {
+                assert!(
+                    provider_name.contains("neon"),
+                    "Should use NEON kernel when feature is available: {}",
+                    provider_name
+                );
+            } else {
+                assert!(
+                    provider_name.contains("fallback"),
+                    "Should use fallback when NEON not available: {}",
+                    provider_name
+                );
+            }
+        }
+
+        #[cfg(not(feature = "neon"))]
+        {
+            assert!(
+                provider_name.contains("fallback"),
+                "Should use fallback when NEON feature not enabled: {}",
+                provider_name
+            );
+        }
+    }
+
+    #[test]
+    fn test_feature_gated_compilation() {
+        // Test that different feature combinations compile correctly
+        // This is mainly a compile-time test, but we can verify runtime behavior
+
+        let devices = DeviceAwareQuantizerFactory::list_available_devices();
+        assert!(devices.contains(&Device::Cpu), "CPU should always be available");
+
+        #[cfg(feature = "gpu")]
+        {
+            // If GPU feature is enabled, we might have CUDA devices
+            println!("GPU feature enabled, available devices: {:?}", devices);
+        }
+
+        #[cfg(not(feature = "gpu"))]
+        {
+            // If GPU feature is disabled, only CPU should be available
+            assert_eq!(
+                devices,
+                vec![Device::Cpu],
+                "Only CPU should be available without GPU feature"
+            );
+        }
+
+        // Test auto-detection works
+        let quantizer = DeviceAwareQuantizerFactory::auto_detect();
+        assert!(quantizer.is_ok(), "Auto-detection should always succeed");
     }
 }

@@ -145,7 +145,7 @@ fn generate_markdown_report(suites: &[SimpleTestSuite]) -> String {
             (total_passed as f64 / total_tests as f64) * 100.0
         ));
     }
-    md.push_str("\n");
+    md.push('\n');
 
     // Test suites
     for suite in suites {
@@ -158,9 +158,9 @@ fn generate_markdown_report(suites: &[SimpleTestSuite]) -> String {
             if let Some(error) = &test.error {
                 md.push_str(&format!(" - Error: {}", error));
             }
-            md.push_str("\n");
+            md.push('\n');
         }
-        md.push_str("\n");
+        md.push('\n');
     }
 
     md

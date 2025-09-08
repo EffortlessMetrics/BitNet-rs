@@ -189,8 +189,7 @@ impl ScenarioConfigManager {
     /// Initialize environment-specific configuration overrides
     fn initialize_environment_overrides(&mut self) {
         // CI environment
-        let mut ci_config = TestConfig::default();
-        ci_config.max_parallel_tests = 8;
+        let mut ci_config = TestConfig { max_parallel_tests: 8, ..Default::default() };
         ci_config.log_level = "debug".to_string();
         ci_config.reporting.output_dir = "/tmp/test-reports".into();
         ci_config.reporting.formats = vec![ReportFormat::Junit, ReportFormat::Html];
@@ -199,14 +198,12 @@ impl ScenarioConfigManager {
         self.environment_overrides.insert(EnvironmentType::CI, ci_config);
 
         // Pre-production environment
-        let mut preprod_config = TestConfig::default();
-        preprod_config.coverage_threshold = 0.7;
+        let mut preprod_config = TestConfig { coverage_threshold: 0.7, ..Default::default() };
         preprod_config.reporting.include_artifacts = true;
         self.environment_overrides.insert(EnvironmentType::PreProduction, preprod_config);
 
         // Production environment
-        let mut prod_config = TestConfig::default();
-        prod_config.max_parallel_tests = 1;
+        let mut prod_config = TestConfig { max_parallel_tests: 1, ..Default::default() };
         prod_config.test_timeout = Duration::from_secs(60);
         prod_config.log_level = "warn".to_string();
         prod_config.reporting.formats = vec![ReportFormat::Json, ReportFormat::Markdown];
@@ -215,8 +212,7 @@ impl ScenarioConfigManager {
         self.environment_overrides.insert(EnvironmentType::Production, prod_config);
 
         // Local environment (development settings)
-        let mut local_config = TestConfig::default();
-        local_config.log_level = "info".to_string();
+        let mut local_config = TestConfig { log_level: "info".to_string(), ..Default::default() };
         local_config.reporting.formats = vec![ReportFormat::Html];
         local_config.reporting.generate_coverage = false;
         local_config.reporting.generate_performance = false;
@@ -579,22 +575,22 @@ impl ScenarioConfigManager {
         let mut cfg = self.resolve(&ctx.scenario, &ctx.environment);
 
         // Platform heuristics (match the expectations in the test file)
-        if let Some(ref platform) = ctx.platform_settings {
-            if let Some(ref os) = platform.os {
-                match os.as_str() {
-                    "windows" => {
-                        if cfg.max_parallel_tests > 8 {
-                            cfg.max_parallel_tests = 8;
-                        }
+        if let Some(ref platform) = ctx.platform_settings
+            && let Some(ref os) = platform.os
+        {
+            match os.as_str() {
+                "windows" => {
+                    if cfg.max_parallel_tests > 8 {
+                        cfg.max_parallel_tests = 8;
                     }
-                    "macos" => {
-                        if cfg.max_parallel_tests > 6 {
-                            cfg.max_parallel_tests = 6;
-                        }
-                    }
-                    // linux / generic: do not tighten beyond scenario defaults
-                    _ => {}
                 }
+                "macos" => {
+                    if cfg.max_parallel_tests > 6 {
+                        cfg.max_parallel_tests = 6;
+                    }
+                }
+                // linux / generic: do not tighten beyond scenario defaults
+                _ => {}
             }
         }
 

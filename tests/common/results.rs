@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
 
 /// Type alias for backward compatibility with existing test code
-/// This allows existing code using TestResult<T> to continue working
+/// This allows existing code using `TestResult<T>` to continue working
 pub type TestResultCompat<T = ()> = Result<T, TestError>;
 
 /// Legacy alias for backward compatibility

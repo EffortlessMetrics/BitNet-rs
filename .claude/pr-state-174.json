@@ -1,0 +1,31 @@
+{
+  "pr_number": 174,
+  "title": "Clean up SIMD kernels in bitnet-quantization crate",
+  "branch": "codex/analyze-bitnet-quantization-for-issues",
+  "status": "merged",
+  "merge_strategy": "squash",
+  "merge_commit": "045cdaf",
+  "validation_date": "2025-09-08",
+  "validation_status": "passed",
+  "quality_gates": {
+    "merge_conflicts": "resolved",
+    "formatting": "passed",
+    "linting": "passed_with_minor_warnings",
+    "tests": "passed",
+    "performance": "validated",
+    "documentation": "passed"
+  },
+  "test_results": {
+    "bitnet_quantization": "15/15 passed",
+    "simd_compatibility": "7/7 passed",
+    "bitnet_kernels": "41/42 passed (1 ignored)",
+    "performance_benchmarks": "compiled_successfully"
+  },
+  "artifacts": {
+    "validation_report": ".claude/finalization-report-pr174.md",
+    "worktree_location": "/tmp/bitnet-validate-pr174 (cleaned up)",
+    "validation_environment": "isolated_with_sccache"
+  },
+  "next_actions": "none_required",
+  "branch_cleanup": "completed_via_github"
+}

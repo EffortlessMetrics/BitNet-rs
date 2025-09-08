@@ -1,0 +1,1 @@
+Note: CHANGELOG.md has duplicate sections. Manual update needed for PR #141 in Unreleased section.

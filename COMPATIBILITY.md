@@ -100,6 +100,23 @@ We guarantee to load:
   - GPT-2 tokenizer without pre-tokenizer field
   - Vocabulary size mismatches (with warning)
 
+### FFI Bridge Architecture (New in v1.x)
+
+BitNet.rs includes a comprehensive FFI bridge for gradual migration from C++ implementations:
+
+- **Quantization Bridge**: Complete support for I2S, TL1, and TL2 quantization via C++ kernels
+- **Performance Validation**: Built-in tools for comparing FFI vs Rust quantization accuracy and performance  
+- **Migration Path**: Systematic approach enabling kernel-by-kernel replacement without functionality loss
+- **Safety Guarantees**: Safe Rust wrappers with proper error handling and memory management
+- **Feature Gated**: Optional `--features ffi` flag with graceful fallback when unavailable
+
+The FFI bridge ensures that:
+
+1. Existing C++ kernel functionality is preserved during migration
+2. Rust implementations can be validated against C++ equivalents
+3. Migration decisions are based on automated performance and accuracy metrics
+4. No compatibility breaks occur during the transition period
+
 ### GGUF Format Support
 
 - **GGUF v2 and v3 headers**: BitNet.rs accepts both versions with defensive parsing
@@ -328,6 +345,7 @@ BitNet.rs has been **validated as a superior drop-in replacement** for bitnet.cp
 1. BitNet.rs successfully loads the Microsoft BitNet model (GGUF v3 early variant) that causes the C++ implementation to crash
 2. Complete validation framework with tokenizer → logit → NLL parity testing
 3. Robust handling of quantization effects without false positives
+4. **FFI Quantization Bridge**: Gradual migration support with C++ kernel integration ensuring functionality preservation during transition
 
 ## 📅 Stability Timeline
 

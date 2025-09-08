@@ -1,0 +1,26 @@
+{
+  "pr_number": 187,
+  "title": "Call engine prefill during batch inference",
+  "author": "EffortlessSteven",
+  "head_ref": "codex/implement-prefill-in-run_batch",
+  "base_ref": "main",
+  "status": "VALIDATION_COMPLETE",
+  "mergeable": true,
+  "merge_strategy": "squash",
+  "validation_date": "2025-09-07",
+  "commits": 6,
+  "additions": 627,
+  "deletions": 123,
+  "changed_files": 18,
+  "breaking_changes": false,
+  "tests_passed": true,
+  "security_audit_passed": true,
+  "formatting_applied": true,
+  "ready_for_merge": true,
+  "next_agent": "pr-doc-finalizer",
+  "artifacts": {
+    "validation_report": ".claude/finalization-report.md",
+    "test_results": ".claude/artifacts/pr-187/nextest-results.txt",
+    "worktree_location": "/tmp/bitnet-validate-mucy"
+  }
+}

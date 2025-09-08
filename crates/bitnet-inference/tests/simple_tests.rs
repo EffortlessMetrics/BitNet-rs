@@ -192,7 +192,13 @@ async fn test_streaming_config() {
     assert!(config.buffer_size > 0);
     assert!(config.flush_interval_ms > 0);
 
-    let custom_config = StreamingConfig { buffer_size: 5, flush_interval_ms: 100 };
+    let custom_config = StreamingConfig {
+        buffer_size: 5,
+        flush_interval_ms: 100,
+        max_retries: 3,
+        token_timeout_ms: 5000,
+        cancellable: true,
+    };
     assert_eq!(custom_config.buffer_size, 5);
     assert_eq!(custom_config.flush_interval_ms, 100);
 }
@@ -332,9 +338,7 @@ async fn test_sampling_edge_cases() {
 #[tokio::test]
 async fn test_error_handling() {
     // Test config validation errors
-    let mut config = InferenceConfig::default();
-
-    config.max_context_length = 0;
+    let mut config = InferenceConfig { max_context_length: 0, ..Default::default() };
     let error = config.validate().unwrap_err();
     assert!(error.contains("max_context_length"));
 

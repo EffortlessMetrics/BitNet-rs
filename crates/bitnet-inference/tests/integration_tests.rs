@@ -305,7 +305,7 @@ mod streaming_tests {
         let device = Device::Cpu;
 
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
-        let mut stream = engine.generate_stream("Hello, world!");
+        let mut stream = engine.generate_stream("Hello, world!").unwrap();
 
         let mut token_count = 0;
         let mut total_text = String::new();
@@ -314,8 +314,8 @@ mod streaming_tests {
         while let Ok(Some(result)) = timeout(Duration::from_secs(5), stream.next()).await {
             match result {
                 Ok(text_chunk) => {
-                    assert!(!text_chunk.is_empty());
-                    total_text.push_str(&text_chunk);
+                    assert!(!text_chunk.text.is_empty());
+                    total_text.push_str(&text_chunk.text);
                     token_count += 1;
                 }
                 Err(e) => {
@@ -343,7 +343,7 @@ mod streaming_tests {
 
         let config = GenerationConfig::default().with_max_tokens(10).with_temperature(0.5);
 
-        let mut stream = engine.generate_stream_with_config("Test prompt", &config);
+        let mut stream = engine.generate_stream_with_config("Test prompt", &config).unwrap();
 
         let mut received_tokens = 0;
         while let Ok(Some(result)) = timeout(Duration::from_secs(3), stream.next()).await {
@@ -369,10 +369,11 @@ mod streaming_tests {
         let device = Device::Cpu;
 
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
-        let mut stream = engine.generate_stream("Test prompt");
+        let mut stream = engine.generate_stream("Test prompt").unwrap();
 
         // Take only first few tokens then drop stream
-        let first_result = timeout(Duration::from_secs(2), stream.next()).await;
+        let first_result =
+            timeout(Duration::from_secs(2), stream.expect("Stream creation failed").next()).await;
         assert!(first_result.is_ok());
 
         // Drop the stream (simulating client disconnect)
@@ -383,7 +384,13 @@ mod streaming_tests {
 
     #[tokio::test]
     async fn test_streaming_config_validation() {
-        let config = StreamingConfig { buffer_size: 5, flush_interval_ms: 100 };
+        let config = StreamingConfig {
+            buffer_size: 5,
+            flush_interval_ms: 100,
+            cancellable: true,
+            max_retries: 3,
+            token_timeout_ms: 1000,
+        };
 
         assert_eq!(config.buffer_size, 5);
         assert_eq!(config.flush_interval_ms, 100);

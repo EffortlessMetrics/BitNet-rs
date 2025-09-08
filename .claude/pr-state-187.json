@@ -1,0 +1,33 @@
+{
+  "pr_number": 187,
+  "title": "Call engine prefill during batch inference",
+  "branch": "codex/implement-prefill-in-run_batch",
+  "status": "MANUAL_INTERVENTION_REQUIRED",
+  "validation_status": "PASSED",
+  "merge_strategy": "squash",
+  "blocking_issue": "merge_conflicts",
+  "conflicted_files": [
+    "crates/bitnet-cli/src/commands/inference.rs",
+    "crates/bitnet-inference/src/engine.rs", 
+    "README.md",
+    "CLAUDE.md",
+    "docs/test-suite.md",
+    ".claude/finalization-report.md"
+  ],
+  "validation_summary": {
+    "format_check": "passed",
+    "compilation": "passed", 
+    "tests_passed": 66,
+    "tests_failed": 0,
+    "cross_validation": "not_required",
+    "quality_gates": "all_passed"
+  },
+  "next_steps": [
+    "Manual conflict resolution required",
+    "Rebase PR branch onto current main",
+    "Resolve conflicts preserving prefill functionality", 
+    "Re-run validation after conflict resolution"
+  ],
+  "finalized_at": "2025-09-08T00:23:47Z",
+  "agent": "pr-finalize"
+}

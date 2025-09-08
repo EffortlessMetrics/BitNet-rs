@@ -1,0 +1,308 @@
+//! Integration tests for batch inference with prefill functionality
+
+use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device};
+use bitnet_inference::{GenerationConfig, InferenceEngine};
+use bitnet_models::Model;
+use bitnet_tokenizers::Tokenizer;
+use std::{sync::Arc, thread::sleep, time::Duration};
+
+/// Mock model with timing delay for realistic prefill testing
+struct MockModelWithTiming {
+    config: BitNetConfig,
+}
+
+impl MockModelWithTiming {
+    fn new() -> Self {
+        Self { config: BitNetConfig::default() }
+    }
+}
+
+impl Model for MockModelWithTiming {
+    fn config(&self) -> &BitNetConfig {
+        &self.config
+    }
+
+    fn forward(
+        &self,
+        _input: &ConcreteTensor,
+        _cache: &mut dyn std::any::Any,
+    ) -> Result<ConcreteTensor, BitNetError> {
+        // Introduce delay to make prefill latency measurable
+        sleep(Duration::from_millis(10));
+        Ok(ConcreteTensor::mock(vec![1, 1, self.config.model.hidden_size]))
+    }
+
+    fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor, BitNetError> {
+        let seq_len = tokens.len();
+        let hidden_dim = self.config.model.hidden_size;
+        Ok(ConcreteTensor::mock(vec![seq_len, hidden_dim]))
+    }
+
+    fn logits(&self, _hidden: &ConcreteTensor) -> Result<ConcreteTensor, BitNetError> {
+        Ok(ConcreteTensor::mock(vec![1, 1, self.config.model.vocab_size]))
+    }
+}
+
+struct MockTokenizerWithTiming;
+
+impl MockTokenizerWithTiming {
+    fn new() -> Self {
+        Self
+    }
+}
+
+impl Tokenizer for MockTokenizerWithTiming {
+    fn encode(
+        &self,
+        text: &str,
+        _add_bos: bool,
+        _add_special: bool,
+    ) -> Result<Vec<u32>, BitNetError> {
+        // Add small delay to simulate tokenization
+        sleep(Duration::from_millis(1));
+        Ok((0..text.len().min(10)).map(|i| i as u32 + 1).collect())
+    }
+
+    fn decode(&self, tokens: &[u32]) -> Result<String, BitNetError> {
+        // Add small delay to simulate detokenization
+        sleep(Duration::from_millis(1));
+        Ok(format!("decoded_{}_tokens", tokens.len()))
+    }
+
+    fn vocab_size(&self) -> usize {
+        50257
+    }
+
+    fn eos_token_id(&self) -> Option<u32> {
+        Some(50256)
+    }
+
+    fn pad_token_id(&self) -> Option<u32> {
+        Some(50257)
+    }
+
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        Some(format!("<token_{}>", token))
+    }
+}
+
+/// Simple batch processor to simulate CLI functionality
+struct BatchProcessor {
+    engine: InferenceEngine,
+}
+
+impl BatchProcessor {
+    fn new(engine: InferenceEngine) -> Self {
+        Self { engine }
+    }
+
+    async fn process_batch(&mut self, prompts: &[String]) -> anyhow::Result<Vec<BatchResult>> {
+        let mut results = Vec::new();
+
+        for prompt in prompts {
+            let start_time = std::time::Instant::now();
+
+            // 1. Tokenize (measure)
+            let t0 = std::time::Instant::now();
+            let prompt_ids = self.engine.tokenizer().encode(prompt, true, false)?;
+            let t_tokenize_ms = t0.elapsed().as_secs_f64() * 1e3;
+
+            // 2. Prefill (measure)
+            let t1 = std::time::Instant::now();
+            self.engine.prefill(&prompt_ids).await?;
+            let t_prefill_ms = t1.elapsed().as_secs_f64() * 1e3;
+
+            // 3. Generate (measure)
+            let t2 = std::time::Instant::now();
+            let config = GenerationConfig {
+                max_new_tokens: 2,
+                temperature: 0.7,
+                top_k: 40,
+                top_p: 0.9,
+                repetition_penalty: 1.1,
+                seed: None,
+                stop_sequences: vec![],
+                eos_token_id: None,
+                skip_special_tokens: true,
+                logits_tap_steps: 0,
+                logits_topk: 10,
+                logits_cb: None,
+            };
+            let generated_ids = self.engine.generate_tokens(&prompt_ids, &config).await?;
+            let t_generate_ms = t2.elapsed().as_secs_f64() * 1e3;
+
+            // 4. Decode result
+            let generated_text = self.engine.tokenizer().decode(&generated_ids)?;
+            let total_time = start_time.elapsed().as_secs_f64() * 1e3;
+
+            results.push(BatchResult {
+                prompt: prompt.clone(),
+                generated_text,
+                prompt_tokens: prompt_ids.len(),
+                generated_tokens: generated_ids.len(),
+                timing_ms: TimingMetrics {
+                    tokenize: t_tokenize_ms,
+                    prefill: t_prefill_ms,
+                    generate: t_generate_ms,
+                    total: total_time,
+                },
+            });
+        }
+
+        Ok(results)
+    }
+}
+
+#[derive(Debug, Clone)]
+struct BatchResult {
+    pub prompt: String,
+    pub generated_text: String,
+    pub prompt_tokens: usize,
+    pub generated_tokens: usize,
+    pub timing_ms: TimingMetrics,
+}
+
+#[derive(Debug, Clone)]
+struct TimingMetrics {
+    pub tokenize: f64,
+    pub prefill: f64,
+    pub generate: f64,
+    pub total: f64,
+}
+
+#[tokio::test]
+async fn test_batch_prefill_timing() {
+    let model = Arc::new(MockModelWithTiming::new());
+    let tokenizer = Arc::new(MockTokenizerWithTiming::new());
+    let engine = InferenceEngine::new(model, tokenizer, Device::Cpu).unwrap();
+
+    let mut processor = BatchProcessor::new(engine);
+    let prompts = vec!["Hello world".to_string(), "Test prompt".to_string()];
+
+    let results = processor.process_batch(&prompts).await.unwrap();
+
+    assert_eq!(results.len(), 2, "Should process both prompts");
+
+    for (i, result) in results.iter().enumerate() {
+        assert!(
+            result.timing_ms.prefill >= 8.0,
+            "Prompt {} prefill should record latency >= 8ms (got {}ms)",
+            i,
+            result.timing_ms.prefill
+        );
+        assert!(
+            result.timing_ms.tokenize >= 0.5,
+            "Prompt {} tokenization should be measurable (got {}ms)",
+            i,
+            result.timing_ms.tokenize
+        );
+        assert!(
+            result.timing_ms.generate >= 0.0,
+            "Prompt {} generation should be recorded (got {}ms)",
+            i,
+            result.timing_ms.generate
+        );
+        assert!(
+            result.timing_ms.total > result.timing_ms.prefill,
+            "Prompt {} total time should include prefill",
+            i
+        );
+        assert!(result.prompt_tokens > 0, "Should have prompt tokens");
+        assert!(result.generated_tokens > 0, "Should have generated tokens");
+        assert!(!result.generated_text.is_empty(), "Should have generated text");
+    }
+}
+
+#[tokio::test]
+async fn test_batch_prefill_performance_consistency() {
+    let model = Arc::new(MockModelWithTiming::new());
+    let tokenizer = Arc::new(MockTokenizerWithTiming::new());
+    let engine = InferenceEngine::new(model, tokenizer, Device::Cpu).unwrap();
+
+    let mut processor = BatchProcessor::new(engine);
+
+    // Test with prompts of different lengths
+    let prompts = vec![
+        "Short".to_string(),
+        "This is a medium length prompt".to_string(),
+        "This is a very long prompt that should still work correctly with prefill operations"
+            .to_string(),
+    ];
+
+    let results = processor.process_batch(&prompts).await.unwrap();
+
+    assert_eq!(results.len(), 3, "Should process all prompts");
+
+    // Verify timing consistency - prefill should be relatively consistent
+    let prefill_times: Vec<f64> = results.iter().map(|r| r.timing_ms.prefill).collect();
+    for (i, &prefill_time) in prefill_times.iter().enumerate() {
+        assert!(
+            prefill_time >= 8.0 && prefill_time <= 100.0,
+            "Prompt {} prefill time {} should be reasonable",
+            i,
+            prefill_time
+        );
+    }
+
+    // Verify tokenization times are reasonable (may not scale with length due to mock)
+    let tokenize_times: Vec<f64> = results.iter().map(|r| r.timing_ms.tokenize).collect();
+    for (i, &tokenize_time) in tokenize_times.iter().enumerate() {
+        assert!(
+            tokenize_time >= 0.5,
+            "Prompt {} tokenization time {} should be measurable",
+            i,
+            tokenize_time
+        );
+    }
+}
+
+#[tokio::test]
+async fn test_prefill_error_recovery() {
+    let model = Arc::new(MockModelWithTiming::new());
+    let tokenizer = Arc::new(MockTokenizerWithTiming::new());
+    let mut engine = InferenceEngine::new(model, tokenizer, Device::Cpu).unwrap();
+
+    // Test with invalid token - should handle gracefully
+    let vocab_size = engine.tokenizer().vocab_size() as u32;
+    let invalid_tokens = vec![1, 2, vocab_size + 100];
+
+    let result = engine.prefill(&invalid_tokens).await;
+    assert!(result.is_err(), "Should fail with invalid tokens");
+
+    // Should be able to recover with valid tokens
+    let valid_tokens = vec![1, 2, 3];
+    let result = engine.prefill(&valid_tokens).await;
+    assert!(result.is_ok(), "Should recover with valid tokens");
+}
+
+#[tokio::test]
+async fn test_empty_batch_handling() {
+    let model = Arc::new(MockModelWithTiming::new());
+    let tokenizer = Arc::new(MockTokenizerWithTiming::new());
+    let engine = InferenceEngine::new(model, tokenizer, Device::Cpu).unwrap();
+
+    let mut processor = BatchProcessor::new(engine);
+    let empty_prompts = vec![];
+
+    let results = processor.process_batch(&empty_prompts).await.unwrap();
+    assert_eq!(results.len(), 0, "Empty batch should return empty results");
+}
+
+#[tokio::test]
+async fn test_single_prompt_batch() {
+    let model = Arc::new(MockModelWithTiming::new());
+    let tokenizer = Arc::new(MockTokenizerWithTiming::new());
+    let engine = InferenceEngine::new(model, tokenizer, Device::Cpu).unwrap();
+
+    let mut processor = BatchProcessor::new(engine);
+    let single_prompt = vec!["Single test prompt".to_string()];
+
+    let results = processor.process_batch(&single_prompt).await.unwrap();
+
+    assert_eq!(results.len(), 1, "Single prompt should return single result");
+    let result = &results[0];
+
+    assert!(result.timing_ms.prefill >= 8.0, "Should have measurable prefill time");
+    assert!(!result.generated_text.is_empty(), "Should generate text");
+    assert_eq!(result.prompt, "Single test prompt", "Should preserve prompt");
+}

@@ -3,6 +3,24 @@
 `xtask` collects reliable, reproducible workflows for this repo. It's designed
 to be **idempotent**, **cache-aware**, and **CI-friendly**.
 
+## GPU Detection Integration
+
+As of PR #166, xtask integrates with BitNet.rs GPU detection utilities to provide system-aware optimizations and better error reporting.
+
+### GPU Detection Features
+- **Automatic Backend Detection**: CUDA, Metal, ROCm, and WebGPU support
+- **System Probing**: Uses `nvidia-smi`, `rocm-smi`, and system information
+- **Mock Testing**: `BITNET_GPU_FAKE` environment variable for testing scenarios
+- **Graceful Fallbacks**: CPU fallback when GPU unavailable
+
+### Mock GPU Testing
+```bash
+# Test download with mocked GPU environments  
+BITNET_GPU_FAKE="cuda" cargo xtask download-model --dry-run
+BITNET_GPU_FAKE="rocm,metal" cargo xtask crossval --dry-run
+BITNET_GPU_FAKE="" cargo xtask full-crossval  # No GPU scenario
+```
+
 ## Exit Codes
 
 | Code | Meaning              | Common Causes |
