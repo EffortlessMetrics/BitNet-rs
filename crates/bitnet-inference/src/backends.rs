@@ -418,8 +418,9 @@ mod tests {
         assert_eq!(tensor.device(), &Device::Cpu);
 
         let tensor_gpu = tensor.with_device(Device::Cuda(0)).unwrap();
-        // Note: In CPU-only builds, this will still be CPU
-        // When GPU support is added, this will properly transfer to GPU
-        assert_eq!(tensor_gpu.device(), &Device::Cpu);
+        // Determine expected device based on runtime capabilities
+        let expected =
+            Device::from(&Device::Cuda(0).to_candle().unwrap_or_else(|_| candle_core::Device::Cpu));
+        assert_eq!(tensor_gpu.device(), &expected);
     }
 }
