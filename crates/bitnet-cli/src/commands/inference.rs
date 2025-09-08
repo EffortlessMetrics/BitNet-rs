@@ -403,9 +403,10 @@ impl InferenceCommand {
 
         // Validate top_p
         if let Some(top_p) = self.top_p
-            && !(0.0..=1.0).contains(&top_p) {
-                anyhow::bail!("Top-p must be between 0.0 and 1.0");
-            }
+            && !(0.0..=1.0).contains(&top_p)
+        {
+            anyhow::bail!("Top-p must be between 0.0 and 1.0");
+        }
 
         // Validate repetition penalty
         if self.repetition_penalty <= 0.0 {
