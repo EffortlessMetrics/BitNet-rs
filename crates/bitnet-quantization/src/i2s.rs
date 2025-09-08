@@ -299,12 +299,8 @@ impl I2SQuantizer {
                 let i8_vec = _mm256_packs_epi16(i16_vec, i16_vec);
 
                 // Store 8 bytes
-                let result: i64 = _mm256_extract_epi64::<0>(i8_vec);
-                std::ptr::copy_nonoverlapping(
-                    &result as *const i64 as *const i8,
-                    output.as_mut_ptr().add(i * 8),
-                    8,
-                );
+                let low = _mm256_castsi256_si128(i8_vec);
+                _mm_storeu_si64(output.as_mut_ptr().add(i * 8) as *mut u8, low);
             }
         }
 
@@ -329,8 +325,7 @@ impl I2SQuantizer {
         for (i, chunk) in chunks.enumerate() {
             unsafe {
                 // Load 8 i8 values
-                let i8_data = std::ptr::read_unaligned(chunk.as_ptr() as *const i64);
-                let i8_vec = _mm_set1_epi64x(i8_data);
+                let i8_vec = _mm_loadu_si64(chunk.as_ptr() as *const u8);
 
                 // Convert to i32 and then to f32
                 let i32_vec = _mm256_cvtepi8_epi32(i8_vec);
@@ -445,8 +440,7 @@ impl I2SQuantizer {
         for (i, chunk) in chunks.enumerate() {
             unsafe {
                 // Load 4 i8 values
-                let i8_data = std::ptr::read_unaligned(chunk.as_ptr() as *const u32);
-                let i8_vec = vreinterpret_s8_u32(vdup_n_u32(i8_data));
+                let i8_vec = vreinterpret_s8_u32(vld1_dup_u32(chunk.as_ptr() as *const u32));
 
                 // Convert to i32 and then to f32
                 let i16_vec = vmovl_s8(i8_vec);
