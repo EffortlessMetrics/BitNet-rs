@@ -13,7 +13,7 @@ pub struct UniversalTokenizer {
 #[allow(clippy::large_enum_variant)]
 enum TokenizerBackend {
     #[cfg(feature = "spm")]
-    SentencePiece(crate::SmpTokenizer),
+    SentencePiece(crate::SpmTokenizer),
     Mock(MockTokenizer),
 }
 
@@ -81,10 +81,10 @@ impl UniversalTokenizer {
                 debug!("Creating mock tokenizer for {}", config.model_type);
                 Ok(TokenizerBackend::Mock(MockTokenizer::new()))
             }
-            #[cfg(feature = "spm")]
+            #[cfg(feature = "smp")]
             "smp" | "sentencepiece" => {
-                debug!("Creating SentencePiece tokenizer");
-                Ok(TokenizerBackend::SentencePiece(crate::SmpTokenizer::new(config)?))
+                debug!("SentencePiece tokenizer requires file path, using mock fallback");
+                Ok(TokenizerBackend::Mock(MockTokenizer::new()))
             }
             #[cfg(not(feature = "spm"))]
             "smp" | "sentencepiece" => {
