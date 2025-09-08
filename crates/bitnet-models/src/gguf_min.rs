@@ -32,7 +32,6 @@ macro_rules! i2s_oob {
 #[derive(Debug, Clone)]
 struct TensorInfo {
     name: String,
-    #[allow(dead_code)]
     n_dims: u32,
     dims: Vec<u64>,
     ty: u32,     // ggml_type
@@ -49,30 +48,19 @@ fn is_supported_ty(ty: u32) -> bool {
 }
 
 #[inline]
-fn is_2d(dims: &[u64]) -> bool {
-    dims.len() == 2
+fn is_2d(info: &TensorInfo) -> bool {
+    info.n_dims == 2 && info.dims.len() == 2
 }
 
 // Helper for shape-driven tensor selection
 fn looks_like_embeddings(info: &TensorInfo) -> bool {
-    is_2d(&info.dims)
+    is_2d(info)
         && is_supported_ty(info.ty)
         && (info.name.contains("emb") || info.name.contains("wte") || info.name.contains("embed"))
 }
 
-#[allow(dead_code)]
-fn looks_like_output_matrix(info: &TensorInfo) -> bool {
-    // Must be 2D tensor - never accept 1D norm vectors
-    info.dims.len() == 2 &&
-    is_2d(&info.dims) &&
-    is_supported_ty(info.ty) &&
-    // de-prefer obvious non-heads
-    !(info.name.contains("attn_output") || info.name.contains("blk") || info.name.contains("norm"))
-}
-
 #[derive(Debug)]
 struct Parsed {
-    #[allow(dead_code)]
     alignment: u64,
     tensors: Vec<TensorInfo>,
     data_offset: u64, // absolute file offset where tensor data section starts
@@ -99,11 +87,11 @@ pub fn load_two<P: AsRef<Path>>(path: P) -> Result<TwoTensors> {
         pick_tensors(&parsed).with_context(|| "locate tok_embeddings/output tensors")?;
 
     // Materialize as f32 (copy if needed).
-    let tok = tensor_as_f32(&mmap, parsed.data_offset, &tok_info)?;
-    let head = tensor_as_f32(&mmap, parsed.data_offset, &head_info)?;
+    let tok = tensor_as_f32(&mmap, parsed.data_offset, parsed.alignment, &tok_info)?;
+    let head = tensor_as_f32(&mmap, parsed.data_offset, parsed.alignment, &head_info)?;
 
     // Shapes can vary; deduce (vocab, dim) consistently.
-    if tok_info.dims.len() != 2 || head_info.dims.len() != 2 {
+    if !is_2d(&tok_info) || !is_2d(&head_info) {
         bail!("expected 2D tensors; got tok {:?}, head {:?}", tok_info.dims, head_info.dims);
     }
 
@@ -205,14 +193,23 @@ fn parse_header<R: Read + Seek>(r: &mut R) -> Result<Parsed> {
         for _ in 0..n_dims {
             dims.push(read_u64(r)?);
         }
+        ensure!(n_dims as usize == dims.len(), "tensor '{}' dims mismatch", name);
         let ty = read_u32(r)?;
         let offset = read_u64(r)?;
+        ensure!(
+            offset % alignment == 0,
+            "tensor '{}' offset {} not aligned to {alignment}",
+            name,
+            offset
+        );
         tensors.push(TensorInfo { name, n_dims, dims, ty, offset });
     }
 
     // data section begins aligned after the tensor header table
     let here = r.stream_position()?;
     let data_offset = align_up(here, alignment);
+
+    ensure!(data_offset % alignment == 0, "data section not aligned to {alignment}");
 
     Ok(Parsed { alignment, tensors, data_offset })
 }
@@ -252,7 +249,7 @@ fn pick_tensors(parsed: &Parsed) -> Result<(TensorInfo, TensorInfo)> {
 
     // Helper to check if a tensor matches the expected output shape
     let looks_like_output_with_shape = |t: &TensorInfo| -> bool {
-        is_2d(&t.dims)
+        is_2d(t)
             && is_supported_ty(t.ty)
             && ((t.dims[0] == dim && t.dims[1] == vocab)
                 || (t.dims[0] == vocab && t.dims[1] == dim))
@@ -278,7 +275,12 @@ fn pick_tensors(parsed: &Parsed) -> Result<(TensorInfo, TensorInfo)> {
 
 // ---------- tensor materialization ----------
 
-fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Result<Cow<'a, [f32]>> {
+fn tensor_as_f32<'a>(
+    mmap: &'a [u8],
+    data_base: u64,
+    alignment: u64,
+    info: &TensorInfo,
+) -> Result<Cow<'a, [f32]>> {
     use crate::formats::gguf::GgufTensorType;
 
     let nelems: usize = info
@@ -288,6 +290,12 @@ fn tensor_as_f32<'a>(mmap: &'a [u8], data_base: u64, info: &TensorInfo) -> Resul
         .ok_or_else(|| anyhow::anyhow!("tensor size overflow"))?
         .try_into()
         .map_err(|_| anyhow::anyhow!("tensor too large"))?;
+    ensure!(
+        info.offset % alignment == 0,
+        "tensor '{}' offset {} not aligned to {alignment}",
+        info.name,
+        info.offset
+    );
     let offset = (data_base + info.offset) as usize;
 
     match GgufTensorType::from_u32(info.ty)? {
