@@ -695,6 +695,7 @@ dependencies = [
  "prometheus",
  "serde",
  "serde_json",
+ "sysinfo",
  "tokio",
  "tokio-stream",
  "toml 0.9.5",

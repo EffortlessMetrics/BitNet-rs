@@ -1,66 +1,57 @@
 [workspace]
-resolver = "2"
 members = [
-    ".",                          # Main library crate
-    "crates/bitnet-common",
-    "crates/bitnet-compat",
-    "crates/bitnet-ggml-ffi",      # GGML FFI for IQ2_S support
-    "crates/bitnet-models",
-    "crates/bitnet-quantization",
-    "crates/bitnet-kernels",
-    "crates/bitnet-inference",
-    "crates/bitnet-tokenizers",
-    "crates/bitnet-server",
-    "crates/bitnet-cli",
-    "crates/bitnet-ffi",
-    "crates/bitnet-py",
-    "crates/bitnet-wasm",
-    "crates/bitnet-sys",
-    "crossval",
-    "tests",
-    "xtask",
+  ".",                          # Main library crate
+  "crates/bitnet-common",
+  "crates/bitnet-compat",
+  "crates/bitnet-ggml-ffi",     # GGML FFI for IQ2_S support
+  "crates/bitnet-models",
+  "crates/bitnet-quantization",
+  "crates/bitnet-kernels",
+  "crates/bitnet-inference",
+  "crates/bitnet-tokenizers",
+  "crates/bitnet-server",
+  "crates/bitnet-cli",
+  "crates/bitnet-ffi",
+  "crates/bitnet-py",
+  "crates/bitnet-wasm",
+  "crates/bitnet-sys",
+  "crossval",
+  "tests",
+  "xtask",
 ]
+resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
 # wasm/py/ffi, etc.) remain workspace members but are opt-in.
-default-members = [
-    "crates/bitnet-common",
-    "crates/bitnet-models",
-    "crates/bitnet-tokenizers",
-    "crates/bitnet-quantization",
-    "crates/bitnet-kernels",
-    "crates/bitnet-inference",
-    "crates/bitnet-cli",
-    "crates/bitnet-server",
-]
+default-members = ["crates/bitnet-common", "crates/bitnet-models", "crates/bitnet-tokenizers", "crates/bitnet-quantization", "crates/bitnet-kernels", "crates/bitnet-inference", "crates/bitnet-cli", "crates/bitnet-server"]
 
 [package]
-name = "bitnet"
-version = "0.1.0"
-edition = "2024"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/microsoft/BitNet"
-homepage = "https://github.com/microsoft/BitNet"
-documentation = "https://docs.rs/bitnet"
 authors = ["BitNet Contributors <bitnet@microsoft.com>"]
-keywords = ["machine-learning", "llm", "quantization", "inference", "bitnet"]
 categories = ["science", "algorithms", "mathematics", "wasm", "api-bindings"]
 description = "High-performance Rust implementation of BitNet 1-bit LLM inference with cross-platform support"
+documentation = "https://docs.rs/bitnet"
+edition = "2024"
+homepage = "https://github.com/microsoft/BitNet"
+keywords = ["machine-learning", "llm", "quantization", "inference", "bitnet"]
+license = "MIT OR Apache-2.0"
+name = "bitnet"
 readme = "README.md"
+repository = "https://github.com/microsoft/BitNet"
 rust-version.workspace = true
+version = "0.1.0"
 
 [workspace.package]
-version = "0.1.0"
-rust-version = "1.89.0"
-edition = "2024"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/microsoft/BitNet"
-homepage = "https://github.com/microsoft/BitNet"
-documentation = "https://docs.rs/bitnet"
 authors = ["BitNet Contributors <bitnet@microsoft.com>"]
-keywords = ["machine-learning", "llm", "quantization", "inference", "bitnet"]
 categories = ["science", "algorithms", "mathematics", "wasm", "api-bindings"]
 description = "High-performance Rust implementation of BitNet 1-bit LLM inference with cross-platform support"
+documentation = "https://docs.rs/bitnet"
+edition = "2024"
+homepage = "https://github.com/microsoft/BitNet"
+keywords = ["machine-learning", "llm", "quantization", "inference", "bitnet"]
+license = "MIT OR Apache-2.0"
 readme = "README.md"
+repository = "https://github.com/microsoft/BitNet"
+rust-version = "1.89.0"
+version = "0.1.0"
 
 [dependencies]
 # Core crates - always included
@@ -70,34 +61,30 @@ bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.1.0" }
 bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.1.0", optional = true }
 
 # Optional crates based on features
-bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.1.0", optional = true }
 bitnet-inference = { path = "crates/bitnet-inference", version = "0.1.0", optional = true }
+bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.1.0", optional = true }
 bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.1.0", optional = true }
 
 [build-dependencies]
-vergen = { version = "9.0", features = [
-    "build",
-    "rustc",
-    "cargo",
-] }
+vergen = { version = "9.0", features = ["build", "rustc", "cargo"] }
 
 # Features section moved to line 126
 
 [dev-dependencies]
-criterion = "0.5"
-candle-core = { version = "0.9", default-features = false }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-thiserror = "1"
-tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "fs", "io-util"] }
-tempfile = "3.8"
-toml = "0.9"
-ctor = "0.5.0"
-rand = "0.9"
 async-trait = "0.1.89"
+bitnet-tests = { path = "tests", package = "bitnet-tests", default-features = false }
+candle-core = { version = "0.9", default-features = false }
+criterion = "0.5"
+ctor = "0.5.0"
 env_logger = "0.11"
 log = "0.4"
-bitnet-tests = { path = "tests", package = "bitnet-tests", default-features = false }
+rand = "0.9"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tempfile = "3.8"
+thiserror = "1"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "fs", "io-util"] }
+toml = "0.9"
 # API snapshot testing
 insta = { version = "1.34", features = ["yaml", "json"] }
 num_cpus = "1.16"
@@ -107,49 +94,32 @@ reqwest = { version = "0.12", default-features = false }
 # Additional dependencies used by root-level tests
 anyhow = "1.0"
 chrono = { version = "0.4", default-features = true, features = ["clock"] }
-futures-util = "0.3"
-tracing = "0.1"
 fastrand = "2.0"
 filetime = "0.2"
+futures-util = "0.3"
 html-escape = "0.2"
 libc = "0.2"
 rayon = "1.11"
+tracing = "0.1"
 
 [features]
-default = []  # Empty default features - must be explicitly enabled
+default = [] # Empty default features - must be explicitly enabled
 
 # Test and development features (off by default)
 bench = []
-examples = []                                   # Feature gate for examples
+examples = [] # Feature gate for examples
 # Forward features to the dev-dependency bitnet-tests
-integration-tests = [
-    "bitnet-tests/fixtures",
-    "bitnet-tests/reporting", 
-    "bitnet-tests/trend",
-    "bitnet-tests/integration-tests",
-]
-spm = []         # for sentencepiece tokenizer tests
+integration-tests = ["bitnet-tests/fixtures", "bitnet-tests/reporting", "bitnet-tests/trend", "bitnet-tests/integration-tests"]
+spm = []                                                                                                                        # for sentencepiece tokenizer tests
 
 # Core inference features
-cpu = [
-    "kernels",
-    "inference",
-    "tokenizers",
-    "bitnet-kernels/cpu-optimized",
-    "bitnet-inference/cpu",
-]
-gpu = [
-    "kernels",
-    "inference",
-    "tokenizers",
-    "bitnet-kernels/gpu",
-    "bitnet-inference/gpu",
-]
-cuda = ["gpu"]  # Alias for backward compatibility
+cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bitnet-inference/cpu"]
+cuda = ["gpu"]                                                                                       # Alias for backward compatibility
+gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu"]
 
 # Component features
-kernels = ["dep:bitnet-kernels"]
 inference = ["dep:bitnet-inference", "kernels"]
+kernels = ["dep:bitnet-kernels"]
 tokenizers = ["dep:bitnet-tokenizers"]
 
 # SIMD optimizations
@@ -158,34 +128,31 @@ avx512 = ["bitnet-kernels/avx512"]
 neon = ["bitnet-kernels/neon"]
 
 # Language bindings (not included in main crate)
+ffi = []    # Handled by bitnet-ffi crate
 python = [] # Handled by bitnet-py crate
 wasm = []   # Handled by bitnet-wasm crate
-ffi = []    # Handled by bitnet-ffi crate
 
 # Server and CLI (not included in main crate)
-server = [] # Handled by bitnet-server crate
 cli = []    # Handled by bitnet-cli crate
+server = [] # Handled by bitnet-server crate
 
 # Quantization features
-iq2s-ffi = [
-    "bitnet-models/iq2s-ffi",
-    "dep:bitnet_ggml_ffi",
-] # Enable IQ2_S quantization via GGML FFI
+iq2s-ffi = ["bitnet-models/iq2s-ffi", "dep:bitnet_ggml_ffi"] # Enable IQ2_S quantization via GGML FFI
 
 # Cross-validation features
+cpp-ffi = []  # Link tests against BitNet.cpp library
 crossval = [] # Enable cross-validation against C++ implementation
-cpp-ffi = [] # Link tests against BitNet.cpp library
 
 # Test framework features (forward to bitnet-tests)
+ffi-tests = []
 fixtures = ["bitnet-tests/fixtures"]
+full-framework = ["fixtures", "reporting", "trend", "spm", "integration-tests", "ffi-tests"]
 reporting = ["bitnet-tests/reporting"]
 trend = ["bitnet-tests/trend"]
-ffi-tests = []
-full-framework = ["fixtures", "reporting", "trend", "spm", "integration-tests", "ffi-tests"]
 
 # Convenience features
 full = ["cpu", "cuda", "avx2", "avx512", "neon"]
-minimal = []                                    # Only core crates, no inference
+minimal = []                                     # Only core crates, no inference
 
 [package.metadata.docs.rs]
 all-features = true
@@ -213,21 +180,21 @@ required-features = ["cpu", "ffi"]
 [workspace.dependencies]
 # Core dependencies
 anyhow = "1.0.99"
-thiserror = "2.0.15"
+log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+thiserror = "2.0.15"
 toml = "0.9"
-log = "0.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Async runtime
-tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
+tokio = { version = "1.0", features = ["full"] }
 
 # Performance and SIMD
-rayon = "1.11"
 bytemuck = { version = "1.14", features = ["derive"] }
+rayon = "1.11"
 
 # Tensor operations
 candle-core = { version = "0.9", default-features = false }
@@ -235,19 +202,20 @@ candle-nn = { version = "0.9", default-features = false }
 candle-transformers = { version = "0.9", default-features = false }
 
 # Serialization formats
-safetensors = "0.6"
 memmap2 = "0.9"
+safetensors = "0.6"
 
 # CLI and configuration
 clap = { version = "4.5", features = ["derive", "env"] }
 clap_complete = "4.4"
-indicatif = "0.18"
 console = "0.16"
 crossterm = "0.29"
-humantime = "2.1"
-humansize = "2.1"
 dirs = "6.0"
+humansize = "2.1"
+humantime = "2.1"
+indicatif = "0.18"
 num_cpus = "1.16"
+sysinfo = "0.30"
 
 # Web server
 axum = "0.8"
@@ -255,23 +223,23 @@ tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace"] }
 
 # Monitoring and observability
-prometheus = "0.14"
+chrono = { version = "0.4", features = ["serde"] }
 metrics = "0.24"
 metrics-prometheus = "0.11"
 opentelemetry = { version = "0.29", default-features = false, features = ["trace", "metrics"] }
-opentelemetry_sdk = { version = "0.29", features = ["trace", "metrics", "rt-tokio"] }
-opentelemetry-prometheus = "0.29"
 opentelemetry-otlp = { version = "0.29", default-features = false, features = ["grpc-tonic", "trace"] }
+opentelemetry-prometheus = "0.29"
 opentelemetry-stdout = "0.29"
-tracing-opentelemetry = "0.30"
+opentelemetry_sdk = { version = "0.29", features = ["trace", "metrics", "rt-tokio"] }
+prometheus = "0.14"
 tracing-appender = "0.2"
-chrono = { version = "0.4", features = ["serde"] }
+tracing-opentelemetry = "0.30"
 uuid = { version = "1.0", features = ["v4"] }
 
 # FFI and bindings
+js-sys = "0.3"
 pyo3 = { version = "0.25", features = ["extension-module"] }
 wasm-bindgen = "0.2"
-js-sys = "0.3"
 web-sys = "0.3"
 
 # GPU support
@@ -286,22 +254,18 @@ tempfile = "3.8"
 reqwest = { version = "0.12.23", features = ["json"] }
 
 # Code quality
-cc = "1.2"
 bindgen = "0.72"
+cc = "1.2"
 
 # Build-time information
-vergen = { version = "9.0", features = [
-    "build",
-    "rustc",
-    "cargo",
-] }
+vergen = { version = "9.0", features = ["build", "rustc", "cargo"] }
 
 [profile.release]
-lto = "thin"              # Faster than "fat", still good optimization
-codegen-units = 1         # Single codegen unit for best optimization
-panic = "abort"           # Smaller binaries, no unwinding
-strip = "symbols"         # Strip symbols but keep debuginfo
-opt-level = 3             # Maximum optimization (default)
+codegen-units = 1 # Single codegen unit for best optimization
+lto = "thin"      # Faster than "fat", still good optimization
+opt-level = 3     # Maximum optimization (default)
+panic = "abort"   # Smaller binaries, no unwinding
+strip = "symbols" # Strip symbols but keep debuginfo
 # overflow-checks = false # Already false in release
 
 [profile.bench]
@@ -314,13 +278,13 @@ opt-level = 2
 # Workspace-level lints for code quality
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
-nursery = { level = "warn", priority = -1 }
-ptr_arg = "deny"
-module_name_repetitions = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
+module_name_repetitions = "allow"
 must_use_candidate = "allow"
+nursery = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+ptr_arg = "deny"
 
 # Workspace-level feature flags for convenience
 [workspace.metadata.docs.rs]
@@ -328,12 +292,9 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [workspace.metadata.release]
+pre-release-replacements = [{ file = "README.md", search = "bitnet = \"[a-z0-9\\.-]+\"", replace = "bitnet = \"{{version}}\"" }, { file = "CHANGELOG.md", search = "## \\[Unreleased\\]", replace = "## [Unreleased]\n\n## [{{version}}] - {{date}}" }]
 sign-commit = true
 sign-tag = true
-pre-release-replacements = [
-    { file = "README.md", search = "bitnet = \"[a-z0-9\\.-]+\"", replace = "bitnet = \"{{version}}\"" },
-    { file = "CHANGELOG.md", search = "## \\[Unreleased\\]", replace = "## [Unreleased]\n\n## [{{version}}] - {{date}}" },
-]
 
 
 # Workspace metadata for crates.io publication
@@ -344,19 +305,18 @@ path = "tests/performance_benchmarks.rs"
 required-features = ["bench"]
 
 [workspace.metadata.bitnet]
-msrv = "1.89.0"
 categories = [
-    "science",      # Scientific computing
-    "algorithms",   # Algorithm implementations
-    "mathematics",  # Mathematical operations
-    "wasm",         # WebAssembly support
-    "api-bindings", # Language bindings
+  "science",      # Scientific computing
+  "algorithms",   # Algorithm implementations
+  "mathematics",  # Mathematical operations
+  "wasm",         # WebAssembly support
+  "api-bindings", # Language bindings
 ]
 keywords = [
-    "machine-learning", # ML/AI domain
-    "llm",              # Large Language Models
-    "quantization",     # Model quantization
-    "inference",        # Model inference
-    "bitnet",           # BitNet specific
+  "machine-learning", # ML/AI domain
+  "llm",              # Large Language Models
+  "quantization",     # Model quantization
+  "inference",        # Model inference
+  "bitnet",           # BitNet specific
 ]
-
+msrv = "1.89.0"
