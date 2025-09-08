@@ -43,21 +43,21 @@
 use anyhow::{Context, Result};
 use clap::Args;
 use console::style;
-use futures::StreamExt;
+use futures::{StreamExt, future::BoxFuture};
 use humansize::{DECIMAL, format_size};
 use humantime::format_duration;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
 use std::{
     io::{self, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Arc,
     time::{Duration, Instant},
 };
-use tokio::{fs, time::timeout};
+use tokio::fs;
 use tracing::{debug, error, info, warn};
 
-use bitnet_inference::{InferenceConfig, InferenceEngine, SamplingConfig};
+use bitnet_inference::{InferenceEngine, SamplingConfig};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use candle_core::Device;
@@ -74,7 +74,7 @@ pub struct GenerationConfig {
 }
 
 /// Inference command arguments
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Default)]
 pub struct InferenceCommand {
     /// Path to the model file
     #[arg(short, long, value_name = "PATH")]
@@ -270,6 +270,56 @@ pub struct ModelInfo {
     pub hidden_size: Option<usize>,
 }
 
+/// Engine abstraction to allow mocking in tests with async prefill support
+pub trait PrefillEngine {
+    /// Access the tokenizer
+    fn tokenizer(&self) -> Arc<dyn bitnet_tokenizers::Tokenizer>;
+    /// Run the engine prefill phase (async to match InferenceEngine API)
+    fn prefill<'a>(&'a mut self, tokens: &'a [u32]) -> BoxFuture<'a, Result<()>>;
+    /// Generate tokens from the engine
+    fn generate_tokens<'a>(
+        &'a mut self,
+        tokens: &'a [u32],
+        config: &'a GenerationConfig,
+    ) -> BoxFuture<'a, Result<Vec<u32>>>;
+}
+
+impl PrefillEngine for InferenceEngine {
+    fn tokenizer(&self) -> Arc<dyn bitnet_tokenizers::Tokenizer> {
+        self.tokenizer()
+    }
+
+    fn prefill<'a>(&'a mut self, tokens: &'a [u32]) -> BoxFuture<'a, Result<()>> {
+        Box::pin(async move { self.prefill(tokens).await })
+    }
+
+    fn generate_tokens<'a>(
+        &'a mut self,
+        tokens: &'a [u32],
+        config: &'a GenerationConfig,
+    ) -> BoxFuture<'a, Result<Vec<u32>>> {
+        // Map CLI GenerationConfig to engine GenerationConfig
+        let engine_config = bitnet_inference::GenerationConfig {
+            max_new_tokens: config.max_new_tokens as u32,
+            temperature: config.sampling.temperature,
+            top_k: config.sampling.top_k,
+            top_p: config.sampling.top_p,
+            repetition_penalty: config.sampling.repetition_penalty,
+            stop_sequences: config.stop_sequences.clone(),
+            seed: config.sampling.seed,
+            skip_special_tokens: true,
+            eos_token_id: None,
+            logits_tap_steps: 0,
+            logits_topk: 10,
+            logits_cb: None,
+        };
+        Box::pin(async move {
+            // Use explicit InferenceEngine method to avoid recursion
+            InferenceEngine::generate_tokens(self, tokens, &engine_config).await
+        })
+    }
+}
+
 /// Performance metrics
 #[derive(Debug, Default)]
 pub struct PerformanceMetrics {
@@ -281,6 +331,7 @@ pub struct PerformanceMetrics {
     pub cache_misses: usize,
 }
 
+#[cfg(feature = "full-cli")]
 impl InferenceCommand {
     /// Execute the inference command
     pub async fn execute(&self, config: &CliConfig) -> Result<()> {
@@ -543,6 +594,24 @@ impl InferenceCommand {
         Ok(())
     }
 
+    /// Convert CLI GenerationConfig to engine GenerationConfig
+    fn to_engine_config(&self, config: &GenerationConfig) -> bitnet_inference::GenerationConfig {
+        bitnet_inference::GenerationConfig {
+            max_new_tokens: config.max_new_tokens as u32,
+            temperature: config.sampling.temperature,
+            top_k: config.sampling.top_k,
+            top_p: config.sampling.top_p,
+            repetition_penalty: config.sampling.repetition_penalty,
+            stop_sequences: config.stop_sequences.clone(),
+            seed: config.sampling.seed,
+            skip_special_tokens: true,
+            eos_token_id: None,
+            logits_tap_steps: 0,
+            logits_topk: self.logits_topk,
+            logits_cb: None,
+        }
+    }
+
     /// Run streaming inference
     async fn run_streaming_inference(
         &self,
@@ -550,7 +619,8 @@ impl InferenceCommand {
         prompt: &str,
         config: &GenerationConfig,
     ) -> Result<()> {
-        let mut stream = engine.generate_stream_with_config(prompt, config)?;
+        let engine_config = self.to_engine_config(config);
+        let mut stream = engine.generate_stream_with_config(prompt, &engine_config)?;
 
         print!("{}", style("Generated: ").bold());
         io::stdout().flush()?;
@@ -584,9 +654,9 @@ impl InferenceCommand {
     }
 
     /// Run batch inference
-    async fn run_batch_inference(
+    async fn run_batch_inference<E: PrefillEngine + Send>(
         &self,
-        engine: &mut InferenceEngine,
+        engine: &mut E,
         prompts: &[String],
         config: &GenerationConfig,
     ) -> Result<Vec<InferenceResult>> {
@@ -664,9 +734,9 @@ impl InferenceCommand {
     /// - `throughput_tps.prefill`: Prompt processing speed (tokens/second)
     /// - `throughput_tps.decode`: Generation speed (tokens/second)
     /// - `throughput_tps.e2e`: Overall throughput (tokens/second)
-    async fn process_batch_sequential(
+    async fn process_batch_sequential<E: PrefillEngine + Send>(
         &self,
-        engine: &mut InferenceEngine,
+        engine: &mut E,
         batch: &[String],
         config: &GenerationConfig,
     ) -> Result<Vec<InferenceResult>> {
@@ -694,23 +764,8 @@ impl InferenceCommand {
             // The cache is now populated from prefill, making this phase pure generation
             let t2 = Instant::now();
 
-            // Map CLI generation config to engine config
-            let engine_config = bitnet_inference::GenerationConfig {
-                max_new_tokens: config.max_new_tokens as u32,
-                temperature: config.sampling.temperature,
-                top_k: config.sampling.top_k,
-                top_p: config.sampling.top_p,
-                repetition_penalty: config.sampling.repetition_penalty,
-                stop_sequences: config.stop_sequences.clone(),
-                seed: config.sampling.seed,
-                skip_special_tokens: true,
-                eos_token_id: None,
-                logits_tap_steps: 0,
-                logits_topk: self.logits_topk,
-                logits_cb: None,
-            };
-
-            let generated_ids = engine.generate_tokens(&prompt_ids, &engine_config).await?;
+            // Generate with the engine using the trait method
+            let generated_ids = engine.generate_tokens(&prompt_ids, config).await?;
             let t_decode_ms = t2.elapsed().as_secs_f64() * 1e3;
 
             // 4. Decode to text
@@ -755,9 +810,9 @@ impl InferenceCommand {
     }
 
     /// Process batch in parallel (placeholder - would need thread-safe engine)
-    async fn process_batch_parallel(
+    async fn process_batch_parallel<E: PrefillEngine + Send>(
         &self,
-        engine: &mut InferenceEngine,
+        engine: &mut E,
         batch: &[String],
         config: &GenerationConfig,
         _workers: usize,
@@ -1083,9 +1138,43 @@ mod tests {
     use super::*;
     use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device};
     use bitnet_models::Model;
-    use bitnet_tokenizers::Tokenizer;
-    use std::{sync::Arc, thread::sleep, time::Duration};
+    use bitnet_tokenizers::{BasicTokenizer, Tokenizer};
+    use futures::future::BoxFuture;
+    use std::{
+        sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        },
+        thread::sleep,
+        time::Duration,
+    };
 
+    /// Mock engine for testing PrefillEngine trait
+    struct MockEngine {
+        tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
+        called: Arc<AtomicBool>,
+    }
+
+    impl PrefillEngine for MockEngine {
+        fn tokenizer(&self) -> Arc<dyn bitnet_tokenizers::Tokenizer> {
+            self.tokenizer.clone()
+        }
+
+        fn prefill<'a>(&'a mut self, _tokens: &'a [u32]) -> BoxFuture<'a, Result<()>> {
+            self.called.store(true, Ordering::SeqCst);
+            Box::pin(async move { Ok(()) })
+        }
+
+        fn generate_tokens<'a>(
+            &'a mut self,
+            _tokens: &'a [u32],
+            _config: &'a GenerationConfig,
+        ) -> BoxFuture<'a, Result<Vec<u32>>> {
+            Box::pin(async move { Ok(vec![0]) })
+        }
+    }
+
+    /// Mock model for testing InferenceEngine with measurable timing
     struct MockModel {
         config: BitNetConfig,
     }
@@ -1122,6 +1211,7 @@ mod tests {
         }
     }
 
+    /// Mock tokenizer for testing
     struct MockTokenizer;
     impl MockTokenizer {
         fn new() -> Self {
@@ -1161,7 +1251,24 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn prefill_is_executed() {
+    async fn test_prefill_invoked() {
+        let tokenizer = Arc::new(BasicTokenizer::new());
+        let flag = Arc::new(AtomicBool::new(false));
+        let mut engine = MockEngine { tokenizer, called: flag.clone() };
+        let cmd = InferenceCommand::default();
+        let config = GenerationConfig {
+            max_new_tokens: 1,
+            sampling: SamplingConfig::default(),
+            stop_sequences: vec![],
+            stream: false,
+        };
+        let _ =
+            cmd.process_batch_sequential(&mut engine, &["hi".to_string()], &config).await.unwrap();
+        assert!(flag.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_prefill_is_executed_with_timing() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
         let mut engine = InferenceEngine::new(model, tokenizer, Device::Cpu).unwrap();

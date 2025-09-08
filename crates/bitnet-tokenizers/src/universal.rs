@@ -2,7 +2,7 @@ use bitnet_common::Result;
 use std::path::Path;
 use tracing::{debug, warn};
 
-use crate::{HfTokenizer, MockTokenizer, Tokenizer, TokenizerConfig};
+use crate::{MockTokenizer, Tokenizer, TokenizerConfig};
 
 /// Universal tokenizer that auto-detects and handles all formats
 pub struct UniversalTokenizer {
@@ -10,11 +10,10 @@ pub struct UniversalTokenizer {
     config: TokenizerConfig,
 }
 
-#[allow(clippy::large_enum_variant, dead_code)]
+#[allow(clippy::large_enum_variant)]
 enum TokenizerBackend {
     #[cfg(feature = "spm")]
     SentencePiece(crate::SpmTokenizer),
-    Hf(HfTokenizer),
     Mock(MockTokenizer),
 }
 
@@ -79,29 +78,12 @@ impl UniversalTokenizer {
     fn detect_and_create_backend(config: &TokenizerConfig) -> Result<TokenizerBackend> {
         match config.model_type.as_str() {
             "gpt2" | "bpe" | "llama" | "llama3" | "tiktoken" | "gpt4" | "cl100k" | "falcon" => {
-                if let (Some(vocab), Some(merges)) =
-                    (config.vocabulary.as_ref(), config.bpe_merges.as_ref())
-                {
-                    debug!("Creating HF tokenizer for {}", config.model_type);
-                    let tok = HfTokenizer::from_vocab_and_merges(vocab, merges).map_err(|e| {
-                        bitnet_common::BitNetError::Model(
-                            bitnet_common::ModelError::LoadingFailed {
-                                reason: format!("Tokenizer construction error: {}", e),
-                            },
-                        )
-                    })?;
-                    Ok(TokenizerBackend::Hf(tok))
-                } else {
-                    debug!(
-                        "Missing vocab or merges for {}, using mock tokenizer",
-                        config.model_type
-                    );
-                    Ok(TokenizerBackend::Mock(MockTokenizer::new()))
-                }
+                debug!("Creating mock tokenizer for {}", config.model_type);
+                Ok(TokenizerBackend::Mock(MockTokenizer::new()))
             }
-            #[cfg(feature = "spm")]
+            #[cfg(feature = "smp")]
             "smp" | "sentencepiece" => {
-                warn!("SentencePiece tokenizer requires file path, using mock fallback");
+                debug!("SentencePiece tokenizer requires file path, using mock fallback");
                 Ok(TokenizerBackend::Mock(MockTokenizer::new()))
             }
             #[cfg(not(feature = "spm"))]
@@ -130,7 +112,6 @@ impl Tokenizer for UniversalTokenizer {
         let mut tokens = match &self.backend {
             #[cfg(feature = "spm")]
             TokenizerBackend::SentencePiece(t) => t.encode(&processed, false, add_special)?,
-            TokenizerBackend::Hf(t) => t.encode(&processed, false, add_special)?,
             TokenizerBackend::Mock(t) => t.encode(&processed, false, add_special)?,
         };
 
@@ -149,7 +130,6 @@ impl Tokenizer for UniversalTokenizer {
         match &self.backend {
             #[cfg(feature = "spm")]
             TokenizerBackend::SentencePiece(t) => t.decode(tokens),
-            TokenizerBackend::Hf(t) => t.decode(tokens),
             TokenizerBackend::Mock(t) => t.decode(tokens),
         }
     }
@@ -162,7 +142,6 @@ impl Tokenizer for UniversalTokenizer {
         match &self.backend {
             #[cfg(feature = "spm")]
             TokenizerBackend::SentencePiece(t) => t.token_to_piece(token),
-            TokenizerBackend::Hf(t) => t.token_to_piece(token),
             TokenizerBackend::Mock(t) => t.token_to_piece(token),
         }
     }
