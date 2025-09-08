@@ -43,7 +43,7 @@ fn ffi_qk() -> usize {
 #[cfg(not(feature = "iq2s-ffi"))]
 #[inline]
 fn ffi_qk() -> usize {
-    unreachable!("built without feature `iq2s-ffi`")
+    256
 }
 
 #[cfg(feature = "iq2s-ffi")]
@@ -55,13 +55,19 @@ fn ffi_block_bytes() -> usize {
 #[cfg(not(feature = "iq2s-ffi"))]
 #[inline]
 fn ffi_block_bytes() -> usize {
-    unreachable!("built without feature `iq2s-ffi`")
+    82
 }
 
 #[cfg(feature = "iq2s-ffi")]
 #[inline]
 fn ffi_dequant_row(src: *const c_void, dst: *mut f32, n: usize) {
     unsafe { bitnet_ggml_ffi::dequantize_row_iq2_s(src, dst, n) }
+}
+
+#[cfg(not(feature = "iq2s-ffi"))]
+#[inline]
+fn ffi_dequant_row(src: *const c_void, dst: *mut f32, n: usize) {
+    unsafe { rust_dequant_row_iq2s(src, dst, n) }
 }
 
 /// Rust representation of the C `block_iq2_s` used by the GGML backend.
@@ -218,10 +224,7 @@ impl Iq2sBackend {
     pub unsafe fn dequantize_row(self, src: *const c_void, dst: *mut f32, n: usize) {
         match self {
             Iq2sBackend::Rust => unsafe { rust_dequant_row_iq2s(src, dst, n) },
-            #[cfg(feature = "iq2s-ffi")]
             Iq2sBackend::Ffi => ffi_dequant_row(src, dst, n),
-            #[cfg(not(feature = "iq2s-ffi"))]
-            Iq2sBackend::Ffi => unreachable!("compiled without `iq2s-ffi`"),
         }
     }
 
