@@ -39,12 +39,15 @@ fn dims2(tensor: &Tensor, name: &str) -> Result<(usize, usize)> {
     Ok((dims[0], dims[1]))
 }
 
-/// Find a tensor by trying multiple aliases
-#[allow(dead_code)]
-fn pick<'a>(tensors: &'a HashMap<String, Tensor>, candidates: &[&str]) -> Option<&'a Tensor> {
+/// Find a tensor by trying multiple aliases. Returns the first matching
+/// key and tensor pair.
+fn pick<'a, 'b>(
+    tensors: &'a HashMap<String, Tensor>,
+    candidates: &[&'b str],
+) -> Option<(&'b str, &'a Tensor)> {
     for k in candidates {
         if let Some(t) = tensors.get(*k) {
-            return Some(t);
+            return Some((*k, t));
         }
     }
     None
@@ -336,21 +339,19 @@ pub fn normalize_model_tensors(
         "transformer.wte.weight",
     ];
 
-    let emb_key = emb_candidates.iter().find(|k| tensors.contains_key(**k)).ok_or_else(|| {
-        bitnet_common::BitNetError::Validation(
-            "embed tokens not found (tried embed_tokens/tok_embeddings/token_embd/transformer.wte)"
-                .to_string(),
-        )
-    })?;
+    let (emb_key, er, ec, emb_device) = {
+        let (key, emb) = pick(tensors, &emb_candidates).ok_or_else(|| {
+            bitnet_common::BitNetError::Validation(
+                "embed tokens not found (tried embed_tokens/tok_embeddings/token_embd/transformer.wte)"
+                    .to_string(),
+            )
+        })?;
 
-    // Get embedding info first (before mutating tensors)
-    let emb_shape = {
-        let emb = tensors.get(*emb_key).unwrap();
+        // Get embedding info first (before mutating tensors)
         let (er, ec) = dims2(emb, "embed_tokens.weight")?;
         let device = emb.device().clone();
-        (er, ec, device)
+        (key, er, ec, device)
     };
-    let (er, ec, emb_device) = emb_shape;
 
     // 2) Try to detect hidden size from other model weights first
     let detected_hidden = detect_hidden_size_from_weights(tensors, expected_hidden_size)?;
@@ -404,17 +405,17 @@ pub fn normalize_model_tensors(
         // Store metadata about transposition instead of doing it
         // The embedding layer will handle this at inference time
         // For now, just log a warning and keep the tensor as-is
-        if emb_key != &"embed_tokens.weight" {
-            let emb = tensors.remove(*emb_key).unwrap();
+        if emb_key != "embed_tokens.weight" {
+            let emb = tensors.remove(emb_key).unwrap();
             tensors.insert("embed_tokens.weight".to_string(), emb);
         }
         // Add a metadata tensor to indicate transposition is needed
         // This is a tiny 1-element tensor that signals the orientation
         let transpose_flag = Tensor::from_slice(&[1.0f32], 1, &emb_device)?;
         tensors.insert("embed_tokens.transposed".to_string(), transpose_flag);
-    } else if emb_key != &"embed_tokens.weight" {
+    } else if emb_key != "embed_tokens.weight" {
         // Just rename the key if needed
-        let emb = tensors.remove(*emb_key).unwrap();
+        let emb = tensors.remove(emb_key).unwrap();
         tensors.insert("embed_tokens.weight".to_string(), emb);
         // Add flag indicating no transposition needed
         let transpose_flag = Tensor::from_slice(&[0.0f32], 1, &emb_device)?;
@@ -422,13 +423,15 @@ pub fn normalize_model_tensors(
     }
 
     // 4) Locate lm_head with robust aliases, normalize to [n_vocab, n_embd]
-    let lm_candidates =
-        ["lm_head.weight", "output.weight", "model.lm_head.weight", "generator.weight"];
+    let lm_candidates = [
+        "lm_head.weight",
+        "output.weight",
+        "model.lm_head.weight",
+        "generator.weight",
+    ];
 
-    if let Some(lm_key) = lm_candidates.iter().find(|k| tensors.contains_key(**k)) {
-        // Get lm_head info first (before mutating tensors)
-        let (lm_needs_t, lm_device) = {
-            let lm = tensors.get(*lm_key).unwrap();
+    if let Some((lm_key, lm_needs_t, lm_device)) = {
+        if let Some((key, lm)) = pick(tensors, &lm_candidates) {
             let (lr, lc) = dims2(lm, "lm_head.weight")?;
             let device = lm.device().clone();
 
@@ -445,23 +448,25 @@ pub fn normalize_model_tensors(
                     )));
                 }
             };
-            (needs_t, device)
-        };
-
+            Some((key, needs_t, device))
+        } else {
+            None
+        }
+    } {
         if lm_needs_t {
             tracing::warn!(
                 "lm_head is transposed - avoiding {} MB transpose",
                 (vocab_size * hidden_size * 4) / (1024 * 1024)
             );
             // Store metadata instead of transposing
-            if lm_key != &"lm_head.weight" {
-                let lm = tensors.remove(*lm_key).unwrap();
+            if lm_key != "lm_head.weight" {
+                let lm = tensors.remove(lm_key).unwrap();
                 tensors.insert("lm_head.weight".to_string(), lm);
             }
             let transpose_flag = Tensor::from_slice(&[1.0f32], 1, &lm_device)?;
             tensors.insert("lm_head.transposed".to_string(), transpose_flag);
-        } else if lm_key != &"lm_head.weight" {
-            let lm = tensors.remove(*lm_key).unwrap();
+        } else if lm_key != "lm_head.weight" {
+            let lm = tensors.remove(lm_key).unwrap();
             tensors.insert("lm_head.weight".to_string(), lm);
             let transpose_flag = Tensor::from_slice(&[0.0f32], 1, &lm_device)?;
             tensors.insert("lm_head.transposed".to_string(), transpose_flag);
