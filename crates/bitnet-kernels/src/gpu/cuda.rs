@@ -4,8 +4,8 @@
 use crate::KernelProvider;
 use bitnet_common::{KernelError, QuantizationType, Result};
 use cudarc::driver::{
-    CudaContext, CudaFunction, CudaModule, CudaSlice, CudaStream, LaunchConfig, PushKernelArg,
-    result::device as cu_device, sys::CUdevice_attribute,
+    result::device as cu_device, sys::CUdevice_attribute, CudaContext, CudaFunction, CudaModule,
+    CudaSlice, CudaStream, LaunchConfig, PushKernelArg,
 };
 use cudarc::nvrtc::compile_ptx;
 use std::sync::Arc;
@@ -15,11 +15,9 @@ type BatchOperation<'a> = (&'a [i8], &'a [u8], &'a mut [f32], usize, usize, usiz
 
 /// CUDA kernel provider with memory management and stream handling
 pub struct CudaKernel {
-    #[allow(dead_code)]
-    ctx: Arc<CudaContext>,
+    _ctx: Arc<CudaContext>,
     stream: Arc<CudaStream>,
-    #[allow(dead_code)]
-    module: Arc<CudaModule>,
+    _module: Arc<CudaModule>,
     matmul_function: CudaFunction,
     quantize_i2s_function: CudaFunction,
     quantize_tl1_function: CudaFunction,
@@ -107,9 +105,9 @@ impl CudaKernel {
         log::info!("CUDA device info: {:?}", device_info);
 
         Ok(Self {
-            ctx,
+            _ctx: ctx,
             stream,
-            module,
+            _module: module,
             matmul_function,
             quantize_i2s_function,
             quantize_tl1_function,
@@ -354,8 +352,7 @@ impl CudaKernel {
     }
 
     /// Calculate optimal launch parameters based on device capabilities
-    #[allow(dead_code)]
-    fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, usize) {
+    fn _calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, usize) {
         // Use device-specific optimization
         let max_threads = self.device_info.max_threads_per_block as usize;
         let _multiprocessor_count = self.device_info.multiprocessor_count as usize;

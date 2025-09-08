@@ -17,7 +17,6 @@ pub enum PrecisionMode {
 
 /// Mixed precision kernel provider (simplified)
 pub struct MixedPrecisionKernel {
-    #[allow(dead_code)] // Reserved for multi-GPU support
     device_id: usize,
     precision_mode: PrecisionMode,
 }
@@ -39,6 +38,11 @@ impl MixedPrecisionKernel {
     /// Get current precision mode
     pub fn precision_mode(&self) -> PrecisionMode {
         self.precision_mode
+    }
+
+    /// Get the device ID associated with this kernel
+    pub fn device_id(&self) -> usize {
+        self.device_id
     }
 
     /// Check if FP16 is supported (simplified)
@@ -96,6 +100,7 @@ mod tests {
         assert!(kernel.is_ok());
 
         if let Ok(mut kernel) = kernel {
+            assert_eq!(kernel.device_id(), 0);
             assert_eq!(kernel.precision_mode(), PrecisionMode::Auto);
 
             kernel.set_precision_mode(PrecisionMode::FP16);

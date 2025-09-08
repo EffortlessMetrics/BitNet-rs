@@ -4,6 +4,9 @@ use bitnet_common::Result;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
+#[cfg(debug_assertions)]
+use std::backtrace::Backtrace;
+
 /// Memory pool configuration
 #[derive(Debug, Clone)]
 pub struct MemoryPoolConfig {
@@ -52,8 +55,7 @@ struct AllocationInfo {
     size: usize,
     timestamp: Instant,
     #[cfg(debug_assertions)]
-    #[allow(dead_code)] // Used for debugging allocation issues
-    stack_trace: Vec<String>,
+    stack_trace: Backtrace,
 }
 
 /// Memory access pattern for optimization
@@ -79,7 +81,6 @@ pub enum AccessPattern {
 
 /// Optimized memory pool for GPU allocations (simplified)
 pub struct OptimizedMemoryPool {
-    #[allow(dead_code)] // Reserved for multi-GPU support
     device_id: usize,
     config: MemoryPoolConfig,
     free_buffers: HashMap<usize, Vec<Vec<u8>>>, // Simplified buffer storage
@@ -105,7 +106,7 @@ impl OptimizedMemoryPool {
 
     /// Allocate memory from pool (simplified)
     pub fn allocate(&mut self, size: usize) -> Result<Vec<u8>> {
-        log::debug!("Allocating {} bytes from memory pool", size);
+        log::debug!("Allocating {} bytes from memory pool on device {}", size, self.device_id);
 
         // Try to reuse existing buffer
         if let Some(buffer) = self.try_reuse_buffer(size) {
@@ -126,6 +127,8 @@ impl OptimizedMemoryPool {
     pub fn deallocate(&mut self, buffer: Vec<u8>) {
         let size = buffer.len();
         let ptr = buffer.as_ptr();
+
+        log::debug!("Deallocating {} bytes back to pool on device {}", size, self.device_id);
 
         // Remove from tracking
         if let Some(info) = self.allocated_buffers.remove(&ptr) {
@@ -159,11 +162,14 @@ impl OptimizedMemoryPool {
     /// Track allocation for leak detection and statistics
     fn track_allocation(&mut self, buffer: &[u8], size: usize) -> Result<()> {
         let ptr = buffer.as_ptr();
+        #[cfg(debug_assertions)]
+        let stack_trace = self.capture_stack_trace();
+
         let info = AllocationInfo {
             size,
             timestamp: Instant::now(),
             #[cfg(debug_assertions)]
-            stack_trace: self.capture_stack_trace(),
+            stack_trace,
         };
 
         self.allocated_buffers.insert(ptr, info);
@@ -207,9 +213,8 @@ impl OptimizedMemoryPool {
 
     /// Capture stack trace for debugging (simplified)
     #[cfg(debug_assertions)]
-    fn capture_stack_trace(&self) -> Vec<String> {
-        // Simplified - would use backtrace crate in real implementation
-        vec!["stack trace not implemented".to_string()]
+    fn capture_stack_trace(&self) -> Backtrace {
+        Backtrace::force_capture()
     }
 
     /// Get memory usage statistics
@@ -239,12 +244,25 @@ impl OptimizedMemoryPool {
 
         for (ptr, info) in &self.allocated_buffers {
             if now.duration_since(info.timestamp) > Duration::from_secs(3600) {
-                // 1 hour
-                leaks.push(format!("Potential leak: {} bytes at {:p}", info.size, ptr));
+                let mut msg = format!(
+                    "Device {}: potential leak: {} bytes at {:p}",
+                    self.device_id, info.size, ptr
+                );
+                #[cfg(debug_assertions)]
+                {
+                    msg.push_str("\nStack trace:\n");
+                    msg.push_str(&info.stack_trace.to_string());
+                }
+                leaks.push(msg);
             }
         }
 
         leaks
+    }
+
+    /// Get the device ID associated with this memory pool
+    pub fn device_id(&self) -> usize {
+        self.device_id
     }
 }
 
