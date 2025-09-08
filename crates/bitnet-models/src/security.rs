@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::Path;
+use url::Url;
 
 /// Model security configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -102,8 +103,14 @@ impl ModelVerifier {
 
     /// Verify a model source URL is trusted
     pub fn verify_source(&self, url: &str) -> Result<()> {
-        for trusted_source in &self.config.trusted_sources {
-            if url.starts_with(trusted_source) {
+        let parsed = Url::parse(url)?;
+        if parsed.scheme() != "https" {
+            return Err(anyhow!("Model source must use https: {}", url));
+        }
+
+        for trusted in &self.config.trusted_sources {
+            let base = Url::parse(trusted)?;
+            if parsed.domain() == base.domain() && parsed.path().starts_with(base.path()) {
                 return Ok(());
             }
         }

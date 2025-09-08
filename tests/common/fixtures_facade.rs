@@ -6,7 +6,6 @@ use crate::common::harness;
 
 /// Facade for fixture management that provides a consistent API regardless of feature flags
 /// This reduces cfg scatter throughout the codebase
-
 #[cfg(feature = "fixtures")]
 use std::sync::Arc;
 

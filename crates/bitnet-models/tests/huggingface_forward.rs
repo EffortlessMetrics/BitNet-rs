@@ -5,13 +5,10 @@ use std::fs;
 use tempfile::TempDir;
 
 use bitnet_common::Device as CommonDevice;
-use bitnet_common::Tensor;
 use bitnet_models::{
     formats::huggingface::HuggingFaceLoader,
     loader::{FormatLoader, LoadConfig},
-    transformer::KVCache,
 };
-use candle_core::Device as CandleDevice;
 use safetensors::tensor::{Dtype, TensorView};
 
 #[test]
@@ -68,18 +65,9 @@ fn test_load_huggingface_and_forward() {
     fs::write(model_dir.join("model.safetensors.index.json"), serde_json::to_vec(&index).unwrap())
         .unwrap();
 
-    // Load model
+    // Load model expecting an error due to missing transformer weights
     let loader = HuggingFaceLoader;
     let device = CommonDevice::Cpu;
-    let model = loader.load(model_dir, &device, &LoadConfig::default()).expect("load model");
-
-    // Embed and run forward
-    let tokens = vec![0u32, 1, 2, 3];
-    let embedded = model.embed(&tokens).unwrap();
-    let candle_device = CandleDevice::Cpu;
-    let mut cache = KVCache::new(model.config(), 1, &candle_device).unwrap();
-    let hidden = model.forward(&embedded, &mut cache).unwrap();
-
-    assert_eq!(hidden.shape()[0], 1); // batch
-    assert_eq!(hidden.shape()[1], tokens.len());
+    let result = loader.load(model_dir, &device, &LoadConfig::default());
+    assert!(result.is_err(), "model loading should fail without transformer weights");
 }

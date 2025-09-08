@@ -17,6 +17,10 @@ use bitnet_kernels::cpu::*;
 use bitnet_kernels::*;
 use std::time::Instant;
 
+// Import all specific kernel types needed for tests
+// These are available on all architectures (stub implementations on unsupported architectures)
+use bitnet_kernels::{Avx2Kernel, NeonKernel};
+
 /// Test data generator for consistent testing across kernels
 struct TestDataGenerator {
     seed: u64,

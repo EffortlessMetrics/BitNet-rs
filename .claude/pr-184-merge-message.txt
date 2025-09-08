@@ -1,0 +1,26 @@
+fix(sampling): implement comprehensive NaN logit safety in sampling pipeline (#184)
+
+Enhance streaming inference robustness by implementing comprehensive NaN handling
+in the sampling system to prevent runtime crashes and ensure reliable token generation.
+
+Key improvements:
+- Add NaN sanitization by converting NaN logits to -inf before processing
+- Implement safe partial_cmp() with fallback to Ordering::Equal for NaN-safe sorting
+- Filter NaN values in top-k and top-p sampling algorithms
+- Add comprehensive test coverage for NaN handling scenarios
+
+Performance and reliability impact:
+- Minimal overhead on normal sampling paths
+- Significant improvement in fault tolerance during streaming inference
+- Maintains deterministic behavior with proper fallback logic
+- Prevents crashes from model output anomalies
+
+Testing coverage:
+- New tests: test_top_k_filter_with_nan, test_top_p_filter_with_nan, test_sample_with_nan_logits
+- Full validation of core crates: bitnet-cli, bitnet-inference, bitnet-kernels, bitnet-quantization
+- Quality gates: formatting, clippy, security audit, build matrix validation
+
+This change directly enhances the production-ready streaming inference capabilities
+introduced in recent PRs by providing robust error handling for numerical edge cases.
+
+Closes #184

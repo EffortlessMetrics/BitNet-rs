@@ -22,6 +22,7 @@ This directory contains comprehensive examples demonstrating how to integrate Bi
   - `cpu_inference.rs` - Simple CPU inference example
   - `gpu_inference.rs` - GPU-accelerated inference example
   - `streaming.rs` - Streaming generation example
+  - `convolution_demo.rs` - 2D convolution operations with quantization support
 
 ## Running Examples
 

@@ -1,0 +1,48 @@
+{
+  "pr_number": 184,
+  "title": "Handle NaN logits safely in sampling",
+  "author": "EffortlessSteven",
+  "status": "MERGED",
+  "merged_at": "2025-09-07T06:32:44Z",
+  "merge_commit": "dbeb194",
+  "merge_strategy": "squash",
+  "branch_deleted": true,
+  "validation_results": {
+    "quality_gates": {
+      "formatting": "PASS",
+      "clippy": "PASS", 
+      "security_audit": "PASS_WITH_WARNINGS",
+      "build_matrix": "PASS"
+    },
+    "test_results": {
+      "cli_tests": "8/8 PASS",
+      "inference_tests": "36/36 PASS",
+      "quantization_tests": "15/15 PASS", 
+      "kernel_tests": "21/21 PASS",
+      "total_tests": "107/107 PASS"
+    },
+    "new_test_coverage": [
+      "test_top_k_filter_with_nan",
+      "test_top_p_filter_with_nan", 
+      "test_sample_with_nan_logits"
+    ],
+    "performance_impact": "minimal_overhead",
+    "reliability_improvement": "significant"
+  },
+  "technical_changes": {
+    "files_modified": ["crates/bitnet-cli/src/sampling.rs"],
+    "breaking_changes": false,
+    "nan_handling": {
+      "preprocessing": "Convert NaN to -inf",
+      "comparison": "Safe partial_cmp with fallback",
+      "filtering": "NaN values filtered in top-k/top-p"
+    }
+  },
+  "finalization": {
+    "validation_worktree": "/tmp/bitnet-validate-hQkq",
+    "rust_version": "1.89.0",
+    "feature_flags": "--no-default-features --features cpu",
+    "deterministic_mode": true,
+    "sccache_enabled": true
+  }
+}

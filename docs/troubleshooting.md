@@ -450,6 +450,156 @@ curl -X POST http://localhost:8080/v1/stream \
 4. **Server timeout**: Increase timeout settings for longer generations
 5. **PyO3 security warnings**: Update to PyO3 v0.25.1+ for CVE-2024-9979 fix
 
+#### 5. NaN Logits and Sampling Issues (Enhanced in PR #184)
+
+**Problem:** Model generates NaN (Not a Number) values in logits, causing sampling failures
+
+**Symptoms:**
+```
+Error: NaN encountered in logits during sampling
+Warning: Invalid floating-point values detected in model output
+Error: Sampling failed due to numerical instability
+Generation stops unexpectedly with empty outputs
+```
+
+**Root Causes:**
+- Model quantization issues or corruption
+- Numerical overflow in transformer calculations
+- Invalid model weights or precision loss
+- Hardware-specific floating-point anomalies
+
+**Solutions:**
+
+BitNet.rs automatically handles NaN logits with robust error recovery (PR #184):
+
+```bash
+# Test NaN handling with deterministic generation
+bitnet-cli inference \
+  --model model.gguf \
+  --prompt "Test NaN robustness" \
+  --deterministic \
+  --seed 42 \
+  --temperature 0.8
+
+# Enable debug logging to see NaN handling in action
+RUST_LOG=debug bitnet-cli inference \
+  --model model.gguf \
+  --prompt "Debug NaN handling" \
+  --stream
+
+# Validate model integrity if NaN issues persist
+bitnet-cli compat-check model.gguf --verbose
+
+# Test sampling robustness with various parameters
+bitnet-cli inference \
+  --model model.gguf \
+  --prompt "Sampling test" \
+  --top-k 50 \
+  --top-p 0.95 \
+  --temperature 0.7
+```
+
+**Advanced Diagnostics:**
+
+```bash
+# Test NaN-safe sampling operations
+cargo test -p bitnet-cli sampling
+
+# Validate streaming with NaN handling
+cargo test -p bitnet-cli --test cli_smoke
+
+# Run comprehensive sampling tests
+cargo test -p bitnet-cli test_sample_with_nan_logits
+cargo test -p bitnet-cli test_top_k_filter_with_nan
+cargo test -p bitnet-cli test_top_p_filter_with_nan
+```
+
+**What BitNet.rs does automatically:**
+- **NaN Sanitization**: Converts NaN logits to negative infinity for predictable behavior
+- **Safe Sorting**: Uses fallback ordering for NaN values in top-k/top-p filtering
+- **Graceful Degradation**: Maintains deterministic behavior with proper fallback logic
+- **No Crashes**: Prevents runtime crashes from model output anomalies
+
+### FFI Threading and Concurrency Issues (Enhanced in PR #179)
+
+**Problem:** FFI operations experience deadlocks, resource exhaustion, or async runtime conflicts
+
+**Symptoms:**
+```
+Error: Thread safety violation: Failed to send job to thread pool
+Error: ThreadSafety: Thread pool not initialized
+Application hangs during inference with FFI enabled
+Memory usage grows unbounded during concurrent FFI calls
+Async runtime panic: Cannot start a runtime from within a runtime
+```
+
+**Root Causes:**
+- Unbounded channel usage leading to memory exhaustion
+- Job counter increment/decrement mismatches causing desynchronization  
+- Improper worker thread cleanup during shutdown
+- Multiple async runtime initialization conflicts
+- Thread pool resource contention
+
+**Solutions:**
+
+BitNet.rs now includes production-ready threading utilities with robust error handling:
+
+```bash
+# Test thread pool robustness (validates PR #179 fixes)
+cargo test -p bitnet-ffi test_thread_pool_creation
+cargo test -p bitnet-ffi test_thread_pool_execution
+
+# Validate threading deadlock prevention  
+cargo test -p bitnet-ffi test_thread_manager
+cargo test -p bitnet-ffi test_thread_safe_ref_counter
+
+# Test async runtime initialization improvements
+cargo test -p bitnet-ffi test_inference_manager_creation
+
+# Validate error handling enhancements
+cargo test -p bitnet-ffi test_error_state_management
+```
+
+**Configuration Options:**
+
+```rust
+// Custom thread pool configuration
+use bitnet_ffi::threading::ThreadPoolConfig;
+
+let config = ThreadPoolConfig {
+    num_threads: 4,                    // Worker thread count
+    max_queue_size: 1000,             // Bounded channel limit (prevents exhaustion)
+    stack_size: Some(2 * 1024 * 1024), // 2MB stack per thread
+    thread_name_prefix: "bitnet-worker".to_string(),
+};
+```
+
+**Advanced Diagnostics:**
+
+```bash
+# Monitor thread pool statistics
+RUST_LOG=debug bitnet-cli inference \
+  --model model.gguf \
+  --prompt "Threading test" \
+  --features ffi
+
+# Test concurrent FFI operations
+cargo test -p bitnet-ffi test_concurrent_inference_requests
+
+# Validate cleanup and resource management
+cargo test -p bitnet-ffi test_cleanup_thread_pool
+
+# Check thread-local storage management
+cargo test -p bitnet-ffi test_thread_local_storage
+```
+
+**What PR #179 Fixed:**
+- **Bounded Channels**: Changed from unbounded `mpsc::channel()` to bounded `sync_channel(max_queue_size)`
+- **RAII Job Tracking**: Fixed increment/decrement order preventing counter desynchronization
+- **Drop Order Safety**: Reordered ThreadPool struct fields (sender before workers) preventing shutdown deadlocks
+- **Smart Async Context**: Improved runtime detection with proper fallback handling
+- **Enhanced Error Propagation**: Better error messages and recovery patterns
+
 ### API Issues
 
 #### 1. Python API Errors

@@ -6,8 +6,10 @@
 //! - Memory usage profiling and leak detection
 //! - Mixed precision validation
 
+#[cfg(target_arch = "x86_64")]
+use crate::cpu::x86::Avx2Kernel;
 use crate::gpu::cuda::CudaKernel;
-use crate::{KernelProvider, cpu::fallback::FallbackKernel, cpu::x86::Avx2Kernel};
+use crate::{KernelProvider, cpu::fallback::FallbackKernel};
 use bitnet_common::{KernelError, Result};
 
 use std::time::Instant;

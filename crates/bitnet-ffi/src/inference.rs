@@ -5,6 +5,7 @@
 
 use crate::{BitNetCError, BitNetCInferenceConfig, BitNetCPerformanceMetrics, get_model_manager};
 // use bitnet_common::PerformanceMetrics;
+use bitnet_common::Tensor;
 use bitnet_inference::{InferenceConfig, InferenceEngine};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
@@ -89,7 +90,7 @@ impl InferenceManager {
     pub fn generate_tokens(
         &self,
         model_id: u32,
-        _input_tokens: &[u32],
+        input_tokens: &[u32],
         config: &BitNetCInferenceConfig,
     ) -> Result<Vec<u32>, BitNetCError> {
         // Validate configuration
@@ -99,21 +100,32 @@ impl InferenceManager {
         let engine = self.get_or_create_engine(model_id)?;
 
         // Convert C config to Rust config
-        let _generation_config = config.to_generation_config();
+        let generation_config = config.to_generation_config();
 
         // Perform token generation
-        let result = {
-            let _engine_guard = engine.lock().map_err(|_| {
+        let tokens = {
+            let engine_guard = engine.lock().map_err(|_| {
                 BitNetCError::ThreadSafety("Failed to acquire engine lock".to_string())
             })?;
 
-            // Note: generate_tokens is now private. We need to use the public API.
-            // For now, return a placeholder until we can properly implement this
-            // using the async generate methods
-            vec![1, 2, 3] // Placeholder tokens
+            // Decode input tokens into a prompt string
+            let prompt = engine_guard.tokenizer().decode(input_tokens).map_err(|e| {
+                BitNetCError::InvalidArgument(format!("Failed to decode input tokens: {}", e))
+            })?;
+
+            // Generate text using the public API
+            let generated = futures::executor::block_on(
+                engine_guard.generate_with_config(&prompt, &generation_config),
+            )
+            .map_err(|e| BitNetCError::InferenceFailed(format!("Generation failed: {}", e)))?;
+
+            // Convert generated text back to tokens
+            engine_guard.tokenizer().encode(&generated, true, true).map_err(|e| {
+                BitNetCError::InferenceFailed(format!("Failed to encode output tokens: {}", e))
+            })?
         };
 
-        Ok(result)
+        Ok(tokens)
     }
 
     /// Start streaming generation
@@ -318,7 +330,10 @@ impl StreamingSession {
     }
 }
 
-/// Mock model for inference engine creation
+/// Mock model used to satisfy the inference engine during C-API tests.
+///
+/// The model's methods provide minimal mock tensors and do not perform
+/// real inference.
 struct MockInferenceModel {
     cfg: bitnet_common::BitNetConfig,
 }
@@ -381,16 +396,32 @@ impl bitnet_models::Model for MockInferenceModel {
         &self.cfg
     }
 
-    fn embed(&self, _tokens: &[u32]) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
-        // If these mocks are never called in the C-API tests, a todo!() is fine
-        todo!("embed not used in bitnet-ffi tests")
+    /// Mock implementation used only for C-API testing.
+    ///
+    /// Returns a dummy embedding tensor shaped `[1, tokens.len(), hidden_size]`.
+    fn embed(&self, tokens: &[u32]) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
+        // Create a mock tensor [1, seq_len, hidden_size] filled with deterministic values
+        let seq_len = tokens.len();
+        let hidden = self.cfg.model.hidden_size;
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, seq_len, hidden]))
     }
 
+    /// Mock implementation used only for C-API testing.
+    ///
+    /// Produces a logits tensor shaped `[1, seq_len, vocab_size]` where `seq_len`
+    /// matches the second dimension of the input tensor.
     fn logits(
         &self,
-        _x: &bitnet_common::ConcreteTensor,
+        x: &bitnet_common::ConcreteTensor,
     ) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
-        todo!("logits not used in bitnet-ffi tests")
+        // Produce logits tensor [1, seq_len, vocab_size] matching the input sequence length
+        let seq_len = match x.shape() {
+            [_, s, _] => *s,
+            [s, _] => *s,
+            shape => shape.last().copied().unwrap_or(1),
+        };
+        let vocab = self.cfg.model.vocab_size;
+        Ok(bitnet_common::ConcreteTensor::mock(vec![1, seq_len, vocab]))
     }
 
     fn forward(
@@ -442,5 +473,22 @@ mod tests {
         use bitnet_models::Model;
         let config = model.config();
         assert_eq!(config.model.vocab_size, 32000); // Default value
+    }
+
+    #[test]
+    fn test_mock_model_embed_and_logits() {
+        use bitnet_common::Tensor;
+        use bitnet_models::Model;
+
+        let model = MockInferenceModel::new();
+        let tokens = vec![1u32, 2, 3];
+
+        let emb = model.embed(&tokens).expect("embedding");
+        assert_eq!(emb.shape(), &[1, tokens.len(), model.config().model.hidden_size]);
+        assert!(emb.as_slice::<f32>().unwrap().iter().all(|&v| (v - 0.1).abs() < f32::EPSILON));
+
+        let logits = model.logits(&emb).expect("logits");
+        assert_eq!(logits.shape(), &[1, tokens.len(), model.config().model.vocab_size]);
+        assert!(logits.as_slice::<f32>().unwrap().iter().all(|&v| (v - 0.1).abs() < f32::EPSILON));
     }
 }

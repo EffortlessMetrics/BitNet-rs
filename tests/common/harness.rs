@@ -267,11 +267,7 @@ impl TestHarness {
         }
 
         // Call the test's setup method with stable API
-        {
-            self.fixtures.ctx();
-            test_case.setup(())
-        }
-        .await?;
+        test_case.setup(self.fixtures.ctx()).await?;
 
         Ok(())
     }
@@ -440,11 +436,7 @@ impl TestHarnessClone {
         }
 
         // Call the test's setup method with stable API
-        {
-            self.fixtures.ctx();
-            test_case.setup(())
-        }
-        .await?;
+        test_case.setup(self.fixtures.ctx()).await?;
 
         Ok(())
     }

@@ -88,6 +88,29 @@ export BITNET_GPU_FAKE=""            # Mock no GPU available
 cargo test -p bitnet-kernels test_gpu_info_mocked_scenarios
 ```
 
+### Performance Environment Variables
+
+The performance tracking system supports configuration through environment variables:
+
+```bash
+# Performance configuration for GPU workloads
+export BITNET_BATCH_SIZE=8              # Optimal batch size for GPU processing
+export BITNET_MEMORY_LIMIT=2GB          # Memory limit for GPU operations
+export BITNET_NUM_THREADS=4             # Thread count for CPU fallback operations
+
+# Deterministic performance testing
+export BITNET_DETERMINISTIC=1           # Enable deterministic mode
+export BITNET_SEED=42                   # Set seed for reproducible results
+export RAYON_NUM_THREADS=1              # Single-threaded CPU operations
+
+# GPU-specific performance tuning
+cargo test -p bitnet-inference --features integration-tests test_engine_performance_tracking_integration
+
+# Test performance with different configurations
+BITNET_BATCH_SIZE=4 cargo test -p bitnet-kernels --features gpu test_gpu_memory_management
+BITNET_MEMORY_LIMIT=512MB cargo test -p bitnet-kernels --features gpu test_cuda_validation_comprehensive
+```
+
 ## CUDA Device Querying and Hardware Detection
 
 BitNet.rs implements production-ready CUDA device querying using the cudarc API to enable intelligent GPU acceleration and automatic fallback mechanisms.
@@ -110,6 +133,47 @@ pub struct CudaDeviceInfo {
 }
 ```
 
+### Device Memory Tracking
+
+BitNet.rs provides comprehensive memory tracking capabilities for both CPU and GPU devices:
+
+```rust
+use bitnet_kernels::device_aware::{DeviceAwareQuantizer, DeviceStats};
+use bitnet_common::Device;
+
+// Create device-aware quantizer with memory tracking
+let quantizer = DeviceAwareQuantizer::new(Device::Cuda(0))?;
+
+// Perform operations with automatic memory tracking
+let result = quantizer.quantize(&input, QuantizationType::I2S)?;
+
+// Get comprehensive device statistics including memory usage
+if let Some(stats) = quantizer.get_stats() {
+    println!("Memory Usage: {:.1} MB / {:.1} MB ({:.1}%)", 
+        stats.memory_used_bytes as f64 / (1024.0 * 1024.0),
+        stats.memory_total_bytes as f64 / (1024.0 * 1024.0),
+        (stats.memory_used_bytes as f64 / stats.memory_total_bytes as f64) * 100.0
+    );
+    
+    println!("Operations: {} GPU, {} CPU, {} fallbacks",
+        stats.gpu_operations, stats.cpu_operations, stats.fallback_count);
+    
+    // Check memory efficiency
+    if let Some(efficiency) = stats.memory_efficiency() {
+        println!("Memory Efficiency: {:.2}%", efficiency * 100.0);
+    }
+}
+```
+
+#### Memory Tracking Features
+
+- **Real-time Host Memory**: Uses `memory-stats` crate for accurate process-specific memory usage
+- **System Memory Monitoring**: Uses `sysinfo` crate for total system memory tracking
+- **GPU Memory Integration**: CUDA cuMemGetInfo_v2 for GPU memory statistics (when available)
+- **Thread-Safe Tracking**: Arc<Mutex<DeviceStatsInternal>> for safe concurrent access
+- **Memory Efficiency Metrics**: Calculated ratios and usage percentages
+- **Automatic Updates**: Memory stats updated during quantization and matrix operations
+
 ### Device Querying Commands
 
 ```bash
@@ -124,6 +188,15 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_avai
 
 # Validate device capabilities for BitNet quantization
 cargo test -p bitnet-kernels --no-default-features --features gpu test_device_capability_validation
+
+# Test comprehensive memory tracking on GPU devices
+cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_tracking_comprehensive
+
+# Test device-aware memory statistics collection
+cargo test -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
+
+# Test GPU memory management and leak detection
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
 ```
 
 ### Hardware-Aware Optimization
@@ -190,6 +263,7 @@ The CUDA device querying integrates with BitNet's quantization system:
 - **Automatic GPU Acceleration**: Falls back to CPU when GPU is unavailable or insufficient
 - **Memory-Constrained Operation**: Adjusts quantization batch sizes based on available memory
 - **Performance Monitoring**: Tracks GPU utilization and performance across operations
+- **Host Memory Tracking**: Real-time monitoring of system memory usage with detailed statistics
 
 ## GPU Testing Strategy
 
@@ -309,6 +383,111 @@ GPU/CUDA tests require special handling due to hardware dependencies:
    - Provide clear error messages when GPU is unavailable
    - Include CPU fallback path testing in all scenarios
 
+## Memory Tracking and Performance Monitoring
+
+### Host Memory Statistics
+
+BitNet.rs now includes comprehensive host memory tracking using the `sysinfo` crate, providing real-time monitoring of system memory usage alongside GPU operations.
+
+#### DeviceStats with Memory Tracking
+
+The `DeviceStats` structure now includes actual memory usage statistics:
+
+```rust
+use bitnet_kernels::device_aware::DeviceAwareQuantizer;
+
+let quantizer = DeviceAwareQuantizer::new(Device::Cpu)?;
+
+// Perform some operations
+let input = vec![1.0f32; 1024];
+let mut output = vec![0u8; 256];
+let mut scales = vec![0.0f32; 8];
+quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S)?;
+
+// Get comprehensive statistics including memory usage
+if let Some(stats) = quantizer.get_stats() {
+    println!("Device stats: {}", stats.summary());
+    println!("Memory used: {:.2} MB", stats.memory_used_bytes as f64 / (1024.0 * 1024.0));
+    println!("Memory total: {:.2} MB", stats.memory_total_bytes as f64 / (1024.0 * 1024.0));
+    println!("Memory usage: {:.1}%", 
+        (stats.memory_used_bytes as f64 / stats.memory_total_bytes as f64) * 100.0);
+}
+```
+
+#### Memory Tracking Features
+
+- **Real-time Monitoring**: Memory statistics are updated on each request using `sysinfo::System`
+- **Byte-accurate Reporting**: Both used and total memory reported in bytes for precise tracking
+- **Human-readable Display**: The `summary()` method includes memory usage with percentage
+- **Performance Integration**: Memory tracking integrated with existing performance statistics
+
+#### Platform-Specific CPU Kernel Selection
+
+The device-aware quantizer now automatically selects the best CPU kernel based on platform architecture:
+
+```rust
+// Automatic platform detection and optimization
+let quantizer = DeviceAwareQuantizer::new(Device::Cpu)?;
+println!("Active kernel: {}", quantizer.active_provider());
+
+// Expected outputs:
+// - x86_64 with AVX2: "AVX2Kernel"  
+// - aarch64 with NEON: "NeonKernel"
+// - Fallback systems: "FallbackKernel"
+```
+
+#### Memory Tracking Commands
+
+```bash
+# Test comprehensive memory tracking implementation with device-aware stats
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+
+# Test device-aware performance tracking with integrated memory statistics
+cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+
+# Test platform-specific kernel selection with memory monitoring
+cargo test -p bitnet-kernels --no-default-features --features cpu test_platform_kernel_selection
+
+# Test CPU provider creation across architectures
+cargo test -p bitnet-kernels --no-default-features --features cpu test_cpu_provider_creation
+
+# Architecture-specific feature detection tests
+cargo test -p bitnet-kernels --no-default-features --features cpu test_x86_64_feature_detection  # x86_64 only
+cargo test -p bitnet-kernels --no-default-features --features cpu test_aarch64_feature_detection  # aarch64 only
+```
+
+#### Memory and Performance Analysis
+
+The enhanced statistics provide comprehensive monitoring capabilities:
+
+```rust
+#[derive(Debug, Clone)]
+pub struct DeviceStats {
+    pub device_type: String,
+    pub target_device: Device,
+    pub total_operations: u64,
+    pub quantization_operations: u64,
+    pub matmul_operations: u64,
+    pub total_time_ms: f64,
+    pub quantization_time_ms: f64,
+    pub matmul_time_ms: f64,
+    pub gpu_operations: u64,
+    pub cpu_operations: u64,
+    pub fallback_count: u64,
+    pub gpu_efficiency: f64,         // Ratio of GPU operations to total operations
+    pub last_gpu_error: Option<String>,
+    pub last_cpu_error: Option<String>,
+    pub memory_used_bytes: u64,      // Host memory currently used in bytes
+    pub memory_total_bytes: u64,     // Total host memory available in bytes
+}
+```
+
+Key statistics methods:
+- `summary()`: Human-readable summary with memory usage percentage
+- `is_gpu_effective()`: Checks if GPU is being used effectively (>80% efficiency)
+- `avg_quantization_time_ms()`: Average time per quantization operation
+- `avg_matmul_time_ms()`: Average time per matrix multiplication operation
+
 ## Advanced GPU/CUDA Troubleshooting
 
 ### GPU Backend Detection Issues
@@ -386,6 +565,12 @@ GPU/CUDA tests require special handling due to hardware dependencies:
    
    # Check for memory leaks
    cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_cleanup --ignored
+   
+   # Test host memory tracking and comprehensive device statistics
+   cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+   
+   # Test performance tracking with memory integration
+   cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
    ```
 
 3. **Compute Capability Issues**:
@@ -397,18 +582,46 @@ GPU/CUDA tests require special handling due to hardware dependencies:
    cargo test -p bitnet-kernels --no-default-features --features gpu test_device_capability_validation
    ```
 
-### Performance Debugging
+### Performance Monitoring and Analysis
 
-1. **GPU vs CPU Performance Analysis**:
+1. **Comprehensive Performance Tracking**:
+   ```bash
+   # Test comprehensive GPU performance monitoring
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
+   
+   # Validate performance metrics collection
+   cargo test -p bitnet-inference --features integration-tests test_engine_performance_tracking_integration
+   
+   # Test memory usage tracking with device-aware execution
+   cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+   cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+   ```
+
+2. **GPU Performance Analysis**:
    ```bash
    # Run comprehensive performance comparison
    cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy --ignored
    
    # Profile GPU kernel execution
    cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_numerical_accuracy --ignored
+   
+   # GPU memory leak detection and performance benchmarking
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
    ```
 
-2. **Memory Transfer Optimization**:
+3. **Platform-Specific Performance Testing**:
+   ```bash
+   # Test platform-specific CPU kernel selection with performance monitoring
+   cargo test -p bitnet-kernels --no-default-features --features cpu test_cpu_provider_creation
+   
+   # Test architecture-specific feature detection
+   cargo test -p bitnet-kernels --no-default-features --features cpu test_x86_64_feature_detection  # x86_64 only
+   cargo test -p bitnet-kernels --no-default-features --features cpu test_aarch64_feature_detection  # aarch64 only
+   ```
+
+### Performance Debugging
+
+1. **Memory Transfer Optimization**:
    ```bash
    # Test memory access patterns
    cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_access_patterns --ignored

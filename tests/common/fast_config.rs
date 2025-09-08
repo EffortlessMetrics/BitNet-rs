@@ -4,7 +4,7 @@ use std::time::Duration;
 
 /// Fast configuration presets for different testing scenarios
 /// This module provides optimized configurations for speed-critical testing
-
+///
 /// Create a configuration optimized for fast execution
 pub fn fast_config() -> TestConfig {
     let mut config = TestConfig::default();

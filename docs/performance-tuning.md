@@ -9,8 +9,9 @@ BitNet Rust is designed for high performance out of the box, but proper tuning c
 - Hardware-specific optimizations
 - Configuration tuning
 - Memory optimization
-- Batch processing
-- Profiling and monitoring
+- Batch processing with prefill optimization
+- Performance metrics and monitoring
+- Profiling and analysis
 
 ## Hardware Optimization
 
@@ -460,25 +461,93 @@ bitnet-cli inference --model model.gguf --prompt "Hello" --profile
 bitnet-cli profile --model model.gguf --output flamegraph.svg
 ```
 
-### 2. Performance Metrics
+### 2. Enhanced Performance Metrics and Prefill Monitoring
+
+BitNet.rs now provides comprehensive structured performance metrics with detailed timing breakdowns and prefill optimization:
 
 ```rust
-use bitnet::{BitNetModel, PerformanceMonitor};
+use bitnet::{BitNetModel, InferenceEngine, GenerationConfig};
+use serde_json;
 
-let monitor = PerformanceMonitor::new();
-
-// Start monitoring
-monitor.start();
-
-// Run inference
-let output = model.generate("Hello", &config).await?;
-
-// Get metrics
-let metrics = monitor.stop();
-println!("Tokens/sec: {:.2}", metrics.tokens_per_second);
-println!("Latency: {:.2}ms", metrics.avg_latency_ms);
-println!("Memory: {:.2}GB", metrics.peak_memory_gb);
+#[tokio::main]
+async fn main() -> Result<()> {
+    let model = BitNetModel::from_file("model.gguf").await?;
+    let mut engine = InferenceEngine::new(model, tokenizer, device)?;
+    
+    // Configure generation with performance metrics enabled
+    let config = GenerationConfig {
+        max_new_tokens: 100,
+        temperature: 0.7,
+        enable_metrics: true,
+        ..Default::default()
+    };
+    
+    // Explicit prefill for cache warming and latency measurement
+    let prompt_tokens = tokenizer.encode("Hello, world!", true, true)?;
+    let prefill_start = std::time::Instant::now();
+    engine.prefill(&prompt_tokens).await?;
+    let prefill_time = prefill_start.elapsed();
+    
+    // Run inference with detailed performance tracking
+    let response = engine.generate_with_config("Hello, world!", &config).await?;
+    
+    // Access structured performance metrics
+    if let Some(metrics) = response.metrics {
+        // Detailed timing breakdown
+        println!("Tokenization time: {:.2}ms", metrics.timing.tokenize);
+        println!("Prefill time: {:.2}ms", metrics.timing.prefill);
+        println!("Decode time: {:.2}ms", metrics.timing.decode);
+        println!("Total time: {:.2}ms", metrics.timing.total);
+        
+        // Throughput measurements
+        println!("Prefill throughput: {:.2} tokens/sec", metrics.throughput.prefill);
+        println!("Decode throughput: {:.2} tokens/sec", metrics.throughput.decode);
+        println!("End-to-end throughput: {:.2} tokens/sec", metrics.throughput.e2e);
+        
+        // Export metrics for analysis
+        let json_metrics = serde_json::to_string_pretty(&metrics)?;
+        std::fs::write("performance_metrics.json", json_metrics)?;
+    }
+    
+    Ok(())
+}
 ```
+
+#### CLI Performance Monitoring
+
+```bash
+# Batch inference with prefill timing and structured metrics
+bitnet run --input-file prompts.txt \
+  --batch-size 4 \
+  --metrics \
+  --format json \
+  --output metrics.json
+
+# Single inference with detailed performance breakdown
+bitnet run --model model.gguf \
+  --prompt "Test performance" \
+  --metrics \
+  --deterministic \
+  --seed 42
+
+# Performance comparison with different configurations
+bitnet run --model model.gguf \
+  --prompt "Benchmark test" \
+  --metrics \
+  --temperature 0.0 \
+  --batch-size 1,4,8 \
+  --format json
+```
+
+#### Key Performance Metrics Structure
+
+The structured metrics include:
+
+- **TimingMetrics**: `tokenize`, `prefill`, `decode`, `total` (all in milliseconds)
+- **ThroughputMetrics**: `prefill`, `decode`, `e2e` (all in tokens per second)  
+- **TokenCounts**: `prompt_tokens`, `generated_tokens`, `total_tokens`
+- **ModelInfo**: `path`, `quantization`, `device`, `parameters`, `vocab_size`
+- **Memory Usage**: Optional memory consumption tracking
 
 ### 3. Continuous Monitoring
 

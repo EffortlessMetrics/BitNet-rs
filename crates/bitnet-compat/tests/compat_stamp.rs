@@ -30,7 +30,7 @@ mod tests {
         if result.is_ok() || result.unwrap_err().to_string().contains("No compatibility issues") {
             // Check if destination exists (may not if no issues found)
             if dst.exists() {
-                let stamp_path = dst.with_extension("compat.json");
+                let stamp_path = dst.with_extension("gguf.compat.json");
                 assert!(stamp_path.exists(), "Stamp file should be created");
 
                 // Second run should detect idempotency

@@ -42,6 +42,13 @@ impl Sampler {
         // Apply repetition penalty
         let mut logits = self.apply_repetition_penalty(logits);
 
+        // Replace NaN logits with -inf so they are ignored by later steps
+        for logit in &mut logits {
+            if logit.is_nan() {
+                *logit = f32::NEG_INFINITY;
+            }
+        }
+
         // Greedy decoding if temperature is 0
         if self.temperature == 0.0
             || (self.temperature == 1.0 && self.top_k == 0 && self.top_p == 1.0)
@@ -99,8 +106,9 @@ impl Sampler {
             return logits;
         }
 
-        let mut indexed: Vec<(usize, f32)> = logits.iter().copied().enumerate().collect();
-        indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        let mut indexed: Vec<(usize, f32)> =
+            logits.iter().copied().enumerate().filter(|&(_, v)| !v.is_nan()).collect();
+        indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         let mut filtered = vec![f32::NEG_INFINITY; logits.len()];
         for (idx, val) in indexed.iter().take(self.top_k.min(indexed.len())) {
@@ -115,10 +123,13 @@ impl Sampler {
             return logits;
         }
 
-        let mut indexed: Vec<(usize, f32)> = logits.iter().copied().enumerate().collect();
-        indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        let sanitized: Vec<f32> =
+            logits.iter().map(|&v| if v.is_nan() { f32::NEG_INFINITY } else { v }).collect();
 
-        let probs = softmax(&logits);
+        let mut indexed: Vec<(usize, f32)> = sanitized.iter().copied().enumerate().collect();
+        indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        let probs = softmax(&sanitized);
         let sorted_probs: Vec<_> = indexed.iter().map(|&(i, _)| probs[i]).collect();
 
         let mut cumsum = 0.0;
@@ -246,5 +257,29 @@ mod tests {
         assert_eq!(filtered[3], f32::NEG_INFINITY);
         assert_eq!(filtered[1], 3.0);
         assert_eq!(filtered[2], 2.0);
+    }
+
+    #[test]
+    fn test_top_k_filter_with_nan() {
+        let sampler = Sampler::new(1.0, 2, 1.0, 1.0, Some(42));
+        let logits = vec![1.0, f32::NAN, 3.0];
+        let filtered = sampler.top_k_filter(logits);
+        assert_eq!(filtered, vec![1.0, f32::NEG_INFINITY, 3.0]);
+    }
+
+    #[test]
+    fn test_top_p_filter_with_nan() {
+        let sampler = Sampler::new(1.0, 0, 0.9, 1.0, Some(42));
+        let logits = vec![1.0, f32::NAN, 3.0];
+        let filtered = sampler.top_p_filter(logits);
+        assert_eq!(filtered, vec![1.0, f32::NEG_INFINITY, 3.0]);
+    }
+
+    #[test]
+    fn test_sample_with_nan_logits() {
+        let mut sampler = Sampler::new(1.0, 0, 1.0, 1.0, Some(42));
+        let logits = vec![f32::NAN, 0.0, 1.0];
+        let token = sampler.sample(&logits, &[]);
+        assert_ne!(token, 0);
     }
 }

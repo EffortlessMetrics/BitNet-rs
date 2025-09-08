@@ -61,7 +61,7 @@ pub extern "C" fn bitnet_ffi_api_version() -> u32 {
 /// Pointer to null-terminated version string
 #[unsafe(no_mangle)]
 pub extern "C" fn bitnet_version() -> *const c_char {
-    static VERSION: &str = "0.1.0\0";
+    static VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "\0");
     VERSION.as_ptr() as *const c_char
 }
 
