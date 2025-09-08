@@ -369,7 +369,7 @@ mod streaming_tests {
         let device = Device::Cpu;
 
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
-        let mut stream = engine.generate_stream("Test prompt");
+        let mut stream = engine.generate_stream("Test prompt").unwrap();
 
         // Take only first few tokens then drop stream
         let first_result =

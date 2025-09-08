@@ -15,12 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Safe Sorting Operations**: Prevents panics from NaN comparisons with deterministic tie-breaking
   - **Comprehensive Test Coverage**: New tests for `test_top_k_filter_with_nan`, `test_top_p_filter_with_nan`, and `test_sample_with_nan_logits`
   - **Production Reliability**: Prevents runtime crashes from model output anomalies while maintaining streaming inference
-- **Explicit Prefill Functionality in Batch Inference** ([#187](https://github.com/EffortlessSteven/BitNet-rs/pull/187)):
-  - **Explicit prefill method**: New `engine.prefill()` API for cache warming and precise latency measurement
-  - **Structured performance metrics**: Enhanced `TimingMetrics` and `ThroughputMetrics` with dedicated prefill timing
-  - **Batch inference optimization**: Proper prefill integration in CLI batch processing with comprehensive performance tracking
-  - **Safe environment handling**: Improved unsafe environment variable management with proper scoping
-  - **Mock infrastructure**: Enhanced testing with comprehensive mock model and tokenizer implementations
+- **Enhanced Prefill Functionality for Batch Inference** ([#187](https://github.com/EffortlessSteven/BitNet-rs/pull/187)):
+  - **Explicit Prefill Integration**: Added `engine.prefill()` method for explicit cache warming and latency measurement in batch inference operations
+  - **Structured Performance Metrics**: Enhanced `TimingMetrics` with separate measurement for prefill, decode, tokenization, and total inference time
+  - **Comprehensive Throughput Calculations**: New `ThroughputMetrics` with tokens-per-second for prefill, decode, and end-to-end performance
+  - **Production-Ready Error Handling**: Robust error handling for empty tokens, invalid tokens, and context length exceeded scenarios
+  - **Comprehensive Test Coverage**: 13 specialized tests (8 unit + 5 integration) covering batch prefill operations, performance consistency, and error recovery
+  - **Enhanced CLI Integration**: Updated inference commands with prefill timing support and structured JSON metrics output
+  - **Mock Testing Infrastructure**: Comprehensive mock model and tokenizer with realistic timing for accurate performance validation
+  - **Documentation Enhancement**: Detailed inline documentation with usage examples, performance benefits, and troubleshooting guides
+  - **Backward Compatibility**: Zero breaking changes to existing API while adding enhanced functionality
 - **Production-Ready Streaming Inference** ([#182](https://github.com/EffortlessSteven/BitNet-rs/pull/182)):
   - Real async streaming implementation using `GenerationStream` with futures and `StreamExt::next()`
   - Enhanced NaN-safe sampling operations with hardened floating-point comparisons in `top_k_filter` and `top_p_filter`

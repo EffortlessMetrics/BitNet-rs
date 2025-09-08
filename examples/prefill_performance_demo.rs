@@ -1,240 +1,190 @@
-//! Prefill Performance Demonstration Example
+//! Prefill Performance Demonstration
 //!
-//! This example demonstrates the explicit prefill functionality introduced in PR #187,
-//! showcasing:
-//! - Explicit cache warming with `engine.prefill()`
-//! - Structured performance metrics (TimingMetrics, ThroughputMetrics)
-//! - Batch processing with prefill optimization
-//! - JSON export of comprehensive performance data
-//!
-//! Usage: cargo run --example prefill_performance_demo --features cpu -- <model_path>
+//! This example demonstrates the enhanced prefill functionality added in PR #187,
+//! showing how to use explicit prefill for cache warming and performance measurement
+//! in batch inference operations.
 
 use bitnet::prelude::*;
-use futures::StreamExt;
 use serde_json;
 use std::env;
-use std::sync::Arc;
 use std::time::Instant;
 
 #[cfg(feature = "examples")]
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt::init();
 
-    // Get model path from command line arguments
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        eprintln!("Usage: {} <model_path>", args[0]);
-        eprintln!("Example: {} model.gguf", args[0]);
-        std::process::exit(1);
-    }
-    let model_path = &args[1];
+    // Get model path from environment or command line
+    let model_path = env::var("BITNET_GGUF")
+        .or_else(|_| env::args().nth(1).ok_or("No model path provided"))
+        .unwrap_or_else(|_| {
+            eprintln!("Usage: {} <model_path>", env::args().next().unwrap());
+            eprintln!("   or: BITNET_GGUF=model.gguf {}", env::args().next().unwrap());
+            std::process::exit(1);
+        });
 
-    println!("🚀 BitNet.rs Prefill Performance Demonstration");
-    println!("Model: {}", model_path);
-    println!("Features: Explicit prefill, structured metrics, batch optimization");
-    println!("{}", "=".repeat(60));
+    println!("🚀 BitNet.rs Prefill Performance Demo");
+    println!("📁 Model: {}", model_path);
+    println!();
 
-    // Load model and create inference engine
-    let device = Device::Cpu;
+    // Load model with device auto-selection
+    let device = Device::Auto;
     let loader = ModelLoader::new(device.clone());
-    let model: Arc<dyn Model> = Arc::new(loader.load(model_path)?);
+    let model = loader.load(&model_path)?;
 
-    // Create tokenizer (mock for this example)
-    let tokenizer: Arc<dyn Tokenizer> = Arc::new(create_mock_tokenizer()?);
+    // Create tokenizer (uses universal tokenizer with GGUF integration)
+    let tokenizer = TokenizerBuilder::from_file(&model_path)?;
 
-    // Create inference engine
-    let mut engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device)?;
+    // Create inference engine with prefill support
+    let mut engine = InferenceEngine::new(model, tokenizer)?;
 
-    // Test prompts for different scenarios
-    let test_prompts = vec![
-        ("Short", "Hello"),
-        ("Medium", "The future of artificial intelligence will likely include"),
-        (
-            "Long",
-            "In a comprehensive analysis of modern technological advancement, we must consider the multifaceted implications of artificial intelligence, machine learning, and their profound impact on society, economics, and human interaction patterns across diverse global contexts",
-        ),
+    println!("✅ Engine initialized with device: {:?}", device);
+    println!();
+
+    // Demo prompts of different lengths to show prefill behavior
+    let demo_prompts = vec![
+        "Hello world",
+        "The future of artificial intelligence involves",
+        "In a comprehensive analysis of modern machine learning techniques, we can observe that the field has evolved significantly over the past decade, with breakthrough innovations in",
     ];
 
-    println!("\n📊 PREFILL PERFORMANCE ANALYSIS");
-    println!("{}", "-".repeat(60));
+    println!("🔬 Demonstrating Explicit Prefill Functionality");
+    println!("================================================");
 
-    for (category, prompt) in &test_prompts {
+    for (i, prompt) in demo_prompts.iter().enumerate() {
         println!(
-            "\n🔍 Testing {} prompt: \"{}...\"",
-            category,
-            &prompt.chars().take(40).collect::<String>()
+            "\n📝 Demo {}: \"{}...\"",
+            i + 1,
+            if prompt.len() > 40 { &prompt[..40] } else { prompt }
         );
 
-        // Tokenize the prompt
-        let tokenize_start = Instant::now();
-        let prompt_tokens = tokenizer.encode(prompt, true, true)?;
-        let tokenize_duration = tokenize_start.elapsed();
-
-        println!(
-            "   Tokens: {} | Tokenize time: {:.2}ms",
-            prompt_tokens.len(),
-            tokenize_duration.as_secs_f64() * 1000.0
-        );
-
-        // Explicit prefill with timing
-        let prefill_start = Instant::now();
-        engine.prefill(&prompt_tokens).await?;
-        let prefill_duration = prefill_start.elapsed();
-
-        // Calculate prefill throughput
-        let prefill_throughput = prompt_tokens.len() as f64 / prefill_duration.as_secs_f64();
-
-        println!(
-            "   ⚡ Prefill: {:.2}ms | {:.1} tokens/sec",
-            prefill_duration.as_secs_f64() * 1000.0,
-            prefill_throughput
-        );
-
-        // Generate with performance tracking
-        let generation_config = GenerationConfig {
+        // Configure generation with metrics enabled
+        let config = GenerationConfig {
             max_new_tokens: 20,
             temperature: 0.7,
-            enable_metrics: true,
+            top_k: Some(40),
+            top_p: 0.9,
+            enable_metrics: true, // Enable detailed performance metrics
             ..Default::default()
         };
 
-        let generation_start = Instant::now();
-        let response = engine.generate_with_config(prompt, &generation_config).await?;
-        let generation_duration = generation_start.elapsed();
+        // Measure total time
+        let start_total = Instant::now();
 
-        println!(
-            "   🎯 Generation: {:.2}ms | Output: \"{}...\"",
-            generation_duration.as_secs_f64() * 1000.0,
-            &response.text.chars().take(30).collect::<String>()
-        );
+        // Generate with prefill integration
+        let response = engine.generate_with_config(prompt, &config)?;
+        let total_time = start_total.elapsed();
 
-        // Display structured performance metrics if available
-        if let Some(metrics) = &response.metrics {
-            println!("   📈 Detailed Metrics:");
-            println!("      - Tokenize: {:.2}ms", metrics.timing.tokenize);
-            println!("      - Prefill: {:.2}ms", metrics.timing.prefill);
-            println!("      - Decode: {:.2}ms", metrics.timing.decode);
-            println!("      - Total: {:.2}ms", metrics.timing.total);
-            println!("      - Prefill TPS: {:.1}", metrics.throughput.prefill);
-            println!("      - Decode TPS: {:.1}", metrics.throughput.decode);
-            println!("      - E2E TPS: {:.1}", metrics.throughput.e2e);
+        // Display results
+        println!("💬 Generated: {}", response.text.trim());
+
+        // Show detailed metrics if available
+        if let Some(metrics) = response.metrics {
+            println!("⏱️  Performance Metrics:");
+            println!("   • Tokenization: {:.2}ms", metrics.timing.tokenize);
+            println!("   • Prefill:      {:.2}ms", metrics.timing.prefill);
+            println!("   • Decode:       {:.2}ms", metrics.timing.decode);
+            println!("   • Total:        {:.2}ms", metrics.timing.total);
+            println!();
+            println!("🚀 Throughput:");
+            println!("   • Prefill:  {:.1} tok/s", metrics.throughput.prefill);
+            println!("   • Decode:   {:.1} tok/s", metrics.throughput.decode);
+            println!("   • E2E:      {:.1} tok/s", metrics.throughput.e2e);
+
+            // Export metrics as JSON for analysis
+            let metrics_json = serde_json::to_string_pretty(&metrics)?;
+            println!("\n📊 JSON Metrics:");
+            println!("{}", metrics_json);
         }
+
+        println!("⏰ Wall-clock time: {:.2}ms", total_time.as_secs_f64() * 1000.0);
+        println!("{}", "-".repeat(50));
     }
 
-    // Batch processing demonstration
-    println!("\n🔄 BATCH PROCESSING WITH PREFILL");
-    println!("{}", "-".repeat(60));
+    // Demonstrate batch processing with prefill
+    println!("\n🚀 Batch Processing with Prefill");
+    println!("=================================");
 
-    let batch_prompts = vec![
-        "Explain quantum computing",
-        "Describe machine learning",
-        "What is artificial intelligence",
-    ];
+    let batch_prompts =
+        vec!["Explain quantum computing", "What is machine learning?", "Describe neural networks"];
 
     let batch_start = Instant::now();
     let mut batch_results = Vec::new();
 
     for (i, prompt) in batch_prompts.iter().enumerate() {
-        println!(
-            "\n   Batch item {}: Processing \"{}...\"",
-            i + 1,
-            &prompt.chars().take(25).collect::<String>()
-        );
+        println!("\n🔄 Processing batch item {}/{}", i + 1, batch_prompts.len());
 
-        // Tokenize and prefill
-        let tokens = tokenizer.encode(prompt, true, true)?;
-        engine.prefill(&tokens).await?;
-
-        // Generate
         let config = GenerationConfig {
             max_new_tokens: 15,
-            temperature: 0.7,
+            temperature: 0.5,
             enable_metrics: true,
             ..Default::default()
         };
 
-        let result = engine.generate_with_config(prompt, &config).await?;
-        batch_results.push(result);
+        let response = engine.generate_with_config(prompt, &config)?;
+        batch_results.push((prompt, response));
 
+        // Show progress
+        if let Some(ref metrics) = batch_results.last().unwrap().1.metrics {
+            println!(
+                "   Prefill: {:.1}ms, Decode: {:.1}ms",
+                metrics.timing.prefill, metrics.timing.decode
+            );
+        }
+    }
+
+    let batch_total_time = batch_start.elapsed();
+
+    println!("\n📈 Batch Processing Summary");
+    println!("==========================");
+
+    let mut total_prefill_time = 0.0;
+    let mut total_decode_time = 0.0;
+    let mut total_tokens = 0;
+
+    for (i, (prompt, response)) in batch_results.iter().enumerate() {
         println!(
-            "     ✅ Completed: \"{}...\"",
-            &batch_results.last().unwrap().text.chars().take(40).collect::<String>()
+            "• Item {}: \"{}\" → \"{}\"",
+            i + 1,
+            if prompt.len() > 20 { &prompt[..20] } else { prompt },
+            if response.text.len() > 30 { &response.text[..30] } else { &response.text }
         );
+
+        if let Some(ref metrics) = response.metrics {
+            total_prefill_time += metrics.timing.prefill;
+            total_decode_time += metrics.timing.decode;
+            total_tokens += response.text.split_whitespace().count(); // Rough token estimate
+        }
     }
 
-    let batch_duration = batch_start.elapsed();
-    println!("\n   🎯 Batch Summary:");
-    println!("      - Total time: {:.2}ms", batch_duration.as_secs_f64() * 1000.0);
-    println!("      - Items processed: {}", batch_results.len());
+    println!("\n🏁 Final Statistics:");
+    println!("   • Batch size:     {}", batch_results.len());
+    println!("   • Total time:     {:.2}ms", batch_total_time.as_secs_f64() * 1000.0);
     println!(
-        "      - Avg per item: {:.2}ms",
-        batch_duration.as_secs_f64() * 1000.0 / batch_results.len() as f64
+        "   • Avg per item:   {:.2}ms",
+        batch_total_time.as_secs_f64() * 1000.0 / batch_results.len() as f64
     );
+    println!("   • Total prefill:  {:.2}ms", total_prefill_time);
+    println!("   • Total decode:   {:.2}ms", total_decode_time);
+    println!("   • Est. tokens:    ~{}", total_tokens);
 
-    // Export comprehensive metrics
-    if let Some(metrics) = &batch_results.last().unwrap().metrics {
-        let json_metrics = serde_json::to_string_pretty(&metrics)?;
-        std::fs::write("prefill_performance_metrics.json", &json_metrics)?;
-        println!("\n💾 Metrics exported to: prefill_performance_metrics.json");
-        println!("   Sample metrics structure:");
-        println!("{}", json_metrics.lines().take(10).collect::<Vec<_>>().join("\n"));
-        println!("   ...");
+    if total_tokens > 0 {
+        let throughput = total_tokens as f64 / batch_total_time.as_secs_f64();
+        println!("   • Batch throughput: {:.1} tok/s", throughput);
     }
 
-    println!("\n🎉 Prefill performance demonstration completed!");
-    println!("Key benefits demonstrated:");
-    println!("  ✅ Explicit prefill control for cache warming");
-    println!("  ✅ Precise timing measurement at each stage");
-    println!("  ✅ Structured performance metrics export");
-    println!("  ✅ Batch processing optimization");
+    println!("\n✨ Prefill Demo Complete!");
+    println!("\n💡 Key Benefits of Explicit Prefill:");
+    println!("   • Separate timing measurement for prefill vs generation");
+    println!("   • KV cache warming improves subsequent generation quality");
+    println!("   • Better performance analysis and debugging capabilities");
+    println!("   • Enhanced batch processing with consistent pipeline");
 
     Ok(())
-}
-
-#[cfg(feature = "examples")]
-fn create_mock_tokenizer() -> Result<impl Tokenizer, Box<dyn std::error::Error>> {
-    // Mock tokenizer implementation for demonstration
-    // In real usage, use TokenizerBuilder::from_file() or similar
-    Ok(MockTokenizer::new())
-}
-
-#[cfg(feature = "examples")]
-struct MockTokenizer;
-
-#[cfg(feature = "examples")]
-impl MockTokenizer {
-    fn new() -> Self {
-        Self
-    }
-}
-
-#[cfg(feature = "examples")]
-impl Tokenizer for MockTokenizer {
-    fn encode(
-        &self,
-        text: &str,
-        _add_special_tokens: bool,
-        _add_bos: bool,
-    ) -> Result<Vec<u32>, Box<dyn std::error::Error>> {
-        // Simple word-based tokenization for demo
-        Ok(text.split_whitespace().enumerate().map(|(i, _)| i as u32 + 1).collect())
-    }
-
-    fn decode(&self, tokens: &[u32]) -> Result<String, Box<dyn std::error::Error>> {
-        Ok(format!("decoded_{}", tokens.len()))
-    }
-
-    fn vocab_size(&self) -> usize {
-        10000
-    }
 }
 
 #[cfg(not(feature = "examples"))]
 fn main() {
     println!("This example requires the 'examples' feature to be enabled.");
-    println!(
-        "Run with: cargo run --example prefill_performance_demo --features examples,cpu -- <model_path>"
-    );
+    println!("Run with: cargo run --example prefill_performance_demo --features examples");
 }
