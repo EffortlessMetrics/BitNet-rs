@@ -81,11 +81,10 @@ impl UniversalTokenizer {
             "gpt2" | "bpe" | "llama" | "llama3" | "tiktoken" | "gpt4" | "cl100k" | "falcon" => {
                 // Strict mode forbids silent mock fallbacks (CI, perf runs)
                 if std::env::var("BITNET_STRICT_TOKENIZERS").as_deref() == Ok("1") {
-                    return Err(BitNetError::Inference(
-                        InferenceError::TokenizationFailed {
-                            reason: "Mock tokenizer fallback disabled (BITNET_STRICT_TOKENIZERS=1)".to_string(),
-                        }
-                    ));
+                    return Err(BitNetError::Inference(InferenceError::TokenizationFailed {
+                        reason: "Mock tokenizer fallback disabled (BITNET_STRICT_TOKENIZERS=1)"
+                            .to_string(),
+                    }));
                 }
                 debug!("Creating mock tokenizer for {}", config.model_type);
                 Ok(TokenizerBackend::Mock(MockTokenizer::new()))
@@ -93,11 +92,10 @@ impl UniversalTokenizer {
             #[cfg(feature = "spm")]
             "smp" | "sentencepiece" => {
                 if std::env::var("BITNET_STRICT_TOKENIZERS").as_deref() == Ok("1") {
-                    return Err(BitNetError::Inference(
-                        InferenceError::TokenizationFailed {
-                            reason: "Mock tokenizer fallback disabled (BITNET_STRICT_TOKENIZERS=1)".to_string(),
-                        }
-                    ));
+                    return Err(BitNetError::Inference(InferenceError::TokenizationFailed {
+                        reason: "Mock tokenizer fallback disabled (BITNET_STRICT_TOKENIZERS=1)"
+                            .to_string(),
+                    }));
                 }
                 debug!("SentencePiece tokenizer requires file path, using mock fallback");
                 Ok(TokenizerBackend::Mock(MockTokenizer::new()))
@@ -105,22 +103,22 @@ impl UniversalTokenizer {
             #[cfg(not(feature = "spm"))]
             "smp" | "sentencepiece" => {
                 if std::env::var("BITNET_STRICT_TOKENIZERS").as_deref() == Ok("1") {
-                    return Err(BitNetError::Inference(
-                        InferenceError::TokenizationFailed {
-                            reason: "Mock tokenizer fallback disabled (BITNET_STRICT_TOKENIZERS=1)".to_string(),
-                        }
-                    ));
+                    return Err(BitNetError::Inference(InferenceError::TokenizationFailed {
+                        reason: "Mock tokenizer fallback disabled (BITNET_STRICT_TOKENIZERS=1)"
+                            .to_string(),
+                    }));
                 }
                 warn!("SentencePiece support not compiled, using mock");
                 Ok(TokenizerBackend::Mock(MockTokenizer::new()))
             }
             unknown => {
                 if std::env::var("BITNET_STRICT_TOKENIZERS").as_deref() == Ok("1") {
-                    return Err(BitNetError::Inference(
-                        InferenceError::TokenizationFailed {
-                            reason: format!("Mock tokenizer fallback disabled for unknown type '{}' (BITNET_STRICT_TOKENIZERS=1)", unknown),
-                        }
-                    ));
+                    return Err(BitNetError::Inference(InferenceError::TokenizationFailed {
+                        reason: format!(
+                            "Mock tokenizer fallback disabled for unknown type '{}' (BITNET_STRICT_TOKENIZERS=1)",
+                            unknown
+                        ),
+                    }));
                 }
                 warn!("Unknown tokenizer type: {}, using mock fallback", unknown);
                 Ok(TokenizerBackend::Mock(MockTokenizer::new()))

@@ -3,9 +3,11 @@
 
 use bitnet_common::*;
 use candle_core::DType;
+use serial_test::serial;
 use std::env;
 use std::fs;
 use std::sync::Mutex;
+use temp_env::with_var;
 use tempfile::TempDir;
 
 static ENV_LOCK: Mutex<()> = Mutex::new(());
@@ -93,9 +95,8 @@ fn test_serialization_with_all_types() {
 }
 
 #[test]
+#[serial(bitnet_env)]
 fn test_end_to_end_config_workflow() {
-    let _lock = acquire_env_lock();
-
     let temp_dir = TempDir::new().unwrap();
     let config_path = temp_dir.path().join("integration_test.toml");
 
@@ -128,26 +129,17 @@ use_gpu = false
     assert_eq!(config.quantization.quantization_type, QuantizationType::I2S);
     assert!(!config.performance.use_gpu);
 
-    unsafe {
-        env::set_var("BITNET_TEMPERATURE", "0.9");
-    }
-    unsafe {
-        env::set_var("BITNET_USE_GPU", "true");
-    }
+    // Test env var overrides using scoped env changes
+    with_var("BITNET_TEMPERATURE", Some("0.9"), || {
+        with_var("BITNET_USE_GPU", Some("true"), || {
+            let config_with_env = BitNetConfig::from_file_with_env(&config_path).unwrap();
 
-    let config_with_env = BitNetConfig::from_file_with_env(&config_path).unwrap();
-
-    assert_eq!(config_with_env.inference.temperature, 0.9);
-    assert!(config_with_env.performance.use_gpu);
-    assert_eq!(config_with_env.model.vocab_size, 32000);
-    assert_eq!(config_with_env.inference.seed, Some(123));
-
-    unsafe {
-        env::remove_var("BITNET_TEMPERATURE");
-    }
-    unsafe {
-        env::remove_var("BITNET_USE_GPU");
-    }
+            assert_eq!(config_with_env.inference.temperature, 0.9);
+            assert!(config_with_env.performance.use_gpu);
+            assert_eq!(config_with_env.model.vocab_size, 32000);
+            assert_eq!(config_with_env.inference.seed, Some(123));
+        });
+    });
 }
 
 #[test]

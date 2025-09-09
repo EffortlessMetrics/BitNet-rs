@@ -565,7 +565,7 @@ mod performance_tests {
         assert!(duration.as_millis() < 5000); // Should complete within 5 seconds
 
         let stats = engine.get_stats().await;
-        
+
         // Validate meaningful stat invariants
         assert!(stats.cache_usage.is_finite(), "cache_usage should be finite");
         assert!(
@@ -600,9 +600,10 @@ mod performance_tests {
         let mut success_count = 0;
         for handle in handles {
             if let Ok(result) = handle.await
-                && result.is_ok() {
-                    success_count += 1;
-                }
+                && result.is_ok()
+            {
+                success_count += 1;
+            }
         }
 
         // At least some should succeed
@@ -675,9 +676,10 @@ mod performance_tests {
         let mut completed = 0;
         for handle in handles {
             if let Ok(result) = handle.await
-                && result.is_ok() {
-                    completed += 1;
-                }
+                && result.is_ok()
+            {
+                completed += 1;
+            }
         }
 
         let total_time = start_time.elapsed();
@@ -757,10 +759,7 @@ mod error_handling_tests {
 
         let _engine = InferenceEngine::new(model, tokenizer, device).unwrap();
 
-        let invalid_config = GenerationConfig {
-            max_new_tokens: 0,
-            ..GenerationConfig::default()
-        };
+        let invalid_config = GenerationConfig { max_new_tokens: 0, ..GenerationConfig::default() };
 
         // Should validate config before generation
         assert!(invalid_config.validate().is_err());
@@ -773,13 +772,11 @@ mod error_handling_tests {
         let device = Device::Cpu;
 
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
-        let mut stream = engine.generate_stream("Test prompt")
-            .expect("generation stream should be created");
+        let mut stream =
+            engine.generate_stream("Test prompt").expect("generation stream should be created");
 
         // Should propagate model errors through stream
-        let maybe = timeout(Duration::from_secs(2), stream.next())
-            .await
-            .expect("next() timed out");
+        let maybe = timeout(Duration::from_secs(2), stream.next()).await.expect("next() timed out");
 
         match maybe {
             Some(Ok(_item)) => panic!("expected error but got successful item"),

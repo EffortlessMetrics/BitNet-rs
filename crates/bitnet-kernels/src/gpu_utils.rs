@@ -16,7 +16,9 @@ pub fn gpu_available() -> bool {
 pub fn get_gpu_info() -> GpuInfo {
     if let Ok(fake) = env::var("BITNET_GPU_FAKE") {
         if env::var("BITNET_STRICT_NO_FAKE_GPU").as_deref() == Ok("1") {
-            panic!("BITNET_GPU_FAKE is set but strict mode forbids fake GPU (BITNET_STRICT_NO_FAKE_GPU=1)");
+            panic!(
+                "BITNET_GPU_FAKE is set but strict mode forbids fake GPU (BITNET_STRICT_NO_FAKE_GPU=1)"
+            );
         }
         let lower = fake.to_lowercase();
         return GpuInfo {
