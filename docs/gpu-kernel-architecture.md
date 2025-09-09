@@ -28,11 +28,62 @@ bitnet-kernels/src/gpu/
 
 ### Key Architectural Components
 
-1. **CudaKernel**: Core CUDA implementation using cudarc 0.17 API with enhanced error handling
+1. **CudaKernel**: Core CUDA implementation using cudarc 0.17 API with enhanced error handling and infrastructure access (Enhanced in PR #199)
 2. **OptimizedMemoryPool**: Device-specific GPU memory management with device_id() access method
 3. **MixedPrecisionKernel**: Infrastructure for FP16/BF16 operations
 4. **GpuValidator**: Comprehensive validation and benchmarking framework
 5. **FfiKernel**: C++ integration bridge for cross-validation
+
+### GPU Infrastructure Enhancement Sequence
+
+The GPU kernel architecture is being enhanced through a systematic three-phase approach:
+
+#### **Phase 1: Foundation Infrastructure (PR #199) ✅**
+
+**Objective**: Establish foundation for advanced GPU programming by exposing low-level CUDA infrastructure.
+
+**Key Changes**:
+- Removed `#[allow(dead_code)]` from `ctx` and `module` fields in `CudaKernel`
+- Added public `context()` and `module()` accessor methods
+- Integrated `calculate_optimal_launch_params()` in matrix multiplication operations
+- Replaced hardcoded 16x16 block sizes with device-aware optimization
+
+**Technical Implementation**:
+```rust
+impl CudaKernel {
+    /// Get access to the CUDA context for advanced operations
+    pub fn context(&self) -> Arc<CudaContext> {
+        Arc::clone(&self.ctx)
+    }
+
+    /// Get access to the CUDA module for loading additional kernels
+    pub fn module(&self) -> Arc<CudaModule> {
+        Arc::clone(&self.module)
+    }
+}
+```
+
+**Impact**: Enables custom kernel loading, advanced memory management, and device-specific optimization while maintaining backward compatibility.
+
+#### **Phase 2: Advanced Management (PR #202) 🔄**
+
+**Planned Objective**: Implement advanced GPU management capabilities building on the foundation.
+
+**Planned Features**:
+- Advanced memory pool management with CUDA context integration
+- Custom PTX kernel compilation and loading pipeline
+- Multi-stream coordination for overlapped execution
+- Performance profiling integration with CUDA events
+
+#### **Phase 3: Multi-GPU Orchestration (PR #206) 📋**
+
+**Planned Objective**: Enable distributed GPU computing and advanced orchestration.
+
+**Planned Features**:
+- Multi-GPU support with device topology awareness
+- Peer-to-peer memory transfers between devices
+- Load balancing across GPU clusters
+- Advanced resource management for distributed inference
 
 ## Design Principles
 
@@ -169,12 +220,36 @@ unsafe { builder.launch(cfg) }.map_err(|e| KernelError::GpuError {
 })?;
 ```
 
-### Dynamic Launch Parameter Calculation
+### Dynamic Launch Parameter Calculation (Enhanced in PR #199)
 
-**Decision**: Calculate optimal kernel launch parameters at runtime.
+**Decision**: Calculate optimal kernel launch parameters at runtime and integrate them into actual matrix operations.
 
-**Implementation**:
+**Enhancement in PR #199**: Previously, `calculate_optimal_launch_params` was marked with `#[allow(dead_code)]` and not used. Now it's actively integrated into `matmul_i2s` operations, replacing hardcoded 16x16 block configurations with device-aware optimization.
+
+**Before PR #199**:
 ```rust
+// Hardcoded launch parameters
+const BLOCK_SIZE: u32 = 16;
+let grid_x = (m as u32).div_ceil(BLOCK_SIZE);
+let grid_y = (n as u32).div_ceil(BLOCK_SIZE);
+
+#[allow(dead_code)]  // Not actually used!
+fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, usize) {
+    // Implementation existed but was not utilized
+}
+```
+
+**After PR #199**:
+```rust
+// Device-aware launch parameters
+let (block_size, grid_x, grid_y) = self.calculate_optimal_launch_params(m, n);
+let cfg = LaunchConfig {
+    grid_dim: (grid_x as u32, grid_y as u32, 1),
+    block_dim: (block_size as u32, block_size as u32, 1),
+    shared_mem_bytes: 0,
+};
+
+// Active implementation now used in production
 fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, usize) {
     let max_threads = self.device_info.max_threads_per_block as usize;
     let max_shared_mem = self.device_info.max_shared_memory_per_block;
@@ -197,7 +272,7 @@ fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, 
 }
 ```
 
-**Rationale**: Different GPU architectures have different optimal configurations. Static parameters would be suboptimal.
+**Rationale**: Different GPU architectures have different optimal configurations. Static parameters would be suboptimal. PR #199 ensures this optimization is actually utilized in production code.
 
 ## Memory Management Architecture
 

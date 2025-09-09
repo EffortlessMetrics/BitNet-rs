@@ -132,6 +132,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 5. **Enhanced Validation Framework**: Comprehensive GPU/CPU validation with performance metrics and error tolerance
 6. **FFI Bridge Architecture**: Safe C++ kernel integration for gradual migration with comprehensive testing and error handling
 7. **Multi-Backend GPU Detection**: System-aware GPU detection with automatic fallback, supporting CUDA, Metal, ROCm, and WebGPU with mock testing capabilities
+8. **GPU Infrastructure Access**: Low-level CUDA context and module access for advanced GPU programming (PR #199), enabling custom kernel loading and device-specific optimization
 
 ### Enhanced Quality Assurance Framework
 
@@ -364,6 +365,16 @@ BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels --features gpu
 
 # GPU validation example (includes preflight-style checks)
 cargo run --example gpu_validation --no-default-features --features gpu
+
+# GPU Infrastructure Testing (Enhanced in PR #199)
+# Test CUDA context and module access
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_kernel_creation
+
+# Test optimal launch parameter integration 
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
+
+# Test device-aware optimization in matrix operations
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy
 ```
 ## Repository Contracts (for Claude)
 
@@ -442,6 +453,16 @@ cargo test -p bitnet-quantization --no-default-features --features gpu test_dequ
 
 # Comprehensive GPU integration tests
 cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_integration
+
+# GPU Infrastructure Access and Advanced Operations (New in PR #199)
+# Test CUDA context and module access for custom kernel loading
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_kernel_creation
+
+# Validate device-aware launch parameter optimization in matrix operations
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_numerical_accuracy --ignored
+
+# Test optimal launch parameter integration replacing hardcoded values
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
 
 # Test universal tokenizer with automatic GGUF integration
 cargo test -p bitnet-tokenizers --no-default-features test_universal_tokenizer_gguf_integration

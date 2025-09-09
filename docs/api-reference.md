@@ -208,6 +208,87 @@ impl Default for GenerationConfig {
 }
 ```
 
+## GPU Infrastructure and Kernel Management
+
+### CudaKernel (Enhanced in PR #199)
+
+Low-level CUDA kernel provider with advanced GPU infrastructure access.
+
+```rust
+pub struct CudaKernel {
+    // Internal fields for CUDA context, streams, modules, and device info
+}
+
+impl CudaKernel {
+    /// Create a new CUDA kernel provider
+    pub fn new() -> Result<Self>;
+    
+    /// Create a new CUDA kernel provider with specific device
+    pub fn new_with_device(device_id: usize) -> Result<Self>;
+    
+    /// Get device information and capabilities
+    pub fn device_info(&self) -> &CudaDeviceInfo;
+    
+    /// Get access to the CUDA context for advanced operations (New in PR #199)
+    /// Enables custom kernel loading and advanced GPU memory management
+    pub fn context(&self) -> Arc<CudaContext>;
+    
+    /// Get access to the CUDA module for loading additional kernels (New in PR #199)
+    /// Allows loading of custom PTX kernels for specialized operations
+    pub fn module(&self) -> Arc<CudaModule>;
+    
+    /// Synchronize all CUDA streams
+    pub fn synchronize_all(&self) -> Result<()>;
+    
+    /// Get memory usage statistics
+    pub fn memory_stats(&self) -> (usize, usize);
+    
+    /// Get performance statistics
+    pub fn performance_stats(&self) -> PerformanceStats;
+    
+    /// Reset performance statistics for benchmarking
+    pub fn reset_performance_stats(&self);
+    
+    /// Batch matrix multiplication for multiple concurrent requests
+    pub fn batch_matmul_i2s(&self, batches: &mut [BatchOperation<'_>]) -> Result<()>;
+    
+    /// Calculate optimal launch parameters based on device capabilities (Enhanced in PR #199)
+    /// Now used internally for device-aware optimization instead of hardcoded values
+    fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, usize);
+}
+```
+
+**Advanced GPU Infrastructure Usage (New in PR #199):**
+
+```rust
+use bitnet_kernels::gpu::cuda::CudaKernel;
+use cudarc::driver::{CudaModule, LaunchConfig};
+
+// Create CUDA kernel with access to low-level infrastructure
+let kernel = CudaKernel::new_with_device(0)?;
+
+// Access CUDA context for advanced memory operations
+let context = kernel.context();
+
+// Access CUDA module for loading custom kernels
+let module = kernel.module();
+
+// Load custom PTX kernel for specialized operations
+let custom_kernel = module.load_function("my_custom_kernel")?;
+
+// Use device-aware launch parameter optimization
+let device_info = kernel.device_info();
+println!("Using device: {} with {} SMs", 
+    device_info.name, device_info.multiprocessor_count);
+```
+
+**GPU Infrastructure Sequence (#199 → #202 → #206):**
+
+PR #199 establishes the foundation for the GPU infrastructure enhancement sequence:
+- **PR #199**: Exposes CUDA context and module access, integrates optimal launch parameters
+- **PR #202**: Advanced GPU memory management and custom kernel loading
+- **PR #206**: Multi-GPU support and advanced GPU orchestration
+
 ## Device Management
 
 ### Device

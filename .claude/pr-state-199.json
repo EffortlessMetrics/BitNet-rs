@@ -1,0 +1,32 @@
+{
+  "pr_number": 199,
+  "title": "Expose CUDA context and integrate optimal launch params",
+  "status": "MERGED",
+  "merge_commit": "5c83af2",
+  "merge_strategy": "squash",
+  "merge_time": "2025-09-09T01:55:56Z",
+  "branch": "codex/use-ctx-and-module-in-api-methods",
+  "author": "EffortlessSteven",
+  "validation_status": "PASSED",
+  "finalized_by": "pr-finalize",
+  "finalized_at": "2025-09-09T01:56:00Z",
+  "changes": {
+    "files_modified": 1,
+    "lines_changed": 26,
+    "core_functionality": "GPU kernel infrastructure",
+    "breaking_changes": false
+  },
+  "quality_gates": {
+    "build_cpu": "PASSED",
+    "build_gpu": "PASSED", 
+    "tests": "PASSED",
+    "clippy": "PASSED",
+    "fmt": "PASSED"
+  },
+  "sequence_info": {
+    "sequence": "GPU infrastructure",
+    "position": "first",
+    "next_pr": 202,
+    "dependencies": []
+  }
+}

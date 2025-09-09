@@ -251,8 +251,101 @@ let kernel = CudaKernel::new_with_device(0)?;
 let info = kernel.device_info();
 println!("Using device: {} with {} SMs", info.name, info.multiprocessor_count);
 
-// Automatic optimization based on device capabilities
-let optimal_params = kernel.calculate_optimal_launch_params(1024, 1024);
+// Automatic optimization based on device capabilities (Enhanced in PR #199)
+// calculate_optimal_launch_params now used internally in matmul operations
+// Instead of hardcoded 16x16 blocks, uses device-specific optimization
+```
+
+### Advanced GPU Infrastructure Access (New in PR #199)
+
+BitNet.rs now provides access to low-level CUDA infrastructure for advanced GPU programming:
+
+```rust
+use bitnet_kernels::gpu::cuda::CudaKernel;
+use cudarc::driver::{CudaModule, CudaFunction, LaunchConfig};
+
+// Create CUDA kernel with full infrastructure access
+let kernel = CudaKernel::new_with_device(0)?;
+
+// Access CUDA context for advanced memory operations
+let context = kernel.context();
+println!("CUDA context access enabled for device {}", 
+    kernel.device_info().device_id);
+
+// Access CUDA module for loading custom kernels
+let module = kernel.module();
+
+// Load additional custom kernels from PTX
+let custom_ptx = r#"
+.version 8.0
+.target sm_75
+.address_size 64
+
+.visible .entry my_custom_kernel(
+    .param .u64 param_0
+) {
+    // Custom kernel implementation
+    ret;
+}
+"#;
+
+// Compile and load custom kernel (example usage)
+// let custom_module = context.load_ptx(custom_ptx.into(), "my_custom_kernel", &[])?;
+// let custom_function = custom_module.get_func("my_custom_kernel")?;
+
+// Device-aware launch parameter optimization
+let (block_size, grid_x, grid_y) = (16, 64, 64); // Would use internal calculation
+let cfg = LaunchConfig {
+    grid_dim: (grid_x as u32, grid_y as u32, 1),
+    block_dim: (block_size as u32, block_size as u32, 1),
+    shared_mem_bytes: 0,
+};
+```
+
+**Use Cases for Advanced Infrastructure Access:**
+
+1. **Custom Kernel Loading**: Load specialized PTX kernels for domain-specific operations
+2. **Advanced Memory Management**: Implement custom memory pools with CUDA context access
+3. **Multi-Stream Operations**: Coordinate multiple CUDA streams for overlapped execution
+4. **Profiling Integration**: Hook into CUDA profiling APIs for performance analysis
+5. **Inter-GPU Communication**: Implement peer-to-peer transfers between GPUs
+
+### GPU Infrastructure Development Sequence
+
+PR #199 is the first in a planned GPU infrastructure enhancement sequence:
+
+#### **Phase 1: Foundation (PR #199) ✅**
+- Expose CUDA context and module through public accessors
+- Remove dead_code allowances from GPU infrastructure fields  
+- Integrate optimal launch parameters in matrix multiplication operations
+- Enable foundation for custom kernel loading and advanced GPU operations
+
+#### **Phase 2: Advanced Management (PR #202) 🔄**
+- Enhanced GPU memory management with custom allocation strategies
+- Advanced custom kernel loading with PTX compilation pipeline
+- Multi-stream coordination and overlapped execution support
+- Performance profiling integration with CUDA events
+
+#### **Phase 3: Multi-GPU Orchestration (PR #206) 📋**
+- Multi-GPU support with device topology awareness
+- Peer-to-peer memory transfers and communication
+- Load balancing across multiple GPU devices
+- Advanced GPU cluster management for distributed inference
+
+**Testing Strategy for Infrastructure Sequence:**
+
+```bash
+# Phase 1 (PR #199): Foundation testing
+cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_kernel_creation
+cargo test -p bitnet-kernels --no-default-features --features gpu test_optimal_launch_params
+
+# Phase 2 (PR #202): Advanced management testing  
+cargo test -p bitnet-kernels --no-default-features --features gpu test_custom_kernel_loading
+cargo test -p bitnet-kernels --no-default-features --features gpu test_advanced_memory_pools
+
+# Phase 3 (PR #206): Multi-GPU testing
+cargo test -p bitnet-kernels --no-default-features --features gpu test_multi_gpu_coordination
+cargo test -p bitnet-kernels --no-default-features --features gpu test_peer_to_peer_transfers
 ```
 
 ### Integration with Quantization
