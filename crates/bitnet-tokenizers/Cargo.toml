@@ -33,3 +33,4 @@ optional = true
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
 tempfile = "3.8"
+temp-env = "0.3"

@@ -779,13 +779,14 @@ mod error_handling_tests {
         // Should propagate model errors through stream
         let maybe = timeout(Duration::from_secs(2), stream.next())
             .await
-            .expect("stream next() should not timeout");
-        
-        if let Some(result) = maybe {
-            // The result should be an error due to mock failure
-            assert!(result.is_err(), "stream should yield error from mock model failure");
-        } else {
-            panic!("stream should yield at least one item (even if it's an error)");
+            .expect("next() timed out");
+
+        match maybe {
+            Some(Ok(_item)) => panic!("expected error but got successful item"),
+            Some(Err(_err)) => {
+                // Expected: mock failure propagated through stream
+            }
+            None => panic!("stream yielded no items"),
         }
     }
 }

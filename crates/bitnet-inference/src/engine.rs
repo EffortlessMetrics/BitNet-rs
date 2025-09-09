@@ -1279,8 +1279,11 @@ impl InferenceEngine {
 /// Statistics about the inference engine
 #[derive(Debug, Clone)]
 pub struct InferenceStats {
+    /// Size of the cache in entries
     pub cache_size: usize,
+    /// Cache usage as a percentage (0.0-100.0)
     pub cache_usage: f64,
+    /// Type of the inference backend
     pub backend_type: String,
 }
 
