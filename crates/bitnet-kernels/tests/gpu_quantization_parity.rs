@@ -139,22 +139,60 @@ impl SimilarityAnalyzer {
 
         // Scale analysis
         if !cpu_scales.is_empty() && !gpu_scales.is_empty() {
-            let scale_diffs: Vec<f32> =
-                cpu_scales.iter().zip(gpu_scales.iter()).map(|(c, g)| (c - g).abs()).collect();
+            // Check if both CPU and GPU have the same special values (inf, NaN)
+            let both_inf = cpu_scales.iter().zip(gpu_scales.iter()).all(|(c, g)| {
+                (c.is_infinite() && g.is_infinite() && c.signum() == g.signum())
+                    || (c.is_nan() && g.is_nan())
+                    || (c.is_finite() && g.is_finite() && (c - g).abs() < 1e-6)
+            });
 
-            let _max_scale_diff = scale_diffs.iter().fold(0.0f32, |a, &b| a.max(b));
-            let avg_scale_diff = scale_diffs.iter().sum::<f32>() / scale_diffs.len() as f32;
+            if both_inf {
+                // If both have the same special values, they are perfectly similar
+                report.scale_similarity = 1.0;
+            } else {
+                // Standard similarity calculation for normal values
+                let scale_diffs: Vec<f32> = cpu_scales
+                    .iter()
+                    .zip(gpu_scales.iter())
+                    .filter_map(|(c, g)| {
+                        if c.is_finite() && g.is_finite() { Some((c - g).abs()) } else { None }
+                    })
+                    .collect();
 
-            report.scale_similarity = 1.0 - (avg_scale_diff / 2.0).min(1.0); // Rough metric
+                if scale_diffs.is_empty() {
+                    // All values were non-finite but different, similarity is 0
+                    report.scale_similarity = 0.0;
+                } else {
+                    let avg_scale_diff = scale_diffs.iter().sum::<f32>() / scale_diffs.len() as f32;
+                    let max_scale = cpu_scales
+                        .iter()
+                        .chain(gpu_scales.iter())
+                        .filter(|x| x.is_finite())
+                        .fold(0.0f32, |a, &b| a.max(b.abs()));
 
-            for (i, &diff) in scale_diffs.iter().enumerate() {
-                if diff > 1e-6 {
-                    report.scale_differences.push(ScaleDifference {
-                        block_index: i,
-                        cpu_scale: cpu_scales[i],
-                        gpu_scale: gpu_scales[i],
-                        difference: diff,
-                    });
+                    if max_scale > 1e-8 {
+                        let relative_diff = avg_scale_diff / max_scale;
+                        report.scale_similarity = 1.0 - relative_diff.min(1.0);
+                    } else {
+                        report.scale_similarity = 1.0;
+                    }
+                }
+            }
+
+            // Record scale differences for debugging
+            for (i, (&cpu_scale, &gpu_scale)) in
+                cpu_scales.iter().zip(gpu_scales.iter()).enumerate()
+            {
+                if cpu_scale.is_finite() && gpu_scale.is_finite() {
+                    let diff = (cpu_scale - gpu_scale).abs();
+                    if diff > 1e-6 {
+                        report.scale_differences.push(ScaleDifference {
+                            block_index: i,
+                            cpu_scale,
+                            gpu_scale,
+                            difference: diff,
+                        });
+                    }
                 }
             }
         }

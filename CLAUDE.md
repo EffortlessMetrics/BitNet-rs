@@ -57,6 +57,14 @@ cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
 cargo test -p bitnet-quantization --test simd_compatibility
 cargo test -p bitnet-quantization test_i2s_simd_scalar_parity
 cargo test -p bitnet-quantization test_simd_performance_baseline
+
+# Mixed precision GPU kernel tests (requires CUDA)
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_matmul_accuracy
+cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_mode_validation
+
+# Mixed precision benchmarks and performance analysis
+cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
 ```
 
 ### Code Quality Commands
@@ -109,7 +117,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-common`**: Shared types, traits, and utilities
 - **`bitnet-models`**: Model loading and format handling (GGUF, SafeTensors)
 - **`bitnet-quantization`**: 1-bit quantization algorithms
-- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
+- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with mixed precision support (FP16/BF16), FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
 - **`bitnet-inference`**: Inference engine with streaming support
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration and mock fallback system
 - **`bitnet-server`**: HTTP server for BitNet inference with health monitoring
@@ -133,6 +141,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 6. **FFI Bridge Architecture**: Safe C++ kernel integration for gradual migration with comprehensive testing and error handling
 7. **Multi-Backend GPU Detection**: System-aware GPU detection with automatic fallback, supporting CUDA, Metal, ROCm, and WebGPU with mock testing capabilities
 8. **GPU Infrastructure Access**: Low-level CUDA context and module access for advanced GPU programming (PR #199), enabling custom kernel loading and device-specific optimization
+9. **Mixed Precision Computing**: Native CUDA kernels for FP16/BF16 operations with device-aware precision selection and automatic fallback (PR #202)
 
 ### Enhanced Quality Assurance Framework
 
@@ -182,7 +191,7 @@ Minimum Supported Rust Version: **1.89.0** (uses Rust 2024 edition)
 ### Feature Flags
 Default features are **empty** to prevent unwanted dependencies:
 - `cpu`: CPU inference with SIMD optimizations, includes native I2_S support
-- `gpu`: NVIDIA GPU support with advanced device-aware quantization and automatic fallback
+- `gpu`: NVIDIA GPU support with mixed precision kernels (FP16/BF16), advanced device-aware quantization and automatic fallback
 - `cuda`: Backward-compatible alias for `gpu` feature
 - `iq2s-ffi`: IQ2_S quantization via GGML FFI (requires vendored GGML files)
 - `ffi`: C++ FFI bridge with quantization support for gradual migration (includes FfiKernel with I2S/TL1/TL2 quantization)
@@ -219,6 +228,30 @@ The FFI bridge enables gradual migration from C++ to Rust while maintaining func
 - **Migration Path**: Systematic approach to replace C++ kernels with native Rust
 - **Safety**: Safe Rust wrappers with proper error handling and memory management
 - **Testing**: Comprehensive test suite ensuring FFI/Rust quantization parity
+
+### Mixed Precision GPU Acceleration (New in PR #202)
+
+BitNet.rs now provides native CUDA mixed precision support for enhanced GPU performance:
+
+#### Supported Precision Modes
+- **FP32**: Full precision (reference implementation)
+- **FP16**: Half-precision floating point with Tensor Core acceleration (compute capability 6.1+)
+- **BF16**: Brain floating point format for modern architectures (compute capability 8.0+)
+- **Auto**: Automatic precision selection based on device capabilities
+
+#### Device-Aware Precision Selection
+- **Automatic Detection**: Hardware capability detection determines optimal precision
+- **Graceful Fallback**: Automatic CPU fallback when GPU operations fail
+- **Performance Monitoring**: Comprehensive metrics for each precision mode
+- **Memory Tracking**: GPU memory allocation and deallocation monitoring
+- **Tensor Core Optimization**: Leverages WMMA API for maximum performance (CC 7.0+)
+
+#### Mixed Precision Features
+- **Native CUDA Kernels**: Custom PTX kernels optimized for each precision mode
+- **Matrix Multiplication**: Optimized matmul operations with device-specific launch parameters
+- **Precision Conversion**: Efficient FP32↔FP16↔BF16 conversion utilities
+- **Memory Optimization**: Vectorized memory operations and bandwidth optimization
+- **Error Handling**: Comprehensive error propagation with detailed diagnostics
 
 ### Enhanced Inference Engine Architecture
 
@@ -463,6 +496,22 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_nume
 
 # Test optimal launch parameter integration replacing hardcoded values
 cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
+
+# Mixed Precision GPU Operations (New in PR #202)
+# Test mixed precision kernel creation and device capability detection
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
+
+# Test FP16/BF16 matrix multiplication accuracy against FP32 reference
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_matmul_accuracy
+
+# Test precision mode validation and automatic fallback
+cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_mode_validation
+
+# Benchmark mixed precision performance across different precisions
+cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
+
+# Test device-aware precision selection and optimization
+cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_detection_optimization
 
 # Test universal tokenizer with automatic GGUF integration
 cargo test -p bitnet-tokenizers --no-default-features test_universal_tokenizer_gguf_integration

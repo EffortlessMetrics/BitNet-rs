@@ -5,9 +5,10 @@
 //! improvements made in PR #174 where intrinsic calls were modernized.
 
 use bitnet_common::BitNetTensor;
-use bitnet_quantization::{I2SQuantizer, QuantizerTrait};
+use bitnet_quantization::I2SQuantizer;
 use candle_core::{Device, Tensor as CandleTensor};
-use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
+use std::hint::black_box;
 use std::time::Instant;
 
 /// Helper function to create benchmark tensors with realistic data distribution

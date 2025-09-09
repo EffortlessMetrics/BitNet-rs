@@ -3,11 +3,11 @@
 use anyhow::Result;
 use opentelemetry::{KeyValue, global};
 use opentelemetry_otlp::{SpanExporter, WithExportConfig};
-use opentelemetry_prometheus::{PrometheusExporter, exporter};
+use opentelemetry_prometheus::exporter;
 use opentelemetry_sdk::{
     Resource,
     metrics::SdkMeterProvider,
-    trace::{self as sdktrace, Sampler, SdkTracerProvider},
+    trace::{Sampler, SdkTracerProvider},
 };
 use std::time::Duration;
 

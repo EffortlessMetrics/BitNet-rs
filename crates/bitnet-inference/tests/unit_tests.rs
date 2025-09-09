@@ -619,10 +619,9 @@ mod backend_unit_tests {
 
     #[test]
     fn test_gpu_backend_availability() {
-        // Test GPU availability check
-        let is_available = GpuBackend::is_available();
-        // This depends on compile-time features, so we just check it doesn't panic
-        assert!(is_available || !is_available);
+        // Test GPU availability check - simply ensure it doesn't panic
+        let _is_available = GpuBackend::is_available();
+        // This test passes if the method call doesn't panic
     }
 
     #[tokio::test]

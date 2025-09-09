@@ -8,6 +8,7 @@
 //! - Backend performance comparison
 
 #![cfg(feature = "integration-tests")]
+#![allow(dead_code)] // Test utilities may not be used in all test configurations
 
 use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, Device};
 use bitnet_inference::prelude::*;

@@ -117,7 +117,7 @@ impl CudaKernel {
     }
 
     /// Get detailed device information and capabilities
-    fn get_device_info(device_id: usize) -> Result<CudaDeviceInfo> {
+    pub fn get_device_info(device_id: usize) -> Result<CudaDeviceInfo> {
         // Create temporary context to query device properties
         let ctx = CudaContext::new(device_id).map_err(|e| KernelError::GpuError {
             reason: format!("Failed to create CUDA context for device {}: {:?}", device_id, e),
@@ -206,21 +206,26 @@ impl CudaKernel {
                 reason: format!("Failed to allocate output on device: {:?}", e),
             })?;
 
-        // Allocate scale array (one scale per block of 128 elements)
-        let scale_blocks = input.len().div_ceil(128);
+        // Allocate scale array (one scale per block of 32 elements - match CPU)
+        let scale_blocks = input.len().div_ceil(32);
         let mut scales_dev: CudaSlice<f32> =
             self.stream.alloc_zeros(scale_blocks).map_err(|e| KernelError::GpuError {
                 reason: format!("Failed to allocate scales on device: {:?}", e),
             })?;
 
-        // Configure launch parameters
-        const BLOCK_SIZE: u32 = 256;
-        let grid_size = (input.len() as u32).div_ceil(BLOCK_SIZE);
+        // Configure launch parameters for deterministic CPU-compatible processing
+        const CUDA_BLOCK_SIZE: u32 = 256;
+        const CPU_BLOCK_SIZE: u32 = 32;
+
+        // Each CUDA block processes multiple CPU blocks
+        let cpu_blocks_total = (input.len() as u32).div_ceil(CPU_BLOCK_SIZE);
+        let cpu_blocks_per_cuda_block = CUDA_BLOCK_SIZE.div_ceil(CPU_BLOCK_SIZE);
+        let grid_size = cpu_blocks_total.div_ceil(cpu_blocks_per_cuda_block);
 
         let cfg = LaunchConfig {
             grid_dim: (grid_size, 1, 1),
-            block_dim: (BLOCK_SIZE, 1, 1),
-            shared_mem_bytes: 0,
+            block_dim: (CUDA_BLOCK_SIZE, 1, 1),
+            shared_mem_bytes: 1024 * 4, // 1024 floats for shared memory reduction
         };
 
         // Select the appropriate kernel function based on quantization type
@@ -287,8 +292,10 @@ impl CudaKernel {
             KernelError::GpuError { reason: format!("Failed to allocate C on device: {:?}", e) }
         })?;
 
-        // Configure launch parameters based on device capabilities
-        let (block_size, grid_x, grid_y) = self.calculate_optimal_launch_params(m, n);
+        // Use fixed block size to match CUDA kernel (16x16)
+        let block_size = 16;
+        let grid_x = n.div_ceil(block_size);
+        let grid_y = m.div_ceil(block_size);
         let cfg = LaunchConfig {
             grid_dim: (grid_x as u32, grid_y as u32, 1),
             block_dim: (block_size as u32, block_size as u32, 1),
@@ -356,36 +363,6 @@ impl CudaKernel {
     /// Reset performance statistics
     pub fn reset_performance_stats(&self) {
         // Simplified for now
-    }
-
-    /// Calculate optimal launch parameters based on device capabilities
-    fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, usize) {
-        // Use device-specific optimization
-        let max_threads = self.device_info.max_threads_per_block as usize;
-        let _multiprocessor_count = self.device_info.multiprocessor_count as usize;
-
-        // Choose block size based on shared memory constraints
-        let max_shared_mem = self.device_info.max_shared_memory_per_block;
-        let shared_mem_per_element = 2 * std::mem::size_of::<i8>(); // A and B tiles
-
-        // Find largest block size that fits in shared memory
-        let mut block_size = 16; // Start with 16x16
-        while block_size <= 32 {
-            let shared_mem_needed = 2 * block_size * block_size * shared_mem_per_element;
-            if shared_mem_needed > max_shared_mem || block_size * block_size > max_threads {
-                block_size /= 2;
-                break;
-            }
-            block_size *= 2;
-        }
-        block_size = block_size.clamp(8, 32); // Clamp between 8 and 32
-
-        // Calculate grid dimensions
-        let grid_x = m.div_ceil(block_size);
-        let grid_y = n.div_ceil(block_size);
-
-        log::debug!("Optimal launch params: block_size={}, grid={}x{}", block_size, grid_x, grid_y);
-        (block_size, grid_x, grid_y)
     }
 
     /// Batch matrix multiplication for multiple concurrent requests

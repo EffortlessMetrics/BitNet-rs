@@ -237,7 +237,7 @@ async fn test_batch_prefill_performance_consistency() {
     let prefill_times: Vec<f64> = results.iter().map(|r| r.timing_ms.prefill).collect();
     for (i, &prefill_time) in prefill_times.iter().enumerate() {
         assert!(
-            prefill_time >= 8.0 && prefill_time <= 100.0,
+            (8.0..=100.0).contains(&prefill_time),
             "Prompt {} prefill time {} should be reasonable",
             i,
             prefill_time

@@ -360,9 +360,7 @@ async fn test_error_handling() {
 
 #[tokio::test]
 async fn test_generation_config_error_handling() {
-    let mut config = GenerationConfig::default();
-
-    config.max_new_tokens = 0;
+    let mut config = GenerationConfig { max_new_tokens: 0, ..Default::default() };
     let error = config.validate().unwrap_err();
     assert!(error.contains("max_new_tokens"));
 

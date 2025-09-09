@@ -124,10 +124,10 @@ impl ConvertCommand {
         }
 
         // Validate compression level
-        if let Some(level) = self.compression {
-            if level > 9 {
-                anyhow::bail!("Compression level must be between 0 and 9");
-            }
+        if let Some(level) = self.compression
+            && level > 9
+        {
+            anyhow::bail!("Compression level must be between 0 and 9");
         }
 
         Ok(())
@@ -323,17 +323,16 @@ impl ConvertCommand {
         }
 
         // Show file sizes
-        if let Ok(input_metadata) = std::fs::metadata(&self.input) {
-            if let Ok(output_metadata) = std::fs::metadata(&self.output) {
-                let input_size = input_metadata.len();
-                let output_size = output_metadata.len();
-                let ratio =
-                    if input_size > 0 { output_size as f64 / input_size as f64 } else { 0.0 };
+        if let Ok(input_metadata) = std::fs::metadata(&self.input)
+            && let Ok(output_metadata) = std::fs::metadata(&self.output)
+        {
+            let input_size = input_metadata.len();
+            let output_size = output_metadata.len();
+            let ratio = if input_size > 0 { output_size as f64 / input_size as f64 } else { 0.0 };
 
-                println!("  Input size: {} bytes", format_size(input_size));
-                println!("  Output size: {} bytes", format_size(output_size));
-                println!("  Size ratio: {:.2}x", ratio);
-            }
+            println!("  Input size: {} bytes", format_size(input_size));
+            println!("  Output size: {} bytes", format_size(output_size));
+            println!("  Size ratio: {:.2}x", ratio);
         }
 
         Ok(())

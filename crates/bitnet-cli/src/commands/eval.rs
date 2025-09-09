@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use clap::Args;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tracing::{debug, info, warn};
 
@@ -395,7 +395,7 @@ impl EvalCommand {
     /// Load tokenizer
     async fn load_tokenizer(
         &self,
-        model_path: &PathBuf,
+        model_path: &Path,
     ) -> Result<std::sync::Arc<dyn bitnet_tokenizers::Tokenizer>> {
         use bitnet_tokenizers::TokenizerBuilder;
 
@@ -433,10 +433,10 @@ impl EvalCommand {
         let mut lines = Vec::new();
 
         for (i, line) in reader.lines().enumerate() {
-            if let Some(max) = self.max_lines {
-                if i >= max {
-                    break;
-                }
+            if let Some(max) = self.max_lines
+                && i >= max
+            {
+                break;
             }
 
             let line = line.context("Failed to read line from text file")?;
@@ -464,7 +464,8 @@ impl EvalCommand {
         let mut prefix: Vec<u32> = Vec::with_capacity(tokens.len());
         prefix.push(tokens[0]);
 
-        for t in 1..tokens.len() {
+        for (idx, &current_token) in tokens.iter().skip(1).enumerate() {
+            let t = idx + 1;
             // Get logits from forward pass
             let mut logits =
                 engine.eval_ids(&prefix).await.context("eval_ids in teacher-forcing")?;
@@ -477,16 +478,16 @@ impl EvalCommand {
             }
 
             // Skip padding tokens if specified
-            if let Some(pid) = pad_id {
-                if tokens[t] == pid {
-                    prefix.push(tokens[t]);
-                    continue;
-                }
+            if let Some(pid) = pad_id
+                && current_token == pid
+            {
+                prefix.push(current_token);
+                continue;
             }
 
             // Compute log probabilities
             let logp = log_softmax_stable(&logits);
-            let target = tokens[t] as usize;
+            let target = current_token as usize;
             let lp = *logp
                 .get(target)
                 .ok_or_else(|| anyhow::anyhow!("target index {} out of bounds", target))?;
@@ -494,7 +495,7 @@ impl EvalCommand {
             stats.sum -= lp as f64;
             stats.tokens += 1;
 
-            prefix.push(tokens[t]);
+            prefix.push(current_token);
         }
 
         Ok(stats)

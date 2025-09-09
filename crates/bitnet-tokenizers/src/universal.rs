@@ -13,6 +13,7 @@ pub struct UniversalTokenizer {
 #[allow(clippy::large_enum_variant)]
 enum TokenizerBackend {
     #[cfg(feature = "spm")]
+    #[allow(dead_code)] // SentencePiece backend is not yet fully implemented
     SentencePiece(crate::SpmTokenizer),
     Mock(MockTokenizer),
 }

@@ -21,8 +21,12 @@ This document explains the architectural decisions and design patterns used in B
 bitnet-kernels/src/gpu/
 ├── cuda.rs                    # CUDA kernel implementation
 ├── memory_optimization.rs     # Memory management and optimization
-├── mixed_precision.rs         # FP16/BF16 support infrastructure
+├── mixed_precision.rs         # FP16/BF16 support infrastructure (New in PR #202)
 ├── validation.rs              # Comprehensive testing framework
+├── kernels/
+│   ├── mixed_precision_kernels.cu  # Native CUDA mixed precision kernels
+│   ├── bitnet_matmul.cu            # Optimized matrix multiplication
+│   └── bitnet_kernels.cu           # Core quantization kernels
 └── ../ffi/bridge.rs          # C++ integration bridge
 ```
 
@@ -30,7 +34,7 @@ bitnet-kernels/src/gpu/
 
 1. **CudaKernel**: Core CUDA implementation using cudarc 0.17 API with enhanced error handling and infrastructure access (Enhanced in PR #199)
 2. **OptimizedMemoryPool**: Device-specific GPU memory management with device_id() access method
-3. **MixedPrecisionKernel**: Infrastructure for FP16/BF16 operations
+3. **MixedPrecisionKernel**: Comprehensive mixed precision infrastructure for FP16/BF16 operations with device-aware capabilities (New in PR #202)
 4. **GpuValidator**: Comprehensive validation and benchmarking framework
 5. **FfiKernel**: C++ integration bridge for cross-validation
 
@@ -65,25 +69,51 @@ impl CudaKernel {
 
 **Impact**: Enables custom kernel loading, advanced memory management, and device-specific optimization while maintaining backward compatibility.
 
-#### **Phase 2: Advanced Management (PR #202) 🔄**
+#### **Phase 2: Mixed Precision Infrastructure (PR #202) ✅**
 
-**Planned Objective**: Implement advanced GPU management capabilities building on the foundation.
+**Objective**: Implement comprehensive mixed precision support with native CUDA kernels.
+
+**Key Features Implemented**:
+- **MixedPrecisionKernel**: Device-aware mixed precision operations with automatic fallback
+- **Native CUDA Kernels**: Custom PTX kernels for FP16/BF16 operations with Tensor Core support
+- **Performance Monitoring**: Comprehensive metrics tracking for each precision mode  
+- **Memory Management**: GPU memory allocation tracking and leak detection
+- **Precision Conversion**: Efficient FP32↔FP16↔BF16 conversion utilities
+
+**Technical Implementation**:
+```rust
+pub struct MixedPrecisionKernel {
+    device_info: CudaDeviceInfo,
+    precision_mode: PrecisionMode,
+    optimal_precision: PrecisionMode,
+    ctx: Arc<CudaContext>,
+    stream: Arc<CudaStream>,
+    module: Arc<CudaModule>,
+    // Precision-specific kernel functions
+    matmul_fp16_function: Option<CudaFunction>,
+    matmul_bf16_function: Option<CudaFunction>,
+    tensor_core_function: Option<CudaFunction>,
+    // Conversion kernels
+    convert_fp32_to_fp16_function: Option<CudaFunction>,
+    convert_fp32_to_bf16_function: Option<CudaFunction>,
+    // Performance and memory tracking
+    metrics: MixedPrecisionMetrics,
+    memory_tracker: MemoryTracker,
+}
+```
+
+**Impact**: Enables high-performance mixed precision operations with automatic device optimization and comprehensive performance monitoring.
+
+#### **Phase 3: Advanced GPU Management (PR #206) 📋**
+
+**Planned Objective**: Implement advanced GPU management capabilities and multi-GPU orchestration.
 
 **Planned Features**:
-- Advanced memory pool management with CUDA context integration
-- Custom PTX kernel compilation and loading pipeline
-- Multi-stream coordination for overlapped execution
-- Performance profiling integration with CUDA events
-
-#### **Phase 3: Multi-GPU Orchestration (PR #206) 📋**
-
-**Planned Objective**: Enable distributed GPU computing and advanced orchestration.
-
-**Planned Features**:
-- Multi-GPU support with device topology awareness
-- Peer-to-peer memory transfers between devices
-- Load balancing across GPU clusters
-- Advanced resource management for distributed inference
+- **Advanced Memory Management**: Custom memory pools with CUDA context integration
+- **Multi-Stream Coordination**: Overlapped execution and asynchronous operations
+- **Multi-GPU Support**: Device topology awareness and load balancing
+- **Peer-to-Peer Transfers**: Direct memory transfers between GPU devices
+- **Performance Profiling**: Integration with CUDA events and profiling APIs
 
 ## Design Principles
 
@@ -350,34 +380,196 @@ pub fn analyze_access_pattern(access_indices: &[usize]) -> AccessPattern {
 
 ## Mixed Precision Infrastructure
 
-### Capability-Based Precision Selection
+The mixed precision infrastructure (implemented in PR #202) provides comprehensive support for FP16/BF16 operations with device-aware capabilities and automatic fallback mechanisms.
 
-**Decision**: Automatic precision mode selection based on hardware capabilities.
+### Architecture Overview
 
-**Architecture**:
+**Core Components**:
 ```rust
-pub enum PrecisionMode {
-    FP32,   // Full precision (always supported)
-    FP16,   // Half precision (Compute Capability 6.0+)
-    BF16,   // Brain floating point (Compute Capability 8.0+)
-    Auto,   // Automatic selection based on hardware
+pub struct MixedPrecisionKernel {
+    device_info: CudaDeviceInfo,           // Hardware capability information
+    precision_mode: PrecisionMode,         // Current precision setting
+    optimal_precision: PrecisionMode,      // Hardware-optimal precision
+    ctx: Arc<CudaContext>,                 // CUDA context for operations
+    stream: Arc<CudaStream>,               // CUDA stream for async operations
+    module: Arc<CudaModule>,               // PTX module with kernels
+    
+    // Precision-specific kernel functions
+    matmul_fp16_function: Option<CudaFunction>,
+    matmul_bf16_function: Option<CudaFunction>,
+    tensor_core_function: Option<CudaFunction>,
+    
+    // Conversion kernel functions  
+    convert_fp32_to_fp16_function: Option<CudaFunction>,
+    convert_fp32_to_bf16_function: Option<CudaFunction>,
+    convert_fp16_to_fp32_function: Option<CudaFunction>,
+    convert_bf16_to_fp32_function: Option<CudaFunction>,
+    
+    // Performance and resource tracking
+    metrics: MixedPrecisionMetrics,
+    memory_tracker: MemoryTracker,
 }
 ```
 
-**Implementation Strategy**:
+### Capability-Based Precision Selection
+
+**Decision**: Automatic precision mode selection based on hardware capabilities with fallback support.
+
+**Precision Modes**:
 ```rust
-let precision_mode = match device_info.compute_capability {
-    (major, _) if major >= 8 => {
-        if supports_bf16() { PrecisionMode::BF16 } else { PrecisionMode::FP16 }
-    },
-    (major, _) if major >= 6 => {
-        if supports_fp16() { PrecisionMode::FP16 } else { PrecisionMode::FP32 }
-    },
-    _ => PrecisionMode::FP32,
-};
+pub enum PrecisionMode {
+    FP32,   // Full precision (always supported, reference implementation)
+    FP16,   // Half precision (Compute Capability 6.1+, Tensor Cores 7.0+)
+    BF16,   // Brain floating point (Compute Capability 8.0+)
+    Auto,   // Automatic selection based on hardware capabilities
+}
 ```
 
-**Future Extensibility**: Infrastructure in place for easy addition of FP16/BF16 kernels when cudarc API stabilizes.
+**Hardware Detection Strategy**:
+```rust
+pub fn detect_best_precision(device_info: &CudaDeviceInfo) -> PrecisionMode {
+    // Prioritize BF16 for modern architectures (Ampere and newer)
+    if device_info.supports_bf16 {
+        PrecisionMode::BF16
+    }
+    // Use FP16 for Pascal and newer that support it
+    else if device_info.supports_fp16 {
+        PrecisionMode::FP16  
+    }
+    // Fallback to FP32 for older architectures
+    else {
+        PrecisionMode::FP32
+    }
+}
+```
+
+### Native CUDA Kernel Implementation
+
+**PTX Kernel Architecture**:
+The mixed precision kernels are implemented in native CUDA with architecture-specific optimizations:
+
+```cuda
+// Tensor Core matrix multiplication (CC 7.0+)
+extern "C" __global__ void bitnet_matmul_tensor_core(
+    const __half* A, const __half* B, __half* C,
+    int M, int N, int K
+) {
+    #if __CUDA_ARCH__ >= 700
+    using namespace nvcuda;
+    wmma::fragment<wmma::matrix_a, 16, 16, 16, __half, wmma::row_major> a_frag;
+    wmma::fragment<wmma::matrix_b, 16, 16, 16, __half, wmma::col_major> b_frag;
+    wmma::fragment<wmma::accumulator, 16, 16, 16, __half> c_frag;
+    // ... WMMA operations
+    #endif
+}
+
+// BF16 matrix multiplication (CC 8.0+)  
+extern "C" __global__ void bitnet_matmul_bf16(
+    const __nv_bfloat16* A, const __nv_bfloat16* B, __nv_bfloat16* C,
+    int M, int N, int K
+) {
+    #if __CUDA_ARCH__ >= 800
+    // BF16 operations with native arithmetic
+    #endif
+}
+```
+
+**Kernel Loading Strategy**:
+```rust
+impl MixedPrecisionKernel {
+    pub fn new(device_id: usize) -> Result<Self> {
+        // Compile mixed precision PTX kernels
+        let ptx = compile_ptx(include_str!("kernels/mixed_precision_kernels.cu"))?;
+        let module = ctx.load_module(ptx)?;
+        
+        // Load kernels based on device capabilities
+        let matmul_fp16_function = if device_info.supports_fp16 {
+            module.load_function("bitnet_matmul_fp16").ok()
+        } else {
+            None
+        };
+        
+        let tensor_core_function = if device_info.compute_capability.0 >= 7 {
+            module.load_function("bitnet_matmul_tensor_core").ok()
+        } else {
+            None
+        };
+        // ...
+    }
+}
+```
+
+### Performance Monitoring and Metrics
+
+**Comprehensive Metrics Collection**:
+```rust
+pub struct MixedPrecisionMetrics {
+    pub total_operations: u64,
+    pub fp16_execution_time: Duration,
+    pub bf16_execution_time: Duration,
+    pub fp32_execution_time: Duration,
+    pub memory_allocated: usize,
+    pub peak_memory_usage: usize,
+    pub memory_transfers_h2d: u64,
+    pub memory_transfers_d2h: u64,
+    pub bytes_transferred_h2d: u64,
+    pub bytes_transferred_d2h: u64,
+}
+```
+
+**Memory Tracking**:
+```rust
+pub struct MemoryTracker {
+    current_allocated: usize,
+    peak_memory: usize,
+    allocation_count: u64,
+    deallocation_count: u64,
+}
+```
+
+### Device-Aware Operation Flow
+
+**Matrix Multiplication Pipeline**:
+1. **Device Capability Check**: Verify precision mode support
+2. **Kernel Availability Validation**: Ensure required kernels loaded
+3. **Memory Allocation**: Track GPU memory allocation with leak detection
+4. **Precision Conversion**: FP32 → FP16/BF16 conversion on device
+5. **Optimized Execution**: Use Tensor Cores when available
+6. **Result Conversion**: FP16/BF16 → FP32 conversion back to host
+7. **Performance Tracking**: Record execution time and memory metrics
+
+**Automatic Fallback Strategy**:
+```rust
+impl MixedPrecisionKernel {
+    pub fn matmul_auto(&mut self, a: &[f32], b: &[f32], c: &mut [f32], 
+                       m: usize, n: usize, k: usize) -> Result<()> {
+        match self.effective_precision() {
+            PrecisionMode::FP32 => self.matmul_fp32(a, b, c, m, n, k),
+            PrecisionMode::FP16 => self.matmul_fp16(a, b, c, m, n, k),
+            PrecisionMode::BF16 => self.matmul_bf16(a, b, c, m, n, k),
+            PrecisionMode::Auto => unreachable!(), // Resolved in effective_precision
+        }
+    }
+}
+```
+
+### Error Handling and Graceful Degradation
+
+**Comprehensive Error Scenarios**:
+- **Unsupported Hardware**: Automatic fallback to FP32
+- **PTX Compilation Failure**: Clear error messages with troubleshooting guidance  
+- **Memory Allocation Failure**: Resource cleanup and error propagation
+- **Kernel Execution Failure**: Device reset and CPU fallback
+- **Numerical Accuracy Issues**: Validation against reference implementation
+
+### Integration with Existing BitNet Architecture
+
+**Seamless Integration Points**:
+- **Quantization Pipeline**: Mixed precision operations integrate with existing quantization kernels
+- **Memory Management**: Unified memory tracking across all GPU operations
+- **Validation Framework**: Mixed precision accuracy testing integrated with existing validation
+- **Performance Benchmarking**: Mixed precision benchmarks part of comprehensive performance suite
+- **Error Handling**: Consistent error types and handling patterns across all GPU operations
 
 ## Validation Framework
 

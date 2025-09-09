@@ -372,8 +372,7 @@ mod streaming_tests {
         let mut stream = engine.generate_stream("Test prompt").unwrap();
 
         // Take only first few tokens then drop stream
-        let first_result =
-            timeout(Duration::from_secs(2), stream.expect("Stream creation failed").next()).await;
+        let first_result = timeout(Duration::from_secs(2), stream.next()).await;
         assert!(first_result.is_ok());
 
         // Drop the stream (simulating client disconnect)

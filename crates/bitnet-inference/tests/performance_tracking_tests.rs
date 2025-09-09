@@ -57,7 +57,7 @@ impl Model for MockModel {
 
     fn logits(&self, hidden: &ConcreteTensor) -> Result<ConcreteTensor, BitNetError> {
         let shape = hidden.shape();
-        let batch_size = shape.get(0).copied().unwrap_or(1);
+        let batch_size = shape.first().copied().unwrap_or(1);
         let seq_len = shape.get(1).copied().unwrap_or(1);
         Ok(ConcreteTensor::mock(vec![batch_size, seq_len, self.config.model.vocab_size]))
     }
@@ -149,12 +149,12 @@ mod performance_metrics_tests {
     #[tokio::test]
     async fn test_performance_metrics_validation() {
         use super::*;
-        let mut metrics = PerformanceMetrics::default();
-
-        // Valid metrics should pass
-        metrics.tokens_per_second = 10.0;
-        metrics.cache_hit_rate = Some(0.8);
-        metrics.average_token_latency_ms = Some(100.0);
+        let mut metrics = PerformanceMetrics {
+            tokens_per_second: 10.0,
+            cache_hit_rate: Some(0.8),
+            average_token_latency_ms: Some(100.0),
+            ..Default::default()
+        };
         assert!(metrics.validate().is_ok());
 
         // Invalid tokens_per_second should fail
@@ -182,11 +182,8 @@ mod performance_metrics_tests {
     #[tokio::test]
     async fn test_performance_metrics_efficiency_ratio() {
         use super::*;
-        let mut metrics = PerformanceMetrics::default();
-
-        // Zero latency should return 0
-        metrics.total_latency_ms = 0;
-        metrics.tokens_generated = 100;
+        let mut metrics =
+            PerformanceMetrics { total_latency_ms: 0, tokens_generated: 100, ..Default::default() };
         assert_eq!(metrics.efficiency_ratio(), 0.0);
 
         // Normal case

@@ -30,7 +30,7 @@
 ### 🌐 **Cross-Platform Excellence**
 - **Native support** for Linux, macOS, and Windows
 - **Multiple backends**: CPU (AVX2/NEON) and GPU (CUDA) inference engines with automatic kernel selection and device-aware quantization
-- **Advanced GPU features**: Mixed precision (FP16/BF16), memory optimization, and device-specific performance tuning
+- **Advanced GPU features**: Native mixed precision kernels (FP16/BF16) with Tensor Core acceleration, automatic hardware detection, and device-specific performance tuning
 - **Universal model formats**: GGUF, sharded SafeTensors (HuggingFace), and local HuggingFace directories
 - **Language bindings**: C API, Python, and WebAssembly
 
@@ -108,6 +108,10 @@ BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo test --workspace --no-default-featur
 
 # Enhanced GPU validation with performance metrics and error handling
 cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
+
+# Mixed precision GPU operations (FP16/BF16 with Tensor Cores)
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
+cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
 ```
 
 **Enhanced GPU Validation Features:**
@@ -115,7 +119,7 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_vali
 - **Performance Benchmarking**: Built-in kernel performance measurement with speedup calculations
 - **Numerical Accuracy Validation**: Systematic comparison between GPU and CPU implementations
 - **Memory Leak Detection**: Automatic GPU memory monitoring and leak prevention
-- **Mixed Precision Support**: FP16/BF16 validation with error tolerance configuration
+- **Mixed Precision Support**: Native CUDA kernels for FP16/BF16 operations with automatic Tensor Core acceleration (CC 7.0+)
 - **Graceful Error Handling**: Robust error reporting with recovery suggestions
 
 #### 🛠️ **Utilities**

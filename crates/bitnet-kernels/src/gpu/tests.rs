@@ -89,9 +89,9 @@ mod gpu_kernel_tests {
         let n = 32;
         let k = 32;
 
-        // Generate test data
-        let a: Vec<i8> = (0..m * k).map(|i| ((i % 256) as i16 - 128) as i8).collect();
-        let b: Vec<u8> = (0..k * n).map(|i| (i % 4) as u8).collect();
+        // Generate test data that will produce non-zero results
+        let a: Vec<i8> = (0..m * k).map(|i| (1 + (i % 10)) as i8).collect();
+        let b: Vec<u8> = (0..k * n).map(|i| (1 + (i % 3)) as u8).collect();
         let mut c_gpu = vec![0.0f32; m * n];
 
         // Test GPU computation
@@ -307,9 +307,8 @@ mod gpu_kernel_tests {
         let mut test_data = Vec::new();
 
         for i in 0..batch_size {
-            let a: Vec<i8> =
-                (0..m * k).map(|j| (((i * 1000 + j) % 256) as i16 - 128) as i8).collect();
-            let b: Vec<u8> = (0..k * n).map(|j| ((i * 2000 + j) % 4) as u8).collect();
+            let a: Vec<i8> = (0..m * k).map(|j| (1 + ((i * 1000 + j) % 10)) as i8).collect();
+            let b: Vec<u8> = (0..k * n).map(|j| (1 + ((i * 2000 + j) % 3)) as u8).collect();
             let c = vec![0.0f32; m * n];
 
             test_data.push((a, b, c));

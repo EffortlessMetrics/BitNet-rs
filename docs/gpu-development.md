@@ -256,6 +256,143 @@ println!("Using device: {} with {} SMs", info.name, info.multiprocessor_count);
 // Instead of hardcoded 16x16 blocks, uses device-specific optimization
 ```
 
+### Mixed Precision GPU Acceleration (New in PR #202)
+
+BitNet.rs now provides comprehensive mixed precision support with native CUDA kernels for enhanced GPU performance:
+
+#### MixedPrecisionKernel API
+
+The `MixedPrecisionKernel` provides device-aware mixed precision operations:
+
+```rust
+use bitnet_kernels::gpu::{MixedPrecisionKernel, PrecisionMode};
+
+// Create mixed precision kernel with automatic device detection
+let mut kernel = MixedPrecisionKernel::new(0)?;
+println!("Device: {}", kernel.device_info().name);
+println!("Supports FP16: {}", kernel.supports_fp16());
+println!("Supports BF16: {}", kernel.supports_bf16());
+println!("Optimal precision: {:?}", kernel.optimal_precision());
+
+// Perform matrix multiplication with automatic precision selection
+let a = vec![1.0f32; 64 * 64];
+let b = vec![2.0f32; 64 * 64];
+let mut c = vec![0.0f32; 64 * 64];
+
+kernel.matmul_auto(&a, &b, &mut c, 64, 64, 64)?;
+
+// Get performance metrics
+let metrics = kernel.metrics();
+println!("Total operations: {}", metrics.total_operations);
+println!("FP16 time: {:.2}ms", metrics.fp16_execution_time.as_secs_f64() * 1000.0);
+println!("Memory allocated: {} MB", metrics.memory_allocated / (1024 * 1024));
+```
+
+#### Precision Mode Selection
+
+```rust
+// Explicit precision mode selection
+kernel.set_precision_mode(PrecisionMode::FP16);
+kernel.matmul_fp16(&a, &b, &mut c, 64, 64, 64)?;
+
+kernel.set_precision_mode(PrecisionMode::BF16);
+kernel.matmul_bf16(&a, &b, &mut c, 64, 64, 64)?;
+
+// Automatic precision (recommended)
+kernel.set_precision_mode(PrecisionMode::Auto);
+kernel.matmul_auto(&a, &b, &mut c, 64, 64, 64)?;
+```
+
+#### Device Capability Detection
+
+```rust
+use bitnet_kernels::gpu::detect_best_precision;
+
+// Automatic precision detection based on hardware
+let optimal = detect_best_precision(kernel.device_info());
+match optimal {
+    PrecisionMode::BF16 => println!("Using BF16 (Ampere+ architecture)"),
+    PrecisionMode::FP16 => println!("Using FP16 (Pascal+ architecture)"),
+    PrecisionMode::FP32 => println!("Using FP32 (older architecture)"),
+    PrecisionMode::Auto => unreachable!(),
+}
+```
+
+#### Performance Monitoring
+
+```rust
+// Reset metrics for clean measurement
+kernel.reset_metrics();
+
+// Perform operations
+for _ in 0..10 {
+    kernel.matmul_auto(&a, &b, &mut c, 64, 64, 64)?;
+}
+
+// Analyze performance
+let metrics = kernel.metrics();
+println!("Average FP16 time: {:.2}ms", 
+    metrics.fp16_execution_time.as_secs_f64() * 1000.0 / metrics.total_operations as f64);
+println!("Memory efficiency: {:.1}%", 
+    (kernel.current_memory_usage() as f64 / kernel.peak_memory_usage() as f64) * 100.0);
+```
+
+#### Memory Tracking
+
+```rust
+// Monitor GPU memory usage
+println!("Current GPU memory: {} MB", kernel.current_memory_usage() / (1024 * 1024));
+println!("Peak GPU memory: {} MB", kernel.peak_memory_usage() / (1024 * 1024));
+
+// Memory transfer statistics
+let metrics = kernel.metrics();
+println!("Host to device transfers: {}", metrics.memory_transfers_h2d);
+println!("Device to host transfers: {}", metrics.memory_transfers_d2h);
+println!("Total bytes transferred: {} MB", 
+    (metrics.bytes_transferred_h2d + metrics.bytes_transferred_d2h) / (1024 * 1024));
+```
+
+#### Supported Hardware Requirements
+
+- **FP16 Support**: NVIDIA Pascal architecture or newer (Compute Capability 6.1+)
+  - GTX 1080/1070, GTX 1060, Tesla P100, etc.
+  - Uses native CUDA `__half` arithmetic
+  - Automatic Tensor Core acceleration on CC 7.0+
+
+- **BF16 Support**: NVIDIA Ampere architecture or newer (Compute Capability 8.0+)
+  - RTX 3060/3070/3080/3090, A100, etc.
+  - Uses native CUDA `__nv_bfloat16` arithmetic
+  - Better numerical stability than FP16
+
+- **Tensor Core Acceleration**: Available on CC 7.0+ with WMMA API
+  - Volta (V100), Turing (RTX 20-series), Ampere (RTX 30-series, A100)
+  - Automatic 16x16x16 matrix multiplication acceleration
+
+#### Mixed Precision Commands
+
+```bash
+# Test mixed precision kernel creation and capabilities
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
+
+# Test precision mode validation and device compatibility
+cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_mode_validation
+
+# Test FP16 matrix multiplication accuracy
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_fp16_accuracy
+
+# Test BF16 matrix multiplication accuracy
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_bf16_accuracy
+
+# Benchmark mixed precision performance
+cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
+
+# Test precision conversion utilities
+cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_conversion_utilities
+
+# Test memory tracking and performance metrics
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_metrics_tracking
+```
+
 ### Advanced GPU Infrastructure Access (New in PR #199)
 
 BitNet.rs now provides access to low-level CUDA infrastructure for advanced GPU programming:
@@ -583,6 +720,89 @@ Key statistics methods:
 
 ## Advanced GPU/CUDA Troubleshooting
 
+### Mixed Precision Issues (New in PR #202)
+
+1. **Mixed Precision Kernel Creation Fails**:
+   ```bash
+   # Test mixed precision kernel initialization
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
+   
+   # Check device capabilities
+   cargo run --example gpu_validation --no-default-features --features gpu | grep -E "FP16|BF16"
+   
+   # Test with specific device
+   CUDA_VISIBLE_DEVICES=0 cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
+   ```
+
+2. **Precision Mode Not Supported**:
+   ```bash
+   # Check compute capability requirements
+   # FP16 requires CC 6.1+, BF16 requires CC 8.0+
+   nvidia-smi --query-gpu=compute_cap --format=csv,noheader
+   
+   # Test precision detection logic
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_detection_optimization
+   
+   # Verify PTX kernel compilation
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_ptx_compilation
+   ```
+
+3. **Matrix Multiplication Accuracy Issues**:
+   ```bash
+   # Test FP16 vs FP32 accuracy
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_fp16_accuracy --ignored
+   
+   # Test BF16 vs FP32 accuracy
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_bf16_accuracy --ignored
+   
+   # Check numerical precision simulation
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_conversion_utilities
+   ```
+
+4. **Performance Degradation**:
+   ```bash
+   # Benchmark precision modes
+   cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
+   
+   # Check Tensor Core utilization (CC 7.0+)
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_tensor_core_acceleration --ignored
+   
+   # Monitor GPU memory efficiency
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_metrics_tracking
+   ```
+
+5. **Memory Issues with Mixed Precision**:
+   ```bash
+   # Test GPU memory tracking
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_memory_management --ignored
+   
+   # Check for memory leaks
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_memory_cleanup --ignored
+   
+   # Monitor memory transfer efficiency
+   nvidia-smi dmon -s puc -d 1  # Monitor during mixed precision operations
+   ```
+
+6. **PTX Compilation Errors**:
+   ```bash
+   # Check CUDA toolkit compatibility
+   nvcc --version
+   
+   # Test PTX compilation manually
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_loading
+   
+   # Enable CUDA compilation debugging
+   RUST_LOG=debug cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
+   ```
+
+**Common Error Messages and Solutions**:
+
+- **"FP16 not supported on this device"**: Upgrade to Pascal (GTX 10-series) or newer GPU
+- **"BF16 not supported on this device"**: Upgrade to Ampere (RTX 30-series) or newer GPU
+- **"Failed to compile mixed precision PTX"**: Check CUDA toolkit installation and version compatibility
+- **"Tensor Core operations require CC 7.0+"**: Use standard FP16 kernels on older architectures
+- **"Mixed precision kernel not available"**: Verify PTX compilation succeeded and device capabilities
+
 ### GPU Backend Detection Issues
 
 1. **GPU Detection Fails**:
@@ -816,4 +1036,32 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_nume
 
 # GPU vs CPU parity testing across quantization schemes
 cargo test --workspace --no-default-features --features cuda gpu_parity
+
+# Mixed precision GPU operations (New in PR #202)
+# Test mixed precision kernel creation and device detection
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
+
+# Test automatic precision mode selection
+cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_detection_optimization
+
+# Test FP16 matrix multiplication accuracy
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_fp16_accuracy --ignored
+
+# Test BF16 matrix multiplication accuracy 
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_bf16_accuracy --ignored
+
+# Mixed precision performance benchmarks
+cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
+
+# Test Tensor Core acceleration (CC 7.0+)
+cargo test -p bitnet-kernels --no-default-features --features gpu test_tensor_core_acceleration --ignored
+
+# Test precision conversion utilities
+cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_conversion_utilities
+
+# Test mixed precision memory management
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_memory_management --ignored
+
+# Test comprehensive mixed precision metrics
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_metrics_tracking
 ```

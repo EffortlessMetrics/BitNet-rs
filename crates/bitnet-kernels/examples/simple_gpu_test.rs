@@ -13,7 +13,6 @@ fn main() {
     {
         println!("❌ This example requires the 'cuda' feature to be enabled");
         println!("Run with: cargo run --example simple_gpu_test --features cuda");
-        return;
     }
 
     #[cfg(feature = "cuda")]
