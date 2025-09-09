@@ -1,9 +1,11 @@
 //! Tests for strict mode validation that prevents mock fallbacks
 
 use bitnet_tokenizers::{Tokenizer, TokenizerConfig, UniversalTokenizer};
+use serial_test::serial;
 use temp_env::with_var;
 
 #[test]
+#[serial(bitnet_env)]
 fn strict_mode_disallows_bpe_mock_fallback() {
     with_var("BITNET_STRICT_TOKENIZERS", Some("1"), || {
         let cfg = TokenizerConfig { model_type: "bpe".into(), ..Default::default() };
@@ -16,6 +18,7 @@ fn strict_mode_disallows_bpe_mock_fallback() {
 }
 
 #[test]
+#[serial(bitnet_env)]
 fn strict_mode_disallows_unknown_tokenizer_fallback() {
     with_var("BITNET_STRICT_TOKENIZERS", Some("1"), || {
         let cfg =
@@ -33,6 +36,7 @@ fn strict_mode_disallows_unknown_tokenizer_fallback() {
 }
 
 #[test]
+#[serial(bitnet_env)]
 fn normal_mode_allows_mock_fallback() {
     // Ensure strict mode is explicitly not set (None removes the env var)
     with_var("BITNET_STRICT_TOKENIZERS", None::<&str>, || {

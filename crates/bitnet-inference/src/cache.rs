@@ -218,7 +218,8 @@ impl KVCache {
 
     /// Get cache usage percentage
     pub fn usage_percent(&self) -> f64 {
-        (self.current_size as f64 / self.config.max_size_bytes as f64) * 100.0
+        let percent = (self.current_size as f64 / self.config.max_size_bytes as f64) * 100.0;
+        percent.clamp(0.0, 100.0)
     }
 
     /// Evict an entry based on the configured policy

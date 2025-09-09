@@ -34,3 +34,4 @@ optional = true
 tokio = { workspace = true, features = ["full"] }
 tempfile = "3.8"
 temp-env = "0.3"
+serial_test.workspace = true

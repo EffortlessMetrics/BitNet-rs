@@ -27,14 +27,13 @@ echo "=== BitNet-rs Verification Tests ==="
 
 # Pre-flight: ensure key test suites exist
 echo "== Pre-flight test discovery =="
-require_tests 'package("bitnet-quantization")'
-require_tests 'package("bitnet-models")'
-require_tests 'package("bitnet-inference")'
+require_tests 'kind(lib)'
+require_tests 'kind(test)'
 
 # GPU test discovery with CPU-only bypass
 if [ "${CI_NO_GPU:-}" != "1" ]; then
   echo "Discovering GPU tests..."
-  require_tests 'package("bitnet-kernels") and test(~gpu)'
+  require_tests 'test(gpu)'
 else
   green "Skipping GPU discovery (CI_NO_GPU=1)"
 fi

@@ -158,3 +158,7 @@ ci-cuda TAG="main" ARCHS="80;86":
 
 # Quick CI check (default)
 ci: ci-cpu
+
+# Run comprehensive verification test suite
+verify:
+    bash scripts/verify-tests.sh

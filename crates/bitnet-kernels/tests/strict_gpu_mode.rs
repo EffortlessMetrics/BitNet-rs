@@ -1,10 +1,12 @@
 //! Tests for strict GPU mode validation that prevents fake GPU backends
 
 use bitnet_kernels::gpu_utils;
+use serial_test::serial;
 use temp_env::with_vars;
 
 #[test]
 #[should_panic(expected = "BITNET_GPU_FAKE is set but strict mode forbids fake GPU")]
+#[serial(bitnet_env)]
 fn strict_mode_disallows_fake_gpu() {
     // Set both fake GPU and strict mode
     with_vars(
@@ -17,6 +19,7 @@ fn strict_mode_disallows_fake_gpu() {
 }
 
 #[test]
+#[serial(bitnet_env)]
 fn normal_mode_allows_fake_gpu() {
     with_vars(
         [
@@ -32,6 +35,7 @@ fn normal_mode_allows_fake_gpu() {
 }
 
 #[test]
+#[serial(bitnet_env)]
 fn strict_mode_works_with_real_gpu_detection() {
     with_vars(
         [
