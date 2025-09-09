@@ -1,5 +1,5 @@
 //! CUDA kernel implementation using cudarc 0.17
-#![cfg_attr(not(feature = "cuda"), allow(dead_code, unused_imports, unused_variables))]
+#![cfg_attr(not(feature = "cuda"), allow(unused_imports, unused_variables))]
 
 use crate::KernelProvider;
 use bitnet_common::{KernelError, QuantizationType, Result};
@@ -15,10 +15,8 @@ type BatchOperation<'a> = (&'a [i8], &'a [u8], &'a mut [f32], usize, usize, usiz
 
 /// CUDA kernel provider with memory management and stream handling
 pub struct CudaKernel {
-    #[allow(dead_code)]
     ctx: Arc<CudaContext>,
     stream: Arc<CudaStream>,
-    #[allow(dead_code)]
     module: Arc<CudaModule>,
     matmul_function: CudaFunction,
     quantize_i2s_function: CudaFunction,
@@ -289,14 +287,11 @@ impl CudaKernel {
             KernelError::GpuError { reason: format!("Failed to allocate C on device: {:?}", e) }
         })?;
 
-        // Configure launch parameters
-        const BLOCK_SIZE: u32 = 16;
-        let grid_x = (m as u32).div_ceil(BLOCK_SIZE);
-        let grid_y = (n as u32).div_ceil(BLOCK_SIZE);
-
+        // Configure launch parameters based on device capabilities
+        let (block_size, grid_x, grid_y) = self.calculate_optimal_launch_params(m, n);
         let cfg = LaunchConfig {
-            grid_dim: (grid_x, grid_y, 1),
-            block_dim: (BLOCK_SIZE, BLOCK_SIZE, 1),
+            grid_dim: (grid_x as u32, grid_y as u32, 1),
+            block_dim: (block_size as u32, block_size as u32, 1),
             shared_mem_bytes: 0,
         };
 
@@ -330,6 +325,16 @@ impl CudaKernel {
         &self.device_info
     }
 
+    /// Get access to the CUDA context for advanced operations
+    pub fn context(&self) -> Arc<CudaContext> {
+        Arc::clone(&self.ctx)
+    }
+
+    /// Get access to the CUDA module for loading additional kernels
+    pub fn module(&self) -> Arc<CudaModule> {
+        Arc::clone(&self.module)
+    }
+
     /// Synchronize all streams
     pub fn synchronize_all(&self) -> Result<()> {
         // Synchronize the stream to wait for all operations to complete
@@ -354,7 +359,6 @@ impl CudaKernel {
     }
 
     /// Calculate optimal launch parameters based on device capabilities
-    #[allow(dead_code)]
     fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, usize) {
         // Use device-specific optimization
         let max_threads = self.device_info.max_threads_per_block as usize;
