@@ -565,9 +565,15 @@ mod performance_tests {
         assert!(duration.as_millis() < 5000); // Should complete within 5 seconds
 
         let stats = engine.get_stats().await;
-        assert!(stats.cache_size >= 0);
-        assert!(stats.cache_usage >= 0.0);
-        assert!(!stats.backend_type.is_empty());
+        
+        // Validate meaningful stat invariants
+        assert!(stats.cache_usage.is_finite(), "cache_usage should be finite");
+        assert!(
+            (0.0..=100.0).contains(&stats.cache_usage),
+            "cache_usage should be a percentage [0,100] (got {})",
+            stats.cache_usage
+        );
+        assert!(!stats.backend_type.is_empty(), "backend_type should be specified");
     }
 
     #[tokio::test]
@@ -593,11 +599,10 @@ mod performance_tests {
         // Wait for all tasks to complete
         let mut success_count = 0;
         for handle in handles {
-            if let Ok(result) = handle.await {
-                if result.is_ok() {
+            if let Ok(result) = handle.await
+                && result.is_ok() {
                     success_count += 1;
                 }
-            }
         }
 
         // At least some should succeed
@@ -669,11 +674,10 @@ mod performance_tests {
 
         let mut completed = 0;
         for handle in handles {
-            if let Ok(result) = handle.await {
-                if result.is_ok() {
+            if let Ok(result) = handle.await
+                && result.is_ok() {
                     completed += 1;
                 }
-            }
         }
 
         let total_time = start_time.elapsed();
@@ -753,8 +757,10 @@ mod error_handling_tests {
 
         let _engine = InferenceEngine::new(model, tokenizer, device).unwrap();
 
-        let mut invalid_config = GenerationConfig::default();
-        invalid_config.max_new_tokens = 0;
+        let invalid_config = GenerationConfig {
+            max_new_tokens: 0,
+            ..GenerationConfig::default()
+        };
 
         // Should validate config before generation
         assert!(invalid_config.validate().is_err());
@@ -767,11 +773,19 @@ mod error_handling_tests {
         let device = Device::Cpu;
 
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
-        let mut stream = engine.generate_stream("Test prompt");
+        let mut stream = engine.generate_stream("Test prompt")
+            .expect("generation stream should be created");
 
-        // Should propagate errors through stream
-        if let Ok(Some(result)) = timeout(Duration::from_secs(2), stream.next()).await {
-            assert!(result.is_err());
+        // Should propagate model errors through stream
+        let maybe = timeout(Duration::from_secs(2), stream.next())
+            .await
+            .expect("stream next() should not timeout");
+        
+        if let Some(result) = maybe {
+            // The result should be an error due to mock failure
+            assert!(result.is_err(), "stream should yield error from mock model failure");
+        } else {
+            panic!("stream should yield at least one item (even if it's an error)");
         }
     }
 }

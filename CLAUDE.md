@@ -377,6 +377,10 @@ For detailed information on specific topics, see:
 - `RAYON_NUM_THREADS`: Control CPU parallelism
 - `BITNET_GPU_FAKE`: Mock GPU backend detection for testing (e.g., "cuda", "metal", "cuda,rocm")
 
+### Strict Testing Mode Variables (prevent Potemkin passes)
+- `BITNET_STRICT_TOKENIZERS=1`: Forbid mock tokenizer fallbacks in perf/integration tests
+- `BITNET_STRICT_NO_FAKE_GPU=1`: Forbid fake GPU backends in perf/integration tests
+
 ### Build-time Variables (for Git metadata)
 - `VERGEN_GIT_SHA`: Override Git SHA (useful in CI/Docker without .git)
 - `VERGEN_GIT_BRANCH`: Override Git branch
@@ -554,6 +558,26 @@ export LD_LIBRARY_PATH=target/release  # or DYLD_LIBRARY_PATH on macOS
 # Quick lint check
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
+
+# Strict testing lanes (real backends only, no Potemkin passes)
+# CPU baseline (no mocks involved)
+cargo bench -p bitnet-quantization --bench simd_comparison
+
+# GPU perf (strict, real hardware only)
+BITNET_STRICT_NO_FAKE_GPU=1 \
+cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
+
+# Strict integration/tokenizer tests (no mock fallbacks)
+BITNET_STRICT_TOKENIZERS=1 \
+cargo test -p bitnet-tokenizers -- --quiet
+
+BITNET_STRICT_NO_FAKE_GPU=1 \
+cargo test -p bitnet-kernels --no-default-features --features gpu -- --quiet
+
+# Combined strict testing
+BITNET_STRICT_TOKENIZERS=1 \
+BITNET_STRICT_NO_FAKE_GPU=1 \
+scripts/verify-tests.sh
 ```
 
 ## Test Suite
