@@ -135,6 +135,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Safety limits to prevent excessive memory usage
 
 ### Changed
+- **Weight Mapper Code Quality Improvements** ([#209](https://github.com/EffortlessSteven/BitNet-rs/pull/209)):
+  - **Enhanced Pick Helper Function**: Refactored `pick` helper in `weight_mapper.rs` to return both key and tensor, eliminating code duplication
+  - **Streamlined Tensor Alias Resolution**: Simplified embedding and lm_head tensor alias handling with improved maintainability
+  - **Code Structure Optimization**: Enhanced internal helper functions while maintaining all existing functionality and backward compatibility
+  - **Comprehensive Validation**: All 62 tests in bitnet-models package pass, ensuring no functional regressions
 - **Cargo Configuration Cleanup** ([#113](https://github.com/EffortlessSteven/BitNet-rs/pull/113)):
   - Remove tool-generated metadata files (`.crates.toml`, `.crates2.json`) from version control
   - Commit `Cargo.lock` files for reproducible builds across environments

@@ -423,12 +423,8 @@ pub fn normalize_model_tensors(
     }
 
     // 4) Locate lm_head with robust aliases, normalize to [n_vocab, n_embd]
-    let lm_candidates = [
-        "lm_head.weight",
-        "output.weight",
-        "model.lm_head.weight",
-        "generator.weight",
-    ];
+    let lm_candidates =
+        ["lm_head.weight", "output.weight", "model.lm_head.weight", "generator.weight"];
 
     if let Some((lm_key, lm_needs_t, lm_device)) = {
         if let Some((key, lm)) = pick(tensors, &lm_candidates) {
