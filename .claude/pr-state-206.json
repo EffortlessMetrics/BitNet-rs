@@ -1,0 +1,34 @@
+{
+  "pr_number": 206,
+  "title": "feat: implement tensor device transfer",
+  "author": "Steven Zimmerman",
+  "head_sha": "e369fa2",
+  "head_ref": "codex/extend-with_device-to-move-tensors",
+  "base_ref": "main",
+  "status": "MERGED",
+  "validation_status": "PASSED",
+  "merge_strategy": "squash",
+  "validation_timestamp": "2025-09-09T17:40:00Z",
+  "merged_at": "2025-09-09T22:57:30Z",
+  "merged_by": "EffortlessSteven",
+  "validation_worktree": "/tmp/bitnet-validate-X2TO",
+  "test_results": {
+    "total_tests": 89,
+    "passed": 89,
+    "skipped": 3,
+    "failed": 0
+  },
+  "quality_gates": {
+    "format": "PASSED",
+    "clippy": "PASSED_WITH_WARNINGS",
+    "features": "PASSED",
+    "tests": "PASSED"
+  },
+  "changed_files": [
+    "crates/bitnet-inference/src/tensor_ext.rs",
+    "crates/bitnet-inference/src/backends.rs"
+  ],
+  "risk_level": "LOW",
+  "breaking_changes": false,
+  "documentation_required": false
+}
