@@ -1,64 +1,65 @@
 [package]
-name = "bitnet-server"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-repository.workspace = true
-homepage.workspace = true
 authors.workspace = true
-keywords.workspace = true
 categories.workspace = true
 description = "HTTP server for BitNet inference"
+edition.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+name = "bitnet-server"
+repository.workspace = true
+version.workspace = true
 
 [dependencies]
+anyhow.workspace = true
+async-stream = "0.3"
+async-trait = "0.1"
+axum.workspace = true
 bitnet-common = { path = "../bitnet-common" }
 bitnet-inference = { path = "../bitnet-inference" }
 bitnet-models = { path = "../bitnet-models" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers" }
-async-trait = "0.1"
-async-stream = "0.3"
+chrono.workspace = true
+clap.workspace = true
 futures = "0.3"
-tokio-stream = "0.1"
-axum.workspace = true
-tokio.workspace = true
-tower.workspace = true
-tower-http.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-anyhow.workspace = true
-tracing.workspace = true
-tracing-subscriber.workspace = true
-tracing-appender.workspace = true
-tracing-opentelemetry = { workspace = true, optional = true }
-prometheus = { workspace = true, optional = true }
 metrics.workspace = true
 metrics-prometheus = { workspace = true, optional = true }
-opentelemetry = { workspace = true, optional = true }
-opentelemetry_sdk = { workspace = true, optional = true }
-opentelemetry-prometheus = { workspace = true, optional = true }
-opentelemetry-otlp = { workspace = true, optional = true }
-opentelemetry-stdout = { workspace = true, optional = true }
-chrono.workspace = true
-uuid.workspace = true
-clap.workspace = true
-toml.workspace = true
 num_cpus.workspace = true
+opentelemetry = { workspace = true, optional = true }
+opentelemetry-otlp = { workspace = true, optional = true }
+opentelemetry-prometheus = { workspace = true, optional = true }
+opentelemetry-stdout = { workspace = true, optional = true }
+opentelemetry_sdk = { workspace = true, optional = true }
+prometheus = { workspace = true, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+sysinfo.workspace = true
+tokio.workspace = true
+tokio-stream = "0.1"
+toml.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-appender.workspace = true
+tracing-opentelemetry = { workspace = true, optional = true }
+tracing-subscriber.workspace = true
+uuid.workspace = true
 
 [build-dependencies]
-vergen-gix = { version = "1", features = ["build", "cargo", "rustc"] }
 anyhow = "1.0"
+vergen-gix = { version = "1", features = ["build", "cargo", "rustc"] }
 
 [dev-dependencies]
-hyper = "1"
 http-body-util = "0.1"
+hyper = "1"
 
 [[bin]]
 name = "server"
 path = "src/bin/server.rs"
 
 [features]
+cuda = []                                                                                                                                                                         # Recognized flag that gates GPU health checks
 default = ["prometheus"]
-cuda = []  # Recognized flag that gates GPU health checks
-degraded-ok = []  # Map Degraded → 200 OK (default is fail-fast)
-prometheus = ["dep:prometheus", "dep:metrics-prometheus"]
+degraded-ok = []                                                                                                                                                                  # Map Degraded → 200 OK (default is fail-fast)
 opentelemetry = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-prometheus", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tracing-opentelemetry"]
+prometheus = ["dep:prometheus", "dep:metrics-prometheus"]
