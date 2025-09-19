@@ -30,6 +30,12 @@ impl<'a> GgufReader<'a> {
         if header.version >= 3 {
             let doff = header.data_offset as usize;
 
+            // Handle data_offset == 0 explicitly as "no explicit offset"
+            if doff == 0 {
+                tracing::debug!("GGUF v{}: data_offset=0, treating as no explicit offset", header.version);
+                return align_up(kv_end_offset, a);
+            }
+
             // sanity: doff must be >= kv_end, <= file_size, and aligned
             if doff >= kv_end_offset && doff <= file_size && doff % a == 0 {
                 return doff;
@@ -415,6 +421,62 @@ impl<'a> GgufReader<'a> {
             }
         }
 
+        // Validate critical tensors presence (after potential remapping)
+        self.validate_critical_tensors()?;
+
+        Ok(())
+    }
+
+    /// Validate that critical model tensors are present
+    pub fn validate_critical_tensors(&self) -> Result<()> {
+        let tensor_names: std::collections::HashSet<_> =
+            self.tensor_infos.iter().map(|t| t.name.as_str()).collect();
+
+        // Check for embedding tensor (various naming conventions)
+        let embedding_candidates = [
+            "embed_tokens.weight", "token_embd.weight", "tok_embeddings.weight",
+            "model.embed_tokens.weight", "transformer.wte.weight"
+        ];
+        let has_embedding = embedding_candidates.iter().any(|name| tensor_names.contains(name));
+
+        if !has_embedding {
+            return Err(BitNetError::Validation(format!(
+                "No embedding tensor found. Expected one of: {:?}",
+                embedding_candidates
+            )));
+        }
+
+        // Check for at least one layer's attention weights
+        let first_layer_attention_candidates = [
+            "layers.0.attention.q_proj.weight", "layers.0.self_attn.q_proj.weight",
+            "blk.0.attn_q.weight", "model.layers.0.self_attn.q_proj.weight"
+        ];
+        let has_first_layer_attention = first_layer_attention_candidates.iter()
+            .any(|name| tensor_names.contains(name));
+
+        if !has_first_layer_attention {
+            return Err(BitNetError::Validation(format!(
+                "No first layer attention tensor found. Expected one of: {:?}",
+                first_layer_attention_candidates
+            )));
+        }
+
+        // Check for at least one layer's feed-forward weights
+        let first_layer_ffn_candidates = [
+            "layers.0.feed_forward.gate_proj.weight", "layers.0.mlp.gate_proj.weight",
+            "blk.0.ffn_gate.weight", "model.layers.0.mlp.gate_proj.weight"
+        ];
+        let has_first_layer_ffn = first_layer_ffn_candidates.iter()
+            .any(|name| tensor_names.contains(name));
+
+        if !has_first_layer_ffn {
+            return Err(BitNetError::Validation(format!(
+                "No first layer feed-forward tensor found. Expected one of: {:?}",
+                first_layer_ffn_candidates
+            )));
+        }
+
+        tracing::debug!("Critical tensor validation passed: embedding, attention, and FFN tensors found");
         Ok(())
     }
 

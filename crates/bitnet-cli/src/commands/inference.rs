@@ -594,8 +594,19 @@ impl InferenceCommand {
         }
 
         // Try GGUF-embedded tokenizer if available
-        // Note: GGUF tokenizer extraction is not yet fully implemented
-        // This will fall through to the directory-based tokenizer search below
+        if model_path.extension() == Some(std::ffi::OsStr::new("gguf")) {
+            debug!("Attempting to load tokenizer from GGUF model file: {}", model_path.display());
+
+            match bitnet_tokenizers::universal::UniversalTokenizer::from_gguf_file(model_path) {
+                Ok(tokenizer) => {
+                    debug!("Successfully loaded tokenizer from GGUF model file");
+                    return Ok(Arc::new(tokenizer));
+                }
+                Err(e) => {
+                    debug!("Failed to load tokenizer from GGUF: {}, trying alternatives", e);
+                }
+            }
+        }
 
         // Try to load tokenizer from model directory
         let tokenizer_path =

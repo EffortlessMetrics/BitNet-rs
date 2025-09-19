@@ -165,7 +165,19 @@ impl BitNetServer {
                 }
                 Arc::from(bitnet_tokenizers::load_tokenizer(tok_path)?)
             } else {
-                Arc::new(bitnet_tokenizers::BasicTokenizer::default())
+                // Try GGUF-embedded tokenizer first
+                if model_path.extension() == Some(std::ffi::OsStr::new("gguf")) {
+                    match bitnet_tokenizers::universal::UniversalTokenizer::from_gguf_file(model_path) {
+                        Ok(tokenizer) => Arc::new(tokenizer),
+                        Err(_) => {
+                            tracing::warn!("Failed to load tokenizer from GGUF, using basic tokenizer");
+                            anyhow::bail!("No tokenizer available for model; provide --tokenizer or include tokenizer.json.")
+                        }
+                    }
+                } else {
+                    tracing::warn!("No tokenizer provided and model is not GGUF format");
+                    anyhow::bail!("No tokenizer available for model; provide --tokenizer or include tokenizer.json.")
+                }
             };
 
         // Create inference engine - model is already a Box<dyn Model>, convert to Arc

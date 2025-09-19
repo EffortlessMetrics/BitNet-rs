@@ -159,24 +159,24 @@ fn map_tensor_name(name: &str) -> Option<String> {
             let component = parts[2..].join(".");
 
             let mapped_component = match component.as_str() {
-                // Attention weights
-                "attn_q.weight" => "self_attn.q_proj.weight",
-                "attn_k.weight" => "self_attn.k_proj.weight",
-                "attn_v.weight" => "self_attn.v_proj.weight",
-                "attn_output.weight" | "attn_o.weight" => "self_attn.o_proj.weight",
+                // Attention weights - map to attention.* (not self_attn.*)
+                "attn_q.weight" => "attention.q_proj.weight",
+                "attn_k.weight" => "attention.k_proj.weight",
+                "attn_v.weight" => "attention.v_proj.weight",
+                "attn_output.weight" | "attn_o.weight" => "attention.o_proj.weight",
 
-                // Attention normalization
-                "attn_norm.weight" => "input_layernorm.weight",
-                "attn_sub_norm.weight" => "self_attn.sub_layernorm.weight", // BitNet specific
+                // Attention normalization - use attention_norm prefix
+                "attn_norm.weight" => "attention_norm.weight",
+                "attn_sub_norm.weight" => "attention.sub_layernorm.weight", // BitNet specific
 
-                // Feed-forward weights
-                "ffn_gate.weight" | "ffn_gate_inp.weight" => "mlp.gate_proj.weight",
-                "ffn_up.weight" | "ffn_up_proj.weight" => "mlp.up_proj.weight",
-                "ffn_down.weight" | "ffn_down_proj.weight" => "mlp.down_proj.weight",
+                // Feed-forward weights - map to feed_forward.* (not mlp.*)
+                "ffn_gate.weight" | "ffn_gate_inp.weight" => "feed_forward.gate_proj.weight",
+                "ffn_up.weight" | "ffn_up_proj.weight" => "feed_forward.up_proj.weight",
+                "ffn_down.weight" | "ffn_down_proj.weight" => "feed_forward.down_proj.weight",
 
                 // FFN normalization
                 "ffn_norm.weight" => "post_attention_layernorm.weight",
-                "ffn_sub_norm.weight" => "mlp.sub_layernorm.weight", // BitNet specific
+                "ffn_sub_norm.weight" => "feed_forward.sub_layernorm.weight", // BitNet specific
 
                 _ => return None,
             };
@@ -195,22 +195,22 @@ fn map_tensor_name(name: &str) -> Option<String> {
             let component = parts[2..].join(".");
 
             let mapped_component = match component.as_str() {
-                // LLaMA-style attention
-                "attention.wq.weight" | "self_attn.q_proj.weight" => "self_attn.q_proj.weight",
-                "attention.wk.weight" | "self_attn.k_proj.weight" => "self_attn.k_proj.weight",
-                "attention.wv.weight" | "self_attn.v_proj.weight" => "self_attn.v_proj.weight",
-                "attention.wo.weight" | "self_attn.o_proj.weight" => "self_attn.o_proj.weight",
+                // LLaMA-style attention - map to attention.* for consistency
+                "attention.wq.weight" | "self_attn.q_proj.weight" => "attention.q_proj.weight",
+                "attention.wk.weight" | "self_attn.k_proj.weight" => "attention.k_proj.weight",
+                "attention.wv.weight" | "self_attn.v_proj.weight" => "attention.v_proj.weight",
+                "attention.wo.weight" | "self_attn.o_proj.weight" => "attention.o_proj.weight",
 
-                // Normalization
-                "attention_norm.weight" | "input_layernorm.weight" => "input_layernorm.weight",
+                // Normalization - map to expected names
+                "attention_norm.weight" | "input_layernorm.weight" => "attention_norm.weight",
                 "ffn_norm.weight" | "post_attention_layernorm.weight" => {
                     "post_attention_layernorm.weight"
                 }
 
-                // LLaMA-style FFN
-                "feed_forward.w1.weight" | "mlp.gate_proj.weight" => "mlp.gate_proj.weight",
-                "feed_forward.w3.weight" | "mlp.up_proj.weight" => "mlp.up_proj.weight",
-                "feed_forward.w2.weight" | "mlp.down_proj.weight" => "mlp.down_proj.weight",
+                // LLaMA-style FFN - map to feed_forward.* for consistency
+                "feed_forward.w1.weight" | "mlp.gate_proj.weight" => "feed_forward.gate_proj.weight",
+                "feed_forward.w3.weight" | "mlp.up_proj.weight" => "feed_forward.up_proj.weight",
+                "feed_forward.w2.weight" | "mlp.down_proj.weight" => "feed_forward.down_proj.weight",
 
                 _ => return Some(format!("layers.{}.{}", layer_num, component)),
             };

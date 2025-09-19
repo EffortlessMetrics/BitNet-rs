@@ -80,6 +80,9 @@ def run_rust_benchmark(args):
     features = "gpu" if args.gpu else "cpu"
 
     times = []
+    sample_output = None
+    response_correctness = "unknown"
+
     for i in range(args.iterations):
         start = time.time()
         try:
@@ -90,7 +93,7 @@ def run_rust_benchmark(args):
                  "--model", args.model,
                  "--prompt", args.prompt,
                  "--max-new-tokens", str(args.tokens),
-                 "--deterministic", "--greedy"],
+                 "--deterministic", "--greedy", "--format", "json"],
                 capture_output=True,
                 text=True,
                 timeout=args.timeout,
@@ -100,16 +103,50 @@ def run_rust_benchmark(args):
             elapsed = time.time() - start
             times.append(elapsed)
             print(f"  Rust iteration {i+1}: {elapsed:.3f}s")
+
+            # Capture output from first successful iteration
+            if sample_output is None and result.returncode == 0:
+                try:
+                    output_json = json.loads(result.stdout)
+                    if isinstance(output_json, list) and len(output_json) > 0:
+                        sample_output = output_json[0].get("generated_text", "").strip()
+                    elif isinstance(output_json, dict):
+                        sample_output = output_json.get("generated_text", "").strip()
+                    else:
+                        sample_output = result.stdout.strip()
+                except json.JSONDecodeError:
+                    sample_output = result.stdout.strip()
+
+                # Check correctness for known prompts
+                if sample_output:
+                    prompt_lower = args.prompt.lower()
+                    output_lower = sample_output.lower()
+
+                    if "capital of france" in prompt_lower and "paris" in output_lower:
+                        response_correctness = "correct"
+                    elif "2 + 2" in prompt_lower and "4" in output_lower:
+                        response_correctness = "correct"
+                    elif "president" in prompt_lower and "washington" in output_lower:
+                        response_correctness = "correct"
+                    elif "sky" in prompt_lower and "blue" in output_lower:
+                        response_correctness = "correct"
+                    elif sample_output and not sample_output.lower().startswith("error"):
+                        response_correctness = "generated"  # At least something was generated
+                    else:
+                        response_correctness = "incorrect"
+
         except Exception as e:
             print(f"  Rust error: {e}")
             return None
-    
+
     return {
         "mean": statistics.mean(times),
         "stdev": statistics.stdev(times) if len(times) > 1 else 0,
         "min": min(times),
         "max": max(times),
-        "iterations": len(times)
+        "iterations": len(times),
+        "actual_text_output": sample_output,
+        "response_correctness": response_correctness
     }
 
 def parse_args():
@@ -179,6 +216,15 @@ def main():
         print(f"  Std dev:     {rust_results['stdev']:.3f}s")
         print(f"  Min time:    {rust_results['min']:.3f}s")
         print(f"  Max time:    {rust_results['max']:.3f}s")
+        if 'actual_text_output' in rust_results and rust_results['actual_text_output']:
+            output = rust_results['actual_text_output']
+            if len(output) > 100:
+                output = output[:100] + "..."
+            print(f"  Sample output: {output}")
+        if 'response_correctness' in rust_results:
+            correctness = rust_results['response_correctness']
+            status_emoji = {"correct": "✓", "generated": "~", "incorrect": "✗", "unknown": "?"}
+            print(f"  Correctness: {status_emoji.get(correctness, '?')} {correctness}")
     
     # Analysis and comparison
     speedup = None
