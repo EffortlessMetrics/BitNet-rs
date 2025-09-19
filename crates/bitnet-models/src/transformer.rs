@@ -115,7 +115,9 @@ impl RotaryEmbedding {
 /// Multi-Head Attention Layer
 pub struct MultiHeadAttention {
     n_heads: usize,
+    n_kv_heads: usize,
     head_dim: usize,
+    group_size: usize, // n_heads / n_kv_heads
     q_proj: Linear,
     k_proj: Linear,
     v_proj: Linear,
@@ -129,9 +131,24 @@ impl MultiHeadAttention {
         let n_heads = config.model.num_heads;
         let head_dim = hidden_size / n_heads;
 
+        if hidden_size % n_heads != 0 {
+            return Err(BitNetError::Validation(format!(
+                "hidden_size {} not divisible by num_heads {}", hidden_size, n_heads
+            )));
+        }
+
+        let n_kv_heads = config.model.num_key_value_heads.max(1).min(n_heads);
+        if n_heads % n_kv_heads != 0 {
+            return Err(BitNetError::Validation(format!(
+                "num_heads {} must be divisible by num_key_value_heads {}", n_heads, n_kv_heads
+            )));
+        }
+        let group_size = n_heads / n_kv_heads;
+        let kv_out = n_kv_heads * head_dim;
+
         let q_proj = linear_with_optional_bias(hidden_size, hidden_size, vb.pp("q_proj"))?;
-        let k_proj = linear_with_optional_bias(hidden_size, hidden_size, vb.pp("k_proj"))?;
-        let v_proj = linear_with_optional_bias(hidden_size, hidden_size, vb.pp("v_proj"))?;
+        let k_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("k_proj"))?;
+        let v_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("v_proj"))?;
         let o_proj = linear_with_optional_bias(hidden_size, hidden_size, vb.pp("o_proj"))?;
 
         let rope = RotaryEmbedding::new(
@@ -142,7 +159,7 @@ impl MultiHeadAttention {
         )
         .ok();
 
-        Ok(Self { n_heads, head_dim, q_proj, k_proj, v_proj, o_proj, rope })
+        Ok(Self { n_heads, n_kv_heads, head_dim, group_size, q_proj, k_proj, v_proj, o_proj, rope })
     }
 
     pub fn forward(&self, x: &Tensor, kv_cache: Option<&mut LayerKVCache>) -> Result<Tensor> {
@@ -153,21 +170,21 @@ impl MultiHeadAttention {
             .q_proj
             .forward(x)?
             .reshape(&[batch_size, seq_len, self.n_heads, self.head_dim])?
-            .transpose(1, 2)?; // [B, H, T, D]
+            .transpose(1, 2)?; // [B, Hq, T, D]
 
         let k = self
             .k_proj
             .forward(x)?
-            .reshape(&[batch_size, seq_len, self.n_heads, self.head_dim])?
-            .transpose(1, 2)?;
+            .reshape(&[batch_size, seq_len, self.n_kv_heads, self.head_dim])?
+            .transpose(1, 2)?; // [B, HKV, T, D]
 
         let v = self
             .v_proj
             .forward(x)?
-            .reshape(&[batch_size, seq_len, self.n_heads, self.head_dim])?
-            .transpose(1, 2)?;
+            .reshape(&[batch_size, seq_len, self.n_kv_heads, self.head_dim])?
+            .transpose(1, 2)?; // [B, HKV, T, D]
 
-        // Apply rotary embeddings if available
+        // Apply rotary embeddings if available (need to handle different K/V head counts)
         let (q, k) = if let Some(rope) = &self.rope {
             let position = kv_cache.as_ref().map(|c| c.seq_len).unwrap_or(0);
             let q_rot = rope.apply(&q, position)?;
@@ -177,23 +194,39 @@ impl MultiHeadAttention {
             (q, k)
         };
 
-        // Update KV cache if provided
-        let (k, v) = if let Some(cache) = kv_cache {
+        // Update KV cache if provided (store HKV heads, not Hq)
+        let (k_ctx, v_ctx) = if let Some(cache) = kv_cache {
             cache.append(&k, &v)?;
             (cache.k.clone(), cache.v.clone())
         } else {
             (k, v)
         };
 
+        // GQA core: expand K/V to Hq heads (repeat along head axis)
+        // We want K,V of shape [B,Hq,Tk,D]. Repeat every KV head group_size times.
+        let t_k = k_ctx.dims()[2];
+
+        // Expand K: [B, HKV, Tk, D] -> [B, Hq, Tk, D]
+        let k_expanded = k_ctx
+            .unsqueeze(2)?                               // [B, HKV, 1, Tk, D]
+            .repeat(&[1, 1, self.group_size, 1, 1])?    // [B, HKV, group, Tk, D]
+            .reshape(&[batch_size, self.n_heads, t_k, self.head_dim])?; // [B, Hq, Tk, D]
+
+        // Expand V: [B, HKV, Tk, D] -> [B, Hq, Tk, D]
+        let v_expanded = v_ctx
+            .unsqueeze(2)?                               // [B, HKV, 1, Tk, D]
+            .repeat(&[1, 1, self.group_size, 1, 1])?    // [B, HKV, group, Tk, D]
+            .reshape(&[batch_size, self.n_heads, t_k, self.head_dim])?; // [B, Hq, Tk, D]
+
         // Scaled dot-product attention
         let scale = (self.head_dim as f32).sqrt();
-        let scores = q.matmul(&k.transpose(2, 3)?)?;
+        let scores = q.matmul(&k_expanded.transpose(2, 3)?)?;
         let scores = scores.affine((1.0 / scale) as f64, 0.0)?;
 
         // Apply causal mask so queries cannot attend to future positions.
         // When using a KV cache, k includes past tokens, so the mask must
         // account for the total key length.
-        let total_len = k.dims()[2];
+        let total_len = k_expanded.dims()[2];
         let mask = self
             .create_causal_mask(seq_len, total_len, scores.device())?
             .unsqueeze(0)? // Add batch dim
@@ -201,7 +234,7 @@ impl MultiHeadAttention {
         let scores = scores.broadcast_add(&mask)?;
 
         let attn_weights = candle_nn::ops::softmax(&scores, 3)?;
-        let attn_output = attn_weights.matmul(&v)?;
+        let attn_output = attn_weights.matmul(&v_expanded)?;
 
         // Reshape and project output
         let attn_output = attn_output.transpose(1, 2)?.reshape(&[
@@ -301,25 +334,35 @@ pub struct LayerKVCache {
     pub v: Tensor,
     pub seq_len: usize,
     pub max_seq_len: usize,
+    pub n_kv_heads: usize, // Store the number of KV heads for validation
 }
 
 impl LayerKVCache {
     pub fn new(
         batch_size: usize,
-        n_heads: usize,
+        n_kv_heads: usize, // Changed from n_heads to n_kv_heads
         max_seq_len: usize,
         head_dim: usize,
         device: &Device,
     ) -> Result<Self> {
-        let k = Tensor::zeros(&[batch_size, n_heads, max_seq_len, head_dim], DType::F32, device)?;
-        let v = Tensor::zeros(&[batch_size, n_heads, max_seq_len, head_dim], DType::F32, device)?;
+        let k = Tensor::zeros(&[batch_size, n_kv_heads, max_seq_len, head_dim], DType::F32, device)?;
+        let v = Tensor::zeros(&[batch_size, n_kv_heads, max_seq_len, head_dim], DType::F32, device)?;
 
-        Ok(Self { k, v, seq_len: 0, max_seq_len })
+        Ok(Self { k, v, seq_len: 0, max_seq_len, n_kv_heads })
     }
 
     pub fn append(&mut self, k_new: &Tensor, v_new: &Tensor) -> Result<()> {
-        // Expect shapes: k: [B,H,T_new,Hd], v: [B,H,T_new,Hd]
+        // Expect shapes: k: [B,HKV,T_new,Hd], v: [B,HKV,T_new,Hd] where HKV = n_kv_heads
         let new_seq_len = k_new.dims()[2];
+
+        // Validate that the incoming tensors have the expected number of KV heads
+        let k_heads = k_new.dims()[1];
+        if k_heads != self.n_kv_heads {
+            return Err(BitNetError::Validation(format!(
+                "KV cache expects {} heads, but received K tensor with {} heads",
+                self.n_kv_heads, k_heads
+            )));
+        }
 
         if self.seq_len == 0 {
             // First append - just store the tensors
@@ -354,12 +397,13 @@ impl KVCache {
     pub fn new(config: &BitNetConfig, batch_size: usize, device: &Device) -> Result<Self> {
         let n_layers = config.model.num_layers;
         let n_heads = config.model.num_heads;
+        let n_kv_heads = config.model.num_key_value_heads.max(1).min(n_heads);
         let head_dim = config.model.hidden_size / n_heads;
         let max_seq_len = config.model.max_position_embeddings;
 
         let mut layers = Vec::with_capacity(n_layers);
         for _ in 0..n_layers {
-            layers.push(LayerKVCache::new(batch_size, n_heads, max_seq_len, head_dim, device)?);
+            layers.push(LayerKVCache::new(batch_size, n_kv_heads, max_seq_len, head_dim, device)?);
         }
 
         Ok(Self { layers })

@@ -12,6 +12,15 @@ use tracing::{debug, info};
 pub struct GgufLoader;
 
 impl GgufLoader {
+    /// Helper to fetch an unsigned integer by trying a list of keys
+    fn get_u32_any(reader: &GgufReader, keys: &[&str]) -> Option<u32> {
+        for k in keys {
+            if let Some(v) = reader.get_u32_metadata(k) { return Some(v); }
+            if let Some(v) = reader.get_i32_metadata(k) { if v >= 0 { return Some(v as u32); } }
+        }
+        None
+    }
+
     /// Convert our Device to candle Device
     fn device_to_candle(device: &Device) -> Result<candle_core::Device> {
         match device {
@@ -232,6 +241,23 @@ impl GgufLoader {
 
         if let Some(num_heads) = reader.get_u32_metadata("llama.attention.head_count") {
             config.model.num_heads = num_heads as usize;
+        }
+
+        // GQA/MQA: parse K/V head count (vendors use various keys)
+        let kv_keys = [
+            "n_head_kv",             // llama.cpp style
+            "n_kv_heads",
+            "attn.n_kv_heads",       // some HF exports
+            "attn_n_kv_heads",
+            "num_key_value_heads",   // transformers config key
+            "llama.attention.head_count_kv", // GGUF standard
+        ];
+        config.model.num_key_value_heads = Self::get_u32_any(reader, &kv_keys)
+            .map(|v| v as usize)
+            .unwrap_or(0);
+        if config.model.num_key_value_heads == 0 {
+            // default to full MHA if not present
+            config.model.num_key_value_heads = config.model.num_heads;
         }
 
         if let Some(intermediate_size) = reader.get_u32_metadata("llama.feed_forward_length") {

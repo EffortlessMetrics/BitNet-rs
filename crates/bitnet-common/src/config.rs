@@ -29,6 +29,8 @@ pub struct ModelConfig {
     pub hidden_size: usize,
     pub num_layers: usize,
     pub num_heads: usize,
+    /// GQA/MQA: number of K/V heads (defaults to num_heads for MHA)
+    pub num_key_value_heads: usize,
     pub intermediate_size: usize,
     pub max_position_embeddings: usize,
     pub rope_theta: Option<f32>,
@@ -44,6 +46,7 @@ impl Default for ModelConfig {
             hidden_size: 4096,
             num_layers: 32,
             num_heads: 32,
+            num_key_value_heads: 0, // will default to num_heads if not set
             intermediate_size: 11008,
             max_position_embeddings: 2048,
             rope_theta: None,
@@ -191,6 +194,9 @@ impl BitNetConfig {
         }
         if other.model.num_heads != ModelConfig::default().num_heads {
             self.model.num_heads = other.model.num_heads;
+        }
+        if other.model.num_key_value_heads != ModelConfig::default().num_key_value_heads {
+            self.model.num_key_value_heads = other.model.num_key_value_heads;
         }
         if other.model.intermediate_size != ModelConfig::default().intermediate_size {
             self.model.intermediate_size = other.model.intermediate_size;
@@ -452,6 +458,14 @@ impl BitNetConfig {
         } else if self.model.hidden_size % self.model.num_heads != 0 {
             errors.push("hidden_size must be divisible by num_heads".to_string());
         }
+        // Validate num_key_value_heads if set (0 means use num_heads)
+        if self.model.num_key_value_heads > 0 {
+            if self.model.num_key_value_heads > self.model.num_heads {
+                errors.push("num_key_value_heads cannot be greater than num_heads".to_string());
+            } else if self.model.num_heads % self.model.num_key_value_heads != 0 {
+                errors.push("num_heads must be divisible by num_key_value_heads".to_string());
+            }
+        }
         if self.model.intermediate_size == 0 {
             errors.push("intermediate_size must be greater than 0".to_string());
         }
@@ -558,6 +572,11 @@ impl ConfigBuilder {
 
     pub fn num_heads(mut self, heads: usize) -> Self {
         self.config.model.num_heads = heads;
+        self
+    }
+
+    pub fn num_key_value_heads(mut self, heads: usize) -> Self {
+        self.config.model.num_key_value_heads = heads;
         self
     }
 
