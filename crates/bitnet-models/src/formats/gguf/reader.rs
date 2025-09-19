@@ -430,65 +430,40 @@ impl<'a> GgufReader<'a> {
         Ok(())
     }
 
+    /// Helper function to check if any of the candidate names are present in the set
+    fn any_present(set: &std::collections::HashSet<&str>, candidates: &[&str]) -> bool {
+        candidates.iter().any(|k| set.contains(k))
+    }
+
     /// Validate that critical model tensors are present
     pub fn validate_critical_tensors(&self) -> Result<()> {
-        let tensor_names: std::collections::HashSet<_> =
-            self.tensor_infos.iter().map(|t| t.name.as_str()).collect();
+        let names: std::collections::HashSet<_> = self.tensor_infos.iter().map(|t| t.name.as_str()).collect();
 
-        // Check for embedding tensor (various naming conventions)
-        let embedding_candidates = [
-            "embed_tokens.weight",
-            "token_embd.weight",
-            "tok_embeddings.weight",
-            "model.embed_tokens.weight",
-            "transformer.wte.weight",
-        ];
-        let has_embedding = embedding_candidates.iter().any(|name| tensor_names.contains(name));
-
-        if !has_embedding {
-            return Err(BitNetError::Validation(format!(
-                "No embedding tensor found. Expected one of: {:?}",
-                embedding_candidates
-            )));
+        let embed_ok = Self::any_present(&names, &[
+            "embed_tokens.weight", "token_embd.weight", "tok_embeddings.weight",
+            "model.embed_tokens.weight", "transformer.wte.weight"
+        ]);
+        if !embed_ok {
+            return Err(BitNetError::Validation("GGUF: missing embedding tensor".into()));
         }
 
-        // Check for at least one layer's attention weights
-        let first_layer_attention_candidates = [
-            "layers.0.attention.q_proj.weight",
-            "layers.0.self_attn.q_proj.weight",
-            "blk.0.attn_q.weight",
-            "model.layers.0.self_attn.q_proj.weight",
-        ];
-        let has_first_layer_attention =
-            first_layer_attention_candidates.iter().any(|name| tensor_names.contains(name));
-
-        if !has_first_layer_attention {
-            return Err(BitNetError::Validation(format!(
-                "No first layer attention tensor found. Expected one of: {:?}",
-                first_layer_attention_candidates
-            )));
+        let attn0_ok = Self::any_present(&names, &[
+            "layers.0.attention.q_proj.weight", "layers.0.self_attn.q_proj.weight",
+            "blk.0.attn_q.weight", "model.layers.0.self_attn.q_proj.weight"
+        ]);
+        if !attn0_ok {
+            return Err(BitNetError::Validation("GGUF: missing first-layer attention tensor".into()));
         }
 
-        // Check for at least one layer's feed-forward weights
-        let first_layer_ffn_candidates = [
-            "layers.0.feed_forward.gate_proj.weight",
-            "layers.0.mlp.gate_proj.weight",
-            "blk.0.ffn_gate.weight",
-            "model.layers.0.mlp.gate_proj.weight",
-        ];
-        let has_first_layer_ffn =
-            first_layer_ffn_candidates.iter().any(|name| tensor_names.contains(name));
-
-        if !has_first_layer_ffn {
-            return Err(BitNetError::Validation(format!(
-                "No first layer feed-forward tensor found. Expected one of: {:?}",
-                first_layer_ffn_candidates
-            )));
+        let ffn0_ok = Self::any_present(&names, &[
+            "layers.0.feed_forward.gate_proj.weight", "layers.0.mlp.gate_proj.weight",
+            "blk.0.ffn_gate.weight", "model.layers.0.mlp.gate_proj.weight"
+        ]);
+        if !ffn0_ok {
+            return Err(BitNetError::Validation("GGUF: missing first-layer feed-forward tensor".into()));
         }
 
-        tracing::debug!(
-            "Critical tensor validation passed: embedding, attention, and FFN tensors found"
-        );
+        tracing::debug!("GGUF: critical tensors present (embed/attn0/ffn0)");
         Ok(())
     }
 

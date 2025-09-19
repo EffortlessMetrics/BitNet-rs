@@ -8,10 +8,24 @@
 
 use anyhow::{Result, bail};
 use half::f16;
+use tracing::warn;
 
 /// I2_S block constants
-const I2S_BLOCK_ELEMS: usize = 256;
-const I2S_BLOCK_BYTES: usize = 64 /* qbits */ + 2 /* f16 scale */;
+const I2S_DEFAULT_BLOCK: usize = 256;
+
+fn expected_bytes(rows: usize, cols: usize, block: usize) -> usize {
+    let blocks_per_row = (cols + block - 1) / block;
+    let qbits = (block + 3) / 4; // 2 bits per weight
+    (rows * blocks_per_row) * (qbits + 2) // +2 bytes f16 scale
+}
+
+fn infer_block_size(bytes: usize, rows: usize, cols: usize) -> Option<usize> {
+    // Most common variants
+    for b in [256, 128, 64, 32] {
+        if expected_bytes(rows, cols, b) == bytes { return Some(b); }
+    }
+    None
+}
 
 /// Extract (rows, cols) from tensor shape, where last dim is the column count
 fn rows_cols(dims: &[usize]) -> Result<(usize, usize)> {
@@ -59,181 +73,107 @@ fn unpack_2bit_signed(dst: &mut [i8], src_qbits: &[u8], n: usize) {
 /// Dequantized f32 values in row-major order
 pub fn dequantize_to_f32(bytes: &[u8], shape: &[usize]) -> Result<Vec<f32>> {
     let (rows, cols) = rows_cols(shape)?;
-    let blocks_per_row = cols.div_ceil(I2S_BLOCK_ELEMS);
+    let mut block = I2S_DEFAULT_BLOCK;
+    let default_expected = expected_bytes(rows, cols, block);
 
-    // Validate input size with flexible handling
-    let expected = rows * blocks_per_row * I2S_BLOCK_BYTES;
-    if bytes.len() != expected {
-        // Try alternative block sizes (32, 64, 128 elements) for compatibility
-        let alt_block_sizes = [32, 64, 128];
-        let mut _found_valid = false;
-
-        for &block_size in &alt_block_sizes {
-            let alt_blocks_per_row = cols.div_ceil(block_size);
-            let alt_block_bytes = (block_size / 4) + 2; // 2-bit packed + f16 scale
-            let alt_expected = rows * alt_blocks_per_row * alt_block_bytes;
-
-            if bytes.len() == alt_expected {
-                eprintln!(
-                    "Warning: I2_S using alternative block size {} instead of {}",
-                    block_size, I2S_BLOCK_ELEMS
-                );
-                return dequantize_to_f32_with_block_size(bytes, shape, block_size);
-            }
-        }
-
-        // Graceful fallback: try to process with partial blocks
-        let total_blocks = expected / I2S_BLOCK_BYTES;
-        let actual_blocks = bytes.len() / I2S_BLOCK_BYTES;
-
-        if actual_blocks > 0 && actual_blocks < total_blocks {
-            eprintln!(
-                "Warning: I2_S partial data ({} bytes vs {} expected) - processing {} of {} blocks",
-                bytes.len(),
-                expected,
-                actual_blocks,
-                total_blocks
+    if bytes.len() != default_expected {
+        if let Some(b) = infer_block_size(bytes.len(), rows, cols) {
+            warn!("I2_S: non-default block size detected: {} (default {})", b, I2S_DEFAULT_BLOCK);
+            block = b;
+        } else {
+            // Partial data fallback: process what we can, zero-fill the rest
+            let qbits = (block + 3) / 4;
+            let per_block = qbits + 2;
+            let available_blocks = bytes.len() / per_block;
+            warn!(
+                "I2_S: byte length mismatch (got {}, expected {}), processing {} blocks then zero-fill",
+                bytes.len(), default_expected, available_blocks
             );
-            return dequantize_partial_blocks(bytes, shape, actual_blocks);
+            return dequantize_partial_blocks(bytes, shape, block, available_blocks);
         }
+    }
+    dequantize_to_f32_with_block(bytes, shape, block)
+}
 
-        bail!(
-            "I2_S: byte length mismatch (got {}, expected {}) and no valid alternative block size found",
-            bytes.len(),
-            expected
-        );
+fn dequantize_to_f32_with_block(bytes: &[u8], shape: &[usize], block: usize) -> Result<Vec<f32>> {
+    let (rows, cols) = rows_cols(shape)?;
+    let blocks_per_row = (cols + block - 1) / block;
+    let qbits = (block + 3) / 4;
+    let per_block = qbits + 2;
+
+    if bytes.len() != rows * blocks_per_row * per_block {
+        bail!("I2_S: internal size mismatch for block={}", block);
     }
 
     let mut out = vec![0f32; rows * cols];
     let mut off = 0usize;
-
-    // Scratch buffer for unpacked values
-    let mut scratch = [0i8; I2S_BLOCK_ELEMS];
+    let mut scratch = vec![0i8; block];
 
     for r in 0..rows {
         let row_base = r * cols;
         let mut c = 0usize;
-
         for _ in 0..blocks_per_row {
-            let n = (cols - c).min(I2S_BLOCK_ELEMS);
-
-            // Layout: [64 bytes qbits][2 bytes f16 scale]
-            let qbits = &bytes[off..off + 64];
-            off += 64;
-
+            let n = (cols - c).min(block);
+            let qbits_slice = &bytes[off..off + ((n + 3) / 4)];
+            off += qbits_slice.len();
             let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
             off += 2;
             let scale = f16::from_bits(scale_bits).to_f32();
 
-            // Unpack and dequantize
-            unpack_2bit_signed(&mut scratch[..n], qbits, n);
+            unpack_2bit_signed(&mut scratch[..n], qbits_slice, n);
             for i in 0..n {
-                out[row_base + c + i] = scale * (scratch[i] as f32);
+                out[row_base + c + i] = scale * scratch[i] as f32;
             }
             c += n;
         }
     }
+    Ok(out)
+}
 
+fn dequantize_partial_blocks(bytes: &[u8], shape: &[usize], block: usize, available_blocks: usize) -> Result<Vec<f32>> {
+    let (rows, cols) = rows_cols(shape)?;
+    let blocks_per_row = (cols + block - 1) / block;
+    let qbits = (block + 3) / 4;
+    let per_block = qbits + 2;
+
+    let mut out = vec![0f32; rows * cols];
+    let mut off = 0usize;
+    let mut processed = 0usize;
+    let mut scratch = vec![0i8; block];
+
+    'rows: for r in 0..rows {
+        let row_base = r * cols;
+        let mut c = 0usize;
+        for _ in 0..blocks_per_row {
+            if processed == available_blocks { break 'rows; }
+            let n = (cols - c).min(block);
+            if off + per_block > bytes.len() { break 'rows; }
+
+            let qbits_slice = &bytes[off..off + ((n + 3) / 4)];
+            off += qbits_slice.len();
+            let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
+            off += 2;
+            let scale = f16::from_bits(scale_bits).to_f32();
+
+            unpack_2bit_signed(&mut scratch[..n], qbits_slice, n);
+            for i in 0..n {
+                out[row_base + c + i] = scale * scratch[i] as f32;
+            }
+            c += n;
+            processed += 1;
+        }
+    }
+    // remaining values stay zero (explicit)
     Ok(out)
 }
 
 /// Get the number of elements per I2_S block
 pub fn block_elems() -> usize {
-    I2S_BLOCK_ELEMS
+    I2S_DEFAULT_BLOCK
 }
 
 /// Get the byte size of an I2_S block
 pub fn block_bytes() -> usize {
-    I2S_BLOCK_BYTES
+    expected_bytes(1, I2S_DEFAULT_BLOCK, I2S_DEFAULT_BLOCK)
 }
 
-/// Dequantize I2_S with alternative block size
-fn dequantize_to_f32_with_block_size(
-    bytes: &[u8],
-    shape: &[usize],
-    block_size: usize,
-) -> Result<Vec<f32>> {
-    let (rows, cols) = rows_cols(shape)?;
-    let blocks_per_row = cols.div_ceil(block_size);
-    let _block_bytes = (block_size / 4) + 2; // 2-bit packed + f16 scale
-
-    let mut out = vec![0f32; rows * cols];
-    let mut off = 0usize;
-
-    // Scratch buffer for unpacked values
-    let mut scratch = vec![0i8; block_size];
-
-    for r in 0..rows {
-        let row_base = r * cols;
-        let mut c = 0usize;
-
-        for _ in 0..blocks_per_row {
-            let n = (cols - c).min(block_size);
-
-            // Layout: [qbits][2 bytes f16 scale]
-            let qbits_len = n.div_ceil(4); // 2-bit packed, 4 values per byte
-            let qbits = &bytes[off..off + qbits_len];
-            off += qbits_len;
-
-            let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
-            off += 2;
-            let scale = f16::from_bits(scale_bits).to_f32();
-
-            // Unpack and dequantize
-            unpack_2bit_signed(&mut scratch[..n], qbits, n);
-            for i in 0..n {
-                out[row_base + c + i] = scale * (scratch[i] as f32);
-            }
-            c += n;
-        }
-    }
-
-    Ok(out)
-}
-
-/// Dequantize I2_S with partial block processing
-fn dequantize_partial_blocks(
-    bytes: &[u8],
-    shape: &[usize],
-    available_blocks: usize,
-) -> Result<Vec<f32>> {
-    let (rows, cols) = rows_cols(shape)?;
-    let mut out = vec![0f32; rows * cols];
-    let mut off = 0usize;
-
-    // Scratch buffer for unpacked values
-    let mut scratch = [0i8; I2S_BLOCK_ELEMS];
-
-    let blocks_per_row = cols.div_ceil(I2S_BLOCK_ELEMS);
-    let max_processable_rows = available_blocks / blocks_per_row;
-
-    for r in 0..max_processable_rows.min(rows) {
-        let row_base = r * cols;
-        let mut c = 0usize;
-
-        for _ in 0..blocks_per_row {
-            if off + I2S_BLOCK_BYTES > bytes.len() {
-                break; // No more data
-            }
-
-            let n = (cols - c).min(I2S_BLOCK_ELEMS);
-
-            // Layout: [64 bytes qbits][2 bytes f16 scale]
-            let qbits = &bytes[off..off + 64];
-            off += 64;
-
-            let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
-            off += 2;
-            let scale = f16::from_bits(scale_bits).to_f32();
-
-            // Unpack and dequantize
-            unpack_2bit_signed(&mut scratch[..n], qbits, n);
-            for i in 0..n {
-                out[row_base + c + i] = scale * (scratch[i] as f32);
-            }
-            c += n;
-        }
-    }
-
-    Ok(out)
-}

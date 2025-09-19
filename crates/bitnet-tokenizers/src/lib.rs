@@ -1,5 +1,6 @@
 //! Tokenization support for BitNet models
 
+pub mod auto;
 pub mod gguf_tokenizer;
 pub mod hf_tokenizer;
 pub mod loader;

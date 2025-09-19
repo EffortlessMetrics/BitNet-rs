@@ -3,6 +3,68 @@ use candle_core::{DType, Device, Tensor};
 /// Weight mapping utilities for loading model weights from various formats
 use std::borrow::Cow;
 use std::collections::HashMap;
+use once_cell::sync::Lazy;
+use regex::Regex;
+
+/// Canonical target schema:
+/// layers.{i}.attention.{q_proj|k_proj|v_proj|o_proj}.weight
+/// layers.{i}.feed_forward.{gate_proj|up_proj|down_proj}.weight
+/// layers.{i}.attention_norm.weight
+/// layers.{i}.post_attention_layernorm.weight
+static RE_BLK_ATTN_Q: Lazy<Regex> = Lazy::new(|| Regex::new(r"^blk\.(\d+)\.attn_q\.weight$").unwrap());
+static RE_BLK_ATTN_K: Lazy<Regex> = Lazy::new(|| Regex::new(r"^blk\.(\d+)\.attn_k\.weight$").unwrap());
+static RE_BLK_ATTN_V: Lazy<Regex> = Lazy::new(|| Regex::new(r"^blk\.(\d+)\.attn_v\.weight$").unwrap());
+static RE_BLK_ATTN_O: Lazy<Regex> = Lazy::new(|| Regex::new(r"^blk\.(\d+)\.attn_o(?:utput)?\.weight$").unwrap());
+
+static RE_LLAMA_WQ: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.wq\.weight$").unwrap());
+static RE_LLAMA_WK: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.wk\.weight$").unwrap());
+static RE_LLAMA_WV: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.wv\.weight$").unwrap());
+static RE_LLAMA_WO: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.wo\.weight$").unwrap());
+
+// FFN / MLP variants
+static RE_BLK_FFN_GATE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^blk\.(\d+)\.ffn_gate(?:_inp)?\.weight$").unwrap());
+static RE_BLK_FFN_UP:   Lazy<Regex> = Lazy::new(|| Regex::new(r"^blk\.(\d+)\.ffn_(?:up|up_proj)\.weight$").unwrap());
+static RE_BLK_FFN_DOWN: Lazy<Regex> = Lazy::new(|| Regex::new(r"^blk\.(\d+)\.ffn_(?:down|down_proj)\.weight$").unwrap());
+
+static RE_FFN_W1: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:mlp|feed_forward)\.(?:w1|gate_proj)\.weight$").unwrap());
+static RE_FFN_W3: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:mlp|feed_forward)\.(?:w3|up_proj)\.weight$").unwrap());
+static RE_FFN_W2: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:mlp|feed_forward)\.(?:w2|down_proj)\.weight$").unwrap());
+
+// Norm aliases
+static RE_ATTN_NORM: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:attention_norm|input_layernorm)\.weight$").unwrap());
+static RE_FFN_NORM:  Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:post_attention_layernorm|ffn_norm)\.weight$").unwrap());
+
+/// Returns canonical key if `k` matches a known vendor pattern.
+pub fn normalize_vendor_key(k: &str) -> Option<String> {
+    macro_rules! cap {
+        ($re:expr, $k:expr, $fmt:expr) => {{
+            if let Some(c) = $re.captures($k) {
+                Some(format!($fmt, &c[1]))
+            } else { None }
+        }};
+    }
+
+    // Attention (blk.*)
+    cap!(RE_BLK_ATTN_Q, k, "layers.{}.attention.q_proj.weight")
+        .or_else(|| cap!(RE_BLK_ATTN_K, k, "layers.{}.attention.k_proj.weight"))
+        .or_else(|| cap!(RE_BLK_ATTN_V, k, "layers.{}.attention.v_proj.weight"))
+        .or_else(|| cap!(RE_BLK_ATTN_O, k, "layers.{}.attention.o_proj.weight"))
+        // LLaMA-style attention
+        .or_else(|| cap!(RE_LLAMA_WQ, k, "layers.{}.attention.q_proj.weight"))
+        .or_else(|| cap!(RE_LLAMA_WK, k, "layers.{}.attention.k_proj.weight"))
+        .or_else(|| cap!(RE_LLAMA_WV, k, "layers.{}.attention.v_proj.weight"))
+        .or_else(|| cap!(RE_LLAMA_WO, k, "layers.{}.attention.o_proj.weight"))
+        // FFN / MLP
+        .or_else(|| cap!(RE_BLK_FFN_GATE, k, "layers.{}.feed_forward.gate_proj.weight"))
+        .or_else(|| cap!(RE_BLK_FFN_UP,   k, "layers.{}.feed_forward.up_proj.weight"))
+        .or_else(|| cap!(RE_BLK_FFN_DOWN, k, "layers.{}.feed_forward.down_proj.weight"))
+        .or_else(|| cap!(RE_FFN_W1, k, "layers.{}.feed_forward.gate_proj.weight"))
+        .or_else(|| cap!(RE_FFN_W3, k, "layers.{}.feed_forward.up_proj.weight"))
+        .or_else(|| cap!(RE_FFN_W2, k, "layers.{}.feed_forward.down_proj.weight"))
+        // Norms
+        .or_else(|| cap!(RE_ATTN_NORM, k, "layers.{}.attention_norm.weight"))
+        .or_else(|| cap!(RE_FFN_NORM,  k, "layers.{}.post_attention_layernorm.weight"))
+}
 
 /// Map GGUF tensor names to transformer module names
 pub fn remap_gguf_weights(tensors: &HashMap<String, Tensor>) -> Result<HashMap<String, Tensor>> {
@@ -65,7 +127,9 @@ pub fn remap_gguf_weights_with_options(
     for (name, tensor) in tensors {
         // First normalize any known name variations
         let normalized = normalize_name(name);
-        let new_name = if let Some(mapped_name) = map_tensor_name(&normalized) {
+        let new_name = if let Some(canonical) = normalize_vendor_key(&normalized) {
+            canonical
+        } else if let Some(mapped_name) = map_tensor_name(&normalized) {
             mapped_name
         } else {
             unmapped.push(name.clone());
@@ -84,7 +148,7 @@ pub fn remap_gguf_weights_with_options(
                 &unmapped[..5.min(unmapped.len())]
             )));
         } else {
-            eprintln!(
+            tracing::warn!(
                 "Warning: {} unmapped tensors: {:?}",
                 unmapped.len(),
                 &unmapped[..5.min(unmapped.len())]
@@ -513,4 +577,29 @@ pub fn create_var_builder(
     }
 
     Ok(candle_nn::VarBuilder::from_tensors(converted, dtype, device))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_blk_and_llama_variants() {
+        assert_eq!(
+            normalize_vendor_key("blk.7.attn_q.weight").as_deref(),
+            Some("layers.7.attention.q_proj.weight")
+        );
+        assert_eq!(
+            normalize_vendor_key("model.layers.0.self_attn.wo.weight").as_deref(),
+            Some("layers.0.attention.o_proj.weight")
+        );
+        assert_eq!(
+            normalize_vendor_key("blk.2.ffn_gate.weight").as_deref(),
+            Some("layers.2.feed_forward.gate_proj.weight")
+        );
+        assert_eq!(
+            normalize_vendor_key("layers.3.post_attention_layernorm.weight").as_deref(),
+            Some("layers.3.post_attention_layernorm.weight")
+        );
+    }
 }
