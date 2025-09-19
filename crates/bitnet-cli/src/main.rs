@@ -798,11 +798,14 @@ async fn run_simple_generation(
         // Forward pass
         let h = model.forward(&x, any_cache.as_mut())?;
 
-        // Get logits
-        let logits = model.logits(&h)?;
+        // Extract last token hidden state first to avoid 3D×2D matmul issues
+        let last_hidden = extract_last_token_hidden(&h)?;
 
-        // Extract last token logits
-        let logits_vec = extract_logits(&logits)?;
+        // Get logits from last token hidden state
+        let logits = model.logits(&last_hidden)?;
+
+        // Extract logits vector (should now be 2D tensor)
+        let logits_vec = extract_logits_2d(&logits)?;
 
         // Capture logits if requested
         if dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps) {
@@ -979,7 +982,58 @@ async fn run_simple_generation(
     Ok(())
 }
 
-/// Extract logits vector from tensor
+/// Extract last token hidden state from 3D tensor [B,T,H] -> [B,H]
+fn extract_last_token_hidden(tensor: &bitnet_common::ConcreteTensor) -> Result<bitnet_common::ConcreteTensor> {
+    use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
+
+    let shape = tensor.shape();
+    if shape.len() != 3 {
+        return Err(BitNetError::Validation("Expected 3D tensor".into()).into());
+    }
+
+    let (batch_size, seq_len, hidden_size) = (shape[0], shape[1], shape[2]);
+
+    match tensor {
+        ConcreteTensor::BitNet(t) => {
+            let candle = t.to_candle()?;
+            // Extract last token: [B, T, H] -> [B, H]
+            let last = candle.narrow(1, seq_len - 1, 1)?.squeeze(1)?;
+            Ok(ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(last)))
+        }
+        ConcreteTensor::Mock(_) => {
+            // Return mock hidden state [B, H]
+            Ok(ConcreteTensor::mock(vec![batch_size, hidden_size]))
+        }
+    }
+}
+
+/// Extract logits vector from 2D tensor [B,V] -> Vec<f32>
+fn extract_logits_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
+    use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
+
+    let shape = tensor.shape();
+    if shape.len() != 2 {
+        return Err(BitNetError::Validation("Expected 2D tensor".into()).into());
+    }
+
+    let (_batch, _vocab) = (shape[0], shape[1]);
+
+    match tensor {
+        ConcreteTensor::BitNet(t) => {
+            let candle = t.to_candle()?;
+            // Extract first batch: [B, V] -> [V]
+            let batch_0 = candle.i(0)?;
+            let batch_0 = if batch_0.dtype() != DType::F32 { batch_0.to_dtype(DType::F32)? } else { batch_0 };
+            Ok(batch_0.to_vec1::<f32>()?)
+        }
+        ConcreteTensor::Mock(_) => {
+            // Return mock logits for testing
+            Ok(vec![0.1; 50257])
+        }
+    }
+}
+
+/// Extract logits vector from tensor (legacy function for compatibility)
 fn extract_logits(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
     use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
 

@@ -630,52 +630,84 @@ impl TransformerModel {
     }
 
     pub fn logits(&self, hidden: &Tensor) -> Result<Tensor> {
-        // Get dimensions for proper shape handling
-        let (b, t, h) = (hidden.dims()[0], hidden.dims()[1], hidden.dims()[2]);
         let vocab_size = self.config.model.vocab_size;
 
-        if let Some(ref lm_head) = self.lm_head {
-            // Use dedicated LM head if available
-            if self.lm_head_transposed {
-                if let Some(ref weight) = self.lm_head_weight {
-                    // LM head weight is stored as [hidden, vocab]
-                    // Flatten to 2D so Candle matmul is happy
-                    let hidden_2d = hidden.reshape(&[b * t, h])?;
-                    let logits_2d = hidden_2d.matmul(weight)?;
-                    Ok(logits_2d.reshape(&[b, t, vocab_size])?)
-                } else {
-                    // Fallback to standard forward if we couldn't get weight directly
-                    let hidden_2d = hidden.reshape(&[b * t, h])?;
-                    let logits_2d = lm_head.forward(&hidden_2d)?;
-                    Ok(logits_2d.reshape(&[b, t, vocab_size])?)
-                }
-            } else {
-                // Standard path: LM head weight is [vocab, hidden]
-                // Flatten to 2D for proper matmul
-                let hidden_2d = hidden.reshape(&[b * t, h])?;
-                let logits_2d = lm_head.forward(&hidden_2d)?;
-                Ok(logits_2d.reshape(&[b, t, vocab_size])?)
-            }
-        } else {
-            // Tied weights: use embedding matrix
-            static LOGGED: std::sync::Once = std::sync::Once::new();
-            LOGGED.call_once(|| {
-                tracing::info!("LM head tied to input embeddings");
-            });
+        match hidden.rank() {
+            2 => {
+                // [B, H] - last token only
+                let (b, h) = (hidden.dims()[0], hidden.dims()[1]);
 
-            let embeddings = self.embed_tokens.embeddings();
-            if self.embed_transposed {
-                // Embeddings are [hidden, vocab], flatten hidden for matmul
-                let hidden_2d = hidden.reshape(&[b * t, h])?;
-                let logits_2d = hidden_2d.matmul(embeddings)?;
-                Ok(logits_2d.reshape(&[b, t, vocab_size])?)
-            } else {
-                // Embeddings are [vocab, hidden], transpose and flatten for matmul
-                let w = embeddings.transpose(0, 1)?; // [H, V]
-                let hidden_2d = hidden.reshape(&[b * t, h])?;
-                let logits_2d = hidden_2d.matmul(&w)?;
-                Ok(logits_2d.reshape(&[b, t, vocab_size])?)
+                if let Some(ref lm_head) = self.lm_head {
+                    // Use dedicated LM head if available
+                    let logits = lm_head.forward(hidden)?; // [B, V]
+                    Ok(logits.reshape(&[b, vocab_size])?)
+                } else {
+                    // Tied weights: use embedding matrix
+                    static LOGGED: std::sync::Once = std::sync::Once::new();
+                    LOGGED.call_once(|| {
+                        tracing::info!("LM head tied to input embeddings");
+                    });
+
+                    let embeddings = self.embed_tokens.embeddings();
+                    if self.embed_transposed {
+                        // Embeddings are [hidden, vocab]
+                        Ok(hidden.matmul(embeddings)?) // [B, V]
+                    } else {
+                        // Embeddings are [vocab, hidden], transpose first
+                        let w = embeddings.transpose(0, 1)?; // [H, V]
+                        Ok(hidden.matmul(&w)?) // [B, V]
+                    }
+                }
             }
+            3 => {
+                // [B, T, H] - all timesteps
+                let (b, t, h) = (hidden.dims()[0], hidden.dims()[1], hidden.dims()[2]);
+
+                if let Some(ref lm_head) = self.lm_head {
+                    // Use dedicated LM head if available
+                    if self.lm_head_transposed {
+                        if let Some(ref weight) = self.lm_head_weight {
+                            // LM head weight is stored as [hidden, vocab]
+                            // Flatten to 2D so Candle matmul is happy
+                            let hidden_2d = hidden.reshape(&[b * t, h])?;
+                            let logits_2d = hidden_2d.matmul(weight)?;
+                            Ok(logits_2d.reshape(&[b, t, vocab_size])?)
+                        } else {
+                            // Fallback to standard forward if we couldn't get weight directly
+                            let hidden_2d = hidden.reshape(&[b * t, h])?;
+                            let logits_2d = lm_head.forward(&hidden_2d)?;
+                            Ok(logits_2d.reshape(&[b, t, vocab_size])?)
+                        }
+                    } else {
+                        // Standard path: LM head weight is [vocab, hidden]
+                        // Flatten to 2D for proper matmul
+                        let hidden_2d = hidden.reshape(&[b * t, h])?;
+                        let logits_2d = lm_head.forward(&hidden_2d)?;
+                        Ok(logits_2d.reshape(&[b, t, vocab_size])?)
+                    }
+                } else {
+                    // Tied weights: use embedding matrix
+                    static LOGGED: std::sync::Once = std::sync::Once::new();
+                    LOGGED.call_once(|| {
+                        tracing::info!("LM head tied to input embeddings");
+                    });
+
+                    let embeddings = self.embed_tokens.embeddings();
+                    if self.embed_transposed {
+                        // Embeddings are [hidden, vocab], flatten hidden for matmul
+                        let hidden_2d = hidden.reshape(&[b * t, h])?;
+                        let logits_2d = hidden_2d.matmul(embeddings)?;
+                        Ok(logits_2d.reshape(&[b, t, vocab_size])?)
+                    } else {
+                        // Embeddings are [vocab, hidden], transpose and flatten for matmul
+                        let w = embeddings.transpose(0, 1)?; // [H, V]
+                        let hidden_2d = hidden.reshape(&[b * t, h])?;
+                        let logits_2d = hidden_2d.matmul(&w)?;
+                        Ok(logits_2d.reshape(&[b, t, vocab_size])?)
+                    }
+                }
+            }
+            _ => Err(BitNetError::Validation("unexpected hidden rank".into()).into()),
         }
     }
 }
