@@ -4,6 +4,7 @@ use anyhow::Result;
 use metrics::{Counter, Gauge, Histogram, counter, gauge, histogram};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use sysinfo::System;
 use tokio::sync::RwLock;
 
 use super::MonitoringConfig;
@@ -150,7 +151,6 @@ pub struct MetricsCollector {
     pub inference: Arc<InferenceMetrics>,
     pub system: Arc<SystemMetrics>,
     start_time: Instant,
-    #[allow(dead_code)]
     config: MonitoringConfig,
     performance_history: Arc<RwLock<Vec<PerformanceSnapshot>>>,
 }
@@ -205,10 +205,15 @@ impl MetricsCollector {
         // Collect memory usage
         if let Ok(memory_info) = self.get_memory_info().await {
             self.inference.memory_usage_bytes.set(memory_info.used_bytes as f64);
-            self.system.memory_usage_percent.set(memory_info.usage_percent);
+            let usage_percent = if memory_info.total_bytes > 0 {
+                (memory_info.used_bytes as f64 / memory_info.total_bytes as f64) * 100.0
+            } else {
+                0.0
+            };
+            self.system.memory_usage_percent.set(usage_percent);
         }
 
-        // Collect CPU usage (simplified - in production you'd use a proper system monitoring crate)
+        // Collect CPU usage
         if let Ok(cpu_usage) = self.get_cpu_usage().await {
             self.system.cpu_usage_percent.set(cpu_usage);
         }
@@ -225,8 +230,10 @@ impl MetricsCollector {
         let mut history = self.performance_history.write().await;
         history.push(snapshot);
 
-        // Keep only last 1000 snapshots
-        if history.len() > 1000 {
+        // Keep approximately one hour of history based on metrics interval
+        let interval = self.config.metrics_interval.max(1);
+        let history_limit = (3600 / interval).max(1) as usize;
+        if history.len() > history_limit {
             history.remove(0);
         }
 
@@ -270,20 +277,24 @@ impl MetricsCollector {
     }
 
     async fn get_memory_info(&self) -> Result<MemoryInfo> {
-        // Simplified memory info - in production use a proper system monitoring crate
-        Ok(MemoryInfo { used_bytes: 0, total_bytes: 0, usage_percent: 0.0 })
+        let mut sys = System::new();
+        sys.refresh_memory();
+        let total = sys.total_memory();
+        let used = sys.used_memory();
+        Ok(MemoryInfo { used_bytes: used, total_bytes: total })
     }
 
     async fn get_cpu_usage(&self) -> Result<f64> {
-        // Simplified CPU usage - in production use a proper system monitoring crate
-        Ok(0.0)
+        let mut sys = System::new();
+        sys.refresh_cpu();
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        sys.refresh_cpu();
+        Ok(sys.global_cpu_info().cpu_usage() as f64)
     }
 }
 
 #[derive(Debug)]
 struct MemoryInfo {
     used_bytes: u64,
-    #[allow(dead_code)]
     total_bytes: u64,
-    usage_percent: f64,
 }
