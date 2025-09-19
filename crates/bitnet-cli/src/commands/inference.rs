@@ -569,13 +569,41 @@ impl InferenceCommand {
         let device_str = self.device.as_ref().unwrap_or(&config.default_device);
 
         match device_str.as_str() {
-            "cpu" | "auto" => {
+            "cpu" => {
                 info!("Using CPU device");
                 Ok(Device::Cpu)
             }
             "cuda" => {
-                warn!("CUDA support not yet implemented, falling back to CPU");
-                Ok(Device::Cpu)
+                #[cfg(feature = "gpu")]
+                {
+                    if bitnet_kernels::gpu::is_cuda_available() {
+                        info!("Using CUDA device");
+                        Ok(Device::Cuda(candle_core::CudaDevice::new(0)?))
+                    } else {
+                        anyhow::bail!("CUDA requested but no GPU available");
+                    }
+                }
+                #[cfg(not(feature = "gpu"))]
+                {
+                    anyhow::bail!("Binary not built with GPU support");
+                }
+            }
+            "auto" => {
+                #[cfg(feature = "gpu")]
+                {
+                    if bitnet_kernels::gpu::is_cuda_available() {
+                        info!("Auto-select: CUDA");
+                        Ok(Device::Cuda(candle_core::CudaDevice::new(0)?))
+                    } else {
+                        info!("Auto-select: CPU (no GPU available)");
+                        Ok(Device::Cpu)
+                    }
+                }
+                #[cfg(not(feature = "gpu"))]
+                {
+                    info!("Auto-select: CPU (GPU support not compiled)");
+                    Ok(Device::Cpu)
+                }
             }
             _ => anyhow::bail!("Invalid device: {}. Must be one of: cpu, cuda, auto", device_str),
         }

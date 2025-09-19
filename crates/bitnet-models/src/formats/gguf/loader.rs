@@ -159,6 +159,56 @@ impl FormatLoader for GgufLoader {
 }
 
 impl GgufLoader {
+    /// Check if a tensor name indicates it's an embedding tensor
+    fn is_embedding_tensor(name: &str) -> bool {
+        matches!(
+            name,
+            "embed_tokens.weight" |
+            "tok_embeddings.weight" |
+            "token_embd.weight" |
+            "model.embed_tokens.weight" |
+            "transformer.wte.weight"
+        )
+    }
+
+    /// Heuristic: Microsoft 2B ships [hidden, vocab]; we want [vocab, hidden].
+    fn embedding_is_transposed(dims: &[usize]) -> bool {
+        dims.len() == 2 && dims[0] < dims[1] && dims[1] >= 32768
+    }
+
+    /// Helper to transpose F16 data to F32 transposed layout
+    fn transpose_f16_to_f32(bytes: &[u8], dims: &[usize]) -> Result<Vec<f32>> {
+        use std::io::Read;
+        let (rows, cols) = (dims[0], dims[1]);
+        let mut out = vec![0f32; rows * cols]; // transposed [cols, rows]
+        let mut rdr = std::io::Cursor::new(bytes);
+        for r in 0..rows {
+            for c in 0..cols {
+                let mut buf = [0u8; 2];
+                rdr.read_exact(&mut buf).map_err(BitNetError::Io)?;
+                let v = half::f16::from_bits(u16::from_le_bytes(buf)).to_f32();
+                out[c * rows + r] = v;
+            }
+        }
+        Ok(out)
+    }
+
+    /// Helper to transpose F32 data to F32 transposed layout
+    fn transpose_f32_to_f32(bytes: &[u8], dims: &[usize]) -> Result<Vec<f32>> {
+        use std::io::Read;
+        let (rows, cols) = (dims[0], dims[1]);
+        let mut out = vec![0f32; rows * cols]; // transposed [cols, rows]
+        let mut rdr = std::io::Cursor::new(bytes);
+        for r in 0..rows {
+            for c in 0..cols {
+                let mut buf = [0u8; 4];
+                rdr.read_exact(&mut buf).map_err(BitNetError::Io)?;
+                out[c * rows + r] = f32::from_le_bytes(buf);
+            }
+        }
+        Ok(out)
+    }
+
     fn extract_config(&self, reader: &GgufReader) -> Result<BitNetConfig> {
         let mut config = BitNetConfig::default();
 
@@ -298,11 +348,25 @@ impl GgufLoader {
             // Handle I2_S quantization with native Rust dequantization
             if matches!(info.tensor_type, GgufTensorType::I2_S) {
                 use crate::quant::i2s;
-                let f32_data = i2s::dequantize_to_f32(data, &info.shape)
-                    .map_err(|e| BitNetError::Validation(e.to_string()))?;
-                let tensor = Tensor::from_slice(&f32_data, info.shape.as_slice(), &candle_device)
-                    .map_err(|e| BitNetError::Validation(e.to_string()))?;
-                return Ok(tensor);
+
+                // Check for embedding transposition
+                if Self::is_embedding_tensor(&info.name) && Self::embedding_is_transposed(&info.shape) {
+                    info!("Embedding appears transposed ({:?}) -> decoding transposed", info.shape);
+                    let f32_data = i2s::dequantize_to_f32_transposed(data, &info.shape)
+                        .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                    // Now dims become [vocab, hidden]
+                    let (rows, cols) = (info.shape[1], info.shape[0]);
+                    let tensor = Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
+                        .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                    return Ok(tensor);
+                } else {
+                    // Normal I2_S dequantization
+                    let f32_data = i2s::dequantize_to_f32(data, &info.shape)
+                        .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                    let tensor = Tensor::from_slice(&f32_data, info.shape.as_slice(), &candle_device)
+                        .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                    return Ok(tensor);
+                }
             }
 
             // For other quantized types, keep as raw bytes for now
@@ -314,17 +378,37 @@ impl GgufLoader {
             // For regular tensors, interpret the bytes according to the data type
             match dtype {
                 DType::F32 => {
-                    let float_data = bytemuck::cast_slice::<u8, f32>(data);
-                    Tensor::from_slice(float_data, info.shape.as_slice(), &candle_device)
-                        .map_err(|e| BitNetError::Validation(e.to_string()))
+                    // Check for embedding transposition
+                    if Self::is_embedding_tensor(&info.name) && Self::embedding_is_transposed(&info.shape) {
+                        info!("Embedding appears transposed ({:?}) -> decoding transposed", info.shape);
+                        let f32_data = Self::transpose_f32_to_f32(data, &info.shape)?;
+                        // Now dims become [vocab, hidden]
+                        let (rows, cols) = (info.shape[1], info.shape[0]);
+                        Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
+                            .map_err(|e| BitNetError::Validation(e.to_string()))
+                    } else {
+                        let float_data = bytemuck::cast_slice::<u8, f32>(data);
+                        Tensor::from_slice(float_data, info.shape.as_slice(), &candle_device)
+                            .map_err(|e| BitNetError::Validation(e.to_string()))
+                    }
                 }
                 DType::F16 => {
-                    // For now, convert F16 data to F32 for compatibility
-                    let half_data = bytemuck::cast_slice::<u8, u16>(data);
-                    let float_data: Vec<f32> =
-                        half_data.iter().map(|&h| half::f16::from_bits(h).to_f32()).collect();
-                    Tensor::from_slice(&float_data, info.shape.as_slice(), &candle_device)
-                        .map_err(|e| BitNetError::Validation(e.to_string()))
+                    // Check for embedding transposition
+                    if Self::is_embedding_tensor(&info.name) && Self::embedding_is_transposed(&info.shape) {
+                        info!("Embedding appears transposed ({:?}) -> decoding transposed", info.shape);
+                        let f32_data = Self::transpose_f16_to_f32(data, &info.shape)?;
+                        // Now dims become [vocab, hidden]
+                        let (rows, cols) = (info.shape[1], info.shape[0]);
+                        Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
+                            .map_err(|e| BitNetError::Validation(e.to_string()))
+                    } else {
+                        // For now, convert F16 data to F32 for compatibility
+                        let half_data = bytemuck::cast_slice::<u8, u16>(data);
+                        let float_data: Vec<f32> =
+                            half_data.iter().map(|&h| half::f16::from_bits(h).to_f32()).collect();
+                        Tensor::from_slice(&float_data, info.shape.as_slice(), &candle_device)
+                            .map_err(|e| BitNetError::Validation(e.to_string()))
+                    }
                 }
                 _ => Err(BitNetError::Model(ModelError::InvalidFormat {
                     format: format!("Unsupported data type: {:?}", dtype),

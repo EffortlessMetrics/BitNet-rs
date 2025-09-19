@@ -177,3 +177,100 @@ pub fn block_bytes() -> usize {
     expected_bytes(1, I2S_DEFAULT_BLOCK, I2S_DEFAULT_BLOCK)
 }
 
+/// Dequantize I2_S directly into the transposed layout:
+/// input logical shape = [rows, cols]; output shape = [cols, rows].
+pub fn dequantize_to_f32_transposed(bytes: &[u8], shape: &[usize]) -> Result<Vec<f32>> {
+    let (rows, cols) = rows_cols(shape)?;
+    let mut block = infer_block_size(bytes.len(), rows, cols).unwrap_or(I2S_DEFAULT_BLOCK);
+
+    let default_expected = expected_bytes(rows, cols, block);
+    if bytes.len() != default_expected {
+        if let Some(b) = infer_block_size(bytes.len(), rows, cols) {
+            warn!("I2_S: non-default block size detected: {} (default {})", b, I2S_DEFAULT_BLOCK);
+            block = b;
+        } else {
+            // Partial fallback: decode what we can into transposed output
+            let qbits = (block + 3) / 4;
+            let per_block = qbits + 2;
+            let available_blocks = bytes.len() / per_block;
+            warn!(
+                "I2_S: byte length mismatch (got {}, expected {}), processing {} blocks then zero-fill (transposed)",
+                bytes.len(), default_expected, available_blocks
+            );
+            return dequantize_partial_blocks_transposed(bytes, shape, block, available_blocks);
+        }
+    }
+
+    // Normal path: direct transposed dequant
+    let blocks_per_row = (cols + block - 1) / block;
+    let mut out = vec![0f32; rows * cols]; // output logical shape [cols, rows]
+    let mut off = 0usize;
+    let mut scratch = vec![0i8; block];
+
+    for r in 0..rows {
+        let mut c = 0usize;
+        for _ in 0..blocks_per_row {
+            let n = (cols - c).min(block);
+            let qbits_len = (n + 3) / 4;
+            let qbits_slice = &bytes[off..off + qbits_len];
+            off += qbits_len;
+
+            let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
+            off += 2;
+            let scale = f16::from_bits(scale_bits).to_f32();
+
+            unpack_2bit_signed(&mut scratch[..n], qbits_slice, n);
+
+            // Write transposed: input (r, c+i) -> output (c+i, r)
+            for i in 0..n {
+                out[(c + i) * rows + r] = scale * scratch[i] as f32;
+            }
+            c += n;
+        }
+    }
+    Ok(out)
+}
+
+fn dequantize_partial_blocks_transposed(
+    bytes: &[u8],
+    shape: &[usize],
+    block: usize,
+    available_blocks: usize,
+) -> Result<Vec<f32>> {
+    let (rows, cols) = rows_cols(shape)?;
+    let blocks_per_row = (cols + block - 1) / block;
+    let qbits = (block + 3) / 4;
+    let per_block = qbits + 2;
+
+    let mut out = vec![0f32; rows * cols]; // transposed output
+    let mut off = 0usize;
+    let mut processed = 0usize;
+    let mut scratch = vec![0i8; block];
+
+    'rows: for r in 0..rows {
+        let mut c = 0usize;
+        for _ in 0..blocks_per_row {
+            if processed == available_blocks { break 'rows; }
+            let n = (cols - c).min(block);
+            if off + per_block > bytes.len() { break 'rows; }
+
+            let qbits_len = (n + 3) / 4;
+            let qbits_slice = &bytes[off..off + qbits_len];
+            off += qbits_len;
+
+            let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
+            off += 2;
+            let scale = f16::from_bits(scale_bits).to_f32();
+
+            unpack_2bit_signed(&mut scratch[..n], qbits_slice, n);
+            for i in 0..n {
+                out[(c + i) * rows + r] = scale * scratch[i] as f32;
+            }
+            c += n;
+            processed += 1;
+        }
+    }
+    // remainder stays zero
+    Ok(out)
+}
+

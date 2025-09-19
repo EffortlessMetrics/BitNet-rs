@@ -2,6 +2,26 @@ use bitnet_common::{BitNetConfig, BitNetError, Result};
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{LayerNorm, Linear, VarBuilder};
 
+/// Helper to create linear layers with optional bias tensors (zero-injection)
+fn linear_with_optional_bias(
+    in_dim: usize,
+    out_dim: usize,
+    vb: VarBuilder,
+) -> candle_core::Result<Linear> {
+    let weight = vb.get((out_dim, in_dim), "weight")?;
+
+    // Try to get bias, create zeros if missing
+    let bias = match vb.get(out_dim, "bias") {
+        Ok(b) => Some(b),
+        Err(_) => {
+            tracing::debug!("Bias tensor missing for linear layer; injecting zeros [{}]", out_dim);
+            Some(Tensor::zeros(out_dim, DType::F32, vb.device())?)
+        }
+    };
+
+    Ok(Linear::new(weight, bias))
+}
+
 /// Rotary Position Embedding
 pub struct RotaryEmbedding {
     sin: Tensor,
@@ -109,10 +129,10 @@ impl MultiHeadAttention {
         let n_heads = config.model.num_heads;
         let head_dim = hidden_size / n_heads;
 
-        let q_proj = candle_nn::linear(hidden_size, hidden_size, vb.pp("q_proj"))?;
-        let k_proj = candle_nn::linear(hidden_size, hidden_size, vb.pp("k_proj"))?;
-        let v_proj = candle_nn::linear(hidden_size, hidden_size, vb.pp("v_proj"))?;
-        let o_proj = candle_nn::linear(hidden_size, hidden_size, vb.pp("o_proj"))?;
+        let q_proj = linear_with_optional_bias(hidden_size, hidden_size, vb.pp("q_proj"))?;
+        let k_proj = linear_with_optional_bias(hidden_size, hidden_size, vb.pp("k_proj"))?;
+        let v_proj = linear_with_optional_bias(hidden_size, hidden_size, vb.pp("v_proj"))?;
+        let o_proj = linear_with_optional_bias(hidden_size, hidden_size, vb.pp("o_proj"))?;
 
         let rope = RotaryEmbedding::new(
             head_dim,
@@ -222,9 +242,9 @@ impl FeedForward {
         let intermediate_size = config.model.intermediate_size;
 
         Ok(Self {
-            gate_proj: candle_nn::linear(hidden_size, intermediate_size, vb.pp("gate_proj"))?,
-            up_proj: candle_nn::linear(hidden_size, intermediate_size, vb.pp("up_proj"))?,
-            down_proj: candle_nn::linear(intermediate_size, hidden_size, vb.pp("down_proj"))?,
+            gate_proj: linear_with_optional_bias(hidden_size, intermediate_size, vb.pp("gate_proj"))?,
+            up_proj: linear_with_optional_bias(hidden_size, intermediate_size, vb.pp("up_proj"))?,
+            down_proj: linear_with_optional_bias(intermediate_size, hidden_size, vb.pp("down_proj"))?,
         })
     }
 
@@ -402,7 +422,7 @@ impl TransformerModel {
 
         // Try to load lm_head, but it's optional (can be tied to embeddings)
         // Try to create the linear layer, catching errors if weights don't exist
-        let (lm_head, lm_head_weight, lm_head_transposed) = match candle_nn::linear(
+        let (lm_head, lm_head_weight, lm_head_transposed) = match linear_with_optional_bias(
             hidden_size,
             vocab_size,
             vb.pp("lm_head"),
