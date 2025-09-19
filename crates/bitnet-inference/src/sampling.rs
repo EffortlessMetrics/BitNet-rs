@@ -222,11 +222,14 @@ impl SamplingStrategy {
             return Err(anyhow::anyhow!("Empty probability distribution"));
         }
 
+        // Clamp vocabulary size from logits tensor (prevents mismatched vocab issues)
+        let vocab_size = probabilities.len();
+
         // Check if all probabilities are zero
         let sum: f32 = probabilities.iter().sum();
         if sum <= 0.0 {
-            // Fallback to uniform distribution
-            let idx = self.rng.gen_range(0..probabilities.len());
+            // Fallback to uniform distribution within valid vocab range
+            let idx = self.rng.gen_range(0..vocab_size);
             return Ok(idx as u32);
         }
 
@@ -237,12 +240,14 @@ impl SamplingStrategy {
         for (i, &prob) in probabilities.iter().enumerate() {
             cumulative += prob;
             if random_value <= cumulative {
+                // Ensure token ID is within vocabulary bounds
+                debug_assert!(i < vocab_size, "Sampled token {} exceeds vocab size {}", i, vocab_size);
                 return Ok(i as u32);
             }
         }
 
-        // Fallback to last token (shouldn't happen with proper normalization)
-        Ok((probabilities.len() - 1) as u32)
+        // Fallback to last valid token (clamped to vocab size)
+        Ok((vocab_size - 1) as u32)
     }
 
     /// Reset token counts (useful for new sequences)

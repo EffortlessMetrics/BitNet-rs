@@ -8,7 +8,7 @@
 
 use anyhow::{Result, bail};
 use half::f16;
-use tracing::warn;
+use tracing::{debug, warn};
 
 /// I2_S block constants
 const I2S_DEFAULT_BLOCK: usize = 256;
@@ -85,7 +85,7 @@ pub fn dequantize_to_f32(bytes: &[u8], shape: &[usize]) -> Result<Vec<f32>> {
             let qbits = (block + 3) / 4;
             let per_block = qbits + 2;
             let available_blocks = bytes.len() / per_block;
-            warn!(
+            debug!(
                 "I2_S: byte length mismatch (got {}, expected {}), processing {} blocks then zero-fill",
                 bytes.len(), default_expected, available_blocks
             );
