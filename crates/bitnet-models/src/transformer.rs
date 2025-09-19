@@ -22,24 +22,26 @@ fn linear_with_optional_bias(
     Ok(Linear::new(weight, bias))
 }
 
-/// Helper to create layer norm with optional bias (RMSNorm typically has no bias)
+/// Helper to create layer norm with optional bias.
+/// If `bias` is missing we fall back to RMSNorm (no bias).
 fn layer_norm_with_optional_bias(
     normalized_shape: usize,
     eps: f64,
     vb: VarBuilder,
 ) -> candle_core::Result<LayerNorm> {
     let weight = vb.get((normalized_shape,), "weight")?;
-
-    // Try to get bias, but it's optional for RMSNorm
     match vb.get((normalized_shape,), "bias") {
         Ok(bias) => {
-            // Bias exists, use regular LayerNorm
+            // Bias exists → standard LayerNorm
             tracing::debug!("Using LayerNorm with bias [{}]", normalized_shape);
             Ok(LayerNorm::new(weight, bias, eps))
         }
         Err(_) => {
-            // No bias, use RMSNorm mode
-            tracing::debug!("Bias tensor missing for norm layer; using RMSNorm mode (no bias) [{}]", normalized_shape);
+            // No bias → RMSNorm
+            tracing::debug!(
+                "Bias tensor missing for norm layer; using RMSNorm (no bias) [{}]",
+                normalized_shape
+            );
             Ok(LayerNorm::rms_norm(weight, eps))
         }
     }
@@ -628,22 +630,31 @@ impl TransformerModel {
     }
 
     pub fn logits(&self, hidden: &Tensor) -> Result<Tensor> {
+        // Get dimensions for proper shape handling
+        let (b, t, h) = (hidden.dims()[0], hidden.dims()[1], hidden.dims()[2]);
+        let vocab_size = self.config.model.vocab_size;
+
         if let Some(ref lm_head) = self.lm_head {
             // Use dedicated LM head if available
             if self.lm_head_transposed {
                 if let Some(ref weight) = self.lm_head_weight {
                     // LM head weight is stored as [hidden, vocab]
-                    // We want: hidden @ W where W is [hidden, vocab]
-                    // This gives us [batch, seq, vocab] directly
-                    Ok(hidden.matmul(weight)?)
+                    // Flatten to 2D so Candle matmul is happy
+                    let hidden_2d = hidden.reshape(&[b * t, h])?;
+                    let logits_2d = hidden_2d.matmul(weight)?;
+                    Ok(logits_2d.reshape(&[b, t, vocab_size])?)
                 } else {
                     // Fallback to standard forward if we couldn't get weight directly
-                    Ok(lm_head.forward(hidden)?)
+                    let hidden_2d = hidden.reshape(&[b * t, h])?;
+                    let logits_2d = lm_head.forward(&hidden_2d)?;
+                    Ok(logits_2d.reshape(&[b, t, vocab_size])?)
                 }
             } else {
                 // Standard path: LM head weight is [vocab, hidden]
-                // Use the linear layer's forward (does hidden @ W^T)
-                Ok(lm_head.forward(hidden)?)
+                // Flatten to 2D for proper matmul
+                let hidden_2d = hidden.reshape(&[b * t, h])?;
+                let logits_2d = lm_head.forward(&hidden_2d)?;
+                Ok(logits_2d.reshape(&[b, t, vocab_size])?)
             }
         } else {
             // Tied weights: use embedding matrix
@@ -654,11 +665,16 @@ impl TransformerModel {
 
             let embeddings = self.embed_tokens.embeddings();
             if self.embed_transposed {
-                // Embeddings are [hidden, vocab], perfect for hidden @ E
-                Ok(hidden.matmul(embeddings)?)
+                // Embeddings are [hidden, vocab], flatten hidden for matmul
+                let hidden_2d = hidden.reshape(&[b * t, h])?;
+                let logits_2d = hidden_2d.matmul(embeddings)?;
+                Ok(logits_2d.reshape(&[b, t, vocab_size])?)
             } else {
-                // Embeddings are [vocab, hidden], need hidden @ E^T
-                Ok(hidden.matmul(&embeddings.t()?)?)
+                // Embeddings are [vocab, hidden], transpose and flatten for matmul
+                let w = embeddings.transpose(0, 1)?; // [H, V]
+                let hidden_2d = hidden.reshape(&[b * t, h])?;
+                let logits_2d = hidden_2d.matmul(&w)?;
+                Ok(logits_2d.reshape(&[b, t, vocab_size])?)
             }
         }
     }
