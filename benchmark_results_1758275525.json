@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "model": "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf",
+    "prompt": "The capital of France is",
+    "tokens": 8,
+    "iterations": 1,
+    "gpu_mode": false,
+    "timestamp": "2025-09-19 05:52:05"
+  },
+  "cpp": null,
+  "rust": {
+    "mean": 22.533130407333374,
+    "stdev": 0,
+    "min": 22.533130407333374,
+    "max": 22.533130407333374,
+    "iterations": 1
+  },
+  "comparison": {
+    "speedup": null,
+    "improvement_percent": null
+  }
+}

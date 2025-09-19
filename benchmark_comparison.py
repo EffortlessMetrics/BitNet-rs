@@ -8,38 +8,46 @@ import time
 import json
 import os
 import statistics
+import argparse
 from pathlib import Path
 
-MODEL_PATH = "/home/steven/code/Rust/BitNet-rs/models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
-CPP_DIR = "/home/steven/.cache/bitnet_cpp"
-PROMPT = "The capital of France is"
-ITERATIONS = 3
+# Default values (can be overridden via command line)
+DEFAULT_MODEL_PATH = os.environ.get("BITNET_GGUF", "models/bitnet/ggml-model-i2_s.gguf")
+DEFAULT_CPP_DIR = os.environ.get("BITNET_CPP_DIR", os.path.expanduser("~/.cache/bitnet_cpp"))
+DEFAULT_PROMPT = "The capital of France is"
+DEFAULT_ITERATIONS = 3
 
-def run_cpp_benchmark():
+def run_cpp_benchmark(args):
     """Run the C++ implementation benchmark"""
     env = os.environ.copy()
     env["OMP_NUM_THREADS"] = "1"
     env["GGML_NUM_THREADS"] = "1"
-    
-    cpp_bin = f"{CPP_DIR}/build/bin/llama-cli"
+
+    cpp_bin = f"{args.cpp_dir}/build/bin/llama-cli"
     if not Path(cpp_bin).exists():
         print(f"C++ binary not found at {cpp_bin}")
+        print(f"Run 'cargo xtask fetch-cpp' to download and build the C++ implementation")
         return None
-    
+
+    if not Path(args.model).exists():
+        print(f"Model not found at {args.model}")
+        print(f"Set BITNET_GGUF environment variable or use --model argument")
+        return None
+
     times = []
-    for i in range(ITERATIONS):
+    for i in range(args.iterations):
         start = time.time()
         try:
             result = subprocess.run(
-                [cpp_bin, 
-                 "-m", MODEL_PATH,
-                 "-p", PROMPT,
-                 "-n", "32",
+                [cpp_bin,
+                 "-m", args.model,
+                 "-p", args.prompt,
+                 "-n", str(args.tokens),
                  "-t", "1",
                  "--no-display-prompt"],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=args.timeout,
                 env=env
             )
             elapsed = time.time() - start
@@ -57,28 +65,37 @@ def run_cpp_benchmark():
         "iterations": len(times)
     }
 
-def run_rust_benchmark():
+def run_rust_benchmark(args):
     """Run the Rust implementation benchmark"""
     env = os.environ.copy()
     env["OMP_NUM_THREADS"] = "1"
     env["RAYON_NUM_THREADS"] = "1"
-    
+
+    if not Path(args.model).exists():
+        print(f"Model not found at {args.model}")
+        print(f"Set BITNET_GGUF environment variable or use --model argument")
+        return None
+
+    # Detect if we're running with GPU features
+    features = "gpu" if args.gpu else "cpu"
+
     times = []
-    for i in range(ITERATIONS):
+    for i in range(args.iterations):
         start = time.time()
         try:
             result = subprocess.run(
-                ["cargo", "run", "--release", "-p", "bitnet-cli", 
-                 "--no-default-features", "--features", "cpu", "--",
-                 "inference",
-                 "-m", MODEL_PATH,
-                 "-p", PROMPT,
-                 "-n", "32"],
+                ["cargo", "run", "--release", "-p", "bitnet-cli",
+                 "--no-default-features", "--features", features, "--",
+                 "run",
+                 "--model", args.model,
+                 "--prompt", args.prompt,
+                 "--max-new-tokens", str(args.tokens),
+                 "--deterministic", "--greedy"],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=args.timeout,
                 env=env,
-                cwd="/home/steven/code/Rust/BitNet-rs"
+                cwd=args.cwd
             )
             elapsed = time.time() - start
             times.append(elapsed)
@@ -95,22 +112,55 @@ def run_rust_benchmark():
         "iterations": len(times)
     }
 
+def parse_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description="Performance comparison between BitNet.rs and BitNet.cpp")
+    parser.add_argument("--model", "-m", default=DEFAULT_MODEL_PATH,
+                        help=f"Path to GGUF model file (default: {DEFAULT_MODEL_PATH})")
+    parser.add_argument("--cpp-dir", default=DEFAULT_CPP_DIR,
+                        help=f"Path to C++ implementation directory (default: {DEFAULT_CPP_DIR})")
+    parser.add_argument("--prompt", "-p", default=DEFAULT_PROMPT,
+                        help=f"Prompt to use for inference (default: '{DEFAULT_PROMPT}')")
+    parser.add_argument("--tokens", "-n", type=int, default=32,
+                        help="Number of tokens to generate (default: 32)")
+    parser.add_argument("--iterations", "-i", type=int, default=DEFAULT_ITERATIONS,
+                        help=f"Number of benchmark iterations (default: {DEFAULT_ITERATIONS})")
+    parser.add_argument("--timeout", "-t", type=int, default=60,
+                        help="Timeout per iteration in seconds (default: 60)")
+    parser.add_argument("--gpu", action="store_true",
+                        help="Use GPU features for Rust implementation")
+    parser.add_argument("--cwd", default=os.getcwd(),
+                        help="Working directory for Rust build (default: current directory)")
+    parser.add_argument("--skip-cpp", action="store_true",
+                        help="Skip C++ benchmark (Rust only)")
+    parser.add_argument("--skip-rust", action="store_true",
+                        help="Skip Rust benchmark (C++ only)")
+    return parser.parse_args()
+
 def main():
+    args = parse_args()
+
     print("=" * 60)
     print("BitNet.rs vs BitNet.cpp Performance Comparison")
     print("=" * 60)
-    print(f"Model: {Path(MODEL_PATH).name}")
-    print(f"Prompt: '{PROMPT}'")
-    print(f"Tokens to generate: 32")
+    print(f"Model: {Path(args.model).name}")
+    print(f"Prompt: '{args.prompt}'")
+    print(f"Tokens to generate: {args.tokens}")
     print(f"Threads: 1 (for deterministic comparison)")
-    print(f"Iterations: {ITERATIONS}")
+    print(f"Iterations: {args.iterations}")
+    print(f"GPU mode: {'Enabled' if args.gpu else 'Disabled'}")
     print()
-    
-    print("Running C++ implementation benchmark...")
-    cpp_results = run_cpp_benchmark()
-    
-    print("\nRunning Rust implementation benchmark...")
-    rust_results = run_rust_benchmark()
+
+    cpp_results = None
+    rust_results = None
+
+    if not args.skip_cpp:
+        print("Running C++ implementation benchmark...")
+        cpp_results = run_cpp_benchmark(args)
+
+    if not args.skip_rust:
+        print("\nRunning Rust implementation benchmark...")
+        rust_results = run_rust_benchmark(args)
     
     print("\n" + "=" * 60)
     print("RESULTS")
@@ -130,17 +180,21 @@ def main():
         print(f"  Min time:    {rust_results['min']:.3f}s")
         print(f"  Max time:    {rust_results['max']:.3f}s")
     
+    # Analysis and comparison
+    speedup = None
+    improvement = None
+
     if cpp_results and rust_results:
         speedup = cpp_results['mean'] / rust_results['mean']
         improvement = (cpp_results['mean'] - rust_results['mean']) / cpp_results['mean'] * 100
-        
+
         print(f"\nComparison:")
         print(f"  Speedup:     {speedup:.2f}x")
         if improvement > 0:
             print(f"  Improvement: {improvement:.1f}% faster")
         else:
             print(f"  Difference:  {-improvement:.1f}% slower")
-        
+
         # Winner determination
         print(f"\n🏆 Winner: ", end="")
         if speedup > 1.05:
@@ -149,20 +203,29 @@ def main():
             print("BitNet.cpp (C++)")
         else:
             print("TIE (within 5% margin)")
-    
-    # Save results
+
+    # Save results with metadata
     results = {
+        "metadata": {
+            "model": args.model,
+            "prompt": args.prompt,
+            "tokens": args.tokens,
+            "iterations": args.iterations,
+            "gpu_mode": args.gpu,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+        },
         "cpp": cpp_results,
         "rust": rust_results,
         "comparison": {
-            "speedup": speedup if cpp_results and rust_results else None,
-            "improvement_percent": improvement if cpp_results and rust_results else None
+            "speedup": speedup,
+            "improvement_percent": improvement
         }
     }
-    
-    with open("benchmark_results.json", "w") as f:
+
+    output_file = f"benchmark_results_{int(time.time())}.json"
+    with open(output_file, "w") as f:
         json.dump(results, f, indent=2)
-    print(f"\nResults saved to benchmark_results.json")
+    print(f"\nResults saved to {output_file}")
 
 if __name__ == "__main__":
     main()
