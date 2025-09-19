@@ -78,6 +78,53 @@ impl GgufLoader {
         None
     }
 
+    /// Infer number of layers from tensor names when metadata is missing or incorrect.
+    fn infer_num_layers_from_tensors(reader: &GgufReader) -> Option<usize> {
+        let mut max_layer = 0;
+        let tensor_names = reader.tensor_names();
+
+        for name in tensor_names {
+            // Look for patterns like "blk.N." or "layers.N."
+            if let Some(layer_num) = Self::extract_layer_number(name) {
+                max_layer = max_layer.max(layer_num);
+            }
+        }
+
+        if max_layer > 0 {
+            // Layer numbers are 0-indexed, so add 1 to get total count
+            Some(max_layer + 1)
+        } else {
+            None
+        }
+    }
+
+    /// Extract layer number from tensor name patterns like "blk.N." or "layers.N."
+    fn extract_layer_number(name: &str) -> Option<usize> {
+        // Check for "blk.N." pattern
+        if let Some(start) = name.find("blk.") {
+            let after_blk = &name[start + 4..];
+            if let Some(dot_pos) = after_blk.find('.') {
+                let number_str = &after_blk[..dot_pos];
+                if let Ok(layer_num) = number_str.parse::<usize>() {
+                    return Some(layer_num);
+                }
+            }
+        }
+
+        // Check for "layers.N." pattern
+        if let Some(start) = name.find("layers.") {
+            let after_layers = &name[start + 7..];
+            if let Some(dot_pos) = after_layers.find('.') {
+                let number_str = &after_layers[..dot_pos];
+                if let Ok(layer_num) = number_str.parse::<usize>() {
+                    return Some(layer_num);
+                }
+            }
+        }
+
+        None
+    }
+
     /// Infer number of KV heads from tensor shapes (for models without explicit metadata)
     fn infer_kv_heads_from_tensors(reader: &GgufReader, config: &BitNetConfig) -> Result<usize> {
         let hidden_size = config.model.hidden_size;
@@ -385,6 +432,14 @@ impl GgufLoader {
 
         if let Some(num_layers) = reader.get_u32_metadata("llama.block_count") {
             config.model.num_layers = num_layers as usize;
+        }
+
+        // If layer count wasn't in metadata or seems wrong, infer from tensors
+        if config.model.num_layers == 0 || config.model.num_layers == BitNetConfig::default().model.num_layers {
+            if let Some(layers) = Self::infer_num_layers_from_tensors(reader) {
+                tracing::info!("Inferred num_layers={} from tensor analysis", layers);
+                config.model.num_layers = layers;
+            }
         }
 
         // 1) hidden_size: try metadata, else infer from embeddings

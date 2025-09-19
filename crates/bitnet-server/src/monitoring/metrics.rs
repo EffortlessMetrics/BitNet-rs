@@ -286,10 +286,10 @@ impl MetricsCollector {
 
     async fn get_cpu_usage(&self) -> Result<f64> {
         let mut sys = System::new();
-        sys.refresh_cpu();
+        sys.refresh_cpu_all();
         tokio::time::sleep(Duration::from_millis(100)).await;
-        sys.refresh_cpu();
-        Ok(sys.global_cpu_info().cpu_usage() as f64)
+        sys.refresh_cpu_all();
+        Ok(sys.global_cpu_usage() as f64)
     }
 }
 

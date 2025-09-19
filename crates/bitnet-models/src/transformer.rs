@@ -22,6 +22,29 @@ fn linear_with_optional_bias(
     Ok(Linear::new(weight, bias))
 }
 
+/// Helper to create layer norm with optional bias (RMSNorm typically has no bias)
+fn layer_norm_with_optional_bias(
+    normalized_shape: usize,
+    eps: f64,
+    vb: VarBuilder,
+) -> candle_core::Result<LayerNorm> {
+    let weight = vb.get((normalized_shape,), "weight")?;
+
+    // Try to get bias, but it's optional for RMSNorm
+    match vb.get((normalized_shape,), "bias") {
+        Ok(bias) => {
+            // Bias exists, use regular LayerNorm
+            tracing::debug!("Using LayerNorm with bias [{}]", normalized_shape);
+            Ok(LayerNorm::new(weight, bias, eps))
+        }
+        Err(_) => {
+            // No bias, use RMSNorm mode
+            tracing::debug!("Bias tensor missing for norm layer; using RMSNorm mode (no bias) [{}]", normalized_shape);
+            Ok(LayerNorm::rms_norm(weight, eps))
+        }
+    }
+}
+
 /// Rotary Position Embedding
 pub struct RotaryEmbedding {
     sin: Tensor,
@@ -306,8 +329,8 @@ impl TransformerBlock {
         Ok(Self {
             attention: MultiHeadAttention::new(config, vb.pp("attention"))?,
             feed_forward: FeedForward::new(config, vb.pp("feed_forward"))?,
-            attention_norm: candle_nn::layer_norm(hidden_size, eps, vb.pp("attention_norm"))?,
-            ffn_norm: candle_nn::layer_norm(hidden_size, eps, vb.pp("ffn_norm"))?,
+            attention_norm: layer_norm_with_optional_bias(hidden_size, eps, vb.pp("attention_norm"))?,
+            ffn_norm: layer_norm_with_optional_bias(hidden_size, eps, vb.pp("post_attention_layernorm"))?,
         })
     }
 
@@ -462,7 +485,7 @@ impl TransformerModel {
             layers.push(TransformerBlock::new(&config, vb.pp(format!("layers.{}", i)))?);
         }
 
-        let norm = candle_nn::layer_norm(hidden_size, 1e-5, vb.pp("norm"))?;
+        let norm = layer_norm_with_optional_bias(hidden_size, 1e-5, vb.pp("final_norm"))?;
 
         // Try to load lm_head, but it's optional (can be tied to embeddings)
         // Try to create the linear layer, catching errors if weights don't exist
