@@ -32,7 +32,10 @@ impl<'a> GgufReader<'a> {
 
             // Handle data_offset == 0 explicitly as "no explicit offset"
             if doff == 0 {
-                tracing::debug!("GGUF v{}: data_offset=0, treating as no explicit offset", header.version);
+                tracing::debug!(
+                    "GGUF v{}: data_offset=0, treating as no explicit offset",
+                    header.version
+                );
                 return align_up(kv_end_offset, a);
             }
 
@@ -434,8 +437,11 @@ impl<'a> GgufReader<'a> {
 
         // Check for embedding tensor (various naming conventions)
         let embedding_candidates = [
-            "embed_tokens.weight", "token_embd.weight", "tok_embeddings.weight",
-            "model.embed_tokens.weight", "transformer.wte.weight"
+            "embed_tokens.weight",
+            "token_embd.weight",
+            "tok_embeddings.weight",
+            "model.embed_tokens.weight",
+            "transformer.wte.weight",
         ];
         let has_embedding = embedding_candidates.iter().any(|name| tensor_names.contains(name));
 
@@ -448,11 +454,13 @@ impl<'a> GgufReader<'a> {
 
         // Check for at least one layer's attention weights
         let first_layer_attention_candidates = [
-            "layers.0.attention.q_proj.weight", "layers.0.self_attn.q_proj.weight",
-            "blk.0.attn_q.weight", "model.layers.0.self_attn.q_proj.weight"
+            "layers.0.attention.q_proj.weight",
+            "layers.0.self_attn.q_proj.weight",
+            "blk.0.attn_q.weight",
+            "model.layers.0.self_attn.q_proj.weight",
         ];
-        let has_first_layer_attention = first_layer_attention_candidates.iter()
-            .any(|name| tensor_names.contains(name));
+        let has_first_layer_attention =
+            first_layer_attention_candidates.iter().any(|name| tensor_names.contains(name));
 
         if !has_first_layer_attention {
             return Err(BitNetError::Validation(format!(
@@ -463,11 +471,13 @@ impl<'a> GgufReader<'a> {
 
         // Check for at least one layer's feed-forward weights
         let first_layer_ffn_candidates = [
-            "layers.0.feed_forward.gate_proj.weight", "layers.0.mlp.gate_proj.weight",
-            "blk.0.ffn_gate.weight", "model.layers.0.mlp.gate_proj.weight"
+            "layers.0.feed_forward.gate_proj.weight",
+            "layers.0.mlp.gate_proj.weight",
+            "blk.0.ffn_gate.weight",
+            "model.layers.0.mlp.gate_proj.weight",
         ];
-        let has_first_layer_ffn = first_layer_ffn_candidates.iter()
-            .any(|name| tensor_names.contains(name));
+        let has_first_layer_ffn =
+            first_layer_ffn_candidates.iter().any(|name| tensor_names.contains(name));
 
         if !has_first_layer_ffn {
             return Err(BitNetError::Validation(format!(
@@ -476,7 +486,9 @@ impl<'a> GgufReader<'a> {
             )));
         }
 
-        tracing::debug!("Critical tensor validation passed: embedding, attention, and FFN tensors found");
+        tracing::debug!(
+            "Critical tensor validation passed: embedding, attention, and FFN tensors found"
+        );
         Ok(())
     }
 

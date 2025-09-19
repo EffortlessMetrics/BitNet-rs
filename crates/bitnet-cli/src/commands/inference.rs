@@ -597,7 +597,7 @@ impl InferenceCommand {
         if model_path.extension() == Some(std::ffi::OsStr::new("gguf")) {
             debug!("Attempting to load tokenizer from GGUF model file: {}", model_path.display());
 
-            match bitnet_tokenizers::universal::UniversalTokenizer::from_gguf_file(model_path) {
+            match bitnet_tokenizers::universal::UniversalTokenizer::from_gguf(model_path) {
                 Ok(tokenizer) => {
                     debug!("Successfully loaded tokenizer from GGUF model file");
                     return Ok(Arc::new(tokenizer));

@@ -151,7 +151,7 @@ async fn main() -> Result<()> {
                         println!("     {}", line);
                     }
                 }
-                
+
                 println!("   Looking for system-level metrics:");
                 for line in body.lines() {
                     if line.contains("system_") && !line.starts_with('#') {

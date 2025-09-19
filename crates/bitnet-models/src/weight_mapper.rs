@@ -208,9 +208,13 @@ fn map_tensor_name(name: &str) -> Option<String> {
                 }
 
                 // LLaMA-style FFN - map to feed_forward.* for consistency
-                "feed_forward.w1.weight" | "mlp.gate_proj.weight" => "feed_forward.gate_proj.weight",
+                "feed_forward.w1.weight" | "mlp.gate_proj.weight" => {
+                    "feed_forward.gate_proj.weight"
+                }
                 "feed_forward.w3.weight" | "mlp.up_proj.weight" => "feed_forward.up_proj.weight",
-                "feed_forward.w2.weight" | "mlp.down_proj.weight" => "feed_forward.down_proj.weight",
+                "feed_forward.w2.weight" | "mlp.down_proj.weight" => {
+                    "feed_forward.down_proj.weight"
+                }
 
                 _ => return Some(format!("layers.{}.{}", layer_num, component)),
             };

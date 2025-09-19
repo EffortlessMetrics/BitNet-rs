@@ -157,28 +157,33 @@ impl BitNetServer {
         let model = loader.load(model_path, &device, &load_config)?;
 
         // Load tokenizer
-        let tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer> =
-            if let Some(tok_path) = tokenizer_path {
-                let tok_path = Path::new(tok_path);
-                if !tok_path.exists() {
-                    anyhow::bail!("Tokenizer file not found: {}", tok_path.display());
-                }
-                Arc::from(bitnet_tokenizers::load_tokenizer(tok_path)?)
-            } else {
-                // Try GGUF-embedded tokenizer first
-                if model_path.extension() == Some(std::ffi::OsStr::new("gguf")) {
-                    match bitnet_tokenizers::universal::UniversalTokenizer::from_gguf_file(model_path) {
-                        Ok(tokenizer) => Arc::new(tokenizer),
-                        Err(_) => {
-                            tracing::warn!("Failed to load tokenizer from GGUF, using basic tokenizer");
-                            anyhow::bail!("No tokenizer available for model; provide --tokenizer or include tokenizer.json.")
-                        }
+        let tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer> = if let Some(tok_path) =
+            tokenizer_path
+        {
+            let tok_path = Path::new(tok_path);
+            if !tok_path.exists() {
+                anyhow::bail!("Tokenizer file not found: {}", tok_path.display());
+            }
+            Arc::from(bitnet_tokenizers::load_tokenizer(tok_path)?)
+        } else {
+            // Try GGUF-embedded tokenizer first
+            if model_path.extension() == Some(std::ffi::OsStr::new("gguf")) {
+                match bitnet_tokenizers::universal::UniversalTokenizer::from_gguf(model_path) {
+                    Ok(tokenizer) => Arc::new(tokenizer),
+                    Err(_) => {
+                        tracing::warn!("Failed to load tokenizer from GGUF, using basic tokenizer");
+                        anyhow::bail!(
+                            "No tokenizer available for model; provide --tokenizer or include tokenizer.json."
+                        )
                     }
-                } else {
-                    tracing::warn!("No tokenizer provided and model is not GGUF format");
-                    anyhow::bail!("No tokenizer available for model; provide --tokenizer or include tokenizer.json.")
                 }
-            };
+            } else {
+                tracing::warn!("No tokenizer provided and model is not GGUF format");
+                anyhow::bail!(
+                    "No tokenizer available for model; provide --tokenizer or include tokenizer.json."
+                )
+            }
+        };
 
         // Create inference engine - model is already a Box<dyn Model>, convert to Arc
         let model: Arc<dyn bitnet_models::Model> = model.into();

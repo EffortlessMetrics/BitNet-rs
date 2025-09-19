@@ -66,7 +66,7 @@ pub fn dequantize_to_f32(bytes: &[u8], shape: &[usize]) -> Result<Vec<f32>> {
     if bytes.len() != expected {
         // Try alternative block sizes (32, 64, 128 elements) for compatibility
         let alt_block_sizes = [32, 64, 128];
-        let mut found_valid = false;
+        let mut _found_valid = false;
 
         for &block_size in &alt_block_sizes {
             let alt_blocks_per_row = cols.div_ceil(block_size);
@@ -74,7 +74,10 @@ pub fn dequantize_to_f32(bytes: &[u8], shape: &[usize]) -> Result<Vec<f32>> {
             let alt_expected = rows * alt_blocks_per_row * alt_block_bytes;
 
             if bytes.len() == alt_expected {
-                eprintln!("Warning: I2_S using alternative block size {} instead of {}", block_size, I2S_BLOCK_ELEMS);
+                eprintln!(
+                    "Warning: I2_S using alternative block size {} instead of {}",
+                    block_size, I2S_BLOCK_ELEMS
+                );
                 return dequantize_to_f32_with_block_size(bytes, shape, block_size);
             }
         }
@@ -84,12 +87,21 @@ pub fn dequantize_to_f32(bytes: &[u8], shape: &[usize]) -> Result<Vec<f32>> {
         let actual_blocks = bytes.len() / I2S_BLOCK_BYTES;
 
         if actual_blocks > 0 && actual_blocks < total_blocks {
-            eprintln!("Warning: I2_S partial data ({} bytes vs {} expected) - processing {} of {} blocks",
-                     bytes.len(), expected, actual_blocks, total_blocks);
+            eprintln!(
+                "Warning: I2_S partial data ({} bytes vs {} expected) - processing {} of {} blocks",
+                bytes.len(),
+                expected,
+                actual_blocks,
+                total_blocks
+            );
             return dequantize_partial_blocks(bytes, shape, actual_blocks);
         }
 
-        bail!("I2_S: byte length mismatch (got {}, expected {}) and no valid alternative block size found", bytes.len(), expected);
+        bail!(
+            "I2_S: byte length mismatch (got {}, expected {}) and no valid alternative block size found",
+            bytes.len(),
+            expected
+        );
     }
 
     let mut out = vec![0f32; rows * cols];
@@ -136,10 +148,14 @@ pub fn block_bytes() -> usize {
 }
 
 /// Dequantize I2_S with alternative block size
-fn dequantize_to_f32_with_block_size(bytes: &[u8], shape: &[usize], block_size: usize) -> Result<Vec<f32>> {
+fn dequantize_to_f32_with_block_size(
+    bytes: &[u8],
+    shape: &[usize],
+    block_size: usize,
+) -> Result<Vec<f32>> {
     let (rows, cols) = rows_cols(shape)?;
     let blocks_per_row = cols.div_ceil(block_size);
-    let block_bytes = (block_size / 4) + 2; // 2-bit packed + f16 scale
+    let _block_bytes = (block_size / 4) + 2; // 2-bit packed + f16 scale
 
     let mut out = vec![0f32; rows * cols];
     let mut off = 0usize;
@@ -176,7 +192,11 @@ fn dequantize_to_f32_with_block_size(bytes: &[u8], shape: &[usize], block_size: 
 }
 
 /// Dequantize I2_S with partial block processing
-fn dequantize_partial_blocks(bytes: &[u8], shape: &[usize], available_blocks: usize) -> Result<Vec<f32>> {
+fn dequantize_partial_blocks(
+    bytes: &[u8],
+    shape: &[usize],
+    available_blocks: usize,
+) -> Result<Vec<f32>> {
     let (rows, cols) = rows_cols(shape)?;
     let mut out = vec![0f32; rows * cols];
     let mut off = 0usize;
