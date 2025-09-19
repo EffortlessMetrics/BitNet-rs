@@ -465,6 +465,64 @@ enum Cmd {
         #[arg(last = true)]
         args: Vec<String>,
     },
+
+    /// Verify model configuration and tokenizer compatibility
+    ///
+    /// Reads a GGUF model file and inspects its configuration including
+    /// vocab size, hidden dimensions, attention heads, and layers.
+    /// Optionally validates tokenizer compatibility by comparing vocab sizes.
+    Verify {
+        /// Path to GGUF model file
+        #[arg(long)]
+        model: PathBuf,
+        /// Path to tokenizer file (optional)
+        #[arg(long)]
+        tokenizer: Option<PathBuf>,
+        /// Output format (human, json)
+        #[arg(long, default_value = "human")]
+        format: String,
+        /// Exit with error on any compatibility issues
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Run simple inference for smoke testing
+    ///
+    /// Performs a quick inference test with a given prompt to verify
+    /// the model loads and generates reasonable output. Uses deterministic
+    /// greedy decoding by default for reproducible results.
+    Infer {
+        /// Path to GGUF model file
+        #[arg(long)]
+        model: PathBuf,
+        /// Path to tokenizer file (required unless --allow-mock)
+        #[arg(long)]
+        tokenizer: Option<PathBuf>,
+        /// Text prompt for generation
+        #[arg(long)]
+        prompt: String,
+        /// Maximum new tokens to generate
+        #[arg(long, default_value_t = 32)]
+        max_new_tokens: usize,
+        /// Sampling temperature (0.0 = greedy)
+        #[arg(long, default_value_t = 0.0)]
+        temperature: f32,
+        /// Random seed for deterministic output
+        #[arg(long, default_value_t = 42)]
+        seed: u64,
+        /// Use GPU if available
+        #[arg(long, default_value_t = false)]
+        gpu: bool,
+        /// Allow mock tokenizer for testing
+        #[arg(long, default_value_t = false)]
+        allow_mock: bool,
+        /// Deterministic mode (sets threads=1, temperature=0.0)
+        #[arg(long, default_value_t = true)]
+        deterministic: bool,
+        /// Output format (human, json)
+        #[arg(long, default_value = "human")]
+        format: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -582,6 +640,34 @@ fn real_main() -> Result<()> {
             gpu_smoke_cmd(&size, tolerance, skip_if_no_gpu)
         }
         Cmd::Demo { which, args } => demo_cmd(&which, &args),
+        Cmd::Verify { model, tokenizer, format, strict } => {
+            verify_cmd(&model, tokenizer.as_deref(), &format, strict)
+        }
+        Cmd::Infer {
+            model,
+            tokenizer,
+            prompt,
+            max_new_tokens,
+            temperature,
+            seed,
+            gpu,
+            allow_mock,
+            deterministic,
+            format
+        } => {
+            infer_cmd(
+                &model,
+                tokenizer.as_deref(),
+                &prompt,
+                max_new_tokens,
+                temperature,
+                seed,
+                gpu,
+                allow_mock,
+                deterministic,
+                &format
+            )
+        }
     }
 }
 
@@ -2610,6 +2696,421 @@ fn demo_cmd(which: &str, args: &[String]) -> Result<()> {
     println!();
     println!("✅ All demos completed successfully");
     Ok(())
+}
+
+/// Verify model configuration and tokenizer compatibility
+fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool) -> Result<()> {
+    #[derive(serde::Serialize)]
+    struct VerifyReport {
+        model_path: String,
+        vocab_size: Option<usize>,
+        hidden_size: Option<usize>,
+        num_heads: Option<usize>,
+        num_kv_heads: Option<usize>,
+        intermediate_size: Option<usize>,
+        num_layers: Option<usize>,
+        tokenizer_path: Option<String>,
+        tokenizer_vocab_size: Option<usize>,
+        vocab_size_match: Option<bool>,
+        errors: Vec<String>,
+    }
+
+    let mut report = VerifyReport {
+        model_path: model.display().to_string(),
+        vocab_size: None,
+        hidden_size: None,
+        num_heads: None,
+        num_kv_heads: None,
+        intermediate_size: None,
+        num_layers: None,
+        tokenizer_path: tokenizer.map(|p| p.display().to_string()),
+        tokenizer_vocab_size: None,
+        vocab_size_match: None,
+        errors: Vec::new(),
+    };
+
+    // Load and inspect the model
+    match load_model_config(model) {
+        Ok(config) => {
+            report.vocab_size = Some(config.vocab_size);
+            report.hidden_size = Some(config.hidden_size);
+            report.num_heads = Some(config.num_heads);
+            report.num_kv_heads = Some(config.num_kv_heads);
+            report.intermediate_size = Some(config.intermediate_size);
+            report.num_layers = Some(config.num_layers);
+
+            if format == "human" {
+                println!("📋 Model Configuration:");
+                println!("   Vocab size: {}", config.vocab_size);
+                println!("   Hidden size: {}", config.hidden_size);
+                println!("   Attention heads: {} (q) / {} (kv)", config.num_heads, config.num_kv_heads);
+                println!("   Intermediate size: {}", config.intermediate_size);
+                println!("   Layers: {}", config.num_layers);
+            }
+        }
+        Err(e) => {
+            let error_msg = format!("Failed to load model: {}", e);
+            report.errors.push(error_msg.clone());
+            if format == "human" {
+                eprintln!("❌ {}", error_msg);
+            }
+        }
+    }
+
+    // Check tokenizer if provided
+    if let Some(tokenizer_path) = tokenizer {
+        match load_tokenizer_vocab_size(tokenizer_path) {
+            Ok(tokenizer_vocab) => {
+                report.tokenizer_vocab_size = Some(tokenizer_vocab);
+
+                if let Some(model_vocab) = report.vocab_size {
+                    let matches = tokenizer_vocab == model_vocab;
+                    report.vocab_size_match = Some(matches);
+
+                    if format == "human" {
+                        println!("🔤 Tokenizer Information:");
+                        println!("   Vocab size: {}", tokenizer_vocab);
+                        if matches {
+                            println!("   ✅ Vocab size matches model");
+                        } else {
+                            println!("   ❌ Vocab size mismatch! Model: {}, Tokenizer: {}", model_vocab, tokenizer_vocab);
+                        }
+                    }
+
+                    if !matches {
+                        let error_msg = format!("Vocab size mismatch: model={}, tokenizer={}", model_vocab, tokenizer_vocab);
+                        report.errors.push(error_msg);
+                    }
+                }
+            }
+            Err(e) => {
+                let error_msg = format!("Failed to load tokenizer: {}", e);
+                report.errors.push(error_msg.clone());
+                if format == "human" {
+                    eprintln!("❌ {}", error_msg);
+                }
+            }
+        }
+    }
+
+    // Output results
+    match format {
+        "json" => {
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        "human" => {
+            if report.errors.is_empty() {
+                println!("✅ Model verification completed successfully");
+            } else {
+                println!("❌ Verification completed with {} error(s)", report.errors.len());
+                for error in &report.errors {
+                    eprintln!("   • {}", error);
+                }
+            }
+        }
+        _ => bail!("Unknown format: {}", format),
+    }
+
+    // Exit with error if strict mode and there are errors
+    if strict && !report.errors.is_empty() {
+        bail!("Verification failed in strict mode");
+    }
+
+    Ok(())
+}
+
+/// Run simple inference for smoke testing
+fn infer_cmd(
+    model: &Path,
+    tokenizer: Option<&Path>,
+    prompt: &str,
+    max_new_tokens: usize,
+    temperature: f32,
+    seed: u64,
+    gpu: bool,
+    allow_mock: bool,
+    deterministic: bool,
+    format: &str,
+) -> Result<()> {
+    use std::time::Instant;
+
+    #[derive(serde::Serialize)]
+    struct InferReport {
+        model_path: String,
+        tokenizer_path: Option<String>,
+        prompt: String,
+        generated_text: String,
+        config: InferConfig,
+        timing: InferTiming,
+        success: bool,
+        error: Option<String>,
+    }
+
+    #[derive(serde::Serialize)]
+    struct InferConfig {
+        max_new_tokens: usize,
+        temperature: f32,
+        seed: u64,
+        deterministic: bool,
+        device: String,
+    }
+
+    #[derive(serde::Serialize)]
+    struct InferTiming {
+        total_ms: u64,
+        tokens_per_second: f64,
+    }
+
+    let effective_temperature = if deterministic { 0.0 } else { temperature };
+    let device_str = if gpu { "gpu" } else { "cpu" };
+
+    let config = InferConfig {
+        max_new_tokens,
+        temperature: effective_temperature,
+        seed,
+        deterministic,
+        device: device_str.to_string(),
+    };
+
+    let mut report = InferReport {
+        model_path: model.display().to_string(),
+        tokenizer_path: tokenizer.map(|p| p.display().to_string()),
+        prompt: prompt.to_string(),
+        generated_text: String::new(),
+        config,
+        timing: InferTiming {
+            total_ms: 0,
+            tokens_per_second: 0.0,
+        },
+        success: false,
+        error: None,
+    };
+
+    if format == "human" {
+        println!("🚀 Starting inference test...");
+        println!("   Model: {}", model.display());
+        if let Some(tok) = tokenizer {
+            println!("   Tokenizer: {}", tok.display());
+        } else if allow_mock {
+            println!("   Tokenizer: <mock>");
+        } else {
+            println!("   Tokenizer: <none>");
+        }
+        println!("   Prompt: \"{}\"", prompt);
+        println!("   Max tokens: {}", max_new_tokens);
+        println!("   Temperature: {:.1}", effective_temperature);
+        println!("   Device: {}", device_str);
+        println!();
+    }
+
+    let start = Instant::now();
+
+    // TODO: Implement actual inference using BitNet-rs library
+    // For now, this is a placeholder that shows the structure
+    match run_inference_internal(model, tokenizer, prompt, max_new_tokens, effective_temperature, seed, gpu, allow_mock) {
+        Ok(generated) => {
+            let elapsed = start.elapsed();
+            let ms = elapsed.as_millis() as u64;
+            let tokens_per_sec = if ms > 0 {
+                (max_new_tokens as f64) / (ms as f64 / 1000.0)
+            } else {
+                0.0
+            };
+
+            report.generated_text = generated.clone();
+            report.timing.total_ms = ms;
+            report.timing.tokens_per_second = tokens_per_sec;
+            report.success = true;
+
+            if format == "human" {
+                println!("📝 Generated Text:");
+                println!("{}", generated);
+                println!();
+                println!("⏱️  Performance:");
+                println!("   Total time: {} ms", ms);
+                println!("   Tokens/sec: {:.1}", tokens_per_sec);
+                println!("✅ Inference completed successfully");
+            }
+        }
+        Err(e) => {
+            let error_msg = e.to_string();
+            report.error = Some(error_msg.clone());
+
+            if format == "human" {
+                eprintln!("❌ Inference failed: {}", error_msg);
+            }
+        }
+    }
+
+    match format {
+        "json" => {
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        "human" => {
+            // Already handled above
+        }
+        _ => bail!("Unknown format: {}", format),
+    }
+
+    if !report.success {
+        bail!("Inference failed");
+    }
+
+    Ok(())
+}
+
+// Placeholder structures for model configuration
+#[derive(Debug)]
+struct ModelConfig {
+    vocab_size: usize,
+    hidden_size: usize,
+    num_heads: usize,
+    num_kv_heads: usize,
+    intermediate_size: usize,
+    num_layers: usize,
+}
+
+/// Load model configuration from GGUF file
+fn load_model_config(model_path: &Path) -> Result<ModelConfig> {
+    use bitnet_common::Device;
+    use bitnet_models::load_gguf;
+
+    if !model_path.exists() {
+        bail!("Model file not found: {}", model_path.display());
+    }
+
+    // Load the GGUF file using BitNet-rs
+    let (config, _tensors) = load_gguf(model_path, Device::Cpu)
+        .context("Failed to load GGUF model")?;
+
+    // Extract configuration from BitNetConfig
+    let model_config = config.model;
+
+    // If num_key_value_heads is 0, it defaults to num_heads (MHA)
+    let effective_kv_heads = if model_config.num_key_value_heads == 0 {
+        model_config.num_heads
+    } else {
+        model_config.num_key_value_heads
+    };
+
+    Ok(ModelConfig {
+        vocab_size: model_config.vocab_size,
+        hidden_size: model_config.hidden_size,
+        num_heads: model_config.num_heads,
+        num_kv_heads: effective_kv_heads,
+        intermediate_size: model_config.intermediate_size,
+        num_layers: model_config.num_layers,
+    })
+}
+
+/// Load tokenizer vocabulary size
+fn load_tokenizer_vocab_size(tokenizer_path: &Path) -> Result<usize> {
+    if !tokenizer_path.exists() {
+        bail!("Tokenizer file not found: {}", tokenizer_path.display());
+    }
+
+    let file_name = tokenizer_path.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("");
+
+    if file_name.ends_with(".json") {
+        // HuggingFace tokenizer.json format
+        let content = std::fs::read_to_string(tokenizer_path)?;
+        let json: serde_json::Value = serde_json::from_str(&content)?;
+
+        if let Some(vocab) = json.get("model").and_then(|m| m.get("vocab")) {
+            if let Some(vocab_obj) = vocab.as_object() {
+                return Ok(vocab_obj.len());
+            }
+        }
+
+        bail!("Could not find vocab in tokenizer.json");
+    } else if file_name.ends_with(".model") {
+        // SentencePiece model - placeholder
+        // In real implementation, would use sentencepiece library
+        bail!("SentencePiece tokenizer support not yet implemented");
+    } else {
+        bail!("Unknown tokenizer format: {}", file_name);
+    }
+}
+
+/// Run inference using BitNet-rs library
+fn run_inference_internal(
+    model_path: &Path,
+    _tokenizer: Option<&Path>,
+    prompt: &str,
+    max_new_tokens: usize,
+    temperature: f32,
+    seed: u64,
+    gpu: bool,
+    allow_mock: bool,
+) -> Result<String> {
+    #[cfg(feature = "inference")]
+    {
+        use bitnet::prelude::*;
+
+        if max_new_tokens == 0 {
+            return Ok(String::new());
+        }
+
+        // Create device
+        let device = if gpu {
+            match Device::Cuda(0) {
+                Ok(dev) => dev,
+                Err(_) => Device::Cpu,
+            }
+        } else {
+            Device::Cpu
+        };
+
+        // Load the model
+        let loader = ModelLoader::new(device);
+        let model = loader.load(model_path)
+            .context("Failed to load model for inference")?;
+
+        // Create inference engine
+        let mut engine = InferenceEngine::new(model)
+            .context("Failed to create inference engine")?;
+
+        // Configure generation parameters
+        let config = GenerationConfig {
+            max_new_tokens,
+            temperature,
+            seed: Some(seed),
+            top_k: Some(40),
+            top_p: Some(0.9),
+            repetition_penalty: 1.1,
+            ..Default::default()
+        };
+        engine.set_generation_config(config);
+
+        // Generate text
+        let response = engine.generate(prompt)
+            .context("Failed to generate text")?;
+
+        Ok(response)
+    }
+
+    #[cfg(not(feature = "inference"))]
+    {
+        // Suppress unused variable warnings when inference feature is disabled
+        let _ = (model_path, temperature, seed, gpu);
+
+        // Fallback implementation when inference feature is not enabled
+        if max_new_tokens == 0 {
+            return Ok(String::new());
+        }
+
+        if !allow_mock {
+            bail!("Inference feature not enabled. Build with --features inference or use --allow-mock");
+        }
+
+        // Simulate some processing time
+        std::thread::sleep(std::time::Duration::from_millis(100));
+
+        // Return a placeholder generated text
+        Ok(format!("{} [Mock inference: {} tokens generated]", prompt, max_new_tokens))
+    }
 }
 
 #[cfg(test)]

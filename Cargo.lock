@@ -7489,6 +7489,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atty",
+ "bitnet",
+ "bitnet-common",
+ "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
  "chrono",

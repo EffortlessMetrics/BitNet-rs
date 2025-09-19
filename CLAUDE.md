@@ -105,6 +105,16 @@ cargo run -p xtask -- full-crossval
 
 # Check feature flag consistency
 cargo run -p xtask -- check-features
+
+# Verify model configuration and tokenizer compatibility
+cargo run -p xtask -- verify --model models/bitnet/model.gguf
+cargo run -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json
+cargo run -p xtask -- verify --model models/bitnet/model.gguf --format json
+
+# Run simple inference for smoke testing (requires --features inference for real inference)
+cargo run -p xtask --features inference -- infer --model models/bitnet/model.gguf --prompt "The capital of France is" --tokenizer models/bitnet/tokenizer.json
+cargo run -p xtask -- infer --model models/bitnet/model.gguf --prompt "Hello world" --allow-mock --format json
+cargo run -p xtask --features inference -- infer --model models/bitnet/model.gguf --prompt "Test prompt" --max-new-tokens 64 --temperature 0.7 --gpu
 ```
 
 ## High-Level Architecture
