@@ -1,26 +1,34 @@
 {
-  "pr_number": 187,
-  "title": "Call engine prefill during batch inference",
+  "pr_number": 208,
+  "title": "feat(server): collect real system metrics",
   "author": "EffortlessSteven",
-  "head_ref": "codex/implement-prefill-in-run_batch",
+  "head_ref": "codex/update-metricscollector-and-system-queries",
   "base_ref": "main",
-  "status": "VALIDATION_COMPLETE",
-  "mergeable": true,
+  "status": "MERGED",
+  "merged_at": "2025-09-10T04:59:26Z",
+  "merged_by": "EffortlessSteven", 
   "merge_strategy": "squash",
-  "validation_date": "2025-09-07",
-  "commits": 6,
-  "additions": 627,
-  "deletions": 123,
-  "changed_files": 18,
+  "commit_sha": "a067481a5b28a5d7d6b1db6f4924f692bf14990c",
+  "validation_date": "2025-09-10",
+  "commits": 1,
+  "additions": 295,
+  "deletions": 8,
+  "changed_files": 4,
   "breaking_changes": false,
   "tests_passed": true,
   "security_audit_passed": true,
   "formatting_applied": true,
   "ready_for_merge": true,
+  "merge_completed": true,
   "next_agent": "pr-doc-finalizer",
+  "key_features": [
+    "sysinfo-based system metrics",
+    "async-safe metrics collection", 
+    "performance history retention",
+    "prometheus integration"
+  ],
   "artifacts": {
-    "validation_report": ".claude/finalization-report.md",
-    "test_results": ".claude/artifacts/pr-187/nextest-results.txt",
-    "worktree_location": "/tmp/bitnet-validate-mucy"
+    "validation_report": ".claude/finalization-report-pr-208.md",
+    "worktree_location": "/tmp/bitnet-validate-6JZ4"
   }
 }

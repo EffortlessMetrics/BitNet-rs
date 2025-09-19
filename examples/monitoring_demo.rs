@@ -151,6 +151,13 @@ async fn main() -> Result<()> {
                         println!("     {}", line);
                     }
                 }
+                
+                println!("   Looking for system-level metrics:");
+                for line in body.lines() {
+                    if line.contains("system_") && !line.starts_with('#') {
+                        println!("     {}", line);
+                    }
+                }
             }
         }
         Err(e) => println!("   Error: {}", e),
@@ -198,6 +205,8 @@ async fn main() -> Result<()> {
     println!("   • OpenTelemetry distributed tracing");
     println!("   • Automatic performance regression detection");
     println!("   • Resource usage monitoring");
+    println!("   • System-level metrics (CPU, memory, disk, network I/O)");
+    println!("   • Real-time system monitoring with sysinfo integration");
     println!("   • Error rate tracking and alerting");
     println!("   • Kubernetes-compatible health probes");
     println!("   • Configurable log formats (JSON, pretty, compact)");

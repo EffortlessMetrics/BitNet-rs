@@ -90,8 +90,10 @@ docker-compose --profile gpu up -d
 **Metrics**:
 - Request rate and latency (Rust-focused)
 - Resource utilization (CPU, Memory, GPU)
-- Service health indicators
+- System-level metrics (CPU usage, memory usage, disk usage, network I/O)
+- Service health indicators and uptime tracking
 - Error rates and active connections
+- Real-time performance monitoring with sysinfo-based system metrics
 
 ### 2. Performance Comparison
 **Purpose**: Cross-validation and migration support
@@ -122,6 +124,10 @@ docker-compose --profile gpu up -d
 - **BitNetRustHighLatency**: P95 latency > 1s
 - **BitNetRustHighCPUUsage**: CPU usage > 80%
 - **BitNetRustHighMemoryUsage**: Memory usage > 85%
+- **BitNetSystemHighCPU**: System CPU usage > 90%
+- **BitNetSystemHighMemory**: System memory usage > 95%
+- **BitNetSystemHighDisk**: System disk usage > 90%
+- **BitNetSystemNetworkSaturated**: Network bytes/sec > threshold
 
 ### Performance Alerts
 - **BitNetRustLowThroughput**: Throughput < 100 tokens/sec
@@ -136,15 +142,32 @@ docker-compose --profile gpu up -d
 bitnet_requests_total{implementation="rust"}
 bitnet_request_duration_seconds{implementation="rust"}
 bitnet_tokens_per_second{implementation="rust"}
+bitnet_tokens_generated_total
 
 # Resource metrics
 bitnet_rust_allocations_total
 bitnet_rust_simd_operations_total
 bitnet_rust_thread_pool_active_threads
+bitnet_memory_usage_bytes
+bitnet_gpu_memory_usage_bytes
+
+# System-level metrics (NEW)
+system_cpu_usage_percent
+system_memory_usage_percent
+system_disk_usage_percent
+system_network_bytes_received_total
+system_network_bytes_sent_total
+system_uptime_seconds
+
+# Model and inference metrics
+bitnet_model_load_duration_seconds
+bitnet_queue_depth
+bitnet_cache_hit_rate
 
 # Error metrics
 bitnet_rust_panic_total
 bitnet_rust_result_errors_total
+bitnet_errors_total
 ```
 
 ### Cross-Validation Metrics

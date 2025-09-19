@@ -120,7 +120,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with mixed precision support (FP16/BF16), FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
 - **`bitnet-inference`**: Inference engine with streaming support
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration and mock fallback system
-- **`bitnet-server`**: HTTP server for BitNet inference with health monitoring
+- **`bitnet-server`**: HTTP server for BitNet inference with comprehensive health monitoring and real-time system metrics collection (CPU, memory, disk, network I/O)
 
 #### Compatibility Layer
 - **`bitnet-compat`**: GGUF compatibility fixes and diagnostics
@@ -146,6 +146,13 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 ### Enhanced Quality Assurance Framework
 
 BitNet.rs includes a comprehensive quality assurance system designed for production reliability:
+
+#### System Metrics and Monitoring (Enhanced in PR #208)
+- **Real-Time System Monitoring**: Comprehensive system metrics collection using `sysinfo` crate
+- **Performance Correlation**: Application performance metrics correlated with system resource usage
+- **Prometheus Integration**: System metrics exposed via Prometheus endpoints for alerting and dashboards
+- **Resource Tracking**: CPU usage, memory utilization, disk usage, and network I/O monitoring
+- **Health Monitoring**: Service uptime tracking and performance regression detection
 
 #### Kernel Validation System
 - **GPU/CPU Parity Testing**: Systematic validation between GPU and CPU implementations
@@ -578,6 +585,21 @@ cargo test -p bitnet-kernels --no-default-features --features gpu -- --quiet
 BITNET_STRICT_TOKENIZERS=1 \
 BITNET_STRICT_NO_FAKE_GPU=1 \
 scripts/verify-tests.sh
+
+# System metrics testing and validation (NEW)
+# Test system metrics collection in server
+cargo test -p bitnet-server --features prometheus test_system_metrics_collection
+
+# Run server with system metrics enabled
+cargo run -p bitnet-server --features prometheus --bin server &
+curl http://localhost:8080/metrics | grep "system_"
+
+# Test memory tracking integration with system metrics
+cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
+
+# Validate system metrics in monitoring stack
+cd monitoring && docker-compose up -d
+curl http://localhost:9090/api/v1/query?query=system_cpu_usage_percent
 ```
 
 ## Test Suite

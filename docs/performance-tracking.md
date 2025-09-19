@@ -161,6 +161,8 @@ The memory tracking functionality relies on two key dependencies:
   - Provides total system memory information
   - Optimized memory refresh to avoid unnecessary system calls
   - Cross-platform compatibility with consistent API
+  - **NEW**: Enhanced system metrics collection for CPU usage, disk usage, and network statistics
+  - Real-time system monitoring for comprehensive observability
 
 ### Practical Memory Tracking Example
 
@@ -200,6 +202,84 @@ The example output includes:
 ```
 
 This demonstrates how memory tracking integrates seamlessly with quantization operations, providing real-time insights into memory consumption patterns.
+
+### System Metrics Integration
+
+BitNet.rs now includes comprehensive system-level metrics collection through the server monitoring infrastructure. This integration provides full observability into both application-level and system-level performance.
+
+#### Available System Metrics
+
+The system metrics collection, powered by the `sysinfo` crate, provides:
+
+```rust
+use bitnet_server::monitoring::SystemMetrics;
+
+// System metrics are automatically collected
+let system_metrics = SystemMetrics::new();
+
+// Metrics available through Prometheus endpoints:
+// - system_cpu_usage_percent
+// - system_memory_usage_percent  
+// - system_disk_usage_percent
+// - system_network_bytes_received_total
+// - system_network_bytes_sent_total
+// - system_uptime_seconds
+```
+
+#### Integration with Performance Tracking
+
+The system metrics work alongside existing performance tracking:
+
+```rust
+use bitnet_server::monitoring::MetricsCollector;
+use bitnet_inference::engine::InferenceEngine;
+
+// Create metrics collector with system monitoring
+let collector = MetricsCollector::new(&monitoring_config)?;
+
+// Perform inference operations
+let engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
+let tracker = collector.track_request("request-123".to_string());
+
+// Generate text with both application and system monitoring
+let result = engine.generate("Hello world").await?;
+tracker.record_tokens(result.tokens.len() as u64);
+
+// Collect comprehensive system metrics
+collector.collect_system_metrics().await?;
+
+// System metrics are automatically exposed via Prometheus
+```
+
+#### Real-Time System Monitoring
+
+System metrics are collected at configurable intervals and provide insights into:
+
+- **CPU Usage**: Real-time CPU utilization percentage across all cores
+- **Memory Usage**: System memory utilization (used vs total)
+- **Disk Usage**: Storage utilization for inference workloads
+- **Network I/O**: Bytes received/sent for distributed inference scenarios
+- **Process Uptime**: Service availability and restart tracking
+
+#### Performance Correlation Analysis
+
+The system metrics enable correlation between application performance and system resources:
+
+```rust
+// Example: Correlate token throughput with system resources
+let app_metrics = engine.get_performance_metrics().await?;
+let system_stats = collector.get_system_stats().await?;
+
+if app_metrics.tokens_per_second < 50.0 && system_stats.cpu_usage > 90.0 {
+    warn!("Low throughput may be due to CPU saturation: {:.1}% CPU usage", 
+          system_stats.cpu_usage);
+}
+
+if system_stats.memory_usage > 95.0 {
+    warn!("High memory pressure detected: {:.1}% memory usage", 
+          system_stats.memory_usage);
+}
+```
 
 ## Environment Variable Configuration
 
