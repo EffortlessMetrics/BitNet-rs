@@ -6,7 +6,6 @@ use std::{fs, path::PathBuf, sync::Arc, time::Instant};
 use bitnet_common::Device as BNDevice;
 use bitnet_inference::InferenceEngine;
 use bitnet_models::{GgufReader, ModelLoader};
-use bitnet_tokenizers::Tokenizer;
 use candle_core::Device;
 
 #[derive(Args, Debug)]
@@ -52,14 +51,12 @@ pub async fn run_score(args: &ScoreArgs) -> Result<()> {
     });
 
     // Load tokenizer (external preferred)
-    let tokenizer: Arc<dyn Tokenizer> = if let Some(spm) = &args.tokenizer {
-        bitnet_tokenizers::load_tokenizer(spm)
-            .with_context(|| format!("load tokenizer {}", spm.display()))?
-            .into()
+    let tokenizer = if let Some(spm) = &args.tokenizer {
+        // Use unified auto-loader for consistency
+        bitnet_tokenizers::auto::load_auto(&args.model, Some(spm))?
     } else {
-        bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&gguf)
-            .context("GGUF has no embedded tokenizer; pass --tokenizer")?
-            .into()
+        // Use unified auto-loader for consistency
+        bitnet_tokenizers::auto::load_auto(&args.model, None)?
     };
 
     // Determine device

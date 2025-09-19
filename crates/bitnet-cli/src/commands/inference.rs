@@ -586,41 +586,14 @@ impl InferenceCommand {
         &self,
         model_path: &Path,
     ) -> Result<Arc<dyn bitnet_tokenizers::Tokenizer>> {
-        // If explicit tokenizer path provided, use it
-        if let Some(tokenizer_path) = &self.tokenizer {
-            debug!("Loading tokenizer from: {}", tokenizer_path.display());
-            return TokenizerBuilder::from_file(tokenizer_path)
-                .context("Failed to load tokenizer from file");
-        }
+        // Use the unified auto-loader for consistent behavior
+        let tokenizer = bitnet_tokenizers::auto::load_auto(
+            model_path,
+            self.tokenizer.as_deref()
+        )?;
 
-        // Try GGUF-embedded tokenizer if available
-        if model_path.extension() == Some(std::ffi::OsStr::new("gguf")) {
-            debug!("Attempting to load tokenizer from GGUF model file: {}", model_path.display());
-
-            match bitnet_tokenizers::universal::UniversalTokenizer::from_gguf(model_path) {
-                Ok(tokenizer) => {
-                    debug!("Successfully loaded tokenizer from GGUF model file");
-                    return Ok(Arc::new(tokenizer));
-                }
-                Err(e) => {
-                    debug!("Failed to load tokenizer from GGUF: {}, trying alternatives", e);
-                }
-            }
-        }
-
-        // Try to load tokenizer from model directory
-        let tokenizer_path =
-            model_path.parent().map(|p| p.join("tokenizer.json")).filter(|p| p.exists());
-
-        if let Some(tokenizer_path) = tokenizer_path {
-            debug!("Loading tokenizer from: {}", tokenizer_path.display());
-            TokenizerBuilder::from_file(&tokenizer_path)
-                .context("Failed to load tokenizer from file")
-        } else {
-            anyhow::bail!(
-                "No tokenizer found. Pass --tokenizer <tokenizer.json|tokenizer.model> or ensure tokenizer.json exists in model directory."
-            )
-        }
+        debug!("Successfully loaded tokenizer using auto-detection");
+        Ok(tokenizer)
     }
 
     /// Run single inference

@@ -23,7 +23,7 @@ use std::{fs, path::Path};
 /// - The file format is unknown or invalid
 /// - The JSON structure is missing required fields
 /// - The tokenizer fails to load
-pub fn load_tokenizer(path: &Path) -> Result<Box<dyn Tokenizer>> {
+pub fn load_tokenizer(path: &Path) -> Result<Box<dyn Tokenizer + Send + Sync>> {
     // Check file extension to determine tokenizer type
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
@@ -69,7 +69,7 @@ pub fn load_tokenizer(path: &Path) -> Result<Box<dyn Tokenizer>> {
 /// Load tokenizer from GGUF metadata (using HashMap)
 pub fn load_tokenizer_from_gguf(
     metadata: &std::collections::HashMap<String, serde_json::Value>,
-) -> Result<Box<dyn Tokenizer>> {
+) -> Result<Box<dyn Tokenizer + Send + Sync>> {
     use base64::Engine;
 
     // Check if we have a SentencePiece model embedded
@@ -112,7 +112,7 @@ pub fn load_tokenizer_from_gguf(
 /// Load tokenizer from GGUF reader
 pub fn load_tokenizer_from_gguf_reader(
     reader: &bitnet_models::GgufReader,
-) -> Result<Box<dyn Tokenizer>> {
+) -> Result<Box<dyn Tokenizer + Send + Sync>> {
     // Check if the GGUF contains an embedded tokenizer (try both binary and array formats)
     if let Some(bytes) = reader.get_bin_or_u8_array("tokenizer.ggml.model") {
         #[cfg(feature = "spm")]

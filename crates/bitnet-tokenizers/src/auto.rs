@@ -1,17 +1,19 @@
 use std::path::Path;
+use std::sync::Arc;
 use anyhow::{bail, Result};
 use crate::Tokenizer;
 
-pub fn load_auto(model_path: &Path, explicit: Option<&Path>) -> Result<Box<dyn Tokenizer>> {
+pub fn load_auto(model_path: &Path, explicit: Option<&Path>) -> Result<Arc<dyn Tokenizer + Send + Sync>> {
     if let Some(p) = explicit {
-        return crate::load_tokenizer(p);
+        let boxed_tok = crate::load_tokenizer(p)?;
+        return Ok(Arc::from(boxed_tok) as Arc<dyn Tokenizer + Send + Sync>);
     }
 
     // Try tokenizer embedded in GGUF
     if model_path.extension().and_then(|s| s.to_str()) == Some("gguf") {
         if let Ok(tok) = crate::gguf_tokenizer::GgufTokenizer::from_gguf_file(model_path) {
             tracing::debug!("tokenizer: loaded from GGUF");
-            return Ok(Box::new(tok));
+            return Ok(Arc::new(tok));
         }
     }
 
@@ -19,11 +21,13 @@ pub fn load_auto(model_path: &Path, explicit: Option<&Path>) -> Result<Box<dyn T
     if let Some(dir) = model_path.parent() {
         let json = dir.join("tokenizer.json");
         if json.exists() {
-            return crate::load_tokenizer(&json);
+            let boxed_tok = crate::load_tokenizer(&json)?;
+            return Ok(Arc::from(boxed_tok) as Arc<dyn Tokenizer + Send + Sync>);
         }
         let spm = dir.join("tokenizer.model");
         if spm.exists() {
-            return crate::load_tokenizer(&spm);
+            let boxed_tok = crate::load_tokenizer(&spm)?;
+            return Ok(Arc::from(boxed_tok) as Arc<dyn Tokenizer + Send + Sync>);
         }
     }
 

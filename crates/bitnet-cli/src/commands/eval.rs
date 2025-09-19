@@ -397,27 +397,14 @@ impl EvalCommand {
         &self,
         model_path: &Path,
     ) -> Result<std::sync::Arc<dyn bitnet_tokenizers::Tokenizer>> {
-        use bitnet_tokenizers::TokenizerBuilder;
+        // Use the unified auto-loader for consistent behavior
+        let tokenizer = bitnet_tokenizers::auto::load_auto(
+            model_path,
+            self.tokenizer.as_deref()
+        )?;
 
-        if let Some(tokenizer_path) = &self.tokenizer {
-            info!("Loading tokenizer from: {}", tokenizer_path.display());
-            Ok(TokenizerBuilder::from_file(tokenizer_path)?)
-        } else {
-            // Try to find tokenizer in model directory
-            let model_dir = model_path.parent().unwrap_or(std::path::Path::new("."));
-            let tokenizer_json = model_dir.join("tokenizer.json");
-            let tokenizer_model = model_dir.join("tokenizer.model");
-
-            if tokenizer_json.exists() {
-                info!("Using tokenizer.json from model directory");
-                Ok(TokenizerBuilder::from_file(&tokenizer_json)?)
-            } else if tokenizer_model.exists() {
-                info!("Using tokenizer.model from model directory");
-                Ok(TokenizerBuilder::from_file(&tokenizer_model)?)
-            } else {
-                anyhow::bail!("No tokenizer found. Use --tokenizer to specify path")
-            }
-        }
+        info!("Successfully loaded tokenizer using auto-detection");
+        Ok(tokenizer)
     }
 
     /// Read text file (only required when not teacher-forcing)
