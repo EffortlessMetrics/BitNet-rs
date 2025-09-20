@@ -615,10 +615,7 @@ impl InferenceCommand {
         model_path: &Path,
     ) -> Result<Arc<dyn bitnet_tokenizers::Tokenizer>> {
         // Use the unified auto-loader for consistent behavior
-        let tokenizer = bitnet_tokenizers::auto::load_auto(
-            model_path,
-            self.tokenizer.as_deref()
-        )?;
+        let tokenizer = bitnet_tokenizers::auto::load_auto(model_path, self.tokenizer.as_deref())?;
 
         debug!("Successfully loaded tokenizer using auto-detection");
         Ok(tokenizer)

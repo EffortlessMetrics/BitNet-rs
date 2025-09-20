@@ -241,7 +241,12 @@ impl SamplingStrategy {
             cumulative += prob;
             if random_value <= cumulative {
                 // Ensure token ID is within vocabulary bounds
-                debug_assert!(i < vocab_size, "Sampled token {} exceeds vocab size {}", i, vocab_size);
+                debug_assert!(
+                    i < vocab_size,
+                    "Sampled token {} exceeds vocab size {}",
+                    i,
+                    vocab_size
+                );
                 return Ok(i as u32);
             }
         }

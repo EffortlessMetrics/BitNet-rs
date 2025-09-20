@@ -398,10 +398,7 @@ impl EvalCommand {
         model_path: &Path,
     ) -> Result<std::sync::Arc<dyn bitnet_tokenizers::Tokenizer>> {
         // Use the unified auto-loader for consistent behavior
-        let tokenizer = bitnet_tokenizers::auto::load_auto(
-            model_path,
-            self.tokenizer.as_deref()
-        )?;
+        let tokenizer = bitnet_tokenizers::auto::load_auto(model_path, self.tokenizer.as_deref())?;
 
         info!("Successfully loaded tokenizer using auto-detection");
         Ok(tokenizer)

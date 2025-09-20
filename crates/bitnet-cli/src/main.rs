@@ -983,7 +983,9 @@ async fn run_simple_generation(
 }
 
 /// Extract last token hidden state from 3D tensor [B,T,H] -> [B,H]
-fn extract_last_token_hidden(tensor: &bitnet_common::ConcreteTensor) -> Result<bitnet_common::ConcreteTensor> {
+fn extract_last_token_hidden(
+    tensor: &bitnet_common::ConcreteTensor,
+) -> Result<bitnet_common::ConcreteTensor> {
     use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
 
     let shape = tensor.shape();
@@ -1023,7 +1025,8 @@ fn extract_logits_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>>
             let candle = t.to_candle()?;
             // Extract first batch: [B, V] -> [V]
             let batch_0 = candle.i(0)?;
-            let batch_0 = if batch_0.dtype() != DType::F32 { batch_0.to_dtype(DType::F32)? } else { batch_0 };
+            let batch_0 =
+                if batch_0.dtype() != DType::F32 { batch_0.to_dtype(DType::F32)? } else { batch_0 };
             Ok(batch_0.to_vec1::<f32>()?)
         }
         ConcreteTensor::Mock(_) => {

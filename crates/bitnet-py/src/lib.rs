@@ -152,7 +152,7 @@ fn list_available_models(path: &str) -> PyResult<Vec<String>> {
 
 /// Get device information
 #[pyfunction]
-fn get_device_info(py: Python<'_>) -> PyResult<PyObject> {
+fn get_device_info(py: Python<'_>) -> PyResult<Py<PyAny>> {
     let info = PyDict::new(py);
 
     // CPU information

@@ -202,7 +202,7 @@ impl PyInferenceEngine {
     /// # Errors
     /// Returns `PyRuntimeError` if configuration cannot be accessed
     #[getter]
-    fn model_config(&self, py: Python<'_>) -> PyResult<PyObject> {
+    fn model_config(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let rt = tokio::runtime::Runtime::new()
             .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 
@@ -242,7 +242,7 @@ impl PyInferenceEngine {
     ///
     /// # Errors
     /// Returns `PyRuntimeError` if statistics cannot be retrieved
-    fn get_stats(&self, py: Python<'_>) -> PyResult<PyObject> {
+    fn get_stats(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let rt = tokio::runtime::Runtime::new()
             .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 
@@ -543,7 +543,7 @@ impl PyStreamingGenerator {
     ///
     /// # Returns
     /// Python dictionary with streaming statistics
-    fn get_stream_stats(&self, py: Python<'_>) -> PyResult<PyObject> {
+    fn get_stream_stats(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let stats = pyo3::types::PyDict::new(py);
 
         stats.set_item("started", self.started)?;

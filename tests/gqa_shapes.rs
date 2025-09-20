@@ -34,13 +34,13 @@ mod tests {
     fn gqa_validation_logic() {
         // Valid GQA configurations
         assert_valid_gqa(32, 32); // MHA
-        assert_valid_gqa(32, 8);  // GQA with 4 groups
-        assert_valid_gqa(32, 1);  // MQA
+        assert_valid_gqa(32, 8); // GQA with 4 groups
+        assert_valid_gqa(32, 1); // MQA
 
         // Invalid configurations
-        assert_invalid_gqa(32, 0);  // zero KV heads
+        assert_invalid_gqa(32, 0); // zero KV heads
         assert_invalid_gqa(32, 33); // more KV heads than Q heads
-        assert_invalid_gqa(32, 7);  // not divisible
+        assert_invalid_gqa(32, 7); // not divisible
     }
 
     fn assert_valid_gqa(n_heads: usize, n_kv_heads: usize) {
@@ -51,7 +51,11 @@ mod tests {
 
     fn assert_invalid_gqa(n_heads: usize, n_kv_heads: usize) {
         let valid = n_kv_heads > 0 && n_kv_heads <= n_heads && n_heads % n_kv_heads == 0;
-        assert!(!valid, "Configuration should be invalid: n_heads={}, n_kv_heads={}", n_heads, n_kv_heads);
+        assert!(
+            !valid,
+            "Configuration should be invalid: n_heads={}, n_kv_heads={}",
+            n_heads, n_kv_heads
+        );
     }
 
     /// Test common GQA configurations used in practice
@@ -73,7 +77,10 @@ mod tests {
     }
 
     fn test_gqa_config(name: &str, hidden_size: usize, n_heads: usize, n_kv_heads: usize) {
-        println!("Testing {}: hidden={}, heads={}, kv_heads={}", name, hidden_size, n_heads, n_kv_heads);
+        println!(
+            "Testing {}: hidden={}, heads={}, kv_heads={}",
+            name, hidden_size, n_heads, n_kv_heads
+        );
 
         let head_dim = hidden_size / n_heads;
         let group_size = n_heads / n_kv_heads;

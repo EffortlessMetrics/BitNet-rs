@@ -437,30 +437,51 @@ impl<'a> GgufReader<'a> {
 
     /// Validate that critical model tensors are present
     pub fn validate_critical_tensors(&self) -> Result<()> {
-        let names: std::collections::HashSet<_> = self.tensor_infos.iter().map(|t| t.name.as_str()).collect();
+        let names: std::collections::HashSet<_> =
+            self.tensor_infos.iter().map(|t| t.name.as_str()).collect();
 
-        let embed_ok = Self::any_present(&names, &[
-            "embed_tokens.weight", "token_embd.weight", "tok_embeddings.weight",
-            "model.embed_tokens.weight", "transformer.wte.weight"
-        ]);
+        let embed_ok = Self::any_present(
+            &names,
+            &[
+                "embed_tokens.weight",
+                "token_embd.weight",
+                "tok_embeddings.weight",
+                "model.embed_tokens.weight",
+                "transformer.wte.weight",
+            ],
+        );
         if !embed_ok {
             return Err(BitNetError::Validation("GGUF: missing embedding tensor".into()));
         }
 
-        let attn0_ok = Self::any_present(&names, &[
-            "layers.0.attention.q_proj.weight", "layers.0.self_attn.q_proj.weight",
-            "blk.0.attn_q.weight", "model.layers.0.self_attn.q_proj.weight"
-        ]);
+        let attn0_ok = Self::any_present(
+            &names,
+            &[
+                "layers.0.attention.q_proj.weight",
+                "layers.0.self_attn.q_proj.weight",
+                "blk.0.attn_q.weight",
+                "model.layers.0.self_attn.q_proj.weight",
+            ],
+        );
         if !attn0_ok {
-            return Err(BitNetError::Validation("GGUF: missing first-layer attention tensor".into()));
+            return Err(BitNetError::Validation(
+                "GGUF: missing first-layer attention tensor".into(),
+            ));
         }
 
-        let ffn0_ok = Self::any_present(&names, &[
-            "layers.0.feed_forward.gate_proj.weight", "layers.0.mlp.gate_proj.weight",
-            "blk.0.ffn_gate.weight", "model.layers.0.mlp.gate_proj.weight"
-        ]);
+        let ffn0_ok = Self::any_present(
+            &names,
+            &[
+                "layers.0.feed_forward.gate_proj.weight",
+                "layers.0.mlp.gate_proj.weight",
+                "blk.0.ffn_gate.weight",
+                "model.layers.0.mlp.gate_proj.weight",
+            ],
+        );
         if !ffn0_ok {
-            return Err(BitNetError::Validation("GGUF: missing first-layer feed-forward tensor".into()));
+            return Err(BitNetError::Validation(
+                "GGUF: missing first-layer feed-forward tensor".into(),
+            ));
         }
 
         tracing::debug!("GGUF: critical tensors present (embed/attn0/ffn0)");

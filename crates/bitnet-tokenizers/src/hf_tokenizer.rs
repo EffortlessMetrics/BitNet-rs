@@ -5,10 +5,10 @@
 //! with modern transformer models and provide sophisticated tokenization
 //! algorithms including WordPiece, BPE, and Unigram.
 
+use ahash::AHashMap;
 use anyhow::Result as AnyhowResult;
 use bitnet_common::Result;
 use std::{collections::HashMap, path::Path};
-use ahash::AHashMap;
 
 /// Wrapper for Hugging Face tokenizers
 ///
@@ -98,7 +98,8 @@ impl HfTokenizer {
 
         let mut inner = tokenizers::Tokenizer::new(bpe);
         // Use byte-level pre-tokenizer/decoder similar to GPT-2
-        inner.with_pre_tokenizer(Some(tokenizers::pre_tokenizers::byte_level::ByteLevel::default()));
+        inner
+            .with_pre_tokenizer(Some(tokenizers::pre_tokenizers::byte_level::ByteLevel::default()));
         inner.with_decoder(Some(ByteLevel::default()));
 
         Ok(Self { inner, bos_id: None, eos_id: None })

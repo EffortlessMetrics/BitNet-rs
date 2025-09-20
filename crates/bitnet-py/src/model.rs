@@ -60,7 +60,7 @@ impl PyBitNetModel {
 
     /// Get model configuration as a dictionary
     #[getter]
-    fn config(&self, py: Python<'_>) -> PyResult<PyObject> {
+    fn config(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let config = self.inner.config();
         let py_config = PyDict::new(py);
 
@@ -140,7 +140,7 @@ impl PyBitNetModel {
     }
 
     /// Get model information as a dictionary
-    fn info(&self, py: Python<'_>) -> PyResult<PyObject> {
+    fn info(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let info = PyDict::new(py);
         let config = self.inner.config();
 
@@ -214,7 +214,7 @@ impl PyModelLoader {
     }
 
     /// Extract metadata from a model file without loading it
-    fn extract_metadata(&self, py: Python<'_>, path: &str) -> PyResult<PyObject> {
+    fn extract_metadata(&self, py: Python<'_>, path: &str) -> PyResult<Py<PyAny>> {
         let path = path.to_string();
         let device = self.device;
 

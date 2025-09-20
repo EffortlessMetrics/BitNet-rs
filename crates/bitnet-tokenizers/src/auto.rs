@@ -1,9 +1,12 @@
+use crate::Tokenizer;
+use anyhow::{Result, bail};
 use std::path::Path;
 use std::sync::Arc;
-use anyhow::{bail, Result};
-use crate::Tokenizer;
 
-pub fn load_auto(model_path: &Path, explicit: Option<&Path>) -> Result<Arc<dyn Tokenizer + Send + Sync>> {
+pub fn load_auto(
+    model_path: &Path,
+    explicit: Option<&Path>,
+) -> Result<Arc<dyn Tokenizer + Send + Sync>> {
     if let Some(p) = explicit {
         let boxed_tok = crate::load_tokenizer(p)?;
         return Ok(Arc::from(boxed_tok) as Arc<dyn Tokenizer + Send + Sync>);
@@ -32,5 +35,7 @@ pub fn load_auto(model_path: &Path, explicit: Option<&Path>) -> Result<Arc<dyn T
     }
 
     // Do not silently use BasicTokenizer; better to fail and instruct user
-    bail!("No tokenizer found. Provide --tokenizer or include tokenizer.json/.model next to the GGUF.");
+    bail!(
+        "No tokenizer found. Provide --tokenizer or include tokenizer.json/.model next to the GGUF."
+    );
 }

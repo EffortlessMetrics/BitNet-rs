@@ -455,14 +455,14 @@ impl BitNetConfig {
         }
         if self.model.num_heads == 0 {
             errors.push("num_heads must be greater than 0".to_string());
-        } else if self.model.hidden_size % self.model.num_heads != 0 {
+        } else if !self.model.hidden_size.is_multiple_of(self.model.num_heads) {
             errors.push("hidden_size must be divisible by num_heads".to_string());
         }
         // Validate num_key_value_heads if set (0 means use num_heads)
         if self.model.num_key_value_heads > 0 {
             if self.model.num_key_value_heads > self.model.num_heads {
                 errors.push("num_key_value_heads cannot be greater than num_heads".to_string());
-            } else if self.model.num_heads % self.model.num_key_value_heads != 0 {
+            } else if !self.model.num_heads.is_multiple_of(self.model.num_key_value_heads) {
                 errors.push("num_heads must be divisible by num_key_value_heads".to_string());
             }
         }

@@ -14,15 +14,17 @@ use tracing::{debug, warn};
 const I2S_DEFAULT_BLOCK: usize = 256;
 
 fn expected_bytes(rows: usize, cols: usize, block: usize) -> usize {
-    let blocks_per_row = (cols + block - 1) / block;
-    let qbits = (block + 3) / 4; // 2 bits per weight
+    let blocks_per_row = cols.div_ceil(block);
+    let qbits = block.div_ceil(4); // 2 bits per weight
     (rows * blocks_per_row) * (qbits + 2) // +2 bytes f16 scale
 }
 
 fn infer_block_size(bytes: usize, rows: usize, cols: usize) -> Option<usize> {
     // Most common variants
     for b in [256, 128, 64, 32] {
-        if expected_bytes(rows, cols, b) == bytes { return Some(b); }
+        if expected_bytes(rows, cols, b) == bytes {
+            return Some(b);
+        }
     }
     None
 }
@@ -82,19 +84,27 @@ pub fn dequantize_to_f32(bytes: &[u8], shape: &[usize]) -> Result<Vec<f32>> {
             let one_block_bytes = expected_bytes(1, I2S_DEFAULT_BLOCK, I2S_DEFAULT_BLOCK);
             let shortfall = default_expected.saturating_sub(bytes.len());
             if shortfall > one_block_bytes {
-                warn!("I2_S: non-default block size detected: {} (default {})", b, I2S_DEFAULT_BLOCK);
+                warn!(
+                    "I2_S: non-default block size detected: {} (default {})",
+                    b, I2S_DEFAULT_BLOCK
+                );
             } else {
-                debug!("I2_S: non-default block size detected: {} (default {})", b, I2S_DEFAULT_BLOCK);
+                debug!(
+                    "I2_S: non-default block size detected: {} (default {})",
+                    b, I2S_DEFAULT_BLOCK
+                );
             }
             block = b;
         } else {
             // Partial data fallback: process what we can, zero-fill the rest
-            let qbits = (block + 3) / 4;
+            let qbits = block.div_ceil(4);
             let per_block = qbits + 2;
             let available_blocks = bytes.len() / per_block;
             debug!(
                 "I2_S: byte length mismatch (got {}, expected {}), processing {} blocks then zero-fill",
-                bytes.len(), default_expected, available_blocks
+                bytes.len(),
+                default_expected,
+                available_blocks
             );
             return dequantize_partial_blocks(bytes, shape, block, available_blocks);
         }
@@ -104,8 +114,8 @@ pub fn dequantize_to_f32(bytes: &[u8], shape: &[usize]) -> Result<Vec<f32>> {
 
 fn dequantize_to_f32_with_block(bytes: &[u8], shape: &[usize], block: usize) -> Result<Vec<f32>> {
     let (rows, cols) = rows_cols(shape)?;
-    let blocks_per_row = (cols + block - 1) / block;
-    let qbits = (block + 3) / 4;
+    let blocks_per_row = cols.div_ceil(block);
+    let qbits = block.div_ceil(4);
     let per_block = qbits + 2;
 
     if bytes.len() != rows * blocks_per_row * per_block {
@@ -121,7 +131,7 @@ fn dequantize_to_f32_with_block(bytes: &[u8], shape: &[usize], block: usize) -> 
         let mut c = 0usize;
         for _ in 0..blocks_per_row {
             let n = (cols - c).min(block);
-            let qbits_slice = &bytes[off..off + ((n + 3) / 4)];
+            let qbits_slice = &bytes[off..off + n.div_ceil(4)];
             off += qbits_slice.len();
             let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
             off += 2;
@@ -137,10 +147,15 @@ fn dequantize_to_f32_with_block(bytes: &[u8], shape: &[usize], block: usize) -> 
     Ok(out)
 }
 
-fn dequantize_partial_blocks(bytes: &[u8], shape: &[usize], block: usize, available_blocks: usize) -> Result<Vec<f32>> {
+fn dequantize_partial_blocks(
+    bytes: &[u8],
+    shape: &[usize],
+    block: usize,
+    available_blocks: usize,
+) -> Result<Vec<f32>> {
     let (rows, cols) = rows_cols(shape)?;
-    let blocks_per_row = (cols + block - 1) / block;
-    let qbits = (block + 3) / 4;
+    let blocks_per_row = cols.div_ceil(block);
+    let qbits = block.div_ceil(4);
     let per_block = qbits + 2;
 
     let mut out = vec![0f32; rows * cols];
@@ -152,11 +167,15 @@ fn dequantize_partial_blocks(bytes: &[u8], shape: &[usize], block: usize, availa
         let row_base = r * cols;
         let mut c = 0usize;
         for _ in 0..blocks_per_row {
-            if processed == available_blocks { break 'rows; }
+            if processed == available_blocks {
+                break 'rows;
+            }
             let n = (cols - c).min(block);
-            if off + per_block > bytes.len() { break 'rows; }
+            if off + per_block > bytes.len() {
+                break 'rows;
+            }
 
-            let qbits_slice = &bytes[off..off + ((n + 3) / 4)];
+            let qbits_slice = &bytes[off..off + n.div_ceil(4)];
             off += qbits_slice.len();
             let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
             off += 2;
@@ -197,26 +216,34 @@ pub fn dequantize_to_f32_transposed(bytes: &[u8], shape: &[usize]) -> Result<Vec
             let one_block_bytes = expected_bytes(1, I2S_DEFAULT_BLOCK, I2S_DEFAULT_BLOCK);
             let shortfall = default_expected.saturating_sub(bytes.len());
             if shortfall > one_block_bytes {
-                warn!("I2_S: non-default block size detected: {} (default {})", b, I2S_DEFAULT_BLOCK);
+                warn!(
+                    "I2_S: non-default block size detected: {} (default {})",
+                    b, I2S_DEFAULT_BLOCK
+                );
             } else {
-                debug!("I2_S: non-default block size detected: {} (default {})", b, I2S_DEFAULT_BLOCK);
+                debug!(
+                    "I2_S: non-default block size detected: {} (default {})",
+                    b, I2S_DEFAULT_BLOCK
+                );
             }
             block = b;
         } else {
             // Partial fallback: decode what we can into transposed output
-            let qbits = (block + 3) / 4;
+            let qbits = block.div_ceil(4);
             let per_block = qbits + 2;
             let available_blocks = bytes.len() / per_block;
             warn!(
                 "I2_S: byte length mismatch (got {}, expected {}), processing {} blocks then zero-fill (transposed)",
-                bytes.len(), default_expected, available_blocks
+                bytes.len(),
+                default_expected,
+                available_blocks
             );
             return dequantize_partial_blocks_transposed(bytes, shape, block, available_blocks);
         }
     }
 
     // Normal path: direct transposed dequant
-    let blocks_per_row = (cols + block - 1) / block;
+    let blocks_per_row = cols.div_ceil(block);
     let mut out = vec![0f32; rows * cols]; // output logical shape [cols, rows]
     let mut off = 0usize;
     let mut scratch = vec![0i8; block];
@@ -225,7 +252,7 @@ pub fn dequantize_to_f32_transposed(bytes: &[u8], shape: &[usize]) -> Result<Vec
         let mut c = 0usize;
         for _ in 0..blocks_per_row {
             let n = (cols - c).min(block);
-            let qbits_len = (n + 3) / 4;
+            let qbits_len = n.div_ceil(4);
             let qbits_slice = &bytes[off..off + qbits_len];
             off += qbits_len;
 
@@ -252,8 +279,8 @@ fn dequantize_partial_blocks_transposed(
     available_blocks: usize,
 ) -> Result<Vec<f32>> {
     let (rows, cols) = rows_cols(shape)?;
-    let blocks_per_row = (cols + block - 1) / block;
-    let qbits = (block + 3) / 4;
+    let blocks_per_row = cols.div_ceil(block);
+    let qbits = block.div_ceil(4);
     let per_block = qbits + 2;
 
     let mut out = vec![0f32; rows * cols]; // transposed output
@@ -264,11 +291,15 @@ fn dequantize_partial_blocks_transposed(
     'rows: for r in 0..rows {
         let mut c = 0usize;
         for _ in 0..blocks_per_row {
-            if processed == available_blocks { break 'rows; }
+            if processed == available_blocks {
+                break 'rows;
+            }
             let n = (cols - c).min(block);
-            if off + per_block > bytes.len() { break 'rows; }
+            if off + per_block > bytes.len() {
+                break 'rows;
+            }
 
-            let qbits_len = (n + 3) / 4;
+            let qbits_len = n.div_ceil(4);
             let qbits_slice = &bytes[off..off + qbits_len];
             off += qbits_len;
 
@@ -287,4 +318,3 @@ fn dequantize_partial_blocks_transposed(
     // remainder stays zero
     Ok(out)
 }
-

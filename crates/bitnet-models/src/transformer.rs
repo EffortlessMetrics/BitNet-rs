@@ -156,16 +156,18 @@ impl MultiHeadAttention {
         let n_heads = config.model.num_heads;
         let head_dim = hidden_size / n_heads;
 
-        if hidden_size % n_heads != 0 {
+        if !hidden_size.is_multiple_of(n_heads) {
             return Err(BitNetError::Validation(format!(
-                "hidden_size {} not divisible by num_heads {}", hidden_size, n_heads
+                "hidden_size {} not divisible by num_heads {}",
+                hidden_size, n_heads
             )));
         }
 
         let n_kv_heads = config.model.num_key_value_heads.max(1).min(n_heads);
-        if n_heads % n_kv_heads != 0 {
+        if !n_heads.is_multiple_of(n_kv_heads) {
             return Err(BitNetError::Validation(format!(
-                "num_heads {} must be divisible by num_key_value_heads {}", n_heads, n_kv_heads
+                "num_heads {} must be divisible by num_key_value_heads {}",
+                n_heads, n_kv_heads
             )));
         }
         let group_size = n_heads / n_kv_heads;
@@ -300,9 +302,17 @@ impl FeedForward {
         let intermediate_size = config.model.intermediate_size;
 
         Ok(Self {
-            gate_proj: linear_with_optional_bias(hidden_size, intermediate_size, vb.pp("gate_proj"))?,
+            gate_proj: linear_with_optional_bias(
+                hidden_size,
+                intermediate_size,
+                vb.pp("gate_proj"),
+            )?,
             up_proj: linear_with_optional_bias(hidden_size, intermediate_size, vb.pp("up_proj"))?,
-            down_proj: linear_with_optional_bias(intermediate_size, hidden_size, vb.pp("down_proj"))?,
+            down_proj: linear_with_optional_bias(
+                intermediate_size,
+                hidden_size,
+                vb.pp("down_proj"),
+            )?,
         })
     }
 
@@ -331,8 +341,16 @@ impl TransformerBlock {
         Ok(Self {
             attention: MultiHeadAttention::new(config, vb.pp("attention"))?,
             feed_forward: FeedForward::new(config, vb.pp("feed_forward"))?,
-            attention_norm: layer_norm_with_optional_bias(hidden_size, eps, vb.pp("attention_norm"))?,
-            ffn_norm: layer_norm_with_optional_bias(hidden_size, eps, vb.pp("post_attention_layernorm"))?,
+            attention_norm: layer_norm_with_optional_bias(
+                hidden_size,
+                eps,
+                vb.pp("attention_norm"),
+            )?,
+            ffn_norm: layer_norm_with_optional_bias(
+                hidden_size,
+                eps,
+                vb.pp("post_attention_layernorm"),
+            )?,
         })
     }
 
@@ -370,8 +388,10 @@ impl LayerKVCache {
         head_dim: usize,
         device: &Device,
     ) -> Result<Self> {
-        let k = Tensor::zeros(&[batch_size, n_kv_heads, max_seq_len, head_dim], DType::F32, device)?;
-        let v = Tensor::zeros(&[batch_size, n_kv_heads, max_seq_len, head_dim], DType::F32, device)?;
+        let k =
+            Tensor::zeros(&[batch_size, n_kv_heads, max_seq_len, head_dim], DType::F32, device)?;
+        let v =
+            Tensor::zeros(&[batch_size, n_kv_heads, max_seq_len, head_dim], DType::F32, device)?;
 
         Ok(Self { k, v, seq_len: 0, max_seq_len, n_kv_heads })
     }
@@ -707,7 +727,7 @@ impl TransformerModel {
                     }
                 }
             }
-            _ => Err(BitNetError::Validation("unexpected hidden rank".into()).into()),
+            _ => Err(BitNetError::Validation("unexpected hidden rank".into())),
         }
     }
 }

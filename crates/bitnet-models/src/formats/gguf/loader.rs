@@ -15,8 +15,13 @@ impl GgufLoader {
     /// Helper to fetch an unsigned integer by trying a list of keys
     fn get_u32_any(reader: &GgufReader, keys: &[&str]) -> Option<u32> {
         for k in keys {
-            if let Some(v) = reader.get_u32_metadata(k) { return Some(v); }
-            if let Some(v) = reader.get_i32_metadata(k) { if v >= 0 { return Some(v as u32); } }
+            if let Some(v) = reader.get_u32_metadata(k) {
+                return Some(v);
+            }
+            if let Some(v) = reader.get_i32_metadata(k)
+                && v >= 0 {
+                    return Some(v as u32);
+                }
         }
         None
     }
@@ -32,34 +37,40 @@ impl GgufLoader {
             "transformer.wte.weight",
         ];
         for n in &emb_names {
-            if let Some(info) = reader.get_tensor_info_by_name(n) {
-                if info.shape.len() == 2 {
+            if let Some(info) = reader.get_tensor_info_by_name(n)
+                && info.shape.len() == 2 {
                     let a = info.shape[0];
                     let b = info.shape[1];
                     // Heuristic: vocab is big (>= 32768). Hidden is the other dim.
-                    let hidden = if a >= 32768 && b < a { b }
-                                 else if b >= 32768 && a < b { a }
-                                 else { a.min(b) }; // fallback: pick the smaller
+                    let hidden = if a >= 32768 && b < a {
+                        b
+                    } else if b >= 32768 && a < b {
+                        a
+                    } else {
+                        a.min(b)
+                    }; // fallback: pick the smaller
                     tracing::info!("inferred hidden_size={} from {}", hidden, n);
                     return Some(hidden);
                 }
-            }
         }
         None
     }
 
     /// Infer intermediate_size from feed-forward tensor shapes when metadata is missing.
-    fn infer_intermediate_size_from_tensors(reader: &GgufReader, hidden_size: usize) -> Option<usize> {
+    fn infer_intermediate_size_from_tensors(
+        reader: &GgufReader,
+        hidden_size: usize,
+    ) -> Option<usize> {
         let ffn_names = [
             // Common feed-forward projection tensor names
-            "blk.0.ffn_gate.weight",             // Microsoft BitNet style
+            "blk.0.ffn_gate.weight", // Microsoft BitNet style
             "layers.0.feed_forward.gate_proj.weight", // LLaMA style
             "model.layers.0.mlp.gate_proj.weight",
             "transformer.h.0.mlp.c_fc.weight",
         ];
         for n in &ffn_names {
-            if let Some(info) = reader.get_tensor_info_by_name(n) {
-                if info.shape.len() == 2 {
+            if let Some(info) = reader.get_tensor_info_by_name(n)
+                && info.shape.len() == 2 {
                     let w_in = info.shape[0];
                     let w_out = info.shape[1];
                     // gate_proj should be [hidden_size, intermediate_size]
@@ -69,11 +80,14 @@ impl GgufLoader {
                     }
                     // Handle transposed case [intermediate_size, hidden_size]
                     if w_out == hidden_size {
-                        tracing::info!("inferred intermediate_size={} from {} (transposed)", w_in, n);
+                        tracing::info!(
+                            "inferred intermediate_size={} from {} (transposed)",
+                            w_in,
+                            n
+                        );
                         return Some(w_in);
                     }
                 }
-            }
         }
         None
     }
@@ -142,8 +156,8 @@ impl GgufLoader {
 
         // Look for k_proj tensor in first layer to infer KV head count
         let k_proj_names = [
-            "blk.0.attn_k.weight",               // Microsoft BitNet style
-            "layers.0.attention.k_proj.weight",  // LLaMA style
+            "blk.0.attn_k.weight",              // Microsoft BitNet style
+            "layers.0.attention.k_proj.weight", // LLaMA style
             "model.layers.0.self_attn.k_proj.weight",
             "transformer.h.0.attn.k_proj.weight",
         ];
@@ -153,13 +167,16 @@ impl GgufLoader {
             if let Some(info) = reader.get_tensor_info_by_name(tensor_name) {
                 debug!("Found tensor {} with shape {:?}", tensor_name, info.shape);
                 if info.shape.len() == 2 {
-                    let w_in  = info.shape[0];
+                    let w_in = info.shape[0];
                     let w_out = info.shape[1];
                     // Microsoft 2B: [hidden=2560, kv_out=640]
                     if w_in == hidden_size && w_out % head_dim == 0 {
                         let inferred_kv_heads = w_out / head_dim;
                         debug!("inferred_kv_heads={}, num_heads={}", inferred_kv_heads, num_heads);
-                        if inferred_kv_heads != 0 && inferred_kv_heads <= num_heads && num_heads % inferred_kv_heads == 0 {
+                        if inferred_kv_heads != 0
+                            && inferred_kv_heads <= num_heads
+                            && num_heads.is_multiple_of(inferred_kv_heads)
+                        {
                             info!(
                                 "Inferred GQA: {} KV heads from tensor {} shape {:?}",
                                 inferred_kv_heads, tensor_name, info.shape
@@ -328,11 +345,11 @@ impl GgufLoader {
     fn is_embedding_tensor(name: &str) -> bool {
         matches!(
             name,
-            "embed_tokens.weight" |
-            "tok_embeddings.weight" |
-            "token_embd.weight" |
-            "model.embed_tokens.weight" |
-            "transformer.wte.weight"
+            "embed_tokens.weight"
+                | "tok_embeddings.weight"
+                | "token_embd.weight"
+                | "model.embed_tokens.weight"
+                | "transformer.wte.weight"
         )
     }
 
@@ -435,44 +452,53 @@ impl GgufLoader {
         }
 
         // If layer count wasn't in metadata or seems wrong, infer from tensors
-        if config.model.num_layers == 0 || config.model.num_layers == BitNetConfig::default().model.num_layers {
-            if let Some(layers) = Self::infer_num_layers_from_tensors(reader) {
+        if (config.model.num_layers == 0
+            || config.model.num_layers == BitNetConfig::default().model.num_layers)
+            && let Some(layers) = Self::infer_num_layers_from_tensors(reader) {
                 tracing::info!("Inferred num_layers={} from tensor analysis", layers);
                 config.model.num_layers = layers;
             }
-        }
 
         // 1) hidden_size: try metadata, else infer from embeddings
-        if let Some(h) = Self::get_u32_any(reader, &[
-            "llama.embedding_length", "n_embd", "hidden_size",
-        ]) {
+        if let Some(h) =
+            Self::get_u32_any(reader, &["llama.embedding_length", "n_embd", "hidden_size"])
+        {
             config.model.hidden_size = h as usize;
         }
-        if config.model.hidden_size == 0 || config.model.hidden_size == BitNetConfig::default().model.hidden_size {
+        if config.model.hidden_size == 0
+            || config.model.hidden_size == BitNetConfig::default().model.hidden_size
+        {
             if let Some(h) = Self::infer_hidden_size_from_tensors(reader) {
                 config.model.hidden_size = h;
             }
         }
 
         // 2) num_heads: broaden key set (MS 2B commonly has "n_head")
-        if let Some(h) = Self::get_u32_any(reader, &[
-            "llama.attention.head_count", "n_head", "attn.n_heads", "num_attention_heads",
-        ]) {
+        if let Some(h) = Self::get_u32_any(
+            reader,
+            &["llama.attention.head_count", "n_head", "attn.n_heads", "num_attention_heads"],
+        ) {
             config.model.num_heads = h as usize;
         }
 
         // 3) num_key_value_heads:
         //    a) metadata if present
         let kv_keys = [
-            "n_head_kv", "n_kv_heads", "attn.n_kv_heads", "attn_n_kv_heads",
-            "num_key_value_heads", "llama.attention.head_count_kv",
+            "n_head_kv",
+            "n_kv_heads",
+            "attn.n_kv_heads",
+            "attn_n_kv_heads",
+            "num_key_value_heads",
+            "llama.attention.head_count_kv",
         ];
-        config.model.num_key_value_heads = Self::get_u32_any(reader, &kv_keys)
-            .map(|v| v as usize)
-            .unwrap_or(0);
+        config.model.num_key_value_heads =
+            Self::get_u32_any(reader, &kv_keys).map(|v| v as usize).unwrap_or(0);
 
         //    b) if not present, infer from tensor shapes (now that hidden_size & num_heads are set)
-        if config.model.num_key_value_heads == 0 && config.model.num_heads > 0 && config.model.hidden_size > 0 {
+        if config.model.num_key_value_heads == 0
+            && config.model.num_heads > 0
+            && config.model.hidden_size > 0
+        {
             debug!("No explicit GQA metadata found, attempting shape inference...");
             config.model.num_key_value_heads = Self::infer_kv_heads_from_tensors(reader, &config)?;
             debug!("Final num_key_value_heads: {}", config.model.num_key_value_heads);
@@ -498,8 +524,12 @@ impl GgufLoader {
             config.model.intermediate_size = intermediate_size as usize;
         }
         // If no metadata or if it seems wrong (based on tensor shapes), infer from tensors
-        if config.model.intermediate_size == 0 || config.model.intermediate_size == BitNetConfig::default().model.intermediate_size {
-            if let Some(inferred_size) = Self::infer_intermediate_size_from_tensors(reader, config.model.hidden_size) {
+        if config.model.intermediate_size == 0
+            || config.model.intermediate_size == BitNetConfig::default().model.intermediate_size
+        {
+            if let Some(inferred_size) =
+                Self::infer_intermediate_size_from_tensors(reader, config.model.hidden_size)
+            {
                 config.model.intermediate_size = inferred_size;
             }
         }
@@ -509,9 +539,13 @@ impl GgufLoader {
         }
 
         // Log final model configuration
-        info!("model dimensions: hidden={}, intermediate={}, layers={}, vocab={}",
-              config.model.hidden_size, config.model.intermediate_size,
-              config.model.num_layers, config.model.vocab_size);
+        info!(
+            "model dimensions: hidden={}, intermediate={}, layers={}, vocab={}",
+            config.model.hidden_size,
+            config.model.intermediate_size,
+            config.model.num_layers,
+            config.model.vocab_size
+        );
 
         // Set quantization type based on tensor types
         if let Some(qtype) = reader.get_quantization_type() {
@@ -621,7 +655,9 @@ impl GgufLoader {
                 use crate::quant::i2s;
 
                 // Check for embedding transposition
-                if Self::is_embedding_tensor(&info.name) && Self::embedding_is_transposed(&info.shape) {
+                if Self::is_embedding_tensor(&info.name)
+                    && Self::embedding_is_transposed(&info.shape)
+                {
                     info!("Embedding appears transposed ({:?}) -> decoding transposed", info.shape);
                     let f32_data = i2s::dequantize_to_f32_transposed(data, &info.shape)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
@@ -632,15 +668,20 @@ impl GgufLoader {
                     return Ok(tensor);
                 } else if Self::is_projection_tensor(&info.name) && info.shape.len() == 2 {
                     // Projection tensors need transposition for linear layer compatibility
-                    debug!("Transposing projection tensor '{}' from {:?} to {:?}",
-                           info.name, info.shape, [info.shape[1], info.shape[0]]);
+                    debug!(
+                        "Transposing projection tensor '{}' from {:?} to {:?}",
+                        info.name,
+                        info.shape,
+                        [info.shape[1], info.shape[0]]
+                    );
                     return Self::create_transposed_i2s_tensor(data, &info.shape, &candle_device);
                 } else {
                     // Normal I2_S dequantization
                     let f32_data = i2s::dequantize_to_f32(data, &info.shape)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
-                    let tensor = Tensor::from_slice(&f32_data, info.shape.as_slice(), &candle_device)
-                        .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                    let tensor =
+                        Tensor::from_slice(&f32_data, info.shape.as_slice(), &candle_device)
+                            .map_err(|e| BitNetError::Validation(e.to_string()))?;
                     return Ok(tensor);
                 }
             }
@@ -655,8 +696,13 @@ impl GgufLoader {
             match dtype {
                 DType::F32 => {
                     // Check for embedding transposition
-                    if Self::is_embedding_tensor(&info.name) && Self::embedding_is_transposed(&info.shape) {
-                        info!("Embedding appears transposed ({:?}) -> decoding transposed", info.shape);
+                    if Self::is_embedding_tensor(&info.name)
+                        && Self::embedding_is_transposed(&info.shape)
+                    {
+                        info!(
+                            "Embedding appears transposed ({:?}) -> decoding transposed",
+                            info.shape
+                        );
                         let f32_data = Self::transpose_f32_to_f32(data, &info.shape)?;
                         // Now dims become [vocab, hidden]
                         let (rows, cols) = (info.shape[1], info.shape[0]);
@@ -664,8 +710,12 @@ impl GgufLoader {
                             .map_err(|e| BitNetError::Validation(e.to_string()))
                     } else if Self::is_projection_tensor(&info.name) && info.shape.len() == 2 {
                         // Projection tensors need transposition for linear layer compatibility
-                        debug!("Transposing F32 projection tensor '{}' from {:?} to {:?}",
-                               info.name, info.shape, [info.shape[1], info.shape[0]]);
+                        debug!(
+                            "Transposing F32 projection tensor '{}' from {:?} to {:?}",
+                            info.name,
+                            info.shape,
+                            [info.shape[1], info.shape[0]]
+                        );
                         let f32_data = Self::transpose_f32_to_f32(data, &info.shape)?;
                         let (rows, cols) = (info.shape[1], info.shape[0]);
                         Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
@@ -678,8 +728,13 @@ impl GgufLoader {
                 }
                 DType::F16 => {
                     // Check for embedding transposition
-                    if Self::is_embedding_tensor(&info.name) && Self::embedding_is_transposed(&info.shape) {
-                        info!("Embedding appears transposed ({:?}) -> decoding transposed", info.shape);
+                    if Self::is_embedding_tensor(&info.name)
+                        && Self::embedding_is_transposed(&info.shape)
+                    {
+                        info!(
+                            "Embedding appears transposed ({:?}) -> decoding transposed",
+                            info.shape
+                        );
                         let f32_data = Self::transpose_f16_to_f32(data, &info.shape)?;
                         // Now dims become [vocab, hidden]
                         let (rows, cols) = (info.shape[1], info.shape[0]);
@@ -687,8 +742,12 @@ impl GgufLoader {
                             .map_err(|e| BitNetError::Validation(e.to_string()))
                     } else if Self::is_projection_tensor(&info.name) && info.shape.len() == 2 {
                         // Projection tensors need transposition for linear layer compatibility
-                        debug!("Transposing F16 projection tensor '{}' from {:?} to {:?}",
-                               info.name, info.shape, [info.shape[1], info.shape[0]]);
+                        debug!(
+                            "Transposing F16 projection tensor '{}' from {:?} to {:?}",
+                            info.name,
+                            info.shape,
+                            [info.shape[1], info.shape[0]]
+                        );
                         let f32_data = Self::transpose_f16_to_f32(data, &info.shape)?;
                         let (rows, cols) = (info.shape[1], info.shape[0]);
                         Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)

@@ -667,9 +667,27 @@ fn real_main() -> Result<()> {
         Cmd::Gate { which } => match which {
             GateWhich::Mapper { model } => std::process::exit(gates::mapper_gate(model)?),
         },
-        Cmd::Benchmark { model, tokenizer, tokens, prompt, gpu, allow_mock, no_output, json, warmup_tokens } => {
-            benchmark_cmd(&model, tokenizer.as_deref(), tokens, &prompt, gpu, allow_mock, no_output, json.as_deref(), warmup_tokens)
-        }
+        Cmd::Benchmark {
+            model,
+            tokenizer,
+            tokens,
+            prompt,
+            gpu,
+            allow_mock,
+            no_output,
+            json,
+            warmup_tokens,
+        } => benchmark_cmd(
+            &model,
+            tokenizer.as_deref(),
+            tokens,
+            &prompt,
+            gpu,
+            allow_mock,
+            no_output,
+            json.as_deref(),
+            warmup_tokens,
+        ),
         Cmd::CompareMetrics { baseline, current, ppl_max, latency_p95_max, tok_s_min } => {
             compare_metrics(&baseline, &current, ppl_max, latency_p95_max, tok_s_min)
         }
@@ -695,21 +713,19 @@ fn real_main() -> Result<()> {
             gpu,
             allow_mock,
             deterministic,
-            format
-        } => {
-            infer_cmd(
-                &model,
-                tokenizer.as_deref(),
-                &prompt,
-                max_new_tokens,
-                temperature,
-                seed,
-                gpu,
-                allow_mock,
-                deterministic,
-                &format
-            )
-        }
+            format,
+        } => infer_cmd(
+            &model,
+            tokenizer.as_deref(),
+            &prompt,
+            max_new_tokens,
+            temperature,
+            seed,
+            gpu,
+            allow_mock,
+            deterministic,
+            &format,
+        ),
     }
 }
 
@@ -1462,7 +1478,10 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
                     Ok(bytes) => {
                         if let Err(e) = fs::write(&tokenizer_dest, &bytes) {
                             if verbose {
-                                eprintln!("[VERBOSE] Failed to save tokenizer {}: {}", tokenizer_file, e);
+                                eprintln!(
+                                    "[VERBOSE] Failed to save tokenizer {}: {}",
+                                    tokenizer_file, e
+                                );
                             }
                         } else {
                             if !json {
@@ -1474,7 +1493,10 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
                     }
                     Err(e) => {
                         if verbose {
-                            eprintln!("[VERBOSE] Failed to read tokenizer {}: {}", tokenizer_file, e);
+                            eprintln!(
+                                "[VERBOSE] Failed to read tokenizer {}: {}",
+                                tokenizer_file, e
+                            );
                         }
                     }
                 }
@@ -1487,12 +1509,19 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
             }
             Ok(response) => {
                 if verbose {
-                    eprintln!("[VERBOSE] Failed to download tokenizer {}: HTTP {}", tokenizer_file, response.status());
+                    eprintln!(
+                        "[VERBOSE] Failed to download tokenizer {}: HTTP {}",
+                        tokenizer_file,
+                        response.status()
+                    );
                 }
             }
             Err(e) => {
                 if verbose {
-                    eprintln!("[VERBOSE] Network error downloading tokenizer {}: {}", tokenizer_file, e);
+                    eprintln!(
+                        "[VERBOSE] Network error downloading tokenizer {}: {}",
+                        tokenizer_file, e
+                    );
                 }
             }
         }
@@ -1511,8 +1540,11 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
         eprintln!("  export CROSSVAL_GGUF=\"{}\"", abs_path.display());
 
         if tokenizer_downloaded {
-            if let Ok(tokenizer_path) = dest_dir.join("tokenizer.json").canonicalize()
-                .or_else(|_| dest_dir.join("tokenizer.model").canonicalize()) {
+            if let Ok(tokenizer_path) = dest_dir
+                .join("tokenizer.json")
+                .canonicalize()
+                .or_else(|_| dest_dir.join("tokenizer.model").canonicalize())
+            {
                 eprintln!("  export TOKENIZER_PATH=\"{}\"", tokenizer_path.display());
             }
         }
@@ -2423,13 +2455,10 @@ fn benchmark_cmd(
             warmup_tokens,
             device: device_str.to_string(),
             vocab: None,
-            version: option_env!("GIT_SHA_SHORT").map(|s| s.to_string())
-                     .or_else(|| option_env!("CARGO_PKG_VERSION").map(|s| s.to_string())),
-            timing: BenchmarkTiming {
-                warmup_ms: 0,
-                generation_ms: 0,
-                total_ms: 0,
-            },
+            version: option_env!("GIT_SHA_SHORT")
+                .map(|s| s.to_string())
+                .or_else(|| option_env!("CARGO_PKG_VERSION").map(|s| s.to_string())),
+            timing: BenchmarkTiming { warmup_ms: 0, generation_ms: 0, total_ms: 0 },
             performance: BenchmarkPerformance {
                 tokens_per_sec: 0.0,
                 ms_per_token: 0.0,
@@ -2453,13 +2482,10 @@ fn benchmark_cmd(
         warmup_tokens,
         device: device_str.to_string(),
         vocab: load_model_config(model).ok().map(|c| c.vocab_size),
-        version: option_env!("GIT_SHA_SHORT").map(|s| s.to_string())
-                 .or_else(|| option_env!("CARGO_PKG_VERSION").map(|s| s.to_string())),
-        timing: BenchmarkTiming {
-            warmup_ms: 0,
-            generation_ms: 0,
-            total_ms: 0,
-        },
+        version: option_env!("GIT_SHA_SHORT")
+            .map(|s| s.to_string())
+            .or_else(|| option_env!("CARGO_PKG_VERSION").map(|s| s.to_string())),
+        timing: BenchmarkTiming { warmup_ms: 0, generation_ms: 0, total_ms: 0 },
         performance: BenchmarkPerformance {
             tokens_per_sec: 0.0,
             ms_per_token: 0.0,
@@ -2494,10 +2520,10 @@ fn benchmark_cmd(
             tokenizer,
             prompt,
             warmup_tokens,
-            0.0,    // temperature = 0.0 for deterministic
-            42,     // seed = 42
+            0.0, // temperature = 0.0 for deterministic
+            42,  // seed = 42
             gpu,
-            allow_mock
+            allow_mock,
         ) {
             Ok(_) => {
                 let warmup_elapsed = warmup_start.elapsed();
@@ -2522,14 +2548,9 @@ fn benchmark_cmd(
     let benchmark_start = Instant::now();
 
     match run_inference_internal(
-        model,
-        tokenizer,
-        prompt,
-        tokens,
-        0.0,    // temperature = 0.0 for deterministic
-        42,     // seed = 42
-        gpu,
-        allow_mock
+        model, tokenizer, prompt, tokens, 0.0, // temperature = 0.0 for deterministic
+        42,  // seed = 42
+        gpu, allow_mock,
     ) {
         Ok(generated_text) => {
             let benchmark_elapsed = benchmark_start.elapsed();
@@ -2556,7 +2577,8 @@ fn benchmark_cmd(
 
             if generation_secs > 0.0 && actual_tokens > 0 {
                 report.performance.tokens_per_sec = actual_tokens as f64 / generation_secs;
-                report.performance.ms_per_token = (report.timing.generation_ms as f64) / (actual_tokens as f64);
+                report.performance.ms_per_token =
+                    (report.timing.generation_ms as f64) / (actual_tokens as f64);
             }
 
             if total_secs > 0.0 {
@@ -2567,7 +2589,8 @@ fn benchmark_cmd(
             report.success = true;
 
             // Always print one-liner summary (even with --json)
-            println!("{} tokens in {:.2}s → {:.1} tok/s ({})",
+            println!(
+                "{} tokens in {:.2}s → {:.1} tok/s ({})",
                 actual_tokens,
                 report.timing.generation_ms as f64 / 1000.0,
                 report.performance.tokens_per_sec,
@@ -3128,9 +3151,9 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
             let kv = if config.num_kv_heads == 0 { q } else { config.num_kv_heads };
 
             if hidden % q != 0 || q % kv != 0 {
-                report.errors.push(format!(
-                    "Inconsistent heads: hidden={} q={} kv={}", hidden, q, kv
-                ));
+                report
+                    .errors
+                    .push(format!("Inconsistent heads: hidden={} q={} kv={}", hidden, q, kv));
             } else {
                 let head_dim = hidden / q;
                 let group = q / kv;
@@ -3145,7 +3168,10 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
                 println!("📋 Model Configuration:");
                 println!("   Vocab size: {}", config.vocab_size);
                 println!("   Hidden size: {}", config.hidden_size);
-                println!("   Attention heads: {} (q) / {} (kv)", config.num_heads, config.num_kv_heads);
+                println!(
+                    "   Attention heads: {} (q) / {} (kv)",
+                    config.num_heads, config.num_kv_heads
+                );
                 if let (Some(head_dim), Some(group)) = (report.head_dim, report.group_size) {
                     println!("   heads: q={} kv={} (group={}) head_dim={}", q, kv, group, head_dim);
                 }
@@ -3178,12 +3204,18 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
                         if matches {
                             println!("   ✅ Vocab size matches model");
                         } else {
-                            println!("   ❌ Vocab size mismatch! Model: {}, Tokenizer: {}", model_vocab, tokenizer_vocab);
+                            println!(
+                                "   ❌ Vocab size mismatch! Model: {}, Tokenizer: {}",
+                                model_vocab, tokenizer_vocab
+                            );
                         }
                     }
 
                     if !matches {
-                        let error_msg = format!("Vocab size mismatch: model={}, tokenizer={}", model_vocab, tokenizer_vocab);
+                        let error_msg = format!(
+                            "Vocab size mismatch: model={}, tokenizer={}",
+                            model_vocab, tokenizer_vocab
+                        );
                         report.errors.push(error_msg);
                     }
                 }
@@ -3285,10 +3317,16 @@ fn infer_cmd(
                     50257 => "This model expects the **GPT-2 tokenizer (50,257)**",
                     _ => "This model requires a tokenizer",
                 };
-                bail!("{}. Pass `--tokenizer path/to/tokenizer.json` or use `--allow-mock`.\nExpected vocab (from weights): {}", tokenizer_msg, config.vocab_size);
+                bail!(
+                    "{}. Pass `--tokenizer path/to/tokenizer.json` or use `--allow-mock`.\nExpected vocab (from weights): {}",
+                    tokenizer_msg,
+                    config.vocab_size
+                );
             }
             Err(_) => {
-                bail!("Model requires a tokenizer. Pass `--tokenizer path/to/tokenizer.json` or use `--allow-mock` for testing.");
+                bail!(
+                    "Model requires a tokenizer. Pass `--tokenizer path/to/tokenizer.json` or use `--allow-mock` for testing."
+                );
             }
         }
     }
@@ -3309,10 +3347,7 @@ fn infer_cmd(
         prompt: prompt.to_string(),
         generated_text: String::new(),
         config,
-        timing: InferTiming {
-            total_ms: 0,
-            tokens_per_second: 0.0,
-        },
+        timing: InferTiming { total_ms: 0, tokens_per_second: 0.0 },
         success: false,
         error: None,
     };
@@ -3337,15 +3372,21 @@ fn infer_cmd(
     let start = Instant::now();
 
     // Run inference
-    match run_inference_internal(model, tokenizer, prompt, max_new_tokens, effective_temperature, effective_seed, gpu, allow_mock) {
+    match run_inference_internal(
+        model,
+        tokenizer,
+        prompt,
+        max_new_tokens,
+        effective_temperature,
+        effective_seed,
+        gpu,
+        allow_mock,
+    ) {
         Ok(generated) => {
             let elapsed = start.elapsed();
             let ms = elapsed.as_millis() as u64;
-            let tokens_per_sec = if ms > 0 {
-                (max_new_tokens as f64) / (ms as f64 / 1000.0)
-            } else {
-                0.0
-            };
+            let tokens_per_sec =
+                if ms > 0 { (max_new_tokens as f64) / (ms as f64 / 1000.0) } else { 0.0 };
 
             report.generated_text = generated.clone();
             report.timing.total_ms = ms;
@@ -3409,8 +3450,8 @@ fn load_model_config(model_path: &Path) -> Result<ModelConfig> {
     }
 
     // Load the GGUF file using BitNet-rs
-    let (config, _tensors) = load_gguf(model_path, Device::Cpu)
-        .context("Failed to load GGUF model")?;
+    let (config, _tensors) =
+        load_gguf(model_path, Device::Cpu).context("Failed to load GGUF model")?;
 
     // Extract configuration from BitNetConfig
     let model_config = config.model;
@@ -3452,8 +3493,10 @@ fn count_tokens(text: &str, tokenizer_path: Option<&Path>, allow_mock: bool) -> 
     }
 
     if let Some(tokenizer_path) = tokenizer_path {
-        let tokenizer = bitnet_tokenizers::loader::load_tokenizer(tokenizer_path)
-            .with_context(|| format!("Failed to load tokenizer from {}", tokenizer_path.display()))?;
+        let tokenizer =
+            bitnet_tokenizers::loader::load_tokenizer(tokenizer_path).with_context(|| {
+                format!("Failed to load tokenizer from {}", tokenizer_path.display())
+            })?;
 
         // Use encode to get token IDs and count them
         match tokenizer.encode(text, false, false) {
@@ -3462,7 +3505,7 @@ fn count_tokens(text: &str, tokenizer_path: Option<&Path>, allow_mock: bool) -> 
                 // Fallback to rough character-based estimation if tokenization fails
                 Ok(text.chars().count() / 4) // rough approximation: 4 chars per token
             }
-            Err(e) => Err(anyhow::anyhow!("Failed to tokenize text: {}", e))
+            Err(e) => Err(anyhow::anyhow!("Failed to tokenize text: {}", e)),
         }
     } else if allow_mock {
         // Mock tokenizer: rough approximation
@@ -3506,7 +3549,12 @@ fn run_inference_internal(
                 // Create a simple wrapper that implements Tokenizer
                 struct TokenizerWrapper(Box<dyn bitnet_tokenizers::Tokenizer + Send + Sync>);
                 impl bitnet_tokenizers::Tokenizer for TokenizerWrapper {
-                    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> bitnet_common::Result<Vec<u32>> {
+                    fn encode(
+                        &self,
+                        text: &str,
+                        add_bos: bool,
+                        add_special: bool,
+                    ) -> bitnet_common::Result<Vec<u32>> {
                         self.0.encode(text, add_bos, add_special)
                     }
                     fn decode(&self, tokens: &[u32]) -> bitnet_common::Result<String> {
@@ -3521,9 +3569,7 @@ fn run_inference_internal(
                 }
                 Arc::new(TokenizerWrapper(tok))
             }
-            None if allow_mock => {
-                Arc::new(bitnet_tokenizers::MockTokenizer::new())
-            }
+            None if allow_mock => Arc::new(bitnet_tokenizers::MockTokenizer::new()),
             None => bail!(
                 "inference failed: tokenizer required. \
                  This model expects the **LLaMA-3 tokenizer (128,256)**. \
@@ -3536,8 +3582,7 @@ fn run_inference_internal(
 
         // Load the model
         let loader = ModelLoader::new(device);
-        let model = loader.load(model_path)
-            .context("Failed to load model for inference")?;
+        let model = loader.load(model_path).context("Failed to load model for inference")?;
 
         // Convert Box<dyn Model> to Arc<dyn Model>
         let model_arc: Arc<dyn bitnet_models::Model> = model.into();
@@ -3549,16 +3594,13 @@ fn run_inference_internal(
         // For now, use a simple generation without complex config
         // Generate text - handle async if needed
         let response = match tokio::runtime::Runtime::new() {
-            Ok(rt) => {
-                rt.block_on(async {
-                    engine.generate(prompt).await
-                })
-            }
+            Ok(rt) => rt.block_on(async { engine.generate(prompt).await }),
             Err(_) => {
                 // Fallback for environments without async runtime
                 futures::executor::block_on(engine.generate(prompt))
             }
-        }.context("Failed to generate text")?;
+        }
+        .context("Failed to generate text")?;
 
         Ok(response)
     }
@@ -3583,10 +3625,15 @@ fn run_inference_internal(
                         50257 => "This model expects the **GPT-2 tokenizer (50,257)**",
                         _ => "This model requires a tokenizer",
                     };
-                    bail!("Inference feature not enabled. Build with `--features inference` for real inference, or use `--allow-mock` for testing.\n{}", tokenizer_msg);
+                    bail!(
+                        "Inference feature not enabled. Build with `--features inference` for real inference, or use `--allow-mock` for testing.\n{}",
+                        tokenizer_msg
+                    );
                 }
                 Err(_) => {
-                    bail!("Inference feature not enabled. Build with `--features inference` for real inference, or use `--allow-mock` for testing.");
+                    bail!(
+                        "Inference feature not enabled. Build with `--features inference` for real inference, or use `--allow-mock` for testing."
+                    );
                 }
             }
         }
