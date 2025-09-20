@@ -1013,7 +1013,7 @@ impl InferenceEngine {
         }
     }
 
-    /// Generate tokens using the configured backend
+    /// Generate tokens using the configured backend with incremental generation
     pub async fn generate_tokens(
         &self,
         input_tokens: &[u32],
@@ -1033,8 +1033,42 @@ impl InferenceEngine {
         let mut sampling_strategy = SamplingStrategy::new(sampling_config);
 
         for step in 0..config.max_new_tokens {
-            // Forward pass through model
-            let logits = self.forward_pass(&current_tokens).await?;
+            // CRITICAL FIX: Use incremental generation after prefill
+            // - First step: Run full forward pass (in case prefill wasn't called)
+            // - Subsequent steps: Only process the last added token (incremental)
+            let tokens_to_process = if step == 0 {
+                // First step: ensure we have logits for the full sequence
+                &current_tokens
+            } else {
+                // Incremental: only process the last token that was just added
+                &current_tokens[current_tokens.len() - 1..]
+            };
+
+            let logits = self.forward_pass(tokens_to_process).await?;
+
+            // DEBUG: On first step, show tokenization and top-5 logits for diagnostics
+            if step == 0 {
+                debug!("=== First Token Generation Debug ===");
+                debug!("Input token count: {}", input_tokens.len());
+                debug!("First 10 input tokens (with pieces):");
+                for (i, &token_id) in input_tokens.iter().take(10).enumerate() {
+                    let piece = self.tokenizer.token_to_piece(token_id).unwrap_or("?".into());
+                    debug!("  #{}: id={} piece='{}'", i, token_id, piece);
+                }
+
+                // Show top-5 logits for first generated token
+                let mut logit_indices: Vec<usize> = (0..logits.len()).collect();
+                logit_indices.sort_by(|&a, &b| logits[b].partial_cmp(&logits[a]).unwrap_or(std::cmp::Ordering::Equal));
+                debug!("Top-5 next token predictions:");
+                for (rank, &idx) in logit_indices.iter().take(5).enumerate() {
+                    let piece = self.tokenizer.token_to_piece(idx as u32).unwrap_or("?".into());
+                    debug!("  #{}: id={} piece='{}' logit={:.3}", rank + 1, idx, piece, logits[idx]);
+                }
+
+                let eos_id = self.tokenizer.eos_token_id();
+                debug!("EOS token ID: {:?}", eos_id);
+                debug!("=====================================");
+            }
 
             // Sample next token first
             let next_token = sampling_strategy.sample(&logits, &current_tokens)?;
