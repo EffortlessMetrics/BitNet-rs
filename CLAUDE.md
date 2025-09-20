@@ -203,7 +203,7 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 ## Important Considerations
 
 ### MSRV
-Minimum Supported Rust Version: **1.89.0** (uses Rust 2024 edition)
+Minimum Supported Rust Version: **1.90.0** (uses Rust 2024 edition)
 
 ### Feature Flags
 Default features are **empty** to prevent unwanted dependencies:
@@ -562,7 +562,7 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cp
 
 ```bash
 # Quick compile & test (CPU, MSRV-accurate)
-rustup run 1.89.0 cargo test --workspace --no-default-features --features cpu
+rustup run 1.90.0 cargo test --workspace --no-default-features --features cpu
 
 # Quick compile & test with concurrency caps
 scripts/preflight.sh && cargo t2
