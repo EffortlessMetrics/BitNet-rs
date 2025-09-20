@@ -26,7 +26,7 @@ impl Sampler {
         let rng = if let Some(seed) = seed {
             ChaCha20Rng::seed_from_u64(seed)
         } else {
-            ChaCha20Rng::from_entropy()
+            ChaCha20Rng::from_rng(&mut rand::rng())
         };
 
         Self { rng, temperature, top_k, top_p, repetition_penalty, token_counts: HashMap::new() }
@@ -151,7 +151,7 @@ impl Sampler {
 
     /// Sample from probability distribution
     fn sample_from_probs(&mut self, probs: &[f32]) -> u32 {
-        let uniform: f32 = self.rng.r#gen();
+        let uniform: f32 = self.rng.random();
         let mut cumsum = 0.0;
 
         for (i, &prob) in probs.iter().enumerate() {

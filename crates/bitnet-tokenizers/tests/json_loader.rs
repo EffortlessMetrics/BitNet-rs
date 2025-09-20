@@ -16,7 +16,7 @@ fn load_hf_tokenizer_json() {
     let model = WordLevel::from_file(vocab_file.path().to_str().unwrap(), "<unk>".into())
         .expect("create model");
     let mut tokenizer = HfTokenizer::new(model);
-    tokenizer.with_pre_tokenizer(tokenizers::pre_tokenizers::whitespace::Whitespace {});
+    tokenizer.with_pre_tokenizer(Some(tokenizers::pre_tokenizers::whitespace::Whitespace {}));
     let json = tokenizer.to_string(true).expect("serialize tokenizer");
 
     let tmp = tempfile::Builder::new().suffix(".json").tempfile().expect("tmp file");
@@ -70,7 +70,7 @@ fn load_json_with_special_tokens() {
     let model = WordLevel::from_file(vocab_file.path().to_str().unwrap(), "<unk>".into())
         .expect("create model");
     let mut tokenizer = HfTokenizer::new(model);
-    tokenizer.with_pre_tokenizer(tokenizers::pre_tokenizers::whitespace::Whitespace {});
+    tokenizer.with_pre_tokenizer(Some(tokenizers::pre_tokenizers::whitespace::Whitespace {}));
     let json = tokenizer.to_string(true).expect("serialize tokenizer");
 
     let tmp = tempfile::Builder::new().suffix(".json").tempfile().expect("tmp file");

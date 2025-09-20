@@ -43,7 +43,7 @@ impl SamplingStrategy {
         let rng = if let Some(seed) = config.seed {
             ChaCha8Rng::seed_from_u64(seed)
         } else {
-            ChaCha8Rng::from_entropy()
+            ChaCha8Rng::from_rng(&mut rand::rng())
         };
 
         Self { config, rng, token_counts: HashMap::new() }
@@ -229,12 +229,12 @@ impl SamplingStrategy {
         let sum: f32 = probabilities.iter().sum();
         if sum <= 0.0 {
             // Fallback to uniform distribution within valid vocab range
-            let idx = self.rng.gen_range(0..vocab_size);
+            let idx = self.rng.random_range(0..vocab_size);
             return Ok(idx as u32);
         }
 
         // Sample using cumulative distribution
-        let random_value: f32 = self.rng.r#gen();
+        let random_value: f32 = self.rng.random();
         let mut cumulative = 0.0;
 
         for (i, &prob) in probabilities.iter().enumerate() {
@@ -262,7 +262,7 @@ impl SamplingStrategy {
             self.rng = if let Some(seed) = config.seed {
                 ChaCha8Rng::seed_from_u64(seed)
             } else {
-                ChaCha8Rng::from_entropy()
+                ChaCha8Rng::from_rng(&mut rand::rng())
             };
         }
 

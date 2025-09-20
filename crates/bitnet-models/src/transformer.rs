@@ -635,7 +635,7 @@ impl TransformerModel {
         match hidden.rank() {
             2 => {
                 // [B, H] - last token only
-                let (b, h) = (hidden.dims()[0], hidden.dims()[1]);
+                let (b, _h) = (hidden.dims()[0], hidden.dims()[1]);
 
                 if let Some(ref lm_head) = self.lm_head {
                     // Use dedicated LM head if available

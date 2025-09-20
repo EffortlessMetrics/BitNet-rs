@@ -15,9 +15,8 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 futures-util = "0.3.31"
-# Both getrandom versions for WASM compatibility
+# getrandom for WASM compatibility
 getrandom = { version = "0.3.3", features = ["wasm_js"] }
-getrandom02 = { package = "getrandom", version = "0.3.3", features = ["js"] }
 bitnet-common = { path = "../bitnet-common" }
 bitnet-models = { path = "../bitnet-models" }
 bitnet-quantization = { path = "../bitnet-quantization" }

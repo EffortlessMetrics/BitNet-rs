@@ -8,6 +8,7 @@
 use anyhow::Result as AnyhowResult;
 use bitnet_common::Result;
 use std::{collections::HashMap, path::Path};
+use ahash::AHashMap;
 
 /// Wrapper for Hugging Face tokenizers
 ///
@@ -91,14 +92,14 @@ impl HfTokenizer {
             .collect();
 
         let bpe = BPE::builder()
-            .vocab_and_merges(vocab_map, merges_vec)
+            .vocab_and_merges(AHashMap::from_iter(vocab_map), merges_vec)
             .build()
             .map_err(|e| anyhow::anyhow!(e))?;
 
         let mut inner = tokenizers::Tokenizer::new(bpe);
         // Use byte-level pre-tokenizer/decoder similar to GPT-2
-        inner.with_pre_tokenizer(tokenizers::pre_tokenizers::byte_level::ByteLevel::default());
-        inner.with_decoder(ByteLevel::default());
+        inner.with_pre_tokenizer(Some(tokenizers::pre_tokenizers::byte_level::ByteLevel::default()));
+        inner.with_decoder(Some(ByteLevel::default()));
 
         Ok(Self { inner, bos_id: None, eos_id: None })
     }

@@ -50,6 +50,905 @@ extern "C" {
 
 #define BITNET_ERROR_INTERNAL -10
 
+typedef struct Option_BitNetCStreamCallback Option_BitNetCStreamCallback;
+
+typedef struct Vec_f32 Vec_f32;
+
+/**
+ * Opaque model handle - matches llama_model*
+ */
+typedef struct llama_model llama_model;
+
+/**
+ * C API model configuration structure
+ */
+typedef struct BitNetCConfig {
+  /**
+   * Model file path (null-terminated string)
+   */
+  const char *model_path;
+  /**
+   * Model format (0=GGUF, 1=SafeTensors, 2=HuggingFace)
+   */
+  unsigned int model_format;
+  /**
+   * Vocabulary size
+   */
+  unsigned int vocab_size;
+  /**
+   * Hidden size
+   */
+  unsigned int hidden_size;
+  /**
+   * Number of layers
+   */
+  unsigned int num_layers;
+  /**
+   * Number of attention heads
+   */
+  unsigned int num_heads;
+  /**
+   * Intermediate size
+   */
+  unsigned int intermediate_size;
+  /**
+   * Maximum position embeddings
+   */
+  unsigned int max_position_embeddings;
+  /**
+   * Quantization type (0=I2S, 1=TL1, 2=TL2)
+   */
+  unsigned int quantization_type;
+  /**
+   * Quantization block size
+   */
+  unsigned int block_size;
+  /**
+   * Quantization precision
+   */
+  float precision;
+  /**
+   * Number of threads (0 for auto-detection)
+   */
+  unsigned int num_threads;
+  /**
+   * Use GPU acceleration (0=false, 1=true)
+   */
+  unsigned int use_gpu;
+  /**
+   * Batch size
+   */
+  unsigned int batch_size;
+  /**
+   * Memory limit in bytes (0 for no limit)
+   */
+  unsigned long memory_limit;
+} BitNetCConfig;
+
+/**
+ * C API inference configuration structure
+ */
+typedef struct BitNetCInferenceConfig {
+  /**
+   * Maximum sequence length
+   */
+  unsigned int max_length;
+  /**
+   * Maximum new tokens to generate
+   */
+  unsigned int max_new_tokens;
+  /**
+   * Temperature for sampling
+   */
+  float temperature;
+  /**
+   * Top-k sampling parameter (0 to disable)
+   */
+  unsigned int top_k;
+  /**
+   * Top-p sampling parameter (0.0 to disable)
+   */
+  float top_p;
+  /**
+   * Repetition penalty
+   */
+  float repetition_penalty;
+  /**
+   * Frequency penalty
+   */
+  float frequency_penalty;
+  /**
+   * Presence penalty
+   */
+  float presence_penalty;
+  /**
+   * Random seed (0 for random)
+   */
+  unsigned long seed;
+  /**
+   * Enable sampling (0=greedy, 1=sampling)
+   */
+  unsigned int do_sample;
+  /**
+   * Backend preference (0=auto, 1=cpu, 2=gpu)
+   */
+  unsigned int backend_preference;
+  /**
+   * Enable streaming output (0=false, 1=true)
+   */
+  unsigned int enable_streaming;
+  /**
+   * Streaming buffer size
+   */
+  unsigned int stream_buffer_size;
+} BitNetCInferenceConfig;
+
+/**
+ * C API model information structure
+ */
+typedef struct BitNetCModel {
+  /**
+   * Model name (null-terminated string)
+   */
+  const char *name;
+  /**
+   * Model version (null-terminated string)
+   */
+  const char *version;
+  /**
+   * Model architecture (null-terminated string)
+   */
+  const char *architecture;
+  /**
+   * Vocabulary size
+   */
+  unsigned int vocab_size;
+  /**
+   * Context length
+   */
+  unsigned int context_length;
+  /**
+   * Hidden size
+   */
+  unsigned int hidden_size;
+  /**
+   * Number of layers
+   */
+  unsigned int num_layers;
+  /**
+   * Number of attention heads
+   */
+  unsigned int num_heads;
+  /**
+   * Intermediate size
+   */
+  unsigned int intermediate_size;
+  /**
+   * Quantization type (0=I2S, 1=TL1, 2=TL2)
+   */
+  unsigned int quantization_type;
+  /**
+   * Model file size in bytes
+   */
+  unsigned long file_size;
+  /**
+   * Memory usage in bytes
+   */
+  unsigned long memory_usage;
+  /**
+   * Whether the model is loaded on GPU
+   */
+  unsigned int is_gpu_loaded;
+} BitNetCModel;
+
+/**
+ * C API streaming configuration
+ */
+typedef struct BitNetCStreamConfig {
+  /**
+   * Callback function for streaming tokens
+   */
+  struct Option_BitNetCStreamCallback callback;
+  /**
+   * User data passed to callback
+   */
+  void *user_data;
+  /**
+   * Buffer size for streaming
+   */
+  unsigned int buffer_size;
+  /**
+   * Yield interval in tokens
+   */
+  unsigned int yield_interval;
+  /**
+   * Enable backpressure handling
+   */
+  unsigned int enable_backpressure;
+  /**
+   * Timeout in milliseconds
+   */
+  unsigned int timeout_ms;
+} BitNetCStreamConfig;
+
+/**
+ * C API performance metrics structure
+ */
+typedef struct BitNetCPerformanceMetrics {
+  /**
+   * Tokens per second
+   */
+  float tokens_per_second;
+  /**
+   * Latency in milliseconds
+   */
+  float latency_ms;
+  /**
+   * Memory usage in MB
+   */
+  float memory_usage_mb;
+  /**
+   * GPU utilization percentage (0-100, -1 if not available)
+   */
+  float gpu_utilization;
+  /**
+   * Total inference time in milliseconds
+   */
+  float total_inference_time_ms;
+  /**
+   * Time to first token in milliseconds
+   */
+  float time_to_first_token_ms;
+  /**
+   * Number of tokens generated
+   */
+  unsigned int tokens_generated;
+  /**
+   * Number of tokens in prompt
+   */
+  unsigned int prompt_tokens;
+} BitNetCPerformanceMetrics;
+
+/**
+ * Model loading parameters - matches llama_model_params
+ */
+typedef struct llama_model_params {
+  int n_gpu_layers;
+  int main_gpu;
+  const float *tensor_split;
+  bool (*progress_callback)(float, void*);
+  void *progress_callback_user_data;
+  const void *kv_overrides;
+  bool vocab_only;
+  bool use_mmap;
+  bool use_mlock;
+} llama_model_params;
+
+/**
+ * Opaque context handle - matches llama_context*
+ */
+typedef struct llama_context {
+  InferenceEngine engine;
+  struct Vec_f32 last_logits;
+  uintptr_t vocab_size;
+} llama_context;
+
+/**
+ * Context parameters - matches llama_context_params
+ */
+typedef struct llama_context_params {
+  uint32_t seed;
+  uint32_t n_ctx;
+  uint32_t n_batch;
+  uint32_t n_threads;
+  uint32_t n_threads_batch;
+  int rope_scaling_type;
+  float rope_freq_base;
+  float rope_freq_scale;
+  float yarn_ext_factor;
+  float yarn_attn_factor;
+  float yarn_beta_fast;
+  float yarn_beta_slow;
+  uint32_t yarn_orig_ctx;
+  bool (*cb_eval)(void*, bool);
+  void *cb_eval_user_data;
+  int type_k;
+  int type_v;
+  bool logits_all;
+  bool embedding;
+  bool offload_kqv;
+} llama_context_params;
+
+/**
+ * Get ABI version for compatibility validation
+ *
+ * Returns the current ABI version number. Applications should check this
+ * to ensure compatibility with the expected API version.
+ *
+ * # Returns
+ * Current ABI version number
+ */
+unsigned int bitnet_abi_version(void);
+
+/**
+ * Get FFI API version
+ *
+ * Returns the FFI API version for tracking API changes.
+ * This is used for API compatibility checking in CI.
+ *
+ * # Returns
+ * FFI API version number
+ */
+uint32_t bitnet_ffi_api_version(void);
+
+/**
+ * Get library version string
+ *
+ * Returns a null-terminated string containing the library version.
+ * The returned pointer is valid for the lifetime of the program.
+ *
+ * # Returns
+ * Pointer to null-terminated version string
+ */
+const char *bitnet_version(void);
+
+/**
+ * Initialize the BitNet library
+ *
+ * Must be called before any other BitNet functions. This function is thread-safe
+ * and can be called multiple times safely.
+ *
+ * # Returns
+ * BITNET_SUCCESS on success, error code on failure
+ */
+int bitnet_init(void);
+
+/**
+ * Cleanup and shutdown the BitNet library
+ *
+ * Should be called when the library is no longer needed. After calling this
+ * function, no other BitNet functions should be called except bitnet_init().
+ * This function is thread-safe.
+ *
+ * # Returns
+ * BITNET_SUCCESS on success, error code on failure
+ */
+int bitnet_cleanup(void);
+
+/**
+ * Load a model from file with exact signature compatibility
+ *
+ * Loads a BitNet model from the specified file path. The model format is
+ * automatically detected based on the file extension and content.
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `path` must be a valid pointer to a null-terminated C string
+ * - The string must be valid UTF-8
+ * - The caller must ensure the string remains valid for the duration of this call
+ *
+ * # Arguments
+ * * `path` - Null-terminated string containing the path to the model file
+ *
+ * # Returns
+ * Model ID (>= 0) on success, negative error code on failure
+ */
+int bitnet_model_load(const char *path);
+
+/**
+ * Load a model with configuration
+ *
+ * Loads a BitNet model with the specified configuration. This provides more
+ * control over the loading process than bitnet_model_load().
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `path` must be a valid pointer to a null-terminated C string
+ * - `config` must be a valid pointer to a properly initialized BitNetCConfig structure
+ * - Both pointers must remain valid for the duration of this call
+ * - The string must be valid UTF-8
+ *
+ * # Arguments
+ * * `path` - Null-terminated string containing the path to the model file
+ * * `config` - Pointer to model configuration structure
+ *
+ * # Returns
+ * Model ID (>= 0) on success, negative error code on failure
+ */
+int bitnet_model_load_with_config(const char *path, const struct BitNetCConfig *config);
+
+/**
+ * Free a loaded model with exact signature compatibility
+ *
+ * Frees the resources associated with a loaded model. After calling this
+ * function, the model ID becomes invalid and should not be used.
+ *
+ * # Arguments
+ * * `model_id` - Model ID returned by bitnet_model_load()
+ *
+ * # Returns
+ * BITNET_SUCCESS on success, error code on failure
+ */
+int bitnet_model_free(int model_id);
+
+/**
+ * Run inference with exact signature compatibility
+ *
+ * Generates text from the given prompt using the specified model.
+ * The output buffer must be large enough to hold the generated text.
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `prompt` must be a valid pointer to a null-terminated C string with valid UTF-8
+ * - `output` must be a valid pointer to a writable buffer of at least `max_len` bytes
+ * - The caller must ensure both pointers remain valid for the duration of this call
+ * - The caller must ensure the output buffer is large enough for the generated text plus null terminator
+ *
+ * # Arguments
+ * * `model_id` - Model ID returned by bitnet_model_load()
+ * * `prompt` - Null-terminated input prompt string
+ * * `output` - Buffer to store the generated text (null-terminated)
+ * * `max_len` - Maximum length of the output buffer (including null terminator)
+ *
+ * # Returns
+ * Number of characters written (excluding null terminator) on success, negative error code on failure
+ */
+int bitnet_inference(int model_id,
+                     const char *prompt,
+                     char *output,
+                     uintptr_t max_len);
+
+/**
+ * Run inference with configuration
+ *
+ * Generates text from the given prompt using the specified model and configuration.
+ * This provides more control over the generation process than bitnet_inference().
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `prompt` must be a valid pointer to a null-terminated C string with valid UTF-8
+ * - `config` must be a valid pointer to a properly initialized BitNetCInferenceConfig structure
+ * - `output` must be a valid pointer to a writable buffer of at least `max_len` bytes
+ * - All pointers must remain valid for the duration of this call
+ * - The caller must ensure the output buffer is large enough for the generated text plus null terminator
+ *
+ * # Arguments
+ * * `model_id` - Model ID returned by bitnet_model_load()
+ * * `prompt` - Null-terminated input prompt string
+ * * `config` - Pointer to inference configuration structure
+ * * `output` - Buffer to store the generated text (null-terminated)
+ * * `max_len` - Maximum length of the output buffer (including null terminator)
+ *
+ * # Returns
+ * Number of characters written (excluding null terminator) on success, negative error code on failure
+ */
+int bitnet_inference_with_config(int model_id,
+                                 const char *prompt,
+                                 const struct BitNetCInferenceConfig *config,
+                                 char *output,
+                                 uintptr_t max_len);
+
+/**
+ * Get the last error message
+ *
+ * Returns a detailed error message for the last error that occurred.
+ * The returned pointer is valid until the next BitNet function call.
+ *
+ * # Returns
+ * Pointer to null-terminated error message, or null if no error occurred
+ */
+const char *bitnet_get_last_error(void);
+
+/**
+ * Clear the last error
+ *
+ * Clears the last error state. After calling this function,
+ * bitnet_get_last_error() will return null until another error occurs.
+ */
+void bitnet_clear_last_error(void);
+
+/**
+ * Check if a model is loaded
+ *
+ * Checks whether a model with the given ID is currently loaded.
+ *
+ * # Arguments
+ * * `model_id` - Model ID to check
+ *
+ * # Returns
+ * 1 if model is loaded, 0 if not loaded, negative error code on failure
+ */
+int bitnet_model_is_loaded(int model_id);
+
+/**
+ * Get model information
+ *
+ * Retrieves information about a loaded model.
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `info` must be a valid pointer to a writable BitNetCModel structure
+ * - The caller must ensure the pointer remains valid for the duration of this call
+ *
+ * # Arguments
+ * * `model_id` - Model ID
+ * * `info` - Pointer to structure to fill with model information
+ *
+ * # Returns
+ * BITNET_SUCCESS on success, error code on failure
+ */
+int bitnet_model_get_info(int model_id, struct BitNetCModel *info);
+
+/**
+ * Set the number of threads for CPU inference
+ *
+ * Sets the number of threads to use for CPU-based inference operations.
+ * This affects all models and inference operations.
+ *
+ * # Arguments
+ * * `num_threads` - Number of threads to use (0 for auto-detection)
+ *
+ * # Returns
+ * BITNET_SUCCESS on success, error code on failure
+ */
+int bitnet_set_num_threads(unsigned int num_threads);
+
+/**
+ * Get the current number of threads
+ *
+ * Returns the current number of threads being used for CPU inference.
+ *
+ * # Returns
+ * Number of threads currently in use
+ */
+unsigned int bitnet_get_num_threads(void);
+
+/**
+ * Enable or disable GPU acceleration
+ *
+ * Enables or disables GPU acceleration for inference operations.
+ * This setting affects all subsequent model loading and inference operations.
+ *
+ * # Arguments
+ * * `enable` - 1 to enable GPU, 0 to disable
+ *
+ * # Returns
+ * BITNET_SUCCESS on success, error code on failure
+ */
+int bitnet_set_gpu_enabled(int enable);
+
+/**
+ * Check if GPU acceleration is available
+ *
+ * Checks whether GPU acceleration is available on the current system.
+ *
+ * # Returns
+ * 1 if GPU is available, 0 if not available
+ */
+int bitnet_is_gpu_available(void);
+
+/**
+ * Start batch inference for multiple prompts
+ *
+ * Processes multiple prompts concurrently for improved throughput.
+ * All prompts use the same inference configuration.
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `prompts` must be a valid pointer to an array of `num_prompts` valid C string pointers
+ * - `config` must be a valid pointer to a properly initialized BitNetCInferenceConfig structure
+ * - `outputs` must be a valid pointer to an array of `num_prompts` writable buffer pointers
+ * - `max_lens` must be a valid pointer to an array of `num_prompts` size values
+ * - All string pointers must be null-terminated and contain valid UTF-8
+ * - All output buffers must be large enough for the generated text plus null terminators
+ * - All pointers must remain valid for the duration of this call
+ *
+ * # Arguments
+ * * `model_id` - Model ID returned by bitnet_model_load()
+ * * `prompts` - Array of null-terminated prompt strings
+ * * `num_prompts` - Number of prompts in the array
+ * * `config` - Pointer to inference configuration structure
+ * * `outputs` - Array of output buffers (one per prompt)
+ * * `max_lens` - Array of maximum lengths for each output buffer
+ *
+ * # Returns
+ * Number of successful inferences on success, negative error code on failure
+ */
+int bitnet_batch_inference(int model_id,
+                           const char *const *prompts,
+                           uintptr_t num_prompts,
+                           const struct BitNetCInferenceConfig *config,
+                           char **outputs,
+                           const uintptr_t *max_lens);
+
+/**
+ * Start streaming inference
+ *
+ * Begins streaming text generation that yields tokens incrementally.
+ * The callback function is called for each generated token.
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `prompt` must be a valid pointer to a null-terminated C string with valid UTF-8
+ * - `config` must be a valid pointer to a properly initialized BitNetCInferenceConfig structure
+ * - `stream_config` must be a valid pointer to a properly initialized BitNetCStreamConfig structure
+ * - All pointers must remain valid for the duration of this call
+ * - Any callback function pointers in the config structures must be valid
+ *
+ * # Arguments
+ * * `model_id` - Model ID returned by bitnet_model_load()
+ * * `prompt` - Null-terminated input prompt string
+ * * `config` - Pointer to inference configuration structure
+ * * `stream_config` - Pointer to streaming configuration structure
+ *
+ * # Returns
+ * Stream ID (>= 0) on success, negative error code on failure
+ */
+int bitnet_start_streaming(int model_id,
+                           const char *prompt,
+                           const struct BitNetCInferenceConfig *config,
+                           const struct BitNetCStreamConfig *stream_config);
+
+/**
+ * Stop streaming inference
+ *
+ * Stops an active streaming session and frees associated resources.
+ *
+ * # Arguments
+ * * `stream_id` - Stream ID returned by bitnet_start_streaming()
+ *
+ * # Returns
+ * BITNET_SUCCESS on success, error code on failure
+ */
+int bitnet_stop_streaming(int stream_id);
+
+/**
+ * Get next token from stream
+ *
+ * Retrieves the next token from an active streaming session.
+ * Returns 0 when the stream is finished.
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `token` must be a valid pointer to a writable buffer of at least `max_len` bytes
+ * - The caller must ensure the buffer remains valid for the duration of this call
+ * - The buffer must be large enough for the token string plus null terminator
+ *
+ * # Arguments
+ * * `stream_id` - Stream ID returned by bitnet_start_streaming()
+ * * `token` - Buffer to store the token (null-terminated)
+ * * `max_len` - Maximum length of token buffer (including null terminator)
+ *
+ * # Returns
+ * Length of token on success, 0 if stream finished, negative error code on failure
+ */
+int bitnet_stream_next_token(int stream_id, char *token, uintptr_t max_len);
+
+/**
+ * Get performance metrics for a model
+ *
+ * Retrieves detailed performance metrics for the specified model.
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `metrics` must be a valid pointer to a writable BitNetCPerformanceMetrics structure
+ * - The caller must ensure the pointer remains valid for the duration of this call
+ *
+ * # Arguments
+ * * `model_id` - Model ID
+ * * `metrics` - Pointer to structure to fill with performance metrics
+ *
+ * # Returns
+ * BITNET_SUCCESS on success, error code on failure
+ */
+int bitnet_get_performance_metrics(int model_id, struct BitNetCPerformanceMetrics *metrics);
+
+/**
+ * Reset performance metrics for a model
+ *
+ * Resets all performance counters and statistics for the specified model.
+ *
+ * # Arguments
+ * * `model_id` - Model ID
+ *
+ * # Returns
+ * BITNET_SUCCESS on success, error code on failure
+ */
+int bitnet_reset_performance_metrics(int model_id);
+
+/**
+ * Set memory limit for the library
+ *
+ * Sets a global memory limit for all BitNet operations.
+ *
+ * # Arguments
+ * * `limit_bytes` - Memory limit in bytes (0 for no limit)
+ *
+ * # Returns
+ * BITNET_SUCCESS on success, error code on failure
+ */
+int bitnet_set_memory_limit(uint64_t limit_bytes);
+
+/**
+ * Get current memory usage
+ *
+ * Returns the current memory usage of the BitNet library.
+ *
+ * # Returns
+ * Current memory usage in bytes
+ */
+uint64_t bitnet_get_memory_usage(void);
+
+/**
+ * Perform garbage collection
+ *
+ * Triggers garbage collection to free unused memory.
+ *
+ * # Returns
+ * BITNET_SUCCESS on success, error code on failure
+ */
+int bitnet_garbage_collect(void);
+
+/**
+ * Switch model backend at runtime
+ *
+ * Switches the inference backend for a loaded model between CPU and GPU.
+ *
+ * # Safety
+ * This function is safe to call with integer parameters, but care must be taken:
+ * - The model_id must be valid and correspond to a loaded model
+ * - The backend_preference must be a valid backend identifier
+ *
+ * # Arguments
+ * * `model_id` - Model ID
+ * * `backend_preference` - Backend preference (0=auto, 1=cpu, 2=gpu)
+ *
+ * # Returns
+ * BITNET_SUCCESS on success, error code on failure
+ */
+int bitnet_switch_model_backend(int model_id, unsigned int backend_preference);
+
+/**
+ * Get model loading progress
+ *
+ * Returns the loading progress for models that are currently being loaded.
+ *
+ * # Arguments
+ * * `model_id` - Model ID (can be from an in-progress load operation)
+ *
+ * # Returns
+ * Progress percentage (0-100) on success, negative error code on failure
+ */
+int bitnet_get_model_loading_progress(int model_id);
+
+/**
+ * Load model from file - 100% compatible with llama_load_model_from_file
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `path_model` must be a valid pointer to a null-terminated C string
+ * - The string must be valid UTF-8 and the file must exist
+ * - The caller must ensure the pointer remains valid for the duration of this call
+ */
+struct llama_model *llama_load_model_from_file(const char *path_model,
+                                               struct llama_model_params params);
+
+/**
+ * Free model - matches llama_free_model
+ * Free a model - 100% compatible with llama_free_model
+ *
+ * # Safety
+ * This function takes ownership of a raw pointer and must be called with valid arguments:
+ * - `model` must be a valid pointer previously returned by llama_load_model_from_file
+ * - The model must not be used after this call
+ * - This function must not be called twice with the same pointer
+ */
+void llama_free_model(struct llama_model *model);
+
+/**
+ * Create context from model - matches llama_new_context_with_model
+ * Create new context with model - 100% compatible with llama_new_context_with_model
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `model` must be a valid pointer to a model previously loaded with llama_load_model_from_file
+ * - The model must remain valid for the lifetime of the returned context
+ */
+struct llama_context *llama_new_context_with_model(struct llama_model *model,
+                                                   struct llama_context_params _params);
+
+/**
+ * Free context - matches llama_free
+ * Free a context - 100% compatible with llama_free
+ *
+ * # Safety
+ * This function takes ownership of a raw pointer and must be called with valid arguments:
+ * - `ctx` must be a valid pointer previously returned by llama_new_context_with_model
+ * - The context must not be used after this call
+ * - This function must not be called twice with the same pointer
+ */
+void llama_free(struct llama_context *ctx);
+
+/**
+ * Tokenize text - 100% compatible with llama_tokenize
+ * Returns number of tokens, or negative value on error
+ * If return value > n_max_tokens, call again with larger buffer
+ * Tokenize text - 100% compatible with llama_tokenize
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `model` must be a valid pointer to a loaded model
+ * - `text` must be a valid pointer to a null-terminated C string
+ * - `tokens` must be a valid pointer to a writable array of at least `n_max_tokens` elements
+ * - All pointers must remain valid for the duration of this call
+ */
+int llama_tokenize(const struct llama_model *model,
+                   const char *text,
+                   int text_len,
+                   int *tokens,
+                   int n_max_tokens,
+                   bool add_bos,
+                   bool special);
+
+/**
+ * Evaluate tokens - matches llama_eval
+ * Evaluate tokens - 100% compatible with llama_eval
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `ctx` must be a valid pointer to a context
+ * - `tokens` must be a valid pointer to a readable array of at least `n_tokens` elements
+ * - All pointers must remain valid for the duration of this call
+ */
+int llama_eval(struct llama_context *ctx,
+               const int *tokens,
+               int n_tokens,
+               int _n_past,
+               int _n_threads);
+
+/**
+ * Get logits pointer - matches llama_get_logits
+ * Get logits - 100% compatible with llama_get_logits
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `ctx` must be a valid pointer to a context
+ * - The returned pointer is valid only until the next call to llama_eval
+ */
+float *llama_get_logits(struct llama_context *ctx);
+
+/**
+ * Get logits for specific token - matches llama_get_logits_ith
+ * Get logits at specific position - 100% compatible with llama_get_logits_ith
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `ctx` must be a valid pointer to a context
+ * - `i` must be a valid token index
+ * - The returned pointer is valid only until the next call to llama_eval
+ */
+float *llama_get_logits_ith(struct llama_context *ctx, int i);
+
+/**
+ * Get vocabulary size
+ * Get vocabulary size - 100% compatible with llama_n_vocab
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `model` must be a valid pointer to a loaded model
+ */
+int llama_n_vocab(const struct llama_model *model);
+
+/**
+ * Get context size
+ * Get context size - 100% compatible with llama_n_ctx
+ *
+ * # Safety
+ * This function dereferences raw pointers and must be called with valid arguments:
+ * - `ctx` must be a valid pointer to a context
+ */
+int llama_n_ctx(const struct llama_context *ctx);
+
 #endif  /* BITNET_FFI_H */
 
 #ifdef __cplusplus

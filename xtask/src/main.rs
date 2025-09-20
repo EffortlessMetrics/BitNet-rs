@@ -2410,7 +2410,7 @@ fn benchmark_cmd(
         total_tokens_per_sec: f64,
     }
 
-    let (device, device_str) = select_device(gpu);
+    let (_device, device_str) = select_device(gpu);
 
     // Short-circuit on odd cases
     if tokens == 0 {
@@ -3293,7 +3293,7 @@ fn infer_cmd(
         }
     }
 
-    let (device, device_str) = select_device(gpu);
+    let (_device, device_str) = select_device(gpu);
 
     let config = InferConfig {
         max_new_tokens,
@@ -3475,7 +3475,7 @@ fn count_tokens(text: &str, tokenizer_path: Option<&Path>, allow_mock: bool) -> 
 /// Run inference using BitNet-rs library
 fn run_inference_internal(
     model_path: &Path,
-    tokenizer_path: Option<&Path>,
+    _tokenizer_path: Option<&Path>,
     prompt: &str,
     max_new_tokens: usize,
     temperature: f32,
