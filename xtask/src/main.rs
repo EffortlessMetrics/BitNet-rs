@@ -3489,6 +3489,11 @@ fn run_inference_internal(
     gpu: bool,
     allow_mock: bool,
 ) -> Result<String> {
+    // The model file must exist regardless of --allow-mock
+    if !model_path.exists() {
+        bail!("inference failed: model not found: {}", model_path.display());
+    }
+
     #[cfg(feature = "inference")]
     {
         use bitnet::prelude::*;

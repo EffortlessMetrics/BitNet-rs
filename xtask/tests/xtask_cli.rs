@@ -97,3 +97,23 @@ fn benchmark_zero_tokens_short_circuit() {
     assert_eq!(v["success"], true);
     assert_eq!(v["timing"]["total_ms"], 0);
 }
+
+#[test]
+fn infer_json_mode_clean_stdout() {
+    let model_path = get_test_model_path();
+    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    cmd.args([
+        "infer","--model",&model_path,
+        "--prompt","test","--max-new-tokens","2","--allow-mock","--format","json"
+    ]);
+    let binding = cmd.assert().success();
+    let output = binding.get_output();
+
+    // Stdout should only contain valid JSON
+    let stdout = std::str::from_utf8(&output.stdout).unwrap();
+    serde_json::from_str::<serde_json::Value>(stdout).unwrap();
+
+    // Should not contain any "Model expects" guidance in stdout
+    assert!(!stdout.contains("Model expects"));
+    assert!(!stdout.contains("LLaMA"));
+}
