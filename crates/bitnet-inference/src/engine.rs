@@ -764,12 +764,12 @@ impl InferenceEngine {
         };
 
         // PATCH 5: Validate model hyperparameters during initialization
-        engine.validate_model_hyperparameters()
+        engine
+            .validate_model_hyperparameters()
             .context("Model hyperparameter validation failed")?;
 
         // PATCH 6: Validate quantization sanity
-        engine.validate_quantization_sanity()
-            .context("Quantization sanity check failed")?;
+        engine.validate_quantization_sanity().context("Quantization sanity check failed")?;
 
         Ok(engine)
     }
@@ -845,15 +845,19 @@ impl InferenceEngine {
 
         // Tokenize input with timing
         let encode_start = std::time::Instant::now();
-        let input_tokens = self.tokenizer
+        let input_tokens = self
+            .tokenizer
             .encode(&processed_prompt, add_bos, add_special)
             .context("Failed to tokenize input prompt")?;
         metrics.tokenizer_encode_time_ms = Some(encode_start.elapsed().as_millis() as u64);
 
         // Log encoding details for debugging
         if processed_prompt != prompt {
-            debug!("Applied chat template, original length: {}, processed length: {}",
-                   prompt.len(), processed_prompt.len());
+            debug!(
+                "Applied chat template, original length: {}, processed length: {}",
+                prompt.len(),
+                processed_prompt.len()
+            );
         }
         debug!("Encoding settings: add_bos={}, add_special={}", add_bos, add_special);
 
@@ -1083,7 +1087,10 @@ impl InferenceEngine {
                 let _ = self.forward_pass(last_token).await?;
                 let dt = t0.elapsed();
                 let cache = self.cache.read().await;
-                eprintln!("probe: single decode step took {dt:?}, cache len={}", cache.num_tokens_total());
+                eprintln!(
+                    "probe: single decode step took {dt:?}, cache len={}",
+                    cache.num_tokens_total()
+                );
             }
 
             // Show incremental slice length for debugging
@@ -1110,7 +1117,9 @@ impl InferenceEngine {
                         logits[b].partial_cmp(&logits[a]).unwrap_or(std::cmp::Ordering::Equal)
                     });
                     idx.truncate(top_k);
-                    idx.sort_by(|&a, &b| logits[b].partial_cmp(&logits[a]).unwrap_or(std::cmp::Ordering::Equal));
+                    idx.sort_by(|&a, &b| {
+                        logits[b].partial_cmp(&logits[a]).unwrap_or(std::cmp::Ordering::Equal)
+                    });
                 }
 
                 eprintln!("Top-5 next token predictions:");
@@ -1300,17 +1309,19 @@ impl InferenceEngine {
         eprintln!("  head_dim: {}", head_dim);
 
         // Critical assertions
-        if model.hidden_size % model.num_heads != 0 {
+        if !model.hidden_size.is_multiple_of(model.num_heads) {
             return Err(anyhow::anyhow!(
                 "Invalid model: hidden_size ({}) not divisible by num_heads ({})",
-                model.hidden_size, model.num_heads
+                model.hidden_size,
+                model.num_heads
             ));
         }
 
-        if model.num_heads % effective_kv_heads != 0 {
+        if !model.num_heads.is_multiple_of(effective_kv_heads) {
             return Err(anyhow::anyhow!(
                 "Invalid model: num_heads ({}) not divisible by num_key_value_heads ({})",
-                model.num_heads, effective_kv_heads
+                model.num_heads,
+                effective_kv_heads
             ));
         }
 
@@ -1366,7 +1377,7 @@ impl InferenceEngine {
         // 4. Ensure scales and blocks are correct
 
         // For now, we'll validate that basic quantization parameters are reasonable
-        let config = self.model.config();
+        let _config = self.model.config();
         eprintln!("Quantization validation:");
         eprintln!("  Model appears to use quantized weights");
 

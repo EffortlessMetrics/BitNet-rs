@@ -15,16 +15,16 @@ use tracing::{debug, warn};
 enum I2SMapping {
     Sym, // {-2, -1, +1, +2} - symmetric without zero
     #[allow(dead_code)]
-    Zp,  // {-1, 0, +1, +2} - zero-point mapping
+    Zp, // {-1, 0, +1, +2} - zero-point mapping
     #[allow(dead_code)]
-    Orig // {-2, -1, 0, +1} - original implementation
+    Orig, // {-2, -1, 0, +1} - original implementation
 }
 
 #[inline]
 fn i2s_lut(mapping: I2SMapping) -> [f32; 4] {
     match mapping {
         I2SMapping::Sym => [-2.0, -1.0, 1.0, 2.0],
-        I2SMapping::Zp  => [-1.0,  0.0, 1.0, 2.0],
+        I2SMapping::Zp => [-1.0, 0.0, 1.0, 2.0],
         I2SMapping::Orig => [-2.0, -1.0, 0.0, 1.0],
     }
 }
@@ -40,8 +40,8 @@ fn i2s_env() -> (I2SMapping, bool, f32) {
 
 #[inline]
 fn i2s_dequant_block(
-    dst: &mut [f32],      // len=n
-    qbits: &[u8],         // ceil(n/4)
+    dst: &mut [f32], // len=n
+    qbits: &[u8],    // ceil(n/4)
     n: usize,
     scale_bits: u16,
     mapping: I2SMapping,
@@ -50,7 +50,9 @@ fn i2s_dequant_block(
 ) {
     let lut = i2s_lut(mapping);
     let mut s = f16::from_bits(scale_bits).to_f32();
-    if inv_scale { s = 1.0 / s; }
+    if inv_scale {
+        s = 1.0 / s;
+    }
     s *= k;
 
     for i in 0..n {
@@ -86,7 +88,6 @@ fn rows_cols(dims: &[usize]) -> Result<(usize, usize)> {
         }
     }
 }
-
 
 /// Dequantize I2_S formatted tensor data to f32
 ///
@@ -160,7 +161,15 @@ fn dequantize_to_f32_with_block(bytes: &[u8], shape: &[usize], block: usize) -> 
             let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
             off += 2;
 
-            i2s_dequant_block(&mut out[row_base + c..row_base + c + n], qslice, n, scale_bits, mapping, inv_scale, k);
+            i2s_dequant_block(
+                &mut out[row_base + c..row_base + c + n],
+                qslice,
+                n,
+                scale_bits,
+                mapping,
+                inv_scale,
+                k,
+            );
             c += n;
         }
     }
@@ -201,7 +210,15 @@ fn dequantize_partial_blocks(
             let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
             off += 2;
 
-            i2s_dequant_block(&mut out[row_base + c..row_base + c + n], qslice, n, scale_bits, mapping, inv_scale, k);
+            i2s_dequant_block(
+                &mut out[row_base + c..row_base + c + n],
+                qslice,
+                n,
+                scale_bits,
+                mapping,
+                inv_scale,
+                k,
+            );
             c += n;
             processed += 1;
         }
@@ -393,7 +410,12 @@ mod tests {
 
         // Make a deterministic code pattern 0,1,2,3 repeat
         let mut codes = Vec::<u8>::new();
-        for _ in 0..(block) { codes.push(0); codes.push(1); codes.push(2); codes.push(3); }
+        for _ in 0..(block) {
+            codes.push(0);
+            codes.push(1);
+            codes.push(2);
+            codes.push(3);
+        }
         let qbits_one_block = pack_codes(&codes[..block]);
 
         // Assemble bytes row-major: for each block -> qbits then f16 scale(2.0)
@@ -413,18 +435,24 @@ mod tests {
 
         // Transposed path gives [cols, rows]; transpose back to [rows, cols]
         let b_t = dequantize_to_f32_transposed(&bytes, &shape).expect("transposed dequant");
-        assert_eq!(b_t.len(), rows*cols);
-        let mut b = vec![0f32; rows*cols];
+        assert_eq!(b_t.len(), rows * cols);
+        let mut b = vec![0f32; rows * cols];
         for r in 0..rows {
             for c in 0..cols {
-                b[r*cols + c] = b_t[c*rows + r];
+                b[r * cols + c] = b_t[c * rows + r];
             }
         }
 
         // MSE check
-        let mse = a.iter().zip(&b).map(|(x,y)| {
-            let d = x - y; d*d
-        }).sum::<f32>() / (a.len() as f32);
+        let mse = a
+            .iter()
+            .zip(&b)
+            .map(|(x, y)| {
+                let d = x - y;
+                d * d
+            })
+            .sum::<f32>()
+            / (a.len() as f32);
         assert!(mse < 1e-6, "parity MSE too large: {mse}");
     }
 }

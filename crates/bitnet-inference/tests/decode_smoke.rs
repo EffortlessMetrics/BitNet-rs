@@ -5,10 +5,10 @@
 
 #![cfg(feature = "debug-asserts")]
 
-use std::sync::Arc;
+use bitnet_common::Device;
 use bitnet_inference::*;
 use bitnet_tokenizers::MockTokenizer;
-use bitnet_common::Device;
+use std::sync::Arc;
 
 /// Minimal engine with mock tokenizer and tiny config, one prefill + one decode.
 /// We only assert that logits variance (std) is > 0 after one token.

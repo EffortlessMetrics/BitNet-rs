@@ -12,6 +12,26 @@ use tracing::{debug, info};
 pub struct GgufLoader;
 
 impl GgufLoader {
+    #[inline]
+    fn is_projection_weight(name: &str) -> bool {
+        // Linear projections (attn + ffn) that should be [out,in] in memory
+        name.ends_with(".q_proj.weight")
+            || name.ends_with(".k_proj.weight")
+            || name.ends_with(".v_proj.weight")
+            || name.ends_with(".o_proj.weight")
+            || name.ends_with(".gate_proj.weight")
+            || name.ends_with(".up_proj.weight")
+            || name.ends_with(".down_proj.weight")
+    }
+
+    #[inline]
+    fn maybe_transpose_to_out_in(shape: &[usize], name: &str) -> bool {
+        // All projection weights are stored/consumed as [out,in] in our kernels.
+        // GGUF frequently provides them as [in,out]. Normalize here once.
+        // Use name-only gating since model dims vary across architectures.
+        Self::is_projection_weight(name) && shape.len() == 2
+    }
+
     /// Helper to fetch an unsigned integer by trying a list of keys
     fn get_u32_any(reader: &GgufReader, keys: &[&str]) -> Option<u32> {
         for k in keys {
@@ -19,9 +39,10 @@ impl GgufLoader {
                 return Some(v);
             }
             if let Some(v) = reader.get_i32_metadata(k)
-                && v >= 0 {
-                    return Some(v as u32);
-                }
+                && v >= 0
+            {
+                return Some(v as u32);
+            }
         }
         None
     }
@@ -38,20 +59,21 @@ impl GgufLoader {
         ];
         for n in &emb_names {
             if let Some(info) = reader.get_tensor_info_by_name(n)
-                && info.shape.len() == 2 {
-                    let a = info.shape[0];
-                    let b = info.shape[1];
-                    // Heuristic: vocab is big (>= 32768). Hidden is the other dim.
-                    let hidden = if a >= 32768 && b < a {
-                        b
-                    } else if b >= 32768 && a < b {
-                        a
-                    } else {
-                        a.min(b)
-                    }; // fallback: pick the smaller
-                    tracing::info!("inferred hidden_size={} from {}", hidden, n);
-                    return Some(hidden);
-                }
+                && info.shape.len() == 2
+            {
+                let a = info.shape[0];
+                let b = info.shape[1];
+                // Heuristic: vocab is big (>= 32768). Hidden is the other dim.
+                let hidden = if a >= 32768 && b < a {
+                    b
+                } else if b >= 32768 && a < b {
+                    a
+                } else {
+                    a.min(b)
+                }; // fallback: pick the smaller
+                tracing::info!("inferred hidden_size={} from {}", hidden, n);
+                return Some(hidden);
+            }
         }
         None
     }
@@ -70,24 +92,21 @@ impl GgufLoader {
         ];
         for n in &ffn_names {
             if let Some(info) = reader.get_tensor_info_by_name(n)
-                && info.shape.len() == 2 {
-                    let w_in = info.shape[0];
-                    let w_out = info.shape[1];
-                    // gate_proj should be [hidden_size, intermediate_size]
-                    if w_in == hidden_size {
-                        tracing::info!("inferred intermediate_size={} from {}", w_out, n);
-                        return Some(w_out);
-                    }
-                    // Handle transposed case [intermediate_size, hidden_size]
-                    if w_out == hidden_size {
-                        tracing::info!(
-                            "inferred intermediate_size={} from {} (transposed)",
-                            w_in,
-                            n
-                        );
-                        return Some(w_in);
-                    }
+                && info.shape.len() == 2
+            {
+                let w_in = info.shape[0];
+                let w_out = info.shape[1];
+                // gate_proj should be [hidden_size, intermediate_size]
+                if w_in == hidden_size {
+                    tracing::info!("inferred intermediate_size={} from {}", w_out, n);
+                    return Some(w_out);
                 }
+                // Handle transposed case [intermediate_size, hidden_size]
+                if w_out == hidden_size {
+                    tracing::info!("inferred intermediate_size={} from {} (transposed)", w_in, n);
+                    return Some(w_in);
+                }
+            }
         }
         None
     }
@@ -242,10 +261,10 @@ impl GgufLoader {
         let probe_len = max_probe.min(data.len());
         let slice = &data[..probe_len];
 
-        let (min, max, sum) = slice.iter().fold(
-            (f32::INFINITY, f32::NEG_INFINITY, 0.0),
-            |(mi, ma, s), &x| (mi.min(x), ma.max(x), s + x)
-        );
+        let (min, max, sum) =
+            slice.iter().fold((f32::INFINITY, f32::NEG_INFINITY, 0.0), |(mi, ma, s), &x| {
+                (mi.min(x), ma.max(x), s + x)
+            });
         let mean = sum / (slice.len() as f32);
         let non_zero_count = slice.iter().filter(|&&x| x != 0.0).count();
 
@@ -257,7 +276,9 @@ impl GgufLoader {
         if non_zero_count == 0 {
             eprintln!("⚠️  [i2s probe] {name}: ALL ZEROS detected - quantization failure!");
         } else if non_zero_count < probe_len / 4 {
-            eprintln!("⚠️  [i2s probe] {name}: Mostly zeros ({non_zero_count}/{probe_len}) - possible quantization issue");
+            eprintln!(
+                "⚠️  [i2s probe] {name}: Mostly zeros ({non_zero_count}/{probe_len}) - possible quantization issue"
+            );
         }
     }
 }
@@ -456,7 +477,7 @@ impl GgufLoader {
             .map_err(|e| BitNetError::Validation(e.to_string()))?;
 
         // PATCH 7: Probe the dequantized data for debugging
-        Self::debug_probe_i2s_tensor(&format!("transposed_projection"), &f32_data, dims, 1000);
+        Self::debug_probe_i2s_tensor(&"transposed_projection".to_string(), &f32_data, dims, 1000);
 
         // Then transpose from [rows, cols] to [cols, rows]
         let (rows, cols) = (dims[0], dims[1]);
@@ -488,10 +509,11 @@ impl GgufLoader {
         // If layer count wasn't in metadata or seems wrong, infer from tensors
         if (config.model.num_layers == 0
             || config.model.num_layers == BitNetConfig::default().model.num_layers)
-            && let Some(layers) = Self::infer_num_layers_from_tensors(reader) {
-                tracing::info!("Inferred num_layers={} from tensor analysis", layers);
-                config.model.num_layers = layers;
-            }
+            && let Some(layers) = Self::infer_num_layers_from_tensors(reader)
+        {
+            tracing::info!("Inferred num_layers={} from tensor analysis", layers);
+            config.model.num_layers = layers;
+        }
 
         // 1) hidden_size: try metadata, else infer from embeddings
         if let Some(h) =
@@ -711,13 +733,33 @@ impl GgufLoader {
                     return Self::create_transposed_i2s_tensor(data, &info.shape, &candle_device);
                 } else {
                     // Normal I2_S dequantization
-                    let f32_data = i2s::dequantize_to_f32(data, &info.shape)
+                    let mut f32_data = i2s::dequantize_to_f32(data, &info.shape)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                    // Transpose once to [out,in] if this is a projection weight
+                    let (mut rows, mut cols) = (info.shape[0], info.shape[1]);
+                    let mut want_shape = info.shape.clone();
+                    if Self::maybe_transpose_to_out_in(&info.shape, &info.name) {
+                        // f32_data currently [rows, cols]=[in,out]; flip to [out,in]
+                        let mut transposed = vec![0f32; rows * cols];
+                        for r in 0..rows {
+                            for c in 0..cols {
+                                transposed[c * rows + r] = f32_data[r * cols + c];
+                            }
+                        }
+                        f32_data = transposed;
+                        (rows, cols) = (cols, rows);
+                        want_shape = vec![rows, cols];
+                        tracing::debug!(
+                            "pre-transposed {} to [out,in]={:?}",
+                            info.name,
+                            want_shape
+                        );
+                    }
 
                     // PATCH 7: Probe the dequantized data for debugging
-                    Self::debug_probe_i2s_tensor(&info.name, &f32_data, &info.shape, 1000);
+                    Self::debug_probe_i2s_tensor(&info.name, &f32_data, &want_shape, 1000);
                     let tensor =
-                        Tensor::from_slice(&f32_data, info.shape.as_slice(), &candle_device)
+                        Tensor::from_slice(&f32_data, want_shape.as_slice(), &candle_device)
                             .map_err(|e| BitNetError::Validation(e.to_string()))?;
                     return Ok(tensor);
                 }
@@ -745,13 +787,11 @@ impl GgufLoader {
                         let (rows, cols) = (info.shape[1], info.shape[0]);
                         Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
                             .map_err(|e| BitNetError::Validation(e.to_string()))
-                    } else if Self::is_projection_tensor(&info.name) && info.shape.len() == 2 {
-                        // Projection tensors need transposition for linear layer compatibility
+                    } else if Self::maybe_transpose_to_out_in(&info.shape, &info.name) {
+                        // Apply unified transpose logic for F32 projection weights
                         debug!(
-                            "Transposing F32 projection tensor '{}' from {:?} to {:?}",
-                            info.name,
-                            info.shape,
-                            [info.shape[1], info.shape[0]]
+                            "pre-transposing F32 projection '{}' from {:?} to [out,in]",
+                            info.name, info.shape
                         );
                         let f32_data = Self::transpose_f32_to_f32(data, &info.shape)?;
                         let (rows, cols) = (info.shape[1], info.shape[0]);
@@ -777,13 +817,11 @@ impl GgufLoader {
                         let (rows, cols) = (info.shape[1], info.shape[0]);
                         Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
                             .map_err(|e| BitNetError::Validation(e.to_string()))
-                    } else if Self::is_projection_tensor(&info.name) && info.shape.len() == 2 {
-                        // Projection tensors need transposition for linear layer compatibility
+                    } else if Self::maybe_transpose_to_out_in(&info.shape, &info.name) {
+                        // Apply unified transpose logic for F16 projection weights
                         debug!(
-                            "Transposing F16 projection tensor '{}' from {:?} to {:?}",
-                            info.name,
-                            info.shape,
-                            [info.shape[1], info.shape[0]]
+                            "pre-transposing F16 projection '{}' from {:?} to [out,in]",
+                            info.name, info.shape
                         );
                         let f32_data = Self::transpose_f16_to_f32(data, &info.shape)?;
                         let (rows, cols) = (info.shape[1], info.shape[0]);

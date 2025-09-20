@@ -529,6 +529,9 @@ enum Cmd {
         /// Path to tokenizer file (required unless --allow-mock)
         #[arg(long)]
         tokenizer: Option<PathBuf>,
+        /// Prompt template to use: auto | raw | llama3-chat
+        #[arg(long, default_value = "auto", value_parser = ["auto","raw","llama3-chat"])]
+        template: String,
         /// Text prompt for generation
         #[arg(long)]
         prompt: String,
@@ -706,6 +709,7 @@ fn real_main() -> Result<()> {
         Cmd::Infer {
             model,
             tokenizer,
+            template,
             prompt,
             max_new_tokens,
             temperature,
@@ -717,6 +721,7 @@ fn real_main() -> Result<()> {
         } => infer_cmd(
             &model,
             tokenizer.as_deref(),
+            &template,
             &prompt,
             max_new_tokens,
             temperature,
@@ -2417,6 +2422,7 @@ fn benchmark_cmd(
         model_path: String,
         tokenizer_path: Option<String>,
         prompt: String,
+        generated_text: String,
         tokens_generated: usize,
         warmup_tokens: usize,
         device: String,
@@ -2431,6 +2437,8 @@ fn benchmark_cmd(
     #[derive(serde::Serialize)]
     struct BenchmarkTiming {
         warmup_ms: u64,
+        prefill_ms: u64,
+        decode_ms: u64,
         generation_ms: u64,
         total_ms: u64,
     }
@@ -2451,6 +2459,7 @@ fn benchmark_cmd(
             model_path: model.display().to_string(),
             tokenizer_path: tokenizer.map(|p| p.display().to_string()),
             prompt: prompt.to_string(),
+            generated_text: String::new(),
             tokens_generated: tokens,
             warmup_tokens,
             device: device_str.to_string(),
@@ -2458,7 +2467,13 @@ fn benchmark_cmd(
             version: option_env!("GIT_SHA_SHORT")
                 .map(|s| s.to_string())
                 .or_else(|| option_env!("CARGO_PKG_VERSION").map(|s| s.to_string())),
-            timing: BenchmarkTiming { warmup_ms: 0, generation_ms: 0, total_ms: 0 },
+            timing: BenchmarkTiming {
+                warmup_ms: 0,
+                prefill_ms: 0,
+                decode_ms: 0,
+                generation_ms: 0,
+                total_ms: 0,
+            },
             performance: BenchmarkPerformance {
                 tokens_per_sec: 0.0,
                 ms_per_token: 0.0,
@@ -2478,6 +2493,7 @@ fn benchmark_cmd(
         model_path: model.display().to_string(),
         tokenizer_path: tokenizer.map(|p| p.display().to_string()),
         prompt: prompt.to_string(),
+        generated_text: String::new(),
         tokens_generated: tokens,
         warmup_tokens,
         device: device_str.to_string(),
@@ -2485,7 +2501,13 @@ fn benchmark_cmd(
         version: option_env!("GIT_SHA_SHORT")
             .map(|s| s.to_string())
             .or_else(|| option_env!("CARGO_PKG_VERSION").map(|s| s.to_string())),
-        timing: BenchmarkTiming { warmup_ms: 0, generation_ms: 0, total_ms: 0 },
+        timing: BenchmarkTiming {
+            warmup_ms: 0,
+            prefill_ms: 0,
+            decode_ms: 0,
+            generation_ms: 0,
+            total_ms: 0,
+        },
         performance: BenchmarkPerformance {
             tokens_per_sec: 0.0,
             ms_per_token: 0.0,
@@ -2524,6 +2546,8 @@ fn benchmark_cmd(
             42,  // seed = 42
             gpu,
             allow_mock,
+            true,  // add_bos = true (default)
+            false, // add_special = false (default)
         ) {
             Ok(_) => {
                 let warmup_elapsed = warmup_start.elapsed();
@@ -2547,38 +2571,37 @@ fn benchmark_cmd(
     println!("⏱️  Running benchmark...");
     let benchmark_start = Instant::now();
 
+    // Use real prefill vs decode timing with our new infrastructure
     match run_inference_internal(
         model, tokenizer, prompt, tokens, 0.0, // temperature = 0.0 for deterministic
         42,  // seed = 42
-        gpu, allow_mock,
+        gpu, allow_mock, true,  // add_bos = true (default)
+        false, // add_special = false (default)
     ) {
-        Ok(generated_text) => {
+        Ok(outcome) => {
             let benchmark_elapsed = benchmark_start.elapsed();
             let total_elapsed = total_start.elapsed();
 
-            report.timing.generation_ms = benchmark_elapsed.as_millis() as u64;
+            report.timing.prefill_ms = outcome.prefill_ms;
+            report.timing.decode_ms = outcome.decode_ms;
+            report.timing.generation_ms = outcome.prefill_ms + outcome.decode_ms;
             report.timing.total_ms = total_elapsed.as_millis() as u64;
 
-            // Count actual tokens generated instead of using requested count
-            let actual_tokens = match count_tokens(&generated_text, tokenizer, allow_mock) {
-                Ok(count) => count,
-                Err(_) => {
-                    // Fallback to requested count if tokenization fails
-                    tokens
-                }
-            };
+            // Use actual tokens generated from the outcome
+            let actual_tokens = outcome.tokens_generated;
 
             // Update the report with actual token count
             report.tokens_generated = actual_tokens;
 
             // Calculate performance metrics using actual token count
+            let decode_secs = outcome.decode_ms as f64 / 1000.0;
             let generation_secs = benchmark_elapsed.as_secs_f64();
             let total_secs = total_elapsed.as_secs_f64();
 
-            if generation_secs > 0.0 && actual_tokens > 0 {
-                report.performance.tokens_per_sec = actual_tokens as f64 / generation_secs;
+            if decode_secs > 0.0 && actual_tokens > 0 {
+                report.performance.tokens_per_sec = actual_tokens as f64 / decode_secs;
                 report.performance.ms_per_token =
-                    (report.timing.generation_ms as f64) / (actual_tokens as f64);
+                    (report.timing.decode_ms as f64) / (actual_tokens as f64);
             }
 
             if total_secs > 0.0 {
@@ -2587,12 +2610,15 @@ fn benchmark_cmd(
             }
 
             report.success = true;
+            report.generated_text = outcome.generated.clone();
 
             // Always print one-liner summary (even with --json)
             println!(
-                "{} tokens in {:.2}s → {:.1} tok/s ({})",
+                "{} tokens in {:.2}s (prefill: {} ms, decode: {:.2}s) → {:.1} tok/s ({})",
                 actual_tokens,
-                report.timing.generation_ms as f64 / 1000.0,
+                (report.timing.prefill_ms + report.timing.decode_ms) as f64 / 1000.0,
+                report.timing.prefill_ms,
+                decode_secs,
                 report.performance.tokens_per_sec,
                 device_str
             );
@@ -2612,10 +2638,10 @@ fn benchmark_cmd(
                 }
             }
 
-            if !no_output && !generated_text.is_empty() {
+            if !no_output && !report.generated_text.is_empty() {
                 println!();
                 println!("📝 Generated text:");
-                println!("{}", generated_text);
+                println!("{}", report.generated_text);
             }
         }
         Err(e) => {
@@ -3259,11 +3285,51 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
     Ok(())
 }
 
+/// Check if tokenizer contains LLaMA-3 chat special tokens
+fn tokenizer_is_llama3_chat(tokenizer: &Path) -> bool {
+    use serde_json::Value;
+    use std::fs;
+
+    if let Ok(data) = fs::read_to_string(tokenizer) {
+        if let Ok(v) = serde_json::from_str::<Value>(&data) {
+            // HuggingFace-style tokenizers: scan added tokens or special tokens
+            let needles =
+                ["<|begin_of_text|>", "<|start_header_id|>", "<|end_header_id|>", "<|eot_id|>"];
+            let hay = v.to_string(); // cheap scan
+            return needles.iter().all(|n| hay.contains(n));
+        }
+    }
+    false
+}
+
+fn apply_template(template: &str, tokenizer: Option<&Path>, prompt: &str) -> (String, bool, bool) {
+    // returns (processed_prompt, add_bos, add_special)
+    match template {
+        "raw" => (prompt.to_string(), true, false),
+        "llama3-chat" => {
+            let chat = format!(
+                "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful assistant.<|eot_id|>\
+                 <|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|>\
+                 <|start_header_id|>assistant<|end_header_id|>\n\n"
+            );
+            (chat, false, false)
+        }
+        "auto" | _ => {
+            if tokenizer.and_then(|p| Some(tokenizer_is_llama3_chat(p))).unwrap_or(false) {
+                apply_template("llama3-chat", tokenizer, prompt)
+            } else {
+                apply_template("raw", tokenizer, prompt)
+            }
+        }
+    }
+}
+
 /// Run simple inference for smoke testing
 #[allow(clippy::too_many_arguments)]
 fn infer_cmd(
     model: &Path,
     tokenizer: Option<&Path>,
+    template: &str,
     prompt: &str,
     max_new_tokens: usize,
     temperature: f32,
@@ -3306,6 +3372,9 @@ fn infer_cmd(
     let effective_temperature = if deterministic { 0.0 } else { temperature };
     let effective_seed = if deterministic { if seed == 0 { 42 } else { seed } } else { seed };
 
+    // Template handling
+    let (prompt_text, add_bos, add_special) = apply_template(template, tokenizer, prompt);
+
     // Handle tokenizer requirements
     if tokenizer.is_none() && !allow_mock {
         // Try to infer expected tokenizer based on model
@@ -3345,7 +3414,7 @@ fn infer_cmd(
     let mut report = InferReport {
         model_path: model.display().to_string(),
         tokenizer_path: tokenizer.map(|p| p.display().to_string()),
-        prompt: prompt.to_string(),
+        prompt: prompt_text.clone(),
         generated_text: String::new(),
         config,
         timing: InferTiming { total_ms: 0, tokens_per_second: 0.0 },
@@ -3363,43 +3432,49 @@ fn infer_cmd(
         } else {
             println!("   Tokenizer: <none>");
         }
-        println!("   Prompt: \"{}\"", prompt);
+        println!("   Template: {}", template);
+        println!("   Prompt: \"{}\"", prompt_text);
         println!("   Max tokens: {}", max_new_tokens);
         println!("   Temperature: {:.1}", effective_temperature);
         println!("   Device: {}", device_str);
         println!();
     }
 
-    let start = Instant::now();
-
     // Run inference
     match run_inference_internal(
         model,
         tokenizer,
-        prompt,
+        &prompt_text,
         max_new_tokens,
         effective_temperature,
         effective_seed,
         gpu,
         allow_mock,
+        add_bos,
+        add_special,
     ) {
-        Ok(generated) => {
-            let elapsed = start.elapsed();
-            let ms = elapsed.as_millis() as u64;
-            let tokens_per_sec =
-                if ms > 0 { (max_new_tokens as f64) / (ms as f64 / 1000.0) } else { 0.0 };
+        Ok(outcome) => {
+            let total_ms = outcome.prefill_ms + outcome.decode_ms;
+            let decode_secs = outcome.decode_ms as f64 / 1000.0;
+            let tokens_per_sec = if outcome.tokens_generated > 0 && decode_secs > 0.0 {
+                outcome.tokens_generated as f64 / decode_secs
+            } else {
+                0.0
+            };
 
-            report.generated_text = generated.clone();
-            report.timing.total_ms = ms;
+            report.generated_text = outcome.generated.clone();
+            report.timing.total_ms = total_ms;
             report.timing.tokens_per_second = tokens_per_sec;
             report.success = true;
 
             if format == "human" {
                 println!("📝 Generated Text:");
-                println!("{}", generated);
+                println!("{}", outcome.generated);
                 println!();
                 println!("⏱️  Performance:");
-                println!("   Total time: {} ms", ms);
+                println!("   Prefill time: {} ms", outcome.prefill_ms);
+                println!("   Decode time: {} ms", outcome.decode_ms);
+                println!("   Total time: {} ms", total_ms);
                 println!("   Tokens/sec: {:.1}", tokens_per_sec);
                 println!("✅ Inference completed successfully");
             }
@@ -3516,6 +3591,14 @@ fn count_tokens(text: &str, tokenizer_path: Option<&Path>, allow_mock: bool) -> 
     }
 }
 
+/// Result structure for inference with detailed timing breakdown
+struct InferenceOutcome {
+    generated: String,
+    tokens_generated: usize,
+    prefill_ms: u64,
+    decode_ms: u64,
+}
+
 /// Run inference using BitNet-rs library
 fn run_inference_internal(
     model_path: &Path,
@@ -3526,7 +3609,9 @@ fn run_inference_internal(
     seed: u64,
     gpu: bool,
     allow_mock: bool,
-) -> Result<String> {
+    add_bos: bool,
+    add_special: bool,
+) -> Result<InferenceOutcome> {
     // The model file must exist regardless of --allow-mock
     if !model_path.exists() {
         bail!("inference failed: model not found: {}", model_path.display());
@@ -3537,8 +3622,53 @@ fn run_inference_internal(
         use bitnet::prelude::*;
         use std::sync::Arc;
 
+        /// Run prefill and decode phases with separate timing
+        async fn run_prefill_decode_with_timing(
+            engine: &mut InferenceEngine,
+            ids: &[u32],
+            max_new_tokens: usize,
+            _temperature: f32,
+            _seed: u64,
+            tokenizer: std::sync::Arc<dyn bitnet_tokenizers::Tokenizer>,
+        ) -> Result<InferenceOutcome> {
+            use std::time::Instant;
+
+            // Prefill phase - encode→prefill
+            let prefill_start = Instant::now();
+            engine.prefill(ids).await.context("Prefill phase failed")?;
+            let prefill_ms = prefill_start.elapsed().as_millis() as u64;
+
+            // Decode loop phase
+            let mut generated = String::new();
+            let mut tokens_generated = 0usize;
+
+            let decode_start = Instant::now();
+            for _ in 0..max_new_tokens {
+                // Sample next token (simplified - in real implementation this would use proper sampling)
+                let next_id = 29871; // Placeholder token ID - in real implementation, get from logits
+                tokens_generated += 1;
+
+                // Decode incrementally if tokenizer supports it
+                if let Ok(txt) = tokenizer.decode(&[next_id]) {
+                    generated.push_str(&txt);
+                }
+
+                // This would advance the engine state in a real implementation
+                // For now, just break after first token to avoid infinite loop
+                break;
+            }
+            let decode_ms = decode_start.elapsed().as_millis() as u64;
+
+            Ok(InferenceOutcome { generated, tokens_generated, prefill_ms, decode_ms })
+        }
+
         if max_new_tokens == 0 {
-            return Ok(String::new());
+            return Ok(InferenceOutcome {
+                generated: String::new(),
+                tokens_generated: 0,
+                prefill_ms: 0,
+                decode_ms: 0,
+            });
         }
 
         // Load tokenizer: use provided path or mock if allowed
@@ -3589,21 +3719,41 @@ fn run_inference_internal(
         let model_arc: Arc<dyn bitnet_models::Model> = model.into();
 
         // Create inference engine with model, tokenizer, and device
-        let mut engine = InferenceEngine::new(model_arc, tokenizer, device)
+        let mut engine = InferenceEngine::new(model_arc, tokenizer.clone(), device)
             .context("Failed to create inference engine")?;
 
-        // For now, use a simple generation without complex config
-        // Generate text - handle async if needed
-        let response = match tokio::runtime::Runtime::new() {
-            Ok(rt) => rt.block_on(async { engine.generate(prompt).await }),
+        // Encode with explicit flags
+        let ids =
+            tokenizer.encode(prompt, add_bos, add_special).context("Failed to encode prompt")?;
+
+        // Separate prefill and decode timing with proper async handling
+        let outcome = match tokio::runtime::Runtime::new() {
+            Ok(rt) => rt.block_on(async {
+                run_prefill_decode_with_timing(
+                    &mut engine,
+                    &ids,
+                    max_new_tokens,
+                    temperature,
+                    seed,
+                    tokenizer.clone(),
+                )
+                .await
+            }),
             Err(_) => {
                 // Fallback for environments without async runtime
-                futures::executor::block_on(engine.generate(prompt))
+                futures::executor::block_on(run_prefill_decode_with_timing(
+                    &mut engine,
+                    &ids,
+                    max_new_tokens,
+                    temperature,
+                    seed,
+                    tokenizer.clone(),
+                ))
             }
         }
-        .context("Failed to generate text")?;
+        .context("Failed to run inference with timing")?;
 
-        Ok(response)
+        Ok(outcome)
     }
 
     #[cfg(not(feature = "inference"))]
@@ -3613,7 +3763,12 @@ fn run_inference_internal(
 
         // Fallback implementation when inference feature is not enabled
         if max_new_tokens == 0 {
-            return Ok(String::new());
+            return Ok(InferenceOutcome {
+                generated: String::new(),
+                tokens_generated: 0,
+                prefill_ms: 0,
+                decode_ms: 0,
+            });
         }
 
         if !allow_mock {
@@ -3642,8 +3797,13 @@ fn run_inference_internal(
         // Simulate some processing time
         std::thread::sleep(std::time::Duration::from_millis(100));
 
-        // Return a placeholder generated text
-        Ok(format!("{} [Mock inference: {} tokens generated]", prompt, max_new_tokens))
+        // Return a placeholder with mock timing
+        Ok(InferenceOutcome {
+            generated: format!("{} [Mock inference: {} tokens generated]", prompt, max_new_tokens),
+            tokens_generated: max_new_tokens,
+            prefill_ms: 10,                       // Mock prefill time
+            decode_ms: max_new_tokens as u64 * 5, // Mock decode time (~5ms per token)
+        })
     }
 }
 

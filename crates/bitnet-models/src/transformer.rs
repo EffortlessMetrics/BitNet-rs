@@ -24,11 +24,17 @@ fn dbg_finite(tag: &str, t: &Tensor) -> candle_core::Result<()> {
         let mut n_inf = 0;
         for &x in &v[..n] {
             if !x.is_finite() {
-                if x.is_nan() { n_nan += 1; } else { n_inf += 1; }
+                if x.is_nan() {
+                    n_nan += 1;
+                } else {
+                    n_inf += 1;
+                }
             }
         }
         if n_nan + n_inf > 0 {
-            eprintln!("⚠️  [dbg] {tag}: non-finite values: NaN={n_nan} Inf={n_inf} (in first {n} elems)");
+            eprintln!(
+                "⚠️  [dbg] {tag}: non-finite values: NaN={n_nan} Inf={n_inf} (in first {n} elems)"
+            );
         }
     }
     Ok(())
@@ -629,13 +635,19 @@ impl TransformerModel {
             let embed_weight = embed_tokens.embeddings();
             if embed_weight.dims() == [vocab_size, hidden_size] {
                 // Embeddings are [V, H], transpose to [H, V] to avoid per-step transpose
-                tracing::info!("Pre-transposing tied embeddings [V,H] -> [H,V] to avoid per-step transpose");
+                tracing::info!(
+                    "Pre-transposing tied embeddings [V,H] -> [H,V] to avoid per-step transpose"
+                );
                 let transposed_weight = embed_weight.transpose(0, 1)?; // [H, V]
                 (false, Some(transposed_weight)) // Keep original flag, but cache transposed weight
             } else {
                 // Embeddings already in [H, V] format or unexpected shape
-                tracing::warn!("Embeddings have unexpected shape: {:?}, expected [vocab={}, hidden={}]",
-                              embed_weight.dims(), vocab_size, hidden_size);
+                tracing::warn!(
+                    "Embeddings have unexpected shape: {:?}, expected [vocab={}, hidden={}]",
+                    embed_weight.dims(),
+                    vocab_size,
+                    hidden_size
+                );
                 (embed_transposed, None)
             }
         } else {
