@@ -43,7 +43,7 @@ impl PyInferenceEngine {
         device: &str,
         _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
     ) -> PyResult<Self> {
-        py.allow_threads(|| {
+        py.detach(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 
@@ -96,7 +96,7 @@ impl PyInferenceEngine {
         top_k: Option<u32>,
         _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
     ) -> PyResult<String> {
-        py.allow_threads(|| {
+        py.detach(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 
@@ -272,7 +272,7 @@ impl PyInferenceEngine {
     /// # Errors
     /// Returns `PyRuntimeError` if cache clearing fails
     fn clear_cache(&self, py: Python<'_>) -> PyResult<()> {
-        py.allow_threads(|| {
+        py.detach(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 
@@ -619,7 +619,7 @@ pub fn batch_generate(
     prompts: Vec<String>,
     _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
 ) -> PyResult<Vec<String>> {
-    py.allow_threads(|| {
+    py.detach(|| {
         let rt = tokio::runtime::Runtime::new()
             .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 

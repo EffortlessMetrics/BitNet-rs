@@ -42,7 +42,7 @@ impl PyBitNetModel {
         device: &str,
         _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
     ) -> PyResult<Self> {
-        py.allow_threads(|| {
+        py.detach(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 
@@ -198,7 +198,7 @@ impl PyModelLoader {
         path: &str,
         _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
     ) -> PyResult<PyBitNetModel> {
-        py.allow_threads(|| {
+        py.detach(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 
@@ -218,7 +218,7 @@ impl PyModelLoader {
         let path = path.to_string();
         let device = self.device;
 
-        let metadata = py.allow_threads(|| {
+        let metadata = py.detach(|| {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 

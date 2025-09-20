@@ -1037,6 +1037,7 @@ fn extract_logits_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>>
 }
 
 /// Extract logits vector from tensor (legacy function for compatibility)
+#[allow(dead_code)]
 fn extract_logits(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
     use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
 

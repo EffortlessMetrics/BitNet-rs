@@ -21,12 +21,7 @@ fn expected_bytes(rows: usize, cols: usize, block: usize) -> usize {
 
 fn infer_block_size(bytes: usize, rows: usize, cols: usize) -> Option<usize> {
     // Most common variants
-    for b in [256, 128, 64, 32] {
-        if expected_bytes(rows, cols, b) == bytes {
-            return Some(b);
-        }
-    }
-    None
+    [256, 128, 64, 32].into_iter().find(|&b| expected_bytes(rows, cols, b) == bytes)
 }
 
 /// Extract (rows, cols) from tensor shape, where last dim is the column count

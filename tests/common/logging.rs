@@ -913,7 +913,7 @@ fn calculate_histogram_stats(values: &[f64]) -> HistogramStats {
     let max = sorted_values[count - 1];
     let mean = sum / count as f64;
 
-    let median = if count % 2 == 0 {
+    let median = if count.is_multiple_of(2) {
         (sorted_values[count / 2 - 1] + sorted_values[count / 2]) / 2.0
     } else {
         sorted_values[count / 2]

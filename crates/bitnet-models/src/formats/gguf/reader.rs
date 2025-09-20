@@ -40,7 +40,7 @@ impl<'a> GgufReader<'a> {
             }
 
             // sanity: doff must be >= kv_end, <= file_size, and aligned
-            if doff >= kv_end_offset && doff <= file_size && doff % a == 0 {
+            if doff >= kv_end_offset && doff <= file_size && doff.is_multiple_of(a) {
                 return doff;
             }
 

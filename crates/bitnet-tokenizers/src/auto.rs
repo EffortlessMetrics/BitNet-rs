@@ -13,11 +13,11 @@ pub fn load_auto(
     }
 
     // Try tokenizer embedded in GGUF
-    if model_path.extension().and_then(|s| s.to_str()) == Some("gguf") {
-        if let Ok(tok) = crate::gguf_tokenizer::GgufTokenizer::from_gguf_file(model_path) {
-            tracing::debug!("tokenizer: loaded from GGUF");
-            return Ok(Arc::new(tok));
-        }
+    if model_path.extension().and_then(|s| s.to_str()) == Some("gguf")
+        && let Ok(tok) = crate::gguf_tokenizer::GgufTokenizer::from_gguf_file(model_path)
+    {
+        tracing::debug!("tokenizer: loaded from GGUF");
+        return Ok(Arc::new(tok));
     }
 
     // Try tokenizer.json / tokenizer.model in the model directory

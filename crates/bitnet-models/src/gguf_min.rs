@@ -209,7 +209,7 @@ fn parse_header<R: Read + Seek>(r: &mut R) -> Result<Parsed> {
     let here = r.stream_position()?;
     let data_offset = align_up(here, alignment);
 
-    ensure!(data_offset % alignment == 0, "data section not aligned to {alignment}");
+    ensure!(data_offset.is_multiple_of(alignment), "data section not aligned to {alignment}");
 
     Ok(Parsed { alignment, tensors, data_offset })
 }
@@ -291,7 +291,7 @@ fn tensor_as_f32<'a>(
         .try_into()
         .map_err(|_| anyhow::anyhow!("tensor too large"))?;
     ensure!(
-        info.offset % alignment == 0,
+        info.offset.is_multiple_of(alignment),
         "tensor '{}' offset {} not aligned to {alignment}",
         info.name,
         info.offset

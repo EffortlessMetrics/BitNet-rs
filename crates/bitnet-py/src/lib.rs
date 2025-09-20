@@ -105,7 +105,7 @@ fn load_model(
     device: &str,
     _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
 ) -> PyResult<PyBitNetModel> {
-    py.allow_threads(|| {
+    py.detach(|| {
         let rt = tokio::runtime::Runtime::new().map_err(|e| {
             PyRuntimeError::new_err(format!("Failed to create async runtime: {}", e))
         })?;

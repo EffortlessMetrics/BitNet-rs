@@ -1539,14 +1539,13 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
         eprintln!("To use this model for cross-validation:");
         eprintln!("  export CROSSVAL_GGUF=\"{}\"", abs_path.display());
 
-        if tokenizer_downloaded {
-            if let Ok(tokenizer_path) = dest_dir
+        if tokenizer_downloaded
+            && let Ok(tokenizer_path) = dest_dir
                 .join("tokenizer.json")
                 .canonicalize()
                 .or_else(|_| dest_dir.join("tokenizer.model").canonicalize())
-            {
-                eprintln!("  export TOKENIZER_PATH=\"{}\"", tokenizer_path.display());
-            }
+        {
+            eprintln!("  export TOKENIZER_PATH=\"{}\"", tokenizer_path.display());
         }
     }
 
@@ -2399,6 +2398,7 @@ fn check_features() -> Result<()> {
 }
 
 /// Run decode performance benchmarks
+#[allow(clippy::too_many_arguments)]
 fn benchmark_cmd(
     model: &Path,
     tokenizer: Option<&Path>,
@@ -3260,6 +3260,7 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
 }
 
 /// Run simple inference for smoke testing
+#[allow(clippy::too_many_arguments)]
 fn infer_cmd(
     model: &Path,
     tokenizer: Option<&Path>,
@@ -3518,7 +3519,7 @@ fn count_tokens(text: &str, tokenizer_path: Option<&Path>, allow_mock: bool) -> 
 /// Run inference using BitNet-rs library
 fn run_inference_internal(
     model_path: &Path,
-    _tokenizer_path: Option<&Path>,
+    tokenizer_path: Option<&Path>,
     prompt: &str,
     max_new_tokens: usize,
     temperature: f32,

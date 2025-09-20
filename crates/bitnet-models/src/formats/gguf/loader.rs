@@ -465,12 +465,11 @@ impl GgufLoader {
         {
             config.model.hidden_size = h as usize;
         }
-        if config.model.hidden_size == 0
-            || config.model.hidden_size == BitNetConfig::default().model.hidden_size
+        if (config.model.hidden_size == 0
+            || config.model.hidden_size == BitNetConfig::default().model.hidden_size)
+            && let Some(h) = Self::infer_hidden_size_from_tensors(reader)
         {
-            if let Some(h) = Self::infer_hidden_size_from_tensors(reader) {
-                config.model.hidden_size = h;
-            }
+            config.model.hidden_size = h;
         }
 
         // 2) num_heads: broaden key set (MS 2B commonly has "n_head")
@@ -524,14 +523,12 @@ impl GgufLoader {
             config.model.intermediate_size = intermediate_size as usize;
         }
         // If no metadata or if it seems wrong (based on tensor shapes), infer from tensors
-        if config.model.intermediate_size == 0
-            || config.model.intermediate_size == BitNetConfig::default().model.intermediate_size
-        {
-            if let Some(inferred_size) =
+        if (config.model.intermediate_size == 0
+            || config.model.intermediate_size == BitNetConfig::default().model.intermediate_size)
+            && let Some(inferred_size) =
                 Self::infer_intermediate_size_from_tensors(reader, config.model.hidden_size)
-            {
-                config.model.intermediate_size = inferred_size;
-            }
+        {
+            config.model.intermediate_size = inferred_size;
         }
 
         if let Some(context_length) = reader.get_u32_metadata("llama.context_length") {
