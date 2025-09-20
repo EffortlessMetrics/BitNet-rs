@@ -7494,6 +7494,7 @@ dependencies = [
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
+ "bitnet-tokenizers",
  "chrono",
  "clap",
  "ctrlc",

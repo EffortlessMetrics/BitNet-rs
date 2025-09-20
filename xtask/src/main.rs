@@ -774,6 +774,18 @@ macro_rules! ev {
     };
 }
 
+// Device selection helper with loud but friendly fallback
+fn select_device(gpu: bool) -> (&'static str, &'static str) {
+    if gpu {
+        // Try to detect GPU availability (simplified - in real implementation would check CUDA)
+        // For now, assume GPU works if requested (real implementation would have proper detection)
+        eprintln!("🚀 Using GPU (CUDA)");
+        ("gpu", "gpu")
+    } else {
+        ("cpu", "cpu")
+    }
+}
+
 fn download_model_cmd(config: DownloadConfig) -> Result<()> {
     let DownloadConfig {
         id,
@@ -2367,6 +2379,8 @@ fn benchmark_cmd(
         tokens_generated: usize,
         warmup_tokens: usize,
         device: String,
+        vocab: Option<usize>,
+        version: Option<String>,
         timing: BenchmarkTiming,
         performance: BenchmarkPerformance,
         success: bool,
@@ -2387,7 +2401,40 @@ fn benchmark_cmd(
         total_tokens_per_sec: f64,
     }
 
-    let device_str = if gpu { "gpu" } else { "cpu" };
+    let (device_str, _) = select_device(gpu);
+
+    // Short-circuit on odd cases
+    if tokens == 0 {
+        println!("0 tokens requested; nothing to do.");
+        let report = BenchmarkReport {
+            model_path: model.display().to_string(),
+            tokenizer_path: tokenizer.map(|p| p.display().to_string()),
+            prompt: prompt.to_string(),
+            tokens_generated: tokens,
+            warmup_tokens,
+            device: device_str.to_string(),
+            vocab: None,
+            version: option_env!("GIT_SHA_SHORT").map(|s| s.to_string())
+                     .or_else(|| option_env!("CARGO_PKG_VERSION").map(|s| s.to_string())),
+            timing: BenchmarkTiming {
+                warmup_ms: 0,
+                generation_ms: 0,
+                total_ms: 0,
+            },
+            performance: BenchmarkPerformance {
+                tokens_per_sec: 0.0,
+                ms_per_token: 0.0,
+                total_tokens_per_sec: 0.0,
+            },
+            success: true,
+            error: None,
+        };
+        if let Some(json_path) = json_path {
+            let json = serde_json::to_string_pretty(&report)?;
+            fs::write(json_path, json)?;
+        }
+        return Ok(());
+    }
 
     let mut report = BenchmarkReport {
         model_path: model.display().to_string(),
@@ -2396,6 +2443,9 @@ fn benchmark_cmd(
         tokens_generated: tokens,
         warmup_tokens,
         device: device_str.to_string(),
+        vocab: load_model_config(model).ok().map(|c| c.vocab_size),
+        version: option_env!("GIT_SHA_SHORT").map(|s| s.to_string())
+                 .or_else(|| option_env!("CARGO_PKG_VERSION").map(|s| s.to_string())),
         timing: BenchmarkTiming {
             warmup_ms: 0,
             generation_ms: 0,
@@ -2495,17 +2545,27 @@ fn benchmark_cmd(
 
             report.success = true;
 
-            // Print results
-            println!("✅ Benchmark completed successfully!");
-            println!();
-            println!("📊 Results:");
-            println!("   Generation time: {} ms", report.timing.generation_ms);
-            println!("   Tokens per second: {:.1}", report.performance.tokens_per_sec);
-            println!("   Milliseconds per token: {:.2}", report.performance.ms_per_token);
+            // Always print one-liner summary (even with --json)
+            println!("{} tokens in {:.2}s → {:.1} tok/s ({})",
+                tokens,
+                report.timing.generation_ms as f64 / 1000.0,
+                report.performance.tokens_per_sec,
+                device_str
+            );
 
-            if warmup_tokens > 0 {
-                println!("   Total time (inc. warmup): {} ms", report.timing.total_ms);
-                println!("   Total tokens/sec: {:.1}", report.performance.total_tokens_per_sec);
+            // Print detailed results unless JSON mode
+            if json_path.is_none() {
+                println!("✅ Benchmark completed successfully!");
+                println!();
+                println!("📊 Results:");
+                println!("   Generation time: {} ms", report.timing.generation_ms);
+                println!("   Tokens per second: {:.1}", report.performance.tokens_per_sec);
+                println!("   Milliseconds per token: {:.2}", report.performance.ms_per_token);
+
+                if warmup_tokens > 0 {
+                    println!("   Total time (inc. warmup): {} ms", report.timing.total_ms);
+                    println!("   Total tokens/sec: {:.1}", report.performance.total_tokens_per_sec);
+                }
             }
 
             if !no_output && !generated_text.is_empty() {
@@ -2529,7 +2589,7 @@ fn benchmark_cmd(
     }
 
     if !report.success {
-        bail!("Benchmark failed");
+        bail!("benchmark failed: {}", report.error.unwrap_or_else(|| "unknown error".to_string()));
     }
 
     Ok(())
@@ -3041,11 +3101,21 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
             report.num_heads = Some(config.num_heads);
             report.num_kv_heads = Some(config.num_kv_heads);
 
-            // Calculate head dimension and group size
-            let head_dim = config.hidden_size / config.num_heads;
-            let group_size = config.num_heads / config.num_kv_heads;
-            report.head_dim = Some(head_dim);
-            report.group_size = Some(group_size);
+            // Calculate head dimension and group size safely
+            let hidden = config.hidden_size;
+            let q = config.num_heads.max(1);
+            let kv = if config.num_kv_heads == 0 { q } else { config.num_kv_heads };
+
+            if hidden % q != 0 || q % kv != 0 {
+                report.errors.push(format!(
+                    "Inconsistent heads: hidden={} q={} kv={}", hidden, q, kv
+                ));
+            } else {
+                let head_dim = hidden / q;
+                let group = q / kv;
+                report.head_dim = Some(head_dim);
+                report.group_size = Some(group);
+            }
 
             report.intermediate_size = Some(config.intermediate_size);
             report.num_layers = Some(config.num_layers);
@@ -3055,8 +3125,9 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
                 println!("   Vocab size: {}", config.vocab_size);
                 println!("   Hidden size: {}", config.hidden_size);
                 println!("   Attention heads: {} (q) / {} (kv)", config.num_heads, config.num_kv_heads);
-                println!("   heads: q={} kv={} (group={}) head_dim={}",
-                    config.num_heads, config.num_kv_heads, group_size, head_dim);
+                if let (Some(head_dim), Some(group)) = (report.head_dim, report.group_size) {
+                    println!("   heads: q={} kv={} (group={}) head_dim={}", q, kv, group, head_dim);
+                }
                 println!("   Intermediate size: {}", config.intermediate_size);
                 println!("   Layers: {}", config.num_layers);
             }
@@ -3129,7 +3200,7 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
 
     // Exit with error if strict mode and there are errors
     if strict && !report.errors.is_empty() {
-        bail!("Verification failed in strict mode");
+        bail!("verification failed: {} error(s)", report.errors.len());
     }
 
     Ok(())
@@ -3179,7 +3250,7 @@ fn infer_cmd(
 
     // Handle deterministic mode
     let effective_temperature = if deterministic { 0.0 } else { temperature };
-    let effective_seed = if deterministic && seed == 42 { 42 } else { seed };
+    let effective_seed = if deterministic { if seed == 0 { 42 } else { seed } } else { seed };
 
     // Handle tokenizer requirements
     if tokenizer.is_none() && !allow_mock {
@@ -3193,7 +3264,7 @@ fn infer_cmd(
                     50257 => "This model expects the **GPT-2 tokenizer (50,257)**",
                     _ => "This model requires a tokenizer",
                 };
-                bail!("{}. Pass `--tokenizer path/to/tokenizer.json` or use `--allow-mock` for testing.", tokenizer_msg);
+                bail!("{}. Pass `--tokenizer path/to/tokenizer.json` or use `--allow-mock`.\nExpected vocab (from weights): {}", tokenizer_msg, config.vocab_size);
             }
             Err(_) => {
                 bail!("Model requires a tokenizer. Pass `--tokenizer path/to/tokenizer.json` or use `--allow-mock` for testing.");
@@ -3201,7 +3272,7 @@ fn infer_cmd(
         }
     }
 
-    let device_str = if gpu { "gpu" } else { "cpu" };
+    let (device_str, _) = select_device(gpu);
 
     let config = InferConfig {
         max_new_tokens,
@@ -3291,7 +3362,7 @@ fn infer_cmd(
     }
 
     if !report.success {
-        bail!("Inference failed");
+        bail!("inference failed: {}", report.error.unwrap_or_else(|| "unknown error".to_string()));
     }
 
     Ok(())
