@@ -160,7 +160,6 @@ impl Tokenizer for BasicTokenizer {
 pub enum TokenizerFileKind {
     HfJson,
     #[cfg(feature = "spm")]
-    #[allow(dead_code)]
     Spm,
 }
 
@@ -221,7 +220,15 @@ pub struct TokenizerBuilder;
 impl TokenizerBuilder {
     /// Create tokenizer from file
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Arc<dyn Tokenizer>> {
-        let (tokenizer, _kind) = from_path(path.as_ref())?;
+        let (tokenizer, kind) = from_path(path.as_ref())?;
+        #[cfg(feature = "spm")]
+        {
+            if let TokenizerFileKind::Spm = kind {}
+        }
+        #[cfg(not(feature = "spm"))]
+        {
+            let _ = kind;
+        }
         Ok(tokenizer)
     }
 

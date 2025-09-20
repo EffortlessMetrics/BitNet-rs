@@ -2,7 +2,11 @@ use bitnet_common::{BitNetError, InferenceError, Result};
 use std::path::Path;
 use tracing::{debug, warn};
 
+#[cfg(feature = "spm")]
+use crate::SpmTokenizer;
 use crate::{MockTokenizer, Tokenizer, TokenizerConfig};
+#[cfg(feature = "spm")]
+use bitnet_common::ModelError;
 
 /// Universal tokenizer that auto-detects and handles all formats
 pub struct UniversalTokenizer {
@@ -13,7 +17,6 @@ pub struct UniversalTokenizer {
 #[allow(clippy::large_enum_variant)]
 enum TokenizerBackend {
     #[cfg(feature = "spm")]
-    #[allow(dead_code)] // SentencePiece backend is not yet fully implemented
     SentencePiece(crate::SpmTokenizer),
     Mock(MockTokenizer),
 }
@@ -91,14 +94,23 @@ impl UniversalTokenizer {
             }
             #[cfg(feature = "spm")]
             "smp" | "sentencepiece" => {
-                if std::env::var("BITNET_STRICT_TOKENIZERS").as_deref() == Ok("1") {
-                    return Err(BitNetError::Inference(InferenceError::TokenizationFailed {
-                        reason: "Mock tokenizer fallback disabled (BITNET_STRICT_TOKENIZERS=1)"
-                            .to_string(),
-                    }));
+                if let Some(path) = &config.pre_tokenizer {
+                    let spm = SpmTokenizer::from_file(Path::new(path)).map_err(|e| {
+                        BitNetError::Model(ModelError::LoadingFailed {
+                            reason: format!("Failed to load SentencePiece tokenizer: {}", e),
+                        })
+                    })?;
+                    Ok(TokenizerBackend::SentencePiece(spm))
+                } else {
+                    if std::env::var("BITNET_STRICT_TOKENIZERS").as_deref() == Ok("1") {
+                        return Err(BitNetError::Inference(InferenceError::TokenizationFailed {
+                            reason: "Mock tokenizer fallback disabled (BITNET_STRICT_TOKENIZERS=1)"
+                                .to_string(),
+                        }));
+                    }
+                    warn!("SentencePiece tokenizer requires model path, using mock fallback");
+                    Ok(TokenizerBackend::Mock(MockTokenizer::new()))
                 }
-                debug!("SentencePiece tokenizer requires file path, using mock fallback");
-                Ok(TokenizerBackend::Mock(MockTokenizer::new()))
             }
             #[cfg(not(feature = "spm"))]
             "smp" | "sentencepiece" => {
