@@ -367,6 +367,118 @@ We maintain strict compatibility with llama.cpp while providing enhanced validat
 3. **Cross-Validation**: Run `cargo xtask crossval` for inference changes
 4. **Compatibility**: Check COMPATIBILITY.md before changing public APIs
 
+## Complete Developer Workflow (xtask)
+
+BitNet.rs provides a comprehensive 4-step workflow for model development and testing via `xtask`:
+
+### 1. Download Model and Tokenizer
+
+```bash
+# Download model with automatic tokenizer detection
+cargo run -p xtask -- download-model \
+  --id microsoft/bitnet-b1.58-2B-4T-gguf \
+  --file ggml-model-i2_s.gguf
+
+# This downloads both the model and tokenizer files (tokenizer.json/tokenizer.model) if available
+# Output: models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+#         models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json (if found)
+```
+
+### 2. Verify Model Configuration and Tokenizer Compatibility
+
+```bash
+# Verify model configuration and check tokenizer vocab size
+cargo run -p xtask -- verify \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --format human
+
+# Use --strict for CI environments (exit code 15 on mismatch)
+# Use --format json for machine-readable output
+# Reports: vocab size, hidden size, attention heads, head_dim, group_size
+```
+
+**Important**: The **microsoft/bitnet-b1.58-2B-4T** model expects the **LLaMA-3 tokenizer (128,256 vocab)**.
+
+### 3. Run Inference (Smoke Testing)
+
+```bash
+# Deterministic inference for testing
+cargo run -p xtask -- infer \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt "The capital of France is" \
+  --max-new-tokens 16 \
+  --deterministic
+
+# Options:
+# --gpu: Try GPU inference with CPU fallback
+# --allow-mock: Use mock tokenizer for testing (when tokenizer unavailable)
+# --format json: Machine-readable output
+# --temperature 0.7: Override deterministic mode
+```
+
+### 4. Benchmark Performance (Local Development)
+
+```bash
+# Build with maximum optimizations for benchmarking
+RUSTFLAGS="-C target-cpu=native -C opt-level=3" cargo build --release -p xtask
+
+# Run performance benchmark
+cargo run -p xtask -- benchmark \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --tokens 128 \
+  --no-output
+
+# Options:
+# --warmup-tokens 10: Warmup tokens (default: 10)
+# --gpu: GPU benchmark with fallback
+# --json results.json: Save detailed metrics
+# --prompt "Custom prompt": Change benchmark prompt
+```
+
+### Example Complete Workflow
+
+```bash
+# Complete workflow for BitNet 2B model
+cd BitNet-rs
+
+# 1. Download
+cargo run -p xtask -- download-model \
+  --id microsoft/bitnet-b1.58-2B-4T-gguf \
+  --file ggml-model-i2_s.gguf
+
+# 2. Verify
+cargo run -p xtask -- verify \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
+
+# 3. Test inference
+cargo run -p xtask -- infer \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt "BitNet is a neural network architecture that" \
+  --max-new-tokens 32 \
+  --deterministic
+
+# 4. Benchmark (local only - not for CI)
+RUSTFLAGS="-C target-cpu=native -C opt-level=3" cargo build --release -p xtask
+cargo run -p xtask -- benchmark \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --tokens 128 \
+  --json benchmark-results.json
+```
+
+### Notes
+
+- **Benchmark should not be run in CI** - it's for local performance testing only
+- All commands support `--format json` for structured output
+- Exit codes: 0 (success), 15 (verification failed), 16 (inference failed), 17 (benchmark failed)
+- GPU commands automatically fallback to CPU with warnings
+- Use `--allow-mock` for testing without proper tokenizers
+
 ## Key Files
 
 - `COMPATIBILITY.md`: API stability guarantees and truth tables

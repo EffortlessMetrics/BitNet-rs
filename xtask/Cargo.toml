@@ -25,6 +25,7 @@ chrono = "0.4"
 bitnet-models = { path = "../crates/bitnet-models", default-features = false }
 bitnet-kernels = { path = "../crates/bitnet-kernels", default-features = false }
 bitnet-common = { path = "../crates/bitnet-common", default-features = false }
+bitnet-tokenizers = { path = "../crates/bitnet-tokenizers", default-features = false, features = ["spm"] }
 bitnet-inference = { path = "../crates/bitnet-inference", default-features = false, optional = true }
 bitnet = { path = "..", default-features = false, features = ["cpu"], optional = true }
 

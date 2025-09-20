@@ -93,9 +93,27 @@ jobs:
         run: |
           cargo xtask --help
           cargo xtask --version
-      
+
       - name: Dry-run download
         run: cargo xtask download-model --dry-run
-      
+
+      - name: Generate test fixtures
+        run: |
+          # Generate minimal GGUF file for testing
+          cargo run -p xtask -- gen-mini-gguf --output test-fixture.gguf --version 3
+          ls -la test-fixture.gguf
+
+      - name: Test verify command
+        run: |
+          # Test verify command with test fixture
+          cargo run -p xtask -- verify --model test-fixture.gguf --format json
+          echo "✅ Verify command works"
+
+      - name: Test infer command (mock)
+        run: |
+          # Test infer command with mock tokenizer
+          cargo run -p xtask -- infer --model test-fixture.gguf --prompt "hi" --allow-mock --max-new-tokens 1 --format json
+          echo "✅ Infer command works"
+
       - name: Check demos availability
         run: cargo xtask demo --list

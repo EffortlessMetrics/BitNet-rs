@@ -110,6 +110,9 @@ const EXIT_AUTH: i32 = 11;
 const EXIT_RATE_LIMIT: i32 = 12;
 const EXIT_HASH_MISMATCH: i32 = 13;
 const EXIT_NETWORK: i32 = 14;
+const EXIT_VERIFICATION_FAILED: i32 = 15;
+const EXIT_INFERENCE_FAILED: i32 = 16;
+const EXIT_BENCHMARK_FAILED: i32 = 17;
 const EXIT_INTERRUPTED: i32 = 130;
 
 // Safe exponential backoff helper with jitter
@@ -357,11 +360,38 @@ enum Cmd {
         which: GateWhich,
     },
 
-    /// Run performance benchmarks
+    /// Run decode performance benchmarks
+    ///
+    /// Measures tokens/sec by running deterministic inference with a fixed prompt.
+    /// Uses temperature=0.0 and seed=42 for reproducible results.
     Benchmark {
-        /// Platform to test
-        #[arg(long, default_value = "current")]
-        platform: String,
+        /// Path to GGUF model file
+        #[arg(long)]
+        model: PathBuf,
+        /// Path to tokenizer file (required unless --allow-mock)
+        #[arg(long)]
+        tokenizer: Option<PathBuf>,
+        /// Number of tokens to generate for benchmark
+        #[arg(long, default_value_t = 128)]
+        tokens: usize,
+        /// Benchmark prompt (affects prefill time)
+        #[arg(long, default_value = "The capital of France is")]
+        prompt: String,
+        /// Use GPU if available
+        #[arg(long, default_value_t = false)]
+        gpu: bool,
+        /// Allow mock tokenizer for testing
+        #[arg(long, default_value_t = false)]
+        allow_mock: bool,
+        /// Suppress generation output (default: true)
+        #[arg(long, default_value_t = true)]
+        no_output: bool,
+        /// Write detailed results to JSON file
+        #[arg(long)]
+        json: Option<PathBuf>,
+        /// Number of warmup tokens to generate and discard
+        #[arg(long, default_value_t = 10)]
+        warmup_tokens: usize,
     },
 
     /// Compare metrics with baseline for regression detection
@@ -571,6 +601,15 @@ fn classify_exit(e: &anyhow::Error) -> i32 {
     if msg.contains("interrupted") {
         return EXIT_INTERRUPTED;
     }
+    if msg.contains("verification failed") {
+        return EXIT_VERIFICATION_FAILED;
+    }
+    if msg.contains("inference failed") {
+        return EXIT_INFERENCE_FAILED;
+    }
+    if msg.contains("benchmark failed") {
+        return EXIT_BENCHMARK_FAILED;
+    }
 
     // Default to network error
     EXIT_NETWORK
@@ -627,7 +666,9 @@ fn real_main() -> Result<()> {
         Cmd::Gate { which } => match which {
             GateWhich::Mapper { model } => std::process::exit(gates::mapper_gate(model)?),
         },
-        Cmd::Benchmark { platform } => run_benchmark(&platform),
+        Cmd::Benchmark { model, tokenizer, tokens, prompt, gpu, allow_mock, no_output, json, warmup_tokens } => {
+            benchmark_cmd(&model, tokenizer.as_deref(), tokens, &prompt, gpu, allow_mock, no_output, json.as_deref(), warmup_tokens)
+        }
         Cmd::CompareMetrics { baseline, current, ppl_max, latency_p95_max, tok_s_min } => {
             compare_metrics(&baseline, &current, ppl_max, latency_p95_max, tok_s_min)
         }
@@ -1366,12 +1407,94 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
         eprintln!("   Speed: {:.2} MB/s", throughput);
     }
 
+    // Try to download tokenizer files (tokenizer.json, then tokenizer.model)
+    let mut tokenizer_downloaded = false;
+    let tokenizer_files = ["tokenizer.json", "tokenizer.model"];
+
+    for tokenizer_file in &tokenizer_files {
+        let tokenizer_url = format!("{base_url}/{id}/resolve/{revision}/{tokenizer_file}");
+        let tokenizer_dest = dest_dir.join(tokenizer_file);
+
+        if tokenizer_dest.exists() && !force {
+            if !json {
+                println!("✓ Tokenizer already exists: {}", tokenizer_dest.display());
+            }
+            tokenizer_downloaded = true;
+            break;
+        }
+
+        // Try to download tokenizer (silent failure if not found)
+        let mut tokenizer_req = client.get(&tokenizer_url);
+        if let Some(t) = &token {
+            tokenizer_req = tokenizer_req.header(AUTHORIZATION, format!("Bearer {t}"));
+        }
+        tokenizer_req = tokenizer_req.header(ACCEPT_ENCODING, "identity");
+
+        match tokenizer_req.send() {
+            Ok(response) if response.status().is_success() => {
+                if !json {
+                    println!("📥 Downloading tokenizer: {}", tokenizer_file);
+                }
+
+                // Simple download for tokenizer (usually small files)
+                match response.bytes() {
+                    Ok(bytes) => {
+                        if let Err(e) = fs::write(&tokenizer_dest, &bytes) {
+                            if verbose {
+                                eprintln!("[VERBOSE] Failed to save tokenizer {}: {}", tokenizer_file, e);
+                            }
+                        } else {
+                            if !json {
+                                println!("✓ Saved tokenizer: {}", tokenizer_dest.display());
+                            }
+                            tokenizer_downloaded = true;
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        if verbose {
+                            eprintln!("[VERBOSE] Failed to read tokenizer {}: {}", tokenizer_file, e);
+                        }
+                    }
+                }
+            }
+            Ok(response) if response.status() == StatusCode::NOT_FOUND => {
+                // Tokenizer not found, try next one
+                if verbose {
+                    eprintln!("[VERBOSE] Tokenizer {} not found", tokenizer_file);
+                }
+            }
+            Ok(response) => {
+                if verbose {
+                    eprintln!("[VERBOSE] Failed to download tokenizer {}: HTTP {}", tokenizer_file, response.status());
+                }
+            }
+            Err(e) => {
+                if verbose {
+                    eprintln!("[VERBOSE] Network error downloading tokenizer {}: {}", tokenizer_file, e);
+                }
+            }
+        }
+    }
+
+    if !tokenizer_downloaded && !json {
+        println!("⚠️  No tokenizer found in repository");
+        println!("   This model may require a separate tokenizer file");
+    }
+
     // Print ready-to-use export command (to stderr for non-JSON)
     if !json {
         let abs_path = dest.canonicalize().unwrap_or(dest.clone());
         eprintln!();
         eprintln!("To use this model for cross-validation:");
         eprintln!("  export CROSSVAL_GGUF=\"{}\"", abs_path.display());
+
+        if tokenizer_downloaded {
+            if let Ok(tokenizer_path) = dest_dir.join("tokenizer.json").canonicalize()
+                .or_else(|_| dest_dir.join("tokenizer.model").canonicalize()) {
+                eprintln!("  export TOKENIZER_PATH=\"{}\"", tokenizer_path.display());
+            }
+        }
     }
 
     Ok(())
@@ -2222,18 +2345,193 @@ fn check_features() -> Result<()> {
     Ok(())
 }
 
-fn run_benchmark(platform: &str) -> Result<()> {
-    println!("🚀 Running performance benchmarks...");
-    println!("  Platform: {}", platform);
+/// Run decode performance benchmarks
+fn benchmark_cmd(
+    model: &Path,
+    tokenizer: Option<&Path>,
+    tokens: usize,
+    prompt: &str,
+    gpu: bool,
+    allow_mock: bool,
+    no_output: bool,
+    json_path: Option<&Path>,
+    warmup_tokens: usize,
+) -> Result<()> {
+    use std::time::Instant;
 
-    let status =
-        Command::new("cargo").args(["bench", "--workspace", "--features", "cpu"]).status()?;
-
-    if !status.success() {
-        return Err(anyhow!("Benchmarks failed"));
+    #[derive(serde::Serialize)]
+    struct BenchmarkReport {
+        model_path: String,
+        tokenizer_path: Option<String>,
+        prompt: String,
+        tokens_generated: usize,
+        warmup_tokens: usize,
+        device: String,
+        timing: BenchmarkTiming,
+        performance: BenchmarkPerformance,
+        success: bool,
+        error: Option<String>,
     }
 
-    println!("✅ Benchmarks completed successfully!");
+    #[derive(serde::Serialize)]
+    struct BenchmarkTiming {
+        warmup_ms: u64,
+        generation_ms: u64,
+        total_ms: u64,
+    }
+
+    #[derive(serde::Serialize)]
+    struct BenchmarkPerformance {
+        tokens_per_sec: f64,
+        ms_per_token: f64,
+        total_tokens_per_sec: f64,
+    }
+
+    let device_str = if gpu { "gpu" } else { "cpu" };
+
+    let mut report = BenchmarkReport {
+        model_path: model.display().to_string(),
+        tokenizer_path: tokenizer.map(|p| p.display().to_string()),
+        prompt: prompt.to_string(),
+        tokens_generated: tokens,
+        warmup_tokens,
+        device: device_str.to_string(),
+        timing: BenchmarkTiming {
+            warmup_ms: 0,
+            generation_ms: 0,
+            total_ms: 0,
+        },
+        performance: BenchmarkPerformance {
+            tokens_per_sec: 0.0,
+            ms_per_token: 0.0,
+            total_tokens_per_sec: 0.0,
+        },
+        success: false,
+        error: None,
+    };
+
+    println!("🚀 Running decode performance benchmark...");
+    println!("   Model: {}", model.display());
+    if let Some(tok) = tokenizer {
+        println!("   Tokenizer: {}", tok.display());
+    } else if allow_mock {
+        println!("   Tokenizer: <mock>");
+    } else {
+        println!("   Tokenizer: <none>");
+    }
+    println!("   Device: {}", device_str);
+    println!("   Warmup tokens: {}", warmup_tokens);
+    println!("   Benchmark tokens: {}", tokens);
+
+    let total_start = Instant::now();
+
+    // Warmup pass
+    if warmup_tokens > 0 {
+        println!("🔥 Running warmup...");
+        let warmup_start = Instant::now();
+
+        match run_inference_internal(
+            model,
+            tokenizer,
+            prompt,
+            warmup_tokens,
+            0.0,    // temperature = 0.0 for deterministic
+            42,     // seed = 42
+            gpu,
+            allow_mock
+        ) {
+            Ok(_) => {
+                let warmup_elapsed = warmup_start.elapsed();
+                report.timing.warmup_ms = warmup_elapsed.as_millis() as u64;
+                println!("   Warmup completed in {} ms", report.timing.warmup_ms);
+            }
+            Err(e) => {
+                let error_msg = format!("Warmup failed: {}", e);
+                report.error = Some(error_msg.clone());
+                eprintln!("❌ {}", error_msg);
+                if let Some(json_path) = json_path {
+                    let json = serde_json::to_string_pretty(&report)?;
+                    fs::write(json_path, json)?;
+                }
+                bail!("Benchmark failed during warmup");
+            }
+        }
+    }
+
+    // Main benchmark
+    println!("⏱️  Running benchmark...");
+    let benchmark_start = Instant::now();
+
+    match run_inference_internal(
+        model,
+        tokenizer,
+        prompt,
+        tokens,
+        0.0,    // temperature = 0.0 for deterministic
+        42,     // seed = 42
+        gpu,
+        allow_mock
+    ) {
+        Ok(generated_text) => {
+            let benchmark_elapsed = benchmark_start.elapsed();
+            let total_elapsed = total_start.elapsed();
+
+            report.timing.generation_ms = benchmark_elapsed.as_millis() as u64;
+            report.timing.total_ms = total_elapsed.as_millis() as u64;
+
+            // Calculate performance metrics
+            let generation_secs = benchmark_elapsed.as_secs_f64();
+            let total_secs = total_elapsed.as_secs_f64();
+
+            if generation_secs > 0.0 {
+                report.performance.tokens_per_sec = tokens as f64 / generation_secs;
+                report.performance.ms_per_token = (report.timing.generation_ms as f64) / (tokens as f64);
+            }
+
+            if total_secs > 0.0 {
+                let total_tokens = warmup_tokens + tokens;
+                report.performance.total_tokens_per_sec = total_tokens as f64 / total_secs;
+            }
+
+            report.success = true;
+
+            // Print results
+            println!("✅ Benchmark completed successfully!");
+            println!();
+            println!("📊 Results:");
+            println!("   Generation time: {} ms", report.timing.generation_ms);
+            println!("   Tokens per second: {:.1}", report.performance.tokens_per_sec);
+            println!("   Milliseconds per token: {:.2}", report.performance.ms_per_token);
+
+            if warmup_tokens > 0 {
+                println!("   Total time (inc. warmup): {} ms", report.timing.total_ms);
+                println!("   Total tokens/sec: {:.1}", report.performance.total_tokens_per_sec);
+            }
+
+            if !no_output && !generated_text.is_empty() {
+                println!();
+                println!("📝 Generated text:");
+                println!("{}", generated_text);
+            }
+        }
+        Err(e) => {
+            let error_msg = e.to_string();
+            report.error = Some(error_msg.clone());
+            eprintln!("❌ Benchmark failed: {}", error_msg);
+        }
+    }
+
+    // Write JSON report if requested
+    if let Some(json_path) = json_path {
+        let json = serde_json::to_string_pretty(&report)?;
+        fs::write(json_path, json)?;
+        println!("📄 Results saved to: {}", json_path.display());
+    }
+
+    if !report.success {
+        bail!("Benchmark failed");
+    }
+
     Ok(())
 }
 
@@ -2707,11 +3005,14 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
         hidden_size: Option<usize>,
         num_heads: Option<usize>,
         num_kv_heads: Option<usize>,
+        head_dim: Option<usize>,
+        group_size: Option<usize>,
         intermediate_size: Option<usize>,
         num_layers: Option<usize>,
         tokenizer_path: Option<String>,
         tokenizer_vocab_size: Option<usize>,
         vocab_size_match: Option<bool>,
+        success: bool,
         errors: Vec<String>,
     }
 
@@ -2721,11 +3022,14 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
         hidden_size: None,
         num_heads: None,
         num_kv_heads: None,
+        head_dim: None,
+        group_size: None,
         intermediate_size: None,
         num_layers: None,
         tokenizer_path: tokenizer.map(|p| p.display().to_string()),
         tokenizer_vocab_size: None,
         vocab_size_match: None,
+        success: false,
         errors: Vec::new(),
     };
 
@@ -2736,6 +3040,13 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
             report.hidden_size = Some(config.hidden_size);
             report.num_heads = Some(config.num_heads);
             report.num_kv_heads = Some(config.num_kv_heads);
+
+            // Calculate head dimension and group size
+            let head_dim = config.hidden_size / config.num_heads;
+            let group_size = config.num_heads / config.num_kv_heads;
+            report.head_dim = Some(head_dim);
+            report.group_size = Some(group_size);
+
             report.intermediate_size = Some(config.intermediate_size);
             report.num_layers = Some(config.num_layers);
 
@@ -2744,6 +3055,8 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
                 println!("   Vocab size: {}", config.vocab_size);
                 println!("   Hidden size: {}", config.hidden_size);
                 println!("   Attention heads: {} (q) / {} (kv)", config.num_heads, config.num_kv_heads);
+                println!("   heads: q={} kv={} (group={}) head_dim={}",
+                    config.num_heads, config.num_kv_heads, group_size, head_dim);
                 println!("   Intermediate size: {}", config.intermediate_size);
                 println!("   Layers: {}", config.num_layers);
             }
@@ -2793,13 +3106,16 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
         }
     }
 
+    // Set success status
+    report.success = report.errors.is_empty();
+
     // Output results
     match format {
         "json" => {
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
         "human" => {
-            if report.errors.is_empty() {
+            if report.success {
                 println!("✅ Model verification completed successfully");
             } else {
                 println!("❌ Verification completed with {} error(s)", report.errors.len());
@@ -2861,13 +3177,36 @@ fn infer_cmd(
         tokens_per_second: f64,
     }
 
+    // Handle deterministic mode
     let effective_temperature = if deterministic { 0.0 } else { temperature };
+    let effective_seed = if deterministic && seed == 42 { 42 } else { seed };
+
+    // Handle tokenizer requirements
+    if tokenizer.is_none() && !allow_mock {
+        // Try to infer expected tokenizer based on model
+        match load_model_config(model) {
+            Ok(config) => {
+                // Check for common vocab sizes and provide specific guidance
+                let tokenizer_msg = match config.vocab_size {
+                    128256 => "This model expects the **LLaMA-3 tokenizer (128,256)**",
+                    32000 => "This model expects the **LLaMA tokenizer (32,000)**",
+                    50257 => "This model expects the **GPT-2 tokenizer (50,257)**",
+                    _ => "This model requires a tokenizer",
+                };
+                bail!("{}. Pass `--tokenizer path/to/tokenizer.json` or use `--allow-mock` for testing.", tokenizer_msg);
+            }
+            Err(_) => {
+                bail!("Model requires a tokenizer. Pass `--tokenizer path/to/tokenizer.json` or use `--allow-mock` for testing.");
+            }
+        }
+    }
+
     let device_str = if gpu { "gpu" } else { "cpu" };
 
     let config = InferConfig {
         max_new_tokens,
         temperature: effective_temperature,
-        seed,
+        seed: effective_seed,
         deterministic,
         device: device_str.to_string(),
     };
@@ -2905,9 +3244,8 @@ fn infer_cmd(
 
     let start = Instant::now();
 
-    // TODO: Implement actual inference using BitNet-rs library
-    // For now, this is a placeholder that shows the structure
-    match run_inference_internal(model, tokenizer, prompt, max_new_tokens, effective_temperature, seed, gpu, allow_mock) {
+    // Run inference
+    match run_inference_internal(model, tokenizer, prompt, max_new_tokens, effective_temperature, effective_seed, gpu, allow_mock) {
         Ok(generated) => {
             let elapsed = start.elapsed();
             let ms = elapsed.as_millis() as u64;
@@ -3009,29 +3347,11 @@ fn load_tokenizer_vocab_size(tokenizer_path: &Path) -> Result<usize> {
         bail!("Tokenizer file not found: {}", tokenizer_path.display());
     }
 
-    let file_name = tokenizer_path.file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("");
+    // Use the bitnet-tokenizers infrastructure to load any supported format
+    let tokenizer = bitnet_tokenizers::loader::load_tokenizer(tokenizer_path)
+        .with_context(|| format!("Failed to load tokenizer from {}", tokenizer_path.display()))?;
 
-    if file_name.ends_with(".json") {
-        // HuggingFace tokenizer.json format
-        let content = std::fs::read_to_string(tokenizer_path)?;
-        let json: serde_json::Value = serde_json::from_str(&content)?;
-
-        if let Some(vocab) = json.get("model").and_then(|m| m.get("vocab")) {
-            if let Some(vocab_obj) = vocab.as_object() {
-                return Ok(vocab_obj.len());
-            }
-        }
-
-        bail!("Could not find vocab in tokenizer.json");
-    } else if file_name.ends_with(".model") {
-        // SentencePiece model - placeholder
-        // In real implementation, would use sentencepiece library
-        bail!("SentencePiece tokenizer support not yet implemented");
-    } else {
-        bail!("Unknown tokenizer format: {}", file_name);
-    }
+    Ok(tokenizer.vocab_size())
 }
 
 /// Run inference using BitNet-rs library
@@ -3053,14 +3373,21 @@ fn run_inference_internal(
             return Ok(String::new());
         }
 
-        // Create device
-        let device = if gpu {
+        // Create device with proper fallback handling
+        let (device, actual_device) = if gpu {
             match Device::Cuda(0) {
-                Ok(dev) => dev,
-                Err(_) => Device::Cpu,
+                Ok(dev) => {
+                    eprintln!("🚀 Using GPU (CUDA) for inference");
+                    (dev, "gpu")
+                },
+                Err(e) => {
+                    eprintln!("⚠️  GPU requested but failed to initialize CUDA: {}", e);
+                    eprintln!("   Falling back to CPU");
+                    (Device::Cpu, "cpu")
+                }
             }
         } else {
-            Device::Cpu
+            (Device::Cpu, "cpu")
         };
 
         // Load the model
@@ -3102,7 +3429,21 @@ fn run_inference_internal(
         }
 
         if !allow_mock {
-            bail!("Inference feature not enabled. Build with --features inference or use --allow-mock");
+            // Try to provide specific tokenizer guidance even in mock mode
+            match load_model_config(model_path) {
+                Ok(config) => {
+                    let tokenizer_msg = match config.vocab_size {
+                        128256 => "This model expects the **LLaMA-3 tokenizer (128,256)**",
+                        32000 => "This model expects the **LLaMA tokenizer (32,000)**",
+                        50257 => "This model expects the **GPT-2 tokenizer (50,257)**",
+                        _ => "This model requires a tokenizer",
+                    };
+                    bail!("Inference feature not enabled. Build with `--features inference` for real inference, or use `--allow-mock` for testing.\n{}", tokenizer_msg);
+                }
+                Err(_) => {
+                    bail!("Inference feature not enabled. Build with `--features inference` for real inference, or use `--allow-mock` for testing.");
+                }
+            }
         }
 
         // Simulate some processing time
