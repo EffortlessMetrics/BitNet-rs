@@ -96,6 +96,10 @@ pub struct KVCache {
     current_size: usize,
     /// Memory pool for efficient allocation
     memory_pool: MemoryPool,
+    /// Number of tokens that were prefilled in batch
+    tokens_prefilled: usize,
+    /// Total number of tokens processed (prefill + incremental)
+    tokens_total: usize,
 }
 
 impl KVCache {
@@ -109,6 +113,8 @@ impl KVCache {
             access_order: VecDeque::new(),
             current_size: 0,
             memory_pool,
+            tokens_prefilled: 0,
+            tokens_total: 0,
         })
     }
 
@@ -178,6 +184,8 @@ impl KVCache {
         self.access_order.clear();
         self.current_size = 0;
         self.memory_pool.reset();
+        self.tokens_prefilled = 0;
+        self.tokens_total = 0;
         debug!("Cache cleared");
     }
 
@@ -208,6 +216,7 @@ impl KVCache {
             max_size_bytes: self.config.max_size_bytes,
             hit_rate: 0.0, // Would need to track hits/misses
             memory_efficiency: self.current_size as f64 / self.config.max_size_bytes as f64,
+            cache_size: self.current_size, // Alias for compatibility
         }
     }
 
@@ -220,6 +229,29 @@ impl KVCache {
     pub fn usage_percent(&self) -> f64 {
         let percent = (self.current_size as f64 / self.config.max_size_bytes as f64) * 100.0;
         percent.clamp(0.0, 100.0)
+    }
+
+    /// Get number of tokens that were prefilled in the initial batch
+    pub fn num_tokens_prefilled(&self) -> usize {
+        self.tokens_prefilled
+    }
+
+    /// Get total number of tokens processed (prefill + incremental)
+    pub fn num_tokens_total(&self) -> usize {
+        self.tokens_total
+    }
+
+    /// Record that a prefill operation processed N tokens
+    pub fn record_prefill(&mut self, token_count: usize) {
+        self.tokens_prefilled = token_count;
+        self.tokens_total = token_count;
+        debug!("Cache: recorded prefill of {} tokens", token_count);
+    }
+
+    /// Record that an incremental step processed N tokens (usually 1)
+    pub fn record_incremental(&mut self, token_count: usize) {
+        self.tokens_total += token_count;
+        debug!("Cache: recorded incremental {} tokens (total: {})", token_count, self.tokens_total);
     }
 
     /// Evict an entry based on the configured policy
@@ -280,6 +312,7 @@ pub struct CacheStats {
     pub max_size_bytes: usize,
     pub hit_rate: f64,
     pub memory_efficiency: f64,
+    pub cache_size: usize, // Alias for current_size_bytes for compatibility
 }
 
 /// Memory pool for efficient allocation

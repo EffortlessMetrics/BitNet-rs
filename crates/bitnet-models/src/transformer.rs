@@ -470,6 +470,7 @@ pub struct TransformerModel {
     pub config: BitNetConfig,
     pub embed_tokens: candle_nn::Embedding,
     pub embed_transposed: bool, // True if embeddings are stored as [hidden, vocab]
+    pub embed_tied_weight: Option<Tensor>, // Cached transposed embedding weight for tied models [H, V]
     pub layers: Vec<TransformerBlock>,
     pub norm: LayerNorm,
     pub lm_head: Option<Linear>,        // Optional for tied weights
@@ -546,10 +547,34 @@ impl TransformerModel {
             }
         };
 
+        // PATCH 2: Optimize tied weights by pre-transposing embeddings once at load
+        let (embed_transposed, embed_tied_weight) = if embed_transposed {
+            // Already transposed from flag
+            (true, None)
+        } else if lm_head.is_none() {
+            // No dedicated lm_head, we'll use tied weights - pre-transpose for efficiency
+            let embed_weight = embed_tokens.embeddings();
+            if embed_weight.dims() == [vocab_size, hidden_size] {
+                // Embeddings are [V, H], transpose to [H, V] to avoid per-step transpose
+                tracing::info!("Pre-transposing tied embeddings [V,H] -> [H,V] to avoid per-step transpose");
+                let transposed_weight = embed_weight.transpose(0, 1)?; // [H, V]
+                (false, Some(transposed_weight)) // Keep original flag, but cache transposed weight
+            } else {
+                // Embeddings already in [H, V] format or unexpected shape
+                tracing::warn!("Embeddings have unexpected shape: {:?}, expected [vocab={}, hidden={}]",
+                              embed_weight.dims(), vocab_size, hidden_size);
+                (embed_transposed, None)
+            }
+        } else {
+            // Dedicated lm_head exists, no need to optimize embeddings
+            (embed_transposed, None)
+        };
+
         Ok(Self {
             config,
             embed_tokens,
             embed_transposed,
+            embed_tied_weight,
             layers,
             norm,
             lm_head,
@@ -668,12 +693,16 @@ impl TransformerModel {
                         tracing::info!("LM head tied to input embeddings");
                     });
 
-                    let embeddings = self.embed_tokens.embeddings();
                     if self.embed_transposed {
                         // Embeddings are [hidden, vocab]
+                        let embeddings = self.embed_tokens.embeddings();
                         Ok(hidden.matmul(embeddings)?) // [B, V]
+                    } else if let Some(ref cached_weight) = self.embed_tied_weight {
+                        // Use pre-transposed cached weight [H, V] - avoids per-step transpose!
+                        Ok(hidden.matmul(cached_weight)?) // [B, V]
                     } else {
-                        // Embeddings are [vocab, hidden], transpose first
+                        // Fallback: transpose on-demand (should be rare after optimization)
+                        let embeddings = self.embed_tokens.embeddings();
                         let w = embeddings.transpose(0, 1)?; // [H, V]
                         Ok(hidden.matmul(&w)?) // [B, V]
                     }
@@ -712,14 +741,20 @@ impl TransformerModel {
                         tracing::info!("LM head tied to input embeddings");
                     });
 
-                    let embeddings = self.embed_tokens.embeddings();
                     if self.embed_transposed {
                         // Embeddings are [hidden, vocab], flatten hidden for matmul
+                        let embeddings = self.embed_tokens.embeddings();
                         let hidden_2d = hidden.reshape(&[b * t, h])?;
                         let logits_2d = hidden_2d.matmul(embeddings)?;
                         Ok(logits_2d.reshape(&[b, t, vocab_size])?)
+                    } else if let Some(ref cached_weight) = self.embed_tied_weight {
+                        // Use pre-transposed cached weight [H, V] - avoids per-step transpose!
+                        let hidden_2d = hidden.reshape(&[b * t, h])?;
+                        let logits_2d = hidden_2d.matmul(cached_weight)?;
+                        Ok(logits_2d.reshape(&[b, t, vocab_size])?)
                     } else {
-                        // Embeddings are [vocab, hidden], transpose and flatten for matmul
+                        // Fallback: transpose on-demand (should be rare after optimization)
+                        let embeddings = self.embed_tokens.embeddings();
                         let w = embeddings.transpose(0, 1)?; // [H, V]
                         let hidden_2d = hidden.reshape(&[b * t, h])?;
                         let logits_2d = hidden_2d.matmul(&w)?;
