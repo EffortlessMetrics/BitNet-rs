@@ -29,15 +29,11 @@ fn i2s_lut(mapping: I2SMapping) -> [f32; 4] {
 
 #[inline]
 fn i2s_env() -> (I2SMapping, bool, f32) {
-    let mapping = match std::env::var("BITNET_I2S_LUT").as_deref() {
-        Ok("zp") => I2SMapping::Zp,
-        Ok("sym") => I2SMapping::Sym,
-        _ => I2SMapping::Orig, // default to original
-    };
-    let inv = std::env::var("BITNET_I2S_INV_SCALE").as_deref() == Ok("1");
-    let k: f32 = std::env::var("BITNET_I2S_K").ok()
-        .and_then(|s| s.parse().ok()).unwrap_or(1.0);
-    (mapping, inv, k)
+    // Hard-coded winning configuration that fixes scale explosion:
+    // - Symmetric LUT {-2, -1, +1, +2} avoids quantization failures
+    // - Scale factor K=0.5 reduces activation magnitude
+    // - No inverse scale (inv=false) maintains stable gradients
+    (I2SMapping::Sym, false, 0.5)
 }
 
 #[inline]
