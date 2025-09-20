@@ -2585,7 +2585,7 @@ fn benchmark_cmd(
     if let Some(json_path) = json_path {
         let json = serde_json::to_string_pretty(&report)?;
         fs::write(json_path, json)?;
-        println!("📄 Results saved to: {}", json_path.display());
+        eprintln!("📄 Results saved to: {}", json_path.display());
     }
 
     if !report.success {

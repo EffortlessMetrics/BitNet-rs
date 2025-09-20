@@ -78,7 +78,14 @@ pub fn dequantize_to_f32(bytes: &[u8], shape: &[usize]) -> Result<Vec<f32>> {
 
     if bytes.len() != default_expected {
         if let Some(b) = infer_block_size(bytes.len(), rows, cols) {
-            warn!("I2_S: non-default block size detected: {} (default {})", b, I2S_DEFAULT_BLOCK);
+            // Only warn if the difference is significant (more than one block worth of data)
+            let one_block_bytes = expected_bytes(1, I2S_DEFAULT_BLOCK, I2S_DEFAULT_BLOCK);
+            let shortfall = default_expected.saturating_sub(bytes.len());
+            if shortfall > one_block_bytes {
+                warn!("I2_S: non-default block size detected: {} (default {})", b, I2S_DEFAULT_BLOCK);
+            } else {
+                debug!("I2_S: non-default block size detected: {} (default {})", b, I2S_DEFAULT_BLOCK);
+            }
             block = b;
         } else {
             // Partial data fallback: process what we can, zero-fill the rest
@@ -186,7 +193,14 @@ pub fn dequantize_to_f32_transposed(bytes: &[u8], shape: &[usize]) -> Result<Vec
     let default_expected = expected_bytes(rows, cols, block);
     if bytes.len() != default_expected {
         if let Some(b) = infer_block_size(bytes.len(), rows, cols) {
-            warn!("I2_S: non-default block size detected: {} (default {})", b, I2S_DEFAULT_BLOCK);
+            // Only warn if the difference is significant (more than one block worth of data)
+            let one_block_bytes = expected_bytes(1, I2S_DEFAULT_BLOCK, I2S_DEFAULT_BLOCK);
+            let shortfall = default_expected.saturating_sub(bytes.len());
+            if shortfall > one_block_bytes {
+                warn!("I2_S: non-default block size detected: {} (default {})", b, I2S_DEFAULT_BLOCK);
+            } else {
+                debug!("I2_S: non-default block size detected: {} (default {})", b, I2S_DEFAULT_BLOCK);
+            }
             block = b;
         } else {
             // Partial fallback: decode what we can into transposed output
