@@ -65,6 +65,15 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_precision
 
 # Mixed precision benchmarks and performance analysis
 cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
+
+# SentencePiece (SPM) tokenizer tests (requires spm feature)
+cargo test -p bitnet-tokenizers --no-default-features --features spm test_universal_tokenizer_spm_integration
+cargo test -p bitnet-tokenizers --no-default-features --features spm -- --ignored  # SPM model tests
+cargo test -p bitnet-tokenizers --features "spm,integration-tests" -- --quiet
+
+# Strict tokenizer mode testing (prevents fallback to mock tokenizers)
+BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers --no-default-features --features spm
+BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers -- --quiet
 ```
 
 ### Code Quality Commands
@@ -109,10 +118,12 @@ cargo run -p xtask -- check-features
 # Verify model configuration and tokenizer compatibility
 cargo run -p xtask -- verify --model models/bitnet/model.gguf
 cargo run -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json
+cargo run -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.model  # SPM tokenizer
 cargo run -p xtask -- verify --model models/bitnet/model.gguf --format json
 
 # Run simple inference for smoke testing (requires --features inference for real inference)
 cargo run -p xtask --features inference -- infer --model models/bitnet/model.gguf --prompt "The capital of France is" --tokenizer models/bitnet/tokenizer.json
+cargo run -p xtask --features inference -- infer --model models/bitnet/model.gguf --prompt "The capital of France is" --tokenizer models/bitnet/tokenizer.model  # SPM tokenizer
 cargo run -p xtask -- infer --model models/bitnet/model.gguf --prompt "Hello world" --allow-mock --format json
 cargo run -p xtask --features inference -- infer --model models/bitnet/model.gguf --prompt "Test prompt" --max-new-tokens 64 --temperature 0.7 --gpu
 ```
@@ -212,6 +223,7 @@ Default features are **empty** to prevent unwanted dependencies:
 - `cuda`: Backward-compatible alias for `gpu` feature
 - `iq2s-ffi`: IQ2_S quantization via GGML FFI (requires vendored GGML files)
 - `ffi`: C++ FFI bridge with quantization support for gradual migration (includes FfiKernel with I2S/TL1/TL2 quantization)
+- `spm`: SentencePiece tokenizer support via `sentencepiece` crate (enables real SPM tokenizer loading)
 - `crossval`: Cross-validation against C++ (increases build time)
 
 ### Quantization Support
@@ -300,10 +312,18 @@ BitNet.rs includes a comprehensive tokenizer system with GGUF integration:
 
 #### Supported Tokenizer Formats
 - **GPT-2/BPE**: Modern BPE tokenization with merge rules (via HuggingFace tokenizers)
-- **SentencePiece**: Subword tokenization via SentencePiece library (feature-gated)
+- **SentencePiece**: Subword tokenization via SentencePiece library (feature-gated with `--features spm`)
 - **LLaMA/LLaMA3**: LLaMA-specific tokenization variants
 - **TikToken**: OpenAI's tiktoken format
 - **Mock Backend**: Minimal tokenizer for testing and compatibility
+
+#### SentencePiece (SPM) Backend Features (New in PR #200)
+- **Real SPM Loading**: Loads actual SentencePiece models when `spm` feature enabled and model path provided
+- **Model Type Detection**: Supports both `smp` and `sentencepiece` model type identifiers
+- **Strict Mode Integration**: Proper handling of `BITNET_STRICT_TOKENIZERS=1` environment variable
+- **Graceful Fallback**: Falls back to mock tokenizer when SPM unavailable (unless strict mode active)
+- **File Extension Support**: Automatically detects `.model` files as SentencePiece tokenizers
+- **Error Propagation**: Enhanced error messages for SPM loading failures
 
 #### BPE Backend Features
 - **Runtime Construction**: Build tokenizers from vocabulary and merge rules without JSON files
@@ -507,7 +527,7 @@ For detailed information on specific topics, see:
 - `BITNET_GPU_FAKE`: Mock GPU backend detection for testing (e.g., "cuda", "metal", "cuda,rocm")
 
 ### Strict Testing Mode Variables (prevent Potemkin passes)
-- `BITNET_STRICT_TOKENIZERS=1`: Forbid mock tokenizer fallbacks in perf/integration tests
+- `BITNET_STRICT_TOKENIZERS=1`: Forbid mock tokenizer fallbacks in perf/integration tests (includes SPM tokenizer fallbacks)
 - `BITNET_STRICT_NO_FAKE_GPU=1`: Forbid fake GPU backends in perf/integration tests
 
 ### Build-time Variables (for Git metadata)
@@ -583,6 +603,7 @@ cargo run -p bitnet-cli -- score --model model.gguf --file validation.txt --devi
 
 # Model evaluation with external tokenizer and token limits
 cargo run -p bitnet-cli -- score --model model.gguf --file large-dataset.txt --tokenizer tokenizer.json --max-tokens 1000
+cargo run -p bitnet-cli -- score --model model.gguf --file large-dataset.txt --tokenizer tokenizer.model --max-tokens 1000  # SPM tokenizer
 
 # Enhanced batch inference with prefill timing and structured performance metrics  
 cargo run -p bitnet-cli -- run --input-file prompts.txt --batch-size 4 --metrics --format json
@@ -602,8 +623,15 @@ BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels test_gpu_info_mocked_sc
 # Test universal tokenizer with BPE backend (new feature)
 cargo test -p bitnet-tokenizers --no-default-features
 
+# Test SentencePiece tokenizer integration (requires spm feature)
+cargo test -p bitnet-tokenizers --no-default-features --features spm test_universal_tokenizer_spm_integration
+cargo test -p bitnet-tokenizers --features spm -- --ignored  # Requires SPM model file
+
 # Test BPE tokenizer round-trip functionality (includes new BPE tests)
 cargo test -p bitnet-tokenizers --test universal_roundtrip --no-default-features --features integration-tests
+
+# Test strict tokenizer mode (no mock fallbacks)
+BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers --no-default-features --features spm -- --quiet
 
 # Enhanced GPU validation with performance metrics and error handling
 cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
