@@ -1,4 +1,5 @@
 use anyhow::{Context, Result, anyhow, bail};
+use bitnet_common::Device;
 use bitnet_kernels::gpu_utils::get_gpu_info;
 use clap::{Parser, Subcommand};
 use fs2::FileExt;
@@ -775,15 +776,27 @@ macro_rules! ev {
 }
 
 // Device selection helper with loud but friendly fallback
-fn select_device(gpu: bool) -> (&'static str, &'static str) {
+fn select_device(gpu: bool) -> (Device, &'static str) {
     if gpu {
-        // Try to detect GPU availability (simplified - in real implementation would check CUDA)
-        // For now, assume GPU works if requested (real implementation would have proper detection)
-        eprintln!("🚀 Using GPU (CUDA)");
-        ("gpu", "gpu")
-    } else {
-        ("cpu", "cpu")
+        #[cfg(feature = "inference")]
+        {
+            match Device::Cuda(0) {
+                Ok(dev) => {
+                    eprintln!("🚀 Using GPU (CUDA)");
+                    return (dev, "gpu");
+                },
+                Err(e) => {
+                    eprintln!("⚠️  GPU requested but failed to initialize CUDA: {}", e);
+                    eprintln!("   Falling back to CPU");
+                }
+            }
+        }
+        #[cfg(not(feature = "inference"))]
+        {
+            eprintln!("⚠️  GPU requested but inference feature not enabled; falling back to CPU");
+        }
     }
+    (Device::Cpu, "cpu")
 }
 
 fn download_model_cmd(config: DownloadConfig) -> Result<()> {
@@ -896,12 +909,14 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
         // else: remote changed or HEAD inconclusive → continue into download path
     }
 
-    println!("📥 Downloading from Hugging Face:");
-    println!("   Repository: {}", id);
-    println!("   File: {}", file);
-    println!("   Destination: {}", dest.display());
-    if token.is_some() {
-        println!("   Using HF_TOKEN for authentication");
+    if !json {
+        println!("📥 Downloading from Hugging Face:");
+        println!("   Repository: {}", id);
+        println!("   File: {}", file);
+        println!("   Destination: {}", dest.display());
+        if token.is_some() {
+            println!("   Using HF_TOKEN for authentication");
+        }
     }
 
     // HEAD request to get file size and check resumability
@@ -2401,7 +2416,7 @@ fn benchmark_cmd(
         total_tokens_per_sec: f64,
     }
 
-    let (device_str, _) = select_device(gpu);
+    let (device, device_str) = select_device(gpu);
 
     // Short-circuit on odd cases
     if tokens == 0 {
@@ -2529,25 +2544,37 @@ fn benchmark_cmd(
             report.timing.generation_ms = benchmark_elapsed.as_millis() as u64;
             report.timing.total_ms = total_elapsed.as_millis() as u64;
 
-            // Calculate performance metrics
+            // Count actual tokens generated instead of using requested count
+            let actual_tokens = match count_tokens(&generated_text, tokenizer, allow_mock) {
+                Ok(count) => count,
+                Err(_) => {
+                    // Fallback to requested count if tokenization fails
+                    tokens
+                }
+            };
+
+            // Update the report with actual token count
+            report.tokens_generated = actual_tokens;
+
+            // Calculate performance metrics using actual token count
             let generation_secs = benchmark_elapsed.as_secs_f64();
             let total_secs = total_elapsed.as_secs_f64();
 
-            if generation_secs > 0.0 {
-                report.performance.tokens_per_sec = tokens as f64 / generation_secs;
-                report.performance.ms_per_token = (report.timing.generation_ms as f64) / (tokens as f64);
+            if generation_secs > 0.0 && actual_tokens > 0 {
+                report.performance.tokens_per_sec = actual_tokens as f64 / generation_secs;
+                report.performance.ms_per_token = (report.timing.generation_ms as f64) / (actual_tokens as f64);
             }
 
             if total_secs > 0.0 {
-                let total_tokens = warmup_tokens + tokens;
-                report.performance.total_tokens_per_sec = total_tokens as f64 / total_secs;
+                let total_actual_tokens = warmup_tokens + actual_tokens;
+                report.performance.total_tokens_per_sec = total_actual_tokens as f64 / total_secs;
             }
 
             report.success = true;
 
             // Always print one-liner summary (even with --json)
             println!("{} tokens in {:.2}s → {:.1} tok/s ({})",
-                tokens,
+                actual_tokens,
                 report.timing.generation_ms as f64 / 1000.0,
                 report.performance.tokens_per_sec,
                 device_str
@@ -3272,7 +3299,7 @@ fn infer_cmd(
         }
     }
 
-    let (device_str, _) = select_device(gpu);
+    let (device, device_str) = select_device(gpu);
 
     let config = InferConfig {
         max_new_tokens,
@@ -3381,7 +3408,6 @@ struct ModelConfig {
 
 /// Load model configuration from GGUF file
 fn load_model_config(model_path: &Path) -> Result<ModelConfig> {
-    use bitnet_common::Device;
     use bitnet_models::load_gguf;
 
     if !model_path.exists() {
@@ -3425,6 +3451,33 @@ fn load_tokenizer_vocab_size(tokenizer_path: &Path) -> Result<usize> {
     Ok(tokenizer.vocab_size())
 }
 
+/// Count tokens in generated text using the provided tokenizer
+fn count_tokens(text: &str, tokenizer_path: Option<&Path>, allow_mock: bool) -> Result<usize> {
+    if text.is_empty() {
+        return Ok(0);
+    }
+
+    if let Some(tokenizer_path) = tokenizer_path {
+        let tokenizer = bitnet_tokenizers::loader::load_tokenizer(tokenizer_path)
+            .with_context(|| format!("Failed to load tokenizer from {}", tokenizer_path.display()))?;
+
+        // Use encode to get token IDs and count them
+        match tokenizer.encode(text, false, false) {
+            Ok(encoding) => Ok(encoding.len()),
+            Err(_) if allow_mock => {
+                // Fallback to rough character-based estimation if tokenization fails
+                Ok(text.chars().count() / 4) // rough approximation: 4 chars per token
+            }
+            Err(e) => Err(anyhow::anyhow!("Failed to tokenize text: {}", e))
+        }
+    } else if allow_mock {
+        // Mock tokenizer: rough approximation
+        Ok(text.chars().count() / 4)
+    } else {
+        Err(anyhow::anyhow!("No tokenizer provided and mock not allowed"))
+    }
+}
+
 /// Run inference using BitNet-rs library
 fn run_inference_internal(
     model_path: &Path,
@@ -3445,21 +3498,7 @@ fn run_inference_internal(
         }
 
         // Create device with proper fallback handling
-        let (device, actual_device) = if gpu {
-            match Device::Cuda(0) {
-                Ok(dev) => {
-                    eprintln!("🚀 Using GPU (CUDA) for inference");
-                    (dev, "gpu")
-                },
-                Err(e) => {
-                    eprintln!("⚠️  GPU requested but failed to initialize CUDA: {}", e);
-                    eprintln!("   Falling back to CPU");
-                    (Device::Cpu, "cpu")
-                }
-            }
-        } else {
-            (Device::Cpu, "cpu")
-        };
+        let (device, actual_device) = select_device(gpu);
 
         // Load the model
         let loader = ModelLoader::new(device);
