@@ -2,6 +2,38 @@ use bitnet_common::{BitNetConfig, BitNetError, Result};
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{LayerNorm, Linear, VarBuilder};
 
+/// Debug helper for tensor statistics (only runs if DEBUG_ATTN env var is set)
+fn dbg_stats(tag: &str, t: &Tensor) -> candle_core::Result<()> {
+    if std::env::var("DEBUG_ATTN").is_ok() {
+        let mean = t.mean_all()?.to_scalar::<f32>()?;
+        // Compute std manually: sqrt(E[(x - mean)^2])
+        let diff = t.broadcast_sub(&t.mean_all()?)?;
+        let variance = diff.sqr()?.mean_all()?;
+        let std = variance.sqrt()?.to_scalar::<f32>()?;
+        eprintln!("[dbg] {tag}: mean={mean:.6} std={std:.6}");
+    }
+    Ok(())
+}
+
+/// Debug helper for checking finite values
+fn dbg_finite(tag: &str, t: &Tensor) -> candle_core::Result<()> {
+    if std::env::var("DEBUG_ATTN").is_ok() {
+        let v: Vec<f32> = t.flatten_all()?.to_vec1()?;
+        let n = v.len().min(4096);
+        let mut n_nan = 0;
+        let mut n_inf = 0;
+        for &x in &v[..n] {
+            if !x.is_finite() {
+                if x.is_nan() { n_nan += 1; } else { n_inf += 1; }
+            }
+        }
+        if n_nan + n_inf > 0 {
+            eprintln!("⚠️  [dbg] {tag}: non-finite values: NaN={n_nan} Inf={n_inf} (in first {n} elems)");
+        }
+    }
+    Ok(())
+}
+
 /// Helper to create linear layers with optional bias tensors (zero-injection)
 fn linear_with_optional_bias(
     in_dim: usize,
@@ -211,6 +243,11 @@ impl MultiHeadAttention {
             .reshape(&[batch_size, seq_len, self.n_kv_heads, self.head_dim])?
             .transpose(1, 2)?; // [B, HKV, T, D]
 
+        // Debug Q, K, V projections
+        dbg_stats("Q", &q)?;
+        dbg_stats("K", &k)?;
+        dbg_stats("V", &v)?;
+
         // Apply rotary embeddings if available (need to handle different K/V head counts)
         let (q, k) = if let Some(rope) = &self.rope {
             let position = kv_cache.as_ref().map(|c| c.seq_len).unwrap_or(0);
@@ -250,6 +287,10 @@ impl MultiHeadAttention {
         let scores = q.matmul(&k_expanded.transpose(2, 3)?)?;
         let scores = scores.affine((1.0 / scale) as f64, 0.0)?;
 
+        // Debug scores before mask
+        dbg_stats("scores pre-mask", &scores)?;
+        dbg_finite("scores pre-mask", &scores)?;
+
         // Apply causal mask so queries cannot attend to future positions.
         // When using a KV cache, k includes past tokens, so the mask must
         // account for the total key length.
@@ -260,7 +301,21 @@ impl MultiHeadAttention {
             .unsqueeze(0)?; // Add heads dim
         let scores = scores.broadcast_add(&mask)?;
 
+        // Debug scores after mask
+        dbg_stats("scores post-mask", &scores)?;
+        dbg_finite("scores post-mask", &scores)?;
+
         let attn_weights = candle_nn::ops::softmax(&scores, 3)?;
+
+        // Debug attention weights and row sums
+        dbg_stats("attn softmax", &attn_weights)?;
+        if std::env::var("DEBUG_ATTN").is_ok() {
+            let sums = attn_weights.sum(3)?;
+            let sums_host: Vec<f32> = sums.flatten_all()?.to_vec1()?;
+            let take = sums_host.iter().take(4).cloned().collect::<Vec<_>>();
+            eprintln!("[dbg] attn row-sums (first 4): {:?}", take);
+        }
+
         let attn_output = attn_weights.matmul(&v_expanded)?;
 
         // Reshape and project output
@@ -355,17 +410,35 @@ impl TransformerBlock {
     }
 
     pub fn forward(&self, x: &Tensor, kv_cache: Option<&mut LayerKVCache>) -> Result<Tensor> {
+        // Debug input activation norms
+        if std::env::var("DEBUG_ATTN").is_ok() {
+            let norm = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()?;
+            eprintln!("[norm] input: {norm:.6e}");
+        }
+
         // Pre-norm attention
         let residual = x;
         let x = self.attention_norm.forward(x)?;
         let x = self.attention.forward(&x, kv_cache)?;
         let x = (x + residual)?;
 
+        // Debug post-attention activation norms
+        if std::env::var("DEBUG_ATTN").is_ok() {
+            let norm = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()?;
+            eprintln!("[norm] post-attn: {norm:.6e}");
+        }
+
         // Pre-norm FFN
         let residual = &x;
         let x = self.ffn_norm.forward(&x)?;
         let x = self.feed_forward.forward(&x)?;
         let x = (x + residual)?;
+
+        // Debug post-FFN activation norms
+        if std::env::var("DEBUG_ATTN").is_ok() {
+            let norm = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()?;
+            eprintln!("[norm] post-ffn: {norm:.6e}");
+        }
 
         Ok(x)
     }
@@ -666,12 +739,33 @@ impl TransformerModel {
     pub fn forward(&self, hidden: &Tensor, mut kv_cache: Option<&mut KVCache>) -> Result<Tensor> {
         let mut x = hidden.clone();
 
+        // Debug input activation norm
+        if std::env::var("DEBUG_ATTN").is_ok() {
+            if let Ok(norm) = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>() {
+                eprintln!("[norm] input: {:.6e}", norm);
+            }
+        }
+
         for (i, layer) in self.layers.iter().enumerate() {
             let layer_cache = kv_cache.as_mut().and_then(|c| c.layer_mut(i));
             x = layer.forward(&x, layer_cache)?;
+
+            // Debug layer activation norms (show all layers when debugging)
+            if std::env::var("DEBUG_ATTN").is_ok() {
+                if let Ok(norm) = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>() {
+                    eprintln!("[norm] layer {i}: {:.6e}", norm);
+                }
+            }
         }
 
-        Ok(self.norm.forward(&x)?)
+        let normalized = self.norm.forward(&x)?;
+        if std::env::var("DEBUG_ATTN").is_ok() {
+            if let Ok(norm) = normalized.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>() {
+                eprintln!("[norm] final: {:.6e}", norm);
+            }
+        }
+
+        Ok(normalized)
     }
 
     pub fn logits(&self, hidden: &Tensor) -> Result<Tensor> {
@@ -682,10 +776,10 @@ impl TransformerModel {
                 // [B, H] - last token only
                 let (b, _h) = (hidden.dims()[0], hidden.dims()[1]);
 
-                if let Some(ref lm_head) = self.lm_head {
+                let logits = if let Some(ref lm_head) = self.lm_head {
                     // Use dedicated LM head if available
                     let logits = lm_head.forward(hidden)?; // [B, V]
-                    Ok(logits.reshape(&[b, vocab_size])?)
+                    logits.reshape(&[b, vocab_size])?
                 } else {
                     // Tied weights: use embedding matrix
                     static LOGGED: std::sync::Once = std::sync::Once::new();
@@ -696,17 +790,33 @@ impl TransformerModel {
                     if self.embed_transposed {
                         // Embeddings are [hidden, vocab]
                         let embeddings = self.embed_tokens.embeddings();
-                        Ok(hidden.matmul(embeddings)?) // [B, V]
+                        hidden.matmul(embeddings)? // [B, V]
                     } else if let Some(ref cached_weight) = self.embed_tied_weight {
                         // Use pre-transposed cached weight [H, V] - avoids per-step transpose!
-                        Ok(hidden.matmul(cached_weight)?) // [B, V]
+                        hidden.matmul(cached_weight)? // [B, V]
                     } else {
                         // Fallback: transpose on-demand (should be rare after optimization)
                         let embeddings = self.embed_tokens.embeddings();
                         let w = embeddings.transpose(0, 1)?; // [H, V]
-                        Ok(hidden.matmul(&w)?) // [B, V]
+                        hidden.matmul(&w)? // [B, V]
+                    }
+                };
+
+                // Debug logits std
+                if std::env::var("DEBUG_ATTN").is_ok() {
+                    // Compute std manually: sqrt(E[(x - mean)^2])
+                    if let Ok(mean) = logits.mean_all() {
+                        if let Ok(diff) = logits.broadcast_sub(&mean) {
+                            if let Ok(variance) = diff.sqr()?.mean_all() {
+                                if let Ok(std_val) = variance.sqrt()?.to_scalar::<f32>() {
+                                    eprintln!("[norm] logits std: {:.6e}", std_val);
+                                }
+                            }
+                        }
                     }
                 }
+
+                Ok(logits)
             }
             3 => {
                 // [B, T, H] - all timesteps

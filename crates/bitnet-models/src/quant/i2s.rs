@@ -10,6 +10,58 @@ use anyhow::{Result, bail};
 use half::f16;
 use tracing::{debug, warn};
 
+/// I2_S mapping options for debugging scale issues
+#[derive(Clone, Copy, Debug)]
+enum I2SMapping {
+    Sym, // {-2, -1, +1, +2} - symmetric without zero
+    Zp,  // {-1, 0, +1, +2} - zero-point mapping
+    Orig // {-2, -1, 0, +1} - original implementation
+}
+
+#[inline]
+fn i2s_lut(mapping: I2SMapping) -> [f32; 4] {
+    match mapping {
+        I2SMapping::Sym => [-2.0, -1.0, 1.0, 2.0],
+        I2SMapping::Zp  => [-1.0,  0.0, 1.0, 2.0],
+        I2SMapping::Orig => [-2.0, -1.0, 0.0, 1.0],
+    }
+}
+
+#[inline]
+fn i2s_env() -> (I2SMapping, bool, f32) {
+    let mapping = match std::env::var("BITNET_I2S_LUT").as_deref() {
+        Ok("zp") => I2SMapping::Zp,
+        Ok("sym") => I2SMapping::Sym,
+        _ => I2SMapping::Orig, // default to original
+    };
+    let inv = std::env::var("BITNET_I2S_INV_SCALE").as_deref() == Ok("1");
+    let k: f32 = std::env::var("BITNET_I2S_K").ok()
+        .and_then(|s| s.parse().ok()).unwrap_or(1.0);
+    (mapping, inv, k)
+}
+
+#[inline]
+fn i2s_dequant_block(
+    dst: &mut [f32],      // len=n
+    qbits: &[u8],         // ceil(n/4)
+    n: usize,
+    scale_bits: u16,
+    mapping: I2SMapping,
+    inv_scale: bool,
+    k: f32,
+) {
+    let lut = i2s_lut(mapping);
+    let mut s = f16::from_bits(scale_bits).to_f32();
+    if inv_scale { s = 1.0 / s; }
+    s *= k;
+
+    for i in 0..n {
+        let b = qbits[i >> 2];
+        let code = ((b >> ((i & 3) * 2)) & 0b11) as usize;
+        dst[i] = s * lut[code];
+    }
+}
+
 /// I2_S block constants
 const I2S_DEFAULT_BLOCK: usize = 256;
 
@@ -37,28 +89,6 @@ fn rows_cols(dims: &[usize]) -> Result<(usize, usize)> {
     }
 }
 
-/// Unpack 2-bit values from packed bytes
-/// Each byte contains 4 values: bits [0:1]=v0, [2:3]=v1, [4:5]=v2, [6:7]=v3
-#[inline]
-fn unpack_2bit_signed(dst: &mut [i8], src_qbits: &[u8], n: usize) {
-    // Process 4 values per byte
-    let chunks = n / 4;
-    let rem = n % 4;
-    for i in 0..chunks {
-        let byte = src_qbits[i];
-        dst[i * 4] = (byte & 0b11) as i8 - 2;
-        dst[i * 4 + 1] = ((byte >> 2) & 0b11) as i8 - 2;
-        dst[i * 4 + 2] = ((byte >> 4) & 0b11) as i8 - 2;
-        dst[i * 4 + 3] = ((byte >> 6) & 0b11) as i8 - 2;
-    }
-    // Handle remainder
-    if rem > 0 {
-        let byte = src_qbits[chunks];
-        for j in 0..rem {
-            dst[chunks * 4 + j] = ((byte >> (j * 2)) & 0b11) as i8 - 2;
-        }
-    }
-}
 
 /// Dequantize I2_S formatted tensor data to f32
 ///
@@ -119,23 +149,20 @@ fn dequantize_to_f32_with_block(bytes: &[u8], shape: &[usize], block: usize) -> 
 
     let mut out = vec![0f32; rows * cols];
     let mut off = 0usize;
-    let mut scratch = vec![0i8; block];
+    let (mapping, inv_scale, k) = i2s_env();
 
     for r in 0..rows {
         let row_base = r * cols;
         let mut c = 0usize;
         for _ in 0..blocks_per_row {
             let n = (cols - c).min(block);
-            let qbits_slice = &bytes[off..off + n.div_ceil(4)];
-            off += qbits_slice.len();
+            let qbits_len = n.div_ceil(4);
+            let qslice = &bytes[off..off + qbits_len];
+            off += qbits_len;
             let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
             off += 2;
-            let scale = f16::from_bits(scale_bits).to_f32();
 
-            unpack_2bit_signed(&mut scratch[..n], qbits_slice, n);
-            for i in 0..n {
-                out[row_base + c + i] = scale * scratch[i] as f32;
-            }
+            i2s_dequant_block(&mut out[row_base + c..row_base + c + n], qslice, n, scale_bits, mapping, inv_scale, k);
             c += n;
         }
     }
@@ -156,7 +183,7 @@ fn dequantize_partial_blocks(
     let mut out = vec![0f32; rows * cols];
     let mut off = 0usize;
     let mut processed = 0usize;
-    let mut scratch = vec![0i8; block];
+    let (mapping, inv_scale, k) = i2s_env();
 
     'rows: for r in 0..rows {
         let row_base = r * cols;
@@ -170,16 +197,13 @@ fn dequantize_partial_blocks(
                 break 'rows;
             }
 
-            let qbits_slice = &bytes[off..off + n.div_ceil(4)];
-            off += qbits_slice.len();
+            let qbits_len = n.div_ceil(4);
+            let qslice = &bytes[off..off + qbits_len];
+            off += qbits_len;
             let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
             off += 2;
-            let scale = f16::from_bits(scale_bits).to_f32();
 
-            unpack_2bit_signed(&mut scratch[..n], qbits_slice, n);
-            for i in 0..n {
-                out[row_base + c + i] = scale * scratch[i] as f32;
-            }
+            i2s_dequant_block(&mut out[row_base + c..row_base + c + n], qslice, n, scale_bits, mapping, inv_scale, k);
             c += n;
             processed += 1;
         }
@@ -241,25 +265,26 @@ pub fn dequantize_to_f32_transposed(bytes: &[u8], shape: &[usize]) -> Result<Vec
     let blocks_per_row = cols.div_ceil(block);
     let mut out = vec![0f32; rows * cols]; // output logical shape [cols, rows]
     let mut off = 0usize;
-    let mut scratch = vec![0i8; block];
+    let (mapping, inv_scale, k) = i2s_env();
+    let mut row_scratch = vec![0f32; block];
 
     for r in 0..rows {
         let mut c = 0usize;
         for _ in 0..blocks_per_row {
             let n = (cols - c).min(block);
             let qbits_len = n.div_ceil(4);
-            let qbits_slice = &bytes[off..off + qbits_len];
+            let qslice = &bytes[off..off + qbits_len];
             off += qbits_len;
 
             let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
             off += 2;
-            let scale = f16::from_bits(scale_bits).to_f32();
 
-            unpack_2bit_signed(&mut scratch[..n], qbits_slice, n);
+            // Dequant into temporary scratch, then transpose
+            i2s_dequant_block(&mut row_scratch[..n], qslice, n, scale_bits, mapping, inv_scale, k);
 
             // Write transposed: input (r, c+i) -> output (c+i, r)
             for i in 0..n {
-                out[(c + i) * rows + r] = scale * scratch[i] as f32;
+                out[(c + i) * rows + r] = row_scratch[i];
             }
             c += n;
         }
@@ -281,7 +306,8 @@ fn dequantize_partial_blocks_transposed(
     let mut out = vec![0f32; rows * cols]; // transposed output
     let mut off = 0usize;
     let mut processed = 0usize;
-    let mut scratch = vec![0i8; block];
+    let (mapping, inv_scale, k) = i2s_env();
+    let mut row_scratch = vec![0f32; block];
 
     'rows: for r in 0..rows {
         let mut c = 0usize;
@@ -295,16 +321,16 @@ fn dequantize_partial_blocks_transposed(
             }
 
             let qbits_len = n.div_ceil(4);
-            let qbits_slice = &bytes[off..off + qbits_len];
+            let qslice = &bytes[off..off + qbits_len];
             off += qbits_len;
 
             let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
             off += 2;
-            let scale = f16::from_bits(scale_bits).to_f32();
 
-            unpack_2bit_signed(&mut scratch[..n], qbits_slice, n);
+            // Dequant into temporary scratch, then transpose
+            i2s_dequant_block(&mut row_scratch[..n], qslice, n, scale_bits, mapping, inv_scale, k);
             for i in 0..n {
-                out[(c + i) * rows + r] = scale * scratch[i] as f32;
+                out[(c + i) * rows + r] = row_scratch[i];
             }
             c += n;
             processed += 1;

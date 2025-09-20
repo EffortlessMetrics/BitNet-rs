@@ -231,6 +231,37 @@ impl GgufLoader {
     }
 }
 
+impl GgufLoader {
+    /// PATCH 7: Debug probe for I2_S dequantization to catch zero outputs
+    fn debug_probe_i2s_tensor(name: &str, data: &[f32], shape: &[usize], max_probe: usize) {
+        if data.is_empty() {
+            eprintln!("[i2s probe] {name}: shape={:?} -> EMPTY DATA", shape);
+            return;
+        }
+
+        let probe_len = max_probe.min(data.len());
+        let slice = &data[..probe_len];
+
+        let (min, max, sum) = slice.iter().fold(
+            (f32::INFINITY, f32::NEG_INFINITY, 0.0),
+            |(mi, ma, s), &x| (mi.min(x), ma.max(x), s + x)
+        );
+        let mean = sum / (slice.len() as f32);
+        let non_zero_count = slice.iter().filter(|&&x| x != 0.0).count();
+
+        eprintln!(
+            "[i2s probe] {name}: shape={:?} probe_len={probe_len} -> min={min:.6} max={max:.6} mean={mean:.6} non_zeros={non_zero_count}",
+            shape
+        );
+
+        if non_zero_count == 0 {
+            eprintln!("⚠️  [i2s probe] {name}: ALL ZEROS detected - quantization failure!");
+        } else if non_zero_count < probe_len / 4 {
+            eprintln!("⚠️  [i2s probe] {name}: Mostly zeros ({non_zero_count}/{probe_len}) - possible quantization issue");
+        }
+    }
+}
+
 impl FormatLoader for GgufLoader {
     fn name(&self) -> &'static str {
         "GGUF"
@@ -423,6 +454,9 @@ impl GgufLoader {
         // First dequantize to F32 with original layout
         let f32_data = i2s::dequantize_to_f32(data, dims)
             .map_err(|e| BitNetError::Validation(e.to_string()))?;
+
+        // PATCH 7: Probe the dequantized data for debugging
+        Self::debug_probe_i2s_tensor(&format!("transposed_projection"), &f32_data, dims, 1000);
 
         // Then transpose from [rows, cols] to [cols, rows]
         let (rows, cols) = (dims[0], dims[1]);
@@ -658,6 +692,9 @@ impl GgufLoader {
                     info!("Embedding appears transposed ({:?}) -> decoding transposed", info.shape);
                     let f32_data = i2s::dequantize_to_f32_transposed(data, &info.shape)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
+
+                    // PATCH 7: Probe the dequantized data for debugging
+                    Self::debug_probe_i2s_tensor(&info.name, &f32_data, &info.shape, 1000);
                     // Now dims become [vocab, hidden]
                     let (rows, cols) = (info.shape[1], info.shape[0]);
                     let tensor = Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
@@ -676,6 +713,9 @@ impl GgufLoader {
                     // Normal I2_S dequantization
                     let f32_data = i2s::dequantize_to_f32(data, &info.shape)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
+
+                    // PATCH 7: Probe the dequantized data for debugging
+                    Self::debug_probe_i2s_tensor(&info.name, &f32_data, &info.shape, 1000);
                     let tensor =
                         Tensor::from_slice(&f32_data, info.shape.as_slice(), &candle_device)
                             .map_err(|e| BitNetError::Validation(e.to_string()))?;
