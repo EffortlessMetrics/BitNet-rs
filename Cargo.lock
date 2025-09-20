@@ -7488,6 +7488,7 @@ name = "xtask"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assert_cmd",
  "atty",
  "bitnet",
  "bitnet-common",
@@ -7503,6 +7504,7 @@ dependencies = [
  "hex",
  "httpdate",
  "indicatif 0.17.11",
+ "predicates",
  "reqwest",
  "serde",
  "serde_json",
