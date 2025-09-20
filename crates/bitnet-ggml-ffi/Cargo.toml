@@ -12,7 +12,7 @@ integration-tests = []
 iq2s-ffi = []
 
 [build-dependencies]
-cc = "1.0"
+cc = "1.2.38"
 
 [dependencies]
-libc = "0.2"
+libc = "0.2.175"

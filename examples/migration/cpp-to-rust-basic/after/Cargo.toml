@@ -18,15 +18,15 @@ path = "src/benchmark.rs"
 # bitnet = "0.1"
 
 # For this example, we'll use common dependencies
-tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
-anyhow = "1.0"
-thiserror = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
+anyhow = "1.0.100"
+thiserror = "2.0.16"
+serde = { version = "1.0.225", features = ["derive"] }
+serde_json = "1.0.145"
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
-tempfile = "3.8"
+criterion = { version = "0.7.0", features = ["html_reports"] }
+tempfile = "3.22.0"
 
 [[bench]]
 name = "performance"

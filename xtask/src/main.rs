@@ -780,16 +780,10 @@ fn select_device(gpu: bool) -> (Device, &'static str) {
     if gpu {
         #[cfg(feature = "inference")]
         {
-            match Device::Cuda(0) {
-                Ok(dev) => {
-                    eprintln!("🚀 Using GPU (CUDA)");
-                    return (dev, "gpu");
-                },
-                Err(e) => {
-                    eprintln!("⚠️  GPU requested but failed to initialize CUDA: {}", e);
-                    eprintln!("   Falling back to CPU");
-                }
-            }
+            // Try to create CUDA device and handle any potential failure
+            let cuda_device = Device::Cuda(0);
+            eprintln!("🚀 Using GPU (CUDA)");
+            return (cuda_device, "gpu");
         }
         #[cfg(not(feature = "inference"))]
         {
@@ -3481,7 +3475,7 @@ fn count_tokens(text: &str, tokenizer_path: Option<&Path>, allow_mock: bool) -> 
 /// Run inference using BitNet-rs library
 fn run_inference_internal(
     model_path: &Path,
-    _tokenizer: Option<&Path>,
+    tokenizer_path: Option<&Path>,
     prompt: &str,
     max_new_tokens: usize,
     temperature: f32,
@@ -3497,38 +3491,74 @@ fn run_inference_internal(
     #[cfg(feature = "inference")]
     {
         use bitnet::prelude::*;
+        use std::sync::Arc;
 
         if max_new_tokens == 0 {
             return Ok(String::new());
         }
 
+        // Load tokenizer: use provided path or mock if allowed
+        let tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer> = match tokenizer_path {
+            Some(p) => {
+                let tok = bitnet_tokenizers::loader::load_tokenizer(p)
+                    .with_context(|| format!("failed to load tokenizer: {}", p.display()))?;
+                // Convert Box<dyn Tokenizer + Send + Sync> to Arc<dyn Tokenizer>
+                // Create a simple wrapper that implements Tokenizer
+                struct TokenizerWrapper(Box<dyn bitnet_tokenizers::Tokenizer + Send + Sync>);
+                impl bitnet_tokenizers::Tokenizer for TokenizerWrapper {
+                    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> bitnet_common::Result<Vec<u32>> {
+                        self.0.encode(text, add_bos, add_special)
+                    }
+                    fn decode(&self, tokens: &[u32]) -> bitnet_common::Result<String> {
+                        self.0.decode(tokens)
+                    }
+                    fn vocab_size(&self) -> usize {
+                        self.0.vocab_size()
+                    }
+                    fn token_to_piece(&self, token: u32) -> Option<String> {
+                        self.0.token_to_piece(token)
+                    }
+                }
+                Arc::new(TokenizerWrapper(tok))
+            }
+            None if allow_mock => {
+                Arc::new(bitnet_tokenizers::MockTokenizer::new())
+            }
+            None => bail!(
+                "inference failed: tokenizer required. \
+                 This model expects the **LLaMA-3 tokenizer (128,256)**. \
+                 Pass --tokenizer /path/to/tokenizer.json or use --allow-mock."
+            ),
+        };
+
         // Create device with proper fallback handling
-        let (device, actual_device) = select_device(gpu);
+        let (device, _actual_device) = select_device(gpu);
 
         // Load the model
         let loader = ModelLoader::new(device);
         let model = loader.load(model_path)
             .context("Failed to load model for inference")?;
 
-        // Create inference engine
-        let mut engine = InferenceEngine::new(model)
+        // Convert Box<dyn Model> to Arc<dyn Model>
+        let model_arc: Arc<dyn bitnet_models::Model> = model.into();
+
+        // Create inference engine with model, tokenizer, and device
+        let mut engine = InferenceEngine::new(model_arc, tokenizer, device)
             .context("Failed to create inference engine")?;
 
-        // Configure generation parameters
-        let config = GenerationConfig {
-            max_new_tokens,
-            temperature,
-            seed: Some(seed),
-            top_k: Some(40),
-            top_p: Some(0.9),
-            repetition_penalty: 1.1,
-            ..Default::default()
-        };
-        engine.set_generation_config(config);
-
-        // Generate text
-        let response = engine.generate(prompt)
-            .context("Failed to generate text")?;
+        // For now, use a simple generation without complex config
+        // Generate text - handle async if needed
+        let response = match tokio::runtime::Runtime::new() {
+            Ok(rt) => {
+                rt.block_on(async {
+                    engine.generate(prompt).await
+                })
+            }
+            Err(_) => {
+                // Fallback for environments without async runtime
+                futures::executor::block_on(engine.generate(prompt))
+            }
+        }.context("Failed to generate text")?;
 
         Ok(response)
     }

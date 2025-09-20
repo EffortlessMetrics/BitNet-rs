@@ -14,10 +14,10 @@ description = "WebAssembly bindings for BitNet 1-bit LLM inference"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-futures-util = "0.3"
+futures-util = "0.3.31"
 # Both getrandom versions for WASM compatibility
-getrandom = { version = "0.3", features = ["wasm_js"] }
-getrandom02 = { package = "getrandom", version = "0.2", features = ["js"] }
+getrandom = { version = "0.3.3", features = ["wasm_js"] }
+getrandom02 = { package = "getrandom", version = "0.3.3", features = ["js"] }
 bitnet-common = { path = "../bitnet-common" }
 bitnet-models = { path = "../bitnet-models" }
 bitnet-quantization = { path = "../bitnet-quantization" }
@@ -28,7 +28,7 @@ bitnet-tokenizers = { path = "../bitnet-tokenizers" }
 
 # WebAssembly specific dependencies
 wasm-bindgen = { workspace = true, features = ["serde-serialize"] }
-wasm-bindgen-futures = "0.4"
+wasm-bindgen-futures = "0.4.53"
 js-sys = { workspace = true }
 # Add common web APIs we'll likely use as modules are re-enabled
 web-sys = { workspace = true, features = [
@@ -42,7 +42,7 @@ web-sys = { workspace = true, features = [
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
-serde-wasm-bindgen = "0.6"
+serde-wasm-bindgen = "0.6.5"
 
 # Error handling
 anyhow = { workspace = true }
@@ -50,14 +50,14 @@ thiserror = { workspace = true }
 
 # Async support
 futures = { workspace = true }
-wasm-streams = "0.3"
+wasm-streams = "0.4.2"
 
 # Memory management
-wee_alloc = { version = "0.4", optional = true }
+wee_alloc = { version = "0.4.5", optional = true }
 
 # Logging for WASM
-console_error_panic_hook = { version = "0.1", optional = true }
-wasm-logger = "0.2"
+console_error_panic_hook = { version = "0.1.7", optional = true }
+wasm-logger = "0.2.0"
 
 
 [features]
@@ -80,5 +80,5 @@ wasm-mem = []
 wasm-kernels = []
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3"
+wasm-bindgen-test = "0.3.53"
 

@@ -25,16 +25,16 @@ anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-num_cpus = "1.16"
+num_cpus = "1.17.0"
 candle-core.workspace = true
 futures.workspace = true
-log = "0.4"
+log = "0.4.28"
 
 # Optional CUDA support
 cudarc = { workspace = true, optional = true }
 
 [build-dependencies]
-cbindgen = "0.27"
+cbindgen = "0.29.0"
 
 [dev-dependencies]
 tempfile.workspace = true

@@ -12,8 +12,8 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-async-stream = "0.3"
-async-trait = "0.1"
+async-stream = "0.3.6"
+async-trait = "0.1.89"
 axum.workspace = true
 bitnet-common = { path = "../bitnet-common" }
 bitnet-inference = { path = "../bitnet-inference" }
@@ -21,7 +21,7 @@ bitnet-models = { path = "../bitnet-models" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers" }
 chrono.workspace = true
 clap.workspace = true
-futures = "0.3"
+futures = "0.3.31"
 metrics.workspace = true
 metrics-prometheus = { workspace = true, optional = true }
 num_cpus.workspace = true
@@ -35,7 +35,7 @@ serde.workspace = true
 serde_json.workspace = true
 sysinfo.workspace = true
 tokio.workspace = true
-tokio-stream = "0.1"
+tokio-stream = "0.1.17"
 toml.workspace = true
 tower.workspace = true
 tower-http.workspace = true
@@ -46,12 +46,12 @@ tracing-subscriber.workspace = true
 uuid.workspace = true
 
 [build-dependencies]
-anyhow = "1.0"
-vergen-gix = { version = "1", features = ["build", "cargo", "rustc"] }
+anyhow = "1.0.100"
+vergen-gix = { version = "1.0.9", features = ["build", "cargo", "rustc"] }
 
 [dev-dependencies]
-http-body-util = "0.1"
-hyper = "1"
+http-body-util = "0.1.3"
+hyper = "1.7.0"
 
 [[bin]]
 name = "server"
