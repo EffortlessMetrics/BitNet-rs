@@ -18,11 +18,11 @@ To specify which compiler to use, set the `CC` and `CXX` environment variables:
 ```bash
 # Use GCC (default on most Linux systems)
 export CC=gcc CXX=g++
-cargo build --no-default-features --features ffi
+cargo build --no-default-features --features iq2s-ffi
 
 # Use Clang
-export CC=clang CXX=clang++  
-cargo build --no-default-features --features ffi
+export CC=clang CXX=clang++
+cargo build --no-default-features --features iq2s-ffi
 ```
 
 ### GGML_DEPRECATED Macro
@@ -34,3 +34,4 @@ The GGML header includes compiler-specific deprecation warnings that work with b
 - **MSVC**: Uses `__declspec(deprecated(hint))` with `_MSC_VER` detection
 
 This ensures deprecation warnings are properly displayed across all supported compiler toolchains.
+

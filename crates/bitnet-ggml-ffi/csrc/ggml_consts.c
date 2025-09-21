@@ -18,7 +18,10 @@ int32_t bitnet_iq2s_block_size_bytes(void) {
 // Helper to check if GGML's dequantize_row_iq2_s requires n to be multiple of QK
 // This is critical for tail handling safety
 int32_t bitnet_iq2s_requires_qk_multiple(void) {
-    // Most GGML dequantizers assume n % QK == 0
-    // Return 1 to indicate this requirement (safer assumption)
+    // Derived at build time by scanning GGML's source.
+#ifdef BITNET_IQ2S_DEQUANT_NEEDS_QK_MULTIPLE
     return 1;
+#else
+    return 0;
+#endif
 }
