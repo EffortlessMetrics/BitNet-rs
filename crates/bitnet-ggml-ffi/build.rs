@@ -52,4 +52,3 @@ fn main() {
         println!("cargo:rerun-if-changed=csrc/VENDORED_GGML_COMMIT");
     }
 }
-

@@ -136,4 +136,3 @@ pub unsafe fn quantize_iq2_s(
 ) -> usize {
     panic!("IQ2_S support not compiled: enable feature `iq2s-ffi`");
 }
-
