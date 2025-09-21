@@ -431,12 +431,14 @@ println!("EOS token: {:?}", config.eos_token);
 
 **Enhanced Universal Tokenizer Features:**
 - **Automatic Backend Detection**: Chooses BPE, SentencePiece, or Mock backend based on model metadata
+- **Real SentencePiece Support**: Load actual SPM models with `--features spm` (enhanced in PR #200)
 - **GGUF Metadata Integration**: Extracts tokenizer configuration directly from GGUF model files
 - **BPE Backend Support**: Full GPT-2 compatible BPE tokenization with merge rules
 - **Graceful Fallback**: Mock tokenizer for unsupported formats ensures testing compatibility
 - **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external files
 - **Special Token Handling**: Automatic BOS, EOS, PAD, and UNK token configuration
 - **Byte-Level Processing**: GPT-2 compatible pre-tokenization and decoding
+- **Strict Mode Integration**: Prevents mock fallbacks in performance testing with `BITNET_STRICT_TOKENIZERS=1`
 
 #### Enhanced GGUF Metadata Inspection
 
