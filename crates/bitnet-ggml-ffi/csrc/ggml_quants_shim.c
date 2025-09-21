@@ -8,10 +8,11 @@
 #include "ggml/src/ggml-quants.c"
 
 // Export stable symbol names for Rust to link.
-void bitnet_dequantize_row_iq2_s(const void *src, float *dst, int n) {
-    dequantize_row_iq2_s(src, dst, (int64_t)n);
+void bitnet_dequantize_row_iq2_s(const void *src, float *dst, int64_t n) {
+    dequantize_row_iq2_s(src, dst, n);
 }
 
 size_t bitnet_quantize_iq2_s(const float *src, void *dst, int64_t nrow, int64_t n_per_row) {
     return quantize_iq2_s(src, dst, nrow, n_per_row, NULL);
 }
+
