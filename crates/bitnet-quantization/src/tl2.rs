@@ -11,7 +11,7 @@ use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, T
 use bitnet_kernels::KernelProvider;
 use candle_core::Device;
 use rayon::prelude::*;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::RwLock};
 
 /// Configuration for TL2 quantization with x86-specific optimizations
 #[derive(Debug, Clone)]
@@ -105,8 +105,7 @@ impl VectorizedLookupTable {
 /// TL2 quantization implementation optimized for x86 AVX2/AVX-512
 pub struct TL2Quantizer {
     config: TL2Config,
-    #[allow(dead_code)]
-    lookup_tables: HashMap<String, VectorizedLookupTable>,
+    lookup_tables: RwLock<HashMap<u32, VectorizedLookupTable>>,
     cpu_features: CpuFeatures,
 }
 
@@ -176,12 +175,33 @@ impl TL2Quantizer {
             }
         }
 
-        Self { config, lookup_tables: HashMap::new(), cpu_features }
+        Self { config, lookup_tables: RwLock::new(HashMap::new()), cpu_features }
     }
 
     /// Create a new TL2 quantizer with custom configuration
     pub fn with_config(config: TL2Config) -> Self {
-        Self { config, lookup_tables: HashMap::new(), cpu_features: CpuFeatures::detect() }
+        Self {
+            config,
+            lookup_tables: RwLock::new(HashMap::new()),
+            cpu_features: CpuFeatures::detect(),
+        }
+    }
+
+    /// Get (or create) a lookup table for a given scale
+    fn get_lookup_table(&self, scale: f32) -> VectorizedLookupTable {
+        let key = scale.to_bits();
+
+        // Attempt to read an existing table
+        if let Some(table) = self.lookup_tables.read().unwrap().get(&key) {
+            return table.clone();
+        }
+
+        // Create a new table based on the scale and cache it
+        let num_levels = 1 << self.config.precision_bits;
+        let abs_max = scale * ((num_levels / 2 - 1) as f32);
+        let table = VectorizedLookupTable::new(-abs_max, abs_max, self.config.precision_bits);
+        self.lookup_tables.write().unwrap().insert(key, table.clone());
+        table
     }
 
     /// Load configuration from .ini file for compatibility with C++ implementation
@@ -233,28 +253,15 @@ impl TL2Quantizer {
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
 
-        // Calculate statistics for lookup table generation
-        let (min_val, max_val) =
-            data.iter().fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &val| {
-                (min.min(val), max.max(val))
-            });
-
-        // Generate vectorized lookup table
-        let lookup_table = VectorizedLookupTable::new(min_val, max_val, self.config.precision_bits);
-
         // Calculate grouped scales for better accuracy
         let scales =
             calculate_grouped_scales(&data, self.config.block_size, self.config.precision_bits);
 
         // Select optimal quantization kernel
         let quantized_data = match self.cpu_features.best_kernel() {
-            KernelType::AVX512 if self.config.use_avx512 => {
-                self.quantize_avx512(&data, &lookup_table, &scales)?
-            }
-            KernelType::AVX2 if self.config.use_avx2 => {
-                self.quantize_avx2(&data, &lookup_table, &scales)?
-            }
-            _ => self.quantize_scalar(&data, &lookup_table, &scales)?,
+            KernelType::AVX512 if self.config.use_avx512 => self.quantize_avx512(&data, &scales)?,
+            KernelType::AVX2 if self.config.use_avx2 => self.quantize_avx2(&data, &scales)?,
+            _ => self.quantize_scalar(&data, &scales)?,
         };
 
         // Pack quantized values efficiently
@@ -328,27 +335,17 @@ impl TL2Quantizer {
     }
 
     /// Scalar quantization implementation
-    fn quantize_scalar(
-        &self,
-        data: &[f32],
-        _lookup_table: &VectorizedLookupTable,
-        scales: &[f32],
-    ) -> Result<Vec<i8>> {
+    fn quantize_scalar(&self, data: &[f32], scales: &[f32]) -> Result<Vec<i8>> {
         let mut quantized = vec![0i8; data.len()];
 
         quantized
             .par_chunks_mut(self.config.block_size)
             .zip(data.par_chunks(self.config.block_size))
             .zip(scales.par_iter())
-            .for_each(|((quant_block, data_block), &_scale)| {
-                // Create block-specific lookup table
-                let block_min = data_block.iter().fold(f32::INFINITY, |acc, &x| acc.min(x));
-                let block_max = data_block.iter().fold(f32::NEG_INFINITY, |acc, &x| acc.max(x));
-                let block_table =
-                    VectorizedLookupTable::new(block_min, block_max, self.config.precision_bits);
-
+            .for_each(|((quant_block, data_block), &scale)| {
+                let table = self.get_lookup_table(scale);
                 for (i, &value) in data_block.iter().enumerate() {
-                    quant_block[i] = block_table.quantize(value);
+                    quant_block[i] = table.quantize(value);
                 }
             });
 
@@ -374,14 +371,9 @@ impl TL2Quantizer {
 
     /// AVX2-optimized quantization for x86_64
     #[cfg(target_arch = "x86_64")]
-    fn quantize_avx2(
-        &self,
-        data: &[f32],
-        lookup_table: &VectorizedLookupTable,
-        scales: &[f32],
-    ) -> Result<Vec<i8>> {
+    fn quantize_avx2(&self, data: &[f32], scales: &[f32]) -> Result<Vec<i8>> {
         if !is_x86_feature_detected!("avx2") {
-            return self.quantize_scalar(data, lookup_table, scales);
+            return self.quantize_scalar(data, scales);
         }
 
         let mut quantized = vec![0i8; data.len()];
@@ -390,8 +382,11 @@ impl TL2Quantizer {
             .par_chunks_mut(self.config.block_size)
             .zip(data.par_chunks(self.config.block_size))
             .zip(scales.par_iter())
-            .for_each(|((quant_block, data_block), &scale)| unsafe {
-                self.quantize_avx2_block(data_block, quant_block, lookup_table, scale);
+            .for_each(|((quant_block, data_block), &scale)| {
+                let table = self.get_lookup_table(scale);
+                unsafe {
+                    self.quantize_avx2_block(data_block, quant_block, &table, scale);
+                }
             });
 
         Ok(quantized)
@@ -419,14 +414,9 @@ impl TL2Quantizer {
 
     /// AVX-512 optimized quantization for x86_64 (fallback to AVX2 for now)
     #[cfg(target_arch = "x86_64")]
-    fn quantize_avx512(
-        &self,
-        data: &[f32],
-        lookup_table: &VectorizedLookupTable,
-        scales: &[f32],
-    ) -> Result<Vec<i8>> {
+    fn quantize_avx512(&self, data: &[f32], scales: &[f32]) -> Result<Vec<i8>> {
         // AVX-512 is unstable, fallback to AVX2
-        self.quantize_avx2(data, lookup_table, scales)
+        self.quantize_avx2(data, scales)
     }
 
     /// AVX-512 optimized dequantization for x86_64 (fallback to AVX2 for now)
@@ -438,13 +428,8 @@ impl TL2Quantizer {
 
     /// Fallback to scalar for non-x86 architectures
     #[cfg(not(target_arch = "x86_64"))]
-    fn quantize_avx2(
-        &self,
-        data: &[f32],
-        lookup_table: &VectorizedLookupTable,
-        scales: &[f32],
-    ) -> Result<Vec<i8>> {
-        self.quantize_scalar(data, lookup_table, scales)
+    fn quantize_avx2(&self, data: &[f32], scales: &[f32]) -> Result<Vec<i8>> {
+        self.quantize_scalar(data, scales)
     }
 
     #[cfg(not(target_arch = "x86_64"))]
@@ -453,13 +438,8 @@ impl TL2Quantizer {
     }
 
     #[cfg(not(target_arch = "x86_64"))]
-    fn quantize_avx512(
-        &self,
-        data: &[f32],
-        lookup_table: &VectorizedLookupTable,
-        scales: &[f32],
-    ) -> Result<Vec<i8>> {
-        self.quantize_scalar(data, lookup_table, scales)
+    fn quantize_avx512(&self, data: &[f32], scales: &[f32]) -> Result<Vec<i8>> {
+        self.quantize_scalar(data, scales)
     }
 
     #[cfg(not(target_arch = "x86_64"))]
