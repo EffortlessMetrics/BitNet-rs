@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **WebAssembly (WASM) Compatibility Improvements** ([#170](https://github.com/EffortlessSteven/BitNet-rs/pull/170)):
+  - **Enhanced WASM Build Compatibility**: Avoiding native dependency conflicts for seamless WebAssembly compilation
+  - **Updated Tokenizers Configuration**: Added `unstable_wasm` feature for proper WebAssembly support alongside existing features
+  - **Fixed Workspace Dependency Management**: Consistent dependency versions across all WASM-related crates
+  - **Improved Browser Compatibility**: Proper feature gating and dependency management for browser environments
+  - **SIMD Intrinsic Compatibility**: Fixed AVX2 intrinsics for WebAssembly target compatibility using portable alternatives
+  - **Zero Breaking Changes**: All improvements maintain full backward compatibility with existing builds
 - **Enhanced GGUF Tokenizer with Optimized Byte Mapping** ([#171](https://github.com/EffortlessSteven/BitNet-rs/pull/171)):
   - **O(1) Byte Lookup Performance**: Replaced HashMap with `byte_to_id[256]` array for optimized tokenization performance
   - **Improved UTF-8 Handling**: Enhanced byte buffer management in decode operations for robust text processing

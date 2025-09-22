@@ -20,7 +20,7 @@ getrandom = { version = "0.3.3", features = ["wasm_js"] }
 bitnet-common = { path = "../bitnet-common" }
 bitnet-models = { path = "../bitnet-models" }
 bitnet-quantization = { path = "../bitnet-quantization" }
-bitnet-kernels = { path = "../bitnet-kernels", features = ["cpu"] }
+bitnet-kernels = { path = "../bitnet-kernels", features = ["cpu"], optional = true }
 # Keep inference optional to avoid pulling tokio/mio on wasm by default.
 bitnet-inference = { path = "../bitnet-inference", optional = true, default-features = false }
 bitnet-tokenizers = { path = "../bitnet-tokenizers" }
@@ -76,7 +76,7 @@ debug = ["console_error_panic_hook"]
 # Gradual module re-enablement
 wasm-utils = []
 wasm-mem = []
-wasm-kernels = []
+wasm-kernels = ["dep:bitnet-kernels"]
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.53"

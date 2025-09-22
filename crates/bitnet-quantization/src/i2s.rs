@@ -299,8 +299,12 @@ impl I2SQuantizer {
                 let i8_vec = _mm256_packs_epi16(i16_vec, i16_vec);
 
                 // Store 8 bytes
-                let low = _mm256_castsi256_si128(i8_vec);
-                _mm_storeu_si64(output.as_mut_ptr().add(i * 8) as *mut u8, low);
+                let result = _mm256_extract_epi64::<0>(i8_vec);
+                std::ptr::copy_nonoverlapping(
+                    &result as *const i64 as *const i8,
+                    output.as_mut_ptr().add(i * 8),
+                    8,
+                );
             }
         }
 

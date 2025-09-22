@@ -17,7 +17,7 @@ anyhow.workspace = true
 tracing.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-tokenizers = { version = "0.22.1", default-features = false, features = ["onig"] }
+tokenizers = { version = "0.22.1", default-features = false, features = ["onig", "unstable_wasm"] }
 tempfile = "3.22.0"
 base64 = "0.22.1"
 ahash = "0.8.12"
