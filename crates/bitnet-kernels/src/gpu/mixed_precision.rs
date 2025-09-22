@@ -281,6 +281,11 @@ impl MixedPrecisionKernel {
         self.precision_mode
     }
 
+    /// Get the device ID associated with this kernel
+    pub fn device_id(&self) -> usize {
+        self.device_info.device_id
+    }
+
     /// Check if FP16 is supported
     pub fn supports_fp16(&self) -> bool {
         self.device_info.supports_fp16
