@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Enhanced GGUF Tokenizer with Optimized Byte Mapping** ([#171](https://github.com/EffortlessSteven/BitNet-rs/pull/171)):
+  - **O(1) Byte Lookup Performance**: Replaced HashMap with `byte_to_id[256]` array for optimized tokenization performance
+  - **Improved UTF-8 Handling**: Enhanced byte buffer management in decode operations for robust text processing
+  - **BOS Token Support**: Added BOS token support to BasicTokenizer with vocab boundary checks and enhanced safety
+  - **Critical SPM Compilation Fix**: Resolved compilation error in SentencePiece tokenizer that prevented `spm` feature from working
+  - **Enhanced token_to_piece Functionality**: Direct byte lookup for improved token-to-text conversion performance
+  - **Comprehensive Test Coverage**: Added unit tests for BOS token handling, vocab overflow protection, and enhanced tokenizer functionality
+  - **Backward Compatibility**: All enhancements maintain full API compatibility with existing tokenizer implementations
 - **GPU Infrastructure Foundation - CUDA Context and Module Access** ([#199](https://github.com/EffortlessSteven/BitNet-rs/pull/199)):
   - **Public CUDA Infrastructure Access**: Exposed CUDA context and module through public `context()` and `module()` accessor methods
   - **Custom Kernel Loading Foundation**: Enables loading of specialized PTX kernels for domain-specific GPU operations
