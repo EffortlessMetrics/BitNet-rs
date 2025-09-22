@@ -18,6 +18,15 @@ cargo build --release --no-default-features --features "cpu,iq2s-ffi"
 # Build with FFI quantization bridge support (requires C++ library)
 cargo build --release --no-default-features --features "cpu,ffi"
 
+# Build for WebAssembly (browser/Node.js)
+rustup target add wasm32-unknown-unknown
+cargo build --release --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features
+cargo build --release --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features browser
+cargo build --release --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features nodejs
+
+# Build WASM with enhanced debugging and error reporting
+cargo build --release --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features "browser,debug"
+
 # Run tests (fast, Rust-only)
 cargo test --workspace --no-default-features --features cpu
 
@@ -74,6 +83,12 @@ cargo test -p bitnet-tokenizers --features "spm,integration-tests" -- --quiet
 # Strict tokenizer mode testing (prevents fallback to mock tokenizers)
 BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers --no-default-features --features spm
 BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers -- --quiet
+
+# WebAssembly tests (requires wasm32 target)
+rustup target add wasm32-unknown-unknown
+cargo test -p bitnet-wasm --target wasm32-unknown-unknown --no-default-features
+wasm-pack test --node crates/bitnet-wasm/  # Requires wasm-pack for browser tests
+wasm-pack test --chrome --headless crates/bitnet-wasm/  # Browser testing with headless Chrome
 ```
 
 ### Code Quality Commands
@@ -147,6 +162,7 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-compat`**: GGUF compatibility fixes and diagnostics
 - **`bitnet-ffi`**: C API for llama.cpp drop-in replacement
 - **`bitnet-py`**: Python 3.12+ bindings compatible with llama-cpp-python (PyO3 ABI3-py312)
+- **`bitnet-wasm`**: WebAssembly bindings with enhanced browser/Node.js compatibility and optimized SIMD intrinsics
 
 #### Cross-Validation
 - **`crossval`**: Framework for testing against C++ implementation
@@ -229,6 +245,16 @@ Default features are **empty** to prevent unwanted dependencies:
 - `ffi`: C++ FFI bridge with quantization support for gradual migration (includes FfiKernel with I2S/TL1/TL2 quantization)
 - `spm`: SentencePiece tokenizer support via `sentencepiece` crate (enables real SPM tokenizer loading)
 - `crossval`: Cross-validation against C++ (increases build time)
+
+#### WebAssembly Features
+- `browser`: Browser-specific features including `wee_alloc` allocator for size optimization
+- `nodejs`: Node.js-specific features and runtime optimizations
+- `embedded`: Embedded WASM environment support
+- `debug`: Enhanced debugging with `console_error_panic_hook` for better browser error reporting
+- `inference`: Enables Rust inference engine on WASM (requires rt-wasm runtime support)
+- `wasm-utils`: Gradual WASM utility module re-enablement
+- `wasm-mem`: WASM memory management utilities
+- `wasm-kernels`: WASM-compatible kernel implementations
 
 ### Quantization Support
 BitNet-rs supports multiple quantization formats with advanced device-aware acceleration:
@@ -336,6 +362,13 @@ BitNet.rs includes a comprehensive tokenizer system with GGUF integration:
 - **GGUF Metadata Integration**: Automatically extract BPE data from model files
 - **Byte-Level Processing**: GPT-2 compatible pre-tokenization and decoding
 - **Fallback Support**: Graceful degradation to mock tokenizer when data incomplete
+
+#### WebAssembly Tokenizer Support (Enhanced in PR #170)
+- **unstable_wasm Feature**: Enhanced WASM compatibility using workspace-managed tokenizers dependency
+- **Dependency Management**: Fixed native dependency conflicts for seamless WebAssembly compilation
+- **Browser Compatibility**: Proper feature gating and dependency management for browser environments
+- **Cross-Platform WASM**: Consistent tokenizer functionality across browser and Node.js environments
+- **Mock Fallback**: Testing-compatible tokenizer when full tokenizer unavailable in WASM environment
 
 #### GGUF Tokenizer Metadata Extraction
 The universal tokenizer automatically parses GGUF metadata:
@@ -592,6 +625,14 @@ rustup run 1.90.0 cargo test --workspace --no-default-features --features cpu
 
 # Quick compile & test with concurrency caps
 scripts/preflight.sh && cargo t2
+
+# Quick WASM build and test (browser-compatible)
+rustup target add wasm32-unknown-unknown
+cargo build --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features browser
+cargo test -p bitnet-wasm --target wasm32-unknown-unknown --no-default-features
+
+# Quick WASM build with enhanced debugging
+cargo build --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features "browser,debug"
 
 # Validate GGUF file
 cargo run -p bitnet-cli -- compat-check model.gguf

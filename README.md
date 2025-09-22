@@ -1250,27 +1250,61 @@ cargo run -p bitnet-server --features degraded-ok
 # Unhealthy → 503
 ```
 
-## WASM (experimental)
+## WebAssembly Support
 
-BitNet has an experimental WebAssembly crate.
+BitNet.rs provides comprehensive WebAssembly support for browser and Node.js environments with enhanced compatibility and performance optimizations.
+
+### Quick Start
 
 ```bash
 rustup target add wasm32-unknown-unknown
-# Minimal build (errors go to the browser console without symbols)
-cargo build -p bitnet-wasm --target wasm32-unknown-unknown
 
-# (Optional) Better browser panic messages
-cargo build -p bitnet-wasm --target wasm32-unknown-unknown --features console-error
+# Browser-optimized build with size optimization
+cargo build -p bitnet-wasm --target wasm32-unknown-unknown --no-default-features --features browser
 
-# (Optional) build with the Rust engine once wasm runtime support lands
-# cargo build -p bitnet-wasm --target wasm32-unknown-unknown --features inference
+# Node.js optimized build
+cargo build -p bitnet-wasm --target wasm32-unknown-unknown --no-default-features --features nodejs
+
+# Development build with enhanced debugging
+cargo build -p bitnet-wasm --target wasm32-unknown-unknown --no-default-features --features "browser,debug"
 ```
 
-Notes:
-- The WASM crate is opt-in and not part of default builds.
-- `getrandom` (0.3) uses the JS/WebCrypto backend on `wasm32`; this is selected for you via `.cargo/config.toml` (`getrandom_backend="wasm_js"`).
-- The default WASM build excludes the Rust inference engine to avoid pulling `tokio`/`mio`.
-  Enable `--features inference` later when the wasm runtime path is ready.
+### Enhanced Features (PR #170)
+
+- **🔧 Fixed Dependency Management**: Resolved native dependency conflicts using workspace-managed dependencies
+- **📦 Enhanced Tokenizer Support**: Added `unstable_wasm` feature for proper tokenizer integration in WASM environments
+- **🌐 Browser Compatibility**: Proper feature gating and dependency management for browser environments
+- **⚡ SIMD Compatibility**: Fixed SIMD intrinsics for WebAssembly using portable alternatives to AVX2
+- **🎯 Zero Breaking Changes**: All improvements maintain full backward compatibility
+
+### WASM Feature Flags
+
+| Feature | Description |
+|---------|-------------|
+| `browser` | Browser-specific features including `wee_alloc` allocator for size optimization |
+| `nodejs` | Node.js-specific features and runtime optimizations |
+| `embedded` | Embedded WASM environment support |
+| `debug` | Enhanced debugging with `console_error_panic_hook` for better browser error reporting |
+| `inference` | Enables Rust inference engine on WASM (requires rt-wasm runtime support) |
+
+### Testing
+
+```bash
+# Basic WASM tests
+cargo test -p bitnet-wasm --target wasm32-unknown-unknown --no-default-features
+
+# Browser testing with wasm-pack (requires wasm-pack)
+wasm-pack test --node crates/bitnet-wasm/
+wasm-pack test --chrome --headless crates/bitnet-wasm/
+```
+
+### Integration Notes
+
+- **Dependency Isolation**: The WASM crate is opt-in and not part of default builds
+- **WebCrypto Integration**: `getrandom` (0.3) uses the JS/WebCrypto backend automatically via `.cargo/config.toml`
+- **Tokenizer Compatibility**: Uses `unstable_wasm` feature for seamless WebAssembly tokenizer integration
+- **Runtime Support**: Default WASM build excludes the Rust inference engine to avoid pulling `tokio`/`mio`
+- **Progressive Enhancement**: Enable `--features inference` when WASM runtime support is ready
 
 ## Contributing
 
