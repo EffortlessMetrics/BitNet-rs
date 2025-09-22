@@ -64,12 +64,19 @@ impl super::Tokenizer for SpmTokenizer {
         self.inner.len()
     }
 
-    fn token_to_piece(&self, _token: u32) -> Option<String> {
-        // The sentencepiece crate doesn't provide id_to_piece functionality.
-        // This is a limitation of the current sentencepiece API.
-        // For now, we return None as a safe fallback.
-        // TODO: Consider building a reverse mapping during initialization if needed.
-        None
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        // Use decode_piece_ids to convert a single token ID to its piece representation
+        // This is less efficient than a direct id_to_piece method but provides the same functionality
+        match self.inner.decode_piece_ids(&[token]) {
+            Ok(decoded) => {
+                if decoded.is_empty() {
+                    None
+                } else {
+                    Some(decoded)
+                }
+            }
+            Err(_) => None,
+        }
     }
 
     fn bos_token_id(&self) -> Option<u32> {
