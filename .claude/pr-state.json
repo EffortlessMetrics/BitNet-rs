@@ -1,18 +1,1 @@
-{
-  "pr_number": 171,
-  "title": "Enhance basic tokenizer and refine GGUF byte mapping",
-  "status": "MERGED",
-  "merge_commit": "a2c91bb",
-  "spm_fix_commit": "5fd4300",
-  "merged_at": "2025-09-22T05:01:32Z",
-  "merge_strategy": "squash",
-  "branch_deleted": true,
-  "validation_status": "PASSED",
-  "tests_passed": {
-    "tokenizer_tests": "7/7",
-    "gguf_header_tests": "8/8", 
-    "gguf_fuzz_tests": "5/5",
-    "universal_roundtrip": "1/1"
-  },
-  "critical_fix_applied": "SPM compilation error resolved"
-}
+{"pr_number": 197, "merge_commit": "e4b415b", "merge_strategy": "squash", "merged_at": "2025-09-22T20:29:24Z", "status": "MERGE_SUCCESSFUL", "changes": {"files_modified": ["xtask/src/main.rs"], "additions": 14, "deletions": 3}, "validation": {"tests_passed": true, "formatting_passed": true, "linting_passed": true, "documentation_updates": false}, "cleanup": {"worktree_removed": true, "branch_deleted": true}}
