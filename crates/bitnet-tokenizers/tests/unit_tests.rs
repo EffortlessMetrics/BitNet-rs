@@ -21,6 +21,20 @@ fn adds_eos_token_when_requested() {
 }
 
 #[test]
+fn adds_bos_token_when_requested() {
+    let tokenizer = BasicTokenizer::with_config(10, Some(1), Some(2), None);
+    let tokens = tokenizer.encode("hi", true, false).unwrap();
+    assert_eq!(tokens, vec![1, 0]);
+}
+
+#[test]
+fn errors_on_vocab_overflow() {
+    let tokenizer = BasicTokenizer::with_config(1, None, None, None);
+    let result = tokenizer.encode("too many tokens", false, false);
+    assert!(result.is_err());
+}
+
+#[test]
 fn vocab_and_special_token_ids() {
     let tokenizer = BasicTokenizer::new();
     assert_eq!(tokenizer.vocab_size(), 50257);

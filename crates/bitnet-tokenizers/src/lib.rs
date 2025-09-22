@@ -9,7 +9,7 @@ pub mod sp_tokenizer;
 pub mod spm_tokenizer;
 pub mod universal;
 
-use bitnet_common::Result;
+use bitnet_common::{BitNetError, ModelError, Result};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -82,6 +82,7 @@ pub trait Tokenizer: Send + Sync {
 /// Basic tokenizer implementation
 pub struct BasicTokenizer {
     vocab_size: usize,
+    bos_token_id: Option<u32>,
     eos_token_id: Option<u32>,
     pad_token_id: Option<u32>,
 }
@@ -90,6 +91,7 @@ impl BasicTokenizer {
     pub fn new() -> Self {
         Self {
             vocab_size: 50257, // GPT-2 vocab size
+            bos_token_id: None,
             eos_token_id: Some(50256),
             pad_token_id: None,
         }
@@ -97,10 +99,11 @@ impl BasicTokenizer {
 
     pub fn with_config(
         vocab_size: usize,
+        bos_token_id: Option<u32>,
         eos_token_id: Option<u32>,
         pad_token_id: Option<u32>,
     ) -> Self {
-        Self { vocab_size, eos_token_id, pad_token_id }
+        Self { vocab_size, bos_token_id, eos_token_id, pad_token_id }
     }
 }
 
@@ -111,18 +114,35 @@ impl Default for BasicTokenizer {
 }
 
 impl Tokenizer for BasicTokenizer {
-    fn encode(&self, text: &str, _add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
         if text.is_empty() {
             return Ok(Vec::new());
         }
 
-        // Simple word-based tokenization for testing
         let words: Vec<&str> = text.split_whitespace().collect();
-        let mut tokens: Vec<u32> = words.iter().enumerate().map(|(i, _)| i as u32).collect();
+        let mut tokens: Vec<u32> = Vec::new();
 
-        // Add special tokens if requested
-        if add_special && let Some(eos_id) = self.eos_token_id {
-            tokens.push(eos_id);
+        if add_bos && let Some(bos) = self.bos_token_id {
+            tokens.push(bos);
+        }
+
+        for (i, _) in words.iter().enumerate() {
+            let id = i as u32;
+            if id >= self.vocab_size as u32 {
+                return Err(BitNetError::Model(ModelError::LoadingFailed {
+                    reason: "token id exceeds vocab size".to_string(),
+                }));
+            }
+            tokens.push(id);
+        }
+
+        if add_special {
+            if let Some(eos_id) = self.eos_token_id {
+                tokens.push(eos_id);
+            }
+            if let Some(pad_id) = self.pad_token_id {
+                tokens.push(pad_id);
+            }
         }
 
         Ok(tokens)
@@ -142,12 +162,15 @@ impl Tokenizer for BasicTokenizer {
     }
 
     fn token_to_piece(&self, token: u32) -> Option<String> {
-        // Simple implementation
         Some(format!("<token_{}>", token))
     }
 
     fn eos_token_id(&self) -> Option<u32> {
         self.eos_token_id
+    }
+
+    fn bos_token_id(&self) -> Option<u32> {
+        self.bos_token_id
     }
 
     fn pad_token_id(&self) -> Option<u32> {
@@ -239,9 +262,11 @@ impl TokenizerBuilder {
 
         // Return different configurations based on model name for testing
         match name {
-            "gpt2" => Ok(Arc::new(BasicTokenizer::with_config(50257, Some(50256), None))),
-            "bert" => Ok(Arc::new(BasicTokenizer::with_config(30522, Some(102), Some(0)))),
-            "tiny" => Ok(Arc::new(BasicTokenizer::with_config(1000, Some(999), Some(0)))),
+            "gpt2" => Ok(Arc::new(BasicTokenizer::with_config(50257, None, Some(50256), None))),
+            "bert" => {
+                Ok(Arc::new(BasicTokenizer::with_config(30522, Some(101), Some(102), Some(0))))
+            }
+            "tiny" => Ok(Arc::new(BasicTokenizer::with_config(1000, None, Some(999), Some(0)))),
             _ => Ok(Arc::new(BasicTokenizer::new())),
         }
     }
