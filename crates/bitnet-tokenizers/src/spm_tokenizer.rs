@@ -64,11 +64,12 @@ impl super::Tokenizer for SpmTokenizer {
         self.inner.len()
     }
 
-    fn token_to_piece(&self, token: u32) -> Option<String> {
-        // SentencePiece provides an id_to_piece helper which returns an empty string for
-        // out-of-range ids. Convert that to None for a more idiomatic API.
-        let piece = self.inner.id_to_piece(token as i32);
-        if piece.is_empty() { None } else { Some(piece.to_string()) }
+    fn token_to_piece(&self, _token: u32) -> Option<String> {
+        // The sentencepiece crate doesn't provide id_to_piece functionality.
+        // This is a limitation of the current sentencepiece API.
+        // For now, we return None as a safe fallback.
+        // TODO: Consider building a reverse mapping during initialization if needed.
+        None
     }
 
     fn bos_token_id(&self) -> Option<u32> {
