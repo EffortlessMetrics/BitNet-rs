@@ -67,8 +67,8 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_precision
 cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
 
 # SentencePiece (SPM) tokenizer tests (requires spm feature)
-cargo test -p bitnet-tokenizers --no-default-features --features spm test_universal_tokenizer_spm_integration
-cargo test -p bitnet-tokenizers --no-default-features --features spm -- --ignored  # SPM model tests
+cargo test -p bitnet-tokenizers --features "spm,integration-tests" --test tokenizer_contracts test_sentencepiece_tokenizer_contract
+cargo test -p bitnet-tokenizers --features "spm,integration-tests" -- --ignored  # SPM model tests (requires actual .model file)
 cargo test -p bitnet-tokenizers --features "spm,integration-tests" -- --quiet
 
 # Strict tokenizer mode testing (prevents fallback to mock tokenizers)
@@ -624,8 +624,8 @@ BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels test_gpu_info_mocked_sc
 cargo test -p bitnet-tokenizers --no-default-features
 
 # Test SentencePiece tokenizer integration (requires spm feature)
-cargo test -p bitnet-tokenizers --no-default-features --features spm test_universal_tokenizer_spm_integration
-cargo test -p bitnet-tokenizers --features spm -- --ignored  # Requires SPM model file
+cargo test -p bitnet-tokenizers --features "spm,integration-tests" --test tokenizer_contracts test_sentencepiece_tokenizer_contract
+cargo test -p bitnet-tokenizers --features "spm,integration-tests" -- --ignored  # Requires SPM model file
 
 # Test BPE tokenizer round-trip functionality (includes new BPE tests)
 cargo test -p bitnet-tokenizers --test universal_roundtrip --no-default-features --features integration-tests
