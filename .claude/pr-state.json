@@ -1,34 +1,18 @@
 {
-  "pr_number": 208,
-  "title": "feat(server): collect real system metrics",
-  "author": "EffortlessSteven",
-  "head_ref": "codex/update-metricscollector-and-system-queries",
-  "base_ref": "main",
+  "pr_number": 171,
+  "title": "Enhance basic tokenizer and refine GGUF byte mapping",
   "status": "MERGED",
-  "merged_at": "2025-09-10T04:59:26Z",
-  "merged_by": "EffortlessSteven", 
+  "merge_commit": "a2c91bb",
+  "spm_fix_commit": "5fd4300",
+  "merged_at": "2025-09-22T05:01:32Z",
   "merge_strategy": "squash",
-  "commit_sha": "a067481a5b28a5d7d6b1db6f4924f692bf14990c",
-  "validation_date": "2025-09-10",
-  "commits": 1,
-  "additions": 295,
-  "deletions": 8,
-  "changed_files": 4,
-  "breaking_changes": false,
-  "tests_passed": true,
-  "security_audit_passed": true,
-  "formatting_applied": true,
-  "ready_for_merge": true,
-  "merge_completed": true,
-  "next_agent": "pr-doc-finalizer",
-  "key_features": [
-    "sysinfo-based system metrics",
-    "async-safe metrics collection", 
-    "performance history retention",
-    "prometheus integration"
-  ],
-  "artifacts": {
-    "validation_report": ".claude/finalization-report-pr-208.md",
-    "worktree_location": "/tmp/bitnet-validate-6JZ4"
-  }
+  "branch_deleted": true,
+  "validation_status": "PASSED",
+  "tests_passed": {
+    "tokenizer_tests": "7/7",
+    "gguf_header_tests": "8/8", 
+    "gguf_fuzz_tests": "5/5",
+    "universal_roundtrip": "1/1"
+  },
+  "critical_fix_applied": "SPM compilation error resolved"
 }

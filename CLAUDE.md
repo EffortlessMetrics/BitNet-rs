@@ -189,9 +189,13 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 - **Enhanced Error Reporting**: ValidationResult metrics include `unmapped_count` and `unmapped_tensors`
 - **GGUF Parsing Integration**: Direct model file analysis for compatibility validation
 
-#### Universal Tokenizer Architecture
+#### Universal Tokenizer Architecture (Enhanced in PR #171)
 - **Auto-Detection**: Automatic backend selection based on GGUF model metadata
-- **GGUF Integration**: Direct extraction of tokenizer configuration from model files
+- **Enhanced GGUF Integration**: Direct extraction of tokenizer configuration from model files with optimized byte mapping
+- **O(1) Byte Lookup Performance**: `byte_to_id[256]` array replaces HashMap for faster tokenization
+- **Improved UTF-8 Handling**: Proper byte buffer management in decode operations for robust text processing
+- **BOS Token Support**: Enhanced BasicTokenizer with vocab boundary checks and special token handling
+- **SPM Compilation Fix**: Resolved critical compilation error in SentencePiece tokenizer integration
 - **Fallback Strategy**: Graceful degradation to mock tokenizer for unsupported formats
 - **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external dependencies
 - **Cross-Format Support**: BPE, SentencePiece, and custom tokenizer formats
@@ -317,7 +321,7 @@ BitNet.rs includes a comprehensive tokenizer system with GGUF integration:
 - **TikToken**: OpenAI's tiktoken format
 - **Mock Backend**: Minimal tokenizer for testing and compatibility
 
-#### SentencePiece (SPM) Backend Features (New in PR #200)
+#### SentencePiece (SPM) Backend Features (Compilation Fixed in PR #171)
 - **Real SPM Loading**: Loads actual SentencePiece models when `spm` feature enabled and model path provided
 - **Model Type Detection**: Supports both `smp` and `sentencepiece` model type identifiers
 - **Strict Mode Integration**: Proper handling of `BITNET_STRICT_TOKENIZERS=1` environment variable

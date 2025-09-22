@@ -12,6 +12,8 @@ pub struct SpmTokenizer {
     inner: sentencepiece::SentencePieceProcessor,
     bos_id: Option<u32>,
     eos_id: Option<u32>,
+    // Canonical vocabulary pieces, indexed by id for O(1) lookup
+    id2piece: Box<[String]>,
 }
 
 #[cfg(feature = "spm")]
@@ -19,9 +21,26 @@ impl SpmTokenizer {
     pub fn from_file(path: &Path) -> AnyhowResult<Self> {
         let spp =
             sentencepiece::SentencePieceProcessor::open(path).map_err(|e| anyhow::anyhow!(e))?;
+
+        // Build id→piece lookup table once at initialization
+        let model_bytes = spp.to_serialized_proto();
+        let spm_model = sentencepiece_model::SentencePieceModel::from_slice(&model_bytes)
+            .map_err(|e| anyhow::anyhow!("parse spm model: {e}"))?;
+
+        let id2piece: Box<[String]> = spm_model
+            .pieces()
+            .iter()
+            .map(|p| p.piece().to_owned())
+            .collect::<Vec<_>>()
+            .into_boxed_slice();
+
+        // Optional sanity check
+        debug_assert_eq!(id2piece.len(), spp.len());
+
         let bos_id = spp.bos_id();
         let eos_id = spp.eos_id();
-        Ok(Self { inner: spp, bos_id, eos_id })
+
+        Ok(Self { inner: spp, bos_id, eos_id, id2piece })
     }
 }
 
@@ -65,10 +84,7 @@ impl super::Tokenizer for SpmTokenizer {
     }
 
     fn token_to_piece(&self, token: u32) -> Option<String> {
-        // SentencePiece provides an id_to_piece helper which returns an empty string for
-        // out-of-range ids. Convert that to None for a more idiomatic API.
-        let piece = self.inner.id_to_piece(token as i32);
-        if piece.is_empty() { None } else { Some(piece.to_string()) }
+        self.id2piece.get(token as usize).cloned()
     }
 
     fn bos_token_id(&self) -> Option<u32> {
