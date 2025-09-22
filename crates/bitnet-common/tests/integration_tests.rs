@@ -4,17 +4,9 @@
 use bitnet_common::*;
 use candle_core::DType;
 use serial_test::serial;
-use std::env;
 use std::fs;
-use std::sync::Mutex;
 use temp_env::with_var;
 use tempfile::TempDir;
-
-static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-fn acquire_env_lock() -> std::sync::MutexGuard<'static, ()> {
-    ENV_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
-}
 
 #[test]
 fn test_config_with_tensor_operations() {
@@ -55,6 +47,7 @@ fn test_serialization_with_all_types() {
             hidden_size: 8192,
             num_layers: 48,
             num_heads: 64,
+            num_key_value_heads: 64,
             intermediate_size: 22016,
             max_position_embeddings: 4096,
             rope_theta: Some(10000.0),
