@@ -1,0 +1,37 @@
+{
+  "pr_number": 198,
+  "title": "Cache TL2 lookup tables per scale",
+  "status": "MERGED",
+  "merge_commit": "8578ed3",
+  "merge_strategy": "squash",
+  "branch_name": "codex/integrate-lookup_tables-into-tl2-quantization",
+  "validation_date": "2025-09-22T15:30:00Z",
+  "merge_date": "2025-09-22T15:35:00Z",
+  "validation_worktree": "/tmp/bitnet-validate-vLni",
+  "files_modified": [
+    "crates/bitnet-quantization/src/tl2.rs"
+  ],
+  "test_results": {
+    "total_tests": 50,
+    "passed": 50,
+    "failed": 0,
+    "tl2_specific": 5,
+    "simd_compatibility": 7
+  },
+  "performance_impact": {
+    "small_tensors": "1-4% improvement",
+    "large_tensors": "negligible",
+    "memory_overhead": "minimal"
+  },
+  "api_changes": "none",
+  "breaking_changes": false,
+  "documentation_updates_needed": false,
+  "agent": "pr-finalize",
+  "validation_commands": [
+    "just fmt",
+    "just lint",
+    "just test-quick",
+    "cargo test -p bitnet-quantization --lib tl2",
+    "cargo test -p bitnet-quantization --test simd_compatibility"
+  ]
+}
