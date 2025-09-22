@@ -274,6 +274,8 @@ BitNet.rs now provides native CUDA mixed precision support for enhanced GPU perf
 
 #### Device-Aware Precision Selection
 - **Automatic Detection**: Hardware capability detection determines optimal precision
+- **Device ID Tracking**: GPU kernels expose device ID for multi-GPU debugging scenarios (PR #201)
+- **Capability Querying**: Direct access to FP16/BF16 support via `supports_fp16()` and `supports_bf16()` methods (PR #201)
 - **Graceful Fallback**: Automatic CPU fallback when GPU operations fail
 - **Performance Monitoring**: Comprehensive metrics for each precision mode
 - **Memory Tracking**: GPU memory allocation and deallocation monitoring
@@ -645,6 +647,25 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cp
 
 # GPU memory leak detection and performance benchmarking
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+
+# Enhanced GPU Memory Debugging with Stack Traces (New in PR #201)
+# Test memory pool creation with device ID tracking
+cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_pool_creation
+
+# Test stack trace capture in debug builds (requires debug build)
+cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_allocation -- --nocapture
+
+# Test memory leak detection with comprehensive stack traces
+cargo test -p bitnet-kernels --no-default-features --features gpu test_check_leaks -- --nocapture
+
+# Test device ID tracking for mixed precision kernels
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_device_tracking
+
+# Test memory access pattern analysis and optimization
+cargo test -p bitnet-kernels --no-default-features --features gpu test_access_pattern_analysis
+
+# Run comprehensive memory optimization tests with debug output
+RUST_LOG=debug cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_optimization -- --nocapture
 
 # Device-aware quantization validation (I2S, TL1, TL2)
 cargo test -p bitnet-quantization --no-default-features --features gpu test_dequantize_cpu_and_gpu_paths

@@ -133,6 +133,144 @@ pub struct CudaDeviceInfo {
 }
 ```
 
+### Enhanced GPU Memory Optimization and Debug Tracing (New in PR #201)
+
+BitNet.rs now provides advanced GPU memory optimization with comprehensive debug stack trace capture for improved developer productivity and production debugging:
+
+#### Memory Pool with Stack Trace Debugging
+
+The `OptimizedMemoryPool` now captures stack traces for every allocation in debug builds:
+
+```rust
+use bitnet_kernels::gpu::memory_optimization::{OptimizedMemoryPool, MemoryPoolConfig};
+
+// Create memory pool with debug tracing enabled
+let config = MemoryPoolConfig::default();
+let mut pool = OptimizedMemoryPool::new(0, config);
+
+// Get device ID for multi-GPU scenarios
+println!("Memory pool device: {}", pool.device_id());
+
+// Allocate memory (stack trace captured in debug builds)
+let buffer = pool.allocate(1024 * 1024)?; // 1MB allocation
+
+// Check for memory leaks with stack trace information
+let leaks = pool.check_leaks();
+for leak in leaks {
+    eprintln!("Memory leak detected: {}", leak);
+    // In debug builds, includes full stack trace:
+    // Device 0: potential leak: 1048576 bytes at 0x7f8b4c000000
+    // Stack trace:
+    //    0: rust_begin_unwind
+    //    1: core::panicking::panic_fmt
+    //    2: bitnet_kernels::gpu::memory_optimization::OptimizedMemoryPool::allocate
+    //    3: my_application::main
+}
+
+// Deallocate memory properly
+pool.deallocate(buffer);
+```
+
+#### Device ID Tracking for Mixed Precision Kernels
+
+Mixed precision kernels now expose device ID and capability methods for multi-GPU debugging:
+
+```rust
+use bitnet_kernels::gpu::{MixedPrecisionKernel, PrecisionMode};
+
+// Create kernel and get device tracking information
+let kernel = MixedPrecisionKernel::new(0)?;
+
+// Device identification for multi-GPU scenarios
+println!("Kernel device ID: {}", kernel.device_id());
+println!("Device supports FP16: {}", kernel.supports_fp16());
+println!("Device supports BF16: {}", kernel.supports_bf16());
+
+// Use device capabilities for optimization decisions
+if kernel.supports_bf16() {
+    kernel.set_precision_mode(PrecisionMode::BF16);
+    println!("Using BF16 precision on device {}", kernel.device_id());
+} else if kernel.supports_fp16() {
+    kernel.set_precision_mode(PrecisionMode::FP16);
+    println!("Using FP16 precision on device {}", kernel.device_id());
+} else {
+    kernel.set_precision_mode(PrecisionMode::FP32);
+    println!("Using FP32 precision on device {}", kernel.device_id());
+}
+```
+
+#### Memory Leak Detection with Stack Traces
+
+The enhanced memory pool provides production-ready leak detection:
+
+```rust
+use std::time::Duration;
+
+// Configure memory pool with custom leak detection threshold
+let config = MemoryPoolConfig {
+    max_pool_size: 2 * 1024 * 1024 * 1024, // 2GB pool
+    cleanup_interval: Duration::from_secs(30),
+    ..Default::default()
+};
+
+let mut pool = OptimizedMemoryPool::new(0, config);
+
+// Simulate long-running allocations
+let long_lived_buffer = pool.allocate(64 * 1024)?;
+
+// After 1 hour, check for leaks (configurable threshold)
+std::thread::sleep(Duration::from_secs(3601));
+let leaks = pool.check_leaks();
+
+for leak_report in leaks {
+    // In debug builds, includes complete stack trace
+    eprintln!("LEAK DETECTED: {}", leak_report);
+
+    // Example output:
+    // Device 0: potential leak: 65536 bytes at 0x7f8b4c010000
+    // Stack trace:
+    //    0: std::backtrace::Backtrace::force_capture
+    //    1: bitnet_kernels::gpu::memory_optimization::OptimizedMemoryPool::track_allocation
+    //    2: bitnet_kernels::gpu::memory_optimization::OptimizedMemoryPool::allocate
+    //    3: my_application::process_batch
+    //    4: my_application::main
+}
+
+// Clean up
+pool.deallocate(long_lived_buffer);
+```
+
+#### Memory Statistics and Performance Monitoring
+
+Enhanced memory statistics provide comprehensive tracking:
+
+```rust
+// Get detailed memory usage statistics
+let stats = pool.stats();
+println!("Memory Statistics:");
+println!("  Total allocated: {:.2} MB", stats.total_allocated as f64 / (1024.0 * 1024.0));
+println!("  Current usage: {:.2} MB", stats.current_usage as f64 / (1024.0 * 1024.0));
+println!("  Peak usage: {:.2} MB", stats.peak_usage as f64 / (1024.0 * 1024.0));
+println!("  Allocation count: {}", stats.allocation_count);
+println!("  Cache hit ratio: {:.1}%",
+    (stats.cache_hits as f64 / (stats.cache_hits + stats.cache_misses) as f64) * 100.0);
+
+// Memory access pattern analysis for optimization
+use bitnet_kernels::gpu::memory_optimization::{MemoryLayoutOptimizer, AccessPattern};
+
+let access_indices = vec![0, 2, 4, 6, 8]; // Strided access pattern
+let pattern = MemoryLayoutOptimizer::analyze_access_pattern(&access_indices);
+
+match pattern {
+    AccessPattern::Sequential => println!("Optimal sequential access detected"),
+    AccessPattern::Strided { stride } => {
+        println!("Strided access pattern detected with stride: {}", stride);
+        // Can optimize memory layout for this pattern
+    }
+    AccessPattern::Random => println!("Random access pattern - consider data reorganization"),
+}
+```
+
 ### Device Memory Tracking
 
 BitNet.rs provides comprehensive memory tracking capabilities for both CPU and GPU devices:
@@ -199,6 +337,34 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_device_me
 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
 ```
 
+#### Enhanced Debugging Commands (New in PR #201)
+
+```bash
+# Test memory pool creation with device ID tracking
+cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_pool_creation
+
+# Test stack trace capture in debug builds (requires debug build)
+cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_allocation -- --nocapture
+
+# Test memory leak detection with comprehensive stack traces
+cargo test -p bitnet-kernels --no-default-features --features gpu test_check_leaks -- --nocapture
+
+# Test device ID tracking for mixed precision kernels
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_device_tracking
+
+# Test memory access pattern analysis and optimization
+cargo test -p bitnet-kernels --no-default-features --features gpu test_access_pattern_analysis
+
+# Run comprehensive memory optimization tests with debug output
+RUST_LOG=debug cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_optimization -- --nocapture
+
+# Test multi-GPU device ID tracking (requires multiple GPUs)
+cargo test -p bitnet-kernels --no-default-features --features gpu test_multi_device_memory_pools --ignored
+
+# Test enhanced memory statistics with stack trace integration
+cargo test -p bitnet-kernels --no-default-features --features gpu test_enhanced_memory_stats --ignored
+```
+
 ### Hardware-Aware Optimization
 
 The CUDA implementation automatically optimizes based on detected hardware:
@@ -255,6 +421,287 @@ println!("Using device: {} with {} SMs", info.name, info.multiprocessor_count);
 // calculate_optimal_launch_params now used internally in matmul operations
 // Instead of hardcoded 16x16 blocks, uses device-specific optimization
 ```
+
+## Multi-GPU Development and Device ID Tracking (New in PR #201)
+
+BitNet.rs now provides comprehensive device ID tracking and multi-GPU support for advanced deployment scenarios:
+
+### Device ID Tracking Examples
+
+#### Basic Device ID Querying
+
+```rust
+use bitnet_kernels::gpu::{MixedPrecisionKernel, OptimizedMemoryPool, MemoryPoolConfig};
+
+// Create kernels on specific devices and track their IDs
+let kernel_0 = MixedPrecisionKernel::new(0)?;
+let kernel_1 = MixedPrecisionKernel::new(1)?;
+
+println!("Kernel 0 device: {}", kernel_0.device_id());
+println!("Kernel 1 device: {}", kernel_1.device_id());
+
+// Create memory pools with device tracking
+let config = MemoryPoolConfig::default();
+let mut pool_0 = OptimizedMemoryPool::new(0, config.clone());
+let mut pool_1 = OptimizedMemoryPool::new(1, config);
+
+println!("Memory pool 0 device: {}", pool_0.device_id());
+println!("Memory pool 1 device: {}", pool_1.device_id());
+```
+
+#### Multi-GPU Capability Detection
+
+```rust
+use bitnet_kernels::gpu::{MixedPrecisionKernel, PrecisionMode};
+
+// Query capabilities across multiple devices
+for device_id in 0..2 {
+    match MixedPrecisionKernel::new(device_id) {
+        Ok(kernel) => {
+            println!("Device {}: {}", device_id, kernel.device_info().name);
+            println!("  Device ID: {}", kernel.device_id());
+            println!("  Supports FP16: {}", kernel.supports_fp16());
+            println!("  Supports BF16: {}", kernel.supports_bf16());
+            println!("  Optimal precision: {:?}", kernel.optimal_precision());
+        }
+        Err(e) => {
+            println!("Device {} unavailable: {}", device_id, e);
+        }
+    }
+}
+```
+
+#### Load Balancing Across Multiple GPUs
+
+```rust
+use std::collections::HashMap;
+
+struct MultiGpuManager {
+    kernels: HashMap<usize, MixedPrecisionKernel>,
+    memory_pools: HashMap<usize, OptimizedMemoryPool>,
+}
+
+impl MultiGpuManager {
+    fn new(device_ids: &[usize]) -> Result<Self> {
+        let mut kernels = HashMap::new();
+        let mut memory_pools = HashMap::new();
+
+        for &device_id in device_ids {
+            let kernel = MixedPrecisionKernel::new(device_id)?;
+            let config = MemoryPoolConfig::default();
+            let pool = OptimizedMemoryPool::new(device_id, config);
+
+            // Verify device ID consistency
+            assert_eq!(kernel.device_id(), device_id);
+            assert_eq!(pool.device_id(), device_id);
+
+            kernels.insert(device_id, kernel);
+            memory_pools.insert(device_id, pool);
+        }
+
+        Ok(Self { kernels, memory_pools })
+    }
+
+    fn get_optimal_device(&self) -> Option<usize> {
+        // Find device with best capabilities
+        self.kernels.iter()
+            .filter(|(_, kernel)| kernel.supports_bf16())
+            .map(|(&device_id, _)| device_id)
+            .next()
+            .or_else(|| {
+                // Fallback to FP16 devices
+                self.kernels.iter()
+                    .filter(|(_, kernel)| kernel.supports_fp16())
+                    .map(|(&device_id, _)| device_id)
+                    .next()
+            })
+    }
+
+    fn process_batch_on_device(&mut self, device_id: usize, data: &[f32]) -> Result<Vec<f32>> {
+        let kernel = self.kernels.get_mut(&device_id)
+            .ok_or_else(|| format!("Device {} not available", device_id))?;
+
+        let pool = self.memory_pools.get_mut(&device_id)
+            .ok_or_else(|| format!("Memory pool for device {} not available", device_id))?;
+
+        // Verify we're using the correct device
+        assert_eq!(kernel.device_id(), device_id);
+        assert_eq!(pool.device_id(), device_id);
+
+        // Allocate memory for processing
+        let buffer = pool.allocate(data.len() * std::mem::size_of::<f32>())?;
+
+        // Process data with optimal precision for this device
+        let mut result = vec![0.0f32; data.len()];
+        kernel.matmul_auto(data, data, &mut result, 1, data.len(), 1)?;
+
+        // Clean up
+        pool.deallocate(buffer);
+
+        Ok(result)
+    }
+}
+
+// Usage example
+let device_ids = vec![0, 1, 2];
+let mut manager = MultiGpuManager::new(&device_ids)?;
+
+if let Some(optimal_device) = manager.get_optimal_device() {
+    println!("Using optimal device: {}", optimal_device);
+    let data = vec![1.0f32; 1024];
+    let result = manager.process_batch_on_device(optimal_device, &data)?;
+    println!("Processed {} elements on device {}", result.len(), optimal_device);
+}
+```
+
+### Multi-GPU Memory Debugging
+
+```rust
+use std::time::Duration;
+
+// Track memory usage across multiple devices
+fn debug_multi_gpu_memory(device_ids: &[usize]) -> Result<()> {
+    let mut pools = Vec::new();
+
+    // Create memory pools for each device
+    for &device_id in device_ids {
+        let config = MemoryPoolConfig::default();
+        let pool = OptimizedMemoryPool::new(device_id, config);
+        pools.push(pool);
+    }
+
+    // Allocate memory on each device
+    let mut buffers = Vec::new();
+    for (i, pool) in pools.iter_mut().enumerate() {
+        let device_id = device_ids[i];
+        println!("Allocating on device {}", device_id);
+
+        let buffer = pool.allocate(1024 * 1024)?; // 1MB
+        buffers.push(buffer);
+
+        // Verify device tracking
+        assert_eq!(pool.device_id(), device_id);
+
+        let stats = pool.stats();
+        println!("Device {} stats: {} MB allocated",
+            device_id,
+            stats.current_usage as f64 / (1024.0 * 1024.0)
+        );
+    }
+
+    // Simulate long-running operations
+    std::thread::sleep(Duration::from_secs(2));
+
+    // Check for leaks across all devices
+    for (i, pool) in pools.iter().enumerate() {
+        let device_id = device_ids[i];
+        let leaks = pool.check_leaks();
+
+        if !leaks.is_empty() {
+            eprintln!("Device {} has {} potential leaks:", device_id, leaks.len());
+            for leak in leaks {
+                eprintln!("  {}", leak);
+            }
+        } else {
+            println!("Device {} has no memory leaks", device_id);
+        }
+    }
+
+    // Clean up all buffers
+    for (i, pool) in pools.iter_mut().enumerate() {
+        let buffer = buffers.remove(0);
+        pool.deallocate(buffer);
+        println!("Cleaned up device {}", device_ids[i]);
+    }
+
+    Ok(())
+}
+```
+
+### Device-Specific Performance Optimization
+
+```rust
+use bitnet_kernels::gpu::PrecisionMode;
+
+struct DeviceOptimizer {
+    device_configurations: HashMap<usize, DeviceConfig>,
+}
+
+#[derive(Debug, Clone)]
+struct DeviceConfig {
+    device_id: usize,
+    optimal_precision: PrecisionMode,
+    max_batch_size: usize,
+    preferred_memory_limit: usize,
+}
+
+impl DeviceOptimizer {
+    fn new() -> Self {
+        Self {
+            device_configurations: HashMap::new(),
+        }
+    }
+
+    fn analyze_device(&mut self, device_id: usize) -> Result<DeviceConfig> {
+        let kernel = MixedPrecisionKernel::new(device_id)?;
+
+        // Verify device ID consistency
+        assert_eq!(kernel.device_id(), device_id);
+
+        // Determine optimal configuration based on capabilities
+        let optimal_precision = if kernel.supports_bf16() {
+            PrecisionMode::BF16
+        } else if kernel.supports_fp16() {
+            PrecisionMode::FP16
+        } else {
+            PrecisionMode::FP32
+        };
+
+        let device_info = kernel.device_info();
+        let max_batch_size = (device_info.total_memory / (1024 * 1024 * 100)).min(128); // Conservative estimate
+        let preferred_memory_limit = device_info.total_memory * 80 / 100; // 80% of total memory
+
+        let config = DeviceConfig {
+            device_id,
+            optimal_precision,
+            max_batch_size,
+            preferred_memory_limit,
+        };
+
+        self.device_configurations.insert(device_id, config.clone());
+
+        println!("Device {} configuration:", device_id);
+        println!("  Name: {}", device_info.name);
+        println!("  Device ID: {}", device_id);
+        println!("  Optimal precision: {:?}", optimal_precision);
+        println!("  Max batch size: {}", max_batch_size);
+        println!("  Memory limit: {:.1} GB", preferred_memory_limit as f64 / 1e9);
+
+        Ok(config)
+    }
+
+    fn get_device_config(&self, device_id: usize) -> Option<&DeviceConfig> {
+        self.device_configurations.get(&device_id)
+    }
+}
+
+// Usage
+let mut optimizer = DeviceOptimizer::new();
+for device_id in 0..4 {
+    match optimizer.analyze_device(device_id) {
+        Ok(_) => println!("Successfully analyzed device {}", device_id),
+        Err(e) => println!("Device {} analysis failed: {}", device_id, e),
+    }
+}
+```
+
+### Multi-GPU Debugging Best Practices
+
+1. **Always Verify Device IDs**: Use `device_id()` methods to ensure operations are on the expected device
+2. **Track Memory Per Device**: Use separate memory pools for each device with device ID tracking
+3. **Monitor Cross-Device Operations**: Be aware of memory transfers between devices
+4. **Use Consistent Naming**: Include device ID in log messages and error reporting
+5. **Test Device Fallback**: Ensure your application handles device unavailability gracefully
 
 ### Mixed Precision GPU Acceleration (New in PR #202)
 
@@ -720,6 +1167,86 @@ Key statistics methods:
 
 ## Advanced GPU/CUDA Troubleshooting
 
+### Memory Debugging and Stack Trace Analysis (New in PR #201)
+
+BitNet.rs now provides comprehensive memory debugging capabilities with stack trace capture for production debugging:
+
+1. **Memory Leak Investigation with Stack Traces**:
+   ```bash
+   # Build in debug mode to enable stack trace capture
+   cargo build --debug -p bitnet-kernels --no-default-features --features gpu
+
+   # Run tests with detailed memory leak detection
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_check_leaks -- --nocapture
+
+   # Enable comprehensive logging for memory operations
+   RUST_LOG=debug cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_optimization -- --nocapture
+
+   # Test long-running memory patterns (look for stack traces in output)
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_allocation -- --nocapture
+   ```
+
+2. **Device ID Tracking for Multi-GPU Debugging**:
+   ```bash
+   # Test device ID consistency across operations
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_device_tracking
+
+   # Validate memory pool device assignment
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_pool_creation
+
+   # Test multi-device scenarios (requires multiple GPUs)
+   CUDA_VISIBLE_DEVICES=0,1 cargo test -p bitnet-kernels --no-default-features --features gpu test_multi_device_memory_pools --ignored
+   ```
+
+3. **Memory Access Pattern Analysis**:
+   ```bash
+   # Analyze memory access patterns for optimization opportunities
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_access_pattern_analysis
+
+   # Test pattern detection algorithms
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_analyze_access_pattern
+
+   # Run memory layout optimization tests
+   cargo test -p bitnet-kernels --no-default-features --features gpu test_memory_layout_optimization
+   ```
+
+4. **Interpreting Stack Trace Output**:
+
+   When memory leaks are detected in debug builds, you'll see output like:
+   ```
+   Device 0: potential leak: 1048576 bytes at 0x7f8b4c000000
+   Stack trace:
+      0: std::backtrace::Backtrace::force_capture
+         at /rustc/.../library/std/src/backtrace.rs:101
+      1: bitnet_kernels::gpu::memory_optimization::OptimizedMemoryPool::track_allocation
+         at crates/bitnet-kernels/src/gpu/memory_optimization.rs:166
+      2: bitnet_kernels::gpu::memory_optimization::OptimizedMemoryPool::allocate
+         at crates/bitnet-kernels/src/gpu/memory_optimization.rs:123
+      3: my_application::process_batch
+         at src/main.rs:45
+      4: my_application::main
+         at src/main.rs:20
+   ```
+
+   This tells you:
+   - **Device ID**: Which GPU device has the leak
+   - **Memory size**: How much memory was leaked
+   - **Memory address**: The pointer address of the leaked memory
+   - **Call stack**: Exact code path that led to the allocation
+
+5. **Production Memory Debugging**:
+   ```bash
+   # Enable memory leak detection in production builds (minimal overhead)
+   cargo build --release -p bitnet-kernels --no-default-features --features gpu
+
+   # Set leak detection threshold (default: 1 hour)
+   export BITNET_LEAK_THRESHOLD_SECS=3600
+
+   # Configure memory pool settings for production
+   export BITNET_POOL_SIZE_GB=4
+   export BITNET_CLEANUP_INTERVAL_SECS=60
+   ```
+
 ### Mixed Precision Issues (New in PR #202)
 
 1. **Mixed Precision Kernel Creation Fails**:
@@ -1015,6 +1542,29 @@ BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels test_gpu_info_mocked_sc
 
 # GPU smoke test (basic availability)
 cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_smoke
+
+# Enhanced GPU Memory Debugging and Stack Trace Recipes (New in PR #201)
+
+# Memory leak detection with comprehensive stack traces (debug builds)
+cargo test -p bitnet-kernels --features gpu test_check_leaks -- --nocapture
+
+# Device ID tracking and memory pool management
+cargo test -p bitnet-kernels --features gpu test_memory_pool_creation
+cargo test -p bitnet-kernels --features gpu test_mixed_precision_device_tracking
+
+# Memory access pattern analysis and optimization
+cargo test -p bitnet-kernels --features gpu test_access_pattern_analysis
+cargo test -p bitnet-kernels --features gpu test_analyze_access_pattern
+
+# Multi-GPU device tracking (requires multiple GPUs)
+CUDA_VISIBLE_DEVICES=0,1 cargo test -p bitnet-kernels --features gpu test_multi_device_memory_pools --ignored
+
+# Production memory debugging with minimal overhead
+cargo build --release -p bitnet-kernels --no-default-features --features gpu
+BITNET_LEAK_THRESHOLD_SECS=3600 cargo test -p bitnet-kernels --features gpu test_memory_optimization
+
+# Comprehensive memory debugging with full logging
+RUST_LOG=debug cargo test -p bitnet-kernels --features gpu test_memory_optimization -- --nocapture
 
 # CUDA device information and capabilities
 cargo run --example gpu_validation --no-default-features --features gpu
