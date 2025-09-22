@@ -100,6 +100,16 @@ impl VectorizedLookupTable {
         let index = quantized as usize;
         if index < self.reverse.len() { self.reverse[index] } else { 0.0 }
     }
+
+    /// Get the length of the forward lookup table (for testing)
+    pub fn forward_len(&self) -> usize {
+        self.forward.len()
+    }
+
+    /// Get the length of the reverse lookup table (for testing)
+    pub fn reverse_len(&self) -> usize {
+        self.reverse.len()
+    }
 }
 
 /// TL2 quantization implementation optimized for x86 AVX2/AVX-512
@@ -202,6 +212,15 @@ impl TL2Quantizer {
         let table = VectorizedLookupTable::new(-abs_max, abs_max, self.config.precision_bits);
         self.lookup_tables.write().unwrap().insert(key, table.clone());
         table
+    }
+
+    /// Public method for testing: get or create a lookup table based on min/max values
+    pub fn get_or_create_lookup_table(&self, min_val: f32, max_val: f32) -> VectorizedLookupTable {
+        // Calculate scale from min/max values (similar to how quantization works)
+        let abs_max = max_val.abs().max(min_val.abs());
+        let num_levels = 1 << self.config.precision_bits;
+        let scale = abs_max / ((num_levels / 2) - 1) as f32;
+        self.get_lookup_table(scale)
     }
 
     /// Load configuration from .ini file for compatibility with C++ implementation
