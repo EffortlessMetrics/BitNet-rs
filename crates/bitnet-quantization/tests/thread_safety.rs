@@ -29,12 +29,7 @@ fn test_tl2_lookup_table_thread_safety() {
 fn test_tl2_lookup_table_concurrent_access() {
     let quantizer = Arc::new(TL2Quantizer::new());
     let num_threads = 32;
-    let scales = [
-        (-1.0f32, 1.0f32),
-        (-2.0f32, 2.0f32),
-        (0.0f32, 4.0f32),
-        (-4.0f32, 4.0f32),
-    ];
+    let scales = [(-1.0f32, 1.0f32), (-2.0f32, 2.0f32), (0.0f32, 4.0f32), (-4.0f32, 4.0f32)];
 
     let handles: Vec<_> = (0..num_threads)
         .map(|i| {
