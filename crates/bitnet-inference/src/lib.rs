@@ -7,6 +7,7 @@ pub mod backends;
 pub mod cache;
 pub mod config;
 pub mod engine;
+pub mod production_engine;
 pub mod gguf; // always available (sync parser)
 
 // Re-export GGUF types for easy access
@@ -31,6 +32,7 @@ pub use engine::{InferenceEngine, InferenceResult};
 pub use parity::{
     eval_logits_incremental, eval_logits_once, get_model_config, get_model_vocab_size,
 };
+pub use production_engine::{ProductionInferenceEngine, GenerationResult, PerformanceMetricsCollector, TimingMetrics, ThroughputMetrics};
 pub use sampling::{SamplingConfig, SamplingStrategy};
 pub use streaming::{GenerationStream, StreamingConfig};
 

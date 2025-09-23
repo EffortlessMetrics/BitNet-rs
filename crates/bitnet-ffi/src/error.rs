@@ -68,6 +68,12 @@ impl From<BitNetError> for BitNetCError {
                 bitnet_common::ModelError::UnsupportedVersion { version } => {
                     BitNetCError::ModelLoadFailed(format!("Unsupported model version: {}", version))
                 }
+                bitnet_common::ModelError::FileIOError { path, source } => {
+                    BitNetCError::ModelNotFound(format!("File I/O error for {}: {}", path.display(), source))
+                }
+                bitnet_common::ModelError::GGUFFormatError { message, details: _ } => {
+                    BitNetCError::ModelLoadFailed(format!("GGUF format error: {}", message))
+                }
             },
             BitNetError::Quantization(quant_error) => {
                 BitNetCError::ModelLoadFailed(format!("Quantization error: {}", quant_error))

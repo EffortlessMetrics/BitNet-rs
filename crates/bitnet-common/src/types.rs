@@ -24,7 +24,7 @@ impl std::fmt::Display for QuantizationType {
 }
 
 /// Device abstraction for computation
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Device {
     Cpu,
     Cuda(usize),

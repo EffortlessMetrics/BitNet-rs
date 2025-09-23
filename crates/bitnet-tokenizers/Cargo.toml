@@ -26,6 +26,7 @@ ahash = "0.8.12"
 integration-tests = []
 default = []
 spm = ["sentencepiece", "sentencepiece-model"]
+inference = []
 
 [dependencies.sentencepiece]
 version = "0.12.0"
