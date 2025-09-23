@@ -682,9 +682,11 @@ mod tests {
     #[test]
     fn test_merge_configs() {
         let base = TestConfig::default();
-        let mut override_config = TestConfig::default();
-        override_config.max_parallel_tests = 8;
-        override_config.log_level = "debug".to_string();
+        let override_config = TestConfig {
+            max_parallel_tests: 8,
+            log_level: "debug".to_string(),
+            ..Default::default()
+        };
 
         let merged = merge_configs(base, override_config);
         assert_eq!(merged.max_parallel_tests, 8);

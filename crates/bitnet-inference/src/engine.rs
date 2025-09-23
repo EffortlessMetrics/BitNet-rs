@@ -1348,14 +1348,16 @@ impl InferenceEngine {
 
         // Validate RoPE parameters don't produce degenerate values
         if let Some(theta) = model.rope_theta
-            && (theta <= 0.0 || theta.is_nan() || theta.is_infinite()) {
-                return Err(anyhow::anyhow!("Invalid RoPE theta: {}", theta));
-            }
+            && (theta <= 0.0 || theta.is_nan() || theta.is_infinite())
+        {
+            return Err(anyhow::anyhow!("Invalid RoPE theta: {}", theta));
+        }
 
         if let Some(ref scaling) = model.rope_scaling
-            && (scaling.factor <= 0.0 || scaling.factor.is_nan() || scaling.factor.is_infinite()) {
-                return Err(anyhow::anyhow!("Invalid RoPE scaling factor: {}", scaling.factor));
-            }
+            && (scaling.factor <= 0.0 || scaling.factor.is_nan() || scaling.factor.is_infinite())
+        {
+            return Err(anyhow::anyhow!("Invalid RoPE scaling factor: {}", scaling.factor));
+        }
 
         eprintln!("✅ Model hyperparameters validation passed");
         eprintln!("==========================================");

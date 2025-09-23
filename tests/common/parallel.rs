@@ -363,10 +363,12 @@ mod tests {
 
     #[test]
     fn test_execution_stats() {
-        let mut stats = ExecutionStats::default();
-        stats.total_tests = 10;
-        stats.passed_tests = 8;
-        stats.failed_tests = 2;
+        let stats = ExecutionStats {
+            total_tests: 10,
+            passed_tests: 8,
+            failed_tests: 2,
+            ..Default::default()
+        };
 
         assert_eq!(stats.success_rate(), 0.8);
     }

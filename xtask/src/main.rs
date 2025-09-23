@@ -1675,6 +1675,7 @@ fn verify_sha256(path: &Path, expected_hex: &str) -> Result<()> {
 }
 
 /// Compare benchmark results against baseline with regression detection
+#[allow(clippy::too_many_arguments)]
 fn bench_compare_cmd(
     current_path: &Path,
     baseline_path: Option<&Path>,
@@ -1687,7 +1688,6 @@ fn bench_compare_cmd(
     fail_on_regression: bool,
     verbose: bool,
 ) -> Result<()> {
-
     // Load threshold configuration
     let thresholds = load_thresholds(thresholds_path, ci)?;
 
@@ -1737,13 +1737,12 @@ fn load_thresholds(path: Option<&Path>, ci: bool) -> Result<HashMap<String, f64>
         extract_thresholds_recursive(&config, "", &mut thresholds);
 
         // Apply CI multiplier if in CI mode
-        if ci {
-            if let Some(toml::Value::Table(ci_table)) = config.get("ci") {
-                if let Some(toml::Value::Float(multiplier)) = ci_table.get("multiplier") {
-                    for value in thresholds.values_mut() {
-                        *value *= multiplier;
-                    }
-                }
+        if ci
+            && let Some(toml::Value::Table(ci_table)) = config.get("ci")
+            && let Some(toml::Value::Float(multiplier)) = ci_table.get("multiplier")
+        {
+            for value in thresholds.values_mut() {
+                *value *= multiplier;
             }
         }
     } else {
@@ -1757,15 +1756,16 @@ fn load_thresholds(path: Option<&Path>, ci: bool) -> Result<HashMap<String, f64>
 }
 
 /// Recursively extract thresholds from TOML value
-fn extract_thresholds_recursive(value: &toml::Value, prefix: &str, thresholds: &mut HashMap<String, f64>) {
+fn extract_thresholds_recursive(
+    value: &toml::Value,
+    prefix: &str,
+    thresholds: &mut HashMap<String, f64>,
+) {
     match value {
         toml::Value::Table(table) => {
             for (key, val) in table {
-                let new_prefix = if prefix.is_empty() {
-                    key.clone()
-                } else {
-                    format!("{}_{}", prefix, key)
-                };
+                let new_prefix =
+                    if prefix.is_empty() { key.clone() } else { format!("{}_{}", prefix, key) };
                 extract_thresholds_recursive(val, &new_prefix, thresholds);
             }
         }
@@ -1780,6 +1780,7 @@ fn extract_thresholds_recursive(value: &toml::Value, prefix: &str, thresholds: &
 }
 
 /// Auto-detect appropriate baseline file based on device and category
+#[allow(unexpected_cfgs)]
 fn auto_detect_baseline(device: &str, category: &str) -> Result<PathBuf> {
     let device = if device == "auto" {
         // Try to detect GPU availability
@@ -1900,16 +1901,20 @@ fn compare_benchmarks(
                     let change_percent = (current_value - baseline_value) / baseline_value * 100.0;
 
                     // Determine if this is a performance regression
-                    let is_regression = if metric_name.contains("latency") || metric_name.contains("ms") {
-                        change_percent > 0.0  // Higher latency is worse
-                    } else if metric_name.contains("throughput") || metric_name.contains("per_sec") {
-                        change_percent < 0.0  // Lower throughput is worse
+                    let is_regression = if metric_name.contains("latency")
+                        || metric_name.contains("ms")
+                    {
+                        change_percent > 0.0 // Higher latency is worse
+                    } else if metric_name.contains("throughput") || metric_name.contains("per_sec")
+                    {
+                        change_percent < 0.0 // Lower throughput is worse
                     } else {
-                        change_percent > 0.0  // Default: higher values are worse
+                        change_percent > 0.0 // Default: higher values are worse
                     };
 
                     // Get threshold for this test/metric
-                    let threshold = get_threshold_for_test(test_name, metric_name, thresholds, category);
+                    let threshold =
+                        get_threshold_for_test(test_name, metric_name, thresholds, category);
 
                     if is_regression && change_percent.abs() > threshold {
                         regressions.push(RegressionReport {
@@ -1941,7 +1946,11 @@ fn compare_benchmarks(
     let has_regressions = !regressions.is_empty();
 
     Ok(BenchmarkComparison {
-        baseline_name: baseline.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string(),
+        baseline_name: baseline
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Unknown")
+            .to_string(),
         current_name: current.get("name").and_then(|v| v.as_str()).unwrap_or("Current").to_string(),
         has_regressions,
         regressions,
@@ -1959,23 +1968,23 @@ fn compare_benchmarks(
 fn extract_benchmark_data(json: &Value) -> Result<HashMap<String, HashMap<String, f64>>> {
     let mut benchmarks = HashMap::new();
 
-    if let Some(bench_obj) = json.get("benchmarks") {
-        if let Value::Object(categories) = bench_obj {
-            for (category_name, category_data) in categories {
-                if let Value::Object(tests) = category_data {
-                    for (test_name, test_data) in tests {
-                        let full_test_name = format!("{}_{}", category_name, test_name);
-                        let mut metrics = HashMap::new();
+    if let Some(bench_obj) = json.get("benchmarks")
+        && let Value::Object(categories) = bench_obj
+    {
+        for (category_name, category_data) in categories {
+            if let Value::Object(tests) = category_data {
+                for (test_name, test_data) in tests {
+                    let full_test_name = format!("{}_{}", category_name, test_name);
+                    let mut metrics = HashMap::new();
 
-                        if let Value::Object(test_obj) = test_data {
-                            for (metric_name, metric_value) in test_obj {
-                                if let Some(value) = metric_value.as_f64() {
-                                    metrics.insert(metric_name.clone(), value);
-                                }
+                    if let Value::Object(test_obj) = test_data {
+                        for (metric_name, metric_value) in test_obj {
+                            if let Some(value) = metric_value.as_f64() {
+                                metrics.insert(metric_name.clone(), value);
                             }
                         }
-                        benchmarks.insert(full_test_name, metrics);
                     }
+                    benchmarks.insert(full_test_name, metrics);
                 }
             }
         }
@@ -1985,7 +1994,12 @@ fn extract_benchmark_data(json: &Value) -> Result<HashMap<String, HashMap<String
 }
 
 /// Get threshold for a specific test and metric
-fn get_threshold_for_test(test_name: &str, metric_name: &str, thresholds: &HashMap<String, f64>, category: &str) -> f64 {
+fn get_threshold_for_test(
+    test_name: &str,
+    metric_name: &str,
+    thresholds: &HashMap<String, f64>,
+    category: &str,
+) -> f64 {
     // Check for specific override first
     if let Some(threshold) = thresholds.get(test_name) {
         return *threshold;
@@ -2006,7 +2020,11 @@ fn get_threshold_for_test(test_name: &str, metric_name: &str, thresholds: &HashM
 }
 
 /// Format comparison results based on output format
-fn format_comparison_results(comparison: &BenchmarkComparison, format: &str, verbose: bool) -> Result<String> {
+fn format_comparison_results(
+    comparison: &BenchmarkComparison,
+    format: &str,
+    verbose: bool,
+) -> Result<String> {
     match format {
         "json" => format_json_output(comparison),
         "junit" => format_junit_output(comparison),
@@ -2114,8 +2132,7 @@ fn format_junit_output(comparison: &BenchmarkComparison) -> Result<String> {
     output.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     output.push_str(&format!(
         "<testsuite name=\"benchmark_comparison\" tests=\"{}\" failures=\"{}\" errors=\"0\">\n",
-        comparison.summary.total_tests,
-        comparison.summary.regressions_count
+        comparison.summary.total_tests, comparison.summary.regressions_count
     ));
 
     // Add a test case for each regression
@@ -2199,7 +2216,9 @@ fn format_markdown_output(comparison: &BenchmarkComparison, verbose: bool) -> Re
 
     // Overall result
     if comparison.has_regressions {
-        output.push_str("## ❌ Result: FAILED\n\nPerformance regressions detected above threshold.\n");
+        output.push_str(
+            "## ❌ Result: FAILED\n\nPerformance regressions detected above threshold.\n",
+        );
     } else {
         output.push_str("## ✅ Result: PASSED\n\nNo performance regressions detected.\n");
     }
@@ -3887,13 +3906,14 @@ fn tokenizer_is_llama3_chat(tokenizer: &Path) -> bool {
     use std::fs;
 
     if let Ok(data) = fs::read_to_string(tokenizer)
-        && let Ok(v) = serde_json::from_str::<Value>(&data) {
-            // HuggingFace-style tokenizers: scan added tokens or special tokens
-            let needles =
-                ["<|begin_of_text|>", "<|start_header_id|>", "<|end_header_id|>", "<|eot_id|>"];
-            let hay = v.to_string(); // cheap scan
-            return needles.iter().all(|n| hay.contains(n));
-        }
+        && let Ok(v) = serde_json::from_str::<Value>(&data)
+    {
+        // HuggingFace-style tokenizers: scan added tokens or special tokens
+        let needles =
+            ["<|begin_of_text|>", "<|start_header_id|>", "<|end_header_id|>", "<|eot_id|>"];
+        let hay = v.to_string(); // cheap scan
+        return needles.iter().all(|n| hay.contains(n));
+    }
     false
 }
 
@@ -3916,9 +3936,7 @@ fn apply_template(template: &str, tokenizer: Option<&Path>, prompt: &str) -> (St
                 apply_template("raw", tokenizer, prompt)
             }
         }
-        _ => {
-            apply_template("raw", tokenizer, prompt)
-        }
+        _ => apply_template("raw", tokenizer, prompt),
     }
 }
 
@@ -4200,15 +4218,15 @@ struct InferenceOutcome {
 #[allow(clippy::too_many_arguments)]
 fn run_inference_internal(
     model_path: &Path,
-    tokenizer_path: Option<&Path>,
+    _tokenizer_path: Option<&Path>,
     prompt: &str,
     max_new_tokens: usize,
     temperature: f32,
     seed: u64,
     gpu: bool,
     allow_mock: bool,
-    add_bos: bool,
-    add_special: bool,
+    _add_bos: bool,
+    _add_special: bool,
 ) -> Result<InferenceOutcome> {
     // The model file must exist regardless of --allow-mock
     if !model_path.exists() {
@@ -4252,7 +4270,6 @@ fn run_inference_internal(
                 }
 
                 // For now, just break after first token to avoid infinite loop
-
             }
             let decode_ms = decode_start.elapsed().as_millis() as u64;
 
@@ -4415,7 +4432,6 @@ mod tests {
         port: u16,
         requests: Arc<Mutex<Vec<String>>>,
     }
-
 
     #[test]
     fn test_gpu_preflight_with_no_gpu() {

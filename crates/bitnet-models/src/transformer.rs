@@ -753,9 +753,10 @@ impl TransformerModel {
 
         // Debug input activation norm
         if std::env::var("DEBUG_ATTN").is_ok()
-            && let Ok(norm) = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>() {
-                eprintln!("[norm] input: {:.6e}", norm);
-            }
+            && let Ok(norm) = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
+        {
+            eprintln!("[norm] input: {:.6e}", norm);
+        }
 
         for (i, layer) in self.layers.iter().enumerate() {
             let layer_cache = kv_cache.as_mut().and_then(|c| c.layer_mut(i));
@@ -763,16 +764,18 @@ impl TransformerModel {
 
             // Debug layer activation norms (show all layers when debugging)
             if std::env::var("DEBUG_ATTN").is_ok()
-                && let Ok(norm) = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>() {
-                    eprintln!("[norm] layer {i}: {:.6e}", norm);
-                }
+                && let Ok(norm) = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
+            {
+                eprintln!("[norm] layer {i}: {:.6e}", norm);
+            }
         }
 
         let normalized = self.norm.forward(&x)?;
         if std::env::var("DEBUG_ATTN").is_ok()
-            && let Ok(norm) = normalized.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>() {
-                eprintln!("[norm] final: {:.6e}", norm);
-            }
+            && let Ok(norm) = normalized.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
+        {
+            eprintln!("[norm] final: {:.6e}", norm);
+        }
 
         Ok(normalized)
     }
@@ -816,9 +819,10 @@ impl TransformerModel {
                     && let Ok(mean) = logits.mean_all()
                     && let Ok(diff) = logits.broadcast_sub(&mean)
                     && let Ok(variance) = diff.sqr()?.mean_all()
-                    && let Ok(std_val) = variance.sqrt()?.to_scalar::<f32>() {
-                        eprintln!("[norm] logits std: {:.6e}", std_val);
-                    }
+                    && let Ok(std_val) = variance.sqrt()?.to_scalar::<f32>()
+                {
+                    eprintln!("[norm] logits std: {:.6e}", std_val);
+                }
 
                 Ok(logits)
             }
