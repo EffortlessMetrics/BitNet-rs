@@ -50,7 +50,7 @@ keywords = ["machine-learning", "llm", "quantization", "inference", "bitnet"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/microsoft/BitNet"
-rust-version = "1.90.0"
+rust-version = "1.89.0"
 version = "0.1.0"
 
 [dependencies]

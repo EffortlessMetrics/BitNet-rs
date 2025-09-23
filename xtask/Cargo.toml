@@ -35,6 +35,7 @@ futures = { version = "0.3.31", optional = true }
 [features]
 default = []
 inference = ["dep:bitnet-inference", "dep:bitnet", "dep:tokio", "dep:futures"]
+gpu = ["bitnet-kernels/gpu"]
 
 [dev-dependencies]
 tiny_http = "0.12.0"

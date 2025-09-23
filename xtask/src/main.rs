@@ -1780,7 +1780,6 @@ fn extract_thresholds_recursive(
 }
 
 /// Auto-detect appropriate baseline file based on device and category
-#[allow(unexpected_cfgs)]
 fn auto_detect_baseline(device: &str, category: &str) -> Result<PathBuf> {
     let device = if device == "auto" {
         // Try to detect GPU availability
@@ -4216,6 +4215,7 @@ struct InferenceOutcome {
 
 /// Run inference using BitNet-rs library
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(not(feature = "inference"), allow(unused_variables))]
 fn run_inference_internal(
     model_path: &Path,
     tokenizer_path: Option<&Path>,
