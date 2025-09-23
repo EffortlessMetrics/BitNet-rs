@@ -200,7 +200,7 @@ fn display_enhanced_tensor_summaries(
         std::collections::HashMap::new();
     for tensor in model_info.tensor_summaries() {
         let category = tensor.category.as_deref().unwrap_or("other");
-        categories.entry(category.to_string()).or_insert_with(Vec::new).push(tensor);
+        categories.entry(category.to_string()).or_default().push(tensor);
     }
 
     // Display each category
@@ -257,11 +257,11 @@ fn format_value(value: &GgufValue) -> String {
         GgufValue::String(v) => format!("\"{}\"", v),
         GgufValue::Array(arr) => {
             if arr.len() <= 5 {
-                format!("[{}]", arr.iter().map(|v| format_value(v)).collect::<Vec<_>>().join(", "))
+                format!("[{}]", arr.iter().map(format_value).collect::<Vec<_>>().join(", "))
             } else {
                 format!(
                     "[{}, ... {} more items]",
-                    arr.iter().take(3).map(|v| format_value(v)).collect::<Vec<_>>().join(", "),
+                    arr.iter().take(3).map(format_value).collect::<Vec<_>>().join(", "),
                     arr.len() - 3
                 )
             }

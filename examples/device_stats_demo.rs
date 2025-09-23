@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let size = 1024 * i; // Increasing sizes
         let input: Vec<f32> = (0..size).map(|j| (j as f32).sin()).collect();
         let mut output = vec![0u8; size / 4]; // I2S packs 4 values per byte
-        let mut scales = vec![0.0f32; (size + 127) / 128]; // 128-element blocks
+        let mut scales = vec![0.0f32; size.div_ceil(128)]; // 128-element blocks
 
         println!("   Operation {}: {} elements", i, size);
         quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S)?;

@@ -70,7 +70,7 @@ impl TestCase for DebuggableTestCase {
             operations: 0,
             custom_metrics: [
                 ("simulated_metric".to_string(), 42.0),
-                ("test_complexity".to_string(), 3.14),
+                ("test_complexity".to_string(), std::f64::consts::PI),
             ]
             .into(),
         })

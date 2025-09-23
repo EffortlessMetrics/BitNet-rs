@@ -2,9 +2,9 @@
 name = "bitnet-crossval"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.90"
+rust-version.workspace = true
 description = "Cross-validation framework for BitNet Rust vs C++ implementations"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 publish = false
 
 [features]
@@ -17,7 +17,7 @@ integration-tests = []
 
 [dependencies]
 # Core dependencies (always available)
-serde = { version = "1.0.225", features = ["derive"] }
+serde = { version = "1.0.226", features = ["derive"] }
 serde_json = "1.0.145"
 anyhow = "1.0.100"
 thiserror = "2.0.16"

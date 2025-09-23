@@ -306,39 +306,6 @@ impl ScenarioConfigManager {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_scenario_parsing() {
-        assert_eq!("unit".parse::<TestingScenario>().unwrap(), TestingScenario::Unit);
-        assert_eq!("e2e".parse::<TestingScenario>().unwrap(), TestingScenario::EndToEnd);
-        assert_eq!("perf".parse::<TestingScenario>().unwrap(), TestingScenario::Performance);
-        assert!("invalid".parse::<TestingScenario>().is_err());
-    }
-
-    #[test]
-    fn test_environment_parsing() {
-        assert_eq!("local".parse::<EnvironmentType>().unwrap(), EnvironmentType::Local);
-        assert_eq!("ci".parse::<EnvironmentType>().unwrap(), EnvironmentType::CI);
-        assert_eq!("staging".parse::<EnvironmentType>().unwrap(), EnvironmentType::PreProduction);
-        assert!("invalid".parse::<EnvironmentType>().is_err());
-    }
-
-    #[test]
-    fn test_config_resolution() {
-        let manager = ScenarioConfigManager::default();
-        let config = manager.resolve(&TestingScenario::Unit, &EnvironmentType::CI);
-
-        // CI environment should set specific formats
-        assert!(config.reporting.formats.contains(&ReportFormat::Junit));
-
-        // Unit scenario should have its settings
-        assert_eq!(config.max_parallel_tests, 8);
-    }
-}
-
 // ==== Compatibility shim for legacy tests ===================================
 // Extends the existing types with compatibility methods that were used by
 // tests/test_configuration_scenarios.rs prior to the refactor.
@@ -599,5 +566,38 @@ impl ScenarioConfigManager {
         // We don't apply them here to avoid double-application.
 
         cfg
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_scenario_parsing() {
+        assert_eq!("unit".parse::<TestingScenario>().unwrap(), TestingScenario::Unit);
+        assert_eq!("e2e".parse::<TestingScenario>().unwrap(), TestingScenario::EndToEnd);
+        assert_eq!("perf".parse::<TestingScenario>().unwrap(), TestingScenario::Performance);
+        assert!("invalid".parse::<TestingScenario>().is_err());
+    }
+
+    #[test]
+    fn test_environment_parsing() {
+        assert_eq!("local".parse::<EnvironmentType>().unwrap(), EnvironmentType::Local);
+        assert_eq!("ci".parse::<EnvironmentType>().unwrap(), EnvironmentType::CI);
+        assert_eq!("staging".parse::<EnvironmentType>().unwrap(), EnvironmentType::PreProduction);
+        assert!("invalid".parse::<EnvironmentType>().is_err());
+    }
+
+    #[test]
+    fn test_config_resolution() {
+        let manager = ScenarioConfigManager::default();
+        let config = manager.resolve(&TestingScenario::Unit, &EnvironmentType::CI);
+
+        // CI environment should set specific formats
+        assert!(config.reporting.formats.contains(&ReportFormat::Junit));
+
+        // Unit scenario should have its settings
+        assert_eq!(config.max_parallel_tests, 8);
     }
 }

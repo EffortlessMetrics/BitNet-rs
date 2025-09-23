@@ -62,7 +62,7 @@ async fn test_golden_prompts_with_real_model() -> Result<()> {
 
     // Load model and tokenizer
     let device = bitnet_common::Device::Cpu;
-    let loader = bitnet_models::ModelLoader::new(device.clone());
+    let loader = bitnet_models::ModelLoader::new(device);
     let model = loader.load(model_path)?;
 
     // Try to load tokenizer from GGUF first, then fallback
@@ -84,7 +84,7 @@ async fn test_golden_prompts_with_real_model() -> Result<()> {
 
     // Create inference engine
     let model_arc: Arc<dyn bitnet_models::Model> = model.into();
-    let mut engine = bitnet_inference::InferenceEngine::new(model_arc, tokenizer, device)?;
+    let engine = bitnet_inference::InferenceEngine::new(model_arc, tokenizer, device)?;
 
     // Test each golden prompt
     let mut passed = 0;
@@ -173,13 +173,13 @@ async fn test_basic_response_generation() -> Result<()> {
 
     // Load model and basic tokenizer
     let device = bitnet_common::Device::Cpu;
-    let loader = bitnet_models::ModelLoader::new(device.clone());
+    let loader = bitnet_models::ModelLoader::new(device);
     let model = loader.load(model_path)?;
     let tokenizer = Arc::new(bitnet_tokenizers::BasicTokenizer::new());
 
     // Create inference engine
     let model_arc: Arc<dyn bitnet_models::Model> = model.into();
-    let mut engine = bitnet_inference::InferenceEngine::new(model_arc, tokenizer, device)?;
+    let engine = bitnet_inference::InferenceEngine::new(model_arc, tokenizer, device)?;
 
     // Test basic generation
     let prompt = "Hello, world!";
@@ -297,7 +297,7 @@ async fn test_mock_model_correctness() -> Result<()> {
     let tokenizer = Arc::new(PredictableTokenizer);
     let device = Device::Cpu;
 
-    let mut engine = bitnet_inference::InferenceEngine::new(model, tokenizer, device)?;
+    let engine = bitnet_inference::InferenceEngine::new(model, tokenizer, device)?;
 
     // Test predictable responses
     // Note: The inference engine generates 1 token, so we're testing the decode of generated tokens

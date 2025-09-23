@@ -4,9 +4,13 @@
 //! showing how to use explicit prefill for cache warming and performance measurement
 //! in batch inference operations.
 
+#[cfg(feature = "examples")]
 use bitnet::prelude::*;
+#[cfg(feature = "examples")]
 use serde_json;
+#[cfg(feature = "examples")]
 use std::env;
+#[cfg(feature = "examples")]
 use std::time::Instant;
 
 #[cfg(feature = "examples")]

@@ -95,7 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut found_reports = false;
                 while let Some(entry) = entries.next_entry().await? {
                     let path = entry.path();
-                    if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+                    if path.is_file() && path.extension().is_some_and(|ext| ext == "json") {
                         println!("  📄 {}", path.file_name().unwrap().to_string_lossy());
                         found_reports = true;
                     }

@@ -40,7 +40,7 @@ fn basic_convolution_demo() -> Result<()> {
     // Output will be 1x1 (no padding, 3x3->3x3->1x1)
     let mut output = vec![0.0; 1];
 
-    let result = conv2d(
+    conv2d(
         &input,
         &weight,
         None, // No bias
@@ -142,8 +142,7 @@ fn quantized_convolution_demo() -> Result<()> {
     println!("Output: {:.2}", output[0]);
 
     // Manual calculation for verification
-    let manual_result =
-        1.0 * (-2.0 * 0.5) + 2.0 * (-1.0 * 0.5) + 3.0 * (1.0 * 0.5) + 4.0 * (2.0 * 0.5);
+    let manual_result = 1.0 * (-2.0 * 0.5) + 2.0 * (-0.5) + 3.0 * (1.0 * 0.5) + 4.0 * (2.0 * 0.5);
     println!("Manual calculation: 1×(-1) + 2×(-0.5) + 3×0.5 + 4×1 = {:.2}", manual_result);
 
     println!("✓ Quantized convolution completed\n");

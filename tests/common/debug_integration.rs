@@ -483,7 +483,8 @@ mod tests {
         // Test successful execution
         // Use Fixtures facade for consistent API
         let fixtures = crate::Fixtures::new(&Default::default()).await.unwrap();
-        assert!(debug_test.setup(fixtures.ctx()).await.is_ok());
+        fixtures.ctx();
+        assert!(debug_test.setup(()).await.is_ok());
         assert!(debug_test.execute().await.is_ok());
         assert!(debug_test.cleanup().await.is_ok());
 
@@ -505,7 +506,8 @@ mod tests {
         // Test failure handling
         // Use Fixtures facade for consistent API
         let fixtures = crate::Fixtures::new(&Default::default()).await.unwrap();
-        assert!(debug_test.setup(fixtures.ctx()).await.is_ok());
+        fixtures.ctx();
+        assert!(debug_test.setup(()).await.is_ok());
         assert!(debug_test.execute().await.is_err());
         assert!(debug_test.cleanup().await.is_ok());
 

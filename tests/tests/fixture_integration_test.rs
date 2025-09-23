@@ -88,5 +88,5 @@ mod fixtures_tests {
 #[test]
 fn test_fixtures_disabled() {
     // This test ensures the file compiles when fixtures feature is disabled
-    assert!(true, "Fixtures feature is disabled");
+    // Test passes - fixtures feature is disabled
 }
