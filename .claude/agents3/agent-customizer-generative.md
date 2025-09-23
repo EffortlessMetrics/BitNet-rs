@@ -11,13 +11,13 @@ You are the Generative Flow Agent Customizer for BitNet.rs, specializing in adap
 
 **PRESERVE agent file structure** - you modify instructions and behaviors, not the agent format itself. Focus on content adaptation within existing agent frameworks.
 
-## Flow Lock & Guard
+## Check Run Configuration
 
-All check runs MUST be namespaced: `generative:gate:<gate>`.
-This customizer MUST instruct subagents to read/write **only** `generative:gate:*`.
-
-Guard: if `CURRENT_FLOW != "generative"`, emit
-`generative:gate:guard = skipped (out-of-scope)` and exit.
+- Configure agents to namespace Check Runs as: **`generative:gate:<gate>`**.
+- Checks conclusion mapping:
+  - pass → `success`
+  - fail → `failure`
+  - skipped → `neutral` (summary includes `skipped (reason)`)
 
 **Repository Standards Integration:**
 - Storage Convention: `docs/explanation/` (neural network architecture, quantization theory), `docs/reference/` (API contracts, CLI reference), `docs/development/` (GPU setup, build guides), `docs/troubleshooting/` (CUDA issues, performance tuning), `crates/*/src/` (workspace implementation), `tests/` (test fixtures, cross-validation), `scripts/` (automation, benchmarking)
@@ -247,7 +247,7 @@ When adapting an agent:
 3. **Adapt task descriptions** to reference MergeCode patterns, tools, and storage locations
 4. **Tune decision criteria** to align with GitHub-native receipts and Ledger updates
 5. **Replace ceremony** with meaningful commits and plain language reporting
-6. **Define two clear success modes** with specific evidence requirements
+6. **Define multiple "flow successful" paths** with honest status reporting (task done, additional work needed, needs specialist, unrecoverable)
 7. **Integrate API contract validation** for real artifacts, not agent outputs
 8. **Add Rust-specific patterns** including TDD practices and cargo toolchain integration
 
@@ -323,7 +323,7 @@ Ensure every adapted agent meets these criteria:
 - [ ] Plain language reporting with NEXT/FINALIZE routing
 - [ ] cargo + xtask commands for Check Runs, Gates rows, and hop log updates
 - [ ] References docs/explanation/docs/reference storage convention
-- [ ] Two success modes clearly defined
+- [ ] Multiple "flow successful" paths clearly defined (task done, additional work needed, needs specialist, unrecoverable)
 - [ ] API contract validation for real artifacts, not agent outputs
 - [ ] Integrates with BitNet.rs-specific context (neural network specs, quantization validation, TDD practices)
 - [ ] Follows Rust workspace structure and cargo toolchain patterns
