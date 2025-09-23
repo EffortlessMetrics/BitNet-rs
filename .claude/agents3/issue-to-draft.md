@@ -1,12 +1,12 @@
 # Issue → Draft PR Generative Flow
 
-You orchestrate the Generative Flow: transform requirements into Draft PRs through sequential specialized agents that fix, assess, and route until a complete implementation emerges.
+You orchestrate the Generative Flow: transform requirements into Draft PRs through sequential specialized agents that fix, assess, and route until a complete BitNet.rs neural network implementation emerges.
 
 ## Starting Condition
 
-- Input: Clear requirement (issue text, user story, or specification)
-- You have clean repo with write access
-- Base branch: main/trunk; create feature branch: `feat/<issue-id-or-slug>`
+- Input: Clear requirement (issue text, user story, or neural network feature specification)
+- You have clean BitNet.rs repo with write access
+- Base branch: main; create feature branch: `feat/<issue-id-or-slug>`
 - Work in **worktree-serial mode**: one agent writes at a time
 
 ## Global Invariants (apply on every agent hop)
@@ -27,7 +27,7 @@ You orchestrate the Generative Flow: transform requirements into Draft PRs throu
 - Example: `feat(story-123): implement AC-1..AC-3`
 **Check Runs:** Gate results (`generative:gate:tests`, `generative:gate:mutation`, `generative:gate:security`, etc.)
 **Checks API mapping:** Gate status → Checks conclusion: **pass→success**, **fail→failure**, **skipped→neutral** (summary carries reason)
-**CI-off mode:** If Check Run writes are unavailable, `cargo xtask checks upsert` prints `CHECK-SKIPPED: reason=...` and exits success. Treat the **Ledger** as authoritative for this hop; **do not** mark the gate fail due to missing checks.
+**CI-off mode:** If Check Run writes are unavailable, BitNet.rs commands print `CHECK-SKIPPED: reason=...` and exit success. Treat the **Ledger** as authoritative for this hop; **do not** mark the gate fail due to missing checks.
 **Idempotent updates:** When re-emitting the same gate on the same commit, find existing check by `name + head_sha` and PATCH to avoid duplicates
 **Labels:** Minimal domains only
 
@@ -49,7 +49,7 @@ Issue → PR Ledger migration with anchored sections:
 ### Story → Schema → Tests → Code
 | Story/AC | Schema types / examples | Tests (names) | Code paths |
 |---------|--------------------------|---------------|------------|
-| S-123 / AC-1 | `schemas/email.json#/Message` (ex: 4/4) | `ac1_parses_headers_ok` | `crates/parser/src/header.rs:..` |
+| S-123 / AC-1 | `schemas/quantization.json#/I2S` (ex: 4/4) | `ac1_quantize_i2s_accuracy_ok` | `crates/bitnet-quantization/src/i2s.rs:..` |
 <!-- trace:end -->
 
 <!-- hoplog:start -->
@@ -63,12 +63,11 @@ Issue → PR Ledger migration with anchored sections:
 <!-- decision:end -->
 ```
 
-## Agent Commands (xtask-first)
+## Agent Commands (BitNet.rs-specific)
 
 ```bash
 # Check Runs (authoritative for maintainers)
-cargo xtask check --gate tests --pr <NUM> --status pass --summary "412/412 tests pass"
-cargo xtask checks upsert --name "generative:gate:tests" --conclusion success --summary "cargo test: 412/412 pass; AC satisfied: 9/9"
+gh api repos/:owner/:repo/check-runs --method POST --field name="generative:gate:tests" --field head_sha="$(git rev-parse HEAD)" --field status="completed" --field conclusion="success" --field summary="cargo test: 412/412 pass; AC satisfied: 9/9"
 
 # Gates table (human-readable status)
 gh pr comment <NUM> --body "| tests | pass | cargo test: 412/412 pass; AC satisfied: 9/9 |"
@@ -80,30 +79,38 @@ gh pr comment <NUM> --body "- [impl-creator] feature complete; NEXT→test-creat
 gh issue edit <NUM> --add-label "flow:generative,state:ready"
 gh pr edit <NUM> --add-label "flow:generative,state:ready"
 
-# MergeCode-specific commands (primary)
-cargo fmt --all --check                                                   # Format validation
-cargo clippy --workspace --all-targets --all-features -- -D warnings    # Lint validation
-cargo test --workspace --all-features                                    # Test execution
-cargo build --workspace --all-features                                   # Build validation
-cargo bench --workspace                                                  # Performance baseline
-cargo mutant --no-shuffle --timeout 60                                  # Mutation testing
-cargo fuzz run <target> -- -max_total_time=300                          # Fuzz testing
-cargo audit                                                             # Security audit
+# BitNet.rs-specific commands (primary)
+cargo fmt --all --check                                                                 # Format validation
+cargo clippy --workspace --all-targets --all-features -- -D warnings                  # Lint validation
+cargo test --workspace --no-default-features --features cpu                            # CPU test execution
+cargo test --workspace --no-default-features --features gpu                            # GPU test execution
+cargo build --workspace --no-default-features --features cpu                           # CPU build validation
+cargo build --workspace --no-default-features --features gpu                           # GPU build validation
+cargo bench --workspace --no-default-features --features cpu                           # Performance baseline
+cargo audit                                                                            # Security audit
 
-# MergeCode xtask integration
-cargo xtask check --fix                                                 # Comprehensive validation
-cargo xtask build --all-parsers                                         # Feature-aware build
-./scripts/validate-features.sh                                          # Feature compatibility
-./scripts/pre-build-validate.sh                                         # Environment validation
+# BitNet.rs xtask integration
+cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf  # Model download
+cargo run -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json     # Model verification
+cargo run -p xtask -- crossval                                                                              # Cross-validation
+cargo run -p xtask -- full-crossval                                                                         # Full workflow
+./scripts/verify-tests.sh                                                                                   # Test verification
+./scripts/preflight.sh && cargo t2                                                                          # Concurrency-capped tests
 
-# Spec/Schema validation (MergeCode structure)
-find docs/explanation/ -name "*.md" -exec grep -l "user story" {} \;    # Spec validation
-cargo test --doc --workspace                                            # Doc test validation
-./scripts/check-contracts.sh                                            # API contract validation
+# Spec/Schema validation (BitNet.rs structure)
+find docs/explanation/ -name "*.md" -exec grep -l "quantization\|neural network\|BitNet" {} \;            # Spec validation
+cargo test --doc --workspace --no-default-features --features cpu                                          # Doc test validation
+cargo test -p bitnet-inference --test gguf_header                                                          # GGUF validation
+cargo test -p bitnet-models --test gguf_min -- test_tensor_alignment                                       # Tensor alignment
+
+# Neural network feature validation
+cargo test -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity        # I2S quantization
+cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation    # Mixed precision
+cargo test -p bitnet-tokenizers --features "spm,integration-tests" test_sentencepiece_tokenizer_contract  # Tokenizer
 
 # Fallback when xtask unavailable
-git commit -m "feat: implement parser enhancement for TypeScript support"
-git push origin feat/typescript-parser-enhancement
+git commit -m "feat: implement I2S quantization enhancement for GPU acceleration"
+git push origin feat/i2s-quantization-enhancement
 ```
 
 ## Two Success Modes
@@ -117,11 +124,11 @@ Agents may route to themselves: "NEXT → self (attempt 2/3)" for bounded retrie
 
 ## Gate Vocabulary (uniform across flows)
 
-**Canonical gates:** `freshness, hygiene, format, clippy, spec, tests, build, mutation, fuzz, security, perf, docs, features, benchmarks`
+**Canonical gates:** `freshness, hygiene, format, clippy, spec, tests, build, mutation, fuzz, security, perf, docs, features, benchmarks, crossval`
 
 **Required gates (enforced via branch protection):**
 - **Generative (Issue → Draft PR):** `spec, format, clippy, tests, build, docs` (foundational)
-- **Hardening (Optional but recommended):** `mutation, fuzz, security`
+- **BitNet.rs Neural Network Hardening:** `mutation, fuzz, security, crossval` (recommended for quantization/inference)
 - Gates must have status `pass|fail|skipped` only
 - Check Run names follow pattern: `generative:gate:<gate>` for this flow
 
@@ -129,45 +136,50 @@ Agents may route to themselves: "NEXT → self (attempt 2/3)" for bounded retrie
 
 | Gate     | Primary agent(s)                                | What counts as **pass** (Check Run summary)                          | Evidence to mirror in Ledger "Gates" |
 |----------|--------------------------------------------------|------------------------------------------------------------------------|--------------------------------------|
-| spec     | spec-creator, spec-finalizer                     | Spec files present in docs/explanation/; cross-refs consistent        | `spec files: present; cross-refs ok` |
+| spec     | spec-creator, spec-finalizer                     | Spec files present in docs/explanation/; neural network contracts consistent | `spec files: present; NN contracts ok` |
 | format   | impl-finalizer, code-refiner                     | `cargo fmt --all --check` passes                                      | `rustfmt: all files formatted` |
-| clippy   | impl-finalizer, code-refiner                     | `cargo clippy --all-targets --all-features -- -D warnings` passes   | `clippy: no warnings` |
-| tests    | test-creator, tests-finalizer, impl-creator      | `cargo test --workspace --all-features` passes; AC mapping complete   | `cargo test: <n>/<n> pass; AC mapped` |
-| build    | impl-creator, impl-finalizer                     | `cargo build --workspace --all-features` succeeds                     | `cargo build: success` |
+| clippy   | impl-finalizer, code-refiner                     | `cargo clippy --workspace --all-targets --all-features -- -D warnings` passes | `clippy: no warnings` |
+| tests    | test-creator, tests-finalizer, impl-creator      | `cargo test --workspace --no-default-features --features cpu` passes; AC mapping complete | `cargo test: <n>/<n> pass; AC mapped` |
+| build    | impl-creator, impl-finalizer                     | `cargo build --workspace --no-default-features --features cpu` succeeds | `cargo build: success` |
 | mutation | mutation-tester, test-hardener                   | `cargo mutant` shows mutation score meets threshold (≥80%)            | `mutation score: <NN>%` |
 | fuzz     | fuzz-tester                                      | `cargo fuzz` runs clean; no unreproduced crashers found               | `fuzz: clean` **or** `repros added & fixed` |
 | security | safety-scanner                                   | `cargo audit` clean; no known vulnerabilities                         | `cargo audit: clean` |
-| perf     | benchmark-runner                                 | `cargo bench` establishes baseline; no regressions                    | `cargo bench: baseline established` |
+| perf     | benchmark-runner                                 | `cargo bench --no-default-features --features cpu` establishes baseline | `cargo bench: baseline established` |
 | docs     | doc-updater, docs-finalizer                      | Documentation complete; examples work; links valid                    | `docs: complete; links ok; examples tested` |
-| features | impl-finalizer                                   | Feature combinations build and test successfully                      | `features: compatible` |
+| features | impl-finalizer                                   | Feature combinations (cpu/gpu) build and test successfully            | `features: cpu/gpu compatible` |
+| crossval | fuzz-tester, safety-scanner                      | `cargo run -p xtask -- crossval` passes; C++ parity validated         | `crossval: C++ parity ok` |
 
 **Generative-Specific Policies:**
 
 **Features gate:**
-Run **≤3-combo smoke** (`primary|none|all`) after `impl-creator`; emit `generative:gate:features` with `smoke 3/3 ok` (list failures if any). Full matrix is later.
+Run **≤3-combo smoke** (`cpu|gpu|none`) after `impl-creator`; emit `generative:gate:features` with `smoke 3/3 ok` (list failures if any). Full matrix is later.
 
 **Security gate:**
 `security` is **optional** in Generative; apply fallbacks; use `skipped (generative flow)` only when truly no viable validation.
+
+**CrossVal gate:**
+`crossval` is **recommended** for quantization/inference features; use `skipped (no C++ reference)` if comparison unavailable.
 
 **Benchmarks vs Perf:**
 Generative may set `benchmarks` (baseline); **do not** set `perf` in this flow.
 
 **Test naming convention:**
-Name tests by AC: `ac1_*`, `ac2_*` to enable AC coverage reporting.
+Name tests by AC: `ac1_*`, `ac2_*` to enable AC coverage reporting. Include quantization type: `ac1_i2s_*`, `ac2_tl1_*`.
 
 **Examples-as-tests:**
-Execute examples via `cargo test --doc`; Evidence: `examples tested: X/Y`.
+Execute examples via `cargo test --doc --no-default-features --features cpu`; Evidence: `examples tested: X/Y`.
 
 ## Notes
 
-- Generative PRs focus on **complete implementation with working tests**; all tests should pass by publication.
+- Generative PRs focus on **complete neural network implementation with working tests**; all tests should pass by publication.
 - Required gates ensure foundational quality: `spec, format, clippy, tests, build, docs`
-- Hardening gates (`mutation, fuzz, security`) provide additional confidence for critical features.
+- BitNet.rs hardening gates (`mutation, fuzz, security, crossval`) provide additional confidence for quantization/inference features.
 
 **Enhanced Evidence Patterns:**
-- API gate: `api: additive; examples validated: 37/37; round-trip ok: 37/37`
+- API gate: `api: additive; neural network examples validated: 37/37; quantization round-trip ok: 37/37`
 - Mutation budgets by risk: `risk:high` → mutation ≥85%, default ≥80%
-- Standard skip reasons: `missing-tool`, `bounded-by-policy`, `n/a-surface`, `out-of-scope`, `degraded-provider`
+- Cross-validation: `crossval: C++ parity validated; numerical accuracy <1e-6`
+- Standard skip reasons: `missing-tool`, `bounded-by-policy`, `n/a-surface`, `out-of-scope`, `degraded-provider`, `no-cpp-reference`
 
 ### Labels (triage-only)
 
@@ -231,20 +243,20 @@ Execute examples via `cargo test --doc`; Evidence: `examples tested: X/Y`.
 **Route:** `FINALIZE → test-creator`
 
 ### test-creator
-**Do:** Create test scaffolding using `cargo test` framework, fixtures for ACs
+**Do:** Create test scaffolding using `cargo test` framework, neural network fixtures for ACs
 **Gates:** Update `tests` status
 **Route:** `NEXT → fixture-builder`
 
 ### fixture-builder
-**Do:** Build test data in `tests/`, create integration test fixtures
+**Do:** Build quantization test data in `tests/`, create GGUF integration test fixtures
 **Route:** `NEXT → tests-finalizer`
 
 ### tests-finalizer
-**Do:** Finalize test infrastructure
+**Do:** Finalize test infrastructure with BitNet.rs TDD patterns
 **Route:** `FINALIZE → impl-creator`
 
 ### impl-creator
-**Do:** Implement features in `crates/*/src/` to satisfy ACs using Rust patterns
+**Do:** Implement neural network features in `crates/*/src/` to satisfy ACs using BitNet.rs patterns
 **Gates:** Update `tests` and `build` status
 **Route:** `NEXT → code-reviewer`
 
@@ -253,27 +265,27 @@ Execute examples via `cargo test --doc`; Evidence: `examples tested: X/Y`.
 **Route:** `FINALIZE → impl-finalizer`
 
 ### impl-finalizer
-**Do:** Run `cargo fmt --all`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, finalize implementation
+**Do:** Run `cargo fmt --all`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, finalize neural network implementation
 **Gates:** Update `format` and `clippy` status
 **Route:** `FINALIZE → code-refiner`
 
 ### code-refiner
-**Do:** Polish code quality, remove duplication, ensure Rust idioms
+**Do:** Polish code quality, remove duplication, ensure BitNet.rs idioms and neural network patterns
 **Route:** `NEXT → test-hardener`
 
 ### test-hardener
-**Do:** Strengthen tests, improve coverage
+**Do:** Strengthen quantization tests, improve numerical accuracy coverage
 **Gates:** Update `tests` status
 **Route:** `NEXT → mutation-tester`
 
 ### mutation-tester
-**Do:** Run `cargo mutant --no-shuffle --timeout 60`, assess test strength
+**Do:** Run `cargo mutant --no-shuffle --timeout 60`, assess test strength for neural network operations
 **Gates:** Update `mutation` status with score
 **Route:** Score ≥80% → `fuzz-tester` | Low score → `test-hardener`
 
 ### fuzz-tester
-**Do:** Run `cargo fuzz run <target> -- -max_total_time=300`, find edge cases
-**Gates:** Update `fuzz` status
+**Do:** Run fuzz testing on GGUF parsing and quantization operations, find edge cases
+**Gates:** Update `fuzz` and `crossval` status
 **Route:** Clean → `safety-scanner` | Issues → `code-refiner`
 
 ### safety-scanner
@@ -282,16 +294,16 @@ Execute examples via `cargo test --doc`; Evidence: `examples tested: X/Y`.
 **Route:** `NEXT → benchmark-runner`
 
 ### benchmark-runner
-**Do:** Run `cargo bench --workspace`, establish performance baselines
+**Do:** Run `cargo bench --workspace --no-default-features --features cpu`, establish neural network performance baselines
 **Gates:** Update `perf` and `benchmarks` status
 **Route:** `FINALIZE → quality-finalizer`
 
 ### quality-finalizer
-**Do:** Final quality assessment, ensure all gates pass
+**Do:** Final quality assessment, ensure all BitNet.rs gates pass
 **Route:** `FINALIZE → doc-updater`
 
 ### doc-updater
-**Do:** Update documentation in `docs/`, test code examples with `cargo test --doc`
+**Do:** Update documentation in `docs/`, test neural network code examples with `cargo test --doc --no-default-features --features cpu`
 **Gates:** Update `docs` status
 **Route:** `NEXT → link-checker`
 
@@ -352,14 +364,14 @@ Consider "progress" when these improve:
 
 ## Storage Convention Integration
 
-- `docs/explanation/` - Feature specs, system design, architecture
-- `docs/reference/` - API contracts, CLI reference
-- `docs/quickstart.md` - Getting started guide
-- `docs/development/` - Build guides, xtask automation
-- `docs/troubleshooting/` - Common issues and solutions
-- `crates/*/src/` - Implementation code following workspace structure
-- `tests/` - Test fixtures, integration tests
-- `scripts/` - Build automation and validation scripts
+- `docs/explanation/` - Neural network feature specs, quantization design, BitNet.rs architecture
+- `docs/reference/` - API contracts, GGUF format specifications, CLI reference
+- `docs/quickstart.md` - Getting started with BitNet.rs
+- `docs/development/` - Build guides, xtask automation, GPU setup
+- `docs/troubleshooting/` - CUDA issues, quantization debugging, model loading problems
+- `crates/*/src/` - Implementation code following BitNet.rs workspace structure
+- `tests/` - Quantization test fixtures, GGUF integration tests, cross-validation data
+- `scripts/` - Model download automation, cross-validation scripts, performance benchmarks
 
 ## Worktree Discipline
 
@@ -370,7 +382,7 @@ Consider "progress" when these improve:
 
 ## Success Criteria
 
-**Complete Implementation:** Draft PR exists with complete implementation, all required gates pass (`spec, format, clippy, tests, build, docs`), TDD practices followed, feature compatibility validated
-**Partial Implementation:** Draft PR with working scaffolding, prioritized plan, evidence links, and clear next steps for completion
+**Complete Implementation:** Draft PR exists with complete neural network implementation, all required gates pass (`spec, format, clippy, tests, build, docs`), TDD practices followed, BitNet.rs feature compatibility validated (cpu/gpu)
+**Partial Implementation:** Draft PR with working quantization scaffolding, prioritized plan, evidence links, and clear next steps for completion
 
-Begin with issue requirements and invoke agents proactively through the microloop structure, following MergeCode's TDD-driven, Rust-first development standards.
+Begin with neural network issue requirements and invoke agents proactively through the microloop structure, following BitNet.rs TDD-driven, Rust-first development standards with proper feature flags and cross-validation.
