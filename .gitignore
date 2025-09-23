@@ -80,6 +80,9 @@ coverage/
 *.bin
 models/
 
+# Claude Working Agents
+.claude/agents/
+
 # Build artifacts
 *.dll
 *.so
