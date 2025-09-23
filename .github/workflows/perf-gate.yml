@@ -4,11 +4,12 @@ on:
   pull_request:
     branches: [ main ]
     paths:
-      - 'crates/bitnet-kernels/**'
-      - 'crates/bitnet-inference/**'
-      - 'crates/bitnet-quantization/**'
-      - 'benchmarks/**'
+      - 'crates/**'
       - 'xtask/**'
+      - 'benchmarks/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/perf-gate.yml'
 
 env:
   CARGO_TERM_COLOR: always
@@ -35,9 +36,18 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-perf-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-toolchain-1.89.0
           restore-keys: |
-            ${{ runner.os }}-cargo-perf-
+            ${{ runner.os }}-cargo-
+
+      - name: Verify baseline manifest (sha256)
+        run: |
+          sha=$(find benchmarks/baseline -type f -name '*.json' -print0 \
+                | sort -z | xargs -0 cat | sha256sum | awk '{print $1}')
+          echo "$sha" > /tmp/manifest.sha256
+          echo "Computed manifest: $sha"
+          echo "Stored manifest: $(cat benchmarks/baseline/.MANIFEST.sha256)"
+          diff -u benchmarks/baseline/.MANIFEST.sha256 /tmp/manifest.sha256
 
       - name: Build workspace
         run: cargo build --workspace --release --no-default-features --features cpu
@@ -87,6 +97,7 @@ jobs:
           fi
 
       - name: Performance regression check
+        id: bench_compare
         run: |
           # Compare against baseline; fail PR on regression
           cargo run -p xtask -- bench-compare \
@@ -94,7 +105,38 @@ jobs:
             --current ci/inference.json \
             --thresholds benchmarks/thresholds/default.toml \
             --category inference \
-            --verbose
+            --verbose \
+            --fail-on-regression
+
+      - name: Publish PR summary
+        if: always()
+        run: |
+          echo "## 🚀 Performance Gate" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`xtask bench-compare\` ran against the baseline." >> $GITHUB_STEP_SUMMARY
+          echo "- **Baseline**: benchmarks/baseline/cpu/inference/inference_baseline.json" >> $GITHUB_STEP_SUMMARY
+          echo "- **Thresholds**: benchmarks/thresholds/default.toml" >> $GITHUB_STEP_SUMMARY
+          echo "- **Manifest**: \`$(cat benchmarks/baseline/.MANIFEST.sha256)\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.bench_compare.outcome }}" = "success" ]; then
+            echo "✅ **Result**: No performance regressions detected" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Result**: Performance regression detected - see job logs" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Comment on regression
+        if: failure() && github.event.pull_request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body ":rotating_light: **Performance regression detected** by \`bench-compare\`.
+
+            Please review the job logs and address performance issues before merging.
+
+            - Baseline: benchmarks/baseline/cpu/inference/inference_baseline.json
+            - Thresholds: benchmarks/thresholds/default.toml"
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
@@ -104,17 +146,16 @@ jobs:
           path: ci/inference.json
           retention-days: 30
 
-      - name: Comment PR with results
-        if: always()
+      - name: Comment PR with success results
+        if: success() && github.event.pull_request
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            let comment = '## 🚀 Performance Gate Results\n\n';
+            let comment = '## ✅ Performance Gate Passed\n\n';
 
             try {
               const results = JSON.parse(fs.readFileSync('ci/inference.json', 'utf8'));
-              comment += '**Benchmark completed successfully** ✅\n\n';
 
               if (results.benchmarks && results.benchmarks.inference) {
                 comment += '### Performance Metrics\n';
@@ -125,21 +166,17 @@ jobs:
                 }
               }
 
-              comment += '\n📊 Comparison against baseline thresholds passed.\n';
-              comment += '\n> Baseline manifest: `benchmarks/baseline/.MANIFEST.sha256`';
+              comment += '\n📊 All performance metrics within baseline thresholds.\n';
+              comment += '\n> Baseline manifest: `' + '{{MANIFEST_PLACEHOLDER}}' + '`';
 
             } catch (error) {
-              comment += '**Benchmark failed** ❌\n\n';
-              comment += `Error: ${error.message}\n`;
-              comment += '\n⚠️ Performance regression gate could not complete.';
+              comment += 'Benchmark data processing failed, but comparison passed.\n';
             }
 
             // Post comment on PR
-            if (context.payload.pull_request) {
-              github.rest.issues.createComment({
-                issue_number: context.payload.pull_request.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-            }
+            github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
