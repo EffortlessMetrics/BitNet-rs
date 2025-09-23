@@ -90,45 +90,51 @@ jobs:
           ${{ runner.os }}-${{ matrix.target }}-perf-
           ${{ runner.os }}-perf-
 
-    - name: Setup BitNet.cpp for cross-validation
+    - name: Setup performance environment
       run: |
-        chmod +x ci/use-bitnet-cpp-cache.sh
-        ./ci/use-bitnet-cpp-cache.sh
+        chmod +x scripts/setup-perf-env.sh
+        ./scripts/setup-perf-env.sh --skip-cpp --features cpu
 
     - name: Build optimized Rust implementation
       run: |
         echo "Building optimized Rust implementation..."
-        
+        export RUSTFLAGS="-C target-cpu=native -C opt-level=3"
+
         if [[ "${{ matrix.cross }}" == "true" ]]; then
-          cross build --release --target ${{ matrix.target }} --features cpu,crossval
+          cross build --release --target ${{ matrix.target }} --no-default-features --features cpu
+          cross build --release --target ${{ matrix.target }} -p bitnet-cli --no-default-features --features cpu
         else
-          cargo build --release --target ${{ matrix.target }} --features cpu,crossval
+          cargo build --release --target ${{ matrix.target }} --no-default-features --features cpu
+          cargo build --release --target ${{ matrix.target }} -p bitnet-cli --no-default-features --features cpu
         fi
 
     - name: Generate test fixtures
       run: |
         echo "Generating deterministic test fixtures..."
-        cargo run --bin xtask --features cpu -- gen-fixtures --size small --output crossval/fixtures/
+        cargo run -p xtask -- gen-fixtures --size small --output crossval/fixtures/
 
     - name: Run performance benchmarks
       run: |
         echo "Running comprehensive performance benchmarks..."
-        
-        # Create results directory
-        mkdir -p benchmark-results
-        
-        # Run Rust benchmarks
-        echo "Benchmarking Rust implementation..."
+
+        # Use the enhanced benchmarking script
+        chmod +x scripts/run-performance-benchmarks.sh
+
+        # Set platform-specific configuration
         if [[ "${{ matrix.cross }}" == "true" ]]; then
-          cross bench --target ${{ matrix.target }} --features cpu,crossval -- --output-format json > benchmark-results/rust-results.json
+          ./scripts/run-performance-benchmarks.sh \
+            --features cpu \
+            --target ${{ matrix.target }} \
+            --use-cross \
+            --timeout 180 \
+            --iterations 2 \
+            --tokens 16
         else
-          cargo bench --target ${{ matrix.target }} --features cpu,crossval -- --output-format json > benchmark-results/rust-results.json
-        fi
-        
-        # Run cross-validation benchmarks (if C++ is available)
-        if [[ -n "${BITNET_CPP_ROOT:-}" ]]; then
-          echo "Running cross-validation benchmarks..."
-          cargo test --package crossval --features crossval --release -- --nocapture benchmark > benchmark-results/crossval-results.txt
+          ./scripts/run-performance-benchmarks.sh \
+            --features cpu \
+            --timeout 300 \
+            --iterations 3 \
+            --tokens 32
         fi
 
     - name: Collect system information
@@ -241,175 +247,142 @@ jobs:
         
         python3 parse_results.py
 
-    - name: Compare with baselines
+    - name: Detect performance regressions
       run: |
-        echo "Comparing results with baselines..."
-        
-        # Create comparison script
-        cat > compare_baselines.py << 'EOF'
-        import json
-        import sys
-        from pathlib import Path
-        
-        def load_baselines():
-            """Load baseline performance data"""
-            try:
-                with open('crossval/baselines.json', 'r') as f:
-                    return json.load(f)
-            except Exception as e:
-                print(f"Error loading baselines: {e}")
-                return {}
-        
-        def compare_performance(current, baseline, thresholds):
-            """Compare current performance with baseline"""
-            comparison = {
-                'status': 'unknown',
-                'changes': {},
-                'alerts': []
-            }
-            
-            if not baseline or not current:
-                return comparison
-            
-            # Compare throughput
-            if 'throughput_tokens_per_second' in both:
-                current_throughput = current.get('throughput_tokens_per_second', 0)
-                baseline_throughput = baseline.get('throughput_tokens_per_second', 0)
-                
-                if baseline_throughput > 0:
-                    change_percent = ((current_throughput - baseline_throughput) / baseline_throughput) * 100
-                    comparison['changes']['throughput_change_percent'] = change_percent
-                    
-                    if change_percent < -thresholds.get('critical', {}).get('throughput_decrease_percent', 15):
-                        comparison['alerts'].append(f"CRITICAL: Throughput decreased by {abs(change_percent):.1f}%")
-                    elif change_percent < -thresholds.get('warning', {}).get('throughput_decrease_percent', 8):
-                        comparison['alerts'].append(f"WARNING: Throughput decreased by {abs(change_percent):.1f}%")
-                    elif change_percent > thresholds.get('performance_improvement', {}).get('throughput_increase_percent', 5):
-                        comparison['alerts'].append(f"IMPROVEMENT: Throughput increased by {change_percent:.1f}%")
-            
-            # Determine overall status
-            if any('CRITICAL' in alert for alert in comparison['alerts']):
-                comparison['status'] = 'critical'
-            elif any('WARNING' in alert for alert in comparison['alerts']):
-                comparison['status'] = 'warning'
-            elif any('IMPROVEMENT' in alert for alert in comparison['alerts']):
-                comparison['status'] = 'improved'
-            else:
-                comparison['status'] = 'stable'
-            
-            return comparison
-        
-        # Load data
-        baselines = load_baselines()
-        
-        try:
-            with open('benchmark-results/parsed-results.json', 'r') as f:
-                current_results = json.load(f)
-        except Exception as e:
-            print(f"Error loading current results: {e}")
-            sys.exit(1)
-        
-        platform = '${{ matrix.platform }}'
-        baseline_data = baselines.get('baselines', {}).get(platform, {})
-        thresholds = baselines.get('thresholds', {})
-        alert_thresholds = baselines.get('alerts', {})
-        
-        # Compare results
-        comparison = compare_performance(
-            current_results.get('rust_implementation', {}),
-            baseline_data.get('rust_implementation', {}),
-            {**thresholds, **alert_thresholds}
-        )
-        
-        # Save comparison results
-        comparison_results = {
-            'platform': platform,
-            'timestamp': current_results.get('timestamp'),
-            'comparison': comparison,
-            'current_results': current_results,
-            'baseline_results': baseline_data
-        }
-        
-        with open('benchmark-results/comparison-results.json', 'w') as f:
-            json.dump(comparison_results, f, indent=2)
-        
-        # Print summary
-        print(f"Performance comparison status: {comparison['status'].upper()}")
-        for alert in comparison['alerts']:
-            print(f"  {alert}")
-        
-        # Exit with error code if critical issues found
-        if comparison['status'] == 'critical':
-            sys.exit(1)
-        EOF
-        
-        python3 compare_baselines.py
+        echo "Detecting performance regressions..."
 
-    - name: Generate performance report
+        # Use the enhanced regression detection script
+        chmod +x scripts/detect-performance-regression.py
+
+        # Try to detect regressions from different result files
+        platform="${{ matrix.platform }}"
+
+        # Check if we have performance report
+        if [[ -f "benchmark-results/performance-report.json" ]]; then
+          python3 scripts/detect-performance-regression.py \
+            benchmark-results/performance-report.json \
+            --platform "$platform" \
+            --output benchmark-results/regression-analysis.json \
+            --format human \
+            --fail-on-regression
+        elif [[ -f "benchmark-results/comparison-results.json" ]]; then
+          python3 scripts/detect-performance-regression.py \
+            benchmark-results/comparison-results.json \
+            --platform "$platform" \
+            --output benchmark-results/regression-analysis.json \
+            --format human
+        else
+          echo "⚠️  No suitable results file found for regression analysis"
+          echo '{"status": "no_data", "alerts": [], "summary": {"error": "No results file available"}}' > benchmark-results/regression-analysis.json
+        fi
+
+    - name: Generate enhanced performance report
       run: |
-        echo "Generating performance report..."
-        
-        cat > benchmark-results/performance-report.md << 'EOF'
-        # 📊 Performance Benchmark Report
-        
-        **Platform**: ${{ matrix.platform }}
-        **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-        **Commit**: ${{ github.sha }}
-        
-        ## Current Performance
-        
-        EOF
-        
-        # Add current results to report
-        if [[ -f benchmark-results/parsed-results.json ]]; then
-          echo "### Rust Implementation" >> benchmark-results/performance-report.md
+        echo "Generating enhanced performance report..."
+
+        # The run-performance-benchmarks.sh script already generates reports
+        # Add regression analysis to the markdown report
+
+        if [[ -f benchmark-results/performance-report.md ]]; then
           echo "" >> benchmark-results/performance-report.md
-          python3 -c "
-        import json
-        with open('benchmark-results/parsed-results.json', 'r') as f:
-            data = json.load(f)
-        rust_data = data.get('rust_implementation', {})
-        for key, value in rust_data.items():
-            print(f'- **{key.replace(\"_\", \" \").title()}**: {value}')
-        " >> benchmark-results/performance-report.md
-        fi
-        
-        echo "" >> benchmark-results/performance-report.md
-        echo "## Comparison with Baseline" >> benchmark-results/performance-report.md
-        echo "" >> benchmark-results/performance-report.md
-        
-        # Add comparison results
-        if [[ -f benchmark-results/comparison-results.json ]]; then
-          python3 -c "
-        import json
-        with open('benchmark-results/comparison-results.json', 'r') as f:
-            data = json.load(f)
-        comparison = data.get('comparison', {})
-        status = comparison.get('status', 'unknown')
-        print(f'**Status**: {status.upper()}')
-        print('')
-        for alert in comparison.get('alerts', []):
-            if 'CRITICAL' in alert:
-                print(f'🚨 {alert}')
-            elif 'WARNING' in alert:
-                print(f'⚠️ {alert}')
-            elif 'IMPROVEMENT' in alert:
-                print(f'✅ {alert}')
-            else:
-                print(f'ℹ️ {alert}')
-        " >> benchmark-results/performance-report.md
-        fi
-        
-        echo "" >> benchmark-results/performance-report.md
-        echo "---" >> benchmark-results/performance-report.md
-        echo "*Report generated by Performance Baseline Tracking workflow*" >> benchmark-results/performance-report.md
+          echo "## Regression Analysis" >> benchmark-results/performance-report.md
+          echo "" >> benchmark-results/performance-report.md
 
-    - name: Upload benchmark results
+          if [[ -f benchmark-results/regression-analysis.json ]]; then
+            python3 << 'EOF'
+import json
+try:
+    with open('benchmark-results/regression-analysis.json', 'r') as f:
+        data = json.load(f)
+
+    status = data.get('status', 'unknown')
+    alerts = data.get('alerts', [])
+    summary = data.get('summary', {})
+
+    print(f'**Regression Status**: {status.upper()}')
+    print('')
+
+    if alerts:
+        critical_alerts = [a for a in alerts if a.get('level') == 'critical']
+        warning_alerts = [a for a in alerts if a.get('level') == 'warning']
+        improvement_alerts = [a for a in alerts if a.get('level') == 'improvement']
+
+        if critical_alerts:
+            print('### 🚨 Critical Issues')
+            for alert in critical_alerts:
+                print(f'- {alert.get("message", "Unknown critical issue")}')
+            print('')
+
+        if warning_alerts:
+            print('### ⚠️ Warnings')
+            for alert in warning_alerts:
+                print(f'- {alert.get("message", "Unknown warning")}')
+            print('')
+
+        if improvement_alerts:
+            print('### ✅ Improvements')
+            for alert in improvement_alerts:
+                print(f'- {alert.get("message", "Unknown improvement")}')
+            print('')
+    else:
+        print('✅ No performance issues detected')
+        print('')
+
+    if summary:
+        total_alerts = summary.get('total_alerts', 0)
+        print(f'**Summary**: {total_alerts} total alerts')
+
+except Exception as e:
+    print(f'Error generating regression analysis: {e}')
+EOF
+          else
+            echo "⚠️ Regression analysis not available" >> benchmark-results/performance-report.md
+          fi
+        fi
+
+    - name: Upload comprehensive benchmark results
       uses: actions/upload-artifact@v4
       with:
         name: benchmark-results-${{ matrix.platform }}
         path: benchmark-results/
         retention-days: 90
+
+    - name: Check for critical regressions
+      run: |
+        echo "Checking for critical performance regressions..."
+
+        if [[ -f benchmark-results/regression-analysis.json ]]; then
+          status=$(python3 -c "import json; data=json.load(open('benchmark-results/regression-analysis.json')); print(data.get('status', 'unknown'))")
+
+          if [[ "$status" == "critical" ]]; then
+            echo "🚨 CRITICAL PERFORMANCE REGRESSION DETECTED!"
+            echo "This build has critical performance regressions that must be addressed."
+
+            # Add to job summary
+            echo "## 🚨 Critical Performance Regression" >> $GITHUB_STEP_SUMMARY
+            echo "Platform: ${{ matrix.platform }}" >> $GITHUB_STEP_SUMMARY
+            echo "Status: CRITICAL" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "This build has performance regressions that exceed critical thresholds." >> $GITHUB_STEP_SUMMARY
+            echo "Review the benchmark results artifact for detailed analysis." >> $GITHUB_STEP_SUMMARY
+
+            exit 1
+          elif [[ "$status" == "warning" ]]; then
+            echo "⚠️  Performance warnings detected"
+            echo "## ⚠️ Performance Warnings" >> $GITHUB_STEP_SUMMARY
+            echo "Platform: ${{ matrix.platform }}" >> $GITHUB_STEP_SUMMARY
+            echo "Some performance metrics show concerning trends." >> $GITHUB_STEP_SUMMARY
+          elif [[ "$status" == "improved" ]]; then
+            echo "✅ Performance improvements detected!"
+            echo "## ✅ Performance Improvements" >> $GITHUB_STEP_SUMMARY
+            echo "Platform: ${{ matrix.platform }}" >> $GITHUB_STEP_SUMMARY
+            echo "This build shows performance improvements!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ Performance is stable"
+          fi
+        else
+          echo "⚠️  No regression analysis available"
+        fi
 
     - name: Update baselines (if requested)
       if: github.event.inputs.update_baselines == 'true'

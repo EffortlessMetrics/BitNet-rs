@@ -550,10 +550,11 @@ cargo run -p xtask -- benchmark \
 For detailed information on specific topics, see:
 
 - **[GPU Development Guide](docs/gpu-development.md)**: CUDA device querying, GPU testing strategies, and troubleshooting
-- **[Test Suite Guide](docs/test-suite.md)**: Comprehensive testing framework, configuration, and specialized testing strategies  
+- **[Test Suite Guide](docs/test-suite.md)**: Comprehensive testing framework, configuration, and specialized testing strategies
 - **[GGUF Inspection Guide](docs/gguf-inspection.md)**: Metadata inspection, categorization, and JSON serialization
 - **[Streaming API Guide](docs/streaming-api.md)**: Real-time token streaming with Server-Sent Events
 - **[Concurrency Caps Guide](docs/concurrency-caps.md)**: Resource management and concurrency control
+- **[Performance Benchmarking Guide](docs/performance-benchmarking.md)**: Comprehensive performance tracking, regression detection, and baseline management
 ## Environment Variables
 
 ### Runtime Variables
@@ -663,6 +664,25 @@ cargo run -p bitnet-cli -- run --input-file batch_prompts.txt --batch-size 8 --m
 # Performance comparison with comprehensive metrics (prefill is always enabled)
 cargo run -p bitnet-cli -- run --model model.gguf --prompt "Compare performance" --metrics --format json
 cargo run -p bitnet-cli -- run --model model.gguf --prompt "Standard inference" --metrics --verbose
+
+# Enhanced Performance Benchmarking and Regression Detection
+# Setup performance environment and run comprehensive benchmarks
+./scripts/setup-perf-env.sh && ./scripts/run-performance-benchmarks.sh
+
+# Run GPU performance benchmarks
+./scripts/run-performance-benchmarks.sh --features gpu --timeout 600
+
+# Generate performance baselines from actual benchmark runs
+./scripts/generate-performance-baselines.sh --platforms linux-x86_64 --iterations 10
+
+# Detect performance regressions with detailed analysis
+python3 scripts/detect-performance-regression.py benchmark-results/performance-report.json --fail-on-regression
+
+# Quick benchmark comparison (Rust vs C++)
+python3 benchmark_comparison.py --model model.gguf --iterations 3 --tokens 32
+
+# Cross-platform performance testing
+./scripts/run-performance-benchmarks.sh --target aarch64-unknown-linux-gnu --use-cross
 # Test GPU backend detection and mock scenarios
 cargo test -p bitnet-kernels --no-default-features test_gpu_info_summary
 BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels test_gpu_info_mocked_scenarios
