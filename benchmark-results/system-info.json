@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-23T08:04:04Z",
+  "platform": "x86_64",
+  "os": "Linux",
+  "kernel": "6.6.87.2-microsoft-standard-WSL2",
+  "cpu_count": 32,
+  "memory_gb": 196,
+  "rust_version": "rustc 1.89.0 (29483883e 2025-08-04)",
+  "cargo_version": "cargo 1.89.0 (c24e10642 2025-06-23)",
+  "git_commit": "c7be47795f2dfe24dccca2d7db962e140b846a2c",
+  "git_branch": "main",
+  "environment": {
+    "RUSTFLAGS": " -C target-cpu=native -C opt-level=3",
+    "BITNET_CPP_ROOT": "/home/steven/.cache/bitnet_cpp",
+    "RAYON_NUM_THREADS": "",
+    "OMP_NUM_THREADS": ""
+  }
+}
