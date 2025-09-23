@@ -79,6 +79,7 @@ pub struct TimingMetrics {
 /// Cross-validation fixtures manager
 pub struct CrossValidationFixtures {
     pub reference_data: HashMap<String, ReferenceData>,
+    #[allow(dead_code)]
     pub test_vectors: CrossValidationTestVectors,
     pub config: TestEnvironmentConfig,
     pub cpp_reference_path: Option<PathBuf>,
@@ -297,7 +298,7 @@ impl CrossValidationFixtures {
         let mut logits = vec![-10.0; vocab_size]; // Initialize with low probability
 
         // Set higher logits for common tokens
-        let common_tokens = vec![
+        let common_tokens = [
             12,   // " Paris"
             374,  // " is"
             264,  // " the"

@@ -3,6 +3,9 @@
 //! This test validates the complete fixture infrastructure and demonstrates
 //! how to use the test fixtures for BitNet.rs neural network component testing.
 
+// Allow warnings for test scaffolding code
+#![allow(dead_code, unused_variables, unused_imports, clippy::all)]
+
 use bitnet_common::{Device, Result};
 
 // Import the fixtures module
@@ -210,7 +213,7 @@ async fn test_error_handling_scenarios() -> Result<()> {
         assert!(corrupted_file.exists(), "Corrupted test file should exist");
 
         let file_content = std::fs::read(corrupted_file).unwrap();
-        assert!(file_content.len() > 0, "Corrupted file should have content");
+        assert!(!file_content.is_empty(), "Corrupted file should have content");
         assert_ne!(&file_content[0..4], b"GGUF", "Should not have valid GGUF magic");
     }
 
@@ -304,7 +307,7 @@ async fn test_three_tier_infrastructure() -> Result<()> {
     for tier in tiers {
         // Create config for specific tier
         let mut config = TestEnvironmentConfig::from_env();
-        config.tier = tier.clone();
+        config.tier = tier;
 
         println!("Testing tier: {:?}", tier);
 

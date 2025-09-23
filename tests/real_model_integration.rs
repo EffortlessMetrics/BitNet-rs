@@ -10,6 +10,9 @@
 //!
 //! Test organization follows acceptance criteria mapping with TDD methodology.
 
+// Allow warnings for test scaffolding code
+#![allow(dead_code, unused_variables, unused_imports, clippy::all)]
+
 use std::env;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -35,6 +38,7 @@ macro_rules! skip_if_tier_insufficient {
     };
 }
 
+#[allow(unused_macros)]
 macro_rules! skip_if_no_gpu {
     ($config:expr) => {
         if !$config.gpu_features_enabled() {
@@ -75,6 +79,12 @@ impl RealModelTestConfig {
 /// Test helper for model discovery and validation
 pub struct RealModelTestHelper {
     config: RealModelTestConfig,
+}
+
+impl Default for RealModelTestHelper {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RealModelTestHelper {
@@ -234,7 +244,7 @@ fn test_ac1_model_memory_requirements_validation() {
 
     // Test device configuration optimization
     let optimal_config = model.get_optimal_device_config();
-    assert!(!optimal_config.strategy.is_none(), "Optimal config should specify device strategy");
+    assert!(optimal_config.strategy.is_some(), "Optimal config should specify device strategy");
 
     println!("✅ AC1: Model memory requirements validation test scaffolding created");
 }
@@ -271,7 +281,7 @@ fn test_ac1_model_loading_error_handling() {
         corrupted_result
     {
         assert!(!message.is_empty(), "Error message should be descriptive");
-        assert!(details.recommendations.len() > 0, "Should provide recovery recommendations");
+        assert!(!details.recommendations.is_empty(), "Should provide recovery recommendations");
     } else {
         panic!("Should produce GGUFFormatError for corrupted file");
     }
@@ -293,7 +303,7 @@ fn download_model_with_xtask(model_id: &str, filename: &str) -> Result<PathBuf> 
     use std::process::Command;
 
     let output = Command::new("cargo")
-        .args(&["run", "-p", "xtask", "--", "download-model", "--id", model_id, "--file", filename])
+        .args(["run", "-p", "xtask", "--", "download-model", "--id", model_id, "--file", filename])
         .output()
         .map_err(bitnet_common::BitNetError::Io)?;
 

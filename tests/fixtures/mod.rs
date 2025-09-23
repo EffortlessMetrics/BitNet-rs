@@ -22,6 +22,9 @@
 //! - Numerical accuracy testing with configurable tolerances
 //! - Performance benchmarking and regression detection
 
+// Allow warnings for test scaffolding code
+#![allow(dead_code, unused_variables, unused_imports, clippy::all)]
+
 pub mod cross_validation;
 pub mod device_aware;
 pub mod error_handling;
@@ -49,6 +52,7 @@ pub struct RealModelIntegrationFixtures {
     pub quantization_fixtures: QuantizationFixtures,
     pub cross_validation_fixtures: CrossValidationFixtures,
     pub performance_fixtures: PerformanceFixtures,
+    #[allow(dead_code)]
     pub error_handling_fixtures: ErrorHandlingFixtures,
     pub config: TestEnvironmentConfig,
 }
@@ -60,7 +64,9 @@ pub struct TestEnvironmentConfig {
     pub tokenizer_path: Option<PathBuf>,
     pub use_real_models: bool,
     pub device_preference: Device,
+    #[allow(dead_code)]
     pub strict_mode: bool,
+    #[allow(dead_code)]
     pub timeout: Duration,
     pub tier: TestTier,
 }
@@ -124,6 +130,7 @@ impl TestEnvironmentConfig {
     }
 
     /// Get model path or skip test with appropriate message
+    #[allow(dead_code)]
     pub fn get_model_path_or_skip(&self) -> PathBuf {
         match &self.model_path {
             Some(path) if path.exists() => path.clone(),
@@ -198,6 +205,7 @@ impl RealModelIntegrationFixtures {
     }
 
     /// Cleanup all fixtures and test resources
+    #[allow(dead_code)]
     pub async fn cleanup(&mut self) -> Result<()> {
         // Cleanup in reverse order
         if self.config.tier == TestTier::Full {
@@ -213,7 +221,8 @@ impl RealModelIntegrationFixtures {
     }
 
     /// Get fixtures appropriate for the given acceptance criteria
-    pub fn get_fixtures_for_ac(&self, ac_id: u8) -> Result<ACTestFixtures> {
+    #[allow(dead_code)]
+    pub fn get_fixtures_for_ac(&self, ac_id: u8) -> Result<ACTestFixtures<'_>> {
         match ac_id {
             1 => Ok(ACTestFixtures::AC1 {
                 model_fixtures: &self.model_fixtures,
@@ -245,6 +254,7 @@ impl RealModelIntegrationFixtures {
 }
 
 /// Fixtures grouped by acceptance criteria for organized testing
+#[allow(dead_code)]
 pub enum ACTestFixtures<'a> {
     AC1 {
         model_fixtures: &'a ModelFixtures,

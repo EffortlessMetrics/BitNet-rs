@@ -1786,7 +1786,7 @@ fn auto_detect_baseline(device: &str, category: &str) -> Result<PathBuf> {
         #[cfg(feature = "gpu")]
         {
             use bitnet_kernels::gpu_utils::get_gpu_info;
-            if get_gpu_info().is_ok() { "gpu" } else { "cpu" }
+            if get_gpu_info().any_available() { "gpu" } else { "cpu" }
         }
         #[cfg(not(feature = "gpu"))]
         "cpu"

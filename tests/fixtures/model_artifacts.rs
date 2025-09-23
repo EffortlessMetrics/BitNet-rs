@@ -248,7 +248,7 @@ impl MockBitNetModel {
         buffer
     }
 
-    fn add_kv_pair<T: Serialize>(&self, buffer: &mut Vec<u8>, key: &str, value: &T) {
+    fn add_kv_pair<T: Serialize>(&self, buffer: &mut Vec<u8>, key: &str, _value: &T) {
         // Key
         let key_bytes = key.as_bytes();
         buffer.extend_from_slice(&(key_bytes.len() as u64).to_le_bytes());

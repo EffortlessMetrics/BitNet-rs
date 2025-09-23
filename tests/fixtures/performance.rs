@@ -362,7 +362,7 @@ impl PerformanceFixtures {
             BitNetError::Validation(format!("Performance test suite not found: {}", suite_name))
         })?;
 
-        let targets = self.benchmark_targets.get(&suite.device).ok_or_else(|| {
+        let _targets = self.benchmark_targets.get(&suite.device).ok_or_else(|| {
             BitNetError::Validation(format!("No benchmark targets for device: {:?}", suite.device))
         })?;
 

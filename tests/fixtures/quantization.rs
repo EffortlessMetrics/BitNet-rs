@@ -425,7 +425,7 @@ impl QuantizationFixtures {
             })
         })?;
 
-        let device_data = self.get_device_data(&device).ok_or_else(|| {
+        let _device_data = self.get_device_data(&device).ok_or_else(|| {
             BitNetError::Validation(format!("No test data available for device: {:?}", device))
         })?;
 
@@ -455,7 +455,7 @@ impl QuantizationFixtures {
     /// Validate individual test case
     async fn validate_test_case(
         &self,
-        qtype: &str,
+        _qtype: &str,
         device: Device,
         test_case: &QuantizationTestCase,
     ) -> Result<TestCaseValidationResult> {

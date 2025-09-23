@@ -436,6 +436,7 @@ impl Default for MockBitNetModel {
     }
 }
 
+#[cfg(not(feature = "inference"))]
 impl MockBitNetModel {
     pub fn new() -> Self {
         Self { config: bitnet_common::BitNetConfig::default() }

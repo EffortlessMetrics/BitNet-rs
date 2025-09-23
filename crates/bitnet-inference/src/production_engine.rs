@@ -13,7 +13,7 @@
 
 use crate::engine::PerformanceMetrics;
 use crate::{GenerationConfig, InferenceEngine};
-use bitnet_common::{Device, InferenceError, Result};
+use bitnet_common::{BitNetError, Device, InferenceError, Result};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use serde::{Deserialize, Serialize};
@@ -22,7 +22,7 @@ use std::time::Duration;
 #[allow(unused_imports)]
 use std::time::Instant;
 use tokio::sync::RwLock;
-use tracing::info;
+use tracing::{debug, info, instrument};
 
 /// Enhanced timing metrics for detailed performance tracking
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -326,7 +326,12 @@ impl ProductionInferenceEngine {
     ) -> Result<Self> {
         info!("Creating production inference engine");
 
-        let engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device.clone())?;
+        let engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device.clone())
+            .map_err(|e| {
+                BitNetError::Inference(InferenceError::GenerationFailed {
+                    reason: format!("Engine creation failed: {}", e),
+                })
+            })?;
         let device_manager = DeviceManager::new(device);
         let config = ProductionInferenceConfig::default();
 
@@ -406,7 +411,11 @@ impl ProductionInferenceEngine {
 
         if should_prefill {
             let prefill_start = Instant::now();
-            self.engine.prefill(&input_tokens).await?;
+            self.engine.prefill(&input_tokens).await.map_err(|e| {
+                BitNetError::Inference(InferenceError::GenerationFailed {
+                    reason: format!("Prefill failed: {}", e),
+                })
+            })?;
             let prefill_duration = prefill_start.elapsed();
             metrics.record_prefill_metrics(input_tokens.len(), prefill_duration);
             debug!("Prefill completed in {:?}", prefill_duration);
