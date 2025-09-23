@@ -3,6 +3,7 @@
 //! This test validates that inference produces non-flat logits after one decode step.
 //! It's kept behind a debug feature to avoid blocking CI with complex model loading.
 
+#![allow(unexpected_cfgs)]
 #![cfg(feature = "debug-asserts")]
 
 use bitnet_common::Device;

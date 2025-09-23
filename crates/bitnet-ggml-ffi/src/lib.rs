@@ -116,6 +116,12 @@ pub unsafe fn quantize_iq2_s(
 
 /// Dequantizes a row of IQ2_S quantized data back to f32 values.
 ///
+/// # Safety
+/// The caller must ensure that:
+/// - `_src` is a valid pointer to quantized data
+/// - `_dst` is a valid pointer to writable memory for `_n` f32 values
+/// - Both pointers must remain valid for the duration of this function
+///
 /// # Panics
 /// Always panics when the `iq2s-ffi` feature is not enabled.
 #[cfg(not(feature = "iq2s-ffi"))]
@@ -124,6 +130,13 @@ pub unsafe fn dequantize_row_iq2_s(_src: *const c_void, _dst: *mut f32, _n: usiz
 }
 
 /// Quantizes multiple rows of f32 data into IQ2_S format.
+///
+/// # Safety
+/// The caller must ensure that:
+/// - `_src` is a valid pointer to readable memory for `_nrow * _n_per_row` f32 values
+/// - `_dst` is a valid pointer to writable memory for the quantized output
+/// - Both pointers must remain valid for the duration of this function
+/// - The destination buffer must be large enough for the quantized data
 ///
 /// # Panics
 /// Always panics when the `iq2s-ffi` feature is not enabled.

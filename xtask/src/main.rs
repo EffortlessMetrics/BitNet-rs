@@ -13,8 +13,10 @@ use reqwest::header::{
     IF_MODIFIED_SINCE, IF_NONE_MATCH, IF_RANGE, LAST_MODIFIED, RANGE, RETRY_AFTER,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{
+    collections::HashMap,
     fs,
     io::{BufWriter, Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
@@ -557,6 +559,44 @@ enum Cmd {
         #[arg(long, default_value = "human")]
         format: String,
     },
+
+    /// Compare benchmark results against baseline with regression thresholds
+    ///
+    /// Compares current criterion benchmark results against established baselines
+    /// and reports any performance regressions beyond configured thresholds.
+    /// Exit code 17 (EXIT_BENCHMARK_FAILED) if regressions detected.
+    BenchCompare {
+        /// Path to current benchmark results (criterion JSON or xtask benchmark JSON)
+        #[arg(long)]
+        current: PathBuf,
+        /// Path to baseline JSON file (defaults to auto-detection based on device)
+        #[arg(long)]
+        baseline: Option<PathBuf>,
+        /// Device type for baseline selection (cpu, gpu, auto)
+        #[arg(long, default_value = "auto")]
+        device: String,
+        /// Benchmark category (quantization, inference, kernels, all)
+        #[arg(long, default_value = "all")]
+        category: String,
+        /// Path to threshold configuration file
+        #[arg(long)]
+        thresholds: Option<PathBuf>,
+        /// Output format (human, json, junit, markdown)
+        #[arg(long, default_value = "human")]
+        format: String,
+        /// Output file path (defaults to stdout)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+        /// CI mode - apply CI threshold multipliers
+        #[arg(long, default_value_t = false)]
+        ci: bool,
+        /// Fail on any regression (exit with error code)
+        #[arg(long, default_value_t = true)]
+        fail_on_regression: bool,
+        /// Verbose output with detailed comparison
+        #[arg(short, long, default_value_t = false)]
+        verbose: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -730,6 +770,29 @@ fn real_main() -> Result<()> {
             allow_mock,
             deterministic,
             &format,
+        ),
+        Cmd::BenchCompare {
+            current,
+            baseline,
+            device,
+            category,
+            thresholds,
+            format,
+            output,
+            ci,
+            fail_on_regression,
+            verbose,
+        } => bench_compare_cmd(
+            &current,
+            baseline.as_deref(),
+            &device,
+            &category,
+            thresholds.as_deref(),
+            &format,
+            output.as_deref(),
+            ci,
+            fail_on_regression,
+            verbose,
         ),
     }
 }
@@ -1609,6 +1672,539 @@ fn verify_sha256(path: &Path, expected_hex: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Compare benchmark results against baseline with regression detection
+fn bench_compare_cmd(
+    current_path: &Path,
+    baseline_path: Option<&Path>,
+    device: &str,
+    category: &str,
+    thresholds_path: Option<&Path>,
+    format: &str,
+    output_path: Option<&Path>,
+    ci: bool,
+    fail_on_regression: bool,
+    verbose: bool,
+) -> Result<()> {
+
+    // Load threshold configuration
+    let thresholds = load_thresholds(thresholds_path, ci)?;
+
+    // Auto-detect baseline if not provided
+    let baseline_path = match baseline_path {
+        Some(path) => path.to_path_buf(),
+        None => auto_detect_baseline(device, category)?,
+    };
+
+    // Load baseline and current results
+    let baseline = load_benchmark_results(&baseline_path)?;
+    let current = load_benchmark_results(current_path)?;
+
+    // Perform comparison
+    let comparison = compare_benchmarks(&baseline, &current, &thresholds, category, verbose)?;
+
+    // Generate output
+    let output_content = format_comparison_results(&comparison, format, verbose)?;
+
+    // Write output
+    match output_path {
+        Some(path) => {
+            fs::write(path, &output_content)?;
+            println!("📊 Benchmark comparison saved to: {}", path.display());
+        }
+        None => print!("{}", output_content),
+    }
+
+    // Exit with error if regressions found and fail_on_regression is true
+    if fail_on_regression && comparison.has_regressions {
+        Err(anyhow!("benchmark failed"))
+    } else {
+        Ok(())
+    }
+}
+
+/// Load threshold configuration from TOML file
+fn load_thresholds(path: Option<&Path>, ci: bool) -> Result<HashMap<String, f64>> {
+    let path = path.unwrap_or_else(|| Path::new("benchmarks/thresholds/default.toml"));
+    let mut thresholds = HashMap::new();
+
+    if path.exists() {
+        let content = fs::read_to_string(path)?;
+        let config: toml::Value = toml::from_str(&content)?;
+
+        // Extract thresholds from TOML structure
+        extract_thresholds_recursive(&config, "", &mut thresholds);
+
+        // Apply CI multiplier if in CI mode
+        if ci {
+            if let Some(toml::Value::Table(ci_table)) = config.get("ci") {
+                if let Some(toml::Value::Float(multiplier)) = ci_table.get("multiplier") {
+                    for value in thresholds.values_mut() {
+                        *value *= multiplier;
+                    }
+                }
+            }
+        }
+    } else {
+        // Default thresholds if no config file
+        thresholds.insert("quantization".to_string(), 15.0);
+        thresholds.insert("inference".to_string(), 20.0);
+        thresholds.insert("kernels".to_string(), 15.0);
+    }
+
+    Ok(thresholds)
+}
+
+/// Recursively extract thresholds from TOML value
+fn extract_thresholds_recursive(value: &toml::Value, prefix: &str, thresholds: &mut HashMap<String, f64>) {
+    match value {
+        toml::Value::Table(table) => {
+            for (key, val) in table {
+                let new_prefix = if prefix.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{}_{}", prefix, key)
+                };
+                extract_thresholds_recursive(val, &new_prefix, thresholds);
+            }
+        }
+        toml::Value::Float(f) => {
+            thresholds.insert(prefix.to_string(), *f);
+        }
+        toml::Value::Integer(i) => {
+            thresholds.insert(prefix.to_string(), *i as f64);
+        }
+        _ => {}
+    }
+}
+
+/// Auto-detect appropriate baseline file based on device and category
+fn auto_detect_baseline(device: &str, category: &str) -> Result<PathBuf> {
+    let device = if device == "auto" {
+        // Try to detect GPU availability
+        #[cfg(feature = "gpu")]
+        {
+            use bitnet_kernels::gpu_utils::get_gpu_info;
+            if get_gpu_info().is_ok() { "gpu" } else { "cpu" }
+        }
+        #[cfg(not(feature = "gpu"))]
+        "cpu"
+    } else {
+        device
+    };
+
+    let baseline_dir = Path::new("benchmarks/baseline").join(device);
+
+    match category {
+        "quantization" => {
+            // Look for I2S baseline as primary quantization benchmark
+            let i2s_path = baseline_dir.join("quantization/i2s_baseline.json");
+            if i2s_path.exists() {
+                Ok(i2s_path)
+            } else {
+                Err(anyhow!("No quantization baseline found for device: {}", device))
+            }
+        }
+        "inference" => {
+            let inference_path = baseline_dir.join("inference/inference_baseline.json");
+            if inference_path.exists() {
+                Ok(inference_path)
+            } else {
+                Err(anyhow!("No inference baseline found for device: {}", device))
+            }
+        }
+        "kernels" => {
+            let kernels_path = baseline_dir.join("kernels/kernel_baseline.json");
+            if kernels_path.exists() {
+                Ok(kernels_path)
+            } else {
+                Err(anyhow!("No kernels baseline found for device: {}", device))
+            }
+        }
+        "all" => {
+            // Default to quantization baseline
+            auto_detect_baseline(device, "quantization")
+        }
+        _ => Err(anyhow!("Unknown category: {}", category)),
+    }
+}
+
+/// Load benchmark results from JSON file
+fn load_benchmark_results(path: &Path) -> Result<Value> {
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("Failed to read benchmark file: {}", path.display()))?;
+    let json: Value = serde_json::from_str(&content)
+        .with_context(|| format!("Failed to parse JSON from: {}", path.display()))?;
+    Ok(json)
+}
+
+/// Benchmark comparison results
+#[derive(Debug)]
+struct BenchmarkComparison {
+    baseline_name: String,
+    current_name: String,
+    regressions: Vec<RegressionReport>,
+    improvements: Vec<ImprovementReport>,
+    has_regressions: bool,
+    summary: ComparisonSummary,
+}
+
+#[derive(Debug)]
+struct RegressionReport {
+    test_name: String,
+    baseline_value: f64,
+    current_value: f64,
+    regression_percent: f64,
+    threshold_percent: f64,
+    metric_type: String,
+}
+
+#[derive(Debug)]
+struct ImprovementReport {
+    test_name: String,
+    baseline_value: f64,
+    current_value: f64,
+    improvement_percent: f64,
+    metric_type: String,
+}
+
+#[derive(Debug)]
+struct ComparisonSummary {
+    total_tests: usize,
+    regressions_count: usize,
+    improvements_count: usize,
+    stable_count: usize,
+}
+
+/// Compare benchmark results and detect regressions
+fn compare_benchmarks(
+    baseline: &Value,
+    current: &Value,
+    thresholds: &HashMap<String, f64>,
+    category: &str,
+    _verbose: bool,
+) -> Result<BenchmarkComparison> {
+    let mut regressions = Vec::new();
+    let mut improvements = Vec::new();
+
+    // Extract benchmark data from JSON structures
+    let baseline_benchmarks = extract_benchmark_data(baseline)?;
+    let current_benchmarks = extract_benchmark_data(current)?;
+
+    // Compare each benchmark
+    for (test_name, baseline_metrics) in &baseline_benchmarks {
+        if let Some(current_metrics) = current_benchmarks.get(test_name) {
+            for (metric_name, baseline_value) in baseline_metrics {
+                if let Some(current_value) = current_metrics.get(metric_name) {
+                    let change_percent = (current_value - baseline_value) / baseline_value * 100.0;
+
+                    // Determine if this is a performance regression
+                    let is_regression = if metric_name.contains("latency") || metric_name.contains("ms") {
+                        change_percent > 0.0  // Higher latency is worse
+                    } else if metric_name.contains("throughput") || metric_name.contains("per_sec") {
+                        change_percent < 0.0  // Lower throughput is worse
+                    } else {
+                        change_percent > 0.0  // Default: higher values are worse
+                    };
+
+                    // Get threshold for this test/metric
+                    let threshold = get_threshold_for_test(test_name, metric_name, thresholds, category);
+
+                    if is_regression && change_percent.abs() > threshold {
+                        regressions.push(RegressionReport {
+                            test_name: test_name.clone(),
+                            baseline_value: *baseline_value,
+                            current_value: *current_value,
+                            regression_percent: change_percent.abs(),
+                            threshold_percent: threshold,
+                            metric_type: metric_name.clone(),
+                        });
+                    } else if !is_regression && change_percent.abs() > 5.0 {
+                        improvements.push(ImprovementReport {
+                            test_name: test_name.clone(),
+                            baseline_value: *baseline_value,
+                            current_value: *current_value,
+                            improvement_percent: change_percent.abs(),
+                            metric_type: metric_name.clone(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    let total_tests = baseline_benchmarks.len();
+    let regressions_count = regressions.len();
+    let improvements_count = improvements.len();
+    let stable_count = total_tests.saturating_sub(regressions_count + improvements_count);
+    let has_regressions = !regressions.is_empty();
+
+    Ok(BenchmarkComparison {
+        baseline_name: baseline.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string(),
+        current_name: current.get("name").and_then(|v| v.as_str()).unwrap_or("Current").to_string(),
+        has_regressions,
+        regressions,
+        improvements,
+        summary: ComparisonSummary {
+            total_tests,
+            regressions_count,
+            improvements_count,
+            stable_count,
+        },
+    })
+}
+
+/// Extract benchmark data from JSON value
+fn extract_benchmark_data(json: &Value) -> Result<HashMap<String, HashMap<String, f64>>> {
+    let mut benchmarks = HashMap::new();
+
+    if let Some(bench_obj) = json.get("benchmarks") {
+        if let Value::Object(categories) = bench_obj {
+            for (category_name, category_data) in categories {
+                if let Value::Object(tests) = category_data {
+                    for (test_name, test_data) in tests {
+                        let full_test_name = format!("{}_{}", category_name, test_name);
+                        let mut metrics = HashMap::new();
+
+                        if let Value::Object(test_obj) = test_data {
+                            for (metric_name, metric_value) in test_obj {
+                                if let Some(value) = metric_value.as_f64() {
+                                    metrics.insert(metric_name.clone(), value);
+                                }
+                            }
+                        }
+                        benchmarks.insert(full_test_name, metrics);
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(benchmarks)
+}
+
+/// Get threshold for a specific test and metric
+fn get_threshold_for_test(test_name: &str, metric_name: &str, thresholds: &HashMap<String, f64>, category: &str) -> f64 {
+    // Check for specific override first
+    if let Some(threshold) = thresholds.get(test_name) {
+        return *threshold;
+    }
+
+    // Check for metric-specific threshold
+    if let Some(threshold) = thresholds.get(metric_name) {
+        return *threshold;
+    }
+
+    // Check for category threshold
+    if let Some(threshold) = thresholds.get(category) {
+        return *threshold;
+    }
+
+    // Default threshold
+    15.0
+}
+
+/// Format comparison results based on output format
+fn format_comparison_results(comparison: &BenchmarkComparison, format: &str, verbose: bool) -> Result<String> {
+    match format {
+        "json" => format_json_output(comparison),
+        "junit" => format_junit_output(comparison),
+        "markdown" => format_markdown_output(comparison, verbose),
+        _ => format_human_output(comparison, verbose),
+    }
+}
+
+/// Format results as human-readable text
+fn format_human_output(comparison: &BenchmarkComparison, verbose: bool) -> Result<String> {
+    let mut output = String::new();
+
+    output.push_str("📊 Benchmark Comparison Report\n");
+    output.push_str("==============================\n\n");
+
+    output.push_str(&format!("Baseline: {}\n", comparison.baseline_name));
+    output.push_str(&format!("Current:  {}\n\n", comparison.current_name));
+
+    // Summary
+    output.push_str("📈 Summary:\n");
+    output.push_str(&format!("  Total tests: {}\n", comparison.summary.total_tests));
+    output.push_str(&format!("  Regressions: {}\n", comparison.summary.regressions_count));
+    output.push_str(&format!("  Improvements: {}\n", comparison.summary.improvements_count));
+    output.push_str(&format!("  Stable: {}\n\n", comparison.summary.stable_count));
+
+    // Regressions (always show these)
+    if !comparison.regressions.is_empty() {
+        output.push_str("🚨 Performance Regressions:\n");
+        for regression in &comparison.regressions {
+            output.push_str(&format!(
+                "  ❌ {}.{}: {:.2}% regression ({:.2} → {:.2}) [threshold: {:.1}%]\n",
+                regression.test_name,
+                regression.metric_type,
+                regression.regression_percent,
+                regression.baseline_value,
+                regression.current_value,
+                regression.threshold_percent
+            ));
+        }
+        output.push('\n');
+    }
+
+    // Improvements (show if verbose or if there are significant ones)
+    if verbose && !comparison.improvements.is_empty() {
+        output.push_str("✅ Performance Improvements:\n");
+        for improvement in &comparison.improvements {
+            output.push_str(&format!(
+                "  ✨ {}.{}: {:.2}% improvement ({:.2} → {:.2})\n",
+                improvement.test_name,
+                improvement.metric_type,
+                improvement.improvement_percent,
+                improvement.baseline_value,
+                improvement.current_value
+            ));
+        }
+        output.push('\n');
+    }
+
+    // Overall result
+    if comparison.has_regressions {
+        output.push_str("❌ Result: FAILED - Performance regressions detected\n");
+    } else {
+        output.push_str("✅ Result: PASSED - No performance regressions\n");
+    }
+
+    Ok(output)
+}
+
+/// Format results as JSON
+fn format_json_output(comparison: &BenchmarkComparison) -> Result<String> {
+    let json = serde_json::json!({
+        "baseline_name": comparison.baseline_name,
+        "current_name": comparison.current_name,
+        "has_regressions": comparison.has_regressions,
+        "summary": {
+            "total_tests": comparison.summary.total_tests,
+            "regressions_count": comparison.summary.regressions_count,
+            "improvements_count": comparison.summary.improvements_count,
+            "stable_count": comparison.summary.stable_count
+        },
+        "regressions": comparison.regressions.iter().map(|r| serde_json::json!({
+            "test_name": r.test_name,
+            "metric_type": r.metric_type,
+            "baseline_value": r.baseline_value,
+            "current_value": r.current_value,
+            "regression_percent": r.regression_percent,
+            "threshold_percent": r.threshold_percent
+        })).collect::<Vec<_>>(),
+        "improvements": comparison.improvements.iter().map(|i| serde_json::json!({
+            "test_name": i.test_name,
+            "metric_type": i.metric_type,
+            "baseline_value": i.baseline_value,
+            "current_value": i.current_value,
+            "improvement_percent": i.improvement_percent
+        })).collect::<Vec<_>>()
+    });
+
+    Ok(serde_json::to_string_pretty(&json)?)
+}
+
+/// Format results as JUnit XML
+fn format_junit_output(comparison: &BenchmarkComparison) -> Result<String> {
+    let mut output = String::new();
+
+    output.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+    output.push_str(&format!(
+        "<testsuite name=\"benchmark_comparison\" tests=\"{}\" failures=\"{}\" errors=\"0\">\n",
+        comparison.summary.total_tests,
+        comparison.summary.regressions_count
+    ));
+
+    // Add a test case for each regression
+    for regression in &comparison.regressions {
+        output.push_str(&format!(
+            "  <testcase name=\"{}.{}\" classname=\"benchmark\">\n",
+            regression.test_name, regression.metric_type
+        ));
+        output.push_str(&format!(
+            "    <failure message=\"Performance regression: {:.2}% (threshold: {:.1}%)\">\n",
+            regression.regression_percent, regression.threshold_percent
+        ));
+        output.push_str(&format!(
+            "      Baseline: {:.2}, Current: {:.2}\n",
+            regression.baseline_value, regression.current_value
+        ));
+        output.push_str("    </failure>\n");
+        output.push_str("  </testcase>\n");
+    }
+
+    output.push_str("</testsuite>\n");
+    Ok(output)
+}
+
+/// Format results as Markdown
+fn format_markdown_output(comparison: &BenchmarkComparison, verbose: bool) -> Result<String> {
+    let mut output = String::new();
+
+    output.push_str("# 📊 Benchmark Comparison Report\n\n");
+
+    output.push_str(&format!("**Baseline:** {}\n", comparison.baseline_name));
+    output.push_str(&format!("**Current:** {}\n\n", comparison.current_name));
+
+    // Summary
+    output.push_str("## 📈 Summary\n\n");
+    output.push_str("| Metric | Count |\n");
+    output.push_str("|--------|-------|\n");
+    output.push_str(&format!("| Total tests | {} |\n", comparison.summary.total_tests));
+    output.push_str(&format!("| Regressions | {} |\n", comparison.summary.regressions_count));
+    output.push_str(&format!("| Improvements | {} |\n", comparison.summary.improvements_count));
+    output.push_str(&format!("| Stable | {} |\n\n", comparison.summary.stable_count));
+
+    // Regressions
+    if !comparison.regressions.is_empty() {
+        output.push_str("## 🚨 Performance Regressions\n\n");
+        output.push_str("| Test | Metric | Regression % | Baseline | Current | Threshold % |\n");
+        output.push_str("|------|--------|--------------|----------|---------|-------------|\n");
+
+        for regression in &comparison.regressions {
+            output.push_str(&format!(
+                "| {} | {} | {:.2}% | {:.2} | {:.2} | {:.1}% |\n",
+                regression.test_name,
+                regression.metric_type,
+                regression.regression_percent,
+                regression.baseline_value,
+                regression.current_value,
+                regression.threshold_percent
+            ));
+        }
+        output.push('\n');
+    }
+
+    // Improvements (if verbose)
+    if verbose && !comparison.improvements.is_empty() {
+        output.push_str("## ✅ Performance Improvements\n\n");
+        output.push_str("| Test | Metric | Improvement % | Baseline | Current |\n");
+        output.push_str("|------|--------|---------------|----------|----------|\n");
+
+        for improvement in &comparison.improvements {
+            output.push_str(&format!(
+                "| {} | {} | {:.2}% | {:.2} | {:.2} |\n",
+                improvement.test_name,
+                improvement.metric_type,
+                improvement.improvement_percent,
+                improvement.baseline_value,
+                improvement.current_value
+            ));
+        }
+        output.push('\n');
+    }
+
+    // Overall result
+    if comparison.has_regressions {
+        output.push_str("## ❌ Result: FAILED\n\nPerformance regressions detected above threshold.\n");
+    } else {
+        output.push_str("## ✅ Result: PASSED\n\nNo performance regressions detected.\n");
+    }
+
+    Ok(output)
 }
 
 fn fetch_cpp_cmd(
@@ -2595,7 +3191,7 @@ fn benchmark_cmd(
 
             // Calculate performance metrics using actual token count
             let decode_secs = outcome.decode_ms as f64 / 1000.0;
-            let generation_secs = benchmark_elapsed.as_secs_f64();
+            let _generation_secs = benchmark_elapsed.as_secs_f64();
             let total_secs = total_elapsed.as_secs_f64();
 
             if decode_secs > 0.0 && actual_tokens > 0 {
@@ -3290,15 +3886,14 @@ fn tokenizer_is_llama3_chat(tokenizer: &Path) -> bool {
     use serde_json::Value;
     use std::fs;
 
-    if let Ok(data) = fs::read_to_string(tokenizer) {
-        if let Ok(v) = serde_json::from_str::<Value>(&data) {
+    if let Ok(data) = fs::read_to_string(tokenizer)
+        && let Ok(v) = serde_json::from_str::<Value>(&data) {
             // HuggingFace-style tokenizers: scan added tokens or special tokens
             let needles =
                 ["<|begin_of_text|>", "<|start_header_id|>", "<|end_header_id|>", "<|eot_id|>"];
             let hay = v.to_string(); // cheap scan
             return needles.iter().all(|n| hay.contains(n));
         }
-    }
     false
 }
 
@@ -3314,12 +3909,15 @@ fn apply_template(template: &str, tokenizer: Option<&Path>, prompt: &str) -> (St
             );
             (chat, false, false)
         }
-        "auto" | _ => {
-            if tokenizer.and_then(|p| Some(tokenizer_is_llama3_chat(p))).unwrap_or(false) {
+        "auto" => {
+            if tokenizer.map(tokenizer_is_llama3_chat).unwrap_or(false) {
                 apply_template("llama3-chat", tokenizer, prompt)
             } else {
                 apply_template("raw", tokenizer, prompt)
             }
+        }
+        _ => {
+            apply_template("raw", tokenizer, prompt)
         }
     }
 }
@@ -3339,8 +3937,6 @@ fn infer_cmd(
     deterministic: bool,
     format: &str,
 ) -> Result<()> {
-    use std::time::Instant;
-
     #[derive(serde::Serialize)]
     struct InferReport {
         model_path: String,
@@ -3563,6 +4159,7 @@ fn load_tokenizer_vocab_size(tokenizer_path: &Path) -> Result<usize> {
 }
 
 /// Count tokens in generated text using the provided tokenizer
+#[allow(dead_code)]
 fn count_tokens(text: &str, tokenizer_path: Option<&Path>, allow_mock: bool) -> Result<usize> {
     if text.is_empty() {
         return Ok(0);
@@ -3600,6 +4197,7 @@ struct InferenceOutcome {
 }
 
 /// Run inference using BitNet-rs library
+#[allow(clippy::too_many_arguments)]
 fn run_inference_internal(
     model_path: &Path,
     tokenizer_path: Option<&Path>,
@@ -3643,7 +4241,7 @@ fn run_inference_internal(
             let mut tokens_generated = 0usize;
 
             let decode_start = Instant::now();
-            for _ in 0..max_new_tokens {
+            if (0..max_new_tokens).next().is_some() {
                 // Sample next token (simplified - in real implementation this would use proper sampling)
                 let next_id = 29871; // Placeholder token ID - in real implementation, get from logits
                 tokens_generated += 1;
@@ -3653,9 +4251,8 @@ fn run_inference_internal(
                     generated.push_str(&txt);
                 }
 
-                // This would advance the engine state in a real implementation
                 // For now, just break after first token to avoid infinite loop
-                break;
+
             }
             let decode_ms = decode_start.elapsed().as_millis() as u64;
 
@@ -3818,6 +4415,7 @@ mod tests {
         port: u16,
         requests: Arc<Mutex<Vec<String>>>,
     }
+
 
     #[test]
     fn test_gpu_preflight_with_no_gpu() {

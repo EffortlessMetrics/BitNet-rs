@@ -449,6 +449,7 @@ fn test_reader_v3_falls_back_when_doff_past_eof() {
     assert_eq!(r.get_u32_metadata("k"), Some(7));
 }
 
+#[allow(dead_code)]
 fn build_gguf_bytes_with_tensor(metadata: Vec<(&str, GgufValue)>) -> Vec<u8> {
     let mut data = Vec::<u8>::new();
     const GGUF_VERSION: u32 = 2;

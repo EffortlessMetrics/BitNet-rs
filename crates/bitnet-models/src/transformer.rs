@@ -752,30 +752,27 @@ impl TransformerModel {
         let mut x = hidden.clone();
 
         // Debug input activation norm
-        if std::env::var("DEBUG_ATTN").is_ok() {
-            if let Ok(norm) = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>() {
+        if std::env::var("DEBUG_ATTN").is_ok()
+            && let Ok(norm) = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>() {
                 eprintln!("[norm] input: {:.6e}", norm);
             }
-        }
 
         for (i, layer) in self.layers.iter().enumerate() {
             let layer_cache = kv_cache.as_mut().and_then(|c| c.layer_mut(i));
             x = layer.forward(&x, layer_cache)?;
 
             // Debug layer activation norms (show all layers when debugging)
-            if std::env::var("DEBUG_ATTN").is_ok() {
-                if let Ok(norm) = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>() {
+            if std::env::var("DEBUG_ATTN").is_ok()
+                && let Ok(norm) = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>() {
                     eprintln!("[norm] layer {i}: {:.6e}", norm);
                 }
-            }
         }
 
         let normalized = self.norm.forward(&x)?;
-        if std::env::var("DEBUG_ATTN").is_ok() {
-            if let Ok(norm) = normalized.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>() {
+        if std::env::var("DEBUG_ATTN").is_ok()
+            && let Ok(norm) = normalized.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>() {
                 eprintln!("[norm] final: {:.6e}", norm);
             }
-        }
 
         Ok(normalized)
     }
@@ -815,18 +812,13 @@ impl TransformerModel {
                 };
 
                 // Debug logits std
-                if std::env::var("DEBUG_ATTN").is_ok() {
-                    // Compute std manually: sqrt(E[(x - mean)^2])
-                    if let Ok(mean) = logits.mean_all() {
-                        if let Ok(diff) = logits.broadcast_sub(&mean) {
-                            if let Ok(variance) = diff.sqr()?.mean_all() {
-                                if let Ok(std_val) = variance.sqrt()?.to_scalar::<f32>() {
-                                    eprintln!("[norm] logits std: {:.6e}", std_val);
-                                }
-                            }
-                        }
+                if std::env::var("DEBUG_ATTN").is_ok()
+                    && let Ok(mean) = logits.mean_all()
+                    && let Ok(diff) = logits.broadcast_sub(&mean)
+                    && let Ok(variance) = diff.sqr()?.mean_all()
+                    && let Ok(std_val) = variance.sqrt()?.to_scalar::<f32>() {
+                        eprintln!("[norm] logits std: {:.6e}", std_val);
                     }
-                }
 
                 Ok(logits)
             }

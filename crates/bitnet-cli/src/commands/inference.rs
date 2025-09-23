@@ -59,8 +59,8 @@ use tracing::{debug, error, info, warn};
 
 use bitnet_inference::{InferenceEngine, SamplingConfig};
 use bitnet_models::ModelLoader;
-use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
-use candle_core::Device;
+use bitnet_tokenizers::Tokenizer;
+use candle_core::{Device, utils::cuda_is_available};
 
 use crate::config::CliConfig;
 
@@ -405,8 +405,6 @@ impl InferenceCommand {
 
     /// Setup environment for deterministic execution
     fn setup_environment(&self) -> Result<()> {
-        use std::env;
-
         // Set thread count if specified
         if let Some(threads) = self.threads {
             unsafe {
@@ -576,9 +574,9 @@ impl InferenceCommand {
             "cuda" => {
                 #[cfg(feature = "gpu")]
                 {
-                    if bitnet_kernels::gpu::is_cuda_available() {
+                    if cuda_is_available() {
                         info!("Using CUDA device");
-                        Ok(Device::Cuda(candle_core::CudaDevice::new(0)?))
+                        Ok(Device::Cuda(candle_core::CudaDevice::new_with_stream(0)?))
                     } else {
                         anyhow::bail!("CUDA requested but no GPU available");
                     }
@@ -591,9 +589,9 @@ impl InferenceCommand {
             "auto" => {
                 #[cfg(feature = "gpu")]
                 {
-                    if bitnet_kernels::gpu::is_cuda_available() {
+                    if cuda_is_available() {
                         info!("Auto-select: CUDA");
-                        Ok(Device::Cuda(candle_core::CudaDevice::new(0)?))
+                        Ok(Device::Cuda(candle_core::CudaDevice::new_with_stream(0)?))
                     } else {
                         info!("Auto-select: CPU (no GPU available)");
                         Ok(Device::Cpu)
@@ -878,14 +876,14 @@ impl InferenceCommand {
     /// Run interactive mode
     async fn run_interactive_mode(
         &self,
-        mut engine: InferenceEngine,
-        tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
+        _engine: InferenceEngine,
+        _tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
     ) -> Result<()> {
         println!("{}", style("BitNet Interactive Mode").bold().cyan());
         println!("Type your prompts below. Press Ctrl+C to exit, Ctrl+D for new session.\n");
 
         let mut conversation_history = Vec::new();
-        let config = self.create_generation_config()?;
+        let _config = self.create_generation_config()?;
 
         loop {
             // Get user input
@@ -921,7 +919,7 @@ impl InferenceCommand {
                     }
 
                     // Prepare prompt with history if using chat template
-                    let prompt = if let Some(template) = &self.chat_template {
+                    let _prompt = if let Some(template) = &self.chat_template {
                         self.format_chat_prompt(template, &conversation_history, input)?
                     } else {
                         input.to_string()

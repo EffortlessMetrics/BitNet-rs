@@ -420,7 +420,7 @@ mod tests {
         let tensor_gpu = tensor.with_device(Device::Cuda(0)).unwrap();
         // Determine expected device based on runtime capabilities
         let expected =
-            Device::from(&Device::Cuda(0).to_candle().unwrap_or_else(|_| candle_core::Device::Cpu));
+            Device::from(&Device::Cuda(0).to_candle().unwrap_or(candle_core::Device::Cpu));
         assert_eq!(tensor_gpu.device(), &expected);
     }
 }

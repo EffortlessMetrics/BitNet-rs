@@ -6,7 +6,7 @@ use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
-use tracing::{debug, info, warn};
+use tracing::info;
 
 use bitnet_common::QuantizationType;
 use bitnet_models::ModelLoader;
@@ -134,7 +134,7 @@ impl ConvertCommand {
     }
 
     /// Load the input model
-    async fn load_input_model(&self, config: &CliConfig) -> Result<Box<dyn bitnet_models::Model>> {
+    async fn load_input_model(&self, _config: &CliConfig) -> Result<Box<dyn bitnet_models::Model>> {
         let pb = ProgressBar::new_spinner();
         pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} {msg}").unwrap());
         pb.set_message("Loading input model...");

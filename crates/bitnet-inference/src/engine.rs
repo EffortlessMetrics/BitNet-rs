@@ -1274,6 +1274,7 @@ impl InferenceEngine {
 
     /// Utility function to extract argmax from first batch
     /// Used for greedy decoding in deterministic scenarios
+    #[allow(dead_code)]
     fn argmax_from_first_batch(&self, logits: &[f32]) -> u32 {
         let (max_idx, _) = logits
             .iter()
@@ -1346,17 +1347,15 @@ impl InferenceEngine {
         eprintln!("  max_position_embeddings: {}", model.max_position_embeddings);
 
         // Validate RoPE parameters don't produce degenerate values
-        if let Some(theta) = model.rope_theta {
-            if theta <= 0.0 || theta.is_nan() || theta.is_infinite() {
+        if let Some(theta) = model.rope_theta
+            && (theta <= 0.0 || theta.is_nan() || theta.is_infinite()) {
                 return Err(anyhow::anyhow!("Invalid RoPE theta: {}", theta));
             }
-        }
 
-        if let Some(ref scaling) = model.rope_scaling {
-            if scaling.factor <= 0.0 || scaling.factor.is_nan() || scaling.factor.is_infinite() {
+        if let Some(ref scaling) = model.rope_scaling
+            && (scaling.factor <= 0.0 || scaling.factor.is_nan() || scaling.factor.is_infinite()) {
                 return Err(anyhow::anyhow!("Invalid RoPE scaling factor: {}", scaling.factor));
             }
-        }
 
         eprintln!("✅ Model hyperparameters validation passed");
         eprintln!("==========================================");

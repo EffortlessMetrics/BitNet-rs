@@ -7534,6 +7534,7 @@ dependencies = [
  "tempfile",
  "tiny_http",
  "tokio",
+ "toml 0.8.23",
  "walkdir",
  "which",
 ]

@@ -477,7 +477,7 @@ impl GgufLoader {
             .map_err(|e| BitNetError::Validation(e.to_string()))?;
 
         // PATCH 7: Probe the dequantized data for debugging
-        Self::debug_probe_i2s_tensor(&"transposed_projection".to_string(), &f32_data, dims, 1000);
+        Self::debug_probe_i2s_tensor("transposed_projection", &f32_data, dims, 1000);
 
         // Then transpose from [rows, cols] to [cols, rows]
         let (rows, cols) = (dims[0], dims[1]);
@@ -867,7 +867,7 @@ impl GgufLoader {
             let block_size = info.tensor_type.block_size();
             let total_elements: usize = info.shape.iter().product();
 
-            if total_elements % block_size != 0 {
+            if !total_elements.is_multiple_of(block_size) {
                 return Err(BitNetError::Validation(format!(
                     "Tensor '{}' elements ({}) not aligned to block size ({})",
                     info.name, total_elements, block_size

@@ -362,7 +362,7 @@ mod tests {
 
     /// Pack 4 two-bit codes into one byte: [c0 | c1<<2 | c2<<4 | c3<<6]
     fn pack_codes(codes: &[u8]) -> Vec<u8> {
-        let mut out = Vec::with_capacity((codes.len() + 3) / 4);
+        let mut out = Vec::with_capacity(codes.len().div_ceil(4));
         for chunk in codes.chunks(4) {
             let mut b = 0u8;
             for (i, &c) in chunk.iter().enumerate() {

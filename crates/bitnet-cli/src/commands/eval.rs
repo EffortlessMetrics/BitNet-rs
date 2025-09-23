@@ -449,7 +449,7 @@ impl EvalCommand {
         prefix.push(tokens[0]);
 
         for (idx, &current_token) in tokens.iter().skip(1).enumerate() {
-            let t = idx + 1;
+            let _t = idx + 1;
             // Get logits from forward pass
             let mut logits =
                 engine.eval_ids(&prefix).await.context("eval_ids in teacher-forcing")?;

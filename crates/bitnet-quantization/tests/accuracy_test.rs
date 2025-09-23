@@ -40,9 +40,9 @@ fn generate_test_patterns() -> Vec<Vec<f32>> {
             })
             .collect(),
         // Mixed values
-        (0..1024).map(|i| ((i as f32 / 100.0).sin() * 0.8)).collect(),
+        (0..1024).map(|i| (i as f32 / 100.0).sin() * 0.8).collect(),
         // Random-like values
-        (0..1025).map(|i| ((i as f32 * 0.1234).sin() * 0.7)).collect::<Vec<_>>()[..1025].to_vec(),
+        (0..1025).map(|i| (i as f32 * 0.1234).sin() * 0.7).collect::<Vec<_>>()[..1025].to_vec(),
     ]
 }
 

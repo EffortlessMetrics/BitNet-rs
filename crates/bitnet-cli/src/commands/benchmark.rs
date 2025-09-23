@@ -1,5 +1,4 @@
 //! Benchmarking command implementation
-#![cfg(feature = "cli-bench")]
 
 use anyhow::{Context, Result};
 use clap::Args;
@@ -12,7 +11,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
 
-use bitnet_inference::{InferenceConfig, InferenceEngine};
+use bitnet_inference::InferenceEngine;
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use candle_core::Device;

@@ -233,12 +233,12 @@ mod iq2s_parity_tests {
         let mut block = vec![0u8; block_bytes];
 
         // Random scale
-        let scale = f16::from_f32(rng.gen_range(0.1..2.0));
+        let scale = f16::from_f32(rng.random_range(0.1..2.0));
         block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
 
         // Random quantized values (only set the qs field)
         for block_slot in block.iter_mut().take(66).skip(2) {
-            *block_slot = rng.r#gen();
+            *block_slot = rng.random();
         }
         // Leave qh and scales fields as zero
 
@@ -272,10 +272,10 @@ mod iq2s_parity_tests {
         let mut block = vec![0u8; block_bytes];
 
         // Random data
-        let scale = f16::from_f32(rng.gen_range(0.5..1.5));
+        let scale = f16::from_f32(rng.random_range(0.5..1.5));
         block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
         for block_slot in block.iter_mut().take(66).skip(2) {
-            *block_slot = rng.r#gen();
+            *block_slot = rng.random();
         }
         // Leave qh and scales fields as zero
 

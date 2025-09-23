@@ -352,10 +352,10 @@ mod throughput_tests {
 
         let mut successful_requests = 0;
         for handle in handles {
-            if let Ok(result) = handle.await {
-                if result.is_ok() {
-                    successful_requests += 1;
-                }
+            if let Ok(result) = handle.await
+                && result.is_ok()
+            {
+                successful_requests += 1;
             }
         }
 
@@ -423,10 +423,10 @@ mod throughput_tests {
 
             let mut successful_requests = 0;
             for handle in handles {
-                if let Ok(result) = handle.await {
-                    if result.is_ok() {
-                        successful_requests += 1;
-                    }
+                if let Ok(result) = handle.await
+                    && result.is_ok()
+                {
+                    successful_requests += 1;
                 }
             }
 
