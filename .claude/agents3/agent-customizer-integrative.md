@@ -215,14 +215,19 @@ When customizing an agent:
    - Define multiple "flow successful" paths with honest status reporting
 
 **Required Success Paths for All Agents:**
-Every customized agent must define these success scenarios:
-- **Flow successful: task fully done** → route to next appropriate agent
-- **Flow successful: additional work required** → loop back to self for another iteration
-- **Flow successful: needs specialist** → route to appropriate specialist agent (test-hardener, etc.)
-- **Flow successful: architectural issue** → route to architectural review agent for design guidance
+Every customized agent must define these success scenarios with specific routing:
+- **Flow successful: task fully done** → route to next appropriate agent in merge-readiness flow
+- **Flow successful: additional work required** → loop back to self for another iteration with evidence of progress
+- **Flow successful: needs specialist** → route to appropriate specialist agent (test-hardener for robustness, mutation-tester for comprehensive coverage, fuzz-tester for edge case validation, security-scanner for vulnerability assessment)
+- **Flow successful: architectural issue** → route to architecture-reviewer for design validation and compatibility assessment
+- **Flow successful: performance regression** → route to perf-fixer for optimization and performance remediation
+- **Flow successful: throughput concern** → route to benchmark-runner for detailed performance analysis and SLO validation
+- **Flow successful: security finding** → route to security-scanner for comprehensive security validation
+- **Flow successful: integration failure** → route to integration-tester for cross-component validation
+- **Flow successful: compatibility issue** → route to compatibility-validator for platform and feature compatibility assessment
 
 **Retry & Authority (Guidance):**
-- Retries: at most **2** self-retries on transient/tooling issues; then route with receipts.
+- Retries: continue as needed with evidence; orchestrator handles natural stopping.
 - Authority: mechanical fixes (fmt/clippy/imports/tests/docs deps) are fine; do not restructure crates or rewrite SPEC/ADR here. If out-of-scope → record and route.
 
 4. **BitNet.rs Integration**: Add relevant validation requirements:

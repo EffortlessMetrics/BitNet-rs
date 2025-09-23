@@ -55,7 +55,7 @@ Use progress comments to *teach the next agent/human what matters*. If the reade
 **Post when at least one is true (examples, not rules):**
 
 * **Gate meaningfully changed:** `tests: fail→pass`, `features: skipped→pass`, `mutation: 71%→86%`.
-* **Routing changed:** bounded retries exhausted, or `NEXT/FINALIZE` target changed with rationale.
+* **Routing changed:** `NEXT/FINALIZE` target changed with rationale or natural iteration progress.
 * **Human attention needed:** ambiguity, missing policy, flaky toolchain, unexpected diff.
 * **Long run completed** with non-obvious results: fuzz repro corpus, perf deltas, surviving mutants, partial matrix outcomes.
 * **Mid-run check-in** on multi-minute tasks *with evidence* (not "still running"): e.g., `mutants 640/1024 processed; survivors=73; hot files: …`.
@@ -75,7 +75,7 @@ Observations
 - Facts discovered (numbers, file spans, diffs), not opinions
 
 Actions
-- What you changed/reran (commits, commands, retries k/2)
+- What you changed/reran (commits, commands, iteration progress)
 
 Evidence
 - test: 148/154 pass; new: 0/6 pass; AC satisfied: 9/9
@@ -174,7 +174,7 @@ Status should be one of: pass | fail | skipped (use `skipped (reason)` for N/A).
 - **security**: optional; use `skipped (generative flow)` unless security-critical.
 - **benchmarks**: baseline only → set `generative:gate:benchmarks`; never set `perf`.
 - **features**: run a ≤3-combo smoke (primary/none/max); leave the big matrix to later flows.
-- **retries**: max 2; then route forward with evidence.
+- **retries**: continue as needed with evidence; orchestrator handles natural stopping.
 
 **Missing Tool / Degraded Provider:**
 - If a required tool/script is missing or degraded:
@@ -208,7 +208,7 @@ Status should be one of: pass | fail | skipped (use `skipped (reason)` for N/A).
 - Tune routing to use clear NEXT/FINALIZE patterns with evidence
 - Align decision criteria with microloop structure
 - Emphasize deterministic outputs for reproducible generation
-- **Bounded retries**: at most **2** self-retries (`NEXT → self (2/2)`), then route forward
+- **Natural retries**: continue with evidence as needed; orchestrator handles natural stopping
 - **Worktree discipline**: "single writer at a time". No other worktree mechanics.
 
 **BitNet.rs-Specific Context Integration:**
@@ -248,11 +248,16 @@ When adapting an agent:
 6. **Define multiple "flow successful" paths** with honest status reporting
 
 **Required Success Paths for All Agents:**
-Every customized agent must define these success scenarios:
-- **Flow successful: task fully done** → route to next appropriate agent
-- **Flow successful: additional work required** → loop back to self for another iteration
-- **Flow successful: needs specialist** → route to appropriate specialist agent
-- **Flow successful: architectural issue** → route to architectural review agent for design guidance
+Every customized agent must define these success scenarios with specific routing:
+- **Flow successful: task fully done** → route to next appropriate agent (impl-creator → code-reviewer, test-creator → fixture-builder, spec-creator → schema-validator, etc.)
+- **Flow successful: additional work required** → loop back to self for another iteration with evidence of progress
+- **Flow successful: needs specialist** → route to appropriate specialist agent (code-refiner for optimization, test-hardener for robustness, mutation-tester for coverage gaps, fuzz-tester for edge cases)
+- **Flow successful: architectural issue** → route to spec-analyzer or architectural review agent for design guidance
+- **Flow successful: dependency issue** → route to issue-creator for upstream fixes or dependency management
+- **Flow successful: performance concern** → route to generative-benchmark-runner for baseline establishment or performance analysis
+- **Flow successful: security finding** → route to safety-scanner for security validation and remediation
+- **Flow successful: documentation gap** → route to doc-updater for documentation improvements
+- **Flow successful: integration concern** → route to generative-fixture-builder for integration test scaffolding
 7. **Integrate API contract validation** for real artifacts, not agent outputs
 8. **Add Rust-specific patterns** including TDD practices and cargo toolchain integration
 
@@ -308,7 +313,7 @@ Generative-only Notes
 
 Routing
 - On success: **FINALIZE → <FINALIZE_TARGET>**.
-- On recoverable problems: **NEXT → self** (≤2) or **NEXT → <NEXT_TARGET>** with evidence.
+- On recoverable problems: **NEXT → self** or **NEXT → <NEXT_TARGET>** with evidence.
 ```
 
 ## Quality Validation

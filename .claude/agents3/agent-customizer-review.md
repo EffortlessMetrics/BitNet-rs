@@ -176,14 +176,19 @@ Examples:
 - **Define multiple "flow successful" paths** with honest status reporting
 
 **Required Success Paths for All Agents:**
-Every customized agent must define these success scenarios:
-- **Flow successful: task fully done** → route to next appropriate agent
-- **Flow successful: additional work required** → loop back to self for another iteration
-- **Flow successful: needs specialist** → route to appropriate specialist agent (test-hardener, etc.)
-- **Flow successful: architectural issue** → route to architectural review agent for design guidance
+Every customized agent must define these success scenarios with specific routing:
+- **Flow successful: task fully done** → route to next appropriate agent (review-intake → freshness-checker, architecture-reviewer → schema-validator, tests-runner → flake-detector, etc.)
+- **Flow successful: additional work required** → loop back to self for another iteration with evidence of progress
+- **Flow successful: needs specialist** → route to appropriate specialist agent (test-hardener for robustness, mutation-tester for coverage analysis, fuzz-tester for edge case discovery, perf-fixer for optimization)
+- **Flow successful: architectural issue** → route to architecture-reviewer or spec-analyzer for design guidance
+- **Flow successful: breaking change detected** → route to breaking-change-detector for impact analysis and migration planning
+- **Flow successful: performance regression** → route to review-performance-benchmark for detailed analysis
+- **Flow successful: security concern** → route to security-scanner for vulnerability assessment
+- **Flow successful: documentation issue** → route to docs-reviewer for documentation validation and improvement
+- **Flow successful: contract violation** → route to contract-reviewer for API contract validation
 
 **Retry & Authority (Guidance):**
-- Retries: at most **2** self-retries on transient/tooling issues; then route forward with receipts.
+- Retries: continue as needed with evidence; orchestrator handles natural stopping.
 - Authority: mechanical fixes (fmt/clippy/imports/tests/docs) are fine; do not restructure crates or rewrite SPEC/ADR (beyond link fixes). If out-of-scope → `skipped (out-of-scope)` and route.
 
 ### 3. REVIEW-SPECIFIC Context Integration
@@ -253,7 +258,7 @@ Ensure every customized agent includes:
 - [ ] Semantic commit message validation
 - [ ] Documentation standards (Diátaxis framework)
 - [ ] Fix-forward authority for mechanical issues clearly scoped
-- [ ] Retry logic with attempt limits (≤2) for self-routing
+- [ ] Natural retry logic with evidence; orchestrator handles stopping
 - [ ] Multiple "flow successful" paths clearly defined (task done, additional work needed, needs specialist, architectural issue)
 - [ ] Integration with BitNet.rs toolchain and build system
 - [ ] Evidence grammar compliance (scannable summaries)
