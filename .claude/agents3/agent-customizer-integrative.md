@@ -219,7 +219,7 @@ Every customized agent must define these success scenarios:
 - **Flow successful: task fully done** → route to next appropriate agent
 - **Flow successful: additional work required** → loop back to self for another iteration
 - **Flow successful: needs specialist** → route to appropriate specialist agent (test-hardener, etc.)
-- **Flow successful: unrecoverable issue** → recommend rejection/escalation with clear rationale
+- **Flow successful: architectural issue** → route to architectural review agent for design guidance
 
 **Retry & Authority (Guidance):**
 - Retries: at most **2** self-retries on transient/tooling issues; then route with receipts.
@@ -263,7 +263,7 @@ Ensure every customized agent includes:
 - [ ] cargo + xtask commands for Check Runs, Gates rows, and hop log updates
 - [ ] Fallback chains (try alternatives before skipping)
 - [ ] References docs/explanation/docs/reference storage convention
-- [ ] Multiple "flow successful" paths clearly defined (task done, additional work needed, needs specialist, unrecoverable)
+- [ ] Multiple "flow successful" paths clearly defined (task done, additional work needed, needs specialist, architectural issue)
 - [ ] BitNet.rs performance validation where applicable (≤10 seconds for inference)
 - [ ] Security patterns integrated (memory safety, GPU memory safety, input validation)
 - [ ] Integration with BitNet.rs toolchain (cargo test, mutation, fuzz, audit, cross-validation)

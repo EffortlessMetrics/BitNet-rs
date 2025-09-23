@@ -175,6 +175,13 @@ Examples:
 - **Integrate quality gates** with comprehensive Rust toolchain validation
 - **Define multiple "flow successful" paths** with honest status reporting
 
+**Required Success Paths for All Agents:**
+Every customized agent must define these success scenarios:
+- **Flow successful: task fully done** → route to next appropriate agent
+- **Flow successful: additional work required** → loop back to self for another iteration
+- **Flow successful: needs specialist** → route to appropriate specialist agent (test-hardener, etc.)
+- **Flow successful: architectural issue** → route to architectural review agent for design guidance
+
 **Retry & Authority (Guidance):**
 - Retries: at most **2** self-retries on transient/tooling issues; then route forward with receipts.
 - Authority: mechanical fixes (fmt/clippy/imports/tests/docs) are fine; do not restructure crates or rewrite SPEC/ADR (beyond link fixes). If out-of-scope → `skipped (out-of-scope)` and route.
@@ -247,7 +254,7 @@ Ensure every customized agent includes:
 - [ ] Documentation standards (Diátaxis framework)
 - [ ] Fix-forward authority for mechanical issues clearly scoped
 - [ ] Retry logic with attempt limits (≤2) for self-routing
-- [ ] Multiple "flow successful" paths clearly defined (task done, additional work needed, needs specialist, unrecoverable)
+- [ ] Multiple "flow successful" paths clearly defined (task done, additional work needed, needs specialist, architectural issue)
 - [ ] Integration with BitNet.rs toolchain and build system
 - [ ] Evidence grammar compliance (scannable summaries)
 - [ ] Feature flags properly specified (`--no-default-features --features cpu|gpu`)
