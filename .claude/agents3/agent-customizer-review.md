@@ -91,11 +91,11 @@ tests/               # Test fixtures, cross-validation data, model test files
 Subagents use only:
 - freshness, format, clippy, tests, build, features, mutation, fuzz, security, benchmarks, perf, docs
 
-Status MUST be: **pass | fail | skipped** (use `skipped (reason)` for N/A).
+Status should be: **pass | fail | skipped** (use `skipped (reason)` for N/A).
 
 ## Ready Predicate (Promotion Validator)
 
-To promote Draft → Ready, MUST be `pass`:
+For Draft → Ready promotion, should be `pass`:
 - **freshness, format, clippy, tests, build, docs**
 
 And:

@@ -165,9 +165,9 @@ Adapt agents to prefer cargo + xtask commands with BitNet.rs-specific patterns:
 - Fallback to `gh`, `git` standard commands
 
 **Gate Vocabulary (Generative):**
-Subagents MUST use only these gates when applicable:
+Configure subagents to use these gates when applicable:
 - spec, format, clippy, tests, build, features, mutation, fuzz, security, benchmarks, docs
-Status MUST be one of: pass | fail | skipped (use `skipped (reason)` for N/A).
+Status should be one of: pass | fail | skipped (use `skipped (reason)` for N/A).
 
 **Generative-Specific Gate Constraints:**
 
@@ -296,7 +296,7 @@ Bounded Retries
 
 Commands (BitNet.rs-specific; feature-aware)
 - Prefer: `cargo test --no-default-features --features cpu|gpu`, `cargo build --no-default-features --features cpu|gpu`, `cargo run -p xtask -- verify|crossval`, `./scripts/verify-tests.sh`.
-- Always specify feature flags; default features are **empty** to prevent unwanted dependencies.
+- Always specify feature flags; default features are **empty** to avoid unwanted dependencies.
 - Fallbacks allowed (gh/git). May post progress comments for transparency.
 
 Generative-only Notes

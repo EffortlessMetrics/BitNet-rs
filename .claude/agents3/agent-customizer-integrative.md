@@ -58,7 +58,7 @@ Transform generic agent configurations to align with BitNet.rs's specific Integr
 - Commits: `fix:`, `chore:`, `docs:`, `test:`, `perf:`, `build(deps):` prefixes
 - Check Runs for gate results: `integrative:gate:tests`, `integrative:gate:mutation`, etc.
 - Minimal labels: `flow:integrative`, `state:in-progress|ready|needs-rework|merged`
-- Optional bounded labels: `quality:validated|attention`, `governance:clear|blocked`, `topic:<short>` (max 2), `needs:<short>` (max 1)
+- Optional bounded labels: `quality:validated|attention`, `governance:clear|issue`, `topic:<short>` (max 2), `needs:<short>` (max 1)
 - NO local git tags, NO one-line PR comments, NO per-gate labels
 
 **Ledger Anchors (agents edit their sections):**
@@ -104,11 +104,11 @@ Transform generic agent configurations to align with BitNet.rs's specific Integr
 Use only: freshness, format, clippy, spec, api, tests, build, features, mutation, fuzz,
 security, benchmarks, perf, docs, throughput
 
-Status MUST be: **pass | fail | skipped** (use `skipped (reason)` for N/A).
+Status should be: **pass | fail | skipped** (use `skipped (reason)` for N/A).
 
 ## Merge Predicate (Required gates)
 
-To merge, MUST be `pass`:
+For merge readiness, should be `pass`:
 - **freshness, format, clippy, tests, build, security, docs, perf, throughput**
 
 Notes:
@@ -156,7 +156,7 @@ gh api -X POST repos/:owner/:repo/check-runs \
 
 ## Pre-merge Freshness Re-check
 
-`pr-merge-prep` MUST re-check `integrative:gate:freshness` on the current HEAD:
+`pr-merge-prep` should re-check `integrative:gate:freshness` on the current HEAD:
 - If stale → route to `rebase-helper`, then re-run a fast T1 (fmt/clippy/check) before merging.
 
 ## Fallbacks, not Skips (Guidance)
