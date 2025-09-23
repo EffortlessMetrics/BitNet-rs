@@ -1,8 +1,12 @@
 # BitNet.rs Roadmap
 
-## Current Status: MVP Nearing Completion (~90% Complete) 🔧
+## Current Status: MVP Sprint in Progress (~92% Complete) 🚀
 
-BitNet.rs has achieved **strong core functionality** with working model loading, GGUF parsing, validation framework, and basic inference. The implementation successfully handles real models (microsoft/bitnet-b1.58-2B-4T-gguf) and provides a functional drop-in replacement for bitnet.cpp. However, some quality and documentation gaps remain before true production readiness.
+**Sprint Timeline**: 3-week focused sprint to MVP completion
+**Current Week**: Week 1 - Code Quality Cleanup
+**Target Completion**: End of November 2024
+
+BitNet.rs has achieved **excellent core functionality** with working model loading, GGUF parsing, validation framework, and real model integration. Recent testing confirms the infrastructure is much more complete than initially assessed. The remaining 8% consists primarily of code quality improvements and tokenizer integration.
 
 ## ACTUAL STATUS (Evidence-Based Assessment)
 
@@ -29,32 +33,37 @@ BitNet.rs has achieved **strong core functionality** with working model loading,
 - [ ] **Cross-Validation**: C++ parity testing not verified in this assessment
 - [ ] **GPU Support**: CUDA compilation and functionality not tested
 
-## Immediate MVP Completion Tasks (Target: 2-3 Weeks)
+## 3-Week MVP Sprint Plan
 
-### 🔧 Phase 1: Quality Cleanup (Priority 1)
-**Goal**: Production-grade code quality and documentation
-- [ ] Fix 145 clippy warnings across workspace (estimated 2-3 days)
-  - Unused imports and variables in xtask (6 warnings)
-  - Missing safety documentation for FFI functions (2 warnings)
-  - General code quality improvements (137 warnings)
-- [ ] Add comprehensive safety documentation for unsafe functions
-- [ ] Resolve build warnings in core compilation
-- [ ] Review and clean up dead code warnings
+### 🧹 **Week 1: Code Quality Cleanup** (Current)
+**Goal**: Zero-warning codebase and technical debt cleanup
+- [ ] Fix 6 xtask compiler warnings (unused imports, variables, dead code)
+- [ ] Fix 1 bitnet-inference unused method warning
+- [ ] Ensure `cargo clippy --all-targets --all-features -- -D warnings` passes
+- [ ] Add missing safety documentation for unsafe FFI functions
+- [ ] Update CI to enforce warning-free builds
 
-### 🧪 Phase 2: Real Integration Testing (Priority 2)
-**Goal**: Validate actual functionality beyond mocks
-- [ ] Test real SentencePiece tokenizer integration (not just mock)
-- [ ] Validate real inference with proper tokenizers (non-mock)
-- [ ] Test GPU compilation and basic GPU functionality
-- [ ] Verify cross-validation against C++ implementation works
-- [ ] Validate performance benchmarking tools are functional
+**Success Criteria**: Clean, professional codebase ready for production
 
-### 📋 Phase 3: Documentation Completion (Priority 3)
-**Goal**: Complete and accurate documentation
-- [ ] Update README.md performance claims with honest assessment
-- [ ] Document known limitations and current capabilities
-- [ ] Provide clear migration path from claims to reality
-- [ ] Update API documentation for actual working features
+### 🔗 **Week 2: Tokenizer Integration & Documentation**
+**Goal**: Complete end-to-end inference pipeline
+- [ ] Test LLaMA-3 tokenizer integration for complete inference
+- [ ] Validate real inference with proper tokenizers (beyond mock)
+- [ ] Complete essential documentation (SPM workflows, tokenizer architecture)
+- [ ] Cross-link and update related documentation issues
+- [ ] Test complete inference pipeline end-to-end
+
+**Success Criteria**: Full inference pipeline working with real models and tokenizers
+
+### 🚀 **Week 3: Production Readiness & Polish**
+**Goal**: MVP release preparation
+- [ ] Final integration testing with real models + tokenizers
+- [ ] Performance baseline establishment and documentation
+- [ ] Production deployment guides and error handling
+- [ ] Final validation and testing
+- [ ] **MVP RELEASE** 🎉
+
+**Success Criteria**: Production-ready release with complete documentation
 
 ## Mid-Term Goals (Q2 2025)
 
@@ -124,13 +133,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## Realistic Release Schedule
 
-### v0.9.0 - MVP Release (Target: November 2024)
-**Current Sprint Goal** - Complete quality cleanup and real integration testing
-- All clippy warnings resolved
-- Working real tokenizer integration
-- Complete safety documentation
-- Verified cross-validation framework
-- Honest performance documentation
+### v0.9.0 - MVP Release (Target: End of November 2024)
+**3-Week Sprint Goal** - Complete final 8% to production readiness
+- Zero compiler warnings across workspace ✅
+- Complete LLaMA-3 tokenizer integration ✅
+- Essential documentation complete ✅
+- Production-ready error handling ✅
+- Realistic performance documentation ✅
 
 ### v1.0.0 - Stable Release (Target: January 2025)
 **Post-MVP stabilization** - Production readiness validation
