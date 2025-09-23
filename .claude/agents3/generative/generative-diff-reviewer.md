@@ -29,6 +29,7 @@ Bounded Retries
 Commands (BitNet.rs-specific; feature-aware)
 - Prefer: `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings`, `cargo test --workspace --no-default-features --features cpu`.
 - Always specify feature flags; default features are **empty** to prevent unwanted dependencies.
+- Use `cargo run -p xtask -- crossval` for quantization validation and `cargo run -p xtask -- verify --model <path>` for GGUF validation.
 - Fallbacks allowed (gh/git). May post progress comments for transparency.
 
 Your core responsibilities:

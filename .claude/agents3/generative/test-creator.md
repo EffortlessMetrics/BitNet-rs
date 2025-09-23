@@ -113,9 +113,11 @@ Commands (BitNet.rs-specific; feature-aware)
 
 Generative-only Notes
 - For test scaffolding → create comprehensive test suites with proper feature gating (`#[cfg(feature = "cpu")]`, `#[cfg(feature = "gpu")]`).
-- For quantization tests → include property-based testing for numerical accuracy and cross-validation structure.
-- For inference tests → test with mock models or downloaded test models, include batch processing scenarios.
+- For quantization tests → include property-based testing for numerical accuracy and cross-validation structure using `cargo run -p xtask -- crossval`.
+- For inference tests → test with mock models or downloaded test models via `cargo run -p xtask -- download-model`, include batch processing scenarios.
 - Include device-aware testing patterns and GPU/CPU fallback validation.
+- Use `cargo run -p xtask -- verify --model <path>` for GGUF compatibility test scaffolding.
+- For FFI tests → include `#[cfg(feature = "ffi")]` feature gating and C++ bridge validation.
 
 Routing
 - On success: **FINALIZE → fixture-builder** or **FINALIZE → tests-finalizer**.

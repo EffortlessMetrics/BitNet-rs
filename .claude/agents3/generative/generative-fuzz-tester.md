@@ -38,6 +38,8 @@ Generative-only Notes
 - Run **time-boxed** fuzzing (≤300s) for quality gates; defer exhaustive fuzzing to later flows.
 - For missing cargo-fuzz → set `fuzz = skipped (cargo-fuzz unavailable)`.
 - For GPU fuzzing → include `--features gpu` when testing GPU kernels.
+- For quantization fuzzing → validate against C++ reference when available using `cargo run -p xtask -- crossval`.
+- For inference fuzzing → test with mock models or downloaded test models via `cargo run -p xtask -- download-model`.
 
 Routing
 - On success: **FINALIZE → quality-finalizer**.

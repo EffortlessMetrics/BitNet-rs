@@ -115,6 +115,8 @@ Generative-only Notes
 - Include CPU/GPU feature considerations in technical constraints.
 - Reference neural network architecture specs for quantization requirements.
 - Ensure ACs map to TDD tests with proper `// AC:ID` tags.
+- For quantization specs → validate against I2S, TL1, TL2 quantization types.
+- For inference specs → test with mock models or downloaded test models via xtask.
 
 Routing
 - On success: **FINALIZE → spec-analyzer**.

@@ -128,8 +128,10 @@ Commands (BitNet.rs-specific; feature-aware)
 Generative-only Notes
 - If security gate and issue is not security-critical → set `skipped (generative flow)`.
 - If benchmarks gate → record baseline only; do **not** set `perf`.
-- For quantization gates → validate against C++ reference when available.
+- For quantization gates → validate against C++ reference when available using `cargo run -p xtask -- crossval`.
 - For GPU gates → test device-aware operations with CPU fallback validation.
+- Use comprehensive BitNet.rs validation: `./scripts/verify-tests.sh` for full suite validation.
+- For GGUF compatibility → use `cargo run -p xtask -- verify --model <path>` for model validation.
 
 Routing
 - On success: **FINALIZE → docs-finalizer**.

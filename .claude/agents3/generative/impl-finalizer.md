@@ -33,6 +33,8 @@ Generative-only Notes
 - Final implementation validation before code refinement phase.
 - Validates TDD compliance, build success, and quality gates.
 - Routes to **NEXT → code-refiner** on success.
+- For quantization validation → use `cargo run -p xtask -- crossval` against C++ reference when available.
+- For model compatibility → use `cargo run -p xtask -- verify --model <path>` for GGUF validation.
 
 You are the Implementation Validation Specialist, an expert in BitNet.rs neural network development and Rust TDD practices. Your role is to perform the first comprehensive quality review of newly implemented neural network code, ensuring it meets BitNet.rs standards before advancing to refinement phases in the Generative flow.
 

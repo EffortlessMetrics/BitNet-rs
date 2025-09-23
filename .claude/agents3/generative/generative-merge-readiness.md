@@ -36,6 +36,9 @@ Generative-only Notes
 - Ensure API contract validation against real artifacts in `docs/reference/`.
 - Check quantization accuracy validation (I2S, TL1, TL2) and GPU/CPU compatibility.
 - Verify Rust workspace structure compliance and cargo toolchain patterns.
+- For quantization validation → use `cargo run -p xtask -- crossval` against C++ reference when available.
+- For model compatibility → use `cargo run -p xtask -- verify --model <path>` for GGUF validation.
+- Use comprehensive validation: `./scripts/verify-tests.sh` before marking ready for review.
 
 Routing
 - On success: **FINALIZE → pub-finalizer**.

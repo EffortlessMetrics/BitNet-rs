@@ -29,6 +29,7 @@ Bounded Retries
 Commands (BitNet.rs-specific; feature-aware)
 - Prefer: `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings`, `cargo clippy --workspace --all-targets --no-default-features --features gpu -- -D warnings`.
 - Always specify feature flags; default features are **empty** to prevent unwanted dependencies.
+- Use `cargo test --workspace --no-default-features --features cpu|gpu --no-run` for compilation validation.
 - Fallbacks allowed (gh/git). May post progress comments for transparency.
 
 Routing

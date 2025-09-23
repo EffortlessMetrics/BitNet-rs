@@ -35,6 +35,8 @@ Generative-only Notes
 - Run **focused mutation testing** on neural network critical paths: quantization, kernels, inference.
 - Score threshold: **80%** for core neural network modules, **70%** for supporting infrastructure.
 - Route forward with evidence of mutation scores and surviving mutants in hot neural network files.
+- For quantization mutation testing → validate against C++ reference when available using `cargo run -p xtask -- crossval`.
+- For inference mutation testing → test with mock models or downloaded test models via `cargo run -p xtask -- download-model`.
 
 Routing
 - On success: **FINALIZE → fuzz-tester**.
