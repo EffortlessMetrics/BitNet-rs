@@ -425,6 +425,7 @@ mod tests {
     use super::*;
     use crate::{BYTES_PER_KB, BYTES_PER_MB, TestError};
     use std::time::Duration;
+    use tokio::time::timeout;
 
     struct MockTestCase {
         name: String,
@@ -483,10 +484,22 @@ mod tests {
         // Test successful execution
         // Use Fixtures facade for consistent API
         let fixtures = crate::Fixtures::new(&Default::default()).await.unwrap();
-        fixtures.ctx();
-        assert!(debug_test.setup(()).await.is_ok());
-        assert!(debug_test.execute().await.is_ok());
-        assert!(debug_test.cleanup().await.is_ok());
+
+        // Setup test with fixtures context - add timeout to prevent stalls
+        #[allow(clippy::unit_arg)]
+        let setup = timeout(Duration::from_secs(5), debug_test.setup(fixtures.ctx())).await;
+        assert!(setup.is_ok(), "setup timed out");
+        setup.unwrap().expect("setup failed");
+
+        // Execute should succeed - add timeout to prevent stalls
+        let exec = timeout(Duration::from_secs(10), debug_test.execute()).await;
+        assert!(exec.is_ok(), "execute timed out");
+        exec.unwrap().expect("execute returned error");
+
+        // Cleanup - add timeout to prevent stalls
+        let clean = timeout(Duration::from_secs(5), debug_test.cleanup()).await;
+        assert!(clean.is_ok(), "cleanup timed out");
+        clean.unwrap().expect("cleanup failed");
 
         // Verify debug data was captured
         let debug_report = debugger.generate_debug_report().await.unwrap();
@@ -506,10 +519,22 @@ mod tests {
         // Test failure handling
         // Use Fixtures facade for consistent API
         let fixtures = crate::Fixtures::new(&Default::default()).await.unwrap();
-        fixtures.ctx();
-        assert!(debug_test.setup(()).await.is_ok());
-        assert!(debug_test.execute().await.is_err());
-        assert!(debug_test.cleanup().await.is_ok());
+
+        // Setup test with fixtures context - add timeout to prevent stalls
+        #[allow(clippy::unit_arg)]
+        let setup = timeout(Duration::from_secs(5), debug_test.setup(fixtures.ctx())).await;
+        assert!(setup.is_ok(), "setup timed out");
+        setup.unwrap().expect("setup failed");
+
+        // Execute should **error** quickly instead of stalling
+        let exec = timeout(Duration::from_secs(10), debug_test.execute()).await;
+        assert!(exec.is_ok(), "execute timed out (likely deadlock or missing cancel)");
+        assert!(exec.unwrap().is_err(), "expected execute() to error");
+
+        // Cleanup - add timeout to prevent stalls
+        let clean = timeout(Duration::from_secs(5), debug_test.cleanup()).await;
+        assert!(clean.is_ok(), "cleanup timed out");
+        clean.unwrap().expect("cleanup failed");
 
         // Verify debug data captured the failure
         let debug_report = debugger.generate_debug_report().await.unwrap();

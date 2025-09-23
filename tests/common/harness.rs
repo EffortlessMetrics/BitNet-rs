@@ -268,6 +268,8 @@ impl TestHarness {
 
         // Call the test's setup method with stable API
         {
+            #[allow(clippy::unit_arg)]
+            // FixtureCtx is () when fixtures disabled, &FixtureManager when enabled
             test_case.setup(self.fixtures.ctx()).await?;
         }
 
@@ -439,6 +441,8 @@ impl TestHarnessClone {
 
         // Call the test's setup method with stable API
         {
+            #[allow(clippy::unit_arg)]
+            // FixtureCtx is () when fixtures disabled, &FixtureManager when enabled
             test_case.setup(self.fixtures.ctx()).await?;
         }
 

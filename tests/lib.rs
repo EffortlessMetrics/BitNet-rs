@@ -1,3 +1,7 @@
+#![deny(unused_must_use)]
+// Note: clippy::unit_arg would be too aggressive for our conditional FixtureCtx type
+// (which is () when fixtures disabled, &FixtureManager when enabled)
+
 // Re-export modules for backward compatibility with existing tests
 pub mod common;
 pub mod prelude;

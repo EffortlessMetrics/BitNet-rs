@@ -97,6 +97,7 @@ impl Fixtures {
     /// Returns the fixture context expected by TestCase::setup().
     /// This provides a stable API that works across all feature configurations.
     #[inline]
+    #[must_use = "pass this to setup(...): setup(self.fixtures.ctx())"]
     pub fn ctx(&self) -> harness::FixtureCtx<'_> {
         #[cfg(feature = "fixtures")]
         {
@@ -106,6 +107,8 @@ impl Fixtures {
         #[cfg(not(feature = "fixtures"))]
         {
             // Return unit type when fixtures are disabled
+            #[allow(clippy::unused_unit)]
+            ()
         }
     }
 }
