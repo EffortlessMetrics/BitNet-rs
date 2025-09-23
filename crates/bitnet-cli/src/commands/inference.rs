@@ -60,7 +60,7 @@ use tracing::{debug, error, info, warn};
 use bitnet_inference::{InferenceEngine, SamplingConfig};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::Tokenizer;
-use candle_core::{Device, utils::cuda_is_available};
+use candle_core::{Device, backend::BackendDevice};
 
 use crate::config::CliConfig;
 
@@ -574,9 +574,9 @@ impl InferenceCommand {
             "cuda" => {
                 #[cfg(feature = "gpu")]
                 {
-                    if cuda_is_available() {
+                    if candle_core::utils::cuda_is_available() {
                         info!("Using CUDA device");
-                        Ok(Device::Cuda(candle_core::CudaDevice::new_with_stream(0)?))
+                        Ok(Device::Cuda(candle_core::CudaDevice::new(0)?))
                     } else {
                         anyhow::bail!("CUDA requested but no GPU available");
                     }
@@ -589,9 +589,9 @@ impl InferenceCommand {
             "auto" => {
                 #[cfg(feature = "gpu")]
                 {
-                    if cuda_is_available() {
+                    if candle_core::utils::cuda_is_available() {
                         info!("Auto-select: CUDA");
-                        Ok(Device::Cuda(candle_core::CudaDevice::new_with_stream(0)?))
+                        Ok(Device::Cuda(candle_core::CudaDevice::new(0)?))
                     } else {
                         info!("Auto-select: CPU (no GPU available)");
                         Ok(Device::Cpu)
@@ -876,9 +876,12 @@ impl InferenceCommand {
     /// Run interactive mode
     async fn run_interactive_mode(
         &self,
-        _engine: InferenceEngine,
-        _tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
+        engine: InferenceEngine,
+        tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
     ) -> Result<()> {
+        // Temporary: keep references alive; TODO(use in REPL)
+        let _keep_alive = (&engine, &tokenizer);
+
         println!("{}", style("BitNet Interactive Mode").bold().cyan());
         println!("Type your prompts below. Press Ctrl+C to exit, Ctrl+D for new session.\n");
 
@@ -919,11 +922,13 @@ impl InferenceCommand {
                     }
 
                     // Prepare prompt with history if using chat template
-                    let _prompt = if let Some(template) = &self.chat_template {
+                    let prompt = if let Some(template) = &self.chat_template {
                         self.format_chat_prompt(template, &conversation_history, input)?
                     } else {
                         input.to_string()
                     };
+                    // TODO: use prompt in generation
+                    let _ = &prompt;
 
                     // Generate response
                     let start_time = Instant::now();

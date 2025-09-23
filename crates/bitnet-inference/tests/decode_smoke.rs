@@ -3,16 +3,12 @@
 //! This test validates that inference produces non-flat logits after one decode step.
 //! It's kept behind a debug feature to avoid blocking CI with complex model loading.
 
-#![allow(unexpected_cfgs)]
-#![cfg(feature = "debug-asserts")]
-
-use bitnet_common::Device;
-use bitnet_inference::*;
 use bitnet_tokenizers::MockTokenizer;
 use std::sync::Arc;
 
 /// Minimal engine with mock tokenizer and tiny config, one prefill + one decode.
 /// We only assert that logits variance (std) is > 0 after one token.
+#[cfg_attr(not(debug_assertions), ignore)]
 #[test]
 fn decode_smoke_logits_not_flat() {
     // Use mock tokenizer for testing
@@ -44,6 +40,6 @@ fn decode_smoke_logits_not_flat() {
 
     // For now, just verify mock tokenizer works
     let text = "test";
-    let tokens = tokenizer.encode(text).unwrap();
+    let tokens = tokenizer.encode(text, false, false).unwrap();
     assert!(!tokens.is_empty(), "tokenizer should produce tokens");
 }

@@ -4218,15 +4218,15 @@ struct InferenceOutcome {
 #[allow(clippy::too_many_arguments)]
 fn run_inference_internal(
     model_path: &Path,
-    _tokenizer_path: Option<&Path>,
+    tokenizer_path: Option<&Path>,
     prompt: &str,
     max_new_tokens: usize,
     temperature: f32,
     seed: u64,
     gpu: bool,
     allow_mock: bool,
-    _add_bos: bool,
-    _add_special: bool,
+    add_bos: bool,
+    add_special: bool,
 ) -> Result<InferenceOutcome> {
     // The model file must exist regardless of --allow-mock
     if !model_path.exists() {
