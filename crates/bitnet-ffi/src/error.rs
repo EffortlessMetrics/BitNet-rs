@@ -69,7 +69,11 @@ impl From<BitNetError> for BitNetCError {
                     BitNetCError::ModelLoadFailed(format!("Unsupported model version: {}", version))
                 }
                 bitnet_common::ModelError::FileIOError { path, source } => {
-                    BitNetCError::ModelNotFound(format!("File I/O error for {}: {}", path.display(), source))
+                    BitNetCError::ModelNotFound(format!(
+                        "File I/O error for {}: {}",
+                        path.display(),
+                        source
+                    ))
                 }
                 bitnet_common::ModelError::GGUFFormatError { message, details: _ } => {
                     BitNetCError::ModelLoadFailed(format!("GGUF format error: {}", message))

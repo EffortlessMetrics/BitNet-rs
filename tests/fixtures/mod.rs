@@ -22,25 +22,25 @@
 //! - Numerical accuracy testing with configurable tolerances
 //! - Performance benchmarking and regression detection
 
-pub mod device_aware;
-pub mod model_artifacts;
-pub mod quantization;
 pub mod cross_validation;
-pub mod performance;
+pub mod device_aware;
 pub mod error_handling;
+pub mod model_artifacts;
+pub mod performance;
+pub mod quantization;
 
 // Re-export common fixture types
-pub use device_aware::{DeviceAwareFixtures, GpuTestEnvironment};
-pub use model_artifacts::{ModelFixtures, TestModelConfig, RealModelFixtures};
-pub use quantization::{QuantizationFixtures, QuantizationTestVectors};
-pub use cross_validation::{CrossValidationFixtures, ReferenceData};
-pub use performance::{PerformanceFixtures, BenchmarkTargets};
-pub use error_handling::{ErrorHandlingFixtures, FailureScenarios};
+pub use cross_validation::CrossValidationFixtures;
+pub use device_aware::DeviceAwareFixtures;
+pub use error_handling::ErrorHandlingFixtures;
+pub use model_artifacts::ModelFixtures;
+pub use performance::PerformanceFixtures;
+pub use quantization::QuantizationFixtures;
 
-use bitnet_common::{Device, ModelError, InferenceError, Result};
-use std::path::{Path, PathBuf};
-use std::time::Duration;
+use bitnet_common::{Device, Result};
 use std::env;
+use std::path::PathBuf;
+use std::time::Duration;
 
 /// Main fixture manager for real model integration tests
 pub struct RealModelIntegrationFixtures {
@@ -95,11 +95,7 @@ impl TestEnvironmentConfig {
             _ => {
                 // Auto-detect based on CI environment and model availability
                 if env::var("CI").is_ok() {
-                    if model_path.is_some() {
-                        TestTier::Standard
-                    } else {
-                        TestTier::Fast
-                    }
+                    if model_path.is_some() { TestTier::Standard } else { TestTier::Fast }
                 } else {
                     TestTier::Standard
                 }
@@ -114,12 +110,9 @@ impl TestEnvironmentConfig {
             use_real_models,
             device_preference,
             strict_mode: env::var("BITNET_STRICT_TOKENIZERS").map(|v| v == "1").unwrap_or(false)
-                       || env::var("BITNET_STRICT_NO_FAKE_GPU").map(|v| v == "1").unwrap_or(false),
+                || env::var("BITNET_STRICT_NO_FAKE_GPU").map(|v| v == "1").unwrap_or(false),
             timeout: Duration::from_secs(
-                env::var("BITNET_TEST_TIMEOUT")
-                    .ok()
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or(300) // 5 minutes default
+                env::var("BITNET_TEST_TIMEOUT").ok().and_then(|s| s.parse().ok()).unwrap_or(300), // 5 minutes default
             ),
             tier,
         }
@@ -127,8 +120,7 @@ impl TestEnvironmentConfig {
 
     /// Check if real model testing is enabled and available
     pub fn real_models_available(&self) -> bool {
-        self.use_real_models &&
-        self.model_path.as_ref().map(|p| p.exists()).unwrap_or(false)
+        self.use_real_models && self.model_path.as_ref().map(|p| p.exists()).unwrap_or(false)
     }
 
     /// Get model path or skip test with appropriate message
@@ -136,8 +128,10 @@ impl TestEnvironmentConfig {
         match &self.model_path {
             Some(path) if path.exists() => path.clone(),
             Some(path) => {
-                panic!("Model file not found at {}, set BITNET_GGUF or use BITNET_TEST_TIER=fast",
-                       path.display());
+                panic!(
+                    "Model file not found at {}, set BITNET_GGUF or use BITNET_TEST_TIER=fast",
+                    path.display()
+                );
             }
             None => {
                 match self.tier {
@@ -150,7 +144,9 @@ impl TestEnvironmentConfig {
                             panic!("Real model tests require BITNET_GGUF in CI environment");
                         }
                         // For local development, skip gracefully
-                        eprintln!("Skipping real model test - set BITNET_GGUF environment variable");
+                        eprintln!(
+                            "Skipping real model test - set BITNET_GGUF environment variable"
+                        );
                         std::process::exit(0);
                     }
                 }
@@ -240,9 +236,10 @@ impl RealModelIntegrationFixtures {
                 error_handling_fixtures: &self.error_handling_fixtures,
                 performance_fixtures: &self.performance_fixtures,
             }),
-            _ => Err(bitnet_common::BitNetError::Validation(
-                format!("Invalid acceptance criteria ID: {}", ac_id)
-            )),
+            _ => Err(bitnet_common::BitNetError::Validation(format!(
+                "Invalid acceptance criteria ID: {}",
+                ac_id
+            ))),
         }
     }
 }
@@ -277,8 +274,10 @@ pub enum ACTestFixtures<'a> {
 macro_rules! skip_if_tier_insufficient {
     ($config:expr, $required_tier:expr) => {
         if $config.tier < $required_tier {
-            eprintln!("Skipping test - requires tier {:?}, current tier {:?}",
-                     $required_tier, $config.tier);
+            eprintln!(
+                "Skipping test - requires tier {:?}, current tier {:?}",
+                $required_tier, $config.tier
+            );
             return;
         }
     };
@@ -306,16 +305,12 @@ pub mod test_utils {
 
     impl TempTestEnv {
         pub async fn new() -> Result<Self> {
-            let temp_dir = tempfile::tempdir()
-                .map_err(|e| bitnet_common::BitNetError::Io(e))?;
+            let temp_dir = tempfile::tempdir().map_err(|e| bitnet_common::BitNetError::Io(e))?;
 
             let mut fixtures = RealModelIntegrationFixtures::new();
             fixtures.initialize().await?;
 
-            Ok(Self {
-                fixtures,
-                _temp_dir: temp_dir,
-            })
+            Ok(Self { fixtures, _temp_dir: temp_dir })
         }
     }
 
@@ -323,17 +318,19 @@ pub mod test_utils {
         fn drop(&mut self) {
             // Async cleanup in drop - use tokio::task::block_in_place for test contexts
             let _ = tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current().block_on(
-                    self.fixtures.cleanup()
-                )
+                tokio::runtime::Handle::current().block_on(self.fixtures.cleanup())
             });
         }
     }
 
     /// Skip test with appropriate message based on configuration
     pub fn skip_test_with_reason(config: &TestEnvironmentConfig, reason: &str) -> ! {
-        eprintln!("SKIPPED: {} (tier: {:?}, real_models: {})",
-                 reason, config.tier, config.real_models_available());
+        eprintln!(
+            "SKIPPED: {} (tier: {:?}, real_models: {})",
+            reason,
+            config.tier,
+            config.real_models_available()
+        );
         std::process::exit(0);
     }
 }

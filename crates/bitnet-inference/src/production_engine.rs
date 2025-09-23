@@ -11,19 +11,21 @@
 //! - Comprehensive performance monitoring
 //! - Prefill and batch inference support
 
-use crate::{InferenceEngine, GenerationConfig};
 use crate::engine::PerformanceMetrics;
+use crate::{GenerationConfig, InferenceEngine};
 use bitnet_common::{Device, InferenceError, Result};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+#[allow(unused_imports)]
+use std::time::Instant;
 use tokio::sync::RwLock;
 use tracing::info;
 
 /// Enhanced timing metrics for detailed performance tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TimingMetrics {
     /// Prefill latency in milliseconds
     pub prefill_ms: Option<u64>,
@@ -35,18 +37,6 @@ pub struct TimingMetrics {
     pub tokenization_decode_ms: Option<u64>,
     /// End-to-end total time in milliseconds
     pub total_ms: u64,
-}
-
-impl Default for TimingMetrics {
-    fn default() -> Self {
-        Self {
-            prefill_ms: None,
-            decode_ms: None,
-            tokenization_encode_ms: None,
-            tokenization_decode_ms: None,
-            total_ms: 0,
-        }
-    }
 }
 
 /// Enhanced throughput metrics for performance analysis
@@ -148,7 +138,10 @@ impl PerformanceMetricsCollector {
             tokens_per_second: self.throughput_metrics.end_to_end_tokens_per_sec,
             first_token_latency_ms: self.timing_metrics.prefill_ms,
             average_token_latency_ms: if self.throughput_metrics.total_tokens > 0 {
-                Some(self.timing_metrics.total_ms as f64 / self.throughput_metrics.total_tokens as f64)
+                Some(
+                    self.timing_metrics.total_ms as f64
+                        / self.throughput_metrics.total_tokens as f64,
+                )
             } else {
                 None
             },
@@ -198,7 +191,7 @@ impl DeviceManager {
         };
 
         Self {
-            primary_device: device.clone(),
+            primary_device: device,
             fallback_device: Device::Cpu, // Always fallback to CPU
             capabilities,
         }
@@ -211,7 +204,7 @@ impl DeviceManager {
         // 3. Test device functionality
         // 4. Return best available device
 
-        self.primary_device.clone()
+        self.primary_device
     }
 
     pub fn validate_device_compatibility(&self, _required_memory: u64) -> Result<()> {
@@ -268,16 +261,20 @@ impl GenerationResult {
 /// Production inference engine with enhanced capabilities
 pub struct ProductionInferenceEngine {
     /// Underlying inference engine
+    #[allow(dead_code)]
     engine: InferenceEngine,
     /// Model reference
+    #[allow(dead_code)]
     model: Arc<dyn Model>,
     /// Tokenizer reference
+    #[allow(dead_code)]
     tokenizer: Arc<dyn Tokenizer>,
     /// Performance metrics collector
     metrics_collector: Arc<RwLock<PerformanceMetricsCollector>>,
     /// Device manager
     device_manager: DeviceManager,
     /// Configuration
+    #[allow(dead_code)]
     config: ProductionInferenceConfig,
 }
 
@@ -375,7 +372,11 @@ impl ProductionInferenceEngine {
     /// Generate text with comprehensive performance tracking
     #[cfg(feature = "inference")]
     #[instrument(skip(self))]
-    pub async fn generate_text(&mut self, prompt: &str, config: GenerationConfig) -> Result<GenerationResult> {
+    pub async fn generate_text(
+        &mut self,
+        prompt: &str,
+        config: GenerationConfig,
+    ) -> Result<GenerationResult> {
         let overall_start = Instant::now();
         let mut metrics = PerformanceMetricsCollector::new();
         metrics.set_device_type(&self.device_manager.primary_device);
@@ -384,11 +385,11 @@ impl ProductionInferenceEngine {
 
         // Tokenization phase
         let encode_start = Instant::now();
-        let input_tokens = self.tokenizer
-            .encode(prompt, true, false)
-            .map_err(|e| bitnet_common::BitNetError::Inference(
-                InferenceError::TokenizationFailed { reason: e.to_string() }
-            ))?;
+        let input_tokens = self.tokenizer.encode(prompt, true, false).map_err(|e| {
+            bitnet_common::BitNetError::Inference(InferenceError::TokenizationFailed {
+                reason: e.to_string(),
+            })
+        })?;
         let encode_duration = encode_start.elapsed();
         metrics.record_tokenization_encode(encode_duration);
 
@@ -397,7 +398,9 @@ impl ProductionInferenceEngine {
         // Prefill phase (if strategy requires it)
         let should_prefill = match self.config.prefill_strategy {
             PrefillStrategy::Always => true,
-            PrefillStrategy::Adaptive { threshold_tokens } => input_tokens.len() >= threshold_tokens,
+            PrefillStrategy::Adaptive { threshold_tokens } => {
+                input_tokens.len() >= threshold_tokens
+            }
             PrefillStrategy::Never => false,
         };
 
@@ -411,19 +414,21 @@ impl ProductionInferenceEngine {
 
         // Generation phase
         let generation_start = Instant::now();
-        let generated_text = self.engine.generate_with_config(prompt, &config).await
-            .map_err(|e| bitnet_common::BitNetError::Inference(
-                InferenceError::GenerationFailed { reason: e.to_string() }
-            ))?;
+        let generated_text =
+            self.engine.generate_with_config(prompt, &config).await.map_err(|e| {
+                bitnet_common::BitNetError::Inference(InferenceError::GenerationFailed {
+                    reason: e.to_string(),
+                })
+            })?;
         let generation_duration = generation_start.elapsed();
 
         // Tokenization decode phase
         let decode_start = Instant::now();
-        let output_tokens = self.tokenizer
-            .encode(&generated_text, false, false)
-            .map_err(|e| bitnet_common::BitNetError::Inference(
-                InferenceError::TokenizationFailed { reason: e.to_string() }
-            ))?;
+        let output_tokens = self.tokenizer.encode(&generated_text, false, false).map_err(|e| {
+            bitnet_common::BitNetError::Inference(InferenceError::TokenizationFailed {
+                reason: e.to_string(),
+            })
+        })?;
         let decode_duration = decode_start.elapsed();
         metrics.record_tokenization_decode(decode_duration);
 
@@ -466,7 +471,11 @@ impl ProductionInferenceEngine {
 
     /// Mock generation when inference feature is disabled
     #[cfg(not(feature = "inference"))]
-    pub async fn generate_text(&mut self, _prompt: &str, _config: GenerationConfig) -> Result<GenerationResult> {
+    pub async fn generate_text(
+        &mut self,
+        _prompt: &str,
+        _config: GenerationConfig,
+    ) -> Result<GenerationResult> {
         Err(bitnet_common::BitNetError::Inference(InferenceError::GenerationFailed {
             reason: "Inference feature not enabled - compile with --features inference".to_string(),
         }))
@@ -507,11 +516,7 @@ impl ProductionInferenceEngine {
         info!("Warming up production inference engine");
 
         let warmup_prompt = "Hello";
-        let config = GenerationConfig {
-            max_new_tokens: 1,
-            temperature: 1.0,
-            ..Default::default()
-        };
+        let config = GenerationConfig { max_new_tokens: 1, temperature: 1.0, ..Default::default() };
 
         let _result = self.generate_text(warmup_prompt, config).await?;
         info!("Warmup completed successfully");
@@ -533,9 +538,7 @@ mod tests {
 
     impl MockModel {
         fn new() -> Self {
-            Self {
-                config: BitNetConfig::default(),
-            }
+            Self { config: BitNetConfig::default() }
         }
     }
 
@@ -564,7 +567,12 @@ mod tests {
     struct MockTokenizer;
 
     impl bitnet_tokenizers::Tokenizer for MockTokenizer {
-        fn encode(&self, _text: &str, _add_bos: bool, _add_special: bool) -> bitnet_common::Result<Vec<u32>> {
+        fn encode(
+            &self,
+            _text: &str,
+            _add_bos: bool,
+            _add_special: bool,
+        ) -> bitnet_common::Result<Vec<u32>> {
             Ok(vec![1, 2, 3])
         }
 
@@ -620,13 +628,8 @@ mod tests {
         let throughput = ThroughputMetrics::default();
         let performance = PerformanceMetrics::default();
 
-        let mut result = GenerationResult::new(
-            "test".to_string(),
-            5,
-            performance,
-            timing,
-            throughput,
-        );
+        let mut result =
+            GenerationResult::new("test".to_string(), 5, performance, timing, throughput);
 
         result.calculate_quality_score();
         assert!(result.quality_score.is_some());

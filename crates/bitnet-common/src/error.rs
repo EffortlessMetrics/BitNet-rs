@@ -41,10 +41,7 @@ pub enum ModelError {
         source: std::io::Error,
     },
     #[error("GGUF format error: {message}")]
-    GGUFFormatError {
-        message: String,
-        details: ValidationErrorDetails,
-    },
+    GGUFFormatError { message: String, details: ValidationErrorDetails },
 }
 
 /// Validation error details for enhanced error reporting

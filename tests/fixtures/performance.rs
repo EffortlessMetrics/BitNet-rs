@@ -3,11 +3,11 @@
 //! Provides comprehensive performance testing infrastructure with baseline targets,
 //! regression detection, and detailed metrics collection for BitNet.rs components.
 
-use bitnet_common::{Device, Result, BitNetError};
-use serde::{Serialize, Deserialize};
+use super::TestEnvironmentConfig;
+use bitnet_common::{BitNetError, Device, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use super::TestEnvironmentConfig;
 
 /// Performance benchmark targets for different operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -129,23 +129,23 @@ impl PerformanceFixtures {
                 validation_overhead_ms: 20, // 20ms validation overhead
             },
             quantization: QuantizationTargets {
-                i2s_throughput_gops: 10.0,  // Conservative CPU estimate
+                i2s_throughput_gops: 10.0, // Conservative CPU estimate
                 tl1_throughput_gops: 8.0,
                 tl2_throughput_gops: 6.0,
-                cpu_gpu_speedup_min: 1.0,   // No GPU acceleration
-                batch_efficiency_min: 0.8,  // 80% batch efficiency
+                cpu_gpu_speedup_min: 1.0,  // No GPU acceleration
+                batch_efficiency_min: 0.8, // 80% batch efficiency
             },
             inference: InferenceTargets {
-                first_token_latency_ms: 200, // 200ms first token on CPU
-                tokens_per_second: 20.0,     // 20 tokens/sec
+                first_token_latency_ms: 200,      // 200ms first token on CPU
+                tokens_per_second: 20.0,          // 20 tokens/sec
                 batch_throughput_multiplier: 1.5, // 1.5x with batching
-                memory_efficiency_min: 0.7,  // 70% memory efficiency
+                memory_efficiency_min: 0.7,       // 70% memory efficiency
             },
             memory: MemoryTargets {
-                max_memory_mb: 4096,         // 4GB max for CPU
+                max_memory_mb: 4096,          // 4GB max for CPU
                 memory_leak_threshold_mb: 10, // 10MB leak threshold
-                cache_efficiency_min: 0.8,   // 80% cache hit rate
-                gc_overhead_max: 0.1,        // 10% GC overhead
+                cache_efficiency_min: 0.8,    // 80% cache hit rate
+                gc_overhead_max: 0.1,         // 10% GC overhead
             },
         };
         targets.insert(Device::Cpu, cpu_targets);
@@ -164,20 +164,20 @@ impl PerformanceFixtures {
                     i2s_throughput_gops: 100.0, // 10x CPU performance
                     tl1_throughput_gops: 80.0,
                     tl2_throughput_gops: 60.0,
-                    cpu_gpu_speedup_min: 5.0,   // 5x speedup minimum
-                    batch_efficiency_min: 0.9,  // 90% batch efficiency
+                    cpu_gpu_speedup_min: 5.0,  // 5x speedup minimum
+                    batch_efficiency_min: 0.9, // 90% batch efficiency
                 },
                 inference: InferenceTargets {
-                    first_token_latency_ms: 50,  // 50ms first token on GPU
-                    tokens_per_second: 200.0,    // 200 tokens/sec
+                    first_token_latency_ms: 50,       // 50ms first token on GPU
+                    tokens_per_second: 200.0,         // 200 tokens/sec
                     batch_throughput_multiplier: 4.0, // 4x with batching
-                    memory_efficiency_min: 0.9,  // 90% memory efficiency
+                    memory_efficiency_min: 0.9,       // 90% memory efficiency
                 },
                 memory: MemoryTargets {
-                    max_memory_mb: 8192,         // 8GB max for GPU
+                    max_memory_mb: 8192,          // 8GB max for GPU
                     memory_leak_threshold_mb: 50, // 50MB leak threshold (GPU)
-                    cache_efficiency_min: 0.95,  // 95% cache hit rate
-                    gc_overhead_max: 0.05,       // 5% GC overhead
+                    cache_efficiency_min: 0.95,   // 95% cache hit rate
+                    gc_overhead_max: 0.05,        // 5% GC overhead
                 },
             };
             targets.insert(Device::Cuda(0), gpu_targets);
@@ -223,9 +223,15 @@ impl PerformanceFixtures {
         if baseline_path.exists() {
             match tokio::fs::read_to_string(baseline_path).await {
                 Ok(content) => {
-                    if let Ok(historical_data) = serde_json::from_str::<HashMap<String, Vec<PerformanceMeasurement>>>(&content) {
+                    if let Ok(historical_data) = serde_json::from_str::<
+                        HashMap<String, Vec<PerformanceMeasurement>>,
+                    >(&content)
+                    {
                         self.historical_results = historical_data;
-                        println!("Loaded historical performance data from: {}", baseline_path.display());
+                        println!(
+                            "Loaded historical performance data from: {}",
+                            baseline_path.display()
+                        );
                     }
                 }
                 Err(e) => {
@@ -254,10 +260,7 @@ impl PerformanceFixtures {
                 let measurement = self.create_mock_measurement(operation, &suite.device);
 
                 let key = format!("{}_{:?}", operation, suite.device);
-                self.historical_results
-                    .entry(key)
-                    .or_insert_with(Vec::new)
-                    .push(measurement);
+                self.historical_results.entry(key).or_insert_with(Vec::new).push(measurement);
             }
         }
 
@@ -285,9 +288,8 @@ impl PerformanceFixtures {
         };
 
         // Add some realistic variation
-        let measurements: Vec<f64> = (0..10)
-            .map(|i| base_time * (0.9 + 0.2 * (i as f64) / 10.0))
-            .collect();
+        let measurements: Vec<f64> =
+            (0..10).map(|i| base_time * (0.9 + 0.2 * (i as f64) / 10.0)).collect();
 
         let statistics = Self::calculate_statistics(&measurements);
 
@@ -311,9 +313,7 @@ impl PerformanceFixtures {
         let min = sorted[0];
         let max = sorted[sorted.len() - 1];
 
-        let variance = sorted.iter()
-            .map(|x| (x - mean).powi(2))
-            .sum::<f64>() / sorted.len() as f64;
+        let variance = sorted.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / sorted.len() as f64;
         let std_dev = variance.sqrt();
 
         let p95_idx = (sorted.len() as f64 * 0.95) as usize;
@@ -337,15 +337,17 @@ impl PerformanceFixtures {
         for (device, targets) in &self.benchmark_targets {
             // Basic sanity checks
             if targets.inference.first_token_latency_ms == 0 {
-                return Err(BitNetError::Validation(
-                    format!("Invalid benchmark target for device {:?}: zero first token latency", device)
-                ));
+                return Err(BitNetError::Validation(format!(
+                    "Invalid benchmark target for device {:?}: zero first token latency",
+                    device
+                )));
             }
 
             if targets.quantization.i2s_throughput_gops <= 0.0 {
-                return Err(BitNetError::Validation(
-                    format!("Invalid benchmark target for device {:?}: non-positive throughput", device)
-                ));
+                return Err(BitNetError::Validation(format!(
+                    "Invalid benchmark target for device {:?}: non-positive throughput",
+                    device
+                )));
             }
 
             println!("Validated benchmark targets for device: {:?}", device);
@@ -356,25 +358,19 @@ impl PerformanceFixtures {
 
     /// Run performance benchmark suite
     pub async fn run_benchmark_suite(&self, suite_name: &str) -> Result<BenchmarkSuiteResult> {
-        let suite = self.test_suites.iter()
-            .find(|s| s.name == suite_name)
-            .ok_or_else(|| BitNetError::Validation(
-                format!("Performance test suite not found: {}", suite_name)
-            ))?;
+        let suite = self.test_suites.iter().find(|s| s.name == suite_name).ok_or_else(|| {
+            BitNetError::Validation(format!("Performance test suite not found: {}", suite_name))
+        })?;
 
-        let targets = self.benchmark_targets.get(&suite.device)
-            .ok_or_else(|| BitNetError::Validation(
-                format!("No benchmark targets for device: {:?}", suite.device)
-            ))?;
+        let targets = self.benchmark_targets.get(&suite.device).ok_or_else(|| {
+            BitNetError::Validation(format!("No benchmark targets for device: {:?}", suite.device))
+        })?;
 
         let mut results = vec![];
 
         // Run individual benchmarks
-        let benchmark_ops = vec![
-            "model_loading_small",
-            "quantization_i2s",
-            "inference_first_token",
-        ];
+        let benchmark_ops =
+            vec!["model_loading_small", "quantization_i2s", "inference_first_token"];
 
         for op in benchmark_ops {
             let result = self.run_individual_benchmark(op, suite).await?;
@@ -382,9 +378,9 @@ impl PerformanceFixtures {
         }
 
         // Calculate overall score
-        let overall_score = results.iter()
-            .map(|r| if r.passes_target { 1.0 } else { 0.0 })
-            .sum::<f32>() / results.len() as f32;
+        let overall_score =
+            results.iter().map(|r| if r.passes_target { 1.0 } else { 0.0 }).sum::<f32>()
+                / results.len() as f32;
 
         Ok(BenchmarkSuiteResult {
             suite_name: suite_name.to_string(),
@@ -396,9 +392,10 @@ impl PerformanceFixtures {
     }
 
     /// Run individual performance benchmark
-    async fn run_individual_benchmark(&self,
+    async fn run_individual_benchmark(
+        &self,
         operation: &str,
-        suite: &PerformanceTestSuite
+        suite: &PerformanceTestSuite,
     ) -> Result<IndividualBenchmarkResult> {
         let start_time = Instant::now();
 
@@ -418,9 +415,10 @@ impl PerformanceFixtures {
         let total_time = start_time.elapsed();
 
         if total_time > suite.timeout {
-            return Err(BitNetError::Validation(
-                format!("Benchmark '{}' exceeded timeout", operation)
-            ));
+            return Err(BitNetError::Validation(format!(
+                "Benchmark '{}' exceeded timeout",
+                operation
+            )));
         }
 
         let statistics = Self::calculate_statistics(&measurements);
@@ -430,10 +428,14 @@ impl PerformanceFixtures {
         Ok(IndividualBenchmarkResult {
             operation: operation.to_string(),
             device: suite.device.clone(),
-            statistics,
+            statistics: statistics.clone(),
             target_ms,
             passes_target,
-            regression_vs_baseline: self.calculate_regression(operation, &suite.device, statistics.median_ms),
+            regression_vs_baseline: self.calculate_regression(
+                operation,
+                &suite.device,
+                statistics.median_ms,
+            ),
         })
     }
 
@@ -446,6 +448,7 @@ impl PerformanceFixtures {
             "inference_first_token" => match device {
                 Device::Cpu => Duration::from_millis(100),
                 Device::Cuda(_) => Duration::from_millis(20),
+                Device::Metal => Duration::from_millis(15),
             },
             _ => Duration::from_millis(50),
         };

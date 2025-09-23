@@ -6,21 +6,25 @@
 //! This module contains comprehensive test scaffolding for real BitNet model loading,
 //! GGUF format validation, and tensor alignment verification.
 
-use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
 use std::env;
+#[allow(unused_imports)]
+use std::path::Path;
+use std::path::PathBuf;
+use std::time::Duration;
+#[allow(unused_imports)]
+use std::time::Instant;
 
 // Note: These imports will initially fail compilation until implementation exists
 #[cfg(feature = "inference")]
 use bitnet_models::{
-    BitNetModel, ModelError, ValidationResult, ValidationError,
-    ProductionModelLoader, RealModelLoader, ModelMetadata, TensorCollection,
-    QuantizationInfo, DeviceConfig, LoaderConfig, ValidationLevel,
-    MemoryConfig, PerformanceHints
+    BitNetModel, DeviceConfig, LoaderConfig, MemoryConfig, ModelError, ModelMetadata,
+    PerformanceHints, ProductionModelLoader, QuantizationInfo, RealModelLoader, TensorCollection,
+    ValidationError, ValidationLevel, ValidationResult,
 };
 
 /// Test configuration for model loading tests
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct ModelLoadingTestConfig {
     model_path: Option<PathBuf>,
     validation_level: String,
@@ -28,14 +32,17 @@ struct ModelLoadingTestConfig {
 }
 
 impl ModelLoadingTestConfig {
+    #[allow(dead_code)]
     fn from_env() -> Self {
         Self {
             model_path: env::var("BITNET_GGUF").ok().map(PathBuf::from),
-            validation_level: env::var("BITNET_VALIDATION_LEVEL").unwrap_or_else(|_| "strict".to_string()),
+            validation_level: env::var("BITNET_VALIDATION_LEVEL")
+                .unwrap_or_else(|_| "strict".to_string()),
             timeout: Duration::from_secs(60),
         }
     }
 
+    #[allow(dead_code)]
     fn skip_if_no_model(&self) {
         if self.model_path.is_none() || !self.model_path.as_ref().unwrap().exists() {
             eprintln!("Skipping real model test - set BITNET_GGUF environment variable");
@@ -53,7 +60,8 @@ impl ModelLoadingTestConfig {
 /// Tests the complete model loading pipeline with production-grade validation
 #[test]
 #[cfg(feature = "inference")]
-fn test_real_gguf_model_loading_with_validation() { // AC:1
+fn test_real_gguf_model_loading_with_validation() {
+    // AC:1
     let config = ModelLoadingTestConfig::from_env();
     config.skip_if_no_model();
     let model_path = config.model_path.unwrap();
@@ -95,7 +103,8 @@ fn test_real_gguf_model_loading_with_validation() { // AC:1
 /// Validates 32-byte tensor alignment requirements and provides detailed error reporting
 #[test]
 #[cfg(feature = "inference")]
-fn test_enhanced_tensor_alignment_validation() { // AC:6
+fn test_enhanced_tensor_alignment_validation() {
+    // AC:6
     let config = ModelLoadingTestConfig::from_env();
     config.skip_if_no_model();
     let model_path = config.model_path.unwrap();
@@ -140,7 +149,8 @@ fn test_enhanced_tensor_alignment_validation() { // AC:6
 /// Validates that models can be optimized for specific device configurations
 #[test]
 #[cfg(all(feature = "inference", feature = "gpu"))]
-fn test_device_aware_model_optimization() { // AC:3
+fn test_device_aware_model_optimization() {
+    // AC:3
     let config = ModelLoadingTestConfig::from_env();
     config.skip_if_no_model();
     let model_path = config.model_path.unwrap();
@@ -154,8 +164,14 @@ fn test_device_aware_model_optimization() { // AC:3
     assert!(gpu_config.is_some(), "Model should support GPU optimization");
 
     let gpu_config = gpu_config.unwrap();
-    assert!(gpu_config.memory_optimization.is_some(), "GPU config should include memory optimization");
-    assert!(gpu_config.kernel_optimization.is_some(), "GPU config should include kernel optimization");
+    assert!(
+        gpu_config.memory_optimization.is_some(),
+        "GPU config should include memory optimization"
+    );
+    assert!(
+        gpu_config.kernel_optimization.is_some(),
+        "GPU config should include kernel optimization"
+    );
 
     // Test CPU optimization
     let cpu_config = model.get_optimal_device_config_for_cpu();
@@ -174,7 +190,8 @@ fn test_device_aware_model_optimization() { // AC:3
 /// Validates comprehensive metadata extraction from GGUF headers
 #[test]
 #[cfg(feature = "inference")]
-fn test_model_metadata_extraction_validation() { // AC:1
+fn test_model_metadata_extraction_validation() {
+    // AC:1
     let config = ModelLoadingTestConfig::from_env();
     config.skip_if_no_model();
     let model_path = config.model_path.unwrap();
@@ -212,8 +229,7 @@ fn test_model_metadata_extraction_validation() { // AC:1
     // Validate tokenizer configuration if present
     if let Some(tokenizer_config) = &model.metadata.tokenizer {
         assert_eq!(
-            tokenizer_config.vocab_size,
-            arch.vocab_size,
+            tokenizer_config.vocab_size, arch.vocab_size,
             "Tokenizer vocab size should match architecture"
         );
     }
@@ -225,7 +241,8 @@ fn test_model_metadata_extraction_validation() { // AC:1
 /// Validates GGUF format compliance and version compatibility
 #[test]
 #[cfg(feature = "inference")]
-fn test_model_format_validation_compatibility() { // AC:6
+fn test_model_format_validation_compatibility() {
+    // AC:6
     let config = ModelLoadingTestConfig::from_env();
     config.skip_if_no_model();
     let model_path = config.model_path.unwrap();
@@ -264,14 +281,16 @@ fn test_model_format_validation_compatibility() { // AC:6
 /// Validates efficient loading of large models using memory mapping
 #[test]
 #[cfg(feature = "inference")]
-fn test_memory_mapped_model_loading() { // AC:1
+fn test_memory_mapped_model_loading() {
+    // AC:1
     let config = ModelLoadingTestConfig::from_env();
     config.skip_if_no_model();
     let model_path = config.model_path.unwrap();
 
     // Skip if file is too small for meaningful memory mapping test
     let file_size = model_path.metadata().expect("Should get file metadata").len();
-    if file_size < 100_000_000 { // 100MB threshold
+    if file_size < 100_000_000 {
+        // 100MB threshold
         println!("Skipping memory mapping test - file too small");
         return;
     }
@@ -294,7 +313,8 @@ fn test_memory_mapped_model_loading() { // AC:1
     let start_time = Instant::now();
 
     // Test memory-mapped loading
-    let model = loader.load_with_validation(&model_path).expect("Memory-mapped loading should succeed");
+    let model =
+        loader.load_with_validation(&model_path).expect("Memory-mapped loading should succeed");
     let load_duration = start_time.elapsed();
 
     // Validate memory mapping efficiency
@@ -310,7 +330,10 @@ fn test_memory_mapped_model_loading() { // AC:1
     let _tensor_data = access_tensor_data(first_tensor.1);
     let access_duration = tensor_access_time.elapsed();
 
-    assert!(access_duration < Duration::from_millis(100), "Tensor access should be fast with mapping");
+    assert!(
+        access_duration < Duration::from_millis(100),
+        "Tensor access should be fast with mapping"
+    );
 
     println!("✅ Memory-mapped model loading test scaffolding created");
 }
@@ -323,7 +346,8 @@ fn test_memory_mapped_model_loading() { // AC:1
 /// Validates that models load consistently across different platforms
 #[test]
 #[cfg(feature = "inference")]
-fn test_cross_platform_model_loading_consistency() { // AC:1
+fn test_cross_platform_model_loading_consistency() {
+    // AC:1
     let config = ModelLoadingTestConfig::from_env();
     config.skip_if_no_model();
     let model_path = config.model_path.unwrap();
@@ -359,7 +383,8 @@ fn test_cross_platform_model_loading_consistency() { // AC:1
 /// Validates detailed error messages and recovery suggestions
 #[test]
 #[cfg(feature = "inference")]
-fn test_comprehensive_model_loading_error_handling() { // AC:6
+fn test_comprehensive_model_loading_error_handling() {
+    // AC:6
     // TODO: This test will initially fail - drives error handling implementation
     let loader = ProductionModelLoader::with_enhanced_error_handling();
 

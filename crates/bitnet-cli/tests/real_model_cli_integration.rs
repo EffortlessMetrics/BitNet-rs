@@ -6,9 +6,13 @@
 //! This module contains comprehensive test scaffolding for CLI commands
 //! with real model integration, performance benchmarking, and validation.
 
-use std::path::{Path, PathBuf};
 use std::env;
-use std::process::{Command, Output};
+#[allow(unused_imports)]
+use std::path::Path;
+use std::path::PathBuf;
+use std::process::Command;
+#[allow(unused_imports)]
+use std::process::Output;
 use std::time::{Duration, Instant};
 
 /// Test configuration for CLI integration tests
@@ -58,7 +62,8 @@ impl CLITestConfig {
 /// Test CLI real model inference integration
 /// Validates end-to-end inference through CLI with real models
 #[test]
-fn test_cli_real_model_inference_integration() { // AC:4
+fn test_cli_real_model_inference_integration() {
+    // AC:4
     let config = CLITestConfig::from_env();
     config.skip_if_no_cli();
     config.skip_if_no_model();
@@ -69,11 +74,15 @@ fn test_cli_real_model_inference_integration() { // AC:4
     // TODO: This test will initially fail - drives CLI inference implementation
     let mut cmd = Command::new(&config.bitnet_cli_path);
     cmd.arg("run")
-        .arg("--model").arg(&model_path)
-        .arg("--prompt").arg(test_prompt)
-        .arg("--max-tokens").arg("16")
+        .arg("--model")
+        .arg(&model_path)
+        .arg("--prompt")
+        .arg(test_prompt)
+        .arg("--max-tokens")
+        .arg("16")
         .arg("--deterministic")
-        .arg("--format").arg("json");
+        .arg("--format")
+        .arg("json");
 
     // Add tokenizer if available
     if let Some(tokenizer_path) = &config.tokenizer_path {
@@ -98,8 +107,8 @@ fn test_cli_real_model_inference_integration() { // AC:4
     println!("CLI output: {}", stdout);
 
     // Parse JSON output
-    let result: serde_json::Value = serde_json::from_str(&stdout)
-        .expect("CLI should produce valid JSON");
+    let result: serde_json::Value =
+        serde_json::from_str(&stdout).expect("CLI should produce valid JSON");
 
     // Validate inference result
     assert!(result["text"].is_string(), "Should include generated text");
@@ -127,7 +136,8 @@ fn test_cli_real_model_inference_integration() { // AC:4
 /// Test CLI performance benchmarking commands
 /// Validates CLI benchmarking functionality with real models
 #[test]
-fn test_cli_performance_benchmarking_commands() { // AC:10
+fn test_cli_performance_benchmarking_commands() {
+    // AC:10
     let config = CLITestConfig::from_env();
     config.skip_if_no_cli();
     config.skip_if_no_model();
@@ -137,11 +147,16 @@ fn test_cli_performance_benchmarking_commands() { // AC:10
     // TODO: This test will initially fail - drives CLI benchmarking implementation
     let mut cmd = Command::new(&config.bitnet_cli_path);
     cmd.arg("benchmark")
-        .arg("--model").arg(&model_path)
-        .arg("--tokens").arg("64")
-        .arg("--iterations").arg("3")
-        .arg("--warmup-tokens").arg("10")
-        .arg("--format").arg("json");
+        .arg("--model")
+        .arg(&model_path)
+        .arg("--tokens")
+        .arg("64")
+        .arg("--iterations")
+        .arg("3")
+        .arg("--warmup-tokens")
+        .arg("10")
+        .arg("--format")
+        .arg("json");
 
     // Add tokenizer if available
     if let Some(tokenizer_path) = &config.tokenizer_path {
@@ -155,7 +170,10 @@ fn test_cli_performance_benchmarking_commands() { // AC:10
     let execution_time = start_time.elapsed();
 
     // Validate benchmark execution
-    assert!(execution_time < Duration::from_secs(300), "Benchmark should complete within 5 minutes");
+    assert!(
+        execution_time < Duration::from_secs(300),
+        "Benchmark should complete within 5 minutes"
+    );
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -166,8 +184,8 @@ fn test_cli_performance_benchmarking_commands() { // AC:10
     println!("Benchmark output: {}", stdout);
 
     // Parse benchmark results
-    let result: serde_json::Value = serde_json::from_str(&stdout)
-        .expect("CLI should produce valid JSON");
+    let result: serde_json::Value =
+        serde_json::from_str(&stdout).expect("CLI should produce valid JSON");
 
     // Validate benchmark structure
     assert!(result["benchmark_config"].is_object(), "Should include benchmark config");
@@ -196,12 +214,18 @@ fn test_cli_performance_benchmarking_commands() { // AC:10
     // Test device-specific benchmarking if GPU enabled
     if config.enable_gpu_tests {
         let mut gpu_cmd = Command::new(&config.bitnet_cli_path);
-        gpu_cmd.arg("benchmark")
-            .arg("--model").arg(&model_path)
-            .arg("--device").arg("gpu")
-            .arg("--tokens").arg("32")
-            .arg("--iterations").arg("2")
-            .arg("--format").arg("json");
+        gpu_cmd
+            .arg("benchmark")
+            .arg("--model")
+            .arg(&model_path)
+            .arg("--device")
+            .arg("gpu")
+            .arg("--tokens")
+            .arg("32")
+            .arg("--iterations")
+            .arg("2")
+            .arg("--format")
+            .arg("json");
 
         if let Some(tokenizer_path) = &config.tokenizer_path {
             gpu_cmd.arg("--tokenizer").arg(tokenizer_path);
@@ -211,15 +235,18 @@ fn test_cli_performance_benchmarking_commands() { // AC:10
 
         if gpu_output.status.success() {
             let gpu_stdout = String::from_utf8_lossy(&gpu_output.stdout);
-            let gpu_result: serde_json::Value = serde_json::from_str(&gpu_stdout)
-                .expect("GPU benchmark should produce valid JSON");
+            let gpu_result: serde_json::Value =
+                serde_json::from_str(&gpu_stdout).expect("GPU benchmark should produce valid JSON");
 
             let gpu_throughput = gpu_result["results"]["mean_throughput"].as_f64().unwrap();
             println!("GPU throughput: {:.2} tokens/sec", gpu_throughput);
 
             // GPU should typically be faster than CPU
             if gpu_throughput > mean_throughput * 1.5 {
-                println!("GPU acceleration effective: {:.2}x speedup", gpu_throughput / mean_throughput);
+                println!(
+                    "GPU acceleration effective: {:.2}x speedup",
+                    gpu_throughput / mean_throughput
+                );
             }
         } else {
             println!("GPU benchmark failed (fallback expected)");
@@ -232,7 +259,8 @@ fn test_cli_performance_benchmarking_commands() { // AC:10
 /// Test CLI model validation commands
 /// Validates model compatibility checking and format validation through CLI
 #[test]
-fn test_cli_model_validation_commands() { // AC:6
+fn test_cli_model_validation_commands() {
+    // AC:6
     let config = CLITestConfig::from_env();
     config.skip_if_no_cli();
     config.skip_if_no_model();
@@ -242,10 +270,7 @@ fn test_cli_model_validation_commands() { // AC:6
     // TODO: This test will initially fail - drives CLI validation implementation
     // Test model compatibility check
     let mut compat_cmd = Command::new(&config.bitnet_cli_path);
-    compat_cmd.arg("compat-check")
-        .arg(&model_path)
-        .arg("--format").arg("json")
-        .arg("--strict");
+    compat_cmd.arg("compat-check").arg(&model_path).arg("--format").arg("json").arg("--strict");
 
     println!("Running compatibility check: {:?}", compat_cmd);
 
@@ -273,7 +298,10 @@ fn test_cli_model_validation_commands() { // AC:6
 
     if is_valid {
         println!("Model validation: PASSED");
-        assert!(validation_results["errors"].as_array().unwrap().is_empty(), "Valid model should have no errors");
+        assert!(
+            validation_results["errors"].as_array().unwrap().is_empty(),
+            "Valid model should have no errors"
+        );
     } else {
         println!("Model validation: FAILED");
         let errors = validation_results["errors"].as_array().unwrap();
@@ -286,10 +314,7 @@ fn test_cli_model_validation_commands() { // AC:6
 
     // Test model information extraction
     let mut info_cmd = Command::new(&config.bitnet_cli_path);
-    info_cmd.arg("model-info")
-        .arg(&model_path)
-        .arg("--format").arg("json")
-        .arg("--show-tensors");
+    info_cmd.arg("model-info").arg(&model_path).arg("--format").arg("json").arg("--show-tensors");
 
     println!("Running model info: {:?}", info_cmd);
 
@@ -297,8 +322,8 @@ fn test_cli_model_validation_commands() { // AC:6
 
     if info_output.status.success() {
         let info_stdout = String::from_utf8_lossy(&info_output.stdout);
-        let info_result: serde_json::Value = serde_json::from_str(&info_stdout)
-            .expect("Model info should produce valid JSON");
+        let info_result: serde_json::Value =
+            serde_json::from_str(&info_stdout).expect("Model info should produce valid JSON");
 
         // Validate model info structure
         assert!(info_result["model_info"].is_object(), "Should include model info");
@@ -325,10 +350,12 @@ fn test_cli_model_validation_commands() { // AC:6
         let temp_output_path = std::env::temp_dir().join("fixed_model.gguf");
 
         let mut fix_cmd = Command::new(&config.bitnet_cli_path);
-        fix_cmd.arg("compat-fix")
+        fix_cmd
+            .arg("compat-fix")
             .arg(&model_path)
             .arg(&temp_output_path)
-            .arg("--format").arg("json");
+            .arg("--format")
+            .arg("json");
 
         println!("Running model fix: {:?}", fix_cmd);
 
@@ -336,8 +363,8 @@ fn test_cli_model_validation_commands() { // AC:6
 
         if fix_output.status.success() {
             let fix_stdout = String::from_utf8_lossy(&fix_output.stdout);
-            let fix_result: serde_json::Value = serde_json::from_str(&fix_stdout)
-                .expect("Model fix should produce valid JSON");
+            let fix_result: serde_json::Value =
+                serde_json::from_str(&fix_stdout).expect("Model fix should produce valid JSON");
 
             println!("Model fix result: {}", fix_result["status"].as_str().unwrap_or("unknown"));
 
@@ -362,7 +389,8 @@ fn test_cli_model_validation_commands() { // AC:6
 /// Test CLI batch inference functionality
 /// Validates batch processing of multiple prompts through CLI
 #[test]
-fn test_cli_batch_inference_functionality() { // AC:3
+fn test_cli_batch_inference_functionality() {
+    // AC:3
     let config = CLITestConfig::from_env();
     config.skip_if_no_cli();
     config.skip_if_no_model();
@@ -382,13 +410,20 @@ fn test_cli_batch_inference_functionality() { // AC:3
     let output_file = std::env::temp_dir().join("batch_output.json");
 
     let mut batch_cmd = Command::new(&config.bitnet_cli_path);
-    batch_cmd.arg("run-batch")
-        .arg("--input-file").arg(&input_file)
-        .arg("--output-file").arg(&output_file)
-        .arg("--model").arg(&model_path)
-        .arg("--batch-size").arg("2")
-        .arg("--max-tokens").arg("16")
-        .arg("--parallel").arg("1")
+    batch_cmd
+        .arg("run-batch")
+        .arg("--input-file")
+        .arg(&input_file)
+        .arg("--output-file")
+        .arg(&output_file)
+        .arg("--model")
+        .arg(&model_path)
+        .arg("--batch-size")
+        .arg("2")
+        .arg("--max-tokens")
+        .arg("16")
+        .arg("--parallel")
+        .arg("1")
         .arg("--metrics");
 
     // Add tokenizer if available
@@ -413,11 +448,11 @@ fn test_cli_batch_inference_functionality() { // AC:3
     // Read and validate batch results
     assert!(output_file.exists(), "Batch output file should be created");
 
-    let output_content = std::fs::read_to_string(&output_file)
-        .expect("Should read batch output file");
+    let output_content =
+        std::fs::read_to_string(&output_file).expect("Should read batch output file");
 
-    let batch_results: serde_json::Value = serde_json::from_str(&output_content)
-        .expect("Batch output should be valid JSON");
+    let batch_results: serde_json::Value =
+        serde_json::from_str(&output_content).expect("Batch output should be valid JSON");
 
     // Validate batch result structure
     assert!(batch_results["results"].is_array(), "Should include results array");
@@ -464,17 +499,22 @@ fn test_cli_batch_inference_functionality() { // AC:3
 /// Test CLI error handling and recovery guidance
 /// Validates comprehensive error messages and recovery suggestions through CLI
 #[test]
-fn test_cli_error_handling_and_recovery() { // AC:6
+fn test_cli_error_handling_and_recovery() {
+    // AC:6
     let config = CLITestConfig::from_env();
     config.skip_if_no_cli();
 
     // TODO: This test will initially fail - drives CLI error handling implementation
     // Test missing model file
     let mut missing_cmd = Command::new(&config.bitnet_cli_path);
-    missing_cmd.arg("run")
-        .arg("--model").arg("/nonexistent/model.gguf")
-        .arg("--prompt").arg("test")
-        .arg("--format").arg("json");
+    missing_cmd
+        .arg("run")
+        .arg("--model")
+        .arg("/nonexistent/model.gguf")
+        .arg("--prompt")
+        .arg("test")
+        .arg("--format")
+        .arg("json");
 
     let missing_output = missing_cmd.output().expect("Command should execute");
     assert!(!missing_output.status.success(), "Missing model should fail");
@@ -483,10 +523,14 @@ fn test_cli_error_handling_and_recovery() { // AC:6
     println!("Missing model error: {}", missing_stderr);
 
     // Error should be structured and helpful
-    assert!(missing_stderr.contains("not found") || missing_stderr.contains("No such file"),
-            "Should mention file not found");
-    assert!(missing_stderr.contains("BITNET_GGUF") || missing_stderr.contains("--model"),
-            "Should mention how to specify model");
+    assert!(
+        missing_stderr.contains("not found") || missing_stderr.contains("No such file"),
+        "Should mention file not found"
+    );
+    assert!(
+        missing_stderr.contains("BITNET_GGUF") || missing_stderr.contains("--model"),
+        "Should mention how to specify model"
+    );
 
     // Test invalid command
     let mut invalid_cmd = Command::new(&config.bitnet_cli_path);
@@ -499,8 +543,12 @@ fn test_cli_error_handling_and_recovery() { // AC:6
     println!("Invalid command error: {}", invalid_stderr);
 
     // Should suggest valid commands
-    assert!(invalid_stderr.contains("help") || invalid_stderr.contains("run") || invalid_stderr.contains("benchmark"),
-            "Should suggest valid commands");
+    assert!(
+        invalid_stderr.contains("help")
+            || invalid_stderr.contains("run")
+            || invalid_stderr.contains("benchmark"),
+        "Should suggest valid commands"
+    );
 
     // Test help command
     let mut help_cmd = Command::new(&config.bitnet_cli_path);
@@ -529,8 +577,10 @@ fn test_cli_error_handling_and_recovery() { // AC:6
 
     // Version should be meaningful
     assert!(!version_stdout.trim().is_empty(), "Version should not be empty");
-    assert!(version_stdout.contains("bitnet") || version_stdout.contains("."),
-            "Version should be properly formatted");
+    assert!(
+        version_stdout.contains("bitnet") || version_stdout.contains("."),
+        "Version should be properly formatted"
+    );
 
     println!("✅ CLI error handling and recovery test scaffolding created");
 }

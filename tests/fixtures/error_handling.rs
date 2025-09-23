@@ -3,10 +3,10 @@
 //! Provides comprehensive error testing infrastructure including failure simulation,
 //! recovery validation, and error message quality assessment for BitNet.rs components.
 
-use bitnet_common::{Device, Result, BitNetError, ModelError, InferenceError, KernelError};
-use serde::{Serialize, Deserialize};
+use bitnet_common::{BitNetError, InferenceError, KernelError, ModelError, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tempfile::NamedTempFile;
 
 /// Comprehensive failure scenarios for error testing
@@ -241,7 +241,8 @@ impl ErrorHandlingFixtures {
                 resource_type: "FileSystem".to_string(),
                 failure_condition: "Insufficient permissions to read model file".to_string(),
                 expected_error: "Permission denied".to_string(),
-                mitigation_strategy: "Check file permissions or run with appropriate privileges".to_string(),
+                mitigation_strategy: "Check file permissions or run with appropriate privileges"
+                    .to_string(),
             },
         ];
 
@@ -298,7 +299,9 @@ impl ErrorHandlingFixtures {
 
         // Convert to permanent path
         let path = temp_file.into_temp_path();
-        Ok(path.keep().map_err(BitNetError::Io)?)
+        Ok(path
+            .keep()
+            .map_err(|e| BitNetError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?)
     }
 
     /// Create GGUF file with misaligned tensors
@@ -308,7 +311,7 @@ impl ErrorHandlingFixtures {
         let mut buffer = Vec::new();
 
         // Valid GGUF header
-        buffer.extend_from_slice(b"GGUF");        // Magic
+        buffer.extend_from_slice(b"GGUF"); // Magic
         buffer.extend_from_slice(&3u32.to_le_bytes()); // Version
         buffer.extend_from_slice(&1u64.to_le_bytes()); // Tensor count
         buffer.extend_from_slice(&0u64.to_le_bytes()); // KV count
@@ -333,7 +336,9 @@ impl ErrorHandlingFixtures {
         std::fs::write(&temp_file, buffer).map_err(BitNetError::Io)?;
 
         let path = temp_file.into_temp_path();
-        Ok(path.keep().map_err(BitNetError::Io)?)
+        Ok(path
+            .keep()
+            .map_err(|e| BitNetError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?)
     }
 
     /// Create oversized model file for memory testing
@@ -357,14 +362,17 @@ impl ErrorHandlingFixtures {
             use std::io::Write;
             let mut writer = std::io::BufWriter::new(file);
             let chunk = vec![0u8; 1024 * 1024]; // 1MB chunk
-            for _ in 0..10 { // Write 10MB (smaller for Windows)
+            for _ in 0..10 {
+                // Write 10MB (smaller for Windows)
                 writer.write_all(&chunk).map_err(BitNetError::Io)?;
             }
             writer.flush().map_err(BitNetError::Io)?;
         }
 
         let path = temp_file.into_temp_path();
-        Ok(path.keep().map_err(BitNetError::Io)?)
+        Ok(path
+            .keep()
+            .map_err(|e| BitNetError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?)
     }
 
     /// Create restricted file (Unix only)
@@ -381,7 +389,9 @@ impl ErrorHandlingFixtures {
         std::fs::set_permissions(&temp_file, perms).map_err(BitNetError::Io)?;
 
         let path = temp_file.into_temp_path();
-        Ok(path.keep().map_err(BitNetError::Io)?)
+        Ok(path
+            .keep()
+            .map_err(|e| BitNetError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?)
     }
 
     /// Validate error scenarios configuration
@@ -393,17 +403,16 @@ impl ErrorHandlingFixtures {
             + self.failure_scenarios.resource_failures.len();
 
         if total_scenarios == 0 {
-            return Err(BitNetError::Validation(
-                "No error scenarios defined".to_string()
-            ));
+            return Err(BitNetError::Validation("No error scenarios defined".to_string()));
         }
 
         // Validate that each scenario has required fields
         for scenario in &self.failure_scenarios.model_loading_failures {
             if scenario.expected_error.is_empty() {
-                return Err(BitNetError::Validation(
-                    format!("Missing expected error for scenario: {}", scenario.name)
-                ));
+                return Err(BitNetError::Validation(format!(
+                    "Missing expected error for scenario: {}",
+                    scenario.name
+                )));
             }
         }
 
@@ -413,32 +422,32 @@ impl ErrorHandlingFixtures {
 
     /// Simulate model loading failure
     pub fn simulate_model_loading_failure(&self, failure_name: &str) -> Result<BitNetError> {
-        let failure = self.failure_scenarios.model_loading_failures
+        let failure = self
+            .failure_scenarios
+            .model_loading_failures
             .iter()
             .find(|f| f.name == failure_name)
-            .ok_or_else(|| BitNetError::Validation(
-                format!("Unknown failure scenario: {}", failure_name)
-            ))?;
+            .ok_or_else(|| {
+                BitNetError::Validation(format!("Unknown failure scenario: {}", failure_name))
+            })?;
 
         let error = match failure.failure_type.as_str() {
             "FileNotFound" => BitNetError::Model(ModelError::NotFound {
-                path: failure.test_file_path.clone().unwrap_or_default()
+                path: failure.test_file_path.clone().unwrap_or_default(),
             }),
             "GGUFFormatError" => BitNetError::Model(ModelError::InvalidFormat {
-                format: "Corrupted GGUF file".to_string()
+                format: "Corrupted GGUF file".to_string(),
             }),
             "UnsupportedQuantization" => BitNetError::Model(ModelError::UnsupportedVersion {
-                version: "Unsupported quantization type".to_string()
+                version: "Unsupported quantization type".to_string(),
             }),
             "InsufficientMemory" => BitNetError::Model(ModelError::LoadingFailed {
-                reason: "Insufficient memory".to_string()
+                reason: "Insufficient memory".to_string(),
             }),
             "TensorAlignmentError" => BitNetError::Model(ModelError::InvalidFormat {
-                format: "Tensor alignment validation failed".to_string()
+                format: "Tensor alignment validation failed".to_string(),
             }),
-            _ => BitNetError::Validation(
-                format!("Unknown failure type: {}", failure.failure_type)
-            ),
+            _ => BitNetError::Validation(format!("Unknown failure type: {}", failure.failure_type)),
         };
 
         Ok(error)
@@ -446,29 +455,32 @@ impl ErrorHandlingFixtures {
 
     /// Simulate inference failure
     pub fn simulate_inference_failure(&self, failure_name: &str) -> Result<BitNetError> {
-        let failure = self.failure_scenarios.inference_failures
+        let failure = self
+            .failure_scenarios
+            .inference_failures
             .iter()
             .find(|f| f.name == failure_name)
-            .ok_or_else(|| BitNetError::Validation(
-                format!("Unknown inference failure: {}", failure_name)
-            ))?;
+            .ok_or_else(|| {
+                BitNetError::Validation(format!("Unknown inference failure: {}", failure_name))
+            })?;
 
         let error = match failure.failure_type.as_str() {
-            "ContextLengthExceeded" => BitNetError::Inference(InferenceError::ContextLengthExceeded {
-                length: 4096
-            }),
+            "ContextLengthExceeded" => {
+                BitNetError::Inference(InferenceError::ContextLengthExceeded { length: 4096 })
+            }
             "InvalidInput" => BitNetError::Inference(InferenceError::InvalidInput {
-                reason: failure.input_condition.clone()
+                reason: failure.input_condition.clone(),
             }),
             "TokenizationFailed" => BitNetError::Inference(InferenceError::TokenizationFailed {
-                reason: failure.input_condition.clone()
+                reason: failure.input_condition.clone(),
             }),
             "GenerationTimeout" => BitNetError::Inference(InferenceError::GenerationFailed {
-                reason: "Generation timed out".to_string()
+                reason: "Generation timed out".to_string(),
             }),
-            _ => BitNetError::Validation(
-                format!("Unknown inference failure type: {}", failure.failure_type)
-            ),
+            _ => BitNetError::Validation(format!(
+                "Unknown inference failure type: {}",
+                failure.failure_type
+            )),
         };
 
         Ok(error)
@@ -476,16 +488,17 @@ impl ErrorHandlingFixtures {
 
     /// Simulate device failure
     pub fn simulate_device_failure(&self, failure_name: &str) -> Result<BitNetError> {
-        let failure = self.failure_scenarios.device_failures
+        let failure = self
+            .failure_scenarios
+            .device_failures
             .iter()
             .find(|f| f.name == failure_name)
-            .ok_or_else(|| BitNetError::Validation(
-                format!("Unknown device failure: {}", failure_name)
-            ))?;
+            .ok_or_else(|| {
+                BitNetError::Validation(format!("Unknown device failure: {}", failure_name))
+            })?;
 
-        let error = BitNetError::Kernel(KernelError::GpuError {
-            reason: failure.expected_error.clone()
-        });
+        let error =
+            BitNetError::Kernel(KernelError::GpuError { reason: failure.expected_error.clone() });
 
         Ok(error)
     }
@@ -498,9 +511,9 @@ impl ErrorHandlingFixtures {
         ErrorMessageQuality {
             has_user_friendly_message: !error_str.contains("Error(") && error_str.len() > 10,
             has_technical_details: error_debug.contains("reason") || error_debug.contains("path"),
-            includes_recovery_suggestion: error_str.to_lowercase().contains("try") ||
-                                         error_str.to_lowercase().contains("check") ||
-                                         error_str.to_lowercase().contains("ensure"),
+            includes_recovery_suggestion: error_str.to_lowercase().contains("try")
+                || error_str.to_lowercase().contains("check")
+                || error_str.to_lowercase().contains("ensure"),
             message_length: error_str.len(),
             clarity_score: self.calculate_clarity_score(&error_str),
         }
@@ -508,7 +521,7 @@ impl ErrorHandlingFixtures {
 
     /// Calculate error message clarity score
     fn calculate_clarity_score(&self, message: &str) -> f32 {
-        let mut score = 0.5; // Base score
+        let mut score: f32 = 0.5; // Base score
 
         // Positive indicators
         if message.contains("not found") || message.contains("missing") {

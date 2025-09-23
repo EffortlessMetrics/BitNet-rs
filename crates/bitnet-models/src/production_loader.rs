@@ -16,7 +16,9 @@ use bitnet_common::{
     BitNetError, Device, ModelError, ModelMetadata, Result, ValidationErrorDetails,
 };
 use std::path::Path;
-use tracing::{debug, info, warn};
+#[allow(unused_imports)]
+use tracing::warn;
+use tracing::{debug, info};
 
 /// Enhanced model loading configuration for production use
 #[derive(Debug, Clone)]
@@ -104,10 +106,13 @@ pub struct ValidationResult {
 /// Enhanced model loader for production environments
 pub struct ProductionModelLoader {
     /// Base model loader
+    #[allow(dead_code)]
     base_loader: ModelLoader,
     /// Production configuration
+    #[allow(dead_code)]
     config: ProductionLoadConfig,
     /// Validation enabled
+    #[allow(dead_code)]
     validation_enabled: bool,
 }
 
@@ -123,9 +128,11 @@ impl ProductionModelLoader {
 
     /// Create a production model loader with strict validation
     pub fn new_with_strict_validation() -> Self {
-        let mut config = ProductionLoadConfig::default();
-        config.strict_validation = true;
-        config.validate_tensor_alignment = true;
+        let config = ProductionLoadConfig {
+            strict_validation: true,
+            validate_tensor_alignment: true,
+            ..Default::default()
+        };
 
         Self { base_loader: ModelLoader::new(Device::Cpu), config, validation_enabled: true }
     }
@@ -133,7 +140,7 @@ impl ProductionModelLoader {
     /// Create a production model loader with custom configuration
     pub fn with_config(config: ProductionLoadConfig) -> Self {
         Self {
-            base_loader: ModelLoader::new(config.target_device.clone()),
+            base_loader: ModelLoader::new(config.target_device),
             config,
             validation_enabled: true,
         }
@@ -205,6 +212,7 @@ impl ProductionModelLoader {
     }
 
     /// Validate file access and basic properties
+    #[allow(dead_code)]
     fn validate_file_access(&self, path: &Path) -> Result<()> {
         if !path.exists() {
             return Err(BitNetError::Model(ModelError::NotFound {
@@ -227,6 +235,7 @@ impl ProductionModelLoader {
     }
 
     /// Comprehensive model file validation
+    #[allow(dead_code)]
     fn validate_model_file(&self, path: &Path) -> Result<ValidationResult> {
         let mut result = ValidationResult {
             passed: true,
@@ -250,17 +259,15 @@ impl ProductionModelLoader {
         self.validate_metadata(&metadata, &mut result);
 
         // Validate tensor alignment if requested
-        if self.config.validate_tensor_alignment {
-            if let Err(e) = self.validate_tensor_alignment(path) {
-                result.alignment_issues.push(format!("Tensor alignment validation failed: {}", e));
-                if self.config.strict_validation {
-                    result.passed = false;
-                    result
-                        .errors
-                        .push("Tensor alignment validation failed in strict mode".to_string());
-                } else {
-                    result.warnings.push("Tensor alignment issues detected".to_string());
-                }
+        if self.config.validate_tensor_alignment
+            && let Err(e) = self.validate_tensor_alignment(path)
+        {
+            result.alignment_issues.push(format!("Tensor alignment validation failed: {}", e));
+            if self.config.strict_validation {
+                result.passed = false;
+                result.errors.push("Tensor alignment validation failed in strict mode".to_string());
+            } else {
+                result.warnings.push("Tensor alignment issues detected".to_string());
             }
         }
 
@@ -271,6 +278,7 @@ impl ProductionModelLoader {
     }
 
     /// Validate extracted metadata
+    #[allow(dead_code)]
     fn validate_metadata(&self, metadata: &ModelMetadata, result: &mut ValidationResult) {
         // Check vocabulary size
         if metadata.vocab_size == 0 {
@@ -299,6 +307,7 @@ impl ProductionModelLoader {
     }
 
     /// Validate tensor alignment (simplified implementation)
+    #[allow(dead_code)]
     fn validate_tensor_alignment(&self, _path: &Path) -> Result<()> {
         // In a real implementation, this would:
         // 1. Parse GGUF header to get tensor offsets
@@ -320,6 +329,7 @@ impl ProductionModelLoader {
     }
 
     /// Add performance recommendations based on model properties
+    #[allow(dead_code)]
     fn add_performance_recommendations(
         &self,
         metadata: &ModelMetadata,
@@ -349,6 +359,7 @@ impl ProductionModelLoader {
     }
 
     /// Validate loaded model
+    #[allow(dead_code)]
     fn validate_loaded_model(&self, _model: &dyn Model) -> Result<()> {
         // In a real implementation, this would:
         // 1. Run a small forward pass to validate model works
@@ -419,6 +430,12 @@ pub struct MockBitNetModel {
 }
 
 #[cfg(not(feature = "inference"))]
+impl Default for MockBitNetModel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MockBitNetModel {
     pub fn new() -> Self {
         Self { config: bitnet_common::BitNetConfig::default() }

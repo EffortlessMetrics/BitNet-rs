@@ -6,17 +6,20 @@
 //! This module contains comprehensive test scaffolding for real BitNet model inference,
 //! performance metrics collection, and cross-validation framework integration.
 
-use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
 use std::env;
+#[allow(unused_imports)]
+use std::path::Path;
+use std::path::PathBuf;
+use std::time::Duration;
+#[allow(unused_imports)]
+use std::time::Instant;
 
 // Note: These imports will initially fail compilation until implementation exists
 #[cfg(feature = "inference")]
 use bitnet_inference::{
-    InferenceEngine, InferenceResult, InferenceError, InferenceMetrics,
-    ProductionInferenceEngine, PerformanceMetrics, PerformanceMonitor,
-    PrefillResult, GenerationResult, GenerationConfig, EngineConfig,
-    TimingMetrics, ThroughputMetrics, DevicePerformanceMetrics
+    DevicePerformanceMetrics, EngineConfig, GenerationConfig, GenerationResult, InferenceEngine,
+    InferenceError, InferenceMetrics, InferenceResult, PerformanceMetrics, PerformanceMonitor,
+    PrefillResult, ProductionInferenceEngine, ThroughputMetrics, TimingMetrics,
 };
 
 #[cfg(feature = "inference")]
@@ -27,6 +30,7 @@ use bitnet_tokenizers::UniversalTokenizer;
 
 /// Test configuration for inference engine tests
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct InferenceTestConfig {
     model_path: Option<PathBuf>,
     tokenizer_path: Option<PathBuf>,
@@ -37,6 +41,7 @@ struct InferenceTestConfig {
 }
 
 impl InferenceTestConfig {
+    #[allow(dead_code)]
     fn from_env() -> Self {
         Self {
             model_path: env::var("BITNET_GGUF").ok().map(PathBuf::from),
@@ -51,6 +56,7 @@ impl InferenceTestConfig {
         }
     }
 
+    #[allow(dead_code)]
     fn skip_if_no_model(&self) {
         if self.model_path.is_none() || !self.model_path.as_ref().unwrap().exists() {
             eprintln!("Skipping real inference test - set BITNET_GGUF environment variable");
@@ -68,7 +74,8 @@ impl InferenceTestConfig {
 /// Validates complete inference pipeline with real models and performance metrics
 #[test]
 #[cfg(feature = "inference")]
-fn test_inference_engine_real_model_integration() { // AC:3
+fn test_inference_engine_real_model_integration() {
+    // AC:3
     let config = InferenceTestConfig::from_env();
     config.skip_if_no_model();
 
@@ -94,9 +101,8 @@ fn test_inference_engine_real_model_integration() { // AC:3
 
     // Test end-to-end inference
     let start_time = Instant::now();
-    let inference_result = futures::executor::block_on(
-        engine.infer_with_metrics(test_prompt)
-    ).expect("Inference should succeed");
+    let inference_result = futures::executor::block_on(engine.infer_with_metrics(test_prompt))
+        .expect("Inference should succeed");
 
     let total_duration = start_time.elapsed();
 
@@ -124,7 +130,8 @@ fn test_inference_engine_real_model_integration() { // AC:3
 /// Validates comprehensive performance monitoring and metrics collection
 #[test]
 #[cfg(feature = "inference")]
-fn test_performance_metrics_collection_framework() { // AC:3
+fn test_performance_metrics_collection_framework() {
+    // AC:3
     let config = InferenceTestConfig::from_env();
 
     if !config.enable_metrics {
@@ -163,9 +170,8 @@ fn test_performance_metrics_collection_framework() { // AC:3
     let mut all_metrics = Vec::new();
 
     for prompt in test_prompts {
-        let result = futures::executor::block_on(
-            engine.infer_with_metrics(prompt)
-        ).expect("Inference should succeed");
+        let result = futures::executor::block_on(engine.infer_with_metrics(prompt))
+            .expect("Inference should succeed");
 
         all_metrics.push(result.metrics);
     }
@@ -213,23 +219,23 @@ fn test_performance_metrics_collection_framework() { // AC:3
 /// Validates dedicated prefill functionality for cache optimization
 #[test]
 #[cfg(feature = "inference")]
-fn test_explicit_prefill_operation_with_timing() { // AC:3
+fn test_explicit_prefill_operation_with_timing() {
+    // AC:3
     let config = InferenceTestConfig::from_env();
     config.skip_if_no_model();
 
     let model_path = config.model_path.unwrap();
-    let test_prompt = "This is a longer prompt that should benefit from explicit prefill optimization";
+    let test_prompt =
+        "This is a longer prompt that should benefit from explicit prefill optimization";
 
     // TODO: This test will initially fail - drives explicit prefill implementation
     let model = load_real_model(&model_path).expect("Model should load");
     let tokenizer = create_or_load_tokenizer(&model, config.tokenizer_path.as_ref())
         .expect("Tokenizer should be available");
 
-    let mut engine = ProductionInferenceEngine::new(
-        model,
-        tokenizer,
-        EngineConfig::with_prefill_optimization()
-    ).expect("Engine should initialize");
+    let mut engine =
+        ProductionInferenceEngine::new(model, tokenizer, EngineConfig::with_prefill_optimization())
+            .expect("Engine should initialize");
 
     // Tokenize the prompt
     let input_tokens = engine.tokenize(test_prompt).expect("Tokenization should succeed");
@@ -237,9 +243,8 @@ fn test_explicit_prefill_operation_with_timing() { // AC:3
 
     // Test explicit prefill operation
     let prefill_start = Instant::now();
-    let prefill_result = futures::executor::block_on(
-        engine.prefill(&input_tokens)
-    ).expect("Prefill should succeed");
+    let prefill_result =
+        futures::executor::block_on(engine.prefill(&input_tokens)).expect("Prefill should succeed");
     let prefill_duration = prefill_start.elapsed();
 
     // Validate prefill result
@@ -256,9 +261,9 @@ fn test_explicit_prefill_operation_with_timing() { // AC:3
     };
 
     let generation_start = Instant::now();
-    let generation_result = futures::executor::block_on(
-        engine.generate_tokens(&input_tokens, generation_config)
-    ).expect("Generation should succeed");
+    let generation_result =
+        futures::executor::block_on(engine.generate_tokens(&input_tokens, generation_config))
+            .expect("Generation should succeed");
     let generation_duration = generation_start.elapsed();
 
     // Validate generation benefited from prefill
@@ -268,16 +273,17 @@ fn test_explicit_prefill_operation_with_timing() { // AC:3
     // Compare with cold generation (no prefill)
     let cold_engine = create_cold_engine(&model_path).expect("Cold engine should initialize");
     let cold_start = Instant::now();
-    let _cold_result = futures::executor::block_on(
-        cold_engine.infer_with_metrics(test_prompt)
-    ).expect("Cold inference should succeed");
+    let _cold_result = futures::executor::block_on(cold_engine.infer_with_metrics(test_prompt))
+        .expect("Cold inference should succeed");
     let cold_duration = cold_start.elapsed();
 
     // Prefilled generation should be faster
     let total_prefill_time = prefill_duration + generation_duration;
     if total_prefill_time < cold_duration {
-        println!("Prefill optimization effective: {:.2}x speedup",
-                 cold_duration.as_secs_f64() / total_prefill_time.as_secs_f64());
+        println!(
+            "Prefill optimization effective: {:.2}x speedup",
+            cold_duration.as_secs_f64() / total_prefill_time.as_secs_f64()
+        );
     }
 
     println!("✅ Explicit prefill operation test scaffolding created");
@@ -287,7 +293,8 @@ fn test_explicit_prefill_operation_with_timing() { // AC:3
 /// Validates efficient batch processing with real models
 #[test]
 #[cfg(feature = "inference")]
-fn test_batch_inference_performance_optimization() { // AC:3
+fn test_batch_inference_performance_optimization() {
+    // AC:3
     let config = InferenceTestConfig::from_env();
     config.skip_if_no_model();
 
@@ -316,9 +323,8 @@ fn test_batch_inference_performance_optimization() { // AC:3
 
     // Test batch inference
     let batch_start = Instant::now();
-    let batch_results = futures::executor::block_on(
-        engine.infer_batch(&batch_prompts)
-    ).expect("Batch inference should succeed");
+    let batch_results = futures::executor::block_on(engine.infer_batch(&batch_prompts))
+        .expect("Batch inference should succeed");
     let batch_duration = batch_start.elapsed();
 
     // Validate batch results
@@ -335,9 +341,8 @@ fn test_batch_inference_performance_optimization() { // AC:3
     let mut individual_results = Vec::new();
 
     for prompt in &batch_prompts {
-        let result = futures::executor::block_on(
-            engine.infer_with_metrics(prompt)
-        ).expect("Individual inference should succeed");
+        let result = futures::executor::block_on(engine.infer_with_metrics(prompt))
+            .expect("Individual inference should succeed");
         individual_results.push(result);
     }
 
@@ -367,11 +372,13 @@ fn test_batch_inference_performance_optimization() { // AC:3
 /// Validates inference output parity with C++ reference implementation
 #[test]
 #[cfg(all(feature = "inference", feature = "crossval"))]
-fn test_cpp_inference_cross_validation() { // AC:7
+fn test_cpp_inference_cross_validation() {
+    // AC:7
     let config = InferenceTestConfig::from_env();
     config.skip_if_no_model();
 
-    let cpp_dir = env::var("BITNET_CPP_DIR").expect("BITNET_CPP_DIR must be set for cross-validation");
+    let cpp_dir =
+        env::var("BITNET_CPP_DIR").expect("BITNET_CPP_DIR must be set for cross-validation");
     let model_path = config.model_path.unwrap();
     let test_prompt = "The capital of France is";
 
@@ -380,16 +387,13 @@ fn test_cpp_inference_cross_validation() { // AC:7
     let tokenizer = create_or_load_tokenizer(&model, config.tokenizer_path.as_ref())
         .expect("Tokenizer should be available");
 
-    let mut engine = ProductionInferenceEngine::new(
-        model,
-        tokenizer,
-        EngineConfig::for_cross_validation()
-    ).expect("Engine should initialize");
+    let mut engine =
+        ProductionInferenceEngine::new(model, tokenizer, EngineConfig::for_cross_validation())
+            .expect("Engine should initialize");
 
     // Generate Rust implementation result
-    let rust_result = futures::executor::block_on(
-        engine.infer_with_metrics(test_prompt)
-    ).expect("Rust inference should succeed");
+    let rust_result = futures::executor::block_on(engine.infer_with_metrics(test_prompt))
+        .expect("Rust inference should succeed");
 
     // Generate C++ reference result
     let cpp_result = run_cpp_reference_inference(&cpp_dir, &model_path, test_prompt)
@@ -412,17 +416,20 @@ fn test_cpp_inference_cross_validation() { // AC:7
     // Cross-validate numerical accuracy if logits available
     if let (Some(rust_logits), Some(cpp_logits)) = (&rust_result.logits, &cpp_result.logits) {
         let numerical_comparison = compare_numerical_accuracy(rust_logits, cpp_logits, 1e-4);
-        assert!(numerical_comparison.within_tolerance, "Numerical accuracy should be within tolerance");
+        assert!(
+            numerical_comparison.within_tolerance,
+            "Numerical accuracy should be within tolerance"
+        );
 
-        println!("Numerical accuracy: max_diff={:.6}, rmse={:.6}",
-                 numerical_comparison.max_difference, numerical_comparison.rmse);
+        println!(
+            "Numerical accuracy: max_diff={:.6}, rmse={:.6}",
+            numerical_comparison.max_difference, numerical_comparison.rmse
+        );
     }
 
     // Cross-validate performance characteristics
-    let performance_comparison = compare_performance_metrics(
-        &rust_result.metrics,
-        &cpp_result.metrics
-    );
+    let performance_comparison =
+        compare_performance_metrics(&rust_result.metrics, &cpp_result.metrics);
 
     println!("Performance comparison:");
     println!("  Rust throughput: {:.2} tokens/sec", rust_result.metrics.tokens_per_second);
@@ -436,7 +443,8 @@ fn test_cpp_inference_cross_validation() { // AC:7
 /// Validates perplexity calculations match C++ reference implementation
 #[test]
 #[cfg(all(feature = "inference", feature = "crossval"))]
-fn test_perplexity_calculation_cross_validation() { // AC:8
+fn test_perplexity_calculation_cross_validation() {
+    // AC:8
     let config = InferenceTestConfig::from_env();
     config.skip_if_no_model();
 
@@ -448,16 +456,13 @@ fn test_perplexity_calculation_cross_validation() { // AC:8
     let tokenizer = create_or_load_tokenizer(&model, config.tokenizer_path.as_ref())
         .expect("Tokenizer should be available");
 
-    let mut engine = ProductionInferenceEngine::new(
-        model,
-        tokenizer,
-        EngineConfig::for_evaluation()
-    ).expect("Engine should initialize");
+    let mut engine =
+        ProductionInferenceEngine::new(model, tokenizer, EngineConfig::for_evaluation())
+            .expect("Engine should initialize");
 
     // Calculate perplexity with Rust implementation
-    let rust_perplexity = futures::executor::block_on(
-        engine.calculate_perplexity(test_corpus)
-    ).expect("Rust perplexity calculation should succeed");
+    let rust_perplexity = futures::executor::block_on(engine.calculate_perplexity(test_corpus))
+        .expect("Rust perplexity calculation should succeed");
 
     println!("Rust perplexity: {:.4}", rust_perplexity.value);
 
@@ -497,7 +502,8 @@ fn test_perplexity_calculation_cross_validation() { // AC:8
 /// Validates GPU acceleration with transparent CPU fallback
 #[test]
 #[cfg(all(feature = "inference", feature = "gpu"))]
-fn test_device_aware_inference_with_fallback() { // AC:3
+fn test_device_aware_inference_with_fallback() {
+    // AC:3
     let config = InferenceTestConfig::from_env();
     config.skip_if_no_model();
 
@@ -517,25 +523,21 @@ fn test_device_aware_inference_with_fallback() { // AC:3
         ..Default::default()
     };
 
-    let mut gpu_engine = ProductionInferenceEngine::new(model.clone(), tokenizer.clone(), gpu_config)
-        .expect("GPU engine should initialize");
+    let mut gpu_engine =
+        ProductionInferenceEngine::new(model.clone(), tokenizer.clone(), gpu_config)
+            .expect("GPU engine should initialize");
 
-    let gpu_result = futures::executor::block_on(
-        gpu_engine.infer_with_metrics(test_prompt)
-    ).expect("GPU inference should succeed (with fallback)");
+    let gpu_result = futures::executor::block_on(gpu_engine.infer_with_metrics(test_prompt))
+        .expect("GPU inference should succeed (with fallback)");
 
     // Test CPU-only configuration
-    let cpu_config = EngineConfig {
-        device_preference: "cpu".to_string(),
-        ..Default::default()
-    };
+    let cpu_config = EngineConfig { device_preference: "cpu".to_string(), ..Default::default() };
 
     let mut cpu_engine = ProductionInferenceEngine::new(model, tokenizer, cpu_config)
         .expect("CPU engine should initialize");
 
-    let cpu_result = futures::executor::block_on(
-        cpu_engine.infer_with_metrics(test_prompt)
-    ).expect("CPU inference should succeed");
+    let cpu_result = futures::executor::block_on(cpu_engine.infer_with_metrics(test_prompt))
+        .expect("CPU inference should succeed");
 
     // Validate device execution results
     assert!(!gpu_result.text.is_empty(), "GPU result should generate text");
@@ -560,7 +562,10 @@ fn test_device_aware_inference_with_fallback() { // AC:3
 
     // Test deterministic consistency between devices
     if env::var("BITNET_DETERMINISTIC").map(|v| v == "1").unwrap_or(false) {
-        assert_eq!(gpu_result.tokens, cpu_result.tokens, "Deterministic mode should produce identical tokens");
+        assert_eq!(
+            gpu_result.tokens, cpu_result.tokens,
+            "Deterministic mode should produce identical tokens"
+        );
     }
 
     println!("✅ Device-aware inference with fallback test scaffolding created");
@@ -579,7 +584,7 @@ fn load_real_model(model_path: &Path) -> Result<BitNetModel, Box<dyn std::error:
 #[cfg(feature = "inference")]
 fn create_or_load_tokenizer(
     model: &BitNetModel,
-    tokenizer_path: Option<&PathBuf>
+    tokenizer_path: Option<&PathBuf>,
 ) -> Result<UniversalTokenizer, TokenizerError> {
     // TODO: Implement tokenizer creation/loading
     unimplemented!("Tokenizer creation/loading needs implementation")
@@ -619,7 +624,7 @@ fn create_cold_engine(model_path: &Path) -> Result<ProductionInferenceEngine, In
 fn run_cpp_reference_inference(
     cpp_dir: &str,
     model_path: &Path,
-    prompt: &str
+    prompt: &str,
 ) -> Result<CppInferenceResult, Box<dyn std::error::Error>> {
     // TODO: Implement C++ reference inference execution
     unimplemented!("C++ reference inference execution needs implementation")
@@ -632,13 +637,20 @@ fn compare_token_sequences(rust_tokens: &[u32], cpp_tokens: &[u32]) -> TokenComp
 }
 
 #[cfg(all(feature = "inference", feature = "crossval"))]
-fn compare_numerical_accuracy(rust_logits: &[f32], cpp_logits: &[f32], tolerance: f32) -> NumericalComparison {
+fn compare_numerical_accuracy(
+    rust_logits: &[f32],
+    cpp_logits: &[f32],
+    tolerance: f32,
+) -> NumericalComparison {
     // TODO: Implement numerical accuracy comparison
     unimplemented!("Numerical accuracy comparison needs implementation")
 }
 
 #[cfg(all(feature = "inference", feature = "crossval"))]
-fn compare_performance_metrics(rust_metrics: &InferenceMetrics, cpp_metrics: &CppMetrics) -> PerformanceComparison {
+fn compare_performance_metrics(
+    rust_metrics: &InferenceMetrics,
+    cpp_metrics: &CppMetrics,
+) -> PerformanceComparison {
     // TODO: Implement performance metrics comparison
     unimplemented!("Performance metrics comparison needs implementation")
 }
@@ -647,7 +659,7 @@ fn compare_performance_metrics(rust_metrics: &InferenceMetrics, cpp_metrics: &Cp
 fn calculate_cpp_reference_perplexity(
     cpp_dir: &str,
     model_path: &Path,
-    corpus: &str
+    corpus: &str,
 ) -> Result<PerplexityResult, Box<dyn std::error::Error>> {
     // TODO: Implement C++ reference perplexity calculation
     unimplemented!("C++ reference perplexity calculation needs implementation")

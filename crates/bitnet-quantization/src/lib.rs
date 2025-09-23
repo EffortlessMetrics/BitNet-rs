@@ -17,7 +17,10 @@ pub mod tl1;
 pub mod tl2;
 pub mod utils;
 
-pub use device_aware_quantizer::{DeviceAwareQuantizer, QuantizationType as DeviceQuantizationType, AccuracyValidator, ToleranceConfig};
+pub use device_aware_quantizer::{
+    AccuracyValidator, DeviceAwareQuantizer, QuantizationType as DeviceQuantizationType,
+    ToleranceConfig,
+};
 pub use i2s::{I2SLayout, I2SQuantizer};
 pub use tl1::TL1Quantizer;
 pub use tl2::TL2Quantizer;

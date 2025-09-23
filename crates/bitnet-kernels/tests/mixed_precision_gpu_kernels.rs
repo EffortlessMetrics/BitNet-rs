@@ -7,21 +7,19 @@
 //! with mixed precision support, memory management, and device-aware kernel selection.
 
 use std::env;
+#[allow(unused_imports)]
 use std::time::{Duration, Instant};
 
 // Note: These imports will initially fail compilation until implementation exists
 #[cfg(feature = "gpu")]
 use bitnet_kernels::{
-    GPUKernel, MixedPrecisionKernel, DeviceKernel,
-    CudaKernel, MemoryPool, KernelLauncher,
-    PrecisionMode, LaunchParams, GPUMemoryManager,
-    KernelResult, KernelError, GPUInfo, DeviceInfo
+    CudaKernel, DeviceInfo, DeviceKernel, GPUInfo, GPUKernel, GPUMemoryManager, KernelError,
+    KernelLauncher, KernelResult, LaunchParams, MemoryPool, MixedPrecisionKernel, PrecisionMode,
 };
 
 #[cfg(feature = "inference")]
 use bitnet_kernels::{
-    SIMDKernel, CPUKernel, OptimizationLevel,
-    CacheOptimizedKernel, VectorizedKernel
+    CPUKernel, CacheOptimizedKernel, OptimizationLevel, SIMDKernel, VectorizedKernel,
 };
 
 #[cfg(feature = "inference")]
@@ -29,6 +27,7 @@ use bitnet_common::{Device, DeviceConfig, Tensor};
 
 /// Test configuration for kernel tests
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct KernelTestConfig {
     device_preference: String,
     enable_mixed_precision: bool,
@@ -38,13 +37,14 @@ struct KernelTestConfig {
 }
 
 impl KernelTestConfig {
+    #[allow(dead_code)]
     fn from_env() -> Self {
         Self {
             device_preference: env::var("BITNET_DEVICE").unwrap_or_else(|_| "auto".to_string()),
-            enable_mixed_precision: !env::var("BITNET_DISABLE_MIXED_PRECISION").unwrap_or_default().eq("1"),
-            memory_limit_mb: env::var("BITNET_GPU_MEMORY_LIMIT")
-                .ok()
-                .and_then(|s| s.parse().ok()),
+            enable_mixed_precision: !env::var("BITNET_DISABLE_MIXED_PRECISION")
+                .unwrap_or_default()
+                .eq("1"),
+            memory_limit_mb: env::var("BITNET_GPU_MEMORY_LIMIT").ok().and_then(|s| s.parse().ok()),
             performance_testing: !env::var("BITNET_FAST_TESTS").unwrap_or_default().eq("1"),
             strict_validation: env::var("BITNET_STRICT_NO_FAKE_GPU").unwrap_or_default().eq("1"),
         }
@@ -60,7 +60,8 @@ impl KernelTestConfig {
 /// Validates FP16/BF16 support with automatic device capability detection
 #[test]
 #[cfg(feature = "gpu")]
-fn test_mixed_precision_kernel_creation() { // AC:3
+fn test_mixed_precision_kernel_creation() {
+    // AC:3
     let config = KernelTestConfig::from_env();
 
     if config.strict_validation && !is_real_gpu_available() {
@@ -93,7 +94,10 @@ fn test_mixed_precision_kernel_creation() { // AC:3
 
         // Validate Tensor Core availability
         if gpu_info.compute_major >= 7 {
-            assert!(fp16_kernel.supports_tensor_cores(), "FP16 should support Tensor Cores on CC 7.0+");
+            assert!(
+                fp16_kernel.supports_tensor_cores(),
+                "FP16 should support Tensor Cores on CC 7.0+"
+            );
         }
     } else {
         println!("FP16 not supported on this device - skipping FP16 tests");
@@ -124,7 +128,11 @@ fn test_mixed_precision_kernel_creation() { // AC:3
     if gpu_info.supports_bf16 {
         assert_eq!(selected_precision, PrecisionMode::BF16, "Should prefer BF16 when available");
     } else if gpu_info.supports_fp16 {
-        assert_eq!(selected_precision, PrecisionMode::FP16, "Should prefer FP16 when BF16 unavailable");
+        assert_eq!(
+            selected_precision,
+            PrecisionMode::FP16,
+            "Should prefer FP16 when BF16 unavailable"
+        );
     } else {
         assert_eq!(selected_precision, PrecisionMode::FP32, "Should fallback to FP32");
     }
@@ -136,7 +144,8 @@ fn test_mixed_precision_kernel_creation() { // AC:3
 /// Validates FP16/BF16 matrix operations maintain acceptable accuracy vs FP32
 #[test]
 #[cfg(feature = "gpu")]
-fn test_mixed_precision_matmul_accuracy() { // AC:3
+fn test_mixed_precision_matmul_accuracy() {
+    // AC:3
     let config = KernelTestConfig::from_env();
 
     if config.strict_validation && !is_real_gpu_available() {
@@ -160,8 +169,7 @@ fn test_mixed_precision_matmul_accuracy() { // AC:3
         .expect("FP32 kernel should be available");
 
     let fp32_start = Instant::now();
-    let fp32_result = fp32_kernel.matmul(&a_matrix, &b_matrix)
-        .expect("FP32 matmul should succeed");
+    let fp32_result = fp32_kernel.matmul(&a_matrix, &b_matrix).expect("FP32 matmul should succeed");
     let fp32_duration = fp32_start.elapsed();
 
     println!("FP32 matmul time: {:?}", fp32_duration);
@@ -172,8 +180,8 @@ fn test_mixed_precision_matmul_accuracy() { // AC:3
             .expect("FP16 kernel should be available");
 
         let fp16_start = Instant::now();
-        let fp16_result = fp16_kernel.matmul(&a_matrix, &b_matrix)
-            .expect("FP16 matmul should succeed");
+        let fp16_result =
+            fp16_kernel.matmul(&a_matrix, &b_matrix).expect("FP16 matmul should succeed");
         let fp16_duration = fp16_start.elapsed();
 
         // Validate FP16 accuracy
@@ -192,7 +200,11 @@ fn test_mixed_precision_matmul_accuracy() { // AC:3
         // FP16 should provide speedup (especially with Tensor Cores)
         if fp16_kernel.supports_tensor_cores() {
             let speedup = fp32_duration.as_secs_f64() / fp16_duration.as_secs_f64();
-            assert!(speedup >= 1.2, "FP16 with Tensor Cores should provide ≥1.2x speedup, got {:.2}x", speedup);
+            assert!(
+                speedup >= 1.2,
+                "FP16 with Tensor Cores should provide ≥1.2x speedup, got {:.2}x",
+                speedup
+            );
         }
     }
 
@@ -202,8 +214,8 @@ fn test_mixed_precision_matmul_accuracy() { // AC:3
             .expect("BF16 kernel should be available");
 
         let bf16_start = Instant::now();
-        let bf16_result = bf16_kernel.matmul(&a_matrix, &b_matrix)
-            .expect("BF16 matmul should succeed");
+        let bf16_result =
+            bf16_kernel.matmul(&a_matrix, &b_matrix).expect("BF16 matmul should succeed");
         let bf16_duration = bf16_start.elapsed();
 
         // Validate BF16 accuracy
@@ -231,7 +243,8 @@ fn test_mixed_precision_matmul_accuracy() { // AC:3
 /// Validates precision mode selection with graceful fallback to supported modes
 #[test]
 #[cfg(feature = "gpu")]
-fn test_precision_mode_validation() { // AC:3
+fn test_precision_mode_validation() {
+    // AC:3
     let config = KernelTestConfig::from_env();
 
     if config.strict_validation && !is_real_gpu_available() {
@@ -243,18 +256,39 @@ fn test_precision_mode_validation() { // AC:3
     let gpu_info = GPUInfo::detect().expect("GPU detection should succeed");
 
     // Test precision validation logic
-    assert!(validate_precision_support(PrecisionMode::FP32, &gpu_info), "FP32 should always be supported");
+    assert!(
+        validate_precision_support(PrecisionMode::FP32, &gpu_info),
+        "FP32 should always be supported"
+    );
 
     let fp16_supported = validate_precision_support(PrecisionMode::FP16, &gpu_info);
-    assert_eq!(fp16_supported, gpu_info.supports_fp16, "FP16 validation should match GPU capability");
+    assert_eq!(
+        fp16_supported, gpu_info.supports_fp16,
+        "FP16 validation should match GPU capability"
+    );
 
     let bf16_supported = validate_precision_support(PrecisionMode::BF16, &gpu_info);
-    assert_eq!(bf16_supported, gpu_info.supports_bf16, "BF16 validation should match GPU capability");
+    assert_eq!(
+        bf16_supported, gpu_info.supports_bf16,
+        "BF16 validation should match GPU capability"
+    );
 
     // Test automatic fallback when requesting unsupported precision
     let fallback_test_cases = vec![
-        (PrecisionMode::BF16, if gpu_info.supports_bf16 { PrecisionMode::BF16 } else if gpu_info.supports_fp16 { PrecisionMode::FP16 } else { PrecisionMode::FP32 }),
-        (PrecisionMode::FP16, if gpu_info.supports_fp16 { PrecisionMode::FP16 } else { PrecisionMode::FP32 }),
+        (
+            PrecisionMode::BF16,
+            if gpu_info.supports_bf16 {
+                PrecisionMode::BF16
+            } else if gpu_info.supports_fp16 {
+                PrecisionMode::FP16
+            } else {
+                PrecisionMode::FP32
+            },
+        ),
+        (
+            PrecisionMode::FP16,
+            if gpu_info.supports_fp16 { PrecisionMode::FP16 } else { PrecisionMode::FP32 },
+        ),
         (PrecisionMode::FP32, PrecisionMode::FP32),
     ];
 
@@ -262,8 +296,13 @@ fn test_precision_mode_validation() { // AC:3
         let kernel = MixedPrecisionKernel::new_with_fallback(requested, &gpu_info)
             .expect("Kernel creation with fallback should always succeed");
 
-        assert_eq!(kernel.precision_mode(), expected,
-                   "Requesting {:?} should result in {:?}", requested, expected);
+        assert_eq!(
+            kernel.precision_mode(),
+            expected,
+            "Requesting {:?} should result in {:?}",
+            requested,
+            expected
+        );
 
         println!("Precision fallback: {:?} → {:?}", requested, kernel.precision_mode());
     }
@@ -288,7 +327,8 @@ fn test_precision_mode_validation() { // AC:3
 /// Validates efficient GPU memory allocation and leak detection
 #[test]
 #[cfg(feature = "gpu")]
-fn test_gpu_memory_pool_management() { // AC:3
+fn test_gpu_memory_pool_management() {
+    // AC:3
     let config = KernelTestConfig::from_env();
 
     if config.strict_validation && !is_real_gpu_available() {
@@ -300,14 +340,14 @@ fn test_gpu_memory_pool_management() { // AC:3
     let gpu_info = GPUInfo::detect().expect("GPU detection should succeed");
 
     let memory_limit = config.memory_limit_mb.unwrap_or(
-        std::cmp::min(gpu_info.total_memory_mb / 2, 4096) // Use half available or 4GB max
+        std::cmp::min(gpu_info.total_memory_mb / 2, 4096), // Use half available or 4GB max
     );
 
     println!("GPU memory limit: {} MB", memory_limit);
 
     // Create memory pool with specified limit
-    let memory_pool = MemoryPool::new_with_limit(memory_limit)
-        .expect("Memory pool creation should succeed");
+    let memory_pool =
+        MemoryPool::new_with_limit(memory_limit).expect("Memory pool creation should succeed");
 
     assert_eq!(memory_pool.limit_mb(), memory_limit);
     assert_eq!(memory_pool.allocated_mb(), 0, "Initial allocation should be zero");
@@ -319,13 +359,18 @@ fn test_gpu_memory_pool_management() { // AC:3
 
     for size_mb in allocation_sizes {
         if memory_pool.available_mb() >= size_mb {
-            let allocation = memory_pool.allocate(size_mb * 1024 * 1024)
+            let allocation = memory_pool
+                .allocate(size_mb * 1024 * 1024)
                 .expect(&format!("Should allocate {} MB", size_mb));
 
             allocations.push((size_mb, allocation));
 
-            println!("Allocated {} MB, total allocated: {} MB, available: {} MB",
-                     size_mb, memory_pool.allocated_mb(), memory_pool.available_mb());
+            println!(
+                "Allocated {} MB, total allocated: {} MB, available: {} MB",
+                size_mb,
+                memory_pool.allocated_mb(),
+                memory_pool.available_mb()
+            );
 
             // Validate allocation tracking
             assert!(memory_pool.allocated_mb() > 0, "Should track allocated memory");
@@ -341,7 +386,10 @@ fn test_gpu_memory_pool_management() { // AC:3
         memory_pool.deallocate(allocation).expect("Deallocation should succeed");
         let after_free = memory_pool.allocated_mb();
 
-        println!("Deallocated {} MB, before: {} MB, after: {} MB", size_mb, before_free, after_free);
+        println!(
+            "Deallocated {} MB, before: {} MB, after: {} MB",
+            size_mb, before_free, after_free
+        );
         assert!(after_free < before_free, "Allocated memory should decrease after deallocation");
     }
 
@@ -363,7 +411,8 @@ fn test_gpu_memory_pool_management() { // AC:3
 /// Validates comprehensive memory leak detection with detailed error reporting
 #[test]
 #[cfg(feature = "gpu")]
-fn test_gpu_memory_leak_detection() { // AC:3
+fn test_gpu_memory_leak_detection() {
+    // AC:3
     let config = KernelTestConfig::from_env();
 
     if config.strict_validation && !is_real_gpu_available() {
@@ -372,15 +421,17 @@ fn test_gpu_memory_leak_detection() { // AC:3
     }
 
     // TODO: This test will initially fail - drives memory leak detection implementation
-    let memory_manager = GPUMemoryManager::new_with_leak_detection()
-        .expect("Memory manager should initialize");
+    let memory_manager =
+        GPUMemoryManager::new_with_leak_detection().expect("Memory manager should initialize");
 
     // Test normal allocation/deallocation (no leaks)
     {
-        let allocation1 = memory_manager.allocate(1024 * 1024, "test_allocation_1")
+        let allocation1 = memory_manager
+            .allocate(1024 * 1024, "test_allocation_1")
             .expect("Allocation should succeed");
 
-        let allocation2 = memory_manager.allocate(2048 * 1024, "test_allocation_2")
+        let allocation2 = memory_manager
+            .allocate(2048 * 1024, "test_allocation_2")
             .expect("Allocation should succeed");
 
         // Properly deallocate
@@ -393,7 +444,8 @@ fn test_gpu_memory_leak_detection() { // AC:3
 
     // Test intentional memory leak (for detection validation)
     {
-        let _leaked_allocation = memory_manager.allocate(512 * 1024, "intentional_leak")
+        let _leaked_allocation = memory_manager
+            .allocate(512 * 1024, "intentional_leak")
             .expect("Allocation should succeed");
 
         // Don't deallocate - this should be detected as a leak
@@ -421,7 +473,8 @@ fn test_gpu_memory_leak_detection() { // AC:3
     if let Ok(device_id) = memory_manager.get_current_device_id() {
         println!("Current GPU device ID: {}", device_id);
 
-        let device_stats = memory_manager.get_device_memory_stats(device_id)
+        let device_stats = memory_manager
+            .get_device_memory_stats(device_id)
             .expect("Should get device memory stats");
 
         println!("Device {} memory stats: {:#?}", device_id, device_stats);
@@ -439,7 +492,8 @@ fn test_gpu_memory_leak_detection() { // AC:3
 /// Validates AVX2/AVX-512 vectorization for CPU quantization operations
 #[test]
 #[cfg(feature = "inference")]
-fn test_simd_cpu_optimization_validation() { // AC:3
+fn test_simd_cpu_optimization_validation() {
+    // AC:3
     let config = KernelTestConfig::from_env();
 
     // TODO: This test will initially fail - drives SIMD CPU optimization implementation
@@ -457,8 +511,8 @@ fn test_simd_cpu_optimization_validation() { // AC:3
     // Test scalar baseline (no SIMD)
     let scalar_kernel = SIMDKernel::new(OptimizationLevel::Scalar);
     let scalar_start = Instant::now();
-    let scalar_result = scalar_kernel.process_quantization(&test_data)
-        .expect("Scalar processing should succeed");
+    let scalar_result =
+        scalar_kernel.process_quantization(&test_data).expect("Scalar processing should succeed");
     let scalar_duration = scalar_start.elapsed();
 
     println!("Scalar processing time: {:?}", scalar_duration);
@@ -467,16 +521,18 @@ fn test_simd_cpu_optimization_validation() { // AC:3
     if cpu_info.supports_avx2 {
         let avx2_kernel = SIMDKernel::new(OptimizationLevel::AVX2);
         let avx2_start = Instant::now();
-        let avx2_result = avx2_kernel.process_quantization(&test_data)
-            .expect("AVX2 processing should succeed");
+        let avx2_result =
+            avx2_kernel.process_quantization(&test_data).expect("AVX2 processing should succeed");
         let avx2_duration = avx2_start.elapsed();
 
         println!("AVX2 processing time: {:?}", avx2_duration);
 
         // Validate SIMD accuracy
         let simd_accuracy = calculate_simd_accuracy(&scalar_result, &avx2_result);
-        assert!(simd_accuracy.exact_match || simd_accuracy.relative_error <= 1e-6,
-                "SIMD should maintain numerical accuracy");
+        assert!(
+            simd_accuracy.exact_match || simd_accuracy.relative_error <= 1e-6,
+            "SIMD should maintain numerical accuracy"
+        );
 
         // Validate SIMD speedup
         let speedup = scalar_duration.as_secs_f64() / avx2_duration.as_secs_f64();
@@ -486,17 +542,23 @@ fn test_simd_cpu_optimization_validation() { // AC:3
 
         // Test vectorization efficiency
         let vectorization_stats = avx2_kernel.get_vectorization_stats();
-        println!("AVX2 vectorization: {:.1}% of operations", vectorization_stats.vectorization_percentage);
+        println!(
+            "AVX2 vectorization: {:.1}% of operations",
+            vectorization_stats.vectorization_percentage
+        );
 
-        assert!(vectorization_stats.vectorization_percentage >= 90.0,
-                "Should achieve ≥90% vectorization");
+        assert!(
+            vectorization_stats.vectorization_percentage >= 90.0,
+            "Should achieve ≥90% vectorization"
+        );
     }
 
     // Test AVX-512 if available
     if cpu_info.supports_avx512 {
         let avx512_kernel = SIMDKernel::new(OptimizationLevel::AVX512);
         let avx512_start = Instant::now();
-        let avx512_result = avx512_kernel.process_quantization(&test_data)
+        let avx512_result = avx512_kernel
+            .process_quantization(&test_data)
             .expect("AVX-512 processing should succeed");
         let avx512_duration = avx512_start.elapsed();
 
@@ -508,16 +570,22 @@ fn test_simd_cpu_optimization_validation() { // AC:3
             let avx2_kernel = SIMDKernel::new(OptimizationLevel::AVX2);
             let avx2_duration_ref = time_simd_operation(&avx2_kernel, &test_data);
 
-            let avx512_vs_avx2_speedup = avx2_duration_ref.as_secs_f64() / avx512_duration.as_secs_f64();
+            let avx512_vs_avx2_speedup =
+                avx2_duration_ref.as_secs_f64() / avx512_duration.as_secs_f64();
             println!("AVX-512 vs AVX2 speedup: {:.2}x", avx512_vs_avx2_speedup);
 
-            assert!(avx512_vs_avx2_speedup >= 1.2, "AVX-512 should provide ≥1.2x speedup over AVX2");
+            assert!(
+                avx512_vs_avx2_speedup >= 1.2,
+                "AVX-512 should provide ≥1.2x speedup over AVX2"
+            );
         }
 
         // Validate AVX-512 accuracy
         let avx512_accuracy = calculate_simd_accuracy(&scalar_result, &avx512_result);
-        assert!(avx512_accuracy.exact_match || avx512_accuracy.relative_error <= 1e-6,
-                "AVX-512 should maintain numerical accuracy");
+        assert!(
+            avx512_accuracy.exact_match || avx512_accuracy.relative_error <= 1e-6,
+            "AVX-512 should maintain numerical accuracy"
+        );
     }
 
     println!("✅ SIMD CPU optimization validation test scaffolding created");
@@ -527,7 +595,8 @@ fn test_simd_cpu_optimization_validation() { // AC:3
 /// Validates cache-friendly memory access patterns and locality optimization
 #[test]
 #[cfg(feature = "inference")]
-fn test_cache_optimized_kernel_operations() { // AC:3
+fn test_cache_optimized_kernel_operations() {
+    // AC:3
     let config = KernelTestConfig::from_env();
 
     if !config.performance_testing {
@@ -597,13 +666,14 @@ fn test_cache_optimized_kernel_operations() { // AC:3
 /// Validates automatic kernel selection based on device capabilities
 #[test]
 #[cfg(feature = "inference")]
-fn test_device_aware_kernel_selection() { // AC:3
+fn test_device_aware_kernel_selection() {
+    // AC:3
     let config = KernelTestConfig::from_env();
 
     // TODO: This test will initially fail - drives device-aware selection implementation
     let device_detector = DeviceDetector::new();
-    let available_devices = device_detector.detect_all_devices()
-        .expect("Device detection should succeed");
+    let available_devices =
+        device_detector.detect_all_devices().expect("Device detection should succeed");
 
     println!("Available devices:");
     for device in &available_devices {
@@ -615,8 +685,8 @@ fn test_device_aware_kernel_selection() { // AC:3
 
     // Test kernel selection for different device types
     for device in &available_devices {
-        let optimal_kernel = DeviceKernel::select_optimal(device)
-            .expect("Should select optimal kernel for device");
+        let optimal_kernel =
+            DeviceKernel::select_optimal(device).expect("Should select optimal kernel for device");
 
         println!("Optimal kernel for {}: {:?}", device.name, optimal_kernel.kernel_type());
 
@@ -640,8 +710,9 @@ fn test_device_aware_kernel_selection() { // AC:3
         max_memory_usage_mb: config.memory_limit_mb,
     };
 
-    let performance_kernel = DeviceKernel::select_with_preferences(&available_devices[0], &preferences)
-        .expect("Should select kernel with preferences");
+    let performance_kernel =
+        DeviceKernel::select_with_preferences(&available_devices[0], &preferences)
+            .expect("Should select kernel with preferences");
 
     println!("Performance-optimized kernel: {:?}", performance_kernel.kernel_type());
 
@@ -650,7 +721,11 @@ fn test_device_aware_kernel_selection() { // AC:3
     let fallback_kernel = DeviceKernel::select_with_fallback(&fallback_device)
         .expect("Should provide fallback kernel");
 
-    assert_eq!(fallback_kernel.kernel_type(), KernelType::CPUScalar, "Should fallback to CPU scalar");
+    assert_eq!(
+        fallback_kernel.kernel_type(),
+        KernelType::CPUScalar,
+        "Should fallback to CPU scalar"
+    );
 
     println!("✅ Device-aware kernel selection test scaffolding created");
 }

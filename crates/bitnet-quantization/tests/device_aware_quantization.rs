@@ -7,16 +7,16 @@
 //! with numerical accuracy validation and cross-validation framework integration.
 
 use std::env;
+#[allow(unused_imports)]
 use std::time::{Duration, Instant};
 
 // Note: These imports will initially fail compilation until implementation exists
 #[cfg(feature = "inference")]
 use bitnet_quantization::{
-    RealModelQuantizer, DeviceAwareQuantizer, QuantizationEngine,
-    I2SQuantizer, TL1Quantizer, TL2Quantizer, IQ2SQuantizer,
-    QuantizationResult, QuantizationError, AccuracyMetrics,
-    QuantizationFormat, QuantizationConfig, ValidationConfig,
-    DevicePerformanceMetrics, CrossValidationResult
+    AccuracyMetrics, CrossValidationResult, DeviceAwareQuantizer, DevicePerformanceMetrics,
+    I2SQuantizer, IQ2SQuantizer, QuantizationConfig, QuantizationEngine, QuantizationError,
+    QuantizationFormat, QuantizationResult, RealModelQuantizer, TL1Quantizer, TL2Quantizer,
+    ValidationConfig,
 };
 
 #[cfg(feature = "inference")]
@@ -24,6 +24,7 @@ use bitnet_common::{Device, DeviceConfig, Tensor};
 
 /// Test configuration for quantization tests
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct QuantizationTestConfig {
     device_preference: String,
     enable_cross_validation: bool,
@@ -32,6 +33,7 @@ struct QuantizationTestConfig {
 }
 
 impl QuantizationTestConfig {
+    #[allow(dead_code)]
     fn from_env() -> Self {
         Self {
             device_preference: env::var("BITNET_DEVICE").unwrap_or_else(|_| "auto".to_string()),
@@ -54,7 +56,8 @@ impl QuantizationTestConfig {
 /// Validates 2-bit signed quantization within ±1e-5 tolerance
 #[test]
 #[cfg(feature = "inference")]
-fn test_i2s_quantization_tolerance_1e5() { // AC:8 - I2S ±1e-5
+fn test_i2s_quantization_tolerance_1e5() {
+    // AC:8 - I2S ±1e-5
     let config = QuantizationTestConfig::from_env();
 
     // TODO: This test will initially fail - drives I2S quantization implementation
@@ -66,19 +69,23 @@ fn test_i2s_quantization_tolerance_1e5() { // AC:8 - I2S ±1e-5
 
     // Test I2S quantization
     let start_time = Instant::now();
-    let quantization_result = quantizer.quantize_validated(
-        &test_tensor,
-        scale,
-        None // No reference for this test
-    ).expect("I2S quantization should succeed");
+    let quantization_result = quantizer
+        .quantize_validated(
+            &test_tensor,
+            scale,
+            None, // No reference for this test
+        )
+        .expect("I2S quantization should succeed");
     let quantization_duration = start_time.elapsed();
 
     // Validate quantization accuracy within tolerance
-    let dequantized = quantizer.dequantize_validated(
-        &quantization_result.quantized_data,
-        scale,
-        Some(&test_tensor) // Use original as reference
-    ).expect("I2S dequantization should succeed");
+    let dequantized = quantizer
+        .dequantize_validated(
+            &quantization_result.quantized_data,
+            scale,
+            Some(&test_tensor), // Use original as reference
+        )
+        .expect("I2S dequantization should succeed");
 
     // Calculate accuracy metrics
     let accuracy = calculate_quantization_accuracy(&test_tensor, &dequantized);
@@ -91,8 +98,16 @@ fn test_i2s_quantization_tolerance_1e5() { // AC:8 - I2S ±1e-5
     println!("  Quantization time: {:?}", quantization_duration);
 
     // Validate tolerance requirements for I2S
-    assert!(accuracy.relative_error <= 1e-5, "I2S relative error should be ≤1e-5, got {:.2e}", accuracy.relative_error);
-    assert!(accuracy.correlation >= 0.9999, "I2S correlation should be ≥0.9999, got {:.6}", accuracy.correlation);
+    assert!(
+        accuracy.relative_error <= 1e-5,
+        "I2S relative error should be ≤1e-5, got {:.2e}",
+        accuracy.relative_error
+    );
+    assert!(
+        accuracy.correlation >= 0.9999,
+        "I2S correlation should be ≥0.9999, got {:.6}",
+        accuracy.correlation
+    );
 
     // Validate performance characteristics
     let performance_metrics = &quantization_result.performance_metrics;
@@ -106,7 +121,8 @@ fn test_i2s_quantization_tolerance_1e5() { // AC:8 - I2S ±1e-5
 /// Validates table lookup quantization within ±1e-4 tolerance
 #[test]
 #[cfg(feature = "inference")]
-fn test_tl1_tl2_quantization_tolerance_1e4() { // AC:8 - TL1/TL2 ±1e-4
+fn test_tl1_tl2_quantization_tolerance_1e4() {
+    // AC:8 - TL1/TL2 ±1e-4
     let config = QuantizationTestConfig::from_env();
 
     // TODO: This test will initially fail - drives TL1/TL2 quantization implementation
@@ -114,28 +130,36 @@ fn test_tl1_tl2_quantization_tolerance_1e4() { // AC:8 - TL1/TL2 ±1e-4
 
     // Test TL1 quantization (4-bit lookup)
     let tl1_quantizer = TL1Quantizer::new_with_validation(ValidationConfig::strict());
-    let tl1_table = tl1_quantizer.generate_table(&test_tensor, 16).expect("TL1 table generation should succeed");
+    let tl1_table = tl1_quantizer
+        .generate_table(&test_tensor, 16)
+        .expect("TL1 table generation should succeed");
 
     let tl1_start = Instant::now();
-    let tl1_result = tl1_quantizer.quantize_with_table(&test_tensor, &tl1_table)
+    let tl1_result = tl1_quantizer
+        .quantize_with_table(&test_tensor, &tl1_table)
         .expect("TL1 quantization should succeed");
     let tl1_duration = tl1_start.elapsed();
 
-    let tl1_dequantized = tl1_quantizer.dequantize_with_table(&tl1_result.quantized_indices, &tl1_table)
+    let tl1_dequantized = tl1_quantizer
+        .dequantize_with_table(&tl1_result.quantized_indices, &tl1_table)
         .expect("TL1 dequantization should succeed");
 
     let tl1_accuracy = calculate_quantization_accuracy(&test_tensor, &tl1_dequantized);
 
     // Test TL2 quantization (8-bit lookup)
     let tl2_quantizer = TL2Quantizer::new_with_validation(ValidationConfig::strict());
-    let tl2_table = tl2_quantizer.generate_table(&test_tensor, 256).expect("TL2 table generation should succeed");
+    let tl2_table = tl2_quantizer
+        .generate_table(&test_tensor, 256)
+        .expect("TL2 table generation should succeed");
 
     let tl2_start = Instant::now();
-    let tl2_result = tl2_quantizer.quantize_with_table(&test_tensor, &tl2_table)
+    let tl2_result = tl2_quantizer
+        .quantize_with_table(&test_tensor, &tl2_table)
         .expect("TL2 quantization should succeed");
     let tl2_duration = tl2_start.elapsed();
 
-    let tl2_dequantized = tl2_quantizer.dequantize_with_table(&tl2_result.quantized_indices, &tl2_table)
+    let tl2_dequantized = tl2_quantizer
+        .dequantize_with_table(&tl2_result.quantized_indices, &tl2_table)
         .expect("TL2 dequantization should succeed");
 
     let tl2_accuracy = calculate_quantization_accuracy(&test_tensor, &tl2_dequantized);
@@ -149,11 +173,22 @@ fn test_tl1_tl2_quantization_tolerance_1e4() { // AC:8 - TL1/TL2 ±1e-4
     println!("  Table lookup time: {:?}", tl2_duration);
 
     // Validate tolerance requirements for TL1/TL2
-    assert!(tl1_accuracy.relative_error <= 1e-4, "TL1 relative error should be ≤1e-4, got {:.2e}", tl1_accuracy.relative_error);
-    assert!(tl2_accuracy.relative_error <= 1e-4, "TL2 relative error should be ≤1e-4, got {:.2e}", tl2_accuracy.relative_error);
+    assert!(
+        tl1_accuracy.relative_error <= 1e-4,
+        "TL1 relative error should be ≤1e-4, got {:.2e}",
+        tl1_accuracy.relative_error
+    );
+    assert!(
+        tl2_accuracy.relative_error <= 1e-4,
+        "TL2 relative error should be ≤1e-4, got {:.2e}",
+        tl2_accuracy.relative_error
+    );
 
     // TL2 should be more accurate than TL1 (larger table)
-    assert!(tl2_accuracy.relative_error <= tl1_accuracy.relative_error, "TL2 should be more accurate than TL1");
+    assert!(
+        tl2_accuracy.relative_error <= tl1_accuracy.relative_error,
+        "TL2 should be more accurate than TL1"
+    );
 
     // Validate table efficiency
     assert!(tl1_table.size() == 16, "TL1 table should have 16 entries");
@@ -166,11 +201,13 @@ fn test_tl1_tl2_quantization_tolerance_1e4() { // AC:8 - TL1/TL2 ±1e-4
 /// Validates IQ2_S quantization with ±1e-5 tolerance and GGML compatibility
 #[test]
 #[cfg(feature = "inference")]
-fn test_iq2s_quantization_tolerance_1e5() { // AC:8 - IQ2_S ±1e-5
+fn test_iq2s_quantization_tolerance_1e5() {
+    // AC:8 - IQ2_S ±1e-5
     let config = QuantizationTestConfig::from_env();
 
     // TODO: This test will initially fail - drives IQ2_S quantization implementation
-    let iq2s_quantizer = IQ2SQuantizer::new_ggml_compatible().expect("IQ2S quantizer should initialize");
+    let iq2s_quantizer =
+        IQ2SQuantizer::new_ggml_compatible().expect("IQ2S quantizer should initialize");
 
     // Generate test tensor aligned to IQ2_S block requirements (64 weights per block)
     let block_size = 64;
@@ -179,7 +216,8 @@ fn test_iq2s_quantization_tolerance_1e5() { // AC:8 - IQ2_S ±1e-5
 
     // Test IQ2_S quantization with GGML format compliance
     let iq2s_start = Instant::now();
-    let iq2s_result = iq2s_quantizer.quantize_ggml_format(&test_tensor)
+    let iq2s_result = iq2s_quantizer
+        .quantize_ggml_format(&test_tensor)
         .expect("IQ2_S quantization should succeed");
     let iq2s_duration = iq2s_start.elapsed();
 
@@ -192,12 +230,17 @@ fn test_iq2s_quantization_tolerance_1e5() { // AC:8 - IQ2_S ±1e-5
 
         // Validate quantization levels (should be -2, -1, 1, 2)
         for weight in &block.weights {
-            assert!([-2, -1, 1, 2].contains(weight), "Weight {} should be valid IQ2_S level", weight);
+            assert!(
+                [-2, -1, 1, 2].contains(weight),
+                "Weight {} should be valid IQ2_S level",
+                weight
+            );
         }
     }
 
     // Test dequantization and accuracy
-    let dequantized = iq2s_quantizer.dequantize_ggml_format(&iq2s_result.blocks)
+    let dequantized = iq2s_quantizer
+        .dequantize_ggml_format(&iq2s_result.blocks)
         .expect("IQ2_S dequantization should succeed");
 
     let iq2s_accuracy = calculate_quantization_accuracy(&test_tensor, &dequantized);
@@ -209,13 +252,18 @@ fn test_iq2s_quantization_tolerance_1e5() { // AC:8 - IQ2_S ±1e-5
     println!("  Quantization time: {:?}", iq2s_duration);
 
     // Validate tolerance requirements for IQ2_S
-    assert!(iq2s_accuracy.relative_error <= 1e-5, "IQ2_S relative error should be ≤1e-5, got {:.2e}", iq2s_accuracy.relative_error);
+    assert!(
+        iq2s_accuracy.relative_error <= 1e-5,
+        "IQ2_S relative error should be ≤1e-5, got {:.2e}",
+        iq2s_accuracy.relative_error
+    );
 
     // Test cross-validation with GGML FFI if available
     #[cfg(feature = "ffi")]
     {
         if config.enable_cross_validation {
-            let ffi_result = iq2s_quantizer.cross_validate_ggml(&test_tensor)
+            let ffi_result = iq2s_quantizer
+                .cross_validate_ggml(&test_tensor)
                 .expect("IQ2_S cross-validation should succeed");
 
             assert!(ffi_result.validation_passed, "IQ2_S should pass GGML cross-validation");
@@ -240,17 +288,20 @@ fn test_gpu_quantization_accuracy_validation() {
 
     // TODO: This test will initially fail - drives GPU quantization implementation
     let device_config = DeviceConfig::gpu_with_fallback();
-    let quantizer = DeviceAwareQuantizer::for_device(Device::GPU(device_config), QuantizationConfig::default())
-        .expect("GPU quantizer should initialize");
+    let quantizer =
+        DeviceAwareQuantizer::for_device(Device::GPU(device_config), QuantizationConfig::default())
+            .expect("GPU quantizer should initialize");
 
     let test_tensor = generate_realistic_model_tensor(2 * 1024 * 1024); // 2M elements
 
     // Test I2S quantization on GPU
     let gpu_start = Instant::now();
-    let gpu_result = quantizer.quantize_real_tensors(
-        &[Tensor::from_slice(&test_tensor)],
-        QuantizationFormat::I2S { gpu_accelerated: true }
-    ).expect("GPU quantization should succeed");
+    let gpu_result = quantizer
+        .quantize_real_tensors(
+            &[Tensor::from_slice(&test_tensor)],
+            QuantizationFormat::I2S { gpu_accelerated: true },
+        )
+        .expect("GPU quantization should succeed");
     let gpu_duration = gpu_start.elapsed();
 
     // Validate GPU quantization result
@@ -258,10 +309,8 @@ fn test_gpu_quantization_accuracy_validation() {
     assert!(gpu_result.device_used.is_gpu(), "Should report GPU usage");
 
     // Test numerical accuracy
-    let gpu_accuracy = quantizer.validate_numerical_accuracy(
-        &test_tensor,
-        &gpu_result.dequantized_reference
-    );
+    let gpu_accuracy =
+        quantizer.validate_numerical_accuracy(&test_tensor, &gpu_result.dequantized_reference);
 
     println!("GPU Quantization Results:");
     println!("  Device: {}", gpu_result.device_used);
@@ -291,17 +340,20 @@ fn test_cpu_quantization_accuracy_validation() {
 
     // TODO: This test will initially fail - drives CPU quantization implementation
     let device_config = DeviceConfig::cpu_optimized();
-    let quantizer = DeviceAwareQuantizer::for_device(Device::CPU(device_config), QuantizationConfig::default())
-        .expect("CPU quantizer should initialize");
+    let quantizer =
+        DeviceAwareQuantizer::for_device(Device::CPU(device_config), QuantizationConfig::default())
+            .expect("CPU quantizer should initialize");
 
     let test_tensor = generate_realistic_model_tensor(1024 * 1024); // 1M elements
 
     // Test I2S quantization on CPU with SIMD optimization
     let cpu_start = Instant::now();
-    let cpu_result = quantizer.quantize_real_tensors(
-        &[Tensor::from_slice(&test_tensor)],
-        QuantizationFormat::I2S { gpu_accelerated: false }
-    ).expect("CPU quantization should succeed");
+    let cpu_result = quantizer
+        .quantize_real_tensors(
+            &[Tensor::from_slice(&test_tensor)],
+            QuantizationFormat::I2S { gpu_accelerated: false },
+        )
+        .expect("CPU quantization should succeed");
     let cpu_duration = cpu_start.elapsed();
 
     // Validate CPU quantization result
@@ -309,10 +361,8 @@ fn test_cpu_quantization_accuracy_validation() {
     assert!(cpu_result.device_used.is_cpu(), "Should report CPU usage");
 
     // Test numerical accuracy
-    let cpu_accuracy = quantizer.validate_numerical_accuracy(
-        &test_tensor,
-        &cpu_result.dequantized_reference
-    );
+    let cpu_accuracy =
+        quantizer.validate_numerical_accuracy(&test_tensor, &cpu_result.dequantized_reference);
 
     println!("CPU Quantization Results:");
     println!("  Device: {}", cpu_result.device_used);
@@ -332,8 +382,10 @@ fn test_cpu_quantization_accuracy_validation() {
 
     // Test SIMD optimization effectiveness
     if cpu_result.performance_metrics.simd_instructions_used > 0 {
-        println!("SIMD optimization active: {} vectorized operations",
-                 cpu_result.performance_metrics.simd_instructions_used);
+        println!(
+            "SIMD optimization active: {} vectorized operations",
+            cpu_result.performance_metrics.simd_instructions_used
+        );
     }
 
     println!("✅ CPU quantization accuracy validation test scaffolding created");
@@ -352,24 +404,30 @@ fn test_gpu_cpu_quantization_parity_validation() {
     // Create GPU and CPU quantizers
     let gpu_quantizer = DeviceAwareQuantizer::for_device(
         Device::GPU(DeviceConfig::gpu_with_fallback()),
-        QuantizationConfig::deterministic()
-    ).expect("GPU quantizer should initialize");
+        QuantizationConfig::deterministic(),
+    )
+    .expect("GPU quantizer should initialize");
 
     let cpu_quantizer = DeviceAwareQuantizer::for_device(
         Device::CPU(DeviceConfig::cpu_optimized()),
-        QuantizationConfig::deterministic()
-    ).expect("CPU quantizer should initialize");
+        QuantizationConfig::deterministic(),
+    )
+    .expect("CPU quantizer should initialize");
 
     // Quantize with both devices
-    let gpu_result = gpu_quantizer.quantize_real_tensors(
-        &[Tensor::from_slice(&test_tensor)],
-        QuantizationFormat::I2S { gpu_accelerated: true }
-    ).expect("GPU quantization should succeed");
+    let gpu_result = gpu_quantizer
+        .quantize_real_tensors(
+            &[Tensor::from_slice(&test_tensor)],
+            QuantizationFormat::I2S { gpu_accelerated: true },
+        )
+        .expect("GPU quantization should succeed");
 
-    let cpu_result = cpu_quantizer.quantize_real_tensors(
-        &[Tensor::from_slice(&test_tensor)],
-        QuantizationFormat::I2S { gpu_accelerated: false }
-    ).expect("CPU quantization should succeed");
+    let cpu_result = cpu_quantizer
+        .quantize_real_tensors(
+            &[Tensor::from_slice(&test_tensor)],
+            QuantizationFormat::I2S { gpu_accelerated: false },
+        )
+        .expect("CPU quantization should succeed");
 
     // Validate parity between GPU and CPU results
     let parity_comparison = compare_quantization_results(&gpu_result, &cpu_result);
@@ -386,11 +444,15 @@ fn test_gpu_cpu_quantization_parity_validation() {
 
     // In deterministic mode, results should be identical
     if env::var("BITNET_DETERMINISTIC").map(|v| v == "1").unwrap_or(false) {
-        assert!(parity_comparison.quantized_data_match, "Deterministic mode should produce identical results");
+        assert!(
+            parity_comparison.quantized_data_match,
+            "Deterministic mode should produce identical results"
+        );
     }
 
     // Test device consistency validation
-    let consistency_result = gpu_quantizer.validate_device_consistency(&[Tensor::from_slice(&test_tensor)])
+    let consistency_result = gpu_quantizer
+        .validate_device_consistency(&[Tensor::from_slice(&test_tensor)])
         .expect("Device consistency validation should succeed");
 
     assert!(consistency_result.is_consistent, "Device consistency validation should pass");
@@ -407,8 +469,9 @@ fn test_gpu_cpu_quantization_parity_validation() {
 /// Test quantization cross-validation against C++ reference
 /// Validates quantization accuracy against C++ reference implementation
 #[test]
-#[cfg(all(feature = "inference", feature = "crossval"))]
-fn test_quantization_cross_validation_cpp_reference() { // AC:7
+#[cfg(feature = "inference")]
+fn test_quantization_cross_validation_cpp_reference() {
+    // AC:7
     let config = QuantizationTestConfig::from_env();
 
     if !config.enable_cross_validation {
@@ -421,10 +484,9 @@ fn test_quantization_cross_validation_cpp_reference() { // AC:7
     let test_tensor = generate_realistic_model_tensor(512 * 1024); // 512K elements
 
     // Test I2S cross-validation
-    let i2s_crossval = quantizer.cross_validate_with_cpp(
-        &[Tensor::from_slice(&test_tensor)],
-        config.numerical_tolerance
-    ).expect("I2S cross-validation should succeed");
+    let i2s_crossval = quantizer
+        .cross_validate_with_cpp(&[Tensor::from_slice(&test_tensor)], config.numerical_tolerance)
+        .expect("I2S cross-validation should succeed");
 
     println!("I2S Cross-Validation Results:");
     println!("  Validation passed: {}", i2s_crossval.passed);
@@ -433,8 +495,10 @@ fn test_quantization_cross_validation_cpp_reference() { // AC:7
     println!("  Correlation: {:.6}", i2s_crossval.accuracy_metrics.correlation);
 
     assert!(i2s_crossval.passed, "I2S cross-validation should pass");
-    assert!(i2s_crossval.accuracy_metrics.max_difference <= config.numerical_tolerance,
-            "Max difference should be within tolerance");
+    assert!(
+        i2s_crossval.accuracy_metrics.max_difference <= config.numerical_tolerance,
+        "Max difference should be within tolerance"
+    );
 
     // Test performance comparison if enabled
     if config.performance_benchmarking {
@@ -445,15 +509,17 @@ fn test_quantization_cross_validation_cpp_reference() { // AC:7
             println!("  Speedup: {:.2}x", perf_comparison.speedup_ratio);
 
             // Rust implementation should be competitive
-            assert!(perf_comparison.speedup_ratio >= 0.8, "Rust should be within 20% of C++ performance");
+            assert!(
+                perf_comparison.speedup_ratio >= 0.8,
+                "Rust should be within 20% of C++ performance"
+            );
         }
     }
 
     // Test TL1/TL2 cross-validation if supported
-    let tl1_crossval = quantizer.cross_validate_with_cpp(
-        &[Tensor::from_slice(&test_tensor)],
-        config.numerical_tolerance
-    ).expect("TL1 cross-validation should succeed");
+    let tl1_crossval = quantizer
+        .cross_validate_with_cpp(&[Tensor::from_slice(&test_tensor)], config.numerical_tolerance)
+        .expect("TL1 cross-validation should succeed");
 
     assert!(tl1_crossval.passed, "TL1 cross-validation should pass");
 
@@ -469,7 +535,8 @@ fn test_quantization_cross_validation_cpp_reference() { // AC:7
 /// Validates quantization performance meets target thresholds
 #[test]
 #[cfg(feature = "inference")]
-fn test_quantization_performance_benchmarks() { // AC:10
+fn test_quantization_performance_benchmarks() {
+    // AC:10
     let config = QuantizationTestConfig::from_env();
 
     if !config.performance_benchmarking {
@@ -482,9 +549,9 @@ fn test_quantization_performance_benchmarks() { // AC:10
 
     // Test different tensor sizes for scalability
     let test_sizes = vec![
-        64 * 1024,      // 64K elements
-        256 * 1024,     // 256K elements
-        1024 * 1024,    // 1M elements
+        64 * 1024,       // 64K elements
+        256 * 1024,      // 256K elements
+        1024 * 1024,     // 1M elements
         4 * 1024 * 1024, // 4M elements
     ];
 
@@ -495,13 +562,16 @@ fn test_quantization_performance_benchmarks() { // AC:10
 
         // Benchmark I2S quantization
         let benchmark_start = Instant::now();
-        let result = quantizer.quantize_real_tensors(
-            &[Tensor::from_slice(&test_tensor)],
-            QuantizationFormat::I2S { gpu_accelerated: config.device_preference == "gpu" }
-        ).expect("Quantization should succeed");
+        let result = quantizer
+            .quantize_real_tensors(
+                &[Tensor::from_slice(&test_tensor)],
+                QuantizationFormat::I2S { gpu_accelerated: config.device_preference == "gpu" },
+            )
+            .expect("Quantization should succeed");
         let benchmark_duration = benchmark_start.elapsed();
 
-        let throughput = (size * 4) as f64 / (1024.0 * 1024.0 * 1024.0) / benchmark_duration.as_secs_f64(); // GB/s
+        let throughput =
+            (size * 4) as f64 / (1024.0 * 1024.0 * 1024.0) / benchmark_duration.as_secs_f64(); // GB/s
 
         performance_results.push(PerformanceBenchmark {
             tensor_size: size,
@@ -510,14 +580,15 @@ fn test_quantization_performance_benchmarks() { // AC:10
             device_used: result.device_used.clone(),
         });
 
-        println!("Size: {} elements, Throughput: {:.2} GB/s, Time: {:?}",
-                 size, throughput, benchmark_duration);
+        println!(
+            "Size: {} elements, Throughput: {:.2} GB/s, Time: {:?}",
+            size, throughput, benchmark_duration
+        );
     }
 
     // Validate performance targets
-    let mean_throughput = performance_results.iter()
-        .map(|r| r.throughput_gb_per_sec)
-        .sum::<f64>() / performance_results.len() as f64;
+    let mean_throughput = performance_results.iter().map(|r| r.throughput_gb_per_sec).sum::<f64>()
+        / performance_results.len() as f64;
 
     println!("Mean throughput: {:.2} GB/s", mean_throughput);
 
@@ -525,17 +596,26 @@ fn test_quantization_performance_benchmarks() { // AC:10
     let (min_throughput, target_description) = if config.device_preference == "gpu" {
         (50.0, "GPU should achieve ≥50 GB/s") // GPU target
     } else {
-        (5.0, "CPU should achieve ≥5 GB/s")   // CPU target
+        (5.0, "CPU should achieve ≥5 GB/s") // CPU target
     };
 
-    assert!(mean_throughput >= min_throughput, "{}, got {:.2} GB/s", target_description, mean_throughput);
+    assert!(
+        mean_throughput >= min_throughput,
+        "{}, got {:.2} GB/s",
+        target_description,
+        mean_throughput
+    );
 
     // Test scalability (larger tensors should not degrade significantly)
     let small_throughput = performance_results[0].throughput_gb_per_sec;
     let large_throughput = performance_results.last().unwrap().throughput_gb_per_sec;
     let scalability_ratio = large_throughput / small_throughput;
 
-    assert!(scalability_ratio >= 0.7, "Throughput should scale reasonably with size (≥70%), got {:.2}x", scalability_ratio);
+    assert!(
+        scalability_ratio >= 0.7,
+        "Throughput should scale reasonably with size (≥70%), got {:.2}x",
+        scalability_ratio
+    );
 
     println!("✅ Quantization performance benchmarks test scaffolding created");
 }
@@ -569,7 +649,10 @@ fn generate_iq2s_aligned_tensor(size: usize) -> Vec<f32> {
 }
 
 #[cfg(feature = "inference")]
-fn compare_quantization_results(gpu_result: &QuantizationResult, cpu_result: &QuantizationResult) -> ParityComparison {
+fn compare_quantization_results(
+    gpu_result: &QuantizationResult,
+    cpu_result: &QuantizationResult,
+) -> ParityComparison {
     // TODO: Implement quantization result comparison
     unimplemented!("Quantization result comparison needs implementation")
 }

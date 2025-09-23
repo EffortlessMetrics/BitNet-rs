@@ -3,11 +3,11 @@
 //! Provides reference implementations and test data for validating BitNet.rs
 //! against C++ implementations with configurable tolerance levels.
 
-use bitnet_common::{Device, Result, BitNetError};
-use serde::{Serialize, Deserialize};
+use super::{TestEnvironmentConfig, model_artifacts::ModelFixtures};
+use bitnet_common::{BitNetError, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use super::{TestEnvironmentConfig, model_artifacts::ModelFixtures};
 
 /// Reference data from C++ implementation for cross-validation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -146,7 +146,7 @@ impl CrossValidationFixtures {
             deterministic: true,
             seed: Some(123),
             expected_output: ExpectedOutput {
-                generated_tokens: vec![], // Will be filled during validation
+                generated_tokens: vec![],      // Will be filled during validation
                 generated_text: String::new(), // Will be filled during validation
                 final_logits: vec![],
                 perplexity_score: None,
@@ -194,7 +194,7 @@ impl CrossValidationFixtures {
             expected_output: ExpectedOutput {
                 generated_tokens: vec![], // No generation, just evaluation
                 generated_text: String::new(),
-                final_logits: vec![], // Full logits for each token
+                final_logits: vec![],         // Full logits for each token
                 perplexity_score: Some(12.5), // Example perplexity
                 timing_metrics: TimingMetrics {
                     total_inference_ms: 80.0,
@@ -228,7 +228,10 @@ impl CrossValidationFixtures {
                 expected_probabilities: Self::generate_mock_probabilities(50),
                 inference_metadata: InferenceMetadata {
                     model_path: mock_model.config.model_path.display().to_string(),
-                    tokenizer_path: mock_model.config.tokenizer_path.as_ref()
+                    tokenizer_path: mock_model
+                        .config
+                        .tokenizer_path
+                        .as_ref()
                         .map(|p| p.display().to_string())
                         .unwrap_or_default(),
                     device: "cpu".to_string(),
@@ -257,10 +260,16 @@ impl CrossValidationFixtures {
                 expected_logits: Self::generate_mock_logits(128256), // LLaMA-3 vocab
                 expected_probabilities: Self::generate_mock_probabilities(50),
                 inference_metadata: InferenceMetadata {
-                    model_path: self.config.model_path.as_ref()
+                    model_path: self
+                        .config
+                        .model_path
+                        .as_ref()
                         .map(|p| p.display().to_string())
                         .unwrap_or_default(),
-                    tokenizer_path: self.config.tokenizer_path.as_ref()
+                    tokenizer_path: self
+                        .config
+                        .tokenizer_path
+                        .as_ref()
                         .map(|p| p.display().to_string())
                         .unwrap_or_default(),
                     device: format!("{:?}", self.config.device_preference).to_lowercase(),
@@ -289,11 +298,11 @@ impl CrossValidationFixtures {
 
         // Set higher logits for common tokens
         let common_tokens = vec![
-            12,    // " Paris"
-            374,   // " is"
-            264,   // " the"
-            6864,  // "capital"
-            315,   // " of"
+            12,   // " Paris"
+            374,  // " is"
+            264,  // " the"
+            6864, // "capital"
+            315,  // " of"
         ];
 
         for (i, &token_id) in common_tokens.iter().enumerate() {
@@ -339,14 +348,17 @@ impl CrossValidationFixtures {
             if reference_file.exists() {
                 match tokio::fs::read_to_string(&reference_file).await {
                     Ok(content) => {
-                        if let Ok(cpp_references) = serde_json::from_str::<Vec<ReferenceData>>(&content) {
+                        if let Ok(cpp_references) =
+                            serde_json::from_str::<Vec<ReferenceData>>(&content)
+                        {
                             for reference in cpp_references {
-                                self.reference_data.insert(
-                                    format!("cpp_{}", reference.model_id),
-                                    reference
-                                );
+                                self.reference_data
+                                    .insert(format!("cpp_{}", reference.model_id), reference);
                             }
-                            println!("Loaded C++ reference data from: {}", reference_file.display());
+                            println!(
+                                "Loaded C++ reference data from: {}",
+                                reference_file.display()
+                            );
                         }
                     }
                     Err(e) => {
@@ -363,27 +375,31 @@ impl CrossValidationFixtures {
     async fn validate_crossval_setup(&self) -> Result<()> {
         if self.reference_data.is_empty() {
             return Err(BitNetError::Validation(
-                "No reference data available for cross-validation".to_string()
+                "No reference data available for cross-validation".to_string(),
             ));
         }
 
         // Validate reference data consistency
         for (key, reference) in &self.reference_data {
             if reference.input_tokens.is_empty() {
-                return Err(BitNetError::Validation(
-                    format!("Reference data '{}' has no input tokens", key)
-                ));
+                return Err(BitNetError::Validation(format!(
+                    "Reference data '{}' has no input tokens",
+                    key
+                )));
             }
 
             if reference.expected_logits.is_empty() {
-                return Err(BitNetError::Validation(
-                    format!("Reference data '{}' has no expected logits", key)
-                ));
+                return Err(BitNetError::Validation(format!(
+                    "Reference data '{}' has no expected logits",
+                    key
+                )));
             }
         }
 
-        println!("Cross-validation setup validated with {} reference datasets",
-                self.reference_data.len());
+        println!(
+            "Cross-validation setup validated with {} reference datasets",
+            self.reference_data.len()
+        );
         Ok(())
     }
 
@@ -393,14 +409,14 @@ impl CrossValidationFixtures {
     }
 
     /// Run cross-validation test against reference
-    pub async fn run_cross_validation(&self,
+    pub async fn run_cross_validation(
+        &self,
         model_key: &str,
-        test_case: &CrossValidationTestCase
+        test_case: &CrossValidationTestCase,
     ) -> Result<CrossValidationResult> {
-        let reference = self.get_reference_data(model_key)
-            .ok_or_else(|| BitNetError::Validation(
-                format!("No reference data for model: {}", model_key)
-            ))?;
+        let reference = self.get_reference_data(model_key).ok_or_else(|| {
+            BitNetError::Validation(format!("No reference data for model: {}", model_key))
+        })?;
 
         // This would run actual inference and compare against reference
         // For now, return mock validation result
@@ -410,16 +426,13 @@ impl CrossValidationFixtures {
     }
 
     /// Create mock validation result for testing
-    fn create_mock_validation_result(&self,
+    fn create_mock_validation_result(
+        &self,
         reference: &ReferenceData,
-        test_case: &CrossValidationTestCase
+        test_case: &CrossValidationTestCase,
     ) -> CrossValidationResult {
         // Simulate high correlation for deterministic tests
-        let correlation = if test_case.deterministic {
-            0.99
-        } else {
-            0.95
-        };
+        let correlation = if test_case.deterministic { 0.99 } else { 0.95 };
 
         let passes_tolerance = correlation >= reference.tolerance_config.tau_b_correlation_min;
 

@@ -3,12 +3,10 @@
 //! Provides comprehensive test vectors and validation data for I2S, TL1, TL2, and
 //! other quantization algorithms with known input/output pairs and tolerance validation.
 
-use bitnet_common::{Device, Result, BitNetError, QuantizationError};
-use bitnet_quantization::{QuantizedTensor, I2SQuantizer, TL1Quantizer, TL2Quantizer, QuantizerTrait};
-use bitnet_common::QuantizationType;
-use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
 use super::{TestEnvironmentConfig, model_artifacts::ModelFixtures};
+use bitnet_common::{BitNetError, Device, QuantizationError, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Quantization test vectors with known inputs and expected outputs
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -102,7 +100,7 @@ impl QuantizationFixtures {
             name: "small_values".to_string(),
             input: vec![0.1, -0.2, 0.3, -0.4, 0.5, -0.6, 0.7, -0.8],
             expected_quantized: vec![1, -1, 1, -1, 1, -1, 1, -1], // I2S quantizes to ±1
-            expected_scales: vec![0.8], // Single scale for the block
+            expected_scales: vec![0.8],                           // Single scale for the block
             block_size: 8,
             shape: vec![8],
         });
@@ -141,8 +139,8 @@ impl QuantizationFixtures {
         test_cases.push(QuantizationTestCase {
             name: "realistic_weights".to_string(),
             input: Self::generate_realistic_weights(64, 42), // seed=42 for reproducibility
-            expected_quantized: vec![0; 64], // Will be computed during validation
-            expected_scales: vec![0.0], // Will be computed during validation
+            expected_quantized: vec![0; 64],                 // Will be computed during validation
+            expected_scales: vec![0.0],                      // Will be computed during validation
             block_size: 64,
             shape: vec![8, 8],
         });
@@ -303,19 +301,23 @@ impl QuantizationFixtures {
     }
 
     /// Generate model-based test vectors from actual model weights
-    async fn generate_model_based_test_vectors(&mut self, model_fixtures: &ModelFixtures) -> Result<()> {
+    async fn generate_model_based_test_vectors(
+        &mut self,
+        model_fixtures: &ModelFixtures,
+    ) -> Result<()> {
         // Get mock model to generate realistic test vectors
         if let Some(mock_model) = model_fixtures.get_mock_model("small") {
             // Create test vectors based on model tensor shapes
             for (tensor_name, tensor_info) in &mock_model.mock_tensors {
                 if tensor_name.contains("weight") {
                     let total_elements: u32 = tensor_info.shape.iter().product();
-                    if total_elements > 0 && total_elements <= 10000 { // Reasonable size for testing
+                    if total_elements > 0 && total_elements <= 10000 {
+                        // Reasonable size for testing
 
                         // Generate test case for this tensor
                         let test_weights = Self::generate_realistic_weights(
                             total_elements as usize,
-                            tensor_name.len() as u64 // Use name as seed
+                            tensor_name.len() as u64, // Use name as seed
                         );
 
                         let test_case = QuantizationTestCase {
@@ -350,8 +352,18 @@ impl QuantizationFixtures {
                 // Compute expected quantized values
                 // Mock quantization for fixture validation
                 // In real implementation, this would use actual quantizers
-                let mock_quantized: Vec<i8> = test_case.input.iter()
-                    .map(|&x| if x > 0.0 { 1 } else if x < 0.0 { -1 } else { 0 })
+                let mock_quantized: Vec<i8> = test_case
+                    .input
+                    .iter()
+                    .map(|&x| {
+                        if x > 0.0 {
+                            1
+                        } else if x < 0.0 {
+                            -1
+                        } else {
+                            0
+                        }
+                    })
                     .collect();
                 let mock_scale = test_case.input.iter().map(|x| x.abs()).fold(0.0, f32::max);
                 test_case.expected_quantized = mock_quantized;
@@ -363,9 +375,8 @@ impl QuantizationFixtures {
         for test_case in &mut self.tl1_vectors.test_cases {
             if test_case.expected_quantized.iter().all(|&x| x == 0) {
                 // Mock TL1 quantization
-                let mock_quantized: Vec<i8> = test_case.input.iter()
-                    .map(|&x| (x.clamp(-2.0, 3.0)) as i8)
-                    .collect();
+                let mock_quantized: Vec<i8> =
+                    test_case.input.iter().map(|&x| (x.clamp(-2.0, 3.0)) as i8).collect();
                 let mock_scale = test_case.input.iter().map(|x| x.abs()).fold(0.0, f32::max);
                 test_case.expected_quantized = mock_quantized;
                 test_case.expected_scales = vec![mock_scale];
@@ -376,9 +387,8 @@ impl QuantizationFixtures {
         for test_case in &mut self.tl2_vectors.test_cases {
             if test_case.expected_quantized.iter().all(|&x| x == 0) {
                 // Mock TL2 quantization
-                let mock_quantized: Vec<i8> = test_case.input.iter()
-                    .map(|&x| (x.clamp(-3.0, 4.0)) as i8)
-                    .collect();
+                let mock_quantized: Vec<i8> =
+                    test_case.input.iter().map(|&x| (x.clamp(-3.0, 4.0)) as i8).collect();
                 let mock_scale = test_case.input.iter().map(|x| x.abs()).fold(0.0, f32::max);
                 test_case.expected_quantized = mock_quantized;
                 test_case.expected_scales = vec![mock_scale];
@@ -404,19 +414,20 @@ impl QuantizationFixtures {
     }
 
     /// Run comprehensive quantization validation
-    pub async fn validate_quantization_accuracy(&self,
+    pub async fn validate_quantization_accuracy(
+        &self,
         qtype: &str,
-        device: Device
+        device: Device,
     ) -> Result<QuantizationValidationResult> {
-        let test_vectors = self.get_test_vectors(qtype)
-            .ok_or_else(|| BitNetError::Quantization(QuantizationError::UnsupportedType {
-                qtype: qtype.to_string()
-            }))?;
+        let test_vectors = self.get_test_vectors(qtype).ok_or_else(|| {
+            BitNetError::Quantization(QuantizationError::UnsupportedType {
+                qtype: qtype.to_string(),
+            })
+        })?;
 
-        let device_data = self.get_device_data(&device)
-            .ok_or_else(|| BitNetError::Validation(
-                format!("No test data available for device: {:?}", device)
-            ))?;
+        let device_data = self.get_device_data(&device).ok_or_else(|| {
+            BitNetError::Validation(format!("No test data available for device: {:?}", device))
+        })?;
 
         let mut validation_results = vec![];
         let mut total_accuracy = 0.0;
@@ -428,7 +439,8 @@ impl QuantizationFixtures {
         }
 
         let average_accuracy = total_accuracy / test_vectors.test_cases.len() as f32;
-        let passes_threshold = average_accuracy >= test_vectors.tolerance_config.numerical_accuracy_threshold;
+        let passes_threshold =
+            average_accuracy >= test_vectors.tolerance_config.numerical_accuracy_threshold;
 
         Ok(QuantizationValidationResult {
             quantization_type: qtype.to_string(),
@@ -441,10 +453,11 @@ impl QuantizationFixtures {
     }
 
     /// Validate individual test case
-    async fn validate_test_case(&self,
+    async fn validate_test_case(
+        &self,
         qtype: &str,
         device: Device,
-        test_case: &QuantizationTestCase
+        test_case: &QuantizationTestCase,
     ) -> Result<TestCaseValidationResult> {
         // This would integrate with actual quantization kernels
         // For now, return mock validation result
@@ -458,6 +471,7 @@ impl QuantizationFixtures {
         let latency_ms = match device {
             Device::Cpu => 1.0,
             Device::Cuda(_) => 0.1,
+            Device::Metal => 0.2,
         };
 
         Ok(TestCaseValidationResult {

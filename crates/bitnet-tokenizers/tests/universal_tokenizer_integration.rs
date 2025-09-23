@@ -6,17 +6,19 @@
 //! This module contains comprehensive test scaffolding for universal tokenizer
 //! with GGUF integration, strict mode support, and multi-format compatibility.
 
-use std::path::{Path, PathBuf};
 use std::env;
+#[allow(unused_imports)]
+use std::path::Path;
+use std::path::PathBuf;
+#[allow(unused_imports)]
 use std::time::{Duration, Instant};
 
 // Note: These imports will initially fail compilation until implementation exists
 #[cfg(feature = "inference")]
 use bitnet_tokenizers::{
-    UniversalTokenizer, RealTokenizer, TokenizerProvider,
-    TokenizerBackend, TokenizerConfig, TokenizerError,
-    TokenizationResult, TokenizationMetrics, TokenizerMetadata,
-    SpecialTokens, Vocabulary, BPETokenizer, MockTokenizer
+    BPETokenizer, MockTokenizer, RealTokenizer, SpecialTokens, TokenizationMetrics,
+    TokenizationResult, TokenizerBackend, TokenizerConfig, TokenizerError, TokenizerMetadata,
+    TokenizerProvider, UniversalTokenizer, Vocabulary,
 };
 
 #[cfg(all(feature = "inference", feature = "spm"))]
@@ -27,6 +29,7 @@ use bitnet_models::BitNetModel;
 
 /// Test configuration for tokenizer tests
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct TokenizerTestConfig {
     model_path: Option<PathBuf>,
     tokenizer_path: Option<PathBuf>,
@@ -36,6 +39,7 @@ struct TokenizerTestConfig {
 }
 
 impl TokenizerTestConfig {
+    #[allow(dead_code)]
     fn from_env() -> Self {
         Self {
             model_path: env::var("BITNET_GGUF").ok().map(PathBuf::from),
@@ -46,6 +50,7 @@ impl TokenizerTestConfig {
         }
     }
 
+    #[allow(dead_code)]
     fn skip_if_no_model(&self) {
         if self.model_path.is_none() || !self.model_path.as_ref().unwrap().exists() {
             eprintln!("Skipping tokenizer test - set BITNET_GGUF environment variable");
@@ -63,7 +68,8 @@ impl TokenizerTestConfig {
 /// Validates automatic tokenizer creation from GGUF model metadata
 #[test]
 #[cfg(feature = "inference")]
-fn test_universal_tokenizer_gguf_integration() { // AC:5
+fn test_universal_tokenizer_gguf_integration() {
+    // AC:5
     let config = TokenizerTestConfig::from_env();
     config.skip_if_no_model();
 
@@ -86,8 +92,7 @@ fn test_universal_tokenizer_gguf_integration() { // AC:5
 
             // Validate vocab size matches model architecture
             assert_eq!(
-                metadata.vocab_size,
-                model.metadata.architecture.vocab_size as usize,
+                metadata.vocab_size, model.metadata.architecture.vocab_size as usize,
                 "Tokenizer vocab size should match model architecture"
             );
 
@@ -121,11 +126,12 @@ fn test_universal_tokenizer_gguf_integration() { // AC:5
 
                 // Test mock fallback
                 let mock_tokenizer = RealTokenizer::create_mock_fallback(
-                    model.metadata.architecture.vocab_size as usize
+                    model.metadata.architecture.vocab_size as usize,
                 );
 
                 let test_text = "Test with mock tokenizer";
-                let tokens = mock_tokenizer.encode(test_text).expect("Mock tokenization should succeed");
+                let tokens =
+                    mock_tokenizer.encode(test_text).expect("Mock tokenization should succeed");
                 assert!(!tokens.is_empty(), "Mock tokenizer should produce tokens");
 
                 println!("✅ Mock tokenizer fallback successful");
@@ -140,7 +146,8 @@ fn test_universal_tokenizer_gguf_integration() { // AC:5
 /// Validates that strict mode prevents mock tokenizer fallbacks
 #[test]
 #[cfg(feature = "inference")]
-fn test_strict_tokenizer_mode_enforcement() { // AC:5
+fn test_strict_tokenizer_mode_enforcement() {
+    // AC:5
     let config = TokenizerTestConfig::from_env();
 
     // TODO: This test will initially fail - drives strict mode implementation
@@ -204,7 +211,8 @@ fn test_strict_tokenizer_mode_enforcement() { // AC:5
 /// Validates real SPM tokenizer loading and functionality
 #[test]
 #[cfg(all(feature = "inference", feature = "spm"))]
-fn test_sentencepiece_tokenizer_integration() { // AC:5
+fn test_sentencepiece_tokenizer_integration() {
+    // AC:5
     let config = TokenizerTestConfig::from_env();
 
     if !config.enable_spm {
@@ -242,7 +250,8 @@ fn test_sentencepiece_tokenizer_integration() { // AC:5
             println!("Rare word '{}' tokenized into {} pieces", rare_word, rare_tokens.len());
 
             // Test round-trip accuracy
-            let roundtrip_decoded = spm_tokenizer.decode(&rare_tokens).expect("Round-trip should work");
+            let roundtrip_decoded =
+                spm_tokenizer.decode(&rare_tokens).expect("Round-trip should work");
             assert_eq!(roundtrip_decoded.trim(), rare_word, "Round-trip should preserve text");
 
             println!("✅ SentencePiece tokenizer integration successful");
@@ -260,7 +269,7 @@ fn test_sentencepiece_tokenizer_integration() { // AC:5
         // Try to create universal tokenizer with SPM preference
         let universal_result = UniversalTokenizer::from_gguf_model_with_preference(
             &model,
-            TokenizerBackend::SentencePiece
+            TokenizerBackend::SentencePiece,
         );
 
         match universal_result {
@@ -286,7 +295,8 @@ fn test_sentencepiece_tokenizer_integration() { // AC:5
 /// Validates Byte Pair Encoding tokenization with GGUF metadata
 #[test]
 #[cfg(feature = "inference")]
-fn test_bpe_tokenizer_backend_functionality() { // AC:5
+fn test_bpe_tokenizer_backend_functionality() {
+    // AC:5
     let config = TokenizerTestConfig::from_env();
 
     // TODO: This test will initially fail - drives BPE backend implementation
@@ -337,7 +347,8 @@ fn test_bpe_tokenizer_backend_functionality() { // AC:5
 /// Validates tokenization speed and intelligent result caching
 #[test]
 #[cfg(feature = "inference")]
-fn test_tokenizer_performance_and_caching() { // AC:5
+fn test_tokenizer_performance_and_caching() {
+    // AC:5
     let config = TokenizerTestConfig::from_env();
 
     if !config.performance_testing {
@@ -369,26 +380,34 @@ fn test_tokenizer_performance_and_caching() { // AC:5
     println!("  Rate: {:.0} tokens/second", tokenization_rate);
 
     // Validate performance targets
-    assert!(tokenization_rate >= 10000.0, "Should achieve ≥10K tokens/sec, got {:.0}", tokenization_rate);
+    assert!(
+        tokenization_rate >= 10000.0,
+        "Should achieve ≥10K tokens/sec, got {:.0}",
+        tokenization_rate
+    );
 
     // Test caching effectiveness
     let repeated_text = "This is a repeated text for caching test.";
 
     // First tokenization (cache miss)
     let cache_miss_start = Instant::now();
-    let result1 = tokenizer.encode_with_metrics(repeated_text).expect("First tokenization should succeed");
+    let result1 =
+        tokenizer.encode_with_metrics(repeated_text).expect("First tokenization should succeed");
     let cache_miss_duration = cache_miss_start.elapsed();
 
     assert!(!result1.metrics.cache_hit, "First tokenization should be cache miss");
 
     // Second tokenization (cache hit)
     let cache_hit_start = Instant::now();
-    let result2 = tokenizer.encode_with_metrics(repeated_text).expect("Second tokenization should succeed");
+    let result2 =
+        tokenizer.encode_with_metrics(repeated_text).expect("Second tokenization should succeed");
     let cache_hit_duration = cache_hit_start.elapsed();
 
     if result2.metrics.cache_hit {
-        println!("Cache hit achieved: {:.1}x speedup",
-                 cache_miss_duration.as_secs_f64() / cache_hit_duration.as_secs_f64());
+        println!(
+            "Cache hit achieved: {:.1}x speedup",
+            cache_miss_duration.as_secs_f64() / cache_hit_duration.as_secs_f64()
+        );
 
         // Cache hits should be significantly faster
         assert!(cache_hit_duration < cache_miss_duration / 2, "Cache hit should be ≥2x faster");
@@ -398,7 +417,8 @@ fn test_tokenizer_performance_and_caching() { // AC:5
 
     // Test batch tokenization performance
     let batch_start = Instant::now();
-    let batch_results = tokenizer.encode_batch(&test_corpus[..100]).expect("Batch tokenization should succeed");
+    let batch_results =
+        tokenizer.encode_batch(&test_corpus[..100]).expect("Batch tokenization should succeed");
     let batch_duration = batch_start.elapsed();
 
     let batch_tokens: usize = batch_results.iter().map(|r| r.len()).sum();
@@ -407,7 +427,10 @@ fn test_tokenizer_performance_and_caching() { // AC:5
     println!("Batch tokenization rate: {:.0} tokens/second", batch_rate);
 
     // Batch processing should be efficient
-    assert!(batch_rate >= tokenization_rate * 0.8, "Batch processing should maintain ≥80% efficiency");
+    assert!(
+        batch_rate >= tokenization_rate * 0.8,
+        "Batch processing should maintain ≥80% efficiency"
+    );
 
     println!("✅ Tokenizer performance and caching test scaffolding created");
 }
@@ -421,7 +444,8 @@ fn test_tokenizer_performance_and_caching() { // AC:5
 /// Validates tokenizer compatibility with different model configurations
 #[test]
 #[cfg(feature = "inference")]
-fn test_tokenizer_model_compatibility_validation() { // AC:5
+fn test_tokenizer_model_compatibility_validation() {
+    // AC:5
     let config = TokenizerTestConfig::from_env();
 
     // TODO: This test will initially fail - drives compatibility validation
@@ -435,8 +459,8 @@ fn test_tokenizer_model_compatibility_validation() { // AC:5
     for (scenario_name, model_config, expected_vocab_size) in test_scenarios {
         println!("Testing scenario: {}", scenario_name);
 
-        let tokenizer = create_tokenizer_for_model(&model_config)
-            .expect("Tokenizer creation should succeed");
+        let tokenizer =
+            create_tokenizer_for_model(&model_config).expect("Tokenizer creation should succeed");
 
         // Validate compatibility
         let compatibility_result = tokenizer.validate_compatibility(&model_config);
@@ -453,7 +477,9 @@ fn test_tokenizer_model_compatibility_validation() { // AC:5
 
             // Test tokenization with model-specific text
             let model_specific_text = get_model_specific_test_text(&model_config);
-            let tokens = tokenizer.encode(&model_specific_text).expect("Model-specific tokenization should succeed");
+            let tokens = tokenizer
+                .encode(&model_specific_text)
+                .expect("Model-specific tokenization should succeed");
 
             assert!(!tokens.is_empty(), "Should produce tokens for model-specific text");
 
@@ -461,16 +487,20 @@ fn test_tokenizer_model_compatibility_validation() { // AC:5
             for &token_id in &tokens {
                 assert!(
                     token_id < expected_vocab_size,
-                    "Token ID {} should be < vocab size {}", token_id, expected_vocab_size
+                    "Token ID {} should be < vocab size {}",
+                    token_id,
+                    expected_vocab_size
                 );
             }
-
         } else {
             println!("  ❌ Incompatible: {:?}", compatibility_result.incompatibility_reasons);
 
             // In strict mode, incompatibility should cause test failure
             if config.strict_mode {
-                panic!("Tokenizer incompatibility in strict mode: {:?}", compatibility_result.incompatibility_reasons);
+                panic!(
+                    "Tokenizer incompatibility in strict mode: {:?}",
+                    compatibility_result.incompatibility_reasons
+                );
             }
         }
     }
@@ -479,10 +509,14 @@ fn test_tokenizer_model_compatibility_validation() { // AC:5
     let llama_model = create_llama3_model_config();
     let gpt2_model = create_gpt2_model_config();
 
-    let llama_tokenizer = create_tokenizer_for_model(&llama_model).expect("LLaMA tokenizer should be available");
+    let llama_tokenizer =
+        create_tokenizer_for_model(&llama_model).expect("LLaMA tokenizer should be available");
     let gpt2_compatibility = llama_tokenizer.validate_compatibility(&gpt2_model);
 
-    assert!(!gpt2_compatibility.is_compatible, "LLaMA tokenizer should not be compatible with GPT-2 model");
+    assert!(
+        !gpt2_compatibility.is_compatible,
+        "LLaMA tokenizer should not be compatible with GPT-2 model"
+    );
     println!("Cross-model incompatibility correctly detected");
 
     println!("✅ Tokenizer model compatibility validation test scaffolding created");
@@ -492,7 +526,8 @@ fn test_tokenizer_model_compatibility_validation() { // AC:5
 /// Validates comprehensive error handling with actionable recovery guidance
 #[test]
 #[cfg(feature = "inference")]
-fn test_tokenizer_error_handling_and_recovery() { // AC:5
+fn test_tokenizer_error_handling_and_recovery() {
+    // AC:5
     let config = TokenizerTestConfig::from_env();
 
     // TODO: This test will initially fail - drives error handling implementation
@@ -572,10 +607,12 @@ fn test_tokenizer_error_handling_and_recovery() { // AC:5
 
     // Test recovery mechanisms
     let recovery_provider = TokenizerProvider::with_error_recovery();
-    let recovered_tokenizer = recovery_provider.load_with_fallback(&mismatch_model)
+    let recovered_tokenizer = recovery_provider
+        .load_with_fallback(&mismatch_model)
         .expect("Recovery should provide working tokenizer");
 
-    let recovery_test = recovered_tokenizer.encode("Recovery test text").expect("Recovery tokenizer should work");
+    let recovery_test =
+        recovered_tokenizer.encode("Recovery test text").expect("Recovery tokenizer should work");
     assert!(!recovery_test.is_empty(), "Recovery tokenizer should produce tokens");
 
     println!("✅ Tokenizer error handling and recovery test scaffolding created");
@@ -706,7 +743,10 @@ struct CompatibilityResult {
 
 #[cfg(feature = "inference")]
 impl UniversalTokenizer {
-    fn from_gguf_model_with_preference(model: &BitNetModel, backend: TokenizerBackend) -> Result<Self, TokenizerError> {
+    fn from_gguf_model_with_preference(
+        model: &BitNetModel,
+        backend: TokenizerBackend,
+    ) -> Result<Self, TokenizerError> {
         unimplemented!("GGUF model tokenizer with preference needs implementation")
     }
 
@@ -725,7 +765,10 @@ impl TokenizerProvider {
         unimplemented!("Error recovery provider needs implementation")
     }
 
-    fn load_with_fallback(&self, model: &BitNetModel) -> Result<UniversalTokenizer, TokenizerError> {
+    fn load_with_fallback(
+        &self,
+        model: &BitNetModel,
+    ) -> Result<UniversalTokenizer, TokenizerError> {
         unimplemented!("Load with fallback needs implementation")
     }
 }

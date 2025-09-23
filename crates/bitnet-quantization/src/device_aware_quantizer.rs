@@ -94,14 +94,7 @@ impl QuantizedTensor {
         scales: Vec<f32>,
         block_size: usize,
     ) -> Self {
-        Self {
-            data,
-            qtype,
-            shape,
-            scales,
-            zero_points: None,
-            block_size,
-        }
+        Self { data, qtype, shape, scales, zero_points: None, block_size }
     }
 
     /// Get the total number of elements
@@ -189,10 +182,8 @@ impl AccuracyReport {
         }
 
         let mean = values.iter().sum::<f32>() as f64 / values.len() as f64;
-        let variance = values
-            .iter()
-            .map(|&x| (x as f64 - mean).powi(2))
-            .sum::<f64>() / (values.len() - 1) as f64;
+        let variance = values.iter().map(|&x| (x as f64 - mean).powi(2)).sum::<f64>()
+            / (values.len() - 1) as f64;
 
         variance.sqrt()
     }
@@ -218,6 +209,7 @@ pub struct ParityReport {
 /// CPU quantizer implementation
 #[derive(Debug, Clone)]
 pub struct CPUQuantizer {
+    #[allow(dead_code)]
     tolerance_config: ToleranceConfig,
 }
 
@@ -231,7 +223,7 @@ impl CPUQuantizer {
 
         // Simplified I2S quantization (2-bit signed: -1, 0, 1)
         let block_size = 32; // 32 elements per block
-        let num_blocks = (data.len() + block_size - 1) / block_size;
+        let num_blocks = data.len().div_ceil(block_size);
         let mut quantized_data = Vec::new();
         let mut scales = Vec::new();
 
@@ -282,9 +274,7 @@ impl CPUQuantizer {
 
         if tensor.qtype != QuantizationType::I2S {
             return Err(bitnet_common::BitNetError::Quantization(
-                QuantizationError::UnsupportedType {
-                    qtype: tensor.qtype.to_string(),
-                },
+                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() },
             ));
         }
 
@@ -294,9 +284,9 @@ impl CPUQuantizer {
 
         for block_idx in 0..num_blocks {
             let scale = tensor.scales[block_idx];
-            let start_byte = block_idx * ((block_size + 3) / 4); // 4 values per byte
+            let start_byte = block_idx * block_size.div_ceil(4); // 4 values per byte
 
-            for byte_idx in 0..((block_size + 3) / 4) {
+            for byte_idx in 0..block_size.div_ceil(4) {
                 if start_byte + byte_idx >= tensor.data.len() {
                     break;
                 }
@@ -360,9 +350,7 @@ impl CPUQuantizer {
 
         if tensor.qtype != QuantizationType::TL1 {
             return Err(bitnet_common::BitNetError::Quantization(
-                QuantizationError::UnsupportedType {
-                    qtype: tensor.qtype.to_string(),
-                },
+                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() },
             ));
         }
 
@@ -390,16 +378,15 @@ impl CPUQuantizer {
 /// GPU quantizer implementation
 #[derive(Debug, Clone)]
 pub struct GPUQuantizer {
+    #[allow(dead_code)]
     tolerance_config: ToleranceConfig,
+    #[allow(dead_code)]
     device_id: usize,
 }
 
 impl GPUQuantizer {
     pub fn new(tolerance_config: ToleranceConfig, device_id: usize) -> Self {
-        Self {
-            tolerance_config,
-            device_id,
-        }
+        Self { tolerance_config, device_id }
     }
 
     #[cfg(feature = "gpu")]
@@ -440,19 +427,21 @@ impl GPUQuantizer {
 #[derive(Debug, Clone)]
 pub struct AccuracyValidator {
     tolerance_config: ToleranceConfig,
+    #[allow(dead_code)]
     reference_calculator: ReferenceCalculator,
 }
 
 impl AccuracyValidator {
     pub fn new(tolerance_config: ToleranceConfig) -> Self {
-        Self {
-            tolerance_config,
-            reference_calculator: ReferenceCalculator::new(),
-        }
+        Self { tolerance_config, reference_calculator: ReferenceCalculator::new() }
     }
 
     /// Validate I2S quantization accuracy with ±1e-5 relative error
-    pub fn validate_i2s_accuracy(&self, original: &[f32], quantized: &QuantizedTensor) -> Result<AccuracyReport> {
+    pub fn validate_i2s_accuracy(
+        &self,
+        original: &[f32],
+        quantized: &QuantizedTensor,
+    ) -> Result<AccuracyReport> {
         let cpu_quantizer = CPUQuantizer::new(self.tolerance_config.clone());
         let dequantized = cpu_quantizer.dequantize_i2s(quantized)?;
 
@@ -473,7 +462,11 @@ impl AccuracyValidator {
     }
 
     /// Validate TL1/TL2 quantization accuracy with ±1e-4 tolerance
-    pub fn validate_tl_accuracy(&self, original: &[f32], quantized: &QuantizedTensor) -> Result<AccuracyReport> {
+    pub fn validate_tl_accuracy(
+        &self,
+        original: &[f32],
+        quantized: &QuantizedTensor,
+    ) -> Result<AccuracyReport> {
         let cpu_quantizer = CPUQuantizer::new(self.tolerance_config.clone());
         let dequantized = match quantized.qtype {
             QuantizationType::TL1 => cpu_quantizer.dequantize_tl1(quantized)?,
@@ -483,10 +476,8 @@ impl AccuracyValidator {
             }
             _ => {
                 return Err(bitnet_common::BitNetError::Quantization(
-                    QuantizationError::UnsupportedType {
-                        qtype: quantized.qtype.to_string(),
-                    },
-                ))
+                    QuantizationError::UnsupportedType { qtype: quantized.qtype.to_string() },
+                ));
             }
         };
 
@@ -510,6 +501,12 @@ impl AccuracyValidator {
 /// Reference calculator for perplexity and other metrics
 #[derive(Debug, Clone)]
 pub struct ReferenceCalculator;
+
+impl Default for ReferenceCalculator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl ReferenceCalculator {
     pub fn new() -> Self {
@@ -580,7 +577,11 @@ impl DeviceAwareQuantizer {
     }
 
     /// Quantize with validation for I2S (±1e-5), TL1/TL2 (±1e-4) tolerance
-    pub fn quantize_with_validation(&self, weights: &[f32], quant_type: QuantizationType) -> Result<QuantizedTensor> {
+    pub fn quantize_with_validation(
+        &self,
+        weights: &[f32],
+        quant_type: QuantizationType,
+    ) -> Result<QuantizedTensor> {
         let start_time = Instant::now();
 
         let quantized = match quant_type {
@@ -589,10 +590,8 @@ impl DeviceAwareQuantizer {
             QuantizationType::TL2 => self.cpu_backend.quantize_tl1(weights)?, // Simplified
             _ => {
                 return Err(bitnet_common::BitNetError::Quantization(
-                    QuantizationError::UnsupportedType {
-                        qtype: quant_type.to_string(),
-                    },
-                ))
+                    QuantizationError::UnsupportedType { qtype: quant_type.to_string() },
+                ));
             }
         };
 
@@ -600,16 +599,16 @@ impl DeviceAwareQuantizer {
 
         // Validate accuracy
         let validation_result = match quant_type {
-            QuantizationType::I2S => self.accuracy_validator.validate_i2s_accuracy(weights, &quantized)?,
+            QuantizationType::I2S => {
+                self.accuracy_validator.validate_i2s_accuracy(weights, &quantized)?
+            }
             QuantizationType::TL1 | QuantizationType::TL2 => {
                 self.accuracy_validator.validate_tl_accuracy(weights, &quantized)?
             }
             _ => {
                 return Err(bitnet_common::BitNetError::Quantization(
-                    QuantizationError::UnsupportedType {
-                        qtype: quant_type.to_string(),
-                    },
-                ))
+                    QuantizationError::UnsupportedType { qtype: quant_type.to_string() },
+                ));
             }
         };
 
@@ -642,7 +641,8 @@ impl DeviceAwareQuantizer {
         let cpu_dequantized = self.cpu_backend.dequantize_i2s(&cpu_quantized)?;
         let cpu_time = cpu_start.elapsed();
 
-        let cpu_accuracy = self.accuracy_validator.validate_i2s_accuracy(test_data, &cpu_quantized)?;
+        let cpu_accuracy =
+            self.accuracy_validator.validate_i2s_accuracy(test_data, &cpu_quantized)?;
 
         let gpu_backend = self.gpu_backend.as_ref().unwrap();
         let gpu_start = Instant::now();
@@ -650,7 +650,8 @@ impl DeviceAwareQuantizer {
         let gpu_dequantized = gpu_backend.dequantize_i2s(&gpu_quantized)?;
         let gpu_time = gpu_start.elapsed();
 
-        let mut gpu_accuracy = self.accuracy_validator.validate_i2s_accuracy(test_data, &gpu_quantized)?;
+        let mut gpu_accuracy =
+            self.accuracy_validator.validate_i2s_accuracy(test_data, &gpu_quantized)?;
         gpu_accuracy.device = Device::Cuda(0);
 
         // Calculate cross-device error
@@ -669,7 +670,8 @@ impl DeviceAwareQuantizer {
         let mut performance_comparison = HashMap::new();
         performance_comparison.insert("cpu_time_ms".to_string(), cpu_time.as_millis() as f64);
         performance_comparison.insert("gpu_time_ms".to_string(), gpu_time.as_millis() as f64);
-        performance_comparison.insert("speedup".to_string(), cpu_time.as_secs_f64() / gpu_time.as_secs_f64());
+        performance_comparison
+            .insert("speedup".to_string(), cpu_time.as_secs_f64() / gpu_time.as_secs_f64());
 
         Ok(ParityReport {
             quantization_type: QuantizationType::I2S,
@@ -684,11 +686,9 @@ impl DeviceAwareQuantizer {
     #[cfg(not(feature = "gpu"))]
     pub fn validate_gpu_cpu_parity(&self, _test_data: &[f32]) -> Result<ParityReport> {
         warn!("GPU features not enabled, skipping GPU/CPU parity validation");
-        Err(bitnet_common::BitNetError::Quantization(
-            QuantizationError::UnsupportedType {
-                qtype: "GPU validation not available".to_string(),
-            },
-        ))
+        Err(bitnet_common::BitNetError::Quantization(QuantizationError::UnsupportedType {
+            qtype: "GPU validation not available".to_string(),
+        }))
     }
 }
 
@@ -711,8 +711,10 @@ mod tests {
 
     #[test]
     fn test_i2s_quantization() {
-        let mut tolerance_config = ToleranceConfig::default();
-        tolerance_config.strict_validation = false; // Allow for quantization error in tests
+        let tolerance_config = ToleranceConfig {
+            strict_validation: false, // Allow for quantization error in tests
+            ..Default::default()
+        };
 
         let quantizer = DeviceAwareQuantizer::with_tolerance_config(tolerance_config);
         let test_data = vec![0.5, -0.3, 0.8, -0.1, 0.0];
@@ -728,8 +730,10 @@ mod tests {
 
     #[test]
     fn test_tl1_quantization() {
-        let mut tolerance_config = ToleranceConfig::default();
-        tolerance_config.strict_validation = false; // Allow for quantization error in tests
+        let tolerance_config = ToleranceConfig {
+            strict_validation: false, // Allow for quantization error in tests
+            ..Default::default()
+        };
 
         let quantizer = DeviceAwareQuantizer::with_tolerance_config(tolerance_config);
         let test_data = vec![1.0, -0.5, 0.25, -0.75, 0.0];
@@ -756,9 +760,8 @@ mod tests {
 
     #[test]
     fn test_tolerance_config() {
-        let mut config = ToleranceConfig::default();
-        config.i2s_tolerance = 1e-6;
-        config.strict_validation = false;
+        let config =
+            ToleranceConfig { i2s_tolerance: 1e-6, strict_validation: false, ..Default::default() };
 
         let quantizer = DeviceAwareQuantizer::with_tolerance_config(config.clone());
         assert_eq!(quantizer.tolerance_config.i2s_tolerance, 1e-6);
@@ -780,13 +783,7 @@ mod tests {
     fn test_quantized_tensor() {
         let data = vec![0x12, 0x34, 0x56];
         let scales = vec![1.0, 0.5];
-        let tensor = QuantizedTensor::new(
-            data,
-            QuantizationType::I2S,
-            vec![8],
-            scales,
-            4,
-        );
+        let tensor = QuantizedTensor::new(data, QuantizationType::I2S, vec![8], scales, 4);
 
         assert_eq!(tensor.numel(), 8);
         assert_eq!(tensor.nbytes(), 3);

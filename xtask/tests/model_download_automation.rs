@@ -6,9 +6,11 @@
 //! This module contains comprehensive test scaffolding for xtask model download,
 //! cross-validation orchestration, and CI caching automation.
 
-use std::path::{Path, PathBuf};
 use std::env;
-use std::process::{Command, Output};
+use std::path::{Path, PathBuf};
+use std::process::Command;
+#[allow(unused_imports)]
+use std::process::Output;
 use std::time::{Duration, Instant};
 
 /// Test configuration for xtask tests
@@ -60,7 +62,8 @@ impl XtaskTestConfig {
 /// Test model download automation integration
 /// Validates xtask download-model command with Hugging Face integration
 #[test]
-fn test_model_download_automation_integration() { // AC:1
+fn test_model_download_automation_integration() {
+    // AC:1
     let config = XtaskTestConfig::from_env();
     config.skip_if_no_xtask();
     config.skip_if_no_network();
@@ -106,8 +109,8 @@ fn test_model_download_automation_integration() { // AC:1
     println!("Download dry-run output: {}", stdout);
 
     // Parse dry-run result
-    let dry_run_result: serde_json::Value = serde_json::from_str(&stdout)
-        .expect("Download should produce valid JSON");
+    let dry_run_result: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Download should produce valid JSON");
 
     // Validate dry-run structure
     assert!(dry_run_result["model_id"].is_string(), "Should include model ID");
@@ -122,36 +125,49 @@ fn test_model_download_automation_integration() { // AC:1
 
     // Test download validation without actual download
     let mut validate_cmd = Command::new(&config.xtask_path);
-    validate_cmd.arg("download-model")
-        .arg("--id").arg(test_model_id)
-        .arg("--file").arg(test_file)
+    validate_cmd
+        .arg("download-model")
+        .arg("--id")
+        .arg(test_model_id)
+        .arg("--file")
+        .arg(test_file)
         .arg("--validate")
         .arg("--dry-run")
-        .arg("--format").arg("json");
+        .arg("--format")
+        .arg("json");
 
     let validate_output = validate_cmd.output().expect("Validation command should execute");
 
     if validate_output.status.success() {
         let validate_stdout = String::from_utf8_lossy(&validate_output.stdout);
-        let validate_result: serde_json::Value = serde_json::from_str(&validate_stdout)
-            .expect("Validation should produce valid JSON");
+        let validate_result: serde_json::Value =
+            serde_json::from_str(&validate_stdout).expect("Validation should produce valid JSON");
 
-        assert!(validate_result["validation_enabled"].as_bool().unwrap(), "Validation should be enabled");
-        println!("Download validation: {}", validate_result["validation_status"].as_str().unwrap_or("unknown"));
+        assert!(
+            validate_result["validation_enabled"].as_bool().unwrap(),
+            "Validation should be enabled"
+        );
+        println!(
+            "Download validation: {}",
+            validate_result["validation_status"].as_str().unwrap_or("unknown")
+        );
     }
 
     // Test cache management
     let mut cache_cmd = Command::new(&config.xtask_path);
-    cache_cmd.arg("cache-info")
-        .arg("--cache-dir").arg(&config.cache_dir)
-        .arg("--format").arg("json");
+    cache_cmd
+        .arg("cache-info")
+        .arg("--cache-dir")
+        .arg(&config.cache_dir)
+        .arg("--format")
+        .arg("json");
 
     let cache_output = cache_cmd.output().expect("Cache info should execute");
 
     if cache_output.status.success() {
         let cache_stdout = String::from_utf8_lossy(&cache_output.stdout);
-        let cache_result: serde_json::Value = serde_json::from_str(&cache_stdout)
-            .expect("Cache info should produce valid JSON");
+        let cache_result: serde_json::Value =
+            serde_json::from_str(&cache_stdout).expect("Cache info should produce valid JSON");
 
         println!("Cache info: {:#?}", cache_result);
         assert!(cache_result["cache_dir"].is_string(), "Should report cache directory");
@@ -164,7 +180,8 @@ fn test_model_download_automation_integration() { // AC:1
 /// Test CI caching automation
 /// Validates intelligent model caching for CI environments
 #[test]
-fn test_ci_caching_automation() { // AC:9
+fn test_ci_caching_automation() {
+    // AC:9
     let config = XtaskTestConfig::from_env();
     config.skip_if_no_xtask();
 
@@ -180,8 +197,7 @@ fn test_ci_caching_automation() { // AC:9
 
     // Test cache key generation
     let mut cache_key_cmd = Command::new(&config.xtask_path);
-    cache_key_cmd.arg("generate-cache-key")
-        .arg("--format").arg("json");
+    cache_key_cmd.arg("generate-cache-key").arg("--format").arg("json");
 
     println!("Generating cache key: {:?}", cache_key_cmd);
 
@@ -189,8 +205,8 @@ fn test_ci_caching_automation() { // AC:9
 
     if cache_key_output.status.success() {
         let cache_key_stdout = String::from_utf8_lossy(&cache_key_output.stdout);
-        let cache_key_result: serde_json::Value = serde_json::from_str(&cache_key_stdout)
-            .expect("Cache key should produce valid JSON");
+        let cache_key_result: serde_json::Value =
+            serde_json::from_str(&cache_key_stdout).expect("Cache key should produce valid JSON");
 
         assert!(cache_key_result["cache_key"].is_string(), "Should generate cache key");
         assert!(cache_key_result["dependencies"].is_array(), "Should include dependencies");
@@ -211,17 +227,20 @@ fn test_ci_caching_automation() { // AC:9
 
     // Test cache restoration
     let mut cache_restore_cmd = Command::new(&config.xtask_path);
-    cache_restore_cmd.arg("restore-cache")
-        .arg("--cache-dir").arg(&ci_cache_dir)
+    cache_restore_cmd
+        .arg("restore-cache")
+        .arg("--cache-dir")
+        .arg(&ci_cache_dir)
         .arg("--dry-run")
-        .arg("--format").arg("json");
+        .arg("--format")
+        .arg("json");
 
     let cache_restore_output = cache_restore_cmd.output().expect("Cache restore should execute");
 
     if cache_restore_output.status.success() {
         let restore_stdout = String::from_utf8_lossy(&cache_restore_output.stdout);
-        let restore_result: serde_json::Value = serde_json::from_str(&restore_stdout)
-            .expect("Cache restore should produce valid JSON");
+        let restore_result: serde_json::Value =
+            serde_json::from_str(&restore_stdout).expect("Cache restore should produce valid JSON");
 
         println!("Cache restore: {}", restore_result["status"].as_str().unwrap_or("unknown"));
         assert!(restore_result["cache_hit"].is_boolean(), "Should report cache hit status");
@@ -229,17 +248,20 @@ fn test_ci_caching_automation() { // AC:9
 
     // Test cache saving
     let mut cache_save_cmd = Command::new(&config.xtask_path);
-    cache_save_cmd.arg("save-cache")
-        .arg("--cache-dir").arg(&ci_cache_dir)
+    cache_save_cmd
+        .arg("save-cache")
+        .arg("--cache-dir")
+        .arg(&ci_cache_dir)
         .arg("--dry-run")
-        .arg("--format").arg("json");
+        .arg("--format")
+        .arg("json");
 
     let cache_save_output = cache_save_cmd.output().expect("Cache save should execute");
 
     if cache_save_output.status.success() {
         let save_stdout = String::from_utf8_lossy(&cache_save_output.stdout);
-        let save_result: serde_json::Value = serde_json::from_str(&save_stdout)
-            .expect("Cache save should produce valid JSON");
+        let save_result: serde_json::Value =
+            serde_json::from_str(&save_stdout).expect("Cache save should produce valid JSON");
 
         println!("Cache save: {}", save_result["status"].as_str().unwrap_or("unknown"));
         assert!(save_result["saved_size_mb"].is_number(), "Should report saved size");
@@ -262,7 +284,8 @@ fn test_ci_caching_automation() { // AC:9
 /// Test cross-validation orchestration
 /// Validates C++ implementation integration and validation workflow
 #[test]
-fn test_cross_validation_orchestration() { // AC:7
+fn test_cross_validation_orchestration() {
+    // AC:7
     let config = XtaskTestConfig::from_env();
     config.skip_if_no_xtask();
 
@@ -276,9 +299,7 @@ fn test_cross_validation_orchestration() { // AC:7
 
     // Test C++ implementation detection
     let mut cpp_detect_cmd = Command::new(&config.xtask_path);
-    cpp_detect_cmd.arg("detect-cpp")
-        .arg("--cpp-dir").arg(&cpp_dir)
-        .arg("--format").arg("json");
+    cpp_detect_cmd.arg("detect-cpp").arg("--cpp-dir").arg(&cpp_dir).arg("--format").arg("json");
 
     println!("Detecting C++ implementation: {:?}", cpp_detect_cmd);
 
@@ -291,8 +312,8 @@ fn test_cross_validation_orchestration() { // AC:7
     }
 
     let detect_stdout = String::from_utf8_lossy(&detect_output.stdout);
-    let detect_result: serde_json::Value = serde_json::from_str(&detect_stdout)
-        .expect("C++ detection should produce valid JSON");
+    let detect_result: serde_json::Value =
+        serde_json::from_str(&detect_stdout).expect("C++ detection should produce valid JSON");
 
     assert!(detect_result["cpp_available"].as_bool().unwrap(), "C++ should be available");
     assert!(detect_result["cpp_version"].is_string(), "Should report C++ version");
@@ -301,16 +322,14 @@ fn test_cross_validation_orchestration() { // AC:7
 
     // Test C++ building/fetching
     let mut cpp_fetch_cmd = Command::new(&config.xtask_path);
-    cpp_fetch_cmd.arg("fetch-cpp")
-        .arg("--dry-run")
-        .arg("--format").arg("json");
+    cpp_fetch_cmd.arg("fetch-cpp").arg("--dry-run").arg("--format").arg("json");
 
     let fetch_output = cpp_fetch_cmd.output().expect("C++ fetch should execute");
 
     if fetch_output.status.success() {
         let fetch_stdout = String::from_utf8_lossy(&fetch_output.stdout);
-        let fetch_result: serde_json::Value = serde_json::from_str(&fetch_stdout)
-            .expect("C++ fetch should produce valid JSON");
+        let fetch_result: serde_json::Value =
+            serde_json::from_str(&fetch_stdout).expect("C++ fetch should produce valid JSON");
 
         println!("C++ fetch: {}", fetch_result["status"].as_str().unwrap_or("unknown"));
         assert!(fetch_result["would_build"].is_boolean(), "Should indicate build intent");
@@ -318,9 +337,12 @@ fn test_cross_validation_orchestration() { // AC:7
 
     // Test cross-validation configuration
     let mut crossval_config_cmd = Command::new(&config.xtask_path);
-    crossval_config_cmd.arg("crossval-config")
-        .arg("--tolerance").arg("1e-4")
-        .arg("--format").arg("json");
+    crossval_config_cmd
+        .arg("crossval-config")
+        .arg("--tolerance")
+        .arg("1e-4")
+        .arg("--format")
+        .arg("json");
 
     let config_output = crossval_config_cmd.output().expect("Crossval config should execute");
 
@@ -336,16 +358,14 @@ fn test_cross_validation_orchestration() { // AC:7
 
     // Test dry-run cross-validation
     let mut crossval_cmd = Command::new(&config.xtask_path);
-    crossval_cmd.arg("crossval")
-        .arg("--dry-run")
-        .arg("--format").arg("json");
+    crossval_cmd.arg("crossval").arg("--dry-run").arg("--format").arg("json");
 
     let crossval_output = crossval_cmd.output().expect("Crossval should execute");
 
     if crossval_output.status.success() {
         let crossval_stdout = String::from_utf8_lossy(&crossval_output.stdout);
-        let crossval_result: serde_json::Value = serde_json::from_str(&crossval_stdout)
-            .expect("Crossval should produce valid JSON");
+        let crossval_result: serde_json::Value =
+            serde_json::from_str(&crossval_stdout).expect("Crossval should produce valid JSON");
 
         println!("Cross-validation: {}", crossval_result["status"].as_str().unwrap_or("unknown"));
         assert!(crossval_result["test_plan"].is_array(), "Should include test plan");
@@ -360,7 +380,8 @@ fn test_cross_validation_orchestration() { // AC:7
 /// Test full cross-validation workflow
 /// Validates complete cross-validation workflow with model download and C++ comparison
 #[test]
-fn test_full_crossval_workflow() { // AC:7
+fn test_full_crossval_workflow() {
+    // AC:7
     let config = XtaskTestConfig::from_env();
     config.skip_if_no_xtask();
 
@@ -372,12 +393,17 @@ fn test_full_crossval_workflow() { // AC:7
     // TODO: This test will initially fail - drives full crossval workflow
     // Test complete workflow in dry-run mode
     let mut full_crossval_cmd = Command::new(&config.xtask_path);
-    full_crossval_cmd.arg("full-crossval")
+    full_crossval_cmd
+        .arg("full-crossval")
         .arg("--dry-run")
-        .arg("--model-id").arg("microsoft/bitnet-b1.58-2B-4T-gguf")
-        .arg("--file").arg("ggml-model-i2_s.gguf")
-        .arg("--tolerance").arg("1e-4")
-        .arg("--format").arg("json");
+        .arg("--model-id")
+        .arg("microsoft/bitnet-b1.58-2B-4T-gguf")
+        .arg("--file")
+        .arg("ggml-model-i2_s.gguf")
+        .arg("--tolerance")
+        .arg("1e-4")
+        .arg("--format")
+        .arg("json");
 
     println!("Running full crossval workflow: {:?}", full_crossval_cmd);
 
@@ -402,9 +428,9 @@ fn test_full_crossval_workflow() { // AC:7
         // Expected steps: download, fetch-cpp, crossval
         let expected_steps = vec!["download-model", "fetch-cpp", "run-crossval"];
         for expected_step in expected_steps {
-            let step_found = workflow_steps.iter().any(|step| {
-                step["name"].as_str().unwrap_or("").contains(expected_step)
-            });
+            let step_found = workflow_steps
+                .iter()
+                .any(|step| step["name"].as_str().unwrap_or("").contains(expected_step));
             assert!(step_found, "Should include step: {}", expected_step);
         }
 
@@ -414,7 +440,6 @@ fn test_full_crossval_workflow() { // AC:7
             assert!(resources["disk_space_mb"].is_number(), "Should estimate disk space");
             assert!(resources["memory_mb"].is_number(), "Should estimate memory");
         }
-
     } else {
         let stderr = String::from_utf8_lossy(&workflow_output.stderr);
         println!("Full crossval workflow issue: {}", stderr);
@@ -442,8 +467,7 @@ fn test_feature_flag_consistency_checking() {
 
     // TODO: This test will initially fail - drives feature flag checking
     let mut check_features_cmd = Command::new(&config.xtask_path);
-    check_features_cmd.arg("check-features")
-        .arg("--format").arg("json");
+    check_features_cmd.arg("check-features").arg("--format").arg("json");
 
     println!("Checking feature flag consistency: {:?}", check_features_cmd);
 
@@ -457,8 +481,8 @@ fn test_feature_flag_consistency_checking() {
     let check_stdout = String::from_utf8_lossy(&check_output.stdout);
 
     if !check_stdout.trim().is_empty() {
-        let check_result: serde_json::Value = serde_json::from_str(&check_stdout)
-            .expect("Feature check should produce valid JSON");
+        let check_result: serde_json::Value =
+            serde_json::from_str(&check_stdout).expect("Feature check should produce valid JSON");
 
         // Validate feature consistency report
         assert!(check_result["consistency_status"].is_string(), "Should report consistency status");
@@ -475,7 +499,11 @@ fn test_feature_flag_consistency_checking() {
         for feature in expected_features {
             if let Some(feature_info) = feature_matrix.get(feature) {
                 println!("Feature '{}': {:#?}", feature, feature_info);
-                assert!(feature_info["available"].is_boolean(), "Feature {} should report availability", feature);
+                assert!(
+                    feature_info["available"].is_boolean(),
+                    "Feature {} should report availability",
+                    feature
+                );
             }
         }
 
@@ -507,9 +535,12 @@ fn test_model_verification_validation() {
     let mock_model_path = "/tmp/mock_model.gguf";
 
     let mut verify_cmd = Command::new(&config.xtask_path);
-    verify_cmd.arg("verify")
-        .arg("--model").arg(mock_model_path)
-        .arg("--format").arg("json")
+    verify_cmd
+        .arg("verify")
+        .arg("--model")
+        .arg(mock_model_path)
+        .arg("--format")
+        .arg("json")
         .arg("--dry-run"); // Use dry-run to test structure without real model
 
     println!("Testing model verification: {:?}", verify_cmd);
@@ -521,48 +552,61 @@ fn test_model_verification_validation() {
     let verify_stderr = String::from_utf8_lossy(&verify_output.stderr);
 
     if !verify_stdout.trim().is_empty() {
-        let verify_result: serde_json::Value = serde_json::from_str(&verify_stdout)
-            .expect("Verify should produce valid JSON");
+        let verify_result: serde_json::Value =
+            serde_json::from_str(&verify_stdout).expect("Verify should produce valid JSON");
 
         println!("Verification result: {:#?}", verify_result);
 
         // Should include verification structure even in dry-run
         if verify_result.get("dry_run").and_then(|v| v.as_bool()).unwrap_or(false) {
-            assert!(verify_result["verification_plan"].is_array(), "Should include verification plan");
+            assert!(
+                verify_result["verification_plan"].is_array(),
+                "Should include verification plan"
+            );
             println!("Verification plan validated");
         }
     } else if !verify_stderr.trim().is_empty() {
         println!("Verification error (expected for dry-run): {}", verify_stderr);
 
         // Error should be informative
-        assert!(verify_stderr.contains("model") || verify_stderr.contains("file") || verify_stderr.contains("verify"),
-                "Error should be related to model verification");
+        assert!(
+            verify_stderr.contains("model")
+                || verify_stderr.contains("file")
+                || verify_stderr.contains("verify"),
+            "Error should be related to model verification"
+        );
     }
 
     // Test verification with real model if available
-    if let Some(real_model_path) = env::var("BITNET_GGUF").ok() {
-        if Path::new(&real_model_path).exists() {
-            let mut real_verify_cmd = Command::new(&config.xtask_path);
-            real_verify_cmd.arg("verify")
-                .arg("--model").arg(&real_model_path)
-                .arg("--format").arg("json");
+    if let Ok(real_model_path) = env::var("BITNET_GGUF")
+        && Path::new(&real_model_path).exists()
+    {
+        let mut real_verify_cmd = Command::new(&config.xtask_path);
+        real_verify_cmd
+            .arg("verify")
+            .arg("--model")
+            .arg(&real_model_path)
+            .arg("--format")
+            .arg("json");
 
-            let real_verify_output = real_verify_cmd.output().expect("Real verify should execute");
+        let real_verify_output = real_verify_cmd.output().expect("Real verify should execute");
 
-            if real_verify_output.status.success() {
-                let real_stdout = String::from_utf8_lossy(&real_verify_output.stdout);
-                let real_result: serde_json::Value = serde_json::from_str(&real_stdout)
-                    .expect("Real verify should produce valid JSON");
+        if real_verify_output.status.success() {
+            let real_stdout = String::from_utf8_lossy(&real_verify_output.stdout);
+            let real_result: serde_json::Value =
+                serde_json::from_str(&real_stdout).expect("Real verify should produce valid JSON");
 
-                println!("Real model verification: {}", real_result["status"].as_str().unwrap_or("unknown"));
+            println!(
+                "Real model verification: {}",
+                real_result["status"].as_str().unwrap_or("unknown")
+            );
 
-                if let Some(model_info) = real_result.get("model_info") {
-                    println!("Model info: {:#?}", model_info);
-                }
-            } else {
-                let real_stderr = String::from_utf8_lossy(&real_verify_output.stderr);
-                println!("Real model verification failed: {}", real_stderr);
+            if let Some(model_info) = real_result.get("model_info") {
+                println!("Model info: {:#?}", model_info);
             }
+        } else {
+            let real_stderr = String::from_utf8_lossy(&real_verify_output.stderr);
+            println!("Real model verification failed: {}", real_stderr);
         }
     }
 
@@ -602,11 +646,11 @@ fn test_xtask_infrastructure_availability() {
     list_cmd.arg("list");
 
     let list_output = list_cmd.output();
-    if let Ok(output) = list_output {
-        if output.status.success() {
-            let list_stdout = String::from_utf8_lossy(&output.stdout);
-            println!("Available xtask commands: {}", list_stdout);
-        }
+    if let Ok(output) = list_output
+        && output.status.success()
+    {
+        let list_stdout = String::from_utf8_lossy(&output.stdout);
+        println!("Available xtask commands: {}", list_stdout);
     }
 
     println!("✅ Xtask infrastructure availability validated");
