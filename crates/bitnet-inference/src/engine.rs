@@ -35,11 +35,13 @@
 //!
 //! ### Usage Examples
 //!
-//! ```rust
+//! ```rust,no_run
 //! use bitnet_inference::engine::InferenceEngine;
 //! use bitnet_common::Device;
 //!
 //! # async fn example() -> anyhow::Result<()> {
+//! # let model = todo!(); // Mock model for documentation example
+//! # let tokenizer = todo!(); // Mock tokenizer for documentation example
 //! let engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
 //!
 //! // Generate with performance tracking

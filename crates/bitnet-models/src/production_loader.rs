@@ -157,7 +157,7 @@ impl ProductionModelLoader {
 
         // Validate file size
         if let Some(max_size) = self.config.max_model_size_bytes {
-            let file_size = std::fs::metadata(path).map_err(|e| BitNetError::Io(e))?.len();
+            let file_size = std::fs::metadata(path).map_err(BitNetError::Io)?.len();
 
             if file_size > max_size {
                 return Err(BitNetError::Model(ModelError::LoadingFailed {

@@ -19,7 +19,6 @@ use bitnet_tokenizers::Tokenizer;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
-#[allow(unused_imports)]
 use std::time::Instant;
 use tokio::sync::RwLock;
 use tracing::{debug, info, instrument};
@@ -326,8 +325,8 @@ impl ProductionInferenceEngine {
     ) -> Result<Self> {
         info!("Creating production inference engine");
 
-        let engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device.clone())
-            .map_err(|e| {
+        let engine =
+            InferenceEngine::new(model.clone(), tokenizer.clone(), device).map_err(|e| {
                 BitNetError::Inference(InferenceError::GenerationFailed {
                     reason: format!("Engine creation failed: {}", e),
                 })

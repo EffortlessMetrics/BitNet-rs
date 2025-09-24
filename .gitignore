@@ -51,14 +51,12 @@ wheels/
 # pyenv
 .python-version
 
-<<<<<<< HEAD
 # Virtual environments
 .venv/
 venv/
 env/
 
 =======
->>>>>>> codex/add-gpu-support-for-tensors
 # Environment variables
 .env
 .env.local
@@ -88,25 +86,14 @@ models/
 *.so
 *.dylib
 *.a
-<<<<<<< HEAD
-*.lib
-
-# External dependency cache
-=======
 *.lib# Exter
 nal dependency cache
->>>>>>> codex/add-gpu-support-for-tensors
 .cache/
 **/bitnet_cpp/
 
 # Cross-validation builds
 crossval/target/
-<<<<<<< HEAD
 legacy/
-
-# =============================================================================
-# OVERSIZED PR PREVENTION GUARDRAILS
-# =============================================================================
 
 # Test fixture artifacts (prevent massive test data commits)
 **/fixtures/target/
@@ -178,6 +165,8 @@ vagrant/
 # - Massive JSON test fixtures (PR #103)  
 # - Vendored GGML C code without .gitignore (PR #101)
 # - Branch merge artifacts (PR #104)
-=======
-legacy/
->>>>>>> codex/add-gpu-support-for-tensors
+
+# Mutants
+mutants.out
+mutants.out.old
+mutants/

@@ -566,6 +566,13 @@ impl DeviceAwareQuantizer {
         }
     }
 
+    /// Auto-detect the best quantizer configuration for the current system
+    pub fn auto_detect() -> bitnet_common::Result<Self> {
+        // In a full implementation, this would detect GPU availability, CPU features, etc.
+        // For now, return a default configuration
+        Ok(Self::new())
+    }
+
     pub fn with_tolerance_config(tolerance_config: ToleranceConfig) -> Self {
         Self {
             cpu_backend: CPUQuantizer::new(tolerance_config.clone()),
