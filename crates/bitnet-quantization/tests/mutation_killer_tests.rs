@@ -926,10 +926,9 @@ mod quantization_boundary_tests {
             for (case_idx, values) in near_zero_cases.iter().enumerate() {
                 let tensor = create_test_tensor(values.clone(), vec![values.len()]);
 
-                let quantized = quantizer.quantize_tensor(&tensor).unwrap_or_else(|_| panic!(
-                    "{} quantization failed for near-zero case {}",
-                    name, case_idx
-                ));
+                let quantized = quantizer.quantize_tensor(&tensor).unwrap_or_else(|_| {
+                    panic!("{} quantization failed for near-zero case {}", name, case_idx)
+                });
 
                 // Should produce valid quantized representation
                 assert!(
@@ -950,9 +949,9 @@ mod quantization_boundary_tests {
                     );
                 }
 
-                let dequantized = quantizer
-                    .dequantize_tensor(&quantized)
-                    .unwrap_or_else(|_| panic!("{} dequantization failed for case {}", name, case_idx));
+                let dequantized = quantizer.dequantize_tensor(&quantized).unwrap_or_else(|_| {
+                    panic!("{} dequantization failed for case {}", name, case_idx)
+                });
 
                 let recovered = dequantized.to_vec().unwrap();
 
@@ -996,18 +995,22 @@ mod quantization_boundary_tests {
             for block_size in block_sizes {
                 let quantizer = I2SQuantizer::with_block_size(block_size);
 
-                let quantized = quantizer.quantize_tensor(&tensor).unwrap_or_else(|_| panic!(
-                    "Quantization failed for data_len={}, block_size={}",
-                    expected_len, block_size
-                ));
+                let quantized = quantizer.quantize_tensor(&tensor).unwrap_or_else(|_| {
+                    panic!(
+                        "Quantization failed for data_len={}, block_size={}",
+                        expected_len, block_size
+                    )
+                });
 
                 // Verify data integrity
                 assert_eq!(data.len(), expected_len, "Test data length mismatch");
 
-                let dequantized = quantizer.dequantize_tensor(&quantized).unwrap_or_else(|_| panic!(
-                    "Dequantization failed for data_len={}, block_size={}",
-                    expected_len, block_size
-                ));
+                let dequantized = quantizer.dequantize_tensor(&quantized).unwrap_or_else(|_| {
+                    panic!(
+                        "Dequantization failed for data_len={}, block_size={}",
+                        expected_len, block_size
+                    )
+                });
 
                 let recovered = dequantized.to_vec().unwrap();
                 assert_eq!(
