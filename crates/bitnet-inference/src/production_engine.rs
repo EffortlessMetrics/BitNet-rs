@@ -13,9 +13,9 @@
 
 use crate::engine::PerformanceMetrics;
 use crate::{GenerationConfig, InferenceEngine};
-use bitnet_common::{Device, InferenceError, Result};
 #[cfg(feature = "inference")]
 use bitnet_common::BitNetError;
+use bitnet_common::{Device, InferenceError, Result};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use serde::{Deserialize, Serialize};
@@ -24,9 +24,9 @@ use std::time::Duration;
 #[cfg(feature = "inference")]
 use std::time::Instant;
 use tokio::sync::RwLock;
+use tracing::info;
 #[cfg(feature = "inference")]
 use tracing::{debug, instrument};
-use tracing::info;
 
 /// Enhanced timing metrics for detailed performance tracking
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

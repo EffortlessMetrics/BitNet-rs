@@ -78,6 +78,8 @@ Single PR comment with anchored sections (created by first agent, updated by all
 <!-- gates:start -->
 | Gate | Status | Evidence |
 | ---- | ------ | -------- |
+| format | pass | cargo fmt --all --check: all files formatted |
+| clippy | pass | clippy: 0 warnings (workspace, cpu+gpu features) |
 <!-- gates:end -->
 
 <!-- trace:start -->
@@ -89,6 +91,7 @@ Single PR comment with anchored sections (created by first agent, updated by all
 
 <!-- hoplog:start -->
 ### Hop log
+**hygiene-finalizer** → Applied mechanical code hygiene fixes for BitNet.rs neural network codebase. Fixed GPU test mocks and missing method implementations in `crates/bitnet-kernels/tests/mixed_precision_gpu_kernels.rs` and `tests/fixtures/device_aware.rs`. Evidence: format ✅ cargo fmt --all --check (all files formatted), clippy ✅ CPU/GPU features (0 warnings after 25+ mechanical fixes). Ready for architecture validation. → **NEXT** → architecture-reviewer
 <!-- hoplog:end -->
 
 <!-- decision:start -->

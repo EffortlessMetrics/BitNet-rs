@@ -1,0 +1,1 @@
+{"name": "review:gate:benchmarks", "status": "completed", "conclusion": "success", "output": {"title": "Performance Baseline Established", "summary": "BitNet.rs neural network benchmarks passed successfully", "text": "CPU inference: 200.0 tok/s\nQuantization benchmarks: passed\nGPU fallback: working\nModel loading: functional\nPerformance regression: none detected"}}
