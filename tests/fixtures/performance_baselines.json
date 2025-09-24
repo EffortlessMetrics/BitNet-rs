@@ -1,492 +1,4 @@
 {
-  "inference_generation_Cpu": [
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:32:48.026595151+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:32:49.599280032+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:38:16.811671998+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:38:16.824703615+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:38:16.877685649+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:38:16.893572297+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:38:16.923990086+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:51:37.793528475+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:51:37.804209813+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:23:16.039632933+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:29:21.960179424+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:29:21.975543299+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:29:21.982882521+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:29:21.991661830+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:32:44.997873289+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:32:45.017050789+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:32:45.025667326+00:00"
-    },
-    {
-      "operation": "inference_generation",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.00000000000001,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:32:45.036818831+00:00"
-    }
-  ],
   "quantization_i2s_Cpu": [
     {
       "operation": "quantization_i2s",
@@ -513,7 +25,7 @@
         "percentile_95_ms": 54.0,
         "percentile_99_ms": 54.0
       },
-      "timestamp": "2025-09-24T07:32:48.026587554+00:00"
+      "timestamp": "2025-09-24T20:08:34.660922979+00:00"
     },
     {
       "operation": "quantization_i2s",
@@ -540,7 +52,7 @@
         "percentile_95_ms": 54.0,
         "percentile_99_ms": 54.0
       },
-      "timestamp": "2025-09-24T07:32:49.599272416+00:00"
+      "timestamp": "2025-09-24T20:57:49.797137829+00:00"
     },
     {
       "operation": "quantization_i2s",
@@ -567,7 +79,7 @@
         "percentile_95_ms": 54.0,
         "percentile_99_ms": 54.0
       },
-      "timestamp": "2025-09-24T07:38:16.811665726+00:00"
+      "timestamp": "2025-09-24T20:57:49.813801128+00:00"
     },
     {
       "operation": "quantization_i2s",
@@ -594,873 +106,117 @@
         "percentile_95_ms": 54.0,
         "percentile_99_ms": 54.0
       },
-      "timestamp": "2025-09-24T07:38:16.824697073+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T07:38:16.877679688+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T07:38:16.893566446+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T07:38:16.923986689+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T07:51:37.793523358+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T07:51:37.804205126+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T08:23:16.039627502+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T08:29:21.960174214+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T08:29:21.975540039+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T08:29:21.982877401+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T08:29:21.991658500+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T08:32:44.997862122+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T08:32:45.017045010+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T08:32:45.025662689+00:00"
-    },
-    {
-      "operation": "quantization_i2s",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        45.0,
-        46.0,
-        47.0,
-        48.00000000000001,
-        49.0,
-        50.0,
-        51.0,
-        52.0,
-        53.0,
-        54.0
-      ],
-      "statistics": {
-        "mean_ms": 49.5,
-        "median_ms": 50.0,
-        "min_ms": 45.0,
-        "max_ms": 54.0,
-        "std_dev_ms": 2.872281323269014,
-        "percentile_95_ms": 54.0,
-        "percentile_99_ms": 54.0
-      },
-      "timestamp": "2025-09-24T08:32:45.036815005+00:00"
+      "timestamp": "2025-09-24T20:57:49.816036736+00:00"
     }
   ],
-  "quantization_tl1_Cpu": [
+  "inference_generation_Cpu": [
     {
-      "operation": "quantization_tl1",
+      "operation": "inference_generation",
       "device": "Cpu",
       "iterations": 10,
       "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
+        90.0,
+        92.0,
+        94.0,
+        96.0,
+        98.0,
+        100.0,
+        102.0,
+        104.0,
+        106.0,
+        108.0
       ],
       "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
+        "mean_ms": 99.0,
+        "median_ms": 100.0,
+        "min_ms": 90.0,
+        "max_ms": 108.0,
+        "std_dev_ms": 5.744562646538028,
+        "percentile_95_ms": 108.0,
+        "percentile_99_ms": 108.0
       },
-      "timestamp": "2025-09-24T07:32:48.026589829+00:00"
+      "timestamp": "2025-09-24T20:08:34.660931488+00:00"
     },
     {
-      "operation": "quantization_tl1",
+      "operation": "inference_generation",
       "device": "Cpu",
       "iterations": 10,
       "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
+        90.0,
+        92.0,
+        94.0,
+        96.0,
+        98.0,
+        100.0,
+        102.0,
+        104.0,
+        106.0,
+        108.0
       ],
       "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
+        "mean_ms": 99.0,
+        "median_ms": 100.0,
+        "min_ms": 90.0,
+        "max_ms": 108.0,
+        "std_dev_ms": 5.744562646538028,
+        "percentile_95_ms": 108.0,
+        "percentile_99_ms": 108.0
       },
-      "timestamp": "2025-09-24T07:32:49.599274841+00:00"
+      "timestamp": "2025-09-24T20:57:49.797144249+00:00"
     },
     {
-      "operation": "quantization_tl1",
+      "operation": "inference_generation",
       "device": "Cpu",
       "iterations": 10,
       "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
+        90.0,
+        92.0,
+        94.0,
+        96.0,
+        98.0,
+        100.0,
+        102.0,
+        104.0,
+        106.0,
+        108.0
       ],
       "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
+        "mean_ms": 99.0,
+        "median_ms": 100.0,
+        "min_ms": 90.0,
+        "max_ms": 108.0,
+        "std_dev_ms": 5.744562646538028,
+        "percentile_95_ms": 108.0,
+        "percentile_99_ms": 108.0
       },
-      "timestamp": "2025-09-24T07:38:16.811667600+00:00"
+      "timestamp": "2025-09-24T20:57:49.813806682+00:00"
     },
     {
-      "operation": "quantization_tl1",
+      "operation": "inference_generation",
       "device": "Cpu",
       "iterations": 10,
       "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
+        90.0,
+        92.0,
+        94.0,
+        96.00000000000001,
+        98.0,
+        100.0,
+        102.0,
+        104.0,
+        106.0,
+        108.0
       ],
       "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
+        "mean_ms": 99.0,
+        "median_ms": 100.0,
+        "min_ms": 90.0,
+        "max_ms": 108.0,
+        "std_dev_ms": 5.744562646538028,
+        "percentile_95_ms": 108.0,
+        "percentile_99_ms": 108.0
       },
-      "timestamp": "2025-09-24T07:38:16.824698806+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T07:38:16.877681742+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T07:38:16.893568550+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T07:38:16.923987851+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T07:51:37.793525020+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T07:51:37.804206618+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T08:23:16.039629326+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T08:29:21.960176254+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T08:29:21.975541189+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T08:29:21.982879211+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T08:29:21.991659600+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T08:32:44.997863925+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T08:32:45.017047184+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T08:32:45.025664352+00:00"
-    },
-    {
-      "operation": "quantization_tl1",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        54.0,
-        55.2,
-        56.400000000000006,
-        57.6,
-        58.8,
-        60.0,
-        61.2,
-        62.400000000000006,
-        63.6,
-        64.80000000000001
-      ],
-      "statistics": {
-        "mean_ms": 59.4,
-        "median_ms": 60.0,
-        "min_ms": 54.0,
-        "max_ms": 64.80000000000001,
-        "std_dev_ms": 3.446737587922819,
-        "percentile_95_ms": 64.80000000000001,
-        "percentile_99_ms": 64.80000000000001
-      },
-      "timestamp": "2025-09-24T08:32:45.036816136+00:00"
+      "timestamp": "2025-09-24T20:57:49.816042633+00:00"
     }
   ],
   "model_loading_large_Cpu": [
@@ -1489,7 +245,7 @@
         "percentile_95_ms": 2160.0,
         "percentile_99_ms": 2160.0
       },
-      "timestamp": "2025-09-24T07:32:48.026584467+00:00"
+      "timestamp": "2025-09-24T20:08:34.660920382+00:00"
     },
     {
       "operation": "model_loading_large",
@@ -1516,7 +272,7 @@
         "percentile_95_ms": 2160.0,
         "percentile_99_ms": 2160.0
       },
-      "timestamp": "2025-09-24T07:32:49.599269279+00:00"
+      "timestamp": "2025-09-24T20:57:49.797134801+00:00"
     },
     {
       "operation": "model_loading_large",
@@ -1543,385 +299,7 @@
         "percentile_95_ms": 2160.0,
         "percentile_99_ms": 2160.0
       },
-      "timestamp": "2025-09-24T07:38:16.811662080+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T07:38:16.824694338+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T07:38:16.877676983+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T07:38:16.893563942+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T07:38:16.923985207+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T07:51:37.793521085+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T07:51:37.804202823+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T08:23:16.039625328+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T08:29:21.960172114+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T08:29:21.975538659+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T08:29:21.982875341+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T08:29:21.991656940+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T08:32:44.997859558+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T08:32:45.017041915+00:00"
-    },
-    {
-      "operation": "model_loading_large",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        1800.0,
-        1840.0,
-        1880.0,
-        1920.0,
-        1960.0,
-        2000.0,
-        2040.0,
-        2080.0,
-        2120.0,
-        2160.0
-      ],
-      "statistics": {
-        "mean_ms": 1980.0,
-        "median_ms": 2000.0,
-        "min_ms": 1800.0,
-        "max_ms": 2160.0,
-        "std_dev_ms": 114.89125293076054,
-        "percentile_95_ms": 2160.0,
-        "percentile_99_ms": 2160.0
-      },
-      "timestamp": "2025-09-24T08:32:45.025660255+00:00"
+      "timestamp": "2025-09-24T20:57:49.813799175+00:00"
     },
     {
       "operation": "model_loading_large",
@@ -1948,7 +326,7 @@
         "percentile_95_ms": 2160.0,
         "percentile_99_ms": 2160.0
       },
-      "timestamp": "2025-09-24T08:32:45.036813412+00:00"
+      "timestamp": "2025-09-24T20:57:49.816034553+00:00"
     }
   ],
   "inference_first_token_Cpu": [
@@ -1977,7 +355,7 @@
         "percentile_95_ms": 216.0,
         "percentile_99_ms": 216.0
       },
-      "timestamp": "2025-09-24T07:32:48.026593577+00:00"
+      "timestamp": "2025-09-24T20:08:34.660929091+00:00"
     },
     {
       "operation": "inference_first_token",
@@ -2004,7 +382,7 @@
         "percentile_95_ms": 216.0,
         "percentile_99_ms": 216.0
       },
-      "timestamp": "2025-09-24T07:32:49.599277577+00:00"
+      "timestamp": "2025-09-24T20:57:49.797142368+00:00"
     },
     {
       "operation": "inference_first_token",
@@ -2031,7 +409,7 @@
         "percentile_95_ms": 216.0,
         "percentile_99_ms": 216.0
       },
-      "timestamp": "2025-09-24T07:38:16.811669744+00:00"
+      "timestamp": "2025-09-24T20:57:49.813804841+00:00"
     },
     {
       "operation": "inference_first_token",
@@ -2058,385 +436,117 @@
         "percentile_95_ms": 216.0,
         "percentile_99_ms": 216.0
       },
-      "timestamp": "2025-09-24T07:38:16.824701501+00:00"
-    },
+      "timestamp": "2025-09-24T20:57:49.816040751+00:00"
+    }
+  ],
+  "quantization_tl1_Cpu": [
     {
-      "operation": "inference_first_token",
+      "operation": "quantization_tl1",
       "device": "Cpu",
       "iterations": 10,
       "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
+        54.0,
+        55.2,
+        56.400000000000006,
+        57.6,
+        58.8,
+        60.0,
+        61.2,
+        62.400000000000006,
+        63.6,
+        64.80000000000001
       ],
       "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
+        "mean_ms": 59.4,
+        "median_ms": 60.0,
+        "min_ms": 54.0,
+        "max_ms": 64.80000000000001,
+        "std_dev_ms": 3.446737587922819,
+        "percentile_95_ms": 64.80000000000001,
+        "percentile_99_ms": 64.80000000000001
       },
-      "timestamp": "2025-09-24T07:38:16.877683576+00:00"
+      "timestamp": "2025-09-24T20:08:34.660925336+00:00"
     },
     {
-      "operation": "inference_first_token",
+      "operation": "quantization_tl1",
       "device": "Cpu",
       "iterations": 10,
       "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
+        54.0,
+        55.2,
+        56.400000000000006,
+        57.6,
+        58.8,
+        60.0,
+        61.2,
+        62.400000000000006,
+        63.6,
+        64.80000000000001
       ],
       "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
+        "mean_ms": 59.4,
+        "median_ms": 60.0,
+        "min_ms": 54.0,
+        "max_ms": 64.80000000000001,
+        "std_dev_ms": 3.446737587922819,
+        "percentile_95_ms": 64.80000000000001,
+        "percentile_99_ms": 64.80000000000001
       },
-      "timestamp": "2025-09-24T07:38:16.893570624+00:00"
+      "timestamp": "2025-09-24T20:57:49.797140436+00:00"
     },
     {
-      "operation": "inference_first_token",
+      "operation": "quantization_tl1",
       "device": "Cpu",
       "iterations": 10,
       "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
+        54.0,
+        55.2,
+        56.400000000000006,
+        57.6,
+        58.8,
+        60.0,
+        61.2,
+        62.400000000000006,
+        63.6,
+        64.80000000000001
       ],
       "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
+        "mean_ms": 59.4,
+        "median_ms": 60.0,
+        "min_ms": 54.0,
+        "max_ms": 64.80000000000001,
+        "std_dev_ms": 3.446737587922819,
+        "percentile_95_ms": 64.80000000000001,
+        "percentile_99_ms": 64.80000000000001
       },
-      "timestamp": "2025-09-24T07:38:16.923988984+00:00"
+      "timestamp": "2025-09-24T20:57:49.813802727+00:00"
     },
     {
-      "operation": "inference_first_token",
+      "operation": "quantization_tl1",
       "device": "Cpu",
       "iterations": 10,
       "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
+        54.0,
+        55.2,
+        56.400000000000006,
+        57.6,
+        58.8,
+        60.0,
+        61.2,
+        62.400000000000006,
+        63.6,
+        64.80000000000001
       ],
       "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
+        "mean_ms": 59.4,
+        "median_ms": 60.0,
+        "min_ms": 54.0,
+        "max_ms": 64.80000000000001,
+        "std_dev_ms": 3.446737587922819,
+        "percentile_95_ms": 64.80000000000001,
+        "percentile_99_ms": 64.80000000000001
       },
-      "timestamp": "2025-09-24T07:51:37.793526663+00:00"
-    },
-    {
-      "operation": "inference_first_token",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
-      ],
-      "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
-      },
-      "timestamp": "2025-09-24T07:51:37.804208531+00:00"
-    },
-    {
-      "operation": "inference_first_token",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
-      ],
-      "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
-      },
-      "timestamp": "2025-09-24T08:23:16.039631129+00:00"
-    },
-    {
-      "operation": "inference_first_token",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
-      ],
-      "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
-      },
-      "timestamp": "2025-09-24T08:29:21.960177834+00:00"
-    },
-    {
-      "operation": "inference_first_token",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
-      ],
-      "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
-      },
-      "timestamp": "2025-09-24T08:29:21.975542229+00:00"
-    },
-    {
-      "operation": "inference_first_token",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
-      ],
-      "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
-      },
-      "timestamp": "2025-09-24T08:29:21.982880851+00:00"
-    },
-    {
-      "operation": "inference_first_token",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
-      ],
-      "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
-      },
-      "timestamp": "2025-09-24T08:29:21.991660760+00:00"
-    },
-    {
-      "operation": "inference_first_token",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
-      ],
-      "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
-      },
-      "timestamp": "2025-09-24T08:32:44.997869463+00:00"
-    },
-    {
-      "operation": "inference_first_token",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
-      ],
-      "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
-      },
-      "timestamp": "2025-09-24T08:32:45.017048996+00:00"
-    },
-    {
-      "operation": "inference_first_token",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
-      ],
-      "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
-      },
-      "timestamp": "2025-09-24T08:32:45.025665844+00:00"
-    },
-    {
-      "operation": "inference_first_token",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        180.0,
-        184.0,
-        188.0,
-        192.00000000000003,
-        196.0,
-        200.0,
-        204.0,
-        208.0,
-        212.0,
-        216.0
-      ],
-      "statistics": {
-        "mean_ms": 198.0,
-        "median_ms": 200.0,
-        "min_ms": 180.0,
-        "max_ms": 216.0,
-        "std_dev_ms": 11.489125293076055,
-        "percentile_95_ms": 216.0,
-        "percentile_99_ms": 216.0
-      },
-      "timestamp": "2025-09-24T08:32:45.036817188+00:00"
+      "timestamp": "2025-09-24T20:57:49.816038497+00:00"
     }
   ],
   "model_loading_small_Cpu": [
@@ -2465,7 +575,7 @@
         "percentile_95_ms": 108.0,
         "percentile_99_ms": 108.0
       },
-      "timestamp": "2025-09-24T07:32:48.026564152+00:00"
+      "timestamp": "2025-09-24T20:08:34.660899407+00:00"
     },
     {
       "operation": "model_loading_small",
@@ -2492,7 +602,7 @@
         "percentile_95_ms": 108.0,
         "percentile_99_ms": 108.0
       },
-      "timestamp": "2025-09-24T07:32:49.599252753+00:00"
+      "timestamp": "2025-09-24T20:57:49.797124788+00:00"
     },
     {
       "operation": "model_loading_small",
@@ -2519,385 +629,7 @@
         "percentile_95_ms": 108.0,
         "percentile_99_ms": 108.0
       },
-      "timestamp": "2025-09-24T07:38:16.811615573+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:38:16.824682616+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:38:16.877666734+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:38:16.893551278+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:38:16.923975028+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:51:37.793504181+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T07:51:37.804190676+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:23:16.039614566+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:29:21.960159534+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:29:21.975532099+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:29:21.982867771+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:29:21.991649020+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:32:44.997847699+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:32:45.017028415+00:00"
-    },
-    {
-      "operation": "model_loading_small",
-      "device": "Cpu",
-      "iterations": 10,
-      "measurements": [
-        90.0,
-        92.0,
-        94.0,
-        96.0,
-        98.0,
-        100.0,
-        102.0,
-        104.0,
-        106.0,
-        108.0
-      ],
-      "statistics": {
-        "mean_ms": 99.0,
-        "median_ms": 100.0,
-        "min_ms": 90.0,
-        "max_ms": 108.0,
-        "std_dev_ms": 5.744562646538028,
-        "percentile_95_ms": 108.0,
-        "percentile_99_ms": 108.0
-      },
-      "timestamp": "2025-09-24T08:32:45.025648698+00:00"
+      "timestamp": "2025-09-24T20:57:49.813789827+00:00"
     },
     {
       "operation": "model_loading_small",
@@ -2924,7 +656,7 @@
         "percentile_95_ms": 108.0,
         "percentile_99_ms": 108.0
       },
-      "timestamp": "2025-09-24T08:32:45.036803847+00:00"
+      "timestamp": "2025-09-24T20:57:49.816028455+00:00"
     }
   ]
 }

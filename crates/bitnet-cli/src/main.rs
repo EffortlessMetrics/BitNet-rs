@@ -982,7 +982,7 @@ async fn run_simple_generation(
     Ok(())
 }
 
-/// Extract last token hidden state from 3D tensor [B,T,H] -> [B,H]
+/// Extract last token hidden state from 3D tensor \[B,T,H\] -> \[B,H\]
 fn extract_last_token_hidden(
     tensor: &bitnet_common::ConcreteTensor,
 ) -> Result<bitnet_common::ConcreteTensor> {
@@ -1009,7 +1009,7 @@ fn extract_last_token_hidden(
     }
 }
 
-/// Extract logits vector from 2D tensor [B,V] -> Vec<f32>
+/// Extract logits vector from 2D tensor \[B,V\] -> `Vec<f32>`
 fn extract_logits_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
     use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
 

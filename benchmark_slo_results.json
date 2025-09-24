@@ -1,9 +1,9 @@
 {
   "model_path": "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf",
-  "tokenizer_path": "models/llama3-tokenizer/tokenizer.json",
-  "prompt": "BitNet neural network performance validation test",
+  "tokenizer_path": "models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json",
+  "prompt": "The capital of France is",
   "generated_text": "",
-  "tokens_generated": 128,
+  "tokens_generated": 32,
   "warmup_tokens": 10,
   "device": "cpu",
   "vocab": 128256,
@@ -21,5 +21,5 @@
     "total_tokens_per_sec": 0.0
   },
   "success": false,
-  "error": "Warmup failed: Inference feature not enabled. Build with `--features inference` for real inference, or use `--allow-mock` for testing.\nThis model expects the **LLaMA-3 tokenizer (128,256)**"
+  "error": "Warmup failed: failed to load tokenizer: models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json"
 }

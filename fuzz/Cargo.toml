@@ -12,6 +12,8 @@ libfuzzer-sys = "0.4"
 bitnet-quantization = { path = "../crates/bitnet-quantization" }
 bitnet-models = { path = "../crates/bitnet-models" }
 bitnet-kernels = { path = "../crates/bitnet-kernels" }
+bitnet-common = { path = "../crates/bitnet-common" }
+candle-core = { workspace = true }
 arbitrary = { version = "1.3", features = ["derive"] }
 
 [[bin]]
