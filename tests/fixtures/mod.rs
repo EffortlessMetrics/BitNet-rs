@@ -195,11 +195,10 @@ impl RealModelIntegrationFixtures {
         self.device_fixtures.initialize().await?;
         self.quantization_fixtures.initialize(&self.model_fixtures).await?;
         self.performance_fixtures.initialize().await?;
+        self.error_handling_fixtures.initialize().await?;
 
-        // Cross-validation only for full tier
-        if self.config.tier == TestTier::Full {
-            self.cross_validation_fixtures.initialize(&self.model_fixtures).await?;
-        }
+        // Cross-validation for all tiers (with different levels of detail)
+        self.cross_validation_fixtures.initialize(&self.model_fixtures).await?;
 
         Ok(())
     }
@@ -208,10 +207,8 @@ impl RealModelIntegrationFixtures {
     #[allow(dead_code)]
     pub async fn cleanup(&mut self) -> Result<()> {
         // Cleanup in reverse order
-        if self.config.tier == TestTier::Full {
-            self.cross_validation_fixtures.cleanup().await?;
-        }
-
+        self.cross_validation_fixtures.cleanup().await?;
+        self.error_handling_fixtures.cleanup().await?;
         self.performance_fixtures.cleanup().await?;
         self.quantization_fixtures.cleanup().await?;
         self.device_fixtures.cleanup().await?;
