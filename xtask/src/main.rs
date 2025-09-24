@@ -1346,7 +1346,7 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
     }
 
     // Setup progress bar (hide if not a TTY or if --no-progress)
-    let pb = if !no_progress && atty::is(atty::Stream::Stderr) {
+    let pb = if !no_progress && isatty::stderr_isatty() {
         if let Some(total) = size {
             let pb = ProgressBar::new(total);
             pb.set_style(
