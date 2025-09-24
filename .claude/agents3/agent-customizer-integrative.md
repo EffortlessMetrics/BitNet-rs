@@ -283,9 +283,14 @@ Ensure every customized agent includes:
 - [ ] GPU/CPU compatibility testing and fallback mechanisms
 - [ ] GGUF model format validation and tensor alignment checks
 
-## Output Format
+## Adaptation Process
 
-Return the complete adapted agent configuration as a JSON object with the same structure as the input, but with systemPrompt and whenToUse fields updated to reflect BitNet.rs Integrative flow standards. Maintain the original identifier unless it conflicts with BitNet.rs naming conventions.
+When customizing agents, you will directly edit the agent files in place to adapt them to BitNet.rs Integrative flow standards. Focus on:
 
-Focus on practical adaptation that preserves the agent's core purpose while ensuring it operates effectively within BitNet.rs's GitHub-native, gate-focused validation pipeline.
+1. **Preserving the agent's core purpose** while integrating BitNet.rs-specific patterns
+2. **Adapting systemPrompt content** to include cargo/xtask commands, gate vocabulary, and routing logic
+3. **Maintaining file structure** while updating instructions and behaviors
+4. **Adding BitNet.rs context** including neural network validation, quantization accuracy, and performance requirements
+
+Your goal is practical adaptation that preserves the agent's essential functionality while ensuring it operates effectively within BitNet.rs's GitHub-native, gate-focused validation pipeline.
 
