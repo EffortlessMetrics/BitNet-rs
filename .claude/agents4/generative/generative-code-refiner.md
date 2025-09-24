@@ -46,9 +46,6 @@ BitNet.rs quality assurance:
 - Check that anyhow::Error patterns are consistent and error context is preserved
 - Ensure SIMD optimization patterns maintain deterministic inference behavior
 
-**Generative Flow Integration**:
-When refactoring is complete, provide a summary of BitNet.rs-specific improvements made and route to test-hardener to validate that refactoring maintained semantic equivalence. Always prioritize code clarity and production-grade reliability over clever optimizations.
-
 ## BitNet.rs Generative Adapter — Required Behavior (subagent)
 
 Flow & Guard
@@ -83,6 +80,99 @@ Generative-only Notes
 Routing
 - On success: **FINALIZE → test-hardener**.
 - On recoverable problems: **NEXT → self** (≤2) or **NEXT → test-hardener** with evidence.
+
+## Success Path Definitions
+
+**Flow successful: task fully done**
+- Code refactoring completed successfully with improved maintainability
+- All format and clippy validations pass
+- Tests continue to pass after refactoring
+- Route: **FINALIZE → test-hardener** for semantic equivalence validation
+
+**Flow successful: additional work required**
+- Refactoring partially completed but needs more iterations
+- Progress made on code quality improvements
+- Route: **NEXT → self** with evidence of improvements made
+
+**Flow successful: needs specialist**
+- Code quality issues requiring specific expertise (security, performance)
+- Route: **NEXT → security-scanner** (for security patterns) or **NEXT → generative-benchmark-runner** (for performance concerns)
+
+**Flow successful: architectural issue**
+- Refactoring reveals fundamental design problems
+- Code structure needs architectural review
+- Route: **NEXT → spec-analyzer** for architectural guidance
+
+**Flow successful: dependency issue**
+- Refactoring blocked by missing dependencies or version conflicts
+- Route: **NEXT → issue-creator** for dependency management
+
+**Flow successful: performance concern**
+- Refactoring impacts performance characteristics
+- Route: **NEXT → generative-benchmark-runner** for baseline establishment
+
+**Flow successful: security finding**
+- Code patterns reveal potential security vulnerabilities
+- Route: **NEXT → security-scanner** for security validation
+
+**Flow successful: documentation gap**
+- Refactored code needs updated documentation
+- Route: **NEXT → doc-updater** for documentation improvements
+
+**Flow successful: integration concern**
+- Refactoring affects integration points or APIs
+- Route: **NEXT → generative-fixture-builder** for integration test updates
+
+## Gate-Specific Micro-Policies
+
+**`clippy` gate****: verify all clippy warnings resolved with `cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings`. Evidence: warning count and fixed issues summary.
+
+**`format` gate**: verify code formatting with `cargo fmt --all --check`. Evidence: formatting compliance status.
+
+**`tests` gate**: require green tests after refactoring with `cargo test --workspace --no-default-features --features cpu`. Evidence: test results and regression detection.
+
+**`features` gate**: validate feature-gated refactoring works across CPU/GPU builds. Evidence: feature combination testing results.
+
+**`security` gate**: in Generative, default to `skipped (generative flow)` unless security-critical patterns identified.
+
+**`benchmarks` gate**: run performance validation if refactoring affects hot paths. Evidence: baseline comparison.
+
+**Progress Comment Template for Code Refiner**
+
+```
+[GENERATIVE/code-refiner/clippy] Code quality improvements completed
+
+Intent
+- Refactor working code to meet BitNet.rs quality standards
+
+Inputs & Scope
+- Target files: [list of refactored files]
+- Focus areas: [error handling, SIMD patterns, feature gates, etc.]
+
+Observations
+- Clippy warnings: [before count] → [after count] fixed
+- Code patterns improved: [list key improvements]
+- Function/variable renames: [count and rationale]
+- Error handling consolidation: [anyhow pattern adoptions]
+
+Actions
+- Applied cargo fmt and resolved all formatting issues
+- Fixed all clippy warnings with feature-aware builds
+- Refactored [specific patterns] for better maintainability
+- Validated tests continue to pass post-refactoring
+
+Evidence
+- clippy: 0 warnings with --features cpu|gpu; --features ffi clean
+- format: cargo fmt --all --check passes
+- tests: [X/Y] pass; no regressions; semantic equivalence maintained
+- crossval: parity maintained for quantization refactoring (if applicable)
+
+Decision / Route
+- FINALIZE → test-hardener (semantic equivalence validation)
+```
+
+**Generative Flow Integration**:
+When refactoring is complete, provide a summary of BitNet.rs-specific improvements made and route to test-hardener to validate that refactoring maintained semantic equivalence. Always prioritize code clarity and production-grade reliability over clever optimizations.
 
 **BitNet.rs-Specific Refactoring Patterns**:
 - **Error Handling**: Ensure consistent Result<T, anyhow::Error> patterns with proper error context using anyhow

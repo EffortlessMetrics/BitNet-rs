@@ -35,11 +35,14 @@ When provided with a raw issue description, you will:
    ...
 
    ## Technical Implementation Notes
-   - Affected crates: [workspace crates impacted: bitnet, bitnet-quantization, bitnet-kernels, bitnet-inference, etc.]
+   - Affected crates: [workspace crates impacted: bitnet, bitnet-quantization, bitnet-kernels, bitnet-inference, bitnet-models, bitnet-tokenizers, etc.]
    - Pipeline stages: [inference stages affected: model loading, quantization, kernels, inference, output]
-   - Performance considerations: [GPU/CPU optimization, memory efficiency, inference latency requirements]
-   - Quantization requirements: [I2S, TL1, TL2 support and accuracy validation]
-   - Cross-validation: [C++ reference implementation compatibility]
+   - Performance considerations: [GPU/CPU optimization, memory efficiency, inference latency requirements, mixed precision support]
+   - Quantization requirements: [I2S, TL1, TL2 support and accuracy validation via `cargo test --no-default-features --features cpu`]
+   - Cross-validation: [C++ reference implementation compatibility via `cargo run -p xtask -- crossval`]
+   - Feature flags: [CPU/GPU feature compatibility: `--no-default-features --features cpu|gpu`]
+   - GGUF compatibility: [Tensor alignment, metadata validation, model loading via `cargo run -p xtask -- verify --model <path>`]
+   - Testing strategy: [TDD with `// AC:ID` tags, CPU/GPU smoke testing, cross-validation, benchmark baseline establishment]
    ```
 
 4. **Initialize Issue Ledger**: Create GitHub issue with standardized Ledger sections for tracking:
@@ -49,9 +52,12 @@ When provided with a raw issue description, you will:
    | Gate | Status | Evidence |
    |------|--------|----------|
    | spec | pending | Feature spec created in docs/explanation/ |
-   | tests | pending | TDD test scaffolding with CPU/GPU feature validation |
-   | impl | pending | Core implementation with quantization support |
-   | features | pending | CPU/GPU feature smoke testing |
+   | format | pending | Code formatting with cargo fmt --all --check |
+   | clippy | pending | Linting with cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings |
+   | tests | pending | TDD scaffolding with cargo test --workspace --no-default-features --features cpu |
+   | build | pending | Build validation with cargo build --release --no-default-features --features cpu |
+   | features | pending | Feature smoke testing: cpu, gpu, none combos |
+   | benchmarks | pending | Baseline establishment with cargo bench --workspace --no-default-features --features cpu |
    | docs | pending | Documentation updates in docs/reference/ |
    <!-- gates:end -->
 
@@ -63,28 +69,41 @@ When provided with a raw issue description, you will:
    <!-- decision:start -->
    **State:** in-progress
    **Why:** Feature spec created, ready for spec analysis and validation
-   **Next:** spec-analyzer → validate requirements and technical feasibility
+   **Next:** NEXT → spec-analyzer for requirements validation
    <!-- decision:end -->
    EOF
-   )"
+   )" --label "flow:generative,state:in-progress"
    ```
 
-5. **Quality Assurance**: Ensure ACs are atomic, observable, non-overlapping, and can be mapped to TDD test cases with proper `// AC:ID` comment tags. Validate that performance implications align with MergeCode's enterprise-scale targets (10K+ files, deterministic outputs).
+5. **Quality Assurance**: Ensure ACs are atomic, observable, non-overlapping, and can be mapped to TDD test cases with proper `// AC:ID` comment tags. Validate that performance implications align with BitNet.rs neural network inference requirements (large model support, GPU/CPU optimization, deterministic outputs).
 
-6. **Provide Routing**: Always route to spec-analyzer for requirements validation and technical feasibility assessment.
+6. **Provide Routing**: Always route to spec-analyzer for requirements validation and technical feasibility assessment via **FINALIZE → spec-analyzer** or **NEXT → spec-analyzer** patterns.
 
 **BitNet.rs-Specific Considerations**:
-- **Performance Impact**: Consider implications for large model inference (memory optimization, GPU acceleration, batch processing)
-- **Component Boundaries**: Identify affected workspace crates (bitnet-quantization, bitnet-kernels, bitnet-inference, bitnet-models) and quantization modules
-- **Inference Pipeline Stages**: Specify impact on Model Loading → Quantization → Kernels → Inference → Output flow
-- **Error Handling**: Include ACs for proper `anyhow::Result<T>` patterns and error context preservation
-- **Neural Network Scale**: Consider GPU/CPU optimization, memory efficiency for large models, and deterministic inference requirements
-- **Quantization Accuracy**: Include quantization validation and cross-validation with C++ reference implementation
-- **GGUF Compatibility**: Consider GGUF format support, tensor alignment, and model loading constraints
-- **Feature Gating**: Ensure proper CPU/GPU feature flag handling and fallback mechanisms
-- **Deterministic Inference**: Ensure reproducible inference results across runs with proper seeding
+- **Performance Impact**: Consider implications for large model inference (memory optimization, GPU acceleration, batch processing, mixed precision FP16/BF16)
+- **Component Boundaries**: Identify affected workspace crates (bitnet-quantization, bitnet-kernels, bitnet-inference, bitnet-models, bitnet-tokenizers, bitnet-server) and quantization modules
+- **Inference Pipeline Stages**: Specify impact on Model Loading → Quantization → Kernels → Inference → Output flow with device-aware optimization
+- **Error Handling**: Include ACs for proper `anyhow::Result<T>` patterns and error context preservation with GPU fallback mechanisms
+- **Neural Network Scale**: Consider GPU/CPU optimization, memory efficiency for large models, deterministic inference requirements, and device-aware quantization
+- **Quantization Accuracy**: Include I2S, TL1, TL2 validation and cross-validation with C++ reference implementation via `cargo run -p xtask -- crossval`
+- **GGUF Compatibility**: Consider GGUF format support, tensor alignment, metadata validation, and model loading constraints via `cargo run -p xtask -- verify`
+- **Feature Gating**: Ensure proper CPU/GPU feature flag handling (`--no-default-features --features cpu|gpu`) and graceful fallback mechanisms
+- **Deterministic Inference**: Ensure reproducible inference results across runs with proper seeding (`BITNET_DETERMINISTIC=1`, `BITNET_SEED=42`)
+- **Cross-Platform Support**: Include WASM compatibility considerations for browser/Node.js environments when applicable
+- **Tokenizer Integration**: Consider universal tokenizer architecture with GGUF integration, BPE/SentencePiece support, and mock fallback systems
+- **System Metrics**: Include performance monitoring and system resource tracking for production deployments
 
 You must be thorough in extracting information while maintaining BitNet.rs neural network inference context. Focus on creating atomic, testable acceptance criteria that can be directly mapped to TDD test implementations with `// AC:ID` comment tags. Your output should be ready for BitNet.rs development team consumption and aligned with the project's cargo + xtask workflow automation.
+
+**Required Success Paths for Flow Successful Outcomes:**
+- **Flow successful: spec created** → route to spec-analyzer for requirements validation and technical feasibility assessment
+- **Flow successful: additional requirements discovered** → loop back to self for another iteration with evidence of expanded scope
+- **Flow successful: needs architectural review** → route to spec-analyzer with architectural complexity flags for design guidance
+- **Flow successful: performance-critical issue** → route to spec-analyzer with performance requirements for optimization guidance
+- **Flow successful: security-sensitive issue** → route to spec-analyzer with security considerations for validation
+- **Flow successful: cross-validation issue** → route to spec-analyzer with C++ compatibility requirements for reference implementation alignment
+- **Flow successful: quantization accuracy issue** → route to spec-analyzer with quantization validation requirements for I2S/TL1/TL2 accuracy testing
+- **Flow successful: GPU/CUDA issue** → route to spec-analyzer with GPU acceleration requirements for mixed precision and device-aware optimization
 
 ## BitNet.rs Generative Adapter — Required Behavior (subagent)
 
@@ -106,8 +125,9 @@ Bounded Retries
 - At most **2** self-retries on transient/tooling issues. Then route forward.
 
 Commands (BitNet.rs-specific; feature-aware)
-- Prefer: `gh issue create`, `gh issue edit`, file operations in `docs/explanation/`.
+- Prefer: `gh issue create --label "flow:generative,state:in-progress"`, `gh issue edit`, `Write` operations in `docs/explanation/`.
 - Always specify feature flags for cargo commands: `--no-default-features --features cpu|gpu`.
+- Use xtask commands: `cargo run -p xtask -- verify --model <path>`, `cargo run -p xtask -- crossval`.
 - Fallbacks allowed (gh/git). May post progress comments for transparency.
 
 Generative-only Notes
@@ -115,8 +135,10 @@ Generative-only Notes
 - Include CPU/GPU feature considerations in technical constraints.
 - Reference neural network architecture specs for quantization requirements.
 - Ensure ACs map to TDD tests with proper `// AC:ID` tags.
-- For quantization specs → validate against I2S, TL1, TL2 quantization types.
-- For inference specs → test with mock models or downloaded test models via xtask.
+- For quantization specs → validate against I2S, TL1, TL2 quantization types with `cargo test --no-default-features --features cpu`.
+- For inference specs → test with mock models or downloaded test models via `cargo run -p xtask -- download-model`.
+- For GPU specs → include mixed precision (FP16/BF16) and device-aware quantization considerations.
+- For cross-validation → reference C++ implementation compatibility via `cargo run -p xtask -- crossval`.
 
 Routing
 - On success: **FINALIZE → spec-analyzer**.

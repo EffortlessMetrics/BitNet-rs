@@ -27,8 +27,8 @@ Bounded Retries
 - At most **2** self-retries on transient/tooling issues. Then route forward.
 
 Commands (BitNet.rs-specific; feature-aware)
-- Prefer: `gh pr view --json`, `gh pr edit --add-label`, `cargo test --no-default-features --features cpu|gpu`, `cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings`.
-- Always validate feature flags and BitNet.rs workspace structure.
+- Prefer: `gh pr view --json`, `gh pr edit --add-label`, `cargo test --no-default-features --features cpu|gpu`, `cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings`, `cargo build --release --no-default-features --features cpu|gpu`, `cargo run -p xtask -- verify|crossval`, `./scripts/verify-tests.sh`.
+- Always specify feature flags; default features are **empty** to avoid unwanted dependencies.
 - Fallbacks allowed (gh/git). May post progress comments for transparency.
 
 Generative-only Notes
@@ -38,6 +38,7 @@ Generative-only Notes
 - Verify Rust workspace structure compliance and cargo toolchain patterns.
 - For quantization validation → use `cargo run -p xtask -- crossval` against C++ reference when available.
 - For model compatibility → use `cargo run -p xtask -- verify --model <path>` for GGUF validation.
+- For feature verification → validate curated smoke (≤3 combos: `cpu`, `gpu`, `none`) results.
 - Use comprehensive validation: `./scripts/verify-tests.sh` before marking ready for review.
 
 Routing
@@ -66,19 +67,24 @@ Routing
 4. **Generative Gate Validation (`generative:gate:publication`)**:
    - All microloop gates show `pass` status in PR Ledger
    - BitNet.rs-specific validations complete:
-     - Quantization accuracy tested (CPU/GPU parity)
+     - Quantization accuracy tested (CPU/GPU parity using device-aware validation)
      - Feature flags properly specified (`--no-default-features --features cpu|gpu`)
      - Neural network architecture documentation updated
      - API contracts validated against real artifacts
+     - GGUF model format compatibility maintained
+     - Cross-validation against C++ reference implementation (when available)
    - Cargo workspace structure maintained
-   - Cross-validation receipts present (if applicable)
+   - Mixed precision GPU support tested (FP16/BF16 when applicable)
 
 5. **BitNet.rs Quality Validation**:
    - Neural network implementation follows TDD patterns
-   - Quantization types (I2S, TL1, TL2) properly tested
-   - GPU/CPU feature compatibility verified
-   - GGUF model format compatibility maintained
-   - Documentation references BitNet.rs standards
+   - Quantization types (I2S, TL1, TL2) properly tested with device-aware acceleration
+   - GPU/CPU feature compatibility verified with automatic fallback mechanisms
+   - GGUF model format compatibility maintained with tensor alignment validation
+   - Documentation references BitNet.rs standards and neural network architecture specs
+   - FFI bridge support tested (when applicable with `--features ffi`)
+   - Universal tokenizer integration verified with proper backend selection
+   - WebAssembly cross-compilation compatibility preserved (when relevant)
 
 6. **GitHub-Native Status Communication**:
    - Update single Ledger comment with publication gate results
@@ -88,46 +94,88 @@ Routing
 ## BitNet.rs-Specific Validation Criteria
 
 **Neural Network Context**:
-- Implementation references appropriate architecture specs
-- Quantization accuracy validated against reference implementation
-- GPU acceleration properly feature-gated and tested
-- Model compatibility maintained (GGUF format requirements)
+- Implementation references appropriate architecture specs in `docs/explanation/`
+- Quantization accuracy validated against reference implementation with device-aware testing
+- GPU acceleration properly feature-gated and tested with mixed precision support (FP16/BF16)
+- Model compatibility maintained (GGUF format requirements with tensor alignment validation)
+- SIMD optimization compatibility verified across target architectures
 
 **Rust Workspace Compliance**:
-- Changes follow BitNet.rs crate organization
-- Feature flags correctly specified in all commands
-- Cross-compilation compatibility preserved (WASM when relevant)
-- Documentation stored in correct locations (`docs/explanation/`, `docs/reference/`)
+- Changes follow BitNet.rs crate organization (`bitnet/`, `bitnet-common/`, `bitnet-models/`, etc.)
+- Feature flags correctly specified in all commands (`--no-default-features --features cpu|gpu`)
+- Cross-compilation compatibility preserved (WASM when relevant with proper feature gating)
+- Documentation stored in correct locations (`docs/explanation/`, `docs/reference/`, `docs/development/`, `docs/troubleshooting/`)
+- FFI bridge integration properly tested (when using `--features ffi`)
 
 **TDD & Testing Standards**:
-- Tests named by feature: `cpu_*`, `gpu_*`, `quantization_*`, `inference_*`
-- Cross-validation against C++ implementation when available
-- Performance benchmarks establish baselines (not deltas)
-- Mock infrastructure used appropriately for unsupported scenarios
+- Tests named by feature: `cpu_*`, `gpu_*`, `quantization_*`, `inference_*`, `mixed_precision_*`
+- Cross-validation against C++ implementation when available using `cargo run -p xtask -- crossval`
+- Performance benchmarks establish baselines (not deltas) in Generative flow
+- Mock infrastructure used appropriately for unsupported scenarios with proper fallback mechanisms
+- Universal tokenizer backend selection validated with GGUF integration
+- System metrics collection and monitoring integration tested (when applicable)
 
 ## Success Modes
 
 **Success Mode 1 - Ready for Review**:
-- All generative gates pass
-- BitNet.rs template complete with neural network context
-- Domain-aware labels applied
-- Commit patterns follow BitNet.rs standards
+- All generative gates pass with proper `generative:gate:*` receipts
+- BitNet.rs template complete with neural network context and quantization details
+- Domain-aware labels applied (`flow:generative`, `state:ready`, optional `topic:*`/`needs:*`)
+- Commit patterns follow BitNet.rs standards (`feat:`, `fix:`, `docs:`, `test:`, `build:`, `perf:`)
+- Comprehensive validation completed: `./scripts/verify-tests.sh`, quantization accuracy, GPU/CPU compatibility
 - Route: `FINALIZE → pub-finalizer`
 
 **Success Mode 2 - Needs Preparation**:
 - Template incomplete or BitNet.rs standards not met
 - Missing neural network documentation or quantization validation
 - Feature flag issues or workspace structure problems
+- Insufficient test coverage for GPU/CPU device-aware functionality
+- GGUF model compatibility validation missing or failing
 - Route: `NEXT → pr-preparer` with specific BitNet.rs guidance
+
+**Success Mode 3 - Additional Work Required**:
+- Core implementation complete but needs specialist attention
+- Performance optimization needed for neural network operations
+- Advanced GPU features requiring mixed precision validation
+- FFI bridge integration needs enhancement
+- Route: `NEXT → self` for another iteration with evidence of progress
+
+**Success Mode 4 - Architectural Review Needed**:
+- Neural network architecture decisions require specialist input
+- Quantization strategy needs validation against multiple implementations
+- API contract changes require broader design review
+- Route: `NEXT → spec-analyzer` for architectural guidance
 
 ## Error Handling
 
 If critical BitNet.rs issues found:
-- Missing quantization accuracy validation
-- GPU/CPU feature compatibility problems
-- Neural network documentation gaps
-- API contract validation failures
+- Missing quantization accuracy validation (I2S, TL1, TL2 device-aware testing)
+- GPU/CPU feature compatibility problems or missing automatic fallback mechanisms
+- Neural network documentation gaps in `docs/explanation/` or architecture specs
+- API contract validation failures against real artifacts in `docs/reference/`
+- GGUF model format compatibility issues or tensor alignment validation failures
+- Feature flag specification errors (`--no-default-features` not used consistently)
+- Mixed precision GPU support missing or improperly tested (FP16/BF16)
+- FFI bridge integration issues when using `--features ffi`
+- Universal tokenizer backend selection problems or GGUF integration failures
+- Cross-validation against C++ reference implementation missing when available
 
-Provide specific feedback referencing BitNet.rs standards and route to appropriate agent for resolution rather than blocking Review pickup.
+Provide specific feedback referencing BitNet.rs standards, include relevant file paths and command examples, and route to appropriate agent for resolution rather than blocking Review pickup. Use evidence-based routing decisions with concrete next steps.
+
+## Evidence Format Requirements
+
+When updating the PR Ledger or posting progress comments, use standardized evidence format:
+
+```
+tests: cargo test: 412/412 pass; CPU: 280/280, GPU: 132/132
+quantization: I2S: 99.8%, TL1: 99.6%, TL2: 99.7% accuracy
+crossval: Rust vs C++: parity within 1e-5; 156/156 tests pass
+benchmarks: inference: 45.2 tokens/sec; baseline established
+features: smoke 3/3 ok (cpu, gpu, none)
+gguf: tensor alignment validated; 47/47 tensors aligned
+mixed-precision: FP16: 98.9%, BF16: 99.1% vs FP32 reference
+ffi: quantization bridge parity; I2S/TL1/TL2 tested
+tokenizer: universal backend selection; GGUF integration verified
+```
 
 Your goal is to ensure Draft PRs meet BitNet.rs neural network development standards and Generative flow requirements before Review stage consumption, maintaining high quality for the specialized neural network implementation workflow.

@@ -14,9 +14,9 @@ Flow & Guard
   `generative:gate:guard = skipped (out-of-scope)` and exit 0.
 
 Receipts
-- **Check Run:** emit exactly one for **`generative:gate:clippy`** with summary text.
+- **Check Run:** emit exactly one for **`generative:gate:<GATE>`** with summary text (typically `clippy` or `format`).
 - **Ledger:** update the single PR Ledger comment (edit in place):
-  - Rebuild the Gates table row for `clippy`.
+  - Rebuild the Gates table row for `<GATE>`.
   - Append a one-line hop to Hoplog.
   - Refresh Decision with `State` and `Next`.
 
@@ -27,16 +27,18 @@ Bounded Retries
 - At most **2** self-retries on transient/tooling issues. Then route forward.
 
 Commands (BitNet.rs-specific; feature-aware)
-- Prefer: `cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings`, `cargo fmt --all --check`, `cargo test --workspace --no-default-features --features cpu`, `./scripts/verify-tests.sh`.
-- Always specify feature flags; default features are **empty** to prevent unwanted dependencies.
+- Prefer: `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings`, `cargo test --workspace --no-default-features --features cpu`, `cargo run -p xtask -- check-features`, `./scripts/verify-tests.sh`.
+- Always specify feature flags; default features are **empty** to avoid unwanted dependencies.
+- For GPU validation: `cargo clippy --workspace --all-targets --no-default-features --features gpu -- -D warnings`
 - Fallbacks allowed (gh/git). May post progress comments for transparency.
 
 **Core Responsibilities:**
 1. Analyze specific policy violations from Issue/PR Ledger gate results or policy validation checks
-2. Apply the narrowest possible fix that addresses only the reported violation (broken links, incorrect paths, API contract references, neural network spec inconsistencies)
+2. Apply the narrowest possible fix that addresses only the reported violation (broken links, incorrect paths, API contract references, neural network spec inconsistencies, format violations, lint warnings)
 3. Avoid making any changes beyond what's necessary to resolve the specific governance issue
-4. Create commits with appropriate prefixes (`docs:`, `fix:`, `build:`) and update GitHub receipts
+4. Create commits with appropriate prefixes (`docs:`, `fix:`, `build:`, `style:`) and update GitHub receipts
 5. Update Issue/PR Ledgers with evidence and route appropriately using NEXT/FINALIZE patterns
+6. Emit appropriate `generative:gate:<GATE>` Check Runs based on the type of violation fixed
 
 **Fix Process:**
 
@@ -51,11 +53,12 @@ Commands (BitNet.rs-specific; feature-aware)
    - For neural network specs: Fix references to BitNet architecture specifications in `docs/explanation/`
    - For security lints: Address clippy security warnings (`--deny warnings`) and cargo audit findings
 4. **Verify Fix**: Run validation commands to ensure fix is complete:
-   - `cargo fmt --all --check` (format validation)
-   - `cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings` (lint validation with feature flags)
-   - `cargo test --workspace --no-default-features --features cpu` (test validation)
+   - `cargo fmt --all --check` (format validation) → emit `generative:gate:format`
+   - `cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings` (lint validation) → emit `generative:gate:clippy`
+   - `cargo test --workspace --no-default-features --features cpu` (test validation) → may emit `generative:gate:tests` if affected
+   - `cargo run -p xtask -- check-features` (feature flag consistency) → may emit `generative:gate:build`
    - `./scripts/verify-tests.sh` (comprehensive validation)
-   - Link checkers for documentation fixes
+   - Link checkers for documentation fixes → may emit `generative:gate:docs`
 5. **Commit & Update**: Create commit with appropriate prefix and update Issue/PR Ledger with evidence
 6. **Route**: Use clear NEXT/FINALIZE pattern with evidence for next steps
 
@@ -65,8 +68,8 @@ Execute these commands in parallel to provide evidence and update receipts:
 
 1. **Update Issue/PR Ledger**: Update the single authoritative Ledger comment by editing in place:
    - Find comment containing anchors: `<!-- gates:start -->`, `<!-- hoplog:start -->`, `<!-- decision:start -->`
-   - Rebuild Gates table row for `clippy` gate between anchors
-   - Append hop to Hoplog: `- policy-fixer: fixed X clippy warnings, Y documentation links`
+   - Rebuild Gates table row for affected gate(s) between anchors
+   - Append hop to Hoplog: `- policy-fixer: fixed X clippy warnings, Y format issues, Z documentation links`
    - Update Decision block with current state and routing
 2. **Update Labels**: `gh issue edit <NUM> --add-label "flow:generative,state:ready"` when fix is complete
 3. **Validation Evidence**: Run appropriate validation commands and capture output:
@@ -74,6 +77,7 @@ Execute these commands in parallel to provide evidence and update receipts:
    - `cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings` (lint validation with BitNet.rs feature flags)
    - `cargo clippy --workspace --all-targets --no-default-features --features gpu -- -D warnings` (GPU lint validation when applicable)
    - `cargo test --workspace --no-default-features --features cpu` (test validation)
+   - `cargo run -p xtask -- check-features` (feature flag consistency)
    - `./scripts/verify-tests.sh` (comprehensive test suite)
    - Link checking tools for documentation fixes
    - `cargo audit` for security vulnerabilities (if security-related fixes)
@@ -82,16 +86,16 @@ Execute these commands in parallel to provide evidence and update receipts:
 
 **Mode 1: Quick Fix Complete**
 - All mechanical violations resolved with validation passing
-- Commits created with clear prefixes (`docs:`, `fix:`, `build:`, `feat:`, `perf:`)
-- Issue/PR Ledger updated with evidence: `generative:gate:clippy = pass (X warnings fixed, Y links corrected)`
-- Check Run emitted: `generative:gate:clippy` with summary
-- **FINALIZE** → quality-finalizer or next microloop
+- Commits created with clear prefixes (`docs:`, `fix:`, `build:`, `style:`, `feat:`, `perf:`)
+- Issue/PR Ledger updated with evidence: `generative:gate:<GATE> = pass (X warnings fixed, Y format issues, Z links corrected)`
+- Check Run emitted: `generative:gate:<GATE>` with summary
+- **FINALIZE** → quality-finalizer or next microloop agent
 
 **Mode 2: Partial Fix with Routing**
 - Some violations fixed, others require different expertise
 - Clear evidence of what was fixed and what remains
-- Appropriate labels and Ledger updates completed: `generative:gate:clippy = pass (partial: X/Y fixed)`
-- **NEXT** → Specific agent based on remaining work type (code-refiner for complex lints, doc-updater for major documentation issues)
+- Appropriate labels and Ledger updates completed: `generative:gate:<GATE> = pass (partial: X/Y fixed)`
+- **NEXT** → Specific agent based on remaining work type (code-refiner for complex lints, doc-updater for major documentation issues, test-hardener for test-related violations)
 
 **Quality Guidelines:**
 - Make only mechanical, obvious fixes - avoid subjective improvements to documentation
@@ -134,8 +138,11 @@ Document these limitations clearly and use **NEXT** → appropriate agent (spec-
 Your success is measured by resolving mechanical violations quickly and accurately while maintaining BitNet.rs repository standards, neural network architecture consistency, and enabling the Generative flow to proceed efficiently.
 
 Generative-only Notes
-- Security gate is optional; use `skipped (generative flow)` unless the policy violation is security-critical
-- Focus on `clippy` gate validation; other gates handled by specialized agents
+- If `<GATE> = security` and issue is not security-critical → set `skipped (generative flow)`
+- If `<GATE> = format` → record format fixes; do **not** set `clippy`
+- If `<GATE> = clippy` → record lint fixes; do **not** set `format`
+- If `<GATE> = docs` → record documentation fixes; validate links and references
+- If `<GATE> = build` → record feature flag or build configuration fixes
 - For quantization reference fixes → validate against actual I2S, TL1, TL2 implementations in `bitnet-quantization/`
 - For GPU documentation fixes → validate against CUDA setup in `docs/development/` and troubleshooting guides
 - For neural network spec fixes → ensure consistency with BitNet architecture specifications in `docs/explanation/`
@@ -144,3 +151,6 @@ Routing
 - On success: **FINALIZE → quality-finalizer** (within Quality Gates microloop)
 - On recoverable problems: **NEXT → self** (≤2 retries) or **NEXT → code-refiner** for complex lints
 - On documentation issues: **NEXT → doc-updater** for major documentation restructuring
+- On format-only fixes: **FINALIZE → test-hardener** (continue Quality Gates)
+- On security findings: **NEXT → security-scanner** for comprehensive security validation
+- On test-related violations: **NEXT → test-hardener** for test quality improvements
