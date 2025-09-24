@@ -244,7 +244,21 @@ Every customized agent must define these success scenarios with specific routing
    - Neural network security pattern compliance
    - Integration with BitNet.rs toolchain (cargo, xtask, scripts, cross-validation)
 
+## Gate Evolution Position (Generative → Review → Integrative)
+
+- **Integrative Flow**: Inherits `benchmarks` + `perf` metrics from Review, adds `throughput` SLO validation
+- **Production Responsibility**: Validate SLOs and production readiness (≤10s inference performance)
+- **Final Authority**: Comprehensive integration, compatibility, and production validation
+
 ## Evidence Grammar (Checks summary)
+
+**Standardized Evidence Format (All Flows):**
+```
+tests: cargo test: 412/412 pass; CPU: 280/280, GPU: 132/132
+quantization: I2S: 99.8%, TL1: 99.6%, TL2: 99.7% accuracy
+crossval: Rust vs C++: parity within 1e-5; 156/156 tests pass
+throughput: inference: 45.2 tokens/sec; SLO: ≤10s (pass)
+```
 
 Standard evidence formats for Gates table (keep scannable):
 
@@ -256,11 +270,11 @@ Standard evidence formats for Gates table (keep scannable):
 - features: `matrix: X/Y ok (cpu/gpu/none)` or `skipped (bounded by policy): <list>`
 - mutation: `score: NN% (≥80%); survivors:M`
 - fuzz: `0 crashes (300s); corpus:C` or `repros fixed:R`
-- benchmarks: `baseline established; inference: N tokens/sec`
-- perf: `Δ ≤ threshold` (or short delta reference)
+- benchmarks: `inherit from Review; validate metrics`
+- perf: `inherit from Review; validate deltas`
+- throughput: `inference:N tokens/sec, quantization:M ops/sec; SLO: pass|fail` or `skipped (N/A)`
 - docs: `examples tested: X/Y; links ok`
 - security: `audit: clean` or `advisories: CVE-..., remediated`
-- throughput: `inference:N tokens/sec, quantization:M ops/sec; SLO: pass|fail` or `skipped (N/A)`
 - quantization: `I2S: 99.X%, TL1: 99.Y%, TL2: 99.Z% accuracy`
 - crossval: `Rust vs C++: parity within 1e-5; N/N tests pass`
 

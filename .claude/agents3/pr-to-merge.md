@@ -17,8 +17,46 @@ You orchestrate the Integrative Flow: validate Ready PRs through gate-focused va
   - summarize as `method:<primary|alt1|alt2>; result:<numbers/paths>; reason:<short>`,
   - note the condition in the Hop log,
   - continue to the next verifier instead of blocking.
-- Agents may self-retry **up to 2 times** on transient/tooling issues; then route forward with receipts.
-- If two consecutive passes do not improve signal (fewer failures, higher scores, cleaner receipts), summarize and route forward.
+- Agents may self-iterate as needed with clear evidence of progress; orchestrator handles natural stopping based on diminishing returns.
+- If iterations show diminishing returns or no improvement in signal, provide evidence and route forward.
+
+## Gate Evolution & Flow Transitions
+
+**Integrative Flow Position:** Ready PR → Merge (final in pipeline, inherits from Review)
+
+**Gate Evolution Across Flows:**
+| Flow | Benchmarks | Performance | Purpose |
+|------|------------|-------------|---------|
+| Generative | `benchmarks` (establish baseline) | - | Create implementation foundation |
+| Review | Inherit baseline | `perf` (validate deltas) | Validate quality & readiness |
+| **Integrative** | Inherit metrics | `throughput` (SLO validation) | Validate production readiness |
+
+**Flow Transition Criteria:**
+- **From Review:** All quality gates pass, performance deltas acceptable, Ready for production validation
+- **To Main:** All production gates pass including throughput SLOs, cross-validation complete, integration testing successful
+
+**Evidence Inheritance:**
+- Integrative inherits benchmarks + perf metrics from Review
+- Validates SLOs and production readiness (≤10s inference performance)
+- Performs final integration, compatibility, and production validation
+
+## BitNet.rs Neural Network Validation
+
+**Required BitNet.rs Context for All Agents:**
+- **Quantization Accuracy:** I2S, TL1, TL2 ≥ 99% accuracy vs FP32 reference
+- **Cross-Validation:** `cargo run -p xtask -- crossval` - Rust vs C++ parity within 1e-5 tolerance
+- **Feature Compatibility:** `--no-default-features --features cpu|gpu` validation with fallback testing
+- **GGUF Format:** Model compatibility and tensor alignment validation
+- **Performance SLO:** Neural network inference ≤ 10 seconds for standard models (production validation)
+- **Build Commands:** Always specify feature flags (default features are empty)
+
+**Evidence Format Standards:**
+```
+tests: cargo test: 412/412 pass; CPU: 280/280, GPU: 132/132
+quantization: I2S: 99.8%, TL1: 99.6%, TL2: 99.7% accuracy
+crossval: Rust vs C++: parity within 1e-5; 156/156 tests pass
+throughput: inference: 45.2 tokens/sec; SLO: ≤10s (pass)
+```
 
 ## GitHub-Native Receipts (NO ceremony)
 
@@ -352,8 +390,8 @@ Consider "progress" when these improve:
 
 - **ONE writer at a time** (serialize agents that modify files)
 - **Read-only parallelism** only when guaranteed safe
-- **Bounded retries** (typically 2-3 attempts max per agent)
-- **Fix-forward** within clear authority boundaries
+- **Natural iteration** with evidence of progress; orchestrator manages stopping
+- **Production validation authority** for final integration, compatibility, and merge readiness within this integrative flow iteration
 
 ## Success Criteria
 

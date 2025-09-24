@@ -83,6 +83,14 @@ Evidence
 - fuzz: 0 crashes in 300s; corpus size: 41
 - paths: crates/parser/src/lib.rs:184, docs/explanation/…/xyz.md
 
+**Standardized Evidence Format (All Flows):**
+```
+tests: cargo test: 412/412 pass; CPU: 280/280, GPU: 132/132
+quantization: I2S: 99.8%, TL1: 99.6%, TL2: 99.7% accuracy
+crossval: Rust vs C++: parity within 1e-5; 156/156 tests pass
+benchmarks: inference: 45.2 tokens/sec; baseline established
+```
+
 **Enhanced Evidence Patterns:**
 - Tests gate: `cargo test: 412/412 pass; AC satisfied: 9/9`
 - API gate: `api: additive; examples validated: 37/37; round-trip ok: 37/37`
@@ -92,10 +100,15 @@ Evidence
 **Story/AC Trace Integration:**
 Agents should populate the Story → Schema → Tests → Code table with concrete mappings.
 
+**Gate Evolution Position (Generative → Review → Integrative):**
+- **Generative**: `benchmarks` (establish baseline) → feeds to Review
+- **Review**: inherits baseline, adds `perf` (validate deltas) → feeds to Integrative
+- **Integrative**: inherits metrics, adds `throughput` (SLO validation)
+
 **Generative-Specific Policies:**
 - **Features gate**: ≤3-combo smoke (`cpu|gpu|none`) after `impl-creator`; emit `smoke 3/3 ok`
 - **Security gate**: Optional with fallbacks; use `skipped (generative flow)` only when no viable validation
-- **Benchmarks vs Perf**: May set `benchmarks` baseline; do NOT set `perf` in this flow
+- **Benchmarks vs Perf**: May set `benchmarks` baseline; do NOT set `perf` in this flow (Review flow responsibility)
 - **Test naming**: Name tests by feature: `cpu_*`, `gpu_*`, `quantization_*`, `inference_*` to enable coverage reporting
 - **Commit linkage**: Example: `feat(bitnet): implement I2S quantization for GPU acceleration`
 - **Cross-validation**: Run against C++ implementation when available: `cargo run -p xtask -- crossval`

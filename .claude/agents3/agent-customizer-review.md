@@ -231,7 +231,21 @@ Adapt agents to fit these microloop categories:
 8. **Promotion**
    - review-summarizer → promotion-validator → ready-promoter
 
+## Gate Evolution Position (Generative → Review → Integrative)
+
+- **Review Flow**: Inherits `benchmarks` from Generative, adds `perf` validation, feeds to Integrative
+- **Performance Responsibility**: Validate deltas vs established baseline (not create new baselines)
+- **Quality Authority**: Comprehensive fix-forward, rework, and improvement within the current review flow iteration
+
 ## Evidence Grammar (summaries)
+
+**Standardized Evidence Format (All Flows):**
+```
+tests: cargo test: 412/412 pass; CPU: 280/280, GPU: 132/132
+quantization: I2S: 99.8%, TL1: 99.6%, TL2: 99.7% accuracy
+crossval: Rust vs C++: parity within 1e-5; 156/156 tests pass
+perf: inference: 45.2 tokens/sec; Δ vs baseline: +12%
+```
 
 Standard evidence formats for Gates table (keep scannable):
 
@@ -243,7 +257,7 @@ Standard evidence formats for Gates table (keep scannable):
 - features: `matrix: X/Y ok (cpu/gpu/none)` or `smoke 3/3 ok`
 - mutation: `score: NN% (≥80%); survivors: M`
 - fuzz: `0 crashes (300s); corpus: C` or `repros fixed: R`
-- benchmarks: `baseline established; inference: N tokens/sec`
+- benchmarks: `inherit from Generative; validate baseline`
 - perf: `Δ ≤ threshold` or short delta table reference
 - docs: `examples tested: X/Y; links ok`
 - security: `audit: clean` or `advisories: CVE-..., remediated`
