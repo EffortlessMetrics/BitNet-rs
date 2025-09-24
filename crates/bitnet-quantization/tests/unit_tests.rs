@@ -183,6 +183,236 @@ mod quantization_algorithms {
 }
 
 #[cfg(test)]
+mod compression_ratio_mutant_tests {
+    use super::*;
+    use bitnet_common::QuantizationType;
+
+    /// Test designed to kill the arithmetic mutant: + replaced with -
+    /// Line 95:48: self.data.len() + self.scales.len() * 4 → self.data.len() - self.scales.len() * 4
+    #[test]
+    fn test_compression_ratio_arithmetic_mutant() {
+        // Create a quantized tensor with known data sizes
+        let data_size = 100; // 100 bytes of quantized data
+        let scales_count = 10; // 10 scale values = 10 * 4 = 40 bytes
+        let element_count = 1000; // 1000 elements = 1000 * 4 = 4000 bytes original
+
+        let quantized = QuantizedTensor::new_with_params(
+            vec![0u8; data_size],
+            vec![1.0f32; scales_count],
+            None,
+            vec![element_count],
+            QuantizationType::I2S,
+            32,
+        );
+
+        let ratio = quantized.compression_ratio();
+
+        // Expected calculation with correct arithmetic:
+        // original_bytes = 1000 * 4 = 4000
+        // compressed_bytes = 100 + (10 * 4) = 100 + 40 = 140
+        // ratio = 4000 / 140 = ~28.57
+        let expected_ratio = 4000.0f32 / 140.0f32;
+
+        assert!(
+            (ratio - expected_ratio).abs() < 0.1,
+            "Expected ratio ~{:.2}, got {:.2}. Arithmetic mutant may be present (+ replaced with -)",
+            expected_ratio,
+            ratio
+        );
+
+        // Verify the ratio is reasonable (> 1.0)
+        assert!(ratio > 1.0, "Compression ratio should be > 1.0, got {}", ratio);
+
+        // This test would fail with the mutant:
+        // compressed_bytes = 100 - 40 = 60 (could be negative, causing panic or wrong result)
+        // If negative: ratio would be negative or cause division issues
+        // If 60: ratio = 4000 / 60 = ~66.67 (significantly different from expected)
+    }
+
+    /// Test designed to kill the multiplication mutants: * replaced with + and /
+    /// Line 95:68: self.scales.len() * 4 → self.scales.len() + 4 or self.scales.len() / 4
+    #[test]
+    fn test_compression_ratio_multiplication_mutants() {
+        // Create test cases where scales.len() * 4 vs scales.len() + 4 vs scales.len() / 4
+        // would produce significantly different results
+
+        // Test case 1: Many scales where multiplication matters
+        let large_scales_count = 100; // 100 scales
+        let quantized_large = QuantizedTensor::new_with_params(
+            vec![0u8; 50],
+            vec![1.0f32; large_scales_count],
+            None,
+            vec![1000],
+            QuantizationType::I2S,
+            32,
+        );
+
+        let ratio_large = quantized_large.compression_ratio();
+
+        // Expected calculation with correct multiplication:
+        // original_bytes = 1000 * 4 = 4000
+        // compressed_bytes = 50 + (100 * 4) = 50 + 400 = 450
+        // ratio = 4000 / 450 = ~8.89
+        let expected_large = 4000.0f32 / 450.0f32;
+
+        assert!(
+            (ratio_large - expected_large).abs() < 0.1,
+            "Expected ratio ~{:.2}, got {:.2}. Multiplication mutant may be present (* replaced with + or /)",
+            expected_large,
+            ratio_large
+        );
+
+        // Test case 2: Fewer scales to differentiate between + and / mutants
+        let small_scales_count = 8; // 8 scales
+        let quantized_small = QuantizedTensor::new_with_params(
+            vec![0u8; 200],
+            vec![1.0f32; small_scales_count],
+            None,
+            vec![1000],
+            QuantizationType::I2S,
+            32,
+        );
+
+        let ratio_small = quantized_small.compression_ratio();
+
+        // Expected calculation with correct multiplication:
+        // original_bytes = 1000 * 4 = 4000
+        // compressed_bytes = 200 + (8 * 4) = 200 + 32 = 232
+        // ratio = 4000 / 232 = ~17.24
+        let expected_small = 4000.0f32 / 232.0f32;
+
+        assert!(
+            (ratio_small - expected_small).abs() < 0.1,
+            "Expected ratio ~{:.2}, got {:.2}. Multiplication mutant may be present (* replaced with + or /)",
+            expected_small,
+            ratio_small
+        );
+
+        // These tests would fail with mutants:
+        // Mutant 1 (* → +): compressed_bytes = 50 + (100 + 4) = 154, ratio = 4000/154 = ~25.97
+        // Mutant 2 (* → /): compressed_bytes = 50 + (100 / 4) = 75, ratio = 4000/75 = ~53.33
+        // Both significantly different from expected ~8.89
+    }
+
+    /// Property-based test to ensure compression ratio arithmetic is mathematically sound
+    #[test]
+    fn test_compression_ratio_mathematical_properties() {
+        // Test that doubling scales doubles the scale contribution to compressed size
+        let base_data_size = 100;
+        let base_scales_count = 20;
+        let element_count = 2000;
+
+        let quantized_base = QuantizedTensor::new_with_params(
+            vec![0u8; base_data_size],
+            vec![1.0f32; base_scales_count],
+            None,
+            vec![element_count],
+            QuantizationType::I2S,
+            32,
+        );
+
+        let quantized_double = QuantizedTensor::new_with_params(
+            vec![0u8; base_data_size],
+            vec![1.0f32; base_scales_count * 2], // Double the scales
+            None,
+            vec![element_count],
+            QuantizationType::I2S,
+            32,
+        );
+
+        let ratio_base = quantized_base.compression_ratio();
+        let ratio_double = quantized_double.compression_ratio();
+
+        // Base: compressed = 100 + (20 * 4) = 180, ratio = 8000/180 = ~44.44
+        // Double: compressed = 100 + (40 * 4) = 260, ratio = 8000/260 = ~30.77
+        // The ratio should decrease when scales increase (larger denominator)
+        assert!(
+            ratio_base > ratio_double,
+            "Doubling scales should decrease compression ratio: base={:.2}, double={:.2}",
+            ratio_base,
+            ratio_double
+        );
+
+        // Test that the relationship follows the mathematical formula
+        let expected_base_compressed = base_data_size as f32 + (base_scales_count as f32 * 4.0);
+        let expected_double_compressed =
+            base_data_size as f32 + (base_scales_count as f32 * 2.0 * 4.0);
+        let original_bytes = element_count as f32 * 4.0;
+
+        let expected_base_ratio = original_bytes / expected_base_compressed;
+        let expected_double_ratio = original_bytes / expected_double_compressed;
+
+        assert!(
+            (ratio_base - expected_base_ratio).abs() < 0.01,
+            "Base ratio calculation mismatch: expected {:.2}, got {:.2}",
+            expected_base_ratio,
+            ratio_base
+        );
+
+        assert!(
+            (ratio_double - expected_double_ratio).abs() < 0.01,
+            "Double ratio calculation mismatch: expected {:.2}, got {:.2}",
+            expected_double_ratio,
+            ratio_double
+        );
+    }
+
+    /// Test edge cases that could expose arithmetic errors
+    #[test]
+    fn test_compression_ratio_edge_cases() {
+        // Test case with minimal scales (1 scale)
+        let quantized_min = QuantizedTensor::new_with_params(
+            vec![0u8; 10],
+            vec![1.0f32; 1], // 1 scale = 4 bytes
+            None,
+            vec![100],
+            QuantizationType::I2S,
+            32,
+        );
+
+        let ratio_min = quantized_min.compression_ratio();
+        // Expected: original = 100 * 4 = 400, compressed = 10 + 4 = 14, ratio = 400/14 = ~28.57
+        let expected_min = 400.0f32 / 14.0f32;
+
+        assert!(
+            (ratio_min - expected_min).abs() < 0.1,
+            "Minimal scales test failed: expected {:.2}, got {:.2}",
+            expected_min,
+            ratio_min
+        );
+
+        // Test case where data size equals scale bytes (edge case for arithmetic)
+        let equal_size = 40; // 40 bytes data
+        let scales_for_equal = 10; // 10 scales = 40 bytes
+
+        let quantized_equal = QuantizedTensor::new_with_params(
+            vec![0u8; equal_size],
+            vec![1.0f32; scales_for_equal],
+            None,
+            vec![1000],
+            QuantizationType::I2S,
+            32,
+        );
+
+        let ratio_equal = quantized_equal.compression_ratio();
+        // Expected: original = 1000 * 4 = 4000, compressed = 40 + 40 = 80, ratio = 4000/80 = 50.0
+        let expected_equal = 4000.0f32 / 80.0f32;
+
+        assert!(
+            (ratio_equal - expected_equal).abs() < 0.1,
+            "Equal size test failed: expected {:.2}, got {:.2}",
+            expected_equal,
+            ratio_equal
+        );
+
+        // This would clearly differentiate the mutants:
+        // + → - mutant: compressed = 40 - 40 = 0 (division by zero, handled as 1.0)
+        // * → + mutant: compressed = 40 + (10 + 4) = 54, ratio = 4000/54 = ~74.07
+        // * → / mutant: compressed = 40 + (10 / 4) = 42.5, ratio = 4000/42.5 = ~94.12
+    }
+}
+
+#[cfg(test)]
 mod parameter_validation {
     use super::*;
 
