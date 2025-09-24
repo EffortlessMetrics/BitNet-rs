@@ -180,7 +180,7 @@ Examples:
 **Inference Performance SLO:** Neural network inference ≤ 10 seconds for standard models
 - Bounded smoke tests with small models for quick validation
 - Report actual numbers: "BitNet-3B inference: 45.2 tokens/sec (pass)"
-- Route to benchmark-runner for full validation if needed
+- Route to integrative-benchmark-runner for full validation if needed
 
 **Quantization Accuracy Invariants:**
 - I2S, TL1, TL2 quantization must maintain >99% accuracy vs FP32 reference
@@ -214,6 +214,14 @@ When customizing an agent:
    - Emphasize plain language reporting
    - Define multiple "flow successful" paths with honest status reporting
 
+**Success Definition: Productive Flow, Not Final Output**
+
+Agent success = meaningful progress toward flow advancement, NOT gate completion. An agent succeeds when it:
+- Performs diagnostic work (retrieves, tests, analyzes, diagnoses)
+- Emits check runs reflecting actual outcomes
+- Writes receipts with evidence, reason, and route
+- Advances the microloop understanding
+
 **Required Success Paths for All Agents:**
 Every customized agent must define these success scenarios with specific routing:
 - **Flow successful: task fully done** → route to next appropriate agent in merge-readiness flow
@@ -221,14 +229,14 @@ Every customized agent must define these success scenarios with specific routing
 - **Flow successful: needs specialist** → route to appropriate specialist agent (test-hardener for robustness, mutation-tester for comprehensive coverage, fuzz-tester for edge case validation, security-scanner for vulnerability assessment)
 - **Flow successful: architectural issue** → route to architecture-reviewer for design validation and compatibility assessment
 - **Flow successful: performance regression** → route to perf-fixer for optimization and performance remediation
-- **Flow successful: throughput concern** → route to benchmark-runner for detailed performance analysis and SLO validation
+- **Flow successful: throughput concern** → route to integrative-benchmark-runner for detailed performance analysis and SLO validation
 - **Flow successful: security finding** → route to security-scanner for comprehensive security validation
 - **Flow successful: integration failure** → route to integration-tester for cross-component validation
 - **Flow successful: compatibility issue** → route to compatibility-validator for platform and feature compatibility assessment
 
 **Retry & Authority (Guidance):**
 - Retries: continue as needed with evidence; orchestrator handles natural stopping.
-- Authority: mechanical fixes (fmt/clippy/imports/tests/docs deps) are fine; do not restructure crates or rewrite SPEC/ADR here. If out-of-scope → record and route.
+- Authority: mechanical fixes (fmt/clippy/imports/tests/docs deps) are fine; do not restructure crates or rewrite SPEC/ADR here. If out-of-scope → record and route. Fix-Forward as we can.
 
 4. **BitNet.rs Integration**: Add relevant validation requirements:
    - Inference performance validation where applicable (≤10 seconds for standard models)
@@ -283,7 +291,7 @@ Ensure every customized agent includes:
 - [ ] GPU/CPU compatibility testing and fallback mechanisms
 - [ ] GGUF model format validation and tensor alignment checks
 
-## Adaptation Process
+## Agent Adaptation Workflow
 
 When customizing agents, you will directly edit the agent files in place to adapt them to BitNet.rs Integrative flow standards. Focus on:
 
@@ -293,4 +301,3 @@ When customizing agents, you will directly edit the agent files in place to adap
 4. **Adding BitNet.rs context** including neural network validation, quantization accuracy, and performance requirements
 
 Your goal is practical adaptation that preserves the agent's essential functionality while ensuring it operates effectively within BitNet.rs's GitHub-native, gate-focused validation pipeline.
-

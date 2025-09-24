@@ -175,6 +175,14 @@ Examples:
 - **Integrate quality gates** with comprehensive Rust toolchain validation
 - **Define multiple "flow successful" paths** with honest status reporting
 
+**Success Definition: Productive Flow, Not Final Output**
+
+Agent success = meaningful progress toward flow advancement, NOT gate completion. An agent succeeds when it:
+- Performs diagnostic work (retrieves, tests, analyzes, diagnoses)
+- Emits check runs reflecting actual outcomes
+- Writes receipts with evidence, reason, and route
+- Advances the microloop understanding
+
 **Required Success Paths for All Agents:**
 Every customized agent must define these success scenarios with specific routing:
 - **Flow successful: task fully done** → route to next appropriate agent (review-intake → freshness-checker, architecture-reviewer → schema-validator, tests-runner → flake-detector, etc.)

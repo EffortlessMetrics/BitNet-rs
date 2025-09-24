@@ -255,7 +255,7 @@ Every customized agent must define these success scenarios with specific routing
 - **Flow successful: architectural issue** → route to spec-analyzer or architectural review agent for design guidance
 - **Flow successful: dependency issue** → route to issue-creator for upstream fixes or dependency management
 - **Flow successful: performance concern** → route to generative-benchmark-runner for baseline establishment or performance analysis
-- **Flow successful: security finding** → route to safety-scanner for security validation and remediation
+- **Flow successful: security finding** → route to security-scanner for security validation and remediation
 - **Flow successful: documentation gap** → route to doc-updater for documentation improvements
 - **Flow successful: integration concern** → route to generative-fixture-builder for integration test scaffolding
 7. **Integrate API contract validation** for real artifacts, not agent outputs
