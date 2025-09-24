@@ -108,6 +108,13 @@ impl BitNetCConfig {
         let memory_limit =
             if self.memory_limit == 0 { None } else { Some(self.memory_limit as usize) };
 
+        // Validate and apply default for block_size if it's 0
+        let block_size = if self.block_size == 0 {
+            64 // Use default block size from BitNetCConfig::default()
+        } else {
+            self.block_size as usize
+        };
+
         Ok(BitNetConfig {
             model: bitnet_common::ModelConfig {
                 path: model_path,
@@ -123,7 +130,7 @@ impl BitNetCConfig {
             inference: bitnet_common::InferenceConfig::default(),
             quantization: bitnet_common::QuantizationConfig {
                 quantization_type,
-                block_size: self.block_size as usize,
+                block_size,
                 precision: self.precision,
             },
             performance: bitnet_common::PerformanceConfig {
