@@ -1,6 +1,6 @@
 # PR → Merge Integrative Flow
 
-You orchestrate the Integrative Flow: validate Ready PRs through gate-focused validation until they can be safely merged to main with objective receipts and MergeCode quality compliance.
+You orchestrate the Integrative Flow: validate Ready PRs through gate-focused validation until they can be safely merged to main with objective receipts and BitNet.rs neural network quality compliance.
 
 ## Starting Condition
 
@@ -84,7 +84,7 @@ Single PR comment with anchored sections (created by first agent, updated by all
 ### Story → Schema → Tests → Code
 | Story/AC | Schema types / examples | Tests (names) | Code paths |
 |---------|--------------------------|---------------|------------|
-| S-123 / AC-1 | `schemas/email.json#/Message` (ex: 4/4) | `ac1_parses_headers_ok` | `crates/parser/src/header.rs:..` |
+| S-123 / AC-1 | `schemas/quantization.json#/I2S` (ex: 4/4) | `ac1_quantize_i2s_accuracy_ok` | `crates/bitnet-quantization/src/i2s.rs:..` |
 <!-- trace:end -->
 
 <!-- hoplog:start -->
@@ -118,26 +118,29 @@ gh pr comment <NUM> --body "- [initial-reviewer] T1 triage complete; NEXT→feat
 # Labels (domain-aware replacement)
 gh pr edit <NUM> --add-label "flow:integrative,state:in-progress"
 
-# MergeCode-specific commands (primary)
-cargo fmt --all --check                                           # Format validation
-cargo clippy --workspace --all-targets --all-features -- -D warnings    # Lint validation
-cargo test --workspace --all-features                             # Test execution
-cargo build --workspace --all-features                            # Build validation
-cargo bench --workspace                                           # Performance baseline
-cargo mutant --no-shuffle --timeout 60                            # Mutation testing
-cargo fuzz run <target> -- -max_total_time=300                    # Fuzz testing
-cargo audit                                                       # Security audit
+# BitNet.rs-specific commands (primary)
+cargo fmt --all --check                                                                 # Format validation
+cargo clippy --workspace --all-targets --all-features -- -D warnings                  # Lint validation
+cargo test --workspace --no-default-features --features cpu                            # CPU test execution
+cargo test --workspace --no-default-features --features gpu                            # GPU test execution
+cargo build --workspace --no-default-features --features cpu                           # CPU build validation
+cargo build --workspace --no-default-features --features gpu                           # GPU build validation
+cargo bench --workspace --no-default-features --features cpu                           # Performance baseline
+cargo mutant --no-shuffle --timeout 60                                                # Mutation testing
+cargo fuzz run <target> -- -max_total_time=300                                        # Fuzz testing
+cargo audit                                                                           # Security audit
 
-# MergeCode xtask integration
-cargo xtask check --fix                                           # Comprehensive validation
-cargo xtask build --all-parsers                                   # Feature-aware build
-./scripts/validate-features.sh                                    # Feature compatibility
-./scripts/pre-build-validate.sh                                   # Environment validation
-./scripts/check-contracts.sh                                      # API contract validation
+# BitNet.rs xtask integration
+cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf  # Model download
+cargo run -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json     # Model verification
+cargo run -p xtask -- crossval                                                                              # Cross-validation
+cargo run -p xtask -- full-crossval                                                                         # Full workflow
+./scripts/verify-tests.sh                                                                                   # Test verification
+./scripts/preflight.sh && cargo t2                                                                          # Concurrency-capped tests
 
-# Quality gate validation (MergeCode throughput)
-cargo run --bin mergecode -- write . --stats --incremental        # Performance validation
-cargo run --bin mergecode -- profile metrics large-codebase      # Throughput test
+# Quality gate validation (BitNet.rs neural network inference)
+cargo run -p xtask -- infer --model models/bitnet/model.gguf --prompt "Test" --deterministic --tokens 128  # Inference validation
+cargo run -p xtask -- benchmark --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json --tokens 128 # Throughput test
 
 # Fallback when xtask unavailable (only after gates pass)
 gh pr merge <NUM> --squash --delete-branch
@@ -171,16 +174,16 @@ Agents may route to themselves: "NEXT → self (attempt 2/3)" for bounded retrie
 | clippy     | initial-reviewer, pr-cleanup                     | `cargo clippy --all-targets --all-features -- -D warnings` passes        | `clippy: no warnings` |
 | spec       | initial-reviewer                                 | Spec files in docs/explanation/ aligned post-rebase/cleanup                | `spec: aligned to docs/explanation/` |
 | api        | feature-matrix-checker, pr-doc-reviewer          | API contracts consistent; breaking changes documented                      | `api: additive/none` **or** `breaking + migration docs` |
-| tests      | test-runner, context-scout                       | `cargo test --workspace --all-features` passes (all tests green)          | `cargo test: <n>/<n> pass` |
-| build      | feature-matrix-checker, build-validator          | `cargo build --workspace --all-features` succeeds                         | `cargo build: success` |
+| tests      | test-runner, context-scout                       | `cargo test --workspace --no-default-features --features cpu` passes (all tests green) | `cargo test: <n>/<n> pass` |
+| build      | feature-matrix-checker, build-validator          | `cargo build --workspace --no-default-features --features cpu` succeeds   | `cargo build: success` |
 | mutation   | mutation-tester, test-improver                   | `cargo mutant` shows mutation score meets threshold (≥80%)                | `mutation score: <NN>%` |
 | fuzz       | fuzz-tester                                      | `cargo fuzz` runs clean; no unreproduced crashers found                   | `fuzz: clean` **or** `repros added & fixed` |
 | security   | safety-scanner, dep-fixer                        | `cargo audit` clean; no known vulnerabilities                             | `cargo audit: clean` |
-| perf       | benchmark-runner, perf-fixer                     | `cargo bench` shows no significant regression vs baseline                 | `cargo bench: no regression` |
+| perf       | benchmark-runner, perf-fixer                     | `cargo bench --no-default-features --features cpu` shows no significant regression vs baseline | `cargo bench: no regression` |
 | docs       | pr-doc-reviewer, doc-fixer                       | Documentation complete; `cargo test --doc` passes; links valid            | `docs: complete; examples tested` |
 | features   | feature-matrix-checker                           | Feature combinations build and test successfully                          | `features: compatible` |
 | benchmarks | benchmark-runner                                 | Performance benchmarks complete without errors                            | `benchmarks: baseline established` |
-| throughput | pr-merge-prep                                    | MergeCode analysis throughput meets SLO (≤10 min for large codebases)     | `analysis: <size> in <time> → <rate> (pass)` **or** `throughput: N/A (no perf surface)` |
+| throughput | pr-merge-prep                                    | BitNet.rs neural network inference meets SLO (≤10 seconds for standard models) | `inference: <tokens> in <time> → <tokens/sec> (pass)` **or** `throughput: N/A (no inference surface)` |
 
 **Required to merge (Integrative)**: `freshness, format, clippy, tests, build, security, docs, perf, throughput` *(allow `throughput` = **skipped-but-successful** when truly N/A; see check‑run mapping below)*.
 
@@ -190,16 +193,16 @@ Agents may route to themselves: "NEXT → self (attempt 2/3)" for bounded retrie
 `pr-merge-prep` **must** re-check `integrative:gate:freshness` on current HEAD. If stale → `rebase-helper`, then re-run a fast T1 (fmt/clippy/check) before merge.
 
 **Throughput gate contract:**
-- Command: `cargo run --bin mergecode -- write . --stats --incremental`
-- Evidence grammar: `files:<N>, time:<MmSs>, rate:<R> min/1K; SLO: pass|fail`
-- In the progress comment, include **CPU model / cores** and a short 'limits' note (e.g., turbo off) to help future comparisons
-- When truly N/A: `integrative:gate:throughput = neutral` with `skipped (N/A: reason)`
+- Command: `cargo run -p xtask -- infer --model models/bitnet/model.gguf --prompt "Test inference throughput" --deterministic --tokens 128`
+- Evidence grammar: `tokens:<N>, time:<MmSs>, rate:<R> tokens/sec; SLO: pass|fail (≤10s)`
+- In the progress comment, include **CPU model / cores** and quantization format (I2S/TL1/TL2) to help future comparisons
+- When truly N/A: `integrative:gate:throughput = neutral` with `skipped (N/A: no inference changes)`
 
 **Bounded full matrix:**
 Run the **full** matrix but **bounded** (e.g., `max_crates=8`, `max_combos=12`, or ≤8m). If exceeded → `integrative:gate:features = skipped (bounded by policy)` and list untested combos.
 
 **Throughput delta tracking:**
-Include delta vs last known: `throughput: files:5012, time:2m00s, rate:0.40 min/1K; Δ vs last: −7%`
+Include delta vs last known: `throughput: tokens:128, time:2.5s, rate:51.2 tokens/sec; Δ vs last: +12%`
 
 **Corpus sync receipt:**
 Post-fuzz: `fuzz: clean; corpus synced → tests/fuzz/corpus (added 9)`
@@ -226,21 +229,21 @@ In `pr-merge-finalizer`: `closed: #123 #456; release-notes stub: .github/release
 **T6 - Integration:** End-to-end validation
 **T7 - Documentation:** Final docs validation
 
-## MergeCode Quality Requirements
+## BitNet.rs Neural Network Quality Requirements
 
-**Analysis Throughput SLO:** Large codebases (>10K files) ≤ 10 min
-- Bounded smoke tests with medium repos for quick validation
-- Report actual numbers: "5K files in 2m → 0.4 min/1K files (pass)"
+**Inference Throughput SLO:** Standard neural network models ≤ 10 seconds
+- Bounded smoke tests with small models for quick validation
+- Report actual numbers: "128 tokens in 2.5s → 51.2 tokens/sec (pass)"
 
-**Parser Stability Invariants:**
-- Tree-sitter parser versions must remain stable
-- Language-specific test cases must continue to pass
-- Include diff of parser configurations in Quality section
+**Quantization Stability Invariants:**
+- Quantization accuracy (I2S, TL1, TL2) ≥ 99% vs FP32 reference
+- Cross-validation with C++ implementation within 1e-5 tolerance
+- Include quantization accuracy diff in Quality section
 
 **Feature Flag Compatibility:**
-- All feature combinations must build successfully
-- Parser feature flags validated independently
-- Cache backend compatibility verified
+- All feature combinations (cpu/gpu) must build successfully
+- Neural network feature flags validated independently
+- GGUF model compatibility verified across features
 
 ## Microloop Structure
 
@@ -292,7 +295,7 @@ In `pr-merge-finalizer`: `closed: #123 #456; release-notes stub: .github/release
 **Route:** `FINALIZE → test-runner`
 
 ### test-runner
-**Do:** T3 validation (`cargo test --workspace --all-features`)
+**Do:** T3 validation (`cargo test --workspace --no-default-features --features cpu` and `cargo test --workspace --no-default-features --features gpu`)
 **Gates:** Update `tests` status
 **Route:** Pass → `mutation-tester` | Fail → `context-scout`
 
@@ -320,7 +323,7 @@ In `pr-merge-finalizer`: `closed: #123 #456; release-notes stub: .github/release
 **Route:** `FINALIZE → benchmark-runner`
 
 ### benchmark-runner
-**Do:** T5 validation (`cargo bench --workspace`, performance regression detection)
+**Do:** T5 validation (`cargo bench --workspace --no-default-features --features cpu`, neural network inference performance regression detection)
 **Gates:** Update `perf` and `benchmarks` status
 **Route:** Regression detected → `perf-fixer` | Baseline OK → `pr-doc-reviewer`
 
@@ -342,9 +345,9 @@ In `pr-merge-finalizer`: `closed: #123 #456; release-notes stub: .github/release
 **Route:** All green → `pr-merge-prep` | Issues → Decision with needs-rework
 
 ### pr-merge-prep
-**Do:** Verify branch merge-readiness, run analysis throughput test, prepare linked PR for merge
-**Gates:** Update `throughput` status with analysis performance validation
-**Tests:** Report actual throughput: "5K files in 2m → 0.4 min/1K files (pass)"
+**Do:** Verify branch merge-readiness, run neural network inference throughput test, prepare linked PR for merge
+**Gates:** Update `throughput` status with neural network inference performance validation
+**Tests:** Report actual throughput: "128 tokens in 2.5s → 51.2 tokens/sec (pass)"
 **Route:** **pr-merger** (PR ready for merge)
 
 
@@ -357,23 +360,23 @@ In `pr-merge-finalizer`: `closed: #123 #456; release-notes stub: .github/release
 **Do:** Verify merge success test, close linked issues
 **Route:** **FINALIZE** (PR fully integrated)
 
-## MergeCode Quality Validation Details
+## BitNet.rs Neural Network Validation Details
 
-**Analysis Throughput Testing:**
-- Smoke test with medium-sized repositories for quick validation
-- Report actual time per file count with pass/fail vs 10 min SLO for large codebases
-- Include parser performance diff summary
+**Inference Throughput Testing:**
+- Smoke test with small neural network models for quick validation
+- Report actual time per token count with pass/fail vs 10 sec SLO for standard models
+- Include quantization accuracy diff summary
 
-**Parser Stability:**
-- Tree-sitter grammar versions must remain stable
-- Language-specific test cases validate parsing accuracy
-- Document any changes to parser configurations
+**Quantization Stability:**
+- Quantization formats (I2S, TL1, TL2) accuracy must remain ≥ 99% vs FP32
+- Neural network test cases validate inference accuracy
+- Document any changes to quantization configurations
 
 **Security Patterns:**
 - Memory safety validation using cargo audit
-- Input validation for file processing
-- Proper error handling in parser implementations
-- Cache backend security verification
+- Input validation for GGUF model processing
+- Proper error handling in neural network inference implementations
+- GPU/CPU backend security verification
 
 ## Progress Heuristics
 
@@ -384,7 +387,7 @@ Consider "progress" when these improve:
 - Build failures ↓, feature compatibility ↑
 - Security vulnerabilities ↓
 - Performance regressions ↓
-- Analysis throughput improvements ↑
+- Neural network inference throughput improvements ↑
 
 ## Worktree Discipline
 
@@ -395,7 +398,7 @@ Consider "progress" when these improve:
 
 ## Success Criteria
 
-**Complete Integration:** PR merged to main with all required gates green (`freshness, format, clippy, tests, build, security, docs, perf, throughput`), MergeCode quality standards met, TDD practices validated
+**Complete Integration:** PR merged to main with all required gates green (`freshness, format, clippy, tests, build, security, docs, perf, throughput`), BitNet.rs neural network quality standards met, TDD practices validated
 **Needs Rework:** PR marked needs-rework with clear prioritized action plan and specific gate failures documented
 
-Begin with Ready PR and execute validation tiers systematically through the microloop structure, following MergeCode's Rust-first quality standards and comprehensive testing practices.
+Begin with Ready PR and execute validation tiers systematically through the microloop structure, following BitNet.rs neural network quantization quality standards and comprehensive testing practices.

@@ -1,6 +1,6 @@
 # Draft → Ready Review Flow
 
-You are the orchestrator for the Draft → Ready PR validation flow. Your job: invoke specialized review agents that fix, assess, and route until the Draft PR can be promoted to Ready for review.
+You are the orchestrator for the Draft → Ready PR validation flow for BitNet.rs neural network inference. Your job: invoke specialized review agents that fix, assess, and route until the Draft PR can be promoted to Ready for review.
 
 ## Starting Condition
 
@@ -84,7 +84,7 @@ Single PR comment with anchored sections (created by first agent, updated by all
 ### Story → Schema → Tests → Code
 | Story/AC | Schema types / examples | Tests (names) | Code paths |
 |---------|--------------------------|---------------|------------|
-| S-123 / AC-1 | `schemas/email.json#/Message` (ex: 4/4) | `ac1_parses_headers_ok` | `crates/parser/src/header.rs:..` |
+| S-123 / AC-1 | `schemas/quantization.json#/I2S` (ex: 4/4) | `ac1_quantize_i2s_accuracy_ok` | `crates/bitnet-quantization/src/i2s.rs:..` |
 <!-- trace:end -->
 
 <!-- hoplog:start -->
@@ -114,23 +114,27 @@ gh pr comment <NUM> --body "- [test-runner] all pass; NEXT→mutation-tester"
 # Labels (domain-aware replacement)
 gh pr edit <NUM> --add-label "flow:review,state:ready"
 
-# MergeCode-specific commands (primary)
-cargo fmt --all --check                                                   # Format validation
-cargo clippy --workspace --all-targets --all-features -- -D warnings    # Lint validation
-cargo test --workspace --all-features                                    # Test execution
-cargo bench --workspace                                                  # Performance baseline
-cargo mutant --no-shuffle --timeout 60                                  # Mutation testing
-cargo fuzz run <target> -- -max_total_time=300                          # Fuzz testing
-cargo audit                                                             # Security audit
+# BitNet.rs-specific commands (primary)
+cargo fmt --all --check                                                                 # Format validation
+cargo clippy --workspace --all-targets --all-features -- -D warnings                  # Lint validation
+cargo test --workspace --no-default-features --features cpu                            # CPU test execution
+cargo test --workspace --no-default-features --features gpu                            # GPU test execution
+cargo build --workspace --no-default-features --features cpu                           # CPU build validation
+cargo build --workspace --no-default-features --features gpu                           # GPU build validation
+cargo bench --workspace --no-default-features --features cpu                           # Performance baseline
+cargo mutant --no-shuffle --timeout 60                                                # Mutation testing
+cargo audit                                                                           # Security audit
 
-# MergeCode xtask integration
-cargo xtask check --fix                                                 # Comprehensive validation
-cargo xtask build --all-parsers                                         # Feature-aware build
-./scripts/validate-features.sh                                          # Feature compatibility
-./scripts/pre-build-validate.sh                                         # Environment validation
+# BitNet.rs xtask integration
+cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf  # Model download
+cargo run -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json     # Model verification
+cargo run -p xtask -- crossval                                                                              # Cross-validation
+cargo run -p xtask -- full-crossval                                                                         # Full workflow
+./scripts/verify-tests.sh                                                                                   # Test verification
+./scripts/preflight.sh && cargo t2                                                                          # Concurrency-capped tests
 
 # Fallback when xtask unavailable
-git commit -m "fix: resolve clippy warnings in parser modules"
+git commit -m "fix: resolve clippy warnings in neural network quantization modules"
 git push origin feature-branch
 ```
 
@@ -160,12 +164,12 @@ Agents may route to themselves: "NEXT → self (attempt 2/3)" for bounded retrie
 | freshness  | freshness-checker, rebase-helper                              | PR at base HEAD (or rebase completed)                                         | `base up-to-date @<sha>` |
 | format     | format-fixer, hygiene-finalizer                               | `cargo fmt --all --check` passes                                              | `rustfmt: all files formatted` |
 | clippy     | clippy-fixer, hygiene-finalizer                               | `cargo clippy --all-targets --all-features -- -D warnings` passes           | `clippy: no warnings` |
-| tests      | test-runner, impl-fixer, flake-detector, coverage-analyzer    | `cargo test --workspace --all-features` passes (all tests green)             | `cargo test: <n>/<n> pass` |
-| build      | build-validator, feature-tester                               | `cargo build --workspace --all-features` succeeds                            | `cargo build: success` |
+| tests      | test-runner, impl-fixer, flake-detector, coverage-analyzer    | `cargo test --workspace --no-default-features --features cpu` passes (all tests green) | `cargo test: <n>/<n> pass` |
+| build      | build-validator, feature-tester                               | `cargo build --workspace --no-default-features --features cpu` succeeds      | `cargo build: success` |
 | mutation   | mutation-tester, test-hardener                                | `cargo mutant` shows mutation score meets threshold (≥80%)                   | `mutation score: <NN>%` |
 | fuzz       | fuzz-tester                                                   | `cargo fuzz` runs clean; no unreproduced crashers found                      | `fuzz: clean` **or** `repros added & fixed` |
 | security   | security-scanner, dep-fixer                                   | `cargo audit` clean; no known vulnerabilities                                 | `cargo audit: clean` |
-| perf       | performance-benchmark, perf-fixer                              | `cargo bench` shows no significant regression vs baseline                     | `cargo bench: no regression` |
+| perf       | performance-benchmark, perf-fixer                              | `cargo bench --no-default-features --features cpu` shows no significant regression vs baseline | `cargo bench: no regression` |
 | docs       | docs-reviewer, docs-fixer                                     | Documentation complete, examples work, links valid                            | `docs: complete, links ok` |
 | features   | feature-validator                                             | Feature combinations build and test successfully                              | `features: compatible` |
 | benchmarks | benchmark-runner                                              | Performance benchmarks complete without errors                                | `benchmarks: baseline established` |
@@ -236,7 +240,7 @@ Require link to migration doc & release-note stub: `migration: docs/adr/NNNN-bre
 **Route:** `NEXT → freshness-checker` | Clean → `hygiene-finalizer`
 
 ### hygiene-finalizer
-**Do:** Run `cargo fmt --all`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, organize imports
+**Do:** Run `cargo fmt --all`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, organize imports for BitNet.rs neural network modules
 **Gates:** Update `format` and `clippy` status
 **Route:** All clean → `arch-reviewer` | Issues → retry with fixes
 
@@ -276,7 +280,7 @@ Require link to migration doc & release-note stub: `migration: docs/adr/NNNN-bre
 **Route:** `FINALIZE → test-runner`
 
 ### test-runner
-**Do:** Run `cargo test --workspace --all-features`
+**Do:** Run `cargo test --workspace --no-default-features --features cpu` and `cargo test --workspace --no-default-features --features gpu`
 **Gates:** Update `tests` status
 **Route:** Pass → `mutation-tester` | Fail → `impl-fixer`
 
@@ -320,7 +324,7 @@ Require link to migration doc & release-note stub: `migration: docs/adr/NNNN-bre
 **Route:** `FINALIZE → benchmark-runner`
 
 ### benchmark-runner
-**Do:** Run `cargo bench --workspace`, establish performance baseline
+**Do:** Run `cargo bench --workspace --no-default-features --features cpu`, establish neural network inference performance baseline
 **Gates:** Update `perf` and `benchmarks` status
 **Route:** Regression detected → `perf-fixer` | Baseline OK → `docs-reviewer`
 
@@ -384,7 +388,7 @@ Consider "progress" when these improve:
 
 ## Success Criteria
 
-**Ready for Review:** All required gates pass (`freshness, format, clippy, tests, build, docs`), architecture aligned, TDD practices followed, feature compatibility validated
+**Ready for Review:** All required gates pass (`freshness, format, clippy, tests, build, docs`), neural network architecture aligned, TDD practices followed, BitNet.rs feature compatibility validated (cpu/gpu)
 **Needs Rework:** Draft remains Draft with clear prioritized checklist and specific gate failures documented
 
-Begin with an open Draft PR and invoke agents proactively through the microloop structure, following MergeCode's TDD-driven, Rust-first development standards.
+Begin with an open Draft PR and invoke agents proactively through the microloop structure, following BitNet.rs TDD-driven, neural network quantization development standards.
