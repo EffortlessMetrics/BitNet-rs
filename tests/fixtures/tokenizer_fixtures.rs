@@ -22,7 +22,7 @@ pub struct TokenizerTestFixture {
     pub performance_baseline: PerformanceBaseline,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum TokenizerType {
     LLaMA2,
     LLaMA3,

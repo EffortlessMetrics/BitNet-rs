@@ -99,7 +99,7 @@ impl FixtureLoader {
             return Ok(());
         }
 
-        self.fixtures_dir = config.fixtures_directory;
+        self.fixtures_dir = config.fixtures_directory.clone();
         self.deterministic_mode = config.enable_deterministic;
         self.seed = config.seed.or(self.seed);
 
@@ -118,7 +118,7 @@ impl FixtureLoader {
 
     /// Initialize tokenizer fixtures
     async fn initialize_tokenizer_fixtures(&mut self, config: &FixtureConfig) -> Result<()> {
-        let mut fixtures = TokenizerFixtures::new();
+        let fixtures = TokenizerFixtures::new();
 
         // Write fixture files based on test tier
         match config.test_tier {
@@ -453,8 +453,8 @@ impl FixtureLoader {
         // Clean up binary quantization files
         let quant_dir = fixtures_dir.join("quantization");
         if quant_dir.exists() {
-            for entry in fs::read_dir(&quant_dir).await.map_err(BitNetError::Io)? {
-                let entry = entry.map_err(BitNetError::Io)?;
+            let mut read_dir = fs::read_dir(&quant_dir).await.map_err(BitNetError::Io)?;
+            while let Some(entry) = read_dir.next_entry().await.map_err(BitNetError::Io)? {
                 let path = entry.path();
                 if path.extension().and_then(|s| s.to_str()) == Some("bin") {
                     fs::remove_file(&path).await.map_err(BitNetError::Io)?;

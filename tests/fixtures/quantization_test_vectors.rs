@@ -174,7 +174,7 @@ static TL2_TEST_VECTORS: LazyLock<Vec<QuantizationTestVector>> = LazyLock::new(|
 /// IQ2_S quantization test vectors (GGML-compatible with 82-byte blocks)
 static IQ2S_TEST_VECTORS: LazyLock<Vec<QuantizationTestVector>> = LazyLock::new(|| {
     vec![QuantizationTestVector {
-        quantization_type: QuantizationType::IQ2S,
+        quantization_type: QuantizationType::I2S,
         input_data: vec![
             // 82-byte block worth of data for GGML compatibility
             -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5,
@@ -300,7 +300,7 @@ impl QuantizationFixtures {
         test_vectors.insert(QuantizationType::I2S, I2S_TEST_VECTORS.clone());
         test_vectors.insert(QuantizationType::TL1, TL1_TEST_VECTORS.clone());
         test_vectors.insert(QuantizationType::TL2, TL2_TEST_VECTORS.clone());
-        test_vectors.insert(QuantizationType::IQ2S, IQ2S_TEST_VECTORS.clone());
+        test_vectors.insert(QuantizationType::I2S, IQ2S_TEST_VECTORS.clone());
 
         Self {
             test_vectors,

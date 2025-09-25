@@ -136,7 +136,7 @@ static MICROSOFT_BITNET_2B_MOCK: LazyLock<ModelRepositoryMock> = LazyLock::new(|
             size: 17_000_000, // ~17MB
             download_url: "https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/tokenizer.json".to_string(),
             sha256: "ijkl9012345678ijkl9012345678ijkl9012345678ijkl9012345678ijkl9012".to_string(),
-            content: Some(include_str!("../tokenizers/llama3_tokenizer.json").to_string()),
+            content: Some(include_str!("tokenizers/llama3_tokenizer.json").to_string()),
         },
         TokenizerFileMock {
             filename: "tokenizer_config.json".to_string(),
@@ -242,7 +242,7 @@ static LLAMA2_7B_MOCK: LazyLock<ModelRepositoryMock> = LazyLock::new(|| ModelRep
                 "https://huggingface.co/meta-llama/Llama-2-7b-hf/resolve/main/tokenizer.json"
                     .to_string(),
             sha256: "uvwx4567890123uvwx4567890123uvwx4567890123uvwx4567890123uvwx4567".to_string(),
-            content: Some(include_str!("../tokenizers/llama2_tokenizer.json").to_string()),
+            content: Some(include_str!("tokenizers/llama2_tokenizer.json").to_string()),
         },
         TokenizerFileMock {
             filename: "tokenizer.model".to_string(),
@@ -351,7 +351,7 @@ static HUGGINGFACE_API_RESPONSES: LazyLock<Vec<HuggingFaceApiResponse>> = LazyLo
             headers.insert("etag".to_string(), "\"abcd1234567890\"".to_string());
             headers
         },
-        response_body: include_str!("../tokenizers/llama3_tokenizer.json").to_string(),
+        response_body: include_str!("tokenizers/llama3_tokenizer.json").to_string(),
         delay_ms: Some(200),
         should_fail: false,
         failure_reason: None,
