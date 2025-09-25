@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "model": "crossval/fixtures/test_model_small_metadata.json",
+    "prompt": "The capital of France is",
+    "tokens": 64,
+    "iterations": 3,
+    "gpu_mode": false,
+    "timestamp": "2025-09-25 17:27:31"
+  },
+  "cpp": {
+    "mean": 0.010938167572021484,
+    "stdev": 0.01005067279442323,
+    "min": 0.004497051239013672,
+    "max": 0.022519350051879883,
+    "iterations": 3
+  },
+  "rust": null,
+  "comparison": {
+    "speedup": null,
+    "improvement_percent": null
+  }
+}
