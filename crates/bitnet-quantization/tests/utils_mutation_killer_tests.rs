@@ -385,7 +385,7 @@ mod utils_quantization_mutation_killers {
         // With zero scale, value/scale would be infinity
         // The result should still be within the valid range due to clamping
         assert!(
-            quantized >= -4 && quantized <= 3,
+            (-4..=3).contains(&quantized),
             "Even with zero scale, result should be within 3-bit range, got {}",
             quantized
         );
@@ -667,7 +667,7 @@ mod utility_functions_mutation_killers {
                     // Even if they're the same for this specific case, the logic is still different
                     // Test with a case that definitely differs: repeated non-zero values
                     let test_repeated = vec![1, 1, 1, 1];
-                    let packed_repeated = pack_2bit_values(&test_repeated);
+                    let _packed_repeated = pack_2bit_values(&test_repeated);
                     let mut expected_repeated = 0u8;
                     let mut wrong_repeated = 0u8;
                     for (i, &val) in test_repeated.iter().enumerate() {
@@ -847,7 +847,7 @@ mod utility_functions_mutation_killers {
             // Kill + -> * mutation in end calculation (line 24)
             // Original: let end = (start + block_size).min(data.len());
             // Mutation:  let end = (start * block_size).min(data.len());
-            for i in 0..expected_num_blocks {
+            for (i, _) in scales.iter().enumerate().take(expected_num_blocks) {
                 let start = i * block_size;
                 let correct_end = (start + block_size).min(data.len());
                 let wrong_end = (start * block_size).min(data.len());
