@@ -28,6 +28,9 @@ pub use mock::MockTokenizer;
 pub use spm_tokenizer::SpmTokenizer;
 pub use universal::UniversalTokenizer;
 
+// Export BasicTokenizer for internal and external use
+// BasicTokenizer is defined below in this module
+
 // New tokenizer discovery and strategy exports
 pub use discovery::{TokenizerDiscovery, TokenizerDownloadInfo, TokenizerStrategy};
 pub use download::{DownloadProgress, SmartTokenizerDownload};

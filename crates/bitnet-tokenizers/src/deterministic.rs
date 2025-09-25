@@ -25,7 +25,8 @@ impl DeterministicTokenizer {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    #[allow(unused_imports)]
+    use super::DeterministicTokenizer;
 
     /// AC9: Tests deterministic behavior configuration
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac9-deterministic-behavior

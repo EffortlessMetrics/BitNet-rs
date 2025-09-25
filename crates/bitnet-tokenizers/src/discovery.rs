@@ -131,9 +131,15 @@ impl TokenizerDiscovery {
     /// * `Err(BitNetError::Model)` - GGUF parsing failed or metadata missing
     ///
     /// # Example
-    /// ```rust
+    /// ```rust,no_run
+    /// use bitnet_tokenizers::TokenizerDiscovery;
+    /// use std::path::Path;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let discovery = TokenizerDiscovery::from_gguf(Path::new("model.gguf"))?;
     /// assert_eq!(discovery.vocab_size(), 128256); // LLaMA-3
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn from_gguf(path: &Path) -> Result<Self> {
         // Validate file exists and is readable
@@ -605,7 +611,7 @@ mod tests {
             (1000000, true), // Hypothetical large model
         ];
 
-        for (vocab_size, should_optimize) in test_cases {
+        for (vocab_size, _should_optimize) in test_cases {
             // Mock discovery instance for testing
             // let discovery = create_mock_discovery("test", vocab_size);
             // assert_eq!(discovery.requires_large_vocab_optimization(), should_optimize);
@@ -746,9 +752,9 @@ mod tests {
 
         // Should either succeed (if valid GGUF) or fail with specific error
         match result {
-            Ok(_) => {}                        // Success case
-            Err(BitNetError::Model(_)) => {}   // Expected GGUF parsing error
-            Err(BitNetError::Config(_)) => {}  // Expected configuration error (vocab size extraction)
+            Ok(_) => {}                       // Success case
+            Err(BitNetError::Model(_)) => {}  // Expected GGUF parsing error
+            Err(BitNetError::Config(_)) => {} // Expected configuration error (vocab size extraction)
             Err(other) => panic!("Unexpected error for large file: {:?}", other),
         }
     }

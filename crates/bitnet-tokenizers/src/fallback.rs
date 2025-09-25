@@ -283,7 +283,6 @@ impl FallbackError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::BasicTokenizer;
 
     /// AC5: Tests TokenizerFallbackChain initialization and configuration
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac5-fallback-strategy-system
@@ -521,7 +520,9 @@ mod tests {
     fn test_tokenizer_resolution_variants() {
         let resolutions = [
             TokenizerResolution::File(PathBuf::from("test.json")),
-            TokenizerResolution::Embedded(Arc::new(BasicTokenizer::new()) as Arc<dyn Tokenizer>),
+            TokenizerResolution::Embedded(
+                Arc::new(crate::BasicTokenizer::new()) as Arc<dyn Tokenizer>
+            ),
             TokenizerResolution::Mock(MockTokenizer::new()),
         ];
 

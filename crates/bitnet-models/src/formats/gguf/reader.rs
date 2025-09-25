@@ -1,7 +1,7 @@
 //! GGUF file reader
 
 use super::types::*;
-use bitnet_common::{BitNetError, ModelError, QuantizationType, Result};
+use bitnet_common::{BitNetError, ModelError, QuantizationType, Result, SecurityLimits};
 
 /// GGUF file reader.
 ///
@@ -57,16 +57,24 @@ impl<'a> GgufReader<'a> {
     }
 
     pub fn new(data: &'a [u8]) -> Result<Self> {
+        Self::new_with_limits(data, &SecurityLimits::default())
+    }
+
+    /// Create a new GGUF reader with custom security limits
+    pub fn new_with_limits(data: &'a [u8], limits: &SecurityLimits) -> Result<Self> {
         if data.len() < 16 {
             return Err(BitNetError::Model(ModelError::InvalidFormat {
                 format: "File too small to be a valid GGUF file".to_string(),
             }));
         }
 
+        // Security: Log the file being parsed (for audit trails)
+        tracing::info!("Parsing GGUF file of size {} bytes with security limits", data.len());
+
         let mut offset = 0;
 
-        // Read header
-        let header = GgufHeader::read(data, &mut offset)?;
+        // Read header with security limits
+        let header = GgufHeader::read_with_limits(data, &mut offset, limits)?;
 
         // Validate version
         if header.version < 2 || header.version > 3 {
@@ -75,17 +83,27 @@ impl<'a> GgufReader<'a> {
             }));
         }
 
-        // Read metadata
+        // Read metadata with security limits
         let mut metadata = Vec::new();
-        for _ in 0..header.metadata_kv_count {
-            metadata.push(GgufMetadata::read(data, &mut offset)?);
+        for i in 0..header.metadata_kv_count {
+            // Security: Log progress for large metadata sections
+            if i > 0 && i % 1000 == 0 {
+                tracing::debug!("Parsed {} / {} metadata entries", i, header.metadata_kv_count);
+            }
+
+            metadata.push(GgufMetadata::read_with_limits(data, &mut offset, limits)?);
             // KVs are tightly packed; no per-KV alignment.
         }
 
         // --- tensor infos: offsets are authoritative ---
         let mut tensor_infos = Vec::with_capacity(header.tensor_count as usize);
-        for _ in 0..header.tensor_count {
-            tensor_infos.push(TensorInfo::read(data, &mut offset)?);
+        for i in 0..header.tensor_count {
+            // Security: Log progress for large tensor collections
+            if i > 0 && i % 1000 == 0 {
+                tracing::debug!("Parsed {} / {} tensor infos", i, header.tensor_count);
+            }
+
+            tensor_infos.push(TensorInfo::read_with_limits(data, &mut offset, limits)?);
         }
 
         // Compute data start (uses data_offset for v3 if valid)

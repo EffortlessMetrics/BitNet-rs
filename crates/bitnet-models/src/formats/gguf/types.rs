@@ -5,8 +5,15 @@
 //! - `alignment` is clamped to 32 if it is 0 or not a power of two.
 //! - `data_offset` is only *used* by the reader if it is ≥ end-of-KV, ≤ file size,
 //!   and aligned; otherwise the reader falls back to `align_up(kv_end, alignment)`.
+//!
+//! ## Security Hardening
+//! This module includes comprehensive input validation to prevent memory allocation attacks:
+//! - Bounded string lengths and array sizes to prevent DoS
+//! - Tensor dimension overflow protection
+//! - Progressive memory allocation with safety checks
+//! - Resource limits to prevent memory bombs
 
-use bitnet_common::{BitNetError, ModelError, Result};
+use bitnet_common::{BitNetError, ModelError, Result, SecurityError, SecurityLimits};
 
 /// Returns the smallest `x >= off` such that `x % align == 0`.
 /// Safe for any `align >= 1`.
@@ -36,9 +43,25 @@ pub struct GgufHeader {
 
 impl GgufHeader {
     pub fn read(data: &[u8], offset: &mut usize) -> Result<Self> {
+        Self::read_with_limits(data, offset, &SecurityLimits::default())
+    }
+
+    pub fn read_with_limits(
+        data: &[u8],
+        offset: &mut usize,
+        limits: &SecurityLimits,
+    ) -> Result<Self> {
         if data.len() < *offset + 24 {
             return Err(BitNetError::Model(ModelError::InvalidFormat {
                 format: "Insufficient data for GGUF header".to_string(),
+            }));
+        }
+
+        // Check for reasonable file size to prevent processing of maliciously large files
+        if data.len() > limits.max_metadata_size * 100 {
+            // Allow 10GB max for complete GGUF files
+            return Err(BitNetError::Security(SecurityError::MemoryBomb {
+                reason: format!("File size {} exceeds safety limit", data.len()),
             }));
         }
 
@@ -71,6 +94,16 @@ impl GgufHeader {
         ]);
         *offset += 8;
 
+        // Security: Validate tensor count to prevent memory allocation bombs
+        if tensor_count > 100_000 {
+            // Maximum 100K tensors
+            return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                resource: "tensor_count".to_string(),
+                value: tensor_count,
+                limit: 100_000,
+            }));
+        }
+
         let metadata_kv_count = u64::from_le_bytes([
             data[*offset],
             data[*offset + 1],
@@ -82,6 +115,16 @@ impl GgufHeader {
             data[*offset + 7],
         ]);
         *offset += 8;
+
+        // Security: Validate metadata count to prevent memory allocation bombs
+        if metadata_kv_count > 10_000 {
+            // Maximum 10K metadata entries
+            return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                resource: "metadata_kv_count".to_string(),
+                value: metadata_kv_count,
+                limit: 10_000,
+            }));
+        }
 
         // GGUF v3 Format Variants:
         // 1. Standard v3: Has alignment (u32) and data_offset (u64) fields after metadata_kv_count
@@ -259,8 +302,16 @@ pub struct GgufMetadata {
 
 impl GgufMetadata {
     pub fn read(data: &[u8], offset: &mut usize) -> Result<Self> {
-        let key = read_string(data, offset)?;
-        let value = GgufValue::read(data, offset)?;
+        Self::read_with_limits(data, offset, &SecurityLimits::default())
+    }
+
+    pub fn read_with_limits(
+        data: &[u8],
+        offset: &mut usize,
+        limits: &SecurityLimits,
+    ) -> Result<Self> {
+        let key = read_string_with_limits(data, offset, limits)?;
+        let value = GgufValue::read_with_limits(data, offset, limits)?;
         Ok(Self { key, value })
     }
 }
@@ -282,6 +333,14 @@ pub enum GgufValue {
 
 impl GgufValue {
     pub fn read(data: &[u8], offset: &mut usize) -> Result<Self> {
+        Self::read_with_limits(data, offset, &SecurityLimits::default())
+    }
+
+    pub fn read_with_limits(
+        data: &[u8],
+        offset: &mut usize,
+        limits: &SecurityLimits,
+    ) -> Result<Self> {
         if *offset + 4 > data.len() {
             return Err(BitNetError::Model(ModelError::InvalidFormat {
                 format: "Unexpected end of data while reading GGUF value type".to_string(),
@@ -305,6 +364,39 @@ impl GgufValue {
                 // Array type
                 let array_type = read_u32(data, offset)?;
                 let array_len = read_u64(data, offset)? as usize;
+
+                // Security: Validate array length to prevent memory allocation bombs
+                if array_len > limits.max_array_length {
+                    return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                        resource: "array_length".to_string(),
+                        value: array_len as u64,
+                        limit: limits.max_array_length as u64,
+                    }));
+                }
+
+                // Calculate memory requirements to prevent integer overflow
+                let element_size = match array_type {
+                    0 | 1 => 1,                    // U8, I8
+                    2 | 3 => 2,                    // U16, I16
+                    4..=6 => 4,                    // U32, I32, F32
+                    7 => 1,                        // Bool
+                    8 => limits.max_string_length, // String (worst case)
+                    _ => {
+                        return Err(BitNetError::Security(SecurityError::MalformedData {
+                            reason: format!("Invalid array element type: {}", array_type),
+                        }));
+                    }
+                };
+
+                let memory_required = array_len.saturating_mul(element_size);
+                if memory_required > limits.max_memory_allocation {
+                    return Err(BitNetError::Security(SecurityError::MemoryBomb {
+                        reason: format!(
+                            "Array memory requirement {} exceeds limit {}",
+                            memory_required, limits.max_memory_allocation
+                        ),
+                    }));
+                }
 
                 let mut array = Vec::with_capacity(array_len);
 
@@ -361,7 +453,9 @@ impl GgufValue {
                     8 => {
                         // Array of String - most common for token pieces
                         for _ in 0..array_len {
-                            array.push(GgufValue::String(read_string(data, offset)?));
+                            array.push(GgufValue::String(read_string_with_limits(
+                                data, offset, limits,
+                            )?));
                         }
                     }
                     _ => {
@@ -391,28 +485,98 @@ pub struct TensorInfo {
 
 impl TensorInfo {
     pub fn read(data: &[u8], offset: &mut usize) -> Result<Self> {
-        let name = read_string(data, offset)?;
+        Self::read_with_limits(data, offset, &SecurityLimits::default())
+    }
+
+    pub fn read_with_limits(
+        data: &[u8],
+        offset: &mut usize,
+        limits: &SecurityLimits,
+    ) -> Result<Self> {
+        let name = read_string_with_limits(data, offset, limits)?;
 
         let n_dims = read_u32(data, offset)? as usize;
+
+        // Security: Limit tensor dimensions to prevent memory bombs
+        if n_dims > 8 {
+            // Maximum 8 dimensions for any reasonable tensor
+            return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                resource: "tensor_dimensions".to_string(),
+                value: n_dims as u64,
+                limit: 8,
+            }));
+        }
+
         let mut shape = Vec::with_capacity(n_dims);
+        let mut total_elements = 1u64;
+
         for _ in 0..n_dims {
-            shape.push(read_u64(data, offset)? as usize);
+            let dim = read_u64(data, offset)? as usize;
+
+            // Security: Check for dimension overflow and unreasonable sizes
+            if dim == 0 {
+                return Err(BitNetError::Security(SecurityError::MalformedData {
+                    reason: "Tensor dimension cannot be zero".to_string(),
+                }));
+            }
+
+            if dim > 1_000_000_000 {
+                // 1B elements per dimension max
+                return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                    resource: "tensor_dimension".to_string(),
+                    value: dim as u64,
+                    limit: 1_000_000_000,
+                }));
+            }
+
+            // Check for multiplication overflow
+            total_elements = total_elements.saturating_mul(dim as u64);
+            if total_elements > limits.max_tensor_elements {
+                return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                    resource: "tensor_elements".to_string(),
+                    value: total_elements,
+                    limit: limits.max_tensor_elements,
+                }));
+            }
+
+            shape.push(dim);
         }
 
         let tensor_type = GgufTensorType::from_u32(read_u32(data, offset)?)?;
         let tensor_offset = read_u64(data, offset)?;
 
-        // Calculate tensor size
-        let total_elements: usize = shape.iter().product();
+        // Calculate tensor size with overflow protection
+        let total_elements: usize = total_elements as usize; // Already validated above
+
         let size = if tensor_type.is_quantized() {
             // For quantized types, element_size is actually bytes per block
             let block_size = tensor_type.block_size();
             let bytes_per_block = tensor_type.element_size();
             let num_blocks = total_elements.div_ceil(block_size);
-            (num_blocks * bytes_per_block) as u64
+
+            // Security: Check for size calculation overflow
+            let size_bytes = num_blocks.saturating_mul(bytes_per_block);
+            if size_bytes > limits.max_memory_allocation {
+                return Err(BitNetError::Security(SecurityError::MemoryBomb {
+                    reason: format!(
+                        "Tensor memory requirement {} exceeds limit {}",
+                        size_bytes, limits.max_memory_allocation
+                    ),
+                }));
+            }
+            size_bytes as u64
         } else {
             // For non-quantized types, element_size is bytes per element
-            (total_elements * tensor_type.element_size()) as u64
+            let size_bytes = total_elements.saturating_mul(tensor_type.element_size());
+            if size_bytes > limits.max_memory_allocation {
+                return Err(BitNetError::Security(SecurityError::MemoryBomb {
+                    reason: format!(
+                        "Tensor memory requirement {} exceeds limit {}",
+                        size_bytes, limits.max_memory_allocation
+                    ),
+                }));
+            }
+            size_bytes as u64
         };
 
         Ok(Self { name, shape, tensor_type, offset: tensor_offset, size })
@@ -628,18 +792,22 @@ pub fn read_bool(data: &[u8], offset: &mut usize) -> Result<bool> {
 }
 
 pub fn read_string(data: &[u8], offset: &mut usize) -> Result<String> {
+    read_string_with_limits(data, offset, &SecurityLimits::default())
+}
+
+pub fn read_string_with_limits(
+    data: &[u8],
+    offset: &mut usize,
+    limits: &SecurityLimits,
+) -> Result<String> {
     let len = read_u64(data, offset)? as usize;
 
-    // Sanity check for reasonable string length (e.g., < 1MB)
-    const MAX_STRING_LEN: usize = 1024 * 1024;
-    if len > MAX_STRING_LEN {
-        return Err(BitNetError::Model(ModelError::InvalidFormat {
-            format: format!(
-                "String length {} exceeds maximum {} at offset {}",
-                len,
-                MAX_STRING_LEN,
-                *offset - 8
-            ),
+    // Security: Enforce strict string length limits to prevent DoS
+    if len > limits.max_string_length {
+        return Err(BitNetError::Security(SecurityError::ResourceLimit {
+            resource: "string_length".to_string(),
+            value: len as u64,
+            limit: limits.max_string_length as u64,
         }));
     }
 
@@ -673,10 +841,29 @@ pub fn read_string(data: &[u8], offset: &mut usize) -> Result<String> {
 /// For fields that genuinely need raw bytes (e.g., token pieces arrays),
 /// keep the bytes verbatim.
 pub fn read_bytes(data: &[u8], offset: &mut usize) -> Result<Vec<u8>> {
+    read_bytes_with_limits(data, offset, &SecurityLimits::default())
+}
+
+pub fn read_bytes_with_limits(
+    data: &[u8],
+    offset: &mut usize,
+    limits: &SecurityLimits,
+) -> Result<Vec<u8>> {
     let len = read_u64(data, offset)? as usize;
+
+    // Security: Enforce byte array length limits
+    if len > limits.max_string_length {
+        // Reuse string limit for bytes
+        return Err(BitNetError::Security(SecurityError::ResourceLimit {
+            resource: "byte_array_length".to_string(),
+            value: len as u64,
+            limit: limits.max_string_length as u64,
+        }));
+    }
+
     if *offset + len > data.len() {
-        return Err(BitNetError::Model(ModelError::InvalidFormat {
-            format: "Bytes extend beyond data bounds".to_string(),
+        return Err(BitNetError::Security(SecurityError::MalformedData {
+            reason: "Byte array extends beyond data bounds".to_string(),
         }));
     }
 

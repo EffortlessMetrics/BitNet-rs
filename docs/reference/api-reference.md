@@ -803,37 +803,236 @@ pub struct SamplingConfig {
 
 ## Tokenization
 
+### Tokenizer Discovery and Auto-Download (Issue #249)
+
+BitNet.rs provides intelligent tokenizer discovery and automatic downloading for seamless neural network model integration.
+
+#### TokenizerDiscovery
+
+Comprehensive tokenizer discovery engine for GGUF metadata parsing and neural network model compatibility.
+
+```rust
+use bitnet_tokenizers::{TokenizerDiscovery, TokenizerStrategy};
+use std::path::Path;
+
+pub struct TokenizerDiscovery {
+    // Internal fields for GGUF reader and model metadata
+}
+
+impl TokenizerDiscovery {
+    /// Create discovery engine from GGUF model file
+    pub fn from_gguf(path: &Path) -> Result<Self>;
+
+    /// Discover optimal tokenizer strategy for the loaded model
+    pub fn discover_tokenizer_strategy(&self) -> Result<TokenizerStrategy>;
+
+    /// Get vocabulary size from model metadata
+    pub fn vocab_size(&self) -> usize;
+
+    /// Get model architecture type (e.g., "llama", "gpt2")
+    pub fn model_type(&self) -> &str;
+
+    /// Check if model requires large vocabulary optimization (>64K tokens)
+    /// Large vocabularies require GPU acceleration for efficient embedding lookup
+    pub fn requires_large_vocab_optimization(&self) -> bool;
+
+    /// Check for co-located tokenizer files in model directory
+    pub fn check_colocated_tokenizers(&self) -> Result<Option<PathBuf>>;
+
+    /// Check standard cache directories for compatible tokenizers
+    pub fn check_cache_locations(&self) -> Result<Option<PathBuf>>;
+
+    /// Infer download source based on neural network model patterns
+    pub fn infer_download_source(&self) -> Result<Option<TokenizerDownloadInfo>>;
+
+    /// Try to extract embedded tokenizer from GGUF metadata
+    pub fn try_extract_embedded_tokenizer(&self) -> Result<Option<Arc<dyn Tokenizer>>>;
+}
+```
+
+#### TokenizerStrategy
+
+Comprehensive tokenizer resolution strategy for neural network models.
+
+```rust
+#[derive(Clone)]
+pub enum TokenizerStrategy {
+    /// User explicitly specified tokenizer path
+    Exact(PathBuf),
+    /// Auto-discovered compatible tokenizer in model directory
+    Discovered(PathBuf),
+    /// Smart download required from HuggingFace Hub
+    NeedsDownload(TokenizerDownloadInfo),
+    /// GGUF file contains embedded tokenizer data
+    EmbeddedGguf(Arc<dyn Tokenizer>),
+    /// Mock tokenizer for testing (non-strict mode only)
+    Mock,
+}
+
+impl TokenizerStrategy {
+    /// Check if strategy requires network access
+    pub fn requires_network(&self) -> bool;
+
+    /// Check if strategy uses cached resources
+    pub fn uses_cache(&self) -> bool;
+
+    /// Get description for logging and error messages
+    pub fn description(&self) -> &'static str;
+}
+```
+
+#### SmartTokenizerDownload
+
+Intelligent tokenizer downloading with caching, resume capability, and validation.
+
+```rust
+use bitnet_tokenizers::{SmartTokenizerDownload, TokenizerDownloadInfo};
+
+pub struct SmartTokenizerDownload {
+    // Internal fields for cache management and HTTP client
+}
+
+impl SmartTokenizerDownload {
+    /// Initialize download system with default cache directory
+    pub fn new() -> Result<Self>;
+
+    /// Initialize with custom cache directory
+    pub fn with_cache_dir(cache_dir: PathBuf) -> Result<Self>;
+
+    /// Download tokenizer files for given download info
+    /// Supports resume capability and automatic validation
+    pub async fn download_tokenizer(&self, info: &TokenizerDownloadInfo) -> Result<PathBuf>;
+
+    /// Check if tokenizer is already cached
+    pub fn find_cached_tokenizer(&self, cache_key: &str) -> Option<PathBuf>;
+
+    /// Clear cache for specific tokenizer or all cached tokenizers
+    pub fn clear_cache(&self, cache_key: Option<&str>) -> Result<()>;
+
+    /// Validate downloaded tokenizer against expected metadata
+    pub fn validate_downloaded_tokenizer(&self, path: &Path, info: &TokenizerDownloadInfo) -> Result<()>;
+}
+```
+
+#### ModelCompatibilityMatrix
+
+Neural network model compatibility matrix for tokenizer discovery.
+
+```rust
+#[derive(Debug, Clone)]
+pub struct ModelCompatibilityMatrix {
+    /// LLaMA-3 with 128K vocabulary - requires I2S quantization with GPU acceleration
+    pub llama3_128k: TokenizerDownloadInfo,
+    /// LLaMA-2 with 32K vocabulary - compatible with TL1/TL2 quantization
+    pub llama2_32k: TokenizerDownloadInfo,
+    /// GPT-2 with 50K vocabulary - standard BPE tokenization
+    pub gpt2_50k: TokenizerDownloadInfo,
+    /// BitNet-specific tokenizers for neural network optimization
+    pub bitnet_custom: TokenizerDownloadInfo,
+}
+
+#[derive(Debug, Clone)]
+pub struct TokenizerDownloadInfo {
+    /// HuggingFace repository identifier (e.g., "meta-llama/Llama-2-7b-hf")
+    pub repo: String,
+    /// Required tokenizer files to download (e.g., ["tokenizer.json"])
+    pub files: Vec<String>,
+    /// Cache identifier for persistent storage (e.g., "llama2-32k")
+    pub cache_key: String,
+    /// Expected vocabulary size for validation (optional)
+    pub expected_vocab: Option<usize>,
+}
+```
+
+**Example Usage:**
+
+```rust
+use bitnet_tokenizers::{TokenizerDiscovery, SmartTokenizerDownload};
+use std::path::Path;
+
+// Discover tokenizer strategy from GGUF model
+let discovery = TokenizerDiscovery::from_gguf(Path::new("model.gguf"))?;
+let strategy = discovery.discover_tokenizer_strategy()?;
+
+match strategy {
+    TokenizerStrategy::Discovered(path) => {
+        println!("Found tokenizer: {}", path.display());
+    },
+    TokenizerStrategy::NeedsDownload(info) => {
+        let downloader = SmartTokenizerDownload::new()?;
+        let tokenizer_path = downloader.download_tokenizer(&info).await?;
+        println!("Downloaded tokenizer: {}", tokenizer_path.display());
+    },
+    TokenizerStrategy::EmbeddedGguf(tokenizer) => {
+        println!("Using embedded tokenizer (vocab: {})", tokenizer.vocab_size());
+    },
+    _ => println!("Strategy: {}", strategy.description()),
+}
+```
+
+**Environment Variables:**
+
+- `BITNET_STRICT_TOKENIZERS=1`: Prevent mock fallbacks for production use
+- `BITNET_OFFLINE=1`: Disable network downloads, use cache only
+- `BITNET_DETERMINISTIC=1`: Enable deterministic behavior for testing
+
 ### Tokenizer
 
 Interface for text tokenization.
 
 ```rust
 pub trait Tokenizer: Send + Sync {
-    /// Encode text to token IDs
-    fn encode(&self, text: &str, add_special_tokens: bool) -> Result<Vec<u32>, TokenizerError>;
-    
+    /// Encode text to token IDs with special token handling
+    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>, TokenizerError>;
+
     /// Decode token IDs to text
-    fn decode(&self, token_ids: &[u32], skip_special_tokens: bool) -> Result<String, TokenizerError>;
-    
+    fn decode(&self, token_ids: &[u32]) -> Result<String, TokenizerError>;
+
     /// Get vocabulary size
     fn vocab_size(&self) -> usize;
-    
-    /// Get special token IDs
-    fn special_tokens(&self) -> &SpecialTokens;
-    
-    /// Batch encode multiple texts
-    fn encode_batch(
-        &self,
-        texts: &[&str],
-        add_special_tokens: bool,
-    ) -> Result<Vec<Vec<u32>>, TokenizerError>;
-    
-    /// Batch decode multiple token sequences
-    fn decode_batch(
-        &self,
-        token_ids: &[&[u32]],
-        skip_special_tokens: bool,
-    ) -> Result<Vec<String>, TokenizerError>;
+
+    /// Convert token ID to piece string for inspection
+    fn token_to_piece(&self, token: u32) -> Option<String>;
+}
+
+/// Universal tokenizer with auto-detection and fallback support
+pub struct UniversalTokenizer {
+    // Internal backend implementation
+}
+
+impl UniversalTokenizer {
+    /// Create tokenizer with explicit configuration
+    pub fn new(config: TokenizerConfig) -> Result<Self>;
+
+    /// Create tokenizer from GGUF model file with embedded metadata
+    pub fn from_gguf<P: AsRef<Path>>(path: P) -> Result<Self>;
+}
+
+#[derive(Debug, Clone)]
+pub struct TokenizerConfig {
+    /// Model type (e.g., "llama", "gpt2", "sentencepiece")
+    pub model_type: String,
+    /// Vocabulary size
+    pub vocab_size: usize,
+    /// Path to tokenizer file (for SentencePiece: .model file)
+    pub pre_tokenizer: Option<String>,
+    /// Add BOS token automatically
+    pub add_bos: bool,
+    /// Add EOS token automatically
+    pub add_eos: bool,
+    /// Add space prefix for GPT-style tokenizers
+    pub add_space_prefix: bool,
+    /// Use byte fallback for unknown characters
+    pub byte_fallback: bool,
+    /// Special token IDs
+    pub bos_token_id: Option<u32>,
+    pub eos_token_id: Option<u32>,
+    pub pad_token_id: Option<u32>,
+    pub unk_token_id: Option<u32>,
+    /// Embedded vocabulary (extracted from GGUF)
+    pub vocabulary: Option<Vec<String>>,
+    /// BPE merge rules (for BPE tokenizers)
+    pub bpe_merges: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]

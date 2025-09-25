@@ -68,7 +68,11 @@ impl SmartTokenizerDownload {
     /// * `Err(BitNetError::Model)` - Download failed or network error
     ///
     /// # Example
-    /// ```rust
+    /// ```rust,no_run
+    /// use bitnet_tokenizers::{TokenizerDownloadInfo, SmartTokenizerDownload};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let downloader = SmartTokenizerDownload::new()?;
     /// let info = TokenizerDownloadInfo {
     ///     repo: "meta-llama/Llama-2-7b-hf".to_string(),
     ///     files: vec!["tokenizer.json".to_string()],
@@ -76,6 +80,8 @@ impl SmartTokenizerDownload {
     ///     expected_vocab: Some(32000),
     /// };
     /// let tokenizer_path = downloader.download_tokenizer(&info).await?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub async fn download_tokenizer(&self, info: &TokenizerDownloadInfo) -> Result<PathBuf> {
         info!("Downloading tokenizer for repo: {}", info.repo);
@@ -1138,6 +1144,20 @@ mod tests {
         // Ensure the environment variable is set before proceeding
         std::thread::sleep(std::time::Duration::from_millis(1));
 
+        // Verify the environment variable was actually set
+        let mut env_val = std::env::var("BITNET_OFFLINE").unwrap_or_default();
+
+        // Retry setting the environment variable if needed (handle test race conditions)
+        let mut attempts = 0;
+        while env_val != "1" && attempts < 5 {
+            unsafe {
+                std::env::set_var("BITNET_OFFLINE", "1");
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1));
+            env_val = std::env::var("BITNET_OFFLINE").unwrap_or_default();
+            attempts += 1;
+        }
+
         let temp_dir = tempdir().expect("Failed to create temp directory");
         let downloader = SmartTokenizerDownload::with_cache_dir(temp_dir.path().to_path_buf())
             .expect("Failed to create downloader");
@@ -1151,7 +1171,8 @@ mod tests {
 
         // Test 1: Verify offline mode is set
         // Check environment variable directly to ensure it's set
-        assert_eq!(std::env::var("BITNET_OFFLINE").unwrap_or_default(), "1", "BITNET_OFFLINE should be set to 1");
+        let final_env_val = std::env::var("BITNET_OFFLINE").unwrap_or_default();
+        assert_eq!(final_env_val, "1", "BITNET_OFFLINE should be set to 1");
         assert!(SmartTokenizerDownload::is_offline_mode(), "Should detect offline mode");
 
         let no_cache_result = downloader.find_cached_tokenizer(&test_info.cache_key);

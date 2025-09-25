@@ -23,6 +23,8 @@ pub enum BitNetError {
     Validation(String),
     #[error("Configuration error: {0}")]
     Configuration(String),
+    #[error("Security error: {0}")]
+    Security(#[from] SecurityError),
 }
 
 /// Model-related errors
@@ -63,6 +65,12 @@ pub enum QuantizationError {
     QuantizationFailed { reason: String },
     #[error("Invalid block size: {size}")]
     InvalidBlockSize { size: usize },
+    #[error("Resource limit exceeded: {reason}")]
+    ResourceLimit { reason: String },
+    #[error("Invalid input dimensions: {reason}")]
+    InvalidInput { reason: String },
+    #[error("Memory allocation failed: {reason}")]
+    MemoryAllocation { reason: String },
 }
 
 /// Kernel-related errors
@@ -97,6 +105,47 @@ pub enum InferenceError {
     ContextLengthExceeded { length: usize },
     #[error("Tokenization failed: {reason}")]
     TokenizationFailed { reason: String },
+}
+
+/// Security-related errors for input validation and resource management
+#[derive(Error, Debug)]
+pub enum SecurityError {
+    #[error("Input validation failed: {reason}")]
+    InputValidation { reason: String },
+    #[error("Memory allocation attack detected: {reason}")]
+    MemoryBomb { reason: String },
+    #[error("Resource limit exceeded: {resource} = {value} exceeds limit {limit}")]
+    ResourceLimit { resource: String, value: u64, limit: u64 },
+    #[error("Malformed data structure: {reason}")]
+    MalformedData { reason: String },
+    #[error("Unsafe operation blocked: {operation} - {reason}")]
+    UnsafeOperation { operation: String, reason: String },
+}
+
+/// Security limits for preventing attacks
+pub struct SecurityLimits {
+    /// Maximum tensor elements (1 billion)
+    pub max_tensor_elements: u64,
+    /// Maximum memory allocation (4GB)
+    pub max_memory_allocation: usize,
+    /// Maximum metadata size (100MB)
+    pub max_metadata_size: usize,
+    /// Maximum string length (1MB)
+    pub max_string_length: usize,
+    /// Maximum array length (1M elements)
+    pub max_array_length: usize,
+}
+
+impl Default for SecurityLimits {
+    fn default() -> Self {
+        Self {
+            max_tensor_elements: 1_000_000_000,            // 1B elements
+            max_memory_allocation: 4 * 1024 * 1024 * 1024, // 4GB
+            max_metadata_size: 100 * 1024 * 1024,          // 100MB
+            max_string_length: 1024 * 1024,                // 1MB
+            max_array_length: 1_000_000,                   // 1M elements
+        }
+    }
 }
 
 /// Result type alias

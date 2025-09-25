@@ -9,6 +9,7 @@ use anyhow::Result as AnyhowResult;
 use bitnet_common::{BitNetError, ModelError, Result};
 use std::path::{Path, PathBuf};
 use tracing::warn;
+//use crate::{CacheManager, ModelTypeDetector};
 
 /// Centralized error handling utilities for BitNet.rs tokenizer operations
 ///
@@ -259,9 +260,8 @@ impl ModelTypeDetector {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)] // Test scaffolding may not use all imports yet
     use super::*;
-    use bitnet_common::ModelError;
-    use std::path::PathBuf;
 
     /// AC10: Tests error handling with anyhow::Result integration
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac10-error-handling
@@ -373,14 +373,14 @@ mod tests {
     #[test]
     #[cfg(feature = "cpu")]
     fn test_cache_management() {
-        let cache_dir = CacheManager::cache_directory();
+        let cache_dir = crate::CacheManager::cache_directory();
         assert!(cache_dir.is_ok());
 
         let cache_path = cache_dir.unwrap();
         assert!(cache_path.to_string_lossy().contains("tokenizers"));
 
         // Test model-specific cache directory
-        let model_cache = CacheManager::model_cache_dir("llama2", Some(32000));
+        let model_cache = crate::CacheManager::model_cache_dir("llama2", Some(32000));
         assert!(model_cache.is_ok());
 
         let model_path = model_cache.unwrap();
@@ -393,23 +393,23 @@ mod tests {
     #[cfg(feature = "cpu")]
     fn test_model_type_detection() {
         // Test vocabulary size to model type mapping
-        assert_eq!(ModelTypeDetector::detect_from_vocab_size(32000), "llama2");
-        assert_eq!(ModelTypeDetector::detect_from_vocab_size(128256), "llama3");
-        assert_eq!(ModelTypeDetector::detect_from_vocab_size(50257), "gpt2");
-        assert_eq!(ModelTypeDetector::detect_from_vocab_size(99999), "unknown");
+        assert_eq!(crate::ModelTypeDetector::detect_from_vocab_size(32000), "llama2");
+        assert_eq!(crate::ModelTypeDetector::detect_from_vocab_size(128256), "llama3");
+        assert_eq!(crate::ModelTypeDetector::detect_from_vocab_size(50257), "gpt2");
+        assert_eq!(crate::ModelTypeDetector::detect_from_vocab_size(99999), "unknown");
 
         // Test GPU acceleration requirements
-        assert!(!ModelTypeDetector::requires_gpu_acceleration(32000));
-        assert!(ModelTypeDetector::requires_gpu_acceleration(128256));
+        assert!(!crate::ModelTypeDetector::requires_gpu_acceleration(32000));
+        assert!(crate::ModelTypeDetector::requires_gpu_acceleration(128256));
 
         // Test vocabulary size validation
-        assert!(ModelTypeDetector::validate_vocab_size(32000).is_ok());
-        assert!(ModelTypeDetector::validate_vocab_size(0).is_err());
-        assert!(ModelTypeDetector::validate_vocab_size(3_000_000).is_err());
+        assert!(crate::ModelTypeDetector::validate_vocab_size(32000).is_ok());
+        assert!(crate::ModelTypeDetector::validate_vocab_size(0).is_err());
+        assert!(crate::ModelTypeDetector::validate_vocab_size(3_000_000).is_err());
 
         // Test expected vocabulary sizes
-        assert_eq!(ModelTypeDetector::expected_vocab_size("llama2"), Some(32000));
-        assert_eq!(ModelTypeDetector::expected_vocab_size("llama3"), Some(128256));
-        assert_eq!(ModelTypeDetector::expected_vocab_size("unknown"), None);
+        assert_eq!(crate::ModelTypeDetector::expected_vocab_size("llama2"), Some(32000));
+        assert_eq!(crate::ModelTypeDetector::expected_vocab_size("llama3"), Some(128256));
+        assert_eq!(crate::ModelTypeDetector::expected_vocab_size("unknown"), None);
     }
 }

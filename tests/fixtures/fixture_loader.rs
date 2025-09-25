@@ -668,6 +668,7 @@ impl Default for FixtureConfig {
 impl FixtureConfig {
     /// Detect available features based on compilation flags
     fn detect_available_features() -> Vec<String> {
+        #[allow(unused_mut)] // Conditional compilation may not use mutation
         let mut features = vec!["cpu".to_string()]; // CPU always available
 
         #[cfg(feature = "gpu")]
