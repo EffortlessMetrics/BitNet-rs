@@ -130,6 +130,6 @@ cargo test -p bitnet-quantization test_simd_performance_baseline
 ```
 
 For more information, see:
-- [GPU Development Guide](gpu-development.md) - GPU-specific quantization details
-- [Build Commands](build-commands.md) - Build commands for different quantization features
-- [FFI Threading Architecture](ffi-threading-architecture.md) - FFI bridge details
+- [GPU Development Guide](../development/gpu-development.md) - GPU-specific quantization details
+- [Build Commands](../development/build-commands.md) - Build commands for different quantization features
+- [FFI Threading Architecture](../ffi-threading-architecture.md) - FFI bridge details
