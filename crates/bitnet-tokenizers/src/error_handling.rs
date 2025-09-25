@@ -260,8 +260,8 @@ impl ModelTypeDetector {
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
-    use super::TokenizerErrorHandler;
+    #[allow(unused_imports)] // Test scaffolding may not use all imports yet
+    use super::*;
 
     /// AC10: Tests error handling with anyhow::Result integration
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac10-error-handling
