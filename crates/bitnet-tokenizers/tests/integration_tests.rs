@@ -2,11 +2,6 @@
 //!
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac7-integration-tests
 
-use bitnet_tokenizers::{
-    BasicTokenizer, BitNetTokenizerWrapper, LlamaTokenizerWrapper, SmartTokenizerDownload,
-    Tokenizer, TokenizerDiscovery, TokenizerStrategy, strategy::Gpt2TokenizerWrapper,
-};
-
 /// AC7: End-to-end tokenizer discovery integration test
 /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac7-integration-tests
 #[tokio::test]

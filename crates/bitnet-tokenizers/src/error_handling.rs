@@ -262,8 +262,6 @@ impl ModelTypeDetector {
 mod tests {
     #[allow(unused_imports)]
     use super::TokenizerErrorHandler;
-    use bitnet_common::{BitNetError, ModelError};
-    use std::path::PathBuf;
 
     /// AC10: Tests error handling with anyhow::Result integration
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac10-error-handling
