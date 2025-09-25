@@ -9,6 +9,14 @@ pub mod sp_tokenizer;
 pub mod spm_tokenizer;
 pub mod universal;
 
+// New tokenizer discovery and auto-download modules
+pub mod deterministic;
+pub mod discovery;
+pub mod download;
+pub mod error_handling;
+pub mod fallback;
+pub mod strategy;
+
 use bitnet_common::{BitNetError, ModelError, Result};
 use std::path::Path;
 use std::sync::Arc;
@@ -19,6 +27,18 @@ pub use mock::MockTokenizer;
 #[cfg(feature = "spm")]
 pub use spm_tokenizer::SpmTokenizer;
 pub use universal::UniversalTokenizer;
+
+// Export BasicTokenizer for internal and external use
+// BasicTokenizer is defined below in this module
+
+// New tokenizer discovery and strategy exports
+pub use discovery::{TokenizerDiscovery, TokenizerDownloadInfo, TokenizerStrategy};
+pub use download::{DownloadProgress, SmartTokenizerDownload};
+pub use error_handling::{CacheManager, ModelTypeDetector, TokenizerErrorHandler};
+pub use fallback::TokenizerFallbackChain;
+pub use strategy::{
+    BitNetTokenizerWrapper, Gpt2TokenizerWrapper, LlamaTokenizerWrapper, TokenizerStrategyResolver,
+};
 
 /// Configuration for tokenizer initialization
 #[derive(Debug, Clone, Default)]

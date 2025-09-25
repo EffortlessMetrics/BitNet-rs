@@ -1,3 +1,5 @@
+ultrathink agentically
+
 # Draft → Ready Review Flow
 
 You are the orchestrator for the Draft → Ready PR validation flow for BitNet.rs neural network inference. Your job: invoke specialized review agents that fix, assess, and route until the Draft PR can be promoted to Ready for review.
@@ -395,3 +397,7 @@ Consider "progress" when these improve:
 **Needs Rework:** Draft remains Draft with clear prioritized checklist and specific gate failures documented
 
 Begin with an open Draft PR and invoke agents proactively through the microloop structure, following BitNet.rs TDD-driven, neural network quantization development standards.
+
+Create a todo list to guide us through the flow. The series of microloops.
+
+Let's proceed with PR# 

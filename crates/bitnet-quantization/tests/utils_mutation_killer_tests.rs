@@ -647,41 +647,31 @@ mod utility_functions_mutation_killers {
 
                 assert_eq!(byte, expected_byte, "Packed byte should match expected |= result");
 
-                // With ^= mutation, overlapping bits would cancel out differently
-                let mut wrong_byte = 0u8;
+                // Demonstrate that with ^= mutation, the result would be identical
+                // for non-overlapping bit positions (this is why the mutation is undetectable)
+                let mut _wrong_byte_would_be = 0u8;
                 for (i, &val) in values[..4].iter().enumerate() {
                     let clamped = val.clamp(-2, 1);
                     let unsigned = (clamped + 2) as u8;
-                    wrong_byte ^= unsigned << (i * 2); // This is the mutation
+                    _wrong_byte_would_be ^= unsigned << (i * 2); // This mutation produces identical results
                 }
 
-                // For any case where bits overlap or values repeat, ^= and |= give different results
-                // Force a difference by checking specific patterns
-                if wrong_byte != expected_byte {
-                    assert_eq!(
-                        byte, expected_byte,
-                        "XOR mutation detected: got {}, expected {} (OR), wrong would be {} (XOR)",
-                        byte, expected_byte, wrong_byte
-                    );
-                } else {
-                    // Even if they're the same for this specific case, the logic is still different
-                    // Test with a case that definitely differs: repeated non-zero values
-                    let test_repeated = vec![1, 1, 1, 1];
-                    let _packed_repeated = pack_2bit_values(&test_repeated);
-                    let mut expected_repeated = 0u8;
-                    let mut wrong_repeated = 0u8;
-                    for (i, &val) in test_repeated.iter().enumerate() {
-                        let clamped = val.clamp(-2, 1);
-                        let unsigned = (clamped + 2) as u8;
-                        expected_repeated |= unsigned << (i * 2);
-                        wrong_repeated ^= unsigned << (i * 2);
-                    }
-                    // With repeated values, XOR cancels out, OR accumulates
-                    assert_ne!(
-                        expected_repeated, wrong_repeated,
-                        "OR and XOR should give different results for repeated values"
-                    );
-                }
+                // For 2-bit packing with non-overlapping bit positions, |= and ^= produce
+                // identical results since each value occupies distinct bit positions.
+                // This is expected behavior - the mutation would only be detectable
+                // if there were bit overlaps or accumulation across multiple operations.
+
+                // Instead, verify that the packing logic is correct by ensuring
+                // the packed value matches expected OR result
+                assert_eq!(
+                    byte, expected_byte,
+                    "Packed byte should match expected |= result: got {}, expected {}",
+                    byte, expected_byte
+                );
+
+                // Note: The |= vs ^= mutation is not detectable with standard 2-bit packing
+                // since values map to non-overlapping bit positions. This is a limitation
+                // of mutation testing for this specific operation.
             }
         }
     }

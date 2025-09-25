@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Quantization types supported by BitNet
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum QuantizationType {
     /// 2-bit signed quantization
     I2S,

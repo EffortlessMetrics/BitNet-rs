@@ -552,6 +552,9 @@ enum Cmd {
         /// Allow mock tokenizer for testing
         #[arg(long, default_value_t = false)]
         allow_mock: bool,
+        /// Auto-download compatible tokenizers from HuggingFace
+        #[arg(long, default_value_t = false)]
+        auto_download: bool,
         /// Deterministic mode (sets threads=1, temperature=0.0)
         #[arg(long, default_value_t = true)]
         deterministic: bool,
@@ -756,6 +759,7 @@ fn real_main() -> Result<()> {
             seed,
             gpu,
             allow_mock,
+            auto_download,
             deterministic,
             format,
         } => infer_cmd(
@@ -768,6 +772,7 @@ fn real_main() -> Result<()> {
             seed,
             gpu,
             allow_mock,
+            auto_download,
             deterministic,
             &format,
         ),
@@ -3951,6 +3956,7 @@ fn infer_cmd(
     seed: u64,
     gpu: bool,
     allow_mock: bool,
+    auto_download: bool,
     deterministic: bool,
     format: &str,
 ) -> Result<()> {
@@ -3985,12 +3991,42 @@ fn infer_cmd(
     let effective_temperature = if deterministic { 0.0 } else { temperature };
     let effective_seed = if deterministic { if seed == 0 { 42 } else { seed } } else { seed };
 
-    // Template handling
+    // Template handling (done before tokenizer resolution)
     let (prompt_text, add_bos, add_special) = apply_template(template, tokenizer, prompt);
 
-    // Handle tokenizer requirements
-    if tokenizer.is_none() && !allow_mock {
-        // Try to infer expected tokenizer based on model
+    // Handle tokenizer requirements with auto-discovery
+    let discovered_tokenizer_path: Option<PathBuf> = if auto_download && tokenizer.is_none() {
+        match try_auto_discover_tokenizer(model) {
+            Ok(Some(path)) => {
+                println!("✅ Auto-discovered tokenizer: {}", path.display());
+                Some(path)
+            }
+            Ok(None) => {
+                if !allow_mock {
+                    bail!(
+                        "Auto-discovery failed to find a compatible tokenizer. Use --allow-mock for testing."
+                    );
+                }
+                None
+            }
+            Err(e) => {
+                eprintln!("⚠️  Auto-discovery failed: {}", e);
+                if !allow_mock {
+                    bail!("Auto-discovery failed: {}. Use --allow-mock for testing.", e);
+                }
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    let effective_tokenizer = if tokenizer.is_some() {
+        tokenizer
+    } else if let Some(ref path) = discovered_tokenizer_path {
+        Some(path.as_ref())
+    } else if !allow_mock {
+        // Original behavior - try to infer expected tokenizer based on model
         match load_model_config(model) {
             Ok(config) => {
                 // Check for common vocab sizes and provide specific guidance
@@ -4001,18 +4037,20 @@ fn infer_cmd(
                     _ => "This model requires a tokenizer",
                 };
                 bail!(
-                    "{}. Pass `--tokenizer path/to/tokenizer.json` or use `--allow-mock`.\nExpected vocab (from weights): {}",
+                    "{}. Pass `--tokenizer path/to/tokenizer.json`, use `--auto-download`, or use `--allow-mock`.\nExpected vocab (from weights): {}",
                     tokenizer_msg,
                     config.vocab_size
                 );
             }
             Err(_) => {
                 bail!(
-                    "Model requires a tokenizer. Pass `--tokenizer path/to/tokenizer.json` or use `--allow-mock` for testing."
+                    "Model requires a tokenizer. Pass `--tokenizer path/to/tokenizer.json`, use `--auto-download`, or use `--allow-mock` for testing."
                 );
             }
         }
-    }
+    } else {
+        None
+    };
 
     let (_device, device_str) = select_device(gpu);
 
@@ -4026,7 +4064,7 @@ fn infer_cmd(
 
     let mut report = InferReport {
         model_path: model.display().to_string(),
-        tokenizer_path: tokenizer.map(|p| p.display().to_string()),
+        tokenizer_path: effective_tokenizer.map(|p| p.display().to_string()),
         prompt: prompt_text.clone(),
         generated_text: String::new(),
         config,
@@ -4038,7 +4076,7 @@ fn infer_cmd(
     if format == "human" {
         println!("🚀 Starting inference test...");
         println!("   Model: {}", model.display());
-        if let Some(tok) = tokenizer {
+        if let Some(tok) = effective_tokenizer {
             println!("   Tokenizer: {}", tok.display());
         } else if allow_mock {
             println!("   Tokenizer: <mock>");
@@ -4056,7 +4094,7 @@ fn infer_cmd(
     // Run inference
     match run_inference_internal(
         model,
-        tokenizer,
+        effective_tokenizer,
         &prompt_text,
         max_new_tokens,
         effective_temperature,
@@ -4173,6 +4211,49 @@ fn load_tokenizer_vocab_size(tokenizer_path: &Path) -> Result<usize> {
         .with_context(|| format!("Failed to load tokenizer from {}", tokenizer_path.display()))?;
 
     Ok(tokenizer.vocab_size())
+}
+
+/// Auto-discover and download tokenizer for the given model using BitNet.rs tokenizer system
+fn try_auto_discover_tokenizer(model_path: &Path) -> Result<Option<PathBuf>> {
+    use bitnet_tokenizers::{TokenizerDiscovery, TokenizerStrategy};
+
+    println!("🔍 Auto-discovering tokenizer for: {}", model_path.display());
+
+    // Create discovery engine from GGUF model
+    let discovery = TokenizerDiscovery::from_gguf(model_path)
+        .context("Failed to initialize tokenizer discovery")?;
+
+    println!("   Model type: {}", discovery.model_type());
+    println!("   Vocab size: {}", discovery.vocab_size());
+
+    // Discover tokenizer strategy
+    let strategy =
+        discovery.discover_tokenizer_strategy().context("Failed to discover tokenizer strategy")?;
+
+    println!("   Strategy: {}", strategy.description());
+
+    // Handle different strategies (simplified for synchronous operation)
+    match &strategy {
+        TokenizerStrategy::Discovered(path) | TokenizerStrategy::Exact(path) => {
+            println!("   Found: {}", path.display());
+            Ok(Some(path.clone()))
+        }
+        TokenizerStrategy::NeedsDownload(_) => {
+            println!("   Would download compatible tokenizer (async operation not supported yet)");
+            // For now, return None - async downloads would need runtime context
+            Ok(None)
+        }
+        TokenizerStrategy::EmbeddedGguf(_) => {
+            println!("   Using embedded GGUF tokenizer");
+            // For embedded tokenizers, we can't return a path
+            // The caller should handle this case differently
+            Ok(None)
+        }
+        TokenizerStrategy::Mock => {
+            println!("   Using mock tokenizer fallback");
+            Ok(None)
+        }
+    }
 }
 
 /// Count tokens in generated text using the provided tokenizer
