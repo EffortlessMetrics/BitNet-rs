@@ -1,0 +1,22 @@
+# BitNet.rs Security Advisory Configuration
+#
+# This file documents accepted security advisories that are not actionable
+# due to transitive dependencies or other constraints.
+
+[advisories]
+ignore = [
+    # RUSTSEC-2024-0436: paste crate is no longer maintained
+    #
+    # Status: Accepted Risk
+    # Rationale: The paste crate is a transitive dependency through tokenizers 0.22.1
+    #           which is the latest version. The paste crate is used only as a
+    #           procedural macro for compile-time token pasting and does not affect
+    #           runtime security in BitNet.rs neural network inference operations.
+    #
+    # Dependencies: tokenizers 0.22.1 -> paste 1.0.15 (proc-macro)
+    # Impact: Compile-time only, no runtime security implications
+    # Mitigation: Will be resolved when HuggingFace tokenizers updates to a maintained alternative
+    # Review Date: 2024-09-25
+    # Re-evaluate: 2025-03-01
+    "RUSTSEC-2024-0436",
+]
