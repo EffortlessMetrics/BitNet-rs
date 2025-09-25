@@ -31,6 +31,7 @@ pub use universal::UniversalTokenizer;
 // New tokenizer discovery and strategy exports
 pub use discovery::{TokenizerDiscovery, TokenizerDownloadInfo, TokenizerStrategy};
 pub use download::{DownloadProgress, SmartTokenizerDownload};
+pub use error_handling::{CacheManager, ModelTypeDetector, TokenizerErrorHandler};
 pub use fallback::TokenizerFallbackChain;
 pub use strategy::{
     BitNetTokenizerWrapper, Gpt2TokenizerWrapper, LlamaTokenizerWrapper, TokenizerStrategyResolver,

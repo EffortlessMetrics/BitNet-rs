@@ -9,7 +9,8 @@ use bitnet_common::ModelError; // Used in test cases
 use bitnet_common::{BitNetError, Result};
 use std::path::PathBuf;
 use std::sync::Arc;
-// use tracing::{debug, info, warn};
+#[allow(unused_imports)]
+use tracing::{debug, info, warn};
 
 /// Robust fallback chain for tokenizer resolution
 pub struct TokenizerFallbackChain {
@@ -610,6 +611,7 @@ mod tests {
     }
 
     /// Helper function to create mock TokenizerDiscovery for testing
+    #[allow(dead_code)]
     fn create_mock_discovery() -> TokenizerDiscovery {
         // Test scaffolding - would create mock discovery instance
         unimplemented!("create_mock_discovery - requires TokenizerDiscovery implementation")

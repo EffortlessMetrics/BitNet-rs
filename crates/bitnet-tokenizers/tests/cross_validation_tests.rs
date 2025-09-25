@@ -4,14 +4,9 @@
 
 use bitnet_common::QuantizationType;
 use bitnet_common::Result;
-use bitnet_tokenizers::{
-    BasicTokenizer, Tokenizer, UniversalTokenizer,
-    discovery::{TokenizerDiscovery, TokenizerStrategy},
-    strategy::TokenizerStrategyResolver,
-};
+use bitnet_tokenizers::{discovery::TokenizerDiscovery, Tokenizer, BasicTokenizer};
 use std::path::Path;
 use std::sync::Arc;
-use tokio;
 
 /// AC6: Tests tokenizer discovery cross-validation with universal tokenizer
 /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac6-cross-validation-tests
@@ -24,7 +19,7 @@ async fn test_tokenizer_discovery_cross_validation() {
         ("test-models/gpt2.gguf", 50257, "gpt2"),
     ];
 
-    for (model_path, expected_vocab, expected_type) in test_cases {
+    for (model_path, _expected_vocab, _expected_type) in test_cases {
         let path = Path::new(model_path);
         if !path.exists() {
             continue; // Skip if test model not available
@@ -110,12 +105,12 @@ async fn test_quantization_compatibility_cross_validation() {
             QuantizationType::I2S => {
                 // I2S supports full vocab range with GPU acceleration
                 // assert!(tokens.iter().all(|&t| (t as usize) < 128256));
-                assert!(true, "I2S quantization test scaffolding");
+                println!("I2S quantization test scaffolding");
             }
             QuantizationType::TL1 | QuantizationType::TL2 => {
                 // TL1/TL2 may have lookup table size constraints
                 // assert!(tokens.iter().all(|&t| (t as usize) < 65536)); // 16-bit lookup table limit
-                assert!(true, "TL1/TL2 quantization test scaffolding");
+                println!("TL1/TL2 quantization test scaffolding");
             }
         }
 
@@ -130,7 +125,7 @@ async fn test_quantization_compatibility_cross_validation() {
 async fn test_performance_regression_cross_validation() {
     // Test scaffolding for performance regression testing
 
-    let test_corpus = "The quick brown fox jumps over the lazy dog. ".repeat(1000);
+    let _test_corpus = "The quick brown fox jumps over the lazy dog. ".repeat(1000);
 
     // Test scaffolding - measure performance of different tokenizer implementations
     // let universal_start = std::time::Instant::now();
@@ -190,7 +185,7 @@ async fn test_backward_compatibility_cross_validation() {
 /// AC6: Tests cross-validation framework integration
 /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac6-cross-validation-tests
 #[tokio::test]
-#[cfg(feature = "crossval")]
+#[cfg(feature = "cpu")]
 async fn test_crossval_framework_integration() {
     // Test scaffolding for cross-validation framework integration
 
@@ -307,7 +302,7 @@ async fn test_deterministic_cross_validation() {
         std::env::set_var("RAYON_NUM_THREADS", "1");
     }
 
-    let test_model = "test-models/test.gguf";
+    let _test_model = "test-models/test.gguf";
 
     // Run tokenizer discovery twice with same parameters
     let run_discovery = || async {
@@ -346,6 +341,7 @@ async fn test_deterministic_cross_validation() {
 // Helper functions for cross-validation testing
 
 /// Assert token compatibility between discovered and universal tokenizers
+#[allow(dead_code)]
 fn assert_token_compatibility(discovered: &[u32], universal: &[u32], vocab_size: usize) {
     // All tokens should be within vocab range
     for &token in discovered {
@@ -363,6 +359,7 @@ fn assert_token_compatibility(discovered: &[u32], universal: &[u32], vocab_size:
 }
 
 /// Assert text similarity between decoded outputs
+#[allow(dead_code)]
 fn assert_text_similarity(discovered: &str, universal: &str) {
     // For mock tokenizers, allow generic output
     if discovered.starts_with("Generated text from") || universal.starts_with("Generated text from")
@@ -386,6 +383,7 @@ fn assert_text_similarity(discovered: &str, universal: &str) {
 }
 
 /// Calculate text similarity score between word lists
+#[allow(dead_code)]
 fn text_similarity(words1: &[&str], words2: &[&str]) -> f64 {
     if words1.is_empty() && words2.is_empty() {
         return 1.0;
@@ -410,17 +408,20 @@ fn text_similarity(words1: &[&str], words2: &[&str]) -> f64 {
 }
 
 /// Create test tokenizer for cross-validation
+#[allow(dead_code)]
 fn create_test_tokenizer() -> Arc<dyn Tokenizer> {
     Arc::new(BasicTokenizer::with_config(32000, Some(1), Some(2), None))
 }
 
 /// Generate test corpus for performance testing
+#[allow(dead_code)]
 fn generate_test_corpus(size: usize) -> String {
     let base_text = "The quick brown fox jumps over the lazy dog. Neural networks process language efficiently. ";
     base_text.repeat(size / base_text.len() + 1)[..size].to_string()
 }
 
 /// Mock comparison for test scaffolding
+#[allow(dead_code)]
 fn compare_tokenizer_outputs(
     tokenizer1: &dyn Tokenizer,
     tokenizer2: &dyn Tokenizer,

@@ -2,9 +2,8 @@
 //!
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac4-xtask-integration
 
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use tempfile::{NamedTempFile, TempDir};
+use std::path::PathBuf;
+use tempfile::NamedTempFile;
 #[cfg(feature = "inference")]
 use tokio::process::Command as TokioCommand;
 
@@ -417,40 +416,44 @@ async fn test_xtask_verify_tokenizer_discovery() {
 // Helper functions for test scaffolding
 
 /// Create a test GGUF model file for testing
+#[allow(dead_code)]
 async fn create_test_model() -> PathBuf {
     // Test scaffolding - creates minimal GGUF file for testing
     let temp_file = NamedTempFile::new().expect("Failed to create temp file");
 
     // Write minimal GGUF header for testing
-    std::fs::write(&temp_file.path(), b"GGUF").expect("Failed to write test model");
+    std::fs::write(temp_file.path(), b"GGUF").expect("Failed to write test model");
 
     temp_file.into_temp_path().to_path_buf()
 }
 
 /// Create a test GGUF model file with specific model type and vocabulary size
+#[allow(dead_code)]
 async fn create_test_model_with_type(model_type: &str, vocab_size: usize) -> PathBuf {
     // Test scaffolding - creates GGUF file with specified metadata
     let temp_file = NamedTempFile::new().expect("Failed to create temp file");
 
     // Write GGUF header with metadata for testing
     let test_content = format!("GGUF_TEST_{}_{}", model_type, vocab_size);
-    std::fs::write(&temp_file.path(), test_content.as_bytes()).expect("Failed to write test model");
+    std::fs::write(temp_file.path(), test_content.as_bytes()).expect("Failed to write test model");
 
     temp_file.into_temp_path().to_path_buf()
 }
 
 /// Create a test LLaMA-3 model for large vocabulary testing
+#[allow(dead_code)]
 async fn create_test_llama3_model() -> PathBuf {
     create_test_model_with_type("llama", 128256).await
 }
 
 /// Create a test tokenizer file for explicit tokenizer testing
+#[allow(dead_code)]
 async fn create_test_tokenizer() -> PathBuf {
     // Test scaffolding - creates minimal tokenizer.json file
     let temp_file = NamedTempFile::with_suffix(".json").expect("Failed to create temp tokenizer");
 
     let test_tokenizer_json = r#"{"version":"1.0","tokenizer":{"type":"BPE"},"vocab":{}}"#;
-    std::fs::write(&temp_file.path(), test_tokenizer_json).expect("Failed to write test tokenizer");
+    std::fs::write(temp_file.path(), test_tokenizer_json).expect("Failed to write test tokenizer");
 
     temp_file.into_temp_path().to_path_buf()
 }
