@@ -2,7 +2,8 @@
 //!
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac7-integration-tests
 
-use bitnet_tokenizers::*;
+use bitnet_tokenizers::{Tokenizer, download};
+use std::sync::Arc;
 
 /// AC7: End-to-end tokenizer discovery integration test
 /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac7-integration-tests
@@ -27,9 +28,10 @@ async fn test_end_to_end_tokenizer_discovery_integration() {
 async fn test_gpu_cpu_tokenizer_parity() {
     // Test scaffolding for GPU/CPU parity validation
     println!("✅ AC7: GPU/CPU parity test scaffolding prepared");
-    assert!(true, "GPU/CPU parity test ready for implementation");
+    // GPU/CPU parity validation will be implemented
 }
 
+#[allow(dead_code)]
 async fn setup_test_model() -> std::path::PathBuf {
     // Test scaffolding for model setup
     std::path::PathBuf::from("test-models/integration-test.gguf")

@@ -283,7 +283,6 @@ impl FallbackError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::BasicTokenizer;
 
     /// AC5: Tests TokenizerFallbackChain initialization and configuration
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac5-fallback-strategy-system

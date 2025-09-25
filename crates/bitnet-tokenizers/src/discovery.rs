@@ -611,7 +611,7 @@ mod tests {
             (1000000, true), // Hypothetical large model
         ];
 
-        for (vocab_size, should_optimize) in test_cases {
+        for (vocab_size, _should_optimize) in test_cases {
             // Mock discovery instance for testing
             // let discovery = create_mock_discovery("test", vocab_size);
             // assert_eq!(discovery.requires_large_vocab_optimization(), should_optimize);

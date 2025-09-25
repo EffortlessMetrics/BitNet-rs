@@ -671,7 +671,6 @@ pub enum TokenizerResolution {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::BasicTokenizer;
 
     /// AC3: Tests TokenizerStrategyResolver initialization and basic functionality
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac3-production-tokenizer-strategy

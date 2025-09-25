@@ -259,8 +259,9 @@ impl ModelTypeDetector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use bitnet_common::ModelError;
+    #[allow(unused_imports)]
+    use super::TokenizerErrorHandler;
+    use bitnet_common::{BitNetError, ModelError};
     use std::path::PathBuf;
 
     /// AC10: Tests error handling with anyhow::Result integration

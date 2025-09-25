@@ -2,9 +2,8 @@
 //!
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac6-cross-validation-tests
 
-use bitnet_common::QuantizationType;
-use bitnet_common::Result;
-use bitnet_tokenizers::{BasicTokenizer, Tokenizer, discovery::TokenizerDiscovery};
+use bitnet_common::{QuantizationType, Result};
+use bitnet_tokenizers::{BasicTokenizer, Tokenizer, TokenizerDiscovery};
 use std::path::Path;
 use std::sync::Arc;
 
