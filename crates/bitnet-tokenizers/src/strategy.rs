@@ -691,7 +691,8 @@ mod tests {
     #[test]
     #[cfg(feature = "cpu")]
     fn test_llama_tokenizer_wrapper() {
-        let base_tokenizer = Arc::new(BasicTokenizer::with_config(32000, Some(1), Some(2), None));
+        let base_tokenizer =
+            Arc::new(crate::BasicTokenizer::with_config(32000, Some(1), Some(2), None));
 
         let wrapper_result = LlamaTokenizerWrapper::new(base_tokenizer, 32000);
         assert!(wrapper_result.is_ok(), "LlamaTokenizerWrapper should initialize successfully");
@@ -713,7 +714,8 @@ mod tests {
     #[test]
     #[cfg(feature = "cpu")]
     fn test_gpt2_tokenizer_wrapper() {
-        let base_tokenizer = Arc::new(BasicTokenizer::with_config(50257, None, Some(50256), None));
+        let base_tokenizer =
+            Arc::new(crate::BasicTokenizer::with_config(50257, None, Some(50256), None));
 
         let wrapper_result = Gpt2TokenizerWrapper::new(base_tokenizer);
         assert!(wrapper_result.is_ok(), "Gpt2TokenizerWrapper should initialize successfully");
@@ -730,7 +732,7 @@ mod tests {
     #[test]
     #[cfg(feature = "cpu")]
     fn test_bitnet_tokenizer_wrapper() {
-        let base_tokenizer = Arc::new(BasicTokenizer::new());
+        let base_tokenizer = Arc::new(crate::BasicTokenizer::new());
 
         let wrapper_result = BitNetTokenizerWrapper::new(base_tokenizer, QuantizationType::I2S);
         assert!(wrapper_result.is_ok(), "BitNetTokenizerWrapper should initialize successfully");
@@ -1065,7 +1067,7 @@ mod tests {
     #[cfg(feature = "cpu")]
     fn test_special_token_handling_edge_cases() {
         let base_tokenizer =
-            Arc::new(BasicTokenizer::with_config(32000, Some(1), Some(2), Some(0)));
+            Arc::new(crate::BasicTokenizer::with_config(32000, Some(1), Some(2), Some(0)));
 
         // Test LLaMA wrapper with edge case tokens
         let llama_wrapper = LlamaTokenizerWrapper::new(base_tokenizer.clone(), 32000)
@@ -1090,8 +1092,12 @@ mod tests {
         }
 
         // Test LLaMA-3 special token boundaries
-        let llama3_base =
-            Arc::new(BasicTokenizer::with_config(128256, Some(128000), Some(128001), Some(128002)));
+        let llama3_base = Arc::new(crate::BasicTokenizer::with_config(
+            128256,
+            Some(128000),
+            Some(128001),
+            Some(128002),
+        ));
         let llama3_wrapper = LlamaTokenizerWrapper::new(llama3_base, 128256)
             .expect("LLaMA-3 wrapper should initialize");
 
@@ -1121,24 +1127,24 @@ mod tests {
         // Test mismatched vocabulary sizes
         let mismatched_test_cases = [
             (
-                BasicTokenizer::with_config(1000, Some(1), Some(2), None),
+                crate::BasicTokenizer::with_config(1000, Some(1), Some(2), None),
                 32000,
                 "Small tokenizer with large expected vocab",
             ),
             (
-                BasicTokenizer::with_config(50000, Some(1), Some(2), None),
+                crate::BasicTokenizer::with_config(50000, Some(1), Some(2), None),
                 32000,
                 "Large tokenizer with small expected vocab",
             ),
             (
-                BasicTokenizer::with_config(32000, Some(1), Some(2), None),
+                crate::BasicTokenizer::with_config(32000, Some(1), Some(2), None),
                 128256,
                 "LLaMA-2 tokenizer with LLaMA-3 expected size",
             ),
         ];
 
         for (base_tokenizer, expected_vocab, description) in mismatched_test_cases {
-            let base_arc = Arc::new(base_tokenizer);
+            let base_arc: Arc<dyn Tokenizer> = Arc::new(base_tokenizer);
             let actual_vocab = base_arc.vocab_size();
 
             // LLaMA wrapper should still initialize but may warn about mismatch
@@ -1175,7 +1181,8 @@ mod tests {
         use tokio::task;
 
         // Test concurrent access to tokenizer wrappers
-        let base_tokenizer = Arc::new(BasicTokenizer::with_config(32000, Some(1), Some(2), None));
+        let base_tokenizer =
+            Arc::new(crate::BasicTokenizer::with_config(32000, Some(1), Some(2), None));
 
         // Create multiple wrapper types concurrently
         let mut handles = vec![];
@@ -1332,7 +1339,8 @@ mod tests {
     #[cfg(feature = "cpu")]
     fn test_memory_pressure_tokenizer_creation() {
         // Test creating many tokenizer wrappers to simulate memory pressure
-        let base_tokenizer = Arc::new(BasicTokenizer::with_config(128256, Some(1), Some(2), None)); // Large vocab
+        let base_tokenizer =
+            Arc::new(crate::BasicTokenizer::with_config(128256, Some(1), Some(2), None)); // Large vocab
 
         let mut wrappers = vec![];
         let num_wrappers = 100;
@@ -1348,8 +1356,12 @@ mod tests {
                 }
                 1 => {
                     // GPT-2 wrapper (with mismatched vocab for stress test)
-                    let gpt2_base =
-                        Arc::new(BasicTokenizer::with_config(50257, None, Some(50256), None));
+                    let gpt2_base = Arc::new(crate::BasicTokenizer::with_config(
+                        50257,
+                        None,
+                        Some(50256),
+                        None,
+                    ));
                     let wrapper_result = Gpt2TokenizerWrapper::new(gpt2_base);
                     assert!(wrapper_result.is_ok(), "GPT-2 wrapper {} should succeed", i);
                     wrappers.push(Box::new(wrapper_result.unwrap()) as Box<dyn Tokenizer>);
@@ -1387,7 +1399,8 @@ mod tests {
     fn test_quantization_invalid_token_validation() {
         use bitnet_common::QuantizationType;
 
-        let base_tokenizer = Arc::new(BasicTokenizer::with_config(32000, Some(1), Some(2), None));
+        let base_tokenizer =
+            Arc::new(crate::BasicTokenizer::with_config(32000, Some(1), Some(2), None));
         let bitnet_wrapper = BitNetTokenizerWrapper::new(base_tokenizer, QuantizationType::I2S)
             .expect("BitNet wrapper should initialize");
 

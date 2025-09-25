@@ -520,7 +520,9 @@ mod tests {
     fn test_tokenizer_resolution_variants() {
         let resolutions = [
             TokenizerResolution::File(PathBuf::from("test.json")),
-            TokenizerResolution::Embedded(Arc::new(BasicTokenizer::new()) as Arc<dyn Tokenizer>),
+            TokenizerResolution::Embedded(
+                Arc::new(crate::BasicTokenizer::new()) as Arc<dyn Tokenizer>
+            ),
             TokenizerResolution::Mock(MockTokenizer::new()),
         ];
 

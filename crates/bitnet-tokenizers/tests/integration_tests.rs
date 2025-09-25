@@ -2,7 +2,11 @@
 //!
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac7-integration-tests
 
-use bitnet_tokenizers::{Tokenizer, download};
+use bitnet_tokenizers::{
+    BasicTokenizer, BitNetTokenizerWrapper, LlamaTokenizerWrapper, Tokenizer,
+    TokenizerDiscovery, TokenizerStrategy, SmartTokenizerDownload,
+    strategy::Gpt2TokenizerWrapper,
+};
 use std::sync::Arc;
 
 /// AC7: End-to-end tokenizer discovery integration test
@@ -61,7 +65,7 @@ async fn test_complete_pipeline_failure_recovery() {
     model_file.write_all(&[0u8; 100]).expect("Failed to write padding"); // Incomplete metadata
 
     // Test discovery handles corrupted model gracefully
-    let discovery_result = discovery::TokenizerDiscovery::from_gguf(&corrupted_model);
+    let discovery_result = TokenizerDiscovery::from_gguf(&corrupted_model);
     match discovery_result {
         Ok(_) => println!("Corrupted model was somehow valid"),
         Err(err) => {
@@ -72,7 +76,7 @@ async fn test_complete_pipeline_failure_recovery() {
     }
 
     // Scenario 2: Network failure during download with cache fallback
-    let download_info = discovery::TokenizerDownloadInfo {
+    let download_info = bitnet_tokenizers::discovery::TokenizerDownloadInfo {
         repo: "nonexistent/test-model".to_string(),
         files: vec!["tokenizer.json".to_string()],
         cache_key: "integration-test".to_string(),
@@ -80,7 +84,7 @@ async fn test_complete_pipeline_failure_recovery() {
     };
 
     let downloader =
-        download::SmartTokenizerDownload::with_cache_dir(temp_dir.path().to_path_buf())
+        SmartTokenizerDownload::with_cache_dir(temp_dir.path().to_path_buf())
             .expect("Failed to create downloader");
 
     // Pre-populate cache to test fallback
@@ -127,8 +131,7 @@ async fn test_large_vocabulary_stress_scenarios() {
 
         // Test wrapper creation with large vocabulary
         let wrapper_start = Instant::now();
-        let wrapper_result =
-            strategy::LlamaTokenizerWrapper::new(large_tokenizer.clone(), vocab_size);
+        let wrapper_result = LlamaTokenizerWrapper::new(large_tokenizer.clone(), vocab_size);
         let wrapper_time = wrapper_start.elapsed();
 
         assert!(wrapper_result.is_ok(), "{}: wrapper should handle large vocabulary", description);
@@ -202,8 +205,7 @@ async fn test_concurrent_resource_contention() {
             match i % 4 {
                 0 => {
                     // Tokenizer wrapper creation and encoding
-                    let wrapper_result =
-                        strategy::LlamaTokenizerWrapper::new(tokenizer_clone, 32000);
+                    let wrapper_result = LlamaTokenizerWrapper::new(tokenizer_clone, 32000);
                     assert!(
                         wrapper_result.is_ok(),
                         "Concurrent wrapper creation {} should succeed",
@@ -218,7 +220,7 @@ async fn test_concurrent_resource_contention() {
                 1 => {
                     // Cache access and validation
                     let downloader =
-                        download::SmartTokenizerDownload::with_cache_dir(cache_dir_clone)
+                        SmartTokenizerDownload::with_cache_dir(cache_dir_clone)
                             .expect("Failed to create downloader");
 
                     let cached = downloader.find_cached_tokenizer(cache_key);
@@ -226,7 +228,7 @@ async fn test_concurrent_resource_contention() {
                 }
                 2 => {
                     // BitNet wrapper with quantization
-                    let bitnet_result = strategy::BitNetTokenizerWrapper::new(
+                    let bitnet_result = BitNetTokenizerWrapper::new(
                         tokenizer_clone,
                         bitnet_common::QuantizationType::I2S,
                     );
@@ -240,7 +242,7 @@ async fn test_concurrent_resource_contention() {
                     // GPT-2 wrapper creation
                     let gpt2_tokenizer =
                         Arc::new(BasicTokenizer::with_config(50257, None, Some(50256), None));
-                    let gpt2_result = strategy::Gpt2TokenizerWrapper::new(gpt2_tokenizer);
+                    let gpt2_result = Gpt2TokenizerWrapper::new(gpt2_tokenizer);
                     assert!(gpt2_result.is_ok(), "Concurrent GPT-2 wrapper {} should succeed", i);
                 }
                 _ => unreachable!(),
@@ -303,7 +305,7 @@ async fn test_end_to_end_multiple_failure_points() {
     model_file.write_all(b"GGUF\x03\x00\x00\x00").expect("Failed to write header");
     model_file.write_all(&[0u8; 50]).expect("Failed to write minimal metadata");
 
-    match discovery::TokenizerDiscovery::from_gguf(&model_path) {
+    match TokenizerDiscovery::from_gguf(&model_path) {
         Ok(_) => successful_stages.push(workflow_stages[0]),
         Err(_) => failed_stages.push(workflow_stages[0].to_string()),
     }
@@ -610,23 +612,21 @@ async fn test_memory_efficiency_and_cleanup() {
         for i in 0..10 {
             match i % 3 {
                 0 => {
-                    if let Ok(wrapper) =
-                        strategy::LlamaTokenizerWrapper::new(tokenizer.clone(), vocab_size)
-                    {
+                    if let Ok(wrapper) = LlamaTokenizerWrapper::new(tokenizer.clone(), vocab_size) {
                         wrappers.push(Box::new(wrapper));
                     }
                 }
                 1 => {
                     if vocab_size == 50257 {
                         // GPT-2 specific
-                        if let Ok(wrapper) = strategy::Gpt2TokenizerWrapper::new(tokenizer.clone())
+                        if let Ok(wrapper) = Gpt2TokenizerWrapper::new(tokenizer.clone())
                         {
                             wrappers.push(Box::new(wrapper));
                         }
                     }
                 }
                 2 => {
-                    if let Ok(wrapper) = strategy::BitNetTokenizerWrapper::new(
+                    if let Ok(wrapper) = BitNetTokenizerWrapper::new(
                         tokenizer.clone(),
                         bitnet_common::QuantizationType::I2S,
                     ) {
@@ -731,13 +731,13 @@ async fn test_error_recovery_graceful_degradation() {
 
                 // Test downloader handles corruption gracefully
                 let downloader =
-                    download::SmartTokenizerDownload::with_cache_dir(cache_dir.clone())
+                    SmartTokenizerDownload::with_cache_dir(cache_dir.clone())
                         .expect("Downloader should initialize despite corrupted cache");
 
                 let found = downloader.find_cached_tokenizer("corrupted_test");
                 // Should find file but validation should fail
                 if let Some(found_path) = found {
-                    let validation_info = discovery::TokenizerDownloadInfo {
+                    let validation_info = bitnet_tokenizers::discovery::TokenizerDownloadInfo {
                         repo: "test/repo".to_string(),
                         files: vec!["tokenizer.json".to_string()],
                         cache_key: "test".to_string(),
@@ -778,7 +778,7 @@ async fn test_error_recovery_graceful_degradation() {
                 file.write_all(b"NOT_GGUF_HEADER").expect("Failed to write invalid header");
 
                 // Test discovery fails gracefully
-                let discovery_result = discovery::TokenizerDiscovery::from_gguf(&invalid_model);
+                let discovery_result = TokenizerDiscovery::from_gguf(&invalid_model);
                 assert!(discovery_result.is_err(), "Should reject invalid model");
 
                 // Test fallback chain would continue to next strategy
@@ -792,7 +792,7 @@ async fn test_error_recovery_graceful_degradation() {
                     Arc::new(BasicTokenizer::with_config(500000, Some(1), Some(2), None));
 
                 // Test that large tokenizer still works but may be slower
-                let wrapper_result = strategy::LlamaTokenizerWrapper::new(large_tokenizer, 500000);
+                let wrapper_result = LlamaTokenizerWrapper::new(large_tokenizer, 500000);
                 assert!(wrapper_result.is_ok(), "Should handle large vocabulary");
 
                 let wrapper = wrapper_result.unwrap();
@@ -808,7 +808,7 @@ async fn test_error_recovery_graceful_degradation() {
                 // Multiple downloaders accessing same cache
                 let downloaders: Vec<_> = (0..3)
                     .map(|_| {
-                        download::SmartTokenizerDownload::with_cache_dir(shared_cache.clone())
+                        SmartTokenizerDownload::with_cache_dir(shared_cache.clone())
                             .expect("Failed to create downloader")
                     })
                     .collect();
