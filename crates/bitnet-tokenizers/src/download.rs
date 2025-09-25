@@ -68,7 +68,11 @@ impl SmartTokenizerDownload {
     /// * `Err(BitNetError::Model)` - Download failed or network error
     ///
     /// # Example
-    /// ```rust
+    /// ```rust,no_run
+    /// use bitnet_tokenizers::{TokenizerDownloadInfo, SmartTokenizerDownload};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let downloader = SmartTokenizerDownload::new()?;
     /// let info = TokenizerDownloadInfo {
     ///     repo: "meta-llama/Llama-2-7b-hf".to_string(),
     ///     files: vec!["tokenizer.json".to_string()],
@@ -76,6 +80,8 @@ impl SmartTokenizerDownload {
     ///     expected_vocab: Some(32000),
     /// };
     /// let tokenizer_path = downloader.download_tokenizer(&info).await?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub async fn download_tokenizer(&self, info: &TokenizerDownloadInfo) -> Result<PathBuf> {
         info!("Downloading tokenizer for repo: {}", info.repo);
@@ -1151,7 +1157,11 @@ mod tests {
 
         // Test 1: Verify offline mode is set
         // Check environment variable directly to ensure it's set
-        assert_eq!(std::env::var("BITNET_OFFLINE").unwrap_or_default(), "1", "BITNET_OFFLINE should be set to 1");
+        assert_eq!(
+            std::env::var("BITNET_OFFLINE").unwrap_or_default(),
+            "1",
+            "BITNET_OFFLINE should be set to 1"
+        );
         assert!(SmartTokenizerDownload::is_offline_mode(), "Should detect offline mode");
 
         let no_cache_result = downloader.find_cached_tokenizer(&test_info.cache_key);

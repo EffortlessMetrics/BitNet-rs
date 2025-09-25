@@ -4,7 +4,7 @@
 
 use bitnet_common::QuantizationType;
 use bitnet_common::Result;
-use bitnet_tokenizers::{discovery::TokenizerDiscovery, Tokenizer, BasicTokenizer};
+use bitnet_tokenizers::{BasicTokenizer, Tokenizer, discovery::TokenizerDiscovery};
 use std::path::Path;
 use std::sync::Arc;
 

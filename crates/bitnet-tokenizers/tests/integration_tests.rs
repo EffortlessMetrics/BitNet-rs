@@ -344,29 +344,37 @@ async fn test_end_to_end_multiple_failure_points() {
     type WrapperFactory = Box<dyn Fn() -> WrapperResult>;
 
     let wrapper_tests: Vec<(&str, WrapperFactory)> = vec![
-        ("LLaMA wrapper", Box::new({
-            let test_tokenizer = test_tokenizer.clone();
-            move || {
-                LlamaTokenizerWrapper::new(test_tokenizer.clone(), 32000)
+        (
+            "LLaMA wrapper",
+            Box::new({
+                let test_tokenizer = test_tokenizer.clone();
+                move || {
+                    LlamaTokenizerWrapper::new(test_tokenizer.clone(), 32000)
+                        .map(|w| Box::new(w) as Box<dyn Tokenizer>)
+                }
+            }),
+        ),
+        (
+            "GPT-2 wrapper",
+            Box::new(|| {
+                let gpt2_tokenizer =
+                    Arc::new(BasicTokenizer::with_config(50257, None, Some(50256), None));
+                Gpt2TokenizerWrapper::new(gpt2_tokenizer).map(|w| Box::new(w) as Box<dyn Tokenizer>)
+            }),
+        ),
+        (
+            "BitNet wrapper",
+            Box::new({
+                let test_tokenizer = test_tokenizer.clone();
+                move || {
+                    BitNetTokenizerWrapper::new(
+                        test_tokenizer.clone(),
+                        bitnet_common::QuantizationType::I2S,
+                    )
                     .map(|w| Box::new(w) as Box<dyn Tokenizer>)
-            }
-        })),
-        ("GPT-2 wrapper", Box::new(|| {
-            let gpt2_tokenizer =
-                Arc::new(BasicTokenizer::with_config(50257, None, Some(50256), None));
-            Gpt2TokenizerWrapper::new(gpt2_tokenizer)
-                .map(|w| Box::new(w) as Box<dyn Tokenizer>)
-        })),
-        ("BitNet wrapper", Box::new({
-            let test_tokenizer = test_tokenizer.clone();
-            move || {
-                BitNetTokenizerWrapper::new(
-                    test_tokenizer.clone(),
-                    bitnet_common::QuantizationType::I2S,
-                )
-                .map(|w| Box::new(w) as Box<dyn Tokenizer>)
-            }
-        })),
+                }
+            }),
+        ),
     ];
 
     let mut successful_wrappers = vec![];
@@ -419,7 +427,8 @@ async fn test_end_to_end_multiple_failure_points() {
     use std::time::Instant;
 
     if let Some((_wrapper_name, _)) = successful_wrappers.first()
-        && let Some(wrapper) = successful_wrappers.first().map(|(_, w)| w) {
+        && let Some(wrapper) = successful_wrappers.first().map(|(_, w)| w)
+    {
         let perf_start = Instant::now();
         let mut total_tokens = 0;
 

@@ -147,6 +147,9 @@ impl From<BitNetError> for BitNetCError {
             BitNetError::Configuration(config_error) => {
                 BitNetCError::InvalidArgument(format!("Configuration error: {}", config_error))
             }
+            BitNetError::Security(security_error) => {
+                BitNetCError::InvalidArgument(format!("Security error: {}", security_error))
+            }
         }
     }
 }
