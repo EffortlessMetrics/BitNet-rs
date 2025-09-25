@@ -110,8 +110,10 @@ Generative-only Notes
 - If `impl = security` and issue is not security-critical → set `skipped (generative flow)`.
 - If `impl = benchmarks` → record baseline only; do **not** set `perf`.
 - For feature verification → run **curated smoke** (≤3 combos: `cpu`, `gpu`, `none`) and set `impl = features`.
-- For quantization gates → validate against C++ reference when available.
-- For inference gates → test with mock models or downloaded test models.
+- For quantization gates → validate against C++ reference when available using `cargo run -p xtask -- crossval`.
+- For inference gates → test with mock models or downloaded test models via `cargo run -p xtask -- download-model`.
+- Use `cargo run -p xtask -- verify --model <path>` for GGUF compatibility validation.
+- For GPU implementations → test with `cargo test --no-default-features --features gpu` and ensure CPU fallback.
 
 Routing
 - On success: **FINALIZE → code-reviewer**.

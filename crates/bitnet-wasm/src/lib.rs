@@ -31,10 +31,10 @@ pub fn init_logger() {
     wasm_logger::init(wasm_logger::Config::default());
 }
 
-// Memory allocator optimization for WebAssembly
+// Memory allocator optimization for WebAssembly - using dlmalloc as maintained alternative
 #[cfg(feature = "browser")]
 #[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+static ALLOC: dlmalloc::GlobalDlmalloc = dlmalloc::GlobalDlmalloc;
 
 // For now, comment out modules that have compilation issues on wasm32
 // These will need to be fixed properly in a future PR

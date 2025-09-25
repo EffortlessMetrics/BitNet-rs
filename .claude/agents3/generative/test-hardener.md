@@ -33,8 +33,10 @@ Commands (BitNet.rs-specific; feature-aware)
 
 Generative-only Notes
 - If `mutation` and issue is not performance-critical → set `pass` (establish baseline; heavy mutation testing in later flows).
-- For quantization gates → validate against C++ reference when available.
-- For inference gates → test with mock models or downloaded test models.
+- For quantization gates → validate against C++ reference when available using `cargo run -p xtask -- crossval`.
+- For inference gates → test with mock models or downloaded test models via `cargo run -p xtask -- download-model`.
+- Use `cargo run -p xtask -- verify --model <path>` for GGUF compatibility test enhancement.
+- For GPU test hardening → ensure both `cargo test --no-default-features --features gpu` and CPU fallback work.
 
 Routing
 - On success: **FINALIZE → quality-finalizer**.

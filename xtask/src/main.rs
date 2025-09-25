@@ -1346,7 +1346,7 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
     }
 
     // Setup progress bar (hide if not a TTY or if --no-progress)
-    let pb = if !no_progress && atty::is(atty::Stream::Stderr) {
+    let pb = if !no_progress && isatty::stderr_isatty() {
         if let Some(total) = size {
             let pb = ProgressBar::new(total);
             pb.set_style(
@@ -1786,7 +1786,7 @@ fn auto_detect_baseline(device: &str, category: &str) -> Result<PathBuf> {
         #[cfg(feature = "gpu")]
         {
             use bitnet_kernels::gpu_utils::get_gpu_info;
-            if get_gpu_info().is_ok() { "gpu" } else { "cpu" }
+            if get_gpu_info().any_available() { "gpu" } else { "cpu" }
         }
         #[cfg(not(feature = "gpu"))]
         "cpu"

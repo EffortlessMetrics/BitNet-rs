@@ -119,8 +119,10 @@ Commands (BitNet.rs-specific; feature-aware)
 
 Generative-only Notes
 - For PR preparation → validate feature smoke (≤3 combos: `cpu`, `gpu`, `none`) and set `prep = pass`.
-- For quantization validation → run cross-validation against C++ reference when available.
+- For quantization validation → run cross-validation against C++ reference when available using `cargo run -p xtask -- crossval`.
 - For GPU features → ensure proper CPU fallback mechanisms are tested.
+- Use `cargo run -p xtask -- verify --model <path>` for GGUF compatibility validation during preparation.
+- Validate comprehensive test suite with `./scripts/verify-tests.sh` before PR preparation completion.
 
 Routing
 - On success: **FINALIZE → pr-publisher**.

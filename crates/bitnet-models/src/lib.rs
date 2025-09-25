@@ -7,6 +7,7 @@ pub mod gguf_parity;
 pub mod gguf_simple;
 pub mod loader;
 pub mod minimal;
+pub mod production_loader;
 pub mod quant;
 pub mod security;
 pub mod transformer;
@@ -18,6 +19,7 @@ mod transformer_tests;
 pub use bitnet::*;
 pub use gguf_simple::load_gguf;
 pub use loader::*;
+pub use production_loader::*;
 
 // Export GGUF reader for tokenizer loading
 pub use formats::gguf::GgufReader;

@@ -35,6 +35,8 @@ Generative-only Notes
 - For documentation gates → validate against CLAUDE.md standards and BitNet.rs-specific patterns.
 - Check neural network architecture docs in `docs/explanation/` and API contracts in `docs/reference/`.
 - Validate quantization documentation, GPU/CPU feature documentation, and WASM compatibility guides.
+- For quantization docs → validate against C++ reference when available using `cargo run -p xtask -- crossval`.
+- For model compatibility docs → use `cargo run -p xtask -- verify --model <path>` for GGUF validation examples.
 
 Routing
 - On success: **FINALIZE → pub-finalizer**.

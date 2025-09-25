@@ -75,8 +75,10 @@ Commands (BitNet.rs-specific; feature-aware)
 
 Generative-only Notes
 - For code quality gates → run **format and clippy validation** and set `generative:gate:clippy`.
-- Validate against C++ reference when refactoring quantization code.
-- For neural network gates → test with mock models or downloaded test models.
+- Validate against C++ reference when refactoring quantization code using `cargo run -p xtask -- crossval`.
+- For neural network gates → test with mock models or downloaded test models via xtask.
+- Use `cargo fmt --all --check` and `cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings`.
+- For GPU refactoring → ensure both `cargo test --no-default-features --features gpu` and CPU fallback work.
 
 Routing
 - On success: **FINALIZE → test-hardener**.

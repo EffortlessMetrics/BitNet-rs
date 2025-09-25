@@ -32,6 +32,9 @@ Commands (BitNet.rs-specific; feature-aware)
 Generative-only Notes
 - For documentation gates → validate doctests with `cargo test --doc --workspace --no-default-features --features cpu|gpu`.
 - Ensure all code examples in documentation are testable and accurate.
+- For quantization documentation → validate against C++ reference when available using `cargo run -p xtask -- crossval`.
+- For model compatibility documentation → use `cargo run -p xtask -- verify --model <path>` for GGUF examples.
+- Include GPU/CPU feature-gated documentation examples with proper fallback patterns.
 
 Routing
 - On success: **FINALIZE → docs-finalizer**.

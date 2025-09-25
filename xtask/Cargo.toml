@@ -16,7 +16,7 @@ dirs = "6.0.0"
 walkdir = "2.5.0"
 ctrlc = "3.5.0"
 fs2 = "0.4.3"
-atty = "0.2.14"
+isatty = "0.1.9"
 serde = { version = "1.0.225", features = ["derive"] }
 serde_json = "1.0.145"
 toml = "0.8.15"

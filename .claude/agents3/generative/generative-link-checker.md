@@ -34,6 +34,8 @@ Generative-only Notes
 - Check cross-references to BitNet.rs workspace crates and quantization documentation.
 - Validate GGUF documentation links and model format references.
 - Ensure GPU/CPU feature documentation accuracy and compatibility notes.
+- For quantization documentation links → validate against C++ reference when available using `cargo run -p xtask -- crossval`.
+- For model compatibility documentation links → use `cargo run -p xtask -- verify --model <path>` for GGUF validation.
 
 Routing
 - On success: **FINALIZE → docs-finalizer**.

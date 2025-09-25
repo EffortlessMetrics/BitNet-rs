@@ -13,6 +13,7 @@ static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 ///
 /// # Example
 /// ```rust
+/// use bitnet_tests::common::env::env_guard;
 /// fn my_env_test() {
 ///     let _g = env_guard();
 ///     unsafe { std::env::set_var("BITNET_NO_NETWORK", "true"); }

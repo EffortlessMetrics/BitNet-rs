@@ -17,8 +17,46 @@ You are the orchestrator for the Draft → Ready PR validation flow. Your job: i
   - summarize as `method:<primary|alt1|alt2>; result:<numbers/paths>; reason:<short>`,
   - note the condition in the Hop log,
   - continue to the next verifier instead of blocking.
-- Agents may self-retry **up to 2 times** on transient/tooling issues; then route forward with receipts.
-- If two consecutive passes do not improve signal (fewer failures, higher scores, cleaner receipts), summarize and route forward.
+- Agents may self-iterate as needed with clear evidence of progress; orchestrator handles natural stopping based on diminishing returns.
+- If iterations show diminishing returns or no improvement in signal, provide evidence and route forward.
+
+## Gate Evolution & Flow Transitions
+
+**Review Flow Position:** Draft PR → Ready PR (inherits from Generative, feeds to Integrative)
+
+**Gate Evolution Across Flows:**
+| Flow | Benchmarks | Performance | Purpose |
+|------|------------|-------------|---------|
+| Generative | `benchmarks` (establish baseline) | - | Create implementation foundation |
+| **Review** | Inherit baseline | `perf` (validate deltas) | Validate quality & readiness |
+| Integrative | Inherit metrics | `throughput` (SLO validation) | Validate production readiness |
+
+**Flow Transition Criteria:**
+- **From Generative:** Implementation complete with basic validation, benchmarks established
+- **To Integrative:** All quality gates pass, performance deltas acceptable, ready for production validation
+
+**Evidence Inheritance:**
+- Review inherits Generative benchmarks as performance baseline
+- Review validates performance deltas vs established baseline
+- Integrative inherits Review performance metrics for SLO validation
+
+## BitNet.rs Neural Network Validation
+
+**Required BitNet.rs Context for All Agents:**
+- **Quantization Accuracy:** I2S, TL1, TL2 ≥ 99% accuracy vs FP32 reference
+- **Cross-Validation:** `cargo run -p xtask -- crossval` - Rust vs C++ parity within 1e-5 tolerance
+- **Feature Compatibility:** `--no-default-features --features cpu|gpu` validation with fallback testing
+- **GGUF Format:** Model compatibility and tensor alignment validation
+- **Performance SLO:** Neural network inference ≤ 10 seconds for standard models
+- **Build Commands:** Always specify feature flags (default features are empty)
+
+**Evidence Format Standards:**
+```
+tests: cargo test: 412/412 pass; CPU: 280/280, GPU: 132/132
+quantization: I2S: 99.8%, TL1: 99.6%, TL2: 99.7% accuracy
+crossval: Rust vs C++: parity within 1e-5; 156/156 tests pass
+perf: inference: 45.2 tokens/sec; Δ vs baseline: +12%
+```
 
 ## GitHub-Native Receipts (NO ceremony)
 
@@ -341,8 +379,8 @@ Consider "progress" when these improve:
 
 - **ONE writer at a time** (serialize agents that modify files)
 - **Read-only parallelism** only when guaranteed safe
-- **Bounded retries** (typically 2-3 attempts max per agent)
-- **Fix-forward** within clear authority boundaries
+- **Natural iteration** with evidence of progress; orchestrator manages stopping
+- **Review and rework authority** for comprehensive fix-forward, cleanup, and improvement within this review flow iteration
 
 ## Success Criteria
 

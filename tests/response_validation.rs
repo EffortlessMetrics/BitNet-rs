@@ -239,6 +239,7 @@ async fn test_mock_model_correctness() -> Result<()> {
             _input: &ConcreteTensor,
             _cache: &mut dyn std::any::Any,
         ) -> Result<ConcreteTensor, BitNetError> {
+            // Simple mock forward pass - return fixed dimensions
             Ok(ConcreteTensor::mock(vec![1, 1, self.config.model.hidden_size]))
         }
 

@@ -50,6 +50,8 @@ gpu-tests = []
 # Run tests that require complete kernels/weights:
 full-engine = []
 integration-tests = []
+inference = []
+crossval = []
 
 [[test]]
 name = "comprehensive_tests"

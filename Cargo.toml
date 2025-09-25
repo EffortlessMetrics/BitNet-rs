@@ -18,6 +18,7 @@ members = [
   "crossval",
   "tests",
   "xtask",
+  "fuzz",
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,

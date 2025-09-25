@@ -1,6 +1,7 @@
 [package]
 description = "Comprehensive testing framework for BitNet.rs"
 edition = "2024"
+license = "MIT OR Apache-2.0"
 name = "bitnet-tests"
 version = "0.1.0"
 
@@ -11,7 +12,7 @@ path = "lib.rs"
 [features]
 # Keep integration OFF by default to unblock builds/tests focused on crossval
 default = ["reporting", "fixtures", "trend"]
-full-framework = ["reporting", "fixtures", "trend"]
+full-framework = ["reporting", "fixtures", "trend", "inference", "quantization"]
 reporting = []
 fixtures = []
 trend = []
@@ -21,6 +22,10 @@ cpp = []
 # New: gate the integration suite
 integration-tests = []
 cpp-ffi = []
+# Real model testing features
+inference = ["bitnet-inference/cpu"]
+quantization = []
+gpu = ["bitnet-kernels/gpu", "bitnet-quantization/gpu"]
 
 [[bin]]
 name = "validate_config"
@@ -165,9 +170,14 @@ filetime = "0.2.26"
 bitnet-common = { path = "../crates/bitnet-common" }
 bitnet-inference = { path = "../crates/bitnet-inference", default-features = false, features = ["cpu", "rt-tokio"] }
 bitnet-models = { path = "../crates/bitnet-models" }
+bitnet-quantization = { path = "../crates/bitnet-quantization" }
+bitnet-kernels = { path = "../crates/bitnet-kernels" }
 bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
 bitnet-compat = { path = "../crates/bitnet-compat" }
 bitnet = { path = "../", default-features = false, features = ["cpu"] }
+
+# Additional dependencies for fixtures
+bincode = "1.3.3"
 
 # Platform-specific dependencies
 [target.'cfg(target_os = "windows")'.dependencies]

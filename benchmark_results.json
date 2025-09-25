@@ -1,14 +1,25 @@
 {
-  "cpp": {
-    "mean": 2.445526202519735,
-    "stdev": 0.06997281002000735,
-    "min": 2.3916428089141846,
-    "max": 2.5246083736419678,
-    "iterations": 3
+  "model_path": "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf",
+  "tokenizer_path": "models/llama3-tokenizer/tokenizer.json",
+  "prompt": "BitNet neural network performance validation test",
+  "generated_text": "",
+  "tokens_generated": 128,
+  "warmup_tokens": 10,
+  "device": "cpu",
+  "vocab": 128256,
+  "version": "0.1.0",
+  "timing": {
+    "warmup_ms": 0,
+    "prefill_ms": 0,
+    "decode_ms": 0,
+    "generation_ms": 0,
+    "total_ms": 0
   },
-  "rust": null,
-  "comparison": {
-    "speedup": null,
-    "improvement_percent": null
-  }
+  "performance": {
+    "tokens_per_sec": 0.0,
+    "ms_per_token": 0.0,
+    "total_tokens_per_sec": 0.0
+  },
+  "success": false,
+  "error": "Warmup failed: Inference feature not enabled. Build with `--features inference` for real inference, or use `--allow-mock` for testing.\nThis model expects the **LLaMA-3 tokenizer (128,256)**"
 }

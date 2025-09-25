@@ -34,6 +34,22 @@ pub enum ModelError {
     LoadingFailed { reason: String },
     #[error("Unsupported model version: {version}")]
     UnsupportedVersion { version: String },
+    #[error("File I/O error for {path}: {source}")]
+    FileIOError {
+        path: std::path::PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("GGUF format error: {message}")]
+    GGUFFormatError { message: String, details: ValidationErrorDetails },
+}
+
+/// Validation error details for enhanced error reporting
+#[derive(Debug, Clone)]
+pub struct ValidationErrorDetails {
+    pub errors: Vec<String>,
+    pub warnings: Vec<String>,
+    pub recommendations: Vec<String>,
 }
 
 /// Quantization-related errors

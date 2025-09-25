@@ -1,11 +1,11 @@
 #![no_main]
 
-use libfuzzer_sys::fuzz_target;
 use arbitrary::Arbitrary;
+use libfuzzer_sys::fuzz_target;
 
 #[derive(Arbitrary, Debug)]
 struct MatMulInput {
-    m: u8,  // Use small dimensions to prevent timeout
+    m: u8, // Use small dimensions to prevent timeout
     n: u8,
     k: u8,
     a_data: Vec<i8>,
@@ -14,31 +14,31 @@ struct MatMulInput {
 
 fuzz_target!(|input: MatMulInput| {
     // Convert to reasonable dimensions
-    let m = (input.m as usize).max(1).min(32);
-    let n = (input.n as usize).max(1).min(32);
-    let k = (input.k as usize).max(1).min(32);
-    
+    let m = (input.m as usize).clamp(1, 32);
+    let n = (input.n as usize).clamp(1, 32);
+    let k = (input.k as usize).clamp(1, 32);
+
     // Ensure we have enough data
     let a_size = m * k;
     let b_size = k * n;
-    
+
     if input.a_data.len() < a_size || input.b_data.len() < b_size {
         return;
     }
-    
+
     let a = &input.a_data[..a_size];
     let b = &input.b_data[..b_size];
     let mut c = vec![0.0f32; m * n];
-    
+
     // Test fallback kernel (should never panic)
     let kernel = MockFallbackKernel;
     kernel.matmul_i2s(a, b, &mut c, m, n, k);
-    
+
     // Verify output is finite
     for value in &c {
         assert!(value.is_finite(), "Matrix multiplication produced non-finite result");
     }
-    
+
     // Test with SIMD kernels if available
     #[cfg(target_arch = "x86_64")]
     {
@@ -46,26 +46,36 @@ fuzz_target!(|input: MatMulInput| {
             let avx_kernel = MockAvxKernel;
             let mut c_avx = vec![0.0f32; m * n];
             avx_kernel.matmul_i2s(a, b, &mut c_avx, m, n, k);
-            
+
             // Results should be similar (allowing for floating point differences)
             for (fallback, avx) in c.iter().zip(c_avx.iter()) {
                 let diff = (fallback - avx).abs();
-                assert!(diff < 1e-3, "AVX and fallback results differ too much: {} vs {}", fallback, avx);
+                assert!(
+                    diff < 1e-3,
+                    "AVX and fallback results differ too much: {} vs {}",
+                    fallback,
+                    avx
+                );
             }
         }
     }
-    
+
     #[cfg(target_arch = "aarch64")]
     {
         if std::arch::is_aarch64_feature_detected!("neon") {
             let neon_kernel = MockNeonKernel;
             let mut c_neon = vec![0.0f32; m * n];
             neon_kernel.matmul_i2s(a, b, &mut c_neon, m, n, k);
-            
+
             // Results should be similar
             for (fallback, neon) in c.iter().zip(c_neon.iter()) {
                 let diff = (fallback - neon).abs();
-                assert!(diff < 1e-3, "NEON and fallback results differ too much: {} vs {}", fallback, neon);
+                assert!(
+                    diff < 1e-3,
+                    "NEON and fallback results differ too much: {} vs {}",
+                    fallback,
+                    neon
+                );
             }
         }
     }
