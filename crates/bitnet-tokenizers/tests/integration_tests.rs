@@ -3,11 +3,9 @@
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac7-integration-tests
 
 use bitnet_tokenizers::{
-    BasicTokenizer, BitNetTokenizerWrapper, LlamaTokenizerWrapper, Tokenizer,
-    TokenizerDiscovery, TokenizerStrategy, SmartTokenizerDownload,
-    strategy::Gpt2TokenizerWrapper,
+    BasicTokenizer, BitNetTokenizerWrapper, LlamaTokenizerWrapper, SmartTokenizerDownload,
+    Tokenizer, TokenizerDiscovery, TokenizerStrategy, strategy::Gpt2TokenizerWrapper,
 };
-use std::sync::Arc;
 
 /// AC7: End-to-end tokenizer discovery integration test
 /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac7-integration-tests
@@ -83,9 +81,8 @@ async fn test_complete_pipeline_failure_recovery() {
         expected_vocab: Some(32000),
     };
 
-    let downloader =
-        SmartTokenizerDownload::with_cache_dir(temp_dir.path().to_path_buf())
-            .expect("Failed to create downloader");
+    let downloader = SmartTokenizerDownload::with_cache_dir(temp_dir.path().to_path_buf())
+        .expect("Failed to create downloader");
 
     // Pre-populate cache to test fallback
     let cache_dir = temp_dir.path().join(&download_info.cache_key);
@@ -219,9 +216,8 @@ async fn test_concurrent_resource_contention() {
                 }
                 1 => {
                     // Cache access and validation
-                    let downloader =
-                        SmartTokenizerDownload::with_cache_dir(cache_dir_clone)
-                            .expect("Failed to create downloader");
+                    let downloader = SmartTokenizerDownload::with_cache_dir(cache_dir_clone)
+                        .expect("Failed to create downloader");
 
                     let cached = downloader.find_cached_tokenizer(cache_key);
                     assert!(cached.is_some(), "Concurrent cache access {} should find file", i);
@@ -619,8 +615,7 @@ async fn test_memory_efficiency_and_cleanup() {
                 1 => {
                     if vocab_size == 50257 {
                         // GPT-2 specific
-                        if let Ok(wrapper) = Gpt2TokenizerWrapper::new(tokenizer.clone())
-                        {
+                        if let Ok(wrapper) = Gpt2TokenizerWrapper::new(tokenizer.clone()) {
                             wrappers.push(Box::new(wrapper));
                         }
                     }
@@ -730,9 +725,8 @@ async fn test_error_recovery_graceful_degradation() {
                     .expect("Failed to write corrupted content");
 
                 // Test downloader handles corruption gracefully
-                let downloader =
-                    SmartTokenizerDownload::with_cache_dir(cache_dir.clone())
-                        .expect("Downloader should initialize despite corrupted cache");
+                let downloader = SmartTokenizerDownload::with_cache_dir(cache_dir.clone())
+                    .expect("Downloader should initialize despite corrupted cache");
 
                 let found = downloader.find_cached_tokenizer("corrupted_test");
                 // Should find file but validation should fail
