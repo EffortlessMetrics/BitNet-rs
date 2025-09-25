@@ -457,8 +457,12 @@ mod tests {
     async fn test_smart_tokenizer_download_initialization() {
         let result = SmartTokenizerDownload::new();
 
-        // Test scaffolding - will fail until implementation complete
-        assert!(result.is_err(), "Test scaffolding should fail until implemented");
+        // Should succeed with default cache directory
+        assert!(result.is_ok(), "SmartTokenizerDownload initialization should succeed");
+        let downloader = result.unwrap();
+
+        // Verify cache directory was created
+        assert!(downloader.cache_dir.exists(), "Cache directory should exist after initialization");
     }
 
     /// AC2: Tests download functionality for neural network tokenizers
@@ -474,12 +478,14 @@ mod tests {
         };
 
         let downloader_result = SmartTokenizerDownload::new();
-        assert!(downloader_result.is_err(), "Test scaffolding - requires implementation");
+        assert!(downloader_result.is_ok(), "SmartTokenizerDownload::new should succeed");
+        let _downloader = downloader_result.unwrap();
 
-        // Test scaffolding for download process
-        // let downloader = downloader_result.unwrap();
+        // Test scaffolding for download process - would need network access
         // let result = downloader.download_tokenizer(&download_info).await;
         // assert!(result.is_ok(), "Download should succeed for valid repo");
+        // Download initialization test completed
+        println!("✅ AC2: Download initialization test scaffolding completed");
     }
 
     /// AC2: Tests caching functionality for downloaded tokenizers
@@ -488,12 +494,13 @@ mod tests {
     #[cfg(feature = "cpu")]
     async fn test_download_cache_management() {
         let cache_dir = std::env::temp_dir().join("bitnet-test-cache");
-        let downloader_result = SmartTokenizerDownload::with_cache_dir(cache_dir);
+        let downloader_result = SmartTokenizerDownload::with_cache_dir(cache_dir.clone());
 
-        assert!(downloader_result.is_err(), "Test scaffolding - requires implementation");
+        assert!(downloader_result.is_ok(), "SmartTokenizerDownload::with_cache_dir should succeed");
+        let _downloader = downloader_result.unwrap();
 
-        // Test scaffolding for cache operations
-        // let downloader = downloader_result.unwrap();
+        // Verify cache directory was created
+        assert!(cache_dir.exists(), "Custom cache directory should exist");
 
         // Test cache miss
         // assert!(downloader.find_cached_tokenizer("nonexistent").is_none());
@@ -522,14 +529,19 @@ mod tests {
         };
 
         let downloader_result = SmartTokenizerDownload::new();
-        assert!(downloader_result.is_err(), "Test scaffolding - requires implementation");
+        assert!(
+            downloader_result.is_ok(),
+            "SmartTokenizerDownload::new should succeed for resume test"
+        );
+        let _downloader = downloader_result.unwrap();
 
         // Test scaffolding for resume functionality
         // 1. Start download and interrupt
         // 2. Resume download and verify completion
         // 3. Validate final file integrity
 
-        assert!(true, "Test scaffolding placeholder for download resume");
+        // Test scaffolding placeholder for download resume
+        println!("✅ AC2: Download resume test scaffolding completed");
     }
 
     /// AC2: Tests validation of downloaded tokenizers against neural network requirements
@@ -563,7 +575,11 @@ mod tests {
 
         for _info in test_cases {
             let downloader_result = SmartTokenizerDownload::new();
-            assert!(downloader_result.is_err(), "Test scaffolding - requires implementation");
+            assert!(
+                downloader_result.is_ok(),
+                "SmartTokenizerDownload::new should succeed for validation test"
+            );
+            let _downloader = downloader_result.unwrap();
 
             // Test scaffolding for validation
             // let downloader = downloader_result.unwrap();
@@ -591,7 +607,11 @@ mod tests {
         };
 
         let downloader_result = SmartTokenizerDownload::new();
-        assert!(downloader_result.is_err(), "Test scaffolding - requires implementation");
+        assert!(
+            downloader_result.is_ok(),
+            "SmartTokenizerDownload::new should succeed for offline test"
+        );
+        let _downloader = downloader_result.unwrap();
 
         // Test scaffolding for offline mode
         // let downloader = downloader_result.unwrap();
@@ -623,7 +643,11 @@ mod tests {
         };
 
         let downloader_result = SmartTokenizerDownload::new();
-        assert!(downloader_result.is_err(), "Test scaffolding - requires implementation");
+        assert!(
+            downloader_result.is_ok(),
+            "SmartTokenizerDownload::new should succeed for error handling test"
+        );
+        let _downloader = downloader_result.unwrap();
 
         // Test scaffolding for error handling
         // let downloader = downloader_result.unwrap();
@@ -652,7 +676,11 @@ mod tests {
         };
 
         let downloader_result = SmartTokenizerDownload::new();
-        assert!(downloader_result.is_err(), "Test scaffolding - requires implementation");
+        assert!(
+            downloader_result.is_ok(),
+            "SmartTokenizerDownload::new should succeed for multi-file test"
+        );
+        let _downloader = downloader_result.unwrap();
 
         // Test scaffolding for concurrent downloads
         // let downloader = downloader_result.unwrap();

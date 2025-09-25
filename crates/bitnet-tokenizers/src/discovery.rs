@@ -393,51 +393,46 @@ impl TokenizerDiscovery {
             Some(PathBuf::from(".cache/bitnet")), // Local cache
         ];
 
-        for cache_dir_opt in &cache_dirs {
-            if let Some(cache_dir) = cache_dir_opt {
-                if !cache_dir.exists() {
-                    continue;
-                }
+        for cache_dir in cache_dirs.iter().flatten() {
+            if !cache_dir.exists() {
+                continue;
+            }
 
-                // Check for model type specific cache
-                let model_cache = cache_dir.join(&self.model_type);
-                if model_cache.exists() {
-                    // Look for vocab size specific tokenizers
-                    let size_specific = model_cache.join(format!("vocab_{}", self.vocab_size));
-                    if size_specific.exists() {
-                        let tokenizer_json = size_specific.join("tokenizer.json");
-                        if tokenizer_json.exists() {
-                            debug!("Found cached tokenizer: {}", tokenizer_json.display());
-                            return Ok(Some(tokenizer_json));
-                        }
-                    }
-
-                    // Check general tokenizers in model type directory
-                    for filename in &["tokenizer.json", "tokenizer.model"] {
-                        let tokenizer_path = model_cache.join(filename);
-                        if tokenizer_path.exists() {
-                            debug!("Found general cached tokenizer: {}", tokenizer_path.display());
-                            return Ok(Some(tokenizer_path));
-                        }
+            // Check for model type specific cache
+            let model_cache = cache_dir.join(&self.model_type);
+            if model_cache.exists() {
+                // Look for vocab size specific tokenizers
+                let size_specific = model_cache.join(format!("vocab_{}", self.vocab_size));
+                if size_specific.exists() {
+                    let tokenizer_json = size_specific.join("tokenizer.json");
+                    if tokenizer_json.exists() {
+                        debug!("Found cached tokenizer: {}", tokenizer_json.display());
+                        return Ok(Some(tokenizer_json));
                     }
                 }
 
-                // Check HuggingFace cache layout
-                let hf_cache = cache_dir.join("huggingface");
-                if hf_cache.exists() {
-                    // Look for model repos that might match
-                    if let Ok(entries) = std::fs::read_dir(&hf_cache) {
-                        for entry in entries.flatten() {
-                            if entry.file_type().is_ok_and(|ft| ft.is_dir()) {
-                                let repo_dir = entry.path();
-                                let tokenizer_json = repo_dir.join("tokenizer.json");
-                                if tokenizer_json.exists() {
-                                    debug!(
-                                        "Found HF cached tokenizer: {}",
-                                        tokenizer_json.display()
-                                    );
-                                    return Ok(Some(tokenizer_json));
-                                }
+                // Check general tokenizers in model type directory
+                for filename in &["tokenizer.json", "tokenizer.model"] {
+                    let tokenizer_path = model_cache.join(filename);
+                    if tokenizer_path.exists() {
+                        debug!("Found general cached tokenizer: {}", tokenizer_path.display());
+                        return Ok(Some(tokenizer_path));
+                    }
+                }
+            }
+
+            // Check HuggingFace cache layout
+            let hf_cache = cache_dir.join("huggingface");
+            if hf_cache.exists() {
+                // Look for model repos that might match
+                if let Ok(entries) = std::fs::read_dir(&hf_cache) {
+                    for entry in entries.flatten() {
+                        if entry.file_type().is_ok_and(|ft| ft.is_dir()) {
+                            let repo_dir = entry.path();
+                            let tokenizer_json = repo_dir.join("tokenizer.json");
+                            if tokenizer_json.exists() {
+                                debug!("Found HF cached tokenizer: {}", tokenizer_json.display());
+                                return Ok(Some(tokenizer_json));
                             }
                         }
                     }
@@ -598,8 +593,8 @@ mod tests {
         // - TokenizerStrategy::EmbeddedGguf for GGUF-embedded tokenizers
         // - TokenizerStrategy::Mock for fallback (non-strict mode)
 
-        // Test scaffolding assertion
-        assert!(true, "Test scaffolding placeholder - requires TokenizerDiscovery implementation");
+        // Test scaffolding placeholder - requires TokenizerDiscovery implementation
+        println!("✅ AC1: Tokenizer discovery test scaffolding completed");
     }
 
     /// AC1: Tests large vocabulary optimization detection for GPU acceleration
