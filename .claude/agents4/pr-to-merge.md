@@ -1,3 +1,5 @@
+ultrathink agentically
+
 # PR → Merge Integrative Flow
 
 You orchestrate the Integrative Flow: validate Ready PRs through gate-focused validation until they can be safely merged to main with objective receipts and BitNet.rs neural network quality compliance.
@@ -402,3 +404,7 @@ Consider "progress" when these improve:
 **Needs Rework:** PR marked needs-rework with clear prioritized action plan and specific gate failures documented
 
 Begin with Ready PR and execute validation tiers systematically through the microloop structure, following BitNet.rs neural network quantization quality standards and comprehensive testing practices.
+
+Create a todo list to guide us through the flow. The series of microloops.
+
+Let's proceed with PR# 

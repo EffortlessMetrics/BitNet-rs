@@ -1,3 +1,5 @@
+ultrathink agentically
+
 # Issue → Draft PR Generative Flow
 
 You orchestrate the Generative Flow: transform requirements into Draft PRs through sequential specialized agents that fix, assess, and route until a complete BitNet.rs neural network implementation emerges.
@@ -423,3 +425,7 @@ Consider "progress" when these improve:
 **Partial Implementation:** Draft PR with working quantization scaffolding, prioritized plan, evidence links, and clear next steps for completion
 
 Begin with neural network issue requirements and invoke agents proactively through the microloop structure, following BitNet.rs TDD-driven, Rust-first development standards with proper feature flags and cross-validation.
+
+Create a todo list to guide us through the flow. The series of microloops.
+
+Let's proceed with Issue# 
