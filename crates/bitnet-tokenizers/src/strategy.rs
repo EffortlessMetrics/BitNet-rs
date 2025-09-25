@@ -528,6 +528,12 @@ pub struct TokenizerFallbackChain {
     strict_mode: bool,
 }
 
+impl Default for TokenizerFallbackChain {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TokenizerFallbackChain {
     /// Create fallback chain with environment-based configuration
     ///

@@ -265,16 +265,16 @@ impl TokenizerDiscovery {
         // Look for embedding tensor to infer vocab size
         let tensor_names = reader.tensor_names();
         for name in tensor_names {
-            if name.contains("token_embd") || name.contains("wte") || name.contains("embed") {
-                if let Some(info) = reader.get_tensor_info_by_name(name) {
-                    // Embeddings are typically [vocab_size, hidden_dim]
-                    let shape = &info.shape;
-                    if shape.len() >= 2 {
-                        let possible_vocab = std::cmp::max(shape[0], shape[1]);
-                        // Sanity check - vocab size should be reasonable
-                        if possible_vocab > 1000 && possible_vocab < 2_000_000 {
-                            return Ok(possible_vocab);
-                        }
+            if (name.contains("token_embd") || name.contains("wte") || name.contains("embed"))
+                && let Some(info) = reader.get_tensor_info_by_name(name)
+            {
+                // Embeddings are typically [vocab_size, hidden_dim]
+                let shape = &info.shape;
+                if shape.len() >= 2 {
+                    let possible_vocab = std::cmp::max(shape[0], shape[1]);
+                    // Sanity check - vocab size should be reasonable
+                    if possible_vocab > 1000 && possible_vocab < 2_000_000 {
+                        return Ok(possible_vocab);
                     }
                 }
             }
@@ -357,20 +357,20 @@ impl TokenizerDiscovery {
         }
 
         // Check for model name based tokenizer files
-        if let Some(model_name) = self.model_path.file_stem() {
-            if let Some(model_str) = model_name.to_str() {
-                let name_based_files = [
-                    format!("{}.tokenizer.json", model_str),
-                    format!("{}_tokenizer.json", model_str),
-                    format!("{}.vocab.json", model_str),
-                ];
+        if let Some(model_name) = self.model_path.file_stem()
+            && let Some(model_str) = model_name.to_str()
+        {
+            let name_based_files = [
+                format!("{}.tokenizer.json", model_str),
+                format!("{}_tokenizer.json", model_str),
+                format!("{}.vocab.json", model_str),
+            ];
 
-                for filename in &name_based_files {
-                    let tokenizer_path = model_dir.join(filename);
-                    if tokenizer_path.exists() && tokenizer_path.is_file() {
-                        debug!("Found model-specific tokenizer file: {}", tokenizer_path.display());
-                        return Ok(Some(tokenizer_path));
-                    }
+            for filename in &name_based_files {
+                let tokenizer_path = model_dir.join(filename);
+                if tokenizer_path.exists() && tokenizer_path.is_file() {
+                    debug!("Found model-specific tokenizer file: {}", tokenizer_path.display());
+                    return Ok(Some(tokenizer_path));
                 }
             }
         }
@@ -428,7 +428,7 @@ impl TokenizerDiscovery {
                     // Look for model repos that might match
                     if let Ok(entries) = std::fs::read_dir(&hf_cache) {
                         for entry in entries.flatten() {
-                            if entry.file_type().map_or(false, |ft| ft.is_dir()) {
+                            if entry.file_type().is_ok_and(|ft| ft.is_dir()) {
                                 let repo_dir = entry.path();
                                 let tokenizer_json = repo_dir.join("tokenizer.json");
                                 if tokenizer_json.exists() {
@@ -489,21 +489,21 @@ impl TokenizerDiscovery {
         }
 
         // Check for tokenizer vocab embedded in metadata
-        if let Some(vocab) = self.gguf_reader.get_string_array_metadata("tokenizer.ggml.tokens") {
-            if vocab.len() == self.vocab_size {
-                debug!("Found embedded vocabulary with {} tokens", vocab.len());
+        if let Some(vocab) = self.gguf_reader.get_string_array_metadata("tokenizer.ggml.tokens")
+            && vocab.len() == self.vocab_size
+        {
+            debug!("Found embedded vocabulary with {} tokens", vocab.len());
 
-                // Create tokenizer with embedded vocabulary
-                let basic_tokenizer = crate::BasicTokenizer::with_config(
-                    self.vocab_size,
-                    self.gguf_reader.get_u32_metadata("tokenizer.ggml.bos_token_id"),
-                    self.gguf_reader.get_u32_metadata("tokenizer.ggml.eos_token_id"),
-                    self.gguf_reader.get_u32_metadata("tokenizer.ggml.pad_token_id"),
-                );
+            // Create tokenizer with embedded vocabulary
+            let basic_tokenizer = crate::BasicTokenizer::with_config(
+                self.vocab_size,
+                self.gguf_reader.get_u32_metadata("tokenizer.ggml.bos_token_id"),
+                self.gguf_reader.get_u32_metadata("tokenizer.ggml.eos_token_id"),
+                self.gguf_reader.get_u32_metadata("tokenizer.ggml.pad_token_id"),
+            );
 
-                debug!("Created tokenizer with embedded vocabulary");
-                return Ok(Some(Arc::new(basic_tokenizer)));
-            }
+            debug!("Created tokenizer with embedded vocabulary");
+            return Ok(Some(Arc::new(basic_tokenizer)));
         }
 
         // Check for HuggingFace tokenizer.json embedded as string

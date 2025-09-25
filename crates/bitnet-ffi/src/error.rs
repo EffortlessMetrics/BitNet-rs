@@ -144,6 +144,9 @@ impl From<BitNetError> for BitNetCError {
             BitNetError::Validation(validation_error) => {
                 BitNetCError::InvalidArgument(format!("Validation error: {}", validation_error))
             }
+            BitNetError::Configuration(config_error) => {
+                BitNetCError::InvalidArgument(format!("Configuration error: {}", config_error))
+            }
         }
     }
 }

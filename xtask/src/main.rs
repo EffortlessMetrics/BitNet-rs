@@ -4215,7 +4215,7 @@ fn load_tokenizer_vocab_size(tokenizer_path: &Path) -> Result<usize> {
 
 /// Auto-discover and download tokenizer for the given model using BitNet.rs tokenizer system
 fn try_auto_discover_tokenizer(model_path: &Path) -> Result<Option<PathBuf>> {
-    use bitnet_tokenizers::{TokenizerDiscovery, TokenizerStrategy, TokenizerStrategyResolver};
+    use bitnet_tokenizers::{TokenizerDiscovery, TokenizerStrategy};
 
     println!("🔍 Auto-discovering tokenizer for: {}", model_path.display());
 

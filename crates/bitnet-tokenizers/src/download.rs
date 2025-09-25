@@ -109,9 +109,9 @@ impl SmartTokenizerDownload {
         // Download all files
         #[cfg(not(feature = "downloads"))]
         {
-            return Err(BitNetError::Config(
+            Err(BitNetError::Config(
                 "Download feature not enabled. Build with --features downloads".to_string(),
-            ));
+            ))
         }
 
         #[cfg(feature = "downloads")]
