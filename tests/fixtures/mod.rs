@@ -25,12 +25,21 @@
 // Allow warnings for test scaffolding code
 #![allow(dead_code, unused_variables, unused_imports, clippy::all)]
 
+// Existing fixture modules
 pub mod cross_validation;
 pub mod device_aware;
 pub mod error_handling;
 pub mod model_artifacts;
 pub mod performance;
 pub mod quantization;
+
+// New comprehensive fixture modules for Issue #249 tokenizer testing
+pub mod cross_validation_data;
+pub mod fixture_loader;
+pub mod network_mocks;
+pub mod quantization_test_vectors;
+pub mod simple_validation;
+pub mod tokenizer_fixtures;
 
 // Re-export common fixture types
 pub use cross_validation::CrossValidationFixtures;
@@ -39,6 +48,21 @@ pub use error_handling::ErrorHandlingFixtures;
 pub use model_artifacts::ModelFixtures;
 pub use performance::PerformanceFixtures;
 pub use quantization::QuantizationFixtures;
+
+// Re-export new tokenizer testing fixture types
+pub use cross_validation_data::{
+    CrossValidationFixtures as TokenizerCrossValidationFixtures, CrossValidationTestCase,
+};
+pub use fixture_loader::{
+    FixtureConfig, FixtureLoadResult, FixtureLoader, TestTier as FixtureTier,
+};
+pub use network_mocks::{HuggingFaceApiResponse, NetworkMockFixtures, NetworkTestScenario};
+pub use quantization_test_vectors::{
+    DeviceValidationData, MixedPrecisionTestData, QuantizationTestVector,
+};
+pub use tokenizer_fixtures::{
+    MockGgufModel, TokenizerFixtures, TokenizerTestFixture, TokenizerType,
+};
 
 use bitnet_common::{Device, Result};
 use std::env;

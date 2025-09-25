@@ -21,6 +21,8 @@ pub enum BitNetError {
     Config(String),
     #[error("Validation error: {0}")]
     Validation(String),
+    #[error("Configuration error: {0}")]
+    Configuration(String),
 }
 
 /// Model-related errors
