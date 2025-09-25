@@ -524,6 +524,7 @@ impl TokenizerDiscovery {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
     /// AC1: Tests TokenizerDiscovery GGUF metadata parsing functionality
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac1-tokenizerdiscovery-implementation
