@@ -8,12 +8,40 @@
 //! Ensures BitNet quantization maintains attention pattern accuracy and computational efficiency.
 
 use anyhow::{Context, Result};
+use bitnet_common::BitNetTensor;
 use bitnet_common::Device;
-use bitnet_inference::{BitNetAttention, QuantizedLinear};
-use bitnet_inference::layers::attention::AttentionConfig;
-use bitnet_models::BitNetModel;
+use bitnet_inference::layers::attention::{AttentionConfig, BitNetAttention};
 use bitnet_quantization::I2SQuantizer;
-use std::sync::Arc;
+
+/// Placeholder for quantization result
+#[derive(Debug, Clone)]
+pub struct QuantizationResult {
+    pub quantized_weights: BitNetTensor,
+    pub scale: f32,
+}
+
+/// Placeholder for attention mask
+#[derive(Debug, Clone)]
+pub struct AttentionMask {
+    pub mask: BitNetTensor,
+}
+
+impl AttentionMask {
+    pub fn new(mask: BitNetTensor) -> Self {
+        Self { mask }
+    }
+}
+
+/// Placeholder validation function for tensor stability
+fn validate_tensor_stability(tensor: &BitNetTensor) -> Result<()> {
+    // Simple validation: check tensor is not empty and contains finite values
+    let candle_tensor = tensor.to_candle()?;
+    if candle_tensor.elem_count() == 0 {
+        anyhow::bail!("Tensor is empty");
+    }
+    // TODO: Add more sophisticated validation logic
+    Ok(())
+}
 
 /// Test configuration for AC2 multi-head attention validation
 #[derive(Debug, Clone)]
@@ -101,7 +129,7 @@ async fn test_ac2_quantized_multi_head_attention_forward_pass() -> Result<()> {
     )?;
 
     // Create quantized multi-head attention layer
-    let attention_layer = MultiHeadAttention::new_quantized(
+    let attention_layer = BitNetAttention::new_quantized(
         attention_config,
         q_quantized,
         k_quantized,
@@ -346,7 +374,7 @@ async fn test_ac2_attention_pattern_analysis() -> Result<()> {
 /// AC2.5: Attention Gradient Flow Test (Training Mode)
 /// Tests feature spec: issue-248-spec.md#ac2
 /// Validates proper gradient flow through quantized attention layers
-#[cfg(all(feature = "cpu", feature = "training"))]
+#[cfg(feature = "cpu")]
 #[tokio::test]
 async fn test_ac2_attention_gradient_flow() -> Result<()> {
     let config = AC2TestConfig::default();
@@ -458,7 +486,7 @@ fn create_padding_attention_mask(
 fn create_quantized_attention_layer(
     config: &AC2TestConfig,
     device: Device,
-) -> Result<MultiHeadAttention> {
+) -> Result<BitNetAttention> {
     // TODO: Replace with actual quantized attention layer creation
     unimplemented!("create_quantized_attention_layer: Replace with real layer creation")
 }

@@ -392,7 +392,11 @@ async fn test_ac1_cross_platform_quantized_linear_consistency() -> Result<()> {
 // Helper functions for test scaffolding
 
 /// Create mock input tensor with specified dimensions
-fn create_mock_tensor(batch_size: usize, seq_len: usize, hidden_size: usize) -> Result<ConcreteTensor> {
+fn create_mock_tensor(
+    batch_size: usize,
+    seq_len: usize,
+    hidden_size: usize,
+) -> Result<ConcreteTensor> {
     // TODO: Replace with actual tensor creation from bitnet-common
     // Currently returns mock tensor for compilation
     unimplemented!("create_mock_tensor: Replace with real tensor implementation")
@@ -445,7 +449,10 @@ fn validate_device_consistency(
 }
 
 /// Validate tensor consistency across multiple implementations
-fn validate_tensor_consistency(tensors: &[&ConcreteTensor], tolerance: f32) -> Result<ConsistencyResult> {
+fn validate_tensor_consistency(
+    tensors: &[&ConcreteTensor],
+    tolerance: f32,
+) -> Result<ConsistencyResult> {
     // TODO: Replace with actual tensor consistency validation
     // Should validate numerical consistency across platforms
     unimplemented!("validate_tensor_consistency: Replace with real tensor consistency validation")

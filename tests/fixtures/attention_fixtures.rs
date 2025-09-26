@@ -243,7 +243,9 @@ impl AttentionFixtures {
             quantized_results.push((i2s_data, tl1_data, tl2_data));
         }
 
-        for (test_case, (i2s_data, tl1_data, tl2_data)) in self.test_cases.iter_mut().zip(quantized_results) {
+        for (test_case, (i2s_data, tl1_data, tl2_data)) in
+            self.test_cases.iter_mut().zip(quantized_results)
+        {
             test_case.quantization_data.insert(QuantizationType::I2S, i2s_data);
             test_case.quantization_data.insert(QuantizationType::TL1, tl1_data);
             test_case.quantization_data.insert(QuantizationType::TL2, tl2_data);

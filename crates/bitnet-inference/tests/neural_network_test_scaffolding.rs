@@ -383,7 +383,10 @@ fn test_quantization_compatibility(data: &[f32]) -> Result<QuantizationCompatibi
     })
 }
 
-async fn test_deterministic_inference(_prompt: &str, _seed: u64) -> Result<DeterministicTestResult> {
+async fn test_deterministic_inference(
+    _prompt: &str,
+    _seed: u64,
+) -> Result<DeterministicTestResult> {
     // TODO: Replace with actual deterministic inference testing
     Ok(DeterministicTestResult { output_tokens: vec![1, 2, 3, 4, 5] })
 }

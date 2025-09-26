@@ -24,8 +24,8 @@ async fn test_ac9_end_to_end_transformer_pipeline() -> Result<()> {
     let model = load_complete_bitnet_model("models/test/bitnet-2b.gguf")
         .context("Failed to load complete BitNet model for integration testing")?;
 
-    let tokenizer =
-        UniversalTokenizer::new(Default::default()).context("Failed to create tokenizer with default config")?;
+    let tokenizer = UniversalTokenizer::new(Default::default())
+        .context("Failed to create tokenizer with default config")?;
 
     // Create transformer pipeline using inference engine
     let engine = InferenceEngine::new(Arc::new(model), Arc::new(tokenizer), Device::Cpu)

@@ -32,12 +32,13 @@ async fn test_ac7_deterministic_inference_with_fixed_seed() -> Result<()> {
         let mut engine =
             InferenceEngine::new(Arc::clone(&model), Arc::clone(&tokenizer), Device::Cpu)?;
 
-        let result = engine
-            .generate(&prompt, 32)
-            .await
-            .context(format!("Deterministic inference run {}", i))?;
+        let result =
+            engine.generate(&prompt).await.context(format!("Deterministic inference run {}", i))?;
 
-        results.push(result.tokens);
+        // Convert string result to tokens for test compatibility
+        let tokens =
+            tokenizer.encode(&result, false, false).context("Failed to tokenize result")?;
+        results.push(tokens);
     }
 
     // Validate all results are identical
@@ -55,12 +56,14 @@ async fn test_ac7_deterministic_inference_with_fixed_seed() -> Result<()> {
 }
 
 // Helper functions
-fn create_test_model() -> Result<Arc<BitNetModel>> {
-    unimplemented!("create_test_model")
+fn create_test_model() -> Result<Arc<dyn bitnet_models::bitnet::Model>> {
+    // TODO: Replace with actual model creation or loading
+    // Should create a minimal model suitable for deterministic testing
+    panic!("AC7: create_test_model not yet implemented - replace with real model creation")
 }
 
-fn create_test_tokenizer() -> Result<Arc<bitnet_tokenizers::UniversalTokenizer>> {
-    unimplemented!("create_test_tokenizer")
+fn create_test_tokenizer() -> Result<Arc<dyn bitnet_tokenizers::Tokenizer>> {
+    // TODO: Replace with actual tokenizer creation
+    // Should create a tokenizer compatible with the test model
+    panic!("AC7: create_test_tokenizer not yet implemented - replace with real tokenizer creation")
 }
-
-type BitNetModel = (); // Placeholder

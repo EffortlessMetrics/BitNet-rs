@@ -474,8 +474,8 @@ fn load_bitnet_model_for_crossval(model_path: &str) -> Result<BitNetModel> {
 
 /// Run BitNet.rs inference for cross-validation
 async fn run_bitnet_inference(
-    model: &BitNetModel,
-    input: &str,
+    _model: &BitNetModel,
+    _input: &str,
     quantizer: &I2SQuantizer,
 ) -> Result<InferenceResult> {
     // TODO: Replace with actual inference execution
@@ -514,8 +514,8 @@ fn parse_crossval_output(output: &std::process::Output) -> Result<CrossvalResult
 
 // Additional helper functions for specific quantization methods
 async fn run_bitnet_inference_with_table_lookup(
-    model: &BitNetModel,
-    input: &str,
+    _model: &BitNetModel,
+    _input: &str,
     quantizer: &dyn TableLookupQuantizer,
 ) -> Result<InferenceResult> {
     unimplemented!("run_bitnet_inference_with_table_lookup")
@@ -531,8 +531,8 @@ fn compare_table_lookup_outputs(
 }
 
 async fn run_bitnet_iq2s_inference(
-    model: &BitNetModel,
-    input: &str,
+    _model: &BitNetModel,
+    _input: &str,
     quantizer: &IQ2SQuantizer,
 ) -> Result<InferenceResult> {
     unimplemented!("run_bitnet_iq2s_inference")
