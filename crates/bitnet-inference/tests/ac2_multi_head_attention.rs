@@ -8,8 +8,7 @@
 //! Ensures BitNet quantization maintains attention pattern accuracy and computational efficiency.
 
 use anyhow::{Context, Result};
-use bitnet_common::BitNetTensor;
-use bitnet_common::Device;
+use bitnet_common::{BitNetTensor, Device, Tensor};
 use bitnet_inference::layers::attention::{AttentionConfig, BitNetAttention};
 use bitnet_quantization::I2SQuantizer;
 
@@ -86,16 +85,17 @@ async fn test_ac2_quantized_multi_head_attention_forward_pass() -> Result<()> {
 
     // Create attention configuration
     let attention_config = AttentionConfig {
-        num_heads: config.num_heads,
+        num_attention_heads: config.num_heads,
+        num_key_value_heads: config.num_heads, // Same as attention heads for now
         head_dim: config.head_dim,
         hidden_size: config.hidden_size,
-        dropout_prob: config.dropout_prob,
-        scale_factor: 1.0 / (config.head_dim as f32).sqrt(),
+        max_position_embeddings: 2048,
+        rope_base: 10000.0,
+        attention_dropout: config.dropout_prob,
     };
 
     // Initialize I2S quantizer for attention weights
-    let quantizer = I2SQuantizer::new_with_device(Device::Cpu)
-        .context("Failed to create I2S quantizer for attention weights")?;
+    let quantizer = I2SQuantizer::new();
 
     // Create quantized weight matrices for Q, K, V projections
     let q_weights = create_attention_weight_matrix(config.hidden_size, config.hidden_size)?;

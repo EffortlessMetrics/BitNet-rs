@@ -125,8 +125,10 @@ async fn test_ac3_basic_autoregressive_generation() -> Result<()> {
 
     // Test prompt
     let prompt = "The future of artificial intelligence";
-    let input_tokens =
-        inference_engine.tokenizer().encode(prompt).context("Failed to tokenize input prompt")?;
+    let input_tokens = inference_engine
+        .tokenizer()
+        .encode(prompt, false, false)
+        .context("Failed to tokenize input prompt")?;
 
     // Perform autoregressive generation
     let generation_result =
@@ -162,7 +164,7 @@ async fn test_ac3_basic_autoregressive_generation() -> Result<()> {
     // Decode generated text
     let generated_text = inference_engine
         .tokenizer()
-        .decode(&generation_result.tokens)
+        .decode(&generation_result.tokens, true)
         .context("Failed to decode generated tokens")?;
 
     // Validate generated text is non-empty and contains original prompt
@@ -191,7 +193,7 @@ async fn test_ac3_temperature_sampling_validation() -> Result<()> {
         InferenceEngine::new(Arc::new(model), Arc::new(tokenizer), Device::Cpu)?;
 
     let prompt = "Once upon a time";
-    let input_tokens = inference_engine.tokenizer().encode(prompt)?;
+    let input_tokens = inference_engine.tokenizer().encode(prompt, false, false)?;
 
     // Test different temperature values
     let temperatures = [0.1, 0.7, 1.0, 1.5, 2.0];
@@ -281,7 +283,7 @@ async fn test_ac3_top_k_sampling_validation() -> Result<()> {
         InferenceEngine::new(Arc::new(model), Arc::new(tokenizer), Device::Cpu)?;
 
     let prompt = "The weather today is";
-    let input_tokens = inference_engine.tokenizer().encode(prompt)?;
+    let input_tokens = inference_engine.tokenizer().encode(prompt, false, false)?;
 
     // Test different top-k values
     let top_k_values = [1, 5, 10, 50, 100];
@@ -360,7 +362,7 @@ async fn test_ac3_nucleus_sampling_validation() -> Result<()> {
         InferenceEngine::new(Arc::new(model), Arc::new(tokenizer), Device::Cpu)?;
 
     let prompt = "In the distant future";
-    let input_tokens = inference_engine.tokenizer().encode(prompt)?;
+    let input_tokens = inference_engine.tokenizer().encode(prompt, false, false)?;
 
     // Test different nucleus (top-p) values
     let top_p_values = [0.1, 0.3, 0.5, 0.9, 0.95];
@@ -444,15 +446,17 @@ async fn test_ac3_deterministic_generation_with_seeding() -> Result<()> {
     let config = AC3TestConfig::default();
 
     // Set deterministic environment variables
-    std::env::set_var("BITNET_DETERMINISTIC", "1");
-    std::env::set_var("BITNET_SEED", "42");
-    std::env::set_var("RAYON_NUM_THREADS", "1");
+    unsafe {
+        std::env::set_var("BITNET_DETERMINISTIC", "1");
+        std::env::set_var("BITNET_SEED", "42");
+        std::env::set_var("RAYON_NUM_THREADS", "1");
+    }
 
     let model = create_mock_bitnet_model(config.vocab_size, 2048)?;
     let tokenizer = create_mock_tokenizer(config.vocab_size)?;
 
     let prompt = "The answer to life, the universe, and everything";
-    let input_tokens = tokenizer.encode(prompt)?;
+    let input_tokens = tokenizer.encode(prompt, false, false)?;
 
     // Create deterministic generation config
     let generation_config = create_generation_config(32, 0.8, 20, 0.9, Some(config.seed));
@@ -463,8 +467,8 @@ async fn test_ac3_deterministic_generation_with_seeding() -> Result<()> {
         let mut inference_engine =
             InferenceEngine::new(Arc::clone(&model), Arc::clone(&tokenizer), Device::Cpu)?;
 
-        // Set deterministic seed
-        inference_engine.set_seed(config.seed)?;
+        // Note: Seed setting is handled via environment variables
+        // inference_engine.set_seed(config.seed)?; // Method does not exist in API
 
         let result = generate_with_tokens(&inference_engine, &input_tokens, &generation_config)
             .await
@@ -486,7 +490,8 @@ async fn test_ac3_deterministic_generation_with_seeding() -> Result<()> {
     let mut inference_engine =
         InferenceEngine::new(Arc::clone(&model), Arc::clone(&tokenizer), Device::Cpu)?;
 
-    inference_engine.set_seed(config.seed + 1)?;
+    // Note: Seed setting is handled via environment variables
+    // inference_engine.set_seed(config.seed + 1)?; // Method does not exist in API
 
     let different_seed_config = create_generation_config(32, 0.8, 20, 0.9, Some(config.seed + 1));
 
@@ -497,9 +502,11 @@ async fn test_ac3_deterministic_generation_with_seeding() -> Result<()> {
     assert_ne!(results[0], different_result.tokens, "Different seeds produced identical outputs");
 
     // Clean up environment variables
-    std::env::remove_var("BITNET_DETERMINISTIC");
-    std::env::remove_var("BITNET_SEED");
-    std::env::remove_var("RAYON_NUM_THREADS");
+    unsafe {
+        std::env::remove_var("BITNET_DETERMINISTIC");
+        std::env::remove_var("BITNET_SEED");
+        std::env::remove_var("RAYON_NUM_THREADS");
+    }
 
     // TODO: Replace with actual deterministic generation implementation
     panic!(
@@ -522,7 +529,7 @@ async fn test_ac3_early_stopping_and_eos_handling() -> Result<()> {
         InferenceEngine::new(Arc::new(model), Arc::new(tokenizer), Device::Cpu)?;
 
     let prompt = "The story ends here";
-    let input_tokens = inference_engine.tokenizer().encode(prompt)?;
+    let input_tokens = inference_engine.tokenizer().encode(prompt, false, false)?;
 
     // Test with early stopping enabled (using stop sequences)
     let early_stop_config = GenerationConfig {

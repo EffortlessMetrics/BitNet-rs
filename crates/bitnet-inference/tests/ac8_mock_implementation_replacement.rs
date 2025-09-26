@@ -51,9 +51,9 @@ async fn test_ac8_mock_vs_real_inference_detection() -> Result<()> {
 }
 
 // Helper functions and mock implementations
+use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, InferenceError};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
-use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, InferenceError};
 
 struct MockModel {
     config: BitNetConfig,

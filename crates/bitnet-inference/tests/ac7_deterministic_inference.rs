@@ -18,9 +18,11 @@ use std::sync::Arc;
 #[tokio::test]
 async fn test_ac7_deterministic_inference_with_fixed_seed() -> Result<()> {
     // Set deterministic environment
-    std::env::set_var("BITNET_DETERMINISTIC", "1");
-    std::env::set_var("BITNET_SEED", "42");
-    std::env::set_var("RAYON_NUM_THREADS", "1");
+    unsafe {
+        std::env::set_var("BITNET_DETERMINISTIC", "1");
+        std::env::set_var("BITNET_SEED", "42");
+        std::env::set_var("RAYON_NUM_THREADS", "1");
+    }
 
     let model = create_test_model()?;
     let prompt = "The future of AI is";
@@ -47,9 +49,11 @@ async fn test_ac7_deterministic_inference_with_fixed_seed() -> Result<()> {
     }
 
     // Clean up environment
-    std::env::remove_var("BITNET_DETERMINISTIC");
-    std::env::remove_var("BITNET_SEED");
-    std::env::remove_var("RAYON_NUM_THREADS");
+    unsafe {
+        std::env::remove_var("BITNET_DETERMINISTIC");
+        std::env::remove_var("BITNET_SEED");
+        std::env::remove_var("RAYON_NUM_THREADS");
+    }
 
     // TODO: Replace with actual deterministic implementation
     panic!("AC7.1: Deterministic inference not yet implemented");
