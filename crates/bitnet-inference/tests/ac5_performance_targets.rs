@@ -52,7 +52,7 @@ async fn test_ac5_cpu_performance_targets() -> Result<()> {
     let model = load_bitnet_2b_model_for_performance_testing()
         .context("Failed to load BitNet 2B model for CPU performance testing")?;
 
-    let mut inference_engine =
+    let inference_engine =
         InferenceEngine::new(model, create_performance_test_tokenizer()?, Device::Cpu)?;
 
     // TODO: Enable CPU optimizations when API is available
@@ -229,7 +229,7 @@ async fn test_ac5_gpu_performance_speedup() -> Result<()> {
 #[cfg(feature = "cpu")]
 #[tokio::test]
 async fn test_ac5_kv_cache_utilization_performance() -> Result<()> {
-    let config = AC5TestConfig::default();
+    let _config = AC5TestConfig::default();
 
     let model = load_bitnet_2b_model_for_performance_testing()?;
 
@@ -249,12 +249,12 @@ async fn test_ac5_kv_cache_utilization_performance() -> Result<()> {
 
     // Measure performance with cache
     let cache_start = Instant::now();
-    let cache_result = engine_with_cache.generate(&long_prompt).await?;
+    let _cache_result = engine_with_cache.generate(&long_prompt).await?;
     let cache_duration = cache_start.elapsed();
 
     // Measure performance without cache
     let no_cache_start = Instant::now();
-    let no_cache_result = engine_without_cache.generate(&long_prompt).await?;
+    let _no_cache_result = engine_without_cache.generate(&long_prompt).await?;
     let no_cache_duration = no_cache_start.elapsed();
 
     let cache_speedup = no_cache_duration.as_secs_f32() / cache_duration.as_secs_f32();
@@ -304,7 +304,7 @@ async fn test_ac5_batch_processing_performance() -> Result<()> {
     let config = AC5TestConfig::default();
 
     let model = load_bitnet_2b_model_for_performance_testing()?;
-    let mut inference_engine =
+    let inference_engine =
         InferenceEngine::new(model, create_performance_test_tokenizer()?, Device::Cpu)?;
 
     let batch_prompts =
@@ -395,13 +395,15 @@ fn generate_test_prompt(_target_token_length: usize) -> Result<String> {
 }
 
 /// Check if GPU is available for testing
-fn is_gpu_available() -> bool {
+#[allow(dead_code)]
+fn _is_gpu_available() -> bool {
     // TODO: Replace with actual GPU detection
     false
 }
 
 /// Validate CPU/GPU output consistency
-fn validate_cpu_gpu_output_consistency(
+#[allow(dead_code)]
+fn _validate_cpu_gpu_output_consistency(
     _cpu_result: &GenerationResult,
     _gpu_result: &GenerationResult,
 ) -> Result<ConsistencyResult> {
@@ -410,7 +412,8 @@ fn validate_cpu_gpu_output_consistency(
 }
 
 /// Validate KV-cache output consistency
-fn validate_kv_cache_output_consistency(
+#[allow(dead_code)]
+fn _validate_kv_cache_output_consistency(
     _cache_result: &GenerationResult,
     _no_cache_result: &GenerationResult,
 ) -> Result<ConsistencyResult> {
@@ -499,6 +502,7 @@ impl Tokenizer for MockPerformanceTokenizer {
 
 // Type stubs for compilation
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct PerformanceResult {
     device: Device,
     batch_size: usize,
@@ -508,7 +512,9 @@ struct PerformanceResult {
     latency_ms: f32,
 }
 
+#[allow(dead_code)]
 type GenerationResult = (); // Placeholder
+#[allow(dead_code)]
 type ConsistencyResult = (); // Placeholder
 
 #[derive(Debug, Clone)]

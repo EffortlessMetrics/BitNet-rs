@@ -208,7 +208,7 @@ impl GgufFixtureGenerator {
             writer.write_all(b"GGUF")?;
         }
 
-        writer.write_u32::<LittleEndian>(3)?; // Version 3
+        WriteBytesExt::write_u32::<LittleEndian>(&mut writer, 3)?; // Version 3
 
         Ok(8) // 4 bytes magic + 4 bytes version
     }
@@ -224,11 +224,11 @@ impl GgufFixtureGenerator {
         // Number of tensor info entries
         let tensor_configs =
             self.get_tensor_configs_for_model(&config.model_type, &config.quantization_type);
-        writer.write_u64::<LittleEndian>(tensor_configs.len() as u64)?;
+        WriteBytesExt::write_u64::<LittleEndian>(&mut writer, tensor_configs.len() as u64)?;
         bytes_written += 8;
 
         // Number of KV metadata entries
-        writer.write_u64::<LittleEndian>(5)?; // model.type, vocab_size, hidden_size, layers, quantization
+        WriteBytesExt::write_u64::<LittleEndian>(&mut writer, 5)?; // model.type, vocab_size, hidden_size, layers, quantization
         bytes_written += 8;
 
         // Write metadata KV pairs
@@ -264,16 +264,16 @@ impl GgufFixtureGenerator {
         let mut bytes_written = 0u64;
 
         // Key length and data
-        writer.write_u64::<LittleEndian>(key.len() as u64)?;
+        WriteBytesExt::write_u64::<LittleEndian>(&mut writer, key.len() as u64)?;
         writer.write_all(key.as_bytes())?;
         bytes_written += 8 + key.len() as u64;
 
         // Value type (string = 8)
-        writer.write_u32::<LittleEndian>(8)?;
+        WriteBytesExt::write_u32::<LittleEndian>(&mut writer, 8)?;
         bytes_written += 4;
 
         // Value length and data
-        writer.write_u64::<LittleEndian>(value.len() as u64)?;
+        WriteBytesExt::write_u64::<LittleEndian>(&mut writer, value.len() as u64)?;
         writer.write_all(value.as_bytes())?;
         bytes_written += 8 + value.len() as u64;
 
@@ -289,26 +289,26 @@ impl GgufFixtureGenerator {
         let mut bytes_written = 0u64;
 
         // Tensor name
-        writer.write_u64::<LittleEndian>(config.name.len() as u64)?;
+        WriteBytesExt::write_u64::<LittleEndian>(&mut writer, config.name.len() as u64)?;
         writer.write_all(config.name.as_bytes())?;
         bytes_written += 8 + config.name.len() as u64;
 
         // Number of dimensions
-        writer.write_u32::<LittleEndian>(config.shape.len() as u32)?;
+        WriteBytesExt::write_u32::<LittleEndian>(&mut writer, config.shape.len() as u32)?;
         bytes_written += 4;
 
         // Shape dimensions
         for &dim in &config.shape {
-            writer.write_u64::<LittleEndian>(dim as u64)?;
+            WriteBytesExt::write_u64::<LittleEndian>(&mut writer, dim as u64)?;
             bytes_written += 8;
         }
 
         // Data type
-        writer.write_u32::<LittleEndian>(config.data_type as u32)?;
+        WriteBytesExt::write_u32::<LittleEndian>(&mut writer, config.data_type as u32)?;
         bytes_written += 4;
 
         // Tensor data offset (will be calculated later)
-        writer.write_u64::<LittleEndian>(0)?; // Placeholder
+        WriteBytesExt::write_u64::<LittleEndian>(&mut writer, 0)?; // Placeholder
         bytes_written += 8;
 
         Ok(bytes_written)

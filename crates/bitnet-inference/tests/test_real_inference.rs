@@ -285,7 +285,8 @@ fn add_layernorm_weights(
 }
 
 /// Helper: Create mock quantized weights for testing
-fn create_mock_quantized_weights(
+#[allow(dead_code)]
+fn _create_mock_quantized_weights(
     in_features: usize,
     out_features: usize,
 ) -> Result<bitnet_quantization::QuantizedTensor> {
@@ -308,7 +309,8 @@ fn create_mock_quantized_weights(
 }
 
 /// Helper: Create test tensor
-fn create_test_tensor(shape: Vec<usize>, device: &Device) -> Result<bitnet_common::BitNetTensor> {
+#[allow(dead_code)]
+fn _create_test_tensor(shape: Vec<usize>, device: &Device) -> Result<bitnet_common::BitNetTensor> {
     let total_elements: usize = shape.iter().product();
     let data: Vec<f32> = (0..total_elements).map(|i| (i as f32 * 0.01).sin()).collect();
 

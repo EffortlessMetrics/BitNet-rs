@@ -50,18 +50,11 @@ async fn test_ac10_quantization_error_handling() -> Result<()> {
 #[tokio::test]
 async fn test_ac10_memory_error_recovery() -> Result<()> {
     // Attempt to create oversized model that should fail gracefully
-    let _oversized_config =
-        ModelConfig { vocab_size: usize::MAX, hidden_size: usize::MAX, ..Default::default() };
+    let _oversized_config = ModelConfig { vocab_size: usize::MAX, hidden_size: usize::MAX };
 
     // Mock trying to create an oversized engine (this would require actual model/tokenizer)
     // For now, just simulate the error condition
-    let result: Result<(), anyhow::Error> =
-        Err(anyhow::anyhow!("Mock OutOfMemory error for testing"));
-
-    assert!(result.is_err(), "Should fail with oversized model");
-
-    // Simplified error checking for the mock test
-    let error = result.unwrap_err();
+    let error = anyhow::anyhow!("Mock OutOfMemory error for testing");
     assert!(error.to_string().contains("OutOfMemory"), "Error should mention memory issue");
     println!("Got expected memory error: {}", error);
 

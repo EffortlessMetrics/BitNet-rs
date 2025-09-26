@@ -51,23 +51,17 @@ impl Default for PropertyTestConfig {
 // ============================================================================
 
 #[cfg(feature = "cpu")]
-#[allow(unused_doc_comments, unused_attributes)]
 proptest! {
-    /// Property: I2S quantization round-trip preserves tensor distribution properties
-    /// Tests feature spec: gguf-weight-loading.md#tr2-quantization-integration
-    ///
-    /// This property test validates that I2S quantization maintains statistical properties
-    /// of the original tensor data within acceptable tolerance bounds.
     #![proptest_config(ProptestConfig::with_cases(100))]
 
+    // Property: I2S quantization round-trip preserves tensor distribution properties
+    // Tests feature spec: gguf-weight-loading.md#tr2-quantization-integration
+    //
+    // This property test validates that I2S quantization maintains statistical properties
+    // of the original tensor data within acceptable tolerance bounds.
     #[test]
     fn property_i2s_quantization_preserves_distribution(
-        // Generate tensor data with various statistical properties
-        tensor_data in prop::collection::vec(
-            -10.0f32..10.0f32,
-            32..1024
-        ),
-        // Test different tensor shapes
+        tensor_data in prop::collection::vec(-10.0f32..10.0f32, 32..1024),
         shape_config in (1usize..4, 32usize..256, 32usize..256),
     ) {
         let config = PropertyTestConfig::default();
@@ -129,15 +123,13 @@ proptest! {
 }
 
 #[cfg(feature = "cpu")]
-#[allow(unused_doc_comments, unused_attributes)]
 proptest! {
-    /// Property: I2S quantization accuracy meets ≥99% cosine similarity requirement
-    /// Tests feature spec: gguf-weight-loading.md#v3-quantization-accuracy-validation
     #![proptest_config(ProptestConfig::with_cases(50))]
 
+    // Property: I2S quantization accuracy meets ≥99% cosine similarity requirement
+    // Tests feature spec: gguf-weight-loading.md#v3-quantization-accuracy-validation
     #[test]
     fn property_i2s_quantization_accuracy_threshold(
-        // Generate weight-like tensors (normal distribution)
         tensor_size in 256usize..2048,
         mean in -1.0f32..1.0f32,
         std_dev in 0.1f32..2.0f32,
@@ -179,18 +171,14 @@ proptest! {
 // ============================================================================
 
 #[cfg(feature = "cpu")]
-#[allow(unused_doc_comments, unused_attributes)]
 proptest! {
-    /// Property: TL1 table lookup quantization maintains lookup efficiency
-    /// Tests feature spec: gguf-weight-loading.md#tr2-quantization-integration
     #![proptest_config(ProptestConfig::with_cases(75))]
 
+    // Property: TL1 table lookup quantization maintains lookup efficiency
+    // Tests feature spec: gguf-weight-loading.md#tr2-quantization-integration
     #[test]
     fn property_tl1_quantization_lookup_efficiency(
-        tensor_data in prop::collection::vec(
-            -5.0f32..5.0f32,
-            64..512
-        ),
+        tensor_data in prop::collection::vec(-5.0f32..5.0f32, 64..512),
         lookup_table_size in 8usize..32, // TL1 typically uses 4-bit = 16 entries
     ) {
         let quantizer = TL1Quantizer::new();
@@ -241,33 +229,29 @@ proptest! {
 // ============================================================================
 
 #[cfg(feature = "cpu")]
-#[allow(unused_doc_comments, unused_attributes)]
 proptest! {
-    /// Property: TL2 quantization provides higher precision than TL1
-    /// Tests feature spec: gguf-weight-loading.md#tr2-quantization-integration
     #![proptest_config(ProptestConfig::with_cases(50))]
 
+    // Property: TL2 quantization provides higher precision than TL1
+    // Tests feature spec: gguf-weight-loading.md#tr2-quantization-integration
     #[test]
     fn property_tl2_quantization_precision_improvement(
-        tensor_data in prop::collection::vec(
-            -8.0f32..8.0f32,
-            128..1024
-        ),
+        tensor_data in prop::collection::vec(-8.0f32..8.0f32, 128..1024),
     ) {
         let tl1_quantizer = TL1Quantizer::new();
         let tl2_quantizer = TL2Quantizer::new();
-        let original_tensor = create_test_tensor_from_data(tensor_data.clone(), vec![tensor_data.len()])?;
+        let original_tensor = to_test_error(create_test_tensor_from_data(tensor_data.clone(), vec![tensor_data.len()]))?;
 
         // Quantize with both TL1 and TL2
-        let tl1_quantized = tl1_quantizer.quantize(&original_tensor, &candle_core::Device::Cpu)?;
-        let tl1_dequantized = tl1_quantizer.dequantize(&tl1_quantized, &candle_core::Device::Cpu)?;
+        let tl1_quantized = to_test_error(tl1_quantizer.quantize(&original_tensor, &candle_core::Device::Cpu))?;
+        let tl1_dequantized = to_test_error(tl1_quantizer.dequantize(&tl1_quantized, &candle_core::Device::Cpu))?;
 
-        let tl2_quantized = tl2_quantizer.quantize(&original_tensor, &candle_core::Device::Cpu)?;
-        let tl2_dequantized = tl2_quantizer.dequantize(&tl2_quantized, &candle_core::Device::Cpu)?;
+        let tl2_quantized = to_test_error(tl2_quantizer.quantize(&original_tensor, &candle_core::Device::Cpu))?;
+        let tl2_dequantized = to_test_error(tl2_quantizer.dequantize(&tl2_quantized, &candle_core::Device::Cpu))?;
 
         // Calculate accuracy for both quantization methods
-        let tl1_accuracy = calculate_cosine_similarity(&original_tensor, &tl1_dequantized)?;
-        let tl2_accuracy = calculate_cosine_similarity(&original_tensor, &tl2_dequantized)?;
+        let tl1_accuracy = to_test_error(calculate_cosine_similarity(&original_tensor, &tl1_dequantized))?;
+        let tl2_accuracy = to_test_error(calculate_cosine_similarity(&original_tensor, &tl2_dequantized))?;
 
         // Property: TL2 should provide better or equal accuracy compared to TL1
         prop_assert!(
@@ -294,19 +278,15 @@ proptest! {
 // Property-Based Tests for Cross-Validation (AC5)
 // ============================================================================
 
-/// Property: Quantization results should be deterministic and reproducible
-/// Tests feature spec: gguf-weight-loading.md#v2-deterministic-validation
+// Property: Quantization results should be deterministic and reproducible
+// Tests feature spec: gguf-weight-loading.md#v2-deterministic-validation
 #[cfg(feature = "cpu")]
-#[ignore = "TODO: Fix proptest compilation errors"]
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(25))]
 
     #[test]
     fn property_quantization_deterministic_reproducibility(
-        tensor_data in prop::collection::vec(
-            -3.0f32..3.0f32,
-            64..256
-        ),
+        tensor_data in prop::collection::vec(-3.0f32..3.0f32, 64..256),
         seed in 1u64..1000,
     ) {
         // Set deterministic seed for reproducibility
@@ -316,18 +296,18 @@ proptest! {
         }
 
         let quantizer = I2SQuantizer::new();
-        let original_tensor = create_test_tensor_from_data(tensor_data, vec![tensor_data.len()])?;
+        let original_tensor = to_test_error(create_test_tensor_from_data(tensor_data.clone(), vec![tensor_data.len()]))?;
 
         // Perform quantization twice with same configuration
-        let result1 = quantizer.quantize(&original_tensor, &candle_core::Device::Cpu)?;
-        let result2 = quantizer.quantize(&original_tensor, &candle_core::Device::Cpu)?;
+        let result1 = to_test_error(quantizer.quantize(&original_tensor, &candle_core::Device::Cpu))?;
+        let result2 = to_test_error(quantizer.quantize(&original_tensor, &candle_core::Device::Cpu))?;
 
         // Property: Results should be identical for deterministic quantization
-        let dequantized1 = quantizer.dequantize(&result1, &candle_core::Device::Cpu)?;
-        let dequantized2 = quantizer.dequantize(&result2, &candle_core::Device::Cpu)?;
+        let dequantized1 = to_test_error(quantizer.dequantize(&result1, &candle_core::Device::Cpu))?;
+        let dequantized2 = to_test_error(quantizer.dequantize(&result2, &candle_core::Device::Cpu))?;
 
-        let data1 = extract_tensor_data(&dequantized1)?;
-        let data2 = extract_tensor_data(&dequantized2)?;
+        let data1 = to_test_error(extract_tensor_data(&dequantized1))?;
+        let data2 = to_test_error(extract_tensor_data(&dequantized2))?;
 
         prop_assert_eq!(data1.len(), data2.len(), "Tensor sizes should match");
 
@@ -356,24 +336,21 @@ proptest! {
 
     #[test]
     fn property_cross_platform_quantization_consistency(
-        tensor_data in prop::collection::vec(
-            -2.0f32..2.0f32,
-            128..512
-        ),
+        tensor_data in prop::collection::vec(-2.0f32..2.0f32, 128..512),
     ) {
         let quantizer = I2SQuantizer::new();
-        let original_tensor = create_test_tensor_from_data(tensor_data, vec![tensor_data.len()])?;
+        let original_tensor = to_test_error(create_test_tensor_from_data(tensor_data.clone(), vec![tensor_data.len()]))?;
 
         // Perform Rust quantization
-        let rust_quantized = quantizer.quantize(&original_tensor, &candle_core::Device::Cpu)?;
-        let rust_dequantized = quantizer.dequantize(&rust_quantized, &candle_core::Device::Cpu)?;
+        let rust_quantized = to_test_error(quantizer.quantize(&original_tensor, &candle_core::Device::Cpu))?;
+        let rust_dequantized = to_test_error(quantizer.dequantize(&rust_quantized, &candle_core::Device::Cpu))?;
 
         // TODO: Integrate with actual C++ reference implementation
         // For now, simulate reference implementation result
-        let cpp_reference_result = simulate_cpp_quantization(&original_tensor)?;
+        let cpp_reference_result = to_test_error(simulate_cpp_quantization(&original_tensor))?;
 
         // Property: Rust and C++ implementations should produce consistent results
-        let consistency = calculate_cosine_similarity(&rust_dequantized, &cpp_reference_result)?;
+        let consistency = to_test_error(calculate_cosine_similarity(&rust_dequantized, &cpp_reference_result))?;
         prop_assert!(
             consistency >= 0.999, // Very high consistency requirement for cross-validation
             "Cross-platform consistency {} below threshold 0.999",
@@ -381,7 +358,7 @@ proptest! {
         );
 
         // Property: Numerical tolerance should be within specified bounds
-        let numerical_difference = calculate_max_absolute_difference(&rust_dequantized, &cpp_reference_result)?;
+        let numerical_difference = to_test_error(calculate_max_absolute_difference(&rust_dequantized, &cpp_reference_result))?;
         prop_assert!(
             numerical_difference < 1e-5,
             "Cross-platform numerical difference {} exceeds tolerance 1e-5",
@@ -394,10 +371,9 @@ proptest! {
 // Property-Based Tests for Memory Efficiency (AC7)
 // ============================================================================
 
-/// Property: Quantized tensors should use less memory than original tensors
-/// Tests feature spec: gguf-weight-loading.md#p1-zero-copy-operations
+// Property: Quantized tensors should use less memory than original tensors
+// Tests feature spec: gguf-weight-loading.md#p1-zero-copy-operations
 #[cfg(feature = "cpu")]
-#[ignore = "TODO: Fix proptest compilation errors"]
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(30))]
 
@@ -407,25 +383,25 @@ proptest! {
         quantization_type in prop::sample::select(vec!["I2S", "TL1", "TL2"]),
     ) {
         let original_data = generate_random_tensor_data(tensor_size);
-        let original_tensor = create_test_tensor_from_data(original_data, vec![tensor_size])?;
+        let original_tensor = to_test_error(create_test_tensor_from_data(original_data, vec![tensor_size]))?;
 
         // Calculate original tensor memory usage (FP32)
         let original_memory = tensor_size * std::mem::size_of::<f32>();
 
-        let quantized_memory = match quantization_type.as_ref() {
+        let quantized_memory = match quantization_type {
             "I2S" => {
                 let quantizer = I2SQuantizer::new();
-                let quantized = quantizer.quantize(&original_tensor, &candle_core::Device::Cpu)?;
+                let quantized = to_test_error(quantizer.quantize(&original_tensor, &candle_core::Device::Cpu))?;
                 estimate_quantized_tensor_memory(&quantized)
             },
             "TL1" => {
                 let quantizer = TL1Quantizer::new();
-                let quantized = quantizer.quantize(&original_tensor, &candle_core::Device::Cpu)?;
+                let quantized = to_test_error(quantizer.quantize(&original_tensor, &candle_core::Device::Cpu))?;
                 estimate_quantized_tensor_memory(&quantized)
             },
             "TL2" => {
                 let quantizer = TL2Quantizer::new();
-                let quantized = quantizer.quantize(&original_tensor, &candle_core::Device::Cpu)?;
+                let quantized = to_test_error(quantizer.quantize(&original_tensor, &candle_core::Device::Cpu))?;
                 estimate_quantized_tensor_memory(&quantized)
             },
             _ => panic!("Unknown quantization type"),
@@ -442,7 +418,7 @@ proptest! {
         );
 
         // Property: Memory usage should be predictable based on quantization type
-        match quantization_type.as_ref() {
+        match quantization_type {
             "I2S" => {
                 // I2S uses 2 bits per weight + scale factors
                 let expected_ratio = 2.0 / 32.0 + 0.01; // 2-bit quantization + overhead

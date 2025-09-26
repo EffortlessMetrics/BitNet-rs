@@ -190,7 +190,7 @@ async fn test_ac1_tl1_quantized_linear_forward_pass() -> Result<()> {
     let quantizer = TL1Quantizer::new();
 
     // TODO: Generate optimal lookup table for weight statistics when API is available
-    let weight_stats = calculate_tensor_statistics(&mock_f32_data())?;
+    let _weight_stats = calculate_tensor_statistics(&mock_f32_data())?;
     // let lookup_table = quantizer
     //     .generate_lookup_table(&weight_stats, 16) // 4-bit = 16 entries
     //     .context("Failed to generate TL1 lookup table")?;
@@ -283,7 +283,7 @@ async fn test_ac1_tl2_quantized_linear_forward_pass() -> Result<()> {
     let quantizer = TL2Quantizer::new();
 
     // TODO: Generate larger lookup table for higher precision when API is available
-    let weight_stats = calculate_tensor_statistics(&mock_f32_data())?;
+    let _weight_stats = calculate_tensor_statistics(&mock_f32_data())?;
     // let lookup_table = quantizer
     //     .generate_lookup_table(&weight_stats, 256) // 8-bit = 256 entries
     //     .context("Failed to generate TL2 lookup table")?;
@@ -460,7 +460,8 @@ fn create_mock_weight_matrix(input_size: usize, output_size: usize) -> Result<Co
 }
 
 /// Validate tensor contains no NaN or infinite values
-fn validate_tensor_stability(tensor: &ConcreteTensor) -> Result<()> {
+#[allow(dead_code)]
+fn _validate_tensor_stability(tensor: &ConcreteTensor) -> Result<()> {
     // TODO: Replace with actual tensor validation
     // Basic tensor stability validation
     let shape = tensor.shape();
@@ -497,21 +498,23 @@ fn mock_f32_data() -> Vec<f32> {
 }
 
 /// Check if GPU acceleration is available
-fn is_gpu_available() -> bool {
+#[allow(dead_code)]
+fn _is_gpu_available() -> bool {
     // TODO: Replace with actual GPU detection
     // Should check for CUDA/ROCm/Metal availability
     false
 }
 
 /// Check if FFI bridge is available
-fn is_ffi_available() -> bool {
+#[allow(dead_code)]
+fn _is_ffi_available() -> bool {
     // TODO: Replace with actual FFI availability check
     // Should verify C++ bridge compilation
     false
 }
 
 /// Calculate tensor statistics for quantization
-fn calculate_tensor_statistics(data: &[f32]) -> Result<TensorStatistics> {
+fn calculate_tensor_statistics(_data: &[f32]) -> Result<TensorStatistics> {
     // TODO: Replace with actual statistics calculation
     // Basic tensor statistics - mock implementation
     use std::collections::HashMap;
@@ -529,10 +532,11 @@ fn calculate_tensor_statistics(data: &[f32]) -> Result<TensorStatistics> {
 }
 
 /// Validate quantization consistency between devices
-fn validate_device_consistency(
-    a: &QuantizationResult,
-    b: &QuantizationResult,
-    tolerance: f32,
+#[allow(dead_code)]
+fn _validate_device_consistency(
+    _a: &QuantizationResult,
+    _b: &QuantizationResult,
+    _tolerance: f32,
 ) -> Result<ConsistencyResult> {
     // TODO: Replace with actual consistency validation
     // Basic device consistency validation - mock implementation
@@ -544,9 +548,10 @@ fn validate_device_consistency(
 }
 
 /// Validate tensor consistency across multiple implementations
-fn validate_tensor_consistency(
-    tensors: &[&ConcreteTensor],
-    tolerance: f32,
+#[allow(dead_code)]
+fn _validate_tensor_consistency(
+    _tensors: &[&ConcreteTensor],
+    _tolerance: f32,
 ) -> Result<ConsistencyResult> {
     // TODO: Replace with actual tensor consistency validation
     // Basic tensor consistency validation - mock implementation
@@ -559,6 +564,7 @@ fn validate_tensor_consistency(
 
 // Type stubs for compilation - replace with actual implementations
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct TensorStatistics {
     mean: f32,
     std_dev: f32,
@@ -583,5 +589,7 @@ struct MockTL2LookupTable {
     memory_footprint: usize,
 }
 
+#[allow(dead_code)]
 type ConsistencyResult = (); // Placeholder with max_difference/max_variance fields
+#[allow(dead_code)]
 type QuantizationResult = (); // Placeholder
