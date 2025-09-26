@@ -222,23 +222,30 @@ impl AttentionFixtures {
 
     /// Generate quantized variants for all test cases
     async fn generate_quantized_variants(&mut self) -> Result<()> {
-        for test_case in &mut self.test_cases {
+        let mut quantized_results = Vec::new();
+
+        for test_case in &self.test_cases {
             // Generate I2S quantized data
             let i2s_data = self
                 .quantize_attention_weights(&test_case.weight_matrices, QuantizationType::I2S)
                 .await?;
-            test_case.quantization_data.insert(QuantizationType::I2S, i2s_data);
 
             // Generate TL1 quantized data
             let tl1_data = self
                 .quantize_attention_weights(&test_case.weight_matrices, QuantizationType::TL1)
                 .await?;
-            test_case.quantization_data.insert(QuantizationType::TL1, tl1_data);
 
             // Generate TL2 quantized data
             let tl2_data = self
                 .quantize_attention_weights(&test_case.weight_matrices, QuantizationType::TL2)
                 .await?;
+
+            quantized_results.push((i2s_data, tl1_data, tl2_data));
+        }
+
+        for (test_case, (i2s_data, tl1_data, tl2_data)) in self.test_cases.iter_mut().zip(quantized_results) {
+            test_case.quantization_data.insert(QuantizationType::I2S, i2s_data);
+            test_case.quantization_data.insert(QuantizationType::TL1, tl1_data);
             test_case.quantization_data.insert(QuantizationType::TL2, tl2_data);
         }
 
@@ -341,7 +348,6 @@ impl AttentionFixtures {
             QuantizationType::I2S => max_val / 1.0, // ±1 range
             QuantizationType::TL1 => max_val / 2.0, // ±2 range
             QuantizationType::TL2 => max_val / 3.0, // ±3 range
-            _ => max_val,
         };
 
         let quantized: Vec<i8> = data

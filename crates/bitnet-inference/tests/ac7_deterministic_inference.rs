@@ -59,4 +59,8 @@ fn create_test_model() -> Result<Arc<BitNetModel>> {
     unimplemented!("create_test_model")
 }
 
+fn create_test_tokenizer() -> Result<Arc<bitnet_tokenizers::UniversalTokenizer>> {
+    unimplemented!("create_test_tokenizer")
+}
+
 type BitNetModel = (); // Placeholder

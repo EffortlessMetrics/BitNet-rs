@@ -34,10 +34,10 @@ async fn test_real_transformer_forward_pass() -> Result<()> {
     let test_tokens_u32: Vec<u32> = test_tokens.into_iter().map(|x| x as u32).collect();
     let input_tensor =
         CandleTensor::from_slice(&test_tokens_u32, &[1, test_tokens_u32.len()], &device)?;
-    let input = ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(input_tensor));
+    let _input = ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(input_tensor));
 
     // Create empty cache
-    let mut cache = bitnet_inference::cache::KVCache::new(Default::default())?;
+    let _cache = bitnet_inference::cache::KVCache::new(Default::default())?;
 
     // Test that forward pass returns actual logits, not mock
     let logits = engine.eval_ids(&[1, 2, 3]).await?;

@@ -8,9 +8,9 @@
 
 use anyhow::{Context, Result};
 use bitnet_common::Device;
-use bitnet_inference::{InferenceConfig, InferenceEngine};
+use bitnet_inference::InferenceEngine;
 use bitnet_models::BitNetModel;
-use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
+use bitnet_tokenizers::UniversalTokenizer;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -425,4 +425,3 @@ struct PerformanceResult {
 
 type GenerationResult = (); // Placeholder
 type ConsistencyResult = (); // Placeholder
-type Tokenizer = (); // Placeholder trait

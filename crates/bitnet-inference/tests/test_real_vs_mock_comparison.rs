@@ -8,7 +8,7 @@ use bitnet_common::{BitNetConfig, Device};
 use bitnet_inference::InferenceEngine;
 use bitnet_models::BitNetModel;
 use bitnet_tokenizers::MockTokenizer;
-use candle_core::{DType, Tensor as CandleTensor};
+use candle_core::Tensor as CandleTensor;
 use std::collections::HashMap;
 use std::sync::Arc;
 

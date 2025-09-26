@@ -287,14 +287,18 @@ impl Iq2sQuantizationFixtures {
 
     /// Compute validation metrics for all test cases
     async fn compute_validation_metrics(&mut self) -> Result<()> {
-        for validation_case in &mut self.validation_data {
+        let mut results = Vec::new();
+        for validation_case in &self.validation_data {
             let metrics = self
                 .compute_quality_metrics(
                     &validation_case.input_data,
                     &validation_case.input_data, // Mock: use same data for now
                 )
                 .await?;
+            results.push(metrics);
+        }
 
+        for (validation_case, metrics) in self.validation_data.iter_mut().zip(results) {
             validation_case.expected_quality_metrics = metrics;
         }
 

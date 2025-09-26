@@ -287,17 +287,28 @@ impl GenerationFixtures {
 
     /// Generate deterministic outputs for all test cases
     async fn generate_deterministic_outputs(&mut self) -> Result<()> {
-        for test_case in &mut self.test_cases {
-            if test_case.deterministic_outputs.is_none() {
-                let deterministic = self
-                    .create_deterministic_output(
-                        &test_case.input_data,
-                        &test_case.config,
-                        42, // Standard seed
-                    )
-                    .await?;
-                test_case.deterministic_outputs = Some(deterministic);
-            }
+        let indices: Vec<usize> = self.test_cases
+            .iter()
+            .enumerate()
+            .filter_map(|(i, test_case)| {
+                if test_case.deterministic_outputs.is_none() {
+                    Some(i)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        for i in indices {
+            let test_case = &self.test_cases[i];
+            let deterministic = self
+                .create_deterministic_output(
+                    &test_case.input_data,
+                    &test_case.config,
+                    42, // Standard seed
+                )
+                .await?;
+            self.test_cases[i].deterministic_outputs = Some(deterministic);
         }
 
         Ok(())

@@ -10,6 +10,7 @@
 use anyhow::{Context, Result};
 use bitnet_common::Device;
 use bitnet_inference::{BitNetAttention, QuantizedLinear};
+use bitnet_inference::layers::attention::AttentionConfig;
 use bitnet_models::BitNetModel;
 use bitnet_quantization::I2SQuantizer;
 use std::sync::Arc;

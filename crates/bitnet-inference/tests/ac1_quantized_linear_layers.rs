@@ -8,12 +8,9 @@
 //! Ensures >99% quantization accuracy preservation and proper device-aware execution.
 
 use anyhow::{Context, Result};
-use bitnet_common::Device;
-use bitnet_common::Tensor;
-use bitnet_inference::{InferenceConfig, InferenceEngine, QuantizedLinear};
-use bitnet_models::BitNetModel;
-use bitnet_quantization::{I2SQuantizer, QuantizedTensor, TL1Quantizer, TL2Quantizer};
-use std::sync::Arc;
+use bitnet_common::{ConcreteTensor, Device};
+use bitnet_inference::QuantizedLinear;
+use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
 
 /// Test configuration for AC1 quantized linear layer validation
 #[derive(Debug, Clone)]
@@ -395,7 +392,7 @@ async fn test_ac1_cross_platform_quantized_linear_consistency() -> Result<()> {
 // Helper functions for test scaffolding
 
 /// Create mock input tensor with specified dimensions
-fn create_mock_tensor(batch_size: usize, seq_len: usize, hidden_size: usize) -> Result<Tensor> {
+fn create_mock_tensor(batch_size: usize, seq_len: usize, hidden_size: usize) -> Result<ConcreteTensor> {
     // TODO: Replace with actual tensor creation from bitnet-common
     // Currently returns mock tensor for compilation
     unimplemented!("create_mock_tensor: Replace with real tensor implementation")
@@ -409,7 +406,7 @@ fn create_mock_weight_matrix(input_size: usize, output_size: usize) -> Result<Ve
 }
 
 /// Validate tensor contains no NaN or infinite values
-fn validate_tensor_stability(tensor: &Tensor) -> Result<()> {
+fn validate_tensor_stability(tensor: &ConcreteTensor) -> Result<()> {
     // TODO: Replace with actual tensor validation
     // Should check for numerical stability
     unimplemented!("validate_tensor_stability: Replace with real tensor validation")
@@ -448,7 +445,7 @@ fn validate_device_consistency(
 }
 
 /// Validate tensor consistency across multiple implementations
-fn validate_tensor_consistency(tensors: &[&Tensor], tolerance: f32) -> Result<ConsistencyResult> {
+fn validate_tensor_consistency(tensors: &[&ConcreteTensor], tolerance: f32) -> Result<ConsistencyResult> {
     // TODO: Replace with actual tensor consistency validation
     // Should validate numerical consistency across platforms
     unimplemented!("validate_tensor_consistency: Replace with real tensor consistency validation")

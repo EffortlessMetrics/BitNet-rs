@@ -383,17 +383,17 @@ fn test_quantization_compatibility(data: &[f32]) -> Result<QuantizationCompatibi
     })
 }
 
-async fn test_deterministic_inference(prompt: &str, seed: u64) -> Result<DeterministicTestResult> {
+async fn test_deterministic_inference(_prompt: &str, _seed: u64) -> Result<DeterministicTestResult> {
     // TODO: Replace with actual deterministic inference testing
     Ok(DeterministicTestResult { output_tokens: vec![1, 2, 3, 4, 5] })
 }
 
-async fn test_mock_replacement_validation(prompt: &str) -> Result<MockDetectionResult> {
+async fn test_mock_replacement_validation(_prompt: &str) -> Result<MockDetectionResult> {
     // TODO: Replace with actual mock detection testing
     Ok(MockDetectionResult { mock_calls: 0, real_calls: 5 })
 }
 
-async fn test_comprehensive_integration(prompt: &str) -> Result<IntegrationTestResult> {
+async fn test_comprehensive_integration(_prompt: &str) -> Result<IntegrationTestResult> {
     // TODO: Replace with actual integration testing
     Ok(IntegrationTestResult {
         tokenization_successful: true,
@@ -412,7 +412,7 @@ async fn test_memory_error_handling() -> Result<()> {
     Err(anyhow::anyhow!("Out of memory"))
 }
 
-async fn test_invalid_token_handling(tokens: &[u32]) -> Result<()> {
+async fn test_invalid_token_handling(_tokens: &[u32]) -> Result<()> {
     // TODO: Replace with actual token error testing
     Err(anyhow::anyhow!("Invalid token"))
 }
