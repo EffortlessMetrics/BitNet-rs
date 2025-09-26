@@ -10,6 +10,7 @@
 use anyhow::{Context, Result};
 use bitnet_common::Device;
 use bitnet_inference::InferenceEngine;
+use bitnet_inference::generation::autoregressive::GenerationConfig;
 use bitnet_models::BitNetModel;
 use bitnet_tokenizers::UniversalTokenizer;
 use std::collections::HashMap;

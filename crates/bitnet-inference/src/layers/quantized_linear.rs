@@ -147,6 +147,7 @@ pub struct QuantizedLinear {
     bias: Option<BitNetTensor>,
 
     /// Quantization infrastructure
+    #[allow(dead_code)]
     quantizer: Arc<DeviceAwareQuantizer>,
     qtype: QuantizationType,
 
@@ -364,10 +365,10 @@ impl QuantizedLinear {
         #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         {
             // Use x86 AVX-optimized TL2 kernel when available
-            if let Ok(provider) = self.kernel_manager.select_best() {
-                if provider.name().contains("avx") || provider.name().contains("x86") {
-                    return self.vectorized_tl2_matmul(input, provider).await;
-                }
+            if let Ok(provider) = self.kernel_manager.select_best()
+                && (provider.name().contains("avx") || provider.name().contains("x86"))
+            {
+                return self.vectorized_tl2_matmul(input, provider).await;
             }
         }
 
@@ -497,6 +498,7 @@ impl QuantizedLinear {
     }
 
     /// Generic fallback implementation with improved error handling
+    #[allow(dead_code)]
     async fn forward_generic(&self, input: &BitNetTensor) -> Result<BitNetTensor> {
         let dequantized_weights = self.weights.dequantize().with_context(|| {
             format!(
@@ -534,7 +536,7 @@ impl QuantizedLinear {
     /// I2S memory layout: 82-byte blocks with SIMD alignment
     fn optimize_i2s_layout(&mut self) -> Result<()> {
         // Ensure weights are aligned to I2S block boundaries
-        let total_blocks = (self.weights.data.len() + I2S_BLOCK_SIZE - 1) / I2S_BLOCK_SIZE;
+        let total_blocks = self.weights.data.len().div_ceil(I2S_BLOCK_SIZE);
         let aligned_size = total_blocks * I2S_BLOCK_SIZE;
 
         // Pre-allocate aligned memory pool for I2S operations
@@ -621,6 +623,7 @@ impl QuantizedLinear {
     }
 
     /// Calculate GPU workspace size with memory constraints
+    #[allow(dead_code)]
     fn calculate_gpu_workspace_size(&self) -> Result<usize> {
         // GPU kernels need temporary storage for different quantization types
         let base_weight_size = self.in_features * self.out_features;

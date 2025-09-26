@@ -220,6 +220,7 @@ impl RotaryEmbedding {
 
     /// CUDA-optimized RoPE application
     #[cfg(feature = "gpu")]
+    #[allow(dead_code)]
     async fn apply_rope_cuda(&self, tensor: &BitNetTensor, seq_len: usize) -> Result<BitNetTensor> {
         // Use CUDA kernel for RoPE if available
         // For now, fallback to CPU implementation
@@ -227,6 +228,7 @@ impl RotaryEmbedding {
     }
 
     #[cfg(not(feature = "gpu"))]
+    #[allow(dead_code)]
     async fn apply_rope_cuda(&self, tensor: &BitNetTensor, seq_len: usize) -> Result<BitNetTensor> {
         self.apply_rope_cpu(tensor, seq_len).await
     }

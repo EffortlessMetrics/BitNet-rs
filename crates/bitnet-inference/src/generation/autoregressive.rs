@@ -125,6 +125,7 @@ pub struct AutoregressiveGenerator {
     // Performance optimization state
     token_buffer: Vec<usize>,
     generation_times: VecDeque<f64>,
+    #[allow(dead_code)]
     batch_processor: Option<Arc<BatchProcessor>>,
 
     // Memory management
@@ -140,7 +141,7 @@ pub struct AutoregressiveGenerator {
 
 /// Performance mode for different optimization strategies
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum PerformanceMode {
+pub enum PerformanceMode {
     Latency,      // Optimize for minimal latency
     Throughput,   // Optimize for maximum throughput
     Balanced,     // Balance between latency and throughput
@@ -150,8 +151,11 @@ enum PerformanceMode {
 /// Batch processor for efficient token generation
 #[derive(Debug)]
 struct BatchProcessor {
+    #[allow(dead_code)]
     batch_size: usize,
+    #[allow(dead_code)]
     max_batch_size: usize,
+    #[allow(dead_code)]
     pending_requests: Vec<BatchRequest>,
 }
 
@@ -163,8 +167,11 @@ impl BatchProcessor {
 
 #[derive(Debug)]
 struct BatchRequest {
+    #[allow(dead_code)]
     input_tokens: Vec<usize>,
+    #[allow(dead_code)]
     generation_config: GenerationConfig,
+    #[allow(dead_code)]
     start_time: Instant,
 }
 
@@ -508,10 +515,11 @@ impl AutoregressiveGenerator {
         }
 
         // Try fast sampling first for latency optimization
-        if self.performance_mode == PerformanceMode::Latency && self.config.do_sample {
-            if let Ok(result) = self.try_fast_sampling(logits).await {
-                return Ok(result);
-            }
+        if self.performance_mode == PerformanceMode::Latency
+            && self.config.do_sample
+            && let Ok(result) = self.try_fast_sampling(logits).await
+        {
+            return Ok(result);
         }
 
         // Apply full sampling strategy
