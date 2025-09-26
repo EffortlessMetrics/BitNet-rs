@@ -429,7 +429,7 @@ impl BitNetQuantizationFixtures {
 
         Ok(QuantizationTestFixture {
             name: format!("cross_algorithm_{:?}_comparison", algorithm).to_lowercase(),
-            algorithm,
+            algorithm: algorithm.clone(),
             input_data: input_data.to_vec(),
             input_shape: shape,
             expected_quantized: quantized,

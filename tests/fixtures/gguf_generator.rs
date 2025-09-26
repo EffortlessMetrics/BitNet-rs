@@ -330,7 +330,7 @@ impl GgufFixtureGenerator {
             DataType::F32 => {
                 for i in 0..elements {
                     let value = self.generate_f32_value(i, fixture_config.seed);
-                    writer.write_f32::<LittleEndian>(value)?;
+                    WriteBytesExt::write_f32::<LittleEndian>(&mut writer, value)?;
                     bytes_written += 4;
                 }
             }
@@ -342,7 +342,7 @@ impl GgufFixtureGenerator {
                 for block in 0..num_blocks {
                     // Write scale factor (FP32)
                     let scale = self.generate_f32_value(block, fixture_config.seed + 1000);
-                    writer.write_f32::<LittleEndian>(scale)?;
+                    WriteBytesExt::write_f32::<LittleEndian>(&mut writer, scale)?;
                     bytes_written += 4;
 
                     // Write quantized weights (2 bits each, packed)
@@ -362,7 +362,7 @@ impl GgufFixtureGenerator {
                                 packed_byte |= (quantized as u8) << (bit_pair * 2);
                             }
                         }
-                        writer.write_u8(packed_byte)?;
+                        WriteBytesExt::write_u8(&mut writer, packed_byte)?;
                         bytes_written += 1;
                     }
                 }
@@ -374,7 +374,7 @@ impl GgufFixtureGenerator {
                 // Write lookup table
                 for i in 0..table_size {
                     let value = self.generate_f32_value(i, fixture_config.seed + 3000);
-                    writer.write_f32::<LittleEndian>(value)?;
+                    WriteBytesExt::write_f32::<LittleEndian>(&mut writer, value)?;
                     bytes_written += 4;
                 }
 
@@ -394,7 +394,7 @@ impl GgufFixtureGenerator {
                         } else {
                             0
                         };
-                        writer.write_u8((idx1 & 0xF) | ((idx2 & 0xF) << 4))?;
+                        WriteBytesExt::write_u8(&mut writer, (idx1 & 0xF) | ((idx2 & 0xF) << 4))?;
                         bytes_written += 1;
                     }
                 } else {
@@ -403,7 +403,7 @@ impl GgufFixtureGenerator {
                         let idx = (self.generate_f32_value(i, fixture_config.seed + 4000)
                             * table_size as f32) as u8
                             % table_size as u8;
-                        writer.write_u8(idx)?;
+                        WriteBytesExt::write_u8(&mut writer, idx)?;
                         bytes_written += 1;
                     }
                 }
@@ -421,7 +421,7 @@ impl GgufFixtureGenerator {
             - (bytes_written % fixture_config.tensor_alignment))
             % fixture_config.tensor_alignment;
         for _ in 0..alignment_padding {
-            writer.write_u8(0)?;
+            WriteBytesExt::write_u8(&mut writer, 0)?;
             bytes_written += 1;
         }
 
