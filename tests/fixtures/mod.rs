@@ -41,6 +41,12 @@ pub mod quantization_test_vectors;
 pub mod simple_validation;
 pub mod tokenizer_fixtures;
 
+// Advanced neural network fixture modules for Issue #248 comprehensive testing
+pub mod attention_fixtures;
+pub mod generation_fixtures;
+pub mod iq2s_quantization_fixtures;
+pub mod mixed_precision_fixtures;
+
 // Re-export common fixture types
 pub use cross_validation::CrossValidationFixtures;
 pub use device_aware::DeviceAwareFixtures;
@@ -64,6 +70,22 @@ pub use tokenizer_fixtures::{
     MockGgufModel, TokenizerFixtures, TokenizerTestFixture, TokenizerType,
 };
 
+// Re-export advanced neural network fixture types
+pub use attention_fixtures::{
+    AttentionConfig, AttentionFixtures, AttentionTestCase, KVCacheTestData, RoPETestData,
+};
+pub use generation_fixtures::{
+    DeterministicOutputs, GenerationConfig, GenerationFixtures, GenerationTestCase,
+    GenerationValidationResult, SamplingTestData,
+};
+pub use iq2s_quantization_fixtures::{
+    Iq2sBlock, Iq2sQuantizationFixtures, Iq2sTestCase, QualityMetrics,
+};
+pub use mixed_precision_fixtures::{
+    ComputeCapability, MixedPrecisionConfig, MixedPrecisionFixtures, MixedPrecisionTestCase,
+    PrecisionPerformanceBenchmarks, TensorCoreTests,
+};
+
 use bitnet_common::{Device, Result};
 use std::env;
 use std::path::PathBuf;
@@ -78,6 +100,13 @@ pub struct RealModelIntegrationFixtures {
     pub performance_fixtures: PerformanceFixtures,
     #[allow(dead_code)]
     pub error_handling_fixtures: ErrorHandlingFixtures,
+
+    // Advanced neural network fixtures for comprehensive testing
+    pub iq2s_quantization_fixtures: Iq2sQuantizationFixtures,
+    pub attention_fixtures: AttentionFixtures,
+    pub generation_fixtures: GenerationFixtures,
+    pub mixed_precision_fixtures: MixedPrecisionFixtures,
+
     pub config: TestEnvironmentConfig,
 }
 
@@ -208,6 +237,13 @@ impl RealModelIntegrationFixtures {
             cross_validation_fixtures: CrossValidationFixtures::new(&config),
             performance_fixtures: PerformanceFixtures::new(&config),
             error_handling_fixtures: ErrorHandlingFixtures::new(),
+
+            // Initialize advanced neural network fixtures
+            iq2s_quantization_fixtures: Iq2sQuantizationFixtures::new(&config),
+            attention_fixtures: AttentionFixtures::new(&config),
+            generation_fixtures: GenerationFixtures::new(&config),
+            mixed_precision_fixtures: MixedPrecisionFixtures::new(&config),
+
             config,
         }
     }
@@ -221,6 +257,12 @@ impl RealModelIntegrationFixtures {
         self.performance_fixtures.initialize().await?;
         self.error_handling_fixtures.initialize().await?;
 
+        // Initialize advanced neural network fixtures
+        self.iq2s_quantization_fixtures.initialize().await?;
+        self.attention_fixtures.initialize().await?;
+        self.generation_fixtures.initialize().await?;
+        self.mixed_precision_fixtures.initialize().await?;
+
         // Cross-validation for all tiers (with different levels of detail)
         self.cross_validation_fixtures.initialize(&self.model_fixtures).await?;
 
@@ -232,6 +274,14 @@ impl RealModelIntegrationFixtures {
     pub async fn cleanup(&mut self) -> Result<()> {
         // Cleanup in reverse order
         self.cross_validation_fixtures.cleanup().await?;
+
+        // Cleanup advanced neural network fixtures
+        // Note: Most don't need explicit cleanup, but included for completeness
+        let _ = self.mixed_precision_fixtures.get_test_case("fp16_precision_conversion");
+        let _ = self.generation_fixtures.get_test_case("deterministic_generation");
+        let _ = self.attention_fixtures.get_test_case("basic_attention");
+        let _ = self.iq2s_quantization_fixtures.get_test_case("basic_iq2s_quantization");
+
         self.error_handling_fixtures.cleanup().await?;
         self.performance_fixtures.cleanup().await?;
         self.quantization_fixtures.cleanup().await?;
