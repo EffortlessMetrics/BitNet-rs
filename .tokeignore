@@ -1,0 +1,14 @@
+target
+coverage-report
+benchmark-results
+mutants.out*
+mutants/
+tests/cache
+fixtures/**
+**/fixtures/**
+models/**
+*.gguf
+*.json.gz
+*.json.bz2
+vendor/**
+3rdparty/**

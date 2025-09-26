@@ -555,7 +555,7 @@ fn compute_gradient_norms(gradients: &AttentionGradients) -> GradientNorms {
 }
 
 // Type stubs for compilation - replace with actual implementations
-type Tensor = (); // Placeholder
+type PlaceholderTensor = (); // Placeholder
 type AttentionWeights = (); // Placeholder
 type AttentionGradients = (); // Placeholder
 type AttentionPatternAnalysis = (); // Placeholder with coherence/sparsity fields

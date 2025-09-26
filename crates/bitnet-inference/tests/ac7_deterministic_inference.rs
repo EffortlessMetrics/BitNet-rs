@@ -31,8 +31,7 @@ async fn test_ac7_deterministic_inference_with_fixed_seed() -> Result<()> {
     let mut results = Vec::new();
     for i in 0..3 {
         let tokenizer = create_test_tokenizer()?;
-        let mut engine =
-            InferenceEngine::new(Arc::clone(&model), Arc::clone(&tokenizer), Device::Cpu)?;
+        let engine = InferenceEngine::new(Arc::clone(&model), Arc::clone(&tokenizer), Device::Cpu)?;
 
         let result =
             engine.generate(&prompt).await.context(format!("Deterministic inference run {}", i))?;
