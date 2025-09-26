@@ -8,6 +8,7 @@
 //! Ensures BitNet.rs maintains numerical accuracy and computational correctness.
 
 use anyhow::Result;
+use bitnet_models::BitNetModel;
 use bitnet_quantization::I2SQuantizer;
 
 /// Test configuration for AC4 cross-validation accuracy validation

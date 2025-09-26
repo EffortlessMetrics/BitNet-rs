@@ -13,7 +13,6 @@ use bitnet_inference::InferenceEngine;
 use bitnet_inference::generation::autoregressive::GenerationConfig;
 use bitnet_models::BitNetModel;
 use bitnet_tokenizers::UniversalTokenizer;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Test configuration for AC3 autoregressive generation validation
@@ -549,21 +548,21 @@ async fn test_ac3_early_stopping_and_eos_handling() -> Result<()> {
 // Helper functions for autoregressive generation test scaffolding
 
 /// Create mock BitNet model for testing
-fn create_mock_bitnet_model(vocab_size: usize, hidden_size: usize) -> Result<BitNetModel> {
+fn create_mock_bitnet_model(_vocab_size: usize, _hidden_size: usize) -> Result<BitNetModel> {
     // TODO: Replace with actual model creation or loading
     // Should create a minimal model suitable for generation testing
     unimplemented!("create_mock_bitnet_model: Replace with real model creation")
 }
 
 /// Create mock tokenizer for testing
-fn create_mock_tokenizer(vocab_size: usize) -> Result<UniversalTokenizer> {
+fn create_mock_tokenizer(_vocab_size: usize) -> Result<UniversalTokenizer> {
     // TODO: Replace with actual tokenizer creation
     // Should support encode/decode operations for testing
     unimplemented!("create_mock_tokenizer: Replace with real tokenizer")
 }
 
 /// Calculate diversity metric from multiple token sequences
-fn calculate_token_diversity(samples: &[Vec<u32>]) -> Result<f32> {
+fn calculate_token_diversity(_samples: &[Vec<u32>]) -> Result<f32> {
     // TODO: Replace with actual diversity calculation
     // Should measure diversity using entropy or unique n-gram counts
     unimplemented!("calculate_token_diversity: Replace with real diversity metric")

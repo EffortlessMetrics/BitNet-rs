@@ -10,6 +10,8 @@ use anyhow::{Context, Result};
 use bitnet_common::Device;
 use bitnet_inference::{InferenceConfig, InferenceEngine};
 use bitnet_models::BitNetModel;
+use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 /// Test configuration for AC5 performance target validation
@@ -375,7 +377,7 @@ fn load_bitnet_2b_model_for_performance_testing() -> Result<BitNetModel> {
 }
 
 /// Create tokenizer optimized for performance testing
-fn create_performance_test_tokenizer() -> Result<Arc<dyn Tokenizer>> {
+fn create_performance_test_tokenizer() -> Result<Arc<UniversalTokenizer>> {
     // TODO: Replace with actual high-performance tokenizer
     unimplemented!("create_performance_test_tokenizer")
 }
@@ -394,8 +396,8 @@ fn is_gpu_available() -> bool {
 
 /// Validate CPU/GPU output consistency
 fn validate_cpu_gpu_output_consistency(
-    cpu_result: &GenerationResult,
-    gpu_result: &GenerationResult,
+    _cpu_result: &GenerationResult,
+    _gpu_result: &GenerationResult,
 ) -> Result<ConsistencyResult> {
     // TODO: Replace with actual consistency validation
     unimplemented!("validate_cpu_gpu_output_consistency")
@@ -403,8 +405,8 @@ fn validate_cpu_gpu_output_consistency(
 
 /// Validate KV-cache output consistency
 fn validate_kv_cache_output_consistency(
-    cache_result: &GenerationResult,
-    no_cache_result: &GenerationResult,
+    _cache_result: &GenerationResult,
+    _no_cache_result: &GenerationResult,
 ) -> Result<ConsistencyResult> {
     // TODO: Replace with actual consistency validation
     unimplemented!("validate_kv_cache_output_consistency")
