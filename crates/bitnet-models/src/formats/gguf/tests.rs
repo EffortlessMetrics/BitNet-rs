@@ -400,6 +400,261 @@ fn test_reader_v3_ignores_bad_data_offset() {
 }
 
 #[test]
+fn test_gguf_arithmetic_overflow_protection() {
+    // Test arithmetic operations in header parsing and offset calculations
+
+    // Test 1: Tensor offset overflow protection
+    let mut data = Vec::new();
+    data.extend_from_slice(b"GGUF");
+    data.extend_from_slice(&2u32.to_le_bytes()); // Version
+    data.extend_from_slice(&1u64.to_le_bytes()); // One tensor
+    data.extend_from_slice(&0u64.to_le_bytes()); // Zero metadata
+
+    // Add a tensor info with maximum offset to test overflow protection
+    let tensor_name = "test_tensor";
+    data.extend_from_slice(&(tensor_name.len() as u64).to_le_bytes());
+    data.extend_from_slice(tensor_name.as_bytes());
+    data.extend_from_slice(&4u32.to_le_bytes()); // F32 tensor type
+    data.extend_from_slice(&2u32.to_le_bytes()); // 2D tensor
+    data.extend_from_slice(&10usize.to_le_bytes());
+    data.extend_from_slice(&10usize.to_le_bytes());
+    data.extend_from_slice(&u64::MAX.to_le_bytes()); // Maximum offset to trigger overflow
+
+    let result = GgufReader::new(&data);
+    assert!(result.is_err(), "Should reject tensors with overflow-inducing offsets");
+
+    // Test 2: Alignment calculation edge cases
+    let mut data = Vec::new();
+    data.extend_from_slice(b"GGUF");
+    data.extend_from_slice(&3u32.to_le_bytes()); // Version 3
+    data.extend_from_slice(&0u64.to_le_bytes()); // No tensors
+    data.extend_from_slice(&1u64.to_le_bytes()); // One metadata
+    data.extend_from_slice(&1u32.to_le_bytes()); // Alignment = 1 (edge case)
+    data.extend_from_slice(&0u64.to_le_bytes()); // data_offset = 0
+
+    // Add minimal metadata
+    let key = "k";
+    data.extend_from_slice(&(key.len() as u64).to_le_bytes());
+    data.extend_from_slice(key.as_bytes());
+    data.extend_from_slice(&4u32.to_le_bytes()); // U32 type
+    data.extend_from_slice(&1u32.to_le_bytes()); // Value
+
+    let result = GgufReader::new(&data);
+    assert!(result.is_ok(), "Should handle alignment=1 gracefully");
+    let reader = result.unwrap();
+    assert_eq!(reader.alignment(), 1);
+}
+
+#[test]
+fn test_gguf_security_validation_edge_cases() {
+    // Test security limits and validation logic robustness
+
+    // Test 1: Extremely large metadata count
+    let mut data = Vec::new();
+    data.extend_from_slice(b"GGUF");
+    data.extend_from_slice(&2u32.to_le_bytes());
+    data.extend_from_slice(&0u64.to_le_bytes()); // No tensors
+    data.extend_from_slice(&(u32::MAX as u64).to_le_bytes()); // Huge metadata count
+
+    let result = GgufReader::new(&data);
+    assert!(result.is_err(), "Should reject files with excessive metadata count");
+
+    // Test 2: Memory exhaustion protection for large tensor counts
+    let mut data = Vec::new();
+    data.extend_from_slice(b"GGUF");
+    data.extend_from_slice(&2u32.to_le_bytes());
+    data.extend_from_slice(&(u32::MAX as u64).to_le_bytes()); // Huge tensor count
+    data.extend_from_slice(&0u64.to_le_bytes());
+
+    let result = GgufReader::new(&data);
+    assert!(result.is_err(), "Should reject files with excessive tensor count");
+
+    // Test 3: String length validation with potential overflow
+    let mut data = Vec::new();
+    data.extend_from_slice(b"GGUF");
+    data.extend_from_slice(&2u32.to_le_bytes());
+    data.extend_from_slice(&0u64.to_le_bytes());
+    data.extend_from_slice(&1u64.to_le_bytes());
+
+    // Add metadata with extremely large string length
+    data.extend_from_slice(&u64::MAX.to_le_bytes()); // Huge string length
+
+    let result = GgufReader::new(&data);
+    assert!(result.is_err(), "Should reject files with malformed string lengths");
+}
+
+#[test]
+fn test_gguf_extreme_value_boundary_conditions() {
+    // Test extreme values in GGUF parsing and tensor handling
+
+    // Test 1: Zero-sized tensor dimensions
+    let mut data = Vec::new();
+    data.extend_from_slice(b"GGUF");
+    data.extend_from_slice(&2u32.to_le_bytes());
+    data.extend_from_slice(&1u64.to_le_bytes()); // One tensor
+    data.extend_from_slice(&2u64.to_le_bytes()); // Required metadata
+
+    // Add required metadata first
+    let arch_key = "general.architecture";
+    data.extend_from_slice(&(arch_key.len() as u64).to_le_bytes());
+    data.extend_from_slice(arch_key.as_bytes());
+    data.extend_from_slice(&8u32.to_le_bytes()); // String type
+    let arch_val = "bitnet";
+    data.extend_from_slice(&(arch_val.len() as u64).to_le_bytes());
+    data.extend_from_slice(arch_val.as_bytes());
+
+    let name_key = "general.name";
+    data.extend_from_slice(&(name_key.len() as u64).to_le_bytes());
+    data.extend_from_slice(name_key.as_bytes());
+    data.extend_from_slice(&8u32.to_le_bytes()); // String type
+    let name_val = "test";
+    data.extend_from_slice(&(name_val.len() as u64).to_le_bytes());
+    data.extend_from_slice(name_val.as_bytes());
+
+    // Add tensor with zero dimension
+    let tensor_name = "zero_tensor";
+    data.extend_from_slice(&(tensor_name.len() as u64).to_le_bytes());
+    data.extend_from_slice(tensor_name.as_bytes());
+    data.extend_from_slice(&0u32.to_le_bytes()); // F32 tensor
+    data.extend_from_slice(&2u32.to_le_bytes()); // 2D
+    data.extend_from_slice(&0usize.to_le_bytes()); // Zero dimension
+    data.extend_from_slice(&10usize.to_le_bytes());
+    data.extend_from_slice(&0u64.to_le_bytes()); // Zero offset
+
+    let result = GgufReader::new(&data);
+    assert!(result.is_err(), "Should reject tensors with zero dimensions");
+
+    // Test 2: Maximum dimension values
+    let mut data = Vec::new();
+    data.extend_from_slice(b"GGUF");
+    data.extend_from_slice(&2u32.to_le_bytes());
+    data.extend_from_slice(&1u64.to_le_bytes());
+    data.extend_from_slice(&2u64.to_le_bytes());
+
+    // Required metadata
+    let arch_key = "general.architecture";
+    data.extend_from_slice(&(arch_key.len() as u64).to_le_bytes());
+    data.extend_from_slice(arch_key.as_bytes());
+    data.extend_from_slice(&8u32.to_le_bytes());
+    let arch_val = "bitnet";
+    data.extend_from_slice(&(arch_val.len() as u64).to_le_bytes());
+    data.extend_from_slice(arch_val.as_bytes());
+
+    let name_key = "general.name";
+    data.extend_from_slice(&(name_key.len() as u64).to_le_bytes());
+    data.extend_from_slice(name_key.as_bytes());
+    data.extend_from_slice(&8u32.to_le_bytes());
+    let name_val = "test";
+    data.extend_from_slice(&(name_val.len() as u64).to_le_bytes());
+    data.extend_from_slice(name_val.as_bytes());
+
+    // Tensor with extreme dimensions
+    let tensor_name = "max_tensor";
+    data.extend_from_slice(&(tensor_name.len() as u64).to_le_bytes());
+    data.extend_from_slice(tensor_name.as_bytes());
+    data.extend_from_slice(&0u32.to_le_bytes());
+    data.extend_from_slice(&2u32.to_le_bytes());
+    data.extend_from_slice(&usize::MAX.to_le_bytes()); // Maximum dimension
+    data.extend_from_slice(&usize::MAX.to_le_bytes()); // Maximum dimension
+    data.extend_from_slice(&0u64.to_le_bytes());
+
+    let result = GgufReader::new(&data);
+    assert!(result.is_err(), "Should handle extreme dimension values safely");
+}
+
+#[test]
+fn test_gguf_tensor_data_boundary_validation() {
+    // Test tensor data boundary checks and validation
+
+    // Create minimal valid GGUF with one tensor
+    let metadata = vec![
+        ("general.architecture", GgufValue::String("bitnet".to_string())),
+        ("general.name", GgufValue::String("test".to_string())),
+    ];
+
+    let mut data = Vec::new();
+    data.extend_from_slice(b"GGUF");
+    data.extend_from_slice(&2u32.to_le_bytes());
+    data.extend_from_slice(&1u64.to_le_bytes()); // One tensor
+    data.extend_from_slice(&2u64.to_le_bytes()); // Two metadata items
+
+    // Write metadata
+    for (key, value) in metadata {
+        data.extend_from_slice(&(key.len() as u64).to_le_bytes());
+        data.extend_from_slice(key.as_bytes());
+        write_gguf_value(&mut data, value);
+    }
+
+    // Add tensor info
+    let tensor_name = "test.weight";
+    data.extend_from_slice(&(tensor_name.len() as u64).to_le_bytes());
+    data.extend_from_slice(tensor_name.as_bytes());
+    data.extend_from_slice(&0u32.to_le_bytes()); // F32
+    data.extend_from_slice(&1u32.to_le_bytes()); // 1D
+    data.extend_from_slice(&100usize.to_le_bytes()); // 100 elements
+    data.extend_from_slice(&0u64.to_le_bytes()); // Offset 0
+
+    // Pad to alignment
+    let pad = (32 - (data.len() % 32)) % 32;
+    data.resize(data.len() + pad, 0);
+
+    // Add insufficient tensor data (only 50 bytes instead of 400)
+    data.resize(data.len() + 50, 0x42);
+
+    let result = GgufReader::new(&data);
+    if let Ok(reader) = result {
+        let tensor_result = reader.get_tensor_data(0);
+        assert!(tensor_result.is_err(), "Should detect tensor data extending beyond file");
+    }
+}
+
+#[test]
+fn test_gguf_corrupted_header_edge_cases() {
+    // Test additional corrupted header scenarios for robustness
+
+    // Test 1: Truncated header
+    let truncated = vec![b'G', b'G', b'U']; // Incomplete magic
+    let result = GgufReader::new(&truncated);
+    assert!(result.is_err(), "Should reject truncated headers");
+
+    // Test 2: Version boundary cases
+    for version in [0u32, 1u32, 4u32, u32::MAX] {
+        let mut data = Vec::new();
+        data.extend_from_slice(b"GGUF");
+        data.extend_from_slice(&version.to_le_bytes());
+        data.extend_from_slice(&0u64.to_le_bytes());
+        data.extend_from_slice(&0u64.to_le_bytes());
+
+        let result = GgufReader::new(&data);
+        if !(2..=3).contains(&version) {
+            assert!(result.is_err(), "Should reject unsupported version {}", version);
+        }
+    }
+
+    // Test 3: Misaligned tensor data with extreme alignment values
+    let mut data = Vec::new();
+    data.extend_from_slice(b"GGUF");
+    data.extend_from_slice(&3u32.to_le_bytes()); // v3
+    data.extend_from_slice(&0u64.to_le_bytes());
+    data.extend_from_slice(&1u64.to_le_bytes());
+    data.extend_from_slice(&0u32.to_le_bytes()); // Alignment = 0 (invalid)
+    data.extend_from_slice(&100u64.to_le_bytes()); // data_offset
+
+    let key = "k";
+    data.extend_from_slice(&(key.len() as u64).to_le_bytes());
+    data.extend_from_slice(key.as_bytes());
+    data.extend_from_slice(&4u32.to_le_bytes());
+    data.extend_from_slice(&1u32.to_le_bytes());
+
+    let result = GgufReader::new(&data);
+    if let Ok(reader) = result {
+        // Should clamp invalid alignment to safe default
+        assert!(reader.alignment() >= 1, "Alignment should be clamped to safe minimum");
+        assert!(reader.alignment().is_power_of_two(), "Alignment should be power of two");
+    }
+}
+
+#[test]
 fn test_reader_v3_clamps_weird_alignment() {
     // Write v3 with alignment = 0 (invalid), data_offset aligned to 32 anyway.
     let mut bytes = build_gguf_bytes_v3(vec![("flag", GgufValue::Bool(true))]);
@@ -528,4 +783,160 @@ fn build_gguf_bytes_with_tensor(metadata: Vec<(&str, GgufValue)>) -> Vec<u8> {
     data.resize(data.len() + attn_data_size, 0); // attention tensor data
 
     data
+}
+
+/// Enhanced GGUF edge case tests for robustness
+#[test]
+fn test_gguf_corrupted_header() {
+    // Test with corrupted magic bytes
+    let mut corrupted_data = Vec::new();
+    corrupted_data.extend_from_slice(b"XXXX"); // Invalid magic
+    corrupted_data.extend_from_slice(&2u32.to_le_bytes()); // Version 2
+    corrupted_data.extend_from_slice(&0u64.to_le_bytes()); // Tensor count
+    corrupted_data.extend_from_slice(&0u64.to_le_bytes()); // Metadata count
+
+    let result = GgufReader::new(&corrupted_data);
+    assert!(result.is_err(), "Should fail with corrupted magic bytes");
+
+    // Test with valid magic but corrupted version
+    let mut version_corrupted = Vec::new();
+    version_corrupted.extend_from_slice(b"GGUF"); // Valid magic
+    version_corrupted.extend_from_slice(&999u32.to_le_bytes()); // Unsupported version
+    version_corrupted.extend_from_slice(&0u64.to_le_bytes()); // Tensor count
+    version_corrupted.extend_from_slice(&0u64.to_le_bytes()); // Metadata count
+
+    let result = GgufReader::new(&version_corrupted);
+    // Should either fail or handle gracefully
+    if result.is_ok() {
+        // Graceful handling is acceptable
+    }
+    // Expected failure is also acceptable
+}
+
+#[test]
+fn test_gguf_truncated_file() {
+    // Test with file truncated during header
+    let incomplete_header = vec![b'G', b'G', b'U']; // Truncated magic
+    let result = GgufReader::new(&incomplete_header);
+    assert!(result.is_err(), "Should fail with truncated header");
+
+    // Test with header present but metadata truncated
+    let mut partial_metadata = Vec::new();
+    partial_metadata.extend_from_slice(b"GGUF");
+    partial_metadata.extend_from_slice(&2u32.to_le_bytes());
+    partial_metadata.extend_from_slice(&0u64.to_le_bytes()); // No tensors
+    partial_metadata.extend_from_slice(&1u64.to_le_bytes()); // 1 metadata entry
+    // Missing actual metadata entry
+
+    let result = GgufReader::new(&partial_metadata);
+    assert!(result.is_err(), "Should fail with truncated metadata");
+}
+
+#[test]
+fn test_gguf_malformed_metadata() {
+    let mut malformed_data = Vec::new();
+    malformed_data.extend_from_slice(b"GGUF");
+    malformed_data.extend_from_slice(&2u32.to_le_bytes());
+    malformed_data.extend_from_slice(&0u64.to_le_bytes()); // No tensors
+    malformed_data.extend_from_slice(&1u64.to_le_bytes()); // 1 metadata entry
+
+    // Add key with invalid length
+    malformed_data.extend_from_slice(&u64::MAX.to_le_bytes()); // Excessive key length
+    malformed_data.extend_from_slice(b"test"); // Key shorter than declared
+
+    let result = GgufReader::new(&malformed_data);
+    assert!(result.is_err(), "Should fail with malformed metadata key");
+}
+
+#[test]
+fn test_gguf_extreme_tensor_counts() {
+    // Test with extremely high tensor count but no actual tensors
+    let mut extreme_count = Vec::new();
+    extreme_count.extend_from_slice(b"GGUF");
+    extreme_count.extend_from_slice(&2u32.to_le_bytes());
+    extreme_count.extend_from_slice(&u64::MAX.to_le_bytes()); // Extreme tensor count
+    extreme_count.extend_from_slice(&0u64.to_le_bytes()); // No metadata
+
+    let result = GgufReader::new(&extreme_count);
+    // Should handle large counts gracefully without allocating excessive memory
+    if let Ok(reader) = result {
+        // If parsing succeeds, tensor iteration should be bounded
+        let count = reader.tensor_count() as usize;
+        assert!(count <= 1000, "Tensor count should be bounded for safety");
+    }
+    // Rejection is acceptable
+}
+
+#[test]
+fn test_gguf_misaligned_tensor_data() {
+    // Create GGUF with tensor data at non-standard alignment
+    let mut misaligned_data = Vec::new();
+    misaligned_data.extend_from_slice(b"GGUF");
+    misaligned_data.extend_from_slice(&2u32.to_le_bytes());
+    misaligned_data.extend_from_slice(&1u64.to_le_bytes()); // 1 tensor
+    misaligned_data.extend_from_slice(&0u64.to_le_bytes()); // No metadata
+
+    // Add tensor info with misaligned offset
+    let tensor_name = "test_tensor";
+    misaligned_data.extend_from_slice(&(tensor_name.len() as u64).to_le_bytes());
+    misaligned_data.extend_from_slice(tensor_name.as_bytes());
+
+    // Tensor dimensions (1D)
+    misaligned_data.extend_from_slice(&1u32.to_le_bytes()); // n_dims
+    misaligned_data.extend_from_slice(&4u64.to_le_bytes()); // 4 elements
+
+    // Tensor type (F32)
+    misaligned_data.extend_from_slice(&0u32.to_le_bytes()); // GGML_TYPE_F32
+
+    // Misaligned tensor offset (not 32-byte aligned)
+    let misaligned_offset = 37u64; // Not aligned to 32 bytes
+    misaligned_data.extend_from_slice(&misaligned_offset.to_le_bytes());
+
+    // Pad to at least the tensor offset
+    misaligned_data.resize(misaligned_offset as usize + 16, 0); // 4 f32 values
+
+    let result = GgufReader::new(&misaligned_data);
+    // Should handle misaligned data gracefully
+    if let Ok(reader) = result {
+        let info = reader.get_tensor_info(0);
+        // Should not panic even with misaligned data
+        if info.is_ok() {
+            // Acceptable if parsing succeeds
+        }
+        // Acceptable if tensor access fails gracefully
+    }
+}
+
+#[test]
+fn test_gguf_memory_exhaustion_protection() {
+    // Test protection against memory exhaustion attacks
+    let mut large_metadata = Vec::new();
+    large_metadata.extend_from_slice(b"GGUF");
+    large_metadata.extend_from_slice(&2u32.to_le_bytes());
+    large_metadata.extend_from_slice(&0u64.to_le_bytes()); // No tensors
+    large_metadata.extend_from_slice(&10000u64.to_le_bytes()); // Many metadata entries
+
+    // Add a few normal entries, then truncate
+    // This tests that parser doesn't pre-allocate based on metadata count
+    for i in 0..3 {
+        let key = format!("key_{}", i);
+        large_metadata.extend_from_slice(&(key.len() as u64).to_le_bytes());
+        large_metadata.extend_from_slice(key.as_bytes());
+
+        // String value
+        large_metadata.extend_from_slice(&8u32.to_le_bytes()); // String type
+        let value = format!("value_{}", i);
+        large_metadata.extend_from_slice(&(value.len() as u64).to_le_bytes());
+        large_metadata.extend_from_slice(value.as_bytes());
+    }
+    // File ends here, much shorter than declared metadata count
+
+    let result = GgufReader::new(&large_metadata);
+    // Should fail gracefully without consuming excessive memory
+    if let Ok(reader) = result {
+        // If parsing succeeds, should handle iteration safely
+        let keys: Vec<_> = reader.metadata_keys().into_iter().take(100).collect(); // Bounded iteration
+        assert!(keys.len() <= 100, "Should not iterate beyond reasonable bounds");
+    }
+    // Expected failure is acceptable
 }

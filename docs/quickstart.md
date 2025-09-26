@@ -77,7 +77,7 @@ You've successfully:
 - **API Integration**: See [reference/real-model-api-contracts.md](reference/real-model-api-contracts.md) for Rust API usage
 - **Model Formats**: Learn about GGUF, I2_S, TL1, TL2 quantization in [explanation/](explanation/)
 - **GPU Setup**: Enable CUDA acceleration in [development/gpu-setup-guide.md](development/gpu-setup-guide.md)
-- **Troubleshooting**: Common issues in [troubleshooting.md](../troubleshooting.md)
+- **Troubleshooting**: Common issues in [troubleshooting.md](troubleshooting/troubleshooting.md)
 
 ## Quick Commands Reference
 

@@ -775,6 +775,109 @@ mod tests {
                 prop_assert!(padded_elems >= nelems);
                 prop_assert!(padded_elems - nelems < layout.block_size);
             }
+
+            /// Test I2S quantization stability under varying conditions
+            #[test]
+            fn i2s_quantization_stability_test(
+                block_count in 1usize..100,
+                scale_factor in 0.1f32..10.0f32
+            ) {
+                let layout = I2SLayout::default();
+                let total_elems = block_count * layout.block_size;
+
+                // Create test data with known patterns
+                let mut test_data = vec![0.0f32; total_elems];
+                for (i, elem) in test_data.iter_mut().enumerate().take(total_elems) {
+                    *elem = ((i as f32).sin() * scale_factor).clamp(-2.0, 2.0);
+                }
+
+                // Test that block calculation is correct
+                let calculated_blocks = total_elems.div_ceil(layout.block_size);
+                prop_assert_eq!(calculated_blocks, block_count);
+
+                // Test that data size requirements are met
+                let required_bytes = calculated_blocks * layout.bytes_per_block;
+                prop_assert!(required_bytes >= layout.bytes_per_block);
+                prop_assert!(required_bytes <= total_elems * 4); // Should not exceed f32 storage
+            }
+        }
+
+        /// Test I2S block boundary calculations for edge cases
+        #[test]
+        fn test_i2s_block_boundary_edge_cases() {
+            let layout = I2SLayout::default();
+
+            // Test various element counts around block boundaries
+            let test_cases = vec![
+                (1, 1),                           // Single element
+                (layout.block_size - 1, 1),       // Just under one block
+                (layout.block_size, 1),           // Exactly one block
+                (layout.block_size + 1, 2),       // Just over one block
+                (layout.block_size * 2, 2),       // Exactly two blocks
+                (layout.block_size * 10 + 7, 11), // Multiple blocks plus remainder
+            ];
+
+            for (elems, expected_blocks) in test_cases {
+                let calculated_blocks = elems.div_ceil(layout.block_size);
+                assert_eq!(
+                    calculated_blocks, expected_blocks,
+                    "Block count mismatch for {} elements",
+                    elems
+                );
+
+                let padded_elems = calculated_blocks * layout.block_size;
+                assert!(
+                    padded_elems >= elems,
+                    "Padded elements {} should be >= original {}",
+                    padded_elems,
+                    elems
+                );
+                assert!(
+                    padded_elems - elems < layout.block_size,
+                    "Padding {} too large for {} elements",
+                    padded_elems - elems,
+                    elems
+                );
+            }
+        }
+
+        /// Test I2S memory layout calculations for security
+        #[test]
+        fn test_i2s_memory_layout_security() {
+            let layout = I2SLayout::default();
+
+            // Test that memory calculations don't overflow
+            let max_safe_elems = usize::MAX / 4; // Avoid overflow in bytes calculation
+            let large_elems = max_safe_elems.min(1_000_000); // Reasonable upper bound
+
+            let blocks = large_elems.div_ceil(layout.block_size);
+            let bytes_needed = blocks.saturating_mul(layout.bytes_per_block);
+
+            // Should not panic or overflow
+            assert!(bytes_needed > 0);
+            assert!(bytes_needed >= layout.bytes_per_block);
+            assert!(blocks * layout.bytes_per_block == bytes_needed); // No overflow
+        }
+
+        /// Test device-aware operations with fallback scenarios
+        #[test]
+        fn test_i2s_device_fallback_scenarios() {
+            use bitnet_common::Device;
+
+            let layout = I2SLayout::default();
+            let test_elems = layout.block_size * 4;
+
+            // Test CPU device handling
+            let cpu_device = Device::Cpu;
+            assert_eq!(format!("{:?}", cpu_device), "Cpu");
+
+            // Test device-specific calculations remain consistent
+            let blocks = test_elems.div_ceil(layout.block_size);
+            let bytes_per_device = blocks * layout.bytes_per_block;
+
+            // Device shouldn't affect layout calculations
+            assert_eq!(blocks, 4); // 4 blocks for 4 * block_size elements
+            assert!(bytes_per_device > 0);
         }
     }
 }

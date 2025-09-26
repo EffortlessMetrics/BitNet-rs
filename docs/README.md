@@ -6,7 +6,7 @@ Welcome to the comprehensive documentation for BitNet.rs, the production-ready R
 
 ### Getting Started
 - **[Getting Started Guide](getting-started.md)** - Installation, basic usage, and quick start examples
-- **[API Reference](api-reference.md)** - Complete API documentation with examples
+- **[API Reference](reference/api-reference.md)** - Complete API documentation with examples
 - **[Migration Guide](migration-guide.md)** - Migrate from Python/C++ BitNet implementations
 
 ### Configuration & Testing
@@ -18,7 +18,7 @@ Welcome to the comprehensive documentation for BitNet.rs, the production-ready R
 
 ### Guides
 - **[Performance Tuning](performance-tuning.md)** - Optimize performance for your hardware and use case
-- **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
+- **[Troubleshooting](troubleshooting/troubleshooting.md)** - Common issues and solutions
 
 ### Examples
 - **[Basic Examples](../examples/basic/)** - Simple usage patterns
@@ -74,13 +74,13 @@ BitNet.rs is built around several key concepts:
 
 | Feature | Status | Documentation |
 |---------|--------|---------------|
-| **Core Inference** | ✅ Complete | [API Reference](api-reference.md#bitnetmodel) |
+| **Core Inference** | ✅ Complete | [API Reference](reference/api-reference.md#bitnetmodel) |
 | **Streaming Generation** | ✅ Complete | [Getting Started](getting-started.md#streaming-generation) |
 | **CPU Optimization** | ✅ Complete | [Performance Tuning](performance-tuning.md#cpu-optimization) |
 | **CUDA GPU Support** | ✅ Complete | [Performance Tuning](performance-tuning.md#gpu-optimization) |
-| **Metal GPU Support** | ✅ Complete | [Troubleshooting](troubleshooting.md#metal-gpu-issues) |
-| **Quantization (I2S)** | ✅ Complete | [API Reference](api-reference.md#quantization) |
-| **Quantization (TL1/TL2)** | ✅ Complete | [API Reference](api-reference.md#quantization) |
+| **Metal GPU Support** | ✅ Complete | [Troubleshooting](troubleshooting/troubleshooting.md#metal-gpu-issues) |
+| **Quantization (I2S)** | ✅ Complete | [API Reference](reference/api-reference.md#quantization) |
+| **Quantization (TL1/TL2)** | ✅ Complete | [API Reference](reference/api-reference.md#quantization) |
 | **Python Bindings** | ✅ Complete | [Migration Guide](migration-guide.md#migrating-from-python-bitnet) |
 | **C API** | ✅ Complete | [Migration Guide](migration-guide.md#migrating-from-c-bitnet) |
 | **WebAssembly** | ✅ Complete | [Examples](../examples/wasm/) |
@@ -249,4 +249,4 @@ BitNet Rust is licensed under the [MIT License](../LICENSE).
 
 ---
 
-**Need help?** Check our [Troubleshooting Guide](troubleshooting.md) or join our [Discord community](https://discord.gg/bitnet-rust).
+**Need help?** Check our [Troubleshooting Guide](troubleshooting/troubleshooting.md) or join our [Discord community](https://discord.gg/bitnet-rust).

@@ -65,16 +65,40 @@ impl I2SQuantizer {
     /// Validate input tensor against security limits
     fn validate_tensor_input(tensor: &BitNetTensor, limits: &SecurityLimits) -> Result<()> {
         let shape = tensor.shape();
-        let total_elements = shape.iter().try_fold(1u64, |acc, &dim| {
+
+        // Security: Validate shape before any calculations
+        if shape.is_empty() {
+            return Err(BitNetError::Security(SecurityError::MalformedData {
+                reason: "Tensor shape cannot be empty".to_string(),
+            }));
+        }
+
+        if shape.len() > 8 {
+            return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                resource: "tensor_dimensions".to_string(),
+                value: shape.len() as u64,
+                limit: 8,
+            }));
+        }
+
+        let total_elements = shape.iter().enumerate().try_fold(1u64, |acc, (i, &dim)| {
             if dim == 0 {
                 return Err(BitNetError::Security(SecurityError::MalformedData {
-                    reason: "Tensor dimension cannot be zero".to_string(),
+                    reason: format!("Tensor dimension {} cannot be zero", i),
+                }));
+            }
+
+            if dim > 1_000_000_000 {
+                return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                    resource: "tensor_dimension_size".to_string(),
+                    value: dim as u64,
+                    limit: 1_000_000_000,
                 }));
             }
 
             acc.checked_mul(dim as u64).ok_or_else(|| {
                 BitNetError::Security(SecurityError::MemoryBomb {
-                    reason: "Tensor dimension multiplication overflow".to_string(),
+                    reason: format!("Tensor dimension multiplication overflow at dimension {}", i),
                 })
             })
         })?;
@@ -131,11 +155,40 @@ impl I2SQuantizer {
 
     /// Validate quantized tensor against security limits
     fn validate_quantized_tensor(tensor: &QuantizedTensor, limits: &SecurityLimits) -> Result<()> {
+        // Security: Validate tensor shape before calculations
+        if tensor.shape.is_empty() {
+            return Err(BitNetError::Security(SecurityError::MalformedData {
+                reason: "Quantized tensor shape cannot be empty".to_string(),
+            }));
+        }
+
+        if tensor.shape.len() > 8 {
+            return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                resource: "quantized_tensor_dimensions".to_string(),
+                value: tensor.shape.len() as u64,
+                limit: 8,
+            }));
+        }
+
         // Security: Validate tensor shape and element count
-        let total_elements = tensor.shape.iter().try_fold(1u64, |acc, &dim| {
+        let total_elements = tensor.shape.iter().enumerate().try_fold(1u64, |acc, (i, &dim)| {
+            if dim == 0 {
+                return Err(BitNetError::Security(SecurityError::MalformedData {
+                    reason: format!("Quantized tensor dimension {} cannot be zero", i),
+                }));
+            }
+
+            if dim > 1_000_000_000 {
+                return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                    resource: "quantized_tensor_dimension_size".to_string(),
+                    value: dim as u64,
+                    limit: 1_000_000_000,
+                }));
+            }
+
             acc.checked_mul(dim as u64).ok_or_else(|| {
                 BitNetError::Security(SecurityError::MemoryBomb {
-                    reason: "Quantized tensor dimension overflow".to_string(),
+                    reason: format!("Quantized tensor dimension overflow at dimension {}", i),
                 })
             })
         })?;
@@ -222,10 +275,29 @@ impl I2SQuantizer {
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
 
+        // Security: Validate data length matches tensor shape
+        let expected_elements = shape.iter().try_fold(1usize, |acc, &dim| {
+            acc.checked_mul(dim).ok_or_else(|| {
+                BitNetError::Security(SecurityError::MemoryBomb {
+                    reason: "Shape element count overflow".to_string(),
+                })
+            })
+        })?;
+
+        if data.len() != expected_elements {
+            return Err(BitNetError::Security(SecurityError::MalformedData {
+                reason: format!(
+                    "Data length {} does not match shape element count {}",
+                    data.len(),
+                    expected_elements
+                ),
+            }));
+        }
+
         // Calculate grouped scales for better accuracy
         let scales = calculate_grouped_scales(&data, self.block_size, 2);
 
-        // Quantize data in parallel blocks
+        // Quantize data in parallel blocks with safety checks
         let quantized_data = if self.use_simd {
             self.quantize_simd(&data, &scales)?
         } else {
@@ -271,10 +343,40 @@ impl I2SQuantizer {
         // Security: Validate quantized tensor before dequantization
         Self::validate_quantized_tensor(tensor, limits)?;
 
-        // Unpack 2-bit values
-        let quantized_data = unpack_2bit_values(&tensor.data, tensor.numel());
+        // Security: Validate tensor element count before unpacking
+        let expected_elements = tensor.shape.iter().try_fold(1usize, |acc, &dim| {
+            acc.checked_mul(dim).ok_or_else(|| {
+                BitNetError::Security(SecurityError::MemoryBomb {
+                    reason: "Dequantization shape element count overflow".to_string(),
+                })
+            })
+        })?;
 
-        // Dequantize in parallel blocks
+        let tensor_numel = tensor.numel();
+        if tensor_numel != expected_elements {
+            return Err(BitNetError::Security(SecurityError::MalformedData {
+                reason: format!(
+                    "Tensor numel {} does not match shape element count {}",
+                    tensor_numel, expected_elements
+                ),
+            }));
+        }
+
+        // Unpack 2-bit values with safety checks
+        let quantized_data = unpack_2bit_values(&tensor.data, tensor_numel);
+
+        // Security: Validate unpacked data length
+        if quantized_data.len() != tensor_numel {
+            return Err(BitNetError::Security(SecurityError::MalformedData {
+                reason: format!(
+                    "Unpacked data length {} does not match expected {}",
+                    quantized_data.len(),
+                    tensor_numel
+                ),
+            }));
+        }
+
+        // Dequantize in parallel blocks with safety checks
         let dequantized_data = if self.use_simd {
             self.dequantize_simd(&quantized_data, &tensor.scales)?
         } else {

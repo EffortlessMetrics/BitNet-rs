@@ -16,17 +16,17 @@ use std::sync::Arc;
 /// Validates real implementations replace mock placeholders
 #[cfg(feature = "cpu")]
 #[tokio::test]
-async fn test_ac8_mock_vs_real_inference_detection() -> Result<()> {
-    let model = create_test_model()?;
-    let tokenizer = create_test_tokenizer()?;
-    let mut engine = InferenceEngine::new(Arc::new(model), Arc::new(tokenizer), Device::Cpu)?;
+async fn test_ac8_mock_vs_real_inference_detection() {
+    let model = create_test_model();
+    let tokenizer = create_test_tokenizer();
+    let engine = InferenceEngine::new(Arc::new(model), Arc::new(tokenizer), Device::Cpu).unwrap();
 
     // Enable mock detection (commented out - API doesn't exist in real engine)
     let _mock_detector = MockDetector::new();
     // engine.set_mock_detector(mock_detector);
 
     let prompt = "Test inference path";
-    let result = engine.generate(prompt).await?;
+    let result = engine.generate(prompt).await.unwrap();
 
     // Validate no mock implementations were used (commented out - API doesn't exist)
     // let mock_usage_report = engine.get_mock_usage_report();
@@ -51,7 +51,7 @@ async fn test_ac8_mock_vs_real_inference_detection() -> Result<()> {
 }
 
 // Helper functions and mock implementations
-use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor, InferenceError};
+use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 
@@ -138,10 +138,10 @@ impl MockDetector {
     }
 }
 
-fn create_test_model() -> Result<MockModel> {
-    Ok(MockModel::new())
+fn create_test_model() -> MockModel {
+    MockModel::new()
 }
 
-fn create_test_tokenizer() -> Result<MockTokenizer> {
-    Ok(MockTokenizer::new())
+fn create_test_tokenizer() -> MockTokenizer {
+    MockTokenizer::new()
 }

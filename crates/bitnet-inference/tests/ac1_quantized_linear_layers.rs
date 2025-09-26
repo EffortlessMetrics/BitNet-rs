@@ -97,8 +97,8 @@ async fn test_ac1_i2s_quantized_linear_forward_pass_cpu() -> Result<()> {
     {
         println!("AC1.1: I2S quantized linear layer test skipped - implementation pending");
         // Basic validation that tensors were created
-        assert!(input.shape().len() > 0, "Input tensor should have valid shape");
-        assert!(weight_data.shape().len() > 0, "Weight tensor should have valid shape");
+        assert!(!input.shape().is_empty(), "Input tensor should have valid shape");
+        assert!(!weight_data.shape().is_empty(), "Weight tensor should have valid shape");
     }
 
     Ok(())
@@ -261,8 +261,8 @@ async fn test_ac1_tl1_quantized_linear_forward_pass() -> Result<()> {
     {
         println!("AC1.3: TL1 quantized linear layer test skipped - implementation pending");
         // Basic validation that tensors were created
-        assert!(input.shape().len() > 0, "Input tensor should have valid shape");
-        assert!(weight_data.shape().len() > 0, "Weight tensor should have valid shape");
+        assert!(!input.shape().is_empty(), "Input tensor should have valid shape");
+        assert!(!weight_data.shape().is_empty(), "Weight tensor should have valid shape");
     }
 
     Ok(())
@@ -354,8 +354,8 @@ async fn test_ac1_tl2_quantized_linear_forward_pass() -> Result<()> {
     {
         println!("AC1.4: TL2 quantized linear layer test skipped - implementation pending");
         // Basic validation that tensors were created
-        assert!(input.shape().len() > 0, "Input tensor should have valid shape");
-        assert!(weight_data.shape().len() > 0, "Weight tensor should have valid shape");
+        assert!(!input.shape().is_empty(), "Input tensor should have valid shape");
+        assert!(!weight_data.shape().is_empty(), "Weight tensor should have valid shape");
     }
 
     Ok(())

@@ -37,12 +37,24 @@ once_cell = "1.21.3"
 [dev-dependencies]
 tempfile.workspace = true
 proptest = "1.7.0"
+tokio = { workspace = true, features = ["rt", "macros"] }
 
 [features]
 default = []
+cpu = []  # CPU feature for test scaffolding
 gpu = ["bitnet-common/gpu", "candle-core/cuda"]
 validation = []
 iq2s-ffi = ["dep:bitnet-ggml-ffi", "bitnet-ggml-ffi/iq2s-ffi"]
 iq2s-rust = []  # Placeholder for pure-Rust IQ2_S (safe no-op)
 integration-tests = []
 inference = []
+quantization = []  # Quantization feature for test scaffolding
+ffi = []  # FFI feature for test scaffolding
+browser = []  # Browser WASM feature for test scaffolding
+nodejs = []  # Node.js WASM feature for test scaffolding
+crossval = []  # Cross-validation feature for test scaffolding
+mixed-precision = []  # Mixed precision feature for test scaffolding
+kernels = []  # Kernels integration for test scaffolding
+i2s = []  # I2S quantization for test scaffolding
+tl1 = []  # TL1 quantization for test scaffolding
+tl2 = []  # TL2 quantization for test scaffolding

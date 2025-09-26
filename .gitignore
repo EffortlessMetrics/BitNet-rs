@@ -107,6 +107,10 @@ fixtures/datasets/
 **/fixtures/**/*.bin
 **/fixtures/**/*.json.bz2
 **/fixtures/**/*.json.gz
+# Large generated test vector files (issue #159 prevention)
+**/fixtures/**/*_test_vectors.json
+**/fixtures/**/crossval_*.json
+**/fixtures/**/quantization_test_vectors.json
 test_data/large/
 
 # Vendored dependencies (prevent accidentally committing large C++ codebases)

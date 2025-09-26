@@ -510,13 +510,24 @@ impl TensorInfo {
         let mut shape = Vec::with_capacity(n_dims);
         let mut total_elements = 1u64;
 
-        for _ in 0..n_dims {
-            let dim = read_u64(data, offset)? as usize;
+        for i in 0..n_dims {
+            let dim_u64 = read_u64(data, offset)?;
+
+            // Security: Check for dimension overflow (u64 -> usize conversion)
+            let dim = if dim_u64 > usize::MAX as u64 {
+                return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                    resource: "tensor_dimension_size".to_string(),
+                    value: dim_u64,
+                    limit: usize::MAX as u64,
+                }));
+            } else {
+                dim_u64 as usize
+            };
 
             // Security: Check for dimension overflow and unreasonable sizes
             if dim == 0 {
                 return Err(BitNetError::Security(SecurityError::MalformedData {
-                    reason: "Tensor dimension cannot be zero".to_string(),
+                    reason: format!("Tensor dimension {} cannot be zero", i),
                 }));
             }
 
@@ -529,8 +540,13 @@ impl TensorInfo {
                 }));
             }
 
-            // Check for multiplication overflow
-            total_elements = total_elements.saturating_mul(dim as u64);
+            // Security: Check for multiplication overflow using checked arithmetic
+            total_elements = total_elements.checked_mul(dim as u64).ok_or_else(|| {
+                BitNetError::Security(SecurityError::MemoryBomb {
+                    reason: format!("Tensor dimension multiplication overflow at dimension {}", i),
+                })
+            })?;
+
             if total_elements > limits.max_tensor_elements {
                 return Err(BitNetError::Security(SecurityError::ResourceLimit {
                     resource: "tensor_elements".to_string(),
@@ -742,17 +758,25 @@ pub fn read_i16(data: &[u8], offset: &mut usize) -> Result<i16> {
 }
 
 pub fn read_u32(data: &[u8], offset: &mut usize) -> Result<u32> {
-    if *offset + 4 > data.len() {
+    // Security: Check offset bounds before any array access
+    if *offset >= data.len() || data.len().saturating_sub(*offset) < 4 {
         return Err(BitNetError::Model(ModelError::InvalidFormat {
-            format: "Unexpected end of data".to_string(),
+            format: format!(
+                "Unexpected end of data at offset {} for u32 read (data len: {})",
+                *offset,
+                data.len()
+            ),
         }));
     }
-    let value = u32::from_le_bytes([
-        data[*offset],
-        data[*offset + 1],
-        data[*offset + 2],
-        data[*offset + 3],
-    ]);
+
+    // Security: Use safe array indexing with bounds checking
+    let bytes = data.get(*offset..*offset + 4).ok_or_else(|| {
+        BitNetError::Model(ModelError::InvalidFormat {
+            format: format!("Buffer bounds violation reading u32 at offset {}", *offset),
+        })
+    })?;
+
+    let value = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
     *offset += 4;
     Ok(value)
 }
@@ -762,29 +786,53 @@ pub fn read_i32(data: &[u8], offset: &mut usize) -> Result<i32> {
 }
 
 pub fn read_u64(data: &[u8], offset: &mut usize) -> Result<u64> {
-    if *offset + 8 > data.len() {
+    // Security: Check offset bounds before any array access
+    if *offset >= data.len() || data.len().saturating_sub(*offset) < 8 {
         return Err(BitNetError::Model(ModelError::InvalidFormat {
-            format: "Unexpected end of data".to_string(),
+            format: format!(
+                "Unexpected end of data at offset {} for u64 read (data len: {})",
+                *offset,
+                data.len()
+            ),
         }));
     }
+
+    // Security: Use safe array indexing with bounds checking
+    let bytes = data.get(*offset..*offset + 8).ok_or_else(|| {
+        BitNetError::Model(ModelError::InvalidFormat {
+            format: format!("Buffer bounds violation reading u64 at offset {}", *offset),
+        })
+    })?;
+
     let value = u64::from_le_bytes([
-        data[*offset],
-        data[*offset + 1],
-        data[*offset + 2],
-        data[*offset + 3],
-        data[*offset + 4],
-        data[*offset + 5],
-        data[*offset + 6],
-        data[*offset + 7],
+        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
     ]);
     *offset += 8;
     Ok(value)
 }
 
 pub fn read_f32(data: &[u8], offset: &mut usize) -> Result<f32> {
-    let bytes = [data[*offset], data[*offset + 1], data[*offset + 2], data[*offset + 3]];
+    // Security: Check offset bounds before any array access
+    if *offset >= data.len() || data.len().saturating_sub(*offset) < 4 {
+        return Err(BitNetError::Model(ModelError::InvalidFormat {
+            format: format!(
+                "Unexpected end of data at offset {} for f32 read (data len: {})",
+                *offset,
+                data.len()
+            ),
+        }));
+    }
+
+    // Security: Use safe array indexing with bounds checking
+    let bytes = data.get(*offset..*offset + 4).ok_or_else(|| {
+        BitNetError::Model(ModelError::InvalidFormat {
+            format: format!("Buffer bounds violation reading f32 at offset {}", *offset),
+        })
+    })?;
+
+    let value = f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
     *offset += 4;
-    Ok(f32::from_le_bytes(bytes))
+    Ok(value)
 }
 
 pub fn read_bool(data: &[u8], offset: &mut usize) -> Result<bool> {

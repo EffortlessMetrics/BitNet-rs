@@ -70,7 +70,7 @@ async fn test_autoregressive_generation() -> Result<()> {
     let model = create_real_model_with_weights(&config)?;
     let tokenizer = Arc::new(MockTokenizer::new());
 
-    let mut engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
+    let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
 
     let gen_config = GenerationConfig {
         max_new_tokens: 5,
@@ -101,7 +101,7 @@ async fn test_performance_targets() -> Result<()> {
     let model = create_real_model_with_weights(&config)?;
     let tokenizer = Arc::new(MockTokenizer::new());
 
-    let mut engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
+    let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
 
     let gen_config = GenerationConfig {
         max_new_tokens: 20, // Generate enough tokens to measure throughput

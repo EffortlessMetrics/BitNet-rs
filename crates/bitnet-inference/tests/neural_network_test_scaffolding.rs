@@ -6,6 +6,8 @@
 //! This comprehensive test scaffolding validates neural network inference implementation
 //! following BitNet.rs TDD patterns with feature-gated tests for CPU/GPU execution.
 
+#![allow(dead_code, unused_variables, unused_imports, unused_mut)]
+
 use anyhow::{Context, Result};
 
 /// Test configuration for neural network inference validation

@@ -1,0 +1,268 @@
+{
+  "crossval_tests": [
+    {
+      "name": "i2s_small_matrix",
+      "input_file": "binary/i2s_small_matrix_input.bin",
+      "expected_file": "binary/i2s_small_matrix_expected.bin",
+      "shape": [
+        64,
+        64
+      ],
+      "quantization_type": "I2_S",
+      "metadata": {
+        "block_size": "64",
+        "device": "cpu",
+        "precision": "fp32",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "i2s_attention_q",
+      "input_file": "binary/i2s_attention_q_input.bin",
+      "expected_file": "binary/i2s_attention_q_expected.bin",
+      "shape": [
+        2048,
+        2048
+      ],
+      "quantization_type": "I2_S",
+      "metadata": {
+        "block_size": "64",
+        "device": "cpu",
+        "precision": "fp32",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "i2s_ffn_up",
+      "input_file": "binary/i2s_ffn_up_input.bin",
+      "expected_file": "binary/i2s_ffn_up_expected.bin",
+      "shape": [
+        5632,
+        2048
+      ],
+      "quantization_type": "I2_S",
+      "metadata": {
+        "block_size": "64",
+        "device": "cpu",
+        "precision": "fp32",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "i2s_ffn_down",
+      "input_file": "binary/i2s_ffn_down_input.bin",
+      "expected_file": "binary/i2s_ffn_down_expected.bin",
+      "shape": [
+        2048,
+        5632
+      ],
+      "quantization_type": "I2_S",
+      "metadata": {
+        "block_size": "64",
+        "device": "cpu",
+        "precision": "fp32",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "tl1_small_test",
+      "input_file": "binary/tl1_small_test_input.bin",
+      "expected_file": "binary/tl1_small_test_expected.bin",
+      "shape": [
+        32,
+        32
+      ],
+      "quantization_type": "TL1",
+      "metadata": {
+        "lookup_table_size": "16",
+        "device": "cpu",
+        "precision": "fp32",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "tl1_medium_matrix",
+      "input_file": "binary/tl1_medium_matrix_input.bin",
+      "expected_file": "binary/tl1_medium_matrix_expected.bin",
+      "shape": [
+        256,
+        256
+      ],
+      "quantization_type": "TL1",
+      "metadata": {
+        "lookup_table_size": "16",
+        "device": "cpu",
+        "precision": "fp32",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "tl1_ffn_gate",
+      "input_file": "binary/tl1_ffn_gate_input.bin",
+      "expected_file": "binary/tl1_ffn_gate_expected.bin",
+      "shape": [
+        5632,
+        2048
+      ],
+      "quantization_type": "TL1",
+      "metadata": {
+        "lookup_table_size": "16",
+        "device": "cpu",
+        "precision": "fp32",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "tl2_attention_kv",
+      "input_file": "binary/tl2_attention_kv_input.bin",
+      "expected_file": "binary/tl2_attention_kv_expected.bin",
+      "shape": [
+        2048,
+        2048
+      ],
+      "quantization_type": "TL2",
+      "metadata": {
+        "lookup_table_size": "256",
+        "device": "cpu",
+        "precision": "fp32",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "tl2_embedding",
+      "input_file": "binary/tl2_embedding_input.bin",
+      "expected_file": "binary/tl2_embedding_expected.bin",
+      "shape": [
+        32000,
+        2048
+      ],
+      "quantization_type": "TL2",
+      "metadata": {
+        "lookup_table_size": "256",
+        "device": "cpu",
+        "precision": "fp32",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "tl2_output_proj",
+      "input_file": "binary/tl2_output_proj_input.bin",
+      "expected_file": "binary/tl2_output_proj_expected.bin",
+      "shape": [
+        2048,
+        32000
+      ],
+      "quantization_type": "TL2",
+      "metadata": {
+        "lookup_table_size": "256",
+        "device": "cpu",
+        "precision": "fp32",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "e2e_inference_small",
+      "input_file": "binary/e2e_inference_small_input.bin",
+      "expected_file": "binary/e2e_inference_small_expected.bin",
+      "shape": [
+        8
+      ],
+      "quantization_type": "Mixed",
+      "metadata": {
+        "model_size": "2B",
+        "sequence_length": "8",
+        "vocab_size": "32000",
+        "device": "cpu",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "perf_i2s_matmul",
+      "input_file": "binary/perf_i2s_matmul_input.bin",
+      "expected_file": "binary/perf_i2s_matmul_expected.bin",
+      "shape": [
+        1024,
+        1024
+      ],
+      "quantization_type": "I2_S",
+      "metadata": {
+        "test_type": "performance",
+        "operation": "matrix_multiplication",
+        "device": "cpu",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "perf_tl1_matmul",
+      "input_file": "binary/perf_tl1_matmul_input.bin",
+      "expected_file": "binary/perf_tl1_matmul_expected.bin",
+      "shape": [
+        1024,
+        1024
+      ],
+      "quantization_type": "TL1",
+      "metadata": {
+        "test_type": "performance",
+        "operation": "matrix_multiplication",
+        "device": "cpu",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "perf_tl2_matmul",
+      "input_file": "binary/perf_tl2_matmul_input.bin",
+      "expected_file": "binary/perf_tl2_matmul_expected.bin",
+      "shape": [
+        1024,
+        1024
+      ],
+      "quantization_type": "TL2",
+      "metadata": {
+        "test_type": "performance",
+        "operation": "matrix_multiplication",
+        "device": "cpu",
+        "reference_version": "cpp_v1.0"
+      }
+    },
+    {
+      "name": "perf_large_i2s",
+      "input_file": "binary/perf_large_i2s_input.bin",
+      "expected_file": "binary/perf_large_i2s_expected.bin",
+      "shape": [
+        4096,
+        4096
+      ],
+      "quantization_type": "I2_S",
+      "metadata": {
+        "test_type": "performance",
+        "operation": "matrix_multiplication",
+        "device": "cpu",
+        "reference_version": "cpp_v1.0"
+      }
+    }
+  ],
+  "tolerance_config": {
+    "I2_S": {
+      "absolute": 1e-06,
+      "relative": 0.0001
+    },
+    "TL1": {
+      "absolute": 1e-05,
+      "relative": 0.001
+    },
+    "TL2": {
+      "absolute": 1e-07,
+      "relative": 1e-05
+    },
+    "Mixed": {
+      "absolute": 0.0001,
+      "relative": 0.01
+    }
+  },
+  "performance_baselines": {
+    "perf_i2s_matmul": 2.5,
+    "perf_tl1_matmul": 3.2,
+    "perf_tl2_matmul": 1.8,
+    "perf_large_i2s": 45.0
+  }
+}

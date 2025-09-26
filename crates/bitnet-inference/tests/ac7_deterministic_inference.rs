@@ -34,7 +34,7 @@ async fn test_ac7_deterministic_inference_with_fixed_seed() -> Result<()> {
         let engine = InferenceEngine::new(Arc::clone(&model), Arc::clone(&tokenizer), Device::Cpu)?;
 
         let result =
-            engine.generate(&prompt).await.context(format!("Deterministic inference run {}", i))?;
+            engine.generate(prompt).await.context(format!("Deterministic inference run {}", i))?;
 
         // Convert string result to tokens for test compatibility
         let tokens =

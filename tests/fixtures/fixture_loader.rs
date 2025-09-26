@@ -43,7 +43,7 @@ pub struct FixtureConfig {
 }
 
 /// Test execution tier for fixture selection
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TestTier {
     Fast,     // Mock data only, minimal fixtures
     Standard, // Mix of mock and small real fixtures

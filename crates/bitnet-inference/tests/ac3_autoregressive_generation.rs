@@ -7,11 +7,14 @@
 //! from real logits using temperature, top-k, and nucleus sampling with deterministic seed support.
 //! Ensures generated text quality and proper sampling behavior with BitNet quantized inference.
 
+#![allow(dead_code, unused_variables, unused_imports, unused_mut)]
+
 use anyhow::{Context, Result};
 use bitnet_common::Device;
 use bitnet_inference::GenerationConfig;
 use bitnet_inference::InferenceEngine;
-use bitnet_models::BitNetModel;
+use bitnet_models::{BitNetModel, Model};
+use bitnet_tokenizers::Tokenizer;
 use bitnet_tokenizers::UniversalTokenizer;
 use std::sync::Arc;
 
@@ -30,7 +33,7 @@ async fn generate_with_tokens(
     // Convert tokens back to text for the API call
     let prompt = engine
         .tokenizer()
-        .decode(input_tokens, true)
+        .decode(input_tokens)
         .context("Failed to decode input tokens to prompt")?;
 
     // Use the actual API which expects string and returns string
@@ -164,7 +167,7 @@ async fn test_ac3_basic_autoregressive_generation() -> Result<()> {
     // Decode generated text
     let generated_text = inference_engine
         .tokenizer()
-        .decode(&generation_result.tokens, true)
+        .decode(&generation_result.tokens)
         .context("Failed to decode generated tokens")?;
 
     // Validate generated text is non-empty and contains original prompt
@@ -246,7 +249,7 @@ async fn test_ac3_temperature_sampling_validation() -> Result<()> {
 
     // Validate extreme temperature behaviors
     let (low_temp, low_diversity) = generation_diversities[0]; // 0.1
-    let (high_temp, high_diversity) = generation_diversities.last().unwrap(); // 2.0
+    let (high_temp, high_diversity) = *generation_diversities.last().unwrap(); // 2.0
 
     assert!(
         low_diversity < 0.5,
@@ -464,8 +467,13 @@ async fn test_ac3_deterministic_generation_with_seeding() -> Result<()> {
     // Generate multiple times with same seed
     let mut results = Vec::new();
     for i in 0..3 {
-        let mut inference_engine =
-            InferenceEngine::new(Arc::clone(&model), Arc::clone(&tokenizer), Device::Cpu)?;
+        let fresh_model = create_mock_bitnet_model(config.vocab_size, 2048)?;
+        let fresh_tokenizer = create_mock_tokenizer(config.vocab_size)?;
+        let mut inference_engine = InferenceEngine::new(
+            Arc::new(fresh_model) as Arc<dyn Model>,
+            Arc::new(fresh_tokenizer) as Arc<dyn Tokenizer>,
+            Device::Cpu,
+        )?;
 
         // Note: Seed setting is handled via environment variables
         // inference_engine.set_seed(config.seed)?; // Method does not exist in API
@@ -487,8 +495,13 @@ async fn test_ac3_deterministic_generation_with_seeding() -> Result<()> {
     }
 
     // Test different seeds produce different results
-    let mut inference_engine =
-        InferenceEngine::new(Arc::clone(&model), Arc::clone(&tokenizer), Device::Cpu)?;
+    let different_model = create_mock_bitnet_model(config.vocab_size, 2048)?;
+    let different_tokenizer = create_mock_tokenizer(config.vocab_size)?;
+    let mut inference_engine = InferenceEngine::new(
+        Arc::new(different_model) as Arc<dyn Model>,
+        Arc::new(different_tokenizer) as Arc<dyn Tokenizer>,
+        Device::Cpu,
+    )?;
 
     // Note: Seed setting is handled via environment variables
     // inference_engine.set_seed(config.seed + 1)?; // Method does not exist in API
@@ -569,7 +582,9 @@ async fn test_ac3_early_stopping_and_eos_handling() -> Result<()> {
 
     // Should generate more tokens when early stopping is disabled
     // (assuming EOS is encountered before max_new_tokens)
-    if result_with_early_stop.tokens.len() < input_tokens.len() + early_stop_config.max_new_tokens {
+    if result_with_early_stop.tokens.len()
+        < input_tokens.len() + early_stop_config.max_new_tokens as usize
+    {
         assert!(
             result_no_early_stop.tokens.len() >= result_with_early_stop.tokens.len(),
             "Disabled early stopping should generate at least as many tokens"

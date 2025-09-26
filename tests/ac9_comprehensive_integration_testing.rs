@@ -40,17 +40,14 @@ async fn test_ac9_end_to_end_transformer_pipeline() -> Result<()> {
 
     for prompt in test_prompts {
         let result = engine
-            .generate(prompt, 50)
+            .generate(prompt)
             .await
             .context(format!("Failed end-to-end generation for prompt: {}", prompt))?;
 
         // Validate output structure
-        assert!(!result.generated_text.is_empty(), "No text generated for prompt: {}", prompt);
+        assert!(!result.is_empty(), "No text generated for prompt: {}", prompt);
 
-        assert!(
-            result.generated_text.starts_with(prompt),
-            "Generated text doesn't start with prompt"
-        );
+        assert!(result.starts_with(prompt), "Generated text doesn't start with prompt");
 
         // Validate token consistency (simplified for now)
         // TODO: Extract tokenizer from engine to validate token consistency
@@ -82,7 +79,7 @@ async fn test_ac9_individual_transformer_components() -> Result<()> {
 }
 
 // Helper functions
-fn load_complete_bitnet_model(path: &str) -> Result<BitNetModel> {
+fn load_complete_bitnet_model(_path: &str) -> Result<BitNetModel> {
     unimplemented!("load_complete_bitnet_model")
 }
 
@@ -99,5 +96,7 @@ async fn test_output_projection(_model: &BitNetModel) -> Result<()> {
 }
 
 // Type stubs
+#[allow(dead_code)]
 type TransformerPipeline = (); // Placeholder
+#[allow(dead_code)]
 type TransformerConfig = (); // Placeholder
