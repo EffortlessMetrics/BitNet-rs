@@ -141,7 +141,7 @@ async fn test_ac1_real_model_download_xtask_integration() {
     }
 
     // Skip if not in real model testing mode (use fixtures instead)
-    let mut fixtures = RealModelIntegrationFixtures::new();
+    let fixtures = RealModelIntegrationFixtures::new();
     fixtures.initialize().await.expect("Failed to initialize fixtures");
 
     skip_if_tier_insufficient!(fixtures.config, TestTier::Standard);

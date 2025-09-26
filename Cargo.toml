@@ -94,6 +94,7 @@ tracing-subscriber = { version = "0.3.20", features = ["fmt", "env-filter"] }
 reqwest = { version = "0.12.23", default-features = false }
 # Additional dependencies used by root-level tests
 anyhow = "1.0.100"
+byteorder = "1.5.0"
 chrono = { version = "0.4.42", default-features = true, features = ["clock"] }
 fastrand = "2.3.0"
 filetime = "0.2.26"

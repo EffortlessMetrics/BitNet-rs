@@ -367,6 +367,7 @@ dependencies = [
  "bitnet-quantization",
  "bitnet-tests",
  "bitnet-tokenizers",
+ "byteorder",
  "candle-core",
  "chrono",
  "criterion",

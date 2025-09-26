@@ -67,10 +67,10 @@ cargo run -p xtask -- benchmark --model models/microsoft-bitnet-b1.58-2B-4T-gguf
 
 You've successfully:
 1. **Built BitNet.rs** with device-aware quantization and complete transformer implementation
-2. **Downloaded a real BitNet model** (Microsoft's 1.58-bit GGUF)
-3. **Verified model compatibility** with tensor validation and GGUF metadata extraction
-4. **Ran production-grade neural network inference** with real transformer computation, multi-head attention, and autoregressive generation
-5. **Benchmarked performance** achieving 20+ tokens/second with native CPU optimization
+2. **Downloaded a real BitNet model** (Microsoft's 1.58-bit GGUF) with production GGUF weight loading
+3. **Verified model compatibility** with comprehensive tensor validation, I2S quantization accuracy (≥99%), and GGUF metadata extraction
+4. **Ran production-grade neural network inference** with real transformer weights, multi-head attention, feed-forward layers, and autoregressive generation
+5. **Benchmarked performance** achieving 20+ tokens/second with native CPU optimization and device-aware quantization
 
 ## Next Steps
 

@@ -208,7 +208,7 @@ impl GgufFixtureGenerator {
             writer.write_all(b"GGUF")?;
         }
 
-        WriteBytesExt::write_u32::<LittleEndian>(&mut writer, 3)?; // Version 3
+        WriteBytesExt::write_u32::<LittleEndian>(writer, 3)?; // Version 3
 
         Ok(8) // 4 bytes magic + 4 bytes version
     }
@@ -224,11 +224,11 @@ impl GgufFixtureGenerator {
         // Number of tensor info entries
         let tensor_configs =
             self.get_tensor_configs_for_model(&config.model_type, &config.quantization_type);
-        WriteBytesExt::write_u64::<LittleEndian>(&mut writer, tensor_configs.len() as u64)?;
+        WriteBytesExt::write_u64::<LittleEndian>(writer, tensor_configs.len() as u64)?;
         bytes_written += 8;
 
         // Number of KV metadata entries
-        WriteBytesExt::write_u64::<LittleEndian>(&mut writer, 5)?; // model.type, vocab_size, hidden_size, layers, quantization
+        WriteBytesExt::write_u64::<LittleEndian>(writer, 5)?; // model.type, vocab_size, hidden_size, layers, quantization
         bytes_written += 8;
 
         // Write metadata KV pairs
@@ -264,16 +264,16 @@ impl GgufFixtureGenerator {
         let mut bytes_written = 0u64;
 
         // Key length and data
-        WriteBytesExt::write_u64::<LittleEndian>(&mut writer, key.len() as u64)?;
+        WriteBytesExt::write_u64::<LittleEndian>(writer, key.len() as u64)?;
         writer.write_all(key.as_bytes())?;
         bytes_written += 8 + key.len() as u64;
 
         // Value type (string = 8)
-        WriteBytesExt::write_u32::<LittleEndian>(&mut writer, 8)?;
+        WriteBytesExt::write_u32::<LittleEndian>(writer, 8)?;
         bytes_written += 4;
 
         // Value length and data
-        WriteBytesExt::write_u64::<LittleEndian>(&mut writer, value.len() as u64)?;
+        WriteBytesExt::write_u64::<LittleEndian>(writer, value.len() as u64)?;
         writer.write_all(value.as_bytes())?;
         bytes_written += 8 + value.len() as u64;
 
@@ -289,26 +289,26 @@ impl GgufFixtureGenerator {
         let mut bytes_written = 0u64;
 
         // Tensor name
-        WriteBytesExt::write_u64::<LittleEndian>(&mut writer, config.name.len() as u64)?;
+        WriteBytesExt::write_u64::<LittleEndian>(writer, config.name.len() as u64)?;
         writer.write_all(config.name.as_bytes())?;
         bytes_written += 8 + config.name.len() as u64;
 
         // Number of dimensions
-        WriteBytesExt::write_u32::<LittleEndian>(&mut writer, config.shape.len() as u32)?;
+        WriteBytesExt::write_u32::<LittleEndian>(writer, config.shape.len() as u32)?;
         bytes_written += 4;
 
         // Shape dimensions
         for &dim in &config.shape {
-            WriteBytesExt::write_u64::<LittleEndian>(&mut writer, dim as u64)?;
+            WriteBytesExt::write_u64::<LittleEndian>(writer, dim as u64)?;
             bytes_written += 8;
         }
 
         // Data type
-        WriteBytesExt::write_u32::<LittleEndian>(&mut writer, config.data_type as u32)?;
+        WriteBytesExt::write_u32::<LittleEndian>(writer, config.data_type as u32)?;
         bytes_written += 4;
 
         // Tensor data offset (will be calculated later)
-        WriteBytesExt::write_u64::<LittleEndian>(&mut writer, 0)?; // Placeholder
+        WriteBytesExt::write_u64::<LittleEndian>(writer, 0)?; // Placeholder
         bytes_written += 8;
 
         Ok(bytes_written)
@@ -330,7 +330,7 @@ impl GgufFixtureGenerator {
             DataType::F32 => {
                 for i in 0..elements {
                     let value = self.generate_f32_value(i, fixture_config.seed);
-                    WriteBytesExt::write_f32::<LittleEndian>(&mut writer, value)?;
+                    WriteBytesExt::write_f32::<LittleEndian>(writer, value)?;
                     bytes_written += 4;
                 }
             }
@@ -342,7 +342,7 @@ impl GgufFixtureGenerator {
                 for block in 0..num_blocks {
                     // Write scale factor (FP32)
                     let scale = self.generate_f32_value(block, fixture_config.seed + 1000);
-                    WriteBytesExt::write_f32::<LittleEndian>(&mut writer, scale)?;
+                    WriteBytesExt::write_f32::<LittleEndian>(writer, scale)?;
                     bytes_written += 4;
 
                     // Write quantized weights (2 bits each, packed)
@@ -362,7 +362,7 @@ impl GgufFixtureGenerator {
                                 packed_byte |= (quantized as u8) << (bit_pair * 2);
                             }
                         }
-                        WriteBytesExt::write_u8(&mut writer, packed_byte)?;
+                        WriteBytesExt::write_u8(writer, packed_byte)?;
                         bytes_written += 1;
                     }
                 }
@@ -374,7 +374,7 @@ impl GgufFixtureGenerator {
                 // Write lookup table
                 for i in 0..table_size {
                     let value = self.generate_f32_value(i, fixture_config.seed + 3000);
-                    WriteBytesExt::write_f32::<LittleEndian>(&mut writer, value)?;
+                    WriteBytesExt::write_f32::<LittleEndian>(writer, value)?;
                     bytes_written += 4;
                 }
 
@@ -394,7 +394,7 @@ impl GgufFixtureGenerator {
                         } else {
                             0
                         };
-                        WriteBytesExt::write_u8(&mut writer, (idx1 & 0xF) | ((idx2 & 0xF) << 4))?;
+                        WriteBytesExt::write_u8(writer, (idx1 & 0xF) | ((idx2 & 0xF) << 4))?;
                         bytes_written += 1;
                     }
                 } else {
@@ -403,7 +403,7 @@ impl GgufFixtureGenerator {
                         let idx = (self.generate_f32_value(i, fixture_config.seed + 4000)
                             * table_size as f32) as u8
                             % table_size as u8;
-                        WriteBytesExt::write_u8(&mut writer, idx)?;
+                        WriteBytesExt::write_u8(writer, idx)?;
                         bytes_written += 1;
                     }
                 }
@@ -421,7 +421,7 @@ impl GgufFixtureGenerator {
             - (bytes_written % fixture_config.tensor_alignment))
             % fixture_config.tensor_alignment;
         for _ in 0..alignment_padding {
-            WriteBytesExt::write_u8(&mut writer, 0)?;
+            WriteBytesExt::write_u8(writer, 0)?;
             bytes_written += 1;
         }
 

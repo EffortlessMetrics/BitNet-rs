@@ -250,38 +250,7 @@ impl GgufLoader {
     }
 }
 
-impl GgufLoader {
-    /// PATCH 7: Debug probe for I2_S dequantization to catch zero outputs
-    fn debug_probe_i2s_tensor(name: &str, data: &[f32], shape: &[usize], max_probe: usize) {
-        if data.is_empty() {
-            eprintln!("[i2s probe] {name}: shape={:?} -> EMPTY DATA", shape);
-            return;
-        }
-
-        let probe_len = max_probe.min(data.len());
-        let slice = &data[..probe_len];
-
-        let (min, max, sum) =
-            slice.iter().fold((f32::INFINITY, f32::NEG_INFINITY, 0.0), |(mi, ma, s), &x| {
-                (mi.min(x), ma.max(x), s + x)
-            });
-        let mean = sum / (slice.len() as f32);
-        let non_zero_count = slice.iter().filter(|&&x| x != 0.0).count();
-
-        eprintln!(
-            "[i2s probe] {name}: shape={:?} probe_len={probe_len} -> min={min:.6} max={max:.6} mean={mean:.6} non_zeros={non_zero_count}",
-            shape
-        );
-
-        if non_zero_count == 0 {
-            eprintln!("⚠️  [i2s probe] {name}: ALL ZEROS detected - quantization failure!");
-        } else if non_zero_count < probe_len / 4 {
-            eprintln!(
-                "⚠️  [i2s probe] {name}: Mostly zeros ({non_zero_count}/{probe_len}) - possible quantization issue"
-            );
-        }
-    }
-}
+impl GgufLoader {}
 
 impl FormatLoader for GgufLoader {
     fn name(&self) -> &'static str {
@@ -450,18 +419,20 @@ impl GgufLoader {
 
     /// Helper to transpose F32 data to F32 transposed layout
     fn transpose_f32_to_f32(bytes: &[u8], dims: &[usize]) -> Result<Vec<f32>> {
-        use std::io::Read;
         let (rows, cols) = (dims[0], dims[1]);
-        let mut out = vec![0f32; rows * cols]; // transposed [cols, rows]
-        let mut rdr = std::io::Cursor::new(bytes);
-        for r in 0..rows {
-            for c in 0..cols {
-                let mut buf = [0u8; 4];
-                rdr.read_exact(&mut buf).map_err(BitNetError::Io)?;
-                out[c * rows + r] = f32::from_le_bytes(buf);
+
+        // Read F32 values from bytes using safe byte casting
+        let f32_values = bytemuck::cast_slice::<u8, f32>(bytes);
+
+        // Transpose from [rows, cols] to [cols, rows] using efficient indexing
+        let mut transposed = Vec::with_capacity(rows * cols);
+        for col in 0..cols {
+            for row in 0..rows {
+                transposed.push(f32_values[row * cols + col]);
             }
         }
-        Ok(out)
+
+        Ok(transposed)
     }
 
     /// Helper to create a transposed I2_S tensor (for attention projections)
@@ -473,18 +444,19 @@ impl GgufLoader {
         use crate::quant::i2s;
 
         // First dequantize to F32 with original layout
-        let f32_data = i2s::dequantize_to_f32(data, dims)
-            .map_err(|e| BitNetError::Validation(e.to_string()))?;
+        let f32_data = i2s::dequantize_to_f32(data, dims).map_err(|e| {
+            BitNetError::Validation(format!(
+                "I2_S dequantization failed for tensor with shape {:?}: {}",
+                dims, e
+            ))
+        })?;
 
-        // PATCH 7: Probe the dequantized data for debugging
-        Self::debug_probe_i2s_tensor("transposed_projection", &f32_data, dims, 1000);
-
-        // Then transpose from [rows, cols] to [cols, rows]
+        // Then transpose from [rows, cols] to [cols, rows] using efficient indexing
         let (rows, cols) = (dims[0], dims[1]);
-        let mut transposed = vec![0f32; rows * cols];
-        for r in 0..rows {
-            for c in 0..cols {
-                transposed[c * rows + r] = f32_data[r * cols + c];
+        let mut transposed = Vec::with_capacity(rows * cols);
+        for col in 0..cols {
+            for row in 0..rows {
+                transposed.push(f32_data[row * cols + col]);
             }
         }
 
@@ -715,8 +687,6 @@ impl GgufLoader {
                     let f32_data = i2s::dequantize_to_f32_transposed(data, &info.shape)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
 
-                    // PATCH 7: Probe the dequantized data for debugging
-                    Self::debug_probe_i2s_tensor(&info.name, &f32_data, &info.shape, 1000);
                     // Now dims become [vocab, hidden]
                     let (rows, cols) = (info.shape[1], info.shape[0]);
                     let tensor = Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
@@ -739,14 +709,15 @@ impl GgufLoader {
                     let (mut rows, mut cols) = (info.shape[0], info.shape[1]);
                     let mut want_shape = info.shape.clone();
                     if Self::maybe_transpose_to_out_in(&info.shape, &info.name) {
+                        // In-place transpose to save memory allocation
                         // f32_data currently [rows, cols]=[in,out]; flip to [out,in]
-                        let mut transposed = vec![0f32; rows * cols];
-                        for r in 0..rows {
-                            for c in 0..cols {
-                                transposed[c * rows + r] = f32_data[r * cols + c];
+                        let original_data = std::mem::take(&mut f32_data);
+                        f32_data = Vec::with_capacity(rows * cols);
+                        for col in 0..cols {
+                            for row in 0..rows {
+                                f32_data.push(original_data[row * cols + col]);
                             }
                         }
-                        f32_data = transposed;
                         (rows, cols) = (cols, rows);
                         want_shape = vec![rows, cols];
                         tracing::debug!(
@@ -756,8 +727,6 @@ impl GgufLoader {
                         );
                     }
 
-                    // PATCH 7: Probe the dequantized data for debugging
-                    Self::debug_probe_i2s_tensor(&info.name, &f32_data, &want_shape, 1000);
                     let tensor =
                         Tensor::from_slice(&f32_data, want_shape.as_slice(), &candle_device)
                             .map_err(|e| BitNetError::Validation(e.to_string()))?;

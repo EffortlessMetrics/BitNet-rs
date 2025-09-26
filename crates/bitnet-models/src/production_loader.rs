@@ -16,7 +16,7 @@ use bitnet_common::{
     BitNetError, Device, ModelError, ModelMetadata, Result, ValidationErrorDetails,
 };
 use std::path::Path;
-#[allow(unused_imports)]
+#[cfg(feature = "inference")]
 use tracing::warn;
 use tracing::{debug, info};
 
@@ -104,18 +104,17 @@ pub struct ValidationResult {
 }
 
 /// Enhanced model loader for production environments
+#[allow(dead_code)] // Production infrastructure not fully activated yet
 pub struct ProductionModelLoader {
     /// Base model loader
-    #[allow(dead_code)]
     base_loader: ModelLoader,
     /// Production configuration
-    #[allow(dead_code)]
     config: ProductionLoadConfig,
     /// Validation enabled
-    #[allow(dead_code)]
     validation_enabled: bool,
 }
 
+#[allow(dead_code)] // Production infrastructure methods not fully activated yet
 impl ProductionModelLoader {
     /// Create a new production model loader
     pub fn new() -> Self {
@@ -212,7 +211,6 @@ impl ProductionModelLoader {
     }
 
     /// Validate file access and basic properties
-    #[allow(dead_code)]
     fn validate_file_access(&self, path: &Path) -> Result<()> {
         if !path.exists() {
             return Err(BitNetError::Model(ModelError::NotFound {
@@ -235,7 +233,6 @@ impl ProductionModelLoader {
     }
 
     /// Comprehensive model file validation
-    #[allow(dead_code)]
     fn validate_model_file(&self, path: &Path) -> Result<ValidationResult> {
         let mut result = ValidationResult {
             passed: true,
@@ -278,7 +275,6 @@ impl ProductionModelLoader {
     }
 
     /// Validate extracted metadata
-    #[allow(dead_code)]
     fn validate_metadata(&self, metadata: &ModelMetadata, result: &mut ValidationResult) {
         // Check vocabulary size
         if metadata.vocab_size == 0 {
@@ -307,7 +303,6 @@ impl ProductionModelLoader {
     }
 
     /// Validate tensor alignment (simplified implementation)
-    #[allow(dead_code)]
     fn validate_tensor_alignment(&self, _path: &Path) -> Result<()> {
         // In a real implementation, this would:
         // 1. Parse GGUF header to get tensor offsets
@@ -329,7 +324,6 @@ impl ProductionModelLoader {
     }
 
     /// Add performance recommendations based on model properties
-    #[allow(dead_code)]
     fn add_performance_recommendations(
         &self,
         metadata: &ModelMetadata,
@@ -359,7 +353,6 @@ impl ProductionModelLoader {
     }
 
     /// Validate loaded model
-    #[allow(dead_code)]
     fn validate_loaded_model(&self, _model: &dyn Model) -> Result<()> {
         // In a real implementation, this would:
         // 1. Run a small forward pass to validate model works

@@ -44,21 +44,46 @@ fn i2s_dequant_block(
     qbits: &[u8],    // ceil(n/4)
     n: usize,
     scale_bits: u16,
-    mapping: I2SMapping,
+    lut: &[f32; 4], // Pre-computed lookup table
     inv_scale: bool,
     k: f32,
 ) {
-    let lut = i2s_lut(mapping);
+    // Pre-compute scale factor
     let mut s = f16::from_bits(scale_bits).to_f32();
     if inv_scale {
         s = 1.0 / s;
     }
     s *= k;
 
-    for i in 0..n {
-        let b = qbits[i >> 2];
-        let code = ((b >> ((i & 3) * 2)) & 0b11) as usize;
-        dst[i] = s * lut[code];
+    // Pre-compute scaled lookup table for better cache locality
+    let scaled_lut = [s * lut[0], s * lut[1], s * lut[2], s * lut[3]];
+
+    // Process 4 elements at a time for better performance
+    let chunks = n / 4;
+    let remainder = n % 4;
+
+    for chunk in 0..chunks {
+        let byte_idx = chunk;
+        let b = qbits[byte_idx];
+        let base_idx = chunk * 4;
+
+        // Extract all 4 2-bit codes from the byte at once
+        dst[base_idx] = scaled_lut[(b & 0b11) as usize];
+        dst[base_idx + 1] = scaled_lut[((b >> 2) & 0b11) as usize];
+        dst[base_idx + 2] = scaled_lut[((b >> 4) & 0b11) as usize];
+        dst[base_idx + 3] = scaled_lut[((b >> 6) & 0b11) as usize];
+    }
+
+    // Handle remaining elements
+    if remainder > 0 {
+        let byte_idx = chunks;
+        let b = qbits[byte_idx];
+        let base_idx = chunks * 4;
+
+        for i in 0..remainder {
+            let code = ((b >> (i * 2)) & 0b11) as usize;
+            dst[base_idx + i] = scaled_lut[code];
+        }
     }
 }
 
@@ -146,9 +171,11 @@ fn dequantize_to_f32_with_block(bytes: &[u8], shape: &[usize], block: usize) -> 
         bail!("I2_S: internal size mismatch for block={}", block);
     }
 
-    let mut out = vec![0f32; rows * cols];
+    let mut out = Vec::with_capacity(rows * cols);
+    out.resize(rows * cols, 0.0f32);
     let mut off = 0usize;
     let (mapping, inv_scale, k) = i2s_env();
+    let lut = i2s_lut(mapping); // Pre-compute lookup table once
 
     for r in 0..rows {
         // Security: Check row bounds
@@ -194,7 +221,7 @@ fn dequantize_to_f32_with_block(bytes: &[u8], shape: &[usize], block: usize) -> 
                 qslice,
                 n,
                 scale_bits,
-                mapping,
+                &lut,
                 inv_scale,
                 k,
             );
@@ -228,6 +255,7 @@ fn dequantize_partial_blocks(
     let mut off = 0usize;
     let mut processed = 0usize;
     let (mapping, inv_scale, k) = i2s_env();
+    let lut = i2s_lut(mapping); // Pre-compute lookup table
 
     'rows: for r in 0..rows {
         // Security: Check row bounds
@@ -276,7 +304,7 @@ fn dequantize_partial_blocks(
                 qslice,
                 n,
                 scale_bits,
-                mapping,
+                &lut,
                 inv_scale,
                 k,
             );
@@ -358,6 +386,7 @@ pub fn dequantize_to_f32_transposed(bytes: &[u8], shape: &[usize]) -> Result<Vec
     let mut out = vec![0f32; output_size]; // output logical shape [cols, rows]
     let mut off = 0usize;
     let (mapping, inv_scale, k) = i2s_env();
+    let lut = i2s_lut(mapping); // Pre-compute lookup table
     let mut row_scratch = vec![0f32; block];
 
     for r in 0..rows {
@@ -372,7 +401,7 @@ pub fn dequantize_to_f32_transposed(bytes: &[u8], shape: &[usize]) -> Result<Vec
             off += 2;
 
             // Dequant into temporary scratch, then transpose
-            i2s_dequant_block(&mut row_scratch[..n], qslice, n, scale_bits, mapping, inv_scale, k);
+            i2s_dequant_block(&mut row_scratch[..n], qslice, n, scale_bits, &lut, inv_scale, k);
 
             // Write transposed: input (r, c+i) -> output (c+i, r)
             for i in 0..n {
@@ -409,6 +438,7 @@ fn dequantize_partial_blocks_transposed(
     let mut off = 0usize;
     let mut processed = 0usize;
     let (mapping, inv_scale, k) = i2s_env();
+    let lut = i2s_lut(mapping); // Pre-compute lookup table
     let mut row_scratch = vec![0f32; block];
 
     'rows: for r in 0..rows {
@@ -430,7 +460,7 @@ fn dequantize_partial_blocks_transposed(
             off += 2;
 
             // Dequant into temporary scratch, then transpose
-            i2s_dequant_block(&mut row_scratch[..n], qslice, n, scale_bits, mapping, inv_scale, k);
+            i2s_dequant_block(&mut row_scratch[..n], qslice, n, scale_bits, &lut, inv_scale, k);
             for i in 0..n {
                 out[(c + i) * rows + r] = row_scratch[i];
             }
@@ -473,9 +503,10 @@ mod tests {
         let scale_bits = f16::from_f32(2.0).to_bits();
         let codes = [0u8, 1, 2, 3]; // 4 values -> 1 byte
         let qbits = pack_codes(&codes);
+        let lut = i2s_lut(mapping);
 
         let mut dst = [0f32; 4];
-        i2s_dequant_block(&mut dst, &qbits, 4, scale_bits, mapping, inv, k);
+        i2s_dequant_block(&mut dst, &qbits, 4, scale_bits, &lut, inv, k);
 
         // Sym LUT {-2,-1,+1,+2}, s=1.0 => [-2.0, -1.0, 1.0, 2.0]
         let expected = [-2.0f32, -1.0, 1.0, 2.0];
@@ -553,7 +584,8 @@ mod tests {
         // Test with zero scale (edge case)
         let zero_scale = f16::from_f32(0.0).to_bits();
         let mut dst = [0f32; 4];
-        i2s_dequant_block(&mut dst, &qbits, 4, zero_scale, mapping, inv, k);
+        let lut = i2s_lut(mapping);
+        i2s_dequant_block(&mut dst, &qbits, 4, zero_scale, &lut, inv, k);
         for &val in &dst {
             assert_eq!(val, 0.0, "Zero scale should produce zero outputs");
         }
@@ -561,7 +593,8 @@ mod tests {
         // Test with infinity scale (extreme value)
         let inf_scale = f16::from_f32(f32::INFINITY).to_bits();
         let mut dst = [0f32; 4];
-        i2s_dequant_block(&mut dst, &qbits, 4, inf_scale, mapping, inv, k);
+        let lut = i2s_lut(mapping);
+        i2s_dequant_block(&mut dst, &qbits, 4, inf_scale, &lut, inv, k);
         for &val in &dst {
             assert!(
                 val.is_infinite() || val.is_nan(),
@@ -572,14 +605,16 @@ mod tests {
         // Test with very small scale (near underflow)
         let tiny_scale = f16::from_f32(f32::MIN_POSITIVE).to_bits();
         let mut dst = [0f32; 4];
-        i2s_dequant_block(&mut dst, &qbits, 4, tiny_scale, mapping, inv, k);
+        let lut = i2s_lut(mapping);
+        i2s_dequant_block(&mut dst, &qbits, 4, tiny_scale, &lut, inv, k);
         // Should not panic and produce valid results
         assert!(dst.iter().all(|&x| x.is_finite()));
 
         // Test with maximum f16 scale
         let max_scale = f16::from_f32(65504.0).to_bits(); // Max f16 value
         let mut dst = [0f32; 4];
-        i2s_dequant_block(&mut dst, &qbits, 4, max_scale, mapping, inv, k);
+        let lut = i2s_lut(mapping);
+        i2s_dequant_block(&mut dst, &qbits, 4, max_scale, &lut, inv, k);
         // Should not panic and produce valid results
         assert!(dst.iter().all(|&x| x.is_finite()));
     }
@@ -710,7 +745,8 @@ mod tests {
             let qbits = pack_codes(&codes);
             let mut dst = [0f32; 4];
 
-            i2s_dequant_block(&mut dst, &qbits, 4, scale_bits, mapping, inv, k);
+            let lut = i2s_lut(mapping);
+            i2s_dequant_block(&mut dst, &qbits, 4, scale_bits, &lut, inv, k);
 
             // Verify all outputs are identical and correspond to LUT value
             let lut = i2s_lut(mapping);
