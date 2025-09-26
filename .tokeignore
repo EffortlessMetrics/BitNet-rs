@@ -1,6 +1,8 @@
 target
 coverage-report
 benchmark-results
+mutants.out/
+mutants.out.old/
 mutants.out*
 mutants/
 tests/cache
