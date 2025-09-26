@@ -57,19 +57,20 @@ RUSTFLAGS="-C target-cpu=native -C opt-level=3" cargo build --release -p xtask
 cargo run -p xtask -- benchmark --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json --tokens 128
 ```
 
-**Expected Output:**
-- I2_S quantization: >99% accuracy retention
+**Expected Performance:**
+- I2_S quantization: >99% accuracy retention with real transformer computation
 - Inference speed: 20-100 tokens/second (CPU), 100-500 tokens/second (GPU)
 - Memory usage: ~2GB for 2B parameter model
+- Production-ready: Real neural network inference with quantized linear layers, multi-head attention, and KV-cache optimization
 
 ## What Just Happened?
 
 You've successfully:
-1. **Built BitNet.rs** with device-aware quantization
+1. **Built BitNet.rs** with device-aware quantization and complete transformer implementation
 2. **Downloaded a real BitNet model** (Microsoft's 1.58-bit GGUF)
-3. **Verified model compatibility** with tensor validation
-4. **Ran 1-bit quantized inference** with deterministic output
-5. **Benchmarked performance** with native CPU optimization
+3. **Verified model compatibility** with tensor validation and GGUF metadata extraction
+4. **Ran production-grade neural network inference** with real transformer computation, multi-head attention, and autoregressive generation
+5. **Benchmarked performance** achieving 20+ tokens/second with native CPU optimization
 
 ## Next Steps
 

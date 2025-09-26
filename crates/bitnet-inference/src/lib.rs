@@ -7,7 +7,9 @@ pub mod backends;
 pub mod cache;
 pub mod config;
 pub mod engine;
+pub mod generation;
 pub mod gguf;
+pub mod layers;
 pub mod production_engine; // always available (sync parser)
 
 // Re-export GGUF types for easy access
@@ -29,6 +31,10 @@ pub use backends::{Backend, CpuBackend, GpuBackend};
 pub use cache::{CacheConfig, KVCache};
 pub use config::{GenerationConfig, InferenceConfig};
 pub use engine::{InferenceEngine, InferenceResult};
+pub use generation::{
+    AutoregressiveGenerator, GenConfig, SampleConfig, SamplingStrategy as GenSamplingStrategy,
+};
+pub use layers::{BitNetAttention, QuantizedLinear};
 pub use parity::{
     eval_logits_incremental, eval_logits_once, get_model_config, get_model_vocab_size,
 };

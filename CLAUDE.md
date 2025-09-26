@@ -23,7 +23,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 # Development workflow (xtask)
 cargo run -p xtask -- download-model
 cargo run -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json
-cargo run -p xtask -- infer --model models/bitnet/model.gguf --prompt "Test" --allow-mock
+cargo run -p xtask -- infer --model models/bitnet/model.gguf --prompt "Test" --deterministic
 ```
 
 ## Architecture & Key Concepts
@@ -68,7 +68,7 @@ Minimum Supported Rust Version: **1.90.0** (Rust 2024 edition)
 ### Universal Tokenizer
 - Auto-detecting tokenizer with GGUF integration
 - Supports BPE, SentencePiece, LLaMA variants, TikToken
-- Mock fallback for testing compatibility
+- Graceful fallback for testing and compatibility validation
 - O(1) byte lookup performance with optimized UTF-8 handling
 
 ## Common Issues

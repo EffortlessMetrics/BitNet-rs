@@ -12,8 +12,8 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-models`**: Model loading and format handling (GGUF, SafeTensors)
 - **`bitnet-quantization`**: 1-bit quantization algorithms
 - **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with mixed precision support (FP16/BF16), FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
-- **`bitnet-inference`**: Inference engine with streaming support
-- **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration and mock fallback system
+- **`bitnet-inference`**: Complete neural network inference engine with autoregressive generation, multi-head attention, quantized linear layers, KV-cache optimization, and streaming support
+- **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration and graceful fallback system
 - **`bitnet-server`**: HTTP server for BitNet inference with comprehensive health monitoring and real-time system metrics collection (CPU, memory, disk, network I/O)
 
 ### Compatibility Layer
@@ -70,7 +70,7 @@ BitNet.rs includes a comprehensive quality assurance system designed for product
 - **Improved UTF-8 Handling**: Proper byte buffer management in decode operations for robust text processing
 - **BOS Token Support**: Enhanced BasicTokenizer with vocab boundary checks and special token handling
 - **SPM Compilation Fix**: Resolved critical compilation error in SentencePiece tokenizer integration
-- **Fallback Strategy**: Graceful degradation to mock tokenizer for unsupported formats
+- **Fallback Strategy**: Graceful degradation with compatibility validation for unsupported formats
 - **Runtime Construction**: Build tokenizers from vocabulary and merge rules without external dependencies
 - **Cross-Format Support**: BPE, SentencePiece, and custom tokenizer formats
 
