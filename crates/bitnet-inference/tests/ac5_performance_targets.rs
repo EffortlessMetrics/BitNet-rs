@@ -53,7 +53,7 @@ async fn test_ac5_cpu_performance_targets() -> Result<()> {
         .context("Failed to load BitNet 2B model for CPU performance testing")?;
 
     let mut inference_engine =
-        InferenceEngine::new(Arc::new(model), create_performance_test_tokenizer()?, Device::Cpu)?;
+        InferenceEngine::new(model, create_performance_test_tokenizer()?, Device::Cpu)?;
 
     // TODO: Enable CPU optimizations when API is available
     // inference_engine.enable_cpu_optimizations(true)?;
@@ -158,7 +158,7 @@ async fn test_ac5_gpu_performance_speedup() -> Result<()> {
     let mut gpu_engine = InferenceEngine::new(
         Arc::clone(&model),
         create_performance_test_tokenizer()?,
-        Device::Gpu(0),
+        Device::Cuda(0),
     )?;
 
     // TODO: Enable mixed precision on GPU when API is available
@@ -305,7 +305,7 @@ async fn test_ac5_batch_processing_performance() -> Result<()> {
 
     let model = load_bitnet_2b_model_for_performance_testing()?;
     let mut inference_engine =
-        InferenceEngine::new(Arc::new(model), create_performance_test_tokenizer()?, Device::Cpu)?;
+        InferenceEngine::new(model, create_performance_test_tokenizer()?, Device::Cpu)?;
 
     let batch_prompts =
         (0..16).map(|i| format!("Test prompt number {}: ", i + 1)).collect::<Vec<_>>();

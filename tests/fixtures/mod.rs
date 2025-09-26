@@ -6,10 +6,21 @@
 
 pub mod cross_validation_data;
 pub mod fixture_loader;
+pub mod gguf_generator;
 pub mod integration;
 pub mod network_mocks;
 pub mod quantization_test_vectors;
 pub mod tokenizer_fixtures;
+
+// Quantization test fixtures
+pub mod quantization {
+    pub mod bitnet_quantization_fixtures;
+}
+
+// Cross-validation fixtures
+pub mod crossval {
+    pub mod cpp_reference_mocks;
+}
 
 // Re-export types needed by test files
 pub use fixture_loader::{FixtureConfig, TestTier};

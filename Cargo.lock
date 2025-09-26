@@ -729,6 +729,7 @@ dependencies = [
  "bitnet-models",
  "bitnet-quantization",
  "bitnet-tokenizers",
+ "byteorder",
  "cargo_metadata 0.22.0",
  "chrono",
  "clap",
