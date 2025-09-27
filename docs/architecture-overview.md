@@ -250,8 +250,8 @@ We maintain strict compatibility with llama.cpp while providing enhanced validat
 4. **Compatibility**: Check COMPATIBILITY.md before changing public APIs
 
 For detailed information on specific components, see:
-- [Quantization Support](quantization-support.md)
-- [GPU Development Guide](gpu-development.md)
+- [Quantization Support](reference/quantization-support.md)
+- [GPU Development Guide](development/gpu-development.md)
 - [Tokenizer Architecture](tokenizer-architecture.md)
-- [FFI Bridge Documentation](ffi-bridge.md)
-- [Test Suite Guide](test-suite.md)
+- [FFI Bridge Documentation](ffi-threading-architecture.md)
+- [Test Suite Guide](development/test-suite.md)

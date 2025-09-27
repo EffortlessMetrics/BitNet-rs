@@ -58,8 +58,11 @@
 | tests | ✅ PASS | 388/400 success (97%) | Neural network validated |
 | hardening | ⚠️ CONDITIONAL | mutation: 42.9%, security: clean | Framework ready |
 | benchmarks | ❌ REGRESSION | quantization: 90-98% perf loss detected | Route to perf-fixer |
-| docs | ✅ PASS | Diátaxis complete, API documented | Production ready |
+| docs | ❌ FAILURE | broken: 47 links; details in LINK_VALIDATION_REPORT.md | Route to docs-reviewer |
 <!-- gates:end -->
+
+**Hop Log:**
+- 2025-09-27T[current]: **docs-link-validator** → **docs-reviewer** (FAILURE: 47 broken links found - missing examples/, placeholder URLs, path inconsistencies)
 
 ## BitNet.rs Neural Network Validation
 
@@ -79,16 +82,16 @@
 
 ## Final Promotion Decision
 
-### Route A (Ready for Review) ✅ SELECTED
+### Route B (Documentation Issues) ❌ SELECTED
 
-**Routing Decision**: **PROMOTE TO READY FOR REVIEW**
+**Routing Decision**: **ROUTE TO DOCS-REVIEWER**
 
 **Justification**:
-1. All critical BitNet.rs neural network inference requirements satisfied
-2. Outstanding performance improvements (3-10x quantization throughput)
-3. Production-ready GGUF implementation with comprehensive security
-4. 97% gate success rate with only minor, auto-fixable issues
-5. Device-aware architecture excellence with proper fallback mechanisms
+1. Critical documentation link validation failure (47 broken links)
+2. Missing example directories break user onboarding workflow
+3. Placeholder URLs create broken user experience
+4. Path inconsistencies prevent proper documentation navigation
+5. Must fix before proceeding to policy review
 
 ### Quality Evidence Summary
 ```bash
@@ -119,7 +122,7 @@ security: comprehensive validation; 1 low-risk unmaintained dependency
 
 ---
 
-**Final Status**: ✅ READY FOR REVIEW
-**Timestamp**: 2025-09-26T22:00:00Z
+**Final Status**: ❌ BLOCKED - Documentation Issues
+**Timestamp**: 2025-09-27T[current]
 **Feature**: GGUF Weight Loading for Neural Network Inference (PR #259)
-**Next Step**: Route to ready-promoter for Draft → Ready transition
+**Next Step**: Route to docs-reviewer for link validation fixes

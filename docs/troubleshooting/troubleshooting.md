@@ -946,15 +946,15 @@ When reporting issues, include:
 - Steps to reproduce
 - Debug information collected above
 
-**GitHub Issues:** https://github.com/your-org/bitnet-rust/issues
-**Discord Community:** https://discord.gg/bitnet-rust
+**GitHub Issues:** https://github.com/microsoft/BitNet/issues
+**Community Support:** [GitHub Discussions](https://github.com/microsoft/BitNet/discussions)
 
 ### 4. Community Resources
 
 - **Documentation:** https://docs.rs/bitnet
-- **Examples:** https://github.com/your-org/bitnet-rust/tree/main/examples
-- **FAQ:** https://github.com/your-org/bitnet-rust/wiki/FAQ
-- **Performance Tips:** https://github.com/your-org/bitnet-rust/wiki/Performance
+- **Examples:** https://github.com/microsoft/BitNet/tree/main/examples
+- **FAQ:** https://github.com/microsoft/BitNet/discussions/categories/q-a
+- **Performance Tips:** [Performance Tuning Guide](../performance-tuning.md)
 
 ## Emergency Procedures
 

@@ -202,19 +202,17 @@ char* output = bitnet_inference(model, "Hello, world!", 100, 0.7f);
 ## Community and Support
 
 ### Getting Help
-- **GitHub Issues**: [Report bugs and request features](https://github.com/your-org/bitnet-rust/issues)
-- **Discord Community**: [Join our Discord server](https://discord.gg/bitnet-rust)
+- **GitHub Issues**: [Report bugs and request features](https://github.com/microsoft/BitNet/issues)
 - **Documentation**: [Complete documentation](https://docs.rs/bitnet)
+- **Examples**: Working code samples in [examples/](../examples/) directory
 
 ### Contributing
 - **Contributing Guide**: [How to contribute](../CONTRIBUTING.md)
 - **Code of Conduct**: [Community guidelines](../CODE_OF_CONDUCT.md)
-- **Development Setup**: [Set up development environment](../docs/development.md)
+- **Development Setup**: [Set up development environment](development.md)
 
 ### Professional Support
-- **Enterprise Support**: enterprise@bitnet-rust.com
-- **Consulting Services**: consulting@bitnet-rust.com
-- **Training Workshops**: training@bitnet-rust.com
+For commercial support and services related to BitNet.rs, please contact Microsoft through official channels.
 
 ## Roadmap
 
@@ -249,4 +247,4 @@ BitNet Rust is licensed under the [MIT License](../LICENSE).
 
 ---
 
-**Need help?** Check our [Troubleshooting Guide](troubleshooting/troubleshooting.md) or join our [Discord community](https://discord.gg/bitnet-rust).
+**Need help?** Check our [Troubleshooting Guide](troubleshooting/troubleshooting.md) or [open an issue](https://github.com/microsoft/BitNet/issues) on GitHub.

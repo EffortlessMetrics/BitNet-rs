@@ -461,4 +461,4 @@ When reporting cross-validation issues:
 
 ---
 
-**Need help with cross-validation?** Join our [Discord community](https://discord.gg/bitnet-rust) or check the [troubleshooting guide](../../docs/troubleshooting.md).
+**Need help with cross-validation?** Visit our [GitHub Discussions](https://github.com/microsoft/BitNet/discussions) or check the [troubleshooting guide](../../docs/troubleshooting.md).

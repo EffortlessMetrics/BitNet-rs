@@ -344,4 +344,4 @@ Contact: migration-support@bitnet-rs.com
 
 ---
 
-**Ready to migrate?** Start with our [Quick Start Guide](getting-started.md) or join our [Discord community](https://discord.gg/bitnet-rust) for migration support.
+**Ready to migrate?** Start with our [Quick Start Guide](getting-started.md) or visit our [GitHub Discussions](https://github.com/microsoft/BitNet/discussions) for migration support.

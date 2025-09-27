@@ -447,8 +447,8 @@ python3 scripts/detect-performance-regression.py \
 
 ## 🔗 Related Documentation
 
-- [GPU Development Guide](gpu-development.md): GPU-specific performance considerations
-- [Test Suite Guide](test-suite.md): Comprehensive testing framework
+- [GPU Development Guide](development/gpu-development.md): GPU-specific performance considerations
+- [Test Suite Guide](development/test-suite.md): Comprehensive testing framework
 - [CLAUDE.md](../CLAUDE.md): Complete development commands and workflows
 - [Concurrency Caps Guide](concurrency-caps.md): Resource management for performance testing
 

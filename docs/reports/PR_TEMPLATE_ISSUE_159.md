@@ -143,8 +143,8 @@ This Pull Request implements comprehensive real GGUF model weight loading in Bit
 
 **BitNet.rs Architecture:**
 - [Architecture Overview](docs/architecture-overview.md) - System design and components
-- [Quantization Support](docs/quantization-support.md) - I2_S, TL1, TL2 format specifications
-- [GPU Development Guide](docs/gpu-development.md) - CUDA development guidelines
+- [Quantization Support](docs/reference/quantization-support.md) - I2_S, TL1, TL2 format specifications
+- [GPU Development Guide](docs/development/gpu-development.md) - CUDA development guidelines
 
 ### 🎯 **Impact Assessment**
 
