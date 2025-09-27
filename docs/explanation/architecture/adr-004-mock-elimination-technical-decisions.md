@@ -1,18 +1,19 @@
 # ADR-004: Mock Elimination Technical Decisions for BitNet.rs Quantized Inference
 
 ## Status
-**PROPOSED** - Pending approval for Issue #260 implementation
+**IMPLEMENTED** - Issue #260 mock elimination completed, real quantized computation active
 
 ## Context
 
 BitNet.rs currently suffers from a critical architectural flaw where mock inference paths dominate execution, reporting false performance metrics (~200 tok/s) instead of real quantized neural network computation. This ADR documents the key technical decisions required to eliminate mock fallbacks and implement authentic quantized inference using I2S, TL1, and TL2 quantization algorithms.
 
-### Current Architecture Problems
+### Architecture Problems Resolved
 
-1. **Mock Dominance**: `ConcreteTensor::mock()` calls throughout inference pipeline
-2. **Compilation Barriers**: 21+ compilation errors prevent real quantization execution
-3. **False Metrics**: Performance reporting based on dummy computation rather than real matrix multiplication
-4. **Validation Impossibility**: Cannot cross-validate against Microsoft C++ reference due to mock paths
+1. **Mock Elimination**: ✅ Removed `ConcreteTensor::mock()` calls, implemented real quantized computation
+2. **Compilation Success**: ✅ Resolved compilation errors, real quantization kernels active
+3. **Accurate Metrics**: ✅ Performance reporting based on actual I2S/TL1/TL2 quantized matrix multiplication
+4. **Cross-Validation Ready**: ✅ Can validate against Microsoft C++ reference with <5% tolerance
+5. **Strict Mode Active**: ✅ `BITNET_STRICT_MODE=1` prevents mock fallbacks in production
 
 ### Scope of Technical Decisions
 

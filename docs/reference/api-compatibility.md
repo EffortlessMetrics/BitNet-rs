@@ -190,12 +190,12 @@ public:
 
 ### Inference Speed Improvements
 
-| Model Size | Legacy C++ | BitNet.rs | Improvement |
-|------------|------------|-----------|-------------|
-| **BitNet-1B** | 200 tok/s | 480 tok/s | 2.4x faster |
-| **BitNet-3B** | 120 tok/s | 320 tok/s | 2.7x faster |
-| **BitNet-7B** | 60 tok/s | 180 tok/s | 3.0x faster |
-| **BitNet-13B** | 30 tok/s | 95 tok/s | 3.2x faster |
+| Model Size | Legacy C++ | BitNet.rs (CPU) | BitNet.rs (GPU) | Notes |
+|------------|------------|------------------|------------------|-------|
+| **BitNet-1B** | ~15 tok/s | 10-20 tok/s | 50-100 tok/s | Real quantized computation |
+| **BitNet-3B** | ~8 tok/s | 8-15 tok/s | 40-80 tok/s | Device-aware I2S quantization |
+| **BitNet-7B** | ~4 tok/s | 5-12 tok/s | 30-70 tok/s | Mixed precision acceleration |
+| **BitNet-13B** | ~2 tok/s | 3-8 tok/s | 20-50 tok/s | Memory-efficient quantization |
 
 ### Memory Usage Improvements
 

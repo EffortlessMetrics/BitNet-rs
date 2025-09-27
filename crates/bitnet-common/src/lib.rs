@@ -7,11 +7,15 @@
 pub mod config;
 pub mod error;
 pub mod math;
+pub mod strict_mode;
 pub mod tensor;
 pub mod types;
 
 pub use config::*;
 pub use error::*;
 pub use math::ceil_div;
+pub use strict_mode::{
+    ComputationType, MissingKernelScenario, MockInferencePath, StrictModeConfig, StrictModeEnforcer,
+};
 pub use tensor::*;
 pub use types::*;

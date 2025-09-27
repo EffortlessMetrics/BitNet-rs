@@ -8,7 +8,7 @@
 //! cross-validation testing against Microsoft C++ reference implementation with
 //! realistic performance targets and accuracy validation.
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::env;
 use std::time::{Duration, Instant};
@@ -24,8 +24,10 @@ mod performance_baseline_tests {
     fn test_cpu_performance_baseline_establishment() {
         println!("📊 Baseline: Establishing CPU performance baselines");
 
-        env::set_var("BITNET_DETERMINISTIC", "1");
-        env::set_var("BITNET_SEED", "42");
+        unsafe {
+            env::set_var("BITNET_DETERMINISTIC", "1");
+            env::set_var("BITNET_SEED", "42");
+        }
 
         let baseline_result = || -> Result<()> {
             let baseline_config = CPUBaselineConfig {
@@ -148,8 +150,10 @@ mod performance_baseline_tests {
             Ok(())
         }();
 
-        env::remove_var("BITNET_DETERMINISTIC");
-        env::remove_var("BITNET_SEED");
+        unsafe {
+            env::remove_var("BITNET_DETERMINISTIC");
+            env::remove_var("BITNET_SEED");
+        }
 
         baseline_result.expect("CPU performance baseline establishment should succeed");
     }
@@ -277,8 +281,10 @@ mod performance_baseline_tests {
     fn test_performance_consistency_validation() {
         println!("📊 Baseline: Testing performance consistency");
 
-        env::set_var("BITNET_DETERMINISTIC", "1");
-        env::set_var("BITNET_SEED", "42");
+        unsafe {
+            env::set_var("BITNET_DETERMINISTIC", "1");
+            env::set_var("BITNET_SEED", "42");
+        }
 
         let consistency_result = || -> Result<()> {
             let num_runs = 10;
@@ -343,8 +349,10 @@ mod performance_baseline_tests {
             Ok(())
         }();
 
-        env::remove_var("BITNET_DETERMINISTIC");
-        env::remove_var("BITNET_SEED");
+        unsafe {
+            env::remove_var("BITNET_DETERMINISTIC");
+            env::remove_var("BITNET_SEED");
+        }
 
         consistency_result.expect("Performance consistency validation should succeed");
     }
@@ -361,8 +369,10 @@ mod cross_validation_tests {
     fn test_cpp_reference_cross_validation() {
         println!("🔄 CrossVal: Testing against C++ reference implementation");
 
-        env::set_var("BITNET_DETERMINISTIC", "1");
-        env::set_var("BITNET_SEED", "42");
+        unsafe {
+            env::set_var("BITNET_DETERMINISTIC", "1");
+            env::set_var("BITNET_SEED", "42");
+        }
 
         let crossval_result = || -> Result<()> {
             let crossval_config = CrossValidationConfig {
@@ -487,8 +497,10 @@ mod cross_validation_tests {
             Ok(())
         }();
 
-        env::remove_var("BITNET_DETERMINISTIC");
-        env::remove_var("BITNET_SEED");
+        unsafe {
+            env::remove_var("BITNET_DETERMINISTIC");
+            env::remove_var("BITNET_SEED");
+        }
 
         crossval_result.expect("C++ reference cross-validation should succeed");
     }
@@ -742,7 +754,9 @@ mod mock_detection_tests {
 
         let prevention_result = || -> Result<()> {
             // Test with strict mode disabled (should allow fallbacks)
-            env::remove_var("BITNET_STRICT_MODE");
+            unsafe {
+                env::remove_var("BITNET_STRICT_MODE");
+            }
 
             let relaxed_enforcer = StrictModeEnforcer::new();
             assert!(
@@ -757,7 +771,9 @@ mod mock_detection_tests {
             );
 
             // Test with strict mode enabled (should prevent fallbacks)
-            env::set_var("BITNET_STRICT_MODE", "1");
+            unsafe {
+                env::set_var("BITNET_STRICT_MODE", "1");
+            }
 
             let strict_enforcer = StrictModeEnforcer::new();
             assert!(
@@ -794,7 +810,9 @@ mod mock_detection_tests {
                 "Strict mode should be consistent across crates"
             );
 
-            env::remove_var("BITNET_STRICT_MODE");
+            unsafe {
+                env::remove_var("BITNET_STRICT_MODE");
+            }
 
             println!("  ✅ Strict mode mock prevention successful");
 
@@ -955,6 +973,19 @@ struct PerformanceMockDetector;
 struct StrictModeEnforcer;
 struct ComputationFingerprintAnalyzer;
 struct FingerprintDatabase;
+
+// TDD scaffolding implementations
+impl ComputationFingerprintAnalyzer {
+    fn new() -> Self {
+        Self
+    }
+}
+
+impl FingerprintDatabase {
+    fn new() -> Self {
+        Self
+    }
+}
 
 #[derive(Clone, Copy)]
 enum QuantizationType {

@@ -8,7 +8,7 @@
 //! for mock elimination, ensuring proper interaction between quantization, inference,
 //! models, and kernels components with realistic performance validation.
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use std::env;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -30,9 +30,11 @@ async fn test_end_to_end_mock_elimination_pipeline() {
     println!("🧪 Integration Test: End-to-End Mock Elimination Pipeline");
 
     // Set strict mode for integration testing
-    env::set_var("BITNET_STRICT_MODE", "1");
-    env::set_var("BITNET_DETERMINISTIC", "1");
-    env::set_var("BITNET_SEED", "42");
+    unsafe {
+        env::set_var("BITNET_STRICT_MODE", "1");
+        env::set_var("BITNET_DETERMINISTIC", "1");
+        env::set_var("BITNET_SEED", "42");
+    }
 
     let integration_result = async {
         // Step 1: Load model with real quantized layers

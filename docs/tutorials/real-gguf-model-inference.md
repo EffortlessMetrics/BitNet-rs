@@ -8,7 +8,7 @@ This tutorial demonstrates BitNet.rs's production-ready GGUF weight loading capa
 - **Quantization Support**: I2_S, TL1, TL2 quantization formats with ≥99% accuracy vs FP32
 - **Device-Aware Operations**: Automatic GPU acceleration with CPU fallback
 - **Security & Validation**: Input validation, bounds checking, and error handling
-- **Performance Baselines**: 66+ Melem/s quantization, 200+ tok/s inference
+- **Performance Baselines**: Realistic CPU 10-20 tok/s, GPU 50-100 tok/s with actual quantized computation
 - **Cross-Validation**: Systematic comparison with C++ reference implementation
 
 ## Prerequisites
@@ -228,7 +228,7 @@ cargo run -p xtask -- benchmark \
 
 # Expected performance targets:
 # Quantization: ≥66 Melem/s (CPU), ≥200 Melem/s (GPU)
-# Inference: ≥200 tok/s (CPU), ≥500 tok/s (GPU)
+# Inference: 10-20 tok/s (CPU), 50-100 tok/s (GPU) - realistic performance with real quantization
 # Memory: <2GB RAM for 2B parameter model
 ```
 
@@ -484,7 +484,7 @@ The GGUF weight loading system enables meaningful neural network inference with 
 With real GGUF weight loading, BitNet.rs achieves:
 
 - **Quantization Performance**: 66+ Melem/s (CPU), 200+ Melem/s (GPU)
-- **Inference Throughput**: 200+ tok/s (CPU), 500+ tok/s (GPU)
+- **Inference Throughput**: 10-20 tok/s (CPU), 50-100 tok/s (GPU) with real quantized computation
 - **Memory Efficiency**: <2GB RAM for 2B parameter models
 - **Accuracy**: ≥99% vs FP32 baseline for I2_S quantization
 - **Security**: Comprehensive validation and bounds checking

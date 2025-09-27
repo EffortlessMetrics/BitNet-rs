@@ -305,6 +305,23 @@ impl TL2Quantizer {
         self.quantize(tensor, &Device::Cpu)
     }
 
+    /// Quantize weights from f32 slice - compatibility method for tests
+    pub fn quantize_weights(&self, weights: &[f32]) -> Result<QuantizedTensor> {
+        use crate::utils::create_tensor_from_f32;
+        let shape = vec![weights.len()];
+        let tensor = create_tensor_from_f32(weights.to_vec(), &shape, &candle_core::Device::Cpu)?;
+        self.quantize_tensor(&tensor)
+    }
+
+    /// Check if quantizer supports the specified device
+    pub fn supports_device(&self, device: &bitnet_common::Device) -> bool {
+        match device {
+            bitnet_common::Device::Cpu => true,
+            bitnet_common::Device::Cuda(_) => cfg!(feature = "cuda"),
+            bitnet_common::Device::Metal => false, // Metal support not yet implemented
+        }
+    }
+
     /// Dequantize tensor from TL2 format on a specific device
     pub fn dequantize(&self, tensor: &QuantizedTensor, device: &Device) -> Result<BitNetTensor> {
         if tensor.qtype != QuantizationType::TL2 {

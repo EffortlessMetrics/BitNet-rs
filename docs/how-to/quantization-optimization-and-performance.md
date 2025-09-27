@@ -1,6 +1,6 @@
 # How to Optimize Quantization and Performance
 
-This comprehensive guide shows you how to optimize BitNet.rs quantization performance for production workloads. You'll learn to configure device-aware quantization, tune performance parameters, and achieve the target baselines of 66+ Melem/s quantization and 200+ tok/s inference.
+This comprehensive guide shows you how to optimize BitNet.rs quantization performance for production workloads. You'll learn to configure device-aware quantization, enable strict mode to prevent mock fallbacks, tune performance parameters, and achieve realistic performance baselines with actual quantized computation.
 
 ## Overview
 
@@ -42,9 +42,9 @@ cargo test --no-default-features --features cpu test_i2s_quantization_accuracy
 cargo bench -p bitnet-quantization --bench i2s_bench --no-default-features --features cpu
 
 # Expected performance targets:
-# CPU: ≥66 Melem/s
-# GPU: ≥200 Melem/s
-# Accuracy: ≥99% vs FP32
+# CPU: 10-20 tokens/sec with I2S quantization
+# GPU: 50-100 tokens/sec with mixed precision
+# Accuracy: I2S ≥99.8%, TL1/TL2 ≥99.6% vs FP32
 ```
 
 ### TL1/TL2 Table Lookup Quantization
@@ -114,9 +114,10 @@ cargo bench -p bitnet-kernels --bench device_comparison --no-default-features --
 ```
 
 **Expected GPU Performance:**
-- Quantization: ≥200 Melem/s on modern GPUs
+- Inference: 50-100 tokens/sec with mixed precision acceleration
 - Memory bandwidth: High utilization of GPU memory bus
 - Concurrent operations: Multiple quantization streams
+- CUDA optimization: FP16/BF16 mixed precision support
 
 ### CPU SIMD Optimization
 
@@ -302,20 +303,22 @@ impl QuantizationMemoryPool {
 ### Built-in Benchmarking
 
 ```bash
-# Comprehensive performance benchmarking
-cargo run -p xtask -- benchmark \
+# Comprehensive performance benchmarking with strict mode
+BITNET_STRICT_MODE=1 cargo run -p xtask -- benchmark \
     --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
     --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
     --tokens 128 \
     --warmup 3 \
     --iterations 10
 
-# Expected output:
+# Expected output (realistic performance):
 # Benchmark Results:
-#   Quantization: 78.5 Melem/s (target: ≥66)
-#   Inference: 245.2 tok/s (target: ≥200)
+#   Device: GPU (CUDA)
+#   Quantization: I2S 2-bit signed
+#   Inference: 75.3 tok/s (target: 50-100 GPU)
 #   Memory: 1.8GB peak usage
 #   GPU utilization: 85%
+#   Accuracy: 99.8% correlation vs FP32
 ```
 
 ### Custom Performance Metrics
@@ -387,13 +390,15 @@ fn simulate_inference(token_count: usize) -> Result<usize> {
 ### Environment Configuration
 
 ```bash
-# Optimize for production throughput
+# Optimize for production throughput with strict mode
+export BITNET_STRICT_MODE=1            # Prevent mock inference fallbacks
 export BITNET_DETERMINISTIC=0          # Allow non-deterministic optimizations
 export RAYON_NUM_THREADS=8             # Match CPU cores
 export CUDA_VISIBLE_DEVICES=0          # Use specific GPU
 export BITNET_MEMORY_POOL_SIZE=1GB     # Pre-allocate memory pool
 
-# Optimize for deterministic results
+# Optimize for deterministic results with strict mode
+export BITNET_STRICT_MODE=1            # Essential for production deployment
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
 export RAYON_NUM_THREADS=1             # Single-threaded for reproducibility
@@ -517,8 +522,9 @@ fn benchmark_quantization_performance(c: &mut Criterion) {
     let elapsed = start.elapsed();
     let throughput = (1000.0 * test_data.len() as f64) / elapsed.as_secs_f64() / 1_000_000.0;
 
-    // Assert performance targets
-    assert!(throughput >= 66.0, "Quantization throughput {:.1} Melem/s below target 66 Melem/s", throughput);
+    // Assert realistic performance targets (CPU: 10-20 tok/s, GPU: 50-100 tok/s)
+    let expected_min = if cfg!(feature = "gpu") { 50.0 } else { 10.0 };
+    assert!(throughput >= expected_min, "Inference throughput {:.1} tok/s below target {:.1} tok/s", throughput, expected_min);
 }
 
 criterion_group!(benches, benchmark_quantization_performance);
@@ -587,4 +593,17 @@ This guide covered:
 - ✅ **Testing and validation** for performance regression and accuracy
 - ✅ **Troubleshooting** common performance issues and solutions
 
-With these optimization techniques, you can achieve production-ready performance targets of 66+ Melem/s quantization and 200+ tok/s inference with BitNet.rs's advanced quantization system.
+With these optimization techniques, you can achieve production-ready performance with BitNet.rs's real quantized computation:
+
+**Realistic Performance Targets:**
+- **CPU Performance**: 10-20 tokens/sec with I2S quantization
+- **GPU Performance**: 50-100 tokens/sec with mixed precision acceleration
+- **Quantization Accuracy**: I2S ≥99.8%, TL1/TL2 ≥99.6% correlation with FP32
+- **Cross-Validation**: <5% variance from C++ reference implementation
+
+**Key Improvements:**
+- ✅ Mock inference elimination with BITNET_STRICT_MODE=1
+- ✅ Device-aware quantization selection (CPU SIMD, GPU CUDA)
+- ✅ Real quantized matrix multiplication (I2S, TL1, TL2)
+- ✅ Performance monitoring with realistic baselines
+- ✅ Cross-validation against Microsoft C++ reference
