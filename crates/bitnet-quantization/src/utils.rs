@@ -3,15 +3,39 @@
 use bitnet_common::{BitNetTensor, QuantizationError, Result};
 use candle_core::{DType, Device, Tensor as CandleTensor};
 
-/// Calculate the scale factor for quantization
+/// Calculate the scale factor for quantization with numerical stability
 pub fn calculate_scale(data: &[f32], bits: u8) -> f32 {
-    let max_val = data.iter().fold(0.0f32, |acc, &x| acc.max(x.abs()));
-    if max_val == 0.0 {
-        return 1.0;
+    // Filter out NaN and infinite values, find maximum absolute value
+    let max_val = data
+        .iter()
+        .filter(|&&x| x.is_finite()) // Only consider finite values
+        .map(|&x| x.abs())
+        .fold(0.0f32, |acc, x| acc.max(x));
+
+    // Security: Handle edge cases that could cause numerical instability
+    if max_val == 0.0 || !max_val.is_finite() {
+        return 1.0; // Safe fallback scale
+    }
+
+    // Security: Clamp extremely small values to prevent overflow
+    if max_val < 1e-30 {
+        return 1.0; // Prevent division by very small numbers
+    }
+
+    // Security: Clamp extremely large values to prevent overflow
+    if max_val > 1e30 {
+        return 1e30 / ((1 << (bits - 1)) - 1) as f32; // Clamped scale for extreme values
     }
 
     let max_quant = (1 << (bits - 1)) - 1; // For signed quantization
-    max_val / max_quant as f32
+    let scale = max_val / max_quant as f32;
+
+    // Security: Validate the computed scale is finite
+    if scale.is_finite() && scale > 0.0 {
+        scale
+    } else {
+        1.0 // Safe fallback
+    }
 }
 
 /// Calculate scale factors for grouped quantization
@@ -66,18 +90,52 @@ pub fn unpack_2bit_values(packed: &[u8], output_len: usize) -> Vec<i8> {
     values
 }
 
-/// Quantize a single value to n-bit signed integer
+/// Quantize a single value to n-bit signed integer with numerical stability
 pub fn quantize_value(value: f32, scale: f32, bits: u8) -> i8 {
     let max_val = (1 << (bits - 1)) - 1;
     let min_val = -(1 << (bits - 1));
 
-    let quantized = (value / scale).round() as i32;
+    // Security: Handle NaN and infinite values
+    if !value.is_finite() {
+        return 0; // Map non-finite values to zero
+    }
+
+    // Security: Validate scale is finite and non-zero
+    if !scale.is_finite() || scale == 0.0 {
+        return 0; // Safe fallback for invalid scale
+    }
+
+    // Security: Check for potential overflow before division
+    let normalized = if value.abs() > 1e30 {
+        (if value > 0.0 { 1e30 } else { -1e30 }) / scale
+    } else {
+        value / scale
+    };
+
+    // Security: Validate division result is finite
+    if !normalized.is_finite() {
+        return 0;
+    }
+
+    let quantized = normalized.round() as i32;
     quantized.clamp(min_val, max_val) as i8
 }
 
-/// Dequantize a single value from n-bit signed integer
+/// Dequantize a single value from n-bit signed integer with numerical stability
 pub fn dequantize_value(quantized: i8, scale: f32) -> f32 {
-    quantized as f32 * scale
+    // Security: Validate scale is finite
+    if !scale.is_finite() {
+        return 0.0; // Safe fallback for invalid scale
+    }
+
+    let result = quantized as f32 * scale;
+
+    // Security: Validate result is finite
+    if result.is_finite() {
+        result
+    } else {
+        0.0 // Safe fallback for overflow
+    }
 }
 
 /// Calculate mean squared error between two tensors

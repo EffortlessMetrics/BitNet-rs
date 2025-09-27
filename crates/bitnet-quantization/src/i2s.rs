@@ -157,6 +157,46 @@ impl I2SQuantizer {
         Ok(())
     }
 
+    /// Validate numerical input for potential overflow or invalid values
+    fn validate_numerical_input(data: &[f32]) -> Result<()> {
+        let nan_count = data.iter().filter(|&&x| x.is_nan()).count();
+        let inf_count = data.iter().filter(|&&x| x.is_infinite()).count();
+        let extreme_count = data.iter().filter(|&&x| x.is_finite() && x.abs() > 1e30).count();
+
+        // Security: Log warnings for problematic values but don't fail
+        // This allows quantization to proceed with sanitized values
+        if nan_count > 0 {
+            tracing::warn!(
+                "I2S quantization input contains {} NaN values - these will be mapped to zero",
+                nan_count
+            );
+        }
+
+        if inf_count > 0 {
+            tracing::warn!(
+                "I2S quantization input contains {} infinite values - these will be mapped to zero",
+                inf_count
+            );
+        }
+
+        if extreme_count > 0 {
+            tracing::warn!(
+                "I2S quantization input contains {} extreme values (>1e30) - these will be clamped",
+                extreme_count
+            );
+        }
+
+        // Security: Fail only if all values are problematic
+        let total_problematic = nan_count + inf_count;
+        if total_problematic == data.len() && !data.is_empty() {
+            return Err(BitNetError::Security(SecurityError::MalformedData {
+                reason: "All input values are NaN or infinite - cannot quantize".to_string(),
+            }));
+        }
+
+        Ok(())
+    }
+
     /// Validate quantized tensor against security limits
     fn validate_quantized_tensor(tensor: &QuantizedTensor, limits: &SecurityLimits) -> Result<()> {
         // Security: Validate tensor shape before calculations
@@ -278,6 +318,9 @@ impl I2SQuantizer {
 
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
+
+        // Security: Validate input data for numerical stability
+        Self::validate_numerical_input(&data)?;
 
         // Security: Validate data length matches tensor shape
         let expected_elements = shape.iter().try_fold(1usize, |acc, &dim| {
@@ -414,6 +457,10 @@ impl I2SQuantizer {
 
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
+
+        // Security: Validate input data for numerical stability
+        Self::validate_numerical_input(&data)?;
+
         let num_blocks = data.len().div_ceil(self.block_size);
         let mut scales = vec![0f32; num_blocks];
         let packed_len = (data.len() * 2).div_ceil(8);
