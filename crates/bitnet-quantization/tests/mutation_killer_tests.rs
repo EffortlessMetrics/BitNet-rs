@@ -651,7 +651,7 @@ mod quantization_round_trip_property_tests {
             let mean_rel_error = data.iter()
                 .zip(recovered.iter())
                 .filter(|(orig, _)| orig.abs() > 1e-6)
-                .map(|(orig, rec)| ((orig - rec).abs() / orig.abs()))
+                .map(|(orig, rec)| (orig - rec).abs() / orig.abs())
                 .sum::<f32>() / data.len().max(1) as f32;
 
             prop_assert!(mean_rel_error < 0.5,

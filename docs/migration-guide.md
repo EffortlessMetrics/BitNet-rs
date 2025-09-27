@@ -502,9 +502,9 @@ output = model.generate(prompt)
 
 ### Migration Support
 
-- [GitHub Issues](https://github.com/your-org/bitnet-rust/issues) - Report migration issues
-- [Discord Community](https://discord.gg/bitnet-rust) - Get help from the community
-- [Migration Examples](https://github.com/your-org/bitnet-rust/tree/main/examples/migration) - See complete migration examples
+- [GitHub Issues](https://github.com/microsoft/BitNet/issues) - Report migration issues
+- [GitHub Discussions](https://github.com/microsoft/BitNet/discussions) - Get help from the community
+- [Migration Examples](https://github.com/microsoft/BitNet/tree/main/examples/migration) - See complete migration examples
 
 ### Professional Support
 
@@ -514,4 +514,4 @@ For enterprise migrations, consider:
 - Performance optimization consulting
 - Training and workshops
 
-Contact: support@bitnet-rust.com
+For additional support, please [open an issue](https://github.com/microsoft/BitNet/issues) on GitHub.

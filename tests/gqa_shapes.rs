@@ -50,7 +50,7 @@ mod tests {
     }
 
     fn assert_invalid_gqa(n_heads: usize, n_kv_heads: usize) {
-        let valid = n_kv_heads > 0 && n_kv_heads <= n_heads && n_heads % n_kv_heads == 0;
+        let valid = n_kv_heads > 0 && n_kv_heads <= n_heads && n_heads.is_multiple_of(n_kv_heads);
         assert!(
             !valid,
             "Configuration should be invalid: n_heads={}, n_kv_heads={}",

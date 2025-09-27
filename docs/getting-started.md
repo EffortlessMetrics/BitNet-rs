@@ -1,12 +1,12 @@
 # Getting Started with BitNet Rust
 
-This guide will help you get up and running with BitNet Rust, a high-performance implementation of BitNet models in Rust.
+This guide will help you get up and running with BitNet Rust, a production-ready implementation of 1-bit neural network inference with real GGUF model weight loading. BitNet.rs replaces mock tensor initialization with comprehensive GGUF parsing, enabling meaningful neural network inference with actual trained parameters.
 
 ## Installation
 
 ### Prerequisites
 
-- Rust 1.75 or later
+- Rust 1.90.0 or later
 - CUDA 11.8+ (optional, for GPU acceleration)
 - Python 3.8+ (optional, for Python bindings)
 
@@ -19,45 +19,71 @@ cargo install bitnet-cli
 ### Build from source
 
 ```bash
-git clone https://github.com/your-org/bitnet-rust.git
-cd bitnet-rust
-cargo build --release
+git clone https://github.com/microsoft/BitNet-rs.git
+cd BitNet-rs
+cargo build --release --no-default-features --features cpu
 ```
 
 ### Feature flags
 
 BitNet Rust supports several feature flags for customization:
 
-- `gpu`: Enable CUDA GPU acceleration (default: enabled)
-- `python`: Enable Python bindings (default: disabled)
-- `wasm`: Enable WebAssembly support (default: disabled)
-- `cli`: Enable CLI tool (default: enabled)
+- `cpu`: Enable CPU inference with SIMD optimizations
+- `gpu`: Enable CUDA GPU acceleration with device-aware quantization
+- `ffi`: Enable C++ FFI bridge for cross-validation
+- `crossval`: Enable cross-validation against Microsoft BitNet C++
+
+**Important**: Default features are **empty** - always specify features explicitly.
 
 ```bash
-# Install with specific features
-cargo install bitnet-cli --features "gpu,python"
+# Build with CPU support
+cargo build --no-default-features --features cpu
 
-# Build without GPU support
-cargo build --release --no-default-features --features "cli"
+# Build with GPU support
+cargo build --no-default-features --features gpu
+
+# Build with both CPU and GPU
+cargo build --no-default-features --features "cpu,gpu"
 ```
 
 ## Quick Start
 
-### Using the CLI
+### Using the CLI with Real GGUF Models
 
-1. **Download a model**:
+1. **Download a real BitNet model with trained weights**:
 ```bash
-bitnet-cli model download microsoft/bitnet-b1_58-large
+# Download official Microsoft BitNet model with I2_S quantization
+cargo run -p xtask -- download-model \
+    --id microsoft/bitnet-b1.58-2B-4T-gguf \
+    --file ggml-model-i2_s.gguf
 ```
 
-2. **Run inference**:
+2. **Validate GGUF model and inspect real weights**:
 ```bash
-bitnet-cli inference --model microsoft/bitnet-b1_58-large --prompt "Hello, world!"
+# Verify GGUF compatibility and tensor completeness
+cargo run -p bitnet-cli -- compat-check \
+    models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+
+# Inspect real model weights and quantization format
+cargo run -p bitnet-cli -- inspect \
+    --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 ```
 
-3. **Stream generation**:
+3. **Run inference with real neural network weights**:
 ```bash
-bitnet-cli inference --model microsoft/bitnet-b1_58-large --prompt "Tell me a story" --stream
+# Production inference with actual trained parameters
+cargo run -p xtask -- infer \
+    --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+    --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+    --prompt "Explain quantum computing in simple terms" \
+    --deterministic
+
+# Stream generation with real model weights
+cargo run -p xtask -- infer \
+    --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+    --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+    --prompt "Write a story about AI and humans working together" \
+    --stream
 ```
 
 ### Using the Rust API
@@ -69,29 +95,52 @@ Add BitNet to your `Cargo.toml`:
 bitnet = "0.1.0"
 ```
 
-Basic usage:
+Real GGUF model loading with trained weights:
 
 ```rust
-use bitnet::{BitNetModel, InferenceConfig, GenerationConfig};
+use bitnet::prelude::*;
 use anyhow::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Load a model
-    let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
-    
-    // Configure generation
+    // Load real GGUF model with actual trained neural network weights
+    let model = BitNetModel::from_file(
+        "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
+    ).await?;
+
+    // Verify real weights were loaded (not mock tensors)
+    println!("Loaded {} tensors with {} parameters",
+             model.tensor_count(), model.parameter_count());
+
+    // Create inference engine with device-aware backend selection
+    let engine = InferenceEngine::builder()
+        .model(model)
+        .backend(Backend::Auto)  // Automatically selects GPU if available
+        .quantization(QuantizationType::I2S)  // Use I2_S quantization
+        .build()?;
+
+    // Configure generation with performance metrics
     let config = GenerationConfig {
         max_new_tokens: 100,
         temperature: 0.7,
-        top_p: 0.9,
+        enable_metrics: true,  // Track performance
         ..Default::default()
     };
-    
-    // Generate text
-    let output = model.generate("Hello, world!", &config).await?;
-    println!("Generated: {}", output);
-    
+
+    // Generate text with real neural network inference
+    let response = engine.generate_with_config(
+        "Explain the benefits of 1-bit neural networks",
+        &config
+    ).await?;
+
+    println!("Generated: {}", response.text);
+
+    // Access performance metrics from real inference
+    if let Some(metrics) = response.metrics {
+        println!("Inference time: {:.2}ms", metrics.timing.total);
+        println!("Throughput: {:.1} tokens/sec", metrics.throughput.e2e);
+    }
+
     Ok(())
 }
 ```
@@ -99,24 +148,36 @@ async fn main() -> Result<()> {
 ### Streaming Generation
 
 ```rust
-use bitnet::{BitNetModel, GenerationConfig};
-use futures_util::StreamExt;
-use anyhow::Result;
+use bitnet::prelude::*;
+use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
-    let config = GenerationConfig::default();
-    
-    let mut stream = model.generate_stream("Tell me a story", &config);
-    
-    while let Some(token) = stream.next().await {
-        match token {
-            Ok(text) => print!("{}", text),
+    // Load GGUF model
+    let model = BitNetModel::from_file("model.gguf").await?;
+
+    // Create inference engine
+    let engine = InferenceEngine::builder()
+        .model(model)
+        .backend(Backend::Auto)
+        .build()?;
+
+    // Configure streaming generation
+    let config = GenerationConfig {
+        max_new_tokens: 100,
+        temperature: 0.7,
+        ..Default::default()
+    };
+
+    let mut stream = engine.generate_stream_with_config("Tell me a story", &config);
+
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(response) => print!("{}", response.text),
             Err(e) => eprintln!("Error: {}", e),
         }
     }
-    
+
     Ok(())
 }
 ```
@@ -252,13 +313,13 @@ bitnet-cli benchmark --model model.gguf --monitor-memory
 
 ## Next Steps
 
-- Read the [API Reference](api-reference.md) for detailed API documentation
+- Read the [API Reference](reference/api-reference.md) for detailed API documentation
 - Check out [Examples](examples/) for more usage patterns
 - See [Migration Guide](migration-guide.md) for migrating from Python/C++
 - Review [Performance Tuning](performance-tuning.md) for optimization tips
 
 ## Getting Help
 
-- [GitHub Issues](https://github.com/your-org/bitnet-rust/issues)
+- [GitHub Issues](https://github.com/microsoft/BitNet-rs/issues)
 - [Documentation](https://docs.rs/bitnet)
-- [Discord Community](https://discord.gg/bitnet-rust)
+- [Microsoft BitNet Repository](https://github.com/microsoft/BitNet)

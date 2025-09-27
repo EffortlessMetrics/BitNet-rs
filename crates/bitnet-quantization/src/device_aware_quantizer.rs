@@ -239,7 +239,11 @@ impl CPUQuantizer {
             // Quantize each element in the block
             let mut block_data = Vec::new();
             for &value in block {
-                let normalized = if scale > 0.0 { value / scale } else { 0.0 };
+                let normalized = if scale >= /* ~ changed by cargo-mutants ~ */ 0.0 {
+                    value / scale
+                } else {
+                    0.0
+                };
                 let quantized = if normalized > 0.5 {
                     1i8
                 } else if normalized < -0.5 {

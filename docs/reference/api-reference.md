@@ -6,48 +6,167 @@ This document provides comprehensive API reference for BitNet Rust.
 
 ### BitNetModel
 
-The main model interface for loading and running BitNet models.
+The main model interface for loading and running BitNet models with production-ready GGUF weight loading.
 
 ```rust
 pub struct BitNetModel {
-    // Internal fields
+    // Internal fields for real neural network weights and configuration
 }
 
 impl BitNetModel {
-    /// Load a model from a local GGUF file, SafeTensors file, or HuggingFace directory
+    /// Load a model from a local GGUF file with real trained weights
+    ///
+    /// This method replaces mock tensor initialization with comprehensive GGUF parsing:
+    /// - Parses all transformer layer weights (attention, feed-forward, normalization)
+    /// - Supports I2_S, TL1, TL2 quantization formats with ≥99% accuracy vs FP32
+    /// - Device-aware tensor placement with GPU/CPU support
+    /// - Enhanced security validation and bounds checking
+    /// - Memory-efficient zero-copy operations where possible
+    ///
+    /// # Arguments
+    /// * `path` - Path to GGUF model file
+    ///
+    /// # Returns
+    /// * `Result<Self, BitNetError>` - Loaded model with real weights or error
+    ///
+    /// # Errors
+    /// Returns `BitNetError::GgufParse` for:
+    /// - Invalid GGUF magic bytes or version
+    /// - Missing required transformer tensors
+    /// - Tensor shape validation failures
+    /// - Unsupported quantization formats
+    /// - Security limit violations
     pub async fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, BitNetError>;
-    
-    /// Load a model from HuggingFace Hub
+
+    /// Load a model from HuggingFace Hub with automatic GGUF detection
     pub async fn from_pretrained(model_id: &str) -> Result<Self, BitNetError>;
-    
-    /// Load a model with custom configuration
+
+    /// Load a model with custom configuration and device placement
     pub async fn from_pretrained_with_config(
         model_id: &str,
         config: &ModelConfig,
     ) -> Result<Self, BitNetError>;
-    
-    /// Generate text from a prompt
+
+    /// Generate text using real neural network inference (not mock)
+    ///
+    /// Performs meaningful generation with actual trained parameters:
+    /// - Uses real GGUF model weights for inference
+    /// - Supports I2_S, TL1, TL2 quantization with device-aware acceleration
+    /// - Returns performance metrics when enabled
     pub async fn generate(
         &self,
         prompt: &str,
         config: &GenerationConfig,
-    ) -> Result<String, BitNetError>;
-    
-    /// Generate streaming text
+    ) -> Result<GenerationResponse, BitNetError>;
+
+    /// Generate streaming text with real-time neural network inference
     pub fn generate_stream(
         &self,
         prompt: &str,
         config: &GenerationConfig,
-    ) -> impl Stream<Item = Result<String, BitNetError>>;
-    
+    ) -> impl Stream<Item = Result<StreamResponse, BitNetError>>;
+
     /// Prefill the model cache with given tokens for performance optimization
     pub async fn prefill(&mut self, tokens: &[u32]) -> Result<(), BitNetError>;
-    
-    /// Get model information
+
+    /// Get model information including real tensor count and parameters
     pub fn model_info(&self) -> &ModelInfo;
-    
-    /// Get model configuration
+
+    /// Get model configuration extracted from GGUF metadata
     pub fn config(&self) -> &ModelConfig;
+
+    /// Get actual tensor count loaded from GGUF (not mock count)
+    pub fn tensor_count(&self) -> usize;
+
+    /// Get total parameter count from real model weights
+    pub fn parameter_count(&self) -> u64;
+
+    /// Validate model weights against expected transformer architecture
+    pub fn validate_weights(&self) -> Result<ValidationReport, BitNetError>;
+}
+
+/// Response from text generation with performance metrics
+#[derive(Debug, Clone)]
+pub struct GenerationResponse {
+    /// Generated text
+    pub text: String,
+    /// Token IDs generated
+    pub token_ids: Vec<u32>,
+    /// Performance metrics (if enabled)
+    pub metrics: Option<PerformanceMetrics>,
+    /// Generation metadata
+    pub metadata: GenerationMetadata,
+}
+
+/// Streaming generation response with token-level access
+#[derive(Debug, Clone)]
+pub struct StreamResponse {
+    /// Generated text for this token
+    pub text: String,
+    /// Token IDs for this generation step
+    pub token_ids: Vec<u32>,
+    /// Whether this is the final token
+    pub is_final: bool,
+    /// Incremental timing metrics
+    pub timing: Option<TokenTiming>,
+}
+
+/// Generation metadata for analysis and debugging
+#[derive(Debug, Clone)]
+pub struct GenerationMetadata {
+    /// Model used for generation
+    pub model_name: String,
+    /// Quantization format applied
+    pub quantization: QuantizationType,
+    /// Device used for inference
+    pub device: Device,
+    /// Total tokens in prompt
+    pub prompt_tokens: usize,
+    /// Completion tokens generated
+    pub completion_tokens: usize,
+}
+
+/// Per-token timing information for streaming
+#[derive(Debug, Clone)]
+pub struct TokenTiming {
+    /// Time to generate this token (ms)
+    pub token_time_ms: f64,
+    /// Cumulative generation time (ms)
+    pub cumulative_time_ms: f64,
+    /// Current throughput (tokens/sec)
+    pub current_throughput: f64,
+}
+
+/// Comprehensive model weight validation report
+#[derive(Debug, Clone)]
+pub struct ValidationReport {
+    /// Total tensors validated
+    pub tensor_count: usize,
+    /// Missing required tensors
+    pub missing_tensors: Vec<String>,
+    /// Tensors with invalid shapes
+    pub invalid_shapes: Vec<(String, Vec<usize>, Vec<usize>)>, // (name, expected, actual)
+    /// Quantization accuracy vs FP32 baseline
+    pub quantization_accuracy: f64,
+    /// Memory usage breakdown
+    pub memory_breakdown: MemoryBreakdown,
+    /// Validation passed all checks
+    pub is_valid: bool,
+}
+
+/// Memory usage breakdown for model analysis
+#[derive(Debug, Clone)]
+pub struct MemoryBreakdown {
+    /// Attention layer memory (bytes)
+    pub attention_memory: u64,
+    /// Feed-forward layer memory (bytes)
+    pub feedforward_memory: u64,
+    /// Normalization layer memory (bytes)
+    pub normalization_memory: u64,
+    /// Embedding memory (bytes)
+    pub embedding_memory: u64,
+    /// Total model memory (bytes)
+    pub total_memory: u64,
 }
 ```
 
@@ -1048,40 +1167,372 @@ pub struct SpecialTokens {
 
 ### BitNetError
 
-Main error type for BitNet operations.
+Enhanced error type for BitNet operations with comprehensive GGUF and quantization error handling.
 
 ```rust
 #[derive(thiserror::Error, Debug)]
 pub enum BitNetError {
     #[error("Model error: {0}")]
     Model(#[from] ModelError),
-    
+
     #[error("Tokenization error: {0}")]
     Tokenization(#[from] TokenizerError),
-    
+
+    #[error("GGUF parsing error: {0}")]
+    GgufParse(#[from] GgufParseError),
+
+    #[error("Quantization error: {0}")]
+    Quantization(#[from] QuantizationError),
+
+    #[error("Validation error: {0}")]
+    Validation(String),
+
     #[error("Device error: {0}")]
     Device(String),
-    
-    #[error("Quantization error: {0}")]
-    Quantization(String),
-    
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("Configuration error: {0}")]
     Config(String),
-    
+
     #[error("Memory error: {0}")]
     Memory(String),
-    
+
+    #[error("Security error: {0}")]
+    Security(String),
+
     #[error("Timeout error: operation timed out after {0:?}")]
     Timeout(Duration),
-    
+
     #[error("Capacity error: {0}")]
     Capacity(String),
 }
 
+/// Enhanced GGUF parsing errors with detailed context
+#[derive(thiserror::Error, Debug)]
+pub enum GgufParseError {
+    #[error("Invalid GGUF magic bytes: expected 'GGUF', got '{0}'")]
+    InvalidMagic(String),
+
+    #[error("Unsupported GGUF version: {0} (supported: 1-3)")]
+    UnsupportedVersion(u32),
+
+    #[error("Invalid tensor count: {0} exceeds security limit {1}")]
+    InvalidTensorCount(u32, u32),
+
+    #[error("Invalid KV count: {0} exceeds security limit {1}")]
+    InvalidKvCount(u32, u32),
+
+    #[error("Missing required tensor: '{0}'")]
+    MissingTensor(String),
+
+    #[error("Invalid tensor shape for '{0}': expected {1:?}, got {2:?}")]
+    InvalidTensorShape(String, Vec<usize>, Vec<usize>),
+
+    #[error("Tensor data corruption in '{0}': {1}")]
+    TensorDataCorruption(String, String),
+
+    #[error("Unsupported tensor type: {0}")]
+    UnsupportedTensorType(String),
+
+    #[error("File truncated: expected {0} bytes, got {1}")]
+    FileTruncated(u64, u64),
+
+    #[error("Memory mapping failed: {0}")]
+    MemoryMappingFailed(String),
+
+    #[error("Tensor alignment error for '{0}': offset {1} not aligned to {2}")]
+    TensorAlignment(String, u64, u64),
+}
+
+/// Enhanced quantization errors with context and recovery suggestions
+#[derive(thiserror::Error, Debug)]
+pub enum QuantizationError {
+    #[error("Unsupported quantization format: {0}")]
+    UnsupportedFormat(String),
+
+    #[error("Quantization accuracy too low: {0:.2}% (minimum: {1:.2}%)")]
+    AccuracyTooLow(f64, f64),
+
+    #[error("Input data validation failed: {0}")]
+    InputValidation(String),
+
+    #[error("Output buffer too small: need {0} bytes, got {1}")]
+    OutputBufferTooSmall(usize, usize),
+
+    #[error("Scale buffer mismatch: expected {0} scales, got {1}")]
+    ScaleBufferMismatch(usize, usize),
+
+    #[error("Device quantization failed: {0}")]
+    DeviceQuantizationFailed(String),
+
+    #[error("GPU quantization not available: {0}")]
+    GpuNotAvailable(String),
+
+    #[error("CUDA error during quantization: {0}")]
+    CudaError(String),
+
+    #[error("Memory allocation failed for quantization: {0}")]
+    MemoryAllocation(String),
+
+    #[error("Numerical overflow in quantization: input range [{0}, {1}] exceeds format limits")]
+    NumericalOverflow(f32, f32),
+
+    #[error("Zero-point calculation failed: {0}")]
+    ZeroPointCalculation(String),
+
+    #[error("Scale calculation failed: {0}")]
+    ScaleCalculation(String),
+}
+
+/// Security validation errors for production deployments
+#[derive(thiserror::Error, Debug)]
+pub enum SecurityError {
+    #[error("Model size exceeds security limit: {0} bytes > {1} bytes")]
+    ModelSizeLimit(u64, u64),
+
+    #[error("Tensor count exceeds security limit: {0} > {1}")]
+    TensorCountLimit(usize, usize),
+
+    #[error("Memory allocation exceeds security limit: {0} bytes > {1} bytes")]
+    MemoryLimit(u64, u64),
+
+    #[error("Unsafe tensor operation detected: {0}")]
+    UnsafeTensorOperation(String),
+
+    #[error("Input validation failed: {0}")]
+    InputValidation(String),
+
+    #[error("Resource exhaustion detected: {0}")]
+    ResourceExhaustion(String),
+}
+
+/// Device-specific errors with diagnostic information
+#[derive(thiserror::Error, Debug)]
+pub enum DeviceError {
+    #[error("CUDA device {0} not available")]
+    CudaNotAvailable(usize),
+
+    #[error("CUDA out of memory: requested {0} bytes, available {1} bytes")]
+    CudaOutOfMemory(u64, u64),
+
+    #[error("CUDA computation failed: {0}")]
+    CudaComputation(String),
+
+    #[error("CPU fallback required: {0}")]
+    CpuFallbackRequired(String),
+
+    #[error("Device capability insufficient: requires {0}, available {1}")]
+    InsufficientCapability(String, String),
+
+    #[error("Multi-device synchronization failed: {0}")]
+    SynchronizationFailed(String),
+}
+
 pub type Result<T> = std::result::Result<T, BitNetError>;
+
+/// Error context for enhanced debugging and recovery
+#[derive(Debug, Clone)]
+pub struct ErrorContext {
+    /// Operation being performed when error occurred
+    pub operation: String,
+
+    /// File path if relevant
+    pub file_path: Option<PathBuf>,
+
+    /// Model configuration if available
+    pub model_config: Option<String>,
+
+    /// Device information
+    pub device_info: Option<String>,
+
+    /// Memory usage at time of error
+    pub memory_usage: Option<u64>,
+
+    /// Suggested recovery actions
+    pub recovery_suggestions: Vec<String>,
+
+    /// Environment variables that may be relevant
+    pub relevant_env_vars: Vec<(String, Option<String>)>,
+}
+
+impl ErrorContext {
+    /// Create error context for GGUF loading operation
+    pub fn gguf_loading(file_path: &Path) -> Self;
+
+    /// Create error context for quantization operation
+    pub fn quantization(device: Device, qtype: QuantizationType) -> Self;
+
+    /// Create error context for device operation
+    pub fn device_operation(device: Device, operation: &str) -> Self;
+
+    /// Add recovery suggestion to error context
+    pub fn with_suggestion(mut self, suggestion: &str) -> Self;
+
+    /// Format error context for display
+    pub fn format_for_display(&self) -> String;
+}
+
+/// Enhanced error with context and recovery information
+#[derive(Debug)]
+pub struct ContextualError {
+    /// The underlying error
+    pub error: BitNetError,
+
+    /// Additional context for debugging
+    pub context: ErrorContext,
+
+    /// Error severity level
+    pub severity: ErrorSeverity,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ErrorSeverity {
+    /// Warning - operation can continue
+    Warning,
+
+    /// Error - operation failed but recoverable
+    Error,
+
+    /// Critical - system in unstable state
+    Critical,
+
+    /// Fatal - immediate termination required
+    Fatal,
+}
+
+impl ContextualError {
+    /// Create a contextual error with suggestions
+    pub fn new(error: BitNetError, context: ErrorContext) -> Self;
+
+    /// Check if error is recoverable
+    pub fn is_recoverable(&self) -> bool;
+
+    /// Get suggested recovery actions
+    pub fn recovery_actions(&self) -> &[String];
+
+    /// Format error for end-user display
+    pub fn user_friendly_message(&self) -> String;
+
+    /// Format error for developer debugging
+    pub fn debug_message(&self) -> String;
+}
+```
+
+### Enhanced Error Handling Examples
+
+#### GGUF Loading Error Handling
+
+```rust
+use bitnet_models::gguf_simple::load_gguf;
+use bitnet_common::{Device, BitNetError, GgufParseError};
+
+fn handle_gguf_loading(path: &Path) -> Result<()> {
+    match load_gguf(path, Device::Cpu) {
+        Ok((config, tensors)) => {
+            println!("Loaded {} tensors successfully", tensors.len());
+            Ok(())
+        }
+        Err(BitNetError::GgufParse(GgufParseError::InvalidMagic(magic))) => {
+            eprintln!("Invalid GGUF file: magic bytes '{}'", magic);
+            eprintln!("Suggestion: Verify file is a valid GGUF model");
+            eprintln!("Command: file {}", path.display());
+            Err(BitNetError::GgufParse(GgufParseError::InvalidMagic(magic)))
+        }
+        Err(BitNetError::GgufParse(GgufParseError::UnsupportedVersion(version))) => {
+            eprintln!("Unsupported GGUF version: {}", version);
+            eprintln!("Suggestion: Convert model to supported version (1-3)");
+            eprintln!("Command: cargo run -p bitnet-cli -- convert --target-version 3");
+            Err(BitNetError::GgufParse(GgufParseError::UnsupportedVersion(version)))
+        }
+        Err(BitNetError::Validation(msg)) => {
+            eprintln!("Model validation failed: {}", msg);
+            eprintln!("Suggestion: Check model integrity and format");
+            eprintln!("Command: cargo run -p bitnet-cli -- compat-check {}", path.display());
+            Err(BitNetError::Validation(msg))
+        }
+        Err(e) => {
+            eprintln!("Unexpected error: {}", e);
+            Err(e)
+        }
+    }
+}
+```
+
+#### Quantization Error Handling
+
+```rust
+use bitnet_kernels::device_aware::DeviceAwareQuantizer;
+use bitnet_common::{Device, QuantizationType, QuantizationError};
+
+fn handle_quantization_errors() -> Result<()> {
+    let quantizer = DeviceAwareQuantizer::new(Device::Cuda(0))?;
+    let input = vec![1.0; 1024];
+    let mut output = vec![0u8; 256];
+    let mut scales = vec![0.0f32; 4];
+
+    match quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S) {
+        Ok(()) => println!("Quantization successful"),
+        Err(BitNetError::Quantization(QuantizationError::GpuNotAvailable(msg))) => {
+            eprintln!("GPU quantization failed: {}", msg);
+            eprintln!("Suggestion: Check CUDA installation and GPU availability");
+            eprintln!("Command: nvidia-smi");
+            eprintln!("Fallback: Use CPU quantization with --no-default-features --features cpu");
+        }
+        Err(BitNetError::Quantization(QuantizationError::AccuracyTooLow(actual, required))) => {
+            eprintln!("Quantization accuracy too low: {:.2}% < {:.2}%", actual, required);
+            eprintln!("Suggestion: Try different quantization format or adjust input range");
+            eprintln!("Alternatives: TL1, TL2, or full precision (F32)");
+        }
+        Err(e) => eprintln!("Quantization error: {}", e),
+    }
+
+    Ok(())
+}
+```
+
+#### Production Error Handling
+
+```rust
+use bitnet_common::{ContextualError, ErrorContext, ErrorSeverity};
+
+fn production_error_handler(error: BitNetError, operation: &str) -> ContextualError {
+    let context = match &error {
+        BitNetError::GgufParse(_) => {
+            ErrorContext::gguf_loading(Path::new("model.gguf"))
+                .with_suggestion("Verify model file integrity")
+                .with_suggestion("Check available disk space")
+                .with_suggestion("Try re-downloading the model")
+        }
+        BitNetError::Quantization(_) => {
+            ErrorContext::quantization(Device::Auto, QuantizationType::I2S)
+                .with_suggestion("Check GPU memory availability")
+                .with_suggestion("Try CPU fallback")
+                .with_suggestion("Reduce batch size")
+        }
+        BitNetError::Device(_) => {
+            ErrorContext::device_operation(Device::Auto, operation)
+                .with_suggestion("Check CUDA installation")
+                .with_suggestion("Verify device availability")
+                .with_suggestion("Enable CPU fallback")
+        }
+        _ => ErrorContext::default(),
+    };
+
+    let severity = match &error {
+        BitNetError::Security(_) => ErrorSeverity::Critical,
+        BitNetError::Memory(_) => ErrorSeverity::Error,
+        BitNetError::Device(_) => ErrorSeverity::Warning,
+        _ => ErrorSeverity::Error,
+    };
+
+    ContextualError {
+        error,
+        context,
+        severity,
+    }
+}
 ```
 
 ## Utilities

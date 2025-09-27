@@ -178,6 +178,7 @@ bitnet = { path = "../", default-features = false, features = ["cpu"] }
 
 # Additional dependencies for fixtures
 bincode = "1.3.3"
+byteorder = "1.5.0"
 
 # Platform-specific dependencies
 [target.'cfg(target_os = "windows")'.dependencies]

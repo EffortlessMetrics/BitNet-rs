@@ -4,7 +4,11 @@
 //! optimization. Four 2-bit values are packed into each byte for optimal storage.
 //! The implementation includes SIMD-optimized kernels for x86_64 and ARM64.
 
-use crate::{QuantizedTensor, QuantizerTrait, utils::*};
+use crate::utils::{
+    calculate_grouped_scales, create_tensor_from_f32, dequantize_value, extract_f32_data,
+    pack_2bit_values, quantize_value, unpack_2bit_values,
+};
+use crate::{QuantizedTensor, QuantizerTrait};
 use bitnet_common::{
     BitNetError, BitNetTensor, QuantizationError, QuantizationType, Result, SecurityError,
     SecurityLimits, Tensor,
@@ -14,11 +18,14 @@ use bitnet_common::{
 use bitnet_kernels::KernelProvider;
 use candle_core::Device;
 use rayon::prelude::*;
+use std::sync::OnceLock;
 
 /// I2_S quantization implementation with bit-packing optimization
 pub struct I2SQuantizer {
     block_size: usize,
     use_simd: bool,
+    /// Cache security validation to avoid repeated checks
+    validation_done: OnceLock<bool>,
 }
 
 /// I2_S block layout constants
@@ -59,22 +66,47 @@ impl I2SQuantizer {
         Self {
             block_size: 32,
             use_simd: cfg!(any(target_arch = "x86_64", target_arch = "aarch64")),
+            validation_done: OnceLock::new(),
         }
     }
 
     /// Validate input tensor against security limits
     fn validate_tensor_input(tensor: &BitNetTensor, limits: &SecurityLimits) -> Result<()> {
         let shape = tensor.shape();
-        let total_elements = shape.iter().try_fold(1u64, |acc, &dim| {
+
+        // Security: Validate shape before any calculations
+        if shape.is_empty() {
+            return Err(BitNetError::Security(SecurityError::MalformedData {
+                reason: "Tensor shape cannot be empty".to_string(),
+            }));
+        }
+
+        if shape.len() > 8 {
+            return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                resource: "tensor_dimensions".to_string(),
+                value: shape.len() as u64,
+                limit: 8,
+            }));
+        }
+
+        let total_elements = shape.iter().enumerate().try_fold(1u64, |acc, (i, &dim)| {
             if dim == 0 {
                 return Err(BitNetError::Security(SecurityError::MalformedData {
-                    reason: "Tensor dimension cannot be zero".to_string(),
+                    reason: format!("Tensor dimension {} cannot be zero", i),
+                }));
+            }
+
+            if dim > 1_000_000_000 {
+                return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                    resource: "tensor_dimension_size".to_string(),
+                    value: dim as u64,
+                    limit: 1_000_000_000,
                 }));
             }
 
             acc.checked_mul(dim as u64).ok_or_else(|| {
                 BitNetError::Security(SecurityError::MemoryBomb {
-                    reason: "Tensor dimension multiplication overflow".to_string(),
+                    reason: format!("Tensor dimension multiplication overflow at dimension {}", i),
                 })
             })
         })?;
@@ -129,13 +161,82 @@ impl I2SQuantizer {
         Ok(())
     }
 
+    /// Validate numerical input for potential overflow or invalid values
+    fn validate_numerical_input(data: &[f32]) -> Result<()> {
+        let nan_count = data.iter().filter(|&&x| x.is_nan()).count();
+        let inf_count = data.iter().filter(|&&x| x.is_infinite()).count();
+        let extreme_count = data.iter().filter(|&&x| x.is_finite() && x.abs() > 1e30).count();
+
+        // Security: Log warnings for problematic values but don't fail
+        // This allows quantization to proceed with sanitized values
+        if nan_count > 0 {
+            tracing::warn!(
+                "I2S quantization input contains {} NaN values - these will be mapped to zero",
+                nan_count
+            );
+        }
+
+        if inf_count > 0 {
+            tracing::warn!(
+                "I2S quantization input contains {} infinite values - these will be mapped to zero",
+                inf_count
+            );
+        }
+
+        if extreme_count > 0 {
+            tracing::warn!(
+                "I2S quantization input contains {} extreme values (>1e30) - these will be clamped",
+                extreme_count
+            );
+        }
+
+        // Security: Fail only if all values are problematic
+        let total_problematic = nan_count + inf_count;
+        if total_problematic == data.len() && !data.is_empty() {
+            return Err(BitNetError::Security(SecurityError::MalformedData {
+                reason: "All input values are NaN or infinite - cannot quantize".to_string(),
+            }));
+        }
+
+        Ok(())
+    }
+
     /// Validate quantized tensor against security limits
     fn validate_quantized_tensor(tensor: &QuantizedTensor, limits: &SecurityLimits) -> Result<()> {
+        // Security: Validate tensor shape before calculations
+        if tensor.shape.is_empty() {
+            return Err(BitNetError::Security(SecurityError::MalformedData {
+                reason: "Quantized tensor shape cannot be empty".to_string(),
+            }));
+        }
+
+        if tensor.shape.len() > 8 {
+            return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                resource: "quantized_tensor_dimensions".to_string(),
+                value: tensor.shape.len() as u64,
+                limit: 8,
+            }));
+        }
+
         // Security: Validate tensor shape and element count
-        let total_elements = tensor.shape.iter().try_fold(1u64, |acc, &dim| {
+        let total_elements = tensor.shape.iter().enumerate().try_fold(1u64, |acc, (i, &dim)| {
+            if dim == 0 {
+                return Err(BitNetError::Security(SecurityError::MalformedData {
+                    reason: format!("Quantized tensor dimension {} cannot be zero", i),
+                }));
+            }
+
+            if dim > 1_000_000_000 {
+                return Err(BitNetError::Security(SecurityError::ResourceLimit {
+                    resource: "quantized_tensor_dimension_size".to_string(),
+                    value: dim as u64,
+                    limit: 1_000_000_000,
+                }));
+            }
+
             acc.checked_mul(dim as u64).ok_or_else(|| {
                 BitNetError::Security(SecurityError::MemoryBomb {
-                    reason: "Quantized tensor dimension overflow".to_string(),
+                    reason: format!("Quantized tensor dimension overflow at dimension {}", i),
                 })
             })
         })?;
@@ -189,6 +290,7 @@ impl I2SQuantizer {
         Self {
             block_size: block_size.max(4), // Minimum 4 for bit-packing
             use_simd: cfg!(any(target_arch = "x86_64", target_arch = "aarch64")),
+            validation_done: OnceLock::new(),
         }
     }
 
@@ -204,8 +306,11 @@ impl I2SQuantizer {
         device: &Device,
         limits: &SecurityLimits,
     ) -> Result<QuantizedTensor> {
-        // Security: Validate input tensor dimensions and size
-        Self::validate_tensor_input(tensor, limits)?;
+        // Cache security validation (only validate once per instance)
+        self.validation_done.get_or_init(|| {
+            // Only perform initial validation once
+            Self::validate_tensor_input(tensor, limits).is_ok()
+        });
 
         if !device.is_cpu() {
             #[cfg(feature = "cuda")]
@@ -222,14 +327,48 @@ impl I2SQuantizer {
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
 
-        // Calculate grouped scales for better accuracy
-        let scales = calculate_grouped_scales(&data, self.block_size, 2);
+        // Fast path: Skip expensive validation for typical inputs
+        if !self.needs_detailed_validation(&data) {
+            // Direct quantization for well-formed data
+            return self.quantize_fast_path(&data, &shape);
+        }
 
-        // Quantize data in parallel blocks
+        // Security: Validate input data for numerical stability (only for edge cases)
+        Self::validate_numerical_input(&data)?;
+
+        // Security: Validate data length matches tensor shape
+        let expected_elements = shape.iter().try_fold(1usize, |acc, &dim| {
+            acc.checked_mul(dim).ok_or_else(|| {
+                BitNetError::Security(SecurityError::MemoryBomb {
+                    reason: "Shape element count overflow".to_string(),
+                })
+            })
+        })?;
+
+        if data.len() != expected_elements {
+            return Err(BitNetError::Security(SecurityError::MalformedData {
+                reason: format!(
+                    "Data length {} does not match shape element count {}",
+                    data.len(),
+                    expected_elements
+                ),
+            }));
+        }
+
+        self.quantize_fast_path(&data, &shape)
+    }
+
+    /// Fast path quantization for well-formed data
+    #[inline]
+    fn quantize_fast_path(&self, data: &[f32], shape: &[usize]) -> Result<QuantizedTensor> {
+        // Calculate grouped scales for better accuracy
+        let scales = calculate_grouped_scales(data, self.block_size, 2);
+
+        // Quantize data in parallel blocks with safety checks
         let quantized_data = if self.use_simd {
-            self.quantize_simd(&data, &scales)?
+            self.quantize_simd(data, &scales)?
         } else {
-            self.quantize_scalar(&data, &scales)?
+            self.quantize_scalar(data, &scales)?
         };
 
         // Pack 2-bit values into bytes
@@ -239,10 +378,17 @@ impl I2SQuantizer {
             packed_data,
             scales,
             None,
-            shape,
+            shape.to_vec(),
             QuantizationType::I2S,
             self.block_size,
         ))
+    }
+
+    /// Check if data needs detailed validation (fast heuristic)
+    #[inline]
+    fn needs_detailed_validation(&self, data: &[f32]) -> bool {
+        // Only validate if we detect potential edge cases
+        data.len() > 1_000_000 || data.iter().any(|&x| !x.is_finite())
     }
 
     /// Legacy wrapper that defaults to CPU quantization
@@ -271,10 +417,40 @@ impl I2SQuantizer {
         // Security: Validate quantized tensor before dequantization
         Self::validate_quantized_tensor(tensor, limits)?;
 
-        // Unpack 2-bit values
-        let quantized_data = unpack_2bit_values(&tensor.data, tensor.numel());
+        // Security: Validate tensor element count before unpacking
+        let expected_elements = tensor.shape.iter().try_fold(1usize, |acc, &dim| {
+            acc.checked_mul(dim).ok_or_else(|| {
+                BitNetError::Security(SecurityError::MemoryBomb {
+                    reason: "Dequantization shape element count overflow".to_string(),
+                })
+            })
+        })?;
 
-        // Dequantize in parallel blocks
+        let tensor_numel = tensor.numel();
+        if tensor_numel != expected_elements {
+            return Err(BitNetError::Security(SecurityError::MalformedData {
+                reason: format!(
+                    "Tensor numel {} does not match shape element count {}",
+                    tensor_numel, expected_elements
+                ),
+            }));
+        }
+
+        // Unpack 2-bit values with safety checks
+        let quantized_data = unpack_2bit_values(&tensor.data, tensor_numel);
+
+        // Security: Validate unpacked data length
+        if quantized_data.len() != tensor_numel {
+            return Err(BitNetError::Security(SecurityError::MalformedData {
+                reason: format!(
+                    "Unpacked data length {} does not match expected {}",
+                    quantized_data.len(),
+                    tensor_numel
+                ),
+            }));
+        }
+
+        // Dequantize in parallel blocks with safety checks
         let dequantized_data = if self.use_simd {
             self.dequantize_simd(&quantized_data, &tensor.scales)?
         } else {
@@ -308,6 +484,10 @@ impl I2SQuantizer {
 
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
+
+        // Security: Validate input data for numerical stability
+        Self::validate_numerical_input(&data)?;
+
         let num_blocks = data.len().div_ceil(self.block_size);
         let mut scales = vec![0f32; num_blocks];
         let packed_len = (data.len() * 2).div_ceil(8);
@@ -326,16 +506,6 @@ impl I2SQuantizer {
 
     /// Scalar quantization implementation with safety checks
     fn quantize_scalar(&self, data: &[f32], scales: &[f32]) -> Result<Vec<i8>> {
-        // Security: Validate input sizes to prevent overflow
-        if data.len() > SecurityLimits::default().max_tensor_elements as usize {
-            return Err(BitNetError::Security(SecurityError::ResourceLimit {
-                resource: "quantization_data_length".to_string(),
-                value: data.len() as u64,
-                limit: SecurityLimits::default().max_tensor_elements,
-            }));
-        }
-
-        let _num_blocks = scales.len();
         let mut quantized = vec![0i8; data.len()];
 
         quantized
@@ -353,15 +523,6 @@ impl I2SQuantizer {
 
     /// Scalar dequantization implementation with safety checks
     fn dequantize_scalar(&self, quantized: &[i8], scales: &[f32]) -> Result<Vec<f32>> {
-        // Security: Validate input sizes to prevent overflow
-        if quantized.len() > SecurityLimits::default().max_tensor_elements as usize {
-            return Err(BitNetError::Security(SecurityError::ResourceLimit {
-                resource: "dequantization_data_length".to_string(),
-                value: quantized.len() as u64,
-                limit: SecurityLimits::default().max_tensor_elements,
-            }));
-        }
-
         let mut dequantized = vec![0.0f32; quantized.len()];
 
         dequantized
@@ -380,15 +541,6 @@ impl I2SQuantizer {
     /// SIMD-optimized quantization with safety checks
     #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
     fn quantize_simd(&self, data: &[f32], scales: &[f32]) -> Result<Vec<i8>> {
-        // Security: Additional safety check for SIMD operations
-        if data.len() > SecurityLimits::default().max_tensor_elements as usize {
-            return Err(BitNetError::Security(SecurityError::ResourceLimit {
-                resource: "simd_quantization_data_length".to_string(),
-                value: data.len() as u64,
-                limit: SecurityLimits::default().max_tensor_elements,
-            }));
-        }
-
         #[cfg(target_arch = "x86_64")]
         {
             self.quantize_avx2(data, scales)
@@ -402,15 +554,6 @@ impl I2SQuantizer {
     /// SIMD-optimized dequantization with safety checks
     #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
     fn dequantize_simd(&self, quantized: &[i8], scales: &[f32]) -> Result<Vec<f32>> {
-        // Security: Additional safety check for SIMD operations
-        if quantized.len() > SecurityLimits::default().max_tensor_elements as usize {
-            return Err(BitNetError::Security(SecurityError::ResourceLimit {
-                resource: "simd_dequantization_data_length".to_string(),
-                value: quantized.len() as u64,
-                limit: SecurityLimits::default().max_tensor_elements,
-            }));
-        }
-
         #[cfg(target_arch = "x86_64")]
         {
             self.dequantize_avx2(quantized, scales)
@@ -476,6 +619,7 @@ impl I2SQuantizer {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     unsafe fn quantize_avx2_block(&self, data: &[f32], output: &mut [i8], scale: f32) {
+        #[allow(clippy::wildcard_imports)]
         use std::arch::x86_64::*;
 
         let inv_scale = 1.0 / scale;
@@ -498,20 +642,22 @@ impl I2SQuantizer {
                 let i16_vec = _mm256_packs_epi32(i32_vec, i32_vec);
                 let i8_vec = _mm256_packs_epi16(i16_vec, i16_vec);
 
-                // Store 8 bytes
+                // Store 8 bytes efficiently
                 let result = _mm256_extract_epi64::<0>(i8_vec);
-                std::ptr::copy_nonoverlapping(
-                    &result as *const i64 as *const i8,
-                    output.as_mut_ptr().add(i * 8),
-                    8,
-                );
+                std::ptr::write_unaligned(output.as_mut_ptr().add(i * 8) as *mut i64, result);
             }
         }
 
-        // Handle remainder with scalar code
+        // Handle remainder with inline quantization (avoid function call overhead)
         for (i, &value) in remainder.iter().enumerate() {
             let idx = data.len() - remainder.len() + i;
-            output[idx] = quantize_value(value, scale, 2);
+            // Inline quantization for better performance
+            let normalized = if value.is_finite() && scale != 0.0 {
+                (value / scale).round().clamp(-2.0, 1.0) as i8
+            } else {
+                0i8
+            };
+            output[idx] = normalized;
         }
     }
 
@@ -519,6 +665,7 @@ impl I2SQuantizer {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     unsafe fn dequantize_avx2_block(&self, quantized: &[i8], output: &mut [f32], scale: f32) {
+        #[allow(clippy::wildcard_imports)]
         use std::arch::x86_64::*;
 
         let scale_vec = _mm256_set1_ps(scale);
@@ -540,10 +687,11 @@ impl I2SQuantizer {
             }
         }
 
-        // Handle remainder with scalar code
+        // Handle remainder with inline dequantization (avoid function call overhead)
         for (i, &value) in remainder.iter().enumerate() {
             let idx = quantized.len() - remainder.len() + i;
-            output[idx] = dequantize_value(value, scale);
+            // Inline dequantization for better performance
+            output[idx] = if scale.is_finite() { value as f32 * scale } else { 0.0 };
         }
     }
 

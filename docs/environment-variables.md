@@ -125,6 +125,6 @@ curl http://localhost:9090/api/v1/query?query=system_cpu_usage_percent
 ```
 
 For more information on specific topics, see:
-- [GPU Development Guide](gpu-development.md) - GPU-specific environment variables and testing
-- [Test Suite Guide](test-suite.md) - Testing configuration and variables
+- [GPU Development Guide](development/gpu-development.md) - GPU-specific environment variables and testing
+- [Test Suite Guide](development/test-suite.md) - Testing configuration and variables
 - [Performance Benchmarking Guide](performance-benchmarking.md) - Performance testing variables

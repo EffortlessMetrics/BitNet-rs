@@ -710,7 +710,7 @@ let model = BitNetModel::load("model.gguf", &Device::Cpu)?;
 ### Getting Help
 
 #### Community Support
-- **Discord**: [BitNet.rs Community](https://discord.gg/bitnet-rust)
+- **Community**: [GitHub Discussions](https://github.com/microsoft/BitNet/discussions)
 - **GitHub Issues**: [Report bugs and get help](https://github.com/microsoft/BitNet/issues)
 - **Documentation**: [Complete API docs](https://docs.rs/bitnet)
 
@@ -754,4 +754,4 @@ Contact: migration-support@bitnet-rs.com
 
 ---
 
-**Ready to migrate?** Start with our [Quick Start Migration](#quick-start-migration) or join our [Discord community](https://discord.gg/bitnet-rust) for personalized help with your migration journey.
+**Ready to migrate?** Start with our [Quick Start Migration](#quick-start-migration) or visit our [GitHub Discussions](https://github.com/microsoft/BitNet/discussions) for help with your migration journey.

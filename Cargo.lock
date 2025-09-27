@@ -367,6 +367,7 @@ dependencies = [
  "bitnet-quantization",
  "bitnet-tests",
  "bitnet-tokenizers",
+ "byteorder",
  "candle-core",
  "chrono",
  "criterion",
@@ -616,6 +617,7 @@ dependencies = [
  "sha2",
  "tempfile",
  "thiserror 2.0.16",
+ "tokio",
  "tracing",
  "url",
 ]
@@ -728,6 +730,7 @@ dependencies = [
  "bitnet-models",
  "bitnet-quantization",
  "bitnet-tokenizers",
+ "byteorder",
  "cargo_metadata 0.22.0",
  "chrono",
  "clap",

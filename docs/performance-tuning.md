@@ -739,6 +739,6 @@ scaler.monitor(&model).await?;
 
 For performance-specific questions:
 
-- **Performance Issues:** https://github.com/your-org/bitnet-rust/issues/new?template=performance.md
-- **Optimization Consulting:** performance@bitnet-rust.com
-- **Community Discord:** https://discord.gg/bitnet-rust #performance channel
+- **Performance Issues:** https://github.com/microsoft/BitNet/issues/new
+- **Optimization Help:** [GitHub Discussions](https://github.com/microsoft/BitNet/discussions)
+- **Community Support:** [GitHub Discussions](https://github.com/microsoft/BitNet/discussions)

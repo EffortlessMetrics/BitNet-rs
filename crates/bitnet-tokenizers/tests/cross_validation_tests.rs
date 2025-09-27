@@ -2,11 +2,30 @@
 //!
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac6-cross-validation-tests
 
-use bitnet_common::{QuantizationType, Result};
-use bitnet_tokenizers::{BasicTokenizer, Tokenizer, TokenizerDiscovery};
+use bitnet_common::{BitNetError, Result};
+use bitnet_tokenizers::{BasicTokenizer, Tokenizer};
 #[allow(unused_imports)] // Used in test scaffolding
 use std::path::Path;
 use std::sync::Arc;
+
+// Test scaffolding types for future implementation
+#[allow(dead_code)]
+struct TokenizerDiscovery;
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy)]
+enum QuantizationType {
+    I2S, // 2-bit signed quantization
+    TL1, // Table lookup quantization
+    TL2, // Enhanced table lookup
+}
+
+impl TokenizerDiscovery {
+    #[allow(dead_code)]
+    fn from_gguf(_path: &Path) -> Result<Self> {
+        Err(BitNetError::Validation("TokenizerDiscovery not implemented yet".to_string()))
+    }
+}
 
 /// AC6: Tests tokenizer discovery cross-validation with universal tokenizer
 /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac6-cross-validation-tests

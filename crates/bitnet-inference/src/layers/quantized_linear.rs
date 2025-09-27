@@ -967,7 +967,7 @@ pub fn create_mock_tensor(
 pub fn create_mock_weight_matrix(input_size: usize, output_size: usize) -> Result<Vec<f32>> {
     let total_elements = input_size * output_size;
     let weights: Vec<f32> = (0..total_elements)
-        .map(|i| ((i as f32).sin() * 0.1)) // Simple sinusoidal pattern
+        .map(|i| (i as f32).sin() * 0.1) // Simple sinusoidal pattern
         .collect();
     Ok(weights)
 }

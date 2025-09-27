@@ -7,6 +7,8 @@
 //! cross-validation against C++ reference implementation using `cargo run -p xtask -- crossval`.
 //! Ensures BitNet.rs maintains numerical accuracy and computational correctness.
 
+#![allow(dead_code, unused_variables, unused_imports, unused_mut)]
+
 use anyhow::Result;
 use bitnet_models::BitNetModel;
 use bitnet_quantization::I2SQuantizer;

@@ -422,12 +422,20 @@ impl BitNetConfig {
                         (memory_limit.as_str(), 1)
                     };
 
-                    let bytes: usize = value.trim().parse::<usize>().map_err(|_| {
+                    let base_value: usize = value.trim().parse::<usize>().map_err(|_| {
                         BitNetError::Config(format!(
                             "Invalid BITNET_MEMORY_LIMIT value: '{}'",
                             memory_limit
                         ))
-                    })? * multiplier;
+                    })?;
+
+                    // Safe multiplication with overflow checking for security
+                    let bytes: usize = base_value.checked_mul(multiplier).ok_or_else(|| {
+                        BitNetError::Config(format!(
+                            "Memory limit value too large and would overflow: '{}' * {}",
+                            base_value, multiplier
+                        ))
+                    })?;
                     self.performance.memory_limit = Some(bytes);
                 }
             }

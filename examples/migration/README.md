@@ -65,7 +65,7 @@ Typical improvements seen in these examples:
 
 - **Documentation**: [Migration Guide](../../docs/cpp-to-rust-migration.md)
 - **FAQ**: [Migration FAQ](../../docs/migration-faq.md)
-- **Community**: [Discord](https://discord.gg/bitnet-rust)
+- **Community**: [GitHub Discussions](https://github.com/microsoft/BitNet/discussions)
 - **Issues**: [GitHub Issues](https://github.com/microsoft/BitNet/issues)
 
 ## Contributing

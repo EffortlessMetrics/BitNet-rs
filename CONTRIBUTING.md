@@ -1,94 +1,192 @@
 # Contributing to BitNet.rs
 
-Thank you for your interest in contributing to BitNet.rs! This document provides guidelines and best practices for contributing to the project.
+Welcome to BitNet.rs! We appreciate your interest in contributing to our high-performance 1-bit neural network quantization and inference library for Rust.
 
-## Getting Started
+## Quick Start for Contributors
 
-1. Fork the repository
-2. Clone your fork: `git clone https://github.com/your-username/BitNet-rs.git`
-3. Create a feature branch: `git checkout -b feature/your-feature-name`
-4. Make your changes
-5. Run tests: `cargo test --workspace`
-6. Submit a pull request
+1. **Fork and Clone**
+   ```bash
+   git clone https://github.com/your-username/BitNet-rs.git
+   cd BitNet-rs
+   ```
 
-## Development Setup
+2. **Setup Development Environment**
+   ```bash
+   # Install Rust 1.90.0 or later
+   rustup update stable
 
-### Prerequisites
+   # Install development tools
+   cargo install cargo-nextest cargo-mutants
+   ```
 
-- Rust 1.89.0 or later
-- Git
-- Optional: CUDA toolkit for GPU features
-- Optional: Python 3.8+ for Python bindings
+3. **Run Tests**
+   ```bash
+   # Quick test with CPU features
+   cargo test --workspace --no-default-features --features cpu
 
-### Building
+   # Full test suite
+   ./scripts/test-all.sh
+   ```
+
+## Development Workflow
+
+### Feature Development
+
+1. **Create Feature Branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Follow TDD Approach**
+   - Write tests first
+   - Implement minimal code to pass tests
+   - Refactor with safety
+
+3. **Use xtask Commands**
+   ```bash
+   # Download test models
+   cargo run -p xtask -- download-model
+
+   # Verify implementation
+   cargo run -p xtask -- verify --model models/test.gguf
+
+   # Cross-validate against C++ reference
+   cargo run -p xtask -- crossval
+   ```
+
+### Code Quality Standards
+
+- **MSRV**: Minimum Rust 1.90.0 (2024 edition)
+- **Features**: Always specify `--no-default-features --features cpu|gpu`
+- **Safety**: Minimize `unsafe` code; document all usage
+- **Performance**: Target >99% quantization accuracy
+- **Testing**: Maintain 100% test coverage for critical paths
+
+### Neural Network Specific Guidelines
+
+- **Quantization**: Support I2S, TL1, TL2, and IQ2_S formats
+- **GPU Support**: CUDA kernels with CPU fallback
+- **GGUF Compatibility**: Maintain compatibility with upstream formats
+- **Cross-validation**: All changes must pass C++ reference comparison
+
+## Documentation Requirements
+
+- **API Documentation**: All public APIs must have comprehensive rustdoc
+- **Examples**: Include working examples for new features
+- **Performance**: Document performance characteristics and benchmarks
+- **Migration**: Update migration guides for breaking changes
+
+## Testing Requirements
+
+### Required Test Types
+
+1. **Unit Tests**
+   ```bash
+   cargo test --workspace --no-default-features --features cpu
+   ```
+
+2. **Integration Tests**
+   ```bash
+   cargo test --test integration --no-default-features --features cpu
+   ```
+
+3. **Cross-validation Tests**
+   ```bash
+   export BITNET_GGUF="models/test.gguf"
+   cargo test --package crossval --no-default-features --features cpu
+   ```
+
+4. **Property Tests**
+   ```bash
+   cargo test property_ --no-default-features --features cpu
+   ```
+
+5. **Mutation Tests** (CI only)
+   ```bash
+   cargo mutants --package bitnet-quantization
+   ```
+
+### GPU Testing
 
 ```bash
-# Build with default features (CPU only)
-cargo build --release
-
-# Build with GPU support
-cargo build --release --features gpu
-
-# Build with all features
-cargo build --release --features full
+# Requires CUDA toolkit
+cargo test --workspace --no-default-features --features gpu
 ```
-
-## Code Style
-
-- Use `cargo fmt` to format your code
-- Run `cargo clippy` and address all warnings
-- Follow Rust naming conventions
-- Add documentation comments for public APIs
-- Write unit tests for new functionality
-
-## Testing
-
-```bash
-# Run all tests
-cargo test --workspace
-
-# Run tests with specific features
-cargo test --workspace --features cpu
-
-# Run benchmarks
-cargo bench --workspace
-
-# Run cross-validation tests (if C++ deps available)
-cargo test --workspace --features crossval
-```
-
-## Configuration & testing conventions
-
-- **Do not** apply fast‑feedback/resource/quality clamps inside `ScenarioConfigManager`.
-  The test wrapper owns this logic to prevent double application.
-- Use the shared `ENV_LOCK` + `env_guard()` in any test touching `std::env`.
-- Use `BYTES_PER_KB`, `BYTES_PER_MB`, or `BYTES_PER_GB` for all unit→bytes conversions.
-  (These are **binary** units: 1 KB = 1024 B, 1 MB = 1024 KB, 1 GB = 1024 MB.)
-- Import units via `bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB}`; 
-  avoid `bitnet_tests::common::units::*`.
-- Prefer typed env helpers (`env_u64`, `env_usize`, `env_duration_secs`) and a
-  case‑insensitive `env_bool`.
-- When adding new cross‑validation thresholds, clamp to **non‑negative** values.
-- If you add a clamp, add a **regression test** that fails if it's applied twice.
 
 ## Pull Request Process
 
-1. Update documentation if you change APIs
-2. Add tests for new functionality
-3. Ensure all tests pass
-4. Update the changelog if applicable
-5. Request review from maintainers
+### Before Submitting
 
-## Reporting Issues
+1. **Format and Lint**
+   ```bash
+   cargo fmt --all
+   cargo clippy --all-targets --all-features -- -D warnings
+   ```
 
-When reporting issues, please include:
-- BitNet.rs version
-- Rust version (`rustc --version`)
-- Operating system
-- Steps to reproduce
-- Expected vs actual behavior
-- Error messages or logs
+2. **Run Full Test Suite**
+   ```bash
+   ./scripts/test-all.sh
+   ```
+
+3. **Update Documentation**
+   ```bash
+   cargo doc --workspace --no-default-features --features cpu --no-deps
+   ```
+
+4. **Cross-validate Changes**
+   ```bash
+   cargo run -p xtask -- full-crossval
+   ```
+
+### PR Requirements
+
+- **Title**: Use conventional commits format (`feat:`, `fix:`, `docs:`)
+- **Description**: Include what, why, and testing performed
+- **Tests**: All new code must include tests
+- **Documentation**: Update relevant documentation
+- **Backwards Compatibility**: Document any breaking changes
+
+### Review Process
+
+1. **Automated Checks**: All CI checks must pass
+2. **Code Review**: At least one maintainer approval required
+3. **Cross-validation**: Must pass accuracy validation
+4. **Performance**: No significant performance regressions
+
+## Architecture Guidelines
+
+### Crate Organization
+
+- **`bitnet`**: Main library with unified public API
+- **`bitnet-quantization`**: Quantization algorithms (I2S, TL1, TL2)
+- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels
+- **`bitnet-inference`**: Inference engine with streaming
+- **`bitnet-models`**: Model loading (GGUF, SafeTensors)
+- **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration
+
+### Design Principles
+
+1. **Zero-Copy**: Minimize allocations and copies
+2. **Device-Aware**: Automatic GPU/CPU selection
+3. **Type Safety**: Leverage Rust's type system for correctness
+4. **Performance**: Target high-performance computing workloads
+5. **Compatibility**: Maintain API stability and GGUF compatibility
+
+## Getting Help
+
+- **Documentation**: [docs/](docs/) directory with comprehensive guides
+- **Examples**: [examples/](examples/) directory with working code
+- **Issues**: GitHub Issues for bug reports and feature requests
+- **Discussions**: GitHub Discussions for questions and ideas
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the same terms as the project (MIT OR Apache-2.0).
+By contributing to BitNet.rs, you agree that your contributions will be licensed under the same terms as the project (MIT OR Apache-2.0).
+
+## Code of Conduct
+
+Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+---
+
+Thank you for contributing to BitNet.rs! Your contributions help advance high-performance neural network inference in Rust.

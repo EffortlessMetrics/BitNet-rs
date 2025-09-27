@@ -1,158 +1,115 @@
 # CLAUDE.md
 
-This file provides essential guidance to Claude (claude.ai) when working with the BitNet.rs codebase.
+Essential guidance for working with the BitNet.rs neural network inference codebase.
 
 ## Quick Reference
 
 ### Essential Commands
 ```bash
-# Build with CPU support (default features are EMPTY)
-cargo build --release --no-default-features --features cpu
+# Build (default features are EMPTY - always specify features)
+cargo build --no-default-features --features cpu     # CPU inference
+cargo build --no-default-features --features gpu     # GPU inference
 
-# Build with GPU support
-cargo build --release --no-default-features --features gpu
-
-# Run tests (always specify features explicitly)
+# Test
 cargo test --workspace --no-default-features --features cpu
-cargo test --workspace --no-default-features --features gpu
 
-# Format and lint
-cargo fmt --all
-cargo clippy --all-targets --all-features -- -D warnings
+# Quality
+cargo fmt --all && cargo clippy --all-targets --all-features -- -D warnings
 
-# Development workflow (xtask)
+# Development workflow
 cargo run -p xtask -- download-model
-cargo run -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json
-cargo run -p xtask -- infer --model models/bitnet/model.gguf --prompt "Test" --deterministic
+cargo run -p xtask -- infer --model path/to/model.gguf --prompt "Test"
 ```
 
-## Architecture & Key Concepts
+## Core Architecture
 
-BitNet.rs is a Rust workspace with specialized crates for neural network inference.
+### Design Principles
+1. **Feature-Gated**: Default features are **EMPTY** - always specify `--features cpu|gpu`
+2. **Zero-Copy**: Memory-mapped models, efficient lifetime management
+3. **Device-Aware**: Automatic GPU/CPU selection with graceful fallback
+4. **Cross-Validated**: Systematic comparison with C++ reference
 
-### Core Design Principles
-1. **Feature-Gated Architecture**: Default features are **EMPTY** - always specify features explicitly
-2. **Zero-Copy Operations**: Memory-mapped models, careful lifetime management
-3. **Device-Aware Computing**: Automatic GPU/CPU selection with graceful fallback
-4. **Cross-Validation**: Systematic comparison with C++ reference implementation
+### Key Crates
+- `bitnet` (root): Main library with unified API
+- `bitnet-inference`: Autoregressive generation engine
+- `bitnet-quantization`: 1-bit quantization (I2_S, TL1, TL2)
+- `bitnet-kernels`: SIMD/CUDA compute kernels
+- `bitnet-models`: GGUF/SafeTensors model loading
+- `bitnet-tokenizers`: Universal tokenizer with auto-discovery
+- `crossval`: C++ reference validation framework
 
-### Key Workspace Crates
-- **`bitnet`** (root): Main library with unified public API
-- **`bitnet-inference`**: Inference engine with streaming support
-- **`bitnet-quantization`**: 1-bit quantization (I2_S, TL1, TL2, IQ2_S)
-- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels
-- **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration
-- **`bitnet-models`**: Model loading (GGUF, SafeTensors)
-- **`crossval`**: Framework for testing against C++ implementation
+## Key Configurations
 
-## Important Considerations
-
-### MSRV
-Minimum Supported Rust Version: **1.90.0** (Rust 2024 edition)
+### MSRV: 1.90.0 (Rust 2024 edition)
 
 ### Feature Flags
-**Default features are EMPTY** - always specify explicitly:
-- `cpu`: CPU inference with SIMD optimizations
-- `gpu`: NVIDIA GPU support with mixed precision (FP16/BF16)
+- `cpu`: SIMD-optimized CPU inference (AVX2/AVX-512/NEON)
+- `gpu`: CUDA acceleration with mixed precision (FP16/BF16)
 - `ffi`: C++ FFI bridge for gradual migration
-- `spm`: SentencePiece tokenizer support
-- `crossval`: Cross-validation against C++ implementation
-- WebAssembly: `browser`, `nodejs`, `debug`, `inference`
+- `crossval`: Cross-validation against Microsoft BitNet C++
 
-### Supported Quantization
-- **I2_S**: Native 2-bit signed quantization with GPU/CPU auto-selection
-- **TL1/TL2**: Table lookup quantization with vectorized operations
-- **IQ2_S**: GGML-compatible with 82-byte blocks
-- Device-aware operations with automatic GPU acceleration and CPU fallback
+### Quantization Support
+- **I2_S**: Production 2-bit signed quantization (99%+ accuracy vs FP32)
+- **TL1/TL2**: Table lookup quantization with device-aware selection
+- **IQ2_S**: GGML-compatible via FFI bridge
 
-### Universal Tokenizer
-- Auto-detecting tokenizer with GGUF integration
-- Supports BPE, SentencePiece, LLaMA variants, TikToken
-- Graceful fallback for testing and compatibility validation
-- O(1) byte lookup performance with optimized UTF-8 handling
+## Documentation Structure
 
-## Common Issues
+### Getting Started
+- `docs/quickstart.md`: 5-minute setup guide
+- `docs/getting-started.md`: Comprehensive introduction
+- `docs/explanation/FEATURES.md`: Feature flag documentation
 
-1. **FFI Linker Errors**: Disable FFI (`--no-default-features --features cpu`) or build C++: `cargo xtask fetch-cpp`
-2. **CUDA Issues**: Ensure CUDA toolkit installed and `nvcc` in PATH
-3. **Cross-Validation**: Set `BITNET_GGUF` environment variable to model path
-4. **GGUF Errors**: Use `cargo run -p bitnet-cli -- compat-check model.gguf` for validation
+### Development
+- `docs/development/build-commands.md`: Comprehensive build reference
+- `docs/development/gpu-development.md`: CUDA development guide
+- `docs/development/test-suite.md`: Testing framework
+- `docs/development/validation-framework.md`: Quality assurance
+- `docs/development/xtask.md`: Developer tooling
 
-## Development Workflow
+### Architecture
+- `docs/architecture-overview.md`: System design and components
+- `docs/reference/quantization-support.md`: Quantization algorithms
+- `docs/gpu-kernel-architecture.md`: CUDA kernel design
+- `docs/tokenizer-architecture.md`: Universal tokenizer system
 
-1. Always run tests for affected crates
-2. Format and lint before committing: `cargo fmt --all && cargo clippy`
-3. Cross-validate inference changes: `cargo xtask crossval`
-4. Check COMPATIBILITY.md before API changes
+### Operations
+- `docs/performance-benchmarking.md`: Performance testing
+- `docs/health-endpoints.md`: Monitoring and observability
+- `docs/GPU_SETUP.md`: GPU configuration
+- `docs/environment-variables.md`: Runtime configuration
 
-## 4-Step Developer Workflow
+## Common Workflows
 
+### Development
 ```bash
-# 1. Download model and tokenizer
-cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf
+# Standard development cycle
+cargo test --workspace --no-default-features --features cpu
+cargo fmt --all && cargo clippy --all-targets --all-features -- -D warnings
 
-# 2. Verify compatibility
-cargo run -p xtask -- verify --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
+# Cross-validation (when changing inference)
+export BITNET_GGUF="path/to/model.gguf"
+cargo run -p xtask -- crossval
 
-# 3. Test inference
-cargo run -p xtask -- infer --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json --prompt "Test" --deterministic
-
-# 4. Benchmark (local only)
-RUSTFLAGS="-C target-cpu=native -C opt-level=3" cargo build --release -p xtask
-cargo run -p xtask -- benchmark --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json --tokens 128
+# Model operations
+cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+cargo run -p bitnet-cli -- compat-check model.gguf
 ```
 
-## Key Files & Documentation
+### Troubleshooting
+- FFI linker errors: Use `--no-default-features --features cpu` or `cargo xtask fetch-cpp`
+- CUDA issues: Ensure CUDA toolkit installed and `nvcc` in PATH
+- Model validation: `cargo run -p bitnet-cli -- compat-check model.gguf`
 
-**Essential Files:**
-- `COMPATIBILITY.md`: API stability guarantees
-- `MIGRATION.md`: Migration guide from llama.cpp
-- `crossval/`: Cross-validation test suite
-
-**Detailed Documentation:**
-- [Build Commands](docs/build-commands.md): Comprehensive build and test commands
-- [Architecture Overview](docs/architecture-overview.md): System design and components
-- [Quantization Support](docs/quantization-support.md): Quantization formats and GPU acceleration
-- [Environment Variables](docs/environment-variables.md): Configuration variables
-- [Validation Framework](docs/validation-framework.md): Testing and evaluation
-- [GPU Development Guide](docs/gpu-development.md): CUDA development
-- [Test Suite Guide](docs/test-suite.md): Testing framework
-- [Performance Benchmarking Guide](docs/performance-benchmarking.md): Performance testing
+## Environment Variables
+- `BITNET_DETERMINISTIC=1 BITNET_SEED=42`: Reproducible inference
+- `BITNET_GGUF`: Default model path for cross-validation
+- `RAYON_NUM_THREADS=1`: Single-threaded determinism
 
 ## Repository Contracts
+- **Always specify features**: `--no-default-features --features cpu|gpu`
+- **Use xtask for operations**: `cargo run -p xtask --` instead of scripts
+- **Check compatibility**: Review `COMPATIBILITY.md` before API changes
+- **Never modify GGUF in-place**: Use `bitnet-compat export-fixed` for new files
 
-### Safe Operations for Claude
-- **Default features are EMPTY** → always use `--no-default-features --features cpu|gpu`
-- **Never modify GGUF files in-place** → use `bitnet-compat export-fixed` for new files
-- **Prefer xtask over scripts** → use `cargo run -p xtask --` for model operations
-- **No destructive cleanup** → avoid `rm -rf target/` without confirmation
-
-### Environment Setup
-- `BITNET_DETERMINISTIC=1 BITNET_SEED=42` → reproducible runs
-- `RAYON_NUM_THREADS=1` → single-threaded determinism
-- FFI: `LD_LIBRARY_PATH=target/release` (Linux), `DYLD_LIBRARY_PATH=target/release` (macOS)
-
-## Fast Recipes
-
-```bash
-# Quick test
-cargo test --workspace --no-default-features --features cpu
-
-# WASM build
-rustup target add wasm32-unknown-unknown
-cargo build --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features --features browser
-
-# Validate model
-cargo run -p bitnet-cli -- compat-check model.gguf
-
-# Cross-validation
-export BITNET_GGUF="models/bitnet/model.gguf" BITNET_DETERMINISTIC=1 BITNET_SEED=42
-cargo run -p xtask -- full-crossval
-
-# Strict testing (no mocks)
-BITNET_STRICT_TOKENIZERS=1 BITNET_STRICT_NO_FAKE_GPU=1 scripts/verify-tests.sh
-```
-
-For comprehensive command references, see [Build Commands](docs/build-commands.md).
-
-**Important:** See detailed documentation in `docs/` directory for comprehensive information on all topics.
+For comprehensive documentation, see the `docs/` directory organized by audience and use case.

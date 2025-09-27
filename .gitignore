@@ -107,6 +107,10 @@ fixtures/datasets/
 **/fixtures/**/*.bin
 **/fixtures/**/*.json.bz2
 **/fixtures/**/*.json.gz
+# Large generated test vector files (issue #159 prevention)
+**/fixtures/**/*_test_vectors.json
+**/fixtures/**/crossval_*.json
+**/fixtures/**/quantization_test_vectors.json
 test_data/large/
 
 # Vendored dependencies (prevent accidentally committing large C++ codebases)
@@ -170,3 +174,21 @@ vagrant/
 mutants.out
 mutants.out.old
 mutants/
+
+# Rust compiler crash reports
+rustc-ice-*.txt
+
+# Test executables and artifacts
+test_gguf
+test_tokenizer_cpp
+test_ffi_constants
+
+# Temporary test directories
+test-fixtures-tmp*/
+fixture_test/
+
+# Historical test results (archived)
+test-results/
+mutants-report/
+
+fuzz/

@@ -3011,8 +3011,16 @@ fn check_features() -> Result<()> {
 
     let cargo_toml = fs::read_to_string("Cargo.toml")?;
 
-    if cargo_toml.contains("default = [") && cargo_toml.contains("\"crossval\"") {
-        return Err(anyhow!("crossval feature is enabled by default! This will slow down builds."));
+    // Look for crossval specifically in default features array
+    if let Some(default_start) = cargo_toml.find("default = [")
+        && let Some(default_end) = cargo_toml[default_start..].find(']')
+    {
+        let default_section = &cargo_toml[default_start..default_start + default_end + 1];
+        if default_section.contains("\"crossval\"") {
+            return Err(anyhow!(
+                "crossval feature is enabled by default! This will slow down builds."
+            ));
+        }
     }
 
     println!("  ✅ crossval feature is not in default features");

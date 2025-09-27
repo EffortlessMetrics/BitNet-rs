@@ -3,14 +3,14 @@ name: Validate Artifacts
 on:
   pull_request:
     paths:
-      - 'bench/results/*.json'
-      - 'bench/schema/*.json'
+      - 'benchmarks-new/archive/results/*.json'
+      - 'benchmarks-new/archive/schema/*.json'
       - 'artifacts/*.json'
   push:
     branches: [main]
     paths:
-      - 'bench/results/*.json'
-      - 'bench/schema/*.json'
+      - 'benchmarks-new/archive/results/*.json'
+      - 'benchmarks-new/archive/schema/*.json'
 
 jobs:
   validate-json-schemas:
@@ -35,12 +35,12 @@ jobs:
           from jsonschema import validate, Draft7Validator, ValidationError
           
           # Load performance schema
-          with open('bench/schema/perf.schema.json') as f:
+          with open('benchmarks-new/archive/schema/perf.schema.json') as f:
               perf_schema = json.load(f)
           
           # Validate all performance JSONs
           errors = []
-          for json_file in glob.glob('bench/results/*-*.json'):
+          for json_file in glob.glob('benchmarks-new/archive/results/*-*.json'):
               try:
                   with open(json_file) as f:
                       data = json.load(f)
@@ -67,7 +67,7 @@ jobs:
           from jsonschema import validate, Draft7Validator, ValidationError
           
           # Load parity schema
-          with open('bench/schema/parity.schema.json') as f:
+          with open('benchmarks-new/archive/schema/parity.schema.json') as f:
               parity_schema = json.load(f)
           
           # Validate all parity JSONs
@@ -99,7 +99,7 @@ jobs:
           
           required_provenance = ['git_commit', 'git_dirty', 'model_hash', 'schema_version']
           
-          for json_file in glob.glob('bench/results/*.json'):
+          for json_file in glob.glob('benchmarks-new/archive/results/*.json'):
               with open(json_file) as f:
                   data = json.load(f)
               
@@ -121,8 +121,8 @@ jobs:
           # Check that PERF_COMPARISON.md matches JSON sources
           if [ -f docs/PERF_COMPARISON.md ]; then
             # Find latest safetensors and gguf JSONs
-            LATEST_ST=$(ls -t bench/results/*-safetensors.json 2>/dev/null | head -1)
-            LATEST_GGUF=$(ls -t bench/results/*-gguf.json 2>/dev/null | head -1)
+            LATEST_ST=$(ls -t benchmarks-new/archive/results/*-safetensors.json 2>/dev/null | head -1)
+            LATEST_GGUF=$(ls -t benchmarks-new/archive/results/*-gguf.json 2>/dev/null | head -1)
             
             if [ -n "$LATEST_ST" ] && [ -n "$LATEST_GGUF" ]; then
               # Regenerate and compare

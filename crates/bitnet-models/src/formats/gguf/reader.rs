@@ -113,17 +113,55 @@ impl<'a> GgufReader<'a> {
         // Recompute sizes from successive offsets (and file end for the last tensor)
         for i in 0..tensor_infos.len() {
             let cur_off = tensor_infos[i].offset as usize;
+
+            // Security: Check for offset bounds and overflow
+            if tensor_infos[i].offset > u64::MAX / 2 {
+                return Err(BitNetError::Model(ModelError::LoadingFailed {
+                    reason: format!(
+                        "Tensor '{}' offset {} is suspiciously large",
+                        tensor_infos[i].name, tensor_infos[i].offset
+                    ),
+                }));
+            }
+
             let abs_start = data_start.checked_add(cur_off).ok_or_else(|| {
                 BitNetError::Model(ModelError::LoadingFailed {
-                    reason: format!("Tensor '{}' offset overflow", tensor_infos[i].name),
+                    reason: format!(
+                        "Tensor '{}' offset overflow: data_start={}, offset={}",
+                        tensor_infos[i].name, data_start, cur_off
+                    ),
                 })
             })?;
 
+            // Security: Ensure abs_start is within file bounds
+            if abs_start > file_size {
+                return Err(BitNetError::Model(ModelError::LoadingFailed {
+                    reason: format!(
+                        "Tensor '{}' start position {} exceeds file size {}",
+                        tensor_infos[i].name, abs_start, file_size
+                    ),
+                }));
+            }
+
             let abs_end = if i + 1 < tensor_infos.len() {
                 let next_off = tensor_infos[i + 1].offset as usize;
+
+                // Security: Check next tensor offset bounds
+                if tensor_infos[i + 1].offset > u64::MAX / 2 {
+                    return Err(BitNetError::Model(ModelError::LoadingFailed {
+                        reason: format!(
+                            "Next tensor offset {} is suspiciously large",
+                            tensor_infos[i + 1].offset
+                        ),
+                    }));
+                }
+
                 data_start.checked_add(next_off).ok_or_else(|| {
                     BitNetError::Model(ModelError::LoadingFailed {
-                        reason: format!("Tensor '{}' next offset overflow", tensor_infos[i].name),
+                        reason: format!(
+                            "Tensor '{}' next offset overflow: data_start={}, next_offset={}",
+                            tensor_infos[i].name, data_start, next_off
+                        ),
                     })
                 })?
             } else {
@@ -138,7 +176,24 @@ impl<'a> GgufReader<'a> {
                     ),
                 }));
             }
-            let sz = abs_end - abs_start;
+
+            // Security: Check for size overflow in subtraction
+            let sz = abs_end.checked_sub(abs_start).ok_or_else(|| {
+                BitNetError::Model(ModelError::LoadingFailed {
+                    reason: format!("Tensor '{}' size calculation underflow", tensor_infos[i].name),
+                })
+            })?;
+
+            // Security: Ensure size is reasonable (< 10GB per tensor)
+            if sz > 10 * 1024 * 1024 * 1024 {
+                return Err(BitNetError::Model(ModelError::LoadingFailed {
+                    reason: format!(
+                        "Tensor '{}' size {} exceeds 10GB limit",
+                        tensor_infos[i].name, sz
+                    ),
+                }));
+            }
+
             tensor_infos[i].size = sz as u64;
         }
 
@@ -199,18 +254,46 @@ impl<'a> GgufReader<'a> {
 
     /// Get tensor data by tensor info
     pub fn get_tensor_data_by_info(&self, info: &TensorInfo) -> Result<&[u8]> {
+        // Security: Validate tensor info before any calculations
+        if info.offset > u64::MAX / 2 || info.size > u64::MAX / 2 {
+            return Err(BitNetError::Model(ModelError::LoadingFailed {
+                reason: format!(
+                    "Tensor '{}' has suspiciously large offset ({}) or size ({})",
+                    info.name, info.offset, info.size
+                ),
+            }));
+        }
+
         // Tensor offsets in GGUF are relative to data_start
         let start = self.data_start.checked_add(info.offset as usize).ok_or_else(|| {
             BitNetError::Model(ModelError::LoadingFailed {
-                reason: format!("Tensor '{}' offset overflow", info.name),
+                reason: format!(
+                    "Tensor '{}' offset overflow: data_start={}, offset={}",
+                    info.name, self.data_start, info.offset
+                ),
             })
         })?;
 
         let end = start.checked_add(info.size as usize).ok_or_else(|| {
             BitNetError::Model(ModelError::LoadingFailed {
-                reason: format!("Tensor '{}' size overflow", info.name),
+                reason: format!(
+                    "Tensor '{}' size overflow: start={}, size={}",
+                    info.name, start, info.size
+                ),
             })
         })?;
+
+        // Security: Multiple bounds checks for defense in depth
+        if start >= self.data.len() {
+            return Err(BitNetError::Model(ModelError::LoadingFailed {
+                reason: format!(
+                    "Tensor '{}' start position {} is at or beyond file size {}",
+                    info.name,
+                    start,
+                    self.data.len()
+                ),
+            }));
+        }
 
         if end > self.data.len() {
             return Err(BitNetError::Model(ModelError::LoadingFailed {
@@ -224,7 +307,24 @@ impl<'a> GgufReader<'a> {
             }));
         }
 
-        Ok(&self.data[start..end])
+        if start > end {
+            return Err(BitNetError::Model(ModelError::LoadingFailed {
+                reason: format!(
+                    "Tensor '{}' has invalid range (start {} > end {})",
+                    info.name, start, end
+                ),
+            }));
+        }
+
+        // Security: Use safe slice indexing
+        self.data.get(start..end).ok_or_else(|| {
+            BitNetError::Model(ModelError::LoadingFailed {
+                reason: format!(
+                    "Tensor '{}' slice bounds violation [{}..{}]",
+                    info.name, start, end
+                ),
+            })
+        })
     }
 
     /// Get tensor data by name

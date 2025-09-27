@@ -70,7 +70,7 @@ async fn test_autoregressive_generation() -> Result<()> {
     let model = create_real_model_with_weights(&config)?;
     let tokenizer = Arc::new(MockTokenizer::new());
 
-    let mut engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
+    let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
 
     let gen_config = GenerationConfig {
         max_new_tokens: 5,
@@ -101,7 +101,7 @@ async fn test_performance_targets() -> Result<()> {
     let model = create_real_model_with_weights(&config)?;
     let tokenizer = Arc::new(MockTokenizer::new());
 
-    let mut engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
+    let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
 
     let gen_config = GenerationConfig {
         max_new_tokens: 20, // Generate enough tokens to measure throughput
@@ -285,7 +285,8 @@ fn add_layernorm_weights(
 }
 
 /// Helper: Create mock quantized weights for testing
-fn create_mock_quantized_weights(
+#[allow(dead_code)]
+fn _create_mock_quantized_weights(
     in_features: usize,
     out_features: usize,
 ) -> Result<bitnet_quantization::QuantizedTensor> {
@@ -308,7 +309,8 @@ fn create_mock_quantized_weights(
 }
 
 /// Helper: Create test tensor
-fn create_test_tensor(shape: Vec<usize>, device: &Device) -> Result<bitnet_common::BitNetTensor> {
+#[allow(dead_code)]
+fn _create_test_tensor(shape: Vec<usize>, device: &Device) -> Result<bitnet_common::BitNetTensor> {
     let total_elements: usize = shape.iter().product();
     let data: Vec<f32> = (0..total_elements).map(|i| (i as f32 * 0.01).sin()).collect();
 

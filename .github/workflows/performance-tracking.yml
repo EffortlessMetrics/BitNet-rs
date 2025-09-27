@@ -141,7 +141,7 @@ jobs:
       run: |
         echo "Collecting system information..."
         
-        cat > benchmark-results/system-info.json << EOF
+        cat > benchmarks-new/results/system-info.json << EOF
         {
           "platform": "${{ matrix.platform }}",
           "target": "${{ matrix.target }}",
@@ -224,11 +224,11 @@ jobs:
                 return {}
         
         # Parse results
-        rust_results = parse_rust_benchmarks('benchmark-results/rust-results.json')
+        rust_results = parse_rust_benchmarks('benchmarks-new/results/rust-results.json')
         crossval_results = {}
         
-        if Path('benchmark-results/crossval-results.txt').exists():
-            crossval_results = parse_crossval_results('benchmark-results/crossval-results.txt')
+        if Path('benchmarks-new/results/crossval-results.txt').exists():
+            crossval_results = parse_crossval_results('benchmarks-new/results/crossval-results.txt')
         
         # Combine results
         combined_results = {
@@ -239,7 +239,7 @@ jobs:
         }
         
         # Save parsed results
-        with open('benchmark-results/parsed-results.json', 'w') as f:
+        with open('benchmarks-new/results/parsed-results.json', 'w') as f:
             json.dump(combined_results, f, indent=2)
         
         print("Benchmark results parsed successfully")
@@ -258,22 +258,22 @@ jobs:
         platform="${{ matrix.platform }}"
 
         # Check if we have performance report
-        if [[ -f "benchmark-results/performance-report.json" ]]; then
+        if [[ -f "benchmarks-new/results/performance-report.json" ]]; then
           python3 scripts/detect-performance-regression.py \
-            benchmark-results/performance-report.json \
+            benchmarks-new/results/performance-report.json \
             --platform "$platform" \
-            --output benchmark-results/regression-analysis.json \
+            --output benchmarks-new/results/regression-analysis.json \
             --format human \
             --fail-on-regression
-        elif [[ -f "benchmark-results/comparison-results.json" ]]; then
+        elif [[ -f "benchmarks-new/results/comparison-results.json" ]]; then
           python3 scripts/detect-performance-regression.py \
-            benchmark-results/comparison-results.json \
+            benchmarks-new/results/comparison-results.json \
             --platform "$platform" \
-            --output benchmark-results/regression-analysis.json \
+            --output benchmarks-new/results/regression-analysis.json \
             --format human
         else
           echo "⚠️  No suitable results file found for regression analysis"
-          echo '{"status": "no_data", "alerts": [], "summary": {"error": "No results file available"}}' > benchmark-results/regression-analysis.json
+          echo '{"status": "no_data", "alerts": [], "summary": {"error": "No results file available"}}' > benchmarks-new/results/regression-analysis.json
         fi
 
     - name: Generate enhanced performance report
@@ -283,16 +283,16 @@ jobs:
         # The run-performance-benchmarks.sh script already generates reports
         # Add regression analysis to the markdown report
 
-        if [[ -f benchmark-results/performance-report.md ]]; then
-          echo "" >> benchmark-results/performance-report.md
-          echo "## Regression Analysis" >> benchmark-results/performance-report.md
-          echo "" >> benchmark-results/performance-report.md
+        if [[ -f benchmarks-new/results/performance-report.md ]]; then
+          echo "" >> benchmarks-new/results/performance-report.md
+          echo "## Regression Analysis" >> benchmarks-new/results/performance-report.md
+          echo "" >> benchmarks-new/results/performance-report.md
 
-          if [[ -f benchmark-results/regression-analysis.json ]]; then
+          if [[ -f benchmarks-new/results/regression-analysis.json ]]; then
             python3 << 'EOF'
 import json
 try:
-    with open('benchmark-results/regression-analysis.json', 'r') as f:
+    with open('benchmarks-new/results/regression-analysis.json', 'r') as f:
         data = json.load(f)
 
     status = data.get('status', 'unknown')
@@ -336,7 +336,7 @@ except Exception as e:
     print(f'Error generating regression analysis: {e}')
 EOF
           else
-            echo "⚠️ Regression analysis not available" >> benchmark-results/performance-report.md
+            echo "⚠️ Regression analysis not available" >> benchmarks-new/results/performance-report.md
           fi
         fi
 
@@ -344,15 +344,15 @@ EOF
       uses: actions/upload-artifact@v4
       with:
         name: benchmark-results-${{ matrix.platform }}
-        path: benchmark-results/
+        path: benchmarks-new/results/
         retention-days: 90
 
     - name: Check for critical regressions
       run: |
         echo "Checking for critical performance regressions..."
 
-        if [[ -f benchmark-results/regression-analysis.json ]]; then
-          status=$(python3 -c "import json; data=json.load(open('benchmark-results/regression-analysis.json')); print(data.get('status', 'unknown'))")
+        if [[ -f benchmarks-new/results/regression-analysis.json ]]; then
+          status=$(python3 -c "import json; data=json.load(open('benchmarks-new/results/regression-analysis.json')); print(data.get('status', 'unknown'))")
 
           if [[ "$status" == "critical" ]]; then
             echo "🚨 CRITICAL PERFORMANCE REGRESSION DETECTED!"
@@ -401,7 +401,7 @@ EOF
             baselines = json.load(f)
         
         # Load new results
-        with open('benchmark-results/parsed-results.json', 'r') as f:
+        with open('benchmarks-new/results/parsed-results.json', 'r') as f:
             new_results = json.load(f)
         
         platform = '${{ matrix.platform }}'
