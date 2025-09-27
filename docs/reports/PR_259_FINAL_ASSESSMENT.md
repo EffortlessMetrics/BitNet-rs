@@ -57,7 +57,7 @@
 | architecture | ✅ PASS | excellent BitNet.rs alignment | Device-aware design |
 | tests | ✅ PASS | 388/400 success (97%) | Neural network validated |
 | hardening | ⚠️ CONDITIONAL | mutation: 42.9%, security: clean | Framework ready |
-| benchmarks | ✅ PASS | quantization: 3-10x SLO performance | Outstanding results |
+| benchmarks | ❌ REGRESSION | quantization: 90-98% perf loss detected | Route to perf-fixer |
 | docs | ✅ PASS | Diátaxis complete, API documented | Production ready |
 <!-- gates:end -->
 
