@@ -13,4 +13,5 @@ pub mod strict_mode;
 
 // Re-export fixture loader for convenient access
 pub mod fixture_loader;
+#[allow(unused_imports)]
 pub use fixture_loader::*;

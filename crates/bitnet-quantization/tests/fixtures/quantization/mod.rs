@@ -7,10 +7,12 @@ pub mod i2s_test_data;
 pub mod tl_lookup_table_data;
 
 // Re-export key types for convenience
+#[allow(unused_imports)]
 pub use i2s_test_data::{
     DeviceType, I2SAccuracyFixture, I2SCrossValidationFixture, I2STestFixture,
 };
 
+#[allow(unused_imports)]
 pub use tl_lookup_table_data::{
     LookupTableParams, MemoryLayoutFixture, SimdArchitecture, TL1TestFixture, TL2TestFixture,
     TLPerformanceFixture,

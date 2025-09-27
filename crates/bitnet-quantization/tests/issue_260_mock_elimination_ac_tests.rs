@@ -9,7 +9,7 @@
 //! for traceability and use BitNet.rs TDD patterns with proper feature gating.
 
 use anyhow::{Context, Result, anyhow};
-use bitnet_common::{BitNetTensor, Device, QuantizationType, Tensor};
+use bitnet_common::{BitNetTensor, Device, QuantizationType};
 use bitnet_quantization::{I2SQuantizer, QuantizedTensor, TL1Quantizer, TL2Quantizer};
 use std::env;
 
@@ -365,7 +365,7 @@ mod ac5_qlinear_replacement_tests {
             let qlinear = create_qlinear_with_type(qtype);
             let input = create_test_input_tensor();
 
-            let output = qlinear
+            let _output = qlinear
                 .forward_quantized(&input, false)
                 .expect("All quantization types should work");
 
@@ -373,7 +373,7 @@ mod ac5_qlinear_replacement_tests {
             // assert!(!output.is_mock(), "No quantization type should use mock fallback");
             assert_eq!(qlinear.get_quantization_type(), qtype, "Should use specified quantization");
 
-            println!("  ✅ {} quantization verified", format!("{:?}", qtype));
+            println!("  ✅ {:?} quantization verified", qtype);
         }
 
         println!("✅ AC5: All linear layers quantized test passed");
@@ -406,11 +406,12 @@ mod ac5_qlinear_replacement_tests {
 }
 
 /// Helper functions and mock implementations for test scaffolding
-
 /// Strict mode configuration for testing
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct StrictModeConfig {
     pub enabled: bool,
+    #[allow(dead_code)]
     pub fail_on_mock: bool,
     pub require_quantization: bool,
 }
@@ -442,8 +443,11 @@ struct MockInferencePath {
 }
 
 /// Fallback detector for testing
+#[allow(dead_code)]
 struct FallbackDetector {
+    #[allow(dead_code)]
     dequantization_fallbacks: u32,
+    #[allow(dead_code)]
     mock_computation_calls: u32,
 }
 
@@ -465,6 +469,7 @@ fn create_test_input_tensor() -> BitNetTensor {
     BitNetTensor::new(candle_tensor)
 }
 
+#[allow(dead_code)]
 fn calculate_correlation(a: &[f32], b: &[f32]) -> f32 {
     assert_eq!(a.len(), b.len(), "Vectors must have same length for correlation");
 
@@ -495,6 +500,7 @@ fn simulate_missing_kernel_scenario(config: &StrictModeConfig) -> Result<()> {
 }
 
 // Mock trait implementations for testing
+#[allow(dead_code)]
 trait QuantizerTrait {
     fn quantize_weights(&self, weights: &[f32]) -> Result<QuantizedTensor>;
     fn dequantize_for_validation(&self, quantized: &QuantizedTensor) -> Result<Vec<f32>>;

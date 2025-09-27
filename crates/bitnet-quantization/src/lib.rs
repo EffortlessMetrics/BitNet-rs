@@ -13,9 +13,11 @@ use bitnet_common::{BitNetTensor, QuantizationType, Result};
 
 pub mod device_aware_quantizer;
 pub mod i2s;
+pub mod simd_ops;
 pub mod tl1;
 pub mod tl2;
 pub mod utils;
+pub mod validation;
 
 pub use device_aware_quantizer::{
     AccuracyValidator, DeviceAwareQuantizer, QuantizationType as DeviceQuantizationType,

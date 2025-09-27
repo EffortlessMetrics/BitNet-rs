@@ -4,6 +4,8 @@
 //! and validating strict mode behavior. Includes statistical fingerprinting,
 //! performance characteristics, and environment variable configurations.
 
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 use std::env;
 
@@ -539,7 +541,6 @@ pub fn load_statistical_analysis_fixtures() -> Vec<StatisticalAnalysisFixture> {
 }
 
 /// Helper functions to create test data
-
 fn create_mock_computation_data() -> ComputationData {
     ComputationData {
         input_vectors: vec![vec![1.0; 256], vec![0.5; 256], vec![2.0; 256]],
@@ -727,7 +728,6 @@ fn create_corrupted_computation_data() -> ComputationData {
 }
 
 /// Helper functions for data generation
-
 fn generate_realistic_vector(size: usize, rng_state: &mut u64) -> Vec<f32> {
     (0..size).map(|_| normal_random(rng_state, 0.0, 1.0)).collect()
 }
@@ -772,9 +772,9 @@ fn generate_blocked_addresses(count: usize) -> Vec<usize> {
 
 fn add_subtle_patterns(mut vec: Vec<f32>) -> Vec<f32> {
     // Add subtle but detectable patterns
-    for i in 0..vec.len() {
+    for (i, item) in vec.iter_mut().enumerate() {
         if i % 16 == 0 {
-            vec[i] *= 1.001; // Tiny but consistent bias
+            *item *= 1.001; // Tiny but consistent bias
         }
     }
     vec
@@ -821,7 +821,6 @@ fn generate_quantized_distribution(size: usize) -> Vec<f32> {
 }
 
 /// Standard helper functions
-
 fn lcg_random(state: &mut u64) -> f32 {
     *state = state.wrapping_mul(1664525).wrapping_add(1013904223);
     (*state as f32) / (u32::MAX as f32)

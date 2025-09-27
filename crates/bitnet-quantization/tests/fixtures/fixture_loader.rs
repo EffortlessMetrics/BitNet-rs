@@ -3,7 +3,10 @@
 //! Provides basic fixture loading utilities without complex global state management.
 //! This approach is more suitable for test environments with deterministic behavior.
 
+#![allow(dead_code)]
+
 // Re-export fixture modules from parent
+#[allow(unused_imports)]
 pub use super::crossval;
 pub use super::models;
 pub use super::quantization;
@@ -13,7 +16,9 @@ pub use super::strict_mode;
 pub use models::qlinear_layer_data::{
     GgufModelFixture, LayerReplacementScenario, QLinearLayerFixture,
 };
+#[allow(unused_imports)]
 pub use quantization::i2s_test_data::{DeviceType, I2SAccuracyFixture, I2STestFixture};
+#[allow(unused_imports)]
 pub use quantization::tl_lookup_table_data::{MemoryLayoutFixture, TL1TestFixture, TL2TestFixture};
 pub use strict_mode::mock_detection_data::{
     MockDetectionFixture, StatisticalAnalysisFixture, StrictModeFixture,

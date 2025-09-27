@@ -28,6 +28,7 @@ tempfile.workspace = true
 
 [features]
 default = []
+cpu = ["bitnet-kernels/cpu"]
 simd = []
 integration-tests = []
 gpu = ["bitnet-kernels/gpu"]

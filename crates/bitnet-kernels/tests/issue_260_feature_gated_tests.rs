@@ -351,7 +351,7 @@ mod cpu_feature_tests {
                     tl2_kernel.quantized_matmul_generic(&test_input, &test_weights)?;
 
                 // Results should be numerically close
-                let correlation = calculate_correlation(&avx_result.data(), &generic_result.data());
+                let correlation = calculate_correlation(avx_result.data(), generic_result.data());
                 assert!(
                     correlation > 0.999,
                     "AVX and generic results should correlate: {:.6}",
@@ -914,7 +914,7 @@ mod cross_platform_tests {
     fn test_graceful_feature_degradation() {
         println!("🔧 Cross-Platform: Testing graceful feature degradation");
 
-        let result = || -> Result<()> {
+        let result: Result<()> = {
             let device_manager = create_adaptive_device_manager();
 
             // Test device availability detection
@@ -955,7 +955,7 @@ mod cross_platform_tests {
             println!("  ✅ Graceful feature degradation successful");
 
             Ok(())
-        }();
+        };
 
         result.expect("Graceful feature degradation should work");
     }

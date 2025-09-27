@@ -7,6 +7,9 @@
 //! This test module focuses on inference engine mock elimination, strict mode enforcement,
 //! and performance baseline establishment with comprehensive AC coverage for AC6-AC10.
 
+#![allow(dead_code)]
+#![allow(unused_imports)]
+
 use anyhow::{Result, anyhow};
 use bitnet_common::PerformanceMetrics;
 use std::env;

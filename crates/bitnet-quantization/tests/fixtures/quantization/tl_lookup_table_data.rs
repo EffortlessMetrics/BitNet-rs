@@ -4,10 +4,13 @@
 //! quantization validation. Includes SIMD-aligned memory layouts, cache-friendly
 //! access patterns, and architecture-specific optimizations.
 
-use std::collections::HashMap;
+#![allow(dead_code)]
+
+// use std::collections::HashMap; // TODO: Will be used for lookup table optimization
 
 /// TL1 quantization test fixture (ARM NEON optimized)
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct TL1TestFixture {
     pub name: &'static str,
     pub input_weights: Vec<f32>,
@@ -285,7 +288,7 @@ pub enum WeightPattern {
     Sparse,
     Uniform,
     Attention,
-    MLP,
+    Mlp,
     Embedding,
 }
 
@@ -311,7 +314,7 @@ fn generate_weight_distribution(size: usize, pattern: WeightPattern) -> Vec<f32>
         WeightPattern::Sparse => 34567,
         WeightPattern::Uniform => 45678,
         WeightPattern::Attention => 56789,
-        WeightPattern::MLP => 67890,
+        WeightPattern::Mlp => 67890,
         WeightPattern::Embedding => 78901,
     };
 
@@ -337,7 +340,7 @@ fn generate_weight_distribution(size: usize, pattern: WeightPattern) -> Vec<f32>
                 // Attention weights tend to have specific patterns
                 xavier_random(&mut rng_state, size)
             }
-            WeightPattern::MLP => {
+            WeightPattern::Mlp => {
                 // MLP weights use Kaiming initialization
                 kaiming_random(&mut rng_state, size)
             }
@@ -453,7 +456,6 @@ fn generate_quantized_indices_u16(size: usize, table_size: usize) -> Vec<u16> {
 }
 
 /// Helper functions for random number generation
-
 fn lcg_random(state: &mut u64) -> f32 {
     *state = state.wrapping_mul(1664525).wrapping_add(1013904223);
     (*state as f32) / (u32::MAX as f32)

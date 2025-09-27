@@ -377,7 +377,7 @@ fn generate_expected_i2s_quantized(size: usize, _block_size: usize) -> Vec<i8> {
 
 /// Generate expected scale factors
 fn generate_expected_scales(size: usize, block_size: usize) -> Vec<f32> {
-    let num_blocks = (size + block_size - 1) / block_size;
+    let num_blocks = size.div_ceil(block_size);
     let mut scales = Vec::with_capacity(num_blocks);
     let mut rng_state = 98765u64;
 
@@ -409,14 +409,18 @@ fn lcg_random(state: &mut u64) -> f32 {
 
 /// Get fixture by name for dynamic test selection
 pub fn get_fixture_by_name(name: &str) -> Option<I2STestFixture> {
-    let mut all_fixtures = load_i2s_cpu_fixtures();
-
     #[cfg(feature = "gpu")]
     {
+        let mut all_fixtures = load_i2s_cpu_fixtures();
         all_fixtures.extend(load_i2s_gpu_fixtures());
+        all_fixtures.into_iter().find(|f| f.name == name)
     }
 
-    all_fixtures.into_iter().find(|f| f.name == name)
+    #[cfg(not(feature = "gpu"))]
+    {
+        let all_fixtures = load_i2s_cpu_fixtures();
+        all_fixtures.into_iter().find(|f| f.name == name)
+    }
 }
 
 /// Validate fixture data integrity
@@ -429,8 +433,7 @@ pub fn validate_fixture_integrity(fixture: &I2STestFixture) -> Result<(), String
         return Err("Quantized length must match input length".to_string());
     }
 
-    let expected_scale_count =
-        (fixture.input_weights.len() + fixture.block_size - 1) / fixture.block_size;
+    let expected_scale_count = fixture.input_weights.len().div_ceil(fixture.block_size);
     if fixture.expected_scales.len() != expected_scale_count {
         return Err(format!(
             "Expected {} scales, got {}",
