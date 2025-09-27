@@ -1,10 +1,10 @@
 # BitNet.rs Roadmap
 
-_Last updated: 2025-09-22 (America/Toronto)._
+_Last updated: 2025-09-27_
 
-## Status: MVP ≈90% complete
+## Status: Functional Implementation
 
-Core is solid: real GGUF model load/inspect/verify; download/caching; basic inference path; tests build/run. Gaps are quality (warnings), tokenizer fixture/docs, and benchmark baselines.
+Core functionality working: GGUF model loading, device-aware quantization, basic inference, cross-platform builds. Performance claims need validation, quality work ongoing.
 
 ### Verified working
 
@@ -58,69 +58,61 @@ Core is solid: real GGUF model load/inspect/verify; download/caching; basic infe
 
 ## Dates (updated)
 
-### **v0.9.0 — MVP:** **Oct 31, 2025**
+### **v0.2.0 — Quality & Measurement:** **Q4 2025**
 
-**Core Deliverables:**
-- Zero warnings in target crates (`bitnet-common`, `bitnet-tokenizers`, `xtask`)
-- SPM fixture + comprehensive tokenizer architecture documentation
-- Real inference smoke test (non-mock) working end-to-end
-- Performance baseline JSON + `xtask bench-compare` with CI gating
-- `xtask verify` aggregator command documented in README
-- Safety documentation for all `unsafe` sites
+**Code Quality (Evidence-Based):**
+- Eliminate clippy warnings in core crates (measured: current count)
+- Complete safety documentation for unsafe code (audit needed)
+- Memory leak testing with tools like Valgrind
+- Error handling standardization across workspace
 
-**Quality Gates:**
-- `cargo clippy --all-targets --all-features -D warnings` passes
-- Contract tests pass with SPM fixture
-- CI fails on performance regression vs baseline
-- Fresh machine setup completes in <10 minutes
+**Performance Reality Check:**
+- Measure actual performance vs C++ implementation (no claims)
+- Document real throughput numbers with test setup
+- Establish baseline JSON for regression detection
+- GPU memory usage measurement and optimization
 
-### **v1.0.0 — Stable:** **Jan 31, 2026**
+### **v0.3.0 — Ecosystem Integration:** **Q1 2026**
 
-**Production Readiness:**
-- API stability guarantees and semantic versioning
-- Comprehensive performance benchmarks with documented numbers
-- Production deployment guides (Docker, Kubernetes, Helm)
-- Initial GPU acceleration validation and basic CUDA support
-- Cross-validation parity with C++ reference implementation
-- Memory profiling and optimization documentation
+**Practical Focus:**
+- Python bindings stability and performance testing
+- WebAssembly optimization with real-world examples
+- C API completion for actual llama.cpp compatibility
+- Docker deployment examples and guides
 
-**Infrastructure:**
-- Automated security scanning and dependency management
-- Performance regression CI enforcement
-- Documentation completeness verification
-- Release automation and artifact publishing
-
-### **v1.1.0 — Performance:** **Apr 30, 2026**
-
-**Optimization Focus:**
-- Measured performance improvements over C++ baseline
-- Dynamic batching and adaptive inference optimizations
+**Measured Improvements:**
+- Document actual vs claimed performance with test methodology
+- Cross-validation accuracy measurement against C++ reference
 - Memory usage profiling with optimization recommendations
-- SIMD kernel optimization with platform-specific tuning
-- GPU memory management and multi-GPU support
-- Performance monitoring and alerting integration
+- Platform compatibility verification (Linux, macOS, Windows)
 
-**Advanced Features:**
-- Streaming inference with Server-Sent Events
-- WebAssembly optimization with browser compatibility
-- FFI bridge completion for gradual C++ migration
-- Advanced quantization methods (beyond I2_S)
+### **v1.0.0 — Stable API:** **Q2 2026**
 
-### **v2.0.0 — Advanced:** **Q3 2026**
+**API Maturity:**
+- Semantic versioning policy with migration guides
+- Public API surface audit and cleanup
+- Breaking change policy and deprecation process
+- Cross-platform compatibility verification
 
-**Ecosystem Integration:**
-- LangChain and Hugging Face Transformers compatibility
-- ONNX export/import pipeline
-- TensorRT and WebGPU backend support
-- Multi-LoRA adapter architecture
-- Quantization-aware training integration
+**Quality Assurance:**
+- Comprehensive test coverage with measured results
+- Security audit and vulnerability management
+- Error handling and logging standards
+- Performance regression CI enforcement
 
-**Research & Innovation:**
-- Novel 1-bit quantization techniques
-- Hardware-specific optimizations (TPU, IPU)
-- Distributed inference across heterogeneous hardware
-- Energy efficiency optimizations and monitoring
-- Real-time streaming with sub-second latency targets
+### **v1.1.0 — Performance Optimization:** **Q3 2026**
+
+**Evidence-Based Optimization:**
+- Measure and document performance vs C++ implementation
+- SIMD kernel optimization with benchmarked improvements
+- Memory management optimization with measured results
+- GPU acceleration validation on multiple hardware configurations
+
+**Advanced Features (If Validated):**
+- Dynamic batching based on actual use cases
+- Streaming inference optimization with measured latency
+- Multi-GPU support where beneficial
+- Advanced quantization methods beyond I2_S (research-backed)
 
 ---
 
