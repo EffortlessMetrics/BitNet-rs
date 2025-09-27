@@ -20,13 +20,12 @@ mod arithmetic_mutation_killers {
         // Original: data.len() + scales.len() * 4
         // Mutated:  data.len() - scales.len() * 4
 
-        let data = vec![0u8; 50];  // 50 bytes of data
-        let scales = vec![1.0f32; 20];  // 20 scales = 80 bytes (20 * 4)
-        let shape = vec![400];  // 400 elements = 1600 bytes FP32 (400 * 4)
+        let data = vec![0u8; 50]; // 50 bytes of data
+        let scales = vec![1.0f32; 20]; // 20 scales = 80 bytes (20 * 4)
+        let shape = vec![400]; // 400 elements = 1600 bytes FP32 (400 * 4)
 
-        let tensor = QuantizedTensor::new_with_params(
-            data, scales, None, shape, QuantizationType::I2S, 32
-        );
+        let tensor =
+            QuantizedTensor::new_with_params(data, scales, None, shape, QuantizationType::I2S, 32);
 
         let ratio = tensor.compression_ratio();
 
@@ -34,18 +33,20 @@ mod arithmetic_mutation_killers {
         let expected_correct = 1600.0 / 130.0;
 
         // Mutated calculation: 1600 / (50 - 80) = 1600 / (-30) = negative (clamped to 1.0)
-        let expected_mutated = 1.0;  // Division by negative number, clamped
+        let expected_mutated = 1.0; // Division by negative number, clamped
 
         assert!(
             (ratio - expected_correct).abs() < 1e-6,
             "Expected correct ratio {}, got {}. Mutation NOT killed!",
-            expected_correct, ratio
+            expected_correct,
+            ratio
         );
 
         assert!(
             (ratio - expected_mutated).abs() > 1e-6,
             "Addition to subtraction mutation detected! Expected {}, got {}",
-            expected_correct, ratio
+            expected_correct,
+            ratio
         );
     }
 
@@ -55,13 +56,12 @@ mod arithmetic_mutation_killers {
         // Original: data.len() + scales.len() * 4
         // Mutated:  data.len() + scales.len() + 4
 
-        let data = vec![0u8; 100];  // 100 bytes of data
-        let scales = vec![1.0f32; 50];  // 50 scales normally = 200 bytes (50 * 4)
-        let shape = vec![800];  // 800 elements = 3200 bytes FP32 (800 * 4)
+        let data = vec![0u8; 100]; // 100 bytes of data
+        let scales = vec![1.0f32; 50]; // 50 scales normally = 200 bytes (50 * 4)
+        let shape = vec![800]; // 800 elements = 3200 bytes FP32 (800 * 4)
 
-        let tensor = QuantizedTensor::new_with_params(
-            data, scales, None, shape, QuantizationType::I2S, 32
-        );
+        let tensor =
+            QuantizedTensor::new_with_params(data, scales, None, shape, QuantizationType::I2S, 32);
 
         let ratio = tensor.compression_ratio();
 
@@ -74,13 +74,16 @@ mod arithmetic_mutation_killers {
         assert!(
             (ratio - expected_correct).abs() < 1e-6,
             "Expected correct ratio {}, got {}. Mutation NOT killed!",
-            expected_correct, ratio
+            expected_correct,
+            ratio
         );
 
         assert!(
             (ratio - expected_mutated).abs() > 1e-6,
             "Multiplication to addition mutation detected! Expected {}, got {}. Difference: {}",
-            expected_correct, ratio, (ratio - expected_mutated).abs()
+            expected_correct,
+            ratio,
+            (ratio - expected_mutated).abs()
         );
     }
 
@@ -90,13 +93,12 @@ mod arithmetic_mutation_killers {
         // Original: data.len() + scales.len() * 4
         // Mutated:  data.len() + scales.len() / 4
 
-        let data = vec![0u8; 60];  // 60 bytes of data
-        let scales = vec![1.0f32; 32];  // 32 scales normally = 128 bytes (32 * 4)
-        let shape = vec![400];  // 400 elements = 1600 bytes FP32 (400 * 4)
+        let data = vec![0u8; 60]; // 60 bytes of data
+        let scales = vec![1.0f32; 32]; // 32 scales normally = 128 bytes (32 * 4)
+        let shape = vec![400]; // 400 elements = 1600 bytes FP32 (400 * 4)
 
-        let tensor = QuantizedTensor::new_with_params(
-            data, scales, None, shape, QuantizationType::I2S, 32
-        );
+        let tensor =
+            QuantizedTensor::new_with_params(data, scales, None, shape, QuantizationType::I2S, 32);
 
         let ratio = tensor.compression_ratio();
 
@@ -109,13 +111,16 @@ mod arithmetic_mutation_killers {
         assert!(
             (ratio - expected_correct).abs() < 1e-6,
             "Expected correct ratio {}, got {}. Mutation NOT killed!",
-            expected_correct, ratio
+            expected_correct,
+            ratio
         );
 
         assert!(
             (ratio - expected_mutated).abs() > 1e-6,
             "Multiplication to division mutation detected! Expected {}, got {}. Difference: {}",
-            expected_correct, ratio, (ratio - expected_mutated).abs()
+            expected_correct,
+            ratio,
+            (ratio - expected_mutated).abs()
         );
     }
 
@@ -136,7 +141,12 @@ mod arithmetic_mutation_killers {
             let shape = vec![element_count];
 
             let tensor = QuantizedTensor::new_with_params(
-                data, scales, None, shape, QuantizationType::I2S, 32
+                data,
+                scales,
+                None,
+                shape,
+                QuantizationType::I2S,
+                32,
             );
 
             let ratio = tensor.compression_ratio();
@@ -176,7 +186,9 @@ mod arithmetic_mutation_killers {
             assert!(
                 (ratio - expected_correct).abs() < 1e-6,
                 "{}: Expected correct ratio {}, got {}",
-                test_name, expected_correct, ratio
+                test_name,
+                expected_correct,
+                ratio
             );
 
             // Kill + -> - mutation
@@ -184,7 +196,10 @@ mod arithmetic_mutation_killers {
                 assert!(
                     (ratio - expected_sub_mutation).abs() > 1e-6,
                     "{}: Addition to subtraction mutation not killed! Expected {}, got {}, sub_mutation={}",
-                    test_name, expected_correct, ratio, expected_sub_mutation
+                    test_name,
+                    expected_correct,
+                    ratio,
+                    expected_sub_mutation
                 );
             }
 
@@ -193,7 +208,10 @@ mod arithmetic_mutation_killers {
                 assert!(
                     (ratio - expected_add_mutation).abs() > 1e-6,
                     "{}: Multiplication to addition mutation not killed! Expected {}, got {}, add_mutation={}",
-                    test_name, expected_correct, ratio, expected_add_mutation
+                    test_name,
+                    expected_correct,
+                    ratio,
+                    expected_add_mutation
                 );
             }
 
@@ -202,7 +220,10 @@ mod arithmetic_mutation_killers {
                 assert!(
                     (ratio - expected_div_mutation).abs() > 1e-6,
                     "{}: Multiplication to division mutation not killed! Expected {}, got {}, div_mutation={}",
-                    test_name, expected_correct, ratio, expected_div_mutation
+                    test_name,
+                    expected_correct,
+                    ratio,
+                    expected_div_mutation
                 );
             }
         }
@@ -214,7 +235,12 @@ mod arithmetic_mutation_killers {
 
         // Case 1: Zero scales (should trigger specific mutation patterns)
         let tensor_no_scales = QuantizedTensor::new_with_params(
-            vec![0u8; 64], vec![], None, vec![256], QuantizationType::I2S, 32
+            vec![0u8; 64],
+            vec![],
+            None,
+            vec![256],
+            QuantizationType::I2S,
+            32,
         );
 
         let ratio_no_scales = tensor_no_scales.compression_ratio();
@@ -223,12 +249,18 @@ mod arithmetic_mutation_killers {
         assert!(
             (ratio_no_scales - expected_no_scales).abs() < 1e-6,
             "Zero scales case failed: expected {}, got {}",
-            expected_no_scales, ratio_no_scales
+            expected_no_scales,
+            ratio_no_scales
         );
 
         // Case 2: Large scales count to amplify multiplication mutations
         let tensor_many_scales = QuantizedTensor::new_with_params(
-            vec![0u8; 10], vec![1.0f32; 100], None, vec![200], QuantizationType::I2S, 32
+            vec![0u8; 10],
+            vec![1.0f32; 100],
+            None,
+            vec![200],
+            QuantizationType::I2S,
+            32,
         );
 
         let ratio_many_scales = tensor_many_scales.compression_ratio();
@@ -245,19 +277,22 @@ mod arithmetic_mutation_killers {
         assert!(
             (ratio_many_scales - expected_many_scales).abs() < 1e-6,
             "Many scales case failed: expected {}, got {}",
-            expected_many_scales, ratio_many_scales
+            expected_many_scales,
+            ratio_many_scales
         );
 
         assert!(
             (ratio_many_scales - mutated_add).abs() > 0.1,
             "Multiplication to addition mutation not detected: {} vs {}",
-            ratio_many_scales, mutated_add
+            ratio_many_scales,
+            mutated_add
         );
 
         assert!(
             (ratio_many_scales - mutated_div).abs() > 0.1,
             "Multiplication to division mutation not detected: {} vs {}",
-            ratio_many_scales, mutated_div
+            ratio_many_scales,
+            mutated_div
         );
     }
 
@@ -265,13 +300,12 @@ mod arithmetic_mutation_killers {
     fn test_precise_arithmetic_validation() {
         // Very precise test with carefully chosen numbers to maximize mutation detection
 
-        let data = vec![0u8; 17];  // Prime number
-        let scales = vec![1.0f32; 13];  // Another prime, 13 * 4 = 52
-        let shape = vec![89];  // Prime number, 89 * 4 = 356
+        let data = vec![0u8; 17]; // Prime number
+        let scales = vec![1.0f32; 13]; // Another prime, 13 * 4 = 52
+        let shape = vec![89]; // Prime number, 89 * 4 = 356
 
-        let tensor = QuantizedTensor::new_with_params(
-            data, scales, None, shape, QuantizationType::I2S, 32
-        );
+        let tensor =
+            QuantizedTensor::new_with_params(data, scales, None, shape, QuantizationType::I2S, 32);
 
         let ratio = tensor.compression_ratio();
 
@@ -291,7 +325,8 @@ mod arithmetic_mutation_killers {
         assert!(
             (ratio - expected_correct).abs() < 1e-6,
             "Precise test failed: expected {}, got {}",
-            expected_correct, ratio
+            expected_correct,
+            ratio
         );
 
         // All mutations should produce different results
@@ -311,19 +346,10 @@ mod arithmetic_mutation_killers {
         );
 
         // Ensure the actual ratio matches correct and not any mutation
-        assert!(
-            (ratio - expected_sub).abs() > 1.0,
-            "Subtraction mutation detected in result!"
-        );
+        assert!((ratio - expected_sub).abs() > 1.0, "Subtraction mutation detected in result!");
 
-        assert!(
-            (ratio - expected_add).abs() > 1.0,
-            "Addition mutation detected in result!"
-        );
+        assert!((ratio - expected_add).abs() > 1.0, "Addition mutation detected in result!");
 
-        assert!(
-            (ratio - expected_div).abs() > 1.0,
-            "Division mutation detected in result!"
-        );
+        assert!((ratio - expected_div).abs() > 1.0, "Division mutation detected in result!");
     }
 }

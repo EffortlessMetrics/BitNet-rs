@@ -340,8 +340,7 @@ mod scale_factor_calculation_killers {
                 assert_eq!(
                     scale, 1.0,
                     "Scale fallback wrong for case {}: expected fallback 1.0, got {}",
-                    case_idx,
-                    scale
+                    case_idx, scale
                 );
             }
 

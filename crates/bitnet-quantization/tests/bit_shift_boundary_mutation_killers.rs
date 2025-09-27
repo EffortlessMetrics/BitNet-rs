@@ -527,7 +527,8 @@ mod right_shift_mutation_killers {
             // Test shift amount boundary mutations
             if shift_amount > 0 {
                 // Kill shift_amount -> shift_amount + 1 (only if won't overflow)
-                if shift_amount < 7 {  // Prevent overflow: 7+1=8 is still valid
+                if shift_amount < 7 {
+                    // Prevent overflow: 7+1=8 is still valid
                     let wrong_plus_one = value >> (shift_amount + 1);
                     assert_ne!(
                         result, wrong_plus_one,
