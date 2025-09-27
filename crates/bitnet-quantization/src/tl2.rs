@@ -4,7 +4,11 @@
 //! It uses vectorized lookup tables and advanced SIMD operations to achieve maximum throughput
 //! on x86 architectures, with runtime CPU feature detection for optimal instruction set selection.
 
-use crate::{QuantizedTensor, QuantizerTrait, utils::*};
+use crate::utils::{
+    calculate_grouped_scales, create_tensor_from_f32, dequantize_value, extract_f32_data,
+    pack_2bit_values, unpack_2bit_values,
+};
+use crate::{QuantizedTensor, QuantizerTrait};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
 #[cfg(feature = "gpu")]
 #[allow(unused_imports)]
@@ -476,6 +480,7 @@ impl TL2Quantizer {
         lookup_table: &VectorizedLookupTable,
         scale: f32,
     ) {
+        #[allow(clippy::wildcard_imports)]
         use std::arch::x86_64::*;
 
         let inv_scale = 1.0 / scale;
@@ -527,6 +532,7 @@ impl TL2Quantizer {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     unsafe fn dequantize_avx2_block(&self, quantized: &[i8], output: &mut [f32], scale: f32) {
+        #[allow(clippy::wildcard_imports)]
         use std::arch::x86_64::*;
 
         let scale_vec = _mm256_set1_ps(scale);

@@ -156,7 +156,7 @@ async fn test_ac6_gpu_device_tensor_placement() -> Result<()> {
 
     // Skip test if GPU not available
     if !is_cuda_available() {
-        log::warn!("Skipping GPU tensor placement test: CUDA not available");
+        tracing::warn!("Skipping GPU tensor placement test: CUDA not available");
         return Ok(());
     }
 

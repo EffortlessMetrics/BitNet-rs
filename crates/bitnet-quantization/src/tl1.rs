@@ -4,7 +4,11 @@
 //! It uses lookup tables to accelerate quantization and dequantization operations,
 //! with configurable block sizes for optimal performance on ARM architectures.
 
-use crate::{QuantizedTensor, QuantizerTrait, utils::*};
+use crate::utils::{
+    calculate_grouped_scales, create_tensor_from_f32, extract_f32_data, pack_2bit_values,
+    unpack_2bit_values,
+};
+use crate::{QuantizedTensor, QuantizerTrait};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
 #[cfg(feature = "gpu")]
 #[allow(unused_imports)]

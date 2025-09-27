@@ -471,7 +471,7 @@ fn skip_gguf_value<R: Read>(r: &mut R, ty: u32) -> Result<()> {
 fn skip_gguf_value_seek<R: Read + Seek>(r: &mut R, ty: u32) -> Result<()> {
     // GGUF scalar sizes (see llama.cpp)
     match ty {
-        0 | 1 => skip_n_seek(r, 1)?, // uint8 | int8
+        /* ~ changed by cargo-mutants ~ */ // uint8 | int8
         2 | 3 => skip_n_seek(r, 2)?, // uint16 | int16
         4..=6 => skip_n_seek(r, 4)?, // uint32 | int32 | float32
         7 => skip_n_seek(r, 1)?,     // bool

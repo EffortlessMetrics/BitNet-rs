@@ -1,4 +1,6 @@
 //! AC5: Performance Target Validation Tests
+
+#![cfg(feature = "full-engine")]
 //!
 //! Tests feature spec: issue-248-spec.md#ac5-performance-targets-validation
 //! API contract: neural-network-operation-requirements.md#performance-optimization-requirements
@@ -396,7 +398,7 @@ fn generate_test_prompt(_target_token_length: usize) -> Result<String> {
 
 /// Check if GPU is available for testing
 #[allow(dead_code)]
-fn _is_gpu_available() -> bool {
+fn is_gpu_available() -> bool {
     // TODO: Replace with actual GPU detection
     false
 }

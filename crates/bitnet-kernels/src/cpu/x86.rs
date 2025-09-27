@@ -3,6 +3,7 @@
 
 use crate::{KernelProvider, cpu::fallback::FallbackKernel};
 use bitnet_common::{BitNetError, KernelError, QuantizationType, Result};
+#[allow(clippy::wildcard_imports)]
 use std::arch::x86_64::*;
 
 /// AVX2 optimized CPU kernel for x86_64

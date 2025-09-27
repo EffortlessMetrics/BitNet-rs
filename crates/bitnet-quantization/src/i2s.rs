@@ -4,7 +4,11 @@
 //! optimization. Four 2-bit values are packed into each byte for optimal storage.
 //! The implementation includes SIMD-optimized kernels for x86_64 and ARM64.
 
-use crate::{QuantizedTensor, QuantizerTrait, utils::*};
+use crate::utils::{
+    calculate_grouped_scales, create_tensor_from_f32, dequantize_value, extract_f32_data,
+    pack_2bit_values, quantize_value, unpack_2bit_values,
+};
+use crate::{QuantizedTensor, QuantizerTrait};
 use bitnet_common::{
     BitNetError, BitNetTensor, QuantizationError, QuantizationType, Result, SecurityError,
     SecurityLimits, Tensor,
@@ -578,6 +582,7 @@ impl I2SQuantizer {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     unsafe fn quantize_avx2_block(&self, data: &[f32], output: &mut [i8], scale: f32) {
+        #[allow(clippy::wildcard_imports)]
         use std::arch::x86_64::*;
 
         let inv_scale = 1.0 / scale;
@@ -621,6 +626,7 @@ impl I2SQuantizer {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     unsafe fn dequantize_avx2_block(&self, quantized: &[i8], output: &mut [f32], scale: f32) {
+        #[allow(clippy::wildcard_imports)]
         use std::arch::x86_64::*;
 
         let scale_vec = _mm256_set1_ps(scale);

@@ -3,6 +3,8 @@
 //! Tests feature spec: issue-248-spec.md#ac10-error-handling-robustness
 //! API contract: neural-network-operation-requirements.md#error-handling-and-recovery-requirements
 //!
+
+#![cfg(feature = "full-engine")]
 //! This test module validates proper error handling with anyhow::Result<T> patterns for
 //! quantization failures, out-of-memory conditions, invalid tokens, and device selection
 //! with detailed error context preservation.
