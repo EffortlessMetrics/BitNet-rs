@@ -91,50 +91,30 @@ pub fn unpack_2bit_values(packed: &[u8], output_len: usize) -> Vec<i8> {
 }
 
 /// Quantize a single value to n-bit signed integer with numerical stability
+#[inline]
 pub fn quantize_value(value: f32, scale: f32, bits: u8) -> i8 {
     let max_val = (1 << (bits - 1)) - 1;
     let min_val = -(1 << (bits - 1));
 
-    // Security: Handle NaN and infinite values
-    if !value.is_finite() {
-        return 0; // Map non-finite values to zero
+    // Fast path for typical values
+    if value.is_finite() && scale != 0.0 && scale.is_finite() {
+        let normalized = value / scale;
+        let quantized = normalized.round() as i32;
+        return quantized.clamp(min_val, max_val) as i8;
     }
 
-    // Security: Validate scale is finite and non-zero
-    if !scale.is_finite() || scale == 0.0 {
-        return 0; // Safe fallback for invalid scale
-    }
-
-    // Security: Check for potential overflow before division
-    let normalized = if value.abs() > 1e30 {
-        (if value > 0.0 { 1e30 } else { -1e30 }) / scale
-    } else {
-        value / scale
-    };
-
-    // Security: Validate division result is finite
-    if !normalized.is_finite() {
-        return 0;
-    }
-
-    let quantized = normalized.round() as i32;
-    quantized.clamp(min_val, max_val) as i8
+    // Fallback for edge cases
+    0i8
 }
 
 /// Dequantize a single value from n-bit signed integer with numerical stability
+#[inline]
 pub fn dequantize_value(quantized: i8, scale: f32) -> f32 {
-    // Security: Validate scale is finite
-    if !scale.is_finite() {
-        return 0.0; // Safe fallback for invalid scale
-    }
-
-    let result = quantized as f32 * scale;
-
-    // Security: Validate result is finite
-    if result.is_finite() {
-        result
+    // Fast path for typical values
+    if scale.is_finite() {
+        quantized as f32 * scale
     } else {
-        0.0 // Safe fallback for overflow
+        0.0 // Safe fallback for invalid scale
     }
 }
 
