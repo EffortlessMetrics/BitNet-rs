@@ -62,7 +62,7 @@ help:
 ## quick: One-click quick start (default)
 quick:
 	@echo "$(GREEN)🚀 Quick Start$(NC)"
-	@./deploy.sh quick
+	@scripts/deploy.sh quick
 
 ## all: Build everything with all features
 all:
@@ -73,12 +73,12 @@ all:
 ## install: Full installation with all dependencies
 install:
 	@echo "$(GREEN)Full installation...$(NC)"
-	@./deploy.sh full
+	@scripts/deploy.sh full
 
 ## dev: Setup development environment
 dev:
 	@echo "$(GREEN)Setting up development environment...$(NC)"
-	@./deploy.sh dev
+	@scripts/deploy.sh dev
 
 #############################################################################
 # BUILD TARGETS
@@ -211,7 +211,7 @@ update:
 ## setup: Initial setup
 setup:
 	@echo "$(GREEN)Running initial setup...$(NC)"
-	@./deploy.sh full
+	@scripts/deploy.sh full
 
 #############################################################################
 # CI/CD TARGETS
@@ -228,7 +228,7 @@ ci:
 ## deploy: Deploy to production
 deploy:
 	@echo "$(GREEN)Deploying to production...$(NC)"
-	@./deploy.sh prod
+	@scripts/deploy.sh prod
 
 #############################################################################
 # UTILITY TARGETS

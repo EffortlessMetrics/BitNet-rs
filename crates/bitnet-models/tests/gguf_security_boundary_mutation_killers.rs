@@ -14,12 +14,14 @@ use std::collections::HashMap;
 
 /// Mock GGUF reader structure for testing boundary conditions
 #[derive(Debug)]
+#[allow(dead_code)]
 struct MockGgufReader {
     metadata: HashMap<String, MockMetadataValue>,
     tensors: Vec<MockTensorInfo>,
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 enum MockMetadataValue {
     U32(u32),
     I32(i32),
@@ -28,13 +30,16 @@ enum MockMetadataValue {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct MockTensorInfo {
     name: String,
     shape: Vec<usize>,
     size: u64,
 }
 
+#[allow(dead_code)]
 impl MockGgufReader {
+    #[allow(dead_code)]
     fn new() -> Self {
         Self { metadata: HashMap::new(), tensors: Vec::new() }
     }
@@ -69,7 +74,6 @@ impl MockGgufReader {
 
 #[cfg(test)]
 mod shape_inference_boundary_killers {
-    use super::*;
 
     #[test]
     fn test_kill_hidden_size_inference_comparison_mutations() {
@@ -356,7 +360,7 @@ mod shape_inference_boundary_killers {
                     if inferred_kv_heads > 1 {
                         // Test that wrong operations would give different results
                         let wrong_div = num_heads / inferred_kv_heads;
-                        let wrong_add_check = num_heads + inferred_kv_heads;
+                        let _wrong_add_check = num_heads + inferred_kv_heads;
 
                         // These should be different from the remainder in most cases
                         if remainder != wrong_div % inferred_kv_heads {
@@ -432,7 +436,7 @@ mod memory_allocation_boundary_killers {
                 let is_valid = dim > 0 && dim <= 1_000_000_000;
 
                 // Kill > -> >= mutation (would allow 0)
-                let wrong_greater_equal = dim >= 0 && dim <= 1_000_000_000;
+                let wrong_greater_equal = (0..=1_000_000_000).contains(&dim);
                 if dim == 0 {
                     assert_ne!(
                         is_valid, wrong_greater_equal,
@@ -452,7 +456,7 @@ mod memory_allocation_boundary_killers {
                 }
 
                 // Kill constant mutations in bounds
-                let wrong_bound_plus = dim > 0 && dim <= 1_000_000_001; // +1 mutation
+                let _wrong_bound_plus = dim > 0 && dim <= 1_000_000_001; // +1 mutation
                 let wrong_bound_minus = dim > 0 && dim <= 999_999_999; // -1 mutation
 
                 if dim == 1_000_000_000 {
@@ -746,7 +750,7 @@ mod tensor_validation_edge_case_killers {
             );
 
             // Test u64 arithmetic to kill casting mutations
-            let as_u32_safe = element_count <= u32::MAX as u64;
+            let _as_u32_safe = element_count <= u32::MAX as u64;
             if element_count <= u32::MAX as u64 {
                 let as_u32 = element_count as u32;
                 assert_eq!(
@@ -924,7 +928,7 @@ mod tensor_validation_edge_case_killers {
 /// Property-based tests for comprehensive boundary condition coverage
 #[cfg(test)]
 mod security_boundary_property_tests {
-    use super::*;
+    // Property-based tests using mock implementations
     use proptest::prelude::*;
 
     proptest! {

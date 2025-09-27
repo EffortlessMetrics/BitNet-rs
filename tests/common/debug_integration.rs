@@ -5,8 +5,6 @@ use super::debugging::{DebugConfig, TestDebugger};
 use super::errors::TestOpResult;
 use super::harness::{FixtureCtx, TestCase, TestHarness, TestReporter};
 use super::results::{TestResult, TestSuiteResult};
-#[cfg(feature = "fixtures")]
-use super::{config::FixtureConfig, fixtures};
 
 /// Enhanced test harness with integrated debugging support
 pub struct DebugEnabledTestHarness {

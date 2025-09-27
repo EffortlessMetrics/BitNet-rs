@@ -19,10 +19,10 @@ help:
 	@echo "  NIGHTLY_MODEL=path/to/model # Override model for Nightly lane"
 
 accept:
-	@LANE=$(LANE) XVAL_NONBLOCKING=$(XVAL_NONBLOCKING) ./scripts/ci-acceptance-gate-v2.sh
+	@LANE=$(LANE) XVAL_NONBLOCKING=$(XVAL_NONBLOCKING) scripts/ci-acceptance-gate-v2.sh
 
 accept-pr:
-	@LANE=PR XVAL_NONBLOCKING=$(XVAL_NONBLOCKING) ./scripts/ci-acceptance-gate-v2.sh
+	@LANE=PR XVAL_NONBLOCKING=$(XVAL_NONBLOCKING) scripts/ci-acceptance-gate-v2.sh
 
 accept-nightly:
-	@LANE=NIGHTLY XVAL_NONBLOCKING=$(XVAL_NONBLOCKING) ./scripts/ci-acceptance-gate-v2.sh
+	@LANE=NIGHTLY XVAL_NONBLOCKING=$(XVAL_NONBLOCKING) scripts/ci-acceptance-gate-v2.sh

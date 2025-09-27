@@ -40,7 +40,7 @@ mod scale_factor_calculation_killers {
 
             // Kill max -> min mutation
             let wrong_min = data.iter().fold(0.0f32, |acc, &x| acc.min((x as f32).abs()));
-            if (max_val - wrong_min).abs() > 1e-6 {
+            if (max_val - wrong_min).abs() > 1e-6f32 {
                 assert_ne!(
                     max_val, wrong_min,
                     "Min mutation detected: max={}, min={}",
@@ -130,7 +130,7 @@ mod scale_factor_calculation_killers {
         ];
 
         for (max_val, bits, expect_nonzero) in test_cases {
-            let scale = calculate_scale(&vec![max_val], bits);
+            let scale = calculate_scale(&[max_val], bits);
 
             if expect_nonzero {
                 assert!(scale > 0.0, "Scale should be positive for max_val={}", max_val);
@@ -299,7 +299,7 @@ mod scale_factor_calculation_killers {
     #[test]
     fn test_scale_factor_extreme_values() {
         // Test scale calculation with extreme values to kill edge case mutations
-        let extreme_cases = vec![
+        let extreme_cases = [
             vec![f32::MIN_POSITIVE],   // Smallest positive
             vec![-f32::MIN_POSITIVE],  // Smallest negative
             vec![1e-10, 1e-20, 1e-30], // Very small values
@@ -405,7 +405,7 @@ mod scale_factor_calculation_killers {
             );
 
             // Verify div_ceil property: (result-1) * block_size < data_len (unless result == 0)
-            if scales.len() > 0 {
+            if !scales.is_empty() {
                 assert!(
                     (scales.len() - 1) * block_size < data_len,
                     "div_ceil minimality violation: {} * {} >= {}",
@@ -493,7 +493,7 @@ mod pack_unpack_bit_manipulation_killers {
         // Target: let unsigned = (byte >> (i * 2)) & 0x3; in unpack_2bit_values
         // Kill mutations: >> -> <<, & 0x3 mutations, i*2 arithmetic
 
-        let test_bytes = vec![
+        let test_bytes = [
             0b00000000, // All zeros -> [-2,-2,-2,-2]
             0b11111111, // All ones -> [1,1,1,1]
             0b11100100, // Mixed -> [0,1,-2,1]
@@ -552,7 +552,7 @@ mod pack_unpack_bit_manipulation_killers {
 
             // Verify all values are in valid range
             for &val in &unpacked {
-                assert!(val >= -2 && val <= 1, "Unpacked value {} out of range [-2,1]", val);
+                assert!((-2..=1).contains(&val), "Unpacked value {} out of range [-2,1]", val);
             }
         }
     }
@@ -560,7 +560,7 @@ mod pack_unpack_bit_manipulation_killers {
     #[test]
     fn test_pack_unpack_round_trip_edge_cases() {
         // Test round-trip at boundaries to kill systematic mutations
-        let edge_cases = vec![
+        let edge_cases = [
             vec![-2, -2, -2, -2], // All minimum
             vec![1, 1, 1, 1],     // All maximum
             vec![-2, 1, -2, 1],   // Alternating extremes
@@ -705,7 +705,7 @@ mod scale_factor_property_tests {
 
             // Property: All values in valid range
             for &val in &unpacked.clone() {
-                prop_assert!(val >= -2 && val <= 1, "Value {} out of range", val);
+                prop_assert!((-2..=1).contains(&val), "Value {} out of range", val);
             }
         }
     }

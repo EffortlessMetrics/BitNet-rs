@@ -14,7 +14,7 @@ use proptest::prelude::*;
 
 #[cfg(test)]
 mod left_shift_mutation_killers {
-    use super::*;
+    // Note: pack_2bit_values and unpack_2bit_values are tested indirectly via other functions
 
     #[test]
     fn test_kill_left_shift_in_max_quant_calculation() {
@@ -208,7 +208,7 @@ mod left_shift_mutation_killers {
             }
 
             // Kill - -> * mutation in shift amount
-            let wrong_multiply = bits * 1; // bits * 1 = bits
+            let wrong_multiply = bits; // Mutation: Remove identity operation
             if wrong_multiply != shift_amount && wrong_multiply < 32 {
                 let wrong_mult_result = 1 << wrong_multiply;
                 assert_ne!(
@@ -220,7 +220,7 @@ mod left_shift_mutation_killers {
 
             // Kill - -> / mutation in shift amount
             if bits > 1 {
-                let wrong_divide = bits / 1; // bits / 1 = bits
+                let wrong_divide = bits; // Mutation: Remove identity operation
                 if wrong_divide != shift_amount && wrong_divide < 32 {
                     let wrong_div_result = 1 << wrong_divide;
                     assert_ne!(
@@ -410,14 +410,14 @@ mod right_shift_mutation_killers {
         let test_byte = 0b11100100u8; // Pattern: 11,10,01,00
         let expected_2bit_values = [0, 1, 2, 3]; // Unsigned 2-bit values
 
-        for i in 0..4 {
+        for (i, &expected_val) in expected_2bit_values.iter().enumerate() {
             let shift_amount = i * 2;
             let correct_unsigned = (test_byte >> shift_amount) & 0x3;
 
             assert_eq!(
-                correct_unsigned, expected_2bit_values[i],
+                correct_unsigned, expected_val,
                 "Correct extraction failed at position {}: expected {}, got {}",
-                i, expected_2bit_values[i], correct_unsigned
+                i, expected_val, correct_unsigned
             );
 
             // Kill mask mutations: 0x3 -> 0x1 (1-bit mask)
@@ -514,7 +514,7 @@ mod right_shift_mutation_killers {
             if shift_amount > 0 {
                 let wrong_left_shift = value << shift_amount;
                 // Mask to 8 bits to avoid overflow effects
-                let wrong_left_masked = wrong_left_shift & 0xFF;
+                let wrong_left_masked = wrong_left_shift; // Mutation: Remove identity mask operation
                 assert_ne!(
                     result, wrong_left_masked,
                     "Left shift mutation detected: value=0b{:08b}, shift={}",
@@ -526,7 +526,7 @@ mod right_shift_mutation_killers {
             if shift_amount > 0 {
                 // Kill shift_amount -> shift_amount + 1
                 let wrong_plus_one = value >> (shift_amount + 1);
-                if shift_amount + 1 <= 8 {
+                if shift_amount < 8 {
                     assert_ne!(
                         result, wrong_plus_one,
                         "Shift+1 mutation detected: value=0b{:08b}, shift={}",
@@ -571,7 +571,7 @@ mod bit_packing_mutation_killers {
         // Target: byte |= unsigned << (i * 2); in pack_2bit_values
         // Kill mutations: << -> >>, shift amount arithmetic, |= -> &=, |= -> ^=
 
-        let test_values = vec![
+        let test_values = [
             vec![-2, -1, 0, 1],   // All different values
             vec![1, 1, 1, 1],     // All same (max)
             vec![-2, -2, -2, -2], // All same (min)
@@ -654,7 +654,7 @@ mod bit_packing_mutation_killers {
             for (i, &val) in values.iter().enumerate() {
                 let bit_position = i * 2;
                 let extracted = (packed_byte >> bit_position) & 0x3;
-                let expected_unsigned = ((val.clamp(-2, 1) + 2) as u8);
+                let expected_unsigned = (val.clamp(-2, 1) + 2) as u8;
 
                 assert_eq!(
                     extracted, expected_unsigned,
@@ -746,7 +746,7 @@ mod bit_packing_mutation_killers {
     #[test]
     fn test_bit_packing_round_trip_mutations() {
         // Test round-trip packing/unpacking to catch systematic mutations
-        let comprehensive_test_cases = vec![
+        let comprehensive_test_cases = [
             // Each value at each position to test all bit combinations
             vec![-2, -1, 0, 1], // Sequential
             vec![1, 0, -1, -2], // Reverse sequential
@@ -896,7 +896,7 @@ mod bit_operation_property_tests {
 
             // Property: Range bounds
             if shift_amount < 32 {
-                let max_possible = value >> 0; // Original value
+                let max_possible = value; // Original value
                 let min_possible = if shift_amount >= 31 { 0 } else { value >> 31 };
                 prop_assert!(shifted <= max_possible && shifted >= min_possible,
                     "Shifted value should be within expected range");
@@ -960,7 +960,7 @@ mod bit_operation_property_tests {
 
             // Property: All values in valid range
             for &val in &unpacked {
-                prop_assert!(val >= -2 && val <= 1,
+                prop_assert!((-2..=1).contains(&val),
                     "Unpacked value {} should be in range [-2,1]", val);
             }
 
