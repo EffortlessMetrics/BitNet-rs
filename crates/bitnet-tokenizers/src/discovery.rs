@@ -524,12 +524,19 @@ impl TokenizerDiscovery {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "cpu")]
     use super::TokenizerDiscovery;
+    #[cfg(feature = "gpu")]
+    use crate::ModelTypeDetector;
+    #[cfg(feature = "cpu")]
     use crate::discovery::ModelCompatibilityMatrix;
+    #[cfg(feature = "cpu")]
     use crate::{
         BitNetError, CacheManager, ModelTypeDetector, TokenizerDownloadInfo, TokenizerStrategy,
     };
+    #[cfg(feature = "cpu")]
     use std::path::Path;
+    #[cfg(feature = "cpu")]
     use std::path::PathBuf;
 
     /// AC1: Tests TokenizerDiscovery GGUF metadata parsing functionality

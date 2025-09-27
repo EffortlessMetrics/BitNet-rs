@@ -190,3 +190,5 @@ fixture_test/
 # Historical test results (archived)
 test-results/
 mutants-report/
+
+fuzz/

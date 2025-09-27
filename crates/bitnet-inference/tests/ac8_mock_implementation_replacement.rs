@@ -85,7 +85,8 @@ impl Model for MockModel {
     }
 
     fn logits(&self, _hidden: &ConcreteTensor) -> Result<ConcreteTensor, BitNetError> {
-        Ok(ConcreteTensor::mock(vec![1, self.config.model.vocab_size]))
+        // Return 3D logits tensor [batch_size, sequence_length, vocab_size]
+        Ok(ConcreteTensor::mock(vec![1, 1, self.config.model.vocab_size]))
     }
 }
 
