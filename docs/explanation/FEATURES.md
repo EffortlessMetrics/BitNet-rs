@@ -13,7 +13,7 @@ BitNet.rs uses Cargo feature flags to control compilation of optional functional
 cargo build --no-default-features --features cpu
 
 # GPU-enabled build
-cargo build --no-default-features --features cuda
+cargo build --no-default-features --features gpu
 
 # Full feature set
 cargo build --features full
@@ -294,7 +294,7 @@ Enabling features affects performance and binary size:
 | `gpu` | 2-15x faster | +12 MB | Device-aware quantization |
 | `cuda` | Same as `gpu` | Same as `gpu` | Backward-compatible alias |
 | `avx2` | 1.5-2x faster | +0.5 MB | x86_64 SIMD optimization |
-| `avx512` | 2-3x faster | +1 MB | High-end Intel CPUs |
+| `avx512` | 2-3x faster | +1 MB | Modern Intel and AMD CPUs |
 | `neon` | 1.5-2x faster | +0.5 MB | ARM64 SIMD optimization |
 | `ffi` | No impact | +4 MB | Cross-validation only |
 

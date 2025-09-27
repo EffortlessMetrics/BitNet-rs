@@ -6,7 +6,7 @@ This guide will help you get up and running with BitNet Rust, a production-ready
 
 ### Prerequisites
 
-- Rust 1.75 or later
+- Rust 1.90.0 or later
 - CUDA 11.8+ (optional, for GPU acceleration)
 - Python 3.8+ (optional, for Python bindings)
 
@@ -19,26 +19,31 @@ cargo install bitnet-cli
 ### Build from source
 
 ```bash
-git clone https://github.com/your-org/bitnet-rust.git
-cd bitnet-rust
-cargo build --release
+git clone https://github.com/microsoft/BitNet-rs.git
+cd BitNet-rs
+cargo build --release --no-default-features --features cpu
 ```
 
 ### Feature flags
 
 BitNet Rust supports several feature flags for customization:
 
-- `gpu`: Enable CUDA GPU acceleration (default: enabled)
-- `python`: Enable Python bindings (default: disabled)
-- `wasm`: Enable WebAssembly support (default: disabled)
-- `cli`: Enable CLI tool (default: enabled)
+- `cpu`: Enable CPU inference with SIMD optimizations
+- `gpu`: Enable CUDA GPU acceleration with device-aware quantization
+- `ffi`: Enable C++ FFI bridge for cross-validation
+- `crossval`: Enable cross-validation against Microsoft BitNet C++
+
+**Important**: Default features are **empty** - always specify features explicitly.
 
 ```bash
-# Install with specific features
-cargo install bitnet-cli --features "gpu,python"
+# Build with CPU support
+cargo build --no-default-features --features cpu
 
-# Build without GPU support
-cargo build --release --no-default-features --features "cli"
+# Build with GPU support
+cargo build --no-default-features --features gpu
+
+# Build with both CPU and GPU
+cargo build --no-default-features --features "cpu,gpu"
 ```
 
 ## Quick Start
@@ -143,24 +148,36 @@ async fn main() -> Result<()> {
 ### Streaming Generation
 
 ```rust
-use bitnet::{BitNetModel, GenerationConfig};
-use futures_util::StreamExt;
-use anyhow::Result;
+use bitnet::prelude::*;
+use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
-    let config = GenerationConfig::default();
-    
-    let mut stream = model.generate_stream("Tell me a story", &config);
-    
-    while let Some(token) = stream.next().await {
-        match token {
-            Ok(text) => print!("{}", text),
+    // Load GGUF model
+    let model = BitNetModel::from_file("model.gguf").await?;
+
+    // Create inference engine
+    let engine = InferenceEngine::builder()
+        .model(model)
+        .backend(Backend::Auto)
+        .build()?;
+
+    // Configure streaming generation
+    let config = GenerationConfig {
+        max_new_tokens: 100,
+        temperature: 0.7,
+        ..Default::default()
+    };
+
+    let mut stream = engine.generate_stream_with_config("Tell me a story", &config);
+
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(response) => print!("{}", response.text),
             Err(e) => eprintln!("Error: {}", e),
         }
     }
-    
+
     Ok(())
 }
 ```
@@ -303,6 +320,6 @@ bitnet-cli benchmark --model model.gguf --monitor-memory
 
 ## Getting Help
 
-- [GitHub Issues](https://github.com/your-org/bitnet-rust/issues)
+- [GitHub Issues](https://github.com/microsoft/BitNet-rs/issues)
 - [Documentation](https://docs.rs/bitnet)
-- [Discord Community](https://discord.gg/bitnet-rust)
+- [Microsoft BitNet Repository](https://github.com/microsoft/BitNet)
