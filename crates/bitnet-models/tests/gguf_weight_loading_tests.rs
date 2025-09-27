@@ -9,7 +9,9 @@
 
 #![allow(dead_code)] // Test utilities may be used by future tests
 use anyhow::{Context, Result};
-use bitnet_common::{BitNetError, Device};
+#[cfg(feature = "cpu")]
+use bitnet_common::BitNetError;
+use bitnet_common::Device;
 use candle_core::Tensor as CandleTensor;
 use std::collections::HashMap;
 use std::fs;
