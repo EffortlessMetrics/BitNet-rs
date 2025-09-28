@@ -3,7 +3,10 @@
 //! This module validates real CPU SIMD operations and emits receipts for CI validation.
 //! Tests use actual SIMD features when available and fall back gracefully.
 
+mod support;
+
 use std::env;
+use support::{ComputeReceipt, EnvVarGuard};
 
 /// SIMD feature detection for x86_64
 #[cfg(target_arch = "x86_64")]
@@ -107,10 +110,8 @@ fn simd_vector_add(a: &[f32], b: &[f32]) -> Vec<f32> {
 #[test]
 fn test_simd_feature_detection_and_receipts() {
     // Set deterministic mode safely
-    unsafe {
-        env::set_var("BITNET_DETERMINISTIC", "1");
-        env::set_var("RAYON_NUM_THREADS", "1");
-    }
+    let _d = EnvVarGuard::set("BITNET_DETERMINISTIC", "1");
+    let _t = EnvVarGuard::set("RAYON_NUM_THREADS", "1");
 
     let features = detect_simd_features();
 
@@ -126,31 +127,33 @@ fn test_simd_feature_detection_and_receipts() {
     // Validate correctness
     for i in 0..128 {
         let expected = a[i] + b[i];
-        assert!((result[i] - expected).abs() < 1e-6,
-               "SIMD result mismatch at index {}: {} vs {}", i, result[i], expected);
+        assert!(
+            (result[i] - expected).abs() < 1e-6,
+            "SIMD result mismatch at index {}: {} vs {}",
+            i,
+            result[i],
+            expected
+        );
     }
 
     // Emit receipt for CI validation
-    let receipt = format!(
-        r#"{{"compute_path":"real","backend":"cpu","kernels":["vector_add"],"deterministic":true,"seed":42,"simd_features":{}}}"#,
-        serde_json::to_string(&features).unwrap_or_default()
-    );
-
-    println!("{}", receipt);
+    let receipt = ComputeReceipt::real("cpu", vec!["vector_add"]).with_precision("simd");
+    receipt.print();
 
     // Validate in strict mode
     if env::var("BITNET_STRICT_MODE").unwrap_or_default() == "1" {
-        assert!(features.iter().any(|f| f != "scalar"),
-               "Expected SIMD features in strict mode, got only: {:?}", features);
+        assert!(
+            features.iter().any(|f| f != "scalar"),
+            "Expected SIMD features in strict mode, got only: {:?}",
+            features
+        );
     }
 }
 
 #[test]
 fn test_simd_quantization_simulation() {
     // Set deterministic mode safely
-    unsafe {
-        env::set_var("BITNET_DETERMINISTIC", "1");
-    }
+    let _d = EnvVarGuard::set("BITNET_DETERMINISTIC", "1");
 
     let features = detect_simd_features();
 
@@ -158,7 +161,8 @@ fn test_simd_quantization_simulation() {
     let input: Vec<f32> = (0..64).map(|i| (i as f32 - 32.0) * 0.05).collect();
 
     // Simulate quantization (2-bit signed)
-    let quantized: Vec<i8> = input.iter()
+    let quantized: Vec<i8> = input
+        .iter()
         .map(|&x| {
             let scaled = x * 4.0;
             scaled.clamp(-2.0, 1.0) as i8
@@ -166,9 +170,7 @@ fn test_simd_quantization_simulation() {
         .collect();
 
     // Simulate dequantization
-    let dequantized: Vec<f32> = quantized.iter()
-        .map(|&q| (q as f32) / 4.0)
-        .collect();
+    let dequantized: Vec<f32> = quantized.iter().map(|&q| (q as f32) / 4.0).collect();
 
     // Calculate correlation (simplified)
     let correlation = {
@@ -188,24 +190,17 @@ fn test_simd_quantization_simulation() {
             den_deq += d_deq * d_deq;
         }
 
-        if den_input == 0.0 || den_deq == 0.0 {
-            1.0
-        } else {
-            num / (den_input * den_deq).sqrt()
-        }
+        if den_input == 0.0 || den_deq == 0.0 { 1.0 } else { num / (den_input * den_deq).sqrt() }
     };
 
     // I2S should maintain reasonable correlation (adjusted for simulation)
     assert!(correlation >= 0.90, "I2S correlation {} below threshold", correlation);
 
     // Emit receipt
-    let receipt = format!(
-        r#"{{"compute_path":"real","backend":"cpu","kernels":["i2s_quantize","i2s_dequantize"],"deterministic":true,"i2s_corr":{:.4},"simd_features":{}}}"#,
-        correlation,
-        serde_json::to_string(&features).unwrap_or_default()
-    );
-
-    println!("{}", receipt);
+    let receipt = ComputeReceipt::real("cpu", vec!["i2s_quantize", "i2s_dequantize"])
+        .with_precision("i2s")
+        .with_accuracy(correlation, 0.0);
+    receipt.print();
 }
 
 #[test]
@@ -223,10 +218,6 @@ fn test_simd_ordering_assertions() {
     }
 
     // Emit ordering receipt
-    let receipt = format!(
-        r#"{{"compute_path":"real","backend":"cpu","validation":"simd_ordering","features_detected":{},"ordering_valid":true}}"#,
-        serde_json::to_string(&features).unwrap_or_default()
-    );
-
-    println!("{}", receipt);
+    let receipt = ComputeReceipt::real("cpu", vec!["simd_ordering"]).with_precision("validation");
+    receipt.print();
 }

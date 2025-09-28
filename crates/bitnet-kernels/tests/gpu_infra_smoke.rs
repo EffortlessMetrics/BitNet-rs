@@ -51,9 +51,7 @@ struct MockDeviceDetector {
 #[cfg(all(feature = "gpu", not(feature = "strict")))]
 impl MockDeviceDetector {
     fn new() -> Self {
-        Self {
-            available_gpus: vec![MockGPUInfo::new_rtx4090(), MockGPUInfo::new_gtx1060()],
-        }
+        Self { available_gpus: vec![MockGPUInfo::new_rtx4090(), MockGPUInfo::new_gtx1060()] }
     }
 
     fn detect_capabilities(&self) -> HashMap<String, bool> {

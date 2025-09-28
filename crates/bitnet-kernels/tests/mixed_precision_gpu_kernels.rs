@@ -6,75 +6,15 @@
 //! This module validates REAL mixed precision GPU kernels for BitNet.rs quantized neural network inference.
 //! All tests use actual GPU providers when available and fail in strict mode if mocks are detected.
 
+mod support;
+
+use anyhow;
 use std::env;
-use std::sync::Mutex;
+use support::{ComputeReceipt, EnvVarGuard, assert_real_compute_strict};
 
 // Real BitNet.rs kernel API imports
 #[cfg(feature = "gpu")]
 use bitnet_kernels::{KernelManager, KernelProvider};
-
-/// Global mutex for environment variable safety
-static ENV_MUTEX: Mutex<()> = Mutex::new(());
-
-/// RAII guard for safe environment variable management
-struct EnvGuard {
-    _guard: std::sync::MutexGuard<'static, ()>,
-    vars_to_restore: Vec<(String, Option<String>)>,
-}
-
-impl EnvGuard {
-    fn new() -> Self {
-        let guard = ENV_MUTEX.lock().unwrap();
-        Self {
-            _guard: guard,
-            vars_to_restore: Vec::new(),
-        }
-    }
-
-    fn set_var(&mut self, key: &str, value: &str) {
-        // Store original value for restoration
-        let original = env::var(key).ok();
-        self.vars_to_restore.push((key.to_string(), original));
-
-        // Set new value safely
-        unsafe { env::set_var(key, value); }
-    }
-}
-
-impl Drop for EnvGuard {
-    fn drop(&mut self) {
-        // Restore original environment variables
-        for (key, original_value) in &self.vars_to_restore {
-            unsafe {
-                match original_value {
-                    Some(value) => env::set_var(key, value),
-                    None => env::remove_var(key),
-                }
-            }
-        }
-    }
-}
-
-/// Compute receipt for validation
-#[derive(Debug)]
-struct ComputeReceipt {
-    compute_path: String,
-    backend: String,
-    kernels: Vec<String>,
-    deterministic: bool,
-    precision_mode: String,
-    correlation: Option<f32>,
-    rel_error: Option<f32>,
-    performance_ms: Option<f32>,
-}
-
-/// Assert real computation in strict mode
-fn assert_real_compute(receipt: &ComputeReceipt) {
-    if env::var("BITNET_STRICT_MODE").unwrap_or_default() == "1" {
-        assert_eq!(receipt.compute_path, "real", "Mock path detected in strict mode");
-        assert_ne!(receipt.backend, "mock", "Mock backend detected in strict mode");
-    }
-}
 
 /// Real precision modes supported by BitNet.rs
 #[cfg(feature = "gpu")]
@@ -185,16 +125,14 @@ fn calculate_relative_error(reference: &[f32], test: &[f32]) -> f32 {
 #[cfg(feature = "gpu")]
 fn select_gpu_provider() -> anyhow::Result<Box<dyn KernelProvider>> {
     let km = KernelManager::detect()?;
-    km.best_gpu_provider()
-        .ok_or_else(|| anyhow::anyhow!("No GPU provider available"))
+    km.best_gpu_provider().ok_or_else(|| anyhow::anyhow!("No GPU provider available"))
 }
 
 #[cfg(feature = "gpu")]
 #[test]
 fn test_real_mixed_precision_kernel_creation() -> anyhow::Result<()> {
-    let mut env_guard = EnvGuard::new();
-    env_guard.set_var("BITNET_DETERMINISTIC", "1");
-    env_guard.set_var("RAYON_NUM_THREADS", "1");
+    let _d = EnvVarGuard::set("BITNET_DETERMINISTIC", "1");
+    let _t = EnvVarGuard::set("RAYON_NUM_THREADS", "1");
 
     // Try to get real GPU provider
     let _provider = match select_gpu_provider() {
@@ -223,35 +161,19 @@ fn test_real_mixed_precision_kernel_creation() -> anyhow::Result<()> {
     assert_eq!(precision, PrecisionMode::BF16);
 
     // Emit receipt
-    let receipt = ComputeReceipt {
-        compute_path: "real".to_string(),
-        backend: "cuda".to_string(),
-        kernels: vec!["mixed_precision_detect".to_string()],
-        deterministic: true,
-        precision_mode: precision.as_str().to_string(),
-        correlation: None,
-        rel_error: None,
-        performance_ms: None,
-    };
+    let receipt = ComputeReceipt::real("cuda", vec!["mixed_precision_detect"])
+        .with_precision(precision.as_str());
+    receipt.print();
 
-    println!(r#"{{"compute_path":"{}","backend":"{}","kernels":{},"precision":"{}","deterministic":{}}}"#,
-        receipt.compute_path,
-        receipt.backend,
-        serde_json::to_string(&receipt.kernels).unwrap_or_default(),
-        receipt.precision_mode,
-        receipt.deterministic
-    );
-
-    assert_real_compute(&receipt);
+    assert_real_compute_strict(&receipt);
     Ok(())
 }
 
 #[cfg(feature = "gpu")]
 #[test]
 fn test_real_mixed_precision_accuracy() -> anyhow::Result<()> {
-    let mut env_guard = EnvGuard::new();
-    env_guard.set_var("BITNET_DETERMINISTIC", "1");
-    env_guard.set_var("RAYON_NUM_THREADS", "1");
+    let _d = EnvVarGuard::set("BITNET_DETERMINISTIC", "1");
+    let _t = EnvVarGuard::set("RAYON_NUM_THREADS", "1");
 
     // Try to get real GPU provider
     let _provider = match select_gpu_provider() {
@@ -270,14 +192,15 @@ fn test_real_mixed_precision_accuracy() -> anyhow::Result<()> {
     let (m, k, n) = (16, 16, 16);
 
     // Generate test data
-    let a: Vec<f32> = (0..m*k).map(|i| (i as f32) * 0.1).collect();
-    let b: Vec<f32> = (0..k*n).map(|i| (i as f32) * 0.1 + 1.0).collect();
+    let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1).collect();
+    let b: Vec<f32> = (0..k * n).map(|i| (i as f32) * 0.1 + 1.0).collect();
 
     // Calculate reference result
     let reference = matmul_host(&a, &b, m, k, n);
 
     // Simulate mixed precision result (would use real GPU GEMM)
-    let mixed_precision_result: Vec<f32> = reference.iter()
+    let mixed_precision_result: Vec<f32> = reference
+        .iter()
         .map(|x| {
             // Simulate FP16 precision loss
             let as_f16 = half::f16::from_f32(*x);
@@ -294,35 +217,19 @@ fn test_real_mixed_precision_accuracy() -> anyhow::Result<()> {
     assert!(rel_error <= 1e-2, "Relative error {} above threshold 1e-2", rel_error);
 
     // Emit receipt
-    let receipt = ComputeReceipt {
-        compute_path: "real".to_string(),
-        backend: "cuda".to_string(),
-        kernels: vec!["gemm_fp16".to_string()],
-        deterministic: true,
-        precision_mode: "fp16".to_string(),
-        correlation: Some(correlation),
-        rel_error: Some(rel_error),
-        performance_ms: None,
-    };
+    let receipt = ComputeReceipt::real("cuda", vec!["gemm_fp16"])
+        .with_precision("fp16")
+        .with_accuracy(correlation, rel_error);
+    receipt.print();
 
-    println!(r#"{{"compute_path":"{}","backend":"{}","kernels":{},"precision":"{}","corr":{:.3},"rel_err":{:.6}}}"#,
-        receipt.compute_path,
-        receipt.backend,
-        serde_json::to_string(&receipt.kernels).unwrap_or_default(),
-        receipt.precision_mode,
-        receipt.correlation.unwrap_or(0.0),
-        receipt.rel_error.unwrap_or(f32::INFINITY)
-    );
-
-    assert_real_compute(&receipt);
+    assert_real_compute_strict(&receipt);
     Ok(())
 }
 
 #[cfg(feature = "gpu")]
 #[test]
 fn test_real_gpu_memory_management() -> anyhow::Result<()> {
-    let mut env_guard = EnvGuard::new();
-    env_guard.set_var("BITNET_DETERMINISTIC", "1");
+    let _d = EnvVarGuard::set("BITNET_DETERMINISTIC", "1");
 
     // Try to get real GPU provider
     let _provider = match select_gpu_provider() {
@@ -346,31 +253,20 @@ fn test_real_gpu_memory_management() -> anyhow::Result<()> {
         .parse::<u32>()
         .unwrap_or(4096);
 
-    assert!(test_allocation_mb <= gpu_memory_limit_mb,
-           "Test allocation {} MB exceeds limit {} MB",
-           test_allocation_mb, gpu_memory_limit_mb);
-
-    // Emit receipt
-    let receipt = ComputeReceipt {
-        compute_path: "real".to_string(),
-        backend: "cuda".to_string(),
-        kernels: vec!["memory_management".to_string()],
-        deterministic: true,
-        precision_mode: "memory_test".to_string(),
-        correlation: None,
-        rel_error: None,
-        performance_ms: None,
-    };
-
-    println!(r#"{{"compute_path":"{}","backend":"{}","kernels":{},"memory_test_mb":{},"limit_mb":{}}}}"#,
-        receipt.compute_path,
-        receipt.backend,
-        serde_json::to_string(&receipt.kernels).unwrap_or_default(),
+    assert!(
+        test_allocation_mb <= gpu_memory_limit_mb,
+        "Test allocation {} MB exceeds limit {} MB",
         test_allocation_mb,
         gpu_memory_limit_mb
     );
 
-    assert_real_compute(&receipt);
+    // Emit receipt
+    let receipt =
+        ComputeReceipt::real("cuda", vec!["memory_management"]).with_precision("memory_test");
+
+    receipt.print();
+
+    assert_real_compute_strict(&receipt);
     Ok(())
 }
 
