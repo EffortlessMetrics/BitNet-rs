@@ -388,6 +388,7 @@ mod gpu_feature_tests {
     /// Tests GPU CUDA kernel integration
     #[cfg(feature = "gpu")]
     #[test]
+    #[allow(clippy::cmp_owned)]
     fn test_gpu_cuda_kernel_integration() {
         println!("🔧 GPU: Testing CUDA kernel integration");
 

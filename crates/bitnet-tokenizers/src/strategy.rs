@@ -101,10 +101,113 @@ impl TokenizerStrategyResolver {
     /// 4. Smart download
     /// 5. Mock fallback (non-strict mode)
     pub async fn resolve_with_fallback(&self) -> Result<Arc<dyn Tokenizer>> {
-        // This is test scaffolding - actual implementation pending
-        unimplemented!(
-            "TokenizerStrategyResolver::resolve_with_fallback - requires fallback chain implementation"
-        )
+        let mut errors = Vec::new();
+
+        // Strategy 1: Try GGUF embedded tokenizer
+        match self.discovery.try_extract_embedded_tokenizer() {
+            Ok(Some(embedded_tokenizer)) => {
+                info!("Successfully resolved tokenizer from GGUF metadata");
+                return self.configure_model_specific_wrapper(embedded_tokenizer);
+            }
+            Ok(None) => {
+                debug!("No embedded tokenizer found in GGUF");
+            }
+            Err(e) => {
+                warn!("Failed to extract embedded tokenizer: {}", e);
+                errors.push(("GGUF embedded", e));
+            }
+        }
+
+        // Strategy 2: Try co-located files
+        match self.discovery.check_colocated_tokenizers() {
+            Ok(Some(path)) => {
+                info!("Found co-located tokenizer at: {}", path.display());
+                match self.load_tokenizer_from_path(&path) {
+                    Ok(tokenizer) => return Ok(tokenizer),
+                    Err(e) => {
+                        warn!("Failed to load co-located tokenizer: {}", e);
+                        errors.push(("co-located files", e));
+                    }
+                }
+            }
+            Ok(None) => {
+                debug!("No co-located tokenizer files found");
+            }
+            Err(e) => {
+                warn!("Error checking co-located tokenizers: {}", e);
+                errors.push(("co-located search", e));
+            }
+        }
+
+        // Strategy 3: Try standard cache directories
+        match self.discovery.check_cache_locations() {
+            Ok(Some(path)) => {
+                info!("Found cached tokenizer at: {}", path.display());
+                match self.load_tokenizer_from_path(&path) {
+                    Ok(tokenizer) => return Ok(tokenizer),
+                    Err(e) => {
+                        warn!("Failed to load cached tokenizer: {}", e);
+                        errors.push(("cache directories", e));
+                    }
+                }
+            }
+            Ok(None) => {
+                debug!("No cached tokenizer found");
+            }
+            Err(e) => {
+                warn!("Error checking cache locations: {}", e);
+                errors.push(("cache search", e));
+            }
+        }
+
+        // Strategy 4: Try smart download (if not in offline mode)
+        if std::env::var("BITNET_OFFLINE").is_err() {
+            match self.discovery.infer_download_source() {
+                Ok(Some(download_info)) => {
+                    info!("Attempting smart download from: {}", download_info.repo);
+                    match self.downloader.download_tokenizer(&download_info).await {
+                        Ok(downloaded_path) => {
+                            match self.load_tokenizer_from_path(&downloaded_path) {
+                                Ok(tokenizer) => return Ok(tokenizer),
+                                Err(e) => {
+                                    warn!("Failed to load downloaded tokenizer: {}", e);
+                                    errors.push(("smart download loading", e));
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            warn!("Smart download failed: {}", e);
+                            errors.push(("smart download", e));
+                        }
+                    }
+                }
+                Ok(None) => {
+                    debug!("No download source available for this model");
+                }
+                Err(e) => {
+                    warn!("Error determining download source: {}", e);
+                    errors.push(("download source detection", e));
+                }
+            }
+        } else {
+            debug!("Skipping smart download (offline mode)");
+        }
+
+        // Strategy 5: Mock fallback (non-strict mode only)
+        if std::env::var("BITNET_STRICT_TOKENIZERS").is_err() {
+            info!("Falling back to mock tokenizer");
+            let mock_tokenizer = Arc::new(crate::MockTokenizer::new());
+            return self.configure_model_specific_wrapper(mock_tokenizer);
+        }
+
+        // All strategies failed
+        let error_summary = format!(
+            "All tokenizer resolution strategies failed. Tried: {}. Errors: {:?}",
+            errors.len(),
+            errors.iter().map(|(strategy, _)| strategy).collect::<Vec<_>>()
+        );
+
+        Err(TokenizerErrorHandler::config_error(error_summary))
     }
 
     /// Load tokenizer from file path with neural network model-specific configuration
@@ -928,9 +1031,24 @@ mod tests {
     /// Helper function to create mock discovery for testing
     #[allow(dead_code)]
     fn create_mock_discovery(_model_type: &str, _vocab_size: usize) -> TokenizerDiscovery {
-        // This is a placeholder - actual implementation would create mock
-        // TokenizerDiscovery with specified parameters for testing
-        unimplemented!("create_mock_discovery - requires TokenizerDiscovery implementation")
+        // For now, this returns a test error since TokenizerDiscovery requires valid GGUF
+        // In a real implementation, this would create a proper mock or test fixture
+        // For the current scaffolding, tests should handle the absence of this function
+
+        // Create a minimal test file path for the mock
+        let test_path = std::path::PathBuf::from("/tmp/test_model.gguf");
+
+        // This will fail gracefully in tests, allowing test scaffolding to work
+        // Tests that use this function should be prepared to handle the error
+        match TokenizerDiscovery::from_gguf(&test_path) {
+            Ok(discovery) => discovery,
+            Err(_) => {
+                // Return a reasonable error for test scaffolding
+                panic!(
+                    "create_mock_discovery is test scaffolding - real implementation requires valid GGUF file or proper mock framework"
+                )
+            }
+        }
     }
 
     // ================================

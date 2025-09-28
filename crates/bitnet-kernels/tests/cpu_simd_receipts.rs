@@ -155,7 +155,7 @@ fn test_simd_quantization_simulation() {
     // Set deterministic mode safely
     let _d = EnvVarGuard::set("BITNET_DETERMINISTIC", "1");
 
-    let features = detect_simd_features();
+    let _features = detect_simd_features();
 
     // Simulate I2S quantization using SIMD when available
     let input: Vec<f32> = (0..64).map(|i| (i as f32 - 32.0) * 0.05).collect();

@@ -59,6 +59,7 @@ gpu = ["dep:cudarc", "dep:half"]
 cuda = ["gpu"]  # Alias for backward compatibility
 ffi = ["dep:cc", "dep:bindgen"]
 inference = []
+strict = []  # Strict mode for mock elimination validation
 
 [[bench]]
 name = "kernel_benchmarks"

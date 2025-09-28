@@ -3,5 +3,7 @@
 pub mod env_guard;
 pub mod receipt;
 
+#[allow(unused_imports)]
 pub use env_guard::EnvVarGuard;
-pub use receipt::{ComputeReceipt, assert_real_compute_strict};
+#[allow(unused_imports)]
+pub use receipt::ComputeReceipt;

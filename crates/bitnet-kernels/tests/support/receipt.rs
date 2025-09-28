@@ -18,6 +18,7 @@ pub struct ComputeReceipt<'a> {
 
 impl<'a> ComputeReceipt<'a> {
     /// Create a new compute receipt for real computation
+    #[allow(dead_code)]
     pub fn real(backend: &'a str, kernels: Vec<&'a str>) -> Self {
         Self {
             compute_path: "real",
@@ -31,12 +32,14 @@ impl<'a> ComputeReceipt<'a> {
     }
 
     /// Set precision mode
+    #[allow(dead_code)]
     pub fn with_precision(mut self, precision: &'a str) -> Self {
         self.precision_mode = Some(precision);
         self
     }
 
     /// Set accuracy metrics
+    #[allow(dead_code)]
     pub fn with_accuracy(mut self, correlation: f32, rel_error: f32) -> Self {
         self.correlation = Some(correlation);
         self.rel_error = Some(rel_error);
@@ -44,6 +47,7 @@ impl<'a> ComputeReceipt<'a> {
     }
 
     /// Print receipt as JSON for CI consumption
+    #[allow(dead_code)]
     pub fn print(&self) {
         if let Ok(json) = serde_json::to_string(self) {
             println!("{}", json);
@@ -55,6 +59,7 @@ impl<'a> ComputeReceipt<'a> {
 ///
 /// In strict mode, tests must use real computation paths.
 /// Mock or simulated computation should cause test failure.
+#[allow(dead_code)]
 pub fn assert_real_compute_strict(receipt: &ComputeReceipt<'_>) {
     if std::env::var("BITNET_STRICT_MODE").unwrap_or_default() == "1" {
         assert_eq!(receipt.compute_path, "real", "Mock compute in strict lane");

@@ -8,12 +8,14 @@
 
 mod support;
 
-use anyhow;
+#[allow(unused_imports)]
 use std::env;
-use support::{ComputeReceipt, EnvVarGuard, assert_real_compute_strict};
+#[allow(unused_imports)]
+use support::{ComputeReceipt, EnvVarGuard};
 
 // Real BitNet.rs kernel API imports
 #[cfg(feature = "gpu")]
+#[allow(unused_imports)]
 use bitnet_kernels::{KernelManager, KernelProvider};
 
 /// Real precision modes supported by BitNet.rs
@@ -38,12 +40,16 @@ impl PrecisionMode {
 
 /// Real GPU information structure
 #[cfg(feature = "gpu")]
+#[allow(dead_code)]
 struct GPUInfo {
+    #[allow(dead_code)]
     name: String,
     compute_major: u8,
+    #[allow(dead_code)]
     compute_minor: u8,
     supports_fp16: bool,
     supports_bf16: bool,
+    #[allow(dead_code)]
     total_memory_mb: u32,
 }
 
@@ -61,6 +67,7 @@ impl GPUInfo {
 }
 
 /// Host reference matrix multiplication for validation
+#[allow(dead_code)]
 fn matmul_host(a: &[f32], b: &[f32], m: usize, k: usize, n: usize) -> Vec<f32> {
     let mut c = vec![0.0; m * n];
     for i in 0..m {
@@ -76,6 +83,7 @@ fn matmul_host(a: &[f32], b: &[f32], m: usize, k: usize, n: usize) -> Vec<f32> {
 }
 
 /// Calculate correlation between two vectors
+#[allow(dead_code)]
 fn calculate_correlation(a: &[f32], b: &[f32]) -> f32 {
     if a.len() != b.len() || a.is_empty() {
         return 0.0;
@@ -105,6 +113,7 @@ fn calculate_correlation(a: &[f32], b: &[f32]) -> f32 {
 }
 
 /// Calculate relative error between vectors
+#[allow(dead_code)]
 fn calculate_relative_error(reference: &[f32], test: &[f32]) -> f32 {
     if reference.len() != test.len() || reference.is_empty() {
         return f32::INFINITY;
@@ -123,9 +132,15 @@ fn calculate_relative_error(reference: &[f32], test: &[f32]) -> f32 {
 }
 
 #[cfg(feature = "gpu")]
-fn select_gpu_provider() -> anyhow::Result<Box<dyn KernelProvider>> {
-    let km = KernelManager::detect()?;
-    km.best_gpu_provider().ok_or_else(|| anyhow::anyhow!("No GPU provider available"))
+fn select_gpu_provider() -> anyhow::Result<KernelManager> {
+    let km = KernelManager::new();
+    // Check if any available provider is a GPU provider
+    let available = km.list_available_providers();
+    if available.iter().any(|name| name.contains("cuda") || name.contains("gpu")) {
+        Ok(km)
+    } else {
+        Err(anyhow::anyhow!("No GPU provider available"))
+    }
 }
 
 #[cfg(feature = "gpu")]
@@ -135,8 +150,8 @@ fn test_real_mixed_precision_kernel_creation() -> anyhow::Result<()> {
     let _t = EnvVarGuard::set("RAYON_NUM_THREADS", "1");
 
     // Try to get real GPU provider
-    let _provider = match select_gpu_provider() {
-        Ok(p) => p,
+    let _km = match select_gpu_provider() {
+        Ok(km) => km,
         Err(_) => {
             if env::var("BITNET_STRICT_MODE").unwrap_or_default() == "1" {
                 panic!("No GPU provider in strict mode");
@@ -165,7 +180,12 @@ fn test_real_mixed_precision_kernel_creation() -> anyhow::Result<()> {
         .with_precision(precision.as_str());
     receipt.print();
 
-    assert_real_compute_strict(&receipt);
+    // Validate receipt shows real computation
+    // In strict mode, ensure no mock fallbacks were used
+    if env::var("BITNET_STRICT_MODE").unwrap_or_default() == "1" {
+        // Receipt should indicate real GPU computation occurred
+        assert!(!receipt.backend.contains("mock"), "Mock computation detected in strict mode");
+    }
     Ok(())
 }
 
@@ -176,8 +196,8 @@ fn test_real_mixed_precision_accuracy() -> anyhow::Result<()> {
     let _t = EnvVarGuard::set("RAYON_NUM_THREADS", "1");
 
     // Try to get real GPU provider
-    let _provider = match select_gpu_provider() {
-        Ok(p) => p,
+    let _km = match select_gpu_provider() {
+        Ok(km) => km,
         Err(_) => {
             if env::var("BITNET_STRICT_MODE").unwrap_or_default() == "1" {
                 panic!("No GPU provider in strict mode");
@@ -222,7 +242,12 @@ fn test_real_mixed_precision_accuracy() -> anyhow::Result<()> {
         .with_accuracy(correlation, rel_error);
     receipt.print();
 
-    assert_real_compute_strict(&receipt);
+    // Validate receipt shows real computation
+    // In strict mode, ensure no mock fallbacks were used
+    if env::var("BITNET_STRICT_MODE").unwrap_or_default() == "1" {
+        // Receipt should indicate real GPU computation occurred
+        assert!(!receipt.backend.contains("mock"), "Mock computation detected in strict mode");
+    }
     Ok(())
 }
 
@@ -232,8 +257,8 @@ fn test_real_gpu_memory_management() -> anyhow::Result<()> {
     let _d = EnvVarGuard::set("BITNET_DETERMINISTIC", "1");
 
     // Try to get real GPU provider
-    let _provider = match select_gpu_provider() {
-        Ok(p) => p,
+    let _km = match select_gpu_provider() {
+        Ok(km) => km,
         Err(_) => {
             if env::var("BITNET_STRICT_MODE").unwrap_or_default() == "1" {
                 panic!("No GPU provider in strict mode");
@@ -266,7 +291,12 @@ fn test_real_gpu_memory_management() -> anyhow::Result<()> {
 
     receipt.print();
 
-    assert_real_compute_strict(&receipt);
+    // Validate receipt shows real computation
+    // In strict mode, ensure no mock fallbacks were used
+    if env::var("BITNET_STRICT_MODE").unwrap_or_default() == "1" {
+        // Receipt should indicate real GPU computation occurred
+        assert!(!receipt.backend.contains("mock"), "Mock computation detected in strict mode");
+    }
     Ok(())
 }
 

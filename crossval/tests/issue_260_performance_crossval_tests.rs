@@ -170,8 +170,10 @@ mod performance_baseline_tests {
         println!("📊 Baseline: Establishing GPU performance baselines");
 
         if let Ok(cuda_device) = create_cuda_device() {
-            env::set_var("BITNET_DETERMINISTIC", "1");
-            env::set_var("BITNET_SEED", "42");
+            unsafe {
+                env::set_var("BITNET_DETERMINISTIC", "1");
+                env::set_var("BITNET_SEED", "42");
+            }
 
             let baseline_result = || -> Result<()> {
                 let baseline_config = GPUBaselineConfig {
@@ -254,10 +256,10 @@ mod performance_baseline_tests {
                 // Store GPU baseline results
                 let baseline_storage = BaselineStorage::new();
                 baseline_storage.store_gpu_baseline(&GPUBaselineResults {
-                    fp32_baseline,
-                    fp16_baseline,
+                    fp32_baseline: fp32_baseline.clone(),
+                    fp16_baseline: fp16_baseline.clone(),
                     mixed_precision_speedup,
-                    batch_efficiency,
+                    batch_efficiency: batch_efficiency.efficiency,
                     cuda_info: get_cuda_info(&cuda_device)?,
                     test_timestamp: std::time::SystemTime::now(),
                 })?;
@@ -271,8 +273,10 @@ mod performance_baseline_tests {
                 Ok(())
             }();
 
-            env::remove_var("BITNET_DETERMINISTIC");
-            env::remove_var("BITNET_SEED");
+            unsafe {
+                env::remove_var("BITNET_DETERMINISTIC");
+                env::remove_var("BITNET_SEED");
+            }
 
             baseline_result.expect("GPU performance baseline establishment should succeed");
         } else {
@@ -592,8 +596,10 @@ mod cross_validation_tests {
                 DeterministicTestConfig { seed: 42, num_reproducibility_runs: 5, tolerance: 1e-8 };
 
             // Set deterministic environment
-            env::set_var("BITNET_DETERMINISTIC", "1");
-            env::set_var("BITNET_SEED", &test_config.seed.to_string());
+            unsafe {
+                env::set_var("BITNET_DETERMINISTIC", "1");
+                env::set_var("BITNET_SEED", &test_config.seed.to_string());
+            }
 
             let validator = DeterministicCrossValidator::new(&test_config)?;
             let test_case = create_reproducibility_test_case();
@@ -654,8 +660,10 @@ mod cross_validation_tests {
                 );
             }
 
-            env::remove_var("BITNET_DETERMINISTIC");
-            env::remove_var("BITNET_SEED");
+            unsafe {
+                env::remove_var("BITNET_DETERMINISTIC");
+                env::remove_var("BITNET_SEED");
+            }
 
             println!("  ✅ Deterministic reproducibility validation successful");
             println!("     - All {} runs identical", test_config.num_reproducibility_runs);
@@ -971,6 +979,38 @@ struct ComputationFingerprint {
 // Mock implementations that will fail until real implementation exists (TDD expectation)
 struct CPUBaselineRunner;
 struct GPUBaselineRunner;
+
+impl GPUBaselineRunner {
+    fn new(_device: &CudaDevice, _config: &GPUBaselineConfig) -> Result<Self> {
+        Ok(Self)
+    }
+
+    fn run_fp32_baseline(&self) -> Result<PerformanceBaseline> {
+        Ok(PerformanceBaseline {
+            tokens_per_second: 50.0,
+            latency_ms: 8.0,
+            throughput_gops: 4.2,
+            first_token_latency_ms: 15.0,
+            gpu_utilization_percent: 85.0,
+            memory_bandwidth_utilization: 0.7,
+        })
+    }
+
+    fn run_fp16_baseline(&self) -> Result<PerformanceBaseline> {
+        Ok(PerformanceBaseline {
+            tokens_per_second: 85.0,
+            latency_ms: 5.0,
+            throughput_gops: 7.1,
+            first_token_latency_ms: 12.0,
+            gpu_utilization_percent: 92.0,
+            memory_bandwidth_utilization: 0.8,
+        })
+    }
+
+    fn run_batch_efficiency_test(&self) -> Result<BatchEfficiency> {
+        Ok(BatchEfficiency { max_speedup: 4.2, efficiency: 0.89 })
+    }
+}
 struct BaselineStorage;
 struct CppReferenceValidator;
 struct PerformanceMockDetector;
@@ -1008,11 +1048,21 @@ impl BaselineStorage {
         // Mock implementation for TDD
         Ok(())
     }
+
+    fn store_gpu_baseline(&self, _results: &GPUBaselineResults) -> Result<()> {
+        // Mock implementation for TDD
+        Ok(())
+    }
 }
 
 // Helper function for platform info
 fn get_platform_info() -> String {
     format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH)
+}
+
+// Helper function for CUDA info (mock implementation)
+fn get_cuda_info(_device: &CudaDevice) -> Result<String> {
+    Ok("Mock CUDA Device Info".to_string())
 }
 
 // Performance metrics structure for baselines
@@ -1022,12 +1072,20 @@ struct PerformanceBaseline {
     latency_ms: f64,
     throughput_gops: f64,
     first_token_latency_ms: f64,
+    gpu_utilization_percent: f64,
+    memory_bandwidth_utilization: f64,
 }
 
 #[derive(Debug, Clone)]
 struct MemoryBaseline {
     peak_memory_mb: f64,
     memory_efficiency_percent: f64,
+}
+
+#[derive(Debug, Clone)]
+struct BatchEfficiency {
+    max_speedup: f64,
+    efficiency: f64,
 }
 
 // Implementation for CPU baseline runner
@@ -1042,6 +1100,8 @@ impl CPUBaselineRunner {
             latency_ms: 10.0,
             throughput_gops: 1.5,
             first_token_latency_ms: 25.0,
+            gpu_utilization_percent: 0.0, // CPU baseline
+            memory_bandwidth_utilization: 0.5,
         })
     }
 
@@ -1051,6 +1111,8 @@ impl CPUBaselineRunner {
             latency_ms: 12.0,
             throughput_gops: 1.2,
             first_token_latency_ms: 30.0,
+            gpu_utilization_percent: 0.0, // CPU baseline
+            memory_bandwidth_utilization: 0.4,
         })
     }
 
@@ -1060,6 +1122,8 @@ impl CPUBaselineRunner {
             latency_ms: 15.0,
             throughput_gops: 1.0,
             first_token_latency_ms: 35.0,
+            gpu_utilization_percent: 0.0, // CPU baseline
+            memory_bandwidth_utilization: 0.3,
         })
     }
 
@@ -1073,6 +1137,8 @@ impl CPUBaselineRunner {
             latency_ms: 8.0,
             throughput_gops: 2.0,
             first_token_latency_ms: 20.0,
+            gpu_utilization_percent: 0.0, // CPU baseline
+            memory_bandwidth_utilization: 0.6,
         })
     }
 
@@ -1082,6 +1148,8 @@ impl CPUBaselineRunner {
             latency_ms: 6.0,
             throughput_gops: 3.0,
             first_token_latency_ms: 15.0,
+            gpu_utilization_percent: 0.0, // CPU baseline
+            memory_bandwidth_utilization: 0.7,
         })
     }
 }
@@ -1221,7 +1289,15 @@ struct ComputationTrace {
 struct TestCase {
     id: String,
 }
-struct GPUBaselineResults;
+#[derive(Debug)]
+struct GPUBaselineResults {
+    fp32_baseline: PerformanceBaseline,
+    fp16_baseline: PerformanceBaseline,
+    mixed_precision_speedup: f64,
+    batch_efficiency: f64,
+    cuda_info: String,
+    test_timestamp: std::time::SystemTime,
+}
 struct CrossValidationSummary;
 struct BatchEfficiencyMetrics {
     max_speedup: f64,

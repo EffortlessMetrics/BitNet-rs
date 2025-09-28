@@ -9,12 +9,16 @@ use std::collections::HashMap;
 
 #[cfg(all(feature = "gpu", not(feature = "strict")))]
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct MockGPUInfo {
     name: String,
+    #[allow(dead_code)]
     compute_major: u8,
+    #[allow(dead_code)]
     compute_minor: u8,
     supports_fp16: bool,
     supports_bf16: bool,
+    #[allow(dead_code)]
     total_memory_mb: u32,
 }
 

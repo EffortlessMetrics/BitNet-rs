@@ -6,6 +6,7 @@ use once_cell::sync::Lazy;
 use std::{env as std_env, sync::Mutex};
 
 /// Global lock to serialize environment variable modifications across tests
+#[allow(dead_code)]
 pub static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 
 /// RAII guard for safe environment variable management
@@ -14,6 +15,7 @@ pub static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 /// 1. Thread-safe access to environment variables via global mutex
 /// 2. Automatic restoration of original values on drop
 /// 3. No unsafe blocks required
+#[allow(dead_code)]
 pub struct EnvVarGuard {
     key: &'static str,
     prior: Option<String>,
@@ -30,6 +32,7 @@ impl EnvVarGuard {
     ///
     /// # Safety
     /// The global lock ensures thread safety and proper restoration order
+    #[allow(dead_code)]
     pub fn set(key: &'static str, val: &str) -> Self {
         let guard = ENV_LOCK.lock().unwrap();
         let prior = std_env::var(key).ok();
