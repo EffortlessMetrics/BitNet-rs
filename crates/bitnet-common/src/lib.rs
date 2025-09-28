@@ -15,7 +15,7 @@ pub use config::*;
 pub use error::*;
 pub use math::ceil_div;
 pub use strict_mode::{
-    ComputationType, MissingKernelScenario, MockInferencePath, StrictModeConfig, StrictModeEnforcer,
+    ComputationType, MissingKernelScenario, MockInferencePath, PerformanceMetrics, StrictModeConfig, StrictModeEnforcer,
 };
 pub use tensor::*;
 pub use types::*;

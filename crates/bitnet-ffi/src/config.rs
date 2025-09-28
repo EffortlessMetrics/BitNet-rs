@@ -407,6 +407,7 @@ mod tests {
             tokens_per_second: 100.0,
             latency_ms: 50.0,
             memory_usage_mb: 1024.0,
+            computation_type: bitnet_common::ComputationType::Real,
             gpu_utilization: Some(75.0),
         };
 

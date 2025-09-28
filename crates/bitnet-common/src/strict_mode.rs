@@ -129,13 +129,27 @@ pub struct StrictModeEnforcer {
 impl StrictModeEnforcer {
     /// Create a new strict mode enforcer
     pub fn new() -> Self {
-        let config = STRICT_MODE_CONFIG.get_or_init(StrictModeConfig::from_env).clone();
-        Self { config }
+        Self::with_config(None)
     }
 
     /// Create enforcer with detailed configuration
     pub fn new_detailed() -> Self {
         let config = STRICT_MODE_CONFIG.get_or_init(StrictModeConfig::from_env_detailed).clone();
+        Self { config }
+    }
+
+    /// Create enforcer with optional custom configuration (for testing)
+    pub fn with_config(config: Option<StrictModeConfig>) -> Self {
+        let config = config.unwrap_or_else(|| {
+            STRICT_MODE_CONFIG.get_or_init(StrictModeConfig::from_env).clone()
+        });
+        Self { config }
+    }
+
+    /// Create enforcer with fresh environment reading (bypasses OnceLock for testing)
+    #[cfg(test)]
+    pub fn new_fresh() -> Self {
+        let config = StrictModeConfig::from_env();
         Self { config }
     }
 
@@ -194,6 +208,7 @@ pub struct PerformanceMetrics {
     pub latency_ms: f64,
     pub memory_usage_mb: f64,
     pub computation_type: ComputationType,
+    pub gpu_utilization: Option<f64>,
 }
 
 /// Computation type classification

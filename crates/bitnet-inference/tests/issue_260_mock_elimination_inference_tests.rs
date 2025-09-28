@@ -11,7 +11,7 @@
 #![allow(unused_imports)]
 
 use anyhow::{Result, anyhow};
-use bitnet_common::PerformanceMetrics;
+use bitnet_common::{PerformanceMetrics, ComputationType};
 use std::env;
 
 // Test scaffolding structs - TDD placeholders for real implementation
@@ -124,6 +124,7 @@ fn load_performance_baseline() -> PerformanceMetrics {
         tokens_per_second: 15.0,
         latency_ms: 65.0,
         memory_usage_mb: 2048.0,
+        computation_type: ComputationType::Real,
         gpu_utilization: Some(0.0),
     }
 }
@@ -133,6 +134,7 @@ fn measure_current_performance() -> PerformanceMetrics {
         tokens_per_second: 16.2,
         latency_ms: 62.0,
         memory_usage_mb: 2100.0,
+        computation_type: ComputationType::Real,
         gpu_utilization: Some(0.0),
     }
 }
@@ -142,6 +144,7 @@ fn measure_actual_performance() -> PerformanceMetrics {
         tokens_per_second: 15.5,
         latency_ms: 64.0,
         memory_usage_mb: 2050.0,
+        computation_type: ComputationType::Real,
         gpu_utilization: Some(68.0),
     }
 }
@@ -255,6 +258,7 @@ impl SIMDOptimizationBenchmark {
             tokens_per_second: 12.0,
             latency_ms: 83.0,
             memory_usage_mb: 2048.0,
+            computation_type: ComputationType::Real,
             gpu_utilization: None,
         }
     }
@@ -263,6 +267,7 @@ impl SIMDOptimizationBenchmark {
             tokens_per_second: 18.0,
             latency_ms: 55.0,
             memory_usage_mb: 2048.0,
+            computation_type: ComputationType::Real,
             gpu_utilization: None,
         }
     }
@@ -334,6 +339,7 @@ fn measure_cpu_baseline_performance() -> PerformanceMetrics {
         tokens_per_second: 15.0,
         latency_ms: 67.0,
         memory_usage_mb: 2048.0,
+        computation_type: ComputationType::Real,
         gpu_utilization: None,
     }
 }
@@ -344,6 +350,7 @@ fn measure_gpu_baseline_performance(_device: &Device) -> PerformanceMetrics {
         tokens_per_second: 65.0,
         latency_ms: 15.0,
         memory_usage_mb: 4096.0,
+        computation_type: ComputationType::Real,
         gpu_utilization: Some(85.0),
     }
 }
@@ -396,6 +403,7 @@ impl MixedPrecisionBenchmark {
             tokens_per_second: 50.0,
             latency_ms: 20.0,
             memory_usage_mb: 4096.0,
+            computation_type: ComputationType::Real,
             gpu_utilization: Some(80.0),
         }
     }
@@ -404,6 +412,7 @@ impl MixedPrecisionBenchmark {
             tokens_per_second: 75.0,
             latency_ms: 13.0,
             memory_usage_mb: 3072.0,
+            computation_type: ComputationType::Real,
             gpu_utilization: Some(85.0),
         }
     }
@@ -412,6 +421,7 @@ impl MixedPrecisionBenchmark {
             tokens_per_second: 70.0,
             latency_ms: 14.0,
             memory_usage_mb: 3072.0,
+            computation_type: ComputationType::Real,
             gpu_utilization: Some(83.0),
         })
     }
@@ -522,8 +532,8 @@ mod ac6_ci_pipeline_tests {
             tokens_per_second: 200.0, // Unrealistic for real quantized computation
             latency_ms: 5.0,          // Too low for real computation
             memory_usage_mb: 100.0,   // Too low for neural network model
+            computation_type: ComputationType::Mock,
             gpu_utilization: None,
-            // is_mock_suspected: true, // TODO: Add to PerformanceMetrics when real implementation is created
         };
 
         let detection_result = mock_detector.validate_performance_metrics(&mock_metrics);
@@ -534,8 +544,8 @@ mod ac6_ci_pipeline_tests {
             tokens_per_second: 15.0, // Realistic CPU performance
             latency_ms: 67.0,        // Realistic inference latency
             memory_usage_mb: 2048.0, // Realistic model memory usage
+            computation_type: ComputationType::Real,
             gpu_utilization: None,
-            // is_mock_suspected: false, // TODO: Add to PerformanceMetrics when real implementation is created
         };
 
         let real_result = mock_detector.validate_performance_metrics(&real_metrics);
