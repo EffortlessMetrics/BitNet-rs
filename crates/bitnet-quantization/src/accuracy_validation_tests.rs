@@ -9,7 +9,7 @@ mod tests {
     use crate::{I2SQuantizer, QuantizerTrait, TL1Quantizer, TL2Quantizer};
     use bitnet_common::Result;
     use candle_core::Tensor;
-    use std::f32::consts::{E, PI};
+    use std::f32::consts::PI;
 
     /// Statistical accuracy metrics for quantization evaluation
     #[derive(Debug, Clone)]

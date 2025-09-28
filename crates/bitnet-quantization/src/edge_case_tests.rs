@@ -6,9 +6,8 @@
 #[cfg(test)]
 mod tests {
     use crate::utils::create_tensor_from_f32;
-    use crate::{I2SQuantizer, QuantizerTrait, TL1Quantizer, TL2Quantizer};
+    use crate::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
     use bitnet_common::Result;
-    use candle_core::Tensor;
     use std::f32;
 
     /// Test boundary values for I2S quantization
@@ -156,7 +155,7 @@ mod tests {
         let quantizer = TL2Quantizer::new();
 
         // Test with small values near zero
-        let small_values: Vec<f32> = (0..32).map(|i| (i as f32 / 1000000.0)).collect();
+        let small_values: Vec<f32> = (0..32).map(|i| i as f32 / 1000000.0).collect();
         let small_tensor = create_tensor_from_f32(&small_values, &[32])?;
 
         let quantized = quantizer.quantize(&small_tensor)?;

@@ -138,12 +138,12 @@ mod performance_baseline_tests {
             // Store baseline results
             let baseline_storage = BaselineStorage::new();
             baseline_storage.store_cpu_baseline(&CPUBaselineResults {
-                i2s_baseline,
+                i2s_baseline: i2s_baseline.clone(),
                 #[cfg(target_arch = "aarch64")]
-                tl1_baseline,
+                tl1_baseline: tl1_baseline.clone(),
                 #[cfg(target_arch = "x86_64")]
-                tl2_baseline,
-                memory_baseline,
+                tl2_baseline: tl2_baseline.clone(),
+                memory_baseline: memory_baseline.clone(),
                 test_timestamp: std::time::SystemTime::now(),
                 platform_info: get_platform_info(),
             })?;
@@ -678,7 +678,7 @@ mod mock_detection_tests {
     fn test_performance_based_mock_detection() {
         println!("🕵️  Mock Detection: Testing performance-based detection");
 
-        let detection_result = || -> Result<()> {
+        let detection_result: Result<()> = {
             let mock_detector = PerformanceMockDetector::new();
 
             // Test realistic performance (should pass)
@@ -747,7 +747,7 @@ mod mock_detection_tests {
             println!("     - Borderline confidence: {:.3}", borderline_result.confidence_score);
 
             Ok(())
-        }();
+        };
 
         detection_result.expect("Performance-based mock detection should work");
     }
@@ -757,7 +757,7 @@ mod mock_detection_tests {
     fn test_strict_mode_mock_prevention() {
         println!("🕵️  Mock Detection: Testing strict mode prevention");
 
-        let prevention_result = || -> Result<()> {
+        let prevention_result: Result<()> = {
             // Test with strict mode disabled (should allow fallbacks)
             unsafe {
                 env::remove_var("BITNET_STRICT_MODE");
@@ -822,7 +822,7 @@ mod mock_detection_tests {
             println!("  ✅ Strict mode mock prevention successful");
 
             Ok(())
-        }();
+        };
 
         prevention_result.expect("Strict mode mock prevention should work");
     }
@@ -895,7 +895,6 @@ mod mock_detection_tests {
 }
 
 /// Helper structures and implementations for performance testing
-
 // Configuration structures
 struct CPUBaselineConfig {
     test_duration_seconds: u32,

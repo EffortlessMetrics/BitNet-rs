@@ -93,13 +93,10 @@ fn test_suite_hardening_demonstration() -> Result<()> {
         for (data, shape) in shapes {
             let tensor = create_tensor_from_f32(data, &shape, &device)?;
 
-            match quantizer.quantize(&tensor, &device) {
-                Ok(quantized) => {
-                    if quantized.shape == shape {
-                        shape_successes += 1;
-                    }
-                }
-                Err(_) => {}
+            if let Ok(quantized) = quantizer.quantize(&tensor, &device)
+                && quantized.shape == shape
+            {
+                shape_successes += 1;
             }
         }
 
