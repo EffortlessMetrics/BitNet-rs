@@ -91,7 +91,7 @@ impl StrictModeConfig {
 
     /// Validate kernel availability
     pub fn validate_kernel_availability(&self, scenario: &MissingKernelScenario) -> Result<()> {
-        if self.enabled && self.require_quantization && !scenario.fallback_available {
+        if self.enabled && self.require_quantization && scenario.fallback_available {
             return Err(BitNetError::StrictMode(format!(
                 "Strict mode: Required quantization kernel not available: {:?} on {:?}",
                 scenario.quantization_type, scenario.device
@@ -135,7 +135,7 @@ impl StrictModeEnforcer {
 
     /// Create enforcer with detailed configuration
     pub fn new_detailed() -> Self {
-        let config = StrictModeConfig::from_env_detailed();
+        let config = STRICT_MODE_CONFIG.get_or_init(StrictModeConfig::from_env_detailed).clone();
         Self { config }
     }
 

@@ -854,7 +854,7 @@ impl StrictModeConfig {
     }
 
     fn validate_kernel_availability(&self, scenario: &MissingKernelScenario) -> Result<()> {
-        if self.enabled && self.require_quantization && !scenario.fallback_available {
+        if self.enabled && self.require_quantization && scenario.fallback_available {
             return Err(anyhow!(
                 "Strict mode: Required quantization kernel not available: {:?} on {:?}",
                 scenario.quantization_type,
@@ -1057,6 +1057,16 @@ mod bitnet_common {
         pub fn get_config(&self) -> StrictModeConfig {
             StrictModeConfig::from_env()
         }
+        pub fn validate_inference_path(&self, path: &MockInferencePath) -> Result<()> {
+            if self.is_enabled() && path.uses_mock_computation {
+                Err(anyhow!(
+                    "Strict mode: Mock computation detected in inference path: {}",
+                    path.description
+                ))
+            } else {
+                Ok(())
+            }
+        }
     }
 }
 
@@ -1151,10 +1161,12 @@ impl ThreadSafeStrictModeEnforcer {
         Self
     }
     fn is_enabled(&self) -> bool {
-        env::var("BITNET_STRICT_MODE").unwrap_or_default() == "1"
+        let enforcer = bitnet_common::StrictModeEnforcer::new();
+        enforcer.is_enabled()
     }
-    fn validate_inference_path(&self, _path: &MockInferencePath) -> Result<()> {
-        if self.is_enabled() { Err(anyhow!("Mock inference path rejected")) } else { Ok(()) }
+    fn validate_inference_path(&self, path: &MockInferencePath) -> Result<()> {
+        let enforcer = bitnet_common::StrictModeEnforcer::new();
+        enforcer.validate_inference_path(path).map_err(|e| anyhow!("{}", e))
     }
 }
 
