@@ -6,7 +6,6 @@
 //! This test module provides basic integration testing to verify imports and
 //! basic instantiation across BitNet.rs crates for mock elimination.
 
-use anyhow::Result;
 use std::env;
 
 /// Cross-crate integration test imports

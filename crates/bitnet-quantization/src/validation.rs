@@ -275,7 +275,7 @@ pub fn validate_unpacked_data_consistency(
 mod tests {
     use super::*;
     use crate::utils::create_tensor_from_f32;
-    use bitnet_common::{SecurityLimits, Tensor};
+    use bitnet_common::SecurityLimits;
     use candle_core::Device;
 
     #[test]

@@ -1,6 +1,6 @@
 # Getting Started with BitNet Rust
 
-This guide will help you get up and running with BitNet Rust, a production-ready implementation of 1-bit neural network inference with real GGUF model weight loading. BitNet.rs replaces mock tensor initialization with comprehensive GGUF parsing, enabling meaningful neural network inference with actual trained parameters.
+This guide will help you get up and running with BitNet Rust, a production-ready implementation of 1-bit neural network inference with real quantized computation. BitNet.rs eliminates mock fallbacks and implements native I2S, TL1, and TL2 quantization kernels, enabling authentic neural network inference with realistic performance baselines.
 
 ## Installation
 
@@ -263,13 +263,14 @@ BitNet Rust respects these environment variables:
 
 ## Performance Optimization
 
-### Performance Expectations
+### Performance Expectations (Issue #260 Completed)
 
-BitNet.rs provides realistic performance baselines based on actual quantized computation:
+BitNet.rs provides realistic performance baselines based on real quantized computation without mock fallbacks:
 
-- **CPU Performance**: 10-20 tokens/sec with I2S quantization
+- **CPU Performance**: 10-20 tokens/sec with I2S quantization (real computation, not mock)
 - **GPU Performance**: 50-100 tokens/sec with mixed precision acceleration
-- **Quantization Accuracy**: I2S >99.8%, TL1/TL2 >99.6% correlation with FP32
+- **Quantization Accuracy**: I2S ≥99.8%, TL1/TL2 ≥99.6% correlation with FP32
+- **Strict Mode**: Use `BITNET_STRICT_MODE=1` to prevent any mock fallbacks
 
 ### CPU Optimization
 
@@ -324,12 +325,12 @@ let config = InferenceConfig {
    - Ensure sufficient disk space and memory
 
 3. **Poor performance**:
-   - Verify strict mode is enabled: `BITNET_STRICT_MODE=1`
-   - Check for mock inference fallbacks in logs
+   - **CRITICAL**: Verify strict mode is enabled: `BITNET_STRICT_MODE=1` to prevent mock fallbacks
+   - Check for mock inference warnings in logs (should be eliminated in Issue #260)
    - Enable native CPU features with `RUSTFLAGS="-C target-cpu=native"`
    - Use GPU acceleration if available with proper feature flags
    - Adjust batch size and thread count
-   - Expect realistic performance: CPU 10-20 tok/s, GPU 50-100 tok/s
+   - Expect realistic performance with real quantization: CPU 10-20 tok/s, GPU 50-100 tok/s
 
 ### Debug Mode
 
