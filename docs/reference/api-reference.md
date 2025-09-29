@@ -1,6 +1,472 @@
 # API Reference
 
-This document provides comprehensive API reference for BitNet Rust.
+This document provides comprehensive API reference for BitNet Rust library and production inference server.
+
+## Production Inference Server API
+
+The BitNet.rs production inference server provides enterprise-grade HTTP API endpoints for neural network inference with comprehensive model management, monitoring, and security features.
+
+### Base URL and Versioning
+
+```
+Base URL: http://localhost:8080
+API Version: v1
+```
+
+All v1 endpoints are prefixed with `/v1/` for version management and backward compatibility.
+
+### Authentication
+
+JWT authentication is optional and configurable. When enabled, include the JWT token in requests:
+
+```bash
+curl -H "Authorization: Bearer <jwt-token>" http://localhost:8080/v1/inference
+```
+
+## Inference Endpoints
+
+### POST /v1/inference
+
+Synchronous inference with comprehensive configuration options and performance metrics.
+
+**Request Body**:
+```json
+{
+  "prompt": "The future of AI is",
+  "max_tokens": 100,
+  "model": "optional_model_id",
+  "temperature": 0.7,
+  "top_p": 0.9,
+  "top_k": 50,
+  "repetition_penalty": 1.0,
+  "stop_sequences": ["string"],
+  "seed": 42,
+  "priority": "normal",
+  "device_preference": "auto",
+  "quantization_hint": "i2s",
+  "timeout_ms": 30000
+}
+```
+
+**Request Parameters**:
+- `prompt` (string, required): Input text for generation
+- `max_tokens` (integer, optional, default: 64): Maximum tokens to generate
+- `model` (string, optional): Specific model ID to use for inference
+- `temperature` (float, optional, default: 1.0): Sampling temperature (0.0-2.0)
+- `top_p` (float, optional, default: 0.9): Nucleus sampling probability
+- `top_k` (integer, optional, default: 50): Top-k sampling limit
+- `repetition_penalty` (float, optional, default: 1.0): Repetition penalty factor
+- `stop_sequences` (array, optional): Sequences to stop generation
+- `seed` (integer, optional): Random seed for deterministic generation
+- `priority` (string, optional): Request priority ("low", "normal", "high", "critical")
+- `device_preference` (string, optional): Device selection ("auto", "cpu", "gpu", "cuda:N")
+- `quantization_hint` (string, optional): Preferred quantization ("auto", "i2s", "tl1", "tl2")
+- `timeout_ms` (integer, optional, default: 30000): Request timeout in milliseconds
+
+**Response**:
+```json
+{
+  "text": "The future of AI is bright with advances in neural network quantization enabling efficient deployment at scale.",
+  "tokens_generated": 17,
+  "inference_time_ms": 890,
+  "tokens_per_second": 19.1,
+  "device_used": "Cpu",
+  "quantization_type": "i2s",
+  "batch_id": "batch_uuid_123",
+  "batch_size": 1,
+  "queue_time_ms": 5
+}
+```
+
+**Status Codes**:
+- `200 OK`: Successful inference
+- `400 Bad Request`: Invalid request parameters or validation failure
+- `429 Too Many Requests`: Rate limit exceeded or server overloaded
+- `500 Internal Server Error`: Server error during inference
+
+### POST /v1/inference/stream
+
+Server-Sent Events (SSE) streaming inference for real-time token generation.
+
+**Request**: Same as `/v1/inference` endpoint
+
+**Response Headers**:
+```
+Content-Type: text/event-stream
+Cache-Control: no-cache
+Connection: keep-alive
+```
+
+**Streaming Response Format**:
+```
+data: {"type": "token", "text": "The", "position": 0}
+
+data: {"type": "token", "text": " future", "position": 1}
+
+data: {"type": "metrics", "tokens_per_second": 25.3, "device": "Cpu"}
+
+data: {"type": "complete", "total_tokens": 17, "inference_time_ms": 1780, "final_text": "The future of AI is..."}
+```
+
+**Event Types**:
+- `token`: Individual token generation with text and position
+- `metrics`: Real-time performance metrics during generation
+- `complete`: Final completion event with summary statistics
+- `error`: Error information if generation fails
+
+### POST /inference (Legacy)
+
+Legacy inference endpoint for backward compatibility. Provides simplified interface without enhanced features.
+
+**Request/Response**: Subset of `/v1/inference` without enhanced metadata.
+
+## Model Management Endpoints
+
+### POST /v1/models/load
+
+Load a new model with comprehensive validation and configuration.
+
+**Request Body**:
+```json
+{
+  "model_path": "/path/to/model.gguf",
+  "tokenizer_path": "/path/to/tokenizer.json",
+  "device": "auto",
+  "model_id": "custom_model_name",
+  "validation_config": {
+    "enable_cross_validation": true,
+    "min_accuracy": 0.99,
+    "validation_samples": 100
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "model_id": "model_12345",
+  "status": "success",
+  "message": "Model loaded and activated successfully"
+}
+```
+
+### GET /v1/models
+
+List all loaded models with metadata and performance information.
+
+**Response**:
+```json
+{
+  "models": [
+    {
+      "id": "model_12345",
+      "path": "/app/models/bitnet-2b.gguf",
+      "status": "active",
+      "quantization_format": "i2s",
+      "device": "Cpu",
+      "load_time": "2023-12-01T10:30:00Z",
+      "performance_metrics": {
+        "avg_tokens_per_second": 28.4,
+        "avg_inference_time_ms": 890,
+        "accuracy_score": 0.995,
+        "total_requests": 1524
+      },
+      "model_info": {
+        "parameter_count": 2000000000,
+        "tensor_count": 248,
+        "model_size_bytes": 1200000000
+      }
+    }
+  ]
+}
+```
+
+### GET /v1/models/{model_id}
+
+Get detailed information about a specific model.
+
+**Response**: Single model object from the list above.
+
+### DELETE /v1/models/{model_id}
+
+Unload a specific model from memory.
+
+**Status Codes**:
+- `204 No Content`: Model successfully unloaded
+- `404 Not Found`: Model ID not found
+- `500 Internal Server Error`: Error during unload
+
+### POST /v1/models/swap
+
+Atomic model hot-swapping with rollback capabilities for zero-downtime updates.
+
+**Request Body**:
+```json
+{
+  "new_model_path": "/path/to/new_model.gguf",
+  "target_model_id": "existing_model",
+  "swap_strategy": "atomic",
+  "rollback_on_failure": true,
+  "validation_timeout_seconds": 30
+}
+```
+
+**Response**:
+```json
+{
+  "swap_id": "swap_uuid_456",
+  "status": "success",
+  "new_model_id": "model_67890",
+  "previous_model_id": "model_12345",
+  "swap_time_ms": 245
+}
+```
+
+## Health and Monitoring Endpoints
+
+### GET /health
+
+Comprehensive health check with component status and system metrics.
+
+**Response**:
+```json
+{
+  "status": "healthy",
+  "timestamp": "2023-12-01T10:30:00Z",
+  "components": {
+    "model_manager": "healthy",
+    "execution_router": "healthy",
+    "batch_engine": "healthy",
+    "device_monitor": "healthy",
+    "concurrency_manager": "healthy"
+  },
+  "system_metrics": {
+    "cpu_utilization": 0.65,
+    "gpu_utilization": 0.78,
+    "memory_usage_bytes": 6442450944,
+    "active_requests": 23,
+    "uptime_seconds": 86400
+  },
+  "build_info": {
+    "version": "1.0.0",
+    "build_date": "2023-12-01T08:00:00Z",
+    "git_commit": "abc1234",
+    "features": ["cpu", "gpu", "prometheus"]
+  }
+}
+```
+
+**Status Values**:
+- `healthy`: All components functioning normally
+- `degraded`: Some components have issues but service available
+- `unhealthy`: Critical components failed, service unavailable
+
+### GET /health/live
+
+Kubernetes liveness probe endpoint for container restart decisions.
+
+**Response**:
+```json
+{
+  "status": "live",
+  "timestamp": "2023-12-01T10:30:00Z"
+}
+```
+
+**Status Codes**:
+- `200 OK`: Service is alive and responding
+- `503 Service Unavailable`: Service is unresponsive and should be restarted
+
+### GET /health/ready
+
+Kubernetes readiness probe endpoint for traffic routing decisions.
+
+**Response**:
+```json
+{
+  "status": "ready",
+  "timestamp": "2023-12-01T10:30:00Z",
+  "checks": {
+    "models_loaded": true,
+    "devices_available": true,
+    "request_processing": true
+  }
+}
+```
+
+**Status Codes**:
+- `200 OK`: Service is ready to accept traffic
+- `503 Service Unavailable`: Service not ready for traffic
+
+## Statistics and Performance Endpoints
+
+### GET /v1/stats
+
+Comprehensive server statistics with performance metrics and usage information.
+
+**Response**:
+```json
+{
+  "server_stats": {
+    "uptime_seconds": 86400,
+    "total_requests": 125430,
+    "successful_requests": 124987,
+    "error_rate": 0.0035,
+    "avg_response_time_ms": 1245
+  },
+  "inference_stats": {
+    "total_tokens_generated": 2847593,
+    "avg_tokens_per_second": 28.4,
+    "quantization_distribution": {
+      "i2s": 0.65,
+      "tl1": 0.25,
+      "tl2": 0.10
+    },
+    "device_distribution": {
+      "cpu": 0.40,
+      "gpu": 0.60
+    }
+  },
+  "batch_engine_stats": {
+    "total_batches": 15234,
+    "avg_batch_size": 3.2,
+    "batch_utilization": 0.78,
+    "queue_depth": 12
+  },
+  "concurrency_stats": {
+    "active_requests": 23,
+    "max_concurrent_requests": 100,
+    "rate_limited_requests": 45,
+    "avg_queue_time_ms": 15
+  }
+}
+```
+
+### GET /v1/devices
+
+Device status and utilization information for compute resources.
+
+**Response**:
+```json
+{
+  "devices": [
+    {
+      "id": "cpu",
+      "type": "Cpu",
+      "status": "healthy",
+      "utilization": 0.65,
+      "memory_usage_bytes": 4294967296,
+      "memory_total_bytes": 8589934592,
+      "active_requests": 15,
+      "capabilities": {
+        "simd_support": ["avx2", "avx512"],
+        "quantization_support": ["i2s", "tl1", "tl2"]
+      }
+    },
+    {
+      "id": "cuda:0",
+      "type": "Cuda",
+      "device_index": 0,
+      "status": "healthy",
+      "utilization": 0.78,
+      "memory_usage_bytes": 6442450944,
+      "memory_total_bytes": 10737418240,
+      "active_requests": 8,
+      "capabilities": {
+        "compute_capability": "8.6",
+        "mixed_precision": ["fp16", "bf16"],
+        "quantization_support": ["i2s", "tl1", "tl2"]
+      },
+      "gpu_info": {
+        "name": "NVIDIA GeForce RTX 3080",
+        "driver_version": "525.60.11",
+        "cuda_version": "12.0"
+      }
+    }
+  ]
+}
+```
+
+## Prometheus Metrics Endpoint
+
+### GET /metrics
+
+Prometheus-compatible metrics export for monitoring and alerting.
+
+**Response Format**: Prometheus text exposition format
+
+**Key Metrics**:
+```
+# HELP bitnet_inference_duration_seconds Time spent processing inference requests
+# TYPE bitnet_inference_duration_seconds histogram
+bitnet_inference_duration_seconds_bucket{quantization_type="i2s",device="cpu",le="0.5"} 245
+bitnet_inference_duration_seconds_bucket{quantization_type="i2s",device="cpu",le="1.0"} 892
+bitnet_inference_duration_seconds_bucket{quantization_type="i2s",device="cpu",le="2.0"} 1456
+
+# HELP bitnet_tokens_per_second Current token generation rate
+# TYPE bitnet_tokens_per_second gauge
+bitnet_tokens_per_second{device="cpu",quantization_type="i2s"} 28.4
+
+# HELP bitnet_active_requests Current number of active requests
+# TYPE bitnet_active_requests gauge
+bitnet_active_requests 23
+
+# HELP bitnet_quantization_accuracy_ratio Quantization accuracy vs reference
+# TYPE bitnet_quantization_accuracy_ratio gauge
+bitnet_quantization_accuracy_ratio{quantization_type="i2s"} 0.995
+
+# HELP bitnet_gpu_utilization_ratio GPU utilization percentage
+# TYPE bitnet_gpu_utilization_ratio gauge
+bitnet_gpu_utilization_ratio{device="cuda:0"} 0.78
+
+# HELP bitnet_model_load_duration_seconds Time to load models
+# TYPE bitnet_model_load_duration_seconds histogram
+bitnet_model_load_duration_seconds_sum{model_size="2b"} 125.6
+bitnet_model_load_duration_seconds_count{model_size="2b"} 15
+```
+
+## Error Handling and Status Codes
+
+### Standardized Error Response
+
+All API endpoints return standardized error responses:
+
+```json
+{
+  "error": "Detailed error message",
+  "error_code": "ERROR_CODE",
+  "request_id": "req_uuid_789",
+  "details": {
+    "field": "Additional context",
+    "suggestion": "How to fix the issue"
+  }
+}
+```
+
+### Common Error Codes
+
+- `PROMPT_TOO_LONG`: Input prompt exceeds maximum length
+- `TOO_MANY_TOKENS`: Token count exceeds limit
+- `INVALID_CHARACTERS`: Prompt contains invalid characters
+- `BLOCKED_CONTENT`: Content blocked by security filters
+- `MODEL_NOT_FOUND`: Requested model not available
+- `DEVICE_UNAVAILABLE`: Requested device not available
+- `QUANTIZATION_NOT_SUPPORTED`: Unsupported quantization format
+- `RATE_LIMIT_EXCEEDED`: Request rate limit exceeded
+- `SERVER_OVERLOADED`: Server at capacity
+- `VALIDATION_FAILED`: Request validation failed
+
+### HTTP Status Code Reference
+
+- `200 OK`: Successful request
+- `400 Bad Request`: Client error in request format or content
+- `401 Unauthorized`: Authentication required or failed
+- `403 Forbidden`: Request not allowed for authenticated user
+- `404 Not Found`: Resource not found
+- `413 Payload Too Large`: Request body exceeds size limits
+- `429 Too Many Requests`: Rate limiting applied
+- `500 Internal Server Error`: Unexpected server error
+- `503 Service Unavailable`: Server temporarily unavailable
 
 ## Core Types
 
