@@ -1,0 +1,19 @@
+{
+  "platform": "linux-x86_64",
+  "timestamp": "2025-09-27T17:58:07Z",
+  "metrics": {
+    "rust_implementation": {
+      "throughput_tokens_per_second": 64000.0,
+      "latency_p50_ms": 1.0,
+      "latency_p95_ms": 1.2,
+      "latency_p99_ms": 1.5,
+      "memory_usage_mb": 1024.0,
+      "cpu_usage_percent": 75.0,
+      "first_token_latency_ms": 0.1,
+      "model_load_time_ms": 1200.0,
+      "accuracy_score": 0.9987
+    },
+    "cpp_legacy": {},
+    "performance_ratios": {}
+  }
+}

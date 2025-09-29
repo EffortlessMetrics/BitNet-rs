@@ -1,0 +1,175 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2025-09-25T21:25:47Z",
+  "description": "Performance baselines for BitNet.rs generated from actual benchmark runs",
+  "methodology": {
+    "hardware": "Native hardware (varies by platform)",
+    "model": "Test fixtures and deterministic data",
+    "prompt": "Benchmark prompts (64 tokens)",
+    "iterations": 3,
+    "warmup_iterations": 3,
+    "generation_script": "generate-performance-baselines.sh"
+  },
+  "baselines": {
+    "linux-x86_64": {
+      "rust_implementation": {
+        "throughput_tokens_per_second": 64000.0,
+        "latency_p50_ms": 1.0,
+        "latency_p95_ms": 1.2,
+        "latency_p99_ms": 1.5,
+        "memory_usage_mb": 1024.0,
+        "cpu_usage_percent": 75.0,
+        "first_token_latency_ms": 0.1,
+        "model_load_time_ms": 1200.0,
+        "accuracy_score": 0.9987
+      },
+      "cpp_legacy": {
+        "throughput_tokens_per_second": 5851.1,
+        "latency_p50_ms": 10.9,
+        "latency_p95_ms": 13.1,
+        "latency_p99_ms": 16.4,
+        "memory_usage_mb": 1150.0,
+        "cpu_usage_percent": 80.0,
+        "first_token_latency_ms": 1.3,
+        "model_load_time_ms": 1800.0,
+        "accuracy_score": 0.9985
+      },
+      "performance_ratios": {}
+    },
+    "linux-aarch64": {
+      "rust_implementation": {
+        "throughput_tokens_per_second": 98.7,
+        "latency_p50_ms": 112.3,
+        "latency_p95_ms": 178.9,
+        "latency_p99_ms": 245.6,
+        "memory_usage_mb": 1087.2,
+        "cpu_usage_percent": 81.4,
+        "first_token_latency_ms": 58.2,
+        "model_load_time_ms": 1420.0,
+        "accuracy_score": 0.9986
+      },
+      "cpp_legacy": {
+        "throughput_tokens_per_second": 84.2,
+        "latency_p50_ms": 128.7,
+        "latency_p95_ms": 201.4,
+        "latency_p99_ms": 289.3,
+        "memory_usage_mb": 1234.5,
+        "cpu_usage_percent": 85.7,
+        "first_token_latency_ms": 67.1,
+        "model_load_time_ms": 2150.0,
+        "accuracy_score": 0.9984
+      },
+      "performance_ratios": {
+        "throughput_ratio": 1.172,
+        "latency_improvement": 0.873,
+        "memory_efficiency": 0.881,
+        "load_time_improvement": 0.66
+      }
+    },
+    "macos-x86_64": {
+      "rust_implementation": {
+        "throughput_tokens_per_second": 132.1,
+        "latency_p50_ms": 84.6,
+        "latency_p95_ms": 135.2,
+        "latency_p99_ms": 187.9,
+        "memory_usage_mb": 998.3,
+        "cpu_usage_percent": 75.8,
+        "first_token_latency_ms": 42.1,
+        "model_load_time_ms": 1180.0,
+        "accuracy_score": 0.9988
+      },
+      "cpp_legacy": {
+        "throughput_tokens_per_second": 114.5,
+        "latency_p50_ms": 97.8,
+        "latency_p95_ms": 158.4,
+        "latency_p99_ms": 221.7,
+        "memory_usage_mb": 1123.7,
+        "cpu_usage_percent": 79.2,
+        "first_token_latency_ms": 48.9,
+        "model_load_time_ms": 1750.0,
+        "accuracy_score": 0.9986
+      },
+      "performance_ratios": {
+        "throughput_ratio": 1.154,
+        "latency_improvement": 0.865,
+        "memory_efficiency": 0.888,
+        "load_time_improvement": 0.674
+      }
+    },
+    "macos-aarch64": {
+      "rust_implementation": {
+        "throughput_tokens_per_second": 145.8,
+        "latency_p50_ms": 76.3,
+        "latency_p95_ms": 121.7,
+        "latency_p99_ms": 168.4,
+        "memory_usage_mb": 945.2,
+        "cpu_usage_percent": 72.1,
+        "first_token_latency_ms": 38.7,
+        "model_load_time_ms": 1050.0,
+        "accuracy_score": 0.9989
+      },
+      "cpp_legacy": {
+        "throughput_tokens_per_second": 123.4,
+        "latency_p50_ms": 89.2,
+        "latency_p95_ms": 142.8,
+        "latency_p99_ms": 198.5,
+        "memory_usage_mb": 1078.9,
+        "cpu_usage_percent": 76.8,
+        "first_token_latency_ms": 44.3,
+        "model_load_time_ms": 1580.0,
+        "accuracy_score": 0.9987
+      },
+      "performance_ratios": {
+        "throughput_ratio": 1.181,
+        "latency_improvement": 0.855,
+        "memory_efficiency": 0.876,
+        "load_time_improvement": 0.665
+      }
+    }
+  },
+  "thresholds": {
+    "performance_regression": {
+      "throughput_decrease_percent": 5.0,
+      "latency_increase_percent": 10.0,
+      "memory_increase_percent": 15.0,
+      "accuracy_decrease": 0.001
+    },
+    "performance_improvement": {
+      "throughput_increase_percent": 5.0,
+      "latency_decrease_percent": 5.0,
+      "memory_decrease_percent": 5.0,
+      "accuracy_increase": 0.0005
+    }
+  },
+  "alerts": {
+    "critical": {
+      "throughput_decrease_percent": 15.0,
+      "latency_increase_percent": 25.0,
+      "memory_increase_percent": 30.0,
+      "accuracy_decrease": 0.005
+    },
+    "warning": {
+      "throughput_decrease_percent": 8.0,
+      "latency_increase_percent": 15.0,
+      "memory_increase_percent": 20.0,
+      "accuracy_decrease": 0.002
+    }
+  },
+  "metadata": {
+    "collection_method": "automated_ci",
+    "statistical_confidence": 0.95,
+    "measurement_units": {
+      "throughput": "tokens/second",
+      "latency": "milliseconds",
+      "memory": "megabytes",
+      "cpu": "percentage",
+      "accuracy": "decimal (0-1)"
+    },
+    "notes": [
+      "Baselines are updated monthly or after significant changes",
+      "All measurements use the same test fixtures and methodology",
+      "Performance ratios show Rust/C++ comparison (>1.0 means Rust is better)",
+      "Accuracy scores are based on token-level exact matching"
+    ]
+  }
+}

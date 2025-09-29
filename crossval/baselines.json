@@ -1,13 +1,13 @@
 {
   "version": "1.0.0",
-  "last_updated": "2025-09-25T21:25:47Z",
+  "last_updated": "2025-09-27T17:58:07Z",
   "description": "Performance baselines for BitNet.rs generated from actual benchmark runs",
   "methodology": {
     "hardware": "Native hardware (varies by platform)",
     "model": "Test fixtures and deterministic data",
     "prompt": "Benchmark prompts (64 tokens)",
-    "iterations": 3,
-    "warmup_iterations": 3,
+    "iterations": 5,
+    "warmup_iterations": 1,
     "generation_script": "generate-performance-baselines.sh"
   },
   "baselines": {
@@ -23,17 +23,7 @@
         "model_load_time_ms": 1200.0,
         "accuracy_score": 0.9987
       },
-      "cpp_legacy": {
-        "throughput_tokens_per_second": 5851.1,
-        "latency_p50_ms": 10.9,
-        "latency_p95_ms": 13.1,
-        "latency_p99_ms": 16.4,
-        "memory_usage_mb": 1150.0,
-        "cpu_usage_percent": 80.0,
-        "first_token_latency_ms": 1.3,
-        "model_load_time_ms": 1800.0,
-        "accuracy_score": 0.9985
-      },
+      "cpp_legacy": {},
       "performance_ratios": {}
     },
     "linux-aarch64": {

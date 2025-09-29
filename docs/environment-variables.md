@@ -10,6 +10,7 @@ This document describes all environment variables used throughout BitNet.rs for 
 - `HF_TOKEN`: Hugging Face token for private repos
 - `BITNET_DETERMINISTIC`: Enable deterministic mode for testing
 - `BITNET_SEED`: Set seed for reproducible runs
+- `BITNET_STRICT_MODE`: Prevent mock inference fallbacks ("1" enables strict mode for production)
 
 ### Performance and Parallelism
 - `RAYON_NUM_THREADS`: Control CPU parallelism
@@ -19,6 +20,7 @@ This document describes all environment variables used throughout BitNet.rs for 
 
 These variables prevent "Potemkin passes" (false positives) in performance and integration tests:
 
+- `BITNET_STRICT_MODE=1`: **Primary strict mode** - Prevents ALL mock inference fallbacks, essential for production deployment and accurate performance measurement
 - `BITNET_STRICT_TOKENIZERS=1`: Forbid mock tokenizer fallbacks in perf/integration tests (includes SPM tokenizer fallbacks)
 - `BITNET_STRICT_NO_FAKE_GPU=1`: Forbid fake GPU backends in perf/integration tests
 
@@ -70,12 +72,17 @@ BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels --features gpu
 For reproducible builds and testing:
 
 ```bash
-# Force stable runs
+# Force stable runs with strict mode (no mock fallbacks)
+export BITNET_STRICT_MODE=1
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
 
-# Single-threaded CPU determinism
+# Single-threaded CPU determinism for testing
 export RAYON_NUM_THREADS=1
+
+# Production deterministic inference with real quantization
+BITNET_STRICT_MODE=1 BITNET_DETERMINISTIC=1 BITNET_SEED=42 \
+cargo run -p xtask -- infer --model model.gguf --prompt "Test"
 
 # Local performance builds (not CI)
 export RUSTFLAGS="-C target-cpu=native"
@@ -84,24 +91,38 @@ export RUSTFLAGS="-C target-cpu=native"
 ## Strict Testing Examples
 
 ```bash
+# Primary strict mode - prevents ALL mock inference fallbacks
+BITNET_STRICT_MODE=1 cargo test -p bitnet-inference --no-default-features --features cpu
+BITNET_STRICT_MODE=1 cargo run -p xtask -- infer --model model.gguf --prompt "Test"
+
 # CPU baseline (no mocks involved)
 cargo bench -p bitnet-quantization --bench simd_comparison
 
 # GPU perf (strict, real hardware only)
 BITNET_STRICT_NO_FAKE_GPU=1 \
+BITNET_STRICT_MODE=1 \
 cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
 
 # Strict integration/tokenizer tests (no mock fallbacks)
 BITNET_STRICT_TOKENIZERS=1 \
+BITNET_STRICT_MODE=1 \
 cargo test -p bitnet-tokenizers -- --quiet
 
 BITNET_STRICT_NO_FAKE_GPU=1 \
+BITNET_STRICT_MODE=1 \
 cargo test -p bitnet-kernels --no-default-features --features gpu -- --quiet
 
-# Combined strict testing
+# Combined strict testing for production validation
+BITNET_STRICT_MODE=1 \
 BITNET_STRICT_TOKENIZERS=1 \
 BITNET_STRICT_NO_FAKE_GPU=1 \
 scripts/verify-tests.sh
+
+# Cross-validation with strict mode (no mock fallbacks)
+BITNET_STRICT_MODE=1 \
+BITNET_DETERMINISTIC=1 \
+BITNET_SEED=42 \
+cargo run -p xtask -- crossval
 ```
 
 ## System Metrics Variables

@@ -25,6 +25,8 @@ pub enum BitNetError {
     Configuration(String),
     #[error("Security error: {0}")]
     Security(#[from] SecurityError),
+    #[error("Strict mode violation: {0}")]
+    StrictMode(String),
 }
 
 /// Model-related errors

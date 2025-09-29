@@ -11,10 +11,20 @@ pub struct DeterministicTokenizer;
 impl DeterministicTokenizer {
     /// Enable deterministic mode with environment variables
     pub fn enable_deterministic_mode() -> Result<()> {
-        // Test scaffolding - actual implementation pending
-        unimplemented!(
-            "DeterministicTokenizer::enable_deterministic_mode - requires deterministic configuration"
-        )
+        // Set environment variables for deterministic tokenization
+        unsafe {
+            std::env::set_var("BITNET_DETERMINISTIC", "1");
+            std::env::set_var("TOKENIZERS_PARALLELISM", "false");
+            std::env::set_var("RAYON_NUM_THREADS", "1");
+
+            // Additional deterministic settings for reproducible neural network inference
+            std::env::set_var("BITNET_SEED", "42");
+
+            // Disable potential sources of non-determinism in tokenization
+            std::env::set_var("HF_TOKENIZERS_FAST", "false");
+        }
+
+        Ok(())
     }
 
     /// Check if deterministic mode is enabled

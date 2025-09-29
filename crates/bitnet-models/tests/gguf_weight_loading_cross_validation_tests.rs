@@ -101,9 +101,11 @@ async fn test_ac5_comprehensive_weight_loading_cross_validation() -> Result<()> 
     let config = CrossValidationTestConfig::default();
 
     // Set up deterministic environment for reproducible testing
-    std::env::set_var("BITNET_DETERMINISTIC", "1");
-    std::env::set_var("BITNET_SEED", config.deterministic_seed.to_string());
-    std::env::set_var("BITNET_CROSSVAL_WEIGHTS", "1");
+    unsafe {
+        std::env::set_var("BITNET_DETERMINISTIC", "1");
+        std::env::set_var("BITNET_SEED", config.deterministic_seed.to_string());
+        std::env::set_var("BITNET_CROSSVAL_WEIGHTS", "1");
+    }
 
     // Create test model for cross-validation
     let test_model_path = setup_crossval_test_model()
@@ -151,9 +153,11 @@ async fn test_ac5_comprehensive_weight_loading_cross_validation() -> Result<()> 
         .context("Numerical stability validation failed")?;
 
     // Clean up environment
-    std::env::remove_var("BITNET_DETERMINISTIC");
-    std::env::remove_var("BITNET_SEED");
-    std::env::remove_var("BITNET_CROSSVAL_WEIGHTS");
+    unsafe {
+        std::env::remove_var("BITNET_DETERMINISTIC");
+        std::env::remove_var("BITNET_SEED");
+        std::env::remove_var("BITNET_CROSSVAL_WEIGHTS");
+    }
 
     Ok(())
 }
@@ -166,8 +170,10 @@ async fn test_ac5_inference_pipeline_cross_validation() -> Result<()> {
     let config = CrossValidationTestConfig::default();
 
     // Set up deterministic inference environment
-    std::env::set_var("BITNET_DETERMINISTIC", "1");
-    std::env::set_var("BITNET_SEED", config.deterministic_seed.to_string());
+    unsafe {
+        std::env::set_var("BITNET_DETERMINISTIC", "1");
+        std::env::set_var("BITNET_SEED", config.deterministic_seed.to_string());
+    }
 
     let test_model_path = setup_crossval_test_model().await?;
 
@@ -233,8 +239,10 @@ async fn test_ac5_inference_pipeline_cross_validation() -> Result<()> {
         }
     }
 
-    std::env::remove_var("BITNET_DETERMINISTIC");
-    std::env::remove_var("BITNET_SEED");
+    unsafe {
+        std::env::remove_var("BITNET_DETERMINISTIC");
+        std::env::remove_var("BITNET_SEED");
+    }
 
     Ok(())
 }
@@ -247,8 +255,10 @@ async fn test_ac5_quantization_accuracy_cross_validation() -> Result<()> {
     let config = CrossValidationTestConfig::default();
 
     // Set up test environment
-    std::env::set_var("BITNET_DETERMINISTIC", "1");
-    std::env::set_var("BITNET_SEED", config.deterministic_seed.to_string());
+    unsafe {
+        std::env::set_var("BITNET_DETERMINISTIC", "1");
+        std::env::set_var("BITNET_SEED", config.deterministic_seed.to_string());
+    }
 
     let test_model_path = setup_crossval_test_model().await?;
 
@@ -289,8 +299,10 @@ async fn test_ac5_quantization_accuracy_cross_validation() -> Result<()> {
         tl2_accuracy
     );
 
-    std::env::remove_var("BITNET_DETERMINISTIC");
-    std::env::remove_var("BITNET_SEED");
+    unsafe {
+        std::env::remove_var("BITNET_DETERMINISTIC");
+        std::env::remove_var("BITNET_SEED");
+    }
 
     Ok(())
 }
@@ -305,8 +317,10 @@ async fn test_ac5_deterministic_inference_validation() -> Result<()> {
 
     // Test multiple runs with same seed should produce identical results
     for seed in [42, 123, 777] {
-        std::env::set_var("BITNET_DETERMINISTIC", "1");
-        std::env::set_var("BITNET_SEED", seed.to_string());
+        unsafe {
+            std::env::set_var("BITNET_DETERMINISTIC", "1");
+            std::env::set_var("BITNET_SEED", seed.to_string());
+        }
 
         let (_, weights) = bitnet_models::gguf_simple::load_gguf(&test_model_path, Device::Cpu)?;
 
@@ -331,8 +345,10 @@ async fn test_ac5_deterministic_inference_validation() -> Result<()> {
             );
         }
 
-        std::env::remove_var("BITNET_DETERMINISTIC");
-        std::env::remove_var("BITNET_SEED");
+        unsafe {
+            std::env::remove_var("BITNET_DETERMINISTIC");
+            std::env::remove_var("BITNET_SEED");
+        }
     }
 
     Ok(())

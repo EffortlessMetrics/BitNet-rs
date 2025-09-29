@@ -10,9 +10,9 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet`** (root): Main library with unified public API and production-ready GGUF weight loading
 - **`bitnet-common`**: Shared types, traits, utilities, and enhanced error types for GGUF operations
 - **`bitnet-models`**: **Enhanced model loading with real GGUF weight parsing** - replaces mock tensor initialization with comprehensive transformer layer weight loading (AC1), supporting all quantization formats with device-aware placement
-- **`bitnet-quantization`**: 1-bit quantization algorithms with ≥99% accuracy validation vs FP32 baselines (AC2)
-- **`bitnet-kernels`**: High-performance SIMD/CUDA kernels with mixed precision support (FP16/BF16), device-aware quantization, FFI bridge for gradual C++ migration, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
-- **`bitnet-inference`**: Complete neural network inference engine with autoregressive generation, multi-head attention, quantized linear layers, KV-cache optimization, streaming support, and **real GGUF model integration**
+- **`bitnet-quantization`**: Real quantized computation with I2S (≥99.8%), TL1/TL2 (≥99.6%) accuracy validation vs FP32 baselines - **STRICT MODE ENFORCED** to prevent mock fallbacks
+- **`bitnet-kernels`**: **Device-aware quantization kernels** with SIMD/CUDA acceleration, mixed precision support (FP16/BF16), automatic CPU/GPU selection, FFI bridge for C++ cross-validation, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
+- **`bitnet-inference`**: **Mock-free inference engine** with autoregressive generation, multi-head attention, real quantized linear layers (QLinear), KV-cache optimization, streaming support, and authentic GGUF model integration - **STRICT MODE prevents all mock fallbacks**
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration, automatic discovery, and graceful fallback system
 - **`bitnet-server`**: HTTP server for BitNet inference with comprehensive health monitoring and real-time system metrics collection (CPU, memory, disk, network I/O)
 

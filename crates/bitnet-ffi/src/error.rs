@@ -150,6 +150,9 @@ impl From<BitNetError> for BitNetCError {
             BitNetError::Security(security_error) => {
                 BitNetCError::InvalidArgument(format!("Security error: {}", security_error))
             }
+            BitNetError::StrictMode(strict_mode_error) => {
+                BitNetCError::InvalidArgument(format!("Strict mode error: {}", strict_mode_error))
+            }
         }
     }
 }

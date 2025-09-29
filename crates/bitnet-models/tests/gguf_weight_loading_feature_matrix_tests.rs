@@ -346,9 +346,11 @@ async fn test_feature_matrix_wasm_nodejs() -> Result<()> {
 #[tokio::test]
 async fn test_feature_matrix_crossval_enabled() -> Result<()> {
     // Set cross-validation environment
-    std::env::set_var("BITNET_CROSSVAL_WEIGHTS", "1");
-    std::env::set_var("BITNET_DETERMINISTIC", "1");
-    std::env::set_var("BITNET_SEED", "42");
+    unsafe {
+        std::env::set_var("BITNET_CROSSVAL_WEIGHTS", "1");
+        std::env::set_var("BITNET_DETERMINISTIC", "1");
+        std::env::set_var("BITNET_SEED", "42");
+    }
 
     let fixture = FeatureMatrixFixture::new()?;
     let model_path = fixture.create_test_model()?;

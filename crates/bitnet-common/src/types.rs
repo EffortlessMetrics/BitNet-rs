@@ -24,17 +24,14 @@ impl std::fmt::Display for QuantizationType {
 }
 
 /// Device abstraction for computation
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Default,
+)]
 pub enum Device {
+    #[default]
     Cpu,
     Cuda(usize),
     Metal,
-}
-
-impl Default for Device {
-    fn default() -> Self {
-        Self::Cpu
-    }
 }
 
 // Conservative conversion from Candle device - avoids assuming CUDA ordinal
@@ -53,6 +50,21 @@ impl From<&candle_core::Device> for Device {
 }
 
 impl Device {
+    /// Create a new CUDA device with the specified index
+    pub fn new_cuda(index: usize) -> anyhow::Result<Self> {
+        Ok(Device::Cuda(index))
+    }
+
+    /// Check if this device is CPU
+    pub fn is_cpu(&self) -> bool {
+        matches!(self, Device::Cpu)
+    }
+
+    /// Check if this device is CUDA
+    pub fn is_cuda(&self) -> bool {
+        matches!(self, Device::Cuda(_))
+    }
+
     /// Convert our device preference to Candle's device.
     #[cfg(feature = "cuda")]
     pub fn to_candle(&self) -> anyhow::Result<candle_core::Device> {

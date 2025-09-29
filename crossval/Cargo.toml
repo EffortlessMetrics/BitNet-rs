@@ -14,6 +14,8 @@ ffi = ["dep:cc"]
 iq2s-ffi = ["bitnet-models/iq2s-ffi", "bitnet-ggml-ffi/iq2s-ffi"]
 cpp-probe = []
 integration-tests = []
+cpu = ["bitnet-inference/cpu", "bitnet-models/cpu"]
+gpu = ["bitnet-inference/gpu", "bitnet-models/gpu"]
 
 [dependencies]
 # Core dependencies (always available)

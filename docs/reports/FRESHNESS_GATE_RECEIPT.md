@@ -4,12 +4,12 @@
 | Gate | Status | Evidence | Timestamp |
 |------|--------|----------|-----------|
 | freshness | ✅ PASS | base up-to-date @83acbe6 | 2025-09-26T12:34:56Z |
-| benchmarks | ✅ PASS | cargo bench: I2S: 297-396 Melem/s, TL1: 191-328 Melem/s, TL2: 254-482 Melem/s; matrix: 1.0-3.6 Gelem/s; simd: active; memory: leak check pass | 2025-09-26T20:15:00Z |
+| benchmarks | ✅ PASS | cargo bench: I2S: 20-22 Melem/s quant, 363-2755 Kelem/s dequant; TL1: 18-19 Melem/s quant, 597-1102 Melem/s dequant; TL2: 28-31 Melem/s quant, 2.05-2.6 Melem/s dequant; RTX 5070 Ti available; baseline established | 2025-09-28T02:52:00Z |
 <!-- gates:end -->
 
 <!-- hops:start -->
 - **2025-09-26T12:34:56Z**: freshness-checker → hygiene-finalizer (branch current, no rebase needed)
-- **2025-09-26T20:15:00Z**: performance-baseline-specialist → docs-reviewer (benchmarks passed, ready for documentation review)
+- **2025-09-28T02:52:00Z**: performance-baseline-specialist → docs-reviewer (benchmarks passed with mock elimination baseline, ready for documentation review)
 <!-- hops:end -->
 
 <!-- decision:start -->

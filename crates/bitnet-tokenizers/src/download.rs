@@ -271,7 +271,7 @@ impl SmartTokenizerDownload {
             total_downloaded += chunk.len() as u64;
 
             // Log progress every 1MB
-            if total_downloaded % (1024 * 1024) == 0 || chunk.len() < 1024 {
+            if total_downloaded.is_multiple_of(1024 * 1024) || chunk.len() < 1024 {
                 debug!("Downloaded: {} bytes", total_downloaded);
             }
         }

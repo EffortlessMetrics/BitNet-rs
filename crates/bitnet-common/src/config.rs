@@ -56,8 +56,9 @@ impl Default for ModelConfig {
 }
 
 /// Supported model formats
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ModelFormat {
+    #[default]
     Gguf,
     SafeTensors,
     HuggingFace,
@@ -68,12 +69,6 @@ pub enum ModelFormat {
 pub struct RopeScaling {
     pub scaling_type: String,
     pub factor: f32,
-}
-
-impl Default for ModelFormat {
-    fn default() -> Self {
-        Self::Gguf
-    }
 }
 
 /// Inference configuration

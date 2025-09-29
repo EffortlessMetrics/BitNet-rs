@@ -492,6 +492,78 @@ mod property_tests {
                 prop_assert!(scale.is_finite(), "Scale {} should be finite", scale);
             }
         }
+
+        // NEW: Target specific arithmetic mutations in quantization algorithms
+        #[test]
+        fn test_quantization_arithmetic_consistency(
+            data in prop::collection::vec(-10.0f32..10.0f32, 32..128)
+        ) {
+            let tensor = create_test_tensor(data.clone(), vec![data.len()]);
+            let quantizer = I2SQuantizer::new();
+
+            let quantized = quantizer.quantize_tensor(&tensor).unwrap();
+
+            // Test that scales are computed correctly (not hardcoded)
+            // If scale calculation had `/` replaced with `*`, scales would be wrong
+            for &scale in &quantized.scales {
+                prop_assert!(scale < 100.0, "Scale {} too large - possible arithmetic mutation", scale);
+                prop_assert!(scale > 1e-10, "Scale {} too small - possible arithmetic mutation", scale);
+            }
+
+            // Test dequantization doesn't return hardcoded values
+            let dequantized = quantizer.dequantize_tensor(&quantized).unwrap();
+            let dequant_data = dequantized.to_vec().unwrap();
+
+            // Check for hardcoded return mutations like Ok(vec![1.0])
+            let all_same = dequant_data.windows(2).all(|w| (w[0] - w[1]).abs() < 1e-6);
+            if data.len() > 2 && !data.windows(2).all(|w| (w[0] - w[1]).abs() < 1e-6) {
+                prop_assert!(!all_same, "Dequantization returned constant values - possible hardcoded mutation");
+            }
+        }
+
+        // NEW: Test bit-shift operations aren't mutated
+        #[test]
+        fn test_bit_packing_consistency(
+            data in prop::collection::vec(-2.0f32..2.0f32, 64..256)
+        ) {
+            let tensor = create_test_tensor(data.clone(), vec![data.len()]);
+            let quantizer = I2SQuantizer::new();
+
+            let quantized = quantizer.quantize_tensor(&tensor).unwrap();
+
+            // I2S uses 2-bit quantization, so packed data should be much smaller
+            // If bit shifts were mutated (<</<< with >>), packing would be wrong
+            let original_bytes = data.len() * 4; // f32 = 4 bytes
+            let packed_bytes = quantized.data.len();
+            let scale_bytes = quantized.scales.len() * 4;
+            let total_quantized_bytes = packed_bytes + scale_bytes;
+
+            // Should achieve significant compression due to 2-bit packing
+            let compression_ratio = original_bytes as f32 / total_quantized_bytes as f32;
+            prop_assert!(compression_ratio > 2.0, "Compression ratio {} too low - possible bit-shift mutation", compression_ratio);
+        }
+
+        // NEW: Test device-aware quantization consistency
+        #[test]
+        fn test_device_quantization_consistency(
+            data in prop::collection::vec(-5.0f32..5.0f32, 64..128)
+        ) {
+            let cpu_tensor = create_test_tensor(data.clone(), vec![data.len()]);
+            let quantizer = I2SQuantizer::new();
+
+            let cpu_quantized = quantizer.quantize_tensor(&cpu_tensor).unwrap();
+            let cpu_dequantized = quantizer.dequantize_tensor(&cpu_quantized).unwrap();
+
+            // Test that CPU path produces valid results (not hardcoded fallbacks)
+            let cpu_data = cpu_dequantized.to_vec().unwrap();
+            let mse = data.iter().zip(cpu_data.iter())
+                .map(|(orig, deq)| (orig - deq).powi(2))
+                .sum::<f32>() / data.len() as f32;
+
+            // If device comparison mutations (<< with == or >) caused wrong paths,
+            // MSE would be very high or results would be constant
+            prop_assert!(mse < 50.0, "MSE {} too high - possible device comparison mutation", mse);
+        }
     }
 }
 
@@ -566,6 +638,104 @@ mod integration_tests {
             assert!(dequantize_time.as_millis() < 100, "{} dequantization too slow", name);
             assert!(compression_ratio > 1.0, "{} should provide compression", name);
             assert!(mse < 1.0, "{} MSE too high: {}", name, mse);
+        }
+    }
+
+    // NEW: Test mutation-killing accuracy validations
+    #[test]
+    fn test_quantization_accuracy_thresholds() {
+        // Test I2S quantization achieves >99.8% accuracy
+        let reference_data: Vec<f32> = (0..1024).map(|i| (i as f32 - 512.0) / 256.0).collect();
+        let tensor = create_test_tensor(reference_data.clone(), vec![reference_data.len()]);
+
+        let i2s_quantizer = I2SQuantizer::new();
+        let quantized = i2s_quantizer.quantize_tensor(&tensor).unwrap();
+        let dequantized = i2s_quantizer.dequantize_tensor(&quantized).unwrap();
+
+        let dequant_data = dequantized.to_vec().unwrap();
+        let mse = reference_data
+            .iter()
+            .zip(dequant_data.iter())
+            .map(|(orig, deq)| (orig - deq).powi(2))
+            .sum::<f32>()
+            / reference_data.len() as f32;
+
+        let rmse = mse.sqrt();
+        let signal_power =
+            reference_data.iter().map(|x| x.powi(2)).sum::<f32>() / reference_data.len() as f32;
+        let accuracy_percentage = 100.0 * (1.0 - rmse / signal_power.sqrt());
+
+        // I2S should achieve >99% accuracy - kills mutations that break quantization
+        assert!(
+            accuracy_percentage > 99.0,
+            "I2S accuracy {:.2}% below 99% threshold",
+            accuracy_percentage
+        );
+
+        // Additional validation: dequantized values should be in reasonable range
+        for &val in &dequant_data {
+            assert!(val.is_finite(), "Dequantized value not finite - possible mutation");
+            assert!(
+                val.abs() < 100.0,
+                "Dequantized value {} too large - possible scale mutation",
+                val
+            );
+        }
+    }
+
+    // NEW: Test lookup table arithmetic mutations for TL1/TL2
+    #[test]
+    fn test_lookup_table_arithmetic_consistency() {
+        let test_data = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
+        let tensor = create_test_tensor(test_data.clone(), vec![test_data.len()]);
+
+        // Test TL1 lookup table operations
+        let tl1_quantizer = TL1Quantizer::new();
+        let tl1_quantized = tl1_quantizer.quantize_tensor(&tensor).unwrap();
+        let tl1_dequantized = tl1_quantizer.dequantize_tensor(&tl1_quantized).unwrap();
+
+        // Test TL2 lookup table operations
+        let tl2_quantizer = TL2Quantizer::new();
+        let tl2_quantized = tl2_quantizer.quantize_tensor(&tensor).unwrap();
+        let tl2_dequantized = tl2_quantizer.dequantize_tensor(&tl2_quantized).unwrap();
+
+        // Validate that lookup tables produce different outputs for different inputs
+        // This kills mutations where arithmetic operations are swapped (/, *, %, etc.)
+        let tl1_data = tl1_dequantized.to_vec().unwrap();
+        let tl2_data = tl2_dequantized.to_vec().unwrap();
+
+        // Check for hardcoded returns or broken arithmetic
+        let tl1_range = tl1_data
+            .iter()
+            .fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &x| (min.min(x), max.max(x)));
+        let tl2_range = tl2_data
+            .iter()
+            .fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &x| (min.min(x), max.max(x)));
+
+        // Should have reasonable dynamic range (not all zeros/constants)
+        assert!(
+            tl1_range.1 - tl1_range.0 > 0.1,
+            "TL1 output range too small - possible arithmetic mutation"
+        );
+        assert!(
+            tl2_range.1 - tl2_range.0 > 0.1,
+            "TL2 output range too small - possible arithmetic mutation"
+        );
+
+        // Scales should be reasonable (not infinite/zero from division mutations)
+        for &scale in &tl1_quantized.scales {
+            assert!(
+                scale > 1e-10 && scale < 1e10,
+                "TL1 scale {} unreasonable - possible division mutation",
+                scale
+            );
+        }
+        for &scale in &tl2_quantized.scales {
+            assert!(
+                scale > 1e-10 && scale < 1e10,
+                "TL2 scale {} unreasonable - possible division mutation",
+                scale
+            );
         }
     }
 

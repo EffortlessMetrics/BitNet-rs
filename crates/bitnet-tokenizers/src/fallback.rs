@@ -64,12 +64,51 @@ impl TokenizerFallbackChain {
     /// * `Err(BitNetError)` - All fallback strategies failed with detailed error summary
     pub async fn resolve_tokenizer(
         &self,
-        _discovery: &TokenizerDiscovery,
+        discovery: &TokenizerDiscovery,
     ) -> Result<TokenizerResolution> {
-        // This is test scaffolding - actual implementation pending
-        unimplemented!(
-            "TokenizerFallbackChain::resolve_tokenizer - requires fallback strategy execution"
-        )
+        info!("Starting tokenizer resolution with {} strategies", self._strategies.len());
+        let mut errors = Vec::new();
+
+        for (i, strategy) in self._strategies.iter().enumerate() {
+            debug!("Trying fallback strategy {}/{}: {:?}", i + 1, self._strategies.len(), strategy);
+
+            // Check if strategy is allowed in current mode
+            if self._strict_mode && !strategy.allowed_in_strict_mode() {
+                debug!("Skipping strategy {:?} (not allowed in strict mode)", strategy);
+                continue;
+            }
+
+            if Self::is_offline_mode() && strategy.requires_network() {
+                debug!("Skipping strategy {:?} (network required but offline mode)", strategy);
+                continue;
+            }
+
+            // Try the strategy
+            match self.try_strategy(strategy, discovery).await {
+                Ok(resolution) => {
+                    info!("Successfully resolved tokenizer using strategy {:?}", strategy);
+                    return Ok(resolution);
+                }
+                Err(e) => {
+                    warn!("Strategy {:?} failed: {}", strategy, e);
+                    errors.push((strategy.clone(), e));
+                }
+            }
+        }
+
+        // All strategies failed - generate comprehensive error
+        if self._strict_mode {
+            let error = FallbackError::AllStrategiesFailed {
+                summary: self.generate_error_summary(&errors),
+            };
+            Err(BitNetError::Config(format!("Strict mode: {}", error)))
+        } else {
+            // In non-strict mode, if we reach here, even mock failed
+            let error = FallbackError::AllStrategiesFailed {
+                summary: self.generate_error_summary(&errors),
+            };
+            Err(BitNetError::Config(error.to_string()))
+        }
     }
 
     /// Try individual fallback strategy with error collection
@@ -78,13 +117,89 @@ impl TokenizerFallbackChain {
     #[allow(dead_code)]
     async fn try_strategy(
         &self,
-        _strategy: &FallbackStrategy,
-        _discovery: &TokenizerDiscovery,
+        strategy: &FallbackStrategy,
+        discovery: &TokenizerDiscovery,
     ) -> Result<TokenizerResolution> {
-        // This is test scaffolding - actual implementation pending
-        unimplemented!(
-            "TokenizerFallbackChain::try_strategy - requires individual strategy implementations"
-        )
+        match strategy {
+            FallbackStrategy::GgufMetadata => {
+                // Try to extract embedded tokenizer from GGUF
+                match discovery.try_extract_embedded_tokenizer() {
+                    Ok(Some(tokenizer)) => {
+                        debug!("Successfully extracted embedded tokenizer from GGUF");
+                        Ok(TokenizerResolution::Embedded(tokenizer))
+                    }
+                    Ok(None) => {
+                        Err(BitNetError::Config("No embedded tokenizer found in GGUF".to_string()))
+                    }
+                    Err(e) => {
+                        Err(BitNetError::Config(format!("Failed to extract GGUF tokenizer: {}", e)))
+                    }
+                }
+            }
+
+            FallbackStrategy::ColocatedFiles => {
+                // Look for tokenizer files in same directory as model
+                match discovery.check_colocated_tokenizers() {
+                    Ok(Some(path)) => {
+                        debug!("Found co-located tokenizer at: {}", path.display());
+                        Ok(TokenizerResolution::File(path))
+                    }
+                    Ok(None) => {
+                        Err(BitNetError::Config("No co-located tokenizer files found".to_string()))
+                    }
+                    Err(e) => {
+                        Err(BitNetError::Config(format!("Error checking co-located files: {}", e)))
+                    }
+                }
+            }
+
+            FallbackStrategy::StandardCache => {
+                // Check standard cache locations
+                match discovery.check_cache_locations() {
+                    Ok(Some(path)) => {
+                        debug!("Found cached tokenizer at: {}", path.display());
+                        Ok(TokenizerResolution::File(path))
+                    }
+                    Ok(None) => Err(BitNetError::Config("No cached tokenizer found".to_string())),
+                    Err(e) => {
+                        Err(BitNetError::Config(format!("Error checking cache locations: {}", e)))
+                    }
+                }
+            }
+
+            FallbackStrategy::SmartDownload => {
+                // This strategy would require actual download implementation
+                // For now, return an appropriate error indicating download is needed
+                match discovery.infer_download_source() {
+                    Ok(Some(_download_info)) => {
+                        // In a full implementation, this would perform the download
+                        // For now, indicate that download is required
+                        Err(BitNetError::Config(
+                            "Smart download strategy requires download implementation".to_string(),
+                        ))
+                    }
+                    Ok(None) => {
+                        Err(BitNetError::Config("No download source available".to_string()))
+                    }
+                    Err(e) => Err(BitNetError::Config(format!(
+                        "Error determining download source: {}",
+                        e
+                    ))),
+                }
+            }
+
+            FallbackStrategy::MockFallback => {
+                // Create mock tokenizer if allowed
+                if self._strict_mode {
+                    Err(BitNetError::Config(
+                        "Mock tokenizer not allowed in strict mode".to_string(),
+                    ))
+                } else {
+                    debug!("Creating mock tokenizer fallback");
+                    Ok(TokenizerResolution::Mock(MockTokenizer::new()))
+                }
+            }
+        }
     }
 
     /// Generate comprehensive error summary with actionable suggestions
@@ -614,7 +729,22 @@ mod tests {
     /// Helper function to create mock TokenizerDiscovery for testing
     #[allow(dead_code)]
     fn create_mock_discovery() -> TokenizerDiscovery {
-        // Test scaffolding - would create mock discovery instance
-        unimplemented!("create_mock_discovery - requires TokenizerDiscovery implementation")
+        // For test scaffolding, create a minimal mock that works with the fallback system
+        // In production, this would be a proper mock framework
+
+        // Create a test file path that won't exist
+        let test_path = std::path::PathBuf::from("/tmp/mock_model_test.gguf");
+
+        // This is expected to fail for test scaffolding
+        // Tests should handle this gracefully or use alternative approaches
+        match TokenizerDiscovery::from_gguf(&test_path) {
+            Ok(discovery) => discovery,
+            Err(_) => {
+                // For test scaffolding, we'll indicate that proper mock is needed
+                panic!(
+                    "create_mock_discovery is test scaffolding - requires valid GGUF file or mock framework implementation"
+                )
+            }
+        }
     }
 }

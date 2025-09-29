@@ -11,7 +11,7 @@
 use anyhow::{Context, Result};
 #[cfg(feature = "cpu")]
 use bitnet_common::BitNetError;
-#[cfg(any(feature = "cpu", feature = "gpu"))]
+#[cfg(any(feature = "cpu", feature = "gpu", feature = "crossval"))]
 use bitnet_common::Device;
 use candle_core::Tensor as CandleTensor;
 use std::collections::HashMap;

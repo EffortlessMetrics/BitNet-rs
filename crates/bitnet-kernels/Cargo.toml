@@ -35,6 +35,10 @@ serde_json = "1.0.145"
 tempfile = "3.22.0"
 temp-env = "0.3.6"
 serial_test.workspace = true
+anyhow = "1"
+once_cell = "1.19"
+serde = { version = "1", features = ["derive"] }
+half = "2"
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 # x86-specific dependencies
@@ -55,6 +59,7 @@ gpu = ["dep:cudarc", "dep:half"]
 cuda = ["gpu"]  # Alias for backward compatibility
 ffi = ["dep:cc", "dep:bindgen"]
 inference = []
+strict = []  # Strict mode for mock elimination validation
 
 [[bench]]
 name = "kernel_benchmarks"
