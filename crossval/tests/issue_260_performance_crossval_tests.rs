@@ -1213,8 +1213,52 @@ impl PerformanceMockDetector {
         Self
     }
 
-    fn analyze_metrics(&self, _metrics: &PerformanceMetrics) -> MockDetectionResult {
-        MockDetectionResult { is_mock_suspected: false, confidence_score: 0.5 }
+    fn analyze_metrics(&self, metrics: &PerformanceMetrics) -> MockDetectionResult {
+        // BitNet.rs CPU performance targets: 10-20 tok/s (I2S)
+        // GPU performance targets: 50-100 tok/s (mixed precision)
+
+        let mut suspicion_score: f64 = 0.0;
+
+        // Analyze throughput realism (weight: 0.35)
+        if metrics.tokens_per_second > 150.0 {
+            suspicion_score += 0.35; // Unrealistically high for CPU
+        } else if metrics.tokens_per_second >= 10.0 && metrics.tokens_per_second <= 30.0 {
+            suspicion_score -= 0.15; // Realistic CPU range
+        }
+
+        // Analyze latency characteristics (weight: 0.25)
+        if metrics.latency_p50_ms < 10.0 {
+            suspicion_score += 0.25; // Too low for real computation
+        } else if metrics.latency_p50_ms >= 50.0 && metrics.latency_p50_ms <= 150.0 {
+            suspicion_score -= 0.15; // Realistic latency range
+        }
+
+        // Analyze memory usage (weight: 0.20)
+        if metrics.memory_usage_mb < 500.0 {
+            suspicion_score += 0.20; // Too low for neural network
+        } else if metrics.memory_usage_mb >= 1500.0 && metrics.memory_usage_mb <= 4096.0 {
+            suspicion_score -= 0.10; // Realistic memory range
+        }
+
+        // Analyze CPU utilization (weight: 0.20)
+        if metrics.cpu_usage_percent < 30.0 {
+            suspicion_score += 0.20; // Too low for heavy computation
+        } else if metrics.cpu_usage_percent >= 70.0 {
+            suspicion_score -= 0.10; // High CPU usage expected
+        }
+
+        // Normalize suspicion_score to confidence range [0.0, 1.0]
+        let confidence_score = if suspicion_score > 0.3 {
+            // High suspicion -> mock suspected
+            0.5 + (suspicion_score.min(0.7) / 0.7) * 0.5 // Maps to [0.5, 1.0]
+        } else {
+            // Low suspicion -> realistic performance
+            0.9 - (suspicion_score.max(-0.4) / -0.4) * 0.1 // Maps to [0.8, 0.9]
+        };
+
+        let is_mock_suspected = suspicion_score > 0.3;
+
+        MockDetectionResult { is_mock_suspected, confidence_score }
     }
 }
 
