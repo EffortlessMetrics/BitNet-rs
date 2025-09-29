@@ -1578,8 +1578,7 @@ mod simd_consistency_mutation_killers {
                     if suspicious_constants.iter().all(|&c| (val - c).abs() < 1e-8)
                         && data[i].abs() > 1e-6
                     {
-                        assert!(
-                            false,
+                        panic!(
                             "TL2 returned suspicious constant {} at index {} for input {} - possible hardcoded mutation",
                             val, i, data[i]
                         );

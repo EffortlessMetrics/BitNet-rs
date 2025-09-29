@@ -83,7 +83,7 @@ pub struct StreamingError {
 pub(crate) async fn streaming_handler(
     State(state): State<AppState>,
     axum::Json(request): axum::Json<StreamingRequest>,
-) -> Sse<Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>>> {
+) -> impl axum::response::IntoResponse {
     info!(
         "Streaming request received: prompt_len={}, max_tokens={:?}, timeout={:?}s",
         request.prompt.len(),

@@ -568,7 +568,7 @@ mod memory_allocation_boundary_killers {
             // Kill > -> != mutation
             let wrong_not_equal = memory_estimate != limit;
             if memory_estimate == limit {
-                let fails_with_greater = memory_estimate > limit; // false at limit
+                let _fails_with_greater = memory_estimate > limit; // false at limit
             // At exactly the limit: fails_with_greater=false, wrong_not_equal=false
             // This is expected - both should be false, so skip this test case
             // Test is only meaningful when memory_estimate != limit
