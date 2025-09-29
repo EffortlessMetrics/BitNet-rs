@@ -248,7 +248,7 @@ fn ac1_api_contract_schema_definitions_ok() -> Result<()> {
     // TODO: Test schema enforcement with valid/invalid examples
 
     // Required schema validations
-    let required_request_fields = vec![
+    let required_request_fields = [
         "prompt", // string, minLength: 1, maxLength: 8192
     ];
 

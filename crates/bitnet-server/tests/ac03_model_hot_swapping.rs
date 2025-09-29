@@ -146,7 +146,7 @@ mod cpu_hot_swap_tests {
         for (model_path, should_succeed, description) in test_cases {
             let load_request = json!({
                 "model_path": model_path,
-                "model_id": format!("test-validation-{}", model_path.split('/').last().unwrap()),
+                "model_id": format!("test-validation-{}", model_path.split('/').next_back().unwrap()),
                 "validation_config": {
                     "enable_cross_validation": false, // Focus on GGUF validation
                     "timeout_seconds": 30

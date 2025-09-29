@@ -405,17 +405,14 @@ async fn run_load_test(config: LoadTestConfig) -> Result<LoadTestResult> {
 
             let request_time = request_start.elapsed();
 
-            match processing_result {
-                Ok(device_used) => {
-                    success.fetch_add(1, Ordering::Relaxed);
-                    if device_used == "cpu" {
-                        devices.0.fetch_add(1, Ordering::Relaxed);
-                    } else {
-                        devices.1.fetch_add(1, Ordering::Relaxed);
-                    }
+            if let Ok(device_used) = processing_result {
+                success.fetch_add(1, Ordering::Relaxed);
+                if device_used == "cpu" {
+                    devices.0.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    devices.1.fetch_add(1, Ordering::Relaxed);
                 }
-                Err(_) => {} // Failed request
-            }
+            } // Failed request
 
             request_time
         });
@@ -568,7 +565,7 @@ async fn simulate_inference_request(
     sleep(processing_time).await;
 
     // Simulate occasional failures (5% failure rate)
-    if rand::random::<u8>() % 100 < 5 {
+    if (rand::random::<u64>() % 100) < 5 {
         return Err(anyhow::anyhow!("Simulated request failure"));
     }
 
@@ -577,17 +574,17 @@ async fn simulate_inference_request(
 
 async fn get_memory_usage_mb() -> f64 {
     // Simulate memory usage reading
-    1024.0 + (rand::random::<f64>() * 512.0)
+    1024.0 + ((rand::random::<u64>() % 512) as f64)
 }
 
 fn calculate_quantization_efficiency(_result: &LoadTestResult, _quant_type: &str) -> f64 {
     // Simulate quantization efficiency calculation
-    0.95 + (rand::random::<f64>() * 0.05)
+    0.95 + ((rand::random::<u64>() % 50) as f64 / 1000.0)
 }
 
 fn calculate_simd_utilization(_result: &LoadTestResult) -> f64 {
     // Simulate SIMD utilization calculation
-    0.85 + (rand::random::<f64>() * 0.1)
+    0.85 + ((rand::random::<u64>() % 100) as f64 / 1000.0)
 }
 
 fn print_load_test_summary(result: &LoadTestResult) {
@@ -622,7 +619,7 @@ mod rand {
     use std::cell::RefCell;
 
     thread_local! {
-        static RNG_STATE: RefCell<u64> = RefCell::new(0x1234567890abcdef);
+        static RNG_STATE: RefCell<u64> = const { RefCell::new(0x1234567890abcdef) };
     }
 
     pub fn random<T>() -> T

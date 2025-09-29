@@ -290,14 +290,12 @@ async fn test_concurrent_stress_fault_injection() -> Result<()> {
     let fault_scenario = FaultScenario::ConcurrentStress { concurrent_load: 200 };
 
     // Inject multiple concurrent stressors
-    let stress_futures = vec![
-        inject_memory_pressure_background(),
-        inject_cpu_stress_background(),
-        inject_network_jitter_background(),
-        inject_disk_io_stress_background(),
+    let stress_handles = vec![
+        tokio::spawn(inject_memory_pressure_background()),
+        tokio::spawn(inject_cpu_stress_background()),
+        tokio::spawn(inject_network_jitter_background()),
+        tokio::spawn(inject_disk_io_stress_background()),
     ];
-
-    let stress_handles: Vec<_> = stress_futures.into_iter().map(|fut| tokio::spawn(fut)).collect();
 
     // Run concurrent load under stress
     let load_result = inject_concurrent_stress_fault(fault_scenario.clone()).await?;
@@ -334,11 +332,16 @@ async fn test_concurrent_stress_fault_injection() -> Result<()> {
 async fn test_graceful_degradation_fault_injection() -> Result<()> {
     println!("=== Graceful Degradation Fault Injection Test ===");
 
+    let memory_result = test_memory_pressure_degradation().await?;
+    let cpu_result = test_cpu_throttling_degradation().await?;
+    let gpu_result = test_gpu_unavailable_degradation().await?;
+    let disk_result = test_disk_slow_degradation().await?;
+
     let degradation_scenarios = vec![
-        ("memory_pressure", test_memory_pressure_degradation()),
-        ("cpu_throttling", test_cpu_throttling_degradation()),
-        ("gpu_unavailable", test_gpu_unavailable_degradation()),
-        ("disk_slow", test_disk_slow_degradation()),
+        ("memory_pressure", memory_result),
+        ("cpu_throttling", cpu_result),
+        ("gpu_unavailable", gpu_result),
+        ("disk_slow", disk_result),
     ];
 
     let mut overall_metrics = ReliabilityMetrics {
@@ -353,7 +356,7 @@ async fn test_graceful_degradation_fault_injection() -> Result<()> {
     for (scenario_name, test_future) in degradation_scenarios {
         println!("Testing graceful degradation: {}", scenario_name);
 
-        let result = test_future.await?;
+        let result = test_future;
 
         // Validate graceful degradation behavior
         assert!(
@@ -826,7 +829,7 @@ mod rand {
     use std::cell::RefCell;
 
     thread_local! {
-        static RNG_STATE: RefCell<u64> = RefCell::new(0x1234567890abcdef);
+        static RNG_STATE: RefCell<u64> = const { RefCell::new(0x1234567890abcdef) };
     }
 
     pub fn random<T>() -> T
