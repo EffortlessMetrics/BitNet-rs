@@ -105,8 +105,6 @@ pub static I2S_TEST_VECTORS: LazyLock<Vec<QuantizationTestVector>> = LazyLock::n
                         -1
                     } else if i < 512 {
                         0
-                    } else if i < 768 {
-                        1
                     } else {
                         1
                     }
@@ -148,8 +146,6 @@ pub static TL1_TEST_VECTORS: LazyLock<Vec<QuantizationTestVector>> = LazyLock::n
                         -1
                     } else if i < 128 {
                         0
-                    } else if i < 192 {
-                        1
                     } else {
                         1
                     }
@@ -179,8 +175,6 @@ pub static TL2_TEST_VECTORS: LazyLock<Vec<QuantizationTestVector>> = LazyLock::n
                         -1
                     } else if i < 256 {
                         0
-                    } else if i < 384 {
-                        1
                     } else {
                         1
                     }
