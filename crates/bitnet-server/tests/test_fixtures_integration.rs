@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 //! Integration tests for BitNet.rs inference server test fixtures
 //!
 //! This test validates that all fixture modules load correctly and provide

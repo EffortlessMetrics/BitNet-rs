@@ -1,3 +1,8 @@
+#![allow(unused)]
+#![allow(dead_code)]
+#![allow(clippy::upper_case_acronyms)]
+#![allow(clippy::if_same_then_else)]
+
 //! Quantization Test Data for BitNet.rs Neural Network Components
 //!
 //! This module provides comprehensive quantization test fixtures supporting
