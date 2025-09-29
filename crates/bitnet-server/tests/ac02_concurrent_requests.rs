@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 /// Tests feature spec: issue-251-production-inference-server-architecture.md#ac2-concurrent-request-handling
 /// Tests API contract: issue-251-api-contracts.md#advanced-concurrency-manager
 ///

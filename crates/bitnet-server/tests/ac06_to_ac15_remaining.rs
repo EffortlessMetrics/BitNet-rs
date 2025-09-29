@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 /// Tests feature spec: issue-251-production-inference-server-architecture.md#remaining-acceptance-criteria
 /// Tests API contracts: issue-251-api-contracts.md#comprehensive-api-coverage
 ///

@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 /// Tests feature spec: issue-251-production-inference-server-architecture.md#ac5-health-checks
 /// Tests API contract: issue-251-api-contracts.md#health-check
 ///
@@ -264,7 +267,7 @@ mod gpu_health_monitoring_tests {
         // TODO: Confirm CUDA context is healthy
 
         // Test GPU health during mixed precision inference
-        let gpu_load_test_requests = vec![json!({
+        let gpu_load_test_requests = [json!({
             "prompt": "GPU health test during mixed precision inference",
             "max_tokens": 150,
             "device_preference": "gpu",

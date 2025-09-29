@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 /// Tests feature spec: issue-251-production-inference-server-architecture.md#ac1-rest-api-inference-endpoint
 /// Tests API contract: issue-251-api-contracts.md#synchronous-inference
 ///
@@ -245,7 +248,7 @@ fn ac1_api_contract_schema_definitions_ok() -> Result<()> {
     // TODO: Test schema enforcement with valid/invalid examples
 
     // Required schema validations
-    let required_request_fields = vec![
+    let required_request_fields = [
         "prompt", // string, minLength: 1, maxLength: 8192
     ];
 

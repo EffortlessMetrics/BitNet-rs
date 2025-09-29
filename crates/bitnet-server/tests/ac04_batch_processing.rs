@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 /// Tests feature spec: issue-251-production-inference-server-architecture.md#ac4-batch-processing
 /// Tests API contract: issue-251-api-contracts.md#quantization-aware-batch-engine
 ///
@@ -294,27 +297,24 @@ mod gpu_batch_processing_tests {
         let mut total_gpu_utilization = 0.0;
 
         for result in gpu_results {
-            match result? {
-                Ok((_, response_time, gpu_info)) => {
-                    successful_gpu_requests += 1;
-                    total_gpu_utilization += gpu_info.gpu_utilization;
+            if let Ok((_, response_time, gpu_info)) = result? {
+                successful_gpu_requests += 1;
+                total_gpu_utilization += gpu_info.gpu_utilization;
 
-                    match gpu_info.quantization_format.as_str() {
-                        "tl1" => tl1_requests += 1,
-                        "tl2" => tl2_requests += 1,
-                        _ => {}
-                    }
-
-                    assert!(
-                        gpu_info.mixed_precision_used,
-                        "Mixed precision should be utilized for GPU batches"
-                    );
-                    assert!(
-                        response_time <= Duration::from_secs(1),
-                        "Individual GPU requests should complete quickly"
-                    );
+                match gpu_info.quantization_format.as_str() {
+                    "tl1" => tl1_requests += 1,
+                    "tl2" => tl2_requests += 1,
+                    _ => {}
                 }
-                Err(_) => {}
+
+                assert!(
+                    gpu_info.mixed_precision_used,
+                    "Mixed precision should be utilized for GPU batches"
+                );
+                assert!(
+                    response_time <= Duration::from_secs(1),
+                    "Individual GPU requests should complete quickly"
+                );
             }
         }
 
