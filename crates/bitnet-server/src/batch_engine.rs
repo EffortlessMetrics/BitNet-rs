@@ -281,7 +281,7 @@ impl BatchEngine {
         }
     }
 
-    /// Form a batch from queued requests
+    /// Form a batch from queued requests with optimized memory usage
     async fn form_batch(&self) -> Option<ProcessingBatch> {
         let mut queue = self.request_queue.lock().await;
 
@@ -289,33 +289,35 @@ impl BatchEngine {
             return None;
         }
 
-        // Extract requests for batching
-        let mut candidates: Vec<PendingRequest> = Vec::new();
-        let mut remaining_queue = VecDeque::new();
+        // Pre-allocate with expected capacity to reduce allocations
+        let mut candidates = Vec::with_capacity(self.config.max_batch_size);
+        let mut timed_out_count = 0;
 
-        // Drain the queue to analyze requests
-        while let Some(pending) = queue.pop_front() {
-            // Check if request has timed out
-            if let Some(timeout) = pending.request.timeout
-                && pending.request.created_at.elapsed() > timeout
-            {
-                // Send timeout error
-                let _ = pending.response_tx.send(Err(anyhow::anyhow!("Request timed out")));
-                continue;
-            }
+        // Process requests efficiently without unnecessary allocations
+        for _ in 0..self.config.max_batch_size {
+            if let Some(pending) = queue.pop_front() {
+                // Check if request has timed out
+                if let Some(timeout) = pending.request.timeout
+                    && pending.request.created_at.elapsed() > timeout
+                {
+                    // Send timeout error
+                    let _ = pending.response_tx.send(Err(anyhow::anyhow!("Request timed out")));
+                    timed_out_count += 1;
+                    continue;
+                }
 
-            candidates.push(pending);
-
-            if candidates.len() >= self.config.max_batch_size {
+                candidates.push(pending);
+            } else {
                 break;
             }
         }
 
-        // Put remaining requests back
-        queue.append(&mut remaining_queue);
-        drop(queue);
+        drop(queue); // Release lock early
 
         if candidates.is_empty() {
+            if timed_out_count > 0 {
+                debug!(timed_out_requests = timed_out_count, "Cleaned up timed out requests");
+            }
             return None;
         }
 
@@ -422,25 +424,34 @@ impl BatchEngine {
         }
     }
 
-    /// Get optimal SIMD instruction set
+    /// Get optimal SIMD instruction set for BitNet quantization
     async fn get_optimal_simd_instruction_set(&self) -> Option<String> {
         if !self.config.simd_optimization {
             return None;
         }
 
+        Self::detect_bitnet_optimal_simd()
+    }
+
+    /// Detect optimal SIMD instruction set for BitNet I2S quantization
+    fn detect_bitnet_optimal_simd() -> Option<String> {
         #[cfg(target_arch = "x86_64")]
         {
+            // BitNet I2S quantization benefits from specific instruction sets
             if std::arch::is_x86_feature_detected!("avx512f") {
-                Some("AVX-512".to_string())
+                Some("AVX-512".to_string()) // Best for parallel 2-bit operations
             } else if std::arch::is_x86_feature_detected!("avx2") {
-                Some("AVX2".to_string())
+                Some("AVX2".to_string()) // Good for vectorized quantization
+            } else if std::arch::is_x86_feature_detected!("sse4.1") {
+                Some("SSE4.1".to_string()) // Baseline SIMD support
             } else {
-                Some("SSE4.1".to_string())
+                None
             }
         }
 
         #[cfg(target_arch = "aarch64")]
         {
+            // ARM NEON provides excellent support for BitNet operations
             Some("NEON".to_string())
         }
 

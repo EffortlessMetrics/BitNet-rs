@@ -61,6 +61,15 @@ pub struct InferenceResponse {
     pub tokens_per_second: f64,
 }
 
+/// Standardized error response for all API endpoints
+#[derive(Serialize)]
+pub struct ErrorResponse {
+    pub error: String,
+    pub error_code: String,
+    pub request_id: Option<String>,
+    pub details: Option<serde_json::Value>,
+}
+
 /// Enhanced inference request with additional metadata
 #[derive(Deserialize)]
 pub struct EnhancedInferenceRequest {
@@ -370,9 +379,9 @@ async fn enhanced_inference_handler(
     let start_time = Instant::now();
     let request_id = Uuid::new_v4().to_string();
 
-    // Extract client IP
+    // Extract client IP with localhost fallback
     let client_ip =
-        extract_client_ip_from_headers(&headers).unwrap_or(IpAddr::from([127, 0, 0, 1]));
+        extract_client_ip_from_headers(&headers).unwrap_or_else(|| IpAddr::from([127, 0, 0, 1]));
 
     // Create request metadata
     let metadata = RequestMetadata {
@@ -383,20 +392,18 @@ async fn enhanced_inference_handler(
         priority: parse_priority(request.priority.as_deref()),
     };
 
-    // Validate request
+    // Validate request with standardized error handling
     if let Err(e) = state.security_validator.validate_inference_request(&request.base) {
         warn!(error = %e, "Request validation failed");
-        return Err(StatusCode::BAD_REQUEST);
+        let (status, _error_response) = handle_validation_error(&e, Some(request_id.clone()));
+        return Err(status);
     }
 
-    // Acquire concurrency slot
-    let _slot = match state.concurrency_manager.acquire_request_slot(metadata).await {
-        Ok(slot) => slot,
-        Err(e) => {
-            warn!(error = %e, "Request rejected by concurrency manager");
-            return Err(StatusCode::TOO_MANY_REQUESTS);
-        }
-    };
+    // Acquire concurrency slot with proper error handling
+    let _slot = state.concurrency_manager.acquire_request_slot(metadata).await.map_err(|e| {
+        warn!(error = %e, "Request rejected by concurrency manager");
+        StatusCode::TOO_MANY_REQUESTS
+    })?;
 
     // Create batch request
     let mut batch_request = BatchRequest::new(
@@ -430,35 +437,31 @@ async fn enhanced_inference_handler(
 
     let queue_time = start_time.elapsed();
 
-    // Submit to batch engine
-    match state.batch_engine.submit_request(batch_request).await {
-        Ok(result) => {
-            let response = EnhancedInferenceResponse {
-                base: InferenceResponse {
-                    text: result.generated_text,
-                    tokens_generated: result.tokens_generated,
-                    inference_time_ms: result.execution_time.as_millis() as u64,
-                    tokens_per_second: if result.execution_time.as_millis() > 0 {
-                        (result.tokens_generated as f64 * 1000.0)
-                            / result.execution_time.as_millis() as f64
-                    } else {
-                        0.0
-                    },
-                },
-                device_used: format!("{:?}", result.device_used),
-                quantization_type: result.quantization_type,
-                batch_id: Some(result.batch_id),
-                batch_size: Some(result.batch_size),
-                queue_time_ms: queue_time.as_millis() as u64,
-            };
+    // Submit to batch engine and build response
+    let result = state.batch_engine.submit_request(batch_request).await.map_err(|e| {
+        error!(error = %e, "Batch processing failed");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
-            Ok(Json(response))
-        }
-        Err(e) => {
-            error!(error = %e, "Batch processing failed");
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+    // Calculate tokens per second efficiently
+    let tokens_per_second =
+        calculate_tokens_per_second(result.tokens_generated, result.execution_time);
+
+    let response = EnhancedInferenceResponse {
+        base: InferenceResponse {
+            text: result.generated_text,
+            tokens_generated: result.tokens_generated,
+            inference_time_ms: result.execution_time.as_millis() as u64,
+            tokens_per_second,
+        },
+        device_used: format!("{:?}", result.device_used),
+        quantization_type: result.quantization_type,
+        batch_id: Some(result.batch_id),
+        batch_size: Some(result.batch_size),
+        queue_time_ms: queue_time.as_millis() as u64,
+    };
+
+    Ok(Json(response))
 }
 
 /// Legacy inference handler for backwards compatibility
@@ -486,10 +489,11 @@ async fn load_model_handler(
     State(state): State<ProductionAppState>,
     Json(request): Json<ModelLoadRequest>,
 ) -> Result<Json<ModelLoadResponse>, StatusCode> {
-    // Validate model path
+    // Validate model path with standardized error handling
     if let Err(e) = state.security_validator.validate_model_request(&request.model_path) {
         warn!(error = %e, "Model load request validation failed");
-        return Err(StatusCode::BAD_REQUEST);
+        let (status, _error_response) = handle_validation_error(&e, None);
+        return Err(status);
     }
 
     let device = parse_device(request.device.as_deref().unwrap_or("cpu")).unwrap_or(Device::Cpu);
@@ -651,6 +655,55 @@ async fn request_validation_middleware(
 }
 
 /// Utility functions
+/// Calculate tokens per second from token count and duration
+fn calculate_tokens_per_second(tokens: u64, duration: Duration) -> f64 {
+    let duration_ms = duration.as_millis();
+    if duration_ms > 0 && tokens > 0 { (tokens as f64 * 1000.0) / duration_ms as f64 } else { 0.0 }
+}
+
+/// Create standardized error response
+fn create_error_response(
+    error: &str,
+    error_code: &str,
+    request_id: Option<String>,
+    details: Option<serde_json::Value>,
+) -> Json<ErrorResponse> {
+    Json(ErrorResponse {
+        error: error.to_string(),
+        error_code: error_code.to_string(),
+        request_id,
+        details,
+    })
+}
+
+/// Handle validation errors with consistent response format
+fn handle_validation_error(
+    error: &security::ValidationError,
+    request_id: Option<String>,
+) -> (StatusCode, Json<ErrorResponse>) {
+    let (status, error_code) = match error {
+        security::ValidationError::PromptTooLong(_, _) => {
+            (StatusCode::BAD_REQUEST, "PROMPT_TOO_LONG")
+        }
+        security::ValidationError::TooManyTokens(_, _) => {
+            (StatusCode::BAD_REQUEST, "TOO_MANY_TOKENS")
+        }
+        security::ValidationError::InvalidCharacters => {
+            (StatusCode::BAD_REQUEST, "INVALID_CHARACTERS")
+        }
+        security::ValidationError::BlockedContent(_) => {
+            (StatusCode::BAD_REQUEST, "BLOCKED_CONTENT")
+        }
+        security::ValidationError::MissingField(_) => (StatusCode::BAD_REQUEST, "MISSING_FIELD"),
+        security::ValidationError::InvalidFieldValue(_) => {
+            (StatusCode::BAD_REQUEST, "INVALID_FIELD_VALUE")
+        }
+    };
+
+    let response = create_error_response(&error.to_string(), error_code, request_id, None);
+    (status, response)
+}
+
 /// Parse request priority from string
 fn parse_priority(priority: Option<&str>) -> RequestPriority {
     match priority {
@@ -676,24 +729,7 @@ fn parse_device(device: &str) -> Result<Device> {
     }
 }
 
-/// Extract client IP from headers
+/// Extract client IP from headers using security module's implementation
 fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
-    // Try X-Forwarded-For header first
-    if let Some(forwarded) = headers.get("x-forwarded-for")
-        && let Ok(forwarded_str) = forwarded.to_str()
-        && let Some(first_ip) = forwarded_str.split(',').next()
-        && let Ok(ip) = first_ip.trim().parse::<IpAddr>()
-    {
-        return Some(ip);
-    }
-
-    // Try X-Real-IP header
-    if let Some(real_ip) = headers.get("x-real-ip")
-        && let Ok(ip_str) = real_ip.to_str()
-        && let Ok(ip) = ip_str.parse::<IpAddr>()
-    {
-        return Some(ip);
-    }
-
-    None
+    security::extract_client_ip_from_headers(headers)
 }

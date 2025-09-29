@@ -313,8 +313,13 @@ pub async fn ip_blocking_middleware(
 
 /// Extract client IP from request
 fn extract_client_ip(request: &Request) -> Option<IpAddr> {
+    extract_client_ip_from_headers(request.headers())
+}
+
+/// Extract client IP from headers (shared utility)
+pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
     // Try X-Forwarded-For header first (for reverse proxies)
-    if let Some(forwarded) = request.headers().get("x-forwarded-for")
+    if let Some(forwarded) = headers.get("x-forwarded-for")
         && let Ok(forwarded_str) = forwarded.to_str()
         && let Some(first_ip) = forwarded_str.split(',').next()
         && let Ok(ip) = first_ip.trim().parse::<IpAddr>()
@@ -323,7 +328,7 @@ fn extract_client_ip(request: &Request) -> Option<IpAddr> {
     }
 
     // Try X-Real-IP header
-    if let Some(real_ip) = request.headers().get("x-real-ip")
+    if let Some(real_ip) = headers.get("x-real-ip")
         && let Ok(ip_str) = real_ip.to_str()
         && let Ok(ip) = ip_str.parse::<IpAddr>()
     {

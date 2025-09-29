@@ -246,36 +246,39 @@ impl DeviceMonitor {
         }
     }
 
-    /// Get SIMD support for CPU devices
+    /// Get SIMD support optimized for BitNet quantization operations
     fn get_simd_support(device: &Device) -> Vec<String> {
         match device {
-            Device::Cpu => {
-                let mut support = Vec::new();
-
-                // Check for SIMD support
-                #[cfg(target_arch = "x86_64")]
-                {
-                    if std::arch::is_x86_feature_detected!("avx2") {
-                        support.push("AVX2".to_string());
-                    }
-                    if std::arch::is_x86_feature_detected!("avx512f") {
-                        support.push("AVX-512".to_string());
-                    }
-                    if std::arch::is_x86_feature_detected!("sse4.1") {
-                        support.push("SSE4.1".to_string());
-                    }
-                }
-
-                #[cfg(target_arch = "aarch64")]
-                {
-                    support.push("NEON".to_string());
-                }
-
-                support
-            }
-            Device::Cuda(_) => Vec::new(),
-            Device::Metal => Vec::new(), // TODO: Add Metal-specific optimizations
+            Device::Cpu => Self::detect_cpu_simd_features(),
+            Device::Cuda(_) | Device::Metal => Vec::new(), // GPU devices don't use CPU SIMD
         }
+    }
+
+    /// Detect CPU SIMD features optimized for BitNet quantization
+    fn detect_cpu_simd_features() -> Vec<String> {
+        let mut features = Vec::new();
+
+        #[cfg(target_arch = "x86_64")]
+        {
+            // Order by performance preference for BitNet I2S operations
+            if std::arch::is_x86_feature_detected!("avx512f") {
+                features.push("AVX-512".to_string());
+            }
+            if std::arch::is_x86_feature_detected!("avx2") {
+                features.push("AVX2".to_string());
+            }
+            if std::arch::is_x86_feature_detected!("sse4.1") {
+                features.push("SSE4.1".to_string());
+            }
+        }
+
+        #[cfg(target_arch = "aarch64")]
+        {
+            // ARM NEON is excellent for BitNet quantized operations
+            features.push("NEON".to_string());
+        }
+
+        features
     }
 
     /// Update device health status
