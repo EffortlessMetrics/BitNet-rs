@@ -24,17 +24,14 @@ impl std::fmt::Display for QuantizationType {
 }
 
 /// Device abstraction for computation
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Default,
+)]
 pub enum Device {
+    #[default]
     Cpu,
     Cuda(usize),
     Metal,
-}
-
-impl Default for Device {
-    fn default() -> Self {
-        Self::Cpu
-    }
 }
 
 // Conservative conversion from Candle device - avoids assuming CUDA ordinal
