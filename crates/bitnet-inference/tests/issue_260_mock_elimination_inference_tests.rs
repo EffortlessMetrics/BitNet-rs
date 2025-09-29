@@ -11,7 +11,7 @@
 #![allow(unused_imports)]
 
 use anyhow::{Result, anyhow};
-use bitnet_common::{PerformanceMetrics, ComputationType};
+use bitnet_common::{ComputationType, PerformanceMetrics};
 use std::env;
 
 // Test scaffolding structs - TDD placeholders for real implementation

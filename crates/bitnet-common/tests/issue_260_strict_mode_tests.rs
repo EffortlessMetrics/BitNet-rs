@@ -1057,7 +1057,6 @@ impl ChildStrictConfig {
 // Mock implementations that will fail until real implementation exists (TDD expectation)
 // These are placeholder implementations for test scaffolding
 
-
 mod bitnet_quantization {
     use super::*;
     pub struct StrictModeEnforcer;

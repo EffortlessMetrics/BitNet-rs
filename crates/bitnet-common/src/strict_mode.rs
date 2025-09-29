@@ -140,9 +140,8 @@ impl StrictModeEnforcer {
 
     /// Create enforcer with optional custom configuration (for testing)
     pub fn with_config(config: Option<StrictModeConfig>) -> Self {
-        let config = config.unwrap_or_else(|| {
-            STRICT_MODE_CONFIG.get_or_init(StrictModeConfig::from_env).clone()
-        });
+        let config = config
+            .unwrap_or_else(|| STRICT_MODE_CONFIG.get_or_init(StrictModeConfig::from_env).clone());
         Self { config }
     }
 

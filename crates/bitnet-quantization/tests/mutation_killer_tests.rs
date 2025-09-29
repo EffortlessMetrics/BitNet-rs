@@ -1101,14 +1101,19 @@ mod lookup_table_arithmetic_mutation_killers {
                 assert!(
                     quantized >= 0 && quantized < num_levels as i8,
                     "Quantized value {} out of range [0, {}) for test_val={}, abs_max={}",
-                    quantized, num_levels, test_val, abs_max
+                    quantized,
+                    num_levels,
+                    test_val,
+                    abs_max
                 );
 
                 // Dequantized value should be in reasonable range
                 assert!(
                     dequantized.abs() <= expected_range,
                     "Dequantized value {} out of range for test_val={}, expected_range={}",
-                    dequantized, test_val, expected_range
+                    dequantized,
+                    test_val,
+                    expected_range
                 );
 
                 // For zero input, output should be near zero (within quantization error)
@@ -1116,7 +1121,8 @@ mod lookup_table_arithmetic_mutation_killers {
                     assert!(
                         dequantized.abs() < expected_scale,
                         "Zero input produced large output: {} (scale={})",
-                        dequantized, expected_scale
+                        dequantized,
+                        expected_scale
                     );
                 }
             }
@@ -1133,7 +1139,8 @@ mod lookup_table_arithmetic_mutation_killers {
         ];
 
         for (min_val, max_val, bits, use_asymmetric) in test_cases {
-            let table = bitnet_quantization::tl1::LookupTable::new(min_val, max_val, bits, use_asymmetric);
+            let table =
+                bitnet_quantization::tl1::LookupTable::new(min_val, max_val, bits, use_asymmetric);
             let num_levels = 1 << bits;
 
             // Test asymmetric quantization arithmetic
@@ -1152,7 +1159,9 @@ mod lookup_table_arithmetic_mutation_killers {
                 if (expected_scale - wrong_add_scale).abs() > 1e-6 {
                     // Skip this check if the wrong scale would be too close to the correct result
                     // (this can happen in edge cases where the mutation doesn't significantly change behavior)
-                    let wrong_quantized_estimate = ((test_val - min_val) / wrong_add_scale).round().clamp(0.0, (num_levels - 1) as f32);
+                    let wrong_quantized_estimate = ((test_val - min_val) / wrong_add_scale)
+                        .round()
+                        .clamp(0.0, (num_levels - 1) as f32);
                     if (quantized as f32 - wrong_quantized_estimate).abs() > 0.5 {
                         // Test passed - mutation would be detectable
                     }
@@ -1163,17 +1172,23 @@ mod lookup_table_arithmetic_mutation_killers {
                 if wrong_mul_scale != expected_scale && wrong_mul_scale > 1e-6 {
                     // Wrong scale would cause out-of-range values
                     assert!(
-                        dequantized >= min_val - expected_scale && dequantized <= max_val + expected_scale,
+                        dequantized >= min_val - expected_scale
+                            && dequantized <= max_val + expected_scale,
                         "Multiplication mutation detected: dequantized {} out of range [{}, {}]",
-                        dequantized, min_val, max_val
+                        dequantized,
+                        min_val,
+                        max_val
                     );
                 }
 
                 // Verify asymmetric range is preserved
                 assert!(
-                    dequantized >= min_val - expected_scale * 2.0 && dequantized <= max_val + expected_scale * 2.0,
+                    dequantized >= min_val - expected_scale * 2.0
+                        && dequantized <= max_val + expected_scale * 2.0,
                     "Asymmetric quantization out of range: {} not in [{}, {}]",
-                    dequantized, min_val, max_val
+                    dequantized,
+                    min_val,
+                    max_val
                 );
             }
         }
@@ -1182,19 +1197,20 @@ mod lookup_table_arithmetic_mutation_killers {
     #[test]
     fn test_tl2_vectorized_lookup_arithmetic_mutations() {
         // Target TL2 VectorizedLookupTable arithmetic mutations
-        let test_cases = vec![
-            (-2.0, 2.0, 2),
-            (-8.0, 8.0, 3),
-            (-1.0, 5.0, 2),
-        ];
+        let test_cases = vec![(-2.0, 2.0, 2), (-8.0, 8.0, 3), (-1.0, 5.0, 2)];
 
         for (min_val, max_val, bits) in test_cases {
-            let table = bitnet_quantization::tl2::VectorizedLookupTable::new(min_val, max_val, bits);
+            let table =
+                bitnet_quantization::tl2::VectorizedLookupTable::new(min_val, max_val, bits);
             let num_levels = 1 << bits;
 
             // Verify table dimensions match expected arithmetic
             assert_eq!(table.forward_len(), 256, "Forward table should be 256 elements");
-            assert_eq!(table.reverse_len(), num_levels, "Reverse table should match precision bits");
+            assert_eq!(
+                table.reverse_len(),
+                num_levels,
+                "Reverse table should match precision bits"
+            );
 
             let test_values = vec![
                 min_val,
@@ -1217,7 +1233,8 @@ mod lookup_table_arithmetic_mutation_killers {
                 assert!(
                     quantized >= 0 && (quantized as usize) < table.reverse_len(),
                     "Quantized index {} out of reverse table bounds [0, {})",
-                    quantized, table.reverse_len()
+                    quantized,
+                    table.reverse_len()
                 );
 
                 // Kill scale arithmetic mutations by checking value consistency
@@ -1225,12 +1242,14 @@ mod lookup_table_arithmetic_mutation_killers {
                 assert!(
                     dequantized.abs() <= abs_max * 2.0,
                     "Dequantized value {} too large (abs_max={}), possible scale mutation",
-                    dequantized, abs_max
+                    dequantized,
+                    abs_max
                 );
 
                 // Kill normalization arithmetic mutations
                 // Target: let normalized = (value / self.scale * 128.0 + 128.0)
-                let expected_normalized = (test_val / expected_scale * 128.0 + 128.0).round() as usize;
+                let expected_normalized =
+                    (test_val / expected_scale * 128.0 + 128.0).round() as usize;
                 let clamped_normalized = expected_normalized.clamp(0, 255);
 
                 // If arithmetic was wrong, quantization would be inconsistent
@@ -1239,7 +1258,9 @@ mod lookup_table_arithmetic_mutation_killers {
                     assert!(
                         clamped_normalized < 256,
                         "Normalization failed for test_val={}, scale={}: normalized={}",
-                        test_val, expected_scale, expected_normalized
+                        test_val,
+                        expected_scale,
+                        expected_normalized
                     );
                 }
             }
@@ -1275,7 +1296,9 @@ mod lookup_table_arithmetic_mutation_killers {
             assert_eq!(tl2_recovered.len(), data.len(), "TL2 length mismatch");
 
             // Kill arithmetic mutations that would cause extreme errors
-            for (i, (&orig, (&tl1_val, &tl2_val))) in data.iter().zip(tl1_recovered.iter().zip(tl2_recovered.iter())).enumerate() {
+            for (i, (&orig, (&tl1_val, &tl2_val))) in
+                data.iter().zip(tl1_recovered.iter().zip(tl2_recovered.iter())).enumerate()
+            {
                 let tl1_error = (orig - tl1_val).abs();
                 let tl2_error = (orig - tl2_val).abs();
 
@@ -1283,26 +1306,48 @@ mod lookup_table_arithmetic_mutation_killers {
                 assert!(
                     tl1_error < 50.0,
                     "TL1 error {} too large at index {} (orig={}, recovered={})",
-                    tl1_error, i, orig, tl1_val
+                    tl1_error,
+                    i,
+                    orig,
+                    tl1_val
                 );
                 assert!(
                     tl2_error < 50.0,
                     "TL2 error {} too large at index {} (orig={}, recovered={})",
-                    tl2_error, i, orig, tl2_val
+                    tl2_error,
+                    i,
+                    orig,
+                    tl2_val
                 );
 
                 // Values should be finite
-                assert!(tl1_val.is_finite(), "TL1 produced non-finite value {} at index {}", tl1_val, i);
-                assert!(tl2_val.is_finite(), "TL2 produced non-finite value {} at index {}", tl2_val, i);
+                assert!(
+                    tl1_val.is_finite(),
+                    "TL1 produced non-finite value {} at index {}",
+                    tl1_val,
+                    i
+                );
+                assert!(
+                    tl2_val.is_finite(),
+                    "TL2 produced non-finite value {} at index {}",
+                    tl2_val,
+                    i
+                );
             }
 
             // Cross-validation: both should achieve reasonable accuracy
-            let tl1_mse = data.iter().zip(tl1_recovered.iter())
+            let tl1_mse = data
+                .iter()
+                .zip(tl1_recovered.iter())
                 .map(|(orig, rec)| (orig - rec).powi(2))
-                .sum::<f32>() / data.len() as f32;
-            let tl2_mse = data.iter().zip(tl2_recovered.iter())
+                .sum::<f32>()
+                / data.len() as f32;
+            let tl2_mse = data
+                .iter()
+                .zip(tl2_recovered.iter())
                 .map(|(orig, rec)| (orig - rec).powi(2))
-                .sum::<f32>() / data.len() as f32;
+                .sum::<f32>()
+                / data.len() as f32;
 
             assert!(tl1_mse < 100.0, "TL1 MSE {} too high", tl1_mse);
             assert!(tl2_mse < 100.0, "TL2 MSE {} too high", tl2_mse);
@@ -1330,7 +1375,7 @@ mod simd_consistency_mutation_killers {
 
             // Test different TL1 configurations to stress NEON paths
             let configs = vec![
-                TL1Config { block_size: 8, ..Default::default() },  // Align with NEON processing
+                TL1Config { block_size: 8, ..Default::default() }, // Align with NEON processing
                 TL1Config { block_size: 16, ..Default::default() }, // Larger blocks
                 TL1Config { block_size: 32, ..Default::default() }, // Even larger blocks
             ];
@@ -1368,7 +1413,8 @@ mod simd_consistency_mutation_killers {
 
                 // 2. Check for unrealistic precision that suggests hardcoded values
                 let all_integers = recovered.iter().all(|&x| (x - x.round()).abs() < 1e-8);
-                let _all_half_integers = recovered.iter().all(|&x| (x * 2.0 - (x * 2.0).round()).abs() < 1e-8);
+                let _all_half_integers =
+                    recovered.iter().all(|&x| (x * 2.0 - (x * 2.0).round()).abs() < 1e-8);
 
                 // For quantized data, some precision loss is expected, but perfect integers are suspicious
                 if data.iter().any(|&x| (x - x.round()).abs() > 1e-6) {
@@ -1379,12 +1425,14 @@ mod simd_consistency_mutation_killers {
                 }
 
                 // 3. Check dynamic range preservation
-                let input_range = data.iter().fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &x| {
-                    (min.min(x), max.max(x))
-                });
-                let output_range = recovered.iter().fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &x| {
-                    (min.min(x), max.max(x))
-                });
+                let input_range =
+                    data.iter().fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &x| {
+                        (min.min(x), max.max(x))
+                    });
+                let output_range =
+                    recovered.iter().fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &x| {
+                        (min.min(x), max.max(x))
+                    });
 
                 let input_span = input_range.1 - input_range.0;
                 let output_span = output_range.1 - output_range.0;
@@ -1393,7 +1441,9 @@ mod simd_consistency_mutation_killers {
                     assert!(
                         output_span > input_span * 0.1,
                         "TL1 block_size={} collapsed dynamic range too much: input_span={}, output_span={}",
-                        config.block_size, input_span, output_span
+                        config.block_size,
+                        input_span,
+                        output_span
                     );
                 }
 
@@ -1402,7 +1452,9 @@ mod simd_consistency_mutation_killers {
                     assert!(
                         val.is_finite(),
                         "TL1 block_size={} produced non-finite value {} at index {}",
-                        config.block_size, val, i
+                        config.block_size,
+                        val,
+                        i
                     );
                 }
             }
@@ -1424,7 +1476,7 @@ mod simd_consistency_mutation_killers {
 
             // Test different TL2 configurations to stress AVX paths
             let configs = vec![
-                TL2Config { block_size: 8, use_avx2: true, ..Default::default() },  // AVX2 with small blocks
+                TL2Config { block_size: 8, use_avx2: true, ..Default::default() }, // AVX2 with small blocks
                 TL2Config { block_size: 32, use_avx2: true, ..Default::default() }, // AVX2 with larger blocks
                 TL2Config { block_size: 64, use_avx2: false, ..Default::default() }, // Scalar fallback
             ];
@@ -1460,13 +1512,18 @@ mod simd_consistency_mutation_killers {
 
                 // 2. Check for suspicious bit patterns that suggest hardcoded SIMD constants
                 let has_power_of_two_pattern = recovered.iter().all(|&x| {
-                    if x == 0.0 { true } else {
+                    if x == 0.0 {
+                        true
+                    } else {
                         let abs_x = x.abs();
                         (abs_x - abs_x.log2().round().exp2()).abs() < 1e-6
                     }
                 });
 
-                if !data.iter().all(|&x| x == 0.0 || (x.abs() - x.abs().log2().round().exp2()).abs() < 1e-6) {
+                if !data
+                    .iter()
+                    .all(|&x| x == 0.0 || (x.abs() - x.abs().log2().round().exp2()).abs() < 1e-6)
+                {
                     assert!(
                         !has_power_of_two_pattern,
                         "TL2 returned suspicious power-of-2 pattern - possible hardcoded SIMD mutation"
@@ -1476,7 +1533,9 @@ mod simd_consistency_mutation_killers {
                 // 3. Check AVX2 vs scalar consistency for overlapping cases
                 if config.use_avx2 && cfg!(target_arch = "x86_64") {
                     // For AVX2 path, results should still be reasonable
-                    let max_error = data.iter().zip(recovered.iter())
+                    let max_error = data
+                        .iter()
+                        .zip(recovered.iter())
                         .map(|(orig, rec)| (orig - rec).abs())
                         .fold(0.0f32, f32::max);
 
@@ -1492,7 +1551,8 @@ mod simd_consistency_mutation_killers {
                     // Vectorized tables should not produce constant outputs for varied inputs
                     let output_variance = {
                         let mean = recovered.iter().sum::<f32>() / recovered.len() as f32;
-                        recovered.iter().map(|&x| (x - mean).powi(2)).sum::<f32>() / recovered.len() as f32
+                        recovered.iter().map(|&x| (x - mean).powi(2)).sum::<f32>()
+                            / recovered.len() as f32
                     };
 
                     let input_variance = {
@@ -1504,7 +1564,8 @@ mod simd_consistency_mutation_killers {
                         assert!(
                             output_variance > 1e-10,
                             "TL2 vectorized tables collapsed variance: input={}, output={}",
-                            input_variance, output_variance
+                            input_variance,
+                            output_variance
                         );
                     }
                 }
@@ -1514,7 +1575,9 @@ mod simd_consistency_mutation_killers {
                     // Check for common hardcoded values that might indicate mutations
                     let suspicious_constants = [1.0, -1.0, 0.5, -0.5, 2.0, -2.0, 0.25, -0.25];
 
-                    if suspicious_constants.iter().all(|&c| (val - c).abs() < 1e-8) && data[i].abs() > 1e-6 {
+                    if suspicious_constants.iter().all(|&c| (val - c).abs() < 1e-8)
+                        && data[i].abs() > 1e-6
+                    {
                         assert!(
                             false,
                             "TL2 returned suspicious constant {} at index {} for input {} - possible hardcoded mutation",
@@ -1555,14 +1618,20 @@ mod simd_consistency_mutation_killers {
                 assert!(
                     val.is_finite(),
                     "{} produced non-finite value {} at index {}",
-                    name, val, i
+                    name,
+                    val,
+                    i
                 );
 
                 let error = (test_data[i] - val).abs();
                 assert!(
                     error < 10.0,
                     "{} error {} too large at index {} (orig={}, recovered={})",
-                    name, error, i, test_data[i], val
+                    name,
+                    error,
+                    i,
+                    test_data[i],
+                    val
                 );
             }
 
@@ -1574,11 +1643,8 @@ mod simd_consistency_mutation_killers {
                 // Check for patterns in groups of 4, 8, 16 (common SIMD widths)
                 for stride in [4, 8, 16] {
                     let has_stride_pattern = (0..stride).all(|offset| {
-                        let stride_values: Vec<f32> = recovered.iter()
-                            .skip(offset)
-                            .step_by(stride)
-                            .cloned()
-                            .collect();
+                        let stride_values: Vec<f32> =
+                            recovered.iter().skip(offset).step_by(stride).cloned().collect();
 
                         if stride_values.len() > 1 {
                             stride_values.iter().all(|&x| (x - stride_values[0]).abs() < 1e-8)
@@ -1588,11 +1654,8 @@ mod simd_consistency_mutation_killers {
                     });
 
                     let input_has_stride_pattern = (0..stride).all(|offset| {
-                        let stride_values: Vec<f32> = test_data.iter()
-                            .skip(offset)
-                            .step_by(stride)
-                            .cloned()
-                            .collect();
+                        let stride_values: Vec<f32> =
+                            test_data.iter().skip(offset).step_by(stride).cloned().collect();
 
                         if stride_values.len() > 1 {
                             stride_values.iter().all(|&x| (x - stride_values[0]).abs() < 1e-6)
@@ -1617,13 +1680,12 @@ mod simd_consistency_mutation_killers {
         // Cross-platform consistency: different quantizers should not have identical results
         // (they use different algorithms), but all should be reasonable
         for i in 0..results.len() {
-            for j in (i+1)..results.len() {
+            for j in (i + 1)..results.len() {
                 let (name1, ref data1) = results[i];
                 let (name2, ref data2) = results[j];
 
                 // Different algorithms should produce different results (not identical due to bugs)
-                let identical = data1.iter().zip(data2.iter())
-                    .all(|(a, b)| (a - b).abs() < 1e-10);
+                let identical = data1.iter().zip(data2.iter()).all(|(a, b)| (a - b).abs() < 1e-10);
 
                 assert!(
                     !identical,
@@ -1632,14 +1694,18 @@ mod simd_consistency_mutation_killers {
                 );
 
                 // But both should be reasonable approximations
-                let max_diff = data1.iter().zip(data2.iter())
+                let max_diff = data1
+                    .iter()
+                    .zip(data2.iter())
                     .map(|(a, b)| (a - b).abs())
                     .fold(0.0f32, f32::max);
 
                 assert!(
                     max_diff < 20.0,
                     "{} and {} differ too much (max_diff={}), suggesting implementation issues",
-                    name1, name2, max_diff
+                    name1,
+                    name2,
+                    max_diff
                 );
             }
         }

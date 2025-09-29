@@ -569,9 +569,9 @@ mod memory_allocation_boundary_killers {
             let wrong_not_equal = memory_estimate != limit;
             if memory_estimate == limit {
                 let fails_with_greater = memory_estimate > limit; // false at limit
-                // At exactly the limit: fails_with_greater=false, wrong_not_equal=false
-                // This is expected - both should be false, so skip this test case
-                // Test is only meaningful when memory_estimate != limit
+            // At exactly the limit: fails_with_greater=false, wrong_not_equal=false
+            // This is expected - both should be false, so skip this test case
+            // Test is only meaningful when memory_estimate != limit
             } else {
                 let fails_with_greater = memory_estimate > limit;
                 // When not at limit, > and != should give different results in some cases
@@ -888,7 +888,10 @@ mod tensor_validation_edge_case_killers {
         let max_memory_allocation = 3_500_000_000u64; // ~3.5GB for testing boundary cases
         if total_bytes > max_memory_allocation {
             return Err(BitNetError::Security(SecurityError::MemoryBomb {
-                reason: format!("Tensor memory requirement {} exceeds limit {}", total_bytes, max_memory_allocation),
+                reason: format!(
+                    "Tensor memory requirement {} exceeds limit {}",
+                    total_bytes, max_memory_allocation
+                ),
             }));
         }
 
@@ -916,7 +919,7 @@ mod tensor_validation_edge_case_killers {
         for (shape, data_length, should_match) in test_cases {
             // Handle empty shape specially - product of empty iterator is 1
             let shape_elements: usize = if shape.is_empty() {
-                1  // Empty shape represents scalar (1 element)
+                1 // Empty shape represents scalar (1 element)
             } else {
                 shape.iter().product()
             };

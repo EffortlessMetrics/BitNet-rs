@@ -653,21 +653,33 @@ mod integration_tests {
         let dequantized = i2s_quantizer.dequantize_tensor(&quantized).unwrap();
 
         let dequant_data = dequantized.to_vec().unwrap();
-        let mse = reference_data.iter().zip(dequant_data.iter())
+        let mse = reference_data
+            .iter()
+            .zip(dequant_data.iter())
             .map(|(orig, deq)| (orig - deq).powi(2))
-            .sum::<f32>() / reference_data.len() as f32;
+            .sum::<f32>()
+            / reference_data.len() as f32;
 
         let rmse = mse.sqrt();
-        let signal_power = reference_data.iter().map(|x| x.powi(2)).sum::<f32>() / reference_data.len() as f32;
+        let signal_power =
+            reference_data.iter().map(|x| x.powi(2)).sum::<f32>() / reference_data.len() as f32;
         let accuracy_percentage = 100.0 * (1.0 - rmse / signal_power.sqrt());
 
         // I2S should achieve >99% accuracy - kills mutations that break quantization
-        assert!(accuracy_percentage > 99.0, "I2S accuracy {:.2}% below 99% threshold", accuracy_percentage);
+        assert!(
+            accuracy_percentage > 99.0,
+            "I2S accuracy {:.2}% below 99% threshold",
+            accuracy_percentage
+        );
 
         // Additional validation: dequantized values should be in reasonable range
         for &val in &dequant_data {
             assert!(val.is_finite(), "Dequantized value not finite - possible mutation");
-            assert!(val.abs() < 100.0, "Dequantized value {} too large - possible scale mutation", val);
+            assert!(
+                val.abs() < 100.0,
+                "Dequantized value {} too large - possible scale mutation",
+                val
+            );
         }
     }
 
@@ -693,23 +705,37 @@ mod integration_tests {
         let tl2_data = tl2_dequantized.to_vec().unwrap();
 
         // Check for hardcoded returns or broken arithmetic
-        let tl1_range = tl1_data.iter().fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &x| {
-            (min.min(x), max.max(x))
-        });
-        let tl2_range = tl2_data.iter().fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &x| {
-            (min.min(x), max.max(x))
-        });
+        let tl1_range = tl1_data
+            .iter()
+            .fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &x| (min.min(x), max.max(x)));
+        let tl2_range = tl2_data
+            .iter()
+            .fold((f32::INFINITY, f32::NEG_INFINITY), |(min, max), &x| (min.min(x), max.max(x)));
 
         // Should have reasonable dynamic range (not all zeros/constants)
-        assert!(tl1_range.1 - tl1_range.0 > 0.1, "TL1 output range too small - possible arithmetic mutation");
-        assert!(tl2_range.1 - tl2_range.0 > 0.1, "TL2 output range too small - possible arithmetic mutation");
+        assert!(
+            tl1_range.1 - tl1_range.0 > 0.1,
+            "TL1 output range too small - possible arithmetic mutation"
+        );
+        assert!(
+            tl2_range.1 - tl2_range.0 > 0.1,
+            "TL2 output range too small - possible arithmetic mutation"
+        );
 
         // Scales should be reasonable (not infinite/zero from division mutations)
         for &scale in &tl1_quantized.scales {
-            assert!(scale > 1e-10 && scale < 1e10, "TL1 scale {} unreasonable - possible division mutation", scale);
+            assert!(
+                scale > 1e-10 && scale < 1e10,
+                "TL1 scale {} unreasonable - possible division mutation",
+                scale
+            );
         }
         for &scale in &tl2_quantized.scales {
-            assert!(scale > 1e-10 && scale < 1e10, "TL2 scale {} unreasonable - possible division mutation", scale);
+            assert!(
+                scale > 1e-10 && scale < 1e10,
+                "TL2 scale {} unreasonable - possible division mutation",
+                scale
+            );
         }
     }
 
