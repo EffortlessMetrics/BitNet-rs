@@ -12,7 +12,6 @@
 /// - AC13: Graceful shutdown handling in-flight requests with zero data loss
 /// - AC14: Model compatibility validation for GGUF format compliance
 /// - AC15: Device-aware inference routing with automatic device selection
-
 use anyhow::Result;
 use serde_json::json;
 use std::time::{Duration, Instant};
@@ -68,7 +67,10 @@ mod prometheus_metrics_tests {
         // This validates proper metric labeling without cardinality explosion
 
         let metric_label_tests = vec![
-            ("bitnet_inference_duration_seconds", vec!["model_id", "device", "quantization_format"]),
+            (
+                "bitnet_inference_duration_seconds",
+                vec!["model_id", "device", "quantization_format"],
+            ),
             ("bitnet_tokens_per_second", vec!["model_id", "device"]),
             ("bitnet_gpu_utilization_ratio", vec!["device_id"]),
             ("bitnet_active_inference_requests", vec!["priority"]),
@@ -104,10 +106,10 @@ async fn ac7_streaming_inference_ok() -> Result<()> {
     // TODO: Parse Server-Sent Events stream
 
     let expected_event_types = vec![
-        "token",     // Individual token events
-        "progress",  // Progress updates
-        "metrics",   // Performance metrics
-        "complete",  // Completion event
+        "token",    // Individual token events
+        "progress", // Progress updates
+        "metrics",  // Performance metrics
+        "complete", // Completion event
     ];
 
     for event_type in expected_event_types {
@@ -227,32 +229,44 @@ async fn ac10_performance_requirements_ok() -> Result<()> {
         response_times.push(response_time);
 
         // Validate individual response time
-        assert!(response_time <= MAX_RESPONSE_TIME,
-               "Response #{} took {:?}, should be under {:?}",
-               i, response_time, MAX_RESPONSE_TIME);
+        assert!(
+            response_time <= MAX_RESPONSE_TIME,
+            "Response #{} took {:?}, should be under {:?}",
+            i,
+            response_time,
+            MAX_RESPONSE_TIME
+        );
     }
 
     // Validate overall performance metrics
     let avg_response_time = response_times.iter().sum::<Duration>() / response_times.len() as u32;
     let max_response_time = *response_times.iter().max().unwrap();
 
-    assert!(avg_response_time <= Duration::from_millis(1500),
-           "Average response time should be under 1.5s, got {:?}", avg_response_time);
+    assert!(
+        avg_response_time <= Duration::from_millis(1500),
+        "Average response time should be under 1.5s, got {:?}",
+        avg_response_time
+    );
 
     // TODO: Check final memory usage
     let final_memory_mb = baseline_memory_mb; // TODO: Get actual final memory
     let memory_usage_gb = final_memory_mb / 1024.0;
 
-    assert!(memory_usage_gb <= MAX_MEMORY_USAGE_GB,
-           "Memory usage should be under {}GB, got {:.2}GB",
-           MAX_MEMORY_USAGE_GB, memory_usage_gb);
+    assert!(
+        memory_usage_gb <= MAX_MEMORY_USAGE_GB,
+        "Memory usage should be under {}GB, got {:.2}GB",
+        MAX_MEMORY_USAGE_GB,
+        memory_usage_gb
+    );
 
     // Validate throughput requirements
     // TODO: Calculate tokens per second
     // TODO: Verify >1000 tokens/second aggregate throughput capability
 
-    println!("Performance validation: avg response {:?}, max response {:?}, memory {:.2}GB",
-            avg_response_time, max_response_time, memory_usage_gb);
+    println!(
+        "Performance validation: avg response {:?}, max response {:?}, memory {:.2}GB",
+        avg_response_time, max_response_time, memory_usage_gb
+    );
 
     Ok(())
 }
@@ -264,9 +278,24 @@ async fn ac11_error_handling_ok() -> Result<()> {
 
     let error_test_cases = vec![
         ("invalid_prompt", json!({"max_tokens": 100}), 400, "VALIDATION_FAILED"),
-        ("model_not_found", json!({"prompt": "test", "model": "nonexistent"}), 404, "MODEL_NOT_FOUND"),
-        ("invalid_quantization", json!({"prompt": "test", "quantization_preference": "invalid"}), 400, "VALIDATION_FAILED"),
-        ("excessive_tokens", json!({"prompt": "test", "max_tokens": 10000}), 400, "VALIDATION_FAILED"),
+        (
+            "model_not_found",
+            json!({"prompt": "test", "model": "nonexistent"}),
+            404,
+            "MODEL_NOT_FOUND",
+        ),
+        (
+            "invalid_quantization",
+            json!({"prompt": "test", "quantization_preference": "invalid"}),
+            400,
+            "VALIDATION_FAILED",
+        ),
+        (
+            "excessive_tokens",
+            json!({"prompt": "test", "max_tokens": 10000}),
+            400,
+            "VALIDATION_FAILED",
+        ),
     ];
 
     for (test_name, request_body, expected_status, expected_error_code) in error_test_cases {
@@ -291,7 +320,10 @@ async fn ac11_error_handling_ok() -> Result<()> {
         // TODO: Assert error.code matches expected_error_code
         // TODO: Verify recovery_suggestions are provided and actionable
 
-        println!("Error test '{}': expected {} ({})", test_name, expected_status, expected_error_code);
+        println!(
+            "Error test '{}': expected {} ({})",
+            test_name, expected_status, expected_error_code
+        );
     }
 
     Ok(())
@@ -304,14 +336,33 @@ async fn ac12_request_validation_ok() -> Result<()> {
 
     let validation_test_cases = vec![
         // Input sanitization tests
-        ("xss_attempt", json!({"prompt": "<script>alert('xss')</script>"}), "Should sanitize HTML/JS"),
-        ("sql_injection", json!({"prompt": "'; DROP TABLE models; --"}), "Should handle SQL injection attempts"),
-        ("unicode_normalization", json!({"prompt": "test\u{200B}\u{FEFF}unicode"}), "Should normalize unicode"),
+        (
+            "xss_attempt",
+            json!({"prompt": "<script>alert('xss')</script>"}),
+            "Should sanitize HTML/JS",
+        ),
+        (
+            "sql_injection",
+            json!({"prompt": "'; DROP TABLE models; --"}),
+            "Should handle SQL injection attempts",
+        ),
+        (
+            "unicode_normalization",
+            json!({"prompt": "test\u{200B}\u{FEFF}unicode"}),
+            "Should normalize unicode",
+        ),
         ("excessive_length", json!({"prompt": "x".repeat(10000)}), "Should enforce length limits"),
-
         // Parameter validation tests
-        ("negative_tokens", json!({"prompt": "test", "max_tokens": -1}), "Should reject negative values"),
-        ("invalid_temperature", json!({"prompt": "test", "temperature": 5.0}), "Should enforce parameter bounds"),
+        (
+            "negative_tokens",
+            json!({"prompt": "test", "max_tokens": -1}),
+            "Should reject negative values",
+        ),
+        (
+            "invalid_temperature",
+            json!({"prompt": "test", "temperature": 5.0}),
+            "Should enforce parameter bounds",
+        ),
         ("malformed_json", json!("invalid json"), "Should reject malformed JSON"),
     ];
 
@@ -393,17 +444,22 @@ async fn ac13_graceful_shutdown_ok() -> Result<()> {
     let shutdown_duration = shutdown_start.elapsed();
 
     // Validate graceful shutdown behavior
-    let completed_requests = results.iter()
+    let completed_requests = results
+        .iter()
         .filter_map(|r| r.as_ref().ok())
         .filter(|(_, _, completed)| *completed)
         .count();
 
     // Should complete most or all in-flight requests
-    assert!(completed_requests >= IN_FLIGHT_REQUESTS * 80 / 100,
-           "Should complete at least 80% of in-flight requests during graceful shutdown");
+    assert!(
+        completed_requests >= IN_FLIGHT_REQUESTS * 80 / 100,
+        "Should complete at least 80% of in-flight requests during graceful shutdown"
+    );
 
-    assert!(shutdown_duration <= SHUTDOWN_TIMEOUT,
-           "Graceful shutdown should complete within timeout period");
+    assert!(
+        shutdown_duration <= SHUTDOWN_TIMEOUT,
+        "Graceful shutdown should complete within timeout period"
+    );
 
     // Validate no new requests are accepted during shutdown
     // TODO: Attempt to send new request during shutdown
@@ -414,8 +470,10 @@ async fn ac13_graceful_shutdown_ok() -> Result<()> {
     // TODO: Verify all completed requests have valid responses
     // TODO: Confirm no data corruption occurred
 
-    println!("Graceful shutdown: {}/{} requests completed in {:?}",
-            completed_requests, IN_FLIGHT_REQUESTS, shutdown_duration);
+    println!(
+        "Graceful shutdown: {}/{} requests completed in {:?}",
+        completed_requests, IN_FLIGHT_REQUESTS, shutdown_duration
+    );
 
     Ok(())
 }
@@ -485,18 +543,18 @@ mod device_routing_tests {
             ("i2s_quantization", "i2s", "auto", "cpu", "I2S should prefer CPU with SIMD"),
             ("small_batch", "auto", "auto", "cpu", "Small batches should prefer CPU"),
             ("cpu_forced", "auto", "cpu", "cpu", "CPU preference should be respected"),
-
             // GPU-optimal cases
             ("tl1_quantization", "tl1", "auto", "gpu", "TL1 should prefer GPU acceleration"),
             ("tl2_quantization", "tl2", "auto", "gpu", "TL2 should prefer GPU acceleration"),
             ("large_batch", "auto", "auto", "gpu", "Large batches should prefer GPU"),
             ("gpu_forced", "auto", "gpu", "gpu", "GPU preference should be respected"),
-
             // Auto-routing cases
             ("auto_selection", "auto", "auto", "optimal", "Auto should select optimal device"),
         ];
 
-        for (test_name, quant_pref, device_pref, expected_device_type, description) in device_routing_test_cases {
+        for (test_name, quant_pref, device_pref, expected_device_type, description) in
+            device_routing_test_cases
+        {
             let request = json!({
                 "prompt": format!("Device routing test: {}", test_name),
                 "max_tokens": 100,
@@ -519,7 +577,10 @@ mod device_routing_tests {
                 // TODO: Check device selection reasoning is logged
             }
 
-            println!("Device routing test '{}': {} -> {}", test_name, description, expected_device_type);
+            println!(
+                "Device routing test '{}': {} -> {}",
+                test_name, description, expected_device_type
+            );
         }
 
         // Test device fallback scenarios
@@ -548,34 +609,40 @@ mod device_routing_tests {
 
         const MIXED_DEVICE_REQUESTS: usize = 40;
 
-        let mixed_requests: Vec<_> = (0..MIXED_DEVICE_REQUESTS).map(|i| {
-            let (quant, device) = match i % 4 {
-                0 => ("i2s", "cpu"),    // CPU-optimal
-                1 => ("tl1", "gpu"),    // GPU-optimal
-                2 => ("tl2", "gpu"),    // GPU-optimal
-                _ => ("auto", "auto"),  // Let system decide
-            };
+        let mixed_requests: Vec<_> = (0..MIXED_DEVICE_REQUESTS)
+            .map(|i| {
+                let (quant, device) = match i % 4 {
+                    0 => ("i2s", "cpu"),   // CPU-optimal
+                    1 => ("tl1", "gpu"),   // GPU-optimal
+                    2 => ("tl2", "gpu"),   // GPU-optimal
+                    _ => ("auto", "auto"), // Let system decide
+                };
 
-            json!({
-                "prompt": format!("Mixed device performance test #{}", i),
-                "max_tokens": 80,
-                "quantization_preference": quant,
-                "device_preference": device
+                json!({
+                    "prompt": format!("Mixed device performance test #{}", i),
+                    "max_tokens": 80,
+                    "quantization_preference": quant,
+                    "device_preference": device
+                })
             })
-        }).collect();
+            .collect();
 
         let start_time = Instant::now();
 
-        let handles: Vec<_> = mixed_requests.into_iter().enumerate().map(|(i, request)| {
-            tokio::spawn(async move {
-                // TODO: Send request and capture device utilization
-                // TODO: Measure request processing time
-                // TODO: Return (request_id, device_used, processing_time, throughput)
+        let handles: Vec<_> = mixed_requests
+            .into_iter()
+            .enumerate()
+            .map(|(i, request)| {
+                tokio::spawn(async move {
+                    // TODO: Send request and capture device utilization
+                    // TODO: Measure request processing time
+                    // TODO: Return (request_id, device_used, processing_time, throughput)
 
-                tokio::time::sleep(Duration::from_millis(100)).await;
-                (i, "cpu".to_string(), Duration::from_millis(100), 50.0)
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    (i, "cpu".to_string(), Duration::from_millis(100), 50.0)
+                })
             })
-        }).collect();
+            .collect();
 
         let results = futures::future::join_all(handles).await;
         let total_time = start_time.elapsed();
@@ -597,21 +664,31 @@ mod device_routing_tests {
         }
 
         // Validate load balancing effectiveness
-        assert!(cpu_requests > 0 && gpu_requests > 0,
-               "Requests should be distributed across both CPU and GPU");
+        assert!(
+            cpu_requests > 0 && gpu_requests > 0,
+            "Requests should be distributed across both CPU and GPU"
+        );
 
         let load_balance_ratio = (cpu_requests as f64) / (gpu_requests as f64);
-        assert!(load_balance_ratio >= 0.3 && load_balance_ratio <= 3.0,
-               "Load balancing should not be heavily skewed: CPU {} / GPU {} = {:.2}",
-               cpu_requests, gpu_requests, load_balance_ratio);
+        assert!(
+            load_balance_ratio >= 0.3 && load_balance_ratio <= 3.0,
+            "Load balancing should not be heavily skewed: CPU {} / GPU {} = {:.2}",
+            cpu_requests,
+            gpu_requests,
+            load_balance_ratio
+        );
 
         // Validate performance optimization
         let avg_throughput = total_throughput / MIXED_DEVICE_REQUESTS as f64;
-        assert!(avg_throughput >= 40.0,
-               "Average throughput should benefit from mixed device utilization");
+        assert!(
+            avg_throughput >= 40.0,
+            "Average throughput should benefit from mixed device utilization"
+        );
 
-        println!("Device performance: CPU {} requests, GPU {} requests, avg throughput {:.1} tok/sec in {:?}",
-                cpu_requests, gpu_requests, avg_throughput, total_time);
+        println!(
+            "Device performance: CPU {} requests, GPU {} requests, avg throughput {:.1} tok/sec in {:?}",
+            cpu_requests, gpu_requests, avg_throughput, total_time
+        );
 
         Ok(())
     }
@@ -664,12 +741,20 @@ mod remaining_ac_test_helpers {
                 avg_response_time: avg_time,
                 max_response_time: max_time,
                 min_response_time: min_time,
-                sla_compliance: response_times.iter().filter(|&&t| t <= Duration::from_secs(2)).count() as f64 / response_times.len() as f64,
+                sla_compliance: response_times
+                    .iter()
+                    .filter(|&&t| t <= Duration::from_secs(2))
+                    .count() as f64
+                    / response_times.len() as f64,
                 performance_degradation: false,
             }
         }
 
-        pub fn validate_memory_usage(baseline_mb: f64, current_mb: f64, limit_gb: f64) -> MemoryValidation {
+        pub fn validate_memory_usage(
+            baseline_mb: f64,
+            current_mb: f64,
+            limit_gb: f64,
+        ) -> MemoryValidation {
             let usage_gb = current_mb / 1024.0;
             let increase_percent = ((current_mb - baseline_mb) / baseline_mb) * 100.0;
 
@@ -703,13 +788,16 @@ mod remaining_ac_test_helpers {
     pub struct DeviceRoutingAnalyzer;
 
     impl DeviceRoutingAnalyzer {
-        pub fn analyze_device_selection(requests: &[(String, String, String)]) -> DeviceRoutingAnalysis {
+        pub fn analyze_device_selection(
+            requests: &[(String, String, String)],
+        ) -> DeviceRoutingAnalysis {
             // TODO: Analyze device selection patterns
             // TODO: Validate routing decisions are optimal
             // TODO: Check load balancing effectiveness
 
             let cpu_count = requests.iter().filter(|(_, _, device)| device == "cpu").count();
-            let gpu_count = requests.iter().filter(|(_, _, device)| device.starts_with("cuda:")).count();
+            let gpu_count =
+                requests.iter().filter(|(_, _, device)| device.starts_with("cuda:")).count();
 
             DeviceRoutingAnalysis {
                 cpu_requests: cpu_count,

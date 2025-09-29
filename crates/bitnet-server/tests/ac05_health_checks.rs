@@ -6,7 +6,6 @@
 /// - Liveness and readiness probes for container orchestration
 /// - Performance indicators and SLA compliance tracking
 /// - Real-time system metrics with resource utilization
-
 use anyhow::Result;
 use serde_json::json;
 use std::time::{Duration, Instant};
@@ -32,8 +31,8 @@ async fn ac5_health_checks_ok() -> Result<()> {
         "system_metrics": {
             "cpu_utilization": 0.65,
             "gpu_utilization": 0.78,
-            "memory_usage_bytes": 6442450944,
-            "gpu_memory_usage_bytes": 2147483648,
+            "memory_usage_bytes": 6442450944_i64,
+            "gpu_memory_usage_bytes": 2147483648_u32,
             "active_requests": 23,
             "queue_depth": 5
         },
@@ -58,7 +57,7 @@ async fn ac5_health_checks_ok() -> Result<()> {
         "execution_router",
         "batch_engine",
         "device_monitor",
-        "quantization_engine"
+        "quantization_engine",
     ];
 
     for component in required_components {
@@ -104,8 +103,8 @@ async fn ac5_kubernetes_liveness_probe_ok() -> Result<()> {
     // Test liveness probe under different conditions
     let test_scenarios = vec![
         ("normal_operation", 200, "healthy"),
-        ("high_load", 200, "healthy"),      // Should remain healthy under load
-        ("model_loading", 200, "healthy"),  // Should remain healthy during model ops
+        ("high_load", 200, "healthy"), // Should remain healthy under load
+        ("model_loading", 200, "healthy"), // Should remain healthy during model ops
         ("memory_pressure", 200, "healthy"), // Should remain healthy with memory pressure
     ];
 
@@ -114,8 +113,10 @@ async fn ac5_kubernetes_liveness_probe_ok() -> Result<()> {
         // TODO: Send liveness probe request
         // TODO: Validate expected HTTP status and health status
 
-        println!("Liveness probe scenario '{}': expected {} ({})",
-                scenario, expected_status, expected_health);
+        println!(
+            "Liveness probe scenario '{}': expected {} ({})",
+            scenario, expected_status, expected_health
+        );
     }
 
     Ok(())
@@ -164,8 +165,10 @@ async fn ac5_kubernetes_readiness_probe_ok() -> Result<()> {
         let expected_status = if should_be_ready { 200 } else { 503 };
         let expected_ready = if should_be_ready { "ready" } else { "not_ready" };
 
-        println!("Readiness scenario '{}': expected {} ({}) - {}",
-                scenario, expected_status, expected_ready, description);
+        println!(
+            "Readiness scenario '{}': expected {} ({}) - {}",
+            scenario, expected_status, expected_ready, description
+        );
     }
 
     Ok(())
@@ -193,8 +196,8 @@ mod cpu_health_monitoring_tests {
                 "temperature": 65.0
             },
             "memory_info": {
-                "total_bytes": 16777216000,
-                "available_bytes": 8388608000,
+                "total_bytes": 16777216000_i64,
+                "available_bytes": 8388608000_i64,
                 "utilization": 0.50
             }
         });
@@ -206,14 +209,12 @@ mod cpu_health_monitoring_tests {
         // TODO: Validate memory metrics are current and accurate
 
         // Test CPU health under inference load
-        let cpu_load_test_requests = vec![
-            json!({
-                "prompt": "CPU health test during inference load",
-                "max_tokens": 100,
-                "device_preference": "cpu",
-                "quantization_preference": "i2s"
-            })
-        ];
+        let cpu_load_test_requests = vec![json!({
+            "prompt": "CPU health test during inference load",
+            "max_tokens": 100,
+            "device_preference": "cpu",
+            "quantization_preference": "i2s"
+        })];
 
         // TODO: Send inference requests to create CPU load
         // TODO: Monitor health metrics during CPU processing
@@ -244,8 +245,8 @@ mod gpu_health_monitoring_tests {
                         "id": "cuda:0",
                         "name": "NVIDIA RTX 4090",
                         "compute_capability": "8.9",
-                        "memory_total_bytes": 25769803776,
-                        "memory_used_bytes": 8589934592,
+                        "memory_total_bytes": 25769803776_i64,
+                        "memory_used_bytes": 8589934592_i64,
                         "memory_utilization": 0.33,
                         "gpu_utilization": 0.78,
                         "temperature": 72.0,
@@ -263,14 +264,12 @@ mod gpu_health_monitoring_tests {
         // TODO: Confirm CUDA context is healthy
 
         // Test GPU health during mixed precision inference
-        let gpu_load_test_requests = vec![
-            json!({
-                "prompt": "GPU health test during mixed precision inference",
-                "max_tokens": 150,
-                "device_preference": "gpu",
-                "quantization_preference": "tl1"
-            })
-        ];
+        let gpu_load_test_requests = vec![json!({
+            "prompt": "GPU health test during mixed precision inference",
+            "max_tokens": 150,
+            "device_preference": "gpu",
+            "quantization_preference": "tl1"
+        })];
 
         // TODO: Send GPU inference requests
         // TODO: Monitor GPU health metrics during processing
@@ -418,9 +417,13 @@ async fn ac5_health_check_performance_ok() -> Result<()> {
         health_check_times.push(health_check_time);
 
         // Individual health checks should be fast
-        assert!(health_check_time <= MAX_HEALTH_CHECK_TIME,
-               "Health check #{} took {:?}, should be under {:?}",
-               i, health_check_time, MAX_HEALTH_CHECK_TIME);
+        assert!(
+            health_check_time <= MAX_HEALTH_CHECK_TIME,
+            "Health check #{} took {:?}, should be under {:?}",
+            i,
+            health_check_time,
+            MAX_HEALTH_CHECK_TIME
+        );
 
         // Brief pause to avoid overwhelming the system
         if i % 10 == 9 {
@@ -435,19 +438,30 @@ async fn ac5_health_check_performance_ok() -> Result<()> {
     let min_time = health_check_times.iter().min().unwrap();
 
     // Validate performance requirements
-    assert!(avg_time <= Duration::from_millis(50),
-           "Average health check time should be under 50ms, got {:?}", avg_time);
+    assert!(
+        avg_time <= Duration::from_millis(50),
+        "Average health check time should be under 50ms, got {:?}",
+        avg_time
+    );
 
-    assert!(*max_time <= Duration::from_millis(200),
-           "Maximum health check time should be under 200ms, got {:?}", max_time);
+    assert!(
+        *max_time <= Duration::from_millis(200),
+        "Maximum health check time should be under 200ms, got {:?}",
+        max_time
+    );
 
     // Health checks should be consistent
     let time_variance = max_time.as_millis() - min_time.as_millis();
-    assert!(time_variance <= 150,
-           "Health check time variance should be low, got {}ms", time_variance);
+    assert!(
+        time_variance <= 150,
+        "Health check time variance should be low, got {}ms",
+        time_variance
+    );
 
-    println!("Health check performance: avg {:?}, min {:?}, max {:?} over {} checks",
-            avg_time, min_time, max_time, HEALTH_CHECK_COUNT);
+    println!(
+        "Health check performance: avg {:?}, min {:?}, max {:?} over {} checks",
+        avg_time, min_time, max_time, HEALTH_CHECK_COUNT
+    );
 
     Ok(())
 }
@@ -476,24 +490,29 @@ async fn ac5_health_check_under_load_ok() -> Result<()> {
     }).collect();
 
     // Perform health checks during load
-    let health_check_handles: Vec<_> = (0..HEALTH_CHECKS_DURING_LOAD).map(|i| {
-        tokio::spawn(async move {
-            let start_time = Instant::now();
+    let health_check_handles: Vec<_> = (0..HEALTH_CHECKS_DURING_LOAD)
+        .map(|i| {
+            tokio::spawn(async move {
+                let start_time = Instant::now();
 
-            // TODO: Send health check request during load
-            // TODO: Verify health metrics are accurate despite load
-            // TODO: Check response time is still reasonable
+                // TODO: Send health check request during load
+                // TODO: Verify health metrics are accurate despite load
+                // TODO: Check response time is still reasonable
 
-            let health_check_time = start_time.elapsed();
+                let health_check_time = start_time.elapsed();
 
-            // Health checks should remain fast even under load
-            assert!(health_check_time <= Duration::from_millis(500),
-                   "Health check #{} took {:?} under load, should be under 500ms",
-                   i, health_check_time);
+                // Health checks should remain fast even under load
+                assert!(
+                    health_check_time <= Duration::from_millis(500),
+                    "Health check #{} took {:?} under load, should be under 500ms",
+                    i,
+                    health_check_time
+                );
 
-            (i, health_check_time, true) // (check_id, response_time, success)
+                (i, health_check_time, true) // (check_id, response_time, success)
+            })
         })
-    }).collect();
+        .collect();
 
     // Wait for all operations to complete
     let (load_results, health_results) = tokio::join!(
@@ -502,36 +521,45 @@ async fn ac5_health_check_under_load_ok() -> Result<()> {
     );
 
     // Validate load generation succeeded
-    let successful_load_requests = load_results.iter()
+    let successful_load_requests = load_results
+        .iter()
         .filter_map(|r| r.as_ref().ok().and_then(|inner| inner.as_ref().ok()))
         .count();
 
-    assert!(successful_load_requests >= LOAD_REQUESTS * 90 / 100,
-           "Load generation should be at least 90% successful");
+    assert!(
+        successful_load_requests >= LOAD_REQUESTS * 90 / 100,
+        "Load generation should be at least 90% successful"
+    );
 
     // Validate health checks remained functional under load
-    let successful_health_checks = health_results.iter()
+    let successful_health_checks = health_results
+        .iter()
         .filter_map(|r| r.as_ref().ok())
         .filter(|(_, _, success)| *success)
         .count();
 
-    assert!(successful_health_checks >= HEALTH_CHECKS_DURING_LOAD * 95 / 100,
-           "Health checks should be at least 95% successful under load");
+    assert!(
+        successful_health_checks >= HEALTH_CHECKS_DURING_LOAD * 95 / 100,
+        "Health checks should be at least 95% successful under load"
+    );
 
     // Validate health check performance under load
-    let health_check_times: Vec<Duration> = health_results.iter()
-        .filter_map(|r| r.as_ref().ok())
-        .map(|(_, time, _)| *time)
-        .collect();
+    let health_check_times: Vec<Duration> =
+        health_results.iter().filter_map(|r| r.as_ref().ok()).map(|(_, time, _)| *time).collect();
 
-    let avg_health_time = health_check_times.iter().sum::<Duration>() / health_check_times.len() as u32;
+    let avg_health_time =
+        health_check_times.iter().sum::<Duration>() / health_check_times.len() as u32;
 
-    assert!(avg_health_time <= Duration::from_millis(200),
-           "Average health check time under load should be under 200ms, got {:?}",
-           avg_health_time);
+    assert!(
+        avg_health_time <= Duration::from_millis(200),
+        "Average health check time under load should be under 200ms, got {:?}",
+        avg_health_time
+    );
 
-    println!("Health checks under load: {}/{} successful, avg time {:?}",
-            successful_health_checks, HEALTH_CHECKS_DURING_LOAD, avg_health_time);
+    println!(
+        "Health checks under load: {}/{} successful, avg time {:?}",
+        successful_health_checks, HEALTH_CHECKS_DURING_LOAD, avg_health_time
+    );
 
     Ok(())
 }
@@ -559,7 +587,9 @@ mod health_test_helpers {
             })
         }
 
-        pub fn validate_liveness_response(response: &serde_json::Value) -> Result<LivenessValidation> {
+        pub fn validate_liveness_response(
+            response: &serde_json::Value,
+        ) -> Result<LivenessValidation> {
             // TODO: Validate liveness probe response
             // TODO: Check minimalist response format
             // TODO: Verify fast response time
@@ -571,7 +601,9 @@ mod health_test_helpers {
             })
         }
 
-        pub fn validate_readiness_response(response: &serde_json::Value) -> Result<ReadinessValidation> {
+        pub fn validate_readiness_response(
+            response: &serde_json::Value,
+        ) -> Result<ReadinessValidation> {
             // TODO: Validate readiness probe response
             // TODO: Check all readiness checks are present
             // TODO: Verify readiness logic is sound

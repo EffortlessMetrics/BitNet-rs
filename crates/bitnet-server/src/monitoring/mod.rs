@@ -24,6 +24,8 @@ pub struct MonitoringConfig {
     pub opentelemetry_enabled: bool,
     /// OpenTelemetry endpoint URL
     pub opentelemetry_endpoint: Option<String>,
+    /// OTLP endpoint URL (alias for opentelemetry_endpoint)
+    pub otlp_endpoint: Option<String>,
     /// Health check endpoint path
     pub health_path: String,
     /// Metrics collection interval in seconds
@@ -43,6 +45,7 @@ impl Default for MonitoringConfig {
             prometheus_path: "/metrics".to_string(),
             opentelemetry_enabled: false,
             opentelemetry_endpoint: None,
+            otlp_endpoint: None,
             health_path: "/health".to_string(),
             metrics_interval: 10,
             structured_logging: true,

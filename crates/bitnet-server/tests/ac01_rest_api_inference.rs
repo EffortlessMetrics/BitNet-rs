@@ -6,7 +6,6 @@
 /// - Request validation and schema enforcement
 /// - Response format compliance with BitNet.rs neural network patterns
 /// - Device-aware quantization format selection (I2S, TL1, TL2)
-
 use anyhow::Result;
 use serde_json::json;
 use std::collections::HashMap;
@@ -36,8 +35,12 @@ mod cpu_inference_tests {
 
         // Expected response validation
         let expected_fields = vec![
-            "text", "tokens_generated", "inference_time_ms",
-            "tokens_per_second", "model_id", "request_id"
+            "text",
+            "tokens_generated",
+            "inference_time_ms",
+            "tokens_per_second",
+            "model_id",
+            "request_id",
         ];
 
         // TODO: Assert all required fields are present
@@ -247,17 +250,17 @@ fn ac1_api_contract_schema_definitions_ok() -> Result<()> {
     ];
 
     let optional_request_fields = vec![
-        "max_tokens",           // integer, 1-2048, default: 100
-        "model",               // string, pattern: ^[a-zA-Z0-9_-]+$
-        "temperature",         // number, 0.0-2.0, default: 0.7
-        "top_p",              // number, 0.0-1.0, default: 0.9
-        "top_k",              // integer, 1-1000, default: 50
-        "repetition_penalty",  // number, 0.0-2.0, default: 1.0
-        "stop_sequences",     // array, maxItems: 10
-        "seed",               // integer, 0-4294967295
+        "max_tokens",              // integer, 1-2048, default: 100
+        "model",                   // string, pattern: ^[a-zA-Z0-9_-]+$
+        "temperature",             // number, 0.0-2.0, default: 0.7
+        "top_p",                   // number, 0.0-1.0, default: 0.9
+        "top_k",                   // integer, 1-1000, default: 50
+        "repetition_penalty",      // number, 0.0-2.0, default: 1.0
+        "stop_sequences",          // array, maxItems: 10
+        "seed",                    // integer, 0-4294967295
         "quantization_preference", // enum: auto, i2s, tl1, tl2
-        "device_preference",  // enum: auto, cpu, gpu
-        "priority",           // enum: low, normal, high
+        "device_preference",       // enum: auto, cpu, gpu
+        "priority",                // enum: low, normal, high
     ];
 
     // TODO: Validate all field definitions match specification
@@ -279,9 +282,7 @@ mod test_helpers {
 
     impl MockInferenceClient {
         pub fn new(base_url: &str) -> Self {
-            Self {
-                base_url: base_url.to_string(),
-            }
+            Self { base_url: base_url.to_string() }
         }
 
         pub async fn post_inference(&self, body: serde_json::Value) -> Result<serde_json::Value> {

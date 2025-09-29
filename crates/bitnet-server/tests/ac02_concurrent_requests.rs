@@ -6,7 +6,6 @@
 /// - Intelligent backpressure control based on system metrics
 /// - Priority-based request queuing and processing
 /// - Resource pool management with dynamic allocation
-
 use anyhow::Result;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -51,7 +50,11 @@ mod cpu_concurrency_tests {
 
                 // Simulate request processing for now
                 tokio::time::sleep(Duration::from_millis(100)).await;
-                Ok::<(usize, Duration, bool), anyhow::Error>((request_id, Duration::from_millis(100), true))
+                Ok::<(usize, Duration, bool), anyhow::Error>((
+                    request_id,
+                    Duration::from_millis(100),
+                    true,
+                ))
             });
 
             handles.push(handle);
@@ -80,15 +83,21 @@ mod cpu_concurrency_tests {
         }
 
         // Validate concurrency performance requirements
-        assert!(successful_requests >= CONCURRENT_REQUESTS * 95 / 100,
-               "Should handle at least 95% of concurrent requests successfully");
+        assert!(
+            successful_requests >= CONCURRENT_REQUESTS * 95 / 100,
+            "Should handle at least 95% of concurrent requests successfully"
+        );
 
-        assert!(elapsed <= MAX_RESPONSE_TIME,
-               "All requests should complete within maximum response time");
+        assert!(
+            elapsed <= MAX_RESPONSE_TIME,
+            "All requests should complete within maximum response time"
+        );
 
         let avg_response_time = total_response_time / successful_requests as u32;
-        assert!(avg_response_time <= Duration::from_secs(2),
-               "Average response time should be under 2 seconds");
+        assert!(
+            avg_response_time <= Duration::from_secs(2),
+            "Average response time should be under 2 seconds"
+        );
 
         // TODO: Validate server remained responsive during load
         // TODO: Check memory usage didn't exceed 8GB limit
@@ -106,40 +115,52 @@ mod cpu_concurrency_tests {
         const NORMAL_REQUESTS: usize = 50;
 
         // Phase 1: Generate overload to trigger backpressure
-        let overload_handles: Vec<_> = (0..OVERLOAD_REQUESTS).map(|i| {
-            tokio::spawn(async move {
-                let request_body = serde_json::json!({
-                    "prompt": format!("Overload request #{}", i),
-                    "max_tokens": 100,
-                    "device_preference": "cpu",
-                    "priority": "low"
-                });
+        let overload_handles: Vec<_> = (0..OVERLOAD_REQUESTS)
+            .map(|i| {
+                tokio::spawn(async move {
+                    let request_body = serde_json::json!({
+                        "prompt": format!("Overload request #{}", i),
+                        "max_tokens": 100,
+                        "device_preference": "cpu",
+                        "priority": "low"
+                    });
 
-                // TODO: Send request and measure response
-                // TODO: Return (success, response_time, http_status)
-                tokio::time::sleep(Duration::from_millis(200)).await;
-                Ok::<(bool, Duration, u16), anyhow::Error>((true, Duration::from_millis(200), 200))
+                    // TODO: Send request and measure response
+                    // TODO: Return (success, response_time, http_status)
+                    tokio::time::sleep(Duration::from_millis(200)).await;
+                    Ok::<(bool, Duration, u16), anyhow::Error>((
+                        true,
+                        Duration::from_millis(200),
+                        200,
+                    ))
+                })
             })
-        }).collect();
+            .collect();
 
         // Phase 2: Send normal priority requests during overload
         tokio::time::sleep(Duration::from_millis(100)).await; // Let overload build up
 
-        let normal_handles: Vec<_> = (0..NORMAL_REQUESTS).map(|i| {
-            tokio::spawn(async move {
-                let request_body = serde_json::json!({
-                    "prompt": format!("Normal priority request #{}", i),
-                    "max_tokens": 75,
-                    "device_preference": "cpu",
-                    "priority": "normal"
-                });
+        let normal_handles: Vec<_> = (0..NORMAL_REQUESTS)
+            .map(|i| {
+                tokio::spawn(async move {
+                    let request_body = serde_json::json!({
+                        "prompt": format!("Normal priority request #{}", i),
+                        "max_tokens": 75,
+                        "device_preference": "cpu",
+                        "priority": "normal"
+                    });
 
-                // TODO: Send request and measure response
-                // TODO: Verify normal requests are prioritized over low priority
-                tokio::time::sleep(Duration::from_millis(150)).await;
-                Ok::<(bool, Duration, u16), anyhow::Error>((true, Duration::from_millis(150), 200))
+                    // TODO: Send request and measure response
+                    // TODO: Verify normal requests are prioritized over low priority
+                    tokio::time::sleep(Duration::from_millis(150)).await;
+                    Ok::<(bool, Duration, u16), anyhow::Error>((
+                        true,
+                        Duration::from_millis(150),
+                        200,
+                    ))
+                })
             })
-        }).collect();
+            .collect();
 
         // Wait for completion and analyze results
         let (overload_results, normal_results) = tokio::join!(
@@ -194,7 +215,11 @@ mod gpu_concurrency_tests {
                 // TODO: Return performance metrics
 
                 tokio::time::sleep(Duration::from_millis(80)).await;
-                Ok::<(usize, Duration, bool), anyhow::Error>((request_id, Duration::from_millis(80), true))
+                Ok::<(usize, Duration, bool), anyhow::Error>((
+                    request_id,
+                    Duration::from_millis(80),
+                    true,
+                ))
             });
 
             handles.push(handle);
@@ -204,12 +229,15 @@ mod gpu_concurrency_tests {
         let elapsed = start_time.elapsed();
 
         // Validate GPU concurrency performance
-        let successful_requests = results.iter()
+        let successful_requests = results
+            .iter()
             .filter_map(|r| r.as_ref().ok().and_then(|inner| inner.as_ref().ok()))
             .count();
 
-        assert!(successful_requests >= CONCURRENT_REQUESTS * 98 / 100,
-               "GPU should handle at least 98% of concurrent requests");
+        assert!(
+            successful_requests >= CONCURRENT_REQUESTS * 98 / 100,
+            "GPU should handle at least 98% of concurrent requests"
+        );
 
         // TODO: Validate GPU memory usage during concurrent operations
         // TODO: Check for GPU memory leaks or fragmentation
@@ -257,12 +285,15 @@ mod gpu_concurrency_tests {
         let results = futures::future::join_all(handles).await;
 
         // Validate memory management
-        let successful_requests = results.iter()
+        let successful_requests = results
+            .iter()
             .filter_map(|r| r.as_ref().ok().and_then(|inner| inner.as_ref().ok()))
             .count();
 
-        assert!(successful_requests >= MEMORY_INTENSIVE_REQUESTS * 90 / 100,
-               "Should handle memory-intensive requests with >=90% success rate");
+        assert!(
+            successful_requests >= MEMORY_INTENSIVE_REQUESTS * 90 / 100,
+            "Should handle memory-intensive requests with >=90% success rate"
+        );
 
         // TODO: Assert final GPU memory usage is close to baseline
         // TODO: Verify no memory leaks detected
@@ -345,13 +376,13 @@ mod mixed_device_concurrency_tests {
         let results = futures::future::join_all(handles).await;
 
         // Validate load balancing effectiveness
-        let successful_requests = results.iter()
-            .filter_map(|r| r.as_ref().ok())
-            .filter(|(_, success)| *success)
-            .count();
+        let successful_requests =
+            results.iter().filter_map(|r| r.as_ref().ok()).filter(|(_, success)| *success).count();
 
-        assert!(successful_requests >= TOTAL_REQUESTS * 95 / 100,
-               "Mixed device load balancing should achieve >=95% success rate");
+        assert!(
+            successful_requests >= TOTAL_REQUESTS * 95 / 100,
+            "Mixed device load balancing should achieve >=95% success rate"
+        );
 
         // TODO: Analyze device utilization distribution
         // TODO: Verify requests were balanced appropriately
@@ -402,7 +433,8 @@ mod metrics_concurrency_tests {
         // TODO: Collect final metrics from /metrics endpoint
         // TODO: Validate metric accuracy against actual performance
 
-        let successful_requests = results.iter()
+        let successful_requests = results
+            .iter()
             .filter_map(|r| r.as_ref().ok().and_then(|inner| inner.as_ref().ok()))
             .count();
 
@@ -412,7 +444,10 @@ mod metrics_concurrency_tests {
         // TODO: Verify request rate metrics are accurate
         // TODO: Check error rate metrics if any failures occurred
 
-        assert!(successful_requests > 0, "At least some requests should succeed for metrics validation");
+        assert!(
+            successful_requests > 0,
+            "At least some requests should succeed for metrics validation"
+        );
 
         Ok(())
     }
@@ -433,10 +468,7 @@ mod concurrency_test_helpers {
         pub fn new() -> Result<Self> {
             // TODO: Capture baseline system metrics
             // TODO: Record initial memory and CPU usage
-            Ok(Self {
-                initial_memory: 0,
-                initial_cpu: 0.0,
-            })
+            Ok(Self { initial_memory: 0, initial_cpu: 0.0 })
         }
 
         pub fn check_resource_limits(&self) -> Result<ResourceUsage> {
@@ -457,23 +489,25 @@ mod concurrency_test_helpers {
 
     /// Create batches of test requests for concurrency testing
     pub fn create_request_batch(count: usize, device_pref: &str) -> Vec<serde_json::Value> {
-        (0..count).map(|i| {
-            serde_json::json!({
-                "prompt": format!("Batch test request #{}", i),
-                "max_tokens": 50 + (i % 50), // Vary token count
-                "device_preference": device_pref,
-                "quantization_preference": match i % 3 {
-                    0 => "i2s",
-                    1 => "tl1",
-                    _ => "tl2"
-                },
-                "priority": match i % 10 {
-                    0 => "high",
-                    1..=7 => "normal",
-                    _ => "low"
-                }
+        (0..count)
+            .map(|i| {
+                serde_json::json!({
+                    "prompt": format!("Batch test request #{}", i),
+                    "max_tokens": 50 + (i % 50), // Vary token count
+                    "device_preference": device_pref,
+                    "quantization_preference": match i % 3 {
+                        0 => "i2s",
+                        1 => "tl1",
+                        _ => "tl2"
+                    },
+                    "priority": match i % 10 {
+                        0 => "high",
+                        1..=7 => "normal",
+                        _ => "low"
+                    }
+                })
             })
-        }).collect()
+            .collect()
     }
 
     /// Validate concurrent request timing and ordering

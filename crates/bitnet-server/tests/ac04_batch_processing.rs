@@ -6,7 +6,6 @@
 /// - SIMD alignment optimization for vectorized operations
 /// - Mixed quantization format handling within batches
 /// - Performance optimization while maintaining <2 second response times
-
 use anyhow::Result;
 use serde_json::json;
 use std::collections::HashMap;
@@ -15,8 +14,8 @@ use tokio::time::timeout;
 
 #[cfg(feature = "cpu")]
 mod cpu_batch_processing_tests {
-    use super::*;
     use super::batch_test_types::*;
+    use super::*;
 
     #[tokio::test]
     async fn ac4_batch_processing_cpu_ok() -> Result<()> {
@@ -39,38 +38,44 @@ mod cpu_batch_processing_tests {
         let batch_start_time = Instant::now();
 
         // Send batch of requests simultaneously
-        let batch_handles: Vec<_> = batch_requests.into_iter().enumerate().map(|(i, request)| {
-            tokio::spawn(async move {
-                let request_start = Instant::now();
+        let batch_handles: Vec<_> = batch_requests
+            .into_iter()
+            .enumerate()
+            .map(|(i, request)| {
+                tokio::spawn(async move {
+                    let request_start = Instant::now();
 
-                // TODO: Send request to /v1/inference endpoint
-                // TODO: Measure individual request time within batch
-                // TODO: Return (request_id, response_time, tokens_generated, batch_info)
+                    // TODO: Send request to /v1/inference endpoint
+                    // TODO: Measure individual request time within batch
+                    // TODO: Return (request_id, response_time, tokens_generated, batch_info)
 
-                // Simulate batch processing for now
-                tokio::time::sleep(Duration::from_millis(120)).await;
+                    // Simulate batch processing for now
+                    tokio::time::sleep(Duration::from_millis(120)).await;
 
-                Ok::<(usize, Duration, usize, BatchInfo), anyhow::Error>((
-                    i,
-                    request_start.elapsed(),
-                    100, // tokens generated
-                    BatchInfo {
-                        batch_id: format!("batch-{}", i / 4), // Group every 4 requests
-                        batch_size: 4,
-                        simd_optimized: true,
-                        quantization_format: "i2s".to_string(),
-                    }
-                ))
+                    Ok::<(usize, Duration, usize, BatchInfo), anyhow::Error>((
+                        i,
+                        request_start.elapsed(),
+                        100, // tokens generated
+                        BatchInfo {
+                            batch_id: format!("batch-{}", i / 4), // Group every 4 requests
+                            batch_size: 4,
+                            simd_optimized: true,
+                            quantization_format: "i2s".to_string(),
+                        },
+                    ))
+                })
             })
-        }).collect();
+            .collect();
 
-        let batch_results = timeout(MAX_BATCH_RESPONSE_TIME, futures::future::join_all(batch_handles)).await?;
+        let batch_results =
+            timeout(MAX_BATCH_RESPONSE_TIME, futures::future::join_all(batch_handles)).await?;
         let total_batch_time = batch_start_time.elapsed();
 
         // Analyze batch processing results
         let mut successful_requests = 0;
         let mut total_response_time = Duration::ZERO;
-        let mut batch_groups: HashMap<String, Vec<(usize, Duration, usize, BatchInfo)>> = HashMap::new();
+        let mut batch_groups: HashMap<String, Vec<(usize, Duration, usize, BatchInfo)>> =
+            HashMap::new();
 
         for result in batch_results {
             match result? {
@@ -79,7 +84,8 @@ mod cpu_batch_processing_tests {
                     total_response_time += response_time;
 
                     // Group requests by batch_id for analysis
-                    batch_groups.entry(batch_info.batch_id.clone())
+                    batch_groups
+                        .entry(batch_info.batch_id.clone())
                         .or_insert_with(Vec::new)
                         .push((request_id, response_time, tokens, batch_info));
                 }
@@ -88,15 +94,21 @@ mod cpu_batch_processing_tests {
         }
 
         // Validate batch processing performance
-        assert!(successful_requests >= BATCH_SIZE * 95 / 100,
-               "Should process at least 95% of batch requests successfully");
+        assert!(
+            successful_requests >= BATCH_SIZE * 95 / 100,
+            "Should process at least 95% of batch requests successfully"
+        );
 
-        assert!(total_batch_time <= MAX_BATCH_RESPONSE_TIME,
-               "Batch processing should complete within 2 second limit");
+        assert!(
+            total_batch_time <= MAX_BATCH_RESPONSE_TIME,
+            "Batch processing should complete within 2 second limit"
+        );
 
         let avg_response_time = total_response_time / successful_requests as u32;
-        assert!(avg_response_time <= Duration::from_millis(1500),
-               "Average response time should be under 1.5 seconds");
+        assert!(
+            avg_response_time <= Duration::from_millis(1500),
+            "Average response time should be under 1.5 seconds"
+        );
 
         // Validate SIMD optimization was used
         for (batch_id, requests) in batch_groups {
@@ -104,13 +116,21 @@ mod cpu_batch_processing_tests {
             assert!(requests.len() > 1, "Requests should be grouped into batches");
 
             for (_, _, _, batch_info) in &requests {
-                assert!(batch_info.simd_optimized,
-                       "CPU batch processing should utilize SIMD optimization");
-                assert_eq!(batch_info.quantization_format, "i2s",
-                          "I2S quantization should be used for CPU batches");
+                assert!(
+                    batch_info.simd_optimized,
+                    "CPU batch processing should utilize SIMD optimization"
+                );
+                assert_eq!(
+                    batch_info.quantization_format, "i2s",
+                    "I2S quantization should be used for CPU batches"
+                );
             }
 
-            println!("Batch {} processed {} requests with SIMD optimization", batch_id, requests.len());
+            println!(
+                "Batch {} processed {} requests with SIMD optimization",
+                batch_id,
+                requests.len()
+            );
         }
 
         Ok(())
@@ -142,49 +162,61 @@ mod cpu_batch_processing_tests {
             let batch_start = Instant::now();
 
             // Send aligned batch requests
-            let handles: Vec<_> = batch_requests.into_iter().map(|request| {
-                tokio::spawn(async move {
-                    // TODO: Send request and capture SIMD optimization metrics
-                    // TODO: Verify memory alignment is optimal for vectorization
-                    // TODO: Check AVX2/AVX-512 instruction usage
+            let handles: Vec<_> = batch_requests
+                .into_iter()
+                .map(|request| {
+                    tokio::spawn(async move {
+                        // TODO: Send request and capture SIMD optimization metrics
+                        // TODO: Verify memory alignment is optimal for vectorization
+                        // TODO: Check AVX2/AVX-512 instruction usage
 
-                    tokio::time::sleep(Duration::from_millis(80)).await;
-                    Ok::<SIMDMetrics, anyhow::Error>(SIMDMetrics {
-                        vectorization_utilized: true,
-                        memory_aligned: true,
-                        simd_instruction_set: "AVX2".to_string(),
-                        performance_boost: 2.5, // 2.5x speedup from SIMD
+                        tokio::time::sleep(Duration::from_millis(80)).await;
+                        Ok::<SIMDMetrics, anyhow::Error>(SIMDMetrics {
+                            vectorization_utilized: true,
+                            memory_aligned: true,
+                            simd_instruction_set: "AVX2".to_string(),
+                            performance_boost: 2.5, // 2.5x speedup from SIMD
+                        })
                     })
                 })
-            }).collect();
+                .collect();
 
-            let results: Vec<Result<Result<SIMDMetrics, anyhow::Error>, tokio::task::JoinError>> = futures::future::join_all(handles).await;
+            let results: Vec<Result<Result<SIMDMetrics, anyhow::Error>, tokio::task::JoinError>> =
+                futures::future::join_all(handles).await;
             let batch_duration = batch_start.elapsed();
 
             // Validate SIMD optimization effectiveness
-            let simd_results: Vec<_> = results.into_iter()
-                .filter_map(|r: Result<Result<SIMDMetrics, anyhow::Error>, tokio::task::JoinError>| r.ok().and_then(|inner: Result<SIMDMetrics, anyhow::Error>| inner.ok()))
+            let simd_results: Vec<_> = results
+                .into_iter()
+                .filter_map(
+                    |r: Result<Result<SIMDMetrics, anyhow::Error>, tokio::task::JoinError>| {
+                        r.ok().and_then(|inner: Result<SIMDMetrics, anyhow::Error>| inner.ok())
+                    },
+                )
                 .collect();
 
-            assert_eq!(simd_results.len(), batch_size,
-                      "All requests should have SIMD metrics");
+            assert_eq!(simd_results.len(), batch_size, "All requests should have SIMD metrics");
 
             for metrics in &simd_results {
-                assert!(metrics.vectorization_utilized,
-                       "SIMD vectorization should be utilized");
-                assert!(metrics.memory_aligned,
-                       "Memory should be properly aligned for SIMD");
-                assert!(metrics.performance_boost >= 2.0,
-                       "SIMD should provide at least 2x performance boost");
+                assert!(metrics.vectorization_utilized, "SIMD vectorization should be utilized");
+                assert!(metrics.memory_aligned, "Memory should be properly aligned for SIMD");
+                assert!(
+                    metrics.performance_boost >= 2.0,
+                    "SIMD should provide at least 2x performance boost"
+                );
             }
 
             // Check batch completion time scales with SIMD efficiency
             let expected_max_time = Duration::from_millis(150 + (batch_size as u64 * 10));
-            assert!(batch_duration <= expected_max_time,
-                   "SIMD-optimized batch should complete efficiently");
+            assert!(
+                batch_duration <= expected_max_time,
+                "SIMD-optimized batch should complete efficiently"
+            );
 
-            println!("{}: {} requests processed in {:?} with SIMD",
-                    description, batch_size, batch_duration);
+            println!(
+                "{}: {} requests processed in {:?} with SIMD",
+                description, batch_size, batch_duration
+            );
         }
 
         Ok(())
@@ -193,8 +225,8 @@ mod cpu_batch_processing_tests {
 
 #[cfg(feature = "gpu")]
 mod gpu_batch_processing_tests {
-    use super::*;
     use super::batch_test_types::*;
+    use super::*;
 
     #[tokio::test]
     async fn ac4_batch_processing_gpu_ok() -> Result<()> {
@@ -219,32 +251,41 @@ mod gpu_batch_processing_tests {
 
         let batch_start_time = Instant::now();
 
-        let gpu_handles: Vec<_> = gpu_batch_requests.into_iter().enumerate().map(|(i, request)| {
-            tokio::spawn(async move {
-                let request_start = Instant::now();
+        let gpu_handles: Vec<_> = gpu_batch_requests
+            .into_iter()
+            .enumerate()
+            .map(|(i, request)| {
+                tokio::spawn(async move {
+                    let request_start = Instant::now();
 
-                // TODO: Send request to /v1/inference endpoint
-                // TODO: Monitor GPU utilization during batch processing
-                // TODO: Verify mixed precision (FP16/BF16) is utilized
+                    // TODO: Send request to /v1/inference endpoint
+                    // TODO: Monitor GPU utilization during batch processing
+                    // TODO: Verify mixed precision (FP16/BF16) is utilized
 
-                tokio::time::sleep(Duration::from_millis(100)).await;
+                    tokio::time::sleep(Duration::from_millis(100)).await;
 
-                Ok::<(usize, Duration, GPUBatchInfo), anyhow::Error>((
-                    i,
-                    request_start.elapsed(),
-                    GPUBatchInfo {
-                        batch_id: format!("gpu-batch-{}", i / 8),
-                        device_id: "cuda:0".to_string(),
-                        quantization_format: if i % 2 == 0 { "tl1" } else { "tl2" },
-                        mixed_precision_used: true,
-                        gpu_utilization: 95.0,
-                        memory_usage_mb: 2048.0,
-                    }
-                ))
+                    Ok::<(usize, Duration, GPUBatchInfo), anyhow::Error>((
+                        i,
+                        request_start.elapsed(),
+                        GPUBatchInfo {
+                            batch_id: format!("gpu-batch-{}", i / 8),
+                            device_id: "cuda:0".to_string(),
+                            quantization_format: if i % 2 == 0 {
+                                "tl1".to_string()
+                            } else {
+                                "tl2".to_string()
+                            },
+                            mixed_precision_used: true,
+                            gpu_utilization: 95.0,
+                            memory_usage_mb: 2048.0,
+                        },
+                    ))
+                })
             })
-        }).collect();
+            .collect();
 
-        let gpu_results = timeout(MAX_GPU_BATCH_TIME, futures::future::join_all(gpu_handles)).await?;
+        let gpu_results =
+            timeout(MAX_GPU_BATCH_TIME, futures::future::join_all(gpu_handles)).await?;
         let total_gpu_batch_time = batch_start_time.elapsed();
 
         // Analyze GPU batch processing results
@@ -265,32 +306,46 @@ mod gpu_batch_processing_tests {
                         _ => {}
                     }
 
-                    assert!(gpu_info.mixed_precision_used,
-                           "Mixed precision should be utilized for GPU batches");
-                    assert!(response_time <= Duration::from_secs(1),
-                           "Individual GPU requests should complete quickly");
+                    assert!(
+                        gpu_info.mixed_precision_used,
+                        "Mixed precision should be utilized for GPU batches"
+                    );
+                    assert!(
+                        response_time <= Duration::from_secs(1),
+                        "Individual GPU requests should complete quickly"
+                    );
                 }
                 Err(_) => {}
             }
         }
 
         // Validate GPU batch processing performance
-        assert!(successful_gpu_requests >= GPU_BATCH_SIZE * 98 / 100,
-               "GPU should handle at least 98% of batch requests successfully");
+        assert!(
+            successful_gpu_requests >= GPU_BATCH_SIZE * 98 / 100,
+            "GPU should handle at least 98% of batch requests successfully"
+        );
 
-        assert!(total_gpu_batch_time <= MAX_GPU_BATCH_TIME,
-               "GPU batch processing should complete within time limit");
+        assert!(
+            total_gpu_batch_time <= MAX_GPU_BATCH_TIME,
+            "GPU batch processing should complete within time limit"
+        );
 
         let avg_gpu_utilization = total_gpu_utilization / successful_gpu_requests as f32;
-        assert!(avg_gpu_utilization >= 90.0,
-               "GPU utilization should be high (>90%) during batch processing");
+        assert!(
+            avg_gpu_utilization >= 90.0,
+            "GPU utilization should be high (>90%) during batch processing"
+        );
 
         // Validate mixed quantization handling
-        assert!(tl1_requests > 0 && tl2_requests > 0,
-               "Batch should contain both TL1 and TL2 quantization formats");
+        assert!(
+            tl1_requests > 0 && tl2_requests > 0,
+            "Batch should contain both TL1 and TL2 quantization formats"
+        );
 
-        println!("GPU batch processed {} requests (TL1: {}, TL2: {}) in {:?}",
-                successful_gpu_requests, tl1_requests, tl2_requests, total_gpu_batch_time);
+        println!(
+            "GPU batch processed {} requests (TL1: {}, TL2: {}) in {:?}",
+            successful_gpu_requests, tl1_requests, tl2_requests, total_gpu_batch_time
+        );
 
         Ok(())
     }
@@ -309,56 +364,72 @@ mod gpu_batch_processing_tests {
         for (precision_hint, description) in precision_test_cases {
             const PRECISION_BATCH_SIZE: usize = 24;
 
-            let precision_requests: Vec<_> = (0..PRECISION_BATCH_SIZE).map(|i| {
-                json!({
-                    "prompt": format!("Mixed precision test #{} for {}", i, precision_hint),
-                    "max_tokens": 128,
-                    "device_preference": "gpu",
-                    "quantization_preference": "tl1",
-                    "precision_hint": precision_hint // Custom field for testing
-                })
-            }).collect();
-
-            let precision_handles: Vec<_> = precision_requests.into_iter().map(|request| {
-                tokio::spawn(async move {
-                    // TODO: Send request with precision hint
-                    // TODO: Verify appropriate precision is selected
-                    // TODO: Monitor GPU memory efficiency
-
-                    tokio::time::sleep(Duration::from_millis(90)).await;
-
-                    Ok::<PrecisionMetrics, anyhow::Error>(PrecisionMetrics {
-                        precision_used: precision_hint.to_string(),
-                        memory_efficiency: 85.0,
-                        numerical_stability: 0.995,
-                        performance_boost: 1.8,
+            let precision_requests: Vec<_> = (0..PRECISION_BATCH_SIZE)
+                .map(|i| {
+                    json!({
+                        "prompt": format!("Mixed precision test #{} for {}", i, precision_hint),
+                        "max_tokens": 128,
+                        "device_preference": "gpu",
+                        "quantization_preference": "tl1",
+                        "precision_hint": precision_hint // Custom field for testing
                     })
                 })
-            }).collect();
+                .collect();
+
+            let precision_handles: Vec<_> = precision_requests
+                .into_iter()
+                .map(|request| {
+                    tokio::spawn(async move {
+                        // TODO: Send request with precision hint
+                        // TODO: Verify appropriate precision is selected
+                        // TODO: Monitor GPU memory efficiency
+
+                        tokio::time::sleep(Duration::from_millis(90)).await;
+
+                        Ok::<PrecisionMetrics, anyhow::Error>(PrecisionMetrics {
+                            precision_used: precision_hint.to_string(),
+                            memory_efficiency: 85.0,
+                            numerical_stability: 0.995,
+                            performance_boost: 1.8,
+                        })
+                    })
+                })
+                .collect();
 
             let precision_results = futures::future::join_all(precision_handles).await;
 
             // Validate mixed precision optimization
-            let successful_precision = precision_results.iter()
+            let successful_precision = precision_results
+                .iter()
                 .filter_map(|r| r.as_ref().ok().and_then(|inner| inner.as_ref().ok()))
                 .count();
 
-            assert!(successful_precision >= PRECISION_BATCH_SIZE * 95 / 100,
-                   "Mixed precision batching should achieve >=95% success rate");
+            assert!(
+                successful_precision >= PRECISION_BATCH_SIZE * 95 / 100,
+                "Mixed precision batching should achieve >=95% success rate"
+            );
 
             for result in precision_results {
                 if let Ok(Ok(metrics)) = result {
-                    assert!(metrics.memory_efficiency >= 80.0,
-                           "Mixed precision should improve memory efficiency");
-                    assert!(metrics.numerical_stability >= 0.99,
-                           "Numerical stability should be maintained");
-                    assert!(metrics.performance_boost >= 1.5,
-                           "Mixed precision should provide performance boost");
+                    assert!(
+                        metrics.memory_efficiency >= 80.0,
+                        "Mixed precision should improve memory efficiency"
+                    );
+                    assert!(
+                        metrics.numerical_stability >= 0.99,
+                        "Numerical stability should be maintained"
+                    );
+                    assert!(
+                        metrics.performance_boost >= 1.5,
+                        "Mixed precision should provide performance boost"
+                    );
                 }
             }
 
-            println!("{}: {} requests with {} precision",
-                    description, successful_precision, precision_hint);
+            println!(
+                "{}: {} requests with {} precision",
+                description, successful_precision, precision_hint
+            );
         }
 
         Ok(())
@@ -367,8 +438,8 @@ mod gpu_batch_processing_tests {
 
 #[cfg(all(feature = "cpu", feature = "gpu"))]
 mod mixed_device_batch_tests {
-    use super::*;
     use super::batch_test_types::*;
+    use super::*;
 
     #[tokio::test]
     async fn ac4_cross_device_batch_optimization_ok() -> Result<()> {
@@ -397,26 +468,34 @@ mod mixed_device_batch_tests {
 
         let batch_start = Instant::now();
 
-        let mixed_handles: Vec<_> = mixed_batch_requests.into_iter().enumerate().map(|(i, request)| {
-            tokio::spawn(async move {
-                // TODO: Send request and track device selection
-                // TODO: Monitor batch formation and device utilization
-                // TODO: Verify optimal device assignment
+        let mixed_handles: Vec<_> = mixed_batch_requests
+            .into_iter()
+            .enumerate()
+            .map(|(i, request)| {
+                tokio::spawn(async move {
+                    // TODO: Send request and track device selection
+                    // TODO: Monitor batch formation and device utilization
+                    // TODO: Verify optimal device assignment
 
-                tokio::time::sleep(Duration::from_millis(110)).await;
+                    tokio::time::sleep(Duration::from_millis(110)).await;
 
-                Ok::<(usize, DeviceBatchInfo), anyhow::Error>((i, DeviceBatchInfo {
-                    device_used: if i % 3 == 1 { "cuda:0" } else { "cpu" }.to_string(),
-                    quantization_used: match i % 3 {
-                        0 => "i2s",
-                        1 => "tl1",
-                        _ => "i2s", // Auto selection result
-                    }.to_string(),
-                    batch_efficiency: 92.0,
-                    device_utilization: 88.0,
-                }))
+                    Ok::<(usize, DeviceBatchInfo), anyhow::Error>((
+                        i,
+                        DeviceBatchInfo {
+                            device_used: if i % 3 == 1 { "cuda:0" } else { "cpu" }.to_string(),
+                            quantization_used: match i % 3 {
+                                0 => "i2s",
+                                1 => "tl1",
+                                _ => "i2s", // Auto selection result
+                            }
+                            .to_string(),
+                            batch_efficiency: 92.0,
+                            device_utilization: 88.0,
+                        },
+                    ))
+                })
             })
-        }).collect();
+            .collect();
 
         let mixed_results = futures::future::join_all(mixed_handles).await;
         let total_mixed_time = batch_start.elapsed();
@@ -443,26 +522,36 @@ mod mixed_device_batch_tests {
                     _ => {}
                 }
 
-                assert!(device_info.batch_efficiency >= 85.0,
-                       "Batch efficiency should be high across devices");
-                assert!(device_info.device_utilization >= 80.0,
-                       "Device utilization should be optimal");
+                assert!(
+                    device_info.batch_efficiency >= 85.0,
+                    "Batch efficiency should be high across devices"
+                );
+                assert!(
+                    device_info.device_utilization >= 80.0,
+                    "Device utilization should be optimal"
+                );
             }
         }
 
         // Validate intelligent device distribution
-        assert!(cpu_requests > 0 && gpu_requests > 0,
-               "Requests should be distributed across both CPU and GPU");
+        assert!(
+            cpu_requests > 0 && gpu_requests > 0,
+            "Requests should be distributed across both CPU and GPU"
+        );
 
-        assert!(i2s_requests >= cpu_requests,
-               "I2S quantization should be preferred for CPU requests");
+        assert!(
+            i2s_requests >= cpu_requests,
+            "I2S quantization should be preferred for CPU requests"
+        );
 
         // TODO: Verify batch formation was optimal for each device type
         // TODO: Check that device capabilities influenced batch assignment
         // TODO: Validate overall throughput meets performance targets
 
-        println!("Cross-device batch: CPU {} requests, GPU {} requests in {:?}",
-                cpu_requests, gpu_requests, total_mixed_time);
+        println!(
+            "Cross-device batch: CPU {} requests, GPU {} requests in {:?}",
+            cpu_requests, gpu_requests, total_mixed_time
+        );
 
         Ok(())
     }
@@ -495,18 +584,22 @@ async fn ac4_response_time_guarantee_under_load_ok() -> Result<()> {
             let batch_start = Instant::now();
             let mut batch_response_times = Vec::new();
 
-            let request_handles: Vec<_> = batch_requests.into_iter().enumerate().map(|(i, request)| {
-                tokio::spawn(async move {
-                    let request_start = Instant::now();
+            let request_handles: Vec<_> = batch_requests
+                .into_iter()
+                .enumerate()
+                .map(|(i, request)| {
+                    tokio::spawn(async move {
+                        let request_start = Instant::now();
 
-                    // TODO: Send request to /v1/inference endpoint
-                    // TODO: Measure actual response time
-                    // TODO: Return (request_id, response_time, success)
+                        // TODO: Send request to /v1/inference endpoint
+                        // TODO: Measure actual response time
+                        // TODO: Return (request_id, response_time, success)
 
-                    tokio::time::sleep(Duration::from_millis(150 + (i as u64 * 10))).await;
-                    (i, request_start.elapsed(), true)
+                        tokio::time::sleep(Duration::from_millis(150 + (i as u64 * 10))).await;
+                        (i, request_start.elapsed(), true)
+                    })
                 })
-            }).collect();
+                .collect();
 
             let request_results = futures::future::join_all(request_handles).await;
 
@@ -535,8 +628,12 @@ async fn ac4_response_time_guarantee_under_load_ok() -> Result<()> {
 
     for result in batch_results {
         if let Ok((batch_num, batch_duration, response_times)) = result {
-            println!("Batch {} completed in {:?} with {} requests",
-                    batch_num, batch_duration, response_times.len());
+            println!(
+                "Batch {} completed in {:?} with {} requests",
+                batch_num,
+                batch_duration,
+                response_times.len()
+            );
 
             for (_, response_time) in response_times {
                 total_requests += 1;
@@ -560,24 +657,32 @@ async fn ac4_response_time_guarantee_under_load_ok() -> Result<()> {
     // Validate response time guarantees
     let compliance_rate = requests_within_limit as f64 / total_requests as f64;
 
-    assert!(compliance_rate >= 0.99,
-           "At least 99% of requests should meet <2 second response time, got {:.2}%",
-           compliance_rate * 100.0);
+    assert!(
+        compliance_rate >= 0.99,
+        "At least 99% of requests should meet <2 second response time, got {:.2}%",
+        compliance_rate * 100.0
+    );
 
-    assert!(avg_response_time <= Duration::from_millis(1500),
-           "Average response time should be well under 2 seconds, got {:?}",
-           avg_response_time);
+    assert!(
+        avg_response_time <= Duration::from_millis(1500),
+        "Average response time should be well under 2 seconds, got {:?}",
+        avg_response_time
+    );
 
-    assert!(max_response_time <= Duration::from_millis(2500),
-           "Maximum response time should not significantly exceed limit, got {:?}",
-           max_response_time);
+    assert!(
+        max_response_time <= Duration::from_millis(2500),
+        "Maximum response time should not significantly exceed limit, got {:?}",
+        max_response_time
+    );
 
     // TODO: Verify batch processing optimization contributed to performance
     // TODO: Check that resource utilization remained efficient
     // TODO: Validate no timeouts or failures occurred under load
 
-    println!("Response time validation: {}/{} requests within limit (avg: {:?}, max: {:?})",
-            requests_within_limit, total_requests, avg_response_time, max_response_time);
+    println!(
+        "Response time validation: {}/{} requests within limit (avg: {:?}, max: {:?})",
+        requests_within_limit, total_requests, avg_response_time, max_response_time
+    );
 
     Ok(())
 }
@@ -650,7 +755,10 @@ mod batch_test_helpers {
             self.baseline_metrics = Some(metrics);
         }
 
-        pub fn analyze_batch_efficiency(&self, results: &[(usize, Duration, bool)]) -> BatchAnalysis {
+        pub fn analyze_batch_efficiency(
+            &self,
+            results: &[(usize, Duration, bool)],
+        ) -> BatchAnalysis {
             // TODO: Analyze batch processing efficiency
             // TODO: Calculate throughput improvements from batching
             // TODO: Identify optimal batch sizes for different quantization formats

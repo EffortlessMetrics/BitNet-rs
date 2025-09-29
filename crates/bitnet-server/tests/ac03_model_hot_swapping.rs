@@ -6,7 +6,6 @@
 /// - GGUF format validation and tensor alignment verification
 /// - Cross-validation against C++ reference implementation
 /// - Automatic rollback on validation failure with performance tracking
-
 use anyhow::Result;
 use serde_json::json;
 use std::time::{Duration, Instant};
@@ -91,7 +90,8 @@ mod cpu_hot_swap_tests {
                     }
                 }
             })
-        }).await?;
+        })
+        .await?;
 
         let swap_duration = swap_start_time.elapsed();
 
@@ -125,9 +125,17 @@ mod cpu_hot_swap_tests {
             // Valid GGUF model
             ("/test/models/valid-bitnet-2b.gguf", true, "Valid GGUF should load successfully"),
             // Invalid GGUF format
-            ("/test/models/corrupted-header.gguf", false, "Corrupted GGUF header should fail validation"),
+            (
+                "/test/models/corrupted-header.gguf",
+                false,
+                "Corrupted GGUF header should fail validation",
+            ),
             // Misaligned tensors
-            ("/test/models/misaligned-tensors.gguf", false, "Misaligned tensors should fail validation"),
+            (
+                "/test/models/misaligned-tensors.gguf",
+                false,
+                "Misaligned tensors should fail validation",
+            ),
             // Incompatible quantization format
             ("/test/models/unsupported-quant.gguf", false, "Unsupported quantization should fail"),
         ];
@@ -426,35 +434,37 @@ async fn ac3_zero_downtime_validation_ok() -> Result<()> {
     const SWAP_DURATION_SECONDS: u64 = 30;
 
     // Start background inference requests
-    let background_handles: Vec<_> = (0..BACKGROUND_REQUEST_COUNT).map(|i| {
-        tokio::spawn(async move {
-            let mut successful_requests = 0;
-            let mut failed_requests = 0;
-            let start_time = Instant::now();
+    let background_handles: Vec<_> = (0..BACKGROUND_REQUEST_COUNT)
+        .map(|i| {
+            tokio::spawn(async move {
+                let mut successful_requests = 0;
+                let mut failed_requests = 0;
+                let start_time = Instant::now();
 
-            while start_time.elapsed() < Duration::from_secs(SWAP_DURATION_SECONDS + 10) {
-                let request = json!({
-                    "prompt": format!("Zero-downtime test request #{}", i),
-                    "max_tokens": 50,
-                    "device_preference": "auto"
-                });
+                while start_time.elapsed() < Duration::from_secs(SWAP_DURATION_SECONDS + 10) {
+                    let request = json!({
+                        "prompt": format!("Zero-downtime test request #{}", i),
+                        "max_tokens": 50,
+                        "device_preference": "auto"
+                    });
 
-                // TODO: Send inference request
-                // TODO: Track success/failure rate
-                let success = true; // TODO: Replace with actual request result
+                    // TODO: Send inference request
+                    // TODO: Track success/failure rate
+                    let success = true; // TODO: Replace with actual request result
 
-                if success {
-                    successful_requests += 1;
-                } else {
-                    failed_requests += 1;
+                    if success {
+                        successful_requests += 1;
+                    } else {
+                        failed_requests += 1;
+                    }
+
+                    tokio::time::sleep(Duration::from_millis(500)).await;
                 }
 
-                tokio::time::sleep(Duration::from_millis(500)).await;
-            }
-
-            (successful_requests, failed_requests)
+                (successful_requests, failed_requests)
+            })
         })
-    }).collect();
+        .collect();
 
     // Wait for background requests to start
     tokio::time::sleep(Duration::from_secs(2)).await;
@@ -475,7 +485,8 @@ async fn ac3_zero_downtime_validation_ok() -> Result<()> {
     let swap_result = timeout(Duration::from_secs(SWAP_DURATION_SECONDS), async {
         // TODO: Wait for swap completion
         json!({"status": "completed"})
-    }).await?;
+    })
+    .await?;
 
     let swap_duration = swap_start.elapsed();
 
@@ -494,12 +505,16 @@ async fn ac3_zero_downtime_validation_ok() -> Result<()> {
     // Validate zero-downtime requirements
     let success_rate = total_successful as f64 / (total_successful + total_failed) as f64;
 
-    assert!(success_rate >= 0.99,
-           "Zero-downtime hot-swap should maintain >=99% success rate, got {:.2}%",
-           success_rate * 100.0);
+    assert!(
+        success_rate >= 0.99,
+        "Zero-downtime hot-swap should maintain >=99% success rate, got {:.2}%",
+        success_rate * 100.0
+    );
 
-    assert!(swap_duration <= Duration::from_secs(SWAP_DURATION_SECONDS),
-           "Hot-swap should complete within expected timeframe");
+    assert!(
+        swap_duration <= Duration::from_secs(SWAP_DURATION_SECONDS),
+        "Hot-swap should complete within expected timeframe"
+    );
 
     // TODO: Verify no requests were dropped during swap
     // TODO: Check response time distribution remained reasonable

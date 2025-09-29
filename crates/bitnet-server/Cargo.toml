@@ -22,6 +22,9 @@ bitnet-tokenizers = { path = "../bitnet-tokenizers" }
 chrono.workspace = true
 clap.workspace = true
 futures = "0.3.31"
+jsonwebtoken = "9.3.0"
+regex = "1.10.6"
+thiserror = "2.0.3"
 metrics.workspace = true
 metrics-prometheus = { workspace = true, optional = true }
 num_cpus.workspace = true
