@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 //! Fault injection and production reliability testing for BitNet.rs
 //!
 //! This module tests the server's resilience to various failure modes

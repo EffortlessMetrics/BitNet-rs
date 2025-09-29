@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 //! HTTP Request Fixtures for BitNet.rs Inference Server Testing
 //!
 //! This module provides comprehensive request fixtures for testing the production

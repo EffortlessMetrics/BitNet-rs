@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 //! Comprehensive load testing for BitNet.rs production inference server
 //!
 //! This module tests the server's ability to handle high concurrent load

@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 /// Tests feature spec: issue-251-production-inference-server-architecture.md#ac3-model-hot-swapping
 /// Tests API contract: issue-251-api-contracts.md#model-hot-swap
 ///

@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 //! Test Fixtures for BitNet.rs Inference Server
 //!
 //! This module provides comprehensive test fixtures for the production inference
