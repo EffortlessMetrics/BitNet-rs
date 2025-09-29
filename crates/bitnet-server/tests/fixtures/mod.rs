@@ -56,6 +56,7 @@ pub struct FixtureLoader;
 
 impl FixtureLoader {
     /// Get project root directory for fixture paths
+    #[allow(dead_code)]
     pub fn project_root() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap().to_path_buf()
     }
@@ -243,6 +244,7 @@ impl FixtureSelector {
     }
 
     /// Select appropriate deployment configuration for environment
+    #[allow(dead_code)]
     pub fn select_deployment_config_for_env(env: &str) -> Option<&'static EnvironmentConfig> {
         deployment::get_environment_config(env)
     }

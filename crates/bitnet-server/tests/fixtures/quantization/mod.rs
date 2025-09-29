@@ -20,6 +20,7 @@ pub struct QuantizationTestVector {
     pub test_description: &'static str,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrossValidationFixture {
     pub name: &'static str,
@@ -41,12 +42,14 @@ pub enum QuantizationType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum DeviceType {
     CPU,
     GPU,
     Mixed, // For cross-device validation
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelConfig {
     pub embedding_dim: u32,

@@ -236,7 +236,7 @@ mod fixture_integration_tests {
         assert!(!error_requests.is_empty());
 
         for request_name in error_requests {
-            let (request_json, metadata) = requests::get_error_request(request_name).unwrap();
+            let (_request_json, metadata) = requests::get_error_request(request_name).unwrap();
 
             // Verify error scenarios have appropriate status codes
             assert!(metadata.expected_status_code >= 400);
@@ -250,7 +250,7 @@ mod fixture_integration_tests {
         assert!(!security_requests.is_empty());
 
         for request_name in security_requests {
-            let (request_json, metadata) = requests::get_security_request(request_name).unwrap();
+            let (_request_json, metadata) = requests::get_security_request(request_name).unwrap();
 
             // Security tests should expect rejection
             assert!(metadata.expected_status_code >= 400);

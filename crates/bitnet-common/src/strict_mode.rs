@@ -201,18 +201,25 @@ pub struct MissingKernelScenario {
 }
 
 /// Performance metrics for validation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct PerformanceMetrics {
+    #[serde(default)]
     pub tokens_per_second: f64,
+    #[serde(default)]
     pub latency_ms: f64,
+    #[serde(default)]
     pub memory_usage_mb: f64,
+    #[serde(default)]
     pub computation_type: ComputationType,
+    #[serde(default)]
     pub gpu_utilization: Option<f64>,
 }
 
 /// Computation type classification
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ComputationType {
+    #[default]
     Real,
     Mock,
 }

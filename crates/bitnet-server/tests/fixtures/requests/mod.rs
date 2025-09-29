@@ -164,6 +164,7 @@ pub static BASIC_INFERENCE_REQUESTS: LazyLock<
 });
 
 /// Long prompt test fixtures for stress testing
+#[allow(dead_code)]
 pub static LONG_PROMPT_REQUESTS: LazyLock<
     HashMap<&'static str, (InferenceRequest, TestRequestMetadata)>,
 > = LazyLock::new(|| {
@@ -522,6 +523,7 @@ pub fn get_basic_request(name: &str) -> Option<&'static (InferenceRequest, TestR
     BASIC_INFERENCE_REQUESTS.get(name)
 }
 
+#[allow(dead_code)]
 pub fn get_long_prompt_request(
     name: &str,
 ) -> Option<&'static (InferenceRequest, TestRequestMetadata)> {
