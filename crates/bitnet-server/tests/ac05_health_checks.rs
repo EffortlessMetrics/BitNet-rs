@@ -209,7 +209,7 @@ mod cpu_health_monitoring_tests {
         // TODO: Validate memory metrics are current and accurate
 
         // Test CPU health under inference load
-        let cpu_load_test_requests = vec![json!({
+        let cpu_load_test_requests = [json!({
             "prompt": "CPU health test during inference load",
             "max_tokens": 100,
             "device_preference": "cpu",

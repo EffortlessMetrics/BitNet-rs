@@ -193,17 +193,17 @@ impl FixtureSelector {
             }
 
             // Check quantization type match
-            if let Some(quant_type) = &quantization_type {
-                if &model.quantization_type != quant_type {
-                    continue;
-                }
+            if let Some(quant_type) = &quantization_type
+                && &model.quantization_type != quant_type
+            {
+                continue;
             }
 
             // Check memory requirements
-            if let Some(limit) = memory_limit_mb {
-                if model.model_size_bytes > limit * 1024 * 1024 {
-                    continue;
-                }
+            if let Some(limit) = memory_limit_mb
+                && model.model_size_bytes > limit * 1024 * 1024
+            {
+                continue;
             }
 
             return Some(model);
@@ -279,19 +279,19 @@ impl FixtureValidator {
             return Err(anyhow::anyhow!("Request prompt cannot be empty"));
         }
 
-        if let Some(max_tokens) = request.max_tokens {
-            if max_tokens == 0 {
-                return Err(anyhow::anyhow!("Max tokens must be greater than 0"));
-            }
+        if let Some(max_tokens) = request.max_tokens
+            && max_tokens == 0
+        {
+            return Err(anyhow::anyhow!("Max tokens must be greater than 0"));
         }
 
-        if let Some(temperature) = request.temperature {
-            if temperature < 0.0 || temperature > 2.0 {
-                return Err(anyhow::anyhow!(
-                    "Temperature {} outside valid range [0.0, 2.0]",
-                    temperature
-                ));
-            }
+        if let Some(temperature) = request.temperature
+            && (!(0.0..=2.0).contains(&temperature))
+        {
+            return Err(anyhow::anyhow!(
+                "Temperature {} outside valid range [0.0, 2.0]",
+                temperature
+            ));
         }
 
         Ok(())

@@ -78,18 +78,17 @@ mod cpu_batch_processing_tests {
             HashMap::new();
 
         for result in batch_results {
-            match result? {
-                Ok((request_id, response_time, tokens, batch_info)) => {
-                    successful_requests += 1;
-                    total_response_time += response_time;
+            if let Ok((request_id, response_time, tokens, batch_info)) = result? {
+                successful_requests += 1;
+                total_response_time += response_time;
 
-                    // Group requests by batch_id for analysis
-                    batch_groups
-                        .entry(batch_info.batch_id.clone())
-                        .or_insert_with(Vec::new)
-                        .push((request_id, response_time, tokens, batch_info));
-                }
-                Err(_) => {}
+                // Group requests by batch_id for analysis
+                batch_groups.entry(batch_info.batch_id.clone()).or_default().push((
+                    request_id,
+                    response_time,
+                    tokens,
+                    batch_info,
+                ));
             }
         }
 
@@ -604,10 +603,10 @@ async fn ac4_response_time_guarantee_under_load_ok() -> Result<()> {
             let request_results = futures::future::join_all(request_handles).await;
 
             for result in request_results {
-                if let Ok((request_id, response_time, success)) = result {
-                    if success {
-                        batch_response_times.push((request_id, response_time));
-                    }
+                if let Ok((request_id, response_time, success)) = result
+                    && success
+                {
+                    batch_response_times.push((request_id, response_time));
                 }
             }
 
@@ -626,32 +625,30 @@ async fn ac4_response_time_guarantee_under_load_ok() -> Result<()> {
     let mut max_response_time = Duration::ZERO;
     let mut avg_response_time = Duration::ZERO;
 
-    for result in batch_results {
-        if let Ok((batch_num, batch_duration, response_times)) = result {
-            println!(
-                "Batch {} completed in {:?} with {} requests",
-                batch_num,
-                batch_duration,
-                response_times.len()
-            );
+    for (batch_num, batch_duration, response_times) in batch_results.into_iter().flatten() {
+        println!(
+            "Batch {} completed in {:?} with {} requests",
+            batch_num,
+            batch_duration,
+            response_times.len()
+        );
 
-            for (_, response_time) in response_times {
-                total_requests += 1;
-                avg_response_time += response_time;
+        for (_, response_time) in response_times {
+            total_requests += 1;
+            avg_response_time += response_time;
 
-                if response_time <= MAX_RESPONSE_TIME {
-                    requests_within_limit += 1;
-                }
+            if response_time <= MAX_RESPONSE_TIME {
+                requests_within_limit += 1;
+            }
 
-                if response_time > max_response_time {
-                    max_response_time = response_time;
-                }
+            if response_time > max_response_time {
+                max_response_time = response_time;
             }
         }
     }
 
     if total_requests > 0 {
-        avg_response_time = avg_response_time / total_requests as u32;
+        avg_response_time /= total_requests as u32;
     }
 
     // Validate response time guarantees
@@ -690,7 +687,6 @@ async fn ac4_response_time_guarantee_under_load_ok() -> Result<()> {
 /// Data structures for batch processing test metrics
 #[cfg(test)]
 mod batch_test_types {
-    use super::*;
 
     #[derive(Debug, Clone)]
     pub struct BatchInfo {
@@ -739,7 +735,6 @@ mod batch_test_types {
 #[cfg(test)]
 mod batch_test_helpers {
     use super::*;
-    use batch_test_types::*;
 
     /// Batch performance analyzer for optimization validation
     pub struct BatchPerformanceAnalyzer {

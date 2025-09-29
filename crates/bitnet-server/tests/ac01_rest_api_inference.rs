@@ -34,7 +34,7 @@ mod cpu_inference_tests {
         // TODO: Validate response schema matches API contract
 
         // Expected response validation
-        let expected_fields = vec![
+        let expected_fields = [
             "text",
             "tokens_generated",
             "inference_time_ms",
@@ -311,11 +311,11 @@ mod test_helpers {
         });
 
         // Merge overrides into base request
-        if let serde_json::Value::Object(overrides_map) = overrides {
-            if let serde_json::Value::Object(ref mut base_map) = base_request {
-                for (key, value) in overrides_map {
-                    base_map.insert(key, value);
-                }
+        if let serde_json::Value::Object(overrides_map) = overrides
+            && let serde_json::Value::Object(ref mut base_map) = base_request
+        {
+            for (key, value) in overrides_map {
+                base_map.insert(key, value);
             }
         }
 
