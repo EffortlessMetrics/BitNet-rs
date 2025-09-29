@@ -14,7 +14,10 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-kernels`**: **Device-aware quantization kernels** with SIMD/CUDA acceleration, mixed precision support (FP16/BF16), automatic CPU/GPU selection, FFI bridge for C++ cross-validation, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
 - **`bitnet-inference`**: **Mock-free inference engine** with autoregressive generation, multi-head attention, real quantized linear layers (QLinear), KV-cache optimization, streaming support, and authentic GGUF model integration - **STRICT MODE prevents all mock fallbacks**
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration, automatic discovery, and graceful fallback system
-- **`bitnet-server`**: HTTP server for BitNet inference with comprehensive health monitoring and real-time system metrics collection (CPU, memory, disk, network I/O)
+
+### Application Layer
+- **`bitnet-server`**: **Production HTTP/REST inference server** providing scalable inference endpoints with batch processing, model hot-swapping capabilities, comprehensive health monitoring (liveness/readiness/startup probes), real-time system metrics collection (CPU, memory, disk, network I/O), Prometheus metrics integration, OpenTelemetry observability, streaming inference support, and deployment-ready configurations for Docker and Kubernetes environments
+- **`bitnet-cli`**: Command-line interface for local inference, model verification, and compatibility checking
 
 ### Compatibility Layer
 - **`bitnet-compat`**: GGUF compatibility fixes and diagnostics
@@ -166,6 +169,70 @@ fn validate_tensor_completeness(
 - Systematic regression testing for accuracy preservation
 - Property-based testing for numerical stability
 
+## Production Server Architecture
+
+### `bitnet-server` Crate Overview
+
+The `bitnet-server` crate provides a production-ready HTTP/REST inference server built on the BitNet.rs inference engine. It serves as the application layer for deploying BitNet models in production environments.
+
+**Key Components:**
+- **Inference Engine Integration**: Direct integration with `bitnet-inference` for autoregressive generation
+- **Model Management**: Hot-swappable model loading with graceful failover and validation
+- **Health Monitoring**: Three-tier health check system (liveness, readiness, startup)
+- **System Metrics**: Real-time collection of CPU, memory, disk, and network I/O metrics via `sysinfo`
+- **Observability**: Prometheus metrics and OpenTelemetry integration for distributed tracing
+- **Streaming Support**: Server-sent events (SSE) for real-time token streaming
+- **Batch Processing**: Request batching for improved throughput
+
+**Architecture Position:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Application Layer                         │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              bitnet-server (HTTP/REST)                │   │
+│  │  • Axum web framework                                 │   │
+│  │  • Health endpoints (/health, /ready, /live)         │   │
+│  │  • Inference endpoints (/v1/completions)             │   │
+│  │  • Metrics endpoints (/metrics)                       │   │
+│  │  • Streaming support (SSE)                            │   │
+│  └──────────────────┬───────────────────────────────────┘   │
+└────────────────────┼────────────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────────────┐
+│                   Inference Engine                           │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │            bitnet-inference                           │   │
+│  │  • Autoregressive generation                          │   │
+│  │  • Multi-head attention                               │   │
+│  │  • KV-cache optimization                              │   │
+│  └──────────────────┬───────────────────────────────────┘   │
+└────────────────────┼────────────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────────────┐
+│                  Core Components                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐    │
+│  │bitnet-models│  │bitnet-quant │  │bitnet-tokenizers │    │
+│  └─────────────┘  └─────────────┘  └──────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Integration Points:**
+1. **Model Loading**: Uses `bitnet-models` for GGUF parsing and tensor loading
+2. **Tokenization**: Integrates `bitnet-tokenizers` for universal tokenizer support
+3. **Inference**: Wraps `bitnet-inference` engine with HTTP/REST interface
+4. **Monitoring**: Exposes internal metrics to Prometheus and OpenTelemetry
+
+**Deployment Support:**
+- **Docker**: Multi-stage builds for CPU and GPU variants (see `infra/docker/`)
+- **Kubernetes**: Helm charts with autoscaling and health probes (see `infra/helm/bitnet/`)
+- **Configuration**: Environment variables and TOML configuration files
+- **Security**: Non-root execution, read-only filesystems, minimal dependencies
+
+For detailed deployment guides, see:
+- [Docker Deployment Guide](how-to/production-server-docker-deployment.md)
+- [Kubernetes Deployment Guide](how-to/production-server-kubernetes-deployment.md)
+- [Health Endpoints Documentation](health-endpoints.md)
+
 ## Key Design Patterns
 
 1. **Feature-Gated Architecture**: Default features are **empty** - always specify features explicitly
@@ -180,6 +247,7 @@ fn validate_tensor_completeness(
 10. **Multi-Backend GPU Detection**: System-aware GPU detection with automatic fallback, supporting CUDA, Metal, ROCm, and WebGPU with mock testing capabilities
 11. **GPU Infrastructure Access**: Low-level CUDA context and module access for advanced GPU programming (PR #199), enabling custom kernel loading and device-specific optimization
 12. **Mixed Precision Computing**: Native CUDA kernels for FP16/BF16 operations with device-aware precision selection and automatic fallback (PR #202)
+13. **Production-Ready Server Architecture**: Scalable HTTP/REST inference server with comprehensive health monitoring, system metrics, and deployment automation (PR #422)
 
 ## Enhanced Quality Assurance Framework
 
