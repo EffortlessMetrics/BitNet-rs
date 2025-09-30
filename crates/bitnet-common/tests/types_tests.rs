@@ -176,6 +176,7 @@ fn test_performance_metrics_serialization() {
         tokens_per_second: 125.5,
         latency_ms: 8.2,
         memory_usage_mb: 1024.0,
+        computation_type: ComputationType::Real,
         gpu_utilization: Some(85.5),
     };
 
@@ -185,6 +186,7 @@ fn test_performance_metrics_serialization() {
     assert_eq!(metrics.tokens_per_second, deserialized.tokens_per_second);
     assert_eq!(metrics.latency_ms, deserialized.latency_ms);
     assert_eq!(metrics.memory_usage_mb, deserialized.memory_usage_mb);
+    assert_eq!(metrics.computation_type, deserialized.computation_type);
     assert_eq!(metrics.gpu_utilization, deserialized.gpu_utilization);
 }
 
@@ -194,12 +196,15 @@ fn test_performance_metrics_optional_gpu() {
         tokens_per_second: 100.0,
         latency_ms: 10.0,
         memory_usage_mb: 512.0,
+        computation_type: ComputationType::Real,
         gpu_utilization: None,
     };
 
     let json = serde_json::to_string(&metrics).unwrap();
     let deserialized: PerformanceMetrics = serde_json::from_str(&json).unwrap();
 
+    assert_eq!(metrics.computation_type, ComputationType::Real);
+    assert_eq!(deserialized.computation_type, ComputationType::Real);
     assert_eq!(metrics.gpu_utilization, None);
     assert_eq!(deserialized.gpu_utilization, None);
 }
@@ -276,12 +281,17 @@ proptest! {
         tokens_per_second in 0.0f64..10000.0,
         latency_ms in 0.0f64..1000.0,
         memory_usage_mb in 0.0f64..100000.0,
-        gpu_utilization in proptest::option::of(0.0f64..100.0)
+        gpu_utilization in proptest::option::of(0.0f64..100.0),
+        computation_type in prop_oneof![
+            Just(ComputationType::Real),
+            Just(ComputationType::Mock)
+        ]
     ) {
         let metrics = PerformanceMetrics {
             tokens_per_second,
             latency_ms,
             memory_usage_mb,
+            computation_type,
             gpu_utilization,
         };
 
@@ -292,6 +302,7 @@ proptest! {
         assert!((metrics.tokens_per_second - deserialized.tokens_per_second).abs() < 1e-10);
         assert!((metrics.latency_ms - deserialized.latency_ms).abs() < 1e-10);
         assert!((metrics.memory_usage_mb - deserialized.memory_usage_mb).abs() < 1e-10);
+        assert_eq!(metrics.computation_type, deserialized.computation_type);
 
         // Compare optional GPU utilization with approximate equality
         match (metrics.gpu_utilization, deserialized.gpu_utilization) {

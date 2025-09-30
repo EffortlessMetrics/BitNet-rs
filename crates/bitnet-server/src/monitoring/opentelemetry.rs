@@ -62,8 +62,15 @@ async fn init_tracing(config: &MonitoringConfig) -> Result<()> {
             .with_attributes(vec![KeyValue::new("service.version", env!("CARGO_PKG_VERSION"))])
             .build();
 
+        // Use simple stdout logging for local development
+        // In production, use OTLP exporter configured via init_tracing()
         let provider = SdkTracerProvider::builder()
-            .with_simple_exporter(opentelemetry_stdout::SpanExporter::default())
+            .with_simple_exporter(
+                opentelemetry_otlp::SpanExporter::builder()
+                    .with_tonic()
+                    .with_endpoint("http://localhost:4317")
+                    .build()?,
+            )
             .with_resource(resource)
             .build();
 

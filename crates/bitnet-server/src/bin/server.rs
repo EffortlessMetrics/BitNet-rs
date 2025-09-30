@@ -1,7 +1,6 @@
 //! BitNet server binary with comprehensive monitoring
 
 use anyhow::Result;
-use bitnet_server::monitoring::MonitoringConfig;
 use bitnet_server::{BitNetServer, ServerConfig};
 use clap::Parser;
 use tracing::info;
@@ -68,24 +67,24 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     // Create server configuration
-    let config = ServerConfig {
-        host: args.host,
-        port: args.port,
-        model_path: Some(args.model),
-        tokenizer_path: args.tokenizer,
-        device: args.device,
-        monitoring: MonitoringConfig {
-            prometheus_enabled: args.prometheus,
-            prometheus_path: args.prometheus_path,
-            opentelemetry_enabled: args.opentelemetry,
-            opentelemetry_endpoint: args.opentelemetry_endpoint,
-            health_path: args.health_path,
-            metrics_interval: args.metrics_interval,
-            structured_logging: true,
-            log_level: args.log_level,
-            log_format: args.log_format,
-        },
-    };
+    let mut config = ServerConfig::default();
+
+    // Override server settings
+    config.server.host = args.host;
+    config.server.port = args.port;
+    config.server.default_model_path = Some(args.model);
+    config.server.default_tokenizer_path = args.tokenizer;
+
+    // Override monitoring settings
+    config.monitoring.prometheus_enabled = args.prometheus;
+    config.monitoring.prometheus_path = args.prometheus_path;
+    config.monitoring.opentelemetry_enabled = args.opentelemetry;
+    config.monitoring.opentelemetry_endpoint = args.opentelemetry_endpoint.clone();
+    config.monitoring.otlp_endpoint = args.opentelemetry_endpoint;
+    config.monitoring.health_path = args.health_path;
+    config.monitoring.metrics_interval = args.metrics_interval;
+    config.monitoring.log_level = args.log_level;
+    config.monitoring.log_format = args.log_format;
 
     // Create and start server
     let server = BitNetServer::new(config).await?;

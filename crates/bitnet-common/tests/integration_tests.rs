@@ -164,6 +164,7 @@ fn test_performance_metrics_with_config() {
         tokens_per_second: 150.0,
         latency_ms: 6.67,
         memory_usage_mb: 2048.0,
+        computation_type: ComputationType::Real,
         gpu_utilization: if config.performance.use_gpu { Some(85.0) } else { None },
     };
 
@@ -175,6 +176,7 @@ fn test_performance_metrics_with_config() {
     let json = serde_json::to_string(&metrics).unwrap();
     let deserialized: PerformanceMetrics = serde_json::from_str(&json).unwrap();
     assert_eq!(metrics.tokens_per_second, deserialized.tokens_per_second);
+    assert_eq!(metrics.computation_type, deserialized.computation_type);
     assert_eq!(metrics.gpu_utilization, deserialized.gpu_utilization);
 }
 

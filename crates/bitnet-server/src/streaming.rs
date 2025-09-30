@@ -11,11 +11,10 @@ use std::convert::Infallible;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
 use tracing::{debug, error, info, warn};
 
-use crate::AppState;
+use crate::ProductionAppState;
 
 /// Request for streaming token generation with timeout configuration
 #[derive(Deserialize)]
@@ -81,9 +80,9 @@ pub struct StreamingError {
 
 /// SSE streaming handler for token-by-token generation with comprehensive timeout and error handling
 pub(crate) async fn streaming_handler(
-    State(state): State<AppState>,
+    State(state): State<ProductionAppState>,
     axum::Json(request): axum::Json<StreamingRequest>,
-) -> Sse<Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>>> {
+) -> impl axum::response::IntoResponse {
     info!(
         "Streaming request received: prompt_len={}, max_tokens={:?}, timeout={:?}s",
         request.prompt.len(),
@@ -94,17 +93,15 @@ pub(crate) async fn streaming_handler(
     let detailed_errors = request.detailed_errors.unwrap_or(false);
     let timeout_seconds = request.timeout_seconds.unwrap_or(30);
 
-    let stream: Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>> =
-        if let Some(engine) = state.engine {
-            debug!("Creating real stream with {}s timeout", timeout_seconds);
-            Box::pin(create_error_handling_stream(
-                real_stream(engine, request).await,
-                detailed_errors,
-            ))
-        } else {
-            warn!("No inference engine available, using mock stream");
-            Box::pin(create_error_handling_stream(mock_stream(request).await, detailed_errors))
-        };
+    let stream: Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>> = if let Some(model) =
+        state.model_manager.get_active_model().await
+    {
+        debug!("Creating real stream with {}s timeout", timeout_seconds);
+        Box::pin(create_error_handling_stream(real_stream(model, request).await, detailed_errors))
+    } else {
+        warn!("No inference engine available, using mock stream");
+        Box::pin(create_error_handling_stream(mock_stream(request).await, detailed_errors))
+    };
 
     Sse::new(stream)
         .keep_alive(KeepAlive::new().interval(Duration::from_secs(1)).text("keep-alive"))
@@ -146,7 +143,7 @@ where
 
 /// Real streaming using the BitNet engine
 async fn real_stream(
-    engine: Arc<RwLock<bitnet_inference::InferenceEngine>>,
+    managed_model: Arc<crate::model_manager::ManagedModel>,
     request: StreamingRequest,
 ) -> impl Stream<Item = Result<Event, anyhow::Error>> {
     let start = std::time::Instant::now();
@@ -172,7 +169,7 @@ async fn real_stream(
         };
 
         // Get the engine and create a generation stream
-        let engine = engine.read().await;
+        let engine = &managed_model.engine;
         let tokenizer = engine.tokenizer();
         let mut gen_stream = engine.generate_stream_with_config(&request.prompt, &config)?;
         let mut token_count = 0u64;
@@ -310,7 +307,6 @@ mod tests {
     use bitnet_models::Model;
     use bitnet_tokenizers::Tokenizer;
     use http_body_util::BodyExt;
-    use tokio::sync::RwLock;
 
     use std::any::Any;
 
@@ -380,16 +376,38 @@ mod tests {
     async fn sse_token_ids_match_model_outputs() {
         let model = Arc::new(DummyModel::new());
         let tokenizer = Arc::new(TestTokenizer);
-        let engine =
+        let _engine =
             InferenceEngine::new(model, tokenizer.clone(), bitnet_common::Device::Cpu).unwrap();
-        let app_state = AppState {
+        let app_state = ProductionAppState {
+            config: crate::config::ServerConfig::default(),
+            model_manager: Arc::new(crate::model_manager::ModelManager::new(
+                crate::model_manager::ModelManagerConfig::default(),
+            )),
+            execution_router: Arc::new(
+                crate::execution_router::ExecutionRouter::new(
+                    crate::execution_router::ExecutionRouterConfig::default(),
+                    vec![bitnet_common::Device::Cpu],
+                )
+                .await
+                .unwrap(),
+            ),
+            batch_engine: Arc::new(crate::batch_engine::BatchEngine::new(
+                crate::batch_engine::BatchEngineConfig::default(),
+            )),
+            concurrency_manager: Arc::new(crate::concurrency::ConcurrencyManager::new(
+                crate::concurrency::ConcurrencyConfig::default(),
+            )),
+            security_validator: Arc::new(
+                crate::security::SecurityValidator::new(crate::security::SecurityConfig::default())
+                    .unwrap(),
+            ),
             metrics: Arc::new(
                 crate::monitoring::metrics::MetricsCollector::new(
                     &crate::monitoring::MonitoringConfig::default(),
                 )
                 .unwrap(),
             ),
-            engine: Some(Arc::new(RwLock::new(engine))),
+            start_time: std::time::Instant::now(),
         };
 
         let request = StreamingRequest {

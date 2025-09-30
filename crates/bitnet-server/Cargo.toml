@@ -22,6 +22,9 @@ bitnet-tokenizers = { path = "../bitnet-tokenizers" }
 chrono.workspace = true
 clap.workspace = true
 futures = "0.3.31"
+jsonwebtoken = "9.3.0"
+regex = "1.10.6"
+thiserror = "2.0.3"
 metrics.workspace = true
 metrics-prometheus = { workspace = true, optional = true }
 num_cpus.workspace = true
@@ -50,6 +53,7 @@ anyhow = "1.0.100"
 vergen-gix = { version = "1.0.9", features = ["build", "cargo", "rustc"] }
 
 [dev-dependencies]
+futures = "0.3.31"
 http-body-util = "0.1.3"
 hyper = "1.7.0"
 
@@ -58,8 +62,11 @@ name = "server"
 path = "src/bin/server.rs"
 
 [features]
+cpu = []                                                                                                                                                                          # CPU inference support with SIMD optimization
 cuda = []                                                                                                                                                                         # Recognized flag that gates GPU health checks
+crossval = []                                                                                                                                                                     # Cross-validation framework support
 default = ["prometheus"]
 degraded-ok = []                                                                                                                                                                  # Map Degraded → 200 OK (default is fail-fast)
+gpu = ["cuda"]                                                                                                                                                                    # GPU inference support (alias for cuda)
 opentelemetry = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-prometheus", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tracing-opentelemetry"]
 prometheus = ["dep:prometheus", "dep:metrics-prometheus"]

@@ -891,13 +891,16 @@ mod cross_platform_tests {
                 );
 
                 let test_result = fallback.test_functionality();
-                if test_result.is_ok() {
-                    println!("    ✅ Fallback {} functional", i + 1);
-                    break;
-                } else {
-                    println!("    ⚠️  Fallback {} failed: {}", i + 1, test_result.unwrap_err());
-                    if i == fallback_chain.len() - 1 {
-                        panic!("All fallback options failed");
+                match test_result {
+                    Ok(()) => {
+                        println!("    ✅ Fallback {} functional", i + 1);
+                        break;
+                    }
+                    Err(err) => {
+                        println!("    ⚠️  Fallback {} failed: {}", i + 1, err);
+                        if i == fallback_chain.len() - 1 {
+                            panic!("All fallback options failed");
+                        }
                     }
                 }
             }
