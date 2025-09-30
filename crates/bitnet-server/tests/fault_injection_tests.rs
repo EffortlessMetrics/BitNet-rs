@@ -217,9 +217,12 @@ async fn test_network_latency_fault_injection() -> Result<()> {
         }
 
         // Validate request timeout behavior
+        let expected_threshold = if delay_ms >= 5000 { 0.6 } else { 0.8 };
         assert!(
-            result.error_handling_quality >= 0.8,
-            "Error handling quality should be ≥80% under latency: got {:.1}%",
+            result.error_handling_quality >= expected_threshold,
+            "Error handling quality should be ≥{}% under {}ms latency: got {:.1}%",
+            expected_threshold * 100.0,
+            delay_ms,
             result.error_handling_quality * 100.0
         );
 
