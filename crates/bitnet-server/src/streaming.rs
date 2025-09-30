@@ -268,7 +268,7 @@ async fn mock_stream(
             let elapsed = start.elapsed();
             let data = StreamingToken {
                 token: token.to_string(),
-                token_id: i as u32,
+                token_id: 0, // Mock token ID matching test tokenizer behavior
                 cumulative_time_ms: elapsed.as_millis() as u64,
                 position: i + 1,
             };
