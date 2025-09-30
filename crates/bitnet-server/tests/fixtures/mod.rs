@@ -20,7 +20,7 @@ pub use deployment::EnvironmentConfig;
 pub use models::{GgufTestModel, QuantizationType as ModelQuantizationType, get_all_test_models};
 #[cfg(feature = "crossval")]
 pub use quantization::CrossValidationFixture;
-pub use quantization::{DeviceType, QuantizationTestVector};
+pub use quantization::QuantizationTestVector;
 pub use requests::InferenceRequest;
 pub use responses::InferenceResponse;
 
