@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 //! Deployment Configuration Fixtures for BitNet.rs Inference Server
 //!
 //! This module provides comprehensive deployment fixtures for testing production

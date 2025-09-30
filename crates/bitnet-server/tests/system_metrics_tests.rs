@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 use anyhow::Result;
 use bitnet_server::monitoring::{MonitoringConfig, metrics::MetricsCollector};
 
