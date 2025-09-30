@@ -10,6 +10,7 @@ use fixtures::*;
 #[cfg(test)]
 mod fixture_integration_tests {
     use super::*;
+    use crate::quantization::DeviceType;
 
     #[test]
     fn test_fixture_initialization() {

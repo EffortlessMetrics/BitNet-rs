@@ -345,6 +345,7 @@ macro_rules! load_quantization_vectors {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::quantization::DeviceType;
 
     #[test]
     fn test_fixture_initialization() {
