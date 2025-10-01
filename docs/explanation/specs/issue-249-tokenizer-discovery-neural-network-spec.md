@@ -144,8 +144,8 @@ impl TokenizerDiscovery {
 
 **Validation Commands**:
 ```bash
-cargo test -p bitnet-tokenizers test_tokenizer_discovery_from_gguf --no-default-features --features cpu
-cargo test -p bitnet-tokenizers test_vocab_size_extraction --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_tokenizer_discovery_from_gguf --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_vocab_size_extraction --no-default-features --features cpu
 ```
 
 ### AC2: SmartTokenizerDownload Implementation
@@ -241,8 +241,8 @@ pub struct TokenizerDownloadInfo {
 
 **Validation Commands**:
 ```bash
-cargo test -p bitnet-tokenizers test_smart_tokenizer_download --no-default-features --features cpu
-cargo test -p bitnet-tokenizers test_download_cache_management --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_smart_tokenizer_download --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_download_cache_management --no-default-features --features cpu
 ```
 
 ### AC3: Production TokenizerStrategy Implementation
@@ -380,9 +380,9 @@ impl Tokenizer for LlamaTokenizerWrapper {
 
 **Validation Commands**:
 ```bash
-cargo test -p bitnet-tokenizers test_llama_tokenizer_wrapper --no-default-features --features cpu
-cargo test -p bitnet-tokenizers test_gpt2_tokenizer_wrapper --no-default-features --features cpu
-cargo test -p bitnet-tokenizers test_vocab_size_validation --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_llama_tokenizer_wrapper --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_gpt2_tokenizer_wrapper --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_vocab_size_validation --no-default-features --features cpu
 ```
 
 ### AC4: xtask Integration
@@ -471,7 +471,7 @@ pub struct InferArgs {
 
 **Validation Commands**:
 ```bash
-cargo test -p xtask test_infer_auto_discovery --no-default-features --features cpu
+cargo test --no-default-features -p xtask test_infer_auto_discovery --no-default-features --features cpu
 cargo run -p xtask -- infer --model models/ggml-model-i2_s.gguf --prompt "Test" --auto-download
 ```
 
@@ -632,9 +632,9 @@ pub enum TokenizerResolution {
 **Validation Commands**:
 ```bash
 # Test fallback chain with various scenarios
-cargo test -p bitnet-tokenizers test_fallback_chain_success --no-default-features --features cpu
-cargo test -p bitnet-tokenizers test_fallback_chain_strict_mode --no-default-features --features cpu
-BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers test_no_mock_in_strict_mode --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_fallback_chain_success --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_fallback_chain_strict_mode --no-default-features --features cpu
+BITNET_STRICT_TOKENIZERS=1 cargo test --no-default-features -p bitnet-tokenizers test_no_mock_in_strict_mode --no-default-features --features cpu
 ```
 
 ### AC6: Cross-Validation Tests
@@ -774,8 +774,8 @@ async fn test_quantization_compatibility() -> Result<()> {
 
 **Validation Commands**:
 ```bash
-cargo test -p bitnet-tokenizers --no-default-features --features cpu tokenizer_discovery_crossval
-cargo test --test crossval_integration --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers --no-default-features --features cpu tokenizer_discovery_crossval
+cargo test --no-default-features --test crossval_integration --no-default-features --features cpu
 ```
 
 ### AC7: Integration Tests with Real Models
@@ -911,7 +911,7 @@ async fn test_gpu_cpu_tokenizer_parity() -> Result<()> {
 **Validation Commands**:
 ```bash
 # Full integration test suite
-cargo test --test tokenizer_integration_e2e --no-default-features --features cpu
+cargo test --no-default-features --test tokenizer_integration_e2e --no-default-features --features cpu
 
 # Real model verification
 cargo run -p xtask -- verify --model models/test/test-model.gguf --expect-tokenizer-auto-discovery
@@ -1025,12 +1025,12 @@ cargo build --target wasm32-unknown-unknown --no-default-features --features bro
 **Validation Commands**:
 ```bash
 # Comprehensive test suite
-cargo test --workspace --no-default-features --features cpu tokenizer
+cargo test --no-default-features --workspace --no-default-features --features cpu tokenizer
 ./scripts/verify-tests.sh
 
 # Performance validation
 cargo run -p xtask -- benchmark --tokenizer-discovery-overhead
-RUSTFLAGS="-C target-cpu=native" cargo build --release --no-default-features --features cpu
+RUSTFLAGS="-C target-cpu=native" cargo build --no-default-features --release --no-default-features --features cpu
 
 # Cross-validation with C++ reference
 export BITNET_GGUF="models/bitnet/model.gguf" BITNET_DETERMINISTIC=1 BITNET_SEED=42

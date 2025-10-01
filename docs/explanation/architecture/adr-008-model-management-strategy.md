@@ -419,14 +419,14 @@ impl AtomicHotSwapCoordinator {
 ### Functional Testing
 ```bash
 # Model loading and validation testing
-cargo test -p bitnet-server --test model_management_tests -- test_model_loading_validation
+cargo test --no-default-features --features cpu -p bitnet-server --test model_management_tests -- test_model_loading_validation
 
 # Hot-swap testing with rollback
-cargo test -p bitnet-server --test model_management_tests -- test_atomic_hot_swap_with_rollback
+cargo test --no-default-features --features cpu -p bitnet-server --test model_management_tests -- test_atomic_hot_swap_with_rollback
 
 # Cross-validation accuracy testing
 export BITNET_GGUF="path/to/model.gguf"
-cargo test -p bitnet-server --test model_management_tests -- test_cross_validation_accuracy
+cargo test --no-default-features --features cpu -p bitnet-server --test model_management_tests -- test_cross_validation_accuracy
 ```
 
 ### Performance Testing
@@ -435,7 +435,7 @@ cargo test -p bitnet-server --test model_management_tests -- test_cross_validati
 cargo run -p bitnet-server-bench -- --test hot-swap-performance --iterations 10
 
 # Memory usage validation
-cargo test -p bitnet-server --test model_management_tests -- test_memory_usage_during_swap
+cargo test --no-default-features --features cpu -p bitnet-server --test model_management_tests -- test_memory_usage_during_swap
 
 # Cross-validation performance
 cargo run -p xtask -- crossval --benchmark --iterations 50
@@ -444,10 +444,10 @@ cargo run -p xtask -- crossval --benchmark --iterations 50
 ### Integration Testing
 ```bash
 # End-to-end model management testing
-cargo test -p bitnet-server --test integration_tests -- test_production_model_management
+cargo test --no-default-features --features cpu -p bitnet-server --test integration_tests -- test_production_model_management
 
 # Concurrent inference during model swap
-cargo test -p bitnet-server --test integration_tests -- test_inference_during_hot_swap
+cargo test --no-default-features --features cpu -p bitnet-server --test integration_tests -- test_inference_during_hot_swap
 ```
 
 This ADR establishes a robust model management strategy that ensures zero-downtime deployments while maintaining quantization accuracy and providing comprehensive validation for production neural network inference.

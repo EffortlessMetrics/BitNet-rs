@@ -60,8 +60,8 @@ impl QuantizedLinear {
 
 **Validation Commands**:
 ```bash
-cargo test -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
-cargo test -p bitnet-quantization --no-default-features --features gpu test_device_aware_quantization
+cargo test --no-default-features -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
+cargo test --no-default-features -p bitnet-quantization --no-default-features --features gpu test_device_aware_quantization
 ```
 
 #### 2. bitnet-inference: Mock Removal (Primary Focus)
@@ -80,9 +80,9 @@ cargo test -p bitnet-quantization --no-default-features --features gpu test_devi
 **Validation Commands**:
 ```bash
 # Strict mode testing
-BITNET_STRICT_MODE=1 cargo test -p bitnet-inference --no-default-features --features cpu
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-inference --no-default-features --features cpu
 # Performance regression prevention
-cargo test -p bitnet-inference test_real_vs_mock_comparison --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-inference test_real_vs_mock_comparison --no-default-features --features cpu
 ```
 
 #### 3. bitnet-kernels: I2S/TL1/TL2 Activation (Core Infrastructure)
@@ -104,8 +104,8 @@ cargo test -p bitnet-inference test_real_vs_mock_comparison --no-default-feature
 
 **Validation Commands**:
 ```bash
-cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_info_summary
-cargo test -p bitnet-kernels --no-default-features --features cpu test_mixed_precision_matmul_accuracy
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_info_summary
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_mixed_precision_matmul_accuracy
 ```
 
 #### 4. bitnet-models: QLinear Integration (GGUF Enhancement)
@@ -130,7 +130,7 @@ impl BitNetModel {
 
 **Validation Commands**:
 ```bash
-cargo test -p bitnet-models --test gguf_min -- test_tensor_alignment
+cargo test --no-default-features --features cpu -p bitnet-models --test gguf_min -- test_tensor_alignment
 cargo run -p bitnet-cli -- compat-check --model path/to/model.gguf
 ```
 
@@ -155,11 +155,11 @@ cargo run -p xtask -- fetch-cpp && cargo run -p xtask -- crossval
 ```bash
 # CPU-only build with strict validation
 cargo build --no-default-features --features cpu
-cargo test --workspace --no-default-features --features cpu
+cargo test --no-default-features --workspace --no-default-features --features cpu
 
 # GPU-accelerated build with mixed precision
 cargo build --no-default-features --features gpu
-cargo test --workspace --no-default-features --features gpu
+cargo test --no-default-features --workspace --no-default-features --features gpu
 
 # Cross-validation build
 cargo build --no-default-features --features cpu,crossval
@@ -319,8 +319,8 @@ BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo run -p xtask -- crossval
 **FFI Bridge Validation**:
 ```bash
 # FFI accuracy testing (when available)
-cargo test -p bitnet-kernels --no-default-features --features ffi
-cargo test --workspace --no-default-features --features cpu,ffi test_ffi_parity
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features ffi
+cargo test --no-default-features --workspace --no-default-features --features cpu,ffi test_ffi_parity
 ```
 
 ## Feature Flag Analysis
@@ -389,13 +389,13 @@ fn test_i2s_kernel_integration() { // AC:3
 **Development Validation**:
 ```bash
 # Basic compilation and unit tests
-cargo test --workspace --no-default-features --features cpu
+cargo test --no-default-features --workspace --no-default-features --features cpu
 
 # Strict mode validation
-BITNET_STRICT_MODE=1 cargo test -p bitnet-inference --no-default-features --features cpu
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-inference --no-default-features --features cpu
 
 # Performance regression testing
-cargo test -p bitnet-inference test_performance_targets --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-inference test_performance_targets --no-default-features --features cpu
 ```
 
 **Production Validation**:
@@ -405,7 +405,7 @@ export BITNET_GGUF="path/to/production/model.gguf"
 cargo run -p xtask -- crossval --release
 
 # GPU smoke testing
-cargo test --workspace --no-default-features --features gpu test_gpu_smoke
+cargo test --no-default-features --workspace --no-default-features --features gpu test_gpu_smoke
 ```
 
 ## Risk Assessment
@@ -415,19 +415,19 @@ cargo test --workspace --no-default-features --features gpu test_gpu_smoke
 **High Risk - Quantization Accuracy**:
 - Risk: Numerical precision loss in kernel implementations
 - Mitigation: Comprehensive cross-validation with C++ reference
-- Validation: `cargo test test_quantization_accuracy_targets`
+- Validation: `cargo test --no-default-features --features cpu test_quantization_accuracy_targets`
 - Fallback: Gradual kernel activation with accuracy monitoring
 
 **Medium Risk - Performance Regression**:
 - Risk: Real computation slower than expected baselines
 - Mitigation: Performance benchmarking and optimization iteration
-- Validation: `cargo test test_performance_baseline_establishment`
+- Validation: `cargo test --no-default-features --features cpu test_performance_baseline_establishment`
 - Fallback: Conservative performance targets with optimization roadmap
 
 **Medium Risk - Device Compatibility**:
 - Risk: GPU kernel failures on different CUDA versions
 - Mitigation: Device capability detection and graceful fallback
-- Validation: `cargo test test_device_aware_fallback_mechanisms`
+- Validation: `cargo test --no-default-features --features cpu test_device_aware_fallback_mechanisms`
 - Fallback: CPU-only operation with warning messages
 
 **Low Risk - GGUF Format Changes**:
@@ -443,10 +443,10 @@ cargo test --workspace --no-default-features --features gpu test_gpu_smoke
 **Mitigation Strategy**:
 ```bash
 # Comprehensive build matrix validation
-cargo build --workspace --no-default-features                    # Minimal
-cargo build --workspace --no-default-features --features cpu     # CPU
-cargo build --workspace --no-default-features --features gpu     # GPU
-cargo build --workspace --no-default-features --features cpu,gpu # Full
+cargo build --no-default-features --features cpu --workspace --no-default-features                    # Minimal
+cargo build --no-default-features --workspace --no-default-features --features cpu     # CPU
+cargo build --no-default-features --workspace --no-default-features --features gpu     # GPU
+cargo build --no-default-features --workspace --no-default-features --features cpu,gpu # Full
 ```
 
 ## Success Criteria
@@ -460,22 +460,22 @@ cargo build --workspace --no-default-features --features cpu,gpu # Full
 
 **AC2: Strict Mode Implementation**
 - Target: BITNET_STRICT_MODE=1 prevents all mock fallbacks
-- Validation: `BITNET_STRICT_MODE=1 cargo test test_strict_mode_enforcement`
+- Validation: `BITNET_STRICT_MODE=1 cargo test --no-default-features --features cpu test_strict_mode_enforcement`
 - Evidence: Test failures when mock paths attempted
 
 **AC3: I2S Kernel Integration**
 - Target: I2S quantization without dequantization fallback
-- Validation: `cargo test test_i2s_native_quantized_matmul`
+- Validation: `cargo test --no-default-features --features cpu test_i2s_native_quantized_matmul`
 - Evidence: Direct kernel invocation in profiling traces
 
 **AC4: TL1/TL2 Kernel Integration**
 - Target: Device-aware TL1 (ARM) and TL2 (x86) optimization
-- Validation: `cargo test test_device_aware_quantization_selection`
+- Validation: `cargo test --no-default-features --features cpu test_device_aware_quantization_selection`
 - Evidence: Architecture-specific kernel selection
 
 **AC5: QLinear Replacement**
 - Target: Replace mock linear layers with real quantized operations
-- Validation: `cargo test test_quantized_linear_layer_integration`
+- Validation: `cargo test --no-default-features --features cpu test_quantized_linear_layer_integration`
 - Evidence: No mock tensor operations in inference pipeline
 
 **AC6: CI Mock Evidence Rejection**

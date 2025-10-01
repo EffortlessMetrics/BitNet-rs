@@ -248,13 +248,13 @@ bitnet-wasm/           # WebAssembly bindings
 # Clone and build CPU version
 git clone https://github.com/EffortlessMetrics/BitNet-rs.git
 cd BitNet-rs
-cargo build --release --no-default-features --features cpu
+cargo build --no-default-features --release --no-default-features --features cpu
 
 # Run verification
 cargo run -p xtask -- verify --help
 
 # Run tests
-cargo test --workspace --no-default-features --features cpu
+cargo test --no-default-features --workspace --no-default-features --features cpu
 ```
 
 **Development Commands:**
@@ -359,7 +359,7 @@ cargo run -p xtask -- bench-compare --current results.json
 - `rg -n "unsafe fn|unsafe\s*\{"` → each site links to safety doc section
 
 ### Tokenizer + fixture
-- `SPM_MODEL=tests/fixtures/spm/tiny.model cargo test -p bitnet-tokenizers --features "spm,integration-tests" --test tokenizer_contracts -- --nocapture` → pass
+- `SPM_MODEL=tests/fixtures/spm/tiny.model cargo test --no-default-features -p bitnet-tokenizers --features "spm,integration-tests" --test tokenizer_contracts -- --nocapture` → pass
 - `cargo test -p bitnet-tokenizers --features spm -- test_sentencepiece_tokenizer_contract` without fixture → *skips with message*
 
 ### Real inference smoke

@@ -286,20 +286,20 @@ pub enum Commands {
 1. **Fast Lane (5 minutes)**:
    ```bash
    # Mock models, CPU-only, essential tests
-   cargo test --workspace --no-default-features --features cpu
+   cargo test --no-default-features --workspace --no-default-features --features cpu
    ```
 
 2. **Integration Lane (15 minutes)**:
    ```bash
    # Real models (cached), CPU+GPU, comprehensive tests
-   cargo test --workspace --features "cpu,inference,integration-tests"
+   cargo test --no-default-features --workspace --features "cpu,inference,integration-tests"
    ```
 
 3. **Full Validation (45 minutes)**:
    ```bash
    # Cross-validation, performance benchmarks, compatibility tests
    cargo run -p xtask -- full-crossval
-   cargo bench --workspace --features "cpu,gpu"
+   cargo bench --no-default-features --workspace --features "cpu,gpu"
    ```
 
 **Model Caching Strategy**:

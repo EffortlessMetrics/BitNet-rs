@@ -118,7 +118,7 @@ logits = hf_runner.run_teacher_force(
 
 ```bash
 # Build
-cargo build -p bitnet-cli --release --no-default-features --features cpu
+cargo build --no-default-features -p bitnet-cli --release --no-default-features --features cpu
 
 # Tokenizer parity (fast smoke test)
 BITNET_BIN=target/release/bitnet \
@@ -135,7 +135,7 @@ pytest crossval/props/test_logit_parity.py -v
 # NLL parity
 DELTA_NLL_MAX=0.01 \
 MODEL_PATH=model.gguf TOKENIZER=tokenizer.json \
-cargo test -p crossval test_nll_parity
+cargo test --no-default-features --features cpu -p crossval test_nll_parity
 
 # Greedy invariants
 PROP_EXAMPLES=5 \

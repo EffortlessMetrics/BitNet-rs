@@ -49,7 +49,7 @@ Rust Validation (Required) → C++ Header Preflight → C++ Full Load
 ```bash
 # Generate and validate mini fixture
 cargo xtask gen-mini-gguf --output target/mini.gguf
-cargo test -p xtask mini_gguf
+cargo test --no-default-features --features cpu -p xtask mini_gguf
 
 # Run crossval with soft-fail
 export CROSSVAL_ALLOW_CPP_FAIL=1

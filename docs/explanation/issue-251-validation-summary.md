@@ -16,13 +16,13 @@ This document provides comprehensive validation that the Issue #251 architectura
 **Validation Commands**:
 ```bash
 # CPU-optimized production server (validated)
-cargo build --release --no-default-features --features "cpu,prometheus,degraded-ok"
+cargo build --no-default-features --release --no-default-features --features "cpu,prometheus,degraded-ok"
 
 # GPU-accelerated production server (validated)
-cargo build --release --no-default-features --features "gpu,prometheus,opentelemetry"
+cargo build --no-default-features --release --no-default-features --features "gpu,prometheus,opentelemetry"
 
 # Full-featured production server (validated)
-cargo build --release --no-default-features --features "cpu,gpu,prometheus,opentelemetry,degraded-ok"
+cargo build --no-default-features --release --no-default-features --features "cpu,gpu,prometheus,opentelemetry,degraded-ok"
 ```
 
 **Compliance Status**: ✅ **COMPLIANT** - All specifications use established BitNet.rs feature flag patterns
@@ -61,13 +61,13 @@ cargo run -p xtask -- crossval --dry-run
 **Validation Framework**:
 ```bash
 # Quantization accuracy validation (existing test pattern)
-cargo test -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
+cargo test --no-default-features -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
 
 # GPU precision validation (existing test pattern)
-cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_matmul_accuracy
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_matmul_accuracy
 
 # GGUF compatibility validation (existing test pattern)
-cargo test -p bitnet-models --test gguf_min -- test_tensor_alignment
+cargo test --no-default-features --features cpu -p bitnet-models --test gguf_min -- test_tensor_alignment
 ```
 
 **Compliance Status**: ✅ **COMPLIANT** - All quantization specifications align with existing validation patterns
@@ -102,10 +102,10 @@ cargo run -p xtask -- verify --model path/to/model.gguf
 **Validation Framework**:
 ```bash
 # GPU capability validation (existing test)
-cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_info_summary
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_info_summary
 
 # Device compatibility validation (existing pattern)
-cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_mode_validation
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_precision_mode_validation
 ```
 
 **Compliance Status**: ✅ **COMPLIANT** - Device management specifications align with existing infrastructure
@@ -134,13 +134,13 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_precision
 **Build Command Validation**:
 ```bash
 # Workspace build validation (verified working)
-cargo build --workspace --no-default-features --features cpu
+cargo build --no-default-features --workspace --no-default-features --features cpu
 
 # Server-specific build validation (verified pattern)
-cargo build -p bitnet-server --no-default-features --features "cpu,prometheus"
+cargo build --no-default-features -p bitnet-server --no-default-features --features "cpu,prometheus"
 
 # Test execution validation (verified pattern)
-cargo test --workspace --no-default-features --features cpu
+cargo test --no-default-features --workspace --no-default-features --features cpu
 ```
 
 **Compliance Status**: ✅ **COMPLIANT** - All build specifications use established workspace patterns
@@ -156,13 +156,13 @@ cargo test --workspace --no-default-features --features cpu
 **Test Execution Validation**:
 ```bash
 # Unit testing with AC tags (established pattern)
-cargo test -p bitnet-server --test production_server_tests -- test_ac1_http_api_surface
+cargo test --no-default-features --features cpu -p bitnet-server --test production_server_tests -- test_ac1_http_api_surface
 
 # Integration testing (established pattern)
-cargo test -p bitnet-server --test integration_tests -- test_end_to_end_inference
+cargo test --no-default-features --features cpu -p bitnet-server --test integration_tests -- test_end_to_end_inference
 
 # Performance testing (established tooling)
-cargo bench --workspace --no-default-features --features cpu
+cargo bench --no-default-features --workspace --no-default-features --features cpu
 ```
 
 **Compliance Status**: ✅ **COMPLIANT** - Testing strategy follows established TDD patterns
@@ -180,7 +180,7 @@ cargo bench --workspace --no-default-features --features cpu
 **Performance Baseline Validation**:
 ```bash
 # Benchmark baseline establishment (existing framework)
-cargo bench --workspace --no-default-features --features cpu
+cargo bench --no-default-features --workspace --no-default-features --features cpu
 
 # Performance regression detection (existing tooling)
 cargo run -p xtask -- benchmark-compare --baseline latest --threshold 5%
@@ -337,10 +337,10 @@ cargo run -p xtask -- benchmark-compare --baseline latest --threshold 5%
 **Validation Framework**:
 ```bash
 # AC validation testing (pattern established)
-cargo test -p bitnet-server --test acceptance_tests -- test_ac1_through_ac15
+cargo test --no-default-features --features cpu -p bitnet-server --test acceptance_tests -- test_ac1_through_ac15
 
 # End-to-end validation (comprehensive)
-cargo test -p bitnet-server --test integration_tests -- test_production_scenarios
+cargo test --no-default-features --features cpu -p bitnet-server --test integration_tests -- test_production_scenarios
 ```
 
 **Compliance Status**: ✅ **COMPLIANT** - All acceptance criteria are testable and measurable

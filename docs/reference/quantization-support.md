@@ -87,46 +87,46 @@ BitNet.rs provides native CUDA mixed precision support for enhanced GPU performa
 ### Device-Aware Quantization Testing
 ```bash
 # Test device-aware quantization with strict mode (prevents mock fallbacks)
-BITNET_STRICT_MODE=1 cargo test -p bitnet-quantization --no-default-features --features gpu test_dequantize_cpu_and_gpu_paths
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-quantization --no-default-features --features gpu test_dequantize_cpu_and_gpu_paths
 
 # GPU kernel validation with numerical accuracy testing
-BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy
 
 # Enhanced GPU validation with performance metrics and error handling
-BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
 
 # Validate quantization accuracy targets (I2S >99.8%, TL1/TL2 >99.6%)
-cargo test -p bitnet-quantization --no-default-features --features cpu test_quantization_accuracy_targets
+cargo test --no-default-features -p bitnet-quantization --no-default-features --features cpu test_quantization_accuracy_targets
 ```
 
 ### Mixed Precision Testing
 ```bash
 # Test mixed precision with strict mode (no mock GPU fallbacks)
-BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
 
 # Test FP16/BF16 matrix multiplication accuracy against FP32 reference
-BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_matmul_accuracy
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_matmul_accuracy
 
 # Test precision mode validation and automatic fallback
-BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_mode_validation
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_precision_mode_validation
 
 # Benchmark mixed precision performance with strict mode (realistic baselines)
-BITNET_STRICT_MODE=1 cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
+BITNET_STRICT_MODE=1 cargo bench --no-default-features -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
 
 # Test device-aware precision selection and optimization
-BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_detection_optimization
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_precision_detection_optimization
 ```
 
 ### FFI Quantization Testing
 ```bash
 # FFI quantization bridge validation with strict mode
-BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
 
 # FFI kernel creation and availability testing
-BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --features ffi test_ffi_kernel_creation
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --features ffi test_ffi_kernel_creation
 
 # FFI performance comparison against C++ reference (cross-validation)
-BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --features ffi --release test_performance_comparison_structure
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --features ffi --release test_performance_comparison_structure
 
 # Cross-validation with C++ reference implementation
 BITNET_GGUF="path/to/model.gguf" BITNET_STRICT_MODE=1 cargo run -p xtask -- crossval
@@ -135,12 +135,12 @@ BITNET_GGUF="path/to/model.gguf" BITNET_STRICT_MODE=1 cargo run -p xtask -- cros
 ### SIMD Testing
 ```bash
 # SIMD kernel validation and performance testing
-cargo test -p bitnet-quantization --test simd_compatibility --no-default-features --features cpu
-cargo bench -p bitnet-quantization --bench simd_comparison --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-quantization --test simd_compatibility --no-default-features --features cpu
+cargo bench --no-default-features -p bitnet-quantization --bench simd_comparison --no-default-features --features cpu
 
 # SIMD vs scalar parity testing
-cargo test -p bitnet-quantization test_i2s_simd_scalar_parity
-cargo test -p bitnet-quantization test_simd_performance_baseline
+cargo test --no-default-features --features cpu -p bitnet-quantization test_i2s_simd_scalar_parity
+cargo test --no-default-features --features cpu -p bitnet-quantization test_simd_performance_baseline
 ```
 
 For more information, see:

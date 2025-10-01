@@ -820,7 +820,7 @@ impl NeuralNetworkPrometheusExporter {
   - Real-time accuracy monitoring and alerting
 - **Validation Commands**:
   ```bash
-  cargo test -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
+  cargo test --no-default-features -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
   cargo run -p xtask -- crossval --model path/to/model.gguf
   ```
 
@@ -832,8 +832,8 @@ impl NeuralNetworkPrometheusExporter {
   - Device health monitoring with automatic recovery
 - **Validation Commands**:
   ```bash
-  cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_info_summary
-  cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_mode_validation
+  cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_info_summary
+  cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_precision_mode_validation
   ```
 
 **R3: Memory and Performance Degradation**
@@ -844,8 +844,8 @@ impl NeuralNetworkPrometheusExporter {
   - Adaptive resource management with intelligent backpressure
 - **Validation Commands**:
   ```bash
-  cargo bench --workspace --no-default-features --features cpu
-  cargo test -p bitnet-models --test gguf_min -- test_tensor_alignment
+  cargo bench --no-default-features --workspace --no-default-features --features cpu
+  cargo test --no-default-features --features cpu -p bitnet-models --test gguf_min -- test_tensor_alignment
   ```
 
 ### Production Deployment Risks
@@ -944,11 +944,11 @@ cargo build --no-default-features --features "cpu,gpu,prometheus,opentelemetry,d
 
 ```bash
 # Quantization accuracy validation
-cargo test -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
-cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_matmul_accuracy
+cargo test --no-default-features -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_matmul_accuracy
 
 # GGUF compatibility validation
-cargo test -p bitnet-models --test gguf_min -- test_tensor_alignment
+cargo test --no-default-features --features cpu -p bitnet-models --test gguf_min -- test_tensor_alignment
 cargo run -p bitnet-cli -- compat-check --help
 
 # Cross-validation framework
@@ -956,13 +956,13 @@ export BITNET_GGUF="path/to/model.gguf"
 cargo run -p xtask -- crossval
 
 # Performance benchmarking
-cargo bench --workspace --no-default-features --features cpu
+cargo bench --no-default-features --workspace --no-default-features --features cpu
 ./scripts/verify-tests.sh
 
 # Feature flag validation
 cargo run -p xtask -- check-features
-cargo build --workspace --no-default-features --features cpu
-cargo build --workspace --no-default-features --features gpu
+cargo build --no-default-features --workspace --no-default-features --features cpu
+cargo build --no-default-features --workspace --no-default-features --features gpu
 ```
 
 ### Integration Testing Strategy

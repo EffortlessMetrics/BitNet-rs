@@ -254,19 +254,19 @@ jobs:
         run: |
           case "${{ matrix.test-tier }}" in
             fast)
-              cargo test --workspace --no-default-features --features cpu
+              cargo test --no-default-features --workspace --no-default-features --features cpu
               ;;
             integration)
               if [ -f ~/.cache/bitnet-models/bitnet-2b.gguf ]; then
-                cargo test --workspace --features "cpu,integration-tests"
+                cargo test --no-default-features --workspace --features "cpu,integration-tests"
               else
                 echo "No real models available, running with mocks"
-                cargo test --workspace --no-default-features --features cpu
+                cargo test --no-default-features --workspace --no-default-features --features cpu
               fi
               ;;
             performance)
               if [ -f ~/.cache/bitnet-models/bitnet-2b.gguf ]; then
-                cargo bench --workspace --features cpu
+                cargo bench --no-default-features --workspace --features cpu
               else
                 echo "Skipping performance tests - no models available"
               fi
@@ -748,7 +748,7 @@ jobs:
       - name: Run CPU-only tests
         run: |
           # Always run CPU tests regardless of GPU availability
-          cargo test --workspace --no-default-features --features cpu
+          cargo test --no-default-features --workspace --no-default-features --features cpu
 
   gpu-tests:
     needs: [detect-gpu-requirements, cpu-only-tests]
@@ -777,10 +777,10 @@ jobs:
         run: |
           if [ "$BITNET_GPU_AVAILABLE" = "true" ]; then
             # Real GPU tests
-            cargo test --workspace --features "gpu,integration-tests"
+            cargo test --no-default-features --workspace --features "gpu,integration-tests"
           else
             # Mock GPU tests
-            BITNET_GPU_FAKE="cuda" cargo test --workspace --features gpu
+            BITNET_GPU_FAKE="cuda" cargo test --no-default-features --workspace --features gpu
           fi
 
   gpu-fallback-simulation:
@@ -791,11 +791,11 @@ jobs:
       - name: Test GPU fallback mechanisms
         run: |
           # Test fallback behavior when GPU is not available
-          BITNET_FORCE_CPU_FALLBACK=1 cargo test --workspace --features "cpu,gpu"
+          BITNET_FORCE_CPU_FALLBACK=1 cargo test --no-default-features --workspace --features "cpu,gpu"
 
           # Test mock GPU scenarios
-          BITNET_GPU_FAKE="cuda" cargo test -p bitnet-kernels --features gpu test_gpu_fallback
-          BITNET_GPU_FAKE="metal" cargo test -p bitnet-kernels --features gpu test_device_detection
+          BITNET_GPU_FAKE="cuda" cargo test --no-default-features -p bitnet-kernels --features gpu test_gpu_fallback
+          BITNET_GPU_FAKE="metal" cargo test --no-default-features -p bitnet-kernels --features gpu test_device_detection
 
   integration-matrix:
     needs: [detect-gpu-requirements]
@@ -821,9 +821,9 @@ jobs:
           BITNET_MODEL_CACHE: ~/.cache/bitnet-models
         run: |
           # Run tests with automatic fallback to CPU/mock
-          cargo test --workspace --features "${{ matrix.features }},integration-tests" || {
+          cargo test --no-default-features --workspace --features "${{ matrix.features }},integration-tests" || {
             echo "Integration tests failed, falling back to mock tests"
-            cargo test --workspace --no-default-features --features cpu
+            cargo test --no-default-features --workspace --no-default-features --features cpu
           }
 ```
 

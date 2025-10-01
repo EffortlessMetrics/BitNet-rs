@@ -8,7 +8,7 @@ Thank you for your interest in contributing to BitNet.rs! This document provides
 2. Clone your fork: `git clone https://github.com/your-username/BitNet-rs.git`
 3. Create a feature branch: `git checkout -b feature/your-feature-name`
 4. Make your changes
-5. Run tests: `cargo test --workspace`
+5. Run tests: `cargo test --no-default-features --workspace --features cpu`
 6. Submit a pull request
 
 ## Development Setup
@@ -24,13 +24,13 @@ Thank you for your interest in contributing to BitNet.rs! This document provides
 
 ```bash
 # Build with default features (CPU only)
-cargo build --release
+cargo build --no-default-features --release --features cpu
 
 # Build with GPU support
-cargo build --release --features gpu
+cargo build --no-default-features --release --features gpu
 
 # Build with all features
-cargo build --release --features full
+cargo build --no-default-features --release --features full
 ```
 
 ## Code Style
@@ -45,16 +45,16 @@ cargo build --release --features full
 
 ```bash
 # Run all tests
-cargo test --workspace
+cargo test --no-default-features --workspace --features cpu
 
 # Run tests with specific features
-cargo test --workspace --features cpu
+cargo test --no-default-features --workspace --features cpu
 
 # Run benchmarks
-cargo bench --workspace
+cargo bench --no-default-features --workspace --features cpu
 
 # Run cross-validation tests (if C++ deps available)
-cargo test --workspace --features crossval
+cargo test --no-default-features --workspace --features crossval
 ```
 
 ## Configuration & testing conventions

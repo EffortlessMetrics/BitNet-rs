@@ -367,17 +367,17 @@ impl TransformerCrossValidator {
 **Validation Commands and Thresholds**:
 ```bash
 # Comprehensive transformer validation pipeline
-cargo test --workspace --no-default-features --features cpu,crossval transformer_forward_pass_accuracy
-cargo test --workspace --no-default-features --features gpu,crossval transformer_gpu_cpu_parity
+cargo test --no-default-features --workspace --no-default-features --features cpu,crossval transformer_forward_pass_accuracy
+cargo test --no-default-features --workspace --no-default-features --features gpu,crossval transformer_gpu_cpu_parity
 cargo run -p xtask -- crossval --model models/bitnet/model.gguf --prompts validation_prompts.txt
 cargo run -p xtask -- benchmark-transformer --model models/bitnet/model.gguf --validate-accuracy
 
 # Specific quantization validation
-cargo test -p bitnet-quantization --no-default-features --features cpu test_transformer_i2s_accuracy
-cargo test -p bitnet-kernels --no-default-features --features gpu test_transformer_mixed_precision_parity
+cargo test --no-default-features -p bitnet-quantization --no-default-features --features cpu test_transformer_i2s_accuracy
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_transformer_mixed_precision_parity
 
 # GGUF compatibility validation
-cargo test -p bitnet-models --test transformer_gguf_loading -- test_bitnet_model_tensor_alignment
+cargo test --no-default-features --features cpu -p bitnet-models --test transformer_gguf_loading -- test_bitnet_model_tensor_alignment
 cargo run -p bitnet-cli -- compat-check models/bitnet/model.gguf --validate-transformer
 ```
 
@@ -743,7 +743,7 @@ impl InferenceEngine {
    - **Mitigation**: Layer-by-layer quantization validation with configurable tolerance
    - **Validation Commands**:
      ```bash
-     cargo test -p bitnet-quantization test_transformer_quantization_accuracy
+     cargo test --no-default-features --features cpu -p bitnet-quantization test_transformer_quantization_accuracy
      cargo run -p xtask -- validate-numerical-stability --model model.gguf --tolerance 1e-4
      ```
 
@@ -842,8 +842,8 @@ cargo run -p xtask -- memory-benchmark \
     --platform-validation
 
 # Individual validation components
-cargo test --workspace --no-default-features --features cpu,transformer transformer_accuracy
-cargo test --workspace --no-default-features --features gpu,transformer transformer_performance
+cargo test --no-default-features --workspace --no-default-features --features cpu,transformer transformer_accuracy
+cargo test --no-default-features --workspace --no-default-features --features gpu,transformer transformer_performance
 cargo run -p xtask -- crossval --model models/bitnet-2b.gguf --strict-validation
 cargo run -p xtask -- benchmark-transformer --validate-all-targets
 ```

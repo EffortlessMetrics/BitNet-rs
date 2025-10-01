@@ -30,16 +30,16 @@ For developers new to the testing framework:
 
 ```bash
 # Run all tests
-cargo test
+cargo test --no-default-features --features cpu
 
 # Run unit tests only
-cargo test --lib
+cargo test --no-default-features --features cpu --lib
 
 # Run integration tests
-cargo test --test integration_tests
+cargo test --no-default-features --features cpu --test integration_tests
 
 # Run cross-validation tests
-cargo test --test crossval_tests
+cargo test --no-default-features --features crossval --test crossval_tests
 
 # Generate coverage report
 cargo tarpaulin --out html --output-dir target/coverage
@@ -51,10 +51,10 @@ The framework includes several example tests that demonstrate best practices:
 
 ```bash
 # Run the unit test example (shows 14 different test patterns)
-cargo test --test unit_test_example
+cargo test --no-default-features --features cpu --test unit_test_example
 
 # Run the integration test example (shows workflow and component testing)
-cargo test --test integration_test_example
+cargo test --no-default-features --features cpu --test integration_test_example
 
 # Run the reporting system example
 cargo run -p bitnet-tests --example reporting_example
@@ -68,10 +68,10 @@ These examples show:
 You can also run specific tests from the examples:
 ```bash
 # Run a specific unit test
-cargo test --test unit_test_example test_process_basic_functionality
+cargo test --no-default-features --features cpu --test unit_test_example test_process_basic_functionality
 
 # List all available tests in an example
-cargo test --test unit_test_example -- --list
+cargo test --no-default-features --features cpu --test unit_test_example -- --list
 ```
 
 ## Developer Tools

@@ -341,7 +341,7 @@ Test performance across different architectures:
 
 # WebAssembly (requires wasm32 target)
 rustup target add wasm32-unknown-unknown
-cargo bench -p bitnet-wasm --target wasm32-unknown-unknown
+cargo bench --no-default-features --features cpu -p bitnet-wasm --target wasm32-unknown-unknown
 ```
 
 ### Performance Profiling
@@ -376,7 +376,7 @@ cargo --version
 ls -la crossval/fixtures/
 
 # Check binary compilation
-cargo build --release --no-default-features --features cpu
+cargo build --no-default-features --release --no-default-features --features cpu
 ```
 
 **Benchmark Failures:**

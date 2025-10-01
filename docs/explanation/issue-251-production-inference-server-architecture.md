@@ -533,7 +533,7 @@ FROM rust:1.90-slim as builder
 # Copy source and build with production features
 COPY . /workspace
 WORKDIR /workspace
-RUN cargo build --release --no-default-features --features "cpu,gpu,prometheus,opentelemetry"
+RUN cargo build --no-default-features --release --no-default-features --features "cpu,gpu,prometheus,opentelemetry"
 
 FROM nvidia/cuda:12.0-runtime-ubuntu22.04
 RUN apt-get update && apt-get install -y \
@@ -695,13 +695,13 @@ metrics:
 **Build Configurations**:
 ```bash
 # CPU-optimized production server
-cargo build --release --no-default-features --features "cpu,prometheus,degraded-ok"
+cargo build --no-default-features --release --no-default-features --features "cpu,prometheus,degraded-ok"
 
 # GPU-accelerated production server
-cargo build --release --no-default-features --features "gpu,prometheus,opentelemetry"
+cargo build --no-default-features --release --no-default-features --features "gpu,prometheus,opentelemetry"
 
 # Full-featured production server
-cargo build --release --no-default-features --features "cpu,gpu,prometheus,opentelemetry,degraded-ok"
+cargo build --no-default-features --release --no-default-features --features "cpu,gpu,prometheus,opentelemetry,degraded-ok"
 ```
 
 **Feature Dependencies**:
@@ -720,10 +720,10 @@ export BITNET_GGUF="path/to/model.gguf"
 cargo run -p xtask -- crossval
 
 # Quantization accuracy validation
-cargo test -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
+cargo test --no-default-features -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
 
 # GGUF compatibility validation
-cargo test -p bitnet-models --test gguf_min -- test_tensor_alignment
+cargo test --no-default-features --features cpu -p bitnet-models --test gguf_min -- test_tensor_alignment
 
 # Feature flag validation
 cargo run -p xtask -- check-features
@@ -753,7 +753,7 @@ cargo run -p bitnet-cli -- compat-check model.gguf
 cargo run -p xtask -- verify --model path/to/model.gguf
 
 # Performance benchmarking
-cargo bench --workspace --no-default-features --features cpu
+cargo bench --no-default-features --workspace --no-default-features --features cpu
 ```
 
 ## Implementation Roadmap

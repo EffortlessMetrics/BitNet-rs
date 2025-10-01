@@ -59,7 +59,7 @@ cargo xtask fetch-cpp --tag main --force --clean
 #### Solution B: Convert Model to GGUF v2
 ```bash
 # Build the converter tool
-cargo build -p bitnet-compat --release
+cargo build --no-default-features --features cpu -p bitnet-compat --release
 
 # Convert the model
 cargo run -p bitnet-compat -- convert \
@@ -155,7 +155,7 @@ export LD_LIBRARY_PATH="$HOME/.cache/bitnet_cpp/build/3rdparty/llama.cpp/src:$HO
 export CROSSVAL_GGUF="path/to/model.gguf"
 
 # Run tests
-cargo test -p bitnet-crossval --features crossval
+cargo test --no-default-features -p bitnet-crossval --features crossval
 ```
 
 ## CI Configuration

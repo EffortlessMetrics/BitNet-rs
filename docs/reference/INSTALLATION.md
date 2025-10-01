@@ -250,10 +250,10 @@ cd BitNet
 rustup component add rustfmt clippy
 
 # Build all crates
-cargo build --workspace --all-features
+cargo build --no-default-features --features cpu --workspace --all-features
 
 # Run tests
-cargo test --workspace
+cargo test --no-default-features --features cpu --workspace
 
 # Install locally
 cargo install --path crates/bitnet-cli
@@ -264,16 +264,16 @@ cargo install --path crates/bitnet-server
 
 ```bash
 # Build with all features
-cargo build --all-features
+cargo build --no-default-features --all-features
 
 # Build with GPU support
-cargo build --features gpu
+cargo build --no-default-features --features gpu
 
 # Build with cross-validation support
-cargo build --features crossval
+cargo build --no-default-features --features crossval
 
 # Build minimal version
-cargo build --no-default-features
+cargo build --no-default-features --features cpu
 ```
 
 ## 🐳 Container Installation

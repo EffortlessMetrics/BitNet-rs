@@ -161,11 +161,11 @@ The enhanced GGUF loader parses all transformer layer weights:
 cargo run --example cuda_info --no-default-features --features gpu
 
 # Test GPU quantization with real model weights
-cargo test -p bitnet-kernels --no-default-features --features gpu \
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu \
     test_gpu_quantization_with_real_weights
 
 # Benchmark GPU vs CPU performance with actual models
-cargo bench -p bitnet-kernels --bench quantization_bench \
+cargo bench --no-default-features --features cpu -p bitnet-kernels --bench quantization_bench \
     --no-default-features --features gpu
 ```
 
@@ -173,15 +173,15 @@ cargo bench -p bitnet-kernels --bench quantization_bench \
 
 ```bash
 # Build with native CPU optimizations for real model inference
-RUSTFLAGS="-C target-cpu=native" cargo build --release \
+RUSTFLAGS="-C target-cpu=native" cargo build --no-default-features --features cpu --release \
     --no-default-features --features cpu
 
 # Test SIMD acceleration with real quantized weights
-cargo test -p bitnet-quantization --test simd_compatibility \
+cargo test --no-default-features --features cpu -p bitnet-quantization --test simd_compatibility \
     --no-default-features --features cpu
 
 # Benchmark SIMD performance with actual model tensors
-cargo bench -p bitnet-quantization --bench simd_comparison \
+cargo bench --no-default-features --features cpu -p bitnet-quantization --bench simd_comparison \
     --no-default-features --features cpu
 ```
 
@@ -368,7 +368,7 @@ BITNET_GGUF="model.gguf" cargo test --features crossval \
 
 ```bash
 # Validate all documentation examples with real models
-cargo test --doc --workspace --no-default-features --features cpu
+cargo test --no-default-features --doc --workspace --no-default-features --features cpu
 
 # Build documentation with real model examples
 cargo doc --workspace --no-default-features --features cpu --open
@@ -445,11 +445,11 @@ cargo run -p xtask -- benchmark \
 **Solutions:**
 ```bash
 # Enable native CPU optimizations
-RUSTFLAGS="-C target-cpu=native" cargo build --release \
+RUSTFLAGS="-C target-cpu=native" cargo build --no-default-features --features cpu --release \
     --no-default-features --features cpu
 
 # Use GPU acceleration
-cargo build --release --no-default-features --features gpu
+cargo build --no-default-features --release --no-default-features --features gpu
 
 # Optimize for throughput
 export BITNET_DETERMINISTIC=0

@@ -16,7 +16,7 @@ cargo build --no-default-features --features cpu
 cargo build --no-default-features --features gpu
 
 # Full feature set
-cargo build --features full
+cargo build --no-default-features --features full
 ```
 
 ## Core Features
@@ -77,7 +77,7 @@ Note: This is an alias for the `gpu` feature. New projects should use `gpu` for 
 **When to use:** For comparing against original C++ implementation
 
 ```bash
-cargo build --features ffi
+cargo build --no-default-features --features ffi
 ```
 
 Enables:
@@ -128,7 +128,7 @@ Requirements:
 **When to use:** For validating Rust implementation correctness
 
 ```bash
-cargo test --features "cpu,ffi,crossval"
+cargo test --no-default-features --features "cpu,ffi,crossval"
 ```
 
 ### `full`
@@ -137,7 +137,7 @@ cargo test --features "cpu,ffi,crossval"
 **When to use:** For development and testing
 
 ```bash
-cargo build --features full
+cargo build --no-default-features --features full
 ```
 
 ## Feature Combinations
@@ -146,22 +146,22 @@ cargo build --features full
 
 **Production CPU deployment:**
 ```bash
-cargo build --release --no-default-features --features cpu
+cargo build --no-default-features --release --no-default-features --features cpu
 ```
 
 **Production GPU deployment with device-aware quantization:**
 ```bash
-cargo build --release --no-default-features --features "cpu,gpu"
+cargo build --no-default-features --release --no-default-features --features "cpu,gpu"
 ```
 
 **Development with GPU validation:**
 ```bash
-cargo build --features "cpu,gpu,ffi,crossval"
+cargo build --no-default-features --features "cpu,gpu,ffi,crossval"
 ```
 
 **Maximum performance with GPU acceleration:**
 ```bash
-cargo build --release --features "cpu,gpu,avx512"
+cargo build --no-default-features --release --features "cpu,gpu,avx512"
 ```
 
 ## Workspace Crate Features
@@ -213,7 +213,7 @@ cargo build --no-default-features --features cpu
 
 # Option 2: Build C++ library
 cargo xtask fetch-cpp
-cargo build --features "cpu,ffi"
+cargo build --no-default-features --features "cpu,ffi"
 ```
 
 ### Issue: CUDA features not working
@@ -275,13 +275,13 @@ The `gpu` feature enables advanced device-aware quantization with the following 
 ### Testing and Validation
 ```bash
 # Test device-aware quantization
-cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_quantization
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu --test gpu_quantization
 
 # Test GPU vs CPU accuracy
-cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy --ignored
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy --ignored
 
 # Test automatic fallback
-cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
 ```
 
 ## Performance Impact

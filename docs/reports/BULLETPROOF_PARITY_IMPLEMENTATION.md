@@ -149,7 +149,7 @@ indices.truncate(k);
 ### Quick Validation
 ```bash
 # Build
-cargo build -p bitnet-cli --release --no-default-features --features cpu
+cargo build --no-default-features -p bitnet-cli --release --no-default-features --features cpu
 
 # Test tokenizer parity
 MODEL_PATH=model.gguf TOKENIZER=tokenizer.json HF_MODEL_ID=gpt2 \

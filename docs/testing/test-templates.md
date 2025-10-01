@@ -525,7 +525,7 @@ fn create_large_test_data() -> Vec<u8> {
 2. **Replace placeholder names** with your actual function/type names
 3. **Customize the test data** and assertions for your specific case
 4. **Add the test to the appropriate location** in the `tests/` directory
-5. **Run the test** to verify it works: `cargo test your_test_name`
+5. **Run the test** to verify it works: `cargo test --no-default-features --features cpu your_test_name`
 
 ## Template Customization Tips
 

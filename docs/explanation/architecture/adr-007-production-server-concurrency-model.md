@@ -301,19 +301,19 @@ cargo run -p bitnet-server-bench -- --concurrent 100 --duration 300s
 ### Feature Validation
 ```bash
 # Quantization-aware batching validation
-cargo test -p bitnet-server --test concurrency_tests -- test_quantization_aware_batching
+cargo test --no-default-features --features cpu -p bitnet-server --test concurrency_tests -- test_quantization_aware_batching
 
 # Backpressure validation
-cargo test -p bitnet-server --test concurrency_tests -- test_intelligent_backpressure
+cargo test --no-default-features --features cpu -p bitnet-server --test concurrency_tests -- test_intelligent_backpressure
 
 # Resource pool validation
-cargo test -p bitnet-server --test concurrency_tests -- test_adaptive_resource_pool
+cargo test --no-default-features --features cpu -p bitnet-server --test concurrency_tests -- test_adaptive_resource_pool
 ```
 
 ### Integration Testing
 ```bash
 # End-to-end concurrency testing
-cargo test -p bitnet-server --test integration_tests -- test_production_concurrency_scenarios
+cargo test --no-default-features --features cpu -p bitnet-server --test integration_tests -- test_production_concurrency_scenarios
 
 # Cross-validation with accuracy requirements
 export BITNET_GGUF="path/to/model.gguf"

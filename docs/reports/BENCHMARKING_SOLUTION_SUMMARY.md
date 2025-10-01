@@ -193,7 +193,7 @@ The solution integrates with `.github/workflows/performance-tracking.yml`:
 - name: Run performance benchmarks
   run: |
     ./benchmark_comparison.py --skip-cpp --format json > results.json
-    cargo bench --workspace --no-default-features --features cpu
+    cargo bench --no-default-features --workspace --no-default-features --features cpu
 
 - name: Analyze results
   run: ./scripts/ci-benchmark-integration.sh
@@ -262,7 +262,7 @@ cd BitNet-rs
 
 # Comprehensive benchmarks
 ./benchmark_comparison.py --iterations 5
-cargo bench --features crossval
+cargo bench --no-default-features --features crossval
 ```
 
 ### 4. Troubleshooting

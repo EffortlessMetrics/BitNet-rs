@@ -84,7 +84,7 @@ cargo doc --workspace --no-default-features --features cpu --no-deps
 
 ### Doctest Execution
 ```bash
-cargo test --doc --workspace --no-default-features --features cpu
+cargo test --no-default-features --doc --workspace --no-default-features --features cpu
 ```
 **Result**: ✅ 5/5 doctests passing
 - bitnet: 1 doctest passed
@@ -156,7 +156,7 @@ $ cargo doc --workspace --no-default-features --features cpu --no-deps
    Generated /home/steven/code/Rust/BitNet-rs/target/doc/bitnet/index.html and 19 other files
 
 # Doctest execution - PASS
-$ cargo test --doc --workspace --no-default-features --features cpu
+$ cargo test --no-default-features --doc --workspace --no-default-features --features cpu
    Doc-tests bitnet: 1 passed
    Doc-tests bitnet_compat: 1 passed
    Doc-tests bitnet_inference: 1 passed

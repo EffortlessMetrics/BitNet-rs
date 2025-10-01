@@ -369,7 +369,7 @@ nvidia-smi
 cargo run --example cuda_info --no-default-features --features gpu
 
 # Test GPU functionality
-cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_device_info_query
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_cuda_device_info_query
 ```
 
 **Error: GPU Memory Exhausted**
@@ -512,10 +512,10 @@ cargo test --no-default-features --features cpu test_gguf_properties
 
 ```bash
 # Full end-to-end testing
-cargo test --workspace --no-default-features --features cpu integration_tests
+cargo test --no-default-features --workspace --no-default-features --features cpu integration_tests
 
 # GPU integration testing
-cargo test --workspace --no-default-features --features gpu gpu_integration_tests
+cargo test --no-default-features --workspace --no-default-features --features gpu gpu_integration_tests
 
 # Cross-validation testing
 BITNET_GGUF="model.gguf" cargo test --features crossval crossval_tests

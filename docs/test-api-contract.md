@@ -105,7 +105,7 @@ RUSTFLAGS="-Dwarnings" cargo clippy --workspace --all-features --all-targets -- 
 bash scripts/hooks/banned-patterns.sh
 
 # Check tests compile
-cargo check --workspace --tests --no-default-features --features cpu
+cargo check --no-default-features --workspace --tests --no-default-features --features cpu
 
 # Run security audit
 cargo deny check --hide-inclusion-graph

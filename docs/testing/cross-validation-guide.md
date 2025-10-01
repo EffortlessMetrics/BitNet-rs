@@ -78,16 +78,16 @@ include_artifacts = true
 
 ```bash
 # Run all cross-validation tests
-cargo test --test crossval_tests --no-default-features --features cpu
+cargo test --no-default-features --test crossval_tests --no-default-features --features cpu
 
 # Run specific cross-validation test
-cargo test --test crossval_tests test_accuracy_comparison --no-default-features --features cpu
+cargo test --no-default-features --test crossval_tests test_accuracy_comparison --no-default-features --features cpu
 
 # Run with verbose output
-cargo test --test crossval_tests --no-default-features --features cpu -- --nocapture
+cargo test --no-default-features --test crossval_tests --no-default-features --features cpu -- --nocapture
 
 # Run with specific model
-CROSSVAL_MODEL=small_test_model cargo test --test crossval_tests --no-default-features --features cpu
+CROSSVAL_MODEL=small_test_model cargo test --no-default-features --test crossval_tests --no-default-features --features cpu
 ```
 
 ### Environment Variables
@@ -226,10 +226,10 @@ Test the weight mapper validation with fixtures:
 
 ```bash
 # Test successful model compatibility
-cargo test -p crossval --no-default-features --features cpu validate_model_compatibility_success
+cargo test --no-default-features -p crossval --no-default-features --features cpu validate_model_compatibility_success
 
 # Test unmapped tensor detection
-cargo test -p crossval --no-default-features --features cpu validate_model_compatibility_reports_unmapped
+cargo test --no-default-features -p crossval --no-default-features --features cpu validate_model_compatibility_reports_unmapped
 ```
 
 ### Custom Cross-Validation Tests
@@ -461,10 +461,10 @@ Enable debug mode for detailed logging:
 export RUST_LOG="crossval=debug,bitnet=debug"
 
 # Run with debug output
-cargo test --test crossval_tests --no-default-features --features cpu -- --nocapture
+cargo test --no-default-features --test crossval_tests --no-default-features --features cpu -- --nocapture
 
 # Save debug output to file
-cargo test --test crossval_tests --no-default-features --features cpu -- --nocapture 2>&1 | tee debug.log
+cargo test --no-default-features --test crossval_tests --no-default-features --features cpu -- --nocapture 2>&1 | tee debug.log
 ```
 
 ### Collecting Diagnostics
@@ -485,7 +485,7 @@ cmake --version
 cat tests/config.toml
 
 # Recent test output
-cargo test --test crossval_tests --no-default-features --features cpu -- --nocapture 2>&1 | tail -100
+cargo test --no-default-features --test crossval_tests --no-default-features --features cpu -- --nocapture 2>&1 | tail -100
 
 # Cache status
 ls -la tests/cache/
@@ -537,7 +537,7 @@ jobs:
         key: crossval-fixtures-${{ hashFiles('tests/fixtures.toml') }}
     
     - name: Run cross-validation tests
-      run: cargo test --test crossval_tests --no-default-features --features cpu
+      run: cargo test --no-default-features --test crossval_tests --no-default-features --features cpu
       env:
         BITNET_CPP_BINARY: legacy/bitnet.cpp/build/bitnet_cpp
         RUST_LOG: info
@@ -574,7 +574,7 @@ jobs:
     
     - name: Run comprehensive cross-validation
       run: |
-        cargo test --test crossval_tests test_comprehensive_${{ matrix.model }} --no-default-features --features cpu
+        cargo test --no-default-features --test crossval_tests test_comprehensive_${{ matrix.model }} --no-default-features --features cpu
       env:
         CROSSVAL_MODEL: ${{ matrix.model }}_test_model
         CROSSVAL_MIN_ACCURACY: "0.99"

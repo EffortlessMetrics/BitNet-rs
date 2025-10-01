@@ -36,7 +36,7 @@ rustup update stable
 
 # Clean and rebuild
 cargo clean
-cargo build --release --no-default-features --features cpu
+cargo build --no-default-features --release --no-default-features --features cpu
 ```
 
 #### 2. CUDA Not Found
@@ -144,10 +144,10 @@ cat fixed_model.gguf.compat.json
 **Manual Validation Testing:**
 ```bash
 # Test tensor alignment validation specifically
-cargo test -p bitnet-models --no-default-features --features cpu -- gguf_min::tests::loads_two_tensors
+cargo test --no-default-features -p bitnet-models --no-default-features --features cpu -- gguf_min::tests::loads_two_tensors
 
 # Run comprehensive GGUF parsing tests
-cargo test -p bitnet-models --no-default-features --features cpu -- gguf_min
+cargo test --no-default-features -p bitnet-models --no-default-features --features cpu -- gguf_min
 ```
 
 **Advanced Diagnostics:**
@@ -295,7 +295,7 @@ bitnet compat-check model.gguf --verbose
 **Enable IQ2_S Support:**
 ```bash
 # Build with IQ2_S FFI support
-cargo build --release --no-default-features --features cpu
+cargo build --no-default-features --release --no-default-features --features cpu
 
 # Download GGML compatibility files if needed
 cargo run -p xtask -- vendor-ggml --commit <llama.cpp-commit>
@@ -317,7 +317,7 @@ cargo run --example inspect_gguf_metadata --no-default-features --features cpu -
 ./scripts/test-iq2s-backend.sh
 
 # Verify bit-exact compatibility
-cargo test --workspace --no-default-features --features cpu --test iq2s_parity
+cargo test --no-default-features --workspace --no-default-features --features cpu --test iq2s_parity
 ```
 
 **Common IQ2_S Issues:**
@@ -351,7 +351,7 @@ nvidia-smi  # For GPU
 **CPU Optimization:**
 ```bash
 # Enable native CPU features
-RUSTFLAGS="-C target-cpu=native" cargo build --release --no-default-features --features cpu
+RUSTFLAGS="-C target-cpu=native" cargo build --no-default-features --release --no-default-features --features cpu
 
 # Set thread count
 export RAYON_NUM_THREADS=8
@@ -582,15 +582,15 @@ bitnet-cli inference \
 
 ```bash
 # Test NaN-safe sampling operations
-cargo test -p bitnet-cli --no-default-features --features cpu sampling
+cargo test --no-default-features -p bitnet-cli --no-default-features --features cpu sampling
 
 # Validate streaming with NaN handling
-cargo test -p bitnet-cli --no-default-features --features cpu --test cli_smoke
+cargo test --no-default-features -p bitnet-cli --no-default-features --features cpu --test cli_smoke
 
 # Run comprehensive sampling tests
-cargo test -p bitnet-cli --no-default-features --features cpu test_sample_with_nan_logits
-cargo test -p bitnet-cli --no-default-features --features cpu test_top_k_filter_with_nan
-cargo test -p bitnet-cli --no-default-features --features cpu test_top_p_filter_with_nan
+cargo test --no-default-features -p bitnet-cli --no-default-features --features cpu test_sample_with_nan_logits
+cargo test --no-default-features -p bitnet-cli --no-default-features --features cpu test_top_k_filter_with_nan
+cargo test --no-default-features -p bitnet-cli --no-default-features --features cpu test_top_p_filter_with_nan
 ```
 
 **What BitNet.rs does automatically:**
@@ -625,18 +625,18 @@ BitNet.rs now includes production-ready threading utilities with robust error ha
 
 ```bash
 # Test thread pool robustness (validates PR #179 fixes)
-cargo test -p bitnet-ffi --no-default-features --features cpu test_thread_pool_creation
-cargo test -p bitnet-ffi --no-default-features --features cpu test_thread_pool_execution
+cargo test --no-default-features -p bitnet-ffi --no-default-features --features cpu test_thread_pool_creation
+cargo test --no-default-features -p bitnet-ffi --no-default-features --features cpu test_thread_pool_execution
 
 # Validate threading deadlock prevention
-cargo test -p bitnet-ffi --no-default-features --features cpu test_thread_manager
-cargo test -p bitnet-ffi --no-default-features --features cpu test_thread_safe_ref_counter
+cargo test --no-default-features -p bitnet-ffi --no-default-features --features cpu test_thread_manager
+cargo test --no-default-features -p bitnet-ffi --no-default-features --features cpu test_thread_safe_ref_counter
 
 # Test async runtime initialization improvements
-cargo test -p bitnet-ffi --no-default-features --features cpu test_inference_manager_creation
+cargo test --no-default-features -p bitnet-ffi --no-default-features --features cpu test_inference_manager_creation
 
 # Validate error handling enhancements
-cargo test -p bitnet-ffi --no-default-features --features cpu test_error_state_management
+cargo test --no-default-features -p bitnet-ffi --no-default-features --features cpu test_error_state_management
 ```
 
 **Configuration Options:**
@@ -663,13 +663,13 @@ RUST_LOG=debug bitnet-cli inference \
   --features ffi
 
 # Test concurrent FFI operations
-cargo test -p bitnet-ffi --no-default-features --features cpu test_concurrent_inference_requests
+cargo test --no-default-features -p bitnet-ffi --no-default-features --features cpu test_concurrent_inference_requests
 
 # Validate cleanup and resource management
-cargo test -p bitnet-ffi --no-default-features --features cpu test_cleanup_thread_pool
+cargo test --no-default-features -p bitnet-ffi --no-default-features --features cpu test_cleanup_thread_pool
 
 # Check thread-local storage management
-cargo test -p bitnet-ffi --no-default-features --features cpu test_thread_local_storage
+cargo test --no-default-features -p bitnet-ffi --no-default-features --features cpu test_thread_local_storage
 ```
 
 **What PR #179 Fixed:**
@@ -879,7 +879,7 @@ bitnet-cli inference --model model.gguf --device metal --prompt "Hello"
 ldd --version
 
 # Build from source with older GLIBC
-cargo build --release --no-default-features --features cpu --target x86_64-unknown-linux-musl
+cargo build --no-default-features --release --no-default-features --features cpu --target x86_64-unknown-linux-musl
 ```
 
 #### 2. GPU Driver Issues
@@ -994,5 +994,5 @@ rm -rf ~/.cache/bitnet/
 
 # Rebuild from clean state
 cargo clean
-cargo build --release --no-default-features --features cpu
+cargo build --no-default-features --release --no-default-features --features cpu
 ```

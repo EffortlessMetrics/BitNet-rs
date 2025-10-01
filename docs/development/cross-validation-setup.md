@@ -72,7 +72,7 @@ and enable the `cpp-ffi` feature:
 ./ci/fetch_bitnet_cpp.sh
 
 # Run tests with real FFI bindings
-cargo test -p bitnet-tests --no-default-features --features "cpu,crossval,cpp-ffi"
+cargo test --no-default-features -p bitnet-tests --no-default-features --features "cpu,crossval,cpp-ffi"
 ```
 
 Ensure the resulting shared library is on your linker path (e.g., `LD_LIBRARY_PATH`).
@@ -317,7 +317,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Run tests
-        run: cargo test --workspace --no-default-features --features cpu
+        run: cargo test --no-default-features --workspace --no-default-features --features cpu
   
   # Optional cross-validation (slower)
   crossval:

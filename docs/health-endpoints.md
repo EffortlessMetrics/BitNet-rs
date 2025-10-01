@@ -28,7 +28,7 @@ By default the server uses a **fail-fast** policy:
 If you prefer to keep the load balancer routing traffic during partial issues, build the server with:
 
 ```bash
-cargo build -p bitnet-server --features degraded-ok
+cargo build --no-default-features -p bitnet-server --features degraded-ok
 ```
 
 With `degraded-ok` enabled:

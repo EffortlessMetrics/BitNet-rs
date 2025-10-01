@@ -67,19 +67,19 @@ Device 0: NVIDIA GeForce RTX 4080
 ### Basic CUDA Build
 ```bash
 # Build with CUDA support
-cargo build --release --no-default-features --features gpu
+cargo build --no-default-features --release --no-default-features --features gpu
 
 # Run tests to verify GPU functionality
-cargo test --workspace --no-default-features --features gpu
+cargo test --no-default-features --workspace --no-default-features --features gpu
 ```
 
 ### Advanced GPU Features
 ```bash
 # Build with all GPU optimizations
-cargo build --release --no-default-features --features "cuda,mixed-precision"
+cargo build --no-default-features --release --no-default-features --features "cuda,mixed-precision"
 
 # Build with validation framework for debugging
-cargo build --release --no-default-features --features "cuda,gpu-validation"
+cargo build --no-default-features --release --no-default-features --features "cuda,gpu-validation"
 ```
 
 ## Usage Examples
@@ -317,7 +317,7 @@ error: ptx compilation failed
 nsight-compute --target-processes all cargo run --example gpu_benchmark
 
 # Memory profiling  
-nsight-systems --trace=cuda cargo test gpu_memory_test
+nsight-systems --trace=cuda cargo test --no-default-features --features cpu gpu_memory_test
 ```
 
 #### Validation Scripts
@@ -359,7 +359,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Copy source and build with GPU support
 COPY . /app
 WORKDIR /app
-RUN cargo build --release --no-default-features --features gpu
+RUN cargo build --no-default-features --release --no-default-features --features gpu
 
 # Run with GPU access
 CMD ["./target/release/bitnet-server", "--gpu", "0"]

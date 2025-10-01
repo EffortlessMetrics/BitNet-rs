@@ -23,10 +23,10 @@ Enable native CPU features for maximum performance:
 
 ```bash
 # Build with native CPU optimizations
-RUSTFLAGS="-C target-cpu=native" cargo build --release
+RUSTFLAGS="-C target-cpu=native" cargo build --no-default-features --features cpu --release
 
 # For specific CPU features
-RUSTFLAGS="-C target-feature=+avx2,+fma" cargo build --release
+RUSTFLAGS="-C target-feature=+avx2,+fma" cargo build --no-default-features --features cpu --release
 
 # Check available CPU features
 rustc --print target-features
@@ -87,7 +87,7 @@ For Intel CPUs with AVX-512 support (Skylake-X, Ice Lake, Tiger Lake and newer):
 
 ```bash
 # Build with AVX-512 support
-cargo build --release --no-default-features --features "cpu" 
+cargo build --no-default-features --release --no-default-features --features "cpu" 
 # Note: AVX-512 is automatically detected at runtime
 
 # Verify AVX-512 detection

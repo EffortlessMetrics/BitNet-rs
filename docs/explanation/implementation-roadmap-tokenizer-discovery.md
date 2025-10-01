@@ -49,12 +49,12 @@ This implementation roadmap provides a comprehensive blueprint for implementing 
 **Validation Commands**:
 ```bash
 # Test GGUF metadata extraction
-cargo test -p bitnet-tokenizers test_llama3_vocab_size_extraction --no-default-features --features cpu
-cargo test -p bitnet-tokenizers test_gpt2_metadata_extraction --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_llama3_vocab_size_extraction --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_gpt2_metadata_extraction --no-default-features --features cpu
 
 # Test strategy discovery
-cargo test -p bitnet-tokenizers test_strategy_discovery_colocated_files --no-default-features --features cpu
-cargo test -p bitnet-tokenizers test_download_strategy_inference --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_strategy_discovery_colocated_files --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_download_strategy_inference --no-default-features --features cpu
 ```
 
 #### Milestone 1.2: TokenizerStrategy Enumeration
@@ -99,12 +99,12 @@ cargo test -p bitnet-tokenizers test_download_strategy_inference --no-default-fe
 **Validation Commands**:
 ```bash
 # Test download functionality
-cargo test -p bitnet-tokenizers test_successful_tokenizer_download --no-default-features --features cpu
-cargo test -p bitnet-tokenizers test_download_with_resume --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_successful_tokenizer_download --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_download_with_resume --no-default-features --features cpu
 
 # Test caching system
-cargo test -p bitnet-tokenizers test_download_cache_management --no-default-features --features cpu
-cargo test -p bitnet-tokenizers test_cache_lru_eviction --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_download_cache_management --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_cache_lru_eviction --no-default-features --features cpu
 ```
 
 #### Milestone 2.2: Network Resilience and Error Handling
@@ -148,13 +148,13 @@ cargo test -p bitnet-tokenizers test_cache_lru_eviction --no-default-features --
 **Validation Commands**:
 ```bash
 # Test strategy resolution
-cargo test -p bitnet-tokenizers test_strategy_resolver --no-default-features --features cpu
-cargo test -p bitnet-tokenizers test_llama_tokenizer_wrapper --no-default-features --features cpu
-cargo test -p bitnet-tokenizers test_gpt2_tokenizer_wrapper --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_strategy_resolver --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_llama_tokenizer_wrapper --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_gpt2_tokenizer_wrapper --no-default-features --features cpu
 
 # Test quantization compatibility
-cargo test -p bitnet-tokenizers test_quantization_compatibility --no-default-features --features cpu
-cargo test -p bitnet-quantization test_tokenizer_quantization_integration --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_quantization_compatibility --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-quantization test_tokenizer_quantization_integration --no-default-features --features cpu
 ```
 
 #### Milestone 3.2: Fallback Chain Implementation
@@ -226,11 +226,11 @@ BITNET_DETERMINISTIC=1 BITNET_SEED=42 cargo run -p xtask -- infer --model models
 **Validation Commands**:
 ```bash
 # Cross-validation against existing tokenizer
-cargo test --test tokenizer_discovery_crossval --no-default-features --features cpu
+cargo test --no-default-features --test tokenizer_discovery_crossval --no-default-features --features cpu
 
 # Performance parity validation
 BITNET_GGUF="models/bitnet/model.gguf" cargo run -p xtask -- full-crossval
-cargo test -p bitnet-tokenizers test_tokenization_performance_vs_cpp --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_tokenization_performance_vs_cpp --no-default-features --features cpu
 ```
 
 ### Phase 5: Production Optimization (Week 3)
@@ -383,7 +383,7 @@ BITNET_DOWNLOAD_TIMEOUT=300   // Download timeout in seconds
 ./scripts/validate-tokenizer-discovery.sh
 
 # Individual validation steps
-cargo test --workspace --no-default-features --features cpu tokenizer
+cargo test --no-default-features --workspace --no-default-features --features cpu tokenizer
 cargo run -p xtask -- benchmark --tokenizer-discovery-overhead
 cargo run -p xtask -- crossval --performance --tokenizer-parity
 BITNET_STRICT_TOKENIZERS=1 cargo test --no-default-features --features cpu

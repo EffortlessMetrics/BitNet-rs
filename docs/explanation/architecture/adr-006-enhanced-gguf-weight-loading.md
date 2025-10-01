@@ -77,7 +77,7 @@ cargo build --no-default-features --features cpu
 cargo build --no-default-features --features gpu
 
 // Minimal compilation (testing only)
-cargo build --no-default-features
+cargo build --no-default-features --features cpu
 ```
 
 **Rationale**:

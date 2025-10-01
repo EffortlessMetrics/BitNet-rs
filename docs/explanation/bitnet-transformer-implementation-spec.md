@@ -492,16 +492,16 @@ cargo run -p xtask -- crossval \
 ```bash
 # AC6: Device-aware builds
 # CPU-only build (default features are empty)
-cargo build --release --no-default-features --features cpu
+cargo build --no-default-features --release --no-default-features --features cpu
 
 # GPU-accelerated build
-cargo build --release --no-default-features --features gpu
+cargo build --no-default-features --release --no-default-features --features gpu
 
 # Cross-validation build
-cargo build --release --no-default-features --features cpu,crossval
+cargo build --no-default-features --release --no-default-features --features cpu,crossval
 
 # Development build with all features
-cargo build --release --no-default-features --features cpu,gpu,crossval,ffi
+cargo build --no-default-features --release --no-default-features --features cpu,gpu,crossval,ffi
 ```
 
 ### Feature Flag Implementation
@@ -666,13 +666,13 @@ fn test_gpu_performance_targets() {  // AC:5
 
 ```bash
 # 1. Build with CPU support
-cargo build --release --no-default-features --features cpu
+cargo build --no-default-features --release --no-default-features --features cpu
 
 # 2. Run comprehensive test suite
-cargo test --workspace --no-default-features --features cpu -- --test-threads=1
+cargo test --no-default-features --workspace --no-default-features --features cpu -- --test-threads=1
 
 # 3. Validate transformer components individually
-cargo test -p bitnet-inference --no-default-features --features cpu \
+cargo test --no-default-features -p bitnet-inference --no-default-features --features cpu \
     test_transformer_forward_pass test_attention_accuracy test_generation
 
 # 4. Cross-validation against C++ reference
@@ -708,7 +708,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Test CPU inference
         run: |
-          cargo test --workspace --no-default-features --features cpu
+          cargo test --no-default-features --workspace --no-default-features --features cpu
           cargo run -p xtask -- verify --allow-mock
 
   test-gpu-inference:

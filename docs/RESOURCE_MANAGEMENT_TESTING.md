@@ -210,12 +210,12 @@ The resource management tests use a **hybrid approach** that combines:
 
 ```bash
 # Run all resource management tests
-cargo test --package bitnet-tests --features integration-tests -- resource
+cargo test --no-default-features --package bitnet-tests --features integration-tests -- resource
 
 # Run specific test categories
-cargo test test_comprehensive_resource_management_suite
-cargo test test_memory_leak_detection
-cargo test test_file_handle_management
+cargo test --no-default-features --features cpu test_comprehensive_resource_management_suite
+cargo test --no-default-features --features cpu test_memory_leak_detection
+cargo test --no-default-features --features cpu test_file_handle_management
 ```
 
 ### Interpreting Results

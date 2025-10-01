@@ -67,12 +67,12 @@ BITNET_GGUF=model.gguf cargo run --example inspect_gguf_metadata --no-default-fe
 BITNET_GGUF=model.gguf cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- --json
 
 # Quick header validation (fast path)
-cargo test -p bitnet-inference --test engine_inspect
+cargo test --no-default-features --features cpu -p bitnet-inference --test engine_inspect
 
 # Test enhanced categorization and JSON features
-cargo test -p bitnet-inference --test engine_inspect -- comprehensive_metadata_categorization
-cargo test -p bitnet-inference --test engine_inspect -- json_serialization
-cargo test -p bitnet-inference --test engine_inspect -- categorization_functions
+cargo test --no-default-features --features cpu -p bitnet-inference --test engine_inspect -- comprehensive_metadata_categorization
+cargo test --no-default-features --features cpu -p bitnet-inference --test engine_inspect -- json_serialization
+cargo test --no-default-features --features cpu -p bitnet-inference --test engine_inspect -- categorization_functions
 ```
 
 ## Use Cases

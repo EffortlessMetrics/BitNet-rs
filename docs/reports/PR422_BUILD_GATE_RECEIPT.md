@@ -33,7 +33,7 @@ Build validation completed successfully for PR #422 implementing the production 
 
 ### 1. Workspace Build (CPU Features)
 ```bash
-cargo build --workspace --no-default-features --features cpu
+cargo build --no-default-features --workspace --no-default-features --features cpu
 ```
 **Result**: ✅ PASS
 **Time**: 25.36s
@@ -47,7 +47,7 @@ cargo build --workspace --no-default-features --features cpu
 
 ### 2. Release Build (CPU Features)
 ```bash
-cargo build --workspace --no-default-features --features cpu --release
+cargo build --no-default-features --workspace --no-default-features --features cpu --release
 ```
 **Result**: ✅ PASS
 **Time**: 1m 52s
@@ -56,7 +56,7 @@ cargo build --workspace --no-default-features --features cpu --release
 
 ### 3. GPU Features Build
 ```bash
-cargo build --workspace --no-default-features --features gpu
+cargo build --no-default-features --workspace --no-default-features --features gpu
 ```
 **Result**: ✅ PASS
 **Time**: 39.29s
@@ -64,7 +64,7 @@ cargo build --workspace --no-default-features --features gpu
 
 ### 4. No-Features Build (Core Only)
 ```bash
-cargo build --workspace --no-default-features
+cargo build --no-default-features --features cpu --workspace --no-default-features
 ```
 **Result**: ✅ PASS
 **Time**: 48.66s
@@ -73,7 +73,7 @@ cargo build --workspace --no-default-features
 
 ### 5. All-Features Build
 ```bash
-cargo build --workspace --all-features
+cargo build --no-default-features --features cpu --workspace --all-features
 ```
 **Result**: ⚠️ SKIPPED
 **Reason**: Pre-existing FFI bridge compilation errors in `bitnet-sys` crate
@@ -84,7 +84,7 @@ cargo build --workspace --all-features
 
 ### 6. Independent Crate Build
 ```bash
-cargo build -p bitnet-server --no-default-features --features cpu
+cargo build --no-default-features -p bitnet-server --no-default-features --features cpu
 ```
 **Result**: ✅ PASS
 **Time**: 1.25s (cached dependencies)
@@ -244,8 +244,8 @@ cargo doc --workspace --no-default-features --features cpu --no-deps
 
 **Tests to Execute**:
 ```bash
-cargo test --workspace --no-default-features --features cpu
-cargo test -p bitnet-server --no-default-features --features cpu
+cargo test --no-default-features --workspace --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-server --no-default-features --features cpu
 ```
 
 ---

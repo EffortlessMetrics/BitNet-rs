@@ -16,11 +16,11 @@ This document outlines the development standards, CI/CD pipeline, and quality en
 cargo qg
 
 # CPU-only benches
-cargo bench -p bitnet-quantization --features cpu
+cargo bench --no-default-features -p bitnet-quantization --features cpu
 
 # Build with specific features
-cargo build --workspace --no-default-features --features cpu
-cargo build --workspace --features ffi
+cargo build --no-default-features --workspace --no-default-features --features cpu
+cargo build --no-default-features --workspace --features ffi
 ```
 
 ### Install Git Hooks (Recommended)
@@ -110,7 +110,7 @@ cargo fmt --all
 RUSTFLAGS="-Dwarnings" cargo clippy --workspace --all-features --all-targets -- -D warnings -D clippy::ptr_arg
 
 # Check tests compile (CPU only to avoid C++ deps)
-RUSTFLAGS="-Dwarnings" cargo check --workspace --tests --no-default-features --features cpu
+RUSTFLAGS="-Dwarnings" cargo check --no-default-features --workspace --tests --no-default-features --features cpu
 
 # Check banned patterns
 bash scripts/hooks/banned-patterns.sh
@@ -130,7 +130,7 @@ $env:RUSTFLAGS = "-Dwarnings"
 cargo clippy --workspace --all-features --all-targets -- -D warnings -D clippy::ptr_arg
 
 # Check tests compile
-cargo check --workspace --tests --no-default-features --features cpu
+cargo check --no-default-features --workspace --tests --no-default-features --features cpu
 
 # Check banned patterns
 pwsh scripts/hooks/banned-patterns.ps1

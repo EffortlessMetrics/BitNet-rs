@@ -216,7 +216,7 @@ cargo test --no-default-features --features cpu,ffi,crossval
 - ✅ **Comprehensive**: Each fixture module fully documented with examples
 - ✅ **Usage Examples**: Clear code samples for common use cases
 - ✅ **Architecture Aware**: BitNet.rs-specific patterns and conventions
-- ✅ **Workspace Integration**: Proper cargo test invocation instructions
+- ✅ **Workspace Integration**: Proper cargo test --no-default-features --features cpu invocation instructions
 - ✅ **Troubleshooting**: Error scenarios and resolution guidance
 
 ## Performance Characteristics
