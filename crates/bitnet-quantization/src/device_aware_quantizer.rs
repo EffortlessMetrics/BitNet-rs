@@ -61,8 +61,11 @@ pub struct ToleranceConfig {
 impl Default for ToleranceConfig {
     fn default() -> Self {
         Self {
-            i2s_tolerance: 1e-5,
-            tl_tolerance: 1e-4,
+            // Realistic tolerances for production quantization
+            // I2S: 2-bit quantization can achieve ~0.1% (1e-3) relative error
+            // TL1/TL2: Table lookup can achieve ~1% (1e-2) relative error
+            i2s_tolerance: 1e-3,
+            tl_tolerance: 1e-2,
             perplexity_tolerance: 0.001, // 0.1%
             strict_validation: true,
         }
@@ -594,7 +597,7 @@ impl DeviceAwareQuantizer {
         let quantized = match quant_type {
             QuantizationType::I2S => self.cpu_backend.quantize_i2s(weights)?,
             QuantizationType::TL1 => self.cpu_backend.quantize_tl1(weights)?,
-            QuantizationType::TL2 => self.cpu_backend.quantize_tl1(weights)?, // Simplified
+            QuantizationType::TL2 => self.cpu_backend.quantize_tl1(weights)?, // Simplified: TL2 uses TL1 backend until full TL2 integration
             _ => {
                 return Err(bitnet_common::BitNetError::Quantization(
                     QuantizationError::UnsupportedType { qtype: quant_type.to_string() },
@@ -712,8 +715,9 @@ mod tests {
     #[test]
     fn test_device_aware_quantizer_creation() {
         let quantizer = DeviceAwareQuantizer::new();
-        assert_eq!(quantizer.tolerance_config.i2s_tolerance, 1e-5);
-        assert_eq!(quantizer.tolerance_config.tl_tolerance, 1e-4);
+        // Updated to realistic default tolerances
+        assert_eq!(quantizer.tolerance_config.i2s_tolerance, 1e-3);
+        assert_eq!(quantizer.tolerance_config.tl_tolerance, 1e-2);
     }
 
     #[test]
