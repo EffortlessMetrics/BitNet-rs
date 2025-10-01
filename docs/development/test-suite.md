@@ -131,8 +131,52 @@ The test suite uses a feature-gated configuration system:
 
 - **`fixtures`**: Enables fixture management and test data generation
 - **`reporting`**: Enables test reporting (JSON, HTML, Markdown, JUnit)
-- **`trend`**: Enables trend analysis and performance tracking  
+- **`trend`**: Enables trend analysis and performance tracking
 - **`integration-tests`**: Enables full integration test suite
+
+### Feature-Gated Tests and CI Configuration
+
+BitNet.rs uses feature-gated architecture where **default features are EMPTY**. This means tests that depend on device-specific functionality (CPU/GPU) must be run with explicit feature flags:
+
+```bash
+# Correct: Tests run with required features
+cargo test --no-default-features --features cpu
+
+# Incorrect: Tests may fail without features
+cargo test  # Will fail for device-dependent tests
+```
+
+#### Feature-Gated Test Behavior
+
+Some tests validate feature-gated functionality and will behave differently based on enabled features:
+
+- **With `--features cpu` or `--features gpu`**: Tests validate full functionality
+- **Without features**: Tests validate graceful degradation (e.g., fixture selection returns `None`)
+
+**Example tests with feature-aware assertions:**
+- `test_fixture_selector_functionality` (crates/bitnet-server/tests/test_fixtures_integration.rs:197)
+- `test_model_selection` (crates/bitnet-server/tests/fixtures/mod.rs:403)
+
+These tests use `#[cfg(any(feature = "cpu", feature = "gpu"))]` guards to ensure correct behavior regardless of feature configuration.
+
+#### CI Configuration Requirements
+
+All CI workflows must use proper feature flags to ensure test stability:
+
+```yaml
+# Correct CI test configuration
+- run: cargo test -p bitnet-server --all-targets --no-default-features --features cpu
+
+# Incorrect CI configuration (may cause test failures)
+- run: cargo test -p bitnet-server --all-targets
+```
+
+**CI Workflows with Required Feature Flags:**
+- `.github/workflows/ci.yml`: Main test workflow (uses `--features cpu`)
+- `.github/workflows/clippy-cli-server.yml`: Server-specific tests (updated to use `--features cpu`)
+- `.github/workflows/testing-framework-unit.yml`: Unit test matrix
+
+For more details on feature flags and build configuration, see [CLAUDE.md](../../CLAUDE.md) and [Feature Flags Documentation](../explanation/FEATURES.md).
 
 ## Test Features
 
