@@ -714,7 +714,7 @@ fn create_mock_tensor_layout(
     let output_data: Vec<f32> = (0..(hidden_size * vocab_size))
         .map(|i| {
             let pattern = (i as f32 * 0.002).cos() * 0.3;
-            if pattern.abs() <= /* ~ changed by cargo-mutants ~ */ 1e-6 { 0.0015 } else { pattern }
+            if pattern.abs() < 1e-6 { 0.0015 } else { pattern }
         })
         .collect();
     tensor_map.insert(
