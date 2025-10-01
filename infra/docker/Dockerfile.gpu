@@ -21,7 +21,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates/ ./crates/
 
 # Build release binary with GPU support
-RUN cargo build --release --bin bitnet-cli --features "cpu,gpu"
+RUN cargo build --release --bin bitnet-cli --no-default-features --features gpu
 
 # Runtime stage
 FROM nvidia/cuda:12.2-runtime-ubuntu22.04

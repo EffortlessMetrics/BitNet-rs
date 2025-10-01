@@ -419,5 +419,5 @@ if memory_result.leaks_detected {
 
 - [CUDA Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/)
 - [cuDNN Developer Guide](https://docs.nvidia.com/deeplearning/cudnn/developer-guide/)
-- [GPU Memory Management Best Practices](docs/gpu-memory-management.md)
-- [Performance Profiling Guide](docs/gpu-profiling-guide.md)
+- [GPU Kernel Architecture](../gpu-kernel-architecture.md)
+- [Performance Guide](../performance-guide.md)

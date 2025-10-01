@@ -43,22 +43,22 @@ crossval = []      # Enable cross-validation features
 #### For Testing
 ```bash
 # Run cross-validation tests
-cargo test --features crossval
+cargo test --no-default-features --features "cpu,crossval"
 
 # Run performance benchmarks
-cargo bench --features crossval
+cargo bench --no-default-features --features "cpu,crossval"
 
 # Build with cross-validation support
-cargo build --features crossval
+cargo build --no-default-features --features "cpu,crossval"
 ```
 
 #### For Development
 ```bash
 # Add to your shell profile for persistent enabling
-export CARGO_FEATURES="crossval"
+export CARGO_FEATURES="cpu,crossval"
 
-# Or use cargo config
-echo 'default-features = ["crossval"]' >> .cargo/config.toml
+# Or use cargo config (not recommended - breaks default feature contract)
+# echo 'default-features = ["cpu", "crossval"]' >> .cargo/config.toml
 ```
 
 ### Enabling the C++ FFI in Tests
@@ -72,7 +72,7 @@ and enable the `cpp-ffi` feature:
 ./ci/fetch_bitnet_cpp.sh
 
 # Run tests with real FFI bindings
-cargo test -p bitnet-tests --features crossval,cpp-ffi
+cargo test -p bitnet-tests --no-default-features --features "cpu,crossval,cpp-ffi"
 ```
 
 Ensure the resulting shared library is on your linker path (e.g., `LD_LIBRARY_PATH`).
@@ -130,10 +130,10 @@ The easiest way to set up cross-validation:
 source ~/.cache/bitnet_cpp/setup_env.sh
 
 # 3. Run cross-validation tests
-cargo test --features crossval
+cargo test --no-default-features --features "cpu,crossval"
 
 # 4. Run performance benchmarks
-cargo bench --features crossval
+cargo bench --no-default-features --features "cpu,crossval"
 ```
 
 ### Manual Setup (Advanced)
@@ -151,7 +151,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 
 # 3. Run cross-validation
-cargo test --features crossval
+cargo test --no-default-features --features "cpu,crossval"
 ```
 
 ### Verification
@@ -160,13 +160,13 @@ Verify your setup is working:
 
 ```bash
 # Check C++ implementation availability
-cargo test --features crossval cpp_availability
+cargo test --no-default-features --features "cpu,crossval" cpp_availability
 
 # Run a simple cross-validation test
-cargo test --features crossval test_basic_generation
+cargo test --no-default-features --features "cpu,crossval" test_basic_generation
 
 # Run performance comparison
-cargo bench --features crossval comparison
+cargo bench --no-default-features --features "cpu,crossval" comparison
 ```
 
 ## Usage Examples
@@ -286,9 +286,9 @@ For regular BitNet.rs development, cross-validation is **not needed**:
 
 ```bash
 # Normal development workflow (fast)
-cargo build
-cargo test
-cargo clippy
+cargo build --no-default-features --features cpu
+cargo test --no-default-features --features cpu
+cargo clippy --no-default-features --features cpu
 ```
 
 ### Before Releases
@@ -298,8 +298,8 @@ Enable cross-validation for release validation:
 ```bash
 # Pre-release validation
 ./ci/fetch_bitnet_cpp.sh
-cargo test --features crossval --release
-cargo bench --features crossval --release
+cargo test --no-default-features --features "cpu,crossval" --release
+cargo bench --no-default-features --features "cpu,crossval" --release
 ```
 
 ### CI/CD Integration
@@ -317,7 +317,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Run tests
-        run: cargo test --workspace
+        run: cargo test --workspace --no-default-features --features cpu
   
   # Optional cross-validation (slower)
   crossval:
@@ -330,7 +330,7 @@ jobs:
       - name: Setup C++ implementation
         run: ./ci/fetch_bitnet_cpp.sh
       - name: Run cross-validation
-        run: cargo test --features crossval
+        run: cargo test --no-default-features --features "cpu,crossval"
 ```
 
 ## Troubleshooting
@@ -382,8 +382,8 @@ Cross-validation not available (compile with --features crossval)
 **Solution:**
 ```bash
 # Enable the feature
-cargo test --features crossval
-cargo bench --features crossval
+cargo test --no-default-features --features "cpu,crossval"
+cargo bench --no-default-features --features "cpu,crossval"
 ```
 
 #### 4. Build failures
@@ -398,7 +398,7 @@ Failed to compile bitnet-sys
 # Clean and rebuild
 cargo clean
 ./ci/fetch_bitnet_cpp.sh --clean --force
-cargo build --features crossval
+cargo build --no-default-features --features "cpu,crossval"
 ```
 
 ### Debug Mode
@@ -407,10 +407,10 @@ Enable detailed logging:
 
 ```bash
 # Enable debug logging
-RUST_LOG=debug cargo test --features crossval
+RUST_LOG=debug cargo test --no-default-features --features "cpu,crossval"
 
 # Enable trace logging for specific modules
-RUST_LOG=bitnet_crossval=trace cargo test --features crossval
+RUST_LOG=bitnet_crossval=trace cargo test --no-default-features --features "cpu,crossval"
 ```
 
 ### Performance Issues
@@ -419,11 +419,11 @@ If cross-validation is slow:
 
 ```bash
 # Use release mode for better performance
-cargo test --features crossval --release
-cargo bench --features crossval --release
+cargo test --no-default-features --features "cpu,crossval" --release
+cargo bench --no-default-features --features "cpu,crossval" --release
 
 # Reduce test scope
-cargo test --features crossval -- --test-threads=1
+cargo test --no-default-features --features "cpu,crossval" -- --test-threads=1
 ```
 
 ## Best Practices
@@ -472,7 +472,7 @@ export BITNET_CPP_CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Debug -DENABLE_PROFILING=ON"
 # Test against multiple C++ versions
 for version in v1.0.0 v1.1.0 v1.2.0; do
     ./ci/bump_bitnet_tag.sh update $version
-    cargo test --features crossval
+    cargo test --no-default-features --features "cpu,crossval"
 done
 ```
 
@@ -503,10 +503,10 @@ export BITNET_CPP_CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Release -DOPTIMIZE_FOR_NATIVE=
 
 ```bash
 # Run tests in parallel
-cargo test --features crossval --jobs 4
+cargo test --no-default-features --features "cpu,crossval" --jobs 4
 
 # Run benchmarks with more iterations
-cargo bench --features crossval -- --sample-size 100
+cargo bench --no-default-features --features "cpu,crossval" -- --sample-size 100
 ```
 
 ### Memory Optimization
@@ -514,7 +514,7 @@ cargo bench --features crossval -- --sample-size 100
 ```bash
 # Reduce memory usage during testing
 export BITNET_CPP_MEMORY_LIMIT=2GB
-cargo test --features crossval
+cargo test --no-default-features --features "cpu,crossval"
 ```
 
 ---
