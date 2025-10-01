@@ -2,10 +2,98 @@
 
 ## review:gate:contract
 
-**Status**: ✅ PASS (additive)
-**Classification**: `additive` - New public APIs only, no breaking changes
-**Evidence**: `cargo check: workspace ok; docs: 3/3 examples pass; api: additive (new crate)`
+**Status**: ✅ PASS (none)
+**Classification**: `none` - Test-only changes, no public API modifications
+**Evidence**: `cargo check: workspace ok; docs: 3/3 examples pass; api: none (test modules only)`
 **Validation**: COMPREHENSIVE - All BitNet.rs API contract requirements validated
+
+---
+
+## PR #424: Enhanced Quantization Accuracy Validation (Current)
+
+**Branch**: feat/issue-251-part3-quantization
+**HEAD**: ff11a47 (fix: Resolve quantization test failures with realistic tolerance defaults)
+**Status**: ✅ PASS (contract) | ❌ FAIL (mutation - infrastructure block)
+**Classification**: `none` (test-only changes)
+
+### API Contract Summary
+
+**Changes**: Test module visibility increased (7 files, 2,210 insertions, 865 deletions)
+
+**Public API Changes**: NONE
+```rust
+// crates/bitnet-quantization/src/lib.rs
++pub mod accuracy_validation_tests;  // #[cfg(test)] gated
++pub mod property_based_tests;       // #[cfg(test)] gated
+```
+
+**Analysis**:
+- Both modules are `#[cfg(test)]`-gated → **test-only code**
+- No changes to public structs, traits, functions, or enums
+- No changes to function signatures or trait bounds
+- No changes to struct field visibility or types
+- No changes to module re-exports in public API surface
+
+### Contract Validation Results
+
+**Workspace Validation**
+```bash
+✅ cargo check --workspace --no-default-features --features cpu
+   Finished in 2.61s
+
+✅ cargo check --workspace --no-default-features --features gpu
+   Finished in 8.17s
+
+✅ cargo test --doc --workspace --no-default-features --features cpu
+   3 passed; 0 failed
+
+✅ cargo run -p xtask -- check-features
+   Feature flag consistency check passed
+```
+
+**Neural Network Interface Tests**
+```bash
+✅ cargo test -p bitnet-quantization --no-default-features --features cpu --lib
+   41 passed; 0 failed
+
+✅ cargo test -p bitnet-models --no-default-features --features cpu --lib
+   94 passed; 0 failed; 1 ignored
+
+✅ cargo test -p bitnet-inference --test gguf_header --no-default-features --features cpu
+   8 passed; 0 failed
+```
+
+**GGUF Compatibility**: ✅ MAINTAINED
+- Header parsing: 8/8 tests pass
+- Model loading: 94/94 tests pass
+- I2S quantization: 41/41 tests pass
+- No format version changes
+- No tensor alignment changes
+
+**Affected Crates**:
+- ✅ `bitnet-quantization`: Test modules re-enabled (no public API impact)
+- ✅ `bitnet-models`: No changes
+- ✅ `bitnet-kernels`: No changes
+- ✅ `bitnet-inference`: No changes
+- ✅ `bitnet-server`: No changes
+
+### Semver Impact: PATCH (Test Infrastructure Only)
+
+**Classification**: `none`
+- No public API surface modifications
+- No breaking changes
+- Test module visibility increased (cfg(test)-gated)
+- Migration documentation: Not required
+
+### Gate Routing Decision
+
+**ROUTE → tests-runner**: Contract validation PASSED - API classification: `none` (test-only). All neural network interface contracts validated. No breaking changes. Ready for comprehensive test validation.
+
+**Evidence**: `contract: cargo check: workspace ok; docs: 3/3 examples pass; api: none (test modules only)`
+
+---
+
+## PR #422: Production Inference Server (Previous)
 
 ### API Contract Summary
 

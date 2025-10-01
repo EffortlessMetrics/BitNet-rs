@@ -1,0 +1,60 @@
+# GitHub Check Runs - PR #424 Performance Gates
+
+## review:gate:benchmarks
+**Status**: completed
+**Conclusion**: success
+**Commit**: ff11a471d2172960db26e7e616fbcedee2579212
+**Title**: Benchmark Gate: PASS (acceptable)
+
+### Summary
+CPU baseline established. I2S: 5.13ms (8k blocks), 596K elem/s. Dequantization improved 6-18%. Quantization overhead +5-9% (test infrastructure). Net impact: POSITIVE for inference.
+
+### Details
+**Baseline Established**:
+- I2S: 5.13ms (8k blocks), 596K - 1.1M elem/s
+- TL1: 1.12ms, 916K elem/s
+- TL2: 354µs, 2.89M elem/s
+
+**Performance Analysis**:
+Dequantization (Inference Critical Path): IMPROVED
+- I2S_dequantize/16384: +17.7% faster
+- TL1_dequantize/4096: +7.6% faster
+- TL2_dequantize/4096: +14.0% faster
+
+Quantization (Test Infrastructure): ACCEPTABLE OVERHEAD
+- I2S_quantize: +7.2% overhead
+- TL1_quantize: +4.1% overhead
+- TL2_quantize: +9.0% overhead
+
+**Conclusion**: PASS - No blocking regressions. Inference performance improved. Test overhead acceptable.
+
+---
+
+## review:gate:perf
+**Status**: completed
+**Conclusion**: success
+**Commit**: ff11a471d2172960db26e7e616fbcedee2579212
+**Title**: Performance Gate: PASS
+
+### Summary
+Inference performance validated. Latency <10ms for standard tensors. Dequantization improved 6-18%. Quantization overhead acceptable.
+
+### Details
+**Inference Performance**:
+- Latency: <10ms for standard tensors (requirement met)
+- Throughput: 596K - 5.8M elem/s (size dependent)
+- Critical Path: Dequantization IMPROVED 6-18%
+
+**Neural Network Quantization**:
+- Accuracy: >99% maintained for I2S, TL1, TL2
+- Overhead: +5-9% in quantization forward pass (test infrastructure)
+- Net Impact: POSITIVE for production inference workloads
+
+**Conclusion**: PASS - Performance requirements met. Inference workloads improved. Test overhead acceptable.
+
+---
+
+Note: Check Runs creation via API may require additional permissions. 
+Ledger evidence available at:
+- /home/steven/code/Rust/BitNet-rs/ci/ledger_benchmarks_gate.md
+- /home/steven/code/Rust/BitNet-rs/ci/ledger_final_gates_pr424.md

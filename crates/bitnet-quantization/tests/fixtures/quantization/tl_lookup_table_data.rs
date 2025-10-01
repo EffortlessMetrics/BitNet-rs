@@ -458,12 +458,17 @@ fn generate_quantized_indices_u16(size: usize, table_size: usize) -> Vec<u16> {
 /// Helper functions for random number generation
 fn lcg_random(state: &mut u64) -> f32 {
     *state = state.wrapping_mul(1664525).wrapping_add(1013904223);
-    (*state as f32) / (u32::MAX as f32)
+    // Convert lower 32 bits to f32 in range [0, 1)
+    ((*state as u32) as f32) / (u32::MAX as f32)
 }
 
 fn normal_random(state: &mut u64, mean: f32, std: f32) -> f32 {
     use std::f32::consts::PI;
-    let u1 = lcg_random(state);
+    // Ensure u1 > 0 to avoid ln(0) which produces -inf
+    let mut u1 = lcg_random(state);
+    while u1 <= 0.0 {
+        u1 = lcg_random(state);
+    }
     let u2 = lcg_random(state);
     let z0 = (-2.0 * u1.ln()).sqrt() * (2.0 * PI * u2).cos();
     mean + std * z0
@@ -564,12 +569,15 @@ mod tests {
 
     #[test]
     fn test_weight_pattern_generation() {
-        let weights = generate_weight_distribution(100, WeightPattern::Normal);
-        assert_eq!(weights.len(), 100);
+        // Use larger sample size (1000) for more stable statistics
+        // With N(0, 0.1), standard error = 0.1/sqrt(1000) ≈ 0.003
+        // Tolerance of 0.1 gives ~33 standard errors margin
+        let weights = generate_weight_distribution(1000, WeightPattern::Normal);
+        assert_eq!(weights.len(), 1000);
 
         // Check that weights are reasonable
         let avg = weights.iter().sum::<f32>() / weights.len() as f32;
-        assert!(avg.abs() < 0.1, "Average should be close to zero");
+        assert!(avg.abs() < 0.1, "Average should be close to zero, got {}", avg);
     }
 
     #[test]
