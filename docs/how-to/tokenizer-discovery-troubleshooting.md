@@ -272,7 +272,7 @@ nvcc --version
 nvidia-smi
 
 # Test CUDA functionality
-cargo test -p bitnet-kernels --no-default-features --features gpu gpu_smoke_test
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu gpu_smoke_test
 ```
 
 #### Fallback to CPU Gracefully
@@ -314,14 +314,14 @@ export BITNET_GGUF="path/to/model.gguf"
 cargo run -p xtask -- crossval --tokenizer-only
 
 # Compare tokenizer outputs
-cargo test -p bitnet-tokenizers --no-default-features --features cpu test_tokenizer_contract
+cargo test --no-default-features -p bitnet-tokenizers --no-default-features --features cpu test_tokenizer_contract
 ```
 
 ### Performance Profiling
 
 ```bash
 # Profile tokenizer discovery performance
-cargo build --release --no-default-features --features cpu
+cargo build --no-default-features --release --no-default-features --features cpu
 time cargo run --release -p xtask -- infer \
     --model model.gguf \
     --prompt "Performance test" \
@@ -338,14 +338,14 @@ time cargo run --release -p xtask -- infer \
 
 ```bash
 # Test tokenizer functionality independently
-cargo test -p bitnet-tokenizers --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers --no-default-features --features cpu
 
 # Test specific tokenizer types
-cargo test -p bitnet-tokenizers --no-default-features --features "cpu,spm" test_sentencepiece_tokenizer_contract
+cargo test --no-default-features -p bitnet-tokenizers --no-default-features --features "cpu,spm" test_sentencepiece_tokenizer_contract
 
 # Test with real fixtures
 SPM_MODEL=tests/fixtures/spm/tiny.model \
-cargo test -p bitnet-tokenizers --no-default-features --features "cpu,spm,integration-tests"
+cargo test --no-default-features -p bitnet-tokenizers --no-default-features --features "cpu,spm,integration-tests"
 ```
 
 ## Prevention Strategies

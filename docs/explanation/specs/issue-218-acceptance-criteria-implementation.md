@@ -1157,7 +1157,7 @@ jobs:
           toolchain: 1.90.0
       - name: Run fast tests with mock models
         run: |
-          cargo test --workspace --no-default-features --features cpu
+          cargo test --no-default-features --workspace --no-default-features --features cpu
 
   # Tier 2: Real model validation (cached)
   real-model-validation:
@@ -1184,7 +1184,7 @@ jobs:
           BITNET_MODEL_PATH: ~/.cache/bitnet-models/bitnet-2b/model.gguf
           BITNET_STRICT_TOKENIZERS: 1
         run: |
-          cargo test --workspace --no-default-features --features "cpu,inference" \
+          cargo test --no-default-features --workspace --no-default-features --features "cpu,inference" \
             --features integration-tests
 
   # Tier 3: Full validation with cross-validation

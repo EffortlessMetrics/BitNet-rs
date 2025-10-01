@@ -173,22 +173,22 @@ Comprehensive error condition coverage:
 ### **Week 1: Complete Basic Coverage**
 ```bash
 # Day 1-2: Add basic tests to untested crates
-cargo test --workspace --lib  # Should show 11/11 crates tested
+cargo test --no-default-features --features cpu --workspace --lib  # Should show 11/11 crates tested
 
 # Day 3-4: Fix API inconsistencies  
-cargo test --workspace        # Should show 0 compilation errors
+cargo test --no-default-features --features cpu --workspace        # Should show 0 compilation errors
 
 # Day 5: Add missing integration tests
-cargo test --test integration_tests --workspace
+cargo test --no-default-features --features cpu --test integration_tests --workspace
 ```
 
 ### **Week 2: Advanced Testing**
 ```bash
 # Day 1-3: Performance and stress testing
-cargo test --release --test stress_tests
+cargo test --no-default-features --features cpu --release --test stress_tests
 
 # Day 4-5: Property-based testing
-cargo test --test property_tests
+cargo test --no-default-features --features cpu --test property_tests
 ```
 
 ### **Success Criteria**

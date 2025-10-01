@@ -19,10 +19,10 @@ cd BitNet-rs
 
 ```bash
 # CPU inference (fastest setup)
-cargo build --release --no-default-features --features cpu
+cargo build --no-default-features --release --no-default-features --features cpu
 
 # OR GPU inference (if CUDA available)
-cargo build --release --no-default-features --features gpu
+cargo build --no-default-features --release --no-default-features --features gpu
 ```
 
 ## Step 2: Download BitNet Model (1 minute)
@@ -53,7 +53,7 @@ cargo run -p xtask -- infer --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggm
 
 ```bash
 # Benchmark inference throughput
-RUSTFLAGS="-C target-cpu=native -C opt-level=3" cargo build --release -p xtask
+RUSTFLAGS="-C target-cpu=native -C opt-level=3" cargo build --no-default-features --features cpu --release -p xtask
 cargo run -p xtask -- benchmark --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json --tokens 128
 ```
 
@@ -84,11 +84,11 @@ You've successfully:
 ```bash
 # CPU build and test
 cargo build --no-default-features --features cpu
-cargo test --workspace --no-default-features --features cpu
+cargo test --no-default-features --workspace --no-default-features --features cpu
 
 # GPU build and test
 cargo build --no-default-features --features gpu
-cargo test --workspace --no-default-features --features gpu
+cargo test --no-default-features --workspace --no-default-features --features gpu
 
 # Download and verify model
 cargo run -p xtask -- download-model

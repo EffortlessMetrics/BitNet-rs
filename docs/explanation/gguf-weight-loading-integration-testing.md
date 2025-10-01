@@ -1040,14 +1040,14 @@ echo "================================="
 
 # Phase 1: Unit tests with AC tags
 echo "Phase 1: Unit Tests (AC1-AC10)"
-cargo test --lib --no-default-features --features cpu \
+cargo test --no-default-features --lib --no-default-features --features cpu \
     test_.*_ac[0-9]+ \
     --test-threads=1 \
     -- --nocapture
 
 # Phase 2: Integration tests
 echo "Phase 2: Integration Tests"
-cargo test --test integration_tests --no-default-features --features cpu \
+cargo test --no-default-features --test integration_tests --no-default-features --features cpu \
     --test-threads=1 \
     -- --nocapture
 
@@ -1058,7 +1058,7 @@ if [[ -n "$BITNET_CPP_REFERENCE" ]]; then
     export BITNET_SEED=42
     export RAYON_NUM_THREADS=1
 
-    cargo test --test crossval_tests --no-default-features --features cpu \
+    cargo test --no-default-features --test crossval_tests --no-default-features --features cpu \
         test_cpp_.*_ac5 \
         --test-threads=1 \
         -- --nocapture
@@ -1067,7 +1067,7 @@ fi
 # Phase 4: GPU tests (if CUDA available)
 if [[ -n "$CUDA_VISIBLE_DEVICES" ]]; then
     echo "Phase 4: GPU Tests"
-    cargo test --test gpu_tests --no-default-features --features gpu,cuda \
+    cargo test --no-default-features --test gpu_tests --no-default-features --features gpu,cuda \
         test_.*_ac6 \
         --test-threads=1 \
         -- --nocapture
@@ -1076,14 +1076,14 @@ fi
 # Phase 5: Performance tests (optional)
 if [[ "$RUN_PERF_TESTS" == "1" ]]; then
     echo "Phase 5: Performance Tests"
-    cargo test --test performance_tests --release --no-default-features --features cpu \
+    cargo test --no-default-features --test performance_tests --release --no-default-features --features cpu \
         --test-threads=1 \
         -- --ignored --nocapture
 fi
 
 # Phase 6: Error handling tests
 echo "Phase 6: Error Handling Tests"
-cargo test --test error_tests --no-default-features --features cpu \
+cargo test --no-default-features --test error_tests --no-default-features --features cpu \
     test_.*_ac4 \
     --test-threads=1 \
     -- --nocapture
@@ -1135,13 +1135,13 @@ jobs:
 
     - name: Run AC-tagged unit tests
       run: |
-        cargo test --workspace --no-default-features --features ${{ matrix.features }} \
+        cargo test --no-default-features --workspace --no-default-features --features ${{ matrix.features }} \
           test_.*_ac[0-9]+ \
           --test-threads=1
 
     - name: Run integration tests
       run: |
-        cargo test --workspace --no-default-features --features ${{ matrix.features }} \
+        cargo test --no-default-features --workspace --no-default-features --features ${{ matrix.features }} \
           --test integration_tests
 
     - name: Run cross-validation tests
@@ -1151,13 +1151,13 @@ jobs:
         BITNET_DETERMINISTIC: "1"
         BITNET_SEED: "42"
       run: |
-        cargo test --workspace --no-default-features --features ${{ matrix.features }} \
+        cargo test --no-default-features --workspace --no-default-features --features ${{ matrix.features }} \
           test_cpp_.*_ac5
 
     - name: Run GPU-specific tests
       if: matrix.run_gpu_tests
       run: |
-        cargo test --workspace --no-default-features --features ${{ matrix.features }} \
+        cargo test --no-default-features --workspace --no-default-features --features ${{ matrix.features }} \
           test_.*_ac6 \
           --test-threads=1
 ```

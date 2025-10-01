@@ -246,7 +246,7 @@ Test sizes:
 Compares GPU and CPU results to ensure correctness:
 
 ```bash
-cargo test --package bitnet-kernels --test gpu_smoke --features cuda
+cargo test --no-default-features --package bitnet-kernels --test gpu_smoke --features cuda
 ```
 
 ## CI/CD Integration

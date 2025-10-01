@@ -30,7 +30,7 @@ cargo run -p xtask -- infer --model <model> --prompt "test" --allow-mock
 # Output: ✅ Inference completed successfully
 
 # Unit tests (WORKING)
-cargo test -p bitnet-common --no-default-features
+cargo test --no-default-features --features cpu -p bitnet-common --no-default-features
 # Output: test result: ok. 10 passed; 0 failed
 ```
 

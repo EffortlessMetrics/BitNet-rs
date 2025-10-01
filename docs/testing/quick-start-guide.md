@@ -38,7 +38,7 @@ async fn process_input(input: &str) -> Result<String, String> {
 ### 2. Run Your Test
 
 ```bash
-cargo test test_basic_functionality
+cargo test --no-default-features --features cpu test_basic_functionality
 ```
 
 That's it! You've written and run your first test.
@@ -138,19 +138,19 @@ tests/
 
 ```bash
 # Run all tests
-cargo test
+cargo test --no-default-features --features cpu
 
 # Run specific test
-cargo test test_basic_functionality
+cargo test --no-default-features --features cpu test_basic_functionality
 
 # Run tests in a specific file
-cargo test --test my_first_test
+cargo test --no-default-features --features cpu --test my_first_test
 
 # Run with output
-cargo test -- --nocapture
+cargo test --no-default-features --features cpu -- --nocapture
 
 # Run tests in parallel (default)
-cargo test -- --test-threads=4
+cargo test --no-default-features --features cpu -- --test-threads=4
 ```
 
 ## Next Steps

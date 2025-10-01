@@ -689,7 +689,7 @@ BASELINE_FILE="$BASELINE_DIR/baseline_$VERSION.json"
 mkdir -p "$BASELINE_DIR"
 
 # Run benchmarks and generate baseline
-cargo bench --bench performance_suite -- --save-baseline "$BASELINE_FILE"
+cargo bench --no-default-features --features cpu --bench performance_suite -- --save-baseline "$BASELINE_FILE"
 
 # Compare with previous baseline
 PREVIOUS_BASELINE=$(ls -t "$BASELINE_DIR"/baseline_*.json | head -2 | tail -1)
@@ -811,8 +811,8 @@ jobs:
     
     - name: Run performance benchmarks
       run: |
-        cargo bench --bench performance_suite
-        cargo test --test performance_regression_tests
+        cargo bench --no-default-features --features cpu --bench performance_suite
+        cargo test --no-default-features --features cpu --test performance_regression_tests
     
     - name: Generate performance report
       run: |

@@ -98,8 +98,8 @@ export BITNET_DETERMINISTIC=1 BITNET_SEED=42
 cargo run -p xtask -- full-crossval
 
 # Model compatibility validation with weight mapper
-cargo test -p crossval --no-default-features test_validate_model_compatibility
-cargo test -p crossval --no-default-features test_validate_model_compatibility_reports_unmapped
+cargo test --no-default-features --features cpu -p crossval --no-default-features test_validate_model_compatibility
+cargo test --no-default-features --features cpu -p crossval --no-default-features test_validate_model_compatibility_reports_unmapped
 ```
 
 ## Performance Benchmarking

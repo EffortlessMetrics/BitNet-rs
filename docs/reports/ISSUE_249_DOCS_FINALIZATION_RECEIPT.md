@@ -111,7 +111,7 @@
 
 ```
 docs: cargo doc --workspace --no-default-features --features cpu: clean build; warnings: 2 (non-blocking filename collisions)
-tests: cargo test --doc --workspace --no-default-features --features cpu: pass; failures: 0
+tests: cargo test --no-default-features --doc --workspace --no-default-features --features cpu: pass; failures: 0
 structure: explanation/reference/development/tutorials/how-to/troubleshooting directories validated
 commands: all xtask commands verified; clean-cache usage confirmed
 links: tokenizer documentation links 100% valid; overall 77.3% (legacy issues only)

@@ -8,115 +8,115 @@ This document covers the comprehensive test suite for BitNet.rs, including runni
 
 ```bash
 # Run all tests with CPU features
-cargo test --workspace --no-default-features --features cpu
+cargo test --no-default-features --workspace --no-default-features --features cpu
 
 # Run specific test suites
 cargo test --package bitnet-tests --no-default-features --features fixtures
-cargo test --package bitnet-tests --features reporting,trend
+cargo test --package bitnet-tests --no-default-features --features "cpu,reporting,trend"
 
 # Run integration tests
-cargo test --package bitnet-tests --features integration-tests,fixtures
+cargo test --package bitnet-tests --no-default-features --features "cpu,integration-tests,fixtures"
 
 # Run examples
-cargo run --example reporting_example --features reporting
-cargo run --example ci_reporting_example --features reporting,trend
-cargo run --example debugging_example --features fixtures
+cargo run --example reporting_example --no-default-features --features "cpu,reporting"
+cargo run --example ci_reporting_example --no-default-features --features "cpu,reporting,trend"
+cargo run --example debugging_example --no-default-features --features "cpu,fixtures"
 
 # Run GGUF format validation tests
-cargo test -p bitnet-inference --test gguf_header                 # Pure parser test
-cargo test -p bitnet-inference --no-default-features --features rt-tokio --test smoke -- --nocapture  # Async smoke test
+cargo test --no-default-features -p bitnet-inference --test gguf_header --no-default-features --features cpu                 # Pure parser test
+cargo test --no-default-features -p bitnet-inference --no-default-features --features rt-tokio --test smoke -- --nocapture  # Async smoke test
 
 # Run verification script for all tests
 ./scripts/verify-tests.sh
 
 # Test enhanced prefill functionality and batch inference
-cargo test -p bitnet-cli --test cli_smoke
-cargo test -p bitnet-inference --test batch_prefill
+cargo test --no-default-features -p bitnet-cli --test cli_smoke --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-inference --test batch_prefill --no-default-features --features cpu
 
-# Test mock infrastructure and tokenizer architecture  
-cargo test -p bitnet-inference --test mock_infrastructure
-cargo test -p bitnet-tokenizers --test tokenizer_builder_pattern
+# Test mock infrastructure and tokenizer architecture
+cargo test --no-default-features -p bitnet-inference --test mock_infrastructure --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers --test tokenizer_builder_pattern --no-default-features --features cpu
 ```
 
 ### Convolution Tests
 
 ```bash
 # Run convolution unit tests
-cargo test -p bitnet-kernels --no-default-features --features cpu convolution
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu convolution
 
 # Run PyTorch reference convolution tests (requires Python and PyTorch)
-cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored
+cargo test --no-default-features -p bitnet-kernels conv2d_reference_cases --no-default-features --features cpu -- --ignored
 
 # Test specific convolution functionality
-cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_basic_functionality
-cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_with_bias
-cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_stride
-cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_padding
-cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_dilation
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_conv2d_basic_functionality
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_conv2d_with_bias
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_conv2d_stride
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_conv2d_padding
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_conv2d_dilation
 
 # Test quantized convolution
-cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_quantized_i2s
-cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_quantized_tl1
-cargo test -p bitnet-kernels --no-default-features --features cpu test_conv2d_quantized_with_bias
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_conv2d_quantized_i2s
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_conv2d_quantized_tl1
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_conv2d_quantized_with_bias
 ```
 
 ### GPU-Specific Tests
 
 ```bash
 # GPU smoke tests (basic availability, run on CI with GPU)
-cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_smoke
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu --test gpu_smoke
 
 # GPU integration tests (comprehensive, manual execution)
-cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_quantization --ignored
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu --test gpu_quantization --ignored
 
 # GPU performance tests (benchmarking, development only)
-cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_performance --ignored
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_performance --ignored
 
 # GPU vs CPU quantization accuracy
-cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy --ignored
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy --ignored
 
 # GPU fallback mechanism testing
-cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
 
 # GPU memory management and leak detection
-cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
 
 # CUDA device information and memory tracking
-cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_device_info_query
-cargo test -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_cuda_device_info_query
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
 ```
 
 ### Memory Tracking Tests
 
 ```bash
 # Basic CPU memory tracking tests
-cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
-cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
 
 # Comprehensive memory tracking with device awareness
-cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
-cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_efficiency_tracking
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_memory_efficiency_tracking
 
 # GPU memory tracking tests (requires CUDA)
-cargo test -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
-cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
 
 # Memory tracking integration with device-aware quantization
-cargo test -p bitnet-kernels --no-default-features --features cpu test_device_aware_quantizer_memory_stats
-cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_quantizer_memory_integration
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_device_aware_quantizer_memory_stats
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_cuda_quantizer_memory_integration
 
 # Host memory vs system memory validation
-cargo test -p bitnet-kernels --no-default-features --features cpu test_host_vs_system_memory_tracking
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_host_vs_system_memory_tracking
 
 # Thread-safe memory statistics access
-cargo test -p bitnet-kernels --no-default-features --features cpu test_concurrent_memory_stats_access
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_concurrent_memory_stats_access
 ```
 
 ### Cross-Validation Tests
 
 ```bash
 # Cross-validation testing (requires C++ dependencies)
-cargo test --workspace --features "cpu,ffi,crossval"
+cargo test --no-default-features --workspace --no-default-features --features "cpu,ffi,crossval"
 
 # Full cross-validation workflow
 cargo run -p xtask -- full-crossval
@@ -161,28 +161,28 @@ BitNet.rs includes comprehensive mock infrastructure for robust testing without 
 
 ```bash
 # Test mock model implementation with prefill functionality
-cargo test -p bitnet-inference --test batch_prefill
-cargo test -p bitnet-inference --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-inference --test batch_prefill --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-inference --no-default-features --features cpu
 
 # Test tokenizer builder pattern and Arc<dyn Tokenizer> architecture
-cargo test -p bitnet-tokenizers test_tokenizer_builder_from_file
-cargo test -p bitnet-tokenizers test_universal_tokenizer_mock_fallback
+cargo test --no-default-features -p bitnet-tokenizers test_tokenizer_builder_from_file --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-tokenizers test_universal_tokenizer_mock_fallback --no-default-features --features cpu
 
-# Validate performance metrics with mock infrastructure  
-cargo test -p bitnet-cli test_inference_metrics_collection
-cargo test -p bitnet-cli test_batch_inference_with_mock_model
+# Validate performance metrics with mock infrastructure
+cargo test --no-default-features -p bitnet-cli test_inference_metrics_collection --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-cli test_batch_inference_with_mock_model --no-default-features --features cpu
 ```
 
 #### Safe Environment Variable Handling Tests
 
 ```bash
 # Test enhanced environment variable management with proper unsafe blocks
-cargo test -p bitnet-cli test_safe_environment_setup
-cargo test -p bitnet-cli test_deterministic_configuration
+cargo test --no-default-features -p bitnet-cli test_safe_environment_setup --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-cli test_deterministic_configuration --no-default-features --features cpu
 
 # Validate environment variable handling in different scenarios
-BITNET_DETERMINISTIC=1 cargo test -p bitnet-cli test_deterministic_inference
-BITNET_SEED=42 cargo test -p bitnet-cli test_seeded_generation
+BITNET_DETERMINISTIC=1 cargo test --no-default-features -p bitnet-cli test_deterministic_inference --no-default-features --features cpu
+BITNET_SEED=42 cargo test --no-default-features -p bitnet-cli test_seeded_generation --no-default-features --features cpu
 ```
 
 #### Mock Infrastructure Features
@@ -205,7 +205,7 @@ Use concurrency caps to prevent resource exhaustion:
 # Run tests with concurrency caps (prevents resource storms)
 scripts/preflight.sh && cargo t2                     # 2-thread CPU tests
 scripts/preflight.sh && cargo crossval-capped        # Cross-validation with caps
-scripts/e2e-gate.sh cargo test --features crossval   # Gate heavy E2E tests
+scripts/e2e-gate.sh cargo test --no-default-features --features crossval   # Gate heavy E2E tests
 ```
 
 See [Concurrency Caps Guide](concurrency-caps.md) for detailed information on preflight scripts, e2e gates, and resource management strategies.
@@ -216,23 +216,23 @@ The performance tracking infrastructure includes comprehensive test coverage for
 
 ```bash
 # Run all performance tracking tests
-cargo test -p bitnet-inference --features integration-tests --test performance_tracking_tests
+cargo test --no-default-features -p bitnet-inference --no-default-features --features "cpu,integration-tests" --test performance_tracking_tests
 
 # Run specific performance test categories
-cargo test --test performance_tracking_tests performance_metrics_tests
-cargo test --test performance_tracking_tests performance_tracker_tests  
-cargo test --test performance_tracking_tests environment_variable_tests
+cargo test --no-default-features --test performance_tracking_tests performance_metrics_tests --no-default-features --features cpu
+cargo test --no-default-features --test performance_tracking_tests performance_tracker_tests --no-default-features --features cpu
+cargo test --no-default-features --test performance_tracking_tests environment_variable_tests --no-default-features --features cpu
 
 # Test InferenceEngine performance integration
-cargo test -p bitnet-inference --features integration-tests test_engine_performance_tracking_integration
+cargo test --no-default-features -p bitnet-inference --no-default-features --features "cpu,integration-tests" test_engine_performance_tracking_integration
 
 # Test platform-specific memory and performance tracking
-cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
-cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
 
 # GPU performance validation with comprehensive metrics
-cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
-cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
 ```
 
 #### Performance Test Categories
@@ -252,15 +252,15 @@ See [Performance Tracking Guide](performance-tracking.md) for detailed usage exa
 
 ```bash
 # Run GGUF validation tests
-cargo test -p bitnet-inference --test gguf_header
-cargo test -p bitnet-inference --test gguf_fuzz
-cargo test -p bitnet-inference --test engine_inspect
+cargo test --no-default-features -p bitnet-inference --test gguf_header --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-inference --test gguf_fuzz --no-default-features --features cpu
+cargo test --no-default-features -p bitnet-inference --test engine_inspect --no-default-features --features cpu
 
 # Run async smoke test with synthetic GGUF
 printf "GGUF\x02\x00\x00\x00" > /tmp/t.gguf && \
 printf "\x00\x00\x00\x00\x00\x00\x00\x00" >> /tmp/t.gguf && \
 printf "\x00\x00\x00\x00\x00\x00\x00\x00" >> /tmp/t.gguf && \
-BITNET_GGUF=/tmp/t.gguf cargo test -p bitnet-inference --features rt-tokio --test smoke
+BITNET_GGUF=/tmp/t.gguf cargo test --no-default-features -p bitnet-inference --no-default-features --features rt-tokio --test smoke
 ```
 
 ### Convolution Testing Framework
@@ -276,10 +276,10 @@ The convolution implementation includes optional PyTorch reference tests that va
 pip install torch
 
 # Run PyTorch reference tests (ignored by default)
-cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored
+cargo test --no-default-features -p bitnet-kernels conv2d_reference_cases --no-default-features --features cpu -- --ignored
 
 # Verbose output to see test details
-cargo test -p bitnet-kernels conv2d_reference_cases -- --ignored --nocapture
+cargo test --no-default-features -p bitnet-kernels conv2d_reference_cases --no-default-features --features cpu -- --ignored --nocapture
 ```
 
 The reference tests cover:
@@ -295,19 +295,19 @@ Comprehensive testing of quantized convolution operations:
 
 ```bash
 # Test I2S quantization (2-bit signed)
-cargo test -p bitnet-kernels test_conv2d_quantized_i2s
+cargo test --no-default-features -p bitnet-kernels test_conv2d_quantized_i2s --no-default-features --features cpu
 
 # Test TL1 quantization (table lookup)
-cargo test -p bitnet-kernels test_conv2d_quantized_tl1
+cargo test --no-default-features -p bitnet-kernels test_conv2d_quantized_tl1 --no-default-features --features cpu
 
-# Test TL2 quantization (advanced table lookup)  
-cargo test -p bitnet-kernels test_conv2d_quantized_tl2
+# Test TL2 quantization (advanced table lookup)
+cargo test --no-default-features -p bitnet-kernels test_conv2d_quantized_tl2 --no-default-features --features cpu
 
 # Test quantization with bias
-cargo test -p bitnet-kernels test_conv2d_quantized_with_bias
+cargo test --no-default-features -p bitnet-kernels test_conv2d_quantized_with_bias --no-default-features --features cpu
 
 # Test scale factor application
-cargo test -p bitnet-kernels test_conv2d_quantized_scale_factor
+cargo test --no-default-features -p bitnet-kernels test_conv2d_quantized_scale_factor --no-default-features --features cpu
 ```
 
 #### Error Handling and Validation
@@ -316,26 +316,26 @@ The convolution tests include comprehensive error handling validation:
 
 ```bash
 # Test dimension mismatch errors
-cargo test -p bitnet-kernels test_conv2d_dimension_mismatch
+cargo test --no-default-features -p bitnet-kernels test_conv2d_dimension_mismatch --no-default-features --features cpu
 
 # Test invalid input size errors
-cargo test -p bitnet-kernels test_conv2d_invalid_input_size
+cargo test --no-default-features -p bitnet-kernels test_conv2d_invalid_input_size --no-default-features --features cpu
 
 # Test invalid bias size errors
-cargo test -p bitnet-kernels test_conv2d_invalid_bias_size
+cargo test --no-default-features -p bitnet-kernels test_conv2d_invalid_bias_size --no-default-features --features cpu
 
 # Test quantized weight size validation
-cargo test -p bitnet-kernels test_conv2d_quantized_invalid_weight_size
+cargo test --no-default-features -p bitnet-kernels test_conv2d_quantized_invalid_weight_size --no-default-features --features cpu
 
 # Test scale size validation
-cargo test -p bitnet-kernels test_conv2d_quantized_invalid_scale_size
+cargo test --no-default-features -p bitnet-kernels test_conv2d_quantized_invalid_scale_size --no-default-features --features cpu
 ```
 
 ### IQ2_S Backend Tests
 
 ```bash
 # Build with IQ2_S quantization support (requires GGML FFI)
-cargo build --release --no-default-features --features "cpu,iq2s-ffi"
+cargo build --no-default-features --release --no-default-features --features "cpu,iq2s-ffi"
 
 # Run IQ2_S backend validation
 ./scripts/test-iq2s-backend.sh
@@ -351,10 +351,10 @@ cargo test --package bitnet-models --no-default-features --features "cpu,iq2s-ff
 cargo run --example streaming_generation --no-default-features --features cpu
 
 # Test server streaming
-cargo test -p bitnet-server --no-default-features --features cpu streaming
+cargo test --no-default-features -p bitnet-server --no-default-features --features cpu streaming
 
 # Test token ID accuracy
-cargo test -p bitnet-inference --no-default-features --features cpu test_token_id_streaming
+cargo test --no-default-features -p bitnet-inference --no-default-features --features cpu test_token_id_streaming
 ```
 
 For more streaming functionality and Server-Sent Events testing, see the [Streaming API Guide](streaming-api.md).

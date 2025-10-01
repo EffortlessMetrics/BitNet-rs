@@ -106,7 +106,7 @@ With these fixes, the following thresholds are achievable:
 
 ```bash
 # Build with deterministic settings
-cargo build -p bitnet-cli --release --no-default-features --features cpu
+cargo build --no-default-features -p bitnet-cli --release --no-default-features --features cpu
 
 # Run logit parity test
 TAU_TIE_EPS=1e-6 TAU_MIN=0.60 TAU_STEPS=24 LOGIT_TOPK=10 \

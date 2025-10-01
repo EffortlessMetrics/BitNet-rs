@@ -124,7 +124,7 @@ llama-cli -ngl 0  # Force CPU-only
 ### 1. Validate Rust Implementation
 
 ```bash
-cargo test -p bitnet-models --features cpu
+cargo test --no-default-features -p bitnet-models --features cpu
 ```
 
 ### 2. Test with Mini Fixtures

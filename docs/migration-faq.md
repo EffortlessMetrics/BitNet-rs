@@ -139,13 +139,13 @@ let result = engine.generate("Hello")?;
 ```bash
 # Replace C++ build
 # OLD: cmake .. && make
-# NEW: cargo build --release
+# NEW: cargo build --no-default-features --features cpu --release
 ```
 
 #### 4. **Validation**
 ```bash
 # Cross-validate outputs
-cargo test --features crossval
+cargo test --no-default-features --features crossval
 ```
 
 ### Q: What about Python bindings?
@@ -188,7 +188,7 @@ cargo xtask validate-config rust_config.toml
 
 ```bash
 # Compare performance
-cargo bench --features crossval
+cargo bench --no-default-features --features crossval
 
 # Generate performance report
 cargo xtask performance-report --compare-cpp

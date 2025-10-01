@@ -213,36 +213,36 @@ impl Drop for ThreadPool {
 
 ```bash
 # Test thread pool creation and configuration
-cargo test -p bitnet-ffi test_thread_pool_creation
+cargo test --no-default-features --features cpu -p bitnet-ffi test_thread_pool_creation
 
-# Validate job execution and tracking  
-cargo test -p bitnet-ffi test_thread_pool_execution
+# Validate job execution and tracking
+cargo test --no-default-features --features cpu -p bitnet-ffi test_thread_pool_execution
 
 # Test thread manager lifecycle
-cargo test -p bitnet-ffi test_thread_manager
+cargo test --no-default-features --features cpu -p bitnet-ffi test_thread_manager
 ```
 
 ### Concurrency Tests
 
 ```bash
 # Test concurrent inference requests
-cargo test -p bitnet-ffi test_concurrent_inference_requests
+cargo test --no-default-features --features cpu -p bitnet-ffi test_concurrent_inference_requests
 
 # Validate thread-safe reference counting
-cargo test -p bitnet-ffi test_thread_safe_ref_counter
+cargo test --no-default-features --features cpu -p bitnet-ffi test_thread_safe_ref_counter
 
-# Test cleanup and resource management  
-cargo test -p bitnet-ffi test_cleanup_thread_pool
+# Test cleanup and resource management
+cargo test --no-default-features --features cpu -p bitnet-ffi test_cleanup_thread_pool
 ```
 
 ### Error Handling Tests
 
 ```bash
 # Validate error state management
-cargo test -p bitnet-ffi test_error_state_management
+cargo test --no-default-features --features cpu -p bitnet-ffi test_error_state_management
 
 # Test thread safety violations
-cargo test -p bitnet-ffi test_threading_error_handling
+cargo test --no-default-features --features cpu -p bitnet-ffi test_threading_error_handling
 ```
 
 ## Common Pitfalls and Solutions

@@ -131,16 +131,16 @@ impl StrictModeConfig {
 
 ```bash
 # Validate real quantized computation with strict mode
-BITNET_STRICT_MODE=1 cargo test --workspace --no-default-features --features cpu
+BITNET_STRICT_MODE=1 cargo test --no-default-features --workspace --no-default-features --features cpu
 
 # GPU quantization validation
-BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_comprehensive
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_comprehensive
 
 # Cross-validation against C++ reference
 BITNET_GGUF="model.gguf" BITNET_STRICT_MODE=1 cargo run -p xtask -- crossval
 
 # Performance benchmarking with real computation
-BITNET_STRICT_MODE=1 cargo bench -p bitnet-quantization --bench quantization_bench --no-default-features --features cpu
+BITNET_STRICT_MODE=1 cargo bench --no-default-features -p bitnet-quantization --bench quantization_bench --no-default-features --features cpu
 ```
 
 ## Migration Impact

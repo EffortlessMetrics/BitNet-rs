@@ -651,13 +651,13 @@ impl ProductionHealthChecker {
 ### Functional Testing
 ```bash
 # Monitoring system testing
-cargo test -p bitnet-server --test monitoring_tests -- test_comprehensive_monitoring
+cargo test --no-default-features --features cpu -p bitnet-server --test monitoring_tests -- test_comprehensive_monitoring
 
 # Health check testing
-cargo test -p bitnet-server --test monitoring_tests -- test_kubernetes_health_probes
+cargo test --no-default-features --features cpu -p bitnet-server --test monitoring_tests -- test_kubernetes_health_probes
 
 # Metrics collection testing
-cargo test -p bitnet-server --test monitoring_tests -- test_prometheus_metrics_collection
+cargo test --no-default-features --features cpu -p bitnet-server --test monitoring_tests -- test_prometheus_metrics_collection
 ```
 
 ### Performance Testing
@@ -666,19 +666,19 @@ cargo test -p bitnet-server --test monitoring_tests -- test_prometheus_metrics_c
 cargo run -p bitnet-server-bench -- --test monitoring-overhead --duration 300s
 
 # Metrics export performance
-cargo test -p bitnet-server --test monitoring_tests -- test_metrics_export_performance
+cargo test --no-default-features --features cpu -p bitnet-server --test monitoring_tests -- test_metrics_export_performance
 
 # Health check latency testing
-cargo test -p bitnet-server --test monitoring_tests -- test_health_check_latency
+cargo test --no-default-features --features cpu -p bitnet-server --test monitoring_tests -- test_health_check_latency
 ```
 
 ### Integration Testing
 ```bash
 # End-to-end monitoring testing
-cargo test -p bitnet-server --test integration_tests -- test_monitoring_integration
+cargo test --no-default-features --features cpu -p bitnet-server --test integration_tests -- test_monitoring_integration
 
 # OpenTelemetry tracing validation
-cargo test -p bitnet-server --test integration_tests -- test_opentelemetry_tracing
+cargo test --no-default-features --features cpu -p bitnet-server --test integration_tests -- test_opentelemetry_tracing
 ```
 
 This ADR establishes a comprehensive monitoring architecture that provides deep visibility into neural network inference operations while maintaining production-grade reliability and performance characteristics.

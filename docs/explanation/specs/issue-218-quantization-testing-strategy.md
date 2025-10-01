@@ -633,8 +633,8 @@ jobs:
           toolchain: 1.90.0
       - name: Run fast quantization tests
         run: |
-          cargo test -p bitnet-quantization --no-default-features --features cpu
-          cargo test -p bitnet-kernels --no-default-features --features cpu
+          cargo test --no-default-features -p bitnet-quantization --no-default-features --features cpu
+          cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu
 
   real-model-quantization-tests:
     runs-on: ubuntu-latest
@@ -655,7 +655,7 @@ jobs:
           BITNET_TEST_MODELS_DIR: ~/.cache/bitnet-test-models
           BITNET_STRICT_TOKENIZERS: 1
         run: |
-          cargo test --features "cpu,integration-tests" \
+          cargo test --no-default-features --features "cpu,integration-tests" \
             -p bitnet-quantization \
             -p bitnet-inference \
             -- --test-threads=1
@@ -671,7 +671,7 @@ jobs:
         env:
           BITNET_TEST_MODELS_DIR: /opt/bitnet-models
         run: |
-          cargo test --features "gpu,integration-tests" \
+          cargo test --no-default-features --features "gpu,integration-tests" \
             -p bitnet-quantization \
             -p bitnet-kernels \
             -- --test-threads=1

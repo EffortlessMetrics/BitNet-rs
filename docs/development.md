@@ -14,10 +14,10 @@ This is the main development guide for BitNet.rs, providing an overview of devel
 2. **Run Tests**
    ```bash
    # Quick CPU tests
-   cargo test --workspace --no-default-features --features cpu
+   cargo test --no-default-features --workspace --no-default-features --features cpu
 
    # GPU tests (requires CUDA)
-   cargo test --workspace --no-default-features --features gpu
+   cargo test --no-default-features --workspace --no-default-features --features gpu
    ```
 
 3. **Download Models for Testing**

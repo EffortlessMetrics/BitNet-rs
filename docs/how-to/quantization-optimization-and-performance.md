@@ -16,16 +16,16 @@ BitNet.rs provides advanced quantization optimization features:
 
 ```bash
 # Benchmark quantization performance
-cargo bench -p bitnet-quantization --bench quantization_bench --no-default-features --features cpu
+cargo bench --no-default-features -p bitnet-quantization --bench quantization_bench --no-default-features --features cpu
 
 # Test GPU quantization
-cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_performance
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_performance
 
 # Profile inference performance
 cargo run -p xtask -- benchmark --model model.gguf --profile --tokens 128
 
 # CPU optimization build
-RUSTFLAGS="-C target-cpu=native" cargo build --release --no-default-features --features cpu
+RUSTFLAGS="-C target-cpu=native" cargo build --no-default-features --release --no-default-features --features cpu
 ```
 
 ## Step 1: Understanding Quantization Formats
@@ -39,7 +39,7 @@ I2_S (2-bit signed) quantization offers the best balance of accuracy and perform
 cargo test --no-default-features --features cpu test_i2s_quantization_accuracy
 
 # Benchmark I2_S performance
-cargo bench -p bitnet-quantization --bench i2s_bench --no-default-features --features cpu
+cargo bench --no-default-features -p bitnet-quantization --bench i2s_bench --no-default-features --features cpu
 
 # Expected performance targets:
 # CPU: 10-20 tokens/sec with I2S quantization
@@ -59,7 +59,7 @@ cargo test --no-default-features --features cpu test_tl1_quantization
 cargo test --no-default-features --features cpu test_tl2_quantization
 
 # Benchmark table lookup performance
-cargo bench -p bitnet-quantization --bench table_lookup_bench --no-default-features --features cpu
+cargo bench --no-default-features -p bitnet-quantization --bench table_lookup_bench --no-default-features --features cpu
 ```
 
 ### Programmatic Quantization Format Selection
@@ -106,11 +106,11 @@ async fn optimize_quantization_format() -> Result<()> {
 cargo run --example cuda_info --no-default-features --features gpu
 
 # Test GPU quantization performance
-cargo test -p bitnet-kernels --no-default-features --features gpu \
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu \
     test_gpu_quantization_comprehensive
 
 # Benchmark GPU vs CPU performance
-cargo bench -p bitnet-kernels --bench device_comparison --no-default-features --features gpu
+cargo bench --no-default-features -p bitnet-kernels --bench device_comparison --no-default-features --features gpu
 ```
 
 **Expected GPU Performance:**
@@ -123,15 +123,15 @@ cargo bench -p bitnet-kernels --bench device_comparison --no-default-features --
 
 ```bash
 # Build with native CPU optimizations
-RUSTFLAGS="-C target-cpu=native -C opt-level=3" cargo build --release \
+RUSTFLAGS="-C target-cpu=native -C opt-level=3" cargo build --no-default-features --features cpu --release \
     --no-default-features --features cpu
 
 # Test SIMD acceleration
-cargo test -p bitnet-quantization --test simd_compatibility \
+cargo test --no-default-features --features cpu -p bitnet-quantization --test simd_compatibility \
     --no-default-features --features cpu
 
 # Benchmark SIMD vs scalar performance
-cargo bench -p bitnet-quantization --bench simd_comparison \
+cargo bench --no-default-features --features cpu -p bitnet-quantization --bench simd_comparison \
     --no-default-features --features cpu
 ```
 
@@ -195,7 +195,7 @@ fn benchmark_quantizer(quantizer: &DeviceAwareQuantizer) -> Result<f64> {
 cargo test --no-default-features --features cpu test_zero_copy_quantization
 
 # Benchmark memory-efficient operations
-cargo bench -p bitnet-quantization --bench memory_efficiency --no-default-features --features cpu
+cargo bench --no-default-features -p bitnet-quantization --bench memory_efficiency --no-default-features --features cpu
 ```
 
 ### Memory Layout Optimization
@@ -409,18 +409,18 @@ export RAYON_NUM_THREADS=1             # Single-threaded for reproducibility
 ```bash
 # Maximum performance build
 RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=fat" \
-cargo build --release --no-default-features --features gpu
+cargo build --no-default-features --release --no-default-features --features gpu
 
 # Profile-guided optimization (PGO)
 RUSTFLAGS="-C profile-generate=/tmp/pgo-data" \
-cargo build --release --no-default-features --features gpu
+cargo build --no-default-features --release --no-default-features --features gpu
 
 # Run representative workload for PGO
 cargo run -p xtask -- benchmark --model model.gguf --tokens 1000
 
 # Build with PGO data
 RUSTFLAGS="-C profile-use=/tmp/pgo-data -C target-cpu=native" \
-cargo build --release --no-default-features --features gpu
+cargo build --no-default-features --release --no-default-features --features gpu
 ```
 
 ### Runtime Tuning
@@ -549,10 +549,10 @@ cargo test --no-default-features --features cpu test_simd_availability
 **Solutions:**
 ```bash
 # Enable native CPU optimizations
-RUSTFLAGS="-C target-cpu=native" cargo build --release --no-default-features --features cpu
+RUSTFLAGS="-C target-cpu=native" cargo build --no-default-features --release --no-default-features --features cpu
 
 # Use GPU acceleration
-cargo build --release --no-default-features --features gpu
+cargo build --no-default-features --release --no-default-features --features gpu
 
 # Check memory alignment
 cargo test --no-default-features --features cpu test_memory_alignment
@@ -566,7 +566,7 @@ cargo test --no-default-features --features cpu test_memory_alignment
 nvidia-smi -l 1
 
 # Check GPU memory bandwidth
-cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_bandwidth
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_bandwidth
 ```
 
 **Solutions:**

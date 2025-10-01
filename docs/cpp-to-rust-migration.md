@@ -193,7 +193,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 
 # New Rust build
-cargo build --release
+cargo build --no-default-features --release --no-default-features --features cpu
 ```
 
 ## API Compatibility Matrix
@@ -282,7 +282,7 @@ cmake .. -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64
 ```bash
 # Built-in cross-compilation
 rustup target add aarch64-unknown-linux-gnu
-cargo build --target aarch64-unknown-linux-gnu --release
+cargo build --no-default-features --features cpu --target aarch64-unknown-linux-gnu --release
 ```
 
 ### Docker Integration
@@ -305,7 +305,7 @@ CMD ["./build/my_app"]
 FROM rust:1.89 as builder
 COPY . /app
 WORKDIR /app
-RUN cargo build --release
+RUN cargo build --no-default-features --features cpu --release
 
 FROM debian:bookworm-slim
 COPY --from=builder /app/target/release/my_app /usr/local/bin/
@@ -402,13 +402,13 @@ neon = []
 #### CPU Optimization
 ```bash
 # Build with CPU-specific optimizations
-RUSTFLAGS="-C target-cpu=native" cargo build --release --features avx2
+RUSTFLAGS="-C target-cpu=native" cargo build --no-default-features --release --no-default-features --features "cpu,avx2"
 ```
 
 #### GPU Optimization
 ```bash
 # Build with GPU support
-cargo build --release --features gpu
+cargo build --no-default-features --release --no-default-features --features gpu
 ```
 
 ### Memory Optimization
@@ -440,10 +440,10 @@ Verify that BitNet.rs produces identical results to the C++ implementation:
 ./scripts/dev-crossval.sh
 
 # Run cross-validation tests
-cargo test --features crossval
+cargo test --no-default-features --features "cpu,crossval"
 
 # Run performance benchmarks
-cargo bench --features crossval
+cargo bench --no-default-features --features "cpu,crossval"
 ```
 
 ### Unit Test Migration
@@ -496,10 +496,10 @@ mod tests {
 
 ```bash
 # Run comprehensive test suite
-cargo test --workspace --all-features
+cargo test --no-default-features --workspace --no-default-features --features cpu
 
 # Run with cross-validation
-cargo test --features crossval --release
+cargo test --no-default-features --features "cpu,crossval" --release
 ```
 
 ## Deployment Migration
@@ -586,7 +586,7 @@ CMD ["./build/bitnet_server"]
 FROM rust:1.89 as builder
 COPY . /app
 WORKDIR /app
-RUN cargo build --release
+RUN cargo build --no-default-features --features cpu --release
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*

@@ -167,9 +167,9 @@ This Pull Request implements comprehensive real GGUF model weight loading in Bit
 **Testing Commands:**
 ```bash
 # Validate implementation
-cargo build --release --no-default-features --features cpu
-cargo build --release --no-default-features --features gpu
-cargo test --workspace --no-default-features --features cpu --lib
+cargo build --no-default-features --release --no-default-features --features cpu
+cargo build --no-default-features --release --no-default-features --features gpu
+cargo test --no-default-features --workspace --no-default-features --features cpu --lib
 
 # Cross-validation (when C++ reference available)
 export BITNET_DETERMINISTIC=1 BITNET_SEED=42

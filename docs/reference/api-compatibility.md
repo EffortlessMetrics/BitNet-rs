@@ -223,10 +223,10 @@ BitNet.rs includes comprehensive cross-validation to ensure compatibility:
 
 ```bash
 # Run cross-validation tests
-cargo test --features crossval
+cargo test --no-default-features --features crossval
 
 # Specific accuracy tests
-cargo test --features crossval token_equivalence
+cargo test --no-default-features --features crossval token_equivalence
 ```
 
 **Validation Criteria:**
@@ -239,10 +239,10 @@ cargo test --features crossval token_equivalence
 
 ```bash
 # Test C API compatibility
-cargo test --features crossval c_api_compatibility
+cargo test --no-default-features --features crossval c_api_compatibility
 
 # Test Python binding compatibility
-cargo test --features crossval python_compatibility
+cargo test --no-default-features --features crossval python_compatibility
 ```
 
 ## Migration Checklist
@@ -286,7 +286,7 @@ cargo test --features crossval python_compatibility
 
 ```bash
 # Enable all optimizations
-cargo build --release --features "gpu,avx2,avx512"
+cargo build --no-default-features --release --features "gpu,avx2,avx512"
 ```
 
 ### Issue: Memory Usage Increase

@@ -297,7 +297,7 @@ impl QuantizedLinear {
 - name: Validate Mock Elimination
   run: |
     export BITNET_STRICT_MODE=1
-    cargo test --workspace --no-default-features --features cpu
+    cargo test --no-default-features --workspace --no-default-features --features cpu
 
 - name: Performance Baseline Validation
   run: |

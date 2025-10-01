@@ -254,7 +254,7 @@ fi
 
 ### Local Testing
 ```bash
-✅ cargo check --workspace --no-default-features --features cpu --exclude bitnet-py
+✅ cargo check --no-default-features --workspace --no-default-features --features cpu --exclude bitnet-py
    Finished `dev` profile [unoptimized + debuginfo] target(s) in 16.92s
 
 ✅ Enhanced build script help functionality working

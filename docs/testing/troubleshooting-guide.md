@@ -16,10 +16,10 @@ export RUST_LOG="debug"
 export RUST_LOG="bitnet=debug,crossval=trace,test_harness=info"
 
 # Run tests with logging
-cargo test -- --nocapture
+cargo test --no-default-features --features cpu -- --nocapture
 
 # Save logs to file
-cargo test -- --nocapture 2>&1 | tee test_debug.log
+cargo test --no-default-features --features cpu -- --nocapture 2>&1 | tee test_debug.log
 ```
 
 ### 2. Use Rust Debugging Tools
@@ -27,27 +27,27 @@ cargo test -- --nocapture 2>&1 | tee test_debug.log
 ```bash
 # Run with backtrace on panic
 export RUST_BACKTRACE=1
-cargo test
+cargo test --no-default-features --features cpu
 
 # Full backtrace
 export RUST_BACKTRACE=full
-cargo test
+cargo test --no-default-features --features cpu
 
 # Run specific test with debugging
-cargo test test_name -- --exact --nocapture
+cargo test test_name --no-default-features --features cpu -- --exact --nocapture
 ```
 
 ### 3. Isolate the Problem
 
 ```bash
 # Run single test
-cargo test specific_test_name -- --exact
+cargo test specific_test_name --no-default-features --features cpu -- --exact
 
 # Run tests in single thread
-cargo test -- --test-threads=1
+cargo test --no-default-features --features cpu -- --test-threads=1
 
 # Run with timeout
-timeout 60s cargo test
+timeout 60s cargo test --no-default-features --features cpu
 ```
 
 ## Common Issues and Solutions
@@ -65,7 +65,7 @@ timeout 60s cargo test
 1. Check for deadlocks:
 ```bash
 # Run with timeout and get stack trace
-timeout 30s cargo test &
+timeout 30s cargo test --no-default-features --features cpu &
 sleep 20
 kill -QUIT $!  # Send SIGQUIT for stack trace
 ```
@@ -88,7 +88,7 @@ ps aux | grep cargo
 **Solutions:**
 - Add timeouts to async operations
 - Check for infinite loops in test logic
-- Reduce parallelism: `cargo test -- --test-threads=1`
+- Reduce parallelism: `cargo test --no-default-features --features cpu -- --test-threads=1`
 - Increase system timeout limits
 
 #### Issue: Tests Fail Intermittently
@@ -104,7 +104,7 @@ ps aux | grep cargo
 # Run test 10 times
 for i in {1..10}; do
     echo "Run $i"
-    cargo test test_name -- --exact || break
+    cargo test --no-default-features --features cpu test_name -- --exact || break
 done
 ```
 
@@ -117,7 +117,7 @@ static mut SHARED_STATE: Option<SomeType> = None;
 3. Enable thread sanitizer (if available):
 ```bash
 export RUSTFLAGS="-Z sanitizer=thread"
-cargo test
+cargo test --no-default-features --features cpu
 ```
 
 **Solutions:**
@@ -137,9 +137,9 @@ cargo test
 1. Monitor memory usage:
 ```bash
 # Run with memory monitoring
-valgrind --tool=massif cargo test
+valgrind --tool=massif cargo test --no-default-features --features cpu
 # or
-/usr/bin/time -v cargo test
+/usr/bin/time -v cargo test --no-default-features --features cpu
 ```
 
 2. Check for memory leaks:
@@ -208,7 +208,7 @@ hexdump -C tests/cache/model.gguf | head
 2. Re-download fixture:
 ```bash
 rm tests/cache/model.gguf
-cargo test  # Will trigger re-download
+cargo test --no-default-features --features cpu  # Will trigger re-download
 ```
 
 **Solutions:**
@@ -298,11 +298,11 @@ strings model.gguf | grep -i version
 1. Profile test execution:
 ```bash
 # Use perf (Linux)
-perf record cargo test
+perf record cargo test --no-default-features --features cpu
 perf report
 
 # Use Instruments (macOS)
-instruments -t "Time Profiler" cargo test
+instruments -t "Time Profiler" cargo test --no-default-features --features cpu
 ```
 
 2. Identify bottlenecks:
@@ -337,10 +337,10 @@ watch -n 1 'ps aux | grep cargo'
 2. Use memory profilers:
 ```bash
 # Valgrind (Linux)
-valgrind --tool=massif cargo test
+valgrind --tool=massif cargo test --no-default-features --features cpu
 
 # Heaptrack (Linux)
-heaptrack cargo test
+heaptrack cargo test --no-default-features --features cpu
 ```
 
 **Solutions:**
@@ -368,7 +368,7 @@ cargo --version
 2. Update dependencies:
 ```bash
 cargo update
-cargo clean && cargo build
+cargo clean && cargo build --no-default-features --features cpu
 ```
 
 3. Check for conflicts:
@@ -400,15 +400,15 @@ make clean && make VERBOSE=1
 2. Test FFI bindings:
 ```bash
 # Run with debug symbols
-cargo test --features debug-symbols
+cargo test --no-default-features --features debug-symbols
 ```
 
 3. Use debugging tools:
 ```bash
 # GDB for segfaults
-gdb --args cargo test
+gdb --args cargo test --no-default-features --features cpu
 # or
-lldb -- cargo test
+lldb -- cargo test --no-default-features --features cpu
 ```
 
 **Solutions:**
@@ -423,7 +423,7 @@ lldb -- cargo test
 
 1. **Isolate the failing test:**
 ```bash
-cargo test failing_test_name -- --exact --nocapture
+cargo test failing_test_name --no-default-features --features cpu -- --exact --nocapture
 ```
 
 2. **Create minimal reproduction:**
@@ -448,7 +448,7 @@ uname -a >> debug_info.txt
 ```bash
 export RUST_LOG="trace"
 export RUST_BACKTRACE="full"
-cargo test failing_test -- --nocapture 2>&1 | tee debug.log
+cargo test failing_test --no-default-features --features cpu -- --nocapture 2>&1 | tee debug.log
 ```
 
 2. **Collect system information:**
@@ -506,10 +506,10 @@ async fn test_component_isolation() {
 3. **Use debugging tools:**
 ```bash
 # Memory debugging
-valgrind cargo test
+valgrind cargo test --no-default-features --features cpu
 
 # Thread debugging
-cargo test -- --test-threads=1
+cargo test --no-default-features --features cpu -- --test-threads=1
 ```
 
 ### Step 5: Implement and Verify Fix
@@ -522,19 +522,19 @@ cargo test -- --test-threads=1
 2. **Test the fix:**
 ```bash
 # Test the specific issue
-cargo test failing_test
+cargo test failing_test --no-default-features --features cpu
 
 # Run related tests
-cargo test related_module
+cargo test related_module --no-default-features --features cpu
 
 # Run full test suite
-cargo test
+cargo test --no-default-features --features cpu
 ```
 
 3. **Verify no regressions:**
 ```bash
 # Run tests multiple times
-for i in {1..5}; do cargo test || break; done
+for i in {1..5}; do cargo test --no-default-features --features cpu || break; done
 ```
 
 ## Debugging Tools and Techniques
@@ -560,14 +560,14 @@ cargo outdated
 #### 2. Testing Tools
 ```bash
 # Test with different features
-cargo test --features "feature1,feature2"
-cargo test --no-default-features
+cargo test --no-default-features --features "cpu,feature1,feature2"
+cargo test --no-default-features --features cpu
 
 # Test documentation
-cargo test --doc
+cargo test --no-default-features --doc --no-default-features --features cpu
 
 # Test examples
-cargo test --examples
+cargo test --no-default-features --examples --no-default-features --features cpu
 ```
 
 #### 3. Profiling Tools
@@ -602,7 +602,7 @@ pmap $(pgrep cargo)
 cat /proc/$(pgrep cargo)/status
 
 # Memory leaks
-valgrind --leak-check=full cargo test
+valgrind --leak-check=full cargo test --no-default-features --features cpu
 ```
 
 #### 3. Network Debugging
@@ -683,7 +683,7 @@ cat > debug_report.md << EOF
 
 ## Error Output
 \`\`\`
-$(cargo test failing_test 2>&1)
+$(cargo test --no-default-features --features cpu failing_test 2>&1)
 \`\`\`
 
 ## Additional Information

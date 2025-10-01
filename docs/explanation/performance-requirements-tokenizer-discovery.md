@@ -386,7 +386,7 @@ cargo run -p xtask -- benchmark --network-simulation --latency 50ms --bandwidth 
 cargo run -p xtask -- analyze-performance --window 30days
 
 # Resource usage profiling
-RUSTFLAGS="-C target-cpu=native" cargo build --release --no-default-features --features cpu,gpu
+RUSTFLAGS="-C target-cpu=native" cargo build --no-default-features --release --no-default-features --features cpu,gpu
 perf record cargo run -p xtask -- benchmark --profile-tokenizer
 ```
 

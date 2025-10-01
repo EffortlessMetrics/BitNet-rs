@@ -40,10 +40,10 @@ BitNet.rs is designed for high-performance inference with several optimization s
 
 ```bash
 # Build with native CPU optimizations
-RUSTFLAGS="-C target-cpu=native" cargo build --release
+RUSTFLAGS="-C target-cpu=native" cargo build --no-default-features --features cpu --release
 
 # Or specify features explicitly
-RUSTFLAGS="-C target-feature=+avx2,+fma" cargo build --release
+RUSTFLAGS="-C target-feature=+avx2,+fma" cargo build --no-default-features --features cpu --release
 ```
 
 #### 2. SIMD Kernel Optimization
@@ -52,11 +52,11 @@ BitNet.rs includes enhanced SIMD kernels with optimized memory access patterns:
 
 ```bash
 # Test SIMD kernel compatibility and performance
-cargo test -p bitnet-quantization --test simd_compatibility --no-default-features
-cargo bench -p bitnet-quantization --bench simd_comparison --no-default-features
+cargo test --no-default-features --features cpu -p bitnet-quantization --test simd_compatibility --no-default-features
+cargo bench --no-default-features --features cpu -p bitnet-quantization --bench simd_comparison --no-default-features
 
 # Validate SIMD/scalar parity for all quantization algorithms
-cargo test -p bitnet-quantization test_i2s_simd_scalar_parity
+cargo test --no-default-features --features cpu -p bitnet-quantization test_i2s_simd_scalar_parity
 ```
 
 **Key SIMD Optimizations:**
@@ -68,9 +68,9 @@ cargo test -p bitnet-quantization test_i2s_simd_scalar_parity
 **SIMD Performance Testing:**
 ```bash
 # Compare SIMD vs scalar implementations
-cargo bench -p bitnet-quantization simd_vs_scalar
+cargo bench --no-default-features --features cpu -p bitnet-quantization simd_vs_scalar
 # Run comprehensive compatibility tests  
-cargo test -p bitnet-quantization test_simd_performance_baseline
+cargo test --no-default-features --features cpu -p bitnet-quantization test_simd_performance_baseline
 ```
 
 #### 3. Thread Configuration

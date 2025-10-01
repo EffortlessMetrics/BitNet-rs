@@ -1316,10 +1316,10 @@ All API contracts are validated using:
 **Validation Commands**:
 ```bash
 # API contract validation
-cargo test -p bitnet-server --test api_contracts -- test_api_schema_validation
+cargo test --no-default-features --features cpu -p bitnet-server --test api_contracts -- test_api_schema_validation
 
 # End-to-end API testing
-cargo test -p bitnet-server --test integration_tests -- test_api_workflows
+cargo test --no-default-features --features cpu -p bitnet-server --test integration_tests -- test_api_workflows
 
 # Performance testing
 cargo run -p bitnet-server-bench -- --test api-performance --duration 300s

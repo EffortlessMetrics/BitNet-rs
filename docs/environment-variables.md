@@ -59,12 +59,12 @@ For GPU development, testing, and mock scenarios:
 
 ```bash
 # Test GPU backend detection
-cargo test -p bitnet-kernels --no-default-features test_gpu_info_summary
+cargo test --no-default-features --features cpu -p bitnet-kernels --no-default-features test_gpu_info_summary
 
 # Mock GPU scenarios for testing
-BITNET_GPU_FAKE="cuda" cargo test -p bitnet-kernels test_gpu_info_mocked_scenarios
+BITNET_GPU_FAKE="cuda" cargo test --no-default-features --features cpu -p bitnet-kernels test_gpu_info_mocked_scenarios
 BITNET_GPU_FAKE="metal" cargo run -p xtask -- download-model --dry-run
-BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels --features gpu
+BITNET_GPU_FAKE="cuda,rocm" cargo test --no-default-features -p bitnet-kernels --features gpu
 ```
 
 ## Determinism Configuration
@@ -92,25 +92,25 @@ export RUSTFLAGS="-C target-cpu=native"
 
 ```bash
 # Primary strict mode - prevents ALL mock inference fallbacks
-BITNET_STRICT_MODE=1 cargo test -p bitnet-inference --no-default-features --features cpu
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-inference --no-default-features --features cpu
 BITNET_STRICT_MODE=1 cargo run -p xtask -- infer --model model.gguf --prompt "Test"
 
 # CPU baseline (no mocks involved)
-cargo bench -p bitnet-quantization --bench simd_comparison
+cargo bench --no-default-features --features cpu -p bitnet-quantization --bench simd_comparison
 
 # GPU perf (strict, real hardware only)
 BITNET_STRICT_NO_FAKE_GPU=1 \
 BITNET_STRICT_MODE=1 \
-cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
+cargo bench --no-default-features -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
 
 # Strict integration/tokenizer tests (no mock fallbacks)
 BITNET_STRICT_TOKENIZERS=1 \
 BITNET_STRICT_MODE=1 \
-cargo test -p bitnet-tokenizers -- --quiet
+cargo test --no-default-features --features cpu -p bitnet-tokenizers -- --quiet
 
 BITNET_STRICT_NO_FAKE_GPU=1 \
 BITNET_STRICT_MODE=1 \
-cargo test -p bitnet-kernels --no-default-features --features gpu -- --quiet
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu -- --quiet
 
 # Combined strict testing for production validation
 BITNET_STRICT_MODE=1 \
@@ -131,14 +131,14 @@ For server monitoring and system metrics collection:
 
 ```bash
 # Test system metrics collection in server
-cargo test -p bitnet-server --features prometheus test_system_metrics_collection
+cargo test --no-default-features -p bitnet-server --features prometheus test_system_metrics_collection
 
 # Run server with system metrics enabled
 cargo run -p bitnet-server --features prometheus --bin server &
 curl http://localhost:8080/metrics | grep "system_"
 
 # Test memory tracking integration with system metrics
-cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
 
 # Validate system metrics in monitoring stack
 cd monitoring && docker-compose up -d

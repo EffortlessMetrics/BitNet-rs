@@ -105,16 +105,16 @@ data: {
 cargo run --example streaming_generation --no-default-features --features cpu
 
 # Test server streaming
-cargo test -p bitnet-server --no-default-features --features cpu streaming
+cargo test --no-default-features -p bitnet-server --no-default-features --features cpu streaming
 
 # Test token ID accuracy
-cargo test -p bitnet-inference --no-default-features --features cpu test_token_id_streaming
+cargo test --no-default-features -p bitnet-inference --no-default-features --features cpu test_token_id_streaming
 
 # Test concurrent streaming
-cargo test -p bitnet-inference --no-default-features --features cpu test_concurrent_streams
+cargo test --no-default-features -p bitnet-inference --no-default-features --features cpu test_concurrent_streams
 
 # Validate SSE format
-cargo test -p bitnet-server --no-default-features --features cpu sse_token_ids_match_model_outputs
+cargo test --no-default-features -p bitnet-server --no-default-features --features cpu sse_token_ids_match_model_outputs
 ```
 
 ## Troubleshooting Streaming Issues
@@ -127,7 +127,7 @@ RUST_LOG=bitnet_inference::streaming=debug cargo run --example streaming_generat
 cargo run --example streaming_generation -- --buffer-size 5 --flush-interval 25ms
 
 # Validate token ID consistency
-cargo test -p bitnet-inference test_streaming_token_id_consistency
+cargo test --no-default-features --features cpu -p bitnet-inference test_streaming_token_id_consistency
 
 # Check server streaming health
 curl -X GET http://localhost:8080/health

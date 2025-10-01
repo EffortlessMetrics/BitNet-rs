@@ -401,7 +401,7 @@ export BITNET_SEED=42
 export RAYON_NUM_THREADS=1
 
 # Run tests
-cargo test --package bitnet-inference --features integration-tests
+cargo test --no-default-features --package bitnet-inference --features integration-tests
 ```
 
 ```rust
@@ -528,32 +528,31 @@ The performance tracking infrastructure includes comprehensive test coverage:
 
 ```bash
 # Run performance tracking tests
-cargo test --package bitnet-inference \
-    --no-default-features \
+cargo test --no-default-features --package bitnet-inference \
     --features integration-tests \
     --test performance_tracking_tests
 
 # Run specific test categories
-cargo test --test performance_tracking_tests performance_metrics_tests
-cargo test --test performance_tracking_tests performance_tracker_tests
-cargo test --test performance_tracking_tests environment_variable_tests
+cargo test --no-default-features --features cpu --test performance_tracking_tests performance_metrics_tests
+cargo test --no-default-features --features cpu --test performance_tracking_tests performance_tracker_tests
+cargo test --no-default-features --features cpu --test performance_tracking_tests environment_variable_tests
 
 # Test InferenceEngine performance integration
-cargo test -p bitnet-inference --features integration-tests test_engine_performance_tracking_integration
+cargo test --no-default-features -p bitnet-inference --features integration-tests test_engine_performance_tracking_integration
 
 # Test platform-specific performance tracking
-cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
-cargo test -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
 
 # Test comprehensive memory tracking with device awareness
-cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
-cargo test -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_device_memory_tracking
 
 # Test memory efficiency metrics
-cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_efficiency_tracking
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_memory_efficiency_tracking
 
 # GPU performance validation with comprehensive metrics
-cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
 ```
 
 ## Best Practices

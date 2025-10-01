@@ -144,36 +144,36 @@ The `benchmark_comparison.py` script provides the most comprehensive benchmarkin
 
 ```bash
 # Standard Rust benchmarks
-cargo bench --workspace --no-default-features --features cpu
+cargo bench --no-default-features --workspace --no-default-features --features cpu
 
 # With GPU support
-cargo bench --workspace --no-default-features --features gpu
+cargo bench --no-default-features --workspace --no-default-features --features gpu
 
 # Quick tests
-cargo test --workspace --no-default-features --features cpu --release
+cargo test --no-default-features --workspace --no-default-features --features cpu --release
 ```
 
 ### 3. Cross-Validation Benchmarks
 
 ```bash
 # Criterion-based cross-validation benchmarks
-cargo bench --features crossval
+cargo bench --no-default-features --features crossval
 
 # Comprehensive cross-validation tests
-cargo test --package crossval --features crossval --release -- --nocapture benchmark
+cargo test --no-default-features --package crossval --features crossval --release -- --nocapture benchmark
 ```
 
 ### 4. Specialized Benchmarks
 
 ```bash
 # SIMD performance
-cargo bench -p bitnet-quantization --bench simd_comparison --no-default-features --features cpu
+cargo bench --no-default-features -p bitnet-quantization --bench simd_comparison --no-default-features --features cpu
 
 # GPU kernels (if available)
-cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
+cargo bench --no-default-features -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
 
 # Memory usage
-cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_memory_tracking_comprehensive
 ```
 
 ## Integration with CI/CD
@@ -191,7 +191,7 @@ The script works with `.github/workflows/performance-tracking.yml`:
 - name: Run performance benchmarks
   run: |
     ./benchmark_comparison.py --skip-cpp --format json > benchmark-results.json
-    cargo bench --workspace --no-default-features --features cpu
+    cargo bench --no-default-features --workspace --no-default-features --features cpu
 ```
 
 ### Environment Variables
@@ -305,7 +305,7 @@ cat benchmark-results/benchmark-config.json
 ```bash
 # Build with maximum optimizations
 export RUSTFLAGS="-C target-cpu=native -C opt-level=3"
-cargo build --release --no-default-features --features cpu
+cargo build --no-default-features --release --no-default-features --features cpu
 
 # Run optimized benchmarks
 ./benchmark_comparison.py --iterations 5

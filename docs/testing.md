@@ -28,11 +28,11 @@ Use `BYTES_PER_MB` in assertions (e.g., `500 * BYTES_PER_MB`)—no raw `1024*102
 Run minimal and fixtures paths locally:
 
 ```bash
-cargo build -p bitnet-tests --lib
-cargo test  -p bitnet --test test_configuration_scenarios
+cargo build --no-default-features --features cpu -p bitnet-tests --lib
+cargo test --no-default-features  -p bitnet --test test_configuration_scenarios
 
-cargo build -p bitnet-tests --lib --features full-framework
-cargo test  -p bitnet --features fixtures --test test_configuration_scenarios
+cargo build --no-default-features -p bitnet-tests --lib --features full-framework
+cargo test --no-default-features  -p bitnet --features fixtures --test test_configuration_scenarios
 ```
 
 ## Quick regressions (local)
