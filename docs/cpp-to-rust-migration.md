@@ -193,7 +193,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 
 # New Rust build
-cargo build --release
+cargo build --release --no-default-features --features cpu
 ```
 
 ## API Compatibility Matrix
@@ -402,13 +402,13 @@ neon = []
 #### CPU Optimization
 ```bash
 # Build with CPU-specific optimizations
-RUSTFLAGS="-C target-cpu=native" cargo build --release --features avx2
+RUSTFLAGS="-C target-cpu=native" cargo build --release --no-default-features --features "cpu,avx2"
 ```
 
 #### GPU Optimization
 ```bash
 # Build with GPU support
-cargo build --release --features gpu
+cargo build --release --no-default-features --features gpu
 ```
 
 ### Memory Optimization
@@ -440,10 +440,10 @@ Verify that BitNet.rs produces identical results to the C++ implementation:
 ./scripts/dev-crossval.sh
 
 # Run cross-validation tests
-cargo test --features crossval
+cargo test --no-default-features --features "cpu,crossval"
 
 # Run performance benchmarks
-cargo bench --features crossval
+cargo bench --no-default-features --features "cpu,crossval"
 ```
 
 ### Unit Test Migration
@@ -496,10 +496,10 @@ mod tests {
 
 ```bash
 # Run comprehensive test suite
-cargo test --workspace --all-features
+cargo test --workspace --no-default-features --features cpu
 
 # Run with cross-validation
-cargo test --features crossval --release
+cargo test --no-default-features --features "cpu,crossval" --release
 ```
 
 ## Deployment Migration

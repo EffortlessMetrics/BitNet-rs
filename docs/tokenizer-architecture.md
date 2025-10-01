@@ -412,7 +412,7 @@ let config = TokenizerConfig {
 cargo build --no-default-features --features "cpu,spm"
 
 # Test SPM functionality
-cargo test -p bitnet-tokenizers --features "spm,integration-tests"
+cargo test -p bitnet-tokenizers --no-default-features --features "cpu,spm,integration-tests"
 ```
 
 #### 2. Create SPM Tokenizer from File
@@ -622,7 +622,7 @@ BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers
 
 # SPM integration tests with fixture
 SPM_MODEL=tests/fixtures/spm/tiny.model \
-cargo test -p bitnet-tokenizers --features "spm,integration-tests" -- --ignored
+cargo test -p bitnet-tokenizers --no-default-features --features "cpu,spm,integration-tests" -- --ignored
 ```
 
 #### CI Integration Pattern
@@ -631,10 +631,10 @@ cargo test -p bitnet-tokenizers --features "spm,integration-tests" -- --ignored
 # CI workflow for tokenizer tests
 if [ -f "tests/fixtures/spm/tiny.model" ]; then
     echo "Running full SPM tests with fixture"
-    cargo test -p bitnet-tokenizers --features "spm,integration-tests"
+    cargo test -p bitnet-tokenizers --no-default-features --features "cpu,spm,integration-tests"
 else
     echo "Running tests without SPM fixture"
-    BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers --features spm
+    BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers --no-default-features --features "cpu,spm"
 fi
 ```
 
@@ -974,7 +974,7 @@ spm.SentencePieceTrainer.train('--input=sample.txt --model_prefix=test --vocab_s
 
 ```bash
 # Test tokenizer loading
-cargo test -p bitnet-tokenizers --features "spm,integration-tests" test_sentencepiece_tokenizer_contract
+cargo test -p bitnet-tokenizers --no-default-features --features "cpu,spm,integration-tests" test_sentencepiece_tokenizer_contract
 
 # Verify environment setup
 echo "SPM_MODEL: ${SPM_MODEL:-unset}"
@@ -984,10 +984,10 @@ echo "BITNET_STRICT_TOKENIZERS: ${BITNET_STRICT_TOKENIZERS:-unset}"
 find tests/fixtures -name "*.model" -o -name "*.json"
 
 # Test strict mode
-BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers --features spm -- --quiet
+BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers --no-default-features --features "cpu,spm" -- --quiet
 
 # Run contract tests with SPM fixture
-SPM_MODEL=tests/fixtures/spm/tiny.model cargo test -p bitnet-tokenizers --features "spm,integration-tests" -- test_sentencepiece
+SPM_MODEL=tests/fixtures/spm/tiny.model cargo test -p bitnet-tokenizers --no-default-features --features "cpu,spm,integration-tests" -- test_sentencepiece
 ```
 
 ### Performance Optimization

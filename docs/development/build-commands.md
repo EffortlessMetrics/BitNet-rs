@@ -42,20 +42,20 @@ cargo test --workspace --no-default-features --features cpu
 cargo test --workspace --no-default-features --features gpu
 
 # Run GGUF validation tests (includes tensor alignment validation)
-cargo test -p bitnet-inference --test gguf_header
-cargo test -p bitnet-inference --test gguf_fuzz
-cargo test -p bitnet-inference --test engine_inspect
+cargo test -p bitnet-inference --test gguf_header --no-default-features --features cpu
+cargo test -p bitnet-inference --test gguf_fuzz --no-default-features --features cpu
+cargo test -p bitnet-inference --test engine_inspect --no-default-features --features cpu
 
 # Test enhanced GGUF tensor alignment validation
-cargo test -p bitnet-models --test gguf_min -- test_tensor_alignment
-cargo test -p bitnet-models -- gguf_min::tests::loads_two_tensors
+cargo test -p bitnet-models --test gguf_min --no-default-features --features cpu -- test_tensor_alignment
+cargo test -p bitnet-models --no-default-features --features cpu -- gguf_min::tests::loads_two_tensors
 
 # Run verification script
 ./scripts/verify-tests.sh
 
 # Test enhanced prefill functionality and batch inference
-cargo test -p bitnet-cli --test cli_smoke
-cargo test -p bitnet-inference --test batch_prefill
+cargo test -p bitnet-cli --test cli_smoke --no-default-features --features cpu
+cargo test -p bitnet-inference --test batch_prefill --no-default-features --features cpu
 ```
 
 ### Benchmarking Commands
@@ -74,15 +74,15 @@ cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-feature
 ### Cross-Validation Commands
 ```bash
 # Cross-validation testing (requires C++ dependencies)
-cargo test --workspace --features "cpu,ffi,crossval"
+cargo test --workspace --no-default-features --features "cpu,ffi,crossval"
 
 # FFI quantization bridge tests (compares FFI vs Rust implementations)
-cargo test -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
+cargo test -p bitnet-kernels --no-default-features --features "cpu,ffi" test_ffi_quantize_matches_rust
 
 # SIMD kernel compatibility and performance tests
-cargo test -p bitnet-quantization --test simd_compatibility
-cargo test -p bitnet-quantization test_i2s_simd_scalar_parity
-cargo test -p bitnet-quantization test_simd_performance_baseline
+cargo test -p bitnet-quantization --test simd_compatibility --no-default-features --features cpu
+cargo test -p bitnet-quantization test_i2s_simd_scalar_parity --no-default-features --features cpu
+cargo test -p bitnet-quantization test_simd_performance_baseline --no-default-features --features cpu
 ```
 
 ### GPU-Specific Commands
@@ -96,13 +96,13 @@ cargo test -p bitnet-kernels --no-default-features --features gpu test_precision
 ### Tokenizer Testing
 ```bash
 # SentencePiece (SPM) tokenizer tests (requires spm feature)
-cargo test -p bitnet-tokenizers --features "spm,integration-tests" --test tokenizer_contracts test_sentencepiece_tokenizer_contract
-cargo test -p bitnet-tokenizers --features "spm,integration-tests" -- --ignored  # SPM model tests (requires actual .model file)
-cargo test -p bitnet-tokenizers --features "spm,integration-tests" -- --quiet
+cargo test -p bitnet-tokenizers --no-default-features --features "cpu,spm,integration-tests" --test tokenizer_contracts test_sentencepiece_tokenizer_contract
+cargo test -p bitnet-tokenizers --no-default-features --features "cpu,spm,integration-tests" -- --ignored  # SPM model tests (requires actual .model file)
+cargo test -p bitnet-tokenizers --no-default-features --features "cpu,spm,integration-tests" -- --quiet
 
 # Strict tokenizer mode testing (prevents fallback to mock tokenizers)
-BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers --no-default-features --features spm
-BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers -- --quiet
+BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers --no-default-features --features "cpu,spm"
+BITNET_STRICT_TOKENIZERS=1 cargo test -p bitnet-tokenizers --no-default-features --features cpu -- --quiet
 ```
 
 ### WebAssembly Testing

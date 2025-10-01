@@ -275,13 +275,13 @@ The `gpu` feature enables advanced device-aware quantization with the following 
 ### Testing and Validation
 ```bash
 # Test device-aware quantization
-cargo test -p bitnet-kernels --features gpu --test gpu_quantization
+cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_quantization
 
 # Test GPU vs CPU accuracy
-cargo test -p bitnet-kernels --features gpu test_gpu_vs_cpu_quantization_accuracy --ignored
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy --ignored
 
 # Test automatic fallback
-cargo test -p bitnet-kernels --features gpu test_gpu_quantization_fallback --ignored
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
 ```
 
 ## Performance Impact

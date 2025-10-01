@@ -16,10 +16,10 @@ export RUST_LOG="debug"
 export RUST_LOG="bitnet=debug,crossval=trace,test_harness=info"
 
 # Run tests with logging
-cargo test -- --nocapture
+cargo test --no-default-features --features cpu -- --nocapture
 
 # Save logs to file
-cargo test -- --nocapture 2>&1 | tee test_debug.log
+cargo test --no-default-features --features cpu -- --nocapture 2>&1 | tee test_debug.log
 ```
 
 ### 2. Use Rust Debugging Tools
@@ -27,27 +27,27 @@ cargo test -- --nocapture 2>&1 | tee test_debug.log
 ```bash
 # Run with backtrace on panic
 export RUST_BACKTRACE=1
-cargo test
+cargo test --no-default-features --features cpu
 
 # Full backtrace
 export RUST_BACKTRACE=full
-cargo test
+cargo test --no-default-features --features cpu
 
 # Run specific test with debugging
-cargo test test_name -- --exact --nocapture
+cargo test test_name --no-default-features --features cpu -- --exact --nocapture
 ```
 
 ### 3. Isolate the Problem
 
 ```bash
 # Run single test
-cargo test specific_test_name -- --exact
+cargo test specific_test_name --no-default-features --features cpu -- --exact
 
 # Run tests in single thread
-cargo test -- --test-threads=1
+cargo test --no-default-features --features cpu -- --test-threads=1
 
 # Run with timeout
-timeout 60s cargo test
+timeout 60s cargo test --no-default-features --features cpu
 ```
 
 ## Common Issues and Solutions
@@ -137,9 +137,9 @@ cargo test
 1. Monitor memory usage:
 ```bash
 # Run with memory monitoring
-valgrind --tool=massif cargo test
+valgrind --tool=massif cargo test --no-default-features --features cpu
 # or
-/usr/bin/time -v cargo test
+/usr/bin/time -v cargo test --no-default-features --features cpu
 ```
 
 2. Check for memory leaks:
@@ -208,7 +208,7 @@ hexdump -C tests/cache/model.gguf | head
 2. Re-download fixture:
 ```bash
 rm tests/cache/model.gguf
-cargo test  # Will trigger re-download
+cargo test --no-default-features --features cpu  # Will trigger re-download
 ```
 
 **Solutions:**
@@ -368,7 +368,7 @@ cargo --version
 2. Update dependencies:
 ```bash
 cargo update
-cargo clean && cargo build
+cargo clean && cargo build --no-default-features --features cpu
 ```
 
 3. Check for conflicts:
@@ -423,7 +423,7 @@ lldb -- cargo test
 
 1. **Isolate the failing test:**
 ```bash
-cargo test failing_test_name -- --exact --nocapture
+cargo test failing_test_name --no-default-features --features cpu -- --exact --nocapture
 ```
 
 2. **Create minimal reproduction:**
@@ -448,7 +448,7 @@ uname -a >> debug_info.txt
 ```bash
 export RUST_LOG="trace"
 export RUST_BACKTRACE="full"
-cargo test failing_test -- --nocapture 2>&1 | tee debug.log
+cargo test failing_test --no-default-features --features cpu -- --nocapture 2>&1 | tee debug.log
 ```
 
 2. **Collect system information:**
@@ -522,19 +522,19 @@ cargo test -- --test-threads=1
 2. **Test the fix:**
 ```bash
 # Test the specific issue
-cargo test failing_test
+cargo test failing_test --no-default-features --features cpu
 
 # Run related tests
-cargo test related_module
+cargo test related_module --no-default-features --features cpu
 
 # Run full test suite
-cargo test
+cargo test --no-default-features --features cpu
 ```
 
 3. **Verify no regressions:**
 ```bash
 # Run tests multiple times
-for i in {1..5}; do cargo test || break; done
+for i in {1..5}; do cargo test --no-default-features --features cpu || break; done
 ```
 
 ## Debugging Tools and Techniques
@@ -560,14 +560,14 @@ cargo outdated
 #### 2. Testing Tools
 ```bash
 # Test with different features
-cargo test --features "feature1,feature2"
-cargo test --no-default-features
+cargo test --no-default-features --features "cpu,feature1,feature2"
+cargo test --no-default-features --features cpu
 
 # Test documentation
-cargo test --doc
+cargo test --doc --no-default-features --features cpu
 
 # Test examples
-cargo test --examples
+cargo test --examples --no-default-features --features cpu
 ```
 
 #### 3. Profiling Tools
