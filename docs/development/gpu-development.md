@@ -107,8 +107,8 @@ export RAYON_NUM_THREADS=1              # Single-threaded CPU operations
 cargo test -p bitnet-inference --no-default-features --features "cpu,integration-tests" test_engine_performance_tracking_integration
 
 # Test performance with different configurations
-BITNET_BATCH_SIZE=4 cargo test -p bitnet-kernels --features gpu test_gpu_memory_management
-BITNET_MEMORY_LIMIT=512MB cargo test -p bitnet-kernels --features gpu test_cuda_validation_comprehensive
+BITNET_BATCH_SIZE=4 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
+BITNET_MEMORY_LIMIT=512MB cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
 ```
 
 ## CUDA Device Querying and Hardware Detection
@@ -1351,7 +1351,7 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    
    # Override detection for testing
    export BITNET_GPU_FAKE="cuda,metal"
-   cargo test -p bitnet-kernels test_gpu_info_mocked_scenarios
+   cargo test -p bitnet-kernels --no-default-features --features cpu test_gpu_info_mocked_scenarios
    ```
 
 3. **Version Detection Issues**:
@@ -1430,7 +1430,7 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
    
    # Validate performance metrics collection
-   cargo test -p bitnet-inference --features integration-tests test_engine_performance_tracking_integration
+   cargo test -p bitnet-inference --no-default-features --features integration-tests test_engine_performance_tracking_integration
    
    # Test memory usage tracking with device-aware execution
    cargo test -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
@@ -1538,7 +1538,7 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
 cargo test -p bitnet-kernels --no-default-features test_gpu_info_summary
 
 # Mock GPU testing scenarios
-BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels test_gpu_info_mocked_scenarios
+BITNET_GPU_FAKE="cuda,rocm" cargo test -p bitnet-kernels --no-default-features --features cpu test_gpu_info_mocked_scenarios
 
 # GPU smoke test (basic availability)
 cargo test -p bitnet-kernels --no-default-features --features gpu --test gpu_smoke
