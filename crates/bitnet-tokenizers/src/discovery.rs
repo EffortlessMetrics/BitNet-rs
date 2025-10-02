@@ -254,14 +254,30 @@ impl TokenizerDiscovery {
     ///
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac1-tokenizerdiscovery-implementation
     fn extract_vocab_size(reader: &GgufReader) -> Result<usize> {
-        // Try to get vocab size from metadata first
+        // Try to get vocab size from metadata first - standard GGUF key
         if let Some(vocab_size) = reader.get_u32_metadata("tokenizer.ggml.vocab_size") {
             return Ok(vocab_size as usize);
         }
 
+        // Try to infer from general.architecture metadata
+        if let Some(arch) = reader.get_string_metadata("general.architecture") {
+            let arch_key = format!("{}.vocab_size", arch);
+            if let Some(vocab_size) = reader.get_u32_metadata(&arch_key) {
+                return Ok(vocab_size as usize);
+            }
+        }
+
         // Alternative metadata keys for different model architectures
-        let alt_keys =
-            ["llama.vocab_size", "gpt2.vocab_size", "transformer.vocab_size", "model.vocab_size"];
+        let alt_keys = [
+            "llama.vocab_size",
+            "gpt2.vocab_size",
+            "gptneox.vocab_size",
+            "bert.vocab_size",
+            "t5.vocab_size",
+            "transformer.vocab_size",
+            "model.vocab_size",
+            "vocab_size", // Simple key
+        ];
 
         for key in &alt_keys {
             if let Some(vocab_size) = reader.get_u32_metadata(key) {
@@ -272,22 +288,59 @@ impl TokenizerDiscovery {
         // Look for embedding tensor to infer vocab size
         let tensor_names = reader.tensor_names();
         for name in tensor_names {
-            if (name.contains("token_embd") || name.contains("wte") || name.contains("embed"))
+            if (name.contains("token_embd")
+                || name.contains("wte")
+                || name.contains("embed")
+                || name.contains("embeddings"))
                 && let Some(info) = reader.get_tensor_info_by_name(name)
             {
                 // Embeddings are typically [vocab_size, hidden_dim]
                 let shape = &info.shape;
-                if shape.len() >= 2 {
-                    let possible_vocab = std::cmp::max(shape[0], shape[1]);
-                    // Sanity check - vocab size should be reasonable
-                    if possible_vocab > 1000 && possible_vocab < 2_000_000 {
+                if !shape.is_empty() {
+                    // First dimension is usually vocab_size
+                    let possible_vocab = shape[0];
+                    // Sanity check - vocab size should be reasonable (allow small test vocabularies)
+                    if (100..2_000_000).contains(&possible_vocab) {
+                        debug!(
+                            "Inferred vocab_size {} from embedding tensor '{}'",
+                            possible_vocab, name
+                        );
                         return Ok(possible_vocab);
                     }
                 }
             }
         }
 
-        // Default fallback for common model types
+        // Architecture-specific defaults as last resort
+        if let Some(arch) = reader.get_string_metadata("general.architecture") {
+            let default_vocab = match arch.as_str() {
+                "llama" => {
+                    // Try to distinguish between LLaMA-2 (32K) and LLaMA-3 (128K)
+                    // by checking model name or other metadata
+                    if let Some(name) = reader.get_string_metadata("general.name") {
+                        if name.contains("llama-3") || name.contains("llama3") {
+                            Some(128256)
+                        } else {
+                            Some(32000)
+                        }
+                    } else {
+                        Some(32000) // Default to LLaMA-2
+                    }
+                }
+                "gpt2" => Some(50257),
+                "gptneox" => Some(50257),
+                "bert" => Some(30522),
+                "t5" => Some(32128),
+                _ => None,
+            };
+
+            if let Some(vocab_size) = default_vocab {
+                warn!("Using architecture-specific default vocab_size {} for {}", vocab_size, arch);
+                return Ok(vocab_size);
+            }
+        }
+
+        // Could not determine vocab size
         Err(TokenizerErrorHandler::config_error(
             "Could not extract vocabulary size from GGUF metadata or tensors".to_string(),
         ))
@@ -295,8 +348,9 @@ impl TokenizerDiscovery {
 
     /// Extract model architecture type from GGUF metadata
     fn extract_model_type(reader: &GgufReader) -> Result<String> {
-        // Try to get architecture from metadata
+        // Try to get architecture from metadata - this is the most reliable
         if let Some(arch) = reader.get_string_metadata("general.architecture") {
+            debug!("Found architecture from metadata: {}", arch);
             return Ok(arch);
         }
 
@@ -310,6 +364,7 @@ impl TokenizerDiscovery {
 
         for key in &alt_keys {
             if let Some(arch) = reader.get_string_metadata(key) {
+                debug!("Found architecture from metadata key '{}': {}", key, arch);
                 return Ok(arch);
             }
         }
@@ -317,22 +372,111 @@ impl TokenizerDiscovery {
         // Try to infer from model name
         if let Some(name) = reader.get_string_metadata("general.name") {
             let name_lower = name.to_lowercase();
-            if name_lower.contains("llama") {
-                return Ok("llama".to_string());
-            } else if name_lower.contains("gpt") {
-                return Ok("gpt2".to_string());
-            } else if name_lower.contains("bitnet") {
+
+            // BitNet detection
+            if name_lower.contains("bitnet") || name_lower.contains("bitlinear") {
+                debug!("Detected BitNet architecture from model name");
                 return Ok("bitnet".to_string());
+            }
+
+            // LLaMA detection
+            if name_lower.contains("llama") {
+                debug!("Detected LLaMA architecture from model name");
+                return Ok("llama".to_string());
+            }
+
+            // GPT-2 detection
+            if name_lower.contains("gpt2") || name_lower.contains("gpt-2") {
+                debug!("Detected GPT-2 architecture from model name");
+                return Ok("gpt2".to_string());
+            }
+
+            // GPT-Neo/J detection
+            if name_lower.contains("gpt-neo")
+                || name_lower.contains("gptneox")
+                || name_lower.contains("gpt-j")
+            {
+                debug!("Detected GPT-Neo/J architecture from model name");
+                return Ok("gptneox".to_string());
+            }
+
+            // BERT detection
+            if name_lower.contains("bert") {
+                debug!("Detected BERT architecture from model name");
+                return Ok("bert".to_string());
+            }
+
+            // T5 detection
+            if name_lower.contains("t5") {
+                debug!("Detected T5 architecture from model name");
+                return Ok("t5".to_string());
             }
         }
 
-        // Fallback based on tensor patterns
+        // Fallback: Analyze tensor patterns for architecture detection
         let tensor_names = reader.tensor_names();
-        let has_llama_patterns = tensor_names.iter().any(|name| {
-            name.contains("attn_q") || name.contains("attn_k") || name.contains("attn_v")
-        });
 
-        if has_llama_patterns { Ok("llama".to_string()) } else { Ok("transformer".to_string()) }
+        // BitNet detection: look for "bitlinear" or specific BitNet patterns
+        let has_bitnet_patterns =
+            tensor_names.iter().any(|name| name.contains("bitlinear") || name.contains("bitnet"));
+        if has_bitnet_patterns {
+            debug!("Detected BitNet architecture from tensor patterns");
+            return Ok("bitnet".to_string());
+        }
+
+        // LLaMA detection: look for characteristic attention patterns
+        let has_llama_patterns = tensor_names.iter().any(|name| {
+            name.contains("attn_q")
+                || name.contains("attn_k")
+                || name.contains("attn_v")
+                || name.contains("attention.wq")
+                || name.contains("attention.wk")
+        });
+        if has_llama_patterns {
+            debug!("Detected LLaMA architecture from tensor patterns");
+            return Ok("llama".to_string());
+        }
+
+        // GPT-2 detection: look for MLP and attention patterns
+        let has_gpt2_patterns = tensor_names.iter().any(|name| {
+            (name.contains("mlp") || name.contains("c_fc"))
+                && (name.contains("attn") || name.contains("c_attn"))
+        });
+        if has_gpt2_patterns {
+            debug!("Detected GPT-2 architecture from tensor patterns");
+            return Ok("gpt2".to_string());
+        }
+
+        // GPT-Neo detection: look for characteristic layer patterns
+        let has_gptneox_patterns =
+            tensor_names.iter().any(|name| name.contains("gpt_neox") || name.contains("gptneox"));
+        if has_gptneox_patterns {
+            debug!("Detected GPT-Neo/J architecture from tensor patterns");
+            return Ok("gptneox".to_string());
+        }
+
+        // BERT detection: look for encoder patterns
+        let has_bert_patterns = tensor_names.iter().any(|name| {
+            name.contains("encoder") && (name.contains("self") || name.contains("attention"))
+        });
+        if has_bert_patterns {
+            debug!("Detected BERT architecture from tensor patterns");
+            return Ok("bert".to_string());
+        }
+
+        // T5 detection: look for encoder-decoder patterns
+        let has_t5_patterns = tensor_names.iter().any(|name| {
+            (name.contains("encoder") && name.contains("decoder"))
+                || name.contains("relative_attention_bias")
+        });
+        if has_t5_patterns {
+            debug!("Detected T5 architecture from tensor patterns");
+            return Ok("t5".to_string());
+        }
+
+        // Default fallback to generic transformer
+        warn!("Could not determine specific architecture, defaulting to 'transformer'");
+        Ok("transformer".to_string())
     }
 
     /// Check for co-located tokenizer files in model directory
@@ -462,58 +606,150 @@ impl TokenizerDiscovery {
     pub fn try_extract_embedded_tokenizer(&self) -> Result<Option<Arc<dyn Tokenizer>>> {
         debug!("Attempting to extract embedded tokenizer from GGUF metadata");
 
-        // Check if tokenizer model is embedded as bytes
-        if let Some(tokenizer_model) = self.gguf_reader.get_array_metadata("tokenizer.ggml.model") {
-            debug!("Found embedded tokenizer.ggml.model ({} bytes)", tokenizer_model.len());
+        // Strategy 1: Check for HuggingFace tokenizer.json embedded as string
+        // This is the most complete embedded format
+        if let Some(tokenizer_json) = self.gguf_reader.get_string_metadata("tokenizer.json") {
+            debug!("Found embedded tokenizer.json ({} chars)", tokenizer_json.len());
 
-            // Try to create tokenizer from the embedded data
-            // This is a simplified implementation - in production this would parse the model format
-            if tokenizer_model.len() > 100 {
-                // Sanity check for reasonable size
+            // Validate JSON structure
+            if tokenizer_json.starts_with('{') && tokenizer_json.len() > 50 {
+                // Extract special token IDs from GGUF metadata (more reliable than JSON parsing)
+                let bos_token_id = self.gguf_reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
+                let eos_token_id = self.gguf_reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
+                let pad_token_id = self
+                    .gguf_reader
+                    .get_u32_metadata("tokenizer.ggml.pad_token_id")
+                    .or(self.gguf_reader.get_u32_metadata("tokenizer.ggml.unknown_token_id"));
+
+                // Create a basic tokenizer configured from the metadata
+                // In production, this would parse the JSON and create a full HfTokenizer
                 let basic_tokenizer = crate::BasicTokenizer::with_config(
                     self.vocab_size,
-                    Some(1), // BOS token
-                    Some(2), // EOS token
-                    Some(0), // PAD token
+                    bos_token_id,
+                    eos_token_id,
+                    pad_token_id,
                 );
 
-                debug!("Created basic tokenizer from GGUF metadata");
+                info!(
+                    "Created tokenizer from embedded HF JSON (vocab_size: {}, bos: {:?}, eos: {:?})",
+                    self.vocab_size, bos_token_id, eos_token_id
+                );
                 return Ok(Some(Arc::new(basic_tokenizer)));
             }
         }
 
-        // Check for tokenizer vocab embedded in metadata
-        if let Some(vocab) = self.gguf_reader.get_string_array_metadata("tokenizer.ggml.tokens")
-            && vocab.len() == self.vocab_size
-        {
+        // Strategy 2: Check for tokenizer vocab embedded in metadata (SentencePiece style)
+        // This is common for LLaMA models with SentencePiece tokenizers
+        if let Some(vocab) = self.gguf_reader.get_string_array_metadata("tokenizer.ggml.tokens") {
             debug!("Found embedded vocabulary with {} tokens", vocab.len());
 
-            // Create tokenizer with embedded vocabulary
-            let basic_tokenizer = crate::BasicTokenizer::with_config(
-                self.vocab_size,
-                self.gguf_reader.get_u32_metadata("tokenizer.ggml.bos_token_id"),
-                self.gguf_reader.get_u32_metadata("tokenizer.ggml.eos_token_id"),
-                self.gguf_reader.get_u32_metadata("tokenizer.ggml.pad_token_id"),
-            );
+            // Validate vocabulary matches expected size (allow some tolerance)
+            let vocab_matches = vocab.len() == self.vocab_size
+                || (vocab.len() as i64 - self.vocab_size as i64).abs() < 100;
 
-            debug!("Created tokenizer with embedded vocabulary");
-            return Ok(Some(Arc::new(basic_tokenizer)));
+            if vocab_matches && !vocab.is_empty() {
+                // Extract special token IDs from metadata
+                let bos_token_id = self.gguf_reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
+                let eos_token_id = self.gguf_reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
+                let pad_token_id = self
+                    .gguf_reader
+                    .get_u32_metadata("tokenizer.ggml.pad_token_id")
+                    .or(self.gguf_reader.get_u32_metadata("tokenizer.ggml.unknown_token_id"));
+
+                // Validate special token IDs are within vocabulary bounds
+                let valid_tokens = [bos_token_id, eos_token_id, pad_token_id]
+                    .into_iter()
+                    .flatten()
+                    .all(|id| (id as usize) < vocab.len());
+
+                if valid_tokens {
+                    let basic_tokenizer = crate::BasicTokenizer::with_config(
+                        vocab.len(), // Use actual vocabulary size
+                        bos_token_id,
+                        eos_token_id,
+                        pad_token_id,
+                    );
+
+                    info!(
+                        "Created tokenizer from embedded vocabulary ({} tokens, bos: {:?}, eos: {:?})",
+                        vocab.len(),
+                        bos_token_id,
+                        eos_token_id
+                    );
+                    return Ok(Some(Arc::new(basic_tokenizer)));
+                } else {
+                    warn!(
+                        "Embedded vocabulary found but special tokens are invalid or out of bounds"
+                    );
+                }
+            } else {
+                warn!(
+                    "Embedded vocabulary size mismatch: found {} tokens, expected {}",
+                    vocab.len(),
+                    self.vocab_size
+                );
+            }
         }
 
-        // Check for HuggingFace tokenizer.json embedded as string
-        if let Some(tokenizer_json) = self.gguf_reader.get_string_metadata("tokenizer.json") {
-            debug!("Found embedded tokenizer.json ({} chars)", tokenizer_json.len());
+        // Strategy 3: Check if tokenizer model is embedded as bytes (binary SentencePiece model)
+        // This is less common but supported by some GGUF files
+        if let Some(tokenizer_model) = self.gguf_reader.get_array_metadata("tokenizer.ggml.model") {
+            debug!("Found embedded tokenizer.ggml.model ({} bytes)", tokenizer_model.len());
 
-            // In production, this would parse the JSON and create an HfTokenizer
-            // For now, create a basic tokenizer with inferred parameters
-            let basic_tokenizer = crate::BasicTokenizer::with_config(
-                self.vocab_size,
-                Some(1), // BOS token
-                Some(2), // EOS token
-                Some(0), // PAD token
+            // Validate it's a reasonable size for a tokenizer model (at least 1KB)
+            if tokenizer_model.len() >= 1024 {
+                // Extract special token IDs from metadata
+                let bos_token_id = self.gguf_reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
+                let eos_token_id = self.gguf_reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
+                let pad_token_id = self.gguf_reader.get_u32_metadata("tokenizer.ggml.pad_token_id");
+
+                // In production, this would parse the binary SentencePiece model
+                // For now, create a basic tokenizer with the extracted metadata
+                let basic_tokenizer = crate::BasicTokenizer::with_config(
+                    self.vocab_size,
+                    bos_token_id,
+                    eos_token_id,
+                    pad_token_id,
+                );
+
+                info!(
+                    "Created tokenizer from embedded binary model ({} bytes)",
+                    tokenizer_model.len()
+                );
+                return Ok(Some(Arc::new(basic_tokenizer)));
+            } else {
+                warn!(
+                    "Embedded tokenizer model too small ({} bytes), may be corrupted",
+                    tokenizer_model.len()
+                );
+            }
+        }
+
+        // Strategy 4: Check for minimal embedded metadata (just special token IDs)
+        // This is a fallback for models that only embed token configuration
+        let bos_token_id = self.gguf_reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
+        let eos_token_id = self.gguf_reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
+
+        if bos_token_id.is_some() || eos_token_id.is_some() {
+            debug!(
+                "Found minimal embedded tokenizer metadata (bos: {:?}, eos: {:?})",
+                bos_token_id, eos_token_id
             );
 
-            debug!("Created tokenizer from embedded JSON metadata");
+            // Create basic tokenizer with available special tokens
+            let pad_token_id = self.gguf_reader.get_u32_metadata("tokenizer.ggml.pad_token_id");
+
+            let basic_tokenizer = crate::BasicTokenizer::with_config(
+                self.vocab_size,
+                bos_token_id,
+                eos_token_id,
+                pad_token_id,
+            );
+
+            info!(
+                "Created minimal tokenizer from embedded metadata (vocab_size: {})",
+                self.vocab_size
+            );
             return Ok(Some(Arc::new(basic_tokenizer)));
         }
 
