@@ -423,7 +423,6 @@ pub async fn setup_debug_test_environment()
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::FixtureConfig;
     use crate::{BYTES_PER_KB, BYTES_PER_MB, TestError};
     use std::time::Duration;
     use tokio::time::timeout;
