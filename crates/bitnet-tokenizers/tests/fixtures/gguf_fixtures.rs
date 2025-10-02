@@ -50,26 +50,26 @@ pub fn generate_gguf_fixture(path: &Path, config: &GgufFixtureConfig) -> IoResul
     write_uint32_kv(&mut writer, &format!("{}.vocab_size", config.model_type), config.vocab_size)?;
 
     // Write embedded tokenizer metadata if present
-    if config.has_embedded_tokenizer {
-        if let Some(ref tokenizer_type) = config.tokenizer_type {
-            write_string_kv(&mut writer, "tokenizer.ggml.model", tokenizer_type)?;
+    if config.has_embedded_tokenizer
+        && let Some(ref tokenizer_type) = config.tokenizer_type
+    {
+        write_string_kv(&mut writer, "tokenizer.ggml.model", tokenizer_type)?;
 
-            // Write minimal tokenizer data based on type
-            if tokenizer_type == "hf" {
-                write_string_kv(
-                    &mut writer,
-                    "tokenizer.ggml.tokens",
-                    &vec!["<s>".to_string(), "</s>".to_string(), "<unk>".to_string()]
-                        .iter()
-                        .take(config.vocab_size.min(100) as usize)
-                        .map(|s| s.to_string())
-                        .collect::<Vec<_>>()
-                        .join("\n"),
-                )?;
-            } else if tokenizer_type == "spm" {
-                write_uint32_kv(&mut writer, "tokenizer.ggml.bos_token_id", 1)?;
-                write_uint32_kv(&mut writer, "tokenizer.ggml.eos_token_id", 2)?;
-            }
+        // Write minimal tokenizer data based on type
+        if tokenizer_type == "hf" {
+            write_string_kv(
+                &mut writer,
+                "tokenizer.ggml.tokens",
+                &["<s>".to_string(), "</s>".to_string(), "<unk>".to_string()]
+                    .iter()
+                    .take(config.vocab_size.min(100) as usize)
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            )?;
+        } else if tokenizer_type == "spm" {
+            write_uint32_kv(&mut writer, "tokenizer.ggml.bos_token_id", 1)?;
+            write_uint32_kv(&mut writer, "tokenizer.ggml.eos_token_id", 2)?;
         }
     }
 

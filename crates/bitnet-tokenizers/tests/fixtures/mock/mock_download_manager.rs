@@ -110,11 +110,13 @@ impl MockDownloadManager {
     }
 
     /// Set download delay simulation
+    #[allow(dead_code)]
     pub fn set_delay(&mut self, delay_ms: u64) {
         self.simulated_delay_ms = delay_ms;
     }
 
     /// Clear the cache
+    #[allow(dead_code)]
     pub fn clear_cache(&mut self) {
         self.cache.clear();
     }
@@ -131,6 +133,7 @@ impl Default for MockDownloadManager {
 pub enum MockDownloadError {
     NetworkError(String),
     IoError(String),
+    #[allow(dead_code)]
     InvalidRepo(String),
 }
 

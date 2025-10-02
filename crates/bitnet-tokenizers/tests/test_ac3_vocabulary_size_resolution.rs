@@ -190,7 +190,7 @@ fn ac3_vocab_size_sanity_checking() {
             if let Ok(discovery) = discovery_result {
                 let vocab_size = discovery.vocab_size();
                 assert!(
-                    vocab_size >= 1000 && vocab_size <= 2_000_000,
+                    (1000..=2_000_000).contains(&vocab_size),
                     "Vocabulary size {} should be within valid range",
                     vocab_size
                 );
@@ -318,10 +318,7 @@ fn ac3_mismatched_tensor_dimensions() {
                 println!("AC3: Mismatched dimensions resolved to: {}", vocab_size);
 
                 // Should handle gracefully with sanity checking
-                assert!(
-                    vocab_size >= 1000 && vocab_size <= 2_000_000,
-                    "Should apply sanity checks"
-                );
+                assert!((1000..=2_000_000).contains(&vocab_size), "Should apply sanity checks");
             }
             Err(e) => {
                 println!("AC3: Mismatched dimensions rejected (expected): {}", e);
@@ -352,7 +349,7 @@ fn ac3_vocab_size_boundary_conditions() {
 
     for (vocab_size, should_be_valid, description) in boundaries {
         // Sanity check logic
-        let is_valid = vocab_size >= 1000 && vocab_size <= 2_000_000;
+        let is_valid = (1000..=2_000_000).contains(&vocab_size);
 
         assert_eq!(
             is_valid, should_be_valid,
@@ -555,7 +552,7 @@ fn ac3_custom_architecture_vocab_defaults() {
 
         // Custom architectures should have reasonable defaults
         assert!(
-            vocab_size >= 1000 && vocab_size <= 2_000_000,
+            (1000..=2_000_000).contains(&vocab_size),
             "Custom architecture should have valid vocab size"
         );
     }

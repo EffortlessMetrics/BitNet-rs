@@ -19,7 +19,7 @@ use std::path::Path;
 /// Tests feature spec: issue-336-universal-tokenizer-discovery-spec.md#ac5-production-readiness
 // AC:ID AC5
 #[test]
-#[cfg_attr(not(feature = "crossval"), ignore)]
+#[ignore] // Requires C++ reference implementation and GGUF fixtures
 #[cfg(feature = "cpu")]
 fn ac5_crossval_cpp_reference_tokenization() {
     let test_path = Path::new("tests/fixtures/gguf/bitnet-b1.58-2B.gguf");
@@ -52,7 +52,7 @@ fn ac5_crossval_cpp_reference_tokenization() {
 /// Tests feature spec: issue-336-universal-tokenizer-discovery-spec.md#ac5-production-readiness
 // AC:ID AC5
 #[test]
-#[cfg_attr(not(feature = "crossval"), ignore)]
+#[ignore] // Requires C++ reference implementation and GGUF fixtures
 #[cfg(feature = "cpu")]
 fn ac5_crossval_tokenization_parity() {
     let long_text = "Very long text ".repeat(100);
@@ -91,7 +91,7 @@ fn ac5_crossval_tokenization_parity() {
 /// Tests feature spec: issue-336-universal-tokenizer-discovery-spec.md#ac5-production-readiness
 // AC:ID AC5
 #[test]
-#[cfg_attr(not(feature = "crossval"), ignore)]
+#[ignore] // Requires C++ reference implementation and GGUF fixtures
 #[cfg(feature = "cpu")]
 fn ac5_crossval_vocabulary_size_parity() {
     let test_models = [

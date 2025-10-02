@@ -235,18 +235,18 @@ async fn ac4_download_multiple_tokenizer_files() {
         expected_vocab: None,
     };
 
-    if let Ok(downloader) = SmartTokenizerDownload::new() {
-        if let Ok(tokenizer_path) = downloader.download_tokenizer(&download_info).await {
-            println!("AC4: Downloaded multiple files, primary: {}", tokenizer_path.display());
+    if let Ok(downloader) = SmartTokenizerDownload::new()
+        && let Ok(tokenizer_path) = downloader.download_tokenizer(&download_info).await
+    {
+        println!("AC4: Downloaded multiple files, primary: {}", tokenizer_path.display());
 
-            // Verify multiple files exist in cache
-            let cache_dir = tokenizer_path.parent().expect("Should have parent directory");
+        // Verify multiple files exist in cache
+        let cache_dir = tokenizer_path.parent().expect("Should have parent directory");
 
-            for file in &download_info.files {
-                let file_path = cache_dir.join(file);
-                if file_path.exists() {
-                    println!("AC4: Found downloaded file: {}", file);
-                }
+        for file in &download_info.files {
+            let file_path = cache_dir.join(file);
+            if file_path.exists() {
+                println!("AC4: Found downloaded file: {}", file);
             }
         }
     }
@@ -387,25 +387,25 @@ async fn ac4_download_with_vocab_validation() {
         expected_vocab: Some(32000),
     };
 
-    if let Ok(downloader) = SmartTokenizerDownload::new() {
-        if let Ok(tokenizer_path) = downloader.download_tokenizer(&download_info).await {
-            // Load downloaded tokenizer and verify vocabulary size
-            if let Ok(contents) = std::fs::read_to_string(&tokenizer_path) {
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&contents) {
-                    // Extract vocabulary size from JSON if available
-                    println!("AC4: Downloaded tokenizer JSON structure validated");
+    if let Ok(downloader) = SmartTokenizerDownload::new()
+        && let Ok(tokenizer_path) = downloader.download_tokenizer(&download_info).await
+    {
+        // Load downloaded tokenizer and verify vocabulary size
+        if let Ok(contents) = std::fs::read_to_string(&tokenizer_path)
+            && let Ok(json) = serde_json::from_str::<serde_json::Value>(&contents)
+        {
+            // Extract vocabulary size from JSON if available
+            println!("AC4: Downloaded tokenizer JSON structure validated");
 
-                    if let Some(vocab) = json.get("model").and_then(|m| m.get("vocab")) {
-                        let vocab_size = vocab.as_object().map(|o| o.len()).unwrap_or(0);
-                        println!("AC4: Extracted vocabulary size: {}", vocab_size);
+            if let Some(vocab) = json.get("model").and_then(|m| m.get("vocab")) {
+                let vocab_size = vocab.as_object().map(|o| o.len()).unwrap_or(0);
+                println!("AC4: Extracted vocabulary size: {}", vocab_size);
 
-                        if let Some(expected) = download_info.expected_vocab {
-                            assert_eq!(
-                                vocab_size, expected,
-                                "Downloaded tokenizer should match expected vocabulary size"
-                            );
-                        }
-                    }
+                if let Some(expected) = download_info.expected_vocab {
+                    assert_eq!(
+                        vocab_size, expected,
+                        "Downloaded tokenizer should match expected vocabulary size"
+                    );
                 }
             }
         }

@@ -20,8 +20,11 @@ pub struct MockGgufReader {
 #[derive(Debug, Clone)]
 pub enum MetadataValue {
     String(String),
+    #[allow(dead_code)]
     UInt32(u32),
+    #[allow(dead_code)]
     Float32(f32),
+    #[allow(dead_code)]
     Bool(bool),
 }
 
@@ -30,11 +33,13 @@ pub enum MetadataValue {
 pub struct MockTensor {
     pub name: String,
     pub shape: Vec<usize>,
+    #[allow(dead_code)]
     pub data_type: String,
 }
 
 impl MockGgufReader {
     /// Create a mock LLaMA-2 GGUF reader
+    #[allow(dead_code)]
     pub fn mock_llama2() -> Self {
         let mut metadata = HashMap::new();
         metadata
@@ -74,6 +79,7 @@ impl MockGgufReader {
     }
 
     /// Create a mock LLaMA-3 GGUF reader
+    #[allow(dead_code)]
     pub fn mock_llama3() -> Self {
         let mut metadata = HashMap::new();
         metadata
@@ -91,6 +97,7 @@ impl MockGgufReader {
     }
 
     /// Create a mock GPT-2 GGUF reader
+    #[allow(dead_code)]
     pub fn mock_gpt2() -> Self {
         let mut metadata = HashMap::new();
         metadata
@@ -108,6 +115,7 @@ impl MockGgufReader {
     }
 
     /// Create a mock BitNet GGUF reader
+    #[allow(dead_code)]
     pub fn mock_bitnet() -> Self {
         let mut metadata = HashMap::new();
         metadata.insert(

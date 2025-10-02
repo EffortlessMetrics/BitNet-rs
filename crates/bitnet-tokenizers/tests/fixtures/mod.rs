@@ -20,6 +20,7 @@ pub fn fixture_path(relative_path: &str) -> PathBuf {
 }
 
 /// Check if a fixture exists
+#[allow(dead_code)]
 pub fn fixture_exists(relative_path: &str) -> bool {
     fixture_path(relative_path).exists()
 }
