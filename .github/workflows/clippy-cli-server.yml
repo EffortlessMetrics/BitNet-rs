@@ -64,7 +64,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      - run: cargo test -p bitnet-server --all-targets
+      - run: cargo test -p bitnet-server --all-targets --no-default-features --features cpu
 
   test-server-degraded-ok:
     runs-on: ubuntu-latest
@@ -81,4 +81,4 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      - run: cargo test -p bitnet-server --all-targets --features degraded-ok
+      - run: cargo test -p bitnet-server --all-targets --no-default-features --features cpu,degraded-ok

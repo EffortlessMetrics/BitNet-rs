@@ -406,11 +406,19 @@ mod tests {
             Some(ModelQuantizationType::I2S),
             Some(100), // 100MB limit
         );
-        assert!(cpu_model.is_some());
 
-        let model = cpu_model.unwrap();
-        assert_eq!(model.quantization_type, ModelQuantizationType::I2S);
-        assert!(model.model_size_bytes <= 100 * 1024 * 1024);
+        #[cfg(any(feature = "cpu", feature = "gpu"))]
+        {
+            assert!(cpu_model.is_some(), "Model selection should work with enabled features");
+            let model = cpu_model.unwrap();
+            assert_eq!(model.quantization_type, ModelQuantizationType::I2S);
+            assert!(model.model_size_bytes <= 100 * 1024 * 1024);
+        }
+
+        #[cfg(not(any(feature = "cpu", feature = "gpu")))]
+        {
+            assert!(cpu_model.is_none(), "Model selection should return None without features");
+        }
     }
 
     #[test]
