@@ -334,8 +334,8 @@ if binary_model.len() < 1024 {
 ## Next Steps
 
 - [Automatic Tokenizer Discovery](automatic-tokenizer-discovery.md) - Full automatic discovery
-- [Configure Fallback Strategies](configure-fallback-strategies.md) - Custom fallback chains
-- [Detect Model Architecture](detect-model-architecture.md) - Architecture detection guide
+- [Troubleshoot Tokenizer Discovery](tokenizer-discovery-troubleshooting.md) - Custom fallback chains and error handling
+- [Tokenizer Architecture](../tokenizer-architecture.md) - Architecture detection and design principles
 
 ---
 

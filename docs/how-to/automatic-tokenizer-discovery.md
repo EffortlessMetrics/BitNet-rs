@@ -210,8 +210,8 @@ cp tokenizer.json ~/.cache/bitnet/llama/32000/
 ## Next Steps
 
 - [Extract Embedded Tokenizers](extract-embedded-tokenizers.md) - Manual extraction guide
-- [Configure Fallback Strategies](configure-fallback-strategies.md) - Advanced fallback configuration
-- [Use Offline Mode](use-offline-mode.md) - Air-gapped deployment guide
+- [Troubleshoot Tokenizer Discovery](tokenizer-discovery-troubleshooting.md) - Advanced fallback configuration and error handling
+- [Environment Variables](../environment-variables.md) - Offline mode and strict configuration
 
 ---
 
