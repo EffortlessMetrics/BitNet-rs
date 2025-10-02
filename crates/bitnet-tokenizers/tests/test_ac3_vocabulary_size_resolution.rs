@@ -5,7 +5,10 @@
 //! This test suite validates vocabulary size extraction from GGUF metadata, embedding tensors,
 //! and architecture-specific defaults with proper fallback strategies.
 
+// Imports will be used once implementation is complete
+#[allow(unused_imports)]
 use bitnet_tokenizers::TokenizerDiscovery;
+#[allow(unused_imports)]
 use std::path::Path;
 
 // ================================

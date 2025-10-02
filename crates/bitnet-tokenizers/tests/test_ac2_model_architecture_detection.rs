@@ -5,7 +5,10 @@
 //! This test suite validates model architecture detection from GGUF tensor patterns,
 //! including BitNet, LLaMA, GPT-2, GPT-Neo, BERT, and T5 architectures with confidence scoring.
 
+// Imports will be used once implementation is complete
+#[allow(unused_imports)]
 use bitnet_tokenizers::TokenizerDiscovery;
+#[allow(unused_imports)]
 use std::path::Path;
 
 // ================================

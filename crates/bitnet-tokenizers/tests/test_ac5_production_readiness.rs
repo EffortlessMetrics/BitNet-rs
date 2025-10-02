@@ -5,7 +5,10 @@
 //! This test suite validates production readiness including cross-validation with Microsoft BitNet C++ reference,
 //! GGUF model compatibility, performance benchmarks, and comprehensive documentation.
 
+// Imports will be used once implementation is complete
+#[allow(unused_imports)]
 use bitnet_tokenizers::TokenizerDiscovery;
+#[allow(unused_imports)]
 use std::path::Path;
 
 // ================================

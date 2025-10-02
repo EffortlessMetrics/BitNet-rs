@@ -5,8 +5,12 @@
 //! This test suite validates embedded tokenizer extraction from GGUF metadata,
 //! including HuggingFace JSON tokenizers, SentencePiece models, and fallback behavior.
 
+// Imports will be used once implementation is complete
+#[allow(unused_imports)]
 use bitnet_tokenizers::{Tokenizer, TokenizerDiscovery};
+#[allow(unused_imports)]
 use std::path::Path;
+#[allow(unused_imports)]
 use std::sync::Arc;
 
 // ================================
