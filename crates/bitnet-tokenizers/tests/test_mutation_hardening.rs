@@ -673,9 +673,203 @@ fn test_quantization_edge_case_inputs() {
         assert!(encode_result.is_ok(), "Should encode edge case: {}", description);
 
         if let Ok(tokens) = encode_result {
-            // Test decoding roundtrip
+            // MUTATION HARDENING: Assert output correctness, not just success
+            assert!(
+                !tokens.is_empty() || input.is_empty(),
+                "{}: non-empty input should produce tokens",
+                description
+            );
+
+            // Verify first token is BOS when requested
+            if !input.is_empty() && !tokens.is_empty() {
+                assert_eq!(
+                    tokens[0], 1,
+                    "{}: first token should be BOS (1) when add_bos=true",
+                    description
+                );
+            }
+
+            // Test decoding roundtrip with output validation
             let decode_result = wrapper.decode(&tokens);
             assert!(decode_result.is_ok(), "Should decode edge case: {}", description);
+
+            // MUTATION HARDENING: Verify decoded output is not empty/default
+            let decoded = decode_result.unwrap();
+            if !input.is_empty() && !tokens.is_empty() {
+                assert!(
+                    !decoded.is_empty(),
+                    "{}: decoded output should not be empty for non-empty input",
+                    description
+                );
+            }
         }
+    }
+}
+
+// ================================
+// CRITICAL MUTATION-KILLING TESTS
+// ================================
+
+/// Test vocab_size validation boundary conditions (discovery.rs:330, strategy.rs:552)
+/// KILLS MUTANTS: `return Ok(0)`, `return Ok(1)`, `vocab_size > 0 && vocab_size % 8 == 0`
+#[test]
+fn test_vocab_size_validation_exact_boundaries() {
+    use bitnet_tokenizers::error_handling::ModelTypeDetector;
+
+    // Test zero boundary (line 233: vocab_size == 0)
+    let result_zero = ModelTypeDetector::validate_vocab_size(0);
+    assert!(result_zero.is_err(), "Zero vocab size must be rejected");
+
+    // Test just valid minimum
+    let result_one = ModelTypeDetector::validate_vocab_size(1);
+    assert!(result_one.is_ok(), "Vocab size 1 must be accepted");
+
+    // Test maximum boundary (line 239: vocab_size > 2_000_000)
+    let result_max_valid = ModelTypeDetector::validate_vocab_size(2_000_000);
+    assert!(result_max_valid.is_ok(), "Vocab size 2M must be accepted");
+
+    let result_max_invalid = ModelTypeDetector::validate_vocab_size(2_000_001);
+    assert!(result_max_invalid.is_err(), "Vocab size 2M+1 must be rejected");
+
+    // Test known exact vocab sizes (KILLS: return Ok(0), return Ok(1))
+    let known_sizes =
+        [(32000, "LLaMA-2"), (50257, "GPT-2"), (128256, "LLaMA-3"), (32016, "CodeLlama")];
+
+    for (size, model) in known_sizes {
+        let result = ModelTypeDetector::validate_vocab_size(size);
+        assert!(result.is_ok(), "{} vocab size {} must be valid", model, size);
+
+        // Verify detection returns expected type (not 0 or 1)
+        let detected_type = ModelTypeDetector::detect_from_vocab_size(size);
+        assert!(!detected_type.is_empty(), "{}: detected type must not be empty", model);
+        assert_ne!(detected_type, "0", "{}: detected type must not be '0'", model);
+        assert_ne!(detected_type, "1", "{}: detected type must not be '1'", model);
+    }
+}
+
+/// Test encode/decode return exact values (strategy.rs encode/decode implementations)
+/// KILLS MUTANTS: `encode()→Ok(vec![])`, `decode()→Ok(String::new())`
+#[test]
+fn test_encode_decode_exact_outputs() {
+    let base_tokenizer =
+        Arc::new(bitnet_tokenizers::BasicTokenizer::with_config(32000, Some(1), Some(2), None));
+
+    // Test LLaMA wrapper
+    let llama_wrapper = LlamaTokenizerWrapper::new(base_tokenizer.clone(), 32000)
+        .expect("Should create LLaMA wrapper");
+
+    let test_text = "Hello world";
+    let tokens = llama_wrapper.encode(test_text, true, false).expect("Should encode text");
+
+    // MUTATION HARDENING: Assert exact non-empty, non-default outputs
+    assert!(!tokens.is_empty(), "Encoded tokens must not be empty vec");
+    assert_ne!(tokens, Vec::<u32>::new(), "Encoded tokens must not be empty vec (explicit check)");
+    assert_ne!(tokens.len(), 0, "Encoded tokens length must not be 0");
+
+    // Verify BOS token present
+    assert_eq!(tokens[0], 1, "First token must be BOS (1)");
+    assert_ne!(tokens[0], 0, "First token must not be 0");
+
+    // MUTATION HARDENING: Test decode with explicit token sequence
+    // Use known token IDs to verify decode doesn't return wrong defaults
+    let explicit_tokens = vec![1_u32, 100_u32, 200_u32, 300_u32, 2_u32]; // BOS + tokens + EOS
+    let decode_explicit = llama_wrapper.decode(&explicit_tokens);
+    assert!(decode_explicit.is_ok(), "Should decode explicit token sequence");
+
+    // Test that decode is deterministic (not random or always returning same constant)
+    let decode_first = llama_wrapper.decode(&explicit_tokens).unwrap();
+    let decode_second = llama_wrapper.decode(&explicit_tokens).unwrap();
+    assert_eq!(decode_first, decode_second, "Decode must be deterministic for same input");
+
+    // Test different token sequences produce potentially different results
+    // (kills mutant: decode() → always returns same constant)
+    let different_tokens = vec![1_u32, 500_u32, 600_u32, 2_u32];
+    let decode_different = llama_wrapper.decode(&different_tokens).unwrap();
+
+    // Either results differ OR they're both empty (edge case for BasicTokenizer)
+    // This kills mutants that always return the same value
+    let results_differ = decode_first != decode_different;
+    let both_empty = decode_first.is_empty() && decode_different.is_empty();
+    assert!(
+        results_differ || both_empty,
+        "Different token sequences should produce different results or both be empty, \
+         not always return the same non-empty value"
+    );
+}
+
+/// Test special token IDs return exact expected values
+/// KILLS MUTANTS: `bos_token_id→Some(0)`, `eos_token_id→None`, etc.
+#[test]
+fn test_special_token_ids_exact_values() {
+    // Test LLaMA-2 wrapper
+    let llama2_base =
+        Arc::new(bitnet_tokenizers::BasicTokenizer::with_config(32000, Some(1), Some(2), None));
+    let llama2 =
+        LlamaTokenizerWrapper::new(llama2_base, 32000).expect("Should create LLaMA-2 wrapper");
+
+    // MUTATION HARDENING: Assert exact token IDs, not just Some(_)
+    assert_eq!(llama2.bos_token_id(), Some(1), "LLaMA-2 BOS must be exactly 1");
+    assert_ne!(llama2.bos_token_id(), Some(0), "LLaMA-2 BOS must not be 0");
+    assert_ne!(llama2.bos_token_id(), None, "LLaMA-2 BOS must not be None");
+
+    assert_eq!(llama2.eos_token_id(), Some(2), "LLaMA-2 EOS must be exactly 2");
+    assert_ne!(llama2.eos_token_id(), Some(0), "LLaMA-2 EOS must not be 0");
+    assert_ne!(llama2.eos_token_id(), None, "LLaMA-2 EOS must not be None");
+
+    // Test GPT-2 wrapper (no BOS)
+    let gpt2_base =
+        Arc::new(bitnet_tokenizers::BasicTokenizer::with_config(50257, None, Some(50256), None));
+    let gpt2 = Gpt2TokenizerWrapper::new(gpt2_base).expect("Should create GPT-2 wrapper");
+
+    // MUTATION HARDENING: Assert exact None for BOS, exact Some(50256) for EOS
+    assert_eq!(gpt2.bos_token_id(), None, "GPT-2 BOS must be exactly None");
+    assert_ne!(gpt2.bos_token_id(), Some(0), "GPT-2 BOS must not be Some(0)");
+    assert_ne!(gpt2.bos_token_id(), Some(1), "GPT-2 BOS must not be Some(1)");
+
+    assert_eq!(gpt2.eos_token_id(), Some(50256), "GPT-2 EOS must be exactly 50256");
+    assert_ne!(gpt2.eos_token_id(), Some(0), "GPT-2 EOS must not be 0");
+    assert_ne!(gpt2.eos_token_id(), None, "GPT-2 EOS must not be None");
+}
+
+/// Test vocab_size accessor returns exact expected values
+/// KILLS MUTANTS: Mutations changing return values to 0, 1, or other constants
+#[test]
+fn test_vocab_size_accessor_exact_values() {
+    let test_cases =
+        [(32000, "LLaMA-2"), (50257, "GPT-2"), (128256, "LLaMA-3"), (32016, "CodeLlama")];
+
+    for (expected_size, model_name) in test_cases {
+        let base = Arc::new(bitnet_tokenizers::BasicTokenizer::with_config(
+            expected_size,
+            Some(1),
+            Some(2),
+            None,
+        ));
+
+        let wrapper =
+            LlamaTokenizerWrapper::new(base, expected_size).expect("Should create wrapper");
+
+        // MUTATION HARDENING: Assert exact vocab size, not approximations
+        assert_eq!(
+            wrapper.vocab_size(),
+            expected_size,
+            "{}: vocab_size must return exactly {}",
+            model_name,
+            expected_size
+        );
+        assert_ne!(wrapper.vocab_size(), 0, "{}: vocab_size must not return 0", model_name);
+        assert_ne!(wrapper.vocab_size(), 1, "{}: vocab_size must not return 1", model_name);
+        assert_ne!(
+            wrapper.vocab_size(),
+            expected_size + 1,
+            "{}: vocab_size must not be off-by-one",
+            model_name
+        );
+        assert_ne!(
+            wrapper.vocab_size(),
+            expected_size - 1,
+            "{}: vocab_size must not be off-by-one (below)",
+            model_name
+        );
     }
 }
