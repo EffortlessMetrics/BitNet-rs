@@ -468,11 +468,137 @@ All API endpoints return standardized error responses:
 - `500 Internal Server Error`: Unexpected server error
 - `503 Service Unavailable`: Server temporarily unavailable
 
+## Real Neural Network Inference (Issue #254)
+
+BitNet.rs implements production-quality neural network inference with real quantized computation, replacing all mock implementations.
+
+### Inference Modes
+
+#### Real Inference (Production)
+
+**compute_path="real"** - Uses actual quantized GEMV operations with trained model weights:
+
+- **Quantized Linear Layers**: I2_S/TL1/TL2 GEMV without FP32 staging in hot path
+- **Real Attention**: Q/K/V/O projections with RoPE positional embeddings, GQA, and causal masking
+- **Autoregressive Generation**: Deterministic token generation with seeded sampling
+- **KV-Cache**: Efficient prefill + decode with cache parity validation
+- **Receipt Artifacts**: Generates `ci/inference.json` with verifiable performance metrics
+
+#### Receipt Validation API
+
+Validate inference receipts to ensure real computation paths:
+
+```rust
+use std::path::Path;
+use serde_json::Value;
+
+/// Validate inference receipt artifact
+pub fn validate_inference_receipt(receipt_path: &Path) -> Result<(), String> {
+    let receipt: Value = serde_json::from_str(&std::fs::read_to_string(receipt_path)?)?;
+
+    // AC9: Strict validation rules
+    let compute_path = receipt["compute_path"].as_str()
+        .ok_or("Missing compute_path")?;
+
+    if compute_path != "real" {
+        return Err(format!("Invalid compute_path: '{}' (expected 'real')", compute_path));
+    }
+
+    let kernels = receipt["kernels"].as_array()
+        .ok_or("Missing kernels array")?;
+
+    for kernel in kernels {
+        let kernel_name = kernel.as_str().ok_or("Invalid kernel name")?;
+        if kernel_name.to_lowercase().contains("mock") {
+            return Err(format!("Mock kernel detected: '{}'", kernel_name));
+        }
+    }
+
+    Ok(())
+}
+
+// Example usage in CI/CD
+assert!(validate_inference_receipt(Path::new("ci/inference.json")).is_ok());
+```
+
+### Deterministic Inference
+
+Enable reproducible generation for testing and validation:
+
+```rust
+use bitnet::{BitNetModel, GenerationConfig};
+
+// Set environment variables for determinism
+std::env::set_var("BITNET_DETERMINISTIC", "1");
+std::env::set_var("BITNET_SEED", "42");
+std::env::set_var("RAYON_NUM_THREADS", "1");
+
+let config = GenerationConfig {
+    seed: Some(42),
+    max_new_tokens: 50,
+    ..Default::default()
+};
+
+let model = BitNetModel::from_file("model.gguf").await?;
+
+// Two runs produce identical token sequences (AC6)
+let tokens1 = model.generate("Test", &config).await?.token_ids;
+let tokens2 = model.generate("Test", &config).await?.token_ids;
+
+assert_eq!(tokens1, tokens2); // Deterministic generation
+```
+
+### Quantization Accuracy Guarantees
+
+All quantization kernels meet strict accuracy envelopes (AC5):
+
+| Quantization | Accuracy (MSE vs FP32) | Use Case |
+|-------------|----------------------|----------|
+| **I2_S** | ≤ 1e-5 | Production (default) |
+| **TL1** | ≤ 1e-4 | ARM NEON optimized |
+| **TL2** | ≤ 1e-4 | x86 AVX optimized |
+
+Validate accuracy with built-in tests:
+
+```bash
+# I2S accuracy validation
+cargo test --no-default-features --features cpu test_i2s_kernel_accuracy_envelope
+
+# TL1 accuracy validation
+cargo test --no-default-features --features cpu test_tl1_kernel_accuracy_envelope
+
+# TL2 accuracy validation
+cargo test --no-default-features --features cpu test_tl2_kernel_accuracy_envelope
+```
+
+### Performance Metrics with Receipts
+
+All performance claims must be backed by receipt artifacts:
+
+```rust
+use bitnet::{BitNetModel, GenerationConfig};
+
+let model = BitNetModel::from_file("model.gguf").await?;
+let config = GenerationConfig::default();
+
+let response = model.generate("Prompt", &config).await?;
+
+// Access validated performance metrics
+if let Some(metrics) = response.metrics {
+    println!("Tokens/sec: {}", metrics.tokens_per_second);
+    println!("Latency: {}ms", metrics.total_latency_ms);
+    println!("Backend: {}", metrics.backend_type);
+}
+
+// Receipt artifact automatically generated at ci/inference.json
+// Verify with: cat ci/inference.json | jq '.compute_path'
+```
+
 ## Core Types
 
 ### BitNetModel
 
-The main model interface for loading and running BitNet models with production-ready GGUF weight loading.
+The main model interface for loading and running BitNet models with production-ready GGUF weight loading and real neural network inference.
 
 ```rust
 pub struct BitNetModel {
@@ -513,12 +639,49 @@ impl BitNetModel {
         config: &ModelConfig,
     ) -> Result<Self, BitNetError>;
 
-    /// Generate text using real neural network inference (not mock)
+    /// Generate text using real neural network inference (Issue #254)
     ///
-    /// Performs meaningful generation with actual trained parameters:
-    /// - Uses real GGUF model weights for inference
-    /// - Supports I2_S, TL1, TL2 quantization with device-aware acceleration
-    /// - Returns performance metrics when enabled
+    /// Performs production-quality generation with real quantized computation:
+    /// - **Real GGUF Weights**: Loaded from trained transformer models
+    /// - **Quantized GEMV**: I2_S/TL1/TL2 kernels without FP32 staging (AC1)
+    /// - **Real Attention**: Q/K/V/O projections with RoPE + GQA + causal mask (AC2)
+    /// - **Deterministic**: Seeded generation with BITNET_DETERMINISTIC=1 (AC3)
+    /// - **Receipt Generation**: Creates ci/inference.json with compute_path="real" (AC4)
+    /// - **Accuracy Validated**: I2S ≤ 1e-5 MSE, TL1/TL2 ≤ 1e-4 MSE vs FP32 (AC5)
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use bitnet::{BitNetModel, GenerationConfig};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// // Load real GGUF model with I2S quantization
+    /// let model = BitNetModel::from_file("model.gguf").await?;
+    ///
+    /// // Deterministic generation configuration
+    /// std::env::set_var("BITNET_DETERMINISTIC", "1");
+    /// std::env::set_var("BITNET_SEED", "42");
+    /// std::env::set_var("RAYON_NUM_THREADS", "1");
+    ///
+    /// let config = GenerationConfig {
+    ///     max_new_tokens: 50,
+    ///     temperature: 0.8,
+    ///     seed: Some(42),
+    ///     ..Default::default()
+    /// };
+    ///
+    /// // Real neural network inference (no mock)
+    /// let response = model.generate("The future of AI is", &config).await?;
+    ///
+    /// // Verify real inference path
+    /// assert_eq!(response.metadata.quantization, QuantizationType::I2S);
+    /// assert!(response.metrics.is_some());
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Returns
+    /// * `GenerationResponse` with generated text, token IDs, and performance metrics
+    /// * Receipt artifact generated at `ci/inference.json` with compute_path="real"
     pub async fn generate(
         &self,
         prompt: &str,

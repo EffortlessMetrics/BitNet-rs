@@ -12,8 +12,10 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-models`**: **Enhanced model loading with real GGUF weight parsing** - replaces mock tensor initialization with comprehensive transformer layer weight loading (AC1), supporting all quantization formats with device-aware placement
 - **`bitnet-quantization`**: Real quantized computation with I2S (≥99.8%), TL1/TL2 (≥99.6%) accuracy validation vs FP32 baselines - **STRICT MODE ENFORCED** to prevent mock fallbacks
 - **`bitnet-kernels`**: **Device-aware quantization kernels** with SIMD/CUDA acceleration, mixed precision support (FP16/BF16), automatic CPU/GPU selection, FFI bridge for C++ cross-validation, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
-- **`bitnet-inference`**: **Mock-free inference engine** with autoregressive generation, multi-head attention, real quantized linear layers (QLinear), KV-cache optimization, streaming support, and authentic GGUF model integration - **STRICT MODE prevents all mock fallbacks**
+- **`bitnet-inference`**: **Real neural network inference engine** ([Issue #254](explanation/issue-254-real-inference-spec.md)) with autoregressive generation, multi-head attention, quantized linear layers (I2S/TL1/TL2 GEMV), RoPE positional embeddings, GQA support, KV-cache optimization, deterministic generation, and receipt-backed performance validation - **compute_path="real"** enforced
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration, automatic discovery, and graceful fallback system
+
+**See also**: [Issue #254 Real Inference Specification](explanation/issue-254-real-inference-spec.md) for comprehensive real inference architecture
 
 ### Application Layer
 - **`bitnet-server`**: **Production HTTP/REST inference server** providing scalable inference endpoints with batch processing, model hot-swapping capabilities, comprehensive health monitoring (liveness/readiness/startup probes), real-time system metrics collection (CPU, memory, disk, network I/O), Prometheus metrics integration, OpenTelemetry observability, streaming inference support, and deployment-ready configurations for Docker and Kubernetes environments
