@@ -244,15 +244,16 @@ impl OptimizedMemoryPool {
 
         for (ptr, info) in &self.allocated_buffers {
             if now.duration_since(info.timestamp) > Duration::from_secs(3600) {
-                let mut msg = format!(
+                let msg = format!(
                     "Device {}: potential leak: {} bytes at {:p}",
                     self.device_id, info.size, ptr
                 );
                 #[cfg(debug_assertions)]
                 {
-                    msg.push_str("\nStack trace:\n");
-                    msg.push_str(&info.stack_trace.to_string());
+                    let msg = format!("{}\nStack trace:\n{}", msg, info.stack_trace);
+                    leaks.push(msg);
                 }
+                #[cfg(not(debug_assertions))]
                 leaks.push(msg);
             }
         }

@@ -19,7 +19,8 @@ use tracing::{debug, info, warn};
 pub struct TokenizerStrategyResolver {
     discovery: TokenizerDiscovery,
     downloader: SmartTokenizerDownload,
-    _fallback_chain: TokenizerFallbackChain,
+    #[allow(dead_code)] // Reserved for future fallback chain integration
+    fallback_chain: TokenizerFallbackChain,
 }
 
 impl TokenizerStrategyResolver {
@@ -32,7 +33,7 @@ impl TokenizerStrategyResolver {
         let downloader = SmartTokenizerDownload::new()?;
         let fallback_chain = TokenizerFallbackChain::new();
 
-        Ok(Self { discovery, downloader, _fallback_chain: fallback_chain })
+        Ok(Self { discovery, downloader, fallback_chain })
     }
 
     /// Resolve tokenizer strategy to concrete tokenizer implementation

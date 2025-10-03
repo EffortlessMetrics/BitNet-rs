@@ -95,11 +95,15 @@ async fn main() -> Result<()> {
 - Cross-validation against Microsoft BitNet C++ reference (<5% performance variance)
 - SIMD acceleration (AVX2/AVX-512/NEON) for CPU inference
 
-### Universal Tokenizer
+### Universal Tokenizer Discovery
 
-- Auto-detection from GGUF metadata
-- BPE, SentencePiece, and custom format support
-- O(1) byte lookup performance
+- **Automatic Detection**: Extracts tokenizers from GGUF metadata (HuggingFace JSON, SentencePiece, vocabulary arrays)
+- **Architecture Recognition**: Identifies BitNet, LLaMA-2/3, GPT-2, GPT-Neo, BERT, T5 from tensor patterns
+- **Smart Fallbacks**: Co-located files → cache → HuggingFace Hub download → offline mode
+- **Model-Specific Wrappers**: LLaMA (32K/128K variants), GPT-2 (no BOS), BitNet (quantization-aware)
+- **Production Mode**: `BITNET_STRICT_TOKENIZERS=1` prevents mock fallbacks
+- **Vocabulary Resolution**: 5-strategy extraction from metadata, tensors, or architecture defaults
+- **O(1) Performance**: Memory-mapped GGUF parsing, zero-copy tokenizer extraction
 
 ## Architecture
 
@@ -107,10 +111,10 @@ BitNet.rs is organized as a Rust workspace:
 
 - **`bitnet`**: Main library with unified API
 - **`bitnet-inference`**: Autoregressive generation engine
-- **`bitnet-quantization`**: 1-bit quantization algorithms
+- **`bitnet-quantization`**: 1-bit quantization algorithms (I2_S, TL1, TL2)
 - **`bitnet-kernels`**: SIMD/CUDA compute kernels
-- **`bitnet-models`**: GGUF/SafeTensors model loading
-- **`bitnet-tokenizers`**: Universal tokenizer system
+- **`bitnet-models`**: GGUF/SafeTensors model loading with zero-copy memory mapping
+- **`bitnet-tokenizers`**: Universal tokenizer discovery with automatic GGUF extraction
 
 ## Documentation
 
@@ -122,6 +126,7 @@ BitNet.rs is organized as a Rust workspace:
 
 ### Key Guides
 
+- [Tokenizer Discovery](docs/reference/tokenizer-discovery-api.md) - Automatic tokenizer resolution
 - [GPU Setup](docs/GPU_SETUP.md) - CUDA configuration
 - [Performance](docs/performance-benchmarking.md) - Optimization and benchmarking
 - [Migration](docs/migration-guide.md) - From C++/Python implementations
