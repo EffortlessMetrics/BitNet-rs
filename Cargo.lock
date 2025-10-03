@@ -546,6 +546,7 @@ dependencies = [
  "bitnet-tokenizers",
  "candle-core",
  "candle-nn",
+ "chrono",
  "futures",
  "futures-util",
  "gloo-timers",
