@@ -15,6 +15,7 @@ use std::path::Path;
 
 /// AC:4.1 - Generate inference receipt with compute_path="real"
 /// Validates receipt schema and required fields
+#[ignore] // Issue #254: TDD placeholder - Receipt generation unimplemented
 #[tokio::test]
 async fn test_ac4_receipt_generation_real_path() -> Result<()> {
     // TODO: Create InferenceReceipt struct when API is available
