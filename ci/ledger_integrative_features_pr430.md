@@ -14,6 +14,7 @@
 |------|--------|----------|
 | integrative:gate:features | pass | matrix: 4/4 ok (cpu/gpu/cpu+spm/gpu+spm); quantization: 41/41 lib tests pass; tokenizers: 18/18 pass; gguf: 94/94 lib tests pass; clippy: 0 warnings; time: 1.2min |
 | integrative:gate:mutation | action_required | scope: 563 mutants (bitnet-tokenizers); timeout: 37min est. > 15min limit; hardening: test_mutation_hardening.rs (196 lines, af1708b); tests: 220/220 pass; recommendation: policy-based skip (tokenizer=non-neural-core) OR manual sampling |
+| integrative:gate:policy | pass | clippy: 4/4 violations resolved (unused import, bool simplification, assert constant, vec init); tests: 29/29 mutation_killer_tests pass; workspace: -D warnings clean; commit: a48c467 |
 
 <!-- gates:end -->
 
@@ -226,6 +227,60 @@
 **Why:** Mutation testing gate requires policy decision: 563 mutants in bitnet-tokenizers (utility layer) with 37min estimated runtime exceeds 15min timeout limit. Test suite: 220/220 pass (100%). Mutation hardening committed (test_mutation_hardening.rs, 196 lines). Classification: tokenizers = non-neural-network core (input preprocessing vs quantization/inference compute). Options: (1) policy-based skip for utility layer, (2) manual sampling (50 mutants, 3-5min), or (3) extended timeout (not recommended).
 **Next:** USER DECISION REQUIRED → Policy skip approval OR manual sampling request → Then: integrative-test-runner (T3)
 <!-- decision:end -->
+
+<!-- policy:start -->
+## Policy Gate Results (integrative:gate:policy)
+
+**SHA**: a48c4673780071002bd65ff1a280b3cfd91ba19c
+**Timestamp**: 2025-10-03 T5.5 Execution
+**Agent**: policy-fixer
+**Status**: ✅ PASS
+
+### Violations Resolved
+
+**Clippy Violations in bitnet-tokenizers** (4 mechanical fixes applied):
+
+1. ✅ **Unused Import** (`discovery.rs:758`):
+   - **Issue**: `use crate::error_handling::ModelTypeDetector` not feature-gated
+   - **Fix**: Removed and re-added with `#[cfg(feature = "cpu")]` feature gate
+   - **Evidence**: Import now properly scoped to cpu feature tests
+
+2. ✅ **Boolean Expression Simplification** (`mutation_killer_tests.rs:418`):
+   - **Issue**: `!(!byte_buf.is_empty())` double negation pattern
+   - **Fix**: Simplified to `byte_buf.is_empty()`
+   - **Evidence**: Clippy nonminimal_bool violation resolved
+
+3. ✅ **Assert on Constant** (`mutation_killer_tests.rs:428`):
+   - **Issue**: `assert!(true, "message")` optimized out by compiler
+   - **Fix**: Removed constant assertion, logic verified by reaching branch
+   - **Evidence**: Clippy assertions_on_constants violation resolved
+
+4. ✅ **Vec Init Pattern** (`mutation_killer_tests.rs:701`):
+   - **Issue**: `Vec::new()` followed by immediate `push()` calls
+   - **Fix**: Replaced with `vec![72, 105]` macro pattern
+   - **Evidence**: Clippy vec_init_then_push violation resolved
+
+### Validation Evidence
+
+✅ **Clippy Clean**: `cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings` → 0 errors
+✅ **Tests Pass**: bitnet-tokenizers mutation_killer_tests → 29/29 passed
+✅ **Formatting**: `cargo fmt --all --check` → clean
+✅ **Pre-commit Hooks**: All checks passed (no mock features, no debug prints, no TODOs, no secrets, formatting, clippy)
+
+### Commit Evidence
+
+**Commit**: a48c4673780071002bd65ff1a280b3cfd91ba19c
+**Message**: fix: resolve clippy violations in tokenizer tests (PR #430)
+**Files Changed**: 2 files (discovery.rs, mutation_killer_tests.rs)
+**Lines**: +4/-7 (net reduction through simplification)
+
+### Policy Compliance Summary
+
+policy: clippy violations resolved (4/4 mechanical fixes); tests verified 29/29 pass; workspace clean -D warnings; formatting intact; commit a48c467
+
+**Routing Decision**: NEXT → policy-gatekeeper (re-validate policy gate, verify no new violations)
+
+<!-- policy:end -->
 
 ---
 **Agent**: feature-matrix-checker
