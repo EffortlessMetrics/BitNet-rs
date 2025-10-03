@@ -10,7 +10,6 @@
 
 use anyhow::Result;
 use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
-use std::path::Path;
 
 /// AC:8.1 - LLaMA-3 JSON-BPE auto-discovery from GGUF
 /// Validates JSON-BPE tokenizer detected and loaded from GGUF metadata
@@ -19,7 +18,7 @@ fn test_ac8_llama3_json_bpe_discovery() -> Result<()> {
     // TODO: Implement TokenizerDiscovery::discover_from_gguf when API available
     // let tokenizer = TokenizerDiscovery::discover_from_gguf("tests/fixtures/llama3-model.gguf")?;
 
-    let text = "Hello, world! 你好世界";
+    let _text = "Hello, world! 你好世界";
 
     // TODO: Perform round-trip encode/decode
     // let tokens = tokenizer.encode(text, false, false)?;
@@ -40,7 +39,7 @@ fn test_ac8_llama2_spm_discovery() -> Result<()> {
     // TODO: Implement TokenizerDiscovery::discover_from_gguf when API available
     // let tokenizer = TokenizerDiscovery::discover_from_gguf("tests/fixtures/llama2-model.gguf")?;
 
-    let text = "The quick brown fox jumps over the lazy dog";
+    let _text = "The quick brown fox jumps over the lazy dog";
 
     // TODO: Perform round-trip encode/decode
     // let tokens = tokenizer.encode(text, false, false)?;

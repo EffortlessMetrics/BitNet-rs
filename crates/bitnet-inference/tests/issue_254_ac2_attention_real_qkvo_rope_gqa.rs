@@ -11,6 +11,7 @@
 //! - KV-cache updates
 
 #![cfg(feature = "cpu")]
+#![allow(unused_variables)]
 
 use anyhow::Result;
 use bitnet_common::{BitNetTensor, Device, Tensor};

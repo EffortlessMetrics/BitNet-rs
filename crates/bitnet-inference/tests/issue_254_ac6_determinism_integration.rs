@@ -10,7 +10,7 @@
 
 use anyhow::Result;
 use bitnet_common::Device;
-use bitnet_inference::{AutoregressiveGenerator, GenerationConfig};
+use bitnet_inference::{AutoregressiveGenerator, GenConfig};
 use bitnet_models::BitNetModel;
 use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
 
@@ -19,24 +19,25 @@ use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
 #[tokio::test]
 async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
     // Set deterministic environment
-    std::env::set_var("BITNET_DETERMINISTIC", "1");
-    std::env::set_var("BITNET_SEED", "42");
-    std::env::set_var("RAYON_NUM_THREADS", "1");
+    unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
+    unsafe { std::env::set_var("BITNET_SEED", "42") };
+    unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
 
     let model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
 
-    let config = GenerationConfig {
+    let config = GenConfig {
         seed: Some(42),
         max_new_tokens: 50,
         temperature: 1.0,
-        top_k: 50,
-        top_p: 0.9,
+        top_k: Some(50),
+        top_p: Some(0.9),
         ..Default::default()
     };
 
     let prompt = "The future of AI is";
-    let input_ids = tokenizer.encode(prompt, false, false)?;
+    let input_ids: Vec<usize> =
+        tokenizer.encode(prompt, false, false)?.iter().map(|&x| x as usize).collect();
 
     // Run 1
     let mut generator1 = AutoregressiveGenerator::new(config.clone(), Device::Cpu)?;
@@ -52,9 +53,9 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
     // Verify not trivial
     assert!(tokens1.len() > 10, "AC6: Generation too short to validate");
 
-    std::env::remove_var("BITNET_DETERMINISTIC");
-    std::env::remove_var("BITNET_SEED");
-    std::env::remove_var("RAYON_NUM_THREADS");
+    unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
+    unsafe { std::env::remove_var("BITNET_SEED") };
+    unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
 
     println!("AC6.1: Deterministic inference test - PENDING IMPLEMENTATION");
     Ok(())
@@ -64,24 +65,25 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
 /// Validates consistency over multiple generation cycles
 #[tokio::test]
 async fn test_ac6_determinism_multiple_runs() -> Result<()> {
-    std::env::set_var("BITNET_DETERMINISTIC", "1");
-    std::env::set_var("BITNET_SEED", "42");
-    std::env::set_var("RAYON_NUM_THREADS", "1");
+    unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
+    unsafe { std::env::set_var("BITNET_SEED", "42") };
+    unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
 
     let model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
 
-    let config = GenerationConfig {
+    let config = GenConfig {
         seed: Some(42),
         max_new_tokens: 20,
         temperature: 0.8,
-        top_k: 30,
-        top_p: 0.95,
+        top_k: Some(30),
+        top_p: Some(0.95),
         ..Default::default()
     };
 
     let prompt = "Once upon a time";
-    let input_ids = tokenizer.encode(prompt, false, false)?;
+    let input_ids: Vec<usize> =
+        tokenizer.encode(prompt, false, false)?.iter().map(|&x| x as usize).collect();
 
     // Run 5 times
     let mut results = Vec::new();
@@ -96,9 +98,9 @@ async fn test_ac6_determinism_multiple_runs() -> Result<()> {
         assert_eq!(results[0], results[i], "AC6: Run {} differs from run 0", i);
     }
 
-    std::env::remove_var("BITNET_DETERMINISTIC");
-    std::env::remove_var("BITNET_SEED");
-    std::env::remove_var("RAYON_NUM_THREADS");
+    unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
+    unsafe { std::env::remove_var("BITNET_SEED") };
+    unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
 
     println!("AC6.2: Multiple runs determinism test - PENDING IMPLEMENTATION");
     Ok(())

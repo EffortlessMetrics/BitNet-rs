@@ -31,12 +31,12 @@ async fn test_ac4_receipt_generation_real_path() -> Result<()> {
 
     // Verify deterministic flag
     unsafe {
-        std::env::set_var("BITNET_DETERMINISTIC", "1");
+        unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
     }
     let deterministic_receipt = create_mock_receipt("cpu", vec!["i2s_gemv".to_string()])?;
     assert!(deterministic_receipt.deterministic, "AC4: deterministic should be true");
     unsafe {
-        std::env::remove_var("BITNET_DETERMINISTIC");
+        unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
     }
 
     println!("AC4.1: Receipt generation test - PENDING IMPLEMENTATION");
@@ -94,9 +94,9 @@ async fn test_ac4_save_receipt_to_file() -> Result<()> {
 #[tokio::test]
 async fn test_ac4_receipt_environment_variables() -> Result<()> {
     unsafe {
-        std::env::set_var("BITNET_DETERMINISTIC", "1");
-        std::env::set_var("BITNET_SEED", "42");
-        std::env::set_var("RAYON_NUM_THREADS", "1");
+        unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
+        unsafe { std::env::set_var("BITNET_SEED", "42") };
+        unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
     }
 
     let receipt = create_mock_receipt("cpu", vec!["i2s_gemv".to_string()])?;
@@ -114,9 +114,9 @@ async fn test_ac4_receipt_environment_variables() -> Result<()> {
     );
 
     unsafe {
-        std::env::remove_var("BITNET_DETERMINISTIC");
-        std::env::remove_var("BITNET_SEED");
-        std::env::remove_var("RAYON_NUM_THREADS");
+        unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
+        unsafe { std::env::remove_var("BITNET_SEED") };
+        unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
     }
 
     println!("AC4.4: Environment variables test - PENDING IMPLEMENTATION");

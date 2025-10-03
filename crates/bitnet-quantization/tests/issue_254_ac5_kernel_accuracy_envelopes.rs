@@ -6,14 +6,14 @@
 //! This test validates kernel accuracy envelopes:
 //! - I2_S: ≤ 1e-5 MSE vs FP32
 //! - TL1/TL2: ≤ 1e-4 MSE vs FP32
+//!
 //! Including tail shapes (non-aligned dimensions)
 
 #![cfg(feature = "cpu")]
 
-use anyhow::{Context, Result};
-use bitnet_common::{BitNetTensor, Tensor};
+use anyhow::Result;
+use bitnet_common::{BitNetTensor, Device, Tensor};
 use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
-use candle_core::{Device, Tensor as CandleTensor};
 
 /// Calculate MSE between two tensors
 fn calculate_mse(original: &[f32], reconstructed: &[f32]) -> f32 {
@@ -46,7 +46,7 @@ fn test_ac5_i2s_kernel_accuracy_envelope_aligned() -> Result<()> {
 
     for (m, n) in test_cases {
         let weights = generate_test_weights(m, n);
-        let tensor = BitNetTensor::from_slice(&weights, &[m, n], &candle_core::Device::Cpu)?;
+        let tensor = BitNetTensor::from_slice(&weights, &[m, n], &Device::Cpu)?;
 
         // Quantize and dequantize
         let quantized = quantizer.quantize_tensor(&tensor)?;
@@ -80,7 +80,7 @@ fn test_ac5_i2s_kernel_accuracy_envelope_tail_shapes() -> Result<()> {
 
     for (m, n) in test_cases {
         let weights = generate_test_weights(m, n);
-        let tensor = BitNetTensor::from_slice(&weights, &[m, n], &candle_core::Device::Cpu)?;
+        let tensor = BitNetTensor::from_slice(&weights, &[m, n], &Device::Cpu)?;
 
         let quantized = quantizer.quantize_tensor(&tensor)?;
         let reconstructed = quantizer.dequantize_tensor(&quantized)?;
@@ -112,7 +112,7 @@ fn test_ac5_tl1_kernel_accuracy_envelope_aligned() -> Result<()> {
 
     for (m, n) in test_cases {
         let weights = generate_test_weights(m, n);
-        let tensor = BitNetTensor::from_slice(&weights, &[m, n], &candle_core::Device::Cpu)?;
+        let tensor = BitNetTensor::from_slice(&weights, &[m, n], &Device::Cpu)?;
 
         let quantized = quantizer.quantize_tensor(&tensor)?;
         let reconstructed = quantizer.dequantize_tensor(&quantized)?;
@@ -144,7 +144,7 @@ fn test_ac5_tl1_kernel_accuracy_envelope_tail_shapes() -> Result<()> {
 
     for (m, n) in test_cases {
         let weights = generate_test_weights(m, n);
-        let tensor = BitNetTensor::from_slice(&weights, &[m, n], &candle_core::Device::Cpu)?;
+        let tensor = BitNetTensor::from_slice(&weights, &[m, n], &Device::Cpu)?;
 
         let quantized = quantizer.quantize_tensor(&tensor)?;
         let reconstructed = quantizer.dequantize_tensor(&quantized)?;
@@ -176,7 +176,7 @@ fn test_ac5_tl2_kernel_accuracy_envelope_aligned() -> Result<()> {
 
     for (m, n) in test_cases {
         let weights = generate_test_weights(m, n);
-        let tensor = BitNetTensor::from_slice(&weights, &[m, n], &candle_core::Device::Cpu)?;
+        let tensor = BitNetTensor::from_slice(&weights, &[m, n], &Device::Cpu)?;
 
         let quantized = quantizer.quantize_tensor(&tensor)?;
         let reconstructed = quantizer.dequantize_tensor(&quantized)?;
@@ -209,7 +209,7 @@ fn test_ac5_tl2_kernel_accuracy_envelope_tail_shapes() -> Result<()> {
 
     for (m, n) in test_cases {
         let weights = generate_test_weights(m, n);
-        let tensor = BitNetTensor::from_slice(&weights, &[m, n], &candle_core::Device::Cpu)?;
+        let tensor = BitNetTensor::from_slice(&weights, &[m, n], &Device::Cpu)?;
 
         let quantized = quantizer.quantize_tensor(&tensor)?;
         let reconstructed = quantizer.dequantize_tensor(&quantized)?;
@@ -234,12 +234,7 @@ fn test_ac5_tl2_kernel_accuracy_envelope_tail_shapes() -> Result<()> {
 fn test_ac5_comparative_accuracy() -> Result<()> {
     let (m, n) = (256, 512);
     let weights = generate_test_weights(m, n);
-    let tensor = BitNetTensor::from_slice(
-        &weights,
-        &[m, n],
-        candle_core::DType::F32,
-        &candle_core::Device::Cpu,
-    )?;
+    let tensor = BitNetTensor::from_slice(&weights, &[m, n], &Device::Cpu)?;
 
     // I2S quantization
     let i2s_quantizer = I2SQuantizer::new();

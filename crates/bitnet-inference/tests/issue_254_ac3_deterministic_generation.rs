@@ -11,7 +11,7 @@
 
 use anyhow::Result;
 use bitnet_common::Device;
-use bitnet_inference::{AutoregressiveGenerator, GenerationConfig};
+use bitnet_inference::{AutoregressiveGenerator, GenConfig};
 use bitnet_models::BitNetModel;
 use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
 
@@ -20,15 +20,15 @@ use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
 #[tokio::test]
 async fn test_ac3_deterministic_generation_identical_sequences() -> Result<()> {
     // Set deterministic environment
-    std::env::set_var("BITNET_DETERMINISTIC", "1");
-    std::env::set_var("BITNET_SEED", "42");
-    std::env::set_var("RAYON_NUM_THREADS", "1");
+    unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
+    unsafe { std::env::set_var("BITNET_SEED", "42") };
+    unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
 
-    let config = GenerationConfig {
+    let config = GenConfig {
         max_new_tokens: 50,
         temperature: 1.0,
-        top_k: 50,
-        top_p: 0.9,
+        top_k: Some(50),
+        top_p: Some(0.9),
         seed: Some(42),
         ..Default::default()
     };
@@ -38,7 +38,8 @@ async fn test_ac3_deterministic_generation_identical_sequences() -> Result<()> {
     let tokenizer = create_test_tokenizer()?;
 
     let prompt = "The future of artificial intelligence is";
-    let input_ids = tokenizer.encode(prompt, false, false)?;
+    let input_ids: Vec<usize> =
+        tokenizer.encode(prompt, false, false)?.iter().map(|&x| x as usize).collect();
 
     // Run 1
     let mut generator1 = AutoregressiveGenerator::new(config.clone(), Device::Cpu)?;
@@ -58,9 +59,9 @@ async fn test_ac3_deterministic_generation_identical_sequences() -> Result<()> {
     assert!(tokens1.len() > 10, "AC3: Generation too short to validate determinism");
 
     // Clean up
-    std::env::remove_var("BITNET_DETERMINISTIC");
-    std::env::remove_var("BITNET_SEED");
-    std::env::remove_var("RAYON_NUM_THREADS");
+    unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
+    unsafe { std::env::remove_var("BITNET_SEED") };
+    unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
 
     println!("AC3.1: Deterministic generation test - PENDING IMPLEMENTATION");
     Ok(())
@@ -70,11 +71,11 @@ async fn test_ac3_deterministic_generation_identical_sequences() -> Result<()> {
 /// Validates greedy decoding produces same result without seed
 #[tokio::test]
 async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
-    let config = GenerationConfig {
+    let config = GenConfig {
         max_new_tokens: 20,
         temperature: 0.0, // Greedy
-        top_k: 1,         // Also greedy
-        top_p: 1.0,
+        top_k: Some(1),   // Also greedy
+        top_p: Some(1.0),
         seed: None, // No seed needed for greedy
         ..Default::default()
     };
@@ -83,7 +84,8 @@ async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
     let tokenizer = create_test_tokenizer()?;
 
     let prompt = "Once upon a time";
-    let input_ids = tokenizer.encode(prompt, false, false)?;
+    let input_ids: Vec<usize> =
+        tokenizer.encode(prompt, false, false)?.iter().map(|&x| x as usize).collect();
 
     // Run greedy sampling multiple times
     let mut results = Vec::new();
@@ -106,14 +108,14 @@ async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
 /// Validates top-k sampling respects seed for determinism
 #[tokio::test]
 async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
-    std::env::set_var("BITNET_DETERMINISTIC", "1");
-    std::env::set_var("RAYON_NUM_THREADS", "1");
+    unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
+    unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
 
-    let config = GenerationConfig {
+    let config = GenConfig {
         max_new_tokens: 30,
         temperature: 1.0,
-        top_k: 20,
-        top_p: 1.0,
+        top_k: Some(20),
+        top_p: Some(1.0),
         seed: Some(42),
         ..Default::default()
     };
@@ -122,7 +124,8 @@ async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
     let tokenizer = create_test_tokenizer()?;
 
     let prompt = "In the year 2050";
-    let input_ids = tokenizer.encode(prompt, false, false)?;
+    let input_ids: Vec<usize> =
+        tokenizer.encode(prompt, false, false)?.iter().map(|&x| x as usize).collect();
 
     // Run top-k sampling with same seed
     let mut generator1 = AutoregressiveGenerator::new(config.clone(), Device::Cpu)?;
@@ -134,8 +137,8 @@ async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
     // AC3: Top-k with seed should be deterministic
     assert_eq!(tokens1, tokens2, "AC3: Top-k sampling with seed should be deterministic");
 
-    std::env::remove_var("BITNET_DETERMINISTIC");
-    std::env::remove_var("RAYON_NUM_THREADS");
+    unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
+    unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
 
     println!("AC3.3: Top-k seeded sampling test - PENDING IMPLEMENTATION");
     Ok(())
@@ -145,14 +148,14 @@ async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
 /// Validates nucleus sampling respects seed for determinism
 #[tokio::test]
 async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
-    std::env::set_var("BITNET_DETERMINISTIC", "1");
-    std::env::set_var("RAYON_NUM_THREADS", "1");
+    unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
+    unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
 
-    let config = GenerationConfig {
+    let config = GenConfig {
         max_new_tokens: 25,
         temperature: 0.8,
-        top_k: 0,
-        top_p: 0.95,
+        top_k: Some(0),
+        top_p: Some(0.95),
         seed: Some(123),
         ..Default::default()
     };
@@ -161,7 +164,8 @@ async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
     let tokenizer = create_test_tokenizer()?;
 
     let prompt = "The secret to happiness is";
-    let input_ids = tokenizer.encode(prompt, false, false)?;
+    let input_ids: Vec<usize> =
+        tokenizer.encode(prompt, false, false)?.iter().map(|&x| x as usize).collect();
 
     // Run nucleus sampling with same seed
     let mut generator1 = AutoregressiveGenerator::new(config.clone(), Device::Cpu)?;
@@ -173,8 +177,8 @@ async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
     // AC3: Nucleus sampling with seed should be deterministic
     assert_eq!(tokens1, tokens2, "AC3: Nucleus sampling with seed should be deterministic");
 
-    std::env::remove_var("BITNET_DETERMINISTIC");
-    std::env::remove_var("RAYON_NUM_THREADS");
+    unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
+    unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
 
     println!("AC3.4: Nucleus seeded sampling test - PENDING IMPLEMENTATION");
     Ok(())
@@ -184,21 +188,22 @@ async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
 /// Validates seed actually affects generation
 #[tokio::test]
 async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
-    std::env::set_var("BITNET_DETERMINISTIC", "1");
-    std::env::set_var("RAYON_NUM_THREADS", "1");
+    unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
+    unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
 
     let model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
 
     let prompt = "Once upon a time";
-    let input_ids = tokenizer.encode(prompt, false, false)?;
+    let input_ids: Vec<usize> =
+        tokenizer.encode(prompt, false, false)?.iter().map(|&x| x as usize).collect();
 
     // Generate with seed=42
-    let config1 = GenerationConfig {
+    let config1 = GenConfig {
         max_new_tokens: 20,
         temperature: 1.0,
-        top_k: 50,
-        top_p: 0.9,
+        top_k: Some(50),
+        top_p: Some(0.9),
         seed: Some(42),
         ..Default::default()
     };
@@ -207,11 +212,11 @@ async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
     let tokens1 = gen1.generate(&input_ids, mock_forward_fn).await?;
 
     // Generate with seed=123
-    let config2 = GenerationConfig {
+    let config2 = GenConfig {
         max_new_tokens: 20,
         temperature: 1.0,
-        top_k: 50,
-        top_p: 0.9,
+        top_k: Some(50),
+        top_p: Some(0.9),
         seed: Some(123),
         ..Default::default()
     };
@@ -223,8 +228,8 @@ async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
     // Note: There's a small chance they could be identical by random chance
     assert_ne!(tokens1, tokens2, "AC3: Different seeds should produce different outputs");
 
-    std::env::remove_var("BITNET_DETERMINISTIC");
-    std::env::remove_var("RAYON_NUM_THREADS");
+    unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
+    unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
 
     println!("AC3.5: Different seeds test - PENDING IMPLEMENTATION");
     Ok(())
@@ -234,15 +239,15 @@ async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
 /// Validates single-threaded execution prevents race conditions
 #[tokio::test]
 async fn test_ac3_rayon_single_thread_determinism() -> Result<()> {
-    std::env::set_var("BITNET_DETERMINISTIC", "1");
-    std::env::set_var("BITNET_SEED", "42");
-    std::env::set_var("RAYON_NUM_THREADS", "1");
+    unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
+    unsafe { std::env::set_var("BITNET_SEED", "42") };
+    unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
 
-    let config = GenerationConfig {
+    let config = GenConfig {
         max_new_tokens: 15,
         temperature: 1.0,
-        top_k: 30,
-        top_p: 0.9,
+        top_k: Some(30),
+        top_p: Some(0.9),
         seed: Some(42),
         ..Default::default()
     };
@@ -251,7 +256,8 @@ async fn test_ac3_rayon_single_thread_determinism() -> Result<()> {
     let tokenizer = create_test_tokenizer()?;
 
     let prompt = "The meaning of life";
-    let input_ids = tokenizer.encode(prompt, false, false)?;
+    let input_ids: Vec<usize> =
+        tokenizer.encode(prompt, false, false)?.iter().map(|&x| x as usize).collect();
 
     // Verify RAYON is single-threaded
     assert_eq!(
@@ -276,9 +282,9 @@ async fn test_ac3_rayon_single_thread_determinism() -> Result<()> {
         );
     }
 
-    std::env::remove_var("BITNET_DETERMINISTIC");
-    std::env::remove_var("BITNET_SEED");
-    std::env::remove_var("RAYON_NUM_THREADS");
+    unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
+    unsafe { std::env::remove_var("BITNET_SEED") };
+    unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
 
     println!("AC3.6: Single-threaded determinism test - PENDING IMPLEMENTATION");
     Ok(())

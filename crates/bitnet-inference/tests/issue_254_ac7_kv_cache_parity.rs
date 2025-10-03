@@ -6,10 +6,12 @@
 //! This test validates that prefill + decode(1) produces same next token as full recompute.
 
 #![cfg(feature = "cpu")]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 
 use anyhow::Result;
-use bitnet_common::{BitNetTensor, Device, Tensor};
-use bitnet_inference::{BitNetAttention, KVCache};
+use bitnet_common::{BitNetTensor, Device};
+use bitnet_inference::KVCache;
 
 /// AC:7.1 - KV-cache prefill + decode parity with full recompute
 /// Validates that cached attention matches full attention computation
