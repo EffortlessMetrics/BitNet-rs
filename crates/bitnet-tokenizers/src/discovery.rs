@@ -755,6 +755,7 @@ impl TokenizerDiscovery {
 mod tests {
     #[cfg(feature = "cpu")]
     use super::{ModelCompatibilityMatrix, TokenizerDiscovery};
+    #[cfg(feature = "cpu")]
     use crate::error_handling::ModelTypeDetector;
     #[cfg(feature = "cpu")]
     use crate::{BitNetError, CacheManager, TokenizerDownloadInfo, TokenizerStrategy};

@@ -415,7 +415,7 @@ fn test_negation_operators_in_buffer_checks() {
 
     // Test empty buffer
     assert!(byte_buf.is_empty(), "Buffer should be empty");
-    assert!(!(!byte_buf.is_empty()), "!is_empty() should be false when empty");
+    assert!(byte_buf.is_empty(), "!is_empty() should be false when empty");
 
     // Add byte
     byte_buf.push(65); // 'A'
@@ -424,8 +424,7 @@ fn test_negation_operators_in_buffer_checks() {
 
     // MUTATION KILLER: Verify logic
     if !byte_buf.is_empty() {
-        // This branch should execute when buffer has data
-        assert!(true, "Correctly entered non-empty branch");
+        // This branch should execute when buffer has data - verified by reaching here
     } else {
         panic!("Logic error: should not reach else when buffer has data");
     }
@@ -698,11 +697,8 @@ fn test_gguf_tokenizer_negation_in_buffer_flush() {
     // - When byte_buf has data (!is_empty() == true), should flush to text
     // - Deleting ! would invert logic (flush when empty, wrong!)
 
-    let mut byte_buf: Vec<u8> = Vec::new();
-
     // Test the negation logic that would be in GgufTokenizer::decode
-    byte_buf.push(72); // 'H'
-    byte_buf.push(105); // 'i'
+    let byte_buf: Vec<u8> = vec![72, 105]; // 'H', 'i'
 
     // Correct logic: !byte_buf.is_empty()
     assert!(!byte_buf.is_empty(), "Buffer has data, !is_empty() should be true");
