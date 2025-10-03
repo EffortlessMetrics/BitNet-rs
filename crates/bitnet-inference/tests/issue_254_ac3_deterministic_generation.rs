@@ -14,10 +14,12 @@ use bitnet_common::{Device, Tensor};
 use bitnet_inference::{AutoregressiveGenerator, GenConfig};
 use bitnet_models::BitNetModel;
 use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
+use serial_test::serial;
 
 /// AC:3.1 - Deterministic generation with fixed seed produces identical sequences
 /// Validates ChaCha8Rng seeding and deterministic execution
 #[tokio::test]
+#[serial]
 async fn test_ac3_deterministic_generation_identical_sequences() -> Result<()> {
     // Set deterministic environment
     unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
@@ -52,7 +54,8 @@ async fn test_ac3_deterministic_generation_identical_sequences() -> Result<()> {
     // AC3: Identical deterministic sequences
     assert_eq!(
         tokens1, tokens2,
-        "AC3: Deterministic generation should produce identical sequences"
+        "AC3: Deterministic generation should produce identical sequences.\nRun 1: {:?}\nRun 2: {:?}",
+        tokens1, tokens2
     );
 
     // Validate not trivial (actually generated tokens)
@@ -63,13 +66,14 @@ async fn test_ac3_deterministic_generation_identical_sequences() -> Result<()> {
     unsafe { std::env::remove_var("BITNET_SEED") };
     unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
 
-    println!("AC3.1: Deterministic generation test - PENDING IMPLEMENTATION");
+    println!("AC3.1: Deterministic generation test - PASSED");
     Ok(())
 }
 
 /// AC:3.2 - Greedy sampling (temperature=0 or top_k=1) is deterministic
 /// Validates greedy decoding produces same result without seed
 #[tokio::test]
+#[serial]
 async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
     let config = GenConfig {
         max_new_tokens: 20,
@@ -107,6 +111,7 @@ async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
 /// AC:3.3 - Top-k sampling with seed is reproducible
 /// Validates top-k sampling respects seed for determinism
 #[tokio::test]
+#[serial]
 async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
     unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
     unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
@@ -147,6 +152,7 @@ async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
 /// AC:3.4 - Top-p (nucleus) sampling with seed is reproducible
 /// Validates nucleus sampling respects seed for determinism
 #[tokio::test]
+#[serial]
 async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
     unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
     unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
@@ -187,6 +193,7 @@ async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
 /// AC:3.5 - Different seeds produce different outputs
 /// Validates seed actually affects generation
 #[tokio::test]
+#[serial]
 async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
     unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
     unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
@@ -238,6 +245,7 @@ async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
 /// AC:3.6 - Determinism validation with RAYON_NUM_THREADS=1
 /// Validates single-threaded execution prevents race conditions
 #[tokio::test]
+#[serial]
 async fn test_ac3_rayon_single_thread_determinism() -> Result<()> {
     unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
     unsafe { std::env::set_var("BITNET_SEED", "42") };
