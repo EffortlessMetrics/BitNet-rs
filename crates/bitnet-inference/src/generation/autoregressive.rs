@@ -196,8 +196,10 @@ impl AutoregressiveGenerator {
 
         // Check for deterministic generation
         let deterministic_gen = if std::env::var("BITNET_DETERMINISTIC").is_ok() {
-            let det_seed =
-                std::env::var("BITNET_SEED").ok().and_then(|s| s.parse().ok()).unwrap_or(42);
+            // Prefer config.seed over environment variable for deterministic generation
+            let det_seed = config.seed.unwrap_or_else(|| {
+                std::env::var("BITNET_SEED").ok().and_then(|s| s.parse().ok()).unwrap_or(42)
+            });
             Some(DeterministicGenerator::new(det_seed)?)
         } else {
             None

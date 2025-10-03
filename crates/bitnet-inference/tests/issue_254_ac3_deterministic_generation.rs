@@ -10,7 +10,7 @@
 #![cfg(feature = "cpu")]
 
 use anyhow::Result;
-use bitnet_common::Device;
+use bitnet_common::{Device, Tensor};
 use bitnet_inference::{AutoregressiveGenerator, GenConfig};
 use bitnet_models::BitNetModel;
 use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
@@ -34,7 +34,7 @@ async fn test_ac3_deterministic_generation_identical_sequences() -> Result<()> {
     };
 
     // Create model and tokenizer
-    let model = create_test_model()?;
+    let _model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
 
     let prompt = "The future of artificial intelligence is";
@@ -80,7 +80,7 @@ async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
         ..Default::default()
     };
 
-    let model = create_test_model()?;
+    let _model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
 
     let prompt = "Once upon a time";
@@ -120,7 +120,7 @@ async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
         ..Default::default()
     };
 
-    let model = create_test_model()?;
+    let _model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
 
     let prompt = "In the year 2050";
@@ -160,7 +160,7 @@ async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
         ..Default::default()
     };
 
-    let model = create_test_model()?;
+    let _model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
 
     let prompt = "The secret to happiness is";
@@ -191,7 +191,7 @@ async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
     unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
     unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
 
-    let model = create_test_model()?;
+    let _model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
 
     let prompt = "Once upon a time";
@@ -252,7 +252,7 @@ async fn test_ac3_rayon_single_thread_determinism() -> Result<()> {
         ..Default::default()
     };
 
-    let model = create_test_model()?;
+    let _model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
 
     let prompt = "The meaning of life";
@@ -338,9 +338,40 @@ fn create_test_tokenizer() -> Result<UniversalTokenizer> {
 }
 
 async fn mock_forward_fn(
-    _input: bitnet_common::BitNetTensor,
+    input: bitnet_common::BitNetTensor,
 ) -> Result<bitnet_common::BitNetTensor> {
-    // TODO: Replace with actual model forward pass
-    // For now, return dummy logits tensor
-    Ok(bitnet_common::BitNetTensor::zeros(&[1, 50257], candle_core::DType::F32, &Device::Cpu)?)
+    // Generate varied logits based on input tensor for testing deterministic sampling
+    // This creates a distribution where different seeds will produce different outputs
+
+    let vocab_size = 50257;
+
+    // Get input hash to seed the logits generation
+    let input_candle = input.to_candle()?;
+    let input_shape = input_candle.shape();
+    let seq_len = if input_shape.dims().len() >= 2 {
+        input_shape.dims()[input_shape.dims().len() - 2]
+    } else {
+        1
+    };
+
+    // Create varied logits that depend on sequence length
+    // This ensures different positions produce different distributions
+    let mut logits_data = vec![0.0f32; vocab_size];
+
+    // Create a pseudo-random but deterministic distribution based on seq_len
+    for (i, item) in logits_data.iter_mut().enumerate() {
+        // Use a simple hash-like function for deterministic but varied logits
+        let value = ((i * 17 + seq_len * 31) % 1000) as f32 / 100.0 - 5.0;
+        *item = value;
+    }
+
+    // Add some peaks to make sampling interesting
+    logits_data[42] = 2.0;
+    logits_data[1337] = 1.5;
+    logits_data[9999 % vocab_size] = 1.8;
+
+    let logits =
+        bitnet_common::BitNetTensor::from_slice(&logits_data, &[1, vocab_size], &Device::Cpu)?;
+
+    Ok(logits)
 }

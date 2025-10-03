@@ -23,7 +23,7 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
     unsafe { std::env::set_var("BITNET_SEED", "42") };
     unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
 
-    let model = create_test_model()?;
+    let _model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
 
     let config = GenConfig {
@@ -69,7 +69,7 @@ async fn test_ac6_determinism_multiple_runs() -> Result<()> {
     unsafe { std::env::set_var("BITNET_SEED", "42") };
     unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
 
-    let model = create_test_model()?;
+    let _model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
 
     let config = GenConfig {

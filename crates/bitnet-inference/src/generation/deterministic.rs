@@ -40,12 +40,12 @@ impl DeterministicGenerator {
     pub async fn sample_deterministic(
         &mut self,
         logits: &BitNetTensor,
-        step: usize,
+        _step: usize,
     ) -> Result<(usize, f32)> {
         // For deterministic generation, we use a combination of:
-        // 1. Seed-based RNG state
+        // 1. Seed-based RNG state for reproducible sampling
         // 2. Step-dependent behavior
-        // 3. Argmax sampling with tie-breaking
+        // 3. Categorical sampling from probability distribution
 
         let logits_candle = logits.to_candle()?;
 
@@ -61,15 +61,38 @@ impl DeterministicGenerator {
         let probabilities = candle_nn::ops::softmax(&last_logits, candle_core::D::Minus1)?;
         let prob_vec = probabilities.flatten_all()?.to_vec1::<f32>()?;
 
-        // Deterministic sampling with tie-breaking
-        let token_id = self.deterministic_argmax(&prob_vec, step)?;
-        let probability = prob_vec[token_id];
+        // Use RNG to sample from the probability distribution deterministically
+        let token_id = self.categorical_sample(&prob_vec)?;
+        let probability = prob_vec.get(token_id).copied().unwrap_or(0.0);
 
         self.step_count += 1;
         Ok((token_id, probability))
     }
 
+    /// Categorical sampling using the deterministic RNG
+    fn categorical_sample(&mut self, probabilities: &[f32]) -> Result<usize> {
+        if probabilities.is_empty() {
+            return Err(anyhow::anyhow!("Empty probability distribution"));
+        }
+
+        // Generate random value in [0, 1) using the seeded RNG
+        let random_value = (self.rng.next_u64() as f64) / (u64::MAX as f64);
+
+        // Sample from cumulative distribution
+        let mut cumsum = 0.0;
+        for (idx, &prob) in probabilities.iter().enumerate() {
+            cumsum += prob as f64;
+            if random_value < cumsum {
+                return Ok(idx);
+            }
+        }
+
+        // Fallback to last token if rounding errors occur
+        Ok(probabilities.len() - 1)
+    }
+
     /// Deterministic argmax with reproducible tie-breaking
+    #[allow(dead_code)]
     fn deterministic_argmax(&mut self, probabilities: &[f32], step: usize) -> Result<usize> {
         if probabilities.is_empty() {
             return Err(anyhow::anyhow!("Empty probability distribution"));

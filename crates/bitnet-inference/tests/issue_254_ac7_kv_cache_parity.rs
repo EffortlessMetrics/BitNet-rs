@@ -26,7 +26,7 @@ async fn test_ac7_kv_cache_parity_prefill_decode() -> Result<()> {
     let hidden_size = num_heads * head_dim;
 
     // Test prompt tokens [1, 2, 3, 4, 5]
-    let prompt_tokens = vec![1, 2, 3, 4, 5];
+    let prompt_tokens = [1, 2, 3, 4, 5];
     let seq_len = prompt_tokens.len();
 
     // Create hidden states for prompt
