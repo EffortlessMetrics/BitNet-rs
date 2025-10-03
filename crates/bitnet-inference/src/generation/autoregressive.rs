@@ -297,55 +297,80 @@ impl AutoregressiveGenerator {
     {
         let start_time = Instant::now();
         self.reset_state();
+        self.prefetch_tensor_cache_if_needed(input_ids)?;
 
         let mut current_tokens = input_ids.to_vec();
         let mut generated = Vec::new();
 
-        // Pre-allocate tensor cache for first inference
-        if self.tensor_cache.is_none() {
-            self.prefetch_tensor_cache(&current_tokens)?;
-        }
-
         for step in 0..self.config.max_new_tokens {
-            let step_start = Instant::now();
-
-            // Check length constraints
-            if current_tokens.len() >= self.config.max_length {
+            if self.should_stop_generation(&current_tokens)? {
                 break;
             }
 
-            // Adaptive batch processing for throughput optimization
-            let next_token = if self.performance_mode == PerformanceMode::Throughput
-                && self.should_use_batching(step)
-            {
-                self.generate_token_batched(&current_tokens, &forward_fn, step).await?
-            } else {
-                self.generate_token_single(&current_tokens, &forward_fn, step).await?
-            };
+            let (next_token, step_time) =
+                self.generate_next_token(&current_tokens, &forward_fn, step).await?;
 
-            // Check for EOS token
-            if next_token == self.config.eos_token_id
-                && current_tokens.len() >= self.config.min_length
-            {
+            if self.is_generation_complete(next_token, &current_tokens) {
                 break;
             }
 
-            // Add token and update state
             current_tokens.push(next_token);
             generated.push(next_token);
-            self.update_generation_state(next_token, step_start.elapsed().as_millis() as f64);
+            self.update_generation_state(next_token, step_time);
 
-            // Adaptive optimization based on recent performance
             if step % 10 == 0 {
                 self.adapt_generation_strategy();
             }
         }
 
-        // Update final statistics
-        let total_time = start_time.elapsed().as_millis() as f64;
-        self.update_generation_statistics(generated.len(), total_time);
-
+        self.finalize_generation(&generated, start_time.elapsed().as_millis() as f64);
         Ok(generated)
+    }
+
+    /// Prefetch tensor cache if not already allocated
+    fn prefetch_tensor_cache_if_needed(&mut self, tokens: &[usize]) -> Result<()> {
+        if self.tensor_cache.is_none() {
+            self.prefetch_tensor_cache(tokens)?;
+        }
+        Ok(())
+    }
+
+    /// Check if generation should stop based on length constraints
+    fn should_stop_generation(&self, current_tokens: &[usize]) -> Result<bool> {
+        Ok(current_tokens.len() >= self.config.max_length)
+    }
+
+    /// Generate next token with adaptive optimization
+    async fn generate_next_token<F, Fut>(
+        &mut self,
+        current_tokens: &[usize],
+        forward_fn: &F,
+        step: usize,
+    ) -> Result<(usize, f64)>
+    where
+        F: Fn(BitNetTensor) -> Fut + Send + Sync,
+        Fut: std::future::Future<Output = Result<BitNetTensor>> + Send,
+    {
+        let step_start = Instant::now();
+
+        let next_token = if self.should_use_batching(step) {
+            self.generate_token_batched(current_tokens, forward_fn, step).await?
+        } else {
+            self.generate_token_single(current_tokens, forward_fn, step).await?
+        };
+
+        let step_time = step_start.elapsed().as_millis() as f64;
+        Ok((next_token, step_time))
+    }
+
+    /// Check if generation is complete
+    fn is_generation_complete(&self, token: usize, current_tokens: &[usize]) -> bool {
+        token == self.config.eos_token_id && current_tokens.len() >= self.config.min_length
+    }
+
+    /// Finalize generation and update statistics
+    fn finalize_generation(&mut self, generated: &[usize], total_time: f64) {
+        self.update_generation_statistics(generated.len(), total_time);
     }
 
     /// Generate single token with optimized caching
@@ -492,17 +517,17 @@ impl AutoregressiveGenerator {
     /// Sample next token with latency optimization and fallback strategies
     async fn sample_next_token(&mut self, logits: &BitNetTensor, step: usize) -> Result<usize> {
         let sampling_start = Instant::now();
-
         let (token, _prob) = self.sample_next_token_with_prob(logits, step).await?;
 
-        let sampling_time = sampling_start.elapsed().as_millis() as f64;
+        self.track_sampling_performance(sampling_start.elapsed().as_millis() as f64);
+        Ok(token)
+    }
 
-        // Track sampling performance for adaptive optimization
+    /// Track sampling performance and consider fallback if needed
+    fn track_sampling_performance(&mut self, sampling_time: f64) {
         if sampling_time > LATENCY_TARGET_MS {
             self.consider_sampling_fallback();
         }
-
-        Ok(token)
     }
 
     /// Sample next token with probability and performance monitoring
@@ -516,9 +541,8 @@ impl AutoregressiveGenerator {
             return det_gen.sample_deterministic(logits, step).await;
         }
 
-        // Try fast sampling first for latency optimization
-        if self.performance_mode == PerformanceMode::Latency
-            && self.config.do_sample
+        // Try fast sampling for latency-critical scenarios
+        if self.should_use_fast_sampling()
             && let Ok(result) = self.try_fast_sampling(logits).await
         {
             return Ok(result);
@@ -526,6 +550,11 @@ impl AutoregressiveGenerator {
 
         // Apply full sampling strategy
         self.sampling_strategy.sample(logits, &mut self.rng).await
+    }
+
+    /// Check if fast sampling should be used
+    fn should_use_fast_sampling(&self) -> bool {
+        self.performance_mode == PerformanceMode::Latency && self.config.do_sample
     }
 
     /// Fast sampling for latency-critical scenarios

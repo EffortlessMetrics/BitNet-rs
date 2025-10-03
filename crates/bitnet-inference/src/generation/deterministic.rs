@@ -42,31 +42,40 @@ impl DeterministicGenerator {
         logits: &BitNetTensor,
         _step: usize,
     ) -> Result<(usize, f32)> {
-        // For deterministic generation, we use a combination of:
-        // 1. Seed-based RNG state for reproducible sampling
-        // 2. Step-dependent behavior
-        // 3. Categorical sampling from probability distribution
-
-        let logits_candle = logits.to_candle()?;
-
-        // Get the last token's logits
-        let last_logits = if logits_candle.dims().len() == 3 {
-            let (batch, seq_len, vocab_size) = logits_candle.dims3()?;
-            logits_candle.narrow(1, seq_len - 1, 1)?.reshape(&[batch, vocab_size])?
-        } else {
-            logits_candle.clone()
-        };
-
-        // Convert to probabilities for deterministic sampling
-        let probabilities = candle_nn::ops::softmax(&last_logits, candle_core::D::Minus1)?;
-        let prob_vec = probabilities.flatten_all()?.to_vec1::<f32>()?;
-
-        // Use RNG to sample from the probability distribution deterministically
+        let prob_vec = self.extract_probabilities(logits)?;
         let token_id = self.categorical_sample(&prob_vec)?;
         let probability = prob_vec.get(token_id).copied().unwrap_or(0.0);
 
         self.step_count += 1;
         Ok((token_id, probability))
+    }
+
+    /// Extract probability distribution from logits tensor
+    fn extract_probabilities(&self, logits: &BitNetTensor) -> Result<Vec<f32>> {
+        let logits_candle = logits.to_candle()?;
+
+        // Get the last token's logits (handle both 2D and 3D tensors)
+        let last_logits = self.extract_last_token_logits(&logits_candle)?;
+
+        // Convert to probabilities using softmax
+        let probabilities = candle_nn::ops::softmax(&last_logits, candle_core::D::Minus1)?;
+        probabilities.flatten_all()?.to_vec1::<f32>().context("Failed to extract probabilities")
+    }
+
+    /// Extract last token logits from tensor
+    fn extract_last_token_logits(
+        &self,
+        logits: &candle_core::Tensor,
+    ) -> Result<candle_core::Tensor> {
+        if logits.dims().len() == 3 {
+            let (batch, seq_len, vocab_size) = logits.dims3()?;
+            logits
+                .narrow(1, seq_len - 1, 1)?
+                .reshape(&[batch, vocab_size])
+                .context("Failed to reshape logits")
+        } else {
+            Ok(logits.clone())
+        }
     }
 
     /// Categorical sampling using the deterministic RNG
@@ -190,31 +199,43 @@ pub fn sample_with_global_deterministic(probabilities: &[f32], step: usize) -> R
             return Err(anyhow::anyhow!("Deterministic mode not enabled"));
         }
 
-        // Find maximum probability
-        let max_prob = probabilities
-            .iter()
-            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-            .copied()
-            .unwrap_or(0.0);
-
-        // Find all indices with maximum probability
-        let max_indices: Vec<usize> = probabilities
-            .iter()
-            .enumerate()
-            .filter(|&(_, &prob)| (prob - max_prob).abs() < 1e-9)
-            .map(|(idx, _)| idx)
-            .collect();
-
-        if max_indices.len() == 1 {
-            return Ok(max_indices[0]);
-        }
-
-        // Deterministic tie-breaking
-        let tie_breaker = det_state.seed.wrapping_mul(step as u64 + 1) % max_indices.len() as u64;
-        Ok(max_indices[tie_breaker as usize])
+        deterministic_argmax_with_seed(probabilities, det_state.seed, step)
     } else {
         Err(anyhow::anyhow!("Deterministic state not initialized"))
     }
+}
+
+/// Deterministic argmax with reproducible tie-breaking
+fn deterministic_argmax_with_seed(probabilities: &[f32], seed: u64, step: usize) -> Result<usize> {
+    let max_prob = find_max_probability(probabilities)?;
+    let max_indices = find_max_indices(probabilities, max_prob);
+
+    if max_indices.len() == 1 {
+        return Ok(max_indices[0]);
+    }
+
+    // Deterministic tie-breaking using seed and step
+    let tie_breaker = seed.wrapping_mul(step as u64 + 1) % max_indices.len() as u64;
+    Ok(max_indices[tie_breaker as usize])
+}
+
+/// Find maximum probability in distribution
+fn find_max_probability(probabilities: &[f32]) -> Result<f32> {
+    probabilities
+        .iter()
+        .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+        .copied()
+        .ok_or_else(|| anyhow::anyhow!("Empty probability distribution"))
+}
+
+/// Find all indices with maximum probability
+fn find_max_indices(probabilities: &[f32], max_prob: f32) -> Vec<usize> {
+    probabilities
+        .iter()
+        .enumerate()
+        .filter(|&(_, &prob)| (prob - max_prob).abs() < 1e-9)
+        .map(|(idx, _)| idx)
+        .collect()
 }
 
 /// Initialize deterministic state if environment variables are set
