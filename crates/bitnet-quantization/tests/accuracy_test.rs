@@ -177,9 +177,9 @@ fn test_quantization_determinism() {
 
         // Check all results are identical
         for i in 1..results.len() {
-            for j in 0..results[0].len() {
+            for (j, item) in results[0].iter().enumerate() {
                 assert_eq!(
-                    results[0][j], results[i][j],
+                    item, &results[i][j],
                     "{} quantization is not deterministic at index {}",
                     name, j
                 );

@@ -755,7 +755,8 @@ impl TokenizerDiscovery {
 mod tests {
     #[cfg(feature = "cpu")]
     use super::{ModelCompatibilityMatrix, TokenizerDiscovery};
-    #[cfg(feature = "cpu")]
+    #[cfg(any(feature = "cpu", feature = "gpu"))]
+    #[allow(unused_imports)]
     use crate::error_handling::ModelTypeDetector;
     #[cfg(feature = "cpu")]
     use crate::{BitNetError, CacheManager, TokenizerDownloadInfo, TokenizerStrategy};
@@ -763,9 +764,6 @@ mod tests {
     use std::path::Path;
     #[cfg(feature = "cpu")]
     use std::path::PathBuf;
-
-    #[cfg(feature = "gpu")]
-    use crate::error_handling::ModelTypeDetector;
 
     /// AC1: Tests TokenizerDiscovery GGUF metadata parsing functionality
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac1-tokenizerdiscovery-implementation

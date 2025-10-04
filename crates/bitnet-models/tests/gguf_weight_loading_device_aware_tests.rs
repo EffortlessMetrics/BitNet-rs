@@ -333,14 +333,14 @@ async fn test_ac6_cross_device_consistency_validation() -> Result<()> {
     };
 
     // Validate consistency requirements
-    if let Some(gpu_result) = &consistency_result.gpu_device_result {
-        if gpu_result.loading_success {
-            assert!(
-                consistency_result.passed,
-                "Device consistency validation failed: score={:.6}, max_diff={:.6}",
-                consistency_result.consistency_score, consistency_result.max_difference
-            );
-        }
+    if let Some(gpu_result) = &consistency_result.gpu_device_result
+        && gpu_result.loading_success
+    {
+        assert!(
+            consistency_result.passed,
+            "Device consistency validation failed: score={:.6}, max_diff={:.6}",
+            consistency_result.consistency_score, consistency_result.max_difference
+        );
     }
 
     println!("AC6.3: Cross-device consistency validation completed");

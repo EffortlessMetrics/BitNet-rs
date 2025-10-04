@@ -320,6 +320,7 @@ mod ac4_tl_quantization_tests {
 /// Tests feature spec: issue-260-mock-elimination-spec.md#ac5-qlinear-layer-replacement
 mod ac5_qlinear_replacement_tests {
     use super::*;
+    use bitnet_common::Tensor;
 
     /// AC:AC5 - Tests QLinear mock layer replacement with real quantized computation
     #[cfg(feature = "simd")]
@@ -337,7 +338,7 @@ mod ac5_qlinear_replacement_tests {
 
         // TODO: Validate output characteristics once methods are implemented
         // assert!(!output.is_mock(), "Output should not be mock tensor");
-        assert!(output.shape().len() > 0, "Output should have valid shape");
+        assert!(!output.shape().is_empty(), "Output should have valid shape");
 
         // Test with strict mode
         unsafe {

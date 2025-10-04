@@ -92,7 +92,7 @@ async fn test_integration_models_quantization_cpu() -> Result<()> {
     let load_result = bitnet_models::gguf_simple::load_gguf(&model_path, Device::Cpu);
 
     match load_result {
-        Ok((loaded_config, tensor_map)) => {
+        Ok((_loaded_config, tensor_map)) => {
             // Test quantization integration with loaded weights
             for layer_idx in 0..config.test_model_layers {
                 let layer_prefix = format!("blk.{}", layer_idx);

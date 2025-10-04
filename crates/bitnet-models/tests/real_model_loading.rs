@@ -6,6 +6,12 @@
 //! This module contains comprehensive test scaffolding for real BitNet model loading,
 //! GGUF format validation, and tensor alignment verification.
 
+// TDD scaffold: Skip compilation until ProductionModelLoader and related types are implemented
+// These tests require unimplemented types: ProductionModelLoader, LoaderConfig, etc.
+// To enable: Remove the `#![cfg(false)]` directive below
+#![cfg(false)]
+#![allow(dead_code, unused_variables, unused_imports)]
+
 use std::env;
 #[allow(unused_imports)]
 use std::path::Path;

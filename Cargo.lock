@@ -575,6 +575,8 @@ dependencies = [
  "anyhow",
  "bindgen",
  "bitnet-common",
+ "bitnet-ggml-ffi",
+ "bitnet-quantization",
  "bytemuck",
  "cc",
  "criterion",

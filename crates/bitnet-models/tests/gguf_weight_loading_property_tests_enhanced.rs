@@ -332,14 +332,14 @@ proptest! {
     }
 }
 
-/// Property: Cross-platform quantization consistency (CPU vs reference implementation)
-/// Tests feature spec: gguf-weight-loading.md#v1-cpp-reference-compatibility
 #[cfg(all(feature = "cpu", feature = "crossval"))]
-#[ignore = "TODO: Fix proptest compilation errors"]
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(20))]
 
+    /// Property: Cross-platform quantization consistency (CPU vs reference implementation)
+    /// Tests feature spec: gguf-weight-loading.md#v1-cpp-reference-compatibility
     #[test]
+    #[ignore = "TODO: Fix proptest compilation errors"]
     #[ignore] // Issue #159: TDD placeholder - cross-platform consistency implementation needed
     fn property_cross_platform_quantization_consistency(
         tensor_data in prop::collection::vec(-2.0f32..2.0f32, 128..512),
