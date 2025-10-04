@@ -216,14 +216,14 @@ async fn test_quantized_linear_with_bias() -> Result<()> {
         BitNetTensor::from_slice(&weight_data, &[hidden_size, out_features], &Device::Cpu)?;
 
     let bias_data: Vec<f32> = (0..out_features).map(|i| i as f32 * 0.01).collect();
-    let bias = BitNetTensor::from_slice(&bias_data, &[out_features], &Device::Cpu)?;
+    let _bias = BitNetTensor::from_slice(&bias_data, &[out_features], &Device::Cpu)?;
 
     // Quantize weights
     let quantizer = I2SQuantizer::new();
     let quantized_weights = quantizer.quantize_tensor(&weight_tensor)?;
 
     // Create layer without bias first, then manually set bias (since new_i2s doesn't support bias parameter)
-    let mut linear = QuantizedLinear::new_i2s(quantized_weights, Device::Cpu)?;
+    let linear = QuantizedLinear::new_i2s(quantized_weights, Device::Cpu)?;
 
     // Note: The QuantizedLinear API doesn't expose bias setting directly
     // This test validates forward pass computation; bias handling would require API extension
