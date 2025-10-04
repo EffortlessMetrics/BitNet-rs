@@ -251,7 +251,7 @@ proptest! {
             if let Ok(quantized) = quantizer.quantize_tensor(&bitnet_tensor) {
                 // Verify packed data length is correct
                 // For 2-bit values: (data_len * 2 bits) / 8 bits per byte
-                let expected_min_packed = (data_len * 2).div_ceil(8);
+                let _expected_min_packed = (data_len * 2).div_ceil(8);
 
                 // Account for block structure (data + scales)
                 prop_assert!(
