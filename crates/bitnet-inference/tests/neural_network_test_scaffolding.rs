@@ -118,7 +118,7 @@ async fn test_ac3_autoregressive_token_generation() -> Result<()> {
 #[tokio::test]
 async fn test_ac4_cross_validation_accuracy_preservation() -> Result<()> {
     // Skip if cross-validation environment not available
-    if !std::env::var("BITNET_CROSSVAL_ENABLED").is_ok() {
+    if std::env::var("BITNET_CROSSVAL_ENABLED").is_err() {
         log::warn!("Skipping cross-validation test: BITNET_CROSSVAL_ENABLED not set");
         return Ok(());
     }

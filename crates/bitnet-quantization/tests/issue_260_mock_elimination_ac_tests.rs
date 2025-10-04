@@ -320,7 +320,7 @@ mod ac4_tl_quantization_tests {
 /// Tests feature spec: issue-260-mock-elimination-spec.md#ac5-qlinear-layer-replacement
 mod ac5_qlinear_replacement_tests {
     use super::*;
-    // Tensor trait not needed in this test module
+    use bitnet_common::Tensor;
 
     /// AC:AC5 - Tests QLinear mock layer replacement with real quantized computation
     #[cfg(feature = "simd")]

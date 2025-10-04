@@ -1,7 +1,5 @@
 //! High-level comparison functions for cross-validation
 
-#![cfg(feature = "crossval")]
-
 use crate::{
     CrossvalConfig, Result,
     cpp_bindings::CppModel,

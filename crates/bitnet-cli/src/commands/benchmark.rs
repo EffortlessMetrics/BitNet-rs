@@ -243,7 +243,7 @@ impl BenchmarkCommand {
 
         // Create inference engine
         let model_arc: Arc<dyn bitnet_models::Model> = model.into();
-        let tokenizer_arc: Arc<dyn Tokenizer> = tokenizer.clone().into();
+        let tokenizer_arc: Arc<dyn Tokenizer> = tokenizer.clone();
         let bn_device = bitnet_common::Device::from(&device);
         let engine = InferenceEngine::new(model_arc, tokenizer_arc, bn_device)
             .context("Failed to create inference engine")?;
@@ -491,10 +491,13 @@ impl BenchmarkCommand {
             );
         }
 
-        if let Some(peak_memory) = best.statistics.peak_memory_mb {
-            if peak_memory > 1000.0 {
-                recommendations.push("High memory usage detected. Consider using quantization or smaller batch sizes.".to_string());
-            }
+        if let Some(peak_memory) = best.statistics.peak_memory_mb
+            && peak_memory > 1000.0
+        {
+            recommendations.push(
+                "High memory usage detected. Consider using quantization or smaller batch sizes."
+                    .to_string(),
+            );
         }
 
         BenchmarkSummary {
