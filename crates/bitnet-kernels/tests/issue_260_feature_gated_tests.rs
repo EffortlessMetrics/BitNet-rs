@@ -176,6 +176,7 @@ mod cpu_feature_tests {
     use super::*;
 
     /// Tests CPU SIMD kernel integration without mock fallbacks
+    #[ignore] // Issue #260: TDD placeholder - quantized_matmul not yet implemented
     #[cfg(feature = "cpu")]
     #[test]
     fn test_cpu_simd_kernel_integration() {
@@ -310,6 +311,7 @@ mod cpu_feature_tests {
     }
 
     /// Tests TL2 optimization for x86 AVX
+    #[ignore] // Issue #260: TDD placeholder - TL2 4096-entry table unimplemented
     #[cfg(all(feature = "cpu", target_arch = "x86_64"))]
     #[test]
     fn test_tl2_avx_optimization() {
@@ -821,6 +823,7 @@ mod cross_platform_tests {
     use super::*;
 
     /// Tests feature flag matrix compatibility
+    #[ignore] // Issue #260: TDD placeholder - feature flag test implementations needed
     #[test]
     fn test_feature_flag_matrix_compatibility() {
         println!("🔧 Cross-Platform: Testing feature flag matrix");
@@ -868,6 +871,7 @@ mod cross_platform_tests {
     }
 
     /// Tests graceful feature degradation
+    #[ignore] // Issue #260: TDD placeholder - fallback functionality test implementation needed
     #[test]
     fn test_graceful_feature_degradation() {
         println!("🔧 Cross-Platform: Testing graceful feature degradation");

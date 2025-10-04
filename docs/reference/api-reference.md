@@ -491,26 +491,31 @@ Validate inference receipts to ensure real computation paths:
 ```rust
 use std::path::Path;
 use serde_json::Value;
+use anyhow::{Context, Result};
 
 /// Validate inference receipt artifact
-pub fn validate_inference_receipt(receipt_path: &Path) -> Result<(), String> {
-    let receipt: Value = serde_json::from_str(&std::fs::read_to_string(receipt_path)?)?;
+pub fn validate_inference_receipt(receipt_path: &Path) -> Result<()> {
+    let content = std::fs::read_to_string(receipt_path)
+        .context("Failed to read receipt file")?;
+    let receipt: Value = serde_json::from_str(&content)
+        .context("Failed to parse receipt JSON")?;
 
     // AC9: Strict validation rules
     let compute_path = receipt["compute_path"].as_str()
-        .ok_or("Missing compute_path")?;
+        .ok_or_else(|| anyhow::anyhow!("Missing compute_path"))?;
 
     if compute_path != "real" {
-        return Err(format!("Invalid compute_path: '{}' (expected 'real')", compute_path));
+        anyhow::bail!("Invalid compute_path: '{}' (expected 'real')", compute_path);
     }
 
     let kernels = receipt["kernels"].as_array()
-        .ok_or("Missing kernels array")?;
+        .ok_or_else(|| anyhow::anyhow!("Missing kernels array"))?;
 
     for kernel in kernels {
-        let kernel_name = kernel.as_str().ok_or("Invalid kernel name")?;
+        let kernel_name = kernel.as_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid kernel name"))?;
         if kernel_name.to_lowercase().contains("mock") {
-            return Err(format!("Mock kernel detected: '{}'", kernel_name));
+            anyhow::bail!("Mock kernel detected: '{}'", kernel_name);
         }
     }
 

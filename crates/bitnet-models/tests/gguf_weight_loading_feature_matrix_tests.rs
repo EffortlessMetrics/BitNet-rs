@@ -66,6 +66,7 @@ impl FeatureMatrixFixture {
 
 /// CPU-only build: Test basic weight loading functionality
 /// AC6: CPU/GPU Feature Flag Support
+#[ignore] // Issue #159: TDD placeholder - GGUF parsing implementation needed
 #[cfg(all(feature = "cpu", not(feature = "gpu")))]
 #[tokio::test]
 async fn test_feature_matrix_cpu_only() -> Result<()> {

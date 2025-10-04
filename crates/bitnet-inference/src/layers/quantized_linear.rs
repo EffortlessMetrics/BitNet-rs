@@ -514,11 +514,25 @@ impl QuantizedLinear {
     /// Apply quantization scales to output data
     fn apply_quantization_scales(&self, output_data: &mut [f32], out_features: usize) {
         let input_scale = 1.0; // Input quantization scale
+        let block_size = self.weights.block_size;
+        let batch_size = output_data.len() / out_features;
 
-        for (chunk, &weight_scale) in output_data.chunks_mut(out_features).zip(&self.weights.scales)
-        {
-            for value in chunk.iter_mut() {
-                *value *= input_scale * weight_scale;
+        // Apply scales per-feature or per-block, not per-batch-row
+        for row in 0..batch_size {
+            let base = row * out_features;
+            for col in 0..out_features {
+                // Determine which scale to use based on block structure
+                // For per-feature quantization: use scales[col]
+                // For block quantization: use scales[col / block_size]
+                let scale_idx = if self.weights.scales.len() == out_features {
+                    col // Per-feature quantization
+                } else {
+                    // Block-based quantization: determine block for this output feature
+                    let weight_idx = col * self.in_features; // Simplified: assumes column-major
+                    (weight_idx / block_size).min(self.weights.scales.len() - 1)
+                };
+                let scale = self.weights.scales.get(scale_idx).copied().unwrap_or(1.0);
+                output_data[base + col] *= input_scale * scale;
             }
         }
     }
@@ -1292,12 +1306,20 @@ impl QuantizedLinear {
             )
             .context("Native TL1 quantized matmul failed")?;
 
-        // Apply TL1-specific scaling
+        // Apply TL1-specific scaling per-feature/block
         let input_scale = 1.0;
-        for (chunk, &weight_scale) in output_data.chunks_mut(out_features).zip(&self.weights.scales)
-        {
-            for value in chunk.iter_mut() {
-                *value *= input_scale * weight_scale * 0.8; // TL1 correction factor
+        let block_size = self.weights.block_size;
+        for row in 0..batch_size {
+            let base = row * out_features;
+            for col in 0..out_features {
+                let scale_idx = if self.weights.scales.len() == out_features {
+                    col
+                } else {
+                    let weight_idx = col * in_features;
+                    (weight_idx / block_size).min(self.weights.scales.len() - 1)
+                };
+                let scale = self.weights.scales.get(scale_idx).copied().unwrap_or(1.0);
+                output_data[base + col] *= input_scale * scale * 0.8; // TL1 correction factor
             }
         }
 
@@ -1368,12 +1390,20 @@ impl QuantizedLinear {
             )
             .context("Native TL2 quantized matmul failed")?;
 
-        // Apply TL2-specific scaling
+        // Apply TL2-specific scaling per-feature/block
         let input_scale = 1.0;
-        for (chunk, &weight_scale) in output_data.chunks_mut(out_features).zip(&self.weights.scales)
-        {
-            for value in chunk.iter_mut() {
-                *value *= input_scale * weight_scale * 0.9; // TL2 correction factor
+        let block_size = self.weights.block_size;
+        for row in 0..batch_size {
+            let base = row * out_features;
+            for col in 0..out_features {
+                let scale_idx = if self.weights.scales.len() == out_features {
+                    col
+                } else {
+                    let weight_idx = col * in_features;
+                    (weight_idx / block_size).min(self.weights.scales.len() - 1)
+                };
+                let scale = self.weights.scales.get(scale_idx).copied().unwrap_or(1.0);
+                output_data[base + col] *= input_scale * scale * 0.9; // TL2 correction factor
             }
         }
 

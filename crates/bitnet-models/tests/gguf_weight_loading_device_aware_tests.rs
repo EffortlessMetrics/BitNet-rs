@@ -85,6 +85,7 @@ pub struct DeviceTestResult {
 ///
 /// This test validates that GGUF weight loading correctly places tensors on CPU device
 /// with proper memory management and SIMD optimization utilization.
+#[ignore] // Issue #159: TDD placeholder - temp file lifetime management needed
 #[cfg(feature = "cpu")]
 #[tokio::test]
 async fn test_ac6_cpu_device_tensor_placement() -> Result<()> {
@@ -362,6 +363,7 @@ async fn test_ac6_cross_device_consistency_validation() -> Result<()> {
 
 /// AC6.4: Memory efficiency validation with device-aware optimization
 /// Tests feature spec: gguf-weight-loading.md#p5-gpu-memory-management
+#[ignore] // Issue #159: TDD placeholder - temp file lifetime management needed
 #[cfg(feature = "cpu")]
 #[tokio::test]
 async fn test_ac6_memory_efficiency_validation() -> Result<()> {

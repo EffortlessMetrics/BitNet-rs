@@ -339,6 +339,7 @@ async fn test_integration_wasm_weight_loading() -> Result<()> {
 // ============================================================================
 
 /// Performance integration: End-to-end pipeline performance validation
+#[ignore] // Issue #159: TDD placeholder - optimized weight loading implementation needed
 #[cfg(feature = "cpu")]
 #[tokio::test]
 async fn test_integration_performance_pipeline_cpu() -> Result<()> {

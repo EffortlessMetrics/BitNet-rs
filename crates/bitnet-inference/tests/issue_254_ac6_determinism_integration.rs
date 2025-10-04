@@ -13,10 +13,12 @@ use bitnet_common::Device;
 use bitnet_inference::{AutoregressiveGenerator, GenConfig};
 use bitnet_models::BitNetModel;
 use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
+use serial_test::serial;
 
 /// AC:6.1 - Two complete inference runs produce identical token sequences
 /// Validates full determinism from prompt to generated tokens
 #[tokio::test]
+#[serial]
 async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
     // Set deterministic environment
     unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
@@ -64,6 +66,7 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
 /// AC:6.2 - Determinism across multiple runs (5 iterations)
 /// Validates consistency over multiple generation cycles
 #[tokio::test]
+#[serial]
 async fn test_ac6_determinism_multiple_runs() -> Result<()> {
     unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
     unsafe { std::env::set_var("BITNET_SEED", "42") };

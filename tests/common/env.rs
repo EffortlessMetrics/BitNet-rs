@@ -9,6 +9,63 @@ use std::time::Duration;
 /// Global environment lock to prevent race conditions in tests
 static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
+/// RAII guard for safely setting and restoring environment variables in tests.
+///
+/// Automatically restores the original value (or removes the variable) when dropped,
+/// ensuring cleanup even if the test panics.
+///
+/// # Example
+/// ```rust
+/// use bitnet_tests::common::env::EnvGuard;
+///
+/// fn my_test() {
+///     let _guard1 = EnvGuard::set("BITNET_DETERMINISTIC", "1");
+///     let _guard2 = EnvGuard::set("BITNET_SEED", "42");
+///     // Test code here...
+///     // Variables automatically restored when guards drop
+/// }
+/// ```
+#[must_use = "EnvGuard must be held to ensure cleanup"]
+pub struct EnvGuard {
+    key: String,
+    original: Option<String>,
+}
+
+impl EnvGuard {
+    /// Set an environment variable and return a guard that will restore it on drop.
+    pub fn set(key: impl Into<String>, value: impl AsRef<str>) -> Self {
+        let key = key.into();
+        let original = std::env::var(&key).ok();
+        unsafe {
+            std::env::set_var(&key, value.as_ref());
+        }
+        Self { key, original }
+    }
+
+    /// Remove an environment variable and return a guard that will restore it on drop.
+    #[allow(dead_code)]
+    pub fn remove(key: impl Into<String>) -> Self {
+        let key = key.into();
+        let original = std::env::var(&key).ok();
+        unsafe {
+            std::env::remove_var(&key);
+        }
+        Self { key, original }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        unsafe {
+            if let Some(ref value) = self.original {
+                std::env::set_var(&self.key, value);
+            } else {
+                std::env::remove_var(&self.key);
+            }
+        }
+    }
+}
+
 /// Acquire a guard for safe environment variable manipulation in tests.
 ///
 /// # Example
