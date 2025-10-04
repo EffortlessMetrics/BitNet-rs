@@ -420,4 +420,63 @@ mod tests {
         receipt.test_results.failed = 1;
         assert!(receipt.validate().is_err());
     }
+
+    /// Test that environment variable collection returns non-empty HashMap with valid content
+    /// Kills 3 mutation survivors in receipts.rs:221 (empty HashMap, single empty entry, dummy values)
+    #[test]
+    fn test_receipt_env_vars_content_validation() {
+        // Set test environment variables to ensure we have predictable content
+        // SAFETY: This is test code running in isolation. We clean up at the end.
+        unsafe {
+            std::env::set_var("BITNET_DETERMINISTIC", "1");
+            std::env::set_var("BITNET_SEED", "42");
+        }
+
+        let vars = InferenceReceipt::collect_env_vars();
+
+        // Kill survivor 1: empty HashMap return
+        assert!(!vars.is_empty(), "Environment variables should not be empty");
+
+        // Kill survivor 2 & 3: single empty entry or dummy values
+        for (key, value) in &vars {
+            assert!(!key.is_empty(), "Environment variable key should not be empty");
+            assert!(!value.is_empty(), "Environment variable value should not be empty");
+
+            // Validate actual content - keys should be recognizable environment variables
+            assert!(
+                key.starts_with("BITNET_") || key.starts_with("RAYON_") || key == "RUST_VERSION",
+                "Key '{}' should be a valid BitNet/Rayon/Rust environment variable",
+                key
+            );
+        }
+
+        // Verify specific expected variables are present with correct values
+        assert!(vars.contains_key("BITNET_DETERMINISTIC"), "Should contain BITNET_DETERMINISTIC");
+        assert_eq!(
+            vars.get("BITNET_DETERMINISTIC"),
+            Some(&"1".to_string()),
+            "BITNET_DETERMINISTIC should have value '1'"
+        );
+
+        assert!(vars.contains_key("BITNET_SEED"), "Should contain BITNET_SEED when set");
+        assert_eq!(
+            vars.get("BITNET_SEED"),
+            Some(&"42".to_string()),
+            "BITNET_SEED should have value '42'"
+        );
+
+        assert!(vars.contains_key("RUST_VERSION"), "Should always contain RUST_VERSION");
+        let rust_version = vars.get("RUST_VERSION").unwrap();
+        assert!(
+            rust_version.contains('.'),
+            "RUST_VERSION should be a valid version string with dots"
+        );
+
+        // Clean up test environment variables
+        // SAFETY: This is test cleanup code running in isolation.
+        unsafe {
+            std::env::remove_var("BITNET_DETERMINISTIC");
+            std::env::remove_var("BITNET_SEED");
+        }
+    }
 }

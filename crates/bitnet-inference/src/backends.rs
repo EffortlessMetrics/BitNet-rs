@@ -423,4 +423,47 @@ mod tests {
             Device::from(&Device::Cuda(0).to_candle().unwrap_or(candle_core::Device::Cpu));
         assert_eq!(tensor_gpu.device(), &expected);
     }
+
+    /// Test that backend_type() returns correct string identifiers
+    /// Kills 1 mutation survivor in backends.rs:188 (empty string return for GPU backend)
+    #[test]
+    fn test_backend_type_identifiers() {
+        let model = Arc::new(MockModel::new());
+
+        // Kill survivor: CPU backend should return exactly "cpu" (not empty string)
+        let cpu_backend = CpuBackend::new(model.clone()).unwrap();
+        let cpu_type = cpu_backend.backend_type();
+        assert_eq!(cpu_type, "cpu", "CPU backend should return 'cpu', got '{}'", cpu_type);
+        assert!(!cpu_type.is_empty(), "CPU backend type should not be empty");
+
+        // Kill survivor: GPU backend should return valid device identifier (not empty string)
+        #[cfg(feature = "gpu")]
+        {
+            if GpuBackend::is_available() {
+                let gpu_backend = GpuBackend::new(model.clone(), Device::Cuda(0)).unwrap();
+                let gpu_type = gpu_backend.backend_type();
+                assert!(!gpu_type.is_empty(), "GPU backend type should not be empty");
+                assert!(
+                    gpu_type.contains("gpu"),
+                    "GPU backend type should contain 'gpu', got '{}'",
+                    gpu_type
+                );
+                assert!(
+                    gpu_type.contains("Cuda"),
+                    "GPU backend type should contain device info, got '{}'",
+                    gpu_type
+                );
+            }
+        }
+
+        // Validate backend_type for auto-selected backend
+        let auto_backend = select_backend(model.clone(), None).unwrap();
+        let auto_type = auto_backend.backend_type();
+        assert!(!auto_type.is_empty(), "Auto-selected backend type should not be empty");
+        assert!(
+            auto_type == "cpu" || auto_type.contains("gpu"),
+            "Auto-selected backend type should be 'cpu' or contain 'gpu', got '{}'",
+            auto_type
+        );
+    }
 }

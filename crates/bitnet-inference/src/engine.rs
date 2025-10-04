@@ -138,17 +138,17 @@ pub struct TensorStatistics {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelInfo {
     pub header: gguf::GgufHeader,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     kv_specs: Vec<gguf::GgufKv>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     quantization_hints: Vec<gguf::GgufKv>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     tensor_summaries: Vec<TensorSummary>,
     /// Categorized metadata for easy access
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub categorized_metadata: Option<CategorizedMetadata>,
     /// Enhanced tensor statistics
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub tensor_statistics: Option<TensorStatistics>,
 }
 
@@ -1983,5 +1983,124 @@ mod tests {
         assert!(result.is_ok());
         let generated_text = result.unwrap();
         assert!(!generated_text.is_empty());
+    }
+
+    /// Test that ModelInfo JSON serialization returns non-empty valid JSON
+    /// Kills 1 mutation survivor in engine.rs:188 (empty JSON return)
+    #[test]
+    fn test_model_info_json_serialization_content() {
+        use crate::gguf::{GgufHeader, GgufKv, GgufValue};
+
+        // Create a ModelInfo with actual content
+        let header = GgufHeader { version: 3, n_tensors: 10, n_kv: 5 };
+
+        let kv_specs = vec![
+            GgufKv {
+                key: "general.architecture".to_string(),
+                value: GgufValue::String("bitnet".to_string()),
+            },
+            GgufKv { key: "bitnet.context_length".to_string(), value: GgufValue::U32(2048) },
+            GgufKv { key: "bitnet.embedding_length".to_string(), value: GgufValue::U32(768) },
+        ];
+
+        let tensor_summaries = vec![
+            TensorSummary {
+                name: "token_embd.weight".to_string(),
+                shape: vec![50257, 768],
+                dtype: 17, // I2_S
+                dtype_name: Some("I2_S".to_string()),
+                category: Some("embedding".to_string()),
+                parameter_count: 50257 * 768,
+            },
+            TensorSummary {
+                name: "blk.0.attn_q.weight".to_string(),
+                shape: vec![768, 768],
+                dtype: 17,
+                dtype_name: Some("I2_S".to_string()),
+                category: Some("attention".to_string()),
+                parameter_count: 768 * 768,
+            },
+        ];
+
+        let model_info = ModelInfo {
+            header,
+            kv_specs,
+            quantization_hints: vec![],
+            tensor_summaries,
+            categorized_metadata: None,
+            tensor_statistics: None,
+        };
+
+        // Test to_json_compact - kills survivor: empty JSON return
+        let json_compact = model_info.to_json_compact().unwrap();
+        assert!(!json_compact.is_empty(), "Compact JSON should not be empty");
+        assert!(json_compact.len() > 10, "Compact JSON should have substantial content");
+
+        // Verify JSON is valid by parsing it back
+        let parsed: serde_json::Value = serde_json::from_str(&json_compact)
+            .expect("Compact JSON should be valid and parseable");
+        assert!(parsed.is_object(), "Parsed JSON should be an object");
+
+        // Verify key fields are present in the JSON
+        let obj = parsed.as_object().unwrap();
+        assert!(obj.contains_key("header"), "JSON should contain 'header' field");
+        assert!(obj.contains_key("kv_specs"), "JSON should contain 'kv_specs' field");
+        assert!(
+            obj.contains_key("tensor_summaries"),
+            "JSON should contain 'tensor_summaries' field"
+        );
+
+        // Test to_json (pretty-printed version)
+        let json_pretty = model_info.to_json().unwrap();
+        assert!(!json_pretty.is_empty(), "Pretty JSON should not be empty");
+        assert!(
+            json_pretty.len() > json_compact.len(),
+            "Pretty JSON should be longer than compact"
+        );
+
+        // Verify pretty JSON is also valid
+        let parsed_pretty: serde_json::Value =
+            serde_json::from_str(&json_pretty).expect("Pretty JSON should be valid and parseable");
+        assert!(parsed_pretty.is_object(), "Parsed pretty JSON should be an object");
+
+        // Verify round-trip: serialize -> deserialize -> serialize produces consistent results
+        let deserialized: ModelInfo = serde_json::from_str(&json_compact)
+            .expect("Should be able to deserialize ModelInfo from JSON");
+
+        // Check that deserialized values match original
+        assert_eq!(deserialized.header.version, 3, "Version should round-trip correctly");
+        assert_eq!(deserialized.header.n_tensors, 10, "n_tensors should round-trip correctly");
+        assert_eq!(deserialized.header.n_kv, 5, "n_kv should round-trip correctly");
+        assert_eq!(deserialized.kv_specs.len(), 3, "KV specs count should round-trip correctly");
+        assert_eq!(
+            deserialized.tensor_summaries.len(),
+            2,
+            "Tensor summaries count should round-trip correctly"
+        );
+
+        // Verify specific content from kv_specs
+        let arch_kv = deserialized.kv_specs.iter().find(|kv| kv.key == "general.architecture");
+        assert!(arch_kv.is_some(), "Should find architecture key in deserialized data");
+        if let Some(kv) = arch_kv {
+            if let GgufValue::String(ref s) = kv.value {
+                assert_eq!(s, "bitnet", "Architecture value should be 'bitnet'");
+            } else {
+                panic!("Architecture value should be a String");
+            }
+        }
+
+        // Verify specific content from tensor_summaries
+        let embd_tensor =
+            deserialized.tensor_summaries.iter().find(|t| t.name == "token_embd.weight");
+        assert!(embd_tensor.is_some(), "Should find embedding tensor in deserialized data");
+        if let Some(tensor) = embd_tensor {
+            assert_eq!(tensor.shape, vec![50257, 768], "Embedding shape should round-trip");
+            assert_eq!(tensor.dtype, 17, "Embedding dtype should round-trip");
+            assert_eq!(
+                tensor.category.as_deref(),
+                Some("embedding"),
+                "Embedding category should round-trip"
+            );
+        }
     }
 }
