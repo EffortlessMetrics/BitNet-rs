@@ -18,9 +18,7 @@ use std::time::Instant;
 // NOTE: Requires ProductionInferenceEngine, InferenceMetrics, and related types
 #[cfg(feature = "inference")]
 #[allow(unused_imports)]
-use bitnet_inference::{
-    GenerationConfig,
-};
+use bitnet_inference::GenerationConfig;
 
 #[cfg(feature = "inference")]
 use bitnet_models::BitNetModel;
@@ -29,7 +27,7 @@ use bitnet_models::BitNetModel;
 use bitnet_tokenizers::UniversalTokenizer;
 
 // Disable all tests until types are available - tests use non-existent API
-#[cfg(all(feature = "inference", any()))]  // any() = false, disables tests
+#[cfg(all(feature = "inference", any()))] // any() = false, disables tests
 
 /// Test configuration for inference engine tests
 #[derive(Debug, Clone)]
