@@ -6,6 +6,7 @@
 //! This module contains comprehensive test scaffolding for real BitNet model inference,
 //! performance metrics collection, and cross-validation framework integration.
 
+#[cfg(all(feature = "inference", any()))] // any() = false, code disabled
 use std::env;
 #[allow(unused_imports)]
 use std::path::Path;
