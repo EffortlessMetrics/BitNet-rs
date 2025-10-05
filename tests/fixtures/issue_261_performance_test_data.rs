@@ -449,22 +449,23 @@ impl PerformanceStatistics {
             measurements.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / sample_count as f32;
         let std_dev = variance.sqrt();
 
+        // Sort once for min, max, and percentiles
         let mut sorted = measurements.to_vec();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let p50 = sorted[sample_count / 2];
-        let p95 = sorted[(sample_count as f32 * 0.95) as usize];
-        let p99 = sorted[(sample_count as f32 * 0.99) as usize];
+        let p95_idx = ((sample_count as f32 * 0.95) as usize).min(sample_count - 1);
+        let p99_idx = ((sample_count as f32 * 0.99) as usize).min(sample_count - 1);
 
         Self {
             mean,
             std_dev,
             min: sorted[0],
             max: sorted[sample_count - 1],
-            coefficient_of_variation: std_dev / mean,
+            coefficient_of_variation: if mean > 0.0 { std_dev / mean } else { 0.0 },
             p50,
-            p95,
-            p99,
+            p95: sorted[p95_idx],
+            p99: sorted[p99_idx],
             sample_count,
         }
     }

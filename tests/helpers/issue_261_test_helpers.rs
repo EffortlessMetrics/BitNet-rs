@@ -167,26 +167,31 @@ pub struct PerformanceStatistics {
 impl PerformanceStatistics {
     /// Create statistics from duration measurements
     pub fn from_measurements(measurements: &[Duration]) -> Self {
-        let sample_count = measurements.len();
+        let ms_values: Vec<f32> = measurements.iter().map(|d| d.as_secs_f32() * 1000.0).collect();
+        Self::from_f32_values(&ms_values)
+    }
+
+    /// Create statistics from raw f32 values
+    pub fn from_f32_values(values: &[f32]) -> Self {
+        let sample_count = values.len();
         if sample_count == 0 {
             return Self::default();
         }
 
-        let ms_values: Vec<f32> = measurements.iter().map(|d| d.as_secs_f32() * 1000.0).collect();
-
-        let sum: f32 = ms_values.iter().sum();
+        let sum: f32 = values.iter().sum();
         let mean_ms = sum / sample_count as f32;
 
         let variance: f32 =
-            ms_values.iter().map(|x| (x - mean_ms).powi(2)).sum::<f32>() / sample_count as f32;
+            values.iter().map(|x| (x - mean_ms).powi(2)).sum::<f32>() / sample_count as f32;
         let std_dev_ms = variance.sqrt();
 
-        let mut sorted = ms_values.clone();
+        // Sort once for min, max, and percentiles
+        let mut sorted = values.to_vec();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let p50_ms = sorted[sample_count / 2];
-        let p95_ms = sorted[(sample_count as f32 * 0.95) as usize];
-        let p99_ms = sorted[(sample_count as f32 * 0.99) as usize];
+        let p95_idx = ((sample_count as f32 * 0.95) as usize).min(sample_count - 1);
+        let p99_idx = ((sample_count as f32 * 0.99) as usize).min(sample_count - 1);
 
         Self {
             mean_ms,
@@ -194,8 +199,8 @@ impl PerformanceStatistics {
             min_ms: sorted[0],
             max_ms: sorted[sample_count - 1],
             p50_ms,
-            p95_ms,
-            p99_ms,
+            p95_ms: sorted[p95_idx],
+            p99_ms: sorted[p99_idx],
             coefficient_of_variation: if mean_ms > 0.0 { std_dev_ms / mean_ms } else { 0.0 },
             sample_count,
         }
@@ -369,6 +374,24 @@ impl StrictModeConfig {
             }
         }
     }
+}
+
+// ============================================================================
+// Deterministic Random Number Generation
+// ============================================================================
+
+/// Linear congruential generator for deterministic test data generation
+///
+/// This RNG ensures reproducible test fixtures across platforms.
+/// Supports BITNET_SEED environment variable for determinism.
+///
+/// Note: Clamped to avoid exactly 0.0 or 1.0 to prevent ln(0) = -inf in Box-Muller transform
+pub fn lcg_random(state: &mut u64) -> f32 {
+    *state = state.wrapping_mul(1664525).wrapping_add(1013904223);
+    // Use lower 32 bits and ensure result is in (0, 1) to avoid ln(0) = -inf
+    let val = ((*state & 0xFFFFFFFF) as u32) as f32 / (u32::MAX as f32);
+    // Clamp to avoid exactly 0.0 or 1.0
+    val.clamp(1e-10, 1.0 - 1e-10)
 }
 
 // ============================================================================

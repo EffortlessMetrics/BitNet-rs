@@ -394,63 +394,17 @@ fn generate_scales(size: usize, block_size: usize, seed: u64) -> Vec<f32> {
 }
 
 /// Linear congruential generator for deterministic testing
-fn lcg_random(state: &mut u64) -> f32 {
-    *state = state.wrapping_mul(1664525).wrapping_add(1013904223);
-    (*state as f32) / (u32::MAX as f32)
-}
+// Use LCG random from helpers to avoid duplication (now with proper clamping for Box-Muller)
+use crate::helpers::issue_261_test_helpers::lcg_random;
 
 // ============================================================================
 // Cross-Validation Utilities
 // ============================================================================
 
-/// Calculate correlation between two vectors
-pub fn calculate_correlation(a: &[f32], b: &[f32]) -> f32 {
-    if a.len() != b.len() || a.is_empty() {
-        return 0.0;
-    }
-
-    let n = a.len() as f32;
-    let mean_a: f32 = a.iter().sum::<f32>() / n;
-    let mean_b: f32 = b.iter().sum::<f32>() / n;
-
-    let mut cov = 0.0;
-    let mut var_a = 0.0;
-    let mut var_b = 0.0;
-
-    for (ai, bi) in a.iter().zip(b.iter()) {
-        let da = ai - mean_a;
-        let db = bi - mean_b;
-        cov += da * db;
-        var_a += da * da;
-        var_b += db * db;
-    }
-
-    if var_a == 0.0 || var_b == 0.0 {
-        return 0.0;
-    }
-
-    cov / (var_a.sqrt() * var_b.sqrt())
-}
-
-/// Calculate Mean Squared Error (MSE)
-pub fn calculate_mse(a: &[f32], b: &[f32]) -> f32 {
-    if a.len() != b.len() || a.is_empty() {
-        return f32::INFINITY;
-    }
-
-    let sum_squared_diff: f32 = a.iter().zip(b.iter()).map(|(ai, bi)| (ai - bi).powi(2)).sum();
-
-    sum_squared_diff / a.len() as f32
-}
-
-/// Calculate maximum absolute error
-pub fn calculate_max_abs_error(a: &[f32], b: &[f32]) -> f32 {
-    if a.len() != b.len() || a.is_empty() {
-        return f32::INFINITY;
-    }
-
-    a.iter().zip(b.iter()).map(|(ai, bi)| (ai - bi).abs()).fold(0.0, f32::max)
-}
+// Re-export accuracy calculation functions from helpers to avoid duplication
+pub use crate::helpers::issue_261_test_helpers::{
+    calculate_correlation, calculate_max_abs_error, calculate_mse,
+};
 
 /// Validate cross-validation results
 pub fn validate_crossval_results(fixture: &CrossValFixture) -> CrossValReport {

@@ -462,15 +462,8 @@ fn generate_extreme_values(size: usize) -> Vec<f32> {
         .collect()
 }
 
-/// Simple linear congruential generator for deterministic testing
-/// Supports BITNET_SEED environment variable
-fn lcg_random(state: &mut u64) -> f32 {
-    *state = state.wrapping_mul(1664525).wrapping_add(1013904223);
-    // Use lower 32 bits and ensure result is in (0, 1) to avoid ln(0) = -inf
-    let val = ((*state & 0xFFFFFFFF) as u32) as f32 / (u32::MAX as f32);
-    // Clamp to avoid exactly 0.0 or 1.0
-    val.clamp(1e-10, 1.0 - 1e-10)
-}
+// Use LCG random from helpers to avoid duplication
+use crate::helpers::issue_261_test_helpers::lcg_random;
 
 // ============================================================================
 // Fixture Validation Utilities
