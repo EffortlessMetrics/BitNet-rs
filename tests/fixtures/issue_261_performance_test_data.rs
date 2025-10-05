@@ -498,9 +498,7 @@ pub fn validate_performance_against_baseline(
 pub fn detect_mock_performance(tokens_per_sec: f32, device_type: &str) -> MockDetectionResult {
     if tokens_per_sec > 200.0 {
         MockDetectionResult::FailTooFast
-    } else if tokens_per_sec > 150.0 {
-        MockDetectionResult::FailSuspicious
-    } else if device_type == "cpu" && tokens_per_sec > 30.0 {
+    } else if tokens_per_sec > 150.0 || (device_type == "cpu" && tokens_per_sec > 30.0) {
         MockDetectionResult::FailSuspicious
     } else {
         MockDetectionResult::Pass

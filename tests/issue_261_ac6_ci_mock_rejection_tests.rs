@@ -16,7 +16,7 @@ fn test_ci_strict_mode_environment() -> Result<()> {
     // When implemented: should verify CI environment sets BITNET_STRICT_MODE=1
 
     // Expected CI environment variables
-    let required_env_vars = vec![("BITNET_STRICT_MODE", "1"), ("BITNET_CI_ENHANCED_STRICT", "1")];
+    let required_env_vars = [("BITNET_STRICT_MODE", "1"), ("BITNET_CI_ENHANCED_STRICT", "1")];
 
     // Verify expected configuration
     assert_eq!(required_env_vars.len(), 2, "Should have 2 required env vars");
@@ -34,7 +34,7 @@ fn test_ci_mock_performance_detection() -> Result<()> {
     // When implemented: should fail CI when mock evidence found in performance reports
 
     // Expected mock detection patterns
-    let mock_indicators = vec!["mock", "ConcreteTensor::mock", "fallback.*mock"];
+    let mock_indicators = ["mock", "ConcreteTensor::mock", "fallback.*mock"];
     let suspicious_perf = 200.0; // tok/s (unrealistic for CPU)
 
     // Verify detection logic
@@ -71,8 +71,7 @@ fn test_ci_enhanced_strict_features() -> Result<()> {
     // When implemented: should enable additional validations in CI environment
 
     // Expected enhanced strict mode features
-    let enhanced_features =
-        vec!["ci_enhanced_mode", "fail_fast_on_any_mock", "log_all_validations"];
+    let enhanced_features = ["ci_enhanced_mode", "fail_fast_on_any_mock", "log_all_validations"];
 
     // Verify feature set
     assert_eq!(enhanced_features.len(), 3, "Should have 3 enhanced features");
@@ -89,7 +88,7 @@ fn test_ci_grep_mock_evidence() -> Result<()> {
     // When implemented: should detect mock evidence patterns in CI logs
 
     // Expected grep patterns for mock detection
-    let grep_patterns = vec!["mock.*tok", "ConcreteTensor::mock", "fallback.*mock"];
+    let grep_patterns = ["mock.*tok", "ConcreteTensor::mock", "fallback.*mock"];
     let test_log = "Inference completed: 200.0 tok/s (mock computation)";
 
     // Verify pattern matching logic
@@ -107,7 +106,7 @@ fn test_ci_workspace_strict_compilation() -> Result<()> {
     // When implemented: should ensure all workspace crates compile under strict mode
 
     // Expected CI compilation command components
-    let required_components = vec!["BITNET_STRICT_MODE=1", "--workspace", "--no-default-features"];
+    let required_components = ["BITNET_STRICT_MODE=1", "--workspace", "--no-default-features"];
 
     // Verify command structure
     assert_eq!(required_components.len(), 3, "Should have 3 required components");
@@ -125,7 +124,7 @@ fn test_ci_xtask_performance_validation() -> Result<()> {
     // When implemented: should validate performance metrics via xtask command
 
     // Expected xtask command structure
-    let xtask_cmd = vec!["cargo", "run", "-p", "xtask", "--", "validate-performance-metrics"];
+    let xtask_cmd = ["cargo", "run", "-p", "xtask", "--", "validate-performance-metrics"];
 
     // Verify command components
     assert_eq!(xtask_cmd.len(), 6, "Command should have 6 components");

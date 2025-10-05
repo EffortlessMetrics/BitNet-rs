@@ -58,7 +58,7 @@ fn test_gguf_quantization_type_detection() -> Result<()> {
     // When implemented: should automatically detect I2S/TL1/TL2 from GGUF metadata
 
     // Expected quantization types to detect
-    let supported_qtypes = vec!["I2S", "TL1", "TL2"];
+    let supported_qtypes = ["I2S", "TL1", "TL2"];
 
     // Verify expected quantization types are defined
     assert_eq!(supported_qtypes.len(), 3, "Should support 3 quantization types");
@@ -98,7 +98,7 @@ fn test_qlinear_mixed_quantization() -> Result<()> {
     // When implemented: should support different quantization types per layer
 
     // Expected model configuration with mixed quantization
-    let layer_configs = vec![("layer1", "I2S"), ("layer2", "TL1"), ("layer3", "TL2")];
+    let layer_configs = [("layer1", "I2S"), ("layer2", "TL1"), ("layer3", "TL2")];
 
     // Verify layer configuration is valid
     assert_eq!(layer_configs.len(), 3, "Should have 3 layers with different quantizations");
@@ -138,8 +138,8 @@ fn test_qlinear_kernel_provider_selection() -> Result<()> {
     // When implemented: should select optimal kernel provider per layer
 
     // Expected kernel provider selection logic
-    let quantization_types = vec!["I2S", "TL1", "TL2"];
-    let device_types = vec!["CPU", "GPU"];
+    let quantization_types = ["I2S", "TL1", "TL2"];
+    let device_types = ["CPU", "GPU"];
 
     // Verify kernel provider matrix
     assert_eq!(quantization_types.len(), 3, "Should have 3 quantization types");
@@ -157,8 +157,8 @@ fn test_qlinear_no_mock_tensor_ops() -> Result<()> {
     // When implemented: should execute all operations without ConcreteTensor::mock()
 
     // Expected operation types
-    let real_operations = vec!["quantize", "matmul", "dequantize"];
-    let forbidden_operations = vec!["mock"];
+    let real_operations = ["quantize", "matmul", "dequantize"];
+    let forbidden_operations = ["mock"];
 
     // Verify no mock operations expected
     assert!(!real_operations.contains(&"mock"), "Real operations should not include mock");
@@ -176,7 +176,7 @@ fn test_qlinear_gguf_compatibility() -> Result<()> {
     // When implemented: should validate QLinear can load from GGUF models
 
     // Expected GGUF compatibility checks
-    let compat_checks = vec!["qlinear_compatible", "all_layers_quantized"];
+    let compat_checks = ["qlinear_compatible", "all_layers_quantized"];
 
     // Verify compatibility check requirements
     assert_eq!(compat_checks.len(), 2, "Should have 2 compatibility checks");
@@ -195,12 +195,12 @@ fn test_qlinear_layer_config_validation() -> Result<()> {
     // When implemented: should validate weight dimensions, device compatibility, etc.
 
     // Expected configuration validation rules
-    let valid_weight_shapes = vec![[512, 1024], [1024, 2048]];
-    let valid_devices = vec!["CPU", "CUDA"];
+    let valid_weight_shapes = [[512, 1024], [1024, 2048]];
+    let valid_devices = ["CPU", "CUDA"];
     let invalid_cuda_device_id = 99; // Outside typical range 0-7
 
     // Verify validation logic
-    assert!(valid_weight_shapes.len() > 0, "Should have valid weight shapes");
+    assert!(!valid_weight_shapes.is_empty(), "Should have valid weight shapes");
     assert!(valid_devices.contains(&"CPU"), "CPU should be valid device");
     assert!(invalid_cuda_device_id > 8, "Device ID 99 should be invalid");
 

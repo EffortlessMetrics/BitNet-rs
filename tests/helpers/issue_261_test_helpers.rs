@@ -307,7 +307,7 @@ pub struct DeterministicConfig {
 impl DeterministicConfig {
     /// Setup deterministic environment
     pub fn setup() -> Self {
-        let vars = vec!["BITNET_DETERMINISTIC", "BITNET_SEED", "RAYON_NUM_THREADS"];
+        let vars = ["BITNET_DETERMINISTIC", "BITNET_SEED", "RAYON_NUM_THREADS"];
 
         let original_env: Vec<(String, Option<String>)> =
             vars.iter().map(|&var| (var.to_string(), std::env::var(var).ok())).collect();
@@ -340,7 +340,7 @@ pub struct StrictModeConfig {
 impl StrictModeConfig {
     /// Setup strict mode environment
     pub fn setup() -> Self {
-        let vars = vec![
+        let vars = [
             "BITNET_STRICT_MODE",
             "BITNET_STRICT_FAIL_ON_MOCK",
             "BITNET_STRICT_REQUIRE_QUANTIZATION",
@@ -379,9 +379,7 @@ impl StrictModeConfig {
 pub fn detect_mock_performance(tokens_per_sec: f32, device: &str) -> MockDetectionResult {
     if tokens_per_sec > 200.0 {
         MockDetectionResult::DefinitelyMock
-    } else if tokens_per_sec > 150.0 {
-        MockDetectionResult::Suspicious
-    } else if device == "cpu" && tokens_per_sec > 30.0 {
+    } else if tokens_per_sec > 150.0 || (device == "cpu" && tokens_per_sec > 30.0) {
         MockDetectionResult::Suspicious
     } else {
         MockDetectionResult::Legitimate

@@ -7,10 +7,9 @@
 //! AC Reference: AC3 (lines 175-224)
 
 use anyhow::Result;
-use bitnet_common::{BitNetTensor, Device, Tensor};
+use bitnet_common::{BitNetTensor, Device};
 use bitnet_kernels::KernelManager;
 use bitnet_quantization::I2SQuantizer;
-use candle_core::DType;
 
 /// AC:AC3
 /// Test I2S quantization kernel provider availability
@@ -45,8 +44,8 @@ fn test_i2s_native_quantized_matmul() -> Result<()> {
     let quantized = quantizer.quantize_tensor(&tensor)?;
 
     // Verify quantization succeeded and used native operations
-    assert!(quantized.data.len() > 0, "Quantized data should not be empty");
-    assert!(quantized.scales.len() > 0, "Quantized scales should not be empty");
+    assert!(!quantized.data.is_empty(), "Quantized data should not be empty");
+    assert!(!quantized.scales.is_empty(), "Quantized scales should not be empty");
 
     Ok(())
 }

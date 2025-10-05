@@ -469,7 +469,7 @@ fn lcg_random(state: &mut u64) -> f32 {
     // Use lower 32 bits and ensure result is in (0, 1) to avoid ln(0) = -inf
     let val = ((*state & 0xFFFFFFFF) as u32) as f32 / (u32::MAX as f32);
     // Clamp to avoid exactly 0.0 or 1.0
-    val.max(1e-10).min(1.0 - 1e-10)
+    val.clamp(1e-10, 1.0 - 1e-10)
 }
 
 // ============================================================================
@@ -576,7 +576,7 @@ mod tests {
     fn test_i2s_quantized_range() {
         let quantized = generate_i2s_quantized(1000, 42);
         for val in quantized {
-            assert!(val >= -2 && val <= 1, "I2S quantized values must be in range [-2, 1]");
+            assert!((-2..=1).contains(&val), "I2S quantized values must be in range [-2, 1]");
         }
     }
 

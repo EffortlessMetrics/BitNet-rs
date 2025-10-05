@@ -430,14 +430,14 @@ pub struct TensorAlignmentFixture {
 fn calculate_i2s_size(num_elements: u64) -> u64 {
     const BLOCK_SIZE: u64 = 32;
     let num_blocks = num_elements.div_ceil(BLOCK_SIZE);
-    let quantized_bytes = (num_elements * 2 + 7) / 8; // 2 bits per element
+    let quantized_bytes = (num_elements * 2).div_ceil(8); // 2 bits per element
     let scale_bytes = num_blocks * 4; // f32 per block
     quantized_bytes + scale_bytes
 }
 
 /// Calculate aligned offset
 fn calculate_aligned_offset(current_offset: u64, alignment: u64) -> u64 {
-    ((current_offset + alignment - 1) / alignment) * alignment
+    current_offset.div_ceil(alignment) * alignment
 }
 
 /// Generate medium-sized tensor list
@@ -466,7 +466,7 @@ fn generate_medium_tensors() -> Vec<GgufTensorInfo> {
                 qtype: GgufQuantizationType::I2S,
                 offset,
                 size_bytes: size,
-                aligned: offset % 32 == 0,
+                aligned: offset.is_multiple_of(32),
             };
             offset = calculate_aligned_offset(offset + size, 32);
             tensor
@@ -496,7 +496,7 @@ fn generate_tl_tensors(qtype: GgufQuantizationType) -> Vec<GgufTensorInfo> {
                 qtype,
                 offset,
                 size_bytes: size,
-                aligned: offset % 32 == 0,
+                aligned: offset.is_multiple_of(32),
             };
             offset = calculate_aligned_offset(offset + size, 32);
             tensor
@@ -555,7 +555,7 @@ mod tests {
         // 1024 elements / 32 block size = 32 blocks = 32 * 4 = 128 bytes for scales
         // 1024 * 2 bits = 2048 bits = 256 bytes for quantized data
         // Total ≈ 384 bytes
-        assert!(size >= 256 && size <= 512, "I2S size should be reasonable");
+        assert!((256..=512).contains(&size), "I2S size should be reasonable");
     }
 
     #[test]

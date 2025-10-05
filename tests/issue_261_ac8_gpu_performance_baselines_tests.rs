@@ -100,9 +100,9 @@ fn test_gpu_smoke() -> Result<()> {
     // Placeholder: GPU smoke test not yet comprehensive
     // When implemented: should validate basic GPU functionality
 
-    let test_shapes = vec![[128, 256], [256, 512]];
+    let test_shapes = [[128, 256], [256, 512]];
 
-    assert!(test_shapes.len() > 0, "Should have test tensor shapes");
+    assert!(!test_shapes.is_empty(), "Should have test tensor shapes");
     assert_eq!(test_shapes[0][0], 128, "First shape should be [128, 256]");
 
     Ok(())
@@ -115,7 +115,7 @@ fn test_gpu_cpu_fallback() -> Result<()> {
     // Placeholder: GPU/CPU fallback not yet implemented
     // When implemented: should gracefully fall back to CPU when GPU unavailable
 
-    let devices = vec!["GPU", "CPU"];
+    let devices = ["GPU", "CPU"];
 
     assert!(devices.contains(&"CPU"), "Should support CPU fallback");
     assert!(devices.contains(&"GPU"), "Should support GPU");
@@ -131,7 +131,7 @@ fn test_gpu_fp32_accumulator() -> Result<()> {
     // Placeholder: FP32 accumulator validation not yet implemented
     // When implemented: should use FP32 accumulators with INT2 weights
 
-    let dtypes = vec!["F16", "I2S", "F32"]; // activation, weight, accumulator
+    let dtypes = ["F16", "I2S", "F32"]; // activation, weight, accumulator
 
     assert_eq!(dtypes.len(), 3, "Should have 3 dtype components");
     assert_eq!(dtypes[2], "F32", "Accumulator should be FP32");
@@ -147,7 +147,7 @@ fn test_gpu_performance_profiling() -> Result<()> {
     // Placeholder: GPU profiling integration not yet implemented
     // When implemented: should collect comprehensive GPU performance metrics
 
-    let profiling_metrics = vec!["tokens_per_sec", "gpu_utilization", "memory_bandwidth"];
+    let profiling_metrics = ["tokens_per_sec", "gpu_utilization", "memory_bandwidth"];
 
     assert!(profiling_metrics.contains(&"tokens_per_sec"), "Should measure throughput");
     assert!(profiling_metrics.contains(&"gpu_utilization"), "Should measure utilization");

@@ -84,9 +84,8 @@ pub use load_i2s_crossval_fixtures as crossval_i2s;
 pub use load_tl_crossval_fixtures as crossval_tl;
 
 /// Fixture coverage summary
-pub fn fixture_coverage_summary() -> String {
-    format!(
-        r#"Issue #261 Fixture Coverage:
+pub fn fixture_coverage_summary() -> &'static str {
+    r#"Issue #261 Fixture Coverage:
 - AC2: Strict mode configurations (4 fixtures)
 - AC3: I2S quantization test data (5 CPU, 3 GPU fixtures)
 - AC4: TL1/TL2 quantization test data (3 TL1, 3 TL2 fixtures)
@@ -97,7 +96,6 @@ pub fn fixture_coverage_summary() -> String {
 - AC9: Cross-validation data (3 I2S, 2 TL, 3 accuracy fixtures)
 Total: 45+ test fixtures covering all acceptance criteria
 "#
-    )
 }
 
 #[cfg(test)]

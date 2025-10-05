@@ -140,7 +140,7 @@ fn test_xtask_cpu_baseline_command() -> Result<()> {
     // Placeholder: xtask benchmark command not yet implemented
     // When implemented: should run CPU baseline benchmarks via xtask
 
-    let xtask_cmd = vec!["cargo", "run", "-p", "xtask", "--", "benchmark", "--cpu-baseline"];
+    let xtask_cmd = ["cargo", "run", "-p", "xtask", "--", "benchmark", "--cpu-baseline"];
 
     assert_eq!(xtask_cmd[5], "benchmark", "Should run benchmark subcommand");
     assert_eq!(xtask_cmd[6], "--cpu-baseline", "Should specify CPU baseline");
