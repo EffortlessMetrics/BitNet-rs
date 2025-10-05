@@ -84,9 +84,9 @@ pub enum IndicatorType {
 /// Detection confidence level
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DetectionConfidence {
-    DefinitelyMock,    // 100% confidence
-    HighlyLikely,      // >90% confidence
-    Suspicious,        // >50% confidence
+    DefinitelyMock,     // 100% confidence
+    HighlyLikely,       // >90% confidence
+    Suspicious,         // >50% confidence
     PossiblyLegitimate, // <50% confidence
 }
 
@@ -260,13 +260,11 @@ pub fn load_mock_detection_pattern_fixtures() -> Vec<MockDetectionPatternFixture
         MockDetectionPatternFixture {
             pattern_id: "unrealistic_performance",
             computation_description: "Inference reporting >150 tokens/sec on CPU",
-            indicators: vec![
-                MockIndicator {
-                    indicator_type: IndicatorType::UnrealisticPerformance,
-                    threshold_value: Some(150.0),
-                    description: "CPU performance exceeds realistic threshold",
-                },
-            ],
+            indicators: vec![MockIndicator {
+                indicator_type: IndicatorType::UnrealisticPerformance,
+                threshold_value: Some(150.0),
+                description: "CPU performance exceeds realistic threshold",
+            }],
             detection_confidence: DetectionConfidence::HighlyLikely,
             expected_action: StrictModeAction::FailImmediately,
             description: "Unrealistic CPU performance indicates mock computation",
@@ -275,13 +273,11 @@ pub fn load_mock_detection_pattern_fixtures() -> Vec<MockDetectionPatternFixture
         MockDetectionPatternFixture {
             pattern_id: "missing_quantization_kernel",
             computation_description: "Quantized inference without I2S kernel",
-            indicators: vec![
-                MockIndicator {
-                    indicator_type: IndicatorType::MissingQuantizationKernel,
-                    threshold_value: None,
-                    description: "I2S kernel not initialized but quantized inference claimed",
-                },
-            ],
+            indicators: vec![MockIndicator {
+                indicator_type: IndicatorType::MissingQuantizationKernel,
+                threshold_value: None,
+                description: "I2S kernel not initialized but quantized inference claimed",
+            }],
             detection_confidence: DetectionConfidence::DefinitelyMock,
             expected_action: StrictModeAction::FailImmediately,
             description: "Missing quantization kernel proves mock computation",
@@ -290,13 +286,11 @@ pub fn load_mock_detection_pattern_fixtures() -> Vec<MockDetectionPatternFixture
         MockDetectionPatternFixture {
             pattern_id: "dequantization_fallback",
             computation_description: "Dequantizing to FP32 for computation",
-            indicators: vec![
-                MockIndicator {
-                    indicator_type: IndicatorType::DequantizationFallback,
-                    threshold_value: None,
-                    description: "Dequantization step detected in inference path",
-                },
-            ],
+            indicators: vec![MockIndicator {
+                indicator_type: IndicatorType::DequantizationFallback,
+                threshold_value: None,
+                description: "Dequantization step detected in inference path",
+            }],
             detection_confidence: DetectionConfidence::DefinitelyMock,
             expected_action: StrictModeAction::FailImmediately,
             description: "Dequantization fallback violates quantized computation requirement",
@@ -305,13 +299,11 @@ pub fn load_mock_detection_pattern_fixtures() -> Vec<MockDetectionPatternFixture
         MockDetectionPatternFixture {
             pattern_id: "suspicious_timings",
             computation_description: "Inference with inconsistent timing patterns",
-            indicators: vec![
-                MockIndicator {
-                    indicator_type: IndicatorType::SuspiciousTimings,
-                    threshold_value: Some(0.1),
-                    description: "Timing variance <10% suggests cached/mock results",
-                },
-            ],
+            indicators: vec![MockIndicator {
+                indicator_type: IndicatorType::SuspiciousTimings,
+                threshold_value: Some(0.1),
+                description: "Timing variance <10% suggests cached/mock results",
+            }],
             detection_confidence: DetectionConfidence::Suspicious,
             expected_action: StrictModeAction::LogWarningContinue,
             description: "Suspiciously consistent timings may indicate caching",
@@ -320,13 +312,11 @@ pub fn load_mock_detection_pattern_fixtures() -> Vec<MockDetectionPatternFixture
         MockDetectionPatternFixture {
             pattern_id: "mock_computation_flag",
             computation_description: "Explicit mock computation flag set",
-            indicators: vec![
-                MockIndicator {
-                    indicator_type: IndicatorType::MockComputationFlag,
-                    threshold_value: None,
-                    description: "Internal mock computation flag is set to true",
-                },
-            ],
+            indicators: vec![MockIndicator {
+                indicator_type: IndicatorType::MockComputationFlag,
+                threshold_value: None,
+                description: "Internal mock computation flag is set to true",
+            }],
             detection_confidence: DetectionConfidence::DefinitelyMock,
             expected_action: StrictModeAction::FailImmediately,
             description: "Explicit mock flag proves mock computation",
@@ -434,10 +424,14 @@ pub fn validate_environment_config(fixture: &StrictModeConfigFixture) -> bool {
         fixture.environment_variables.get("BITNET_STRICT_VALIDATE_PERFORMANCE") == Some(&"1");
     let ci_enhanced = fixture.environment_variables.get("BITNET_CI_ENHANCED_STRICT") == Some(&"1");
 
+    // CI enhanced mode implies require_quantization and validate_performance
+    let effective_require_quantization = require_quantization || ci_enhanced;
+    let effective_validate_performance = validate_performance || ci_enhanced;
+
     strict_mode == fixture.expected_behavior.enabled
         && fail_on_mock == fixture.expected_behavior.fail_on_mock
-        && require_quantization == fixture.expected_behavior.require_quantization
-        && validate_performance == fixture.expected_behavior.validate_performance
+        && effective_require_quantization == fixture.expected_behavior.require_quantization
+        && effective_validate_performance == fixture.expected_behavior.validate_performance
         && ci_enhanced == fixture.expected_behavior.ci_enhanced_mode
 }
 

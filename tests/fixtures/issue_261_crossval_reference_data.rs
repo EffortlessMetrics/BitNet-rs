@@ -48,10 +48,10 @@ pub struct ModelConfig {
 /// Validation targets for cross-validation
 #[derive(Debug, Clone, Copy)]
 pub struct ValidationTargets {
-    pub min_correlation: f32,      // >99.5%
-    pub max_mse: f32,              // <1e-5
+    pub min_correlation: f32,          // >99.5%
+    pub max_mse: f32,                  // <1e-5
     pub max_performance_variance: f32, // <5%
-    pub numerical_tolerance: f32,  // <1e-6
+    pub numerical_tolerance: f32,      // <1e-6
 }
 
 impl Default for ValidationTargets {
@@ -487,7 +487,7 @@ pub fn validate_crossval_results(fixture: &CrossValFixture) -> CrossValReport {
         max_abs_error,
         rust_performance_tokens_per_sec: 0.0, // Set by actual test
         cpp_performance_tokens_per_sec: 0.0,  // Set by actual test
-        performance_variance: 0.0,             // Set by actual test
+        performance_variance: 0.0,            // Set by actual test
         failure_reasons,
     }
 }

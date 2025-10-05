@@ -18,8 +18,8 @@ pub struct QuantizationTestFixture {
     pub expected_quantized: Vec<i8>,
     pub expected_scales: Vec<f32>,
     pub block_size: usize,
-    pub target_accuracy: f32,     // ≥99.8% for I2S, ≥99.6% for TL1/TL2
-    pub tolerance: f32,            // 1e-3 for I2S, 1e-2 for TL1/TL2
+    pub target_accuracy: f32, // ≥99.8% for I2S, ≥99.6% for TL1/TL2
+    pub tolerance: f32,       // 1e-3 for I2S, 1e-2 for TL1/TL2
     pub device_type: DeviceType,
     pub simd_optimized: bool,
     pub description: &'static str,
@@ -28,9 +28,9 @@ pub struct QuantizationTestFixture {
 /// Quantization type enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QuantizationType {
-    I2S,  // 2-bit signed: {-2, -1, 0, 1}
-    TL1,  // Table lookup 1 (ARM NEON optimized)
-    TL2,  // Table lookup 2 (x86 AVX2/AVX-512 optimized)
+    I2S, // 2-bit signed: {-2, -1, 0, 1}
+    TL1, // Table lookup 1 (ARM NEON optimized)
+    TL2, // Table lookup 2 (x86 AVX2/AVX-512 optimized)
 }
 
 /// Device type for test fixture selection
@@ -373,27 +373,23 @@ fn generate_normal_weights(size: usize, mean: f32, std: f32, seed: u64) -> Vec<f
     let mut weights = Vec::with_capacity(size);
     let mut rng_state = seed;
 
-    for i in 0..size {
-        if i % 2 == 0 && i + 1 < size {
-            // Box-Muller transform for normal distribution
-            let u1 = lcg_random(&mut rng_state);
-            let u2 = lcg_random(&mut rng_state);
-            let z0 = (-2.0 * u1.ln()).sqrt() * (2.0 * PI * u2).cos();
-            let z1 = (-2.0 * u1.ln()).sqrt() * (2.0 * PI * u2).sin();
-            weights.push(mean + std * z0);
-            weights.push(mean + std * z1);
-        }
-    }
-
-    // Handle odd-sized arrays
-    if size % 2 == 1 {
+    let mut i = 0;
+    while i < size {
+        // Box-Muller transform for normal distribution
         let u1 = lcg_random(&mut rng_state);
         let u2 = lcg_random(&mut rng_state);
         let z0 = (-2.0 * u1.ln()).sqrt() * (2.0 * PI * u2).cos();
+        let z1 = (-2.0 * u1.ln()).sqrt() * (2.0 * PI * u2).sin();
+
         weights.push(mean + std * z0);
+        i += 1;
+
+        if i < size {
+            weights.push(mean + std * z1);
+            i += 1;
+        }
     }
 
-    weights.truncate(size);
     weights
 }
 
@@ -441,8 +437,8 @@ fn generate_scales(size: usize, block_size: usize, seed: u64) -> Vec<f32> {
     let mut rng_state = seed.wrapping_mul(5);
 
     for _ in 0..num_blocks {
-        // Typical scale factors for neural network weights
-        let scale = 0.01 + lcg_random(&mut rng_state) * 0.15;
+        // Typical scale factors for neural network weights (range: 0.01 to 0.15)
+        let scale = 0.01 + lcg_random(&mut rng_state) * 0.14;
         scales.push(scale);
     }
 
@@ -470,7 +466,10 @@ fn generate_extreme_values(size: usize) -> Vec<f32> {
 /// Supports BITNET_SEED environment variable
 fn lcg_random(state: &mut u64) -> f32 {
     *state = state.wrapping_mul(1664525).wrapping_add(1013904223);
-    (*state as f32) / (u32::MAX as f32)
+    // Use lower 32 bits and ensure result is in (0, 1) to avoid ln(0) = -inf
+    let val = ((*state & 0xFFFFFFFF) as u32) as f32 / (u32::MAX as f32);
+    // Clamp to avoid exactly 0.0 or 1.0
+    val.max(1e-10).min(1.0 - 1e-10)
 }
 
 // ============================================================================
@@ -577,10 +576,7 @@ mod tests {
     fn test_i2s_quantized_range() {
         let quantized = generate_i2s_quantized(1000, 42);
         for val in quantized {
-            assert!(
-                val >= -2 && val <= 1,
-                "I2S quantized values must be in range [-2, 1]"
-            );
+            assert!(val >= -2 && val <= 1, "I2S quantized values must be in range [-2, 1]");
         }
     }
 

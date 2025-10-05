@@ -100,9 +100,9 @@ pub enum ComputationType {
 /// Mock detection result
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MockDetectionResult {
-    Pass,              // Realistic performance
-    FailSuspicious,    // >150 tok/s indicates mock
-    FailTooFast,       // >200 tok/s definitely mock
+    Pass,           // Realistic performance
+    FailSuspicious, // >150 tok/s indicates mock
+    FailTooFast,    // >200 tok/s definitely mock
 }
 
 /// GPU performance baseline fixture
@@ -212,65 +212,61 @@ pub fn load_cpu_i2s_baselines() -> Vec<PerformanceBaselineFixture> {
 /// Load CPU TL1 performance baselines (ARM NEON)
 #[cfg(all(feature = "cpu", target_arch = "aarch64"))]
 pub fn load_cpu_tl1_baselines() -> Vec<PerformanceBaselineFixture> {
-    vec![
-        PerformanceBaselineFixture {
-            baseline_id: "cpu_tl1_neon",
-            architecture: CpuArchitecture::Aarch64NEON,
-            quantization_type: QuantizationType::TL1,
-            target_tokens_per_sec: PerformanceRange {
-                min_tokens_per_sec: 12.0,
-                max_tokens_per_sec: 18.0,
-                target_mean: 15.0,
-                target_std_dev: 1.5,
-            },
-            latency_percentiles: LatencyPercentiles {
-                p50_ms: 62.0,
-                p95_ms: 72.0,
-                p99_ms: 78.0,
-                max_ms: 85.0,
-            },
-            warmup_iterations: 5,
-            measurement_iterations: 20,
-            statistical_targets: StatisticalTargets {
-                max_coefficient_of_variation: 0.05,
-                min_sample_size: 20,
-                outlier_threshold: 2.0,
-            },
-            description: "CPU TL1 performance baseline for ARM NEON",
+    vec![PerformanceBaselineFixture {
+        baseline_id: "cpu_tl1_neon",
+        architecture: CpuArchitecture::Aarch64NEON,
+        quantization_type: QuantizationType::TL1,
+        target_tokens_per_sec: PerformanceRange {
+            min_tokens_per_sec: 12.0,
+            max_tokens_per_sec: 18.0,
+            target_mean: 15.0,
+            target_std_dev: 1.5,
         },
-    ]
+        latency_percentiles: LatencyPercentiles {
+            p50_ms: 62.0,
+            p95_ms: 72.0,
+            p99_ms: 78.0,
+            max_ms: 85.0,
+        },
+        warmup_iterations: 5,
+        measurement_iterations: 20,
+        statistical_targets: StatisticalTargets {
+            max_coefficient_of_variation: 0.05,
+            min_sample_size: 20,
+            outlier_threshold: 2.0,
+        },
+        description: "CPU TL1 performance baseline for ARM NEON",
+    }]
 }
 
 /// Load CPU TL2 performance baselines (x86 AVX)
 #[cfg(all(feature = "cpu", target_arch = "x86_64"))]
 pub fn load_cpu_tl2_baselines() -> Vec<PerformanceBaselineFixture> {
-    vec![
-        PerformanceBaselineFixture {
-            baseline_id: "cpu_tl2_avx2",
-            architecture: CpuArchitecture::X86_64AVX2,
-            quantization_type: QuantizationType::TL2,
-            target_tokens_per_sec: PerformanceRange {
-                min_tokens_per_sec: 10.0,
-                max_tokens_per_sec: 15.0,
-                target_mean: 12.5,
-                target_std_dev: 1.3,
-            },
-            latency_percentiles: LatencyPercentiles {
-                p50_ms: 75.0,
-                p95_ms: 88.0,
-                p99_ms: 95.0,
-                max_ms: 105.0,
-            },
-            warmup_iterations: 5,
-            measurement_iterations: 20,
-            statistical_targets: StatisticalTargets {
-                max_coefficient_of_variation: 0.05,
-                min_sample_size: 20,
-                outlier_threshold: 2.0,
-            },
-            description: "CPU TL2 performance baseline for x86 AVX2",
+    vec![PerformanceBaselineFixture {
+        baseline_id: "cpu_tl2_avx2",
+        architecture: CpuArchitecture::X86_64AVX2,
+        quantization_type: QuantizationType::TL2,
+        target_tokens_per_sec: PerformanceRange {
+            min_tokens_per_sec: 10.0,
+            max_tokens_per_sec: 15.0,
+            target_mean: 12.5,
+            target_std_dev: 1.3,
         },
-    ]
+        latency_percentiles: LatencyPercentiles {
+            p50_ms: 75.0,
+            p95_ms: 88.0,
+            p99_ms: 95.0,
+            max_ms: 105.0,
+        },
+        warmup_iterations: 5,
+        measurement_iterations: 20,
+        statistical_targets: StatisticalTargets {
+            max_coefficient_of_variation: 0.05,
+            min_sample_size: 20,
+            outlier_threshold: 2.0,
+        },
+        description: "CPU TL2 performance baseline for x86 AVX2",
+    }]
 }
 
 // ============================================================================
@@ -539,14 +535,8 @@ mod tests {
     #[test]
     fn test_mock_detection() {
         assert_eq!(detect_mock_performance(17.5, "cpu"), MockDetectionResult::Pass);
-        assert_eq!(
-            detect_mock_performance(160.0, "gpu"),
-            MockDetectionResult::FailSuspicious
-        );
-        assert_eq!(
-            detect_mock_performance(250.0, "gpu"),
-            MockDetectionResult::FailTooFast
-        );
+        assert_eq!(detect_mock_performance(160.0, "gpu"), MockDetectionResult::FailSuspicious);
+        assert_eq!(detect_mock_performance(250.0, "gpu"), MockDetectionResult::FailTooFast);
     }
 
     #[test]

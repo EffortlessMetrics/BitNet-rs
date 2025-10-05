@@ -75,10 +75,8 @@ pub fn validate_quantization_accuracy(
     let mut errors = Vec::new();
 
     if correlation < target_correlation {
-        errors.push(format!(
-            "Correlation {:.6} below target {:.6}",
-            correlation, target_correlation
-        ));
+        errors
+            .push(format!("Correlation {:.6} below target {:.6}", correlation, target_correlation));
     }
 
     if mse > max_mse {
@@ -174,8 +172,7 @@ impl PerformanceStatistics {
             return Self::default();
         }
 
-        let ms_values: Vec<f32> =
-            measurements.iter().map(|d| d.as_secs_f32() * 1000.0).collect();
+        let ms_values: Vec<f32> = measurements.iter().map(|d| d.as_secs_f32() * 1000.0).collect();
 
         let sum: f32 = ms_values.iter().sum();
         let mean_ms = sum / sample_count as f32;
@@ -206,11 +203,7 @@ impl PerformanceStatistics {
 
     /// Convert to tokens per second (assuming 1 token per iteration)
     pub fn tokens_per_sec(&self) -> f32 {
-        if self.mean_ms > 0.0 {
-            1000.0 / self.mean_ms
-        } else {
-            0.0
-        }
+        if self.mean_ms > 0.0 { 1000.0 / self.mean_ms } else { 0.0 }
     }
 }
 
@@ -314,16 +307,10 @@ pub struct DeterministicConfig {
 impl DeterministicConfig {
     /// Setup deterministic environment
     pub fn setup() -> Self {
-        let vars = vec![
-            "BITNET_DETERMINISTIC",
-            "BITNET_SEED",
-            "RAYON_NUM_THREADS",
-        ];
+        let vars = vec!["BITNET_DETERMINISTIC", "BITNET_SEED", "RAYON_NUM_THREADS"];
 
-        let original_env: Vec<(String, Option<String>)> = vars
-            .iter()
-            .map(|&var| (var.to_string(), std::env::var(var).ok()))
-            .collect();
+        let original_env: Vec<(String, Option<String>)> =
+            vars.iter().map(|&var| (var.to_string(), std::env::var(var).ok())).collect();
 
         unsafe {
             std::env::set_var("BITNET_DETERMINISTIC", "1");
@@ -360,10 +347,8 @@ impl StrictModeConfig {
             "BITNET_STRICT_VALIDATE_PERFORMANCE",
         ];
 
-        let original_env: Vec<(String, Option<String>)> = vars
-            .iter()
-            .map(|&var| (var.to_string(), std::env::var(var).ok()))
-            .collect();
+        let original_env: Vec<(String, Option<String>)> =
+            vars.iter().map(|&var| (var.to_string(), std::env::var(var).ok())).collect();
 
         unsafe {
             std::env::set_var("BITNET_STRICT_MODE", "1");
@@ -502,18 +487,9 @@ mod tests {
 
     #[test]
     fn test_mock_detection() {
-        assert_eq!(
-            detect_mock_performance(17.5, "cpu"),
-            MockDetectionResult::Legitimate
-        );
-        assert_eq!(
-            detect_mock_performance(160.0, "gpu"),
-            MockDetectionResult::Suspicious
-        );
-        assert_eq!(
-            detect_mock_performance(250.0, "gpu"),
-            MockDetectionResult::DefinitelyMock
-        );
+        assert_eq!(detect_mock_performance(17.5, "cpu"), MockDetectionResult::Legitimate);
+        assert_eq!(detect_mock_performance(160.0, "gpu"), MockDetectionResult::Suspicious);
+        assert_eq!(detect_mock_performance(250.0, "gpu"), MockDetectionResult::DefinitelyMock);
     }
 
     #[test]

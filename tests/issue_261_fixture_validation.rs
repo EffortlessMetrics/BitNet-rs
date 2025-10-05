@@ -13,8 +13,8 @@ mod helpers;
 
 use fixtures::*;
 use helpers::{
-    is_cpu_feature_enabled, is_gpu_feature_enabled, is_crossval_feature_enabled,
-    is_ffi_feature_enabled, current_architecture, Architecture,
+    Architecture, current_architecture, is_cpu_feature_enabled, is_crossval_feature_enabled,
+    is_ffi_feature_enabled, is_gpu_feature_enabled,
 };
 
 /// Validate all fixture modules compile and load successfully

@@ -23,8 +23,8 @@ pub struct GgufModelFixture {
 /// GGUF metadata structure
 #[derive(Debug, Clone)]
 pub struct GgufMetadata {
-    pub magic: u32,              // 0x46554747 ("GGUF")
-    pub version: u32,            // GGUF version (3)
+    pub magic: u32,   // 0x46554747 ("GGUF")
+    pub version: u32, // GGUF version (3)
     pub tensor_count: u64,
     pub kv_count: u64,
     pub architecture: &'static str,
@@ -52,10 +52,10 @@ pub struct GgufTensorInfo {
 pub enum GgufQuantizationType {
     F32,
     F16,
-    I2S,   // BitNet I2S quantization
-    TL1,   // BitNet TL1 quantization
-    TL2,   // BitNet TL2 quantization
-    IQ2S,  // GGML IQ2_S quantization (via FFI)
+    I2S,  // BitNet I2S quantization
+    TL1,  // BitNet TL1 quantization
+    TL2,  // BitNet TL2 quantization
+    IQ2S, // GGML IQ2_S quantization (via FFI)
 }
 
 /// Validation flags for GGUF model testing
@@ -291,16 +291,14 @@ pub fn load_corrupted_model_fixtures() -> Vec<GgufModelFixture> {
                 num_heads: 4,
                 max_seq_len: 256,
             },
-            tensors: vec![
-                GgufTensorInfo {
-                    name: "test.weight",
-                    shape: vec![128, 128],
-                    qtype: GgufQuantizationType::I2S,
-                    offset: 17, // Not 32-byte aligned
-                    size_bytes: calculate_i2s_size(128 * 128),
-                    aligned: false,
-                },
-            ],
+            tensors: vec![GgufTensorInfo {
+                name: "test.weight",
+                shape: vec![128, 128],
+                qtype: GgufQuantizationType::I2S,
+                offset: 17, // Not 32-byte aligned
+                size_bytes: calculate_i2s_size(128 * 128),
+                aligned: false,
+            }],
             alignment: 32,
             quantization_type: GgufQuantizationType::I2S,
             weight_mapper_compatible: false,

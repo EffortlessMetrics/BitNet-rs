@@ -146,7 +146,6 @@ impl StrictModeEnforcer {
     }
 
     /// Create enforcer with fresh environment reading (bypasses OnceLock for testing)
-    #[cfg(test)]
     pub fn new_fresh() -> Self {
         let config = StrictModeConfig::from_env();
         Self { config }

@@ -18,36 +18,36 @@ pub mod issue_261_strict_mode_fixtures;
 
 // Re-export commonly used fixtures
 pub use issue_261_crossval_reference_data::{
-    calculate_correlation, calculate_max_abs_error, calculate_mse, validate_crossval_results,
     CrossValFixture, CrossValReport, QuantizationAccuracyFixture, ValidationTargets,
+    calculate_correlation, calculate_max_abs_error, calculate_mse, validate_crossval_results,
 };
 
 pub use issue_261_gguf_test_models::{
-    get_gguf_fixture_by_id, load_corrupted_model_fixtures, load_tensor_alignment_fixtures,
-    load_valid_i2s_model_fixtures, load_valid_tl_model_fixtures, validate_gguf_fixture,
     GgufMetadata, GgufModelFixture, GgufQuantizationType, GgufTensorInfo, TensorAlignmentFixture,
-    ValidationFlags,
+    ValidationFlags, get_gguf_fixture_by_id, load_corrupted_model_fixtures,
+    load_tensor_alignment_fixtures, load_valid_i2s_model_fixtures, load_valid_tl_model_fixtures,
+    validate_gguf_fixture,
 };
 
 pub use issue_261_performance_test_data::{
-    detect_mock_performance, validate_performance_against_baseline, load_mock_detection_fixtures,
-    ComputeCapability, ComputationType, CpuArchitecture, GpuPerformanceFixture,
-    LatencyPercentiles, MockDetectionResult, MockPerformanceFixture, PerformanceBaselineFixture,
-    PerformanceRange, PerformanceStatistics, PrecisionMode,
+    ComputationType, ComputeCapability, CpuArchitecture, GpuPerformanceFixture, LatencyPercentiles,
+    MockDetectionResult, MockPerformanceFixture, PerformanceBaselineFixture, PerformanceRange,
+    PerformanceStatistics, PrecisionMode, detect_mock_performance, load_mock_detection_fixtures,
+    validate_performance_against_baseline,
 };
 
 pub use issue_261_quantization_test_data::{
-    get_fixture_by_id, load_edge_case_fixtures, validate_fixture_integrity, DeviceType,
-    EdgeCaseFixture, ExpectedBehavior, QuantizationTestFixture,
+    DeviceType, EdgeCaseFixture, ExpectedBehavior, QuantizationTestFixture, get_fixture_by_id,
+    load_edge_case_fixtures, validate_fixture_integrity,
 };
 
 pub use issue_261_strict_mode_fixtures::{
-    determine_strict_mode_action, get_mock_pattern_by_id, get_strict_mode_fixture_by_id,
-    load_ci_validation_fixtures, load_mock_detection_pattern_fixtures,
-    load_strict_mode_config_fixtures, validate_environment_config, CiValidationFixture,
-    DetectionConfidence, IndicatorType, KernelAvailability, MockDetectionPatternFixture,
-    MockIndicator, MockScenario, StrictModeAction, StrictModeBehavior, StrictModeConfigFixture,
-    ValidationCheckType, ValidationRule,
+    CiValidationFixture, DetectionConfidence, IndicatorType, KernelAvailability,
+    MockDetectionPatternFixture, MockIndicator, MockScenario, StrictModeAction, StrictModeBehavior,
+    StrictModeConfigFixture, ValidationCheckType, ValidationRule, determine_strict_mode_action,
+    get_mock_pattern_by_id, get_strict_mode_fixture_by_id, load_ci_validation_fixtures,
+    load_mock_detection_pattern_fixtures, load_strict_mode_config_fixtures,
+    validate_environment_config,
 };
 
 // Platform-specific fixture loaders
@@ -58,10 +58,10 @@ pub use issue_261_quantization_test_data::load_i2s_cpu_fixtures;
 pub use issue_261_quantization_test_data::load_i2s_gpu_fixtures;
 
 #[cfg(all(feature = "cpu", target_arch = "x86_64"))]
-pub use issue_261_quantization_test_data::{load_tl2_cpu_fixtures, QuantizationType};
+pub use issue_261_quantization_test_data::{QuantizationType, load_tl2_cpu_fixtures};
 
 #[cfg(all(feature = "cpu", target_arch = "aarch64"))]
-pub use issue_261_quantization_test_data::{load_tl1_cpu_fixtures, QuantizationType};
+pub use issue_261_quantization_test_data::{QuantizationType, load_tl1_cpu_fixtures};
 
 #[cfg(all(feature = "cpu", target_arch = "x86_64"))]
 pub use issue_261_performance_test_data::{load_cpu_i2s_baselines, load_cpu_tl2_baselines};
@@ -74,7 +74,7 @@ pub use issue_261_performance_test_data::load_gpu_i2s_baselines;
 
 #[cfg(feature = "crossval")]
 pub use issue_261_crossval_reference_data::{
-    load_i2s_crossval_fixtures, load_tl_crossval_fixtures, load_quantization_accuracy_fixtures,
+    load_i2s_crossval_fixtures, load_quantization_accuracy_fixtures, load_tl_crossval_fixtures,
 };
 
 // Convenience aliases for crossval
