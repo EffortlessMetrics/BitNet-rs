@@ -10,6 +10,7 @@ mod performance_tests {
 
     /// Performance metrics structure
     #[derive(Debug, Clone)]
+    #[allow(dead_code)]
     struct PerformanceMetrics {
         throughput_tokens_per_second: f64,
         latency_p50_ms: f64,
@@ -498,6 +499,7 @@ mod rand {
     use std::hash::{Hash, Hasher};
     use std::time::{SystemTime, UNIX_EPOCH};
 
+    #[allow(dead_code)]
     pub fn random<T>() -> f64
     where
         T: 'static,

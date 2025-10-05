@@ -1,0 +1,157 @@
+//! AC6: Determinism Integration Test (Issue #254)
+//!
+//! Tests feature spec: issue-254-real-inference-spec.md#ac6-determinism-test
+//! API contract: neural-network-operation-requirements.md#determinism-requirements
+//!
+//! This test validates that two inference runs produce identical token sequences
+//! with BITNET_DETERMINISTIC=1 + RAYON_NUM_THREADS=1.
+
+#![cfg(feature = "cpu")]
+
+use anyhow::Result;
+use bitnet_common::Device;
+use bitnet_inference::{AutoregressiveGenerator, GenConfig};
+use bitnet_models::BitNetModel;
+use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
+use serial_test::serial;
+
+/// AC:6.1 - Two complete inference runs produce identical token sequences
+/// Validates full determinism from prompt to generated tokens
+#[tokio::test]
+#[serial]
+async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
+    // Set deterministic environment
+    unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
+    unsafe { std::env::set_var("BITNET_SEED", "42") };
+    unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
+
+    let _model = create_test_model()?;
+    let tokenizer = create_test_tokenizer()?;
+
+    let config = GenConfig {
+        seed: Some(42),
+        max_new_tokens: 50,
+        temperature: 1.0,
+        top_k: Some(50),
+        top_p: Some(0.9),
+        ..Default::default()
+    };
+
+    let prompt = "The future of AI is";
+    let input_ids: Vec<usize> =
+        tokenizer.encode(prompt, false, false)?.iter().map(|&x| x as usize).collect();
+
+    // Run 1
+    let mut generator1 = AutoregressiveGenerator::new(config.clone(), Device::Cpu)?;
+    let tokens1 = generator1.generate(&input_ids, mock_forward_fn).await?;
+
+    // Run 2
+    let mut generator2 = AutoregressiveGenerator::new(config, Device::Cpu)?;
+    let tokens2 = generator2.generate(&input_ids, mock_forward_fn).await?;
+
+    // AC6: Identical sequences
+    assert_eq!(tokens1, tokens2, "AC6: Deterministic inference should produce identical tokens");
+
+    // Verify not trivial
+    assert!(tokens1.len() > 10, "AC6: Generation too short to validate");
+
+    unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
+    unsafe { std::env::remove_var("BITNET_SEED") };
+    unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
+
+    println!("AC6.1: Deterministic inference test - PENDING IMPLEMENTATION");
+    Ok(())
+}
+
+/// AC:6.2 - Determinism across multiple runs (5 iterations)
+/// Validates consistency over multiple generation cycles
+#[tokio::test]
+#[serial]
+async fn test_ac6_determinism_multiple_runs() -> Result<()> {
+    unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
+    unsafe { std::env::set_var("BITNET_SEED", "42") };
+    unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
+
+    let _model = create_test_model()?;
+    let tokenizer = create_test_tokenizer()?;
+
+    let config = GenConfig {
+        seed: Some(42),
+        max_new_tokens: 20,
+        temperature: 0.8,
+        top_k: Some(30),
+        top_p: Some(0.95),
+        ..Default::default()
+    };
+
+    let prompt = "Once upon a time";
+    let input_ids: Vec<usize> =
+        tokenizer.encode(prompt, false, false)?.iter().map(|&x| x as usize).collect();
+
+    // Run 5 times
+    let mut results = Vec::new();
+    for _ in 0..5 {
+        let mut generator = AutoregressiveGenerator::new(config.clone(), Device::Cpu)?;
+        let tokens = generator.generate(&input_ids, mock_forward_fn).await?;
+        results.push(tokens);
+    }
+
+    // AC6: All results identical
+    for i in 1..results.len() {
+        assert_eq!(results[0], results[i], "AC6: Run {} differs from run 0", i);
+    }
+
+    unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
+    unsafe { std::env::remove_var("BITNET_SEED") };
+    unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
+
+    println!("AC6.2: Multiple runs determinism test - PENDING IMPLEMENTATION");
+    Ok(())
+}
+
+// Helper functions
+fn create_test_model() -> Result<BitNetModel> {
+    use bitnet_common::{BitNetConfig, ModelConfig, ModelFormat};
+    let model_config = ModelConfig {
+        path: None,
+        format: ModelFormat::Gguf,
+        vocab_size: 50257,
+        hidden_size: 768,
+        num_layers: 2,
+        num_heads: 12,
+        num_key_value_heads: 12,
+        intermediate_size: 3072,
+        max_position_embeddings: 1024,
+        rope_theta: Some(10000.0),
+        rope_scaling: None,
+    };
+    let config = BitNetConfig { model: model_config, ..Default::default() };
+    Ok(BitNetModel::new(config, Device::Cpu))
+}
+
+fn create_test_tokenizer() -> Result<UniversalTokenizer> {
+    use bitnet_tokenizers::TokenizerConfig;
+    let config = TokenizerConfig {
+        model_type: "gpt2".to_string(),
+        vocab_size: 50257,
+        pre_tokenizer: Some("gpt2".to_string()),
+        add_bos: false,
+        add_eos: false,
+        add_space_prefix: true,
+        byte_fallback: true,
+        bos_token_id: Some(50256),
+        eos_token_id: Some(50256),
+        pad_token_id: Some(50257),
+        unk_token_id: Some(0),
+        vocabulary: None,
+        bpe_merges: None,
+    };
+    UniversalTokenizer::new(config)
+        .map_err(|e| anyhow::anyhow!("Failed to create tokenizer: {}", e))
+}
+
+async fn mock_forward_fn(
+    _input: bitnet_common::BitNetTensor,
+) -> Result<bitnet_common::BitNetTensor> {
+    Ok(bitnet_common::BitNetTensor::zeros(&[1, 50257], candle_core::DType::F32, &Device::Cpu)?)
+}

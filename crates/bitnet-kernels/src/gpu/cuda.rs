@@ -247,6 +247,11 @@ impl CudaKernel {
             reason: format!("Failed to launch quantization kernel: {:?}", e),
         })?;
 
+        // Synchronize stream to ensure kernel completion before data transfer
+        self.stream.synchronize().map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to synchronize stream after quantization: {:?}", e),
+        })?;
+
         // Transfer results back to host
         let output_host: Vec<u8> = self.stream.memcpy_dtov(&output_dev).map_err(|e| {
             KernelError::GpuError { reason: format!("Failed to transfer output back: {:?}", e) }
@@ -318,12 +323,18 @@ impl CudaKernel {
             reason: format!("Failed to launch kernel: {:?}", e),
         })?;
 
+        // Synchronize stream to ensure kernel completion before data transfer
+        self.stream.synchronize().map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to synchronize stream after matmul: {:?}", e),
+        })?;
+
         // Transfer result back to host
         let c_host: Vec<f32> = self.stream.memcpy_dtov(&c_dev).map_err(|e| {
             KernelError::GpuError { reason: format!("Failed to transfer result back: {:?}", e) }
         })?;
 
         c.copy_from_slice(&c_host);
+        log::debug!("CUDA matmul completed successfully");
         Ok(())
     }
 
@@ -345,7 +356,9 @@ impl CudaKernel {
     /// Synchronize all streams
     pub fn synchronize_all(&self) -> Result<()> {
         // Synchronize the stream to wait for all operations to complete
-        // Note: cudarc streams are automatically synchronized on drop, but explicit sync is good practice
+        self.stream.synchronize().map_err(|e| KernelError::GpuError {
+            reason: format!("Failed to synchronize CUDA stream: {:?}", e),
+        })?;
         log::debug!("CUDA synchronization complete");
         Ok(())
     }

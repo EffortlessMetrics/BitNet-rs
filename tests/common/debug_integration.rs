@@ -1,8 +1,12 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+#[cfg(feature = "fixtures")]
+use super::config::FixtureConfig;
 use super::debugging::{DebugConfig, TestDebugger};
 use super::errors::TestOpResult;
+#[cfg(feature = "fixtures")]
+use super::fixtures;
 use super::harness::{FixtureCtx, TestCase, TestHarness, TestReporter};
 use super::results::{TestResult, TestSuiteResult};
 
@@ -488,7 +492,7 @@ mod tests {
         // Test successful execution
         // Create proper fixture context based on feature flags
         #[cfg(feature = "fixtures")]
-        let fixture_manager =
+        let fixture_manager: fixtures::FixtureManager =
             fixtures::FixtureManager::new(&FixtureConfig::default()).await.unwrap();
         #[cfg(feature = "fixtures")]
         let fixture_ctx = &fixture_manager;
@@ -533,7 +537,7 @@ mod tests {
         // Test failure handling
         // Create proper fixture context based on feature flags
         #[cfg(feature = "fixtures")]
-        let fixture_manager =
+        let fixture_manager: fixtures::FixtureManager =
             fixtures::FixtureManager::new(&FixtureConfig::default()).await.unwrap();
         #[cfg(feature = "fixtures")]
         let fixture_ctx = &fixture_manager;

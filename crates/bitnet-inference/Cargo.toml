@@ -35,11 +35,15 @@ log = "0.4"
 async-stream = "0.3"
 wasm-bindgen-futures = { version = "0.4.53", optional = true }
 gloo-timers = { version = "0.3.0", features = ["futures"], optional = true }
+rustc_version_runtime = "0.3"
+chrono = "0.4"
 
 [dev-dependencies]
 tokio-test = "0.4.4"
 proptest = "1.7.0"
 tempfile = "3.22.0"
+chrono = "0.4"
+serial_test = "3.2.0"
 
 [features]
 default = []

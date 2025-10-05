@@ -337,7 +337,7 @@ mod ac5_qlinear_replacement_tests {
 
         // TODO: Validate output characteristics once methods are implemented
         // assert!(!output.is_mock(), "Output should not be mock tensor");
-        assert!(output.shape().len() > 0, "Output should have valid shape");
+        assert!(!output.shape().is_empty(), "Output should have valid shape");
 
         // Test with strict mode
         unsafe {

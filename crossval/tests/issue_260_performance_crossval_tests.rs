@@ -435,7 +435,7 @@ mod cross_validation_tests {
 
             // Test TL1 cross-validation (if supported on platform)
             #[cfg(target_arch = "aarch64")]
-            {
+            let tl1_results = {
                 println!("  Cross-validating TL1 quantization...");
                 let tl1_results = cross_validator.validate_tl1_quantization()?;
 
@@ -449,11 +449,12 @@ mod cross_validation_tests {
                     "TL1 performance below C++ reference: {:.3}",
                     tl1_results.performance_ratio
                 );
-            }
+                tl1_results
+            };
 
             // Test TL2 cross-validation (if supported on platform)
             #[cfg(target_arch = "x86_64")]
-            {
+            let tl2_results = {
                 println!("  Cross-validating TL2 quantization...");
                 let tl2_results = cross_validator.validate_tl2_quantization()?;
 
@@ -467,7 +468,8 @@ mod cross_validation_tests {
                     "TL2 performance below C++ reference: {:.3}",
                     tl2_results.performance_ratio
                 );
-            }
+                tl2_results
+            };
 
             // Test end-to-end inference cross-validation
             println!("  Cross-validating end-to-end inference...");

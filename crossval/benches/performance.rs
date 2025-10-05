@@ -12,11 +12,12 @@ use bitnet_crossval::{
     fixtures::{STANDARD_PROMPTS, TestFixture},
 };
 use criterion::{
-    AxisScale, BenchmarkId, Criterion, PlotConfiguration, Throughput, black_box, criterion_group,
+    AxisScale, BenchmarkId, Criterion, PlotConfiguration, Throughput, criterion_group,
     criterion_main,
 };
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::hint::black_box;
 use std::time::Duration;
 
 /// Performance baseline data for regression detection

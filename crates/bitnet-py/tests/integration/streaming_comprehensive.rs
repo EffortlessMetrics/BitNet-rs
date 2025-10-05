@@ -10,7 +10,7 @@ use std::ffi::CString;
 /// Test that the Python module can be loaded and streaming generators work
 #[test]
 fn test_python_streaming_module_loads() {
-    Python::with_gil(|py| {
+    Python::attach(|py| {
         // Test that we can create the module
         let module_code = r#"
 import sys
@@ -244,7 +244,7 @@ if __name__ == "__main__":
 /// Test that the streaming generator properly handles resource cleanup
 #[test]
 fn test_streaming_resource_cleanup() {
-    Python::with_gil(|py| {
+    Python::attach(|py| {
         let code = r#"
 import gc
 
@@ -324,10 +324,10 @@ test_resource_cleanup()
     .unwrap();
 }
 
-/// Test async streaming patterns and cancellation  
+/// Test async streaming patterns and cancellation
 #[test]
 fn test_async_streaming_patterns() {
-    Python::with_gil(|py| {
+    Python::attach(|py| {
         let _asyncio = py.import("asyncio")?;
 
         let _code = r#"

@@ -111,16 +111,16 @@ mod crossval_tests {
     fn test_numerical_accuracy_tolerance_violation() {
         println!("Testing numerical accuracy tolerance violation detection...");
 
-        let rust_logits = vec![0.1, 0.2, 0.3];
-        let cpp_logits = vec![0.1, 0.2, 0.4]; // Last value exceeds tolerance
+        let rust_logits: Vec<f32> = vec![0.1, 0.2, 0.3];
+        let cpp_logits: Vec<f32> = vec![0.1, 0.2, 0.4]; // Last value exceeds tolerance
 
         let tolerance = 1e-3f32; // 0.001 tolerance
         let mut violations = Vec::new();
 
         for (i, (rust_logit, cpp_logit)) in rust_logits.iter().zip(cpp_logits.iter()).enumerate() {
-            let diff = ((rust_logit - cpp_logit) as f64).abs();
-            if diff > tolerance as f64 {
-                violations.push((i, diff));
+            let diff = (*rust_logit - *cpp_logit).abs();
+            if diff > tolerance {
+                violations.push((i, f64::from(diff)));
             }
         }
 

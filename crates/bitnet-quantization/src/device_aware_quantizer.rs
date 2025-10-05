@@ -376,6 +376,96 @@ impl CPUQuantizer {
 
         Ok(dequantized)
     }
+
+    pub fn quantize_tl2(&self, data: &[f32]) -> Result<QuantizedTensor> {
+        debug!("Performing TL2 quantization on CPU");
+
+        // TL2 uses 2-bit codes (4 values) with lookup table
+        let block_size = 32;
+        let num_blocks = data.len().div_ceil(block_size);
+        let mut quantized_data = Vec::new();
+        let mut scales = Vec::new();
+
+        for block_idx in 0..num_blocks {
+            let start = block_idx * block_size;
+            let end = (start + block_size).min(data.len());
+            let block = &data[start..end];
+
+            // Calculate scale factor
+            let scale = block.iter().map(|x| x.abs()).fold(0.0, f32::max);
+            scales.push(scale);
+
+            // Quantize to 2-bit codes (0, 1, 2, 3 mapping to lookup table)
+            let mut block_data = Vec::new();
+            for &value in block {
+                let normalized = if scale > 0.0 { value / scale } else { 0.0 };
+                // Map [-1, 1] to [0, 3] for 2-bit encoding
+                let quantized = ((normalized.clamp(-1.0, 1.0) + 1.0) * 1.5) as u8;
+                block_data.push(quantized.min(3));
+            }
+
+            // Pack 4 values per byte (2 bits each)
+            for chunk in block_data.chunks(4) {
+                let mut packed = 0u8;
+                for (i, &val) in chunk.iter().enumerate() {
+                    packed |= (val & 0x03) << (i * 2);
+                }
+                quantized_data.push(packed);
+            }
+        }
+
+        Ok(QuantizedTensor::new(
+            quantized_data,
+            QuantizationType::TL2,
+            vec![data.len()],
+            scales,
+            block_size,
+        ))
+    }
+
+    pub fn dequantize_tl2(&self, tensor: &QuantizedTensor) -> Result<Vec<f32>> {
+        debug!("Performing TL2 dequantization on CPU");
+
+        if tensor.qtype != QuantizationType::TL2 {
+            return Err(bitnet_common::BitNetError::Quantization(
+                QuantizationError::UnsupportedType { qtype: tensor.qtype.to_string() },
+            ));
+        }
+
+        // TL2 lookup table: 4 values for 2-bit codes
+        let lut = [-1.0f32, -0.33, 0.33, 1.0];
+
+        let mut dequantized = Vec::new();
+        let block_size = tensor.block_size;
+        let num_blocks = tensor.scales.len();
+
+        for block_idx in 0..num_blocks {
+            let scale = tensor.scales[block_idx];
+            let start_byte = block_idx * block_size.div_ceil(4);
+
+            for byte_idx in 0..block_size.div_ceil(4) {
+                if start_byte + byte_idx >= tensor.data.len() {
+                    break;
+                }
+
+                let packed = tensor.data[start_byte + byte_idx];
+                for bit_idx in 0..4 {
+                    let code = ((packed >> (bit_idx * 2)) & 0x03) as usize;
+                    let normalized = lut[code.min(3)];
+                    let dequantized_val = normalized * scale;
+                    dequantized.push(dequantized_val);
+
+                    if dequantized.len() >= tensor.numel() {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Trim to exact size
+        dequantized.truncate(tensor.numel());
+        Ok(dequantized)
+    }
 }
 
 /// GPU quantizer implementation
@@ -473,10 +563,7 @@ impl AccuracyValidator {
         let cpu_quantizer = CPUQuantizer::new(self.tolerance_config.clone());
         let dequantized = match quantized.qtype {
             QuantizationType::TL1 => cpu_quantizer.dequantize_tl1(quantized)?,
-            QuantizationType::TL2 => {
-                // TL2 would have its own implementation
-                cpu_quantizer.dequantize_tl1(quantized)?
-            }
+            QuantizationType::TL2 => cpu_quantizer.dequantize_tl2(quantized)?,
             _ => {
                 return Err(bitnet_common::BitNetError::Quantization(
                     QuantizationError::UnsupportedType { qtype: quantized.qtype.to_string() },
@@ -597,7 +684,7 @@ impl DeviceAwareQuantizer {
         let quantized = match quant_type {
             QuantizationType::I2S => self.cpu_backend.quantize_i2s(weights)?,
             QuantizationType::TL1 => self.cpu_backend.quantize_tl1(weights)?,
-            QuantizationType::TL2 => self.cpu_backend.quantize_tl1(weights)?, // Simplified: TL2 uses TL1 backend until full TL2 integration
+            QuantizationType::TL2 => self.cpu_backend.quantize_tl2(weights)?,
             _ => {
                 return Err(bitnet_common::BitNetError::Quantization(
                     QuantizationError::UnsupportedType { qtype: quant_type.to_string() },

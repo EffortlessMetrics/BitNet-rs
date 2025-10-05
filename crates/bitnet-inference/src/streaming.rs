@@ -633,16 +633,10 @@ mod tests {
 
         let mut token_count = 0;
         while let Some(result) = stream.next().await {
-            match result {
-                Ok(stream_response) => {
-                    assert!(!stream_response.text.is_empty());
-                    assert!(!stream_response.token_ids.is_empty());
-                    token_count += 1;
-                }
-                Err(e) => {
-                    panic!("Stream error: {}", e);
-                }
-            }
+            let stream_response = result.expect("Stream should not error");
+            assert!(!stream_response.text.is_empty());
+            assert!(!stream_response.token_ids.is_empty());
+            token_count += 1;
 
             // Prevent infinite loop in test
             if token_count > 10 {
@@ -697,17 +691,11 @@ mod tests {
         let mut total_token_ids = Vec::new();
 
         while let Some(result) = stream.next().await {
-            match result {
-                Ok(stream_response) => {
-                    assert!(!stream_response.text.is_empty());
-                    assert!(!stream_response.token_ids.is_empty());
-                    total_responses += 1;
-                    total_token_ids.extend(stream_response.token_ids);
-                }
-                Err(e) => {
-                    panic!("Stream error: {}", e);
-                }
-            }
+            let stream_response = result.expect("Stream should not error");
+            assert!(!stream_response.text.is_empty());
+            assert!(!stream_response.token_ids.is_empty());
+            total_responses += 1;
+            total_token_ids.extend(stream_response.token_ids);
 
             // Prevent infinite loop
             if total_responses > 10 {

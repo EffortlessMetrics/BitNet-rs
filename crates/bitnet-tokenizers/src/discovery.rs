@@ -755,7 +755,8 @@ impl TokenizerDiscovery {
 mod tests {
     #[cfg(feature = "cpu")]
     use super::{ModelCompatibilityMatrix, TokenizerDiscovery};
-    #[cfg(feature = "cpu")]
+    #[cfg(any(feature = "cpu", feature = "gpu"))]
+    #[allow(unused_imports)]
     use crate::error_handling::ModelTypeDetector;
     #[cfg(feature = "cpu")]
     use crate::{BitNetError, CacheManager, TokenizerDownloadInfo, TokenizerStrategy};

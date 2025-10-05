@@ -6,7 +6,7 @@
 #![cfg(feature = "integration-tests")]
 
 #[cfg(feature = "crossval")]
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 #[cfg(all(test, feature = "crossval"))]
 mod tests {
@@ -15,7 +15,6 @@ mod tests {
     use bitnet_models::GgufReader;
     use bitnet_sys::wrapper::{self, Session as CppSession};
     use bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader;
-    use std::env;
 
     /// Returns the model path if the required environment and C++ backend are available.
     ///

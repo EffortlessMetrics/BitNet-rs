@@ -63,24 +63,30 @@ impl KVCache {
     }
 
     pub fn get(&self, layer_idx: usize) -> Result<(BitNetTensor, BitNetTensor)> {
+        self.validate_layer_index(layer_idx)?;
+
+        // Return sliced view for current sequence length to avoid processing padding
+        let k_cache = self.get_sliced_cache(&self.k_cache[layer_idx])?;
+        let v_cache = self.get_sliced_cache(&self.v_cache[layer_idx])?;
+
+        Ok((k_cache, v_cache))
+    }
+
+    /// Validate layer index is within bounds
+    fn validate_layer_index(&self, layer_idx: usize) -> Result<()> {
         if layer_idx >= self.k_cache.len() {
             return Err(anyhow::anyhow!("Layer index {} out of bounds", layer_idx));
         }
+        Ok(())
+    }
 
-        // Return sliced view for current sequence length to avoid processing padding
-        let k_cache = if self.current_len < self.max_seq_len {
-            self.slice_cache_tensor(&self.k_cache[layer_idx], self.current_len)?
+    /// Get sliced cache tensor for current sequence length
+    fn get_sliced_cache(&self, cache: &BitNetTensor) -> Result<BitNetTensor> {
+        if self.current_len < self.max_seq_len {
+            self.slice_cache_tensor(cache, self.current_len)
         } else {
-            self.k_cache[layer_idx].clone()
-        };
-
-        let v_cache = if self.current_len < self.max_seq_len {
-            self.slice_cache_tensor(&self.v_cache[layer_idx], self.current_len)?
-        } else {
-            self.v_cache[layer_idx].clone()
-        };
-
-        Ok((k_cache, v_cache))
+            Ok(cache.clone())
+        }
     }
 
     /// Slice cache tensor to current sequence length
@@ -437,6 +443,40 @@ impl BitNetAttention {
     ) -> Result<BitNetTensor> {
         let (batch_size, seq_len, _) = self.get_input_dimensions(hidden_states)?;
 
+        // Compute query, key, value projections
+        let (query_states, key_states, value_states) =
+            self.compute_qkv_projections(hidden_states, batch_size, seq_len).await?;
+
+        // Apply rotary embeddings
+        let query_states = self.rope.apply(&query_states, seq_len).await?;
+        let key_states = self.rope.apply(&key_states, seq_len).await?;
+
+        // Handle KV-cache and GQA
+        let (key_states, value_states) =
+            self.process_kv_cache_and_gqa(key_states, value_states, kv_cache, layer_idx, seq_len)?;
+
+        // Compute attention and output projection
+        let attn_output = self
+            .compute_attention(
+                &query_states,
+                &key_states,
+                &value_states,
+                attention_mask,
+                batch_size,
+                seq_len,
+            )
+            .await?;
+
+        self.o_proj.forward(&attn_output).await.context("Failed to compute output projection")
+    }
+
+    /// Compute query, key, value projections and reshape for multi-head attention
+    async fn compute_qkv_projections(
+        &self,
+        hidden_states: &BitNetTensor,
+        batch_size: usize,
+        seq_len: usize,
+    ) -> Result<(BitNetTensor, BitNetTensor, BitNetTensor)> {
         // Apply quantized projections
         let query_states = self
             .q_proj
@@ -471,10 +511,18 @@ impl BitNetAttention {
             self.config.num_key_value_heads,
         )?;
 
-        // Apply rotary embeddings
-        let query_states = self.rope.apply(&query_states, seq_len).await?;
-        let key_states = self.rope.apply(&key_states, seq_len).await?;
+        Ok((query_states, key_states, value_states))
+    }
 
+    /// Process KV-cache and apply GQA if enabled
+    fn process_kv_cache_and_gqa(
+        &self,
+        key_states: BitNetTensor,
+        value_states: BitNetTensor,
+        kv_cache: Option<&mut KVCache>,
+        layer_idx: usize,
+        seq_len: usize,
+    ) -> Result<(BitNetTensor, BitNetTensor)> {
         // Handle KV-cache for autoregressive generation
         let (key_states, value_states) = if let Some(cache) = kv_cache {
             cache.update(layer_idx, key_states.clone(), value_states.clone(), seq_len)?;
@@ -484,32 +532,11 @@ impl BitNetAttention {
         };
 
         // Apply Grouped Query Attention if enabled
-        let (key_states, value_states) = if self.is_gqa {
-            self.apply_gqa(&key_states, &value_states)?
+        if self.is_gqa {
+            self.apply_gqa(&key_states, &value_states)
         } else {
-            (key_states, value_states)
-        };
-
-        // Compute attention
-        let attn_output = self
-            .compute_attention(
-                &query_states,
-                &key_states,
-                &value_states,
-                attention_mask,
-                batch_size,
-                seq_len,
-            )
-            .await?;
-
-        // Apply output projection
-        let output = self
-            .o_proj
-            .forward(&attn_output)
-            .await
-            .context("Failed to compute output projection")?;
-
-        Ok(output)
+            Ok((key_states, value_states))
+        }
     }
 
     fn get_input_dimensions(&self, hidden_states: &BitNetTensor) -> Result<(usize, usize, usize)> {

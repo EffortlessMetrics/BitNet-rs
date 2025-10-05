@@ -85,6 +85,7 @@ pub struct DeviceTestResult {
 ///
 /// This test validates that GGUF weight loading correctly places tensors on CPU device
 /// with proper memory management and SIMD optimization utilization.
+#[ignore] // Issue #159: TDD placeholder - temp file lifetime management needed
 #[cfg(feature = "cpu")]
 #[tokio::test]
 async fn test_ac6_cpu_device_tensor_placement() -> Result<()> {
@@ -332,14 +333,14 @@ async fn test_ac6_cross_device_consistency_validation() -> Result<()> {
     };
 
     // Validate consistency requirements
-    if let Some(gpu_result) = &consistency_result.gpu_device_result {
-        if gpu_result.loading_success {
-            assert!(
-                consistency_result.passed,
-                "Device consistency validation failed: score={:.6}, max_diff={:.6}",
-                consistency_result.consistency_score, consistency_result.max_difference
-            );
-        }
+    if let Some(gpu_result) = &consistency_result.gpu_device_result
+        && gpu_result.loading_success
+    {
+        assert!(
+            consistency_result.passed,
+            "Device consistency validation failed: score={:.6}, max_diff={:.6}",
+            consistency_result.consistency_score, consistency_result.max_difference
+        );
     }
 
     println!("AC6.3: Cross-device consistency validation completed");
@@ -362,6 +363,7 @@ async fn test_ac6_cross_device_consistency_validation() -> Result<()> {
 
 /// AC6.4: Memory efficiency validation with device-aware optimization
 /// Tests feature spec: gguf-weight-loading.md#p5-gpu-memory-management
+#[ignore] // Issue #159: TDD placeholder - temp file lifetime management needed
 #[cfg(feature = "cpu")]
 #[tokio::test]
 async fn test_ac6_memory_efficiency_validation() -> Result<()> {

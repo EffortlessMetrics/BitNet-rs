@@ -11,7 +11,8 @@
 
 use anyhow::Result;
 use bitnet_models::BitNetModel;
-use bitnet_quantization::I2SQuantizer;
+use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
+use std::process::Command;
 
 /// Test configuration for AC4 cross-validation accuracy validation
 #[derive(Debug, Clone)]

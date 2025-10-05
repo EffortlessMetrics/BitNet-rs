@@ -237,6 +237,7 @@ impl I2SQuantizer {
     }
 
     #[cfg(feature = "cuda")]
+    #[allow(dead_code)]
     fn quantize_cuda(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
         self.quantize_cuda_with_limits(tensor, &SecurityLimits::default())
     }

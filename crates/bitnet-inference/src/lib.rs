@@ -11,6 +11,7 @@ pub mod generation;
 pub mod gguf;
 pub mod layers;
 pub mod production_engine; // always available (sync parser)
+pub mod receipts; // AC4: Inference receipt generation
 
 // Re-export GGUF types for easy access
 pub use gguf::{GGUF_HEADER_LEN, GgufError, GgufHeader, GgufKv, GgufValue, read_kv_pairs};
@@ -41,6 +42,10 @@ pub use parity::{
 pub use production_engine::{
     GenerationResult, PerformanceMetricsCollector, ProductionInferenceEngine, ThroughputMetrics,
     TimingMetrics,
+};
+pub use receipts::{
+    AccuracyMetric, AccuracyTestResults, CrossValidation, DeterminismTestResults, InferenceReceipt,
+    KVCacheTestResults, ModelInfo, PerformanceBaseline, RECEIPT_SCHEMA_VERSION, TestResults,
 };
 pub use sampling::{SamplingConfig, SamplingStrategy};
 pub use streaming::{GenerationStream, StreamingConfig};

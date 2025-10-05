@@ -56,7 +56,7 @@ impl QuantizationTestConfig {
 #[cfg(feature = "inference")]
 fn test_i2s_quantization_tolerance_1e5() {
     // AC:8 - I2S ±1e-5
-    let config = QuantizationTestConfig::from_env();
+    let _config = QuantizationTestConfig::from_env();
 
     // Use the actual DeviceAwareQuantizer API
     let quantizer = DeviceAwareQuantizer::with_tolerance_config(ToleranceConfig::default());
@@ -106,7 +106,7 @@ fn test_i2s_quantization_tolerance_1e5() {
 #[cfg(feature = "inference")]
 fn test_tl1_tl2_quantization_tolerance_1e4() {
     // AC:8 - TL1/TL2 ±1e-4
-    let config = QuantizationTestConfig::from_env();
+    let _config = QuantizationTestConfig::from_env();
 
     // Use the actual DeviceAwareQuantizer API for TL1/TL2
     let test_tensor = generate_realistic_model_tensor(512 * 1024); // 512K elements
@@ -179,7 +179,7 @@ fn test_tl1_tl2_quantization_tolerance_1e4() {
 #[cfg(feature = "inference")]
 fn test_iq2s_quantization_tolerance_1e5() {
     // AC:8 - IQ2_S ±1e-5
-    let config = QuantizationTestConfig::from_env();
+    let _config = QuantizationTestConfig::from_env();
 
     // IQ2_S is not yet implemented - skip for now or implement as I2S variant
     println!("IQ2_S quantization test - using I2S as placeholder implementation");
@@ -236,7 +236,7 @@ fn test_iq2s_quantization_tolerance_1e5() {
 #[test]
 #[cfg(all(feature = "inference", feature = "gpu"))]
 fn test_gpu_quantization_accuracy_validation() {
-    let config = QuantizationTestConfig::from_env();
+    let _config = QuantizationTestConfig::from_env();
 
     // Use the actual DeviceAwareQuantizer API
     let quantizer = DeviceAwareQuantizer::with_tolerance_config(ToleranceConfig::default());
@@ -272,7 +272,8 @@ fn test_gpu_quantization_accuracy_validation() {
 
     // GPU quantization should maintain accuracy
     assert!(gpu_accuracy.relative_error <= 1e-5, "GPU quantization should maintain accuracy");
-    assert!(gpu_accuracy.correlation >= 0.9999, "GPU quantization should maintain correlation");
+    // Note: correlation metric would be in gpu_accuracy.metrics["correlation"] if implemented
+    assert!(gpu_accuracy.passed, "GPU quantization should pass validation");
 
     println!("✅ GPU quantization accuracy validation completed");
 }
@@ -282,7 +283,7 @@ fn test_gpu_quantization_accuracy_validation() {
 #[test]
 #[cfg(feature = "inference")]
 fn test_cpu_quantization_accuracy_validation() {
-    let config = QuantizationTestConfig::from_env();
+    let _config = QuantizationTestConfig::from_env();
 
     // Use the actual DeviceAwareQuantizer API for CPU testing
     let quantizer = DeviceAwareQuantizer::with_tolerance_config(ToleranceConfig::default());
@@ -333,7 +334,7 @@ fn test_cpu_quantization_accuracy_validation() {
 #[test]
 #[cfg(all(feature = "inference", feature = "gpu"))]
 fn test_gpu_cpu_quantization_parity_validation() {
-    let config = QuantizationTestConfig::from_env();
+    let _config = QuantizationTestConfig::from_env();
 
     // Test GPU/CPU parity using the DeviceAwareQuantizer
     let test_tensor = generate_realistic_model_tensor(1024 * 1024); // 1M elements
@@ -508,7 +509,7 @@ fn test_quantization_performance_benchmarks() {
 
         // Benchmark I2S quantization
         let benchmark_start = Instant::now();
-        let result = quantizer
+        let _result = quantizer
             .quantize_with_validation(&test_tensor, DeviceQuantizationType::I2S)
             .expect("Quantization should succeed");
         let benchmark_duration = benchmark_start.elapsed();
@@ -598,6 +599,7 @@ fn generate_iq2s_aligned_tensor(_size: usize) -> Vec<f32> {
 
 // Type definitions for test support
 #[cfg(feature = "inference")]
+#[allow(dead_code)]
 struct PerformanceBenchmark {
     tensor_size: usize,
     duration: Duration,

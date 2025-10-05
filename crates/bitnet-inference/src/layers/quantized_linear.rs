@@ -261,28 +261,7 @@ impl QuantizedLinear {
         self.validate_input(input)?;
 
         let input_shape = input.shape();
-        if input_shape.len() < 2 {
-            return Err(QuantizedLinearError::ShapeMismatch {
-                input: input_shape.to_vec(),
-                weight: vec![self.in_features, self.out_features],
-            }
-            .into());
-        }
-
-        // Handle both 2D and 3D inputs
-        let (_batch_size, _seq_len, features) = if input_shape.len() == 3 {
-            (input_shape[0], input_shape[1], input_shape[2])
-        } else {
-            (1, input_shape[0], input_shape[1])
-        };
-
-        if features != self.in_features {
-            return Err(QuantizedLinearError::ShapeMismatch {
-                input: input_shape.to_vec(),
-                weight: vec![self.in_features, self.out_features],
-            }
-            .into());
-        }
+        self.validate_input_dimensions(input_shape)?;
 
         // Perform quantized matrix multiplication based on type
         let output = match self.qtype {
@@ -292,51 +271,89 @@ impl QuantizedLinear {
         };
 
         // Add bias if present
-        let final_output = if let Some(ref bias) = self.bias {
+        self.apply_bias_if_present(output)
+    }
+
+    /// Validate input dimensions for forward pass
+    fn validate_input_dimensions(&self, input_shape: &[usize]) -> Result<()> {
+        if input_shape.len() < 2 {
+            return Err(QuantizedLinearError::ShapeMismatch {
+                input: input_shape.to_vec(),
+                weight: vec![self.in_features, self.out_features],
+            }
+            .into());
+        }
+
+        let features = input_shape[input_shape.len() - 1];
+        if features != self.in_features {
+            return Err(QuantizedLinearError::ShapeMismatch {
+                input: input_shape.to_vec(),
+                weight: vec![self.in_features, self.out_features],
+            }
+            .into());
+        }
+
+        Ok(())
+    }
+
+    /// Apply bias to output tensor if bias is present
+    fn apply_bias_if_present(&self, output: BitNetTensor) -> Result<BitNetTensor> {
+        if let Some(ref bias) = self.bias {
             let bias_candle = bias.to_candle()?;
             let output_candle = output.to_candle()?;
             let biased = output_candle
                 .broadcast_add(&bias_candle)
                 .context("Failed to add bias to output")?;
-            BitNetTensor::new(biased)
+            Ok(BitNetTensor::new(biased))
         } else {
-            output
-        };
-
-        Ok(final_output)
+            Ok(output)
+        }
     }
 
     /// I2S-specific forward pass implementation with optimized kernels
     async fn forward_i2s(&self, input: &BitNetTensor) -> Result<BitNetTensor> {
-        // Use the best available kernel from the kernel manager
         let provider =
             self.kernel_manager.select_best().context("Failed to select kernel provider")?;
 
         let input_candle = input.to_candle()?;
         let input_shape = input_candle.shape();
 
-        // Optimize memory layout for cache efficiency
-        let input_2d = if input_shape.dims().len() > 2 {
-            let total_batch = self.compute_total_batch_size(input_shape.dims());
-            self.reshape_with_alignment(&input_candle, total_batch, self.in_features)?
-        } else {
-            input_candle.clone()
-        };
+        // Reshape to 2D for efficient matrix multiplication
+        let input_2d = self.prepare_input_for_matmul(&input_candle)?;
 
-        // Use quantized matrix multiplication without dequantization when possible
+        // Select optimal kernel path based on device and quantization support
         let output_2d = if self.can_use_native_quantized_matmul() {
             self.quantized_matmul_i2s(&input_2d, provider).await?
         } else {
-            // Fallback to dequantization for compatibility
             self.fallback_i2s_matmul(&input_2d).await?
         };
 
-        // Reshape back to original batch dimensions with proper alignment
-        let output = if input_shape.dims().len() > 2 {
-            let mut output_shape = input_shape.dims().to_vec();
+        // Restore original tensor shape
+        self.restore_output_shape(output_2d, input_shape.dims())
+    }
+
+    /// Prepare input tensor for matrix multiplication with optimal memory layout
+    fn prepare_input_for_matmul(&self, input: &candle_core::Tensor) -> Result<candle_core::Tensor> {
+        let shape = input.shape();
+        if shape.dims().len() > 2 {
+            let total_batch = self.compute_total_batch_size(shape.dims());
+            self.reshape_with_alignment(input, total_batch, self.in_features)
+        } else {
+            Ok(input.clone())
+        }
+    }
+
+    /// Restore output tensor to original batch dimensions
+    fn restore_output_shape(
+        &self,
+        output_2d: candle_core::Tensor,
+        input_dims: &[usize],
+    ) -> Result<BitNetTensor> {
+        let output = if input_dims.len() > 2 {
+            let mut output_shape = input_dims.to_vec();
             let last_idx = output_shape.len() - 1;
             output_shape[last_idx] = self.out_features;
-            output_2d.reshape(output_shape).context("Failed to reshape I2S output")?
+            output_2d.reshape(output_shape).context("Failed to reshape output")?
         } else {
             output_2d
         };
@@ -425,40 +442,19 @@ impl QuantizedLinear {
         input: &candle_core::Tensor,
         provider: &dyn bitnet_kernels::KernelProvider,
     ) -> Result<candle_core::Tensor> {
-        use utils::{quantize_input_i2s, unpack_2bit_values};
+        use utils::quantize_input_i2s;
 
-        // Get input dimensions and data
+        // Extract input data and compute dimensions
         let input_shape = input.shape().dims();
-        let input_data = input
-            .flatten_all()?
-            .to_dtype(candle_core::DType::F32)?
-            .to_vec1::<f32>()
-            .context("Failed to extract input data for I2S quantized matmul")?;
+        let input_data = self.extract_input_data(input)?;
+        let (batch_size, in_features, out_features) = self.calculate_matmul_dimensions(input_shape);
 
-        // Calculate matrix dimensions
-        let batch_size = if input_shape.len() > 2 {
-            input_shape[..input_shape.len() - 1].iter().product()
-        } else {
-            input_shape[0]
-        };
-        let in_features = input_shape[input_shape.len() - 1];
-        let out_features = self.out_features;
-
-        // Quantize input to I2S format
+        // Prepare quantized inputs and weights
         let quantized_input = quantize_input_i2s(&input_data, in_features)?;
+        let weight_data = self.prepare_quantized_weights_i2s()?;
 
-        // Unpack quantized weights (convert from packed u8 to i8)
-        let unpacked_weights = unpack_2bit_values(&self.weights.data, self.weights.numel());
-
-        // Convert unpacked i8 weights to u8 for kernel interface
-        let weight_data: Vec<u8> = unpacked_weights.iter()
-            .map(|&x| (x + 2) as u8) // Convert i8 range [-2,1] to u8 range [0,3]
-            .collect();
-
-        // Prepare output buffer
+        // Execute kernel operation
         let mut output_data = vec![0.0f32; batch_size * out_features];
-
-        // Call native quantized kernel
         provider
             .matmul_i2s(
                 &quantized_input,
@@ -470,16 +466,86 @@ impl QuantizedLinear {
             )
             .context("Native I2S quantized matmul failed")?;
 
-        // Apply scales to output
+        // Apply quantization scales
+        self.apply_quantization_scales(&mut output_data, out_features);
+
+        // Create output tensor with correct shape
+        self.create_output_tensor(
+            output_data,
+            input_shape,
+            batch_size,
+            out_features,
+            input.device(),
+        )
+    }
+
+    /// Extract input data from tensor
+    fn extract_input_data(&self, input: &candle_core::Tensor) -> Result<Vec<f32>> {
+        input
+            .flatten_all()?
+            .to_dtype(candle_core::DType::F32)?
+            .to_vec1::<f32>()
+            .context("Failed to extract input data for quantized matmul")
+    }
+
+    /// Calculate matrix multiplication dimensions
+    fn calculate_matmul_dimensions(&self, input_shape: &[usize]) -> (usize, usize, usize) {
+        let batch_size = if input_shape.len() > 2 {
+            input_shape[..input_shape.len() - 1].iter().product()
+        } else {
+            input_shape[0]
+        };
+        let in_features = input_shape[input_shape.len() - 1];
+        let out_features = self.out_features;
+
+        (batch_size, in_features, out_features)
+    }
+
+    /// Prepare quantized weights for I2S kernel
+    fn prepare_quantized_weights_i2s(&self) -> Result<Vec<u8>> {
+        use utils::unpack_2bit_values;
+
+        let unpacked_weights = unpack_2bit_values(&self.weights.data, self.weights.numel());
+
+        // Convert i8 range [-2,1] to u8 range [0,3] for kernel interface
+        Ok(unpacked_weights.iter().map(|&x| (x + 2) as u8).collect())
+    }
+
+    /// Apply quantization scales to output data
+    fn apply_quantization_scales(&self, output_data: &mut [f32], out_features: usize) {
         let input_scale = 1.0; // Input quantization scale
-        for (chunk, &weight_scale) in output_data.chunks_mut(out_features).zip(&self.weights.scales)
-        {
-            for value in chunk.iter_mut() {
-                *value *= input_scale * weight_scale;
+        let block_size = self.weights.block_size;
+        let batch_size = output_data.len() / out_features;
+
+        // Apply scales per-feature or per-block, not per-batch-row
+        for row in 0..batch_size {
+            let base = row * out_features;
+            for col in 0..out_features {
+                // Determine which scale to use based on block structure
+                // For per-feature quantization: use scales[col]
+                // For block quantization: use scales[col / block_size]
+                let scale_idx = if self.weights.scales.len() == out_features {
+                    col // Per-feature quantization
+                } else {
+                    // Block-based quantization: determine block for this output feature
+                    let weight_idx = col * self.in_features; // Simplified: assumes column-major
+                    (weight_idx / block_size).min(self.weights.scales.len() - 1)
+                };
+                let scale = self.weights.scales.get(scale_idx).copied().unwrap_or(1.0);
+                output_data[base + col] *= input_scale * scale;
             }
         }
+    }
 
-        // Reshape output back to original batch dimensions
+    /// Create output tensor with proper shape
+    fn create_output_tensor(
+        &self,
+        output_data: Vec<f32>,
+        input_shape: &[usize],
+        batch_size: usize,
+        out_features: usize,
+        device: &candle_core::Device,
+    ) -> Result<candle_core::Tensor> {
         let output_shape = if input_shape.len() > 2 {
             let mut shape = input_shape[..input_shape.len() - 1].to_vec();
             shape.push(out_features);
@@ -488,11 +554,8 @@ impl QuantizedLinear {
             vec![batch_size, out_features]
         };
 
-        let output_tensor =
-            candle_core::Tensor::from_vec(output_data, output_shape, input.device())
-                .context("Failed to create output tensor for I2S quantized matmul")?;
-
-        Ok(output_tensor)
+        candle_core::Tensor::from_vec(output_data, output_shape, device)
+            .context("Failed to create output tensor")
     }
 
     /// Fallback I2S matrix multiplication with dequantization (deprecated - only for compatibility)
@@ -1243,12 +1306,20 @@ impl QuantizedLinear {
             )
             .context("Native TL1 quantized matmul failed")?;
 
-        // Apply TL1-specific scaling
+        // Apply TL1-specific scaling per-feature/block
         let input_scale = 1.0;
-        for (chunk, &weight_scale) in output_data.chunks_mut(out_features).zip(&self.weights.scales)
-        {
-            for value in chunk.iter_mut() {
-                *value *= input_scale * weight_scale * 0.8; // TL1 correction factor
+        let block_size = self.weights.block_size;
+        for row in 0..batch_size {
+            let base = row * out_features;
+            for col in 0..out_features {
+                let scale_idx = if self.weights.scales.len() == out_features {
+                    col
+                } else {
+                    let weight_idx = col * in_features;
+                    (weight_idx / block_size).min(self.weights.scales.len() - 1)
+                };
+                let scale = self.weights.scales.get(scale_idx).copied().unwrap_or(1.0);
+                output_data[base + col] *= input_scale * scale * 0.8; // TL1 correction factor
             }
         }
 
@@ -1319,12 +1390,20 @@ impl QuantizedLinear {
             )
             .context("Native TL2 quantized matmul failed")?;
 
-        // Apply TL2-specific scaling
+        // Apply TL2-specific scaling per-feature/block
         let input_scale = 1.0;
-        for (chunk, &weight_scale) in output_data.chunks_mut(out_features).zip(&self.weights.scales)
-        {
-            for value in chunk.iter_mut() {
-                *value *= input_scale * weight_scale * 0.9; // TL2 correction factor
+        let block_size = self.weights.block_size;
+        for row in 0..batch_size {
+            let base = row * out_features;
+            for col in 0..out_features {
+                let scale_idx = if self.weights.scales.len() == out_features {
+                    col
+                } else {
+                    let weight_idx = col * in_features;
+                    (weight_idx / block_size).min(self.weights.scales.len() - 1)
+                };
+                let scale = self.weights.scales.get(scale_idx).copied().unwrap_or(1.0);
+                output_data[base + col] *= input_scale * scale * 0.9; // TL2 correction factor
             }
         }
 

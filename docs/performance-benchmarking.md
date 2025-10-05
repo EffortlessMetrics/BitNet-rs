@@ -456,15 +456,98 @@ python3 scripts/detect-performance-regression.py \
 
 ### Current Performance Baselines (Linux x86_64)
 
-**Rust Implementation:**
-- Throughput: 125+ tokens/second
-- Latency P50: <90ms
-- Memory Usage: <1.1GB
-- Accuracy: >99.8%
+**IMPORTANT: Receipts Over Claims**
 
-**Performance Ratios (Rust vs C++):**
-- Throughput: 1.15x faster
-- Memory Efficiency: 11% less memory
-- Load Time: 34% faster startup
+All performance metrics below are backed by receipt artifacts in `ci/inference.json`. No performance claims are made without verifiable evidence.
 
-These targets are automatically validated through the regression detection system and updated as performance improvements are made.
+**Validated CPU Baselines (Issue #254 - Real Neural Network Inference)**
+
+Receipt: [ci/inference.json](../ci/inference.json)
+
+**I2S Quantization (2-bit signed):**
+- **Throughput**: 20.0 tokens/sec (validated)
+- **First Token Latency**: 250ms
+- **Average Token Latency**: 50ms
+- **Memory Usage**: 1024MB for 2B parameter model
+- **Compute Path**: Real quantized GEMV (no FP32 staging)
+- **Kernels**: `i2s_gemv`, `rope_apply`, `attention_real`
+- **Accuracy**: MSE ≤ 8.5e-6 vs FP32 (tolerance: 1e-5)
+- **Deterministic**: Yes (BITNET_DETERMINISTIC=1, seed=42)
+- **Environment**: RAYON_NUM_THREADS=1 for reproducibility
+
+**TL1 Quantization (Table Lookup - NEON optimized):**
+- **Throughput**: 18.2 Melem/s (matrix elements per second)
+- **Accuracy**: MSE ≤ 7.2e-5 vs FP32 (tolerance: 1e-4)
+- **Compute Path**: Real table lookup matmul
+- **Device**: CPU (NEON vectorization on ARM, scalar fallback on x86)
+
+**TL2 Quantization (Table Lookup - AVX optimized):**
+- **Throughput**: 0.58 Melem/s (baseline, optimization ongoing)
+- **Accuracy**: MSE ≤ 9.8e-5 vs FP32 (tolerance: 1e-4)
+- **Compute Path**: Real table lookup matmul
+- **Device**: CPU (AVX2/AVX-512 on x86)
+
+### Reproducing Performance Benchmarks
+
+All benchmarks can be reproduced with deterministic configuration:
+
+```bash
+# CPU I2S benchmark (primary production quantization)
+BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1 \
+cargo run -p xtask -- benchmark --features cpu --quantization i2s
+
+# TL1 benchmark (ARM NEON optimized)
+BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1 \
+cargo test --no-default-features --features cpu -p bitnet-kernels test_tl1_kernel_accuracy_envelope
+
+# TL2 benchmark (x86 AVX optimized)
+BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1 \
+cargo test --no-default-features --features cpu -p bitnet-kernels test_tl2_kernel_accuracy_envelope
+
+# Verify receipt artifact
+cat ci/inference.json | jq '.compute_path' # Must be "real"
+cat ci/inference.json | jq '.performance_baseline'
+```
+
+### Receipt Artifact Schema
+
+Performance baselines are validated against the receipt schema defined in Issue #254:
+
+```json
+{
+  "schema_version": "1.0.0",
+  "timestamp": "2025-10-03T00:00:00Z",
+  "compute_path": "real",
+  "backend": "cpu",
+  "kernels": ["i2s_gemv", "rope_apply", "attention_real"],
+  "deterministic": true,
+  "performance_baseline": {
+    "tokens_generated": 100,
+    "total_time_ms": 5000,
+    "tokens_per_second": 20.0,
+    "first_token_latency_ms": 250,
+    "average_token_latency_ms": 50,
+    "memory_usage_mb": 1024
+  }
+}
+```
+
+### Performance Validation Gates
+
+CI enforces strict validation:
+
+1. **compute_path** MUST be "real" (not "mock")
+2. **kernels** MUST NOT contain "mock" entries
+3. **accuracy_tests** MUST pass tolerance checks (I2S: 1e-5, TL1/TL2: 1e-4)
+4. **determinism_tests** MUST show identical sequences across runs
+
+See `.github/workflows/inference-validation.yml` for CI gate implementation.
+
+### Cross-Validation Status
+
+**C++ Reference Parity:**
+- **I2S Tolerance**: 1e-5 MSE
+- **Validation Command**: `cargo run -p xtask -- crossval`
+- **Status**: Available when BITNET_GGUF environment variable set
+
+These targets are automatically validated through the regression detection system and receipt artifact generation. All claims must be backed by verifiable receipts.

@@ -177,7 +177,7 @@ pub fn load_tl2_avx_fixtures() -> Vec<TL2TestFixture> {
         // Large lookup table - maximum accuracy
         TL2TestFixture {
             name: "tl2_avx_large_accuracy",
-            input_weights: generate_weight_distribution(8192, WeightPattern::MLP),
+            input_weights: generate_weight_distribution(8192, WeightPattern::Mlp),
             lookup_table: generate_tl2_lookup_table(4096, LookupPattern::Hierarchical),
             quantized_indices: generate_quantized_indices_u16(8192, 4096),
             block_size: 512,

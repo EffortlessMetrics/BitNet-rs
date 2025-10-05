@@ -138,7 +138,7 @@ fn test_concurrent_access() {
         return;
     }
 
-    let model = match CppModel::load(fixture_path) {
+    let _model = match CppModel::load(fixture_path) {
         Ok(model) => model,
         Err(_) => {
             eprintln!("Skipping test: failed to load model");

@@ -467,37 +467,50 @@ impl<'a> GgufReader<'a> {
     }
 
     /// Infer quantization type from tensor types
+    ///
+    /// Only BitNet-specific quantization types are supported:
+    /// - I2_S: BitNet 2-bit signed quantization
+    /// - IQ2_S: GGML-compatible 2-bit quantization (via FFI)
+    /// - F32/F16: Full precision (no quantization)
+    ///
+    /// Standard GGUF quantization types (Q4_*, Q5_*, Q8_*, Q*_K) are NOT supported.
     pub fn get_quantization_type(&self) -> Option<QuantizationType> {
-        // Count different quantization types
+        // Check for supported BitNet quantization types
         let mut has_i2s = false;
-        let mut has_tl1 = false;
-        let mut has_tl2 = false;
 
         for tensor_info in &self.tensor_infos {
             match tensor_info.tensor_type {
-                GgufTensorType::Q4_0 | GgufTensorType::Q4_1 => has_i2s = true,
-                GgufTensorType::Q5_0 | GgufTensorType::Q5_1 => has_tl1 = true,
-                GgufTensorType::Q8_0 | GgufTensorType::Q8_1 => has_tl2 = true,
-                GgufTensorType::Q2_K
+                // Only I2_S and IQ2_S are supported BitNet quantization types
+                GgufTensorType::I2_S | GgufTensorType::IQ2_S => has_i2s = true,
+                // F32 and F16 are unquantized, so they don't set a quantization type
+                GgufTensorType::F32 | GgufTensorType::F16 => continue,
+                // All other GGUF quantization types are unsupported
+                GgufTensorType::Q4_0
+                | GgufTensorType::Q4_1
+                | GgufTensorType::Q5_0
+                | GgufTensorType::Q5_1
+                | GgufTensorType::Q8_0
+                | GgufTensorType::Q8_1
+                | GgufTensorType::Q2_K
                 | GgufTensorType::Q3_K
                 | GgufTensorType::Q4_K
                 | GgufTensorType::Q5_K
                 | GgufTensorType::Q6_K
-                | GgufTensorType::Q8_K => has_tl2 = true,
-                _ => continue,
+                | GgufTensorType::Q8_K => {
+                    tracing::warn!(
+                        "Unsupported GGUF quantization type {:?} in tensor '{}'. \
+                        Only I2_S, IQ2_S, and FP32/FP16 are supported by BitNet.rs. \
+                        Standard GGUF quantized models are not compatible.",
+                        tensor_info.tensor_type,
+                        tensor_info.name
+                    );
+                    continue;
+                }
             }
         }
 
-        // Return the most advanced quantization type found
-        if has_tl2 {
-            Some(QuantizationType::TL2)
-        } else if has_tl1 {
-            Some(QuantizationType::TL1)
-        } else if has_i2s {
-            Some(QuantizationType::I2S)
-        } else {
-            None
-        }
+        // Return I2S if any supported quantization was found
+        if has_i2s { Some(QuantizationType::I2S) } else { None }
     }
 
     /// Validate the GGUF file structure

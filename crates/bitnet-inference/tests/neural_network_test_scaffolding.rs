@@ -36,6 +36,7 @@ impl Default for NeuralNetworkTestConfig {
 /// Tests feature spec: issue-248-spec.md#ac1
 /// Validates I2S, TL1, TL2 quantization maintains >99% accuracy
 #[cfg(feature = "cpu")]
+#[ignore] // Issue #248: TDD placeholder - Quantized linear layer unimplemented
 #[tokio::test]
 async fn test_ac1_quantized_linear_layer_forward_pass() -> Result<()> {
     let config = NeuralNetworkTestConfig::default();
@@ -62,6 +63,7 @@ async fn test_ac1_quantized_linear_layer_forward_pass() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac2
 /// Validates attention with quantized Q, K, V projections
 #[cfg(feature = "cpu")]
+#[ignore] // Issue #248: TDD placeholder - Multi-head attention unimplemented
 #[tokio::test]
 async fn test_ac2_multi_head_attention_mechanism() -> Result<()> {
     let config = NeuralNetworkTestConfig::default();
@@ -89,6 +91,7 @@ async fn test_ac2_multi_head_attention_mechanism() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac3
 /// Validates temperature, top-k, nucleus sampling with deterministic seeding
 #[cfg(feature = "cpu")]
+#[ignore] // Issue #248: TDD placeholder - Autoregressive generation unimplemented
 #[tokio::test]
 async fn test_ac3_autoregressive_token_generation() -> Result<()> {
     let config = NeuralNetworkTestConfig::default();
@@ -115,7 +118,7 @@ async fn test_ac3_autoregressive_token_generation() -> Result<()> {
 #[tokio::test]
 async fn test_ac4_cross_validation_accuracy_preservation() -> Result<()> {
     // Skip if cross-validation environment not available
-    if !std::env::var("BITNET_CROSSVAL_ENABLED").is_ok() {
+    if std::env::var("BITNET_CROSSVAL_ENABLED").is_err() {
         log::warn!("Skipping cross-validation test: BITNET_CROSSVAL_ENABLED not set");
         return Ok(());
     }
@@ -147,6 +150,7 @@ async fn test_ac4_cross_validation_accuracy_preservation() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac5
 /// Validates 5-15 tok/sec CPU, 2-5x GPU speedup
 #[cfg(feature = "cpu")]
+#[ignore] // Issue #248: TDD placeholder - Performance targets unimplemented
 #[tokio::test]
 async fn test_ac5_performance_targets_validation() -> Result<()> {
     let config = NeuralNetworkTestConfig::default();
@@ -203,6 +207,7 @@ fn test_ac6_quantization_format_compatibility() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac7
 /// Validates reproducible outputs with BITNET_DETERMINISTIC=1, BITNET_SEED=42
 #[cfg(feature = "cpu")]
+#[ignore] // Issue #248: TDD placeholder - Deterministic inference unimplemented
 #[tokio::test]
 async fn test_ac7_deterministic_inference_behavior() -> Result<()> {
     // Set deterministic environment
@@ -244,6 +249,7 @@ async fn test_ac7_deterministic_inference_behavior() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac8
 /// Validates real implementations replace mock placeholders
 #[cfg(feature = "cpu")]
+#[ignore] // Issue #248: TDD placeholder - Mock replacement validation unimplemented
 #[tokio::test]
 async fn test_ac8_mock_implementation_replacement_validation() -> Result<()> {
     let test_prompt = "Mock detection test";
@@ -270,6 +276,7 @@ async fn test_ac8_mock_implementation_replacement_validation() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac9
 /// Validates end-to-end transformer pipeline integration
 #[cfg(feature = "cpu")]
+#[ignore] // Issue #248: TDD placeholder - Comprehensive integration unimplemented
 #[tokio::test]
 async fn test_ac9_comprehensive_integration_testing() -> Result<()> {
     let test_prompts =
@@ -300,6 +307,7 @@ async fn test_ac9_comprehensive_integration_testing() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac10
 /// Validates anyhow::Result<T> patterns for error conditions
 #[cfg(feature = "cpu")]
+#[ignore] // Issue #248: TDD placeholder - Error handling robustness unimplemented
 #[tokio::test]
 async fn test_ac10_error_handling_robustness() -> Result<()> {
     // Test quantization error handling

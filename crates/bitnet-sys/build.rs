@@ -233,8 +233,12 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     bindings.write_to_file(&bindings_path)?;
 
     // Post-process to add unsafe to extern blocks for Rust 2024
+    // Only add unsafe if not already present (bindgen 0.69.5+ already adds it)
     let bindings_content = std::fs::read_to_string(&bindings_path)?;
     let fixed_content = bindings_content.replace("extern \"C\" {", "unsafe extern \"C\" {");
+    // Remove duplicate unsafe keywords that may have been created
+    let fixed_content =
+        fixed_content.replace("unsafe unsafe extern \"C\" {", "unsafe extern \"C\" {");
     std::fs::write(&bindings_path, fixed_content)?;
 
     eprintln!("bitnet-sys: Generated C++ bindings successfully");
