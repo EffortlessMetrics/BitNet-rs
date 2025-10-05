@@ -36,12 +36,12 @@ fn test_iq2s_rust_ffi_parity() -> Result<()> {
             let block = &mut test_data[block_offset..block_offset + block_bytes];
 
             // Set scale (first 2 bytes as f16)
-            let scale = f16::from_f32(rng.gen_range(0.1..2.0));
+            let scale = f16::from_f32(rng.random_range(0.1..2.0));
             block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
 
             // Set quantized data (qs: 64 bytes starting at offset 2)
-            for i in 2..66 {
-                block[i] = rng.r#gen();
+            for i in &mut block[2..66] {
+                *i = rng.random();
             }
             // Leave qh and scales fields (bytes 66-81) as zeros for simplicity
         }
@@ -112,7 +112,7 @@ fn test_iq2s_quantization_roundtrip() -> Result<()> {
     let test_cases = vec![
         ("uniform", vec![1.0f32; 256]),
         ("ascending", (0..256).map(|i| i as f32 * 0.01).collect::<Vec<f32>>()),
-        ("random", (0..256).map(|_| rng.gen_range(-2.0..2.0)).collect::<Vec<f32>>()),
+        ("random", (0..256).map(|_| rng.random_range(-2.0..2.0)).collect::<Vec<f32>>()),
         ("sine_wave", (0..256).map(|i| ((i as f32) * 0.1).sin()).collect::<Vec<f32>>()),
     ];
 
@@ -207,8 +207,8 @@ fn test_iq2s_edge_cases() -> Result<()> {
     // Zero scale
     minimal_block[0..2].copy_from_slice(&0u16.to_le_bytes());
     // All codes as zero (only set the qs field)
-    for i in 2..66 {
-        minimal_block[i] = 0;
+    for item in minimal_block.iter_mut().take(66).skip(2) {
+        *item = 0;
     }
     // qh and scales fields already zero-initialized
 
@@ -224,8 +224,8 @@ fn test_iq2s_edge_cases() -> Result<()> {
     let max_scale = f16::from_f32(65000.0); // Near f16 max
     max_block[0..2].copy_from_slice(&max_scale.to_bits().to_le_bytes());
     // Set all codes to maximum value (0b11 = 3, maps to +1)
-    for i in 2..66 {
-        max_block[i] = 0xFF; // All bits set
+    for item in max_block.iter_mut().take(66).skip(2) {
+        *item = 0xFF; // All bits set
     }
 
     let result = Iq2sBackend::Rust.dequantize(&max_block, &[256])?;
@@ -254,10 +254,10 @@ fn test_iq2s_performance_comparison() -> Result<()> {
     let mut rng = rand::rngs::StdRng::seed_from_u64(789);
 
     for block in test_data.chunks_mut(block_bytes) {
-        let scale = f16::from_f32(rng.gen_range(0.5..1.5));
+        let scale = f16::from_f32(rng.random_range(0.5..1.5));
         block[0..2].copy_from_slice(&scale.to_bits().to_le_bytes());
-        for i in 2..66 {
-            block[i] = rng.r#gen();
+        for i in &mut block[2..66] {
+            *i = rng.random();
         }
         // Leave the rest as zeros
     }

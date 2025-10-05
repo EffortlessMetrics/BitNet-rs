@@ -488,7 +488,7 @@ mod tests {
         // Test successful execution
         // Create proper fixture context based on feature flags
         #[cfg(feature = "fixtures")]
-        let fixture_manager =
+        let fixture_manager: fixtures::FixtureManager =
             fixtures::FixtureManager::new(&FixtureConfig::default()).await.unwrap();
         #[cfg(feature = "fixtures")]
         let fixture_ctx = &fixture_manager;
@@ -533,7 +533,7 @@ mod tests {
         // Test failure handling
         // Create proper fixture context based on feature flags
         #[cfg(feature = "fixtures")]
-        let fixture_manager =
+        let fixture_manager: fixtures::FixtureManager =
             fixtures::FixtureManager::new(&FixtureConfig::default()).await.unwrap();
         #[cfg(feature = "fixtures")]
         let fixture_ctx = &fixture_manager;

@@ -993,8 +993,10 @@ mod ac9_cross_validation_tests {
         println!("AC9: Testing deterministic cross-validation results");
 
         // Set deterministic environment
-        env::set_var("BITNET_DETERMINISTIC", "1");
-        env::set_var("BITNET_SEED", "42");
+        unsafe {
+            env::set_var("BITNET_DETERMINISTIC", "1");
+            env::set_var("BITNET_SEED", "42");
+        }
 
         let validator = DeterministicCrossValidator::new();
         let test_case = create_deterministic_test_case();
@@ -1017,8 +1019,10 @@ mod ac9_cross_validation_tests {
         assert_eq!(run1_result.mse, run2_result.mse, "MSE should be deterministic");
 
         // Clean up
-        env::remove_var("BITNET_DETERMINISTIC");
-        env::remove_var("BITNET_SEED");
+        unsafe {
+            env::remove_var("BITNET_DETERMINISTIC");
+            env::remove_var("BITNET_SEED");
+        }
 
         println!("✅ AC9: Deterministic cross-validation test passed");
     }
