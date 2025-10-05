@@ -26,9 +26,6 @@ use bitnet_models::BitNetModel;
 #[cfg(feature = "inference")]
 use bitnet_tokenizers::UniversalTokenizer;
 
-// Disable all tests until types are available - tests use non-existent API
-#[cfg(all(feature = "inference", any()))] // any() = false, disables tests
-
 /// Test configuration for inference engine tests
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -40,6 +37,9 @@ struct InferenceTestConfig {
     timeout: Duration,
     enable_metrics: bool,
 }
+
+// Disable all tests until types are available - tests use non-existent API
+#[cfg(all(feature = "inference", any()))] // any() = false, disables tests
 
 impl InferenceTestConfig {
     #[allow(dead_code)]

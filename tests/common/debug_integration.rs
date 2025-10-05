@@ -1,8 +1,12 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+#[cfg(feature = "fixtures")]
+use super::config::FixtureConfig;
 use super::debugging::{DebugConfig, TestDebugger};
 use super::errors::TestOpResult;
+#[cfg(feature = "fixtures")]
+use super::fixtures;
 use super::harness::{FixtureCtx, TestCase, TestHarness, TestReporter};
 use super::results::{TestResult, TestSuiteResult};
 
