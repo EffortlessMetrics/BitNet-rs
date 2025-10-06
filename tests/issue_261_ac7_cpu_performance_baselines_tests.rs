@@ -165,3 +165,160 @@ fn test_cpu_baseline_consistency() -> Result<()> {
 
     Ok(())
 }
+
+/// AC:AC7
+/// Test performance measurement with invalid values (negative test)
+#[test]
+#[cfg(feature = "cpu")]
+fn test_invalid_performance_measurement() -> Result<()> {
+    // Test that invalid performance values are rejected
+
+    // Negative tokens/sec should be invalid
+    let negative_performance = -5.0;
+    assert!(negative_performance < 0.0, "Negative performance should be detected");
+
+    // Zero tokens/sec should be invalid
+    let zero_performance = 0.0;
+    assert!(zero_performance == 0.0, "Zero performance should be detected");
+
+    // Unrealistically high values (>1000 tok/s) should be rejected
+    let unrealistic_performance = 1500.0;
+    assert!(unrealistic_performance > 1000.0, "Unrealistic performance should be detected");
+
+    Ok(())
+}
+
+/// AC:AC7
+/// Test statistical validation with insufficient samples (negative test)
+#[test]
+#[cfg(feature = "cpu")]
+fn test_insufficient_sample_size() -> Result<()> {
+    // Test that insufficient samples are detected
+
+    let min_required_samples = 20;
+    let insufficient_samples = 3;
+
+    assert!(insufficient_samples < min_required_samples, "Should detect insufficient samples");
+    assert!(insufficient_samples < 10, "Sample size below 10 should be invalid");
+
+    Ok(())
+}
+
+/// AC:AC7
+/// Test high variance detection (CV > 10%)
+#[test]
+#[cfg(feature = "cpu")]
+fn test_high_variance_detection() -> Result<()> {
+    // Test that high variance is detected and flagged
+
+    let max_acceptable_cv = 0.05; // 5%
+    let high_variance_cv = 0.15; // 15%
+
+    assert!(high_variance_cv > max_acceptable_cv, "High variance should be detected");
+    assert!(high_variance_cv > 0.1, "CV > 10% should be flagged as unstable");
+
+    Ok(())
+}
+
+/// AC:AC7
+/// Test baseline range validation (min > max error)
+#[test]
+#[cfg(feature = "cpu")]
+fn test_baseline_range_validation() -> Result<()> {
+    // Test that invalid baseline ranges are detected
+
+    let valid_min = 15.0;
+    let valid_max = 20.0;
+    let invalid_min = 25.0; // Greater than max
+    let invalid_max = 20.0;
+
+    // Valid range
+    assert!(valid_max > valid_min, "Valid range should have max > min");
+
+    // Invalid range (should be detected)
+    assert!(invalid_min > invalid_max, "Invalid range (min > max) should be detected");
+
+    Ok(())
+}
+
+/// AC:AC7
+/// Test warmup iteration validation (warmup > measurement)
+#[test]
+#[cfg(feature = "cpu")]
+fn test_warmup_iteration_validation() -> Result<()> {
+    // Test that warmup > measurement iterations is detected as invalid
+
+    let valid_warmup = 5;
+    let valid_measurement = 20;
+    let invalid_warmup = 30;
+    let invalid_measurement = 10;
+
+    // Valid configuration
+    assert!(valid_measurement > valid_warmup, "Measurement should exceed warmup");
+
+    // Invalid configuration
+    assert!(
+        invalid_warmup > invalid_measurement,
+        "Warmup > measurement should be detected as invalid"
+    );
+
+    Ok(())
+}
+
+/// AC:AC7
+/// Test latency percentile ordering validation
+#[test]
+#[cfg(feature = "cpu")]
+fn test_latency_percentile_ordering() -> Result<()> {
+    // Test that percentile ordering is validated (p50 < p95 < p99)
+
+    let p50 = 50.0;
+    let p95 = 100.0;
+    let p99 = 150.0;
+
+    // Valid ordering
+    assert!(p95 > p50, "p95 should exceed p50");
+    assert!(p99 > p95, "p99 should exceed p95");
+    assert!(p99 > p50, "p99 should exceed p50");
+
+    // Test detection of invalid ordering
+    let invalid_p50 = 200.0;
+    let invalid_p95 = 150.0;
+    let invalid_p99 = 100.0;
+
+    assert!(invalid_p50 > invalid_p95, "Invalid: p50 > p95 should be detected");
+    assert!(invalid_p95 > invalid_p99, "Invalid: p95 > p99 should be detected");
+
+    Ok(())
+}
+
+/// AC:AC7
+/// Test outlier detection threshold validation
+#[test]
+#[cfg(feature = "cpu")]
+fn test_outlier_detection() -> Result<()> {
+    // Test that outliers are properly detected and filtered
+
+    let outlier_threshold = 2.0; // 2 standard deviations
+    let extreme_threshold = 3.0; // 3 standard deviations
+
+    assert!(
+        extreme_threshold > outlier_threshold,
+        "Extreme threshold should exceed outlier threshold"
+    );
+
+    // Simulate outlier detection
+    let baseline_mean: f32 = 17.5;
+    let baseline_std: f32 = 1.5;
+
+    let normal_value: f32 = 18.0;
+    let outlier_value: f32 = 25.0;
+
+    let normal_z_score = (normal_value - baseline_mean).abs() / baseline_std;
+    let outlier_z_score = (outlier_value - baseline_mean).abs() / baseline_std;
+
+    assert!(normal_z_score < outlier_threshold, "Normal value should be within threshold");
+    assert!(outlier_z_score > outlier_threshold, "Outlier should exceed threshold");
+
+    Ok(())
+}

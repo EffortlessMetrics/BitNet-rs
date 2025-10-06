@@ -361,6 +361,70 @@ pub fn load_edge_case_fixtures() -> Vec<EdgeCaseFixture> {
             quantization_type: QuantizationType::I2S,
             description: "Tensor size not aligned to block size",
         },
+        // NaN values
+        EdgeCaseFixture {
+            case_name: "nan_values",
+            input_data: vec![f32::NAN, 0.5, -0.5, f32::NAN],
+            expected_behavior: ExpectedBehavior::ErrorCondition("NaN values not supported"),
+            quantization_type: QuantizationType::I2S,
+            description: "Input containing NaN values",
+        },
+        // Infinity values
+        EdgeCaseFixture {
+            case_name: "infinity_values",
+            input_data: vec![f32::INFINITY, -f32::INFINITY, 0.0, 1.0],
+            expected_behavior: ExpectedBehavior::ErrorCondition("Infinite values not supported"),
+            quantization_type: QuantizationType::I2S,
+            description: "Input containing infinite values",
+        },
+        // Denormal numbers (very small)
+        EdgeCaseFixture {
+            case_name: "denormal_numbers",
+            input_data: vec![f32::MIN_POSITIVE, -f32::MIN_POSITIVE, 1e-40, -1e-40],
+            expected_behavior: ExpectedBehavior::SuccessWithAccuracy(0.95),
+            quantization_type: QuantizationType::I2S,
+            description: "Denormal floating point numbers",
+        },
+        // Empty tensor (should error or handle gracefully)
+        EdgeCaseFixture {
+            case_name: "empty_tensor",
+            input_data: vec![],
+            expected_behavior: ExpectedBehavior::ErrorCondition("Empty tensor not supported"),
+            quantization_type: QuantizationType::I2S,
+            description: "Empty input tensor",
+        },
+        // Large tensor (stress test)
+        EdgeCaseFixture {
+            case_name: "large_tensor_1m",
+            input_data: generate_normal_weights(1_000_000, 0.0, 0.1, 999),
+            expected_behavior: ExpectedBehavior::SuccessWithAccuracy(0.999),
+            quantization_type: QuantizationType::I2S,
+            description: "Large 1M element tensor for stress testing",
+        },
+        // All negative values
+        EdgeCaseFixture {
+            case_name: "all_negative",
+            input_data: vec![-1.0; 256],
+            expected_behavior: ExpectedBehavior::SuccessWithAccuracy(0.999),
+            quantization_type: QuantizationType::I2S,
+            description: "All negative values",
+        },
+        // Gradient descent boundary (very small gradients)
+        EdgeCaseFixture {
+            case_name: "tiny_gradients",
+            input_data: vec![1e-6, -1e-6, 5e-7, -5e-7],
+            expected_behavior: ExpectedBehavior::SuccessWithAccuracy(0.95),
+            quantization_type: QuantizationType::I2S,
+            description: "Very small gradient-like values",
+        },
+        // Spike pattern (outliers)
+        EdgeCaseFixture {
+            case_name: "spike_outliers",
+            input_data: generate_spike_pattern(256),
+            expected_behavior: ExpectedBehavior::SuccessWithAccuracy(0.997),
+            quantization_type: QuantizationType::I2S,
+            description: "Normal distribution with rare extreme spikes",
+        },
     ]
 }
 
@@ -458,6 +522,22 @@ fn generate_extreme_values(size: usize) -> Vec<f32> {
             1 => -100.0,
             2 => 0.001,
             _ => -0.001,
+        })
+        .collect()
+}
+
+/// Generate spike pattern with rare outliers
+fn generate_spike_pattern(size: usize) -> Vec<f32> {
+    let mut rng_state = 777u64;
+    (0..size)
+        .map(|i| {
+            let base = lcg_random(&mut rng_state) * 0.2 - 0.1; // Normal range -0.1 to 0.1
+            if i % 50 == 0 {
+                // Every 50th element is a spike
+                base * 100.0 // Extreme outlier
+            } else {
+                base
+            }
         })
         .collect()
 }

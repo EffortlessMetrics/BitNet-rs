@@ -254,3 +254,140 @@ fn test_i2s_device_aware_execution() -> Result<()> {
 
     Ok(())
 }
+
+/// AC:AC3
+/// Test I2S quantization with zero tensor (edge case)
+#[test]
+#[cfg(feature = "cpu")]
+fn test_i2s_zero_tensor() -> Result<()> {
+    let quantizer = I2SQuantizer::new();
+
+    // All-zero tensor
+    let data = vec![0.0; 256];
+    let tensor = BitNetTensor::from_slice(&data, &[256], &Device::Cpu)?;
+
+    // Should handle zero tensor gracefully
+    let result = quantizer.quantize_tensor(&tensor);
+    assert!(result.is_ok(), "Should handle zero tensor without error");
+
+    let quantized = result?;
+    let dequantized = quantizer.dequantize_tensor(&quantized)?;
+    let dequant_data = dequantized.to_vec()?;
+
+    // All values should remain near zero
+    for &val in &dequant_data {
+        assert!(val.abs() < 1e-3, "Zero tensor should dequantize to near-zero");
+    }
+
+    Ok(())
+}
+
+/// AC:AC3
+/// Test I2S quantization error handling for invalid input
+#[test]
+#[cfg(feature = "cpu")]
+fn test_i2s_invalid_input_handling() -> Result<()> {
+    let quantizer = I2SQuantizer::new();
+
+    // Test with NaN values
+    let nan_data = vec![f32::NAN, 0.5, -0.5, f32::NAN];
+    let nan_tensor = BitNetTensor::from_slice(&nan_data, &[4], &Device::Cpu)?;
+
+    // Should either error or handle NaN gracefully
+    let nan_result = quantizer.quantize_tensor(&nan_tensor);
+    if let Ok(quantized) = nan_result {
+        // If it succeeds, verify it doesn't produce NaN in output
+        let dequant = quantizer.dequantize_tensor(&quantized)?;
+        let dequant_data = dequant.to_vec()?;
+        for &val in &dequant_data {
+            assert!(!val.is_nan(), "Output should not contain NaN");
+        }
+    }
+
+    Ok(())
+}
+
+/// AC:AC3
+/// Test I2S quantization precision at boundaries
+#[test]
+#[cfg(feature = "cpu")]
+fn test_i2s_boundary_precision() -> Result<()> {
+    let quantizer = I2SQuantizer::new();
+
+    // Test with extreme but valid values
+    let boundary_data: Vec<f32> =
+        vec![f32::MIN_POSITIVE, -f32::MIN_POSITIVE, 1.0, -1.0, 10.0, -10.0]
+            .into_iter()
+            .cycle()
+            .take(256)
+            .collect();
+
+    let tensor = BitNetTensor::from_slice(&boundary_data, &[256], &Device::Cpu)?;
+    let quantized = quantizer.quantize_tensor(&tensor)?;
+    let dequantized = quantizer.dequantize_tensor(&quantized)?;
+
+    // Verify quantization didn't overflow or produce invalid results
+    let dequant_data = dequantized.to_vec()?;
+    for &val in &dequant_data {
+        assert!(val.is_finite(), "All dequantized values should be finite");
+        assert!(!val.is_nan(), "No NaN values should be produced");
+    }
+
+    Ok(())
+}
+
+/// AC:AC3
+/// Test I2S quantization numerical stability
+#[test]
+#[cfg(feature = "cpu")]
+fn test_i2s_numerical_stability() -> Result<()> {
+    let quantizer = I2SQuantizer::new();
+
+    // Very small values near quantization threshold
+    let small_data: Vec<f32> = (0..256).map(|i| (i as f32 * 1e-5) - 1e-3).collect();
+    let tensor = BitNetTensor::from_slice(&small_data, &[256], &Device::Cpu)?;
+
+    let quantized = quantizer.quantize_tensor(&tensor)?;
+    let dequantized = quantizer.dequantize_tensor(&quantized)?;
+
+    // Should maintain correlation even for small values
+    let dequant_data = dequantized.to_vec()?;
+    let mut correlation_sum = 0.0;
+    for (orig, dequant) in small_data.iter().zip(dequant_data.iter()) {
+        correlation_sum += (orig - dequant).abs();
+    }
+    let avg_error = correlation_sum / 256.0;
+
+    // Should maintain reasonable accuracy even for small values
+    assert!(avg_error < 0.5, "Numerical stability should be maintained, got {}", avg_error);
+
+    Ok(())
+}
+
+/// AC:AC3
+/// Test I2S quantization off-by-one boundary conditions
+#[test]
+#[cfg(feature = "cpu")]
+fn test_i2s_off_by_one_conditions() -> Result<()> {
+    let quantizer = I2SQuantizer::new();
+
+    // Test block sizes around boundaries
+    for size in [31, 32, 33, 63, 64, 65, 127, 128, 129] {
+        let data: Vec<f32> = (0..size).map(|i| (i as f32) / (size as f32)).collect();
+        let tensor = BitNetTensor::from_slice(&data, &[size], &Device::Cpu)?;
+
+        let result = quantizer.quantize_tensor(&tensor);
+        assert!(result.is_ok(), "Should handle size {} without off-by-one errors", size);
+
+        let quantized = result?;
+        // Verify we didn't lose or add elements
+        let expected_packed_size = size.div_ceil(4); // 2 bits per element = 4 elements per byte
+        assert!(
+            quantized.data.len() >= expected_packed_size / 2,
+            "Size {} should produce correct packed size",
+            size
+        );
+    }
+
+    Ok(())
+}
