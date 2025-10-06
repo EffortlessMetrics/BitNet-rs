@@ -6,27 +6,33 @@ This document describes the quantization formats and device-aware acceleration s
 
 BitNet-rs supports multiple quantization formats with advanced device-aware acceleration:
 
-### I2_S - Native Rust Implementation (Production Ready)
+### I2_S - Native Rust Implementation (Production Ready - Issue #261)
 - Native Rust implementation with intelligent GPU/CPU selection and automatic fallback
 - Device-aware quantization with CUDA kernel acceleration and CPU SIMD optimization
-- **Accuracy**: ≥99.8% correlation with FP32 reference (production requirement)
-- **Performance**: CPU 10-20 tok/s, GPU 50-100 tok/s with mixed precision
+- **Accuracy**: ≥99.8% correlation with FP32 reference (production requirement, validated in AC3)
+- **Performance**: CPU 10-20 tok/s (architecture-dependent: AVX-512 > AVX2 > NEON), GPU 50-100 tok/s with mixed precision
 - 2-bit signed quantization with optimized bit-packing (4 values per byte)
-- **Strict Mode**: Use `BITNET_STRICT_MODE=1` to prevent mock fallbacks
+- **Strict Mode**: Use `BITNET_STRICT_MODE=1` to prevent mock fallbacks and ensure real quantized computation
+- **Real Computation**: Native quantized GEMV kernel eliminates FP32 dequantization staging (Issue #261 - AC3)
+- **QLinear Layer Integration**: Replaces standard Linear layers in transformer architecture (Issue #261 - AC5)
 
-### TL1 - Table Lookup Quantization (ARM Optimized)
+### TL1 - Table Lookup Quantization (ARM Optimized - Issue #261)
 - Table lookup quantization optimized for ARM NEON architecture
-- **Accuracy**: ≥99.6% correlation with FP32 reference
-- **Performance**: Device-aware selection with ARM NEON vectorization
+- **Accuracy**: ≥99.6% correlation with FP32 reference (validated in AC3)
+- **Performance**: 12-18 tok/s on ARM NEON (realistic baseline from AC7)
+- **Device-Aware Selection**: Automatic ARM NEON vectorization with scalar fallback
 - Memory-efficient lookup tables (16-256 entries, cache-friendly)
 - Parallel processing with configurable block sizes
+- **Real Computation**: Direct table lookup matmul without FP32 staging (Issue #261)
 
-### TL2 - Advanced Table Lookup (x86 Optimized)
+### TL2 - Advanced Table Lookup (x86 Optimized - Issue #261)
 - Advanced table lookup quantization optimized for x86 AVX2/AVX-512
-- **Accuracy**: ≥99.6% correlation with FP32 reference
-- **Performance**: Optimized for x86 architectures with larger lookup tables
+- **Accuracy**: ≥99.6% correlation with FP32 reference (validated in AC3)
+- **Performance**: 10-15 tok/s on x86 AVX (realistic baseline from AC7)
+- **SIMD Optimization**: AVX2 (32-byte) and AVX-512 (64-byte) vectorization
 - Enhanced vectorized operations (256-4096 entry tables) for large tensor processing
-- CPU feature detection with SIMD optimization fallbacks (AVX2 32-byte, AVX-512 64-byte)
+- CPU feature detection with graceful fallback to scalar implementation
+- **Real Computation**: Direct table lookup matmul without FP32 staging (Issue #261)
 
 ### IQ2_S - GGML-Compatible
 - GGML-compatible quantization with 82-byte block layout and 4-level [-2,-1,1,2] mapping
@@ -143,7 +149,89 @@ cargo test --no-default-features --features cpu -p bitnet-quantization test_i2s_
 cargo test --no-default-features --features cpu -p bitnet-quantization test_simd_performance_baseline
 ```
 
+## Strict Mode Enforcement (Issue #261 - AC2, AC6)
+
+BitNet.rs provides comprehensive strict mode controls to eliminate mock inference paths and ensure production-ready quantized computation:
+
+### Primary Strict Mode Configuration
+
+```bash
+# Enable strict mode for production deployments
+BITNET_STRICT_MODE=1 cargo run -p xtask -- infer --model model.gguf --prompt "Test"
+
+# This enables ALL strict mode checks:
+# - fail_on_mock: Fails when mock computation detected
+# - require_quantization: Requires real I2S/TL1/TL2 kernels
+# - validate_performance: Rejects suspicious metrics (>150 tok/s)
+```
+
+### Granular Strict Mode Controls
+
+```bash
+# Fail immediately on mock detection (Issue #261 - AC2)
+BITNET_STRICT_FAIL_ON_MOCK=1 \
+cargo test -p bitnet-inference --features cpu
+
+# Require real quantization kernels (Issue #261 - AC3)
+BITNET_STRICT_REQUIRE_QUANTIZATION=1 \
+cargo test -p bitnet-quantization --features cpu
+
+# Validate performance metrics (Issue #261 - AC6)
+BITNET_STRICT_VALIDATE_PERFORMANCE=1 \
+cargo run -p xtask -- benchmark --model model.gguf
+
+# CI enhanced strict mode (Issue #261 - AC6)
+CI=1 BITNET_CI_ENHANCED_STRICT=1 BITNET_STRICT_MODE=1 \
+cargo test --workspace --features cpu
+```
+
+### Strict Mode API Usage
+
+```rust
+use bitnet_common::strict_mode::{StrictModeConfig, StrictModeEnforcer};
+
+// Production inference with strict mode
+std::env::set_var("BITNET_STRICT_MODE", "1");
+let enforcer = StrictModeEnforcer::new_detailed();
+
+// Validate inference path (fails on mock usage)
+enforcer.validate_inference_path(&inference_path)?;
+
+// Validate quantization kernel availability
+enforcer.validate_kernel_availability(&kernel_scenario)?;
+
+// Validate performance metrics (rejects >150 tok/s as suspicious)
+enforcer.validate_performance_metrics(&performance_metrics)?;
+```
+
+### Performance Validation Thresholds
+
+Strict mode validates performance metrics against realistic baselines:
+
+| Metric | Threshold | Reasoning |
+|--------|-----------|-----------|
+| Throughput | ≤150 tok/s | Values >150 tok/s flag potential mock computation |
+| Computation Type | Must be `Real` | Rejects `Mock` computation type |
+| Quantization Accuracy | I2S ≥99.8%, TL1/TL2 ≥99.6% | Validates against FP32 reference |
+| Device Utilization | GPU >80% | Ensures efficient GPU utilization |
+
+### CI Integration
+
+```yaml
+# .github/workflows/performance-tracking.yml
+- name: Run strict mode tests
+  env:
+    BITNET_STRICT_MODE: "1"
+    BITNET_CI_ENHANCED_STRICT: "1"
+    BITNET_DETERMINISTIC: "1"
+    BITNET_SEED: "42"
+  run: |
+    cargo test --workspace --features cpu
+    cargo run -p xtask -- crossval
+```
+
 For more information, see:
+- [Environment Variables](../environment-variables.md) - Complete strict mode variable documentation
 - [GPU Development Guide](../development/gpu-development.md) - GPU-specific quantization details
 - [Build Commands](../development/build-commands.md) - Build commands for different quantization features
 - [FFI Threading Architecture](../ffi-threading-architecture.md) - FFI bridge details

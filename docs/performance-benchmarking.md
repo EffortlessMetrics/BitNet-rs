@@ -7,15 +7,15 @@ BitNet.rs includes a comprehensive performance benchmarking infrastructure desig
 ### Running Basic Benchmarks
 
 ```bash
-# Setup environment and run CPU benchmarks
+# Setup environment and run CPU benchmarks with strict mode (no mock fallbacks)
 ./scripts/setup-perf-env.sh
-./scripts/run-performance-benchmarks.sh
+BITNET_STRICT_MODE=1 ./scripts/run-performance-benchmarks.sh
 
-# Run GPU benchmarks (requires CUDA)
-./scripts/run-performance-benchmarks.sh --features gpu
+# Run GPU benchmarks with strict mode (requires CUDA, realistic 50-100 tok/s)
+BITNET_STRICT_MODE=1 ./scripts/run-performance-benchmarks.sh --features gpu
 
-# Run with cross-validation against C++ implementation
-./scripts/run-performance-benchmarks.sh --include-cpp
+# Run with cross-validation against C++ implementation and strict mode
+BITNET_STRICT_MODE=1 ./scripts/run-performance-benchmarks.sh --include-cpp
 ```
 
 ### Detecting Performance Regressions
@@ -90,11 +90,13 @@ The setup script configures a deterministic benchmarking environment:
 ./scripts/setup-perf-env.sh --skip-cpp
 ```
 
-**Key Environment Variables:**
-- `BITNET_DETERMINISTIC=1`: Enable deterministic mode
+**Key Environment Variables (Issue #261 - Strict Mode):**
+- `BITNET_STRICT_MODE=1`: **PRIMARY** - Prevent all mock inference fallbacks (essential for accurate performance)
+- `BITNET_DETERMINISTIC=1`: Enable deterministic mode for reproducible results
 - `BITNET_SEED=42`: Set random seed for reproducibility
-- `RAYON_NUM_THREADS=1`: Single-threaded CPU execution
+- `RAYON_NUM_THREADS=1`: Single-threaded CPU execution for determinism
 - `RUSTFLAGS="-C target-cpu=native -C opt-level=3"`: Maximum optimization
+- `BITNET_CI_ENHANCED_STRICT=1`: Enhanced strict mode for CI environments (with `CI=1`)
 
 ### Test Fixtures
 
@@ -541,7 +543,7 @@ CI enforces strict validation:
 3. **accuracy_tests** MUST pass tolerance checks (I2S: 1e-5, TL1/TL2: 1e-4)
 4. **determinism_tests** MUST show identical sequences across runs
 
-See `.github/workflows/inference-validation.yml` for CI gate implementation.
+See `.github/workflows/performance-tracking.yml` for CI gate implementation.
 
 ### Cross-Validation Status
 
@@ -551,3 +553,152 @@ See `.github/workflows/inference-validation.yml` for CI gate implementation.
 - **Status**: Available when BITNET_GGUF environment variable set
 
 These targets are automatically validated through the regression detection system and receipt artifact generation. All claims must be backed by verifiable receipts.
+
+## 🔒 Strict Mode Performance Testing (Issue #261)
+
+### Overview
+
+BitNet.rs Issue #261 implemented comprehensive strict mode controls to eliminate mock inference paths and ensure accurate performance reporting. All performance benchmarks MUST use strict mode to prevent false positives from mock computation.
+
+### Strict Mode Environment Variables
+
+| Variable | Purpose | Usage |
+|----------|---------|-------|
+| `BITNET_STRICT_MODE=1` | Primary strict mode - prevents ALL mock fallbacks | **Required for all production benchmarks** |
+| `BITNET_STRICT_FAIL_ON_MOCK=1` | Fail immediately on mock detection | Activated by `BITNET_STRICT_MODE=1` |
+| `BITNET_STRICT_REQUIRE_QUANTIZATION=1` | Require real I2S/TL1/TL2 kernels | Activated by `BITNET_STRICT_MODE=1` |
+| `BITNET_STRICT_VALIDATE_PERFORMANCE=1` | Validate realistic performance metrics | Activated by `BITNET_STRICT_MODE=1` |
+| `BITNET_CI_ENHANCED_STRICT=1` | Enhanced CI validation with comprehensive logging | Use in CI with `CI=1` |
+
+### Strict Mode Benchmark Examples
+
+```bash
+# CPU baseline with strict mode (I2S quantization: 10-20 tok/s expected)
+BITNET_STRICT_MODE=1 \
+BITNET_DETERMINISTIC=1 \
+BITNET_SEED=42 \
+cargo run -p xtask -- benchmark --features cpu --quantization i2s
+
+# GPU baseline with strict mode (mixed precision: 50-100 tok/s expected)
+BITNET_STRICT_MODE=1 \
+BITNET_DETERMINISTIC=1 \
+cargo run -p xtask -- benchmark --features gpu --quantization i2s
+
+# Cross-validation with strict mode (validates ≥99.8% I2S accuracy)
+BITNET_STRICT_MODE=1 \
+BITNET_DETERMINISTIC=1 \
+BITNET_SEED=42 \
+cargo run -p xtask -- crossval
+
+# CI enhanced strict mode (comprehensive validation)
+CI=1 \
+BITNET_CI_ENHANCED_STRICT=1 \
+BITNET_STRICT_MODE=1 \
+cargo test --workspace --features cpu
+```
+
+### Performance Validation Thresholds
+
+Strict mode enforces realistic performance expectations:
+
+| Quantization | CPU Performance | GPU Performance | Accuracy Target |
+|--------------|----------------|-----------------|-----------------|
+| I2S (2-bit) | 10-20 tok/s (AVX-512 > AVX2 > NEON) | 50-100 tok/s (FP16/BF16) | ≥99.8% vs FP32 |
+| TL1 (table lookup) | 12-18 tok/s (ARM NEON optimized) | N/A | ≥99.6% vs FP32 |
+| TL2 (table lookup) | 10-15 tok/s (x86 AVX optimized) | N/A | ≥99.6% vs FP32 |
+
+**Validation Rules:**
+- Performance >150 tok/s flagged as potentially mock computation
+- Computation type MUST be `Real` (not `Mock`)
+- Accuracy MUST meet thresholds in cross-validation
+- GPU utilization MUST be >80% for GPU benchmarks
+
+### Strict Mode Test Coverage
+
+```bash
+# Unit tests for strict mode enforcement (AC2)
+cargo test -p bitnet-common test_strict_mode_from_env_detailed
+cargo test -p bitnet-common test_strict_mode_ci_enhanced
+
+# Integration tests for real quantization (AC3)
+BITNET_STRICT_MODE=1 \
+cargo test -p bitnet-quantization test_i2s_simd_scalar_parity
+
+# Performance validation tests (AC7, AC8)
+BITNET_STRICT_MODE=1 \
+cargo test -p bitnet-kernels test_cpu_performance_baselines
+BITNET_STRICT_MODE=1 \
+cargo test -p bitnet-kernels test_gpu_performance_baselines --features gpu
+
+# CI mock rejection tests (AC6)
+CI=1 BITNET_CI_ENHANCED_STRICT=1 BITNET_STRICT_MODE=1 \
+cargo test test_ci_enhanced_strict_mode_comprehensive
+```
+
+### Receipts and Evidence
+
+All performance claims MUST be backed by verifiable receipts:
+
+1. **Receipt Artifacts**: `ci/inference.json` contains validated performance baselines
+2. **Computation Path**: MUST be `"real"` (not `"mock"`)
+3. **Kernel Usage**: Real quantization kernels (`i2s_gemv`, `rope_apply`, `attention_real`)
+4. **Determinism**: Identical sequences across runs with same seed
+
+**Example Receipt Validation:**
+```bash
+# Verify receipt shows real computation
+cat ci/inference.json | jq '.compute_path'
+# Expected: "real"
+
+# Verify realistic performance
+cat ci/inference.json | jq '.performance_baseline.tokens_per_second'
+# Expected: 10-20 for CPU, 50-100 for GPU
+
+# Verify no mock kernels
+cat ci/inference.json | jq '.kernels | map(select(contains("mock")))'
+# Expected: []
+```
+
+### CI Integration
+
+```yaml
+# .github/workflows/performance-tracking.yml
+- name: Run strict mode benchmarks
+  env:
+    BITNET_STRICT_MODE: "1"
+    BITNET_CI_ENHANCED_STRICT: "1"
+    BITNET_DETERMINISTIC: "1"
+    BITNET_SEED: "42"
+    CI: "1"
+  run: |
+    # Setup and run benchmarks
+    ./scripts/setup-perf-env.sh
+    ./scripts/run-performance-benchmarks.sh --features cpu
+
+    # Validate receipts
+    python3 scripts/validate-performance-receipts.py ci/inference.json
+
+    # Detect regressions
+    python3 scripts/detect-performance-regression.py \
+      benchmark-results/performance-report.json \
+      --fail-on-regression
+```
+
+### Troubleshooting Strict Mode Failures
+
+**Error: "Strict mode: Mock computation detected"**
+- Cause: Inference path using mock fallback instead of real quantization
+- Solution: Ensure quantization kernels are properly integrated and feature flags are correct
+
+**Error: "Strict mode: Suspicious performance detected: X tok/s"**
+- Cause: Performance >150 tok/s suggests mock computation
+- Solution: Verify real quantization kernels are being used, check computation path in receipts
+
+**Error: "Strict mode: Required quantization kernel not available"**
+- Cause: I2S/TL1/TL2 kernel not available for current device
+- Solution: Build with correct feature flags (`--features cpu` or `--features gpu`)
+
+For more information, see:
+- [Environment Variables](environment-variables.md) - Complete strict mode variable documentation
+- [Quantization Support](reference/quantization-support.md) - Quantization accuracy and performance details
+- [Issue #261 Specification](explanation/specs/issue-261-mock-performance-reporting-elimination-spec.md) - Technical implementation details
