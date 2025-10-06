@@ -18,9 +18,38 @@ This document describes all environment variables used throughout BitNet.rs for 
 
 ## Strict Testing Mode Variables
 
-These variables prevent "Potemkin passes" (false positives) in performance and integration tests:
+These variables prevent "Potemkin passes" (false positives) in performance and integration tests by eliminating mock inference paths:
 
+### Primary Strict Mode (Issue #261 Implementation)
 - `BITNET_STRICT_MODE=1`: **Primary strict mode** - Prevents ALL mock inference fallbacks, essential for production deployment and accurate performance measurement
+  - Enables `fail_on_mock`, `require_quantization`, and `validate_performance` checks
+  - Fails fast when mock computation paths are detected
+  - Validates performance metrics to reject suspicious values (>150 tok/s flagged as potentially mock)
+  - Required for production deployments to ensure real quantized inference
+
+### Detailed Strict Mode Controls (Issue #261 - Granular Configuration)
+- `BITNET_STRICT_FAIL_ON_MOCK=1`: Fail immediately when mock computation is detected in inference pipeline
+  - Activated automatically when `BITNET_STRICT_MODE=1`
+  - Can be enabled independently for targeted testing
+  - Validates all tensor operations and kernel calls for mock usage
+
+- `BITNET_STRICT_REQUIRE_QUANTIZATION=1`: Require real quantization kernels (I2S/TL1/TL2) to be available and used
+  - Activated automatically when `BITNET_STRICT_MODE=1`
+  - Prevents fallback to FP32 computation when quantization expected
+  - Validates device-aware quantization kernel selection
+
+- `BITNET_STRICT_VALIDATE_PERFORMANCE=1`: Validate performance metrics for realistic values
+  - Activated automatically when `BITNET_STRICT_MODE=1`
+  - Rejects performance metrics from mock computation paths
+  - Flags unrealistic throughput (>150 tok/s) as suspicious
+
+- `BITNET_CI_ENHANCED_STRICT=1`: Enhanced strict mode for CI environments (Issue #261 - AC6)
+  - Activates when both `CI` environment variable and this flag are set
+  - Enables `ci_enhanced_mode`, `log_all_validations`, and `fail_fast_on_any_mock`
+  - Provides comprehensive logging for CI pipeline debugging
+  - Ensures production-grade validation in automated testing
+
+### Legacy Strict Mode Variables
 - `BITNET_STRICT_TOKENIZERS=1`: Forbid mock tokenizer fallbacks in perf/integration tests (includes SPM tokenizer fallbacks)
 - `BITNET_STRICT_NO_FAKE_GPU=1`: Forbid fake GPU backends in perf/integration tests
 
@@ -90,27 +119,74 @@ export RUSTFLAGS="-C target-cpu=native"
 
 ## Strict Testing Examples
 
+### Basic Strict Mode Usage (Issue #261)
 ```bash
 # Primary strict mode - prevents ALL mock inference fallbacks
-BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-inference --no-default-features --features cpu
+BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-inference --features cpu
 BITNET_STRICT_MODE=1 cargo run -p xtask -- infer --model model.gguf --prompt "Test"
 
-# CPU baseline (no mocks involved)
+# Production inference with strict mode (realistic performance: 10-20 tok/s CPU, 50-100 tok/s GPU)
+BITNET_STRICT_MODE=1 cargo run -p xtask -- infer \
+  --model models/bitnet-model.gguf \
+  --prompt "Explain quantum computing" \
+  --deterministic
+```
+
+### Granular Strict Mode Controls (Issue #261)
+```bash
+# Fail immediately on mock detection
+BITNET_STRICT_FAIL_ON_MOCK=1 \
+cargo test -p bitnet-inference --features cpu test_inference_real_computation
+
+# Require real quantization kernels (I2S/TL1/TL2)
+BITNET_STRICT_REQUIRE_QUANTIZATION=1 \
+cargo test -p bitnet-quantization --features cpu test_quantization_kernel_integration
+
+# Validate performance metrics for realistic values
+BITNET_STRICT_VALIDATE_PERFORMANCE=1 \
+cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+
+# CI enhanced strict mode (comprehensive validation)
+CI=1 BITNET_CI_ENHANCED_STRICT=1 BITNET_STRICT_MODE=1 \
+cargo test --workspace --features cpu
+```
+
+### Performance Testing with Strict Mode
+```bash
+# CPU baseline with real quantization (no mocks)
+BITNET_STRICT_MODE=1 \
 cargo bench --no-default-features --features cpu -p bitnet-quantization --bench simd_comparison
 
-# GPU perf (strict, real hardware only)
+# GPU performance with strict hardware validation
 BITNET_STRICT_NO_FAKE_GPU=1 \
 BITNET_STRICT_MODE=1 \
-cargo bench --no-default-features -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
+cargo bench -p bitnet-kernels --bench mixed_precision_bench --features gpu
 
-# Strict integration/tokenizer tests (no mock fallbacks)
+# Realistic CPU performance baselines (Issue #261 - AC7)
+# Expected: I2S 10-20 tok/s, TL1 12-18 tok/s, TL2 10-15 tok/s
+BITNET_STRICT_MODE=1 \
+BITNET_DETERMINISTIC=1 \
+BITNET_SEED=42 \
+cargo run -p xtask -- benchmark --features cpu --quantization i2s
+
+# Realistic GPU performance baselines (Issue #261 - AC8)
+# Expected: Mixed precision 50-100 tok/s, GPU utilization >80%
+BITNET_STRICT_MODE=1 \
+BITNET_DETERMINISTIC=1 \
+cargo run -p xtask -- benchmark --features gpu --quantization i2s
+```
+
+### Strict Integration Testing
+```bash
+# Strict tokenizer tests (no mock fallbacks)
 BITNET_STRICT_TOKENIZERS=1 \
 BITNET_STRICT_MODE=1 \
-cargo test --no-default-features --features cpu -p bitnet-tokenizers -- --quiet
+cargo test --features cpu -p bitnet-tokenizers -- --quiet
 
+# Strict GPU kernel tests (real hardware only)
 BITNET_STRICT_NO_FAKE_GPU=1 \
 BITNET_STRICT_MODE=1 \
-cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu -- --quiet
+cargo test -p bitnet-kernels --features gpu -- --quiet
 
 # Combined strict testing for production validation
 BITNET_STRICT_MODE=1 \
@@ -118,7 +194,8 @@ BITNET_STRICT_TOKENIZERS=1 \
 BITNET_STRICT_NO_FAKE_GPU=1 \
 scripts/verify-tests.sh
 
-# Cross-validation with strict mode (no mock fallbacks)
+# Cross-validation with strict mode (Issue #261 - AC9)
+# Validates quantization accuracy: I2S ≥99.8%, TL1/TL2 ≥99.6% vs FP32
 BITNET_STRICT_MODE=1 \
 BITNET_DETERMINISTIC=1 \
 BITNET_SEED=42 \
