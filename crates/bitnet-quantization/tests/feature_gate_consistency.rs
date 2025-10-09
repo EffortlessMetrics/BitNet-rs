@@ -60,7 +60,7 @@ fn cuda_functions_compiled_with_features() {
     // compiled when the features are enabled
 
     // The mere existence of this test ensures the compiler sees these functions
-    let _test_i2s_has_cuda = {
+    {
         // We're just checking compilation, not execution
         // The actual quantize_cuda method is private, but it's compiled
         // and used internally by the public quantize() method
@@ -68,14 +68,12 @@ fn cuda_functions_compiled_with_features() {
         let quantizer = I2SQuantizer::default();
         // This should compile and use CUDA path when device is CUDA
         let _supports = quantizer.supports_device(&Device::Cuda(0));
-    };
+    }
 
     // If we get here, it means:
     // 1. The test compiled
     // 2. CUDA support is advertised
     // 3. CUDA functions are available
-
-    assert!(true, "CUDA functions are compiled when features are enabled");
 }
 
 /// Test CPU support is always available
