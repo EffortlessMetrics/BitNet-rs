@@ -104,7 +104,7 @@ impl I2SQuantizer {
         });
 
         if !device.is_cpu() {
-            #[cfg(feature = "cuda")]
+            #[cfg(any(feature = "gpu", feature = "cuda"))]
             {
                 if device.is_cuda()
                     && bitnet_kernels::gpu::cuda::is_cuda_available()
@@ -172,7 +172,7 @@ impl I2SQuantizer {
     pub fn supports_device(&self, device: &bitnet_common::Device) -> bool {
         match device {
             bitnet_common::Device::Cpu => true,
-            bitnet_common::Device::Cuda(_) => cfg!(feature = "gpu"),
+            bitnet_common::Device::Cuda(_) => cfg!(any(feature = "gpu", feature = "cuda")),
             bitnet_common::Device::Metal => false, // Metal support not yet implemented
         }
     }
@@ -236,13 +236,13 @@ impl I2SQuantizer {
         self.dequantize(tensor, &Device::Cpu)
     }
 
-    #[cfg(feature = "cuda")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[allow(dead_code)]
     fn quantize_cuda(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
         self.quantize_cuda_with_limits(tensor, &SecurityLimits::default())
     }
 
-    #[cfg(feature = "cuda")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn quantize_cuda_with_limits(
         &self,
         tensor: &BitNetTensor,
