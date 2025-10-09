@@ -58,7 +58,7 @@ version = "0.1.0"
 # Core crates - always included
 bitnet-common = { path = "crates/bitnet-common", version = "0.1.0" }
 bitnet-models = { path = "crates/bitnet-models", version = "0.1.0" }
-bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.1.0" }
+bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.1.0", default-features = false }
 bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.1.0", optional = true }
 
 # Optional crates based on features
@@ -76,14 +76,14 @@ async-trait = "0.1.89"
 bitnet-tests = { path = "tests", package = "bitnet-tests", default-features = false }
 candle-core = { version = "0.9.1", default-features = false }
 criterion = "0.7.0"
-ctor = "0.5.0"
+ctor = "0.6.0"
 env_logger = "0.11.8"
 log = "0.4.28"
 rand = "0.9.2"
-serde = { version = "1.0.225", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
-tempfile = "3.22.0"
-thiserror = "2.0.16"
+tempfile = "3.23.0"
+thiserror = "2.0.17"
 tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread", "fs", "io-util"] }
 toml = "0.9.7"
 # API snapshot testing
@@ -100,7 +100,7 @@ fastrand = "2.3.0"
 filetime = "0.2.26"
 futures-util = "0.3.31"
 html-escape = "0.2.13"
-libc = "0.2.175"
+libc = "0.2.177"
 rayon = "1.11.0"
 tracing = "0.1.41"
 
@@ -115,9 +115,9 @@ integration-tests = ["bitnet-tests/fixtures", "bitnet-tests/reporting", "bitnet-
 spm = []                                                                                                                        # for sentencepiece tokenizer tests
 
 # Core inference features
-cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bitnet-inference/cpu"]
+cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bitnet-inference/cpu", "bitnet-quantization/cpu"]
 cuda = ["gpu"]                                                                                       # Alias for backward compatibility
-gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu"]
+gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 
 # Component features
 inference = ["dep:bitnet-inference", "kernels"]
@@ -183,9 +183,9 @@ required-features = ["cpu", "ffi"]
 # Core dependencies
 anyhow = "1.0.100"
 log = "0.4.28"
-serde = { version = "1.0.225", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
-thiserror = "2.0.16"
+thiserror = "2.0.17"
 toml = "0.9.7"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
@@ -195,7 +195,7 @@ futures = "0.3.31"
 tokio = { version = "1.47.1", features = ["full"] }
 
 # Performance and SIMD
-bytemuck = { version = "1.23.2", features = ["derive"] }
+bytemuck = { version = "1.24.0", features = ["derive"] }
 rayon = "1.11.0"
 
 # Tensor operations
@@ -217,10 +217,10 @@ humansize = "2.1.3"
 humantime = "2.3.0"
 indicatif = "0.18.0"
 num_cpus = "1.17.0"
-sysinfo = "0.37.0"
+sysinfo = "0.37.2"
 
 # Web server
-axum = "0.8.4"
+axum = "0.8.6"
 tower = "0.5.2"
 tower-http = { version = "0.6.6", features = ["cors", "trace"] }
 
@@ -228,29 +228,29 @@ tower-http = { version = "0.6.6", features = ["cors", "trace"] }
 chrono = { version = "0.4.42", features = ["serde"] }
 metrics = "0.24.2"
 metrics-prometheus = "0.11.0"
-opentelemetry = { version = "0.29.0", default-features = false, features = ["trace", "metrics"] }
-opentelemetry-otlp = { version = "0.29.0", default-features = false, features = ["grpc-tonic", "trace"] }
+opentelemetry = { version = "0.31.0", default-features = false, features = ["trace", "metrics"] }
+opentelemetry-otlp = { version = "0.31.0", default-features = false, features = ["grpc-tonic", "trace"] }
 opentelemetry-prometheus = "0.29.1"
-opentelemetry-stdout = { version = "0.29.0", default-features = false }
-opentelemetry_sdk = { version = "0.29.0", features = ["trace", "metrics", "rt-tokio"] }
+opentelemetry-stdout = { version = "0.31.0", default-features = false }
+opentelemetry_sdk = { version = "0.31.0", features = ["trace", "metrics", "rt-tokio"] }
 prometheus = "0.14.0"
 tracing-appender = "0.2.3"
-tracing-opentelemetry = "0.29.0"
+tracing-opentelemetry = "0.32.0"
 uuid = { version = "1.18.1", features = ["v4"] }
 
 # FFI and bindings
-js-sys = "0.3.80"
+js-sys = "0.3.81"
 pyo3 = { version = "0.26.0", features = ["extension-module"] }
-wasm-bindgen = "0.2.103"
-web-sys = "0.3.80"
+wasm-bindgen = "0.2.104"
+web-sys = "0.3.81"
 
 # GPU support
 cudarc = "0.17.3"
 
 # Testing and benchmarking
 criterion = { version = "0.7.0", features = ["html_reports"] }
-proptest = "1.7.0"
-tempfile = "3.22.0"
+proptest = "1.8.0"
+tempfile = "3.23.0"
 serial_test = "3.2.0"
 temp-env = "0.3.6"
 
@@ -259,7 +259,7 @@ reqwest = { version = "0.12.23", features = ["json"] }
 
 # Code quality
 bindgen = "0.72.1"
-cc = "1.2.38"
+cc = "1.2.40"
 
 # Build-time information
 vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
