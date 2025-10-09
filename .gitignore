@@ -192,3 +192,5 @@ test-results/
 mutants-report/
 
 fuzz/
+
+tests/tests/cache/incremental/last_run.json
