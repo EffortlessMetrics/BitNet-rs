@@ -174,6 +174,54 @@ fn test_best_for_arch_is_available() {
     assert_eq!(best_qtype, QuantizationType::I2S, "Other archs should use I2S");
 }
 
+/// Test QuantizerTrait default is_available implementation
+///
+/// This test validates the trait's default `is_available()` behavior by creating
+/// a minimal test quantizer that doesn't override the method. This catches mutations
+/// in the trait default at lib.rs:189-191.
+///
+/// **Mutation Target**: lib.rs:190 - `return true` mutated to `return false`
+#[test]
+#[cfg(feature = "cpu")]
+fn test_quantizer_trait_default_is_available() -> Result<()> {
+    use bitnet_quantization::QuantizedTensor;
+
+    /// Minimal test quantizer that uses the trait default for is_available()
+    struct MinimalQuantizer;
+
+    impl QuantizerTrait for MinimalQuantizer {
+        fn quantize_tensor(
+            &self,
+            _tensor: &BitNetTensor,
+        ) -> bitnet_common::Result<QuantizedTensor> {
+            // Minimal stub implementation
+            Ok(QuantizedTensor::new(vec![], vec![], vec![1], QuantizationType::I2S))
+        }
+
+        fn dequantize_tensor(
+            &self,
+            _tensor: &QuantizedTensor,
+        ) -> bitnet_common::Result<BitNetTensor> {
+            // Minimal stub implementation
+            BitNetTensor::from_slice(&[0.0], &[1], &Device::Cpu)
+        }
+
+        fn quantization_type(&self) -> QuantizationType {
+            QuantizationType::I2S
+        }
+
+        // Deliberately NOT overriding is_available() to use trait default
+    }
+
+    let quantizer = MinimalQuantizer;
+
+    // The trait default should return true
+    // If mutated to return false, this assertion will fail
+    assert!(quantizer.is_available(), "QuantizerTrait default is_available() should return true");
+
+    Ok(())
+}
+
 // ============================================================================
 // Mutant 3: Conversion Validation (lib.rs:199:21)
 // Kill mutant that replaces `tensor.qtype == target_qtype` with `tensor.qtype != target_qtype`
