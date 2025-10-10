@@ -9,7 +9,7 @@
 //! for traceability and use BitNet.rs TDD patterns with proper feature gating.
 
 use anyhow::{Context, Result, anyhow};
-use bitnet_common::{BitNetTensor, Device, QuantizationType};
+use bitnet_common::{BitNetTensor, Device, QuantizationType, Tensor};
 use bitnet_quantization::{I2SQuantizer, QuantizedTensor, TL1Quantizer, TL2Quantizer};
 use std::env;
 
