@@ -85,7 +85,7 @@ serde_json = "1.0.145"
 tempfile = "3.23.0"
 thiserror = "2.0.17"
 tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread", "fs", "io-util"] }
-toml = "0.9.7"
+toml = "0.9.8"
 # API snapshot testing
 insta = { version = "1.43.2", features = ["yaml", "json"] }
 num_cpus = "1.17.0"
@@ -186,7 +186,7 @@ log = "0.4.28"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 thiserror = "2.0.17"
-toml = "0.9.7"
+toml = "0.9.8"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 
