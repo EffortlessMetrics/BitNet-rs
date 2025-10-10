@@ -447,7 +447,7 @@ impl TrendReporter {
         // Simple confidence calculation based on sample size and variance
         let size_factor = (sample_size as f64).ln() / 10.0;
         let variance_factor = 1.0 / (1.0 + variance);
-        (size_factor * variance_factor).min(1.0).max(0.0)
+        (size_factor * variance_factor).clamp(0.0, 1.0)
     }
 
     async fn cleanup_old_entries(&self) -> Result<()> {

@@ -6,6 +6,7 @@ use std::time::Duration;
 /// This module provides optimized configurations for speed-critical testing
 ///
 /// Create a configuration optimized for fast execution
+#[allow(clippy::field_reassign_with_default)]
 pub fn fast_config() -> TestConfig {
     let mut config = TestConfig::default();
 
@@ -67,6 +68,7 @@ pub fn unit_test_config() -> TestConfig {
 }
 
 /// Create a configuration for quick integration tests
+#[allow(clippy::field_reassign_with_default)]
 pub fn quick_integration_config() -> TestConfig {
     let mut config = TestConfig::default();
 

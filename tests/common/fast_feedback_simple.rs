@@ -142,23 +142,27 @@ impl FastFeedbackSystem {
 
     /// Create a fast feedback system optimized for CI
     pub fn for_ci() -> Self {
-        let mut config = FastFeedbackConfig::default();
-        config.target_feedback_time = Duration::from_secs(90); // 1.5 minutes for CI
-        config.max_feedback_time = Duration::from_secs(3 * 60); // 3 minutes max
-        config.speed_profile = SpeedProfile::Lightning;
-        config.fail_fast = true;
-        config.max_parallel_fast = 2; // Conservative for CI
+        let config = FastFeedbackConfig {
+            target_feedback_time: Duration::from_secs(90), // 1.5 minutes for CI
+            max_feedback_time: Duration::from_secs(3 * 60), // 3 minutes max
+            speed_profile: SpeedProfile::Lightning,
+            fail_fast: true,
+            max_parallel_fast: 2, // Conservative for CI
+            ..Default::default()
+        };
         Self::new(config)
     }
 
     /// Create a fast feedback system optimized for development
     pub fn for_development() -> Self {
-        let mut config = FastFeedbackConfig::default();
-        config.target_feedback_time = Duration::from_secs(30); // 30 seconds for dev
-        config.max_feedback_time = Duration::from_secs(2 * 60); // 2 minutes max
-        config.speed_profile = SpeedProfile::Lightning;
-        config.enable_incremental = true;
-        config.fail_fast = false; // See all failures in dev
+        let config = FastFeedbackConfig {
+            target_feedback_time: Duration::from_secs(30), // 30 seconds for dev
+            max_feedback_time: Duration::from_secs(2 * 60), // 2 minutes max
+            speed_profile: SpeedProfile::Lightning,
+            enable_incremental: true,
+            fail_fast: false, // See all failures in dev
+            ..Default::default()
+        };
         Self::new(config)
     }
 

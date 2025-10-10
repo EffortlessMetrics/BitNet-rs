@@ -16,7 +16,7 @@ use bitnet_tokenizers::{Tokenizer, TokenizerBuilder};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tokio::sync::RwLock;
 use tracing::{debug, info, instrument};
 
@@ -223,7 +223,7 @@ impl BitNetImplementation for RustImplementation {
         info!("Loading model from: {}", model_path.display());
 
         // Load model using BitNet.rs model loader
-        let loader = ModelLoader::new(self.device.clone());
+        let loader = ModelLoader::new(self.device);
         let model = loader.load(model_path).map_err(|e| ImplementationError::ModelLoadError {
             message: format!("Failed to load model: {}", e),
         })?;
@@ -231,7 +231,7 @@ impl BitNetImplementation for RustImplementation {
         let model_config = model.config().clone();
         // Since Model trait is not object-safe, we need to work with the concrete type
         // For now, we'll create a mock model for testing purposes
-        let mock_model = bitnet_models::BitNetModel::new(model_config.clone(), self.device.clone());
+        let mock_model = bitnet_models::BitNetModel::new(model_config.clone(), self.device);
         let _model_arc = Arc::new(mock_model);
 
         // Load tokenizer - try to find tokenizer file alongside model
@@ -478,7 +478,7 @@ impl Default for RustImplementationFactory {
 #[async_trait]
 impl crate::cross_validation::implementation::ImplementationFactory for RustImplementationFactory {
     async fn create(&self) -> ImplementationResult<Box<dyn BitNetImplementation>> {
-        let mut implementation = RustImplementation::with_device(self.device.clone());
+        let mut implementation = RustImplementation::with_device(self.device);
         implementation.initialize(None).await?;
         Ok(Box::new(implementation))
     }
