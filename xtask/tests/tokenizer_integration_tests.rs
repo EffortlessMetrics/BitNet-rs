@@ -3,6 +3,7 @@
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac4-xtask-integration
 
 use std::path::PathBuf;
+#[cfg(feature = "inference")]
 use std::process::Command;
 use tempfile::NamedTempFile;
 #[cfg(feature = "inference")]

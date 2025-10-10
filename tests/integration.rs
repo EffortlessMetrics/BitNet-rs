@@ -10,6 +10,9 @@ mod integration_placeholder {
     #[test]
     fn test_integration_module_loads() {
         // This test ensures the integration module loads correctly
-        assert!(true, "Integration module loaded successfully");
+        #[allow(clippy::assertions_on_constants)]
+        {
+            assert!(true, "Integration module loaded successfully");
+        }
     }
 }
