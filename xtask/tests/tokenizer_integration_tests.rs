@@ -3,6 +3,7 @@
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac4-xtask-integration
 
 use std::path::PathBuf;
+use std::process::Command;
 use tempfile::NamedTempFile;
 #[cfg(feature = "inference")]
 use tokio::process::Command as TokioCommand;
@@ -16,7 +17,7 @@ async fn test_xtask_infer_auto_discovery() {
     let test_model_path = create_test_model().await;
 
     let result = TokioCommand::new("cargo")
-        .args(&[
+        .args([
             "run",
             "-p",
             "xtask",
@@ -51,9 +52,9 @@ async fn test_xtask_infer_auto_discovery() {
                 panic!("Test scaffolding should fail until tokenizer discovery is implemented");
             }
         }
-        Err(e) => {
+        Err(_) => {
             // Command execution failure is acceptable for test scaffolding
-            assert!(true, "Command execution failed as expected: {}", e);
+            // Command execution failed as expected
         }
     }
 }
@@ -66,7 +67,7 @@ async fn test_xtask_infer_strict_mode() {
     let test_model_path = create_test_model().await;
 
     let result = TokioCommand::new("cargo")
-        .args(&[
+        .args([
             "run",
             "-p",
             "xtask",
@@ -98,7 +99,7 @@ async fn test_xtask_infer_strict_mode() {
         }
         Err(_) => {
             // Command execution failure is acceptable for test scaffolding
-            assert!(true, "Command execution failed as expected for strict mode");
+            // Command execution failed as expected for strict mode
         }
     }
 }
@@ -112,7 +113,7 @@ async fn test_xtask_infer_explicit_tokenizer() {
     let test_tokenizer_path = create_test_tokenizer().await;
 
     let result = TokioCommand::new("cargo")
-        .args(&[
+        .args([
             "run",
             "-p",
             "xtask",
@@ -135,7 +136,7 @@ async fn test_xtask_infer_explicit_tokenizer() {
     match result {
         Ok(output) => {
             // May succeed or fail depending on implementation status
-            let stdout = String::from_utf8_lossy(&output.stdout);
+            let _stdout = String::from_utf8_lossy(&output.stdout);
             let stderr = String::from_utf8_lossy(&output.stderr);
 
             // Should not attempt auto-discovery when tokenizer is explicit
@@ -146,7 +147,7 @@ async fn test_xtask_infer_explicit_tokenizer() {
         }
         Err(_) => {
             // Command execution failure is acceptable for test scaffolding
-            assert!(true, "Explicit tokenizer test - implementation pending");
+            // This is intentional scaffolding, not a real test assertion
         }
     }
 }
@@ -159,7 +160,7 @@ async fn test_xtask_tokenizer_download_progress() {
     let test_model_path = create_test_llama3_model().await;
 
     let result = TokioCommand::new("cargo")
-        .args(&[
+        .args([
             "run",
             "-p",
             "xtask",
@@ -178,18 +179,18 @@ async fn test_xtask_tokenizer_download_progress() {
     // Test scaffolding for progress reporting
     match result {
         Ok(output) => {
-            let stderr = String::from_utf8_lossy(&output.stderr);
+            let _stderr = String::from_utf8_lossy(&output.stderr);
 
             // Should show progress indicators when downloading
             // These messages will be implemented in the actual CLI integration
-            let expected_messages =
+            let _expected_messages =
                 ["🔍 Auto-discovering tokenizer", "📥 Downloading tokenizer", "✅ Tokenizer ready"];
 
             // For test scaffolding, just verify the structure exists
-            assert!(true, "Test scaffolding - progress reporting structure defined");
+            // This is intentional scaffolding for future implementation
         }
         Err(_) => {
-            assert!(true, "Progress reporting test - implementation pending");
+            // Progress reporting test - implementation pending
         }
     }
 }
@@ -202,7 +203,7 @@ async fn test_xtask_tokenizer_discovery_error_handling() {
     let invalid_model_path = PathBuf::from("nonexistent-model.gguf");
 
     let result = TokioCommand::new("cargo")
-        .args(&[
+        .args([
             "run",
             "-p",
             "xtask",
@@ -238,7 +239,7 @@ async fn test_xtask_tokenizer_discovery_error_handling() {
             );
         }
         Err(_) => {
-            assert!(true, "Error handling test - command execution failure expected");
+            // Error handling test - command execution failure expected
         }
     }
 }
@@ -254,11 +255,11 @@ async fn test_xtask_neural_network_model_types() {
         ("gpt2", "openai-community/gpt2", 50257),
     ];
 
-    for (model_type, expected_repo, vocab_size) in model_test_cases {
+    for (model_type, _expected_repo, vocab_size) in model_test_cases {
         let test_model_path = create_test_model_with_type(model_type, vocab_size).await;
 
         let result = TokioCommand::new("cargo")
-            .args(&[
+            .args([
                 "run",
                 "-p",
                 "xtask",
@@ -277,14 +278,14 @@ async fn test_xtask_neural_network_model_types() {
         // Test scaffolding for model type-specific discovery
         match result {
             Ok(output) => {
-                let stderr = String::from_utf8_lossy(&output.stderr);
+                let _stderr = String::from_utf8_lossy(&output.stderr);
 
                 // Should detect model type and infer appropriate tokenizer source
                 // This is test scaffolding - actual implementation will detect model types
-                assert!(true, "Model type detection test scaffolding for {}", model_type);
+                // Model type: {model_type}
             }
             Err(_) => {
-                assert!(true, "Neural network model type test - implementation pending");
+                // Neural network model type test - implementation pending
             }
         }
     }
@@ -298,7 +299,7 @@ async fn test_xtask_offline_mode() {
     let test_model_path = create_test_model().await;
 
     let result = TokioCommand::new("cargo")
-        .args(&[
+        .args([
             "run", "-p", "xtask", "--",
             "infer",
             "--model", test_model_path.to_str().unwrap(),
@@ -321,7 +322,7 @@ async fn test_xtask_offline_mode() {
             );
         }
         Err(_) => {
-            assert!(true, "Offline mode test - implementation pending");
+            // Offline mode test - implementation pending
         }
     }
 }
@@ -336,7 +337,7 @@ async fn test_xtask_deterministic_tokenizer_selection() {
     // Run inference twice with same parameters
     let run_inference = || async {
         TokioCommand::new("cargo")
-            .args(&[
+            .args([
                 "run",
                 "-p",
                 "xtask",
@@ -364,14 +365,14 @@ async fn test_xtask_deterministic_tokenizer_selection() {
     match (result1, result2) {
         (Ok(output1), Ok(output2)) => {
             // With same parameters, tokenizer selection should be deterministic
-            let stderr1 = String::from_utf8_lossy(&output1.stderr);
-            let stderr2 = String::from_utf8_lossy(&output2.stderr);
+            let _stderr1 = String::from_utf8_lossy(&output1.stderr);
+            let _stderr2 = String::from_utf8_lossy(&output2.stderr);
 
             // Test scaffolding - actual implementation will ensure determinism
-            assert!(true, "Deterministic tokenizer selection test scaffolding");
+            // Outputs should be deterministic with same parameters
         }
         _ => {
-            assert!(true, "Deterministic test - implementation pending");
+            // Deterministic test - implementation pending
         }
     }
 }
@@ -384,7 +385,7 @@ async fn test_xtask_verify_tokenizer_discovery() {
     let test_model_path = create_test_model().await;
 
     let result = TokioCommand::new("cargo")
-        .args(&[
+        .args([
             "run",
             "-p",
             "xtask",
@@ -401,14 +402,14 @@ async fn test_xtask_verify_tokenizer_discovery() {
     match result {
         Ok(output) => {
             // verify command should validate tokenizer discovery capability
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
+            let _stdout = String::from_utf8_lossy(&output.stdout);
+            let _stderr = String::from_utf8_lossy(&output.stderr);
 
             // Test scaffolding - actual implementation will add verification
-            assert!(true, "Verify command tokenizer discovery test scaffolding");
+            // Verify command should validate tokenizer discovery
         }
         Err(_) => {
-            assert!(true, "Verify command integration - implementation pending");
+            // Verify command integration - implementation pending
         }
     }
 }
@@ -462,7 +463,7 @@ async fn create_test_tokenizer() -> PathBuf {
 #[test]
 #[cfg(feature = "inference")]
 fn test_xtask_command_availability() {
-    let output = Command::new("cargo").args(&["run", "-p", "xtask", "--", "--help"]).output();
+    let output = Command::new("cargo").args(["run", "-p", "xtask", "--", "--help"]).output();
 
     match output {
         Ok(result) => {
@@ -475,7 +476,7 @@ fn test_xtask_command_availability() {
         }
         Err(_) => {
             // Command not available - this is acceptable for test scaffolding
-            assert!(true, "xtask command availability test - may not be built yet");
+            // xtask command availability test - may not be built yet
         }
     }
 }
@@ -510,6 +511,6 @@ fn test_tokenizer_discovery_cli_flags() {
 
     for combination in flag_combinations {
         // Test scaffolding - verify combinations make sense
-        assert!(combination.len() > 0, "Flag combination should not be empty");
+        assert!(!combination.is_empty(), "Flag combination should not be empty");
     }
 }

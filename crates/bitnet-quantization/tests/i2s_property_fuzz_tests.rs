@@ -157,10 +157,10 @@ proptest! {
 
         // CUDA support should be consistent with feature flag
         let cuda_supported = quantizer.supports_device(&Device::Cuda(0));
-        if cfg!(feature = "cuda") {
-            prop_assert!(cuda_supported, "CUDA should be supported with cuda feature");
+        if cfg!(any(feature = "gpu", feature = "cuda")) {
+            prop_assert!(cuda_supported, "CUDA should be supported with gpu or cuda feature");
         } else {
-            prop_assert!(!cuda_supported, "CUDA should not be supported without cuda feature");
+            prop_assert!(!cuda_supported, "CUDA should not be supported without gpu or cuda feature");
         }
 
         // Metal should not be supported yet

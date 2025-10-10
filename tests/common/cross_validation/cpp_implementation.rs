@@ -209,17 +209,17 @@ impl CppImplementation {
         }
 
         // Try to find in PATH
-        if let Ok(output) = AsyncCommand::new("which").arg("bitnet").output().await {
-            if output.status.success() {
-                let path_str = String::from_utf8_lossy(&output.stdout);
-                let path_str = path_str.trim();
-                let path = PathBuf::from(path_str);
-                if self.verify_binary(&path).await? {
-                    self.binary_path = Some(path);
-                    self.is_available = true;
-                    info!("Found C++ binary in PATH: {}", path_str);
-                    return Ok(());
-                }
+        if let Ok(output) = AsyncCommand::new("which").arg("bitnet").output().await
+            && output.status.success()
+        {
+            let path_str = String::from_utf8_lossy(&output.stdout);
+            let path_str = path_str.trim();
+            let path = PathBuf::from(path_str);
+            if self.verify_binary(&path).await? {
+                self.binary_path = Some(path);
+                self.is_available = true;
+                info!("Found C++ binary in PATH: {}", path_str);
+                return Ok(());
             }
         }
 
@@ -534,12 +534,8 @@ impl BitNetImplementation for CppImplementation {
         }
 
         // Copy tokens to Rust Vec
-        let tokens: Vec<u32> = unsafe {
-            std::slice::from_raw_parts(tokens_ptr, token_count as usize)
-                .iter()
-                .map(|&t| t as u32)
-                .collect()
-        };
+        let tokens: Vec<u32> =
+            unsafe { std::slice::from_raw_parts(tokens_ptr, token_count as usize).to_vec() };
 
         // Free C++ allocated memory
         unsafe {
@@ -635,9 +631,7 @@ impl BitNetImplementation for CppImplementation {
         } else {
             unsafe {
                 std::slice::from_raw_parts(cpp_result.tokens, cpp_result.token_count as usize)
-                    .iter()
-                    .map(|&t| t as u32)
-                    .collect()
+                    .to_vec()
             }
         };
 
@@ -742,8 +736,7 @@ impl BitNetImplementation for CppImplementation {
     }
 }
 
-///
-// Factory for creating C++ implementation instances
+/// Factory for creating C++ implementation instances
 pub struct CppImplementationFactory {
     binary_path: Option<PathBuf>,
 }

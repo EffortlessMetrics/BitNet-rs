@@ -151,13 +151,13 @@ async fn test_ac5_gpu_performance_speedup() -> Result<()> {
     let model = load_bitnet_2b_model_for_performance_testing()?;
 
     // Create CPU and GPU inference engines
-    let mut cpu_engine = InferenceEngine::new(
+    let cpu_engine = InferenceEngine::new(
         Arc::clone(&model),
         create_performance_test_tokenizer()?,
         Device::Cpu,
     )?;
 
-    let mut gpu_engine = InferenceEngine::new(
+    let gpu_engine = InferenceEngine::new(
         Arc::clone(&model),
         create_performance_test_tokenizer()?,
         Device::Cuda(0),

@@ -202,24 +202,15 @@ impl CrossValidationSuite {
             model_path.file_name().and_then(|n| n.to_str()).unwrap_or("unknown").to_string();
 
         // Initialize both implementations
-        self.rust_impl
-            .initialize(None)
-            .await
-            .map_err(|e| ComparisonError::ImplementationError(e))?;
-        self.cpp_impl
-            .initialize(None)
-            .await
-            .map_err(|e| ComparisonError::ImplementationError(e))?;
+        self.rust_impl.initialize(None).await.map_err(ComparisonError::ImplementationError)?;
+        self.cpp_impl.initialize(None).await.map_err(ComparisonError::ImplementationError)?;
 
         // Load model in both implementations
         self.rust_impl
             .load_model(model_path)
             .await
-            .map_err(|e| ComparisonError::ImplementationError(e))?;
-        self.cpp_impl
-            .load_model(model_path)
-            .await
-            .map_err(|e| ComparisonError::ImplementationError(e))?;
+            .map_err(ComparisonError::ImplementationError)?;
+        self.cpp_impl.load_model(model_path).await.map_err(ComparisonError::ImplementationError)?;
 
         let mut test_results = Vec::new();
 
@@ -400,7 +391,7 @@ impl CrossValidationSuite {
 
         let passes_tolerance = token_accuracy >= self.tolerance.min_token_accuracy
             && probability_similarity
-                .map_or(true, |sim| sim >= (1.0 - self.tolerance.max_probability_divergence));
+                .is_none_or(|sim| sim >= (1.0 - self.tolerance.max_probability_divergence));
 
         AccuracyResult {
             token_accuracy,

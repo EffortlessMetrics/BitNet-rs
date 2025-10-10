@@ -164,7 +164,7 @@ impl TL1Quantizer {
     /// Quantize tensor using TL1 algorithm on a specific device
     pub fn quantize(&self, tensor: &BitNetTensor, device: &Device) -> Result<QuantizedTensor> {
         if !device.is_cpu() {
-            #[cfg(feature = "cuda")]
+            #[cfg(any(feature = "gpu", feature = "cuda"))]
             {
                 if device.is_cuda()
                     && bitnet_kernels::gpu::cuda::is_cuda_available()
@@ -239,7 +239,7 @@ impl TL1Quantizer {
     pub fn supports_device(&self, device: &bitnet_common::Device) -> bool {
         match device {
             bitnet_common::Device::Cpu => true,
-            bitnet_common::Device::Cuda(_) => cfg!(feature = "gpu"),
+            bitnet_common::Device::Cuda(_) => cfg!(any(feature = "gpu", feature = "cuda")),
             bitnet_common::Device::Metal => false, // Metal support not yet implemented
         }
     }
@@ -275,7 +275,7 @@ impl TL1Quantizer {
         self.dequantize(tensor, &Device::Cpu)
     }
 
-    #[cfg(feature = "cuda")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn quantize_cuda(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
         use bitnet_kernels::gpu::cuda::CudaKernel;
         let data = extract_f32_data(tensor)?;

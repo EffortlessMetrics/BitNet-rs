@@ -1,4 +1,3 @@
-#![cfg(feature = "integration-tests")]
 //! Integration tests for BitNet workspace
 
 // Re-export integration test modules for backward compatibility

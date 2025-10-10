@@ -274,12 +274,12 @@ impl ResourceManager {
         implementation: Box<dyn BitNetImplementation>,
     ) -> ImplementationResult<()> {
         // Check resource limits
-        if let Some(max_impls) = self.resource_limits.max_implementations {
-            if self.active_implementations.len() >= max_impls {
-                return Err(ImplementationError::NotAvailable {
-                    name: "Resource limit exceeded".to_string(),
-                });
-            }
+        if let Some(max_impls) = self.resource_limits.max_implementations
+            && self.active_implementations.len() >= max_impls
+        {
+            return Err(ImplementationError::NotAvailable {
+                name: "Resource limit exceeded".to_string(),
+            });
         }
 
         if let Some(max_memory) = self.resource_limits.max_memory {
@@ -366,12 +366,11 @@ pub mod utils {
             use std::fs;
             if let Ok(contents) = fs::read_to_string("/proc/self/status") {
                 for line in contents.lines() {
-                    if line.starts_with("VmRSS:") {
-                        if let Some(kb_str) = line.split_whitespace().nth(1) {
-                            if let Ok(kb) = kb_str.parse::<u64>() {
-                                return kb * 1024; // Convert KB to bytes
-                            }
-                        }
+                    if line.starts_with("VmRSS:")
+                        && let Some(kb_str) = line.split_whitespace().nth(1)
+                        && let Ok(kb) = kb_str.parse::<u64>()
+                    {
+                        return kb * 1024; // Convert KB to bytes
                     }
                 }
             }
@@ -411,12 +410,11 @@ pub mod utils {
             use std::fs;
             if let Ok(contents) = fs::read_to_string("/proc/self/status") {
                 for line in contents.lines() {
-                    if line.starts_with("VmHWM:") {
-                        if let Some(kb_str) = line.split_whitespace().nth(1) {
-                            if let Ok(kb) = kb_str.parse::<u64>() {
-                                return kb * 1024; // Convert KB to bytes
-                            }
-                        }
+                    if line.starts_with("VmHWM:")
+                        && let Some(kb_str) = line.split_whitespace().nth(1)
+                        && let Ok(kb) = kb_str.parse::<u64>()
+                    {
+                        return kb * 1024; // Convert KB to bytes
                     }
                 }
             }
