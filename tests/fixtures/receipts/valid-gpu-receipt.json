@@ -1,0 +1,6 @@
+{
+  "backend": "cuda",
+  "kernels": ["gemm_fp16", "i2s_gpu_quantize"],
+  "tokens_per_second": 87.5,
+  "latency_ms": 11.4
+}

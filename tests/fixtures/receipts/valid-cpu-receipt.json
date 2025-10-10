@@ -1,0 +1,6 @@
+{
+  "backend": "cpu",
+  "kernels": ["avx2_matmul", "i2s_cpu_quantize"],
+  "tokens_per_second": 15.2,
+  "latency_ms": 66.7
+}

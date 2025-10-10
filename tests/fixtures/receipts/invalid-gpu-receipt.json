@@ -1,0 +1,6 @@
+{
+  "backend": "cuda",
+  "kernels": ["i2s_cpu_quantize", "avx2_matmul"],
+  "tokens_per_second": 12.3,
+  "latency_ms": 81.2
+}
