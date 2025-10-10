@@ -53,12 +53,15 @@ fn ac1_no_standalone_cuda_gates_in_kernels() {
 /// Tests specification: docs/explanation/issue-439-spec.md#ac1
 #[test]
 fn ac1_gpu_validation_module_uses_unified_predicate() {
-    let validation_path = "/home/steven/code/Rust/BitNet-rs/crates/bitnet-kernels/src/gpu/validation.rs";
+    let validation_path =
+        "/home/steven/code/Rust/BitNet-rs/crates/bitnet-kernels/src/gpu/validation.rs";
 
     // Check if validation.rs exists (may not be implemented yet)
     if !std::path::Path::new(validation_path).exists() {
         // Module not yet implemented - test will pass once created with correct gates
-        println!("Note: gpu/validation.rs not yet created - this test validates it uses unified gates");
+        println!(
+            "Note: gpu/validation.rs not yet created - this test validates it uses unified gates"
+        );
         return;
     }
 
@@ -129,7 +132,9 @@ fn ac1_build_scripts_check_both_gpu_features() {
 
     if !std::path::Path::new(build_rs_path).exists() {
         // build.rs not yet created - test will validate it once implemented
-        println!("Note: bitnet-kernels/build.rs not yet created - AC2 will validate unified detection");
+        println!(
+            "Note: bitnet-kernels/build.rs not yet created - AC2 will validate unified detection"
+        );
         return;
     }
 

@@ -17,12 +17,7 @@ use std::process::Command;
 #[test]
 fn ac7_docs_use_no_default_features_pattern() {
     let output = Command::new("rg")
-        .args(&[
-            r"--features\s+(cpu|gpu)",
-            "--glob",
-            "*.md",
-            "docs/",
-        ])
+        .args(&[r"--features\s+(cpu|gpu)", "--glob", "*.md", "docs/"])
         .current_dir("/home/steven/code/Rust/BitNet-rs")
         .output()
         .expect("Failed to run ripgrep - ensure 'rg' is installed");
@@ -30,7 +25,9 @@ fn ac7_docs_use_no_default_features_pattern() {
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     if stdout.is_empty() {
-        println!("AC:7 INFO - No feature flag examples found in docs/ (may not be implemented yet)");
+        println!(
+            "AC:7 INFO - No feature flag examples found in docs/ (may not be implemented yet)"
+        );
         return;
     }
 
@@ -72,12 +69,7 @@ fn ac7_docs_use_no_default_features_pattern() {
 #[test]
 fn ac7_no_standalone_cuda_examples() {
     let output = Command::new("rg")
-        .args(&[
-            r"--features\s+cuda",
-            "--glob",
-            "*.md",
-            "docs/",
-        ])
+        .args(&[r"--features\s+cuda", "--glob", "*.md", "docs/"])
         .current_dir("/home/steven/code/Rust/BitNet-rs")
         .output()
         .expect("Failed to run ripgrep");
@@ -90,7 +82,8 @@ fn ac7_no_standalone_cuda_examples() {
     }
 
     // Check if examples mention cuda is an alias
-    let has_alias_context = stdout.contains("alias") || stdout.contains("deprecated") || stdout.contains("use gpu");
+    let has_alias_context =
+        stdout.contains("alias") || stdout.contains("deprecated") || stdout.contains("use gpu");
 
     if !has_alias_context {
         println!(
@@ -116,8 +109,7 @@ fn ac7_claude_md_standardized_examples() {
         return;
     }
 
-    let claude_md = std::fs::read_to_string(claude_md_path)
-        .expect("Failed to read CLAUDE.md");
+    let claude_md = std::fs::read_to_string(claude_md_path).expect("Failed to read CLAUDE.md");
 
     // Check for cargo build/test/run examples
     let has_feature_examples = claude_md.contains("--features");
@@ -128,8 +120,8 @@ fn ac7_claude_md_standardized_examples() {
     }
 
     // Verify examples use --no-default-features
-    let examples_with_defaults = claude_md.contains("--features cpu")
-        || claude_md.contains("--features gpu");
+    let examples_with_defaults =
+        claude_md.contains("--features cpu") || claude_md.contains("--features gpu");
 
     if examples_with_defaults {
         let uses_no_defaults = claude_md.contains("--no-default-features");
@@ -145,8 +137,6 @@ fn ac7_claude_md_standardized_examples() {
 
 #[cfg(test)]
 mod comprehensive_docs_audit {
-    use super::*;
-
     /// AC:7 - GPU development guide uses unified feature flags
     ///
     /// Tests that GPU development documentation mentions unified predicate
@@ -160,8 +150,8 @@ mod comprehensive_docs_audit {
             return;
         }
 
-        let contents = std::fs::read_to_string(gpu_dev_guide)
-            .expect("Failed to read gpu-development.md");
+        let contents =
+            std::fs::read_to_string(gpu_dev_guide).expect("Failed to read gpu-development.md");
 
         // Should mention unified predicate approach
         let mentions_unified = contents.contains("any(feature")
@@ -188,8 +178,8 @@ mod comprehensive_docs_audit {
             return;
         }
 
-        let contents = std::fs::read_to_string(build_commands)
-            .expect("Failed to read build-commands.md");
+        let contents =
+            std::fs::read_to_string(build_commands).expect("Failed to read build-commands.md");
 
         // Count --no-default-features usage
         let no_defaults_count = contents.matches("--no-default-features").count();
@@ -226,8 +216,7 @@ mod comprehensive_docs_audit {
             return;
         }
 
-        let readme = std::fs::read_to_string(readme_path)
-            .expect("Failed to read README.md");
+        let readme = std::fs::read_to_string(readme_path).expect("Failed to read README.md");
 
         // Check for cargo examples
         if readme.contains("cargo build") || readme.contains("cargo run") {
@@ -255,12 +244,13 @@ mod comprehensive_docs_audit {
             return;
         }
 
-        let contents = std::fs::read_to_string(features_doc)
-            .expect("Failed to read FEATURES.md");
+        let contents = std::fs::read_to_string(features_doc).expect("Failed to read FEATURES.md");
 
         // Should explain gpu and cuda relationship
         let explains_cuda_alias = contents.contains("cuda")
-            && (contents.contains("alias") || contents.contains("temporary") || contents.contains("gpu"));
+            && (contents.contains("alias")
+                || contents.contains("temporary")
+                || contents.contains("gpu"));
 
         if explains_cuda_alias {
             println!("AC:7 PASS - FEATURES.md explains cuda as gpu alias");
@@ -277,12 +267,11 @@ mod comprehensive_docs_audit {
     fn ac7_cargo_toml_documents_empty_defaults() {
         let cargo_toml = "/home/steven/code/Rust/BitNet-rs/Cargo.toml";
 
-        let contents = std::fs::read_to_string(cargo_toml)
-            .expect("Failed to read Cargo.toml");
+        let contents = std::fs::read_to_string(cargo_toml).expect("Failed to read Cargo.toml");
 
         // Check for default = [] or default = [ ] (empty)
-        let has_empty_defaults = contents.contains("default = []")
-            || contents.contains("default = [ ]");
+        let has_empty_defaults =
+            contents.contains("default = []") || contents.contains("default = [ ]");
 
         if has_empty_defaults {
             println!("AC:7 PASS - Cargo.toml uses empty default features");
@@ -317,8 +306,10 @@ mod cross_reference_audit {
 
         if !stdout.is_empty() {
             // Should consistently refer to "GPU feature" not "CUDA feature"
-            let gpu_refs = stdout.matches("GPU feature").count() + stdout.matches("gpu feature").count();
-            let cuda_refs = stdout.matches("CUDA feature").count() + stdout.matches("cuda feature").count();
+            let gpu_refs =
+                stdout.matches("GPU feature").count() + stdout.matches("gpu feature").count();
+            let cuda_refs =
+                stdout.matches("CUDA feature").count() + stdout.matches("cuda feature").count();
 
             if cuda_refs > 0 && gpu_refs == 0 {
                 println!(
@@ -326,7 +317,10 @@ mod cross_reference_audit {
                     cuda_refs
                 );
             } else {
-                println!("AC:7 PASS - Feature terminology is consistent (GPU: {}, CUDA: {})", gpu_refs, cuda_refs);
+                println!(
+                    "AC:7 PASS - Feature terminology is consistent (GPU: {}, CUDA: {})",
+                    gpu_refs, cuda_refs
+                );
             }
         }
     }

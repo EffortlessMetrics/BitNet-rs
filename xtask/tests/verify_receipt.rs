@@ -22,12 +22,12 @@ struct Receipt {
 
 /// GPU kernel naming convention prefixes (AC6)
 const GPU_KERNEL_PREFIXES: &[&str] = &[
-    "gemm_",      // GEMM kernels (gemm_fp16, gemm_bf16)
-    "wmma_",      // Tensor Core kernels (wmma_matmul)
-    "cuda_",      // CUDA utilities (cuda_sync, cuda_memcpy)
-    "i2s_gpu_",   // I2_S GPU quantization
-    "tl1_gpu_",   // TL1 GPU quantization
-    "tl2_gpu_",   // TL2 GPU quantization
+    "gemm_",    // GEMM kernels (gemm_fp16, gemm_bf16)
+    "wmma_",    // Tensor Core kernels (wmma_matmul)
+    "cuda_",    // CUDA utilities (cuda_sync, cuda_memcpy)
+    "i2s_gpu_", // I2_S GPU quantization
+    "tl1_gpu_", // TL1 GPU quantization
+    "tl2_gpu_", // TL2 GPU quantization
 ];
 
 /// AC:6 - GPU backend requires GPU kernel evidence
@@ -37,7 +37,7 @@ const GPU_KERNEL_PREFIXES: &[&str] = &[
 ///
 /// Tests specification: docs/explanation/issue-439-spec.md#receipt-validation
 fn verify_gpu_receipt(receipt: &Receipt) -> anyhow::Result<()> {
-    use anyhow::{Context, ensure};
+    use anyhow::ensure;
 
     let backend_claims_gpu = receipt.backend == "cuda" || receipt.backend == "gpu";
 
@@ -54,11 +54,10 @@ fn verify_gpu_receipt(receipt: &Receipt) -> anyhow::Result<()> {
         receipt.kernels
     );
 
-    let has_gpu_kernel = receipt.kernels.iter().any(|kernel_id| {
-        GPU_KERNEL_PREFIXES
-            .iter()
-            .any(|prefix| kernel_id.starts_with(prefix))
-    });
+    let has_gpu_kernel = receipt
+        .kernels
+        .iter()
+        .any(|kernel_id| GPU_KERNEL_PREFIXES.iter().any(|prefix| kernel_id.starts_with(prefix)));
 
     ensure!(
         has_gpu_kernel,
@@ -95,10 +94,7 @@ mod receipt_validation_tests {
 
         let result = verify_gpu_receipt(&receipt);
 
-        assert!(
-            result.is_err(),
-            "AC:6 FAIL - GPU backend with CPU kernels should fail validation"
-        );
+        assert!(result.is_err(), "AC:6 FAIL - GPU backend with CPU kernels should fail validation");
 
         let err_msg = result.unwrap_err().to_string();
 
@@ -171,10 +167,7 @@ mod receipt_validation_tests {
 
         let result = verify_gpu_receipt(&receipt);
 
-        assert!(
-            result.is_err(),
-            "AC:6 FAIL - GPU backend with empty kernels should fail"
-        );
+        assert!(result.is_err(), "AC:6 FAIL - GPU backend with empty kernels should fail");
 
         println!("AC:6 PASS - GPU backend with empty kernels correctly fails");
     }
@@ -268,18 +261,11 @@ mod fixture_integration_tests {
             .join(format!("{}.json", name));
 
         let contents = fs::read_to_string(&fixture_path).unwrap_or_else(|_| {
-            panic!(
-                "AC:6 FAIL - Failed to load receipt fixture: {}",
-                fixture_path.display()
-            )
+            panic!("AC:6 FAIL - Failed to load receipt fixture: {}", fixture_path.display())
         });
 
         serde_json::from_str(&contents).unwrap_or_else(|e| {
-            panic!(
-                "AC:6 FAIL - Failed to parse receipt fixture {}: {}",
-                fixture_path.display(),
-                e
-            )
+            panic!("AC:6 FAIL - Failed to parse receipt fixture {}: {}", fixture_path.display(), e)
         })
     }
 
@@ -306,10 +292,7 @@ mod fixture_integration_tests {
 
         let result = verify_gpu_receipt(&receipt);
 
-        assert!(
-            result.is_err(),
-            "AC:6 FAIL - invalid-gpu-receipt.json should fail validation"
-        );
+        assert!(result.is_err(), "AC:6 FAIL - invalid-gpu-receipt.json should fail validation");
 
         println!("AC:6 PASS - invalid-gpu-receipt.json fixture correctly fails");
     }
@@ -356,7 +339,9 @@ mod fixture_integration_tests {
             "AC:6 FAIL - All kernel type fixture should contain all GPU kernel categories"
         );
 
-        println!("AC:6 PASS - gpu-receipt-all-kernel-types.json contains all GPU kernel categories");
+        println!(
+            "AC:6 PASS - gpu-receipt-all-kernel-types.json contains all GPU kernel categories"
+        );
     }
 }
 
@@ -375,7 +360,7 @@ mod performance_validation {
         let suspicious_receipt = Receipt {
             backend: "cuda".to_string(),
             kernels: vec!["gemm_fp16".to_string()], // Has GPU kernel but...
-            tokens_per_second: Some(8.5), // ...suspiciously low performance (CPU-like)
+            tokens_per_second: Some(8.5),           // ...suspiciously low performance (CPU-like)
             latency_ms: Some(117.0),
         };
 

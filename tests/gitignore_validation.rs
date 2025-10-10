@@ -22,8 +22,8 @@ fn ac8_proptest_regressions_ignored() {
         "AC:8 FAIL - .gitignore file not found at repository root"
     );
 
-    let gitignore = fs::read_to_string(gitignore_path)
-        .expect("AC:8 FAIL - Failed to read .gitignore");
+    let gitignore =
+        fs::read_to_string(gitignore_path).expect("AC:8 FAIL - Failed to read .gitignore");
 
     // Check for proptest-regressions pattern
     let has_proptest_pattern = gitignore.contains("*.proptest-regressions")
@@ -49,8 +49,8 @@ fn ac8_proptest_regressions_ignored() {
 fn ac8_cache_incremental_ignored() {
     let gitignore_path = "/home/steven/code/Rust/BitNet-rs/.gitignore";
 
-    let gitignore = fs::read_to_string(gitignore_path)
-        .expect("AC:8 FAIL - Failed to read .gitignore");
+    let gitignore =
+        fs::read_to_string(gitignore_path).expect("AC:8 FAIL - Failed to read .gitignore");
 
     // Check for last_run.json pattern (spec says it should already be at line 196)
     let has_last_run_pattern = gitignore.contains("tests/tests/cache/incremental/last_run.json")
@@ -78,8 +78,7 @@ mod gitignore_comprehensive_audit {
     fn ac8_common_test_artifacts_ignored() {
         let gitignore_path = "/home/steven/code/Rust/BitNet-rs/.gitignore";
 
-        let gitignore = fs::read_to_string(gitignore_path)
-            .expect("Failed to read .gitignore");
+        let gitignore = fs::read_to_string(gitignore_path).expect("Failed to read .gitignore");
 
         let recommended_patterns = vec![
             ("target/", "Cargo build directory"),
@@ -106,8 +105,7 @@ mod gitignore_comprehensive_audit {
     fn ac8_model_files_handling() {
         let gitignore_path = "/home/steven/code/Rust/BitNet-rs/.gitignore";
 
-        let gitignore = fs::read_to_string(gitignore_path)
-            .expect("Failed to read .gitignore");
+        let gitignore = fs::read_to_string(gitignore_path).expect("Failed to read .gitignore");
 
         let model_patterns = vec!["*.gguf", "*.safetensors", "models/"];
 
@@ -132,8 +130,7 @@ mod gitignore_comprehensive_audit {
     fn ac8_test_output_directories_ignored() {
         let gitignore_path = "/home/steven/code/Rust/BitNet-rs/.gitignore";
 
-        let gitignore = fs::read_to_string(gitignore_path)
-            .expect("Failed to read .gitignore");
+        let gitignore = fs::read_to_string(gitignore_path).expect("Failed to read .gitignore");
 
         let test_output_patterns = vec!["test-output/", "tmp/", "temp/"];
 
@@ -210,8 +207,7 @@ mod gitignore_format_validation {
     fn ac8_gitignore_well_documented() {
         let gitignore_path = "/home/steven/code/Rust/BitNet-rs/.gitignore";
 
-        let gitignore = fs::read_to_string(gitignore_path)
-            .expect("Failed to read .gitignore");
+        let gitignore = fs::read_to_string(gitignore_path).expect("Failed to read .gitignore");
 
         // Check for comment lines
         let has_comments = gitignore.lines().any(|line| line.starts_with('#'));
@@ -237,8 +233,7 @@ mod gitignore_format_validation {
     fn ac8_gitignore_glob_patterns_correct() {
         let gitignore_path = "/home/steven/code/Rust/BitNet-rs/.gitignore";
 
-        let gitignore = fs::read_to_string(gitignore_path)
-            .expect("Failed to read .gitignore");
+        let gitignore = fs::read_to_string(gitignore_path).expect("Failed to read .gitignore");
 
         // Check for recursive glob patterns
         let uses_recursive_glob = gitignore.contains("**/");

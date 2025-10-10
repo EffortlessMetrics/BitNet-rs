@@ -197,12 +197,12 @@ mod integration_tests {
         );
 
         // Verify CPU is always marked as available
-        assert!(
-            summary.contains("CPU ✓"),
-            "AC:3 FAIL - Summary should show CPU as available"
-        );
+        assert!(summary.contains("CPU ✓"), "AC:3 FAIL - Summary should show CPU as available");
 
-        println!("AC:3 PASS - device_capability_summary() provides complete diagnostics:\n{}", summary);
+        println!(
+            "AC:3 PASS - device_capability_summary() provides complete diagnostics:\n{}",
+            summary
+        );
     }
 
     /// AC:3 - Test fake precedence in capability summary

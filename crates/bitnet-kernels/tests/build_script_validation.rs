@@ -52,10 +52,7 @@ fn ac2_build_script_checks_both_features() {
         "AC:2 FAIL - build.rs must combine GPU and CUDA features with logical OR or any()"
     );
 
-    assert!(
-        has_is_some,
-        "AC:2 FAIL - build.rs must use .is_some() to check environment variables"
-    );
+    assert!(has_is_some, "AC:2 FAIL - build.rs must use .is_some() to check environment variables");
 
     // Success: build.rs uses unified GPU detection pattern
     println!("AC:2 PASS - build.rs checks both CARGO_FEATURE_GPU and CARGO_FEATURE_CUDA");
@@ -115,8 +112,11 @@ fn ac2_workspace_build_scripts_consistency() {
         };
 
         // If build script checks GPU features, verify unified pattern
-        if build_rs.contains("CARGO_FEATURE") && (build_rs.contains("GPU") || build_rs.contains("CUDA")) {
-            let has_unified_check = (build_rs.contains("CARGO_FEATURE_GPU") && build_rs.contains("CARGO_FEATURE_CUDA"))
+        if build_rs.contains("CARGO_FEATURE")
+            && (build_rs.contains("GPU") || build_rs.contains("CUDA"))
+        {
+            let has_unified_check = (build_rs.contains("CARGO_FEATURE_GPU")
+                && build_rs.contains("CARGO_FEATURE_CUDA"))
                 || build_rs.contains("any([");
 
             assert!(
