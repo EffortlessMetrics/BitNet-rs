@@ -19,6 +19,20 @@
 /// Returns `true` if either `feature="gpu"` or `feature="cuda"` was enabled
 /// at compile time. This does NOT check runtime GPU availability.
 ///
+/// # Example
+///
+/// ```
+/// use bitnet_kernels::device_features::gpu_compiled;
+///
+/// if gpu_compiled() {
+///     println!("GPU support compiled into binary");
+///     // Can attempt GPU operations (may still fail at runtime)
+/// } else {
+///     println!("GPU support NOT compiled - CPU only");
+///     // Must use CPU-only operations
+/// }
+/// ```
+///
 /// # Specification
 ///
 /// Tests specification: docs/explanation/issue-439-spec.md#ac3-shared-helpers
@@ -37,6 +51,22 @@ pub fn gpu_compiled() -> bool {
 /// Returns `true` if:
 /// - GPU compiled AND CUDA runtime detected
 /// - `BITNET_GPU_FAKE=cuda` environment variable set (overrides real detection)
+///
+/// # Example
+///
+/// ```
+/// use bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime};
+///
+/// // Check both compile-time and runtime GPU availability
+/// if gpu_compiled() && gpu_available_runtime() {
+///     println!("GPU available: use CUDA acceleration");
+///     // Safe to use GPU operations
+/// } else if gpu_compiled() {
+///     println!("GPU compiled but not available at runtime - fallback to CPU");
+/// } else {
+///     println!("GPU not compiled - CPU only");
+/// }
+/// ```
 ///
 /// # Specification
 ///
@@ -67,12 +97,18 @@ pub fn gpu_available_runtime() -> bool {
 ///
 /// Returns a human-readable summary of compile-time and runtime capabilities.
 ///
-/// # Example Output
+/// # Example
 ///
-/// ```text
-/// Device Capabilities:
-///   Compiled: GPU ✓, CPU ✓
-///   Runtime: CUDA 12.1 ✓, CPU ✓
+/// ```
+/// use bitnet_kernels::device_features::device_capability_summary;
+///
+/// // Print diagnostic information
+/// println!("{}", device_capability_summary());
+///
+/// // Example output when GPU compiled and available:
+/// // Device Capabilities:
+/// //   Compiled: GPU ✓, CPU ✓
+/// //   Runtime: CUDA 12.1 ✓, CPU ✓
 /// ```
 ///
 /// # Specification

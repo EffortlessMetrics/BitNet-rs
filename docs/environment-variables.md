@@ -211,7 +211,7 @@ cargo test --features cpu -p bitnet-tokenizers -- --quiet
 # Strict GPU kernel tests (real hardware only)
 BITNET_STRICT_NO_FAKE_GPU=1 \
 BITNET_STRICT_MODE=1 \
-cargo test -p bitnet-kernels --features gpu -- --quiet
+cargo test --no-default-features -p bitnet-kernels --features gpu -- --quiet
 
 # Combined strict testing for production validation
 BITNET_STRICT_MODE=1 \
