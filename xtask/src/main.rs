@@ -4560,6 +4560,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_gpu_preflight_with_no_gpu() {
         unsafe {
             std::env::set_var("BITNET_GPU_FAKE", "none");
@@ -4572,6 +4573,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_gpu_preflight_with_gpu() {
         unsafe {
             std::env::set_var("BITNET_GPU_FAKE", "cuda");
@@ -4583,6 +4585,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_gpu_smoke_skips_without_gpu() {
         unsafe {
             std::env::set_var("BITNET_GPU_FAKE", "none");
