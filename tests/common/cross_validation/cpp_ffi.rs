@@ -163,7 +163,6 @@ pub extern "C" fn bitnet_cpp_free_tokens(_ptr: *mut c_uint) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::ffi::CString;
     use std::os::raw::c_char;
 
