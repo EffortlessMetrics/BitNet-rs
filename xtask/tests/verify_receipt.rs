@@ -405,4 +405,82 @@ mod performance_validation {
 
         println!("AC:6 PASS - GPU performance baseline validation works");
     }
+
+    /// AC:6 - Mixed CPU+GPU kernels should pass if GPU kernel present
+    ///
+    /// Tests that receipts with BOTH CPU and GPU kernels pass validation
+    /// as long as at least one GPU kernel is present (partial fallback scenario).
+    ///
+    /// This is a realistic scenario where some operations fall back to CPU
+    /// but the GPU is still being used for critical operations.
+    ///
+    /// Tests specification: docs/explanation/issue-439-spec.md#receipt-validation
+    #[test]
+    fn ac6_mixed_cpu_gpu_kernels_should_pass_if_gpu_kernel_present() {
+        let mixed_receipt = Receipt {
+            backend: "cuda".to_string(),
+            kernels: vec![
+                "gemm_fp32".to_string(),        // GPU kernel (valid)
+                "i2s_cpu_quantize".to_string(), // CPU kernel (fallback)
+                "avx2_matmul".to_string(),      // CPU kernel (fallback)
+            ],
+            tokens_per_second: Some(45.5),
+            latency_ms: Some(22.0),
+        };
+
+        let result = verify_gpu_receipt(&mixed_receipt);
+
+        assert!(
+            result.is_ok(),
+            "AC:6 FAIL - Mixed CPU+GPU kernels should pass if at least one GPU kernel present: {:?}",
+            result.err()
+        );
+
+        println!(
+            "AC:6 PASS - Mixed CPU+GPU kernels pass validation (partial fallback scenario handled correctly)"
+        );
+    }
+
+    /// AC:6 - Mixed CPU+GPU fixture integration test
+    ///
+    /// Tests that the mixed-cpu-gpu-kernels-receipt.json fixture passes validation.
+    #[test]
+    fn ac6_fixture_mixed_cpu_gpu_kernels() {
+        use std::fs;
+
+        let fixture_path = PathBuf::from("/home/steven/code/Rust/BitNet-rs")
+            .join("tests/fixtures/receipts/mixed-cpu-gpu-kernels-receipt.json");
+
+        let contents = fs::read_to_string(&fixture_path).unwrap_or_else(|_| {
+            panic!("AC:6 FAIL - Failed to load mixed receipt fixture: {}", fixture_path.display())
+        });
+
+        let receipt: Receipt = serde_json::from_str(&contents).unwrap_or_else(|e| {
+            panic!(
+                "AC:6 FAIL - Failed to parse mixed receipt fixture {}: {}",
+                fixture_path.display(),
+                e
+            )
+        });
+
+        let result = verify_gpu_receipt(&receipt);
+
+        assert!(
+            result.is_ok(),
+            "AC:6 FAIL - mixed-cpu-gpu-kernels-receipt.json should pass: {:?}",
+            result.err()
+        );
+
+        // Verify it has both CPU and GPU kernels
+        let has_gpu_kernel =
+            receipt.kernels.iter().any(|k| GPU_KERNEL_PREFIXES.iter().any(|p| k.starts_with(p)));
+        let has_cpu_kernel = receipt.kernels.iter().any(|k| k.contains("cpu") || k.contains("avx"));
+
+        assert!(
+            has_gpu_kernel && has_cpu_kernel,
+            "AC:6 FAIL - Mixed fixture should contain both GPU and CPU kernels"
+        );
+
+        println!("AC:6 PASS - mixed-cpu-gpu-kernels-receipt.json fixture validates correctly");
+    }
 }

@@ -163,6 +163,51 @@ mod runtime_detection {
 
         println!("AC:3 PASS - BITNET_GPU_FAKE supports case-insensitive matching");
     }
+
+    /// AC:3 - GPU compiled but runtime unavailable (realistic production scenario)
+    ///
+    /// Tests the important real-world case where GPU features are compiled in,
+    /// but CUDA runtime is unavailable (no GPU hardware, driver issues, etc.).
+    ///
+    /// This validates that gpu_compiled() and gpu_available_runtime() correctly
+    /// distinguish between compile-time and runtime GPU availability.
+    ///
+    /// Tests specification: docs/explanation/issue-439-spec.md#shared-helpers
+    #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    fn ac3_gpu_compiled_but_runtime_unavailable() {
+        use bitnet_kernels::device_features::{gpu_available_runtime, gpu_compiled};
+        use std::env;
+
+        // GPU should be compiled in
+        assert!(
+            gpu_compiled(),
+            "AC:3 FAIL - gpu_compiled() should return true when GPU features enabled"
+        );
+
+        // Simulate CUDA runtime unavailable
+        unsafe {
+            env::set_var("BITNET_GPU_FAKE", "none");
+        }
+
+        let runtime_available = gpu_available_runtime();
+
+        // Clean up environment
+        unsafe {
+            env::remove_var("BITNET_GPU_FAKE");
+        }
+
+        // Runtime should report unavailable
+        assert!(
+            !runtime_available,
+            "AC:3 FAIL - gpu_available_runtime() should return false when CUDA runtime unavailable"
+        );
+
+        println!(
+            "AC:3 PASS - Correctly distinguishes compile-time vs runtime GPU availability\n\
+             gpu_compiled() = true, gpu_available_runtime() = false (realistic production scenario)"
+        );
+    }
 }
 
 #[cfg(test)]
