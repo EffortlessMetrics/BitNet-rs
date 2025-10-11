@@ -11,7 +11,9 @@
 //! - bitnet-inference: End-to-end inference with real weights
 
 use anyhow::{Context, Result};
-use bitnet_common::{BitNetConfig, Device};
+use bitnet_common::BitNetConfig;
+#[cfg(any(feature = "cpu", feature = "gpu"))]
+use bitnet_common::Device;
 use candle_core::Tensor as CandleTensor;
 use std::collections::HashMap;
 use std::path::PathBuf;

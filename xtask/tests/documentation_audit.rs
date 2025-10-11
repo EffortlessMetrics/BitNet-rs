@@ -149,6 +149,8 @@ fn ac7_claude_md_standardized_examples() {
 
 #[cfg(test)]
 mod comprehensive_docs_audit {
+    use super::*;
+
     /// AC:7 - GPU development guide uses unified feature flags
     ///
     /// Tests that GPU development documentation mentions unified predicate
