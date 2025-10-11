@@ -1,0 +1,7 @@
+{
+  "backend": "cuda",
+  "kernels": [],
+  "tokens_per_second": 95.0,
+  "latency_ms": 10.5,
+  "model": "bitnet-2B"
+}

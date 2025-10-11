@@ -1,0 +1,23 @@
+{
+  "cuda": true,
+  "driver_version": "11.8",
+  "runtime_version": "11.8",
+  "device_count": 1,
+  "devices": [
+    {
+      "id": 0,
+      "name": "NVIDIA GTX 1080 Ti",
+      "compute_capability": "6.1",
+      "memory_total_gb": 11,
+      "memory_available_gb": 10.5,
+      "multiprocessor_count": 28,
+      "max_threads_per_block": 1024,
+      "supports_tensor_cores": false,
+      "supports_fp16": true,
+      "supports_bf16": false,
+      "pcie_generation": 3,
+      "pcie_width": 16,
+      "note": "Below recommended compute capability 7.0 - limited mixed precision support"
+    }
+  ]
+}

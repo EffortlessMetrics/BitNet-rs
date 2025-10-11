@@ -1,0 +1,22 @@
+{
+  "cuda": true,
+  "driver_version": "12.2",
+  "runtime_version": "12.2",
+  "device_count": 1,
+  "devices": [
+    {
+      "id": 0,
+      "name": "NVIDIA RTX 4090",
+      "compute_capability": "8.9",
+      "memory_total_gb": 24,
+      "memory_available_gb": 22.5,
+      "multiprocessor_count": 128,
+      "max_threads_per_block": 1024,
+      "supports_tensor_cores": true,
+      "supports_fp16": true,
+      "supports_bf16": true,
+      "pcie_generation": 4,
+      "pcie_width": 16
+    }
+  ]
+}

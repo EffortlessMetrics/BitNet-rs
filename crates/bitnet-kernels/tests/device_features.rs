@@ -60,6 +60,7 @@ mod runtime_detection {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn ac3_gpu_fake_cuda_overrides_detection() {
         use bitnet_kernels::device_features::gpu_available_runtime;
+        use std::env;
 
         // Set fake GPU environment variable
         unsafe {
@@ -91,6 +92,7 @@ mod runtime_detection {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn ac3_gpu_fake_none_disables_detection() {
         use bitnet_kernels::device_features::gpu_available_runtime;
+        use std::env;
 
         // Disable GPU detection via fake environment
         unsafe {
@@ -139,6 +141,7 @@ mod runtime_detection {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn ac3_gpu_fake_case_insensitive() {
         use bitnet_kernels::device_features::gpu_available_runtime;
+        use std::env;
 
         let test_cases = vec!["cuda", "CUDA", "Cuda", "CuDa"];
 
@@ -211,6 +214,7 @@ mod integration_tests {
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn ac3_capability_summary_respects_fake() {
         use bitnet_kernels::device_features::device_capability_summary;
+        use std::env;
 
         // Test with fake GPU enabled
         unsafe {

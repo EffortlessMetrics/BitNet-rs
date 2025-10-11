@@ -1,0 +1,6 @@
+{
+  "backend": null,
+  "kernels": ["i2s_cpu_quantize"],
+  "tokens_per_second": 15.0,
+  "latency_ms": 66.7
+}
