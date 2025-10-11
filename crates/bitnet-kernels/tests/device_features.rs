@@ -520,6 +520,81 @@ mod integration_tests {
 }
 
 #[cfg(test)]
+mod strict_mode_tests {
+    /// Test that BITNET_STRICT_MODE=1 forbids BITNET_GPU_FAKE
+    ///
+    /// Validates that when strict mode is enabled, fake GPU simulation is
+    /// disabled and only real GPU detection is used. This prevents fake
+    /// GPU receipts in production/CI strict mode.
+    #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    fn ac_strict_mode_forbids_fake_gpu() {
+        use bitnet_kernels::device_features::gpu_available_runtime;
+        use std::env;
+
+        // Enable strict mode
+        unsafe {
+            env::set_var("BITNET_STRICT_MODE", "1");
+            env::set_var("BITNET_GPU_FAKE", "cuda");
+        }
+
+        // In strict mode, BITNET_GPU_FAKE should be ignored
+        let result = gpu_available_runtime();
+
+        // Clean up environment
+        unsafe {
+            env::remove_var("BITNET_STRICT_MODE");
+            env::remove_var("BITNET_GPU_FAKE");
+        }
+
+        // In strict mode with fake GPU, should use real detection
+        // On CPU-only CI, real detection returns false
+        // The key test: BITNET_GPU_FAKE=cuda is IGNORED in strict mode
+        let real_gpu_available = bitnet_kernels::gpu_utils::get_gpu_info().cuda;
+        assert_eq!(
+            result, real_gpu_available,
+            "Strict mode FAIL - BITNET_GPU_FAKE should be ignored when BITNET_STRICT_MODE=1"
+        );
+
+        println!("STRICT MODE PASS - BITNET_GPU_FAKE correctly ignored in strict mode");
+    }
+
+    /// Test that strict mode allows real GPU detection
+    ///
+    /// Validates that strict mode doesn't block real GPU detection,
+    /// only fake GPU simulation.
+    #[test]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    fn ac_strict_mode_allows_real_gpu() {
+        use bitnet_kernels::device_features::gpu_available_runtime;
+        use std::env;
+
+        // Enable strict mode WITHOUT fake GPU
+        unsafe {
+            env::set_var("BITNET_STRICT_MODE", "1");
+            env::remove_var("BITNET_GPU_FAKE");
+        }
+
+        // Should use real GPU detection
+        let result = gpu_available_runtime();
+
+        // Clean up environment
+        unsafe {
+            env::remove_var("BITNET_STRICT_MODE");
+        }
+
+        // Result should match real GPU detection
+        let real_gpu_available = bitnet_kernels::gpu_utils::get_gpu_info().cuda;
+        assert_eq!(
+            result, real_gpu_available,
+            "Strict mode FAIL - Real GPU detection should work in strict mode"
+        );
+
+        println!("STRICT MODE PASS - Real GPU detection works in strict mode (result: {})", result);
+    }
+}
+
+#[cfg(test)]
 mod workspace_integration {
     use std::path::PathBuf;
 
