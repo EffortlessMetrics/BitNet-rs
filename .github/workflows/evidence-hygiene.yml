@@ -1,0 +1,29 @@
+name: Evidence Hygiene
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  hygiene:
+    name: Evidence and Code Hygiene Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
+
+      - name: Run grep guards (paths & cuda-only)
+        run: bash ci/scripts/grep-guards.sh
+
+      - name: Validate inference receipt (if exists)
+        if: hashFiles('ci/inference.json') != ''
+        run: |
+          sudo apt-get install -y jq
+          bash ci/scripts/validate-receipt.sh ci/inference.json

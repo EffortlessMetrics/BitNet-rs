@@ -51,6 +51,12 @@ pub fn gpu_compiled() -> bool {
 /// Returns `true` if:
 /// - GPU compiled AND CUDA runtime detected
 /// - `BITNET_GPU_FAKE=cuda` environment variable set (overrides real detection)
+///   (unless `BITNET_STRICT_MODE=1` is set, which forces real detection)
+///
+/// # Strict Mode
+///
+/// When `BITNET_STRICT_MODE=1` is set, `BITNET_GPU_FAKE` is ignored and only
+/// real GPU detection is used. This prevents fake GPU simulation in strict mode.
 ///
 /// # Example
 ///
@@ -75,6 +81,16 @@ pub fn gpu_compiled() -> bool {
 #[inline]
 pub fn gpu_available_runtime() -> bool {
     use std::env;
+
+    // In strict mode, refuse BITNET_GPU_FAKE and always use real detection
+    let strict_mode = env::var("BITNET_STRICT_MODE")
+        .map(|v| v == "1" || v.to_lowercase() == "true")
+        .unwrap_or(false);
+
+    if strict_mode {
+        // Strict mode: only real GPU detection
+        return crate::gpu_utils::get_gpu_info().cuda;
+    }
 
     // Check BITNET_GPU_FAKE first (deterministic testing)
     if let Ok(fake) = env::var("BITNET_GPU_FAKE") {
