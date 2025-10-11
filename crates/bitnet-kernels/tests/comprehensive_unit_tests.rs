@@ -316,7 +316,7 @@ mod cpu_kernel_tests {
 // GPU Kernel Tests
 // ============================================================================
 
-#[cfg(feature = "cuda")]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 mod gpu_kernel_tests {
     use super::*;
     use bitnet_kernels::gpu::CudaKernel;
@@ -505,7 +505,7 @@ mod kernel_selection_tests {
         println!("Selected kernel: {}", selected_name);
 
         // Verify selection priority
-        #[cfg(feature = "cuda")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         if available.contains(&"CUDA") {
             assert_eq!(selected_name, "CUDA", "CUDA should be preferred when available");
         }

@@ -6,7 +6,7 @@
 //! compiled in.
 //!
 //! Issue: #437 introduced a mismatch where `cfg!(feature = "gpu")` was used at
-//! runtime but CUDA code was behind `#[cfg(feature = "cuda")]`, causing silent
+//! runtime but CUDA code was behind `#[cfg(any(feature = "gpu", feature = "cuda"))]`, causing silent
 //! CPU fallback when building with `--features gpu`.
 
 use bitnet_common::Device;

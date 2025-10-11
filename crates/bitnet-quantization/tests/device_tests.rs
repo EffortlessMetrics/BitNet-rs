@@ -24,7 +24,7 @@ fn test_dequantize_cpu_and_gpu_paths() {
         assert_eq!(cpu.shape(), &[32]);
 
         // GPU path (skip if CUDA unavailable)
-        #[cfg(feature = "cuda")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         if let Ok(_cuda) = Device::new_cuda(0) {
             let gpu = q.dequantize_tensor(&q_data).unwrap();
             assert_eq!(gpu.shape(), &[32]);

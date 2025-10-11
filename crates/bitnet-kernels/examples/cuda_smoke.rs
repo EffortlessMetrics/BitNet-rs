@@ -1,6 +1,6 @@
 //! Simple CUDA smoke test to verify GPU functionality
 
-#[cfg(feature = "cuda")]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 fn main() -> anyhow::Result<()> {
     use bitnet_kernels::KernelProvider;
     use bitnet_kernels::gpu::cuda::CudaKernel;
@@ -91,7 +91,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "cuda"))]
+#[cfg(not(any(feature = "gpu", feature = "cuda")))]
 fn main() {
     eprintln!("This example requires the 'cuda' feature to be enabled.");
     eprintln!("Run with: cargo run --example cuda_smoke --features cuda");

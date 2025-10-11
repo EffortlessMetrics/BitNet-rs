@@ -150,7 +150,7 @@ mod gitignore_comprehensive_audit {
         use std::process::Command;
 
         let output = Command::new("git")
-            .args(&["ls-files", "*.proptest-regressions"])
+            .args(["ls-files", "*.proptest-regressions"])
             .current_dir("/home/steven/code/Rust/BitNet-rs")
             .output()
             .expect("Failed to run git ls-files");
@@ -176,7 +176,7 @@ mod gitignore_comprehensive_audit {
         use std::process::Command;
 
         let output = Command::new("git")
-            .args(&["ls-files", "**/last_run.json"])
+            .args(["ls-files", "**/last_run.json"])
             .current_dir("/home/steven/code/Rust/BitNet-rs")
             .output()
             .expect("Failed to run git ls-files");

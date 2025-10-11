@@ -177,12 +177,12 @@ impl DeviceMonitor {
             Device::Cpu => true,
             Device::Cuda(device_id) => {
                 // Check if CUDA device is available
-                #[cfg(feature = "cuda")]
+                #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
                     // TODO: Implement CUDA device detection
                     *device_id < 8 // Assume up to 8 GPUs for now
                 }
-                #[cfg(not(feature = "cuda"))]
+                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
                 {
                     let _ = device_id;
                     false
@@ -197,12 +197,12 @@ impl DeviceMonitor {
         match device {
             Device::Cpu => system.total_memory() / (1024 * 1024), // Convert to MB
             Device::Cuda(_device_id) => {
-                #[cfg(feature = "cuda")]
+                #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
                     // TODO: Get CUDA device memory
                     8192 // Default 8GB for now
                 }
-                #[cfg(not(feature = "cuda"))]
+                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
                 0
             }
             Device::Metal => {
@@ -217,12 +217,12 @@ impl DeviceMonitor {
         match device {
             Device::Cpu => system.free_memory() / (1024 * 1024), // Convert to MB
             Device::Cuda(_device_id) => {
-                #[cfg(feature = "cuda")]
+                #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
                     // TODO: Get CUDA device free memory
                     4096 // Default 4GB free for now
                 }
-                #[cfg(not(feature = "cuda"))]
+                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
                 0
             }
             Device::Metal => 4096, // TODO: Get Metal device free memory
@@ -234,12 +234,12 @@ impl DeviceMonitor {
         match device {
             Device::Cpu => None,
             Device::Cuda(_device_id) => {
-                #[cfg(feature = "cuda")]
+                #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
                     // TODO: Get actual compute capability
                     Some("8.6".to_string()) // Default modern GPU capability
                 }
-                #[cfg(not(feature = "cuda"))]
+                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
                 None
             }
             Device::Metal => Some("Metal 3".to_string()), // TODO: Get actual Metal version
@@ -334,11 +334,11 @@ impl DeviceMonitor {
                 }
             }
             Device::Cuda(_) => {
-                #[cfg(feature = "cuda")]
+                #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
                     120.0 // Estimated GPU performance
                 }
-                #[cfg(not(feature = "cuda"))]
+                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
                 0.0
             }
             Device::Metal => {

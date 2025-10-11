@@ -7,7 +7,7 @@
 //! - Memory management and leak detection
 //! - Error handling and edge cases
 
-#[cfg(feature = "cuda")]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 mod cuda_tests {
     use bitnet_common::QuantizationType;
     use bitnet_kernels::KernelProvider;
@@ -274,7 +274,7 @@ mod cuda_tests {
     }
 }
 
-#[cfg(not(feature = "cuda"))]
+#[cfg(not(any(feature = "gpu", feature = "cuda")))]
 mod no_cuda_tests {
     #[test]
     fn test_cuda_feature_disabled() {

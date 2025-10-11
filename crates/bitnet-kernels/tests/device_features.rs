@@ -48,8 +48,6 @@ mod compile_time_detection {
 
 #[cfg(test)]
 mod runtime_detection {
-    use std::env;
-
     /// AC:3 - gpu_available_runtime() respects BITNET_GPU_FAKE=cuda
     ///
     /// Tests that the fake GPU environment variable overrides real hardware
@@ -263,7 +261,7 @@ mod workspace_integration {
         use std::process::Command;
 
         let output = Command::new("rg")
-            .args(&[
+            .args([
                 "use bitnet_kernels::device_features",
                 "--glob",
                 "*.rs",
@@ -294,7 +292,7 @@ mod workspace_integration {
         use std::process::Command;
 
         let output = Command::new("rg")
-            .args(&[
+            .args([
                 "use bitnet_kernels::device_features",
                 "--glob",
                 "*.rs",

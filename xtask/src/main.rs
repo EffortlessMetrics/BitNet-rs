@@ -461,6 +461,21 @@ enum Cmd {
     /// Exit codes:
     /// - 0: GPU backend available
     /// - 1: No GPU backend found (but can continue with CPU)
+    ///
+    /// Deprecated: Use `gpu-preflight` for full control. This alias is provided
+    /// for backward compatibility with Issue #439 tests.
+    Preflight,
+
+    /// Check system capabilities for BitNet.rs (GPU detection, features)
+    ///
+    /// Reports compile-time and runtime device capabilities including:
+    /// - GPU availability (CUDA, Metal, ROCm)
+    /// - CPU SIMD features
+    /// - Driver versions and compute capabilities
+    ///
+    /// Exit codes:
+    /// - 0: GPU backend available
+    /// - 1: No GPU backend found (but can continue with CPU)
     GpuPreflight {
         /// Exit with error if no GPU found (default: warn only)
         #[arg(long, default_value_t = false)]
@@ -741,6 +756,7 @@ fn real_main() -> Result<()> {
             detect_breaking_changes_cmd(baseline.as_deref(), &current, &format)
         }
         Cmd::VendorGgml { commit, force, output } => vendor_ggml_cmd(&commit, force, &output),
+        Cmd::Preflight => preflight_cmd(),
         Cmd::GpuPreflight { require, format } => gpu_preflight_cmd(require, &format),
         Cmd::GpuSmoke { size, tolerance, skip_if_no_gpu } => {
             gpu_smoke_cmd(&size, tolerance, skip_if_no_gpu)
@@ -3617,6 +3633,27 @@ fn vendor_ggml_cmd(commit: &str, force: bool, output_dir: &Path) -> Result<()> {
 }
 
 // GPU-related command implementations
+
+/// Simplified preflight command for Issue #439 compatibility
+///
+/// Calls device_capability_summary() and reports GPU status.
+/// Uses BITNET_GPU_FAKE for deterministic testing.
+fn preflight_cmd() -> Result<()> {
+    println!("{}", bitnet_kernels::device_features::device_capability_summary());
+
+    // Additional validation for GPU availability
+    if bitnet_kernels::device_features::gpu_compiled() {
+        if bitnet_kernels::device_features::gpu_available_runtime() {
+            println!("\n✓ GPU: Available");
+        } else {
+            println!("\n✗ GPU: Not available at runtime");
+        }
+    } else {
+        println!("\n- GPU: Not compiled");
+    }
+
+    Ok(())
+}
 
 fn gpu_preflight_cmd(require: bool, format: &str) -> Result<()> {
     // Query GPU information using the kernels crate

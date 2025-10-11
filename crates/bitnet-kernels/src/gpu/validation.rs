@@ -10,7 +10,7 @@
 use crate::cpu::x86::Avx2Kernel;
 use crate::gpu::cuda::CudaKernel;
 use crate::{KernelProvider, cpu::fallback::FallbackKernel};
-#[cfg(feature = "cuda")]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 use bitnet_common::KernelError;
 use bitnet_common::Result;
 
@@ -341,7 +341,7 @@ impl GpuValidator {
     }
 
     /// Test memory usage and detect leaks
-    #[cfg(feature = "cuda")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn test_memory_usage(&self) -> Result<MemoryResult> {
         use cudarc::driver::CudaContext;
         use cudarc::driver::sys::{cuMemAlloc_v2, cuMemFree_v2, cuMemGetInfo_v2};
@@ -472,7 +472,7 @@ impl GpuValidator {
     }
 
     /// Placeholder memory usage test when CUDA is unavailable
-    #[cfg(not(feature = "cuda"))]
+    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
     fn test_memory_usage(&self) -> Result<MemoryResult> {
         log::warn!("CUDA feature not enabled; skipping memory usage test");
         Ok(MemoryResult { peak_gpu_memory: 0, leaks_detected: false, efficiency_score: 1.0 })
@@ -575,7 +575,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "cuda")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn test_memory_usage_tracking() {
         // Initialize logger for debugging
         let _ =

@@ -7,8 +7,14 @@ fn main() {
     // Always allow re-run if this file changes
     println!("cargo:rerun-if-changed=build.rs");
 
-    // CUDA configuration
-    if env::var_os("CARGO_FEATURE_CUDA").is_some() {
+    // CUDA configuration - check both gpu and cuda features
+    let gpu =
+        env::var_os("CARGO_FEATURE_GPU").is_some() || env::var_os("CARGO_FEATURE_CUDA").is_some();
+
+    if gpu {
+        // Emit build-time cfg flag for unified GPU detection
+        println!("cargo:rustc-cfg=bitnet_build_gpu");
+
         // Add CUDA library paths
         println!("cargo:rustc-link-search=/usr/local/cuda/lib64");
         println!("cargo:rustc-link-search=/usr/local/cuda/lib64/stubs");

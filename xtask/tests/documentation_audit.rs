@@ -17,7 +17,7 @@ use std::process::Command;
 #[test]
 fn ac7_docs_use_no_default_features_pattern() {
     let output = Command::new("rg")
-        .args(&[r"--features\s+(cpu|gpu)", "--glob", "*.md", "docs/"])
+        .args([r"--features\s+(cpu|gpu)", "--glob", "*.md", "docs/"])
         .current_dir("/home/steven/code/Rust/BitNet-rs")
         .output()
         .expect("Failed to run ripgrep - ensure 'rg' is installed");
@@ -69,7 +69,7 @@ fn ac7_docs_use_no_default_features_pattern() {
 #[test]
 fn ac7_no_standalone_cuda_examples() {
     let output = Command::new("rg")
-        .args(&[r"--features\s+cuda", "--glob", "*.md", "docs/"])
+        .args([r"--features\s+cuda", "--glob", "*.md", "docs/"])
         .current_dir("/home/steven/code/Rust/BitNet-rs")
         .output()
         .expect("Failed to run ripgrep");
@@ -292,7 +292,7 @@ mod cross_reference_audit {
     #[test]
     fn ac7_consistent_feature_terminology() {
         let output = Command::new("rg")
-            .args(&[
+            .args([
                 r"(GPU feature|gpu feature|CUDA feature|cuda feature)",
                 "--glob",
                 "*.md",

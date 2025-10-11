@@ -398,7 +398,7 @@ mod performance_validation {
 
         let tps = gpu_baseline.tokens_per_second.unwrap();
         assert!(
-            tps >= 30.0 && tps <= 150.0,
+            (30.0..=150.0).contains(&tps),
             "AC:6 INFO - GPU performance {:.1} tok/s within expected range 30-150 tok/s",
             tps
         );

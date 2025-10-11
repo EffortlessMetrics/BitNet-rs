@@ -221,13 +221,13 @@ impl InferenceManager {
     /// Check if GPU acceleration is available
     pub fn is_gpu_available(&self) -> bool {
         // Check if CUDA is available
-        #[cfg(feature = "cuda")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
             // For now, just return true if CUDA feature is enabled
             // The actual CUDA device check would need to be done through bitnet_common
             true
         }
-        #[cfg(not(feature = "cuda"))]
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
         {
             false
         }
@@ -449,7 +449,7 @@ mod tests {
     #[test]
     fn test_inference_manager_creation() {
         let manager = InferenceManager::new();
-        assert!(!manager.is_gpu_available() || cfg!(feature = "cuda"));
+        assert!(!manager.is_gpu_available() || cfg!(any(feature = "gpu", feature = "cuda")));
     }
 
     #[test]

@@ -19,19 +19,12 @@
 /// Returns `true` if either `feature="gpu"` or `feature="cuda"` was enabled
 /// at compile time. This does NOT check runtime GPU availability.
 ///
-/// # Implementation Status
-///
-/// STUB - Implementation required for AC:3
-///
 /// # Specification
 ///
 /// Tests specification: docs/explanation/issue-439-spec.md#ac3-shared-helpers
 #[inline]
 pub fn gpu_compiled() -> bool {
-    // TODO: Implement unified GPU feature detection
-    // Expected implementation:
-    // cfg!(any(feature = "gpu", feature = "cuda"))
-    unimplemented!("AC:3 - gpu_compiled() requires implementation")
+    cfg!(any(feature = "gpu", feature = "cuda"))
 }
 
 /// Check if GPU is available at runtime
@@ -45,21 +38,21 @@ pub fn gpu_compiled() -> bool {
 /// - GPU compiled AND CUDA runtime detected
 /// - `BITNET_GPU_FAKE=cuda` environment variable set (overrides real detection)
 ///
-/// # Implementation Status
-///
-/// STUB - Implementation required for AC:3
-///
 /// # Specification
 ///
 /// Tests specification: docs/explanation/issue-439-spec.md#ac3-shared-helpers
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 #[inline]
 pub fn gpu_available_runtime() -> bool {
-    // TODO: Implement GPU runtime detection with BITNET_GPU_FAKE precedence
-    // Expected implementation:
-    // 1. Check BITNET_GPU_FAKE environment variable first (deterministic testing)
-    // 2. Fall back to real CUDA detection via gpu_utils::get_gpu_info()
-    unimplemented!("AC:3 - gpu_available_runtime() requires implementation")
+    use std::env;
+
+    // Check BITNET_GPU_FAKE first (deterministic testing)
+    if let Ok(fake) = env::var("BITNET_GPU_FAKE") {
+        return fake.eq_ignore_ascii_case("cuda") || fake.eq_ignore_ascii_case("gpu");
+    }
+
+    // Fall back to real GPU detection
+    crate::gpu_utils::get_gpu_info().cuda
 }
 
 /// Stub implementation when GPU not compiled
@@ -74,26 +67,46 @@ pub fn gpu_available_runtime() -> bool {
 ///
 /// Returns a human-readable summary of compile-time and runtime capabilities.
 ///
-/// # Implementation Status
-///
-/// STUB - Implementation required for AC:3
-///
 /// # Example Output
 ///
 /// ```text
 /// Device Capabilities:
 ///   Compiled: GPU ✓, CPU ✓
-///   Runtime: CUDA 12.1 ✓, cuBLAS ✓
+///   Runtime: CUDA 12.1 ✓, CPU ✓
 /// ```
 ///
 /// # Specification
 ///
 /// Tests specification: docs/explanation/issue-439-spec.md#device-feature-detection-api
 pub fn device_capability_summary() -> String {
-    // TODO: Implement diagnostic summary
-    // Expected implementation:
-    // 1. Report compile-time capabilities (gpu_compiled())
-    // 2. Report runtime capabilities (gpu_available_runtime())
-    // 3. Include CUDA version if available
-    unimplemented!("AC:3 - device_capability_summary() requires implementation")
+    let mut summary = String::from("Device Capabilities:\n");
+
+    // Compile-time capabilities
+    summary.push_str("  Compiled: ");
+    if gpu_compiled() {
+        summary.push_str("GPU ✓, ");
+    }
+    summary.push_str("CPU ✓\n");
+
+    // Runtime capabilities
+    summary.push_str("  Runtime: ");
+
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    {
+        if gpu_available_runtime() {
+            let info = crate::gpu_utils::get_gpu_info();
+            if let Some(version) = &info.cuda_version {
+                summary.push_str(&format!("CUDA {} ✓", version));
+            } else {
+                summary.push_str("CUDA ✓");
+            }
+        } else {
+            summary.push_str("CUDA ✗");
+        }
+        summary.push_str(", ");
+    }
+
+    summary.push_str("CPU ✓");
+
+    summary
 }

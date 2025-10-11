@@ -6,11 +6,11 @@ use bitnet_quantization::{
 use candle_core::Device;
 
 fn prepare_devices() -> Option<Device> {
-    #[cfg(feature = "cuda")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
         if candle_core::utils::cuda_is_available() { Device::new_cuda(0).ok() } else { None }
     }
-    #[cfg(not(feature = "cuda"))]
+    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
     {
         None
     }

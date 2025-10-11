@@ -104,7 +104,7 @@ impl HealthChecker {
             .insert("inference_engine".to_string(), self.check_inference_engine_health().await);
 
         // Check GPU availability (if enabled)
-        #[cfg(feature = "cuda")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         components.insert("gpu".to_string(), self.check_gpu_health().await);
 
         // Determine overall status
@@ -132,9 +132,9 @@ impl HealthChecker {
                 cargo_profile: option_env!("VERGEN_CARGO_OPT_LEVEL")
                     .unwrap_or("unknown")
                     .to_string(),
-                #[cfg(feature = "cuda")]
+                #[cfg(any(feature = "gpu", feature = "cuda"))]
                 cuda_version: Some(self.get_cuda_version()),
-                #[cfg(not(feature = "cuda"))]
+                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
                 cuda_version: None,
             },
             components,
@@ -228,7 +228,7 @@ impl HealthChecker {
     }
 
     #[allow(dead_code)]
-    #[cfg(feature = "cuda")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     async fn check_gpu_health(&self) -> ComponentHealth {
         let start = Instant::now();
 
@@ -247,7 +247,7 @@ impl HealthChecker {
     }
 
     #[allow(dead_code)]
-    #[cfg(feature = "cuda")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     async fn check_gpu_status(&self) -> Result<String, String> {
         // Placeholder GPU check - in production, use actual CUDA queries
         Ok("CUDA device 0 available".to_string())
@@ -306,7 +306,7 @@ impl HealthChecker {
         }
     }
 
-    #[cfg(feature = "cuda")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn get_cuda_version(&self) -> String {
         // In production, query actual CUDA version
         "12.3".to_string()

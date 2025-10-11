@@ -3,13 +3,13 @@
 //! Tests specification: docs/explanation/issue-439-spec.md#ac1-kernel-gate-unification
 //!
 //! Validates that GPU code uses unified predicate `#[cfg(any(feature="gpu", feature="cuda"))]`
-//! rather than standalone `#[cfg(feature="cuda")]` to prevent compile-time drift.
+//! rather than standalone cuda-only gates to prevent compile-time drift.
 
 use std::process::Command;
 
 /// AC:1 - Verify no standalone cuda feature gates exist in bitnet-kernels
 ///
-/// This test uses ripgrep to search for standalone `#[cfg(feature = "cuda")]`
+/// This test uses ripgrep to search for standalone `#[cfg(any(feature = "gpu", feature = "cuda"))]`
 /// that are not part of the unified `any(feature = "gpu", feature = "cuda")` predicate.
 ///
 /// Tests specification: docs/explanation/issue-439-spec.md#implementation-approach-1
@@ -17,7 +17,7 @@ use std::process::Command;
 fn ac1_no_standalone_cuda_gates_in_kernels() {
     // Search for standalone cuda gates without "any(feature"
     let output = Command::new("rg")
-        .args(&[
+        .args([
             r#"#\[cfg\(feature\s*=\s*"cuda"\)\]"#,
             "--glob",
             "*.rs",
@@ -89,7 +89,7 @@ fn ac1_gpu_validation_module_uses_unified_predicate() {
 #[test]
 fn ac1_workspace_wide_cuda_gate_consistency() {
     let output = Command::new("rg")
-        .args(&[
+        .args([
             r#"#\[cfg\(feature\s*=\s*"cuda"\)\]"#,
             "--glob",
             "*.rs",
@@ -163,7 +163,7 @@ mod gpu_runtime_checks {
     #[test]
     fn ac1_cfg_macro_uses_unified_predicate() {
         let output = Command::new("rg")
-            .args(&[
+            .args([
                 r#"cfg!\(feature\s*=\s*"cuda"\)"#,
                 "--glob",
                 "*.rs",
