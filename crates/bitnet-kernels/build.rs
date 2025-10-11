@@ -7,8 +7,16 @@ fn main() {
     // Always allow re-run if this file changes
     println!("cargo:rerun-if-changed=build.rs");
 
-    // CUDA configuration
-    if env::var_os("CARGO_FEATURE_CUDA").is_some() {
+    // Unified GPU detection: honor both "gpu" and legacy "cuda" features for back-compat.
+    // This ensures the build script recognizes GPU builds regardless of which feature is enabled.
+    // See Issue #439 for unified predicate approach.
+    let gpu =
+        env::var_os("CARGO_FEATURE_GPU").is_some() || env::var_os("CARGO_FEATURE_CUDA").is_some();
+
+    if gpu {
+        // Emit build-time cfg flag for unified GPU detection
+        println!("cargo:rustc-cfg=bitnet_build_gpu");
+
         // Add CUDA library paths
         println!("cargo:rustc-link-search=/usr/local/cuda/lib64");
         println!("cargo:rustc-link-search=/usr/local/cuda/lib64/stubs");

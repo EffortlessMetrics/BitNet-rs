@@ -70,6 +70,7 @@ pub struct GenerationConfig {
     pub max_new_tokens: usize,
     pub sampling: SamplingConfig,
     pub stop_sequences: Vec<String>,
+    #[allow(dead_code)]
     pub stream: bool,
 }
 
@@ -365,6 +366,7 @@ impl PrefillEngine for InferenceEngine {
 
 /// Performance metrics
 #[derive(Debug, Default)]
+#[allow(dead_code)]
 pub struct PerformanceMetrics {
     pub total_tokens: usize,
     pub total_time: Duration,

@@ -1,0 +1,36 @@
+{
+  "cuda": true,
+  "driver_version": "12.4",
+  "runtime_version": "12.4",
+  "device_count": 2,
+  "devices": [
+    {
+      "id": 0,
+      "name": "NVIDIA A100-SXM4-40GB",
+      "compute_capability": "8.0",
+      "memory_total_gb": 40,
+      "memory_available_gb": 38.2,
+      "multiprocessor_count": 108,
+      "max_threads_per_block": 1024,
+      "supports_tensor_cores": true,
+      "supports_fp16": true,
+      "supports_bf16": true,
+      "pcie_generation": 4,
+      "pcie_width": 16
+    },
+    {
+      "id": 1,
+      "name": "NVIDIA A100-SXM4-40GB",
+      "compute_capability": "8.0",
+      "memory_total_gb": 40,
+      "memory_available_gb": 39.8,
+      "multiprocessor_count": 108,
+      "max_threads_per_block": 1024,
+      "supports_tensor_cores": true,
+      "supports_fp16": true,
+      "supports_bf16": true,
+      "pcie_generation": 4,
+      "pcie_width": 16
+    }
+  ]
+}

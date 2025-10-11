@@ -93,6 +93,69 @@ models/
 
 ---
 
+## `preflight`
+
+Check system capabilities for BitNet.rs (GPU detection, features).
+
+```bash
+cargo run -p xtask -- preflight
+```
+
+**Output Example**:
+```
+Device Capabilities:
+  Compiled: GPU ✓, CPU ✓
+  Runtime: CUDA 12.1 ✓, CPU ✓
+
+✓ GPU: Available
+```
+
+**Environment Variables**:
+- `BITNET_GPU_FAKE=cuda`: Override GPU detection to simulate CUDA presence
+- `BITNET_GPU_FAKE=none`: Disable GPU detection to test CPU fallback
+
+**Use Cases**:
+- Verify GPU compilation and runtime availability before inference
+- Test device-aware quantization selection logic
+- Validate feature gate configuration in build scripts
+
+---
+
+## `gpu-preflight`
+
+Advanced GPU preflight check with multiple output formats.
+
+```bash
+cargo run -p xtask -- gpu-preflight [--require] [--format json|text]
+```
+
+**Flags**:
+- `--require`: Exit with error if no GPU found (default: warn only)
+- `--format <text|json>`: Output format (default: text)
+
+**Exit Codes**:
+- 0: GPU backend available
+- 1: No GPU backend found (but can continue with CPU)
+
+**JSON Output**:
+```json
+{
+  "cuda": true,
+  "cuda_version": "12.1",
+  "metal": false,
+  "rocm": false,
+  "wgpu": false,
+  "any_available": true
+}
+```
+
+**Use Cases**:
+- CI/CD pipeline GPU availability checks
+- Automated testing with GPU requirement validation
+- JSON output for integration with monitoring systems
+
+---
+
 ## `fetch-cpp`
 
 Fetches & builds the C++ reference. On success, validates that

@@ -1,0 +1,8 @@
+{
+  "backend": "cuda",
+  "kernels": ["gemm_fp16", "wmma_bf16", "i2s_gpu_quantize", "tl1_gpu_pack"],
+  "tokens_per_second": 92.8,
+  "latency_ms": 10.8,
+  "model": "bitnet-2B",
+  "precision": "mixed"
+}

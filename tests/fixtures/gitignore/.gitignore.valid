@@ -1,0 +1,36 @@
+# Valid .gitignore pattern for Issue #439 AC8
+
+# Proptest regression files (deterministic testing)
+**/*.proptest-regressions
+
+# Incremental test cache (should not be committed)
+tests/tests/cache/incremental/last_run.json
+
+# Test artifacts
+target/
+*.profdata
+*.profraw
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+
+# GGUF models (large binary files)
+*.gguf
+!tests/fixtures/**/*.gguf  # Except fixture models
+
+# Build artifacts
+**/*.o
+**/*.so
+**/*.dll
+**/*.dylib

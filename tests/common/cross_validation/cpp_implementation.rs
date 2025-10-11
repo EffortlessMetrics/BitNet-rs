@@ -774,7 +774,6 @@ impl ImplementationFactory for CppImplementationFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::BYTES_PER_MB;
     use tempfile::TempDir;
 
     #[tokio::test]

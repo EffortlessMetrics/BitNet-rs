@@ -1,0 +1,8 @@
+{
+  "backend": "gpu",
+  "kernels": ["gemm_fp32", "wmma_int8", "cuda_reduce", "i2s_gpu_quantize", "tl1_gpu_pack", "tl2_gpu_dequantize"],
+  "tokens_per_second": 87.5,
+  "latency_ms": 11.4,
+  "model": "bitnet-2B",
+  "note": "Comprehensive GPU kernel coverage"
+}

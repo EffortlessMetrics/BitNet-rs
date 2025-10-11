@@ -194,3 +194,6 @@ mutants-report/
 fuzz/
 
 tests/tests/cache/incremental/last_run.json
+
+# Proptest regression files (Issue #439)
+**/*.proptest-regressions

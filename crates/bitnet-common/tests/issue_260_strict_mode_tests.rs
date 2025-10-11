@@ -292,6 +292,7 @@ mod cross_crate_consistency_tests {
 
     /// Tests strict mode consistency across all BitNet.rs crates
     #[test]
+    #[ignore = "FLAKY: Environment variable pollution in workspace context - repro rate ~50% - passes in isolation - tracked in issue #441"]
     fn test_cross_crate_strict_mode_consistency() {
         println!("🔒 Cross-Crate: Testing strict mode consistency");
 

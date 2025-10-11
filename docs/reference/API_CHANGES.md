@@ -47,11 +47,12 @@ Check this file when upgrading to understand what changed and how to migrate.
 
 #### Changed
 - Default features are now empty (was `["cpu"]`)
-- `gpu` feature renamed to `cuda` (alias kept for compatibility)
+- Feature flag unified: Use `gpu` feature (legacy `cuda` alias maintained for backward compatibility)
 
 #### Migration Notes
-- Explicitly enable features: `--features cpu` or `--features cuda`
-- Update `gpu` references to `cuda` in Cargo.toml
+- Explicitly enable features: `--no-default-features --features cpu` or `--no-default-features --features gpu`
+- Prefer `gpu` feature over deprecated `cuda` alias in new code
+- Always use unified predicate in code: `#[cfg(any(feature = "gpu", feature = "cuda"))]`
 
 ---
 

@@ -1,0 +1,8 @@
+{
+  "backend": "cuda",
+  "kernels": ["gemm_fp32", "i2s_cpu_quantize", "avx2_matmul"],
+  "tokens_per_second": 45.5,
+  "latency_ms": 22.0,
+  "model": "bitnet-2B",
+  "note": "Fallback scenario: Some GPU kernels with CPU fallback"
+}

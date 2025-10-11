@@ -39,7 +39,7 @@ impl From<&candle_core::Device> for Device {
     fn from(d: &candle_core::Device) -> Self {
         match d {
             candle_core::Device::Cpu => Device::Cpu,
-            #[cfg(feature = "cuda")]
+            #[cfg(any(feature = "gpu", feature = "cuda"))]
             candle_core::Device::Cuda(_) => Device::Cuda(usize::MAX), // unknown ordinal
             #[cfg(feature = "metal")]
             candle_core::Device::Metal(_) => Device::Metal,
@@ -66,7 +66,7 @@ impl Device {
     }
 
     /// Convert our device preference to Candle's device.
-    #[cfg(feature = "cuda")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     pub fn to_candle(&self) -> anyhow::Result<candle_core::Device> {
         Ok(match *self {
             Device::Cpu => candle_core::Device::Cpu,
@@ -82,7 +82,7 @@ impl Device {
         })
     }
 
-    #[cfg(not(feature = "cuda"))]
+    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
     pub fn to_candle(&self) -> anyhow::Result<candle_core::Device> {
         Ok(match *self {
             Device::Cpu => candle_core::Device::Cpu,

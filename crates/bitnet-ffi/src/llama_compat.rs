@@ -99,11 +99,11 @@ pub unsafe extern "C" fn llama_load_model_from_file(
 
     // Detect device based on params
     let device = if params.n_gpu_layers > 0 {
-        #[cfg(feature = "cuda")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
             Device::Cuda(params.main_gpu as usize)
         }
-        #[cfg(not(feature = "cuda"))]
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
         {
             warn!("GPU layers requested but CUDA not compiled in, using CPU");
             Device::Cpu

@@ -511,7 +511,7 @@ mod manager_tests {
         // Test GPU kernel selection (should fail on systems without CUDA)
         let result = select_gpu_kernel(0);
 
-        #[cfg(feature = "cuda")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
             // If CUDA feature is enabled, test the interface
             match result {
@@ -526,7 +526,7 @@ mod manager_tests {
             }
         }
 
-        #[cfg(not(feature = "cuda"))]
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
         {
             // Without CUDA feature, should always fail
             assert!(result.is_err());

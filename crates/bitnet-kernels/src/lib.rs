@@ -6,6 +6,7 @@ use std::sync::OnceLock;
 pub mod convolution;
 pub mod cpu;
 pub mod device_aware;
+pub mod device_features;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 #[cfg(feature = "gpu")]

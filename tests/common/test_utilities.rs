@@ -7,6 +7,36 @@ use tokio::time::timeout;
 use super::errors::{TestError, TestOpResult as TestResultCompat};
 use super::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB};
 
+/// Find the workspace root by walking up the directory tree until we find .git directory.
+///
+/// This function starts from the test crate's CARGO_MANIFEST_DIR and walks up
+/// until it finds the .git directory, which indicates the workspace root.
+///
+/// # Panics
+///
+/// Panics if the workspace root cannot be found (no .git directory in any parent).
+///
+/// # Examples
+///
+/// ```ignore
+/// let workspace = workspace_root();
+/// let receipts_dir = workspace.join("tests/fixtures/receipts");
+/// ```
+pub fn workspace_root() -> PathBuf {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+    // Walk up the directory tree until we find .git
+    loop {
+        if path.join(".git").exists() {
+            return path;
+        }
+
+        if !path.pop() {
+            panic!("Could not find workspace root (no .git directory found)");
+        }
+    }
+}
+
 /// Utility functions for common test operations
 pub struct TestUtilities;
 

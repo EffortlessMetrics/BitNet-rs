@@ -1,0 +1,7 @@
+{
+  "backend": "rocm",
+  "kernels": ["hip_matmul"],
+  "tokens_per_second": 60.0,
+  "latency_ms": 16.7,
+  "model": "bitnet-2B"
+}
