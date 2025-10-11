@@ -166,8 +166,6 @@ mod runtime_detection {
 
 #[cfg(test)]
 mod integration_tests {
-    use std::env;
-
     /// AC:3 - Test device_capability_summary() output format
     ///
     /// Validates that the diagnostic summary function provides human-readable
