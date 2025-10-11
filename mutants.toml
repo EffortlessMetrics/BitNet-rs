@@ -1,0 +1,52 @@
+# Mutation testing configuration for BitNet.rs
+#
+# This file configures cargo-mutants to exclude files that cannot be effectively
+# tested through mutation testing due to tooling limitations or architectural constraints.
+#
+# See Issue #440 for mutation testing hardening strategy.
+
+# Files and directories excluded from mutation testing
+exclude_globs = [
+    # Build scripts - tooling glue that runs at compile time with no runtime test harness
+    "**/build.rs",
+
+    # FFI shim modules - thin wrappers around C++ code where:
+    # 1. The real logic lives in C++ (not Rust)
+    # 2. Mutations would break FFI ABI contracts
+    # 3. Cross-language testing is complex and outside mutation test scope
+    "**/ffi/**/*.rs",
+    "**/*_ffi.rs",
+    "**/sys/**/*.rs",
+
+    # Build artifacts
+    "target/**",
+
+    # Generated bindings and code
+    "**/bindings.rs",
+    "**/generated/**",
+
+    # Vendored code
+    "vendor/**",
+
+    # Test utilities and fixtures (not production code)
+    "**/tests/common/**",
+    "**/tests/fixtures/**",
+    "**/test_utilities.rs",
+
+    # Benchmark code (separate from production logic)
+    "**/benches/**",
+]
+
+# Mutation testing thresholds and timeouts
+#
+# Note: Some crates like bitnet-kernels may have lower mutation scores due to
+# compile-time feature gate testing limitations (see device_features.rs comments).
+# This is acceptable as long as runtime behavior is thoroughly tested.
+
+# Increase timeout for GPU tests and complex inference workloads
+# Default is 300s, but neural network operations can take longer
+timeout = 600
+
+# Minimum acceptable mutation score for logic-heavy crates
+# Excludes thin FFI wrappers and build scripts
+minimum_test_timeout = 20

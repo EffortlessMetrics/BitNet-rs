@@ -5,7 +5,19 @@
 //! Validates that documentation uses standardized feature flag examples and
 //! avoids standalone cuda feature references without gpu alias context.
 
+use std::path::PathBuf;
 use std::process::Command;
+
+/// Helper to find workspace root by walking up to .git directory
+fn workspace_root() -> PathBuf {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    while !path.join(".git").exists() {
+        if !path.pop() {
+            panic!("Could not find workspace root (no .git directory found)");
+        }
+    }
+    path
+}
 
 /// AC:7 - Documentation uses --no-default-features pattern
 ///
@@ -18,7 +30,7 @@ use std::process::Command;
 fn ac7_docs_use_no_default_features_pattern() {
     let output = Command::new("rg")
         .args([r"--features\s+(cpu|gpu)", "--glob", "*.md", "docs/"])
-        .current_dir("/home/steven/code/Rust/BitNet-rs")
+        .current_dir(workspace_root())
         .output()
         .expect("Failed to run ripgrep - ensure 'rg' is installed");
 
@@ -70,7 +82,7 @@ fn ac7_docs_use_no_default_features_pattern() {
 fn ac7_no_standalone_cuda_examples() {
     let output = Command::new("rg")
         .args([r"--features\s+cuda", "--glob", "*.md", "docs/"])
-        .current_dir("/home/steven/code/Rust/BitNet-rs")
+        .current_dir(workspace_root())
         .output()
         .expect("Failed to run ripgrep");
 
@@ -102,14 +114,14 @@ fn ac7_no_standalone_cuda_examples() {
 /// standardized feature flag pattern.
 #[test]
 fn ac7_claude_md_standardized_examples() {
-    let claude_md_path = "/home/steven/code/Rust/BitNet-rs/CLAUDE.md";
+    let claude_md_path = workspace_root().join("CLAUDE.md");
 
-    if !std::path::Path::new(claude_md_path).exists() {
+    if !claude_md_path.exists() {
         println!("AC:7 INFO - CLAUDE.md not found");
         return;
     }
 
-    let claude_md = std::fs::read_to_string(claude_md_path).expect("Failed to read CLAUDE.md");
+    let claude_md = std::fs::read_to_string(&claude_md_path).expect("Failed to read CLAUDE.md");
 
     // Check for cargo build/test/run examples
     let has_feature_examples = claude_md.contains("--features");
@@ -143,15 +155,15 @@ mod comprehensive_docs_audit {
     /// and standardized feature flag usage.
     #[test]
     fn ac7_gpu_dev_guide_unified_flags() {
-        let gpu_dev_guide = "/home/steven/code/Rust/BitNet-rs/docs/development/gpu-development.md";
+        let gpu_dev_guide = workspace_root().join("docs/development/gpu-development.md");
 
-        if !std::path::Path::new(gpu_dev_guide).exists() {
+        if !gpu_dev_guide.exists() {
             println!("AC:7 INFO - gpu-development.md not found (may not exist yet)");
             return;
         }
 
         let contents =
-            std::fs::read_to_string(gpu_dev_guide).expect("Failed to read gpu-development.md");
+            std::fs::read_to_string(&gpu_dev_guide).expect("Failed to read gpu-development.md");
 
         // Should mention unified predicate approach
         let mentions_unified = contents.contains("any(feature")
@@ -171,15 +183,15 @@ mod comprehensive_docs_audit {
     /// feature flag patterns.
     #[test]
     fn ac7_build_commands_standardized() {
-        let build_commands = "/home/steven/code/Rust/BitNet-rs/docs/development/build-commands.md";
+        let build_commands = workspace_root().join("docs/development/build-commands.md");
 
-        if !std::path::Path::new(build_commands).exists() {
+        if !build_commands.exists() {
             println!("AC:7 INFO - build-commands.md not found");
             return;
         }
 
         let contents =
-            std::fs::read_to_string(build_commands).expect("Failed to read build-commands.md");
+            std::fs::read_to_string(&build_commands).expect("Failed to read build-commands.md");
 
         // Count --no-default-features usage
         let no_defaults_count = contents.matches("--no-default-features").count();
@@ -209,14 +221,14 @@ mod comprehensive_docs_audit {
     /// for user-facing documentation.
     #[test]
     fn ac7_readme_standardized_examples() {
-        let readme_path = "/home/steven/code/Rust/BitNet-rs/README.md";
+        let readme_path = workspace_root().join("README.md");
 
-        if !std::path::Path::new(readme_path).exists() {
+        if !readme_path.exists() {
             println!("AC:7 INFO - README.md not found");
             return;
         }
 
-        let readme = std::fs::read_to_string(readme_path).expect("Failed to read README.md");
+        let readme = std::fs::read_to_string(&readme_path).expect("Failed to read README.md");
 
         // Check for cargo examples
         if readme.contains("cargo build") || readme.contains("cargo run") {
@@ -237,14 +249,14 @@ mod comprehensive_docs_audit {
     /// gpu/cuda feature relationship and standardized usage patterns.
     #[test]
     fn ac7_features_documentation_accurate() {
-        let features_doc = "/home/steven/code/Rust/BitNet-rs/docs/explanation/FEATURES.md";
+        let features_doc = workspace_root().join("docs/explanation/FEATURES.md");
 
-        if !std::path::Path::new(features_doc).exists() {
+        if !features_doc.exists() {
             println!("AC:7 INFO - FEATURES.md not found (may be in different location)");
             return;
         }
 
-        let contents = std::fs::read_to_string(features_doc).expect("Failed to read FEATURES.md");
+        let contents = std::fs::read_to_string(&features_doc).expect("Failed to read FEATURES.md");
 
         // Should explain gpu and cuda relationship
         let explains_cuda_alias = contents.contains("cuda")
@@ -265,9 +277,9 @@ mod comprehensive_docs_audit {
     /// and explicit feature selection is required.
     #[test]
     fn ac7_cargo_toml_documents_empty_defaults() {
-        let cargo_toml = "/home/steven/code/Rust/BitNet-rs/Cargo.toml";
+        let cargo_toml = workspace_root().join("Cargo.toml");
 
-        let contents = std::fs::read_to_string(cargo_toml).expect("Failed to read Cargo.toml");
+        let contents = std::fs::read_to_string(&cargo_toml).expect("Failed to read Cargo.toml");
 
         // Check for default = [] or default = [ ] (empty)
         let has_empty_defaults =
@@ -298,7 +310,7 @@ mod cross_reference_audit {
                 "*.md",
                 "docs/",
             ])
-            .current_dir("/home/steven/code/Rust/BitNet-rs")
+            .current_dir(workspace_root())
             .output()
             .expect("Failed to run ripgrep");
 

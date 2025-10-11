@@ -5,7 +5,19 @@
 //! Validates that xtask preflight command correctly reports GPU status based on
 //! BITNET_GPU_FAKE environment variable with proper fake precedence.
 
+use std::path::PathBuf;
 use std::process::Command;
+
+/// Helper to find workspace root by walking up to .git directory
+fn workspace_root() -> PathBuf {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    while !path.join(".git").exists() {
+        if !path.pop() {
+            panic!("Could not find workspace root (no .git directory found)");
+        }
+    }
+    path
+}
 
 /// AC:5 - Preflight detects no GPU with BITNET_GPU_FAKE=none
 ///
@@ -17,7 +29,7 @@ use std::process::Command;
 fn ac5_preflight_detects_no_gpu_with_fake_none() {
     let output = Command::new("cargo")
         .args(["run", "-p", "xtask", "--", "preflight"])
-        .current_dir("/home/steven/code/Rust/BitNet-rs")
+        .current_dir(workspace_root())
         .env("BITNET_GPU_FAKE", "none")
         .output()
         .expect("Failed to run xtask preflight - ensure xtask crate exists");
@@ -56,7 +68,7 @@ fn ac5_preflight_detects_no_gpu_with_fake_none() {
 fn ac5_preflight_detects_gpu_with_fake_cuda() {
     let output = Command::new("cargo")
         .args(["run", "-p", "xtask", "--", "preflight"])
-        .current_dir("/home/steven/code/Rust/BitNet-rs")
+        .current_dir(workspace_root())
         .env("BITNET_GPU_FAKE", "cuda")
         .output()
         .expect("Failed to run xtask preflight");
@@ -92,7 +104,7 @@ fn ac5_preflight_detects_gpu_with_fake_cuda() {
 fn ac5_preflight_real_gpu_detection() {
     let output = Command::new("cargo")
         .args(["run", "-p", "xtask", "--", "preflight"])
-        .current_dir("/home/steven/code/Rust/BitNet-rs")
+        .current_dir(workspace_root())
         .env_remove("BITNET_GPU_FAKE") // Ensure no fake override
         .output()
         .expect("Failed to run xtask preflight");
@@ -132,7 +144,7 @@ mod preflight_edge_cases {
         for invalid_value in invalid_values {
             let output = Command::new("cargo")
                 .args(["run", "-p", "xtask", "--", "preflight"])
-                .current_dir("/home/steven/code/Rust/BitNet-rs")
+                .current_dir(workspace_root())
                 .env("BITNET_GPU_FAKE", invalid_value)
                 .output()
                 .expect("Failed to run xtask preflight");
@@ -155,7 +167,7 @@ mod preflight_edge_cases {
     fn ac5_preflight_reports_compile_status() {
         let output = Command::new("cargo")
             .args(["run", "-p", "xtask", "--", "preflight"])
-            .current_dir("/home/steven/code/Rust/BitNet-rs")
+            .current_dir(workspace_root())
             .output()
             .expect("Failed to run xtask preflight");
 
@@ -190,7 +202,7 @@ mod preflight_edge_cases {
         // Test with fake=none
         let output_no_gpu = Command::new("cargo")
             .args(["run", "-p", "xtask", "--", "preflight"])
-            .current_dir("/home/steven/code/Rust/BitNet-rs")
+            .current_dir(workspace_root())
             .env("BITNET_GPU_FAKE", "none")
             .output()
             .expect("Failed to run xtask preflight");
@@ -203,7 +215,7 @@ mod preflight_edge_cases {
         // Test with fake=cuda
         let output_with_gpu = Command::new("cargo")
             .args(["run", "-p", "xtask", "--", "preflight"])
-            .current_dir("/home/steven/code/Rust/BitNet-rs")
+            .current_dir(workspace_root())
             .env("BITNET_GPU_FAKE", "cuda")
             .output()
             .expect("Failed to run xtask preflight");

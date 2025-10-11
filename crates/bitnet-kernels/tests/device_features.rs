@@ -521,6 +521,19 @@ mod integration_tests {
 
 #[cfg(test)]
 mod workspace_integration {
+    use std::path::PathBuf;
+
+    /// Helper to find workspace root by walking up to .git directory
+    fn workspace_root() -> PathBuf {
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        while !path.join(".git").exists() {
+            if !path.pop() {
+                panic!("Could not find workspace root (no .git directory found)");
+            }
+        }
+        path
+    }
+
     /// AC:3 - Verify device_features module is used in quantization
     ///
     /// Tests that bitnet-quantization crate uses the unified device features
@@ -536,7 +549,7 @@ mod workspace_integration {
                 "*.rs",
                 "crates/bitnet-quantization/src/",
             ])
-            .current_dir("/home/steven/code/Rust/BitNet-rs")
+            .current_dir(workspace_root())
             .output()
             .expect("Failed to run ripgrep");
 
@@ -567,7 +580,7 @@ mod workspace_integration {
                 "*.rs",
                 "crates/bitnet-inference/src/",
             ])
-            .current_dir("/home/steven/code/Rust/BitNet-rs")
+            .current_dir(workspace_root())
             .output()
             .expect("Failed to run ripgrep");
 

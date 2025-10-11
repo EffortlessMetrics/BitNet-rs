@@ -255,10 +255,20 @@ mod fixture_integration_tests {
     use super::*;
     use std::fs;
 
+    /// Helper to find workspace root by walking up to .git directory
+    fn workspace_root() -> PathBuf {
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        while !path.join(".git").exists() {
+            if !path.pop() {
+                panic!("Could not find workspace root (no .git directory found)");
+            }
+        }
+        path
+    }
+
     fn load_receipt_fixture(name: &str) -> Receipt {
-        let fixture_path = PathBuf::from("/home/steven/code/Rust/BitNet-rs")
-            .join("tests/fixtures/receipts")
-            .join(format!("{}.json", name));
+        let fixture_path =
+            workspace_root().join("tests/fixtures/receipts").join(format!("{}.json", name));
 
         let contents = fs::read_to_string(&fixture_path).unwrap_or_else(|_| {
             panic!("AC:6 FAIL - Failed to load receipt fixture: {}", fixture_path.display())
@@ -448,8 +458,8 @@ mod performance_validation {
     fn ac6_fixture_mixed_cpu_gpu_kernels() {
         use std::fs;
 
-        let fixture_path = PathBuf::from("/home/steven/code/Rust/BitNet-rs")
-            .join("tests/fixtures/receipts/mixed-cpu-gpu-kernels-receipt.json");
+        let fixture_path =
+            workspace_root().join("tests/fixtures/receipts/mixed-cpu-gpu-kernels-receipt.json");
 
         let contents = fs::read_to_string(&fixture_path).unwrap_or_else(|_| {
             panic!("AC:6 FAIL - Failed to load mixed receipt fixture: {}", fixture_path.display())

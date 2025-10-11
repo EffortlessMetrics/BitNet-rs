@@ -5,7 +5,19 @@
 //! Validates that GPU code uses unified predicate `#[cfg(any(feature="gpu", feature="cuda"))]`
 //! rather than standalone cuda-only gates to prevent compile-time drift.
 
+use std::path::PathBuf;
 use std::process::Command;
+
+/// Helper to find workspace root by walking up to .git directory
+fn workspace_root() -> PathBuf {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    while !path.join(".git").exists() {
+        if !path.pop() {
+            panic!("Could not find workspace root (no .git directory found)");
+        }
+    }
+    path
+}
 
 /// AC:1 - Verify no standalone cuda feature gates exist in bitnet-kernels
 ///
@@ -25,7 +37,7 @@ fn ac1_no_standalone_cuda_gates_in_kernels() {
             "!Cargo.lock",
             "crates/bitnet-kernels/src/",
         ])
-        .current_dir("/home/steven/code/Rust/BitNet-rs")
+        .current_dir(workspace_root())
         .output()
         .expect("Failed to run ripgrep - ensure 'rg' is installed");
 
@@ -97,7 +109,7 @@ fn ac1_workspace_wide_cuda_gate_consistency() {
             "!Cargo.lock",
             "crates/",
         ])
-        .current_dir("/home/steven/code/Rust/BitNet-rs")
+        .current_dir(workspace_root())
         .output()
         .expect("Failed to run ripgrep - ensure 'rg' is installed");
 
@@ -171,7 +183,7 @@ mod gpu_runtime_checks {
                 "!Cargo.lock",
                 "crates/",
             ])
-            .current_dir("/home/steven/code/Rust/BitNet-rs")
+            .current_dir(workspace_root())
             .output()
             .expect("Failed to run ripgrep");
 
