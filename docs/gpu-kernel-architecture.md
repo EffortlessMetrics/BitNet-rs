@@ -117,6 +117,59 @@ pub struct MixedPrecisionKernel {
 
 ## Design Principles
 
+### 0. Unified Feature Gates (Issue #439)
+
+**Principle**: Single source of truth for GPU capability across compile-time and runtime.
+
+**Problem**: Prior to Issue #439, GPU capability checks were inconsistent:
+- Some code used `cfg!(feature = "gpu")`
+- Other code used `cfg!(feature = "cuda")`
+- Runtime checks didn't match compile-time guards
+- Led to silent CPU fallback with dishonest performance receipts
+
+**Solution**: Unified predicate pattern with centralized helpers
+```rust
+// UNIFIED PREDICATE PATTERN (Issue #439)
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+mod gpu_module {
+    // GPU-specific code
+}
+
+// CENTRALIZED RUNTIME CHECKS (bitnet-kernels/src/device_features.rs)
+pub fn gpu_compiled() -> bool {
+    cfg!(any(feature = "gpu", feature = "cuda"))
+}
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub fn gpu_available_runtime() -> bool {
+    // Check BITNET_GPU_FAKE environment variable first
+    if let Ok(fake) = std::env::var("BITNET_GPU_FAKE") {
+        return fake.eq_ignore_ascii_case("cuda") || fake.eq_ignore_ascii_case("gpu");
+    }
+    // Fall back to real CUDA detection
+    crate::gpu_utils::get_gpu_info().cuda
+}
+
+// USAGE IN DEVICE SELECTION
+use bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime};
+
+pub fn supports_device(device: &Device) -> bool {
+    match device {
+        Device::Cpu => true,
+        Device::Cuda(_) => gpu_compiled() && gpu_available_runtime(),
+        Device::Metal => false,
+    }
+}
+```
+
+**Benefits**:
+- **No Feature Gate Drift**: Single predicate ensures consistency
+- **Honest Receipts**: GPU backend claims verified by actual kernel usage
+- **Deterministic Testing**: `BITNET_GPU_FAKE` environment variable for testing both paths
+- **Clear Error Messages**: Distinguishes "not compiled" vs "not available at runtime"
+
+**Validation**: Issue #439 AC6 requires GPU receipts include actual GPU kernel IDs (`gemm_*`, `wmma_*`, `i2s_gpu_*`, etc.) to prevent silent CPU fallback
+
 ### 1. Safety-First Approach
 
 **Principle**: Rust's memory safety guarantees extend to GPU operations.
@@ -142,30 +195,45 @@ let a_dev = self.stream.memcpy_stod(a).map_err(|e| KernelError::GpuError {
 **Principle**: Graceful degradation from GPU to CPU when GPU is unavailable.
 
 **Implementation**:
-- Feature-gated GPU code (`#[cfg(feature = "cuda")]`)
+- Feature-gated GPU code using unified predicate `#[cfg(any(feature = "gpu", feature = "cuda"))]` (Issue #439)
 - Fallback mechanisms to CPU kernels
-- Runtime availability checking
+- Runtime availability checking via `bitnet_kernels::device_features` module
 - Clear error messages for missing dependencies
 
-**Example**:
+**Example** (Post-Issue #439):
 ```rust
-#[cfg(feature = "cuda")]
+use bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn select_gpu_kernel(device_id: usize) -> Result<Box<dyn KernelProvider>> {
-    let cuda_kernel = gpu::CudaKernel::new_with_device(device_id)?;
-    if cuda_kernel.is_available() {
-        Ok(Box::new(cuda_kernel))
-    } else {
-        Err(BitNetError::Kernel(KernelError::NoProvider))
+    // Check both compile-time and runtime availability
+    if !gpu_compiled() {
+        return Err(BitNetError::Kernel(KernelError::NotCompiled {
+            feature: "gpu",
+            hint: "Rebuild with --features gpu"
+        }));
     }
+
+    if !gpu_available_runtime() {
+        return Err(BitNetError::Kernel(KernelError::NotAvailableRuntime {
+            reason: "CUDA runtime not detected. Check nvidia-smi"
+        }));
+    }
+
+    let cuda_kernel = gpu::CudaKernel::new_with_device(device_id)?;
+    Ok(Box::new(cuda_kernel))
 }
 
-#[cfg(not(feature = "cuda"))]
+#[cfg(not(any(feature = "gpu", feature = "cuda")))]
 pub fn select_gpu_kernel(_device_id: usize) -> Result<Box<dyn KernelProvider>> {
-    Err(BitNetError::Kernel(KernelError::NoProvider))
+    Err(BitNetError::Kernel(KernelError::NotCompiled {
+        feature: "gpu",
+        hint: "GPU support not compiled. Rebuild with --no-default-features --features gpu"
+    }))
 }
 ```
 
-**Rationale**: Ensures the library works across environments, from development laptops to GPU-enabled servers.
+**Rationale**: Ensures the library works across environments, from development laptops to GPU-enabled servers. The unified predicate (Issue #439) prevents feature gate mismatches that lead to silent CPU fallback.
 
 ### 3. Performance Transparency
 

@@ -61,15 +61,18 @@ Requirements:
 - Set `LD_LIBRARY_PATH` to include CUDA libraries
 
 ### `cuda`
-**Purpose:** Backward-compatible alias for `gpu` feature  
-**Dependencies:** Same as `gpu` feature  
+**Purpose:** Backward-compatible alias for `gpu` feature
+**Dependencies:** Same as `gpu` feature
 **When to use:** For backward compatibility with existing build scripts
 
 ```bash
 cargo build --no-default-features --features cuda
 ```
 
-Note: This is an alias for the `gpu` feature. New projects should use `gpu` for clarity.
+**Important Notes:**
+- This is an alias for the `gpu` feature. New projects should use `gpu` for clarity.
+- The unified predicate `#[cfg(any(feature = "gpu", feature = "cuda"))]` ensures both features work identically.
+- Planned for removal in a future release; prefer `gpu` in new code.
 
 ### `ffi`
 **Purpose:** Enable C++ FFI bridge for cross-validation  

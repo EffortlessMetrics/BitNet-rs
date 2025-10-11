@@ -14,7 +14,32 @@ This document describes all environment variables used throughout BitNet.rs for 
 
 ### Performance and Parallelism
 - `RAYON_NUM_THREADS`: Control CPU parallelism
-- `BITNET_GPU_FAKE`: Mock GPU backend detection for testing (e.g., "cuda", "metal", "cuda,rocm")
+
+### GPU Feature Detection (Issue #439)
+- `BITNET_GPU_FAKE`: Override GPU detection for deterministic testing and device-aware fallback validation
+  - **Values**:
+    - `none`: Disable GPU detection (test CPU fallback paths)
+    - `cuda` or `gpu`: Enable fake GPU detection (test GPU code paths without hardware)
+    - `metal`, `rocm`: Simulate specific GPU backends
+    - Multiple backends: `cuda,rocm` (comma-separated)
+  - **Usage with Preflight**:
+    ```bash
+    # Test CPU fallback behavior
+    BITNET_GPU_FAKE=none cargo run -p xtask -- preflight
+    # Expected: "✗ GPU: Not available at runtime"
+
+    # Test GPU path without hardware
+    BITNET_GPU_FAKE=cuda cargo run -p xtask -- preflight
+    # Expected: "✓ GPU: Available"
+    ```
+  - **Device-Aware Testing**:
+    ```bash
+    # Test quantization device selection with fake GPU
+    BITNET_GPU_FAKE=cuda cargo test --no-default-features --features gpu -p bitnet-quantization
+
+    # Test CPU fallback in GPU-compiled binary
+    BITNET_GPU_FAKE=none cargo test --no-default-features --features gpu -p bitnet-inference
+    ```
 
 ## Strict Testing Mode Variables
 

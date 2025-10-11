@@ -45,8 +45,16 @@ cargo run -p xtask -- infer --model path/to/model.gguf --prompt "Test"
 ### Feature Flags
 - `cpu`: SIMD-optimized CPU inference (AVX2/AVX-512/NEON)
 - `gpu`: CUDA acceleration with mixed precision (FP16/BF16)
+- `cuda`: Backward-compatible alias for `gpu` (temporary - prefer `gpu` in new code)
 - `ffi`: C++ FFI bridge for gradual migration
 - `crossval`: Cross-validation against Microsoft BitNet C++
+
+**Important**: Always use unified GPU predicate in code:
+```rust
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub fn gpu_function() { /* ... */ }
+```
+Use `bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime}` for runtime checks.
 
 ### Quantization Support
 - **I2_S**: Production 2-bit signed quantization (99%+ accuracy vs FP32)
@@ -100,11 +108,15 @@ cargo run -p bitnet-cli -- compat-check model.gguf
 - FFI linker errors: Use `--no-default-features --features cpu` or `cargo xtask fetch-cpp`
 - CUDA issues: Ensure CUDA toolkit installed and `nvcc` in PATH
 - Model validation: `cargo run -p bitnet-cli -- compat-check model.gguf`
+- GPU detection: Run `cargo run -p xtask -- preflight` to check GPU compilation and runtime availability
+- Silent CPU fallback: Check receipts for GPU kernel IDs (`gemm_*`, `i2s_gpu_*`); use `BITNET_GPU_FAKE` for testing
+- Feature gate mismatches: Always use `#[cfg(any(feature = "gpu", feature = "cuda"))]` pattern
 
 ## Environment Variables
 - `BITNET_DETERMINISTIC=1 BITNET_SEED=42`: Reproducible inference
 - `BITNET_GGUF`: Default model path for cross-validation
 - `RAYON_NUM_THREADS=1`: Single-threaded determinism
+- `BITNET_GPU_FAKE=cuda|none`: Override GPU detection for deterministic testing (Issue #439)
 
 ## Repository Contracts
 - **Always specify features**: `--no-default-features --features cpu|gpu`
