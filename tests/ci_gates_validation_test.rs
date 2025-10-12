@@ -19,7 +19,7 @@ fn test_ac8_exploratory_gate_workflow_syntax() -> Result<()> {
     use std::path::PathBuf;
 
     let workflow_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../.github/workflows/all-features-exploratory.yml");
+        .join(".github/workflows/all-features-exploratory.yml");
 
     if !workflow_path.exists() {
         // Workflow file doesn't exist yet - will be created in AC8 implementation
@@ -67,8 +67,7 @@ fn test_ac8_exploratory_gate_workflow_syntax() -> Result<()> {
 fn test_ac8_required_cpu_gate_workflow_syntax() -> Result<()> {
     use std::path::PathBuf;
 
-    let workflow_path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.github/workflows/ci.yml");
+    let workflow_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".github/workflows/ci.yml");
 
     if !workflow_path.exists() {
         // CI workflow should exist
@@ -288,7 +287,7 @@ fn test_ac8_rollback_strategy_documented() {
 fn test_ac8_workflow_file_locations() -> Result<()> {
     use std::path::PathBuf;
 
-    let workflows_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.github/workflows");
+    let workflows_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".github/workflows");
 
     // Verify workflows directory exists
     assert!(workflows_dir.exists(), ".github/workflows directory should exist");

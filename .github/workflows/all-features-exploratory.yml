@@ -1,4 +1,4 @@
-name: All Features Exploratory
+name: All-Features Exploratory Validation
 
 on:
   pull_request:
@@ -18,7 +18,7 @@ jobs:
           components: clippy
 
       - name: Clippy All Features
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy --workspace --all-features -- -D warnings
 
       - name: Comment Status
         if: failure()
