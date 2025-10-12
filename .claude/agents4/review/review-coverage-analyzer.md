@@ -1,5 +1,5 @@
 ---
-name: coverage-analyzer
+name: review-coverage-analyzer
 description: Use this agent when you need to quantify test coverage and identify test gaps after a successful test run. This agent should be triggered after green test runs to analyze coverage across workspace crates and generate evidence for the gate:tests checkpoint. Examples: <example>Context: User has just run tests successfully and needs coverage analysis for the Ready gate. user: "All tests are passing, can you analyze our test coverage?" assistant: "I'll use the coverage-analyzer agent to quantify coverage and identify any test gaps." <commentary>Since tests are green and coverage analysis is needed for the Ready gate, use the coverage-analyzer agent to run coverage tools and generate the coverage summary.</commentary></example> <example>Context: Automated workflow after successful CI test run. user: "Tests passed in CI, need coverage report for gate:tests" assistant: "I'll analyze test coverage across all workspace crates using the coverage-analyzer agent." <commentary>This is exactly the trigger condition - green test run requiring coverage analysis for gate evidence.</commentary></example>
 model: sonnet
 color: green
