@@ -3,10 +3,8 @@
 use anyhow::Result;
 use opentelemetry::{KeyValue, global};
 use opentelemetry_otlp::{SpanExporter, WithExportConfig};
-use opentelemetry_prometheus::exporter;
 use opentelemetry_sdk::{
     Resource,
-    metrics::SdkMeterProvider,
     trace::{Sampler, SdkTracerProvider},
 };
 use std::time::Duration;
@@ -81,17 +79,14 @@ async fn init_tracing(config: &MonitoringConfig) -> Result<()> {
 }
 
 /// Initialize OpenTelemetry metrics
-async fn init_metrics(_config: &MonitoringConfig) -> Result<()> {
-    // Initialize Prometheus metrics
-    let resource = Resource::builder()
-        .with_service_name("bitnet-server")
-        .with_attributes(vec![KeyValue::new("service.version", env!("CARGO_PKG_VERSION"))])
-        .build();
+async fn init_metrics(config: &MonitoringConfig) -> Result<()> {
+    // Use OTLP for metrics export
+    use super::otlp::{create_resource, init_otlp_metrics};
 
-    let reader = exporter().build()?;
-    let provider = SdkMeterProvider::builder().with_resource(resource).with_reader(reader).build();
+    let resource = create_resource();
+    let endpoint = config.otlp_endpoint.clone().or_else(|| config.opentelemetry_endpoint.clone());
 
-    global::set_meter_provider(provider);
+    let _provider = init_otlp_metrics(endpoint, resource)?;
 
     Ok(())
 }

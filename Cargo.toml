@@ -229,11 +229,11 @@ chrono = { version = "0.4.42", features = ["serde"] }
 metrics = "0.24.2"
 metrics-prometheus = "0.11.0"
 opentelemetry = { version = "0.31.0", default-features = false, features = ["trace", "metrics"] }
-opentelemetry-otlp = { version = "0.31.0", default-features = false, features = ["grpc-tonic", "trace"] }
-opentelemetry-prometheus = "0.29.1"
+opentelemetry-otlp = { version = "0.31.0", default-features = false, features = ["grpc-tonic", "trace", "metrics"] }
 opentelemetry-stdout = { version = "0.31.0", default-features = false }
 opentelemetry_sdk = { version = "0.31.0", features = ["trace", "metrics", "rt-tokio"] }
 prometheus = "0.14.0"
+tonic = "0.12"
 tracing-appender = "0.2.3"
 tracing-opentelemetry = "0.32.0"
 uuid = { version = "1.18.1", features = ["v4"] }
