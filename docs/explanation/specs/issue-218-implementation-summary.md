@@ -21,7 +21,7 @@ This document provides a comprehensive implementation roadmap for transforming I
 ## Specification Documents Reference
 
 ### 1. Neural Network Technical Specification
-**Location**: `/home/steven/code/Rust/BitNet-rs/docs/explanation/specs/issue-218-neural-network-spec.md`
+**Location**: `docs/explanation/specs/issue-218-neural-network-spec.md`
 
 **Key Components**:
 - **Requirements Analysis**: Functional requirements with neural network context
@@ -32,7 +32,7 @@ This document provides a comprehensive implementation roadmap for transforming I
 - **Cross-Validation Framework**: C++ parity testing with configurable tolerance
 
 ### 2. Acceptance Criteria Implementation
-**Location**: `/home/steven/code/Rust/BitNet-rs/docs/explanation/specs/issue-218-acceptance-criteria-implementation.md`
+**Location**: `docs/explanation/specs/issue-218-acceptance-criteria-implementation.md`
 
 **Detailed AC Implementation**:
 - **AC1**: Real BitNet models download and load successfully
@@ -47,7 +47,7 @@ This document provides a comprehensive implementation roadmap for transforming I
 - **AC10**: Performance benchmarks demonstrate acceptable latency/throughput
 
 ### 3. Quantization-Aware Testing Strategy
-**Location**: `/home/steven/code/Rust/BitNet-rs/docs/explanation/specs/issue-218-quantization-testing-strategy.md`
+**Location**: `docs/explanation/specs/issue-218-quantization-testing-strategy.md`
 
 **Testing Framework**:
 - **Unit Testing**: Quantization primitives with synthetic and real tensor data
@@ -57,7 +57,7 @@ This document provides a comprehensive implementation roadmap for transforming I
 - **TDD Strategy**: Test-first development with quantization validation
 
 ### 4. GGUF Compatibility Requirements
-**Location**: `/home/steven/code/Rust/BitNet-rs/docs/explanation/specs/issue-218-gguf-compatibility-requirements.md`
+**Location**: `docs/explanation/specs/issue-218-gguf-compatibility-requirements.md`
 
 **Compatibility Framework**:
 - **Format Support**: GGUF v2/v3 with BitNet-specific extensions
@@ -67,7 +67,7 @@ This document provides a comprehensive implementation roadmap for transforming I
 - **Performance Optimization**: Lazy validation and streaming for large models
 
 ### 5. Device-Aware Implementation
-**Location**: `/home/steven/code/Rust/BitNet-rs/docs/explanation/specs/issue-218-device-aware-implementation.md`
+**Location**: `docs/explanation/specs/issue-218-device-aware-implementation.md`
 
 **Multi-Backend Strategy**:
 - **GPU Acceleration**: CUDA/Metal/ROCm with mixed precision support
@@ -77,7 +77,7 @@ This document provides a comprehensive implementation roadmap for transforming I
 - **Device Discovery**: Automatic capability detection and optimization
 
 ### 6. Risk Mitigation Strategy
-**Location**: `/home/steven/code/Rust/BitNet-rs/docs/explanation/specs/issue-218-risk-mitigation-strategy.md`
+**Location**: `docs/explanation/specs/issue-218-risk-mitigation-strategy.md`
 
 **Comprehensive Risk Management**:
 - **Model Caching**: Multi-tier caching with compression and validation

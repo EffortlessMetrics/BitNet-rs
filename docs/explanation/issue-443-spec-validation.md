@@ -17,8 +17,8 @@ This report validates that the technical specifications for Issue #443 (CPU Vali
 
 | Document | Size | Status | Location |
 |----------|------|--------|----------|
-| Feature Specification | 8,916 bytes | ✅ Complete | `/home/steven/code/Rust/BitNet-rs/docs/explanation/issue-443-spec.md` |
-| Technical Assessment | 35,562 bytes | ✅ Complete | `/home/steven/code/Rust/BitNet-rs/docs/explanation/issue-443-technical-assessment.md` |
+| Feature Specification | 8,916 bytes | ✅ Complete | `docs/explanation/issue-443-spec.md` |
+| Technical Assessment | 35,562 bytes | ✅ Complete | `docs/explanation/issue-443-technical-assessment.md` |
 | GitHub Issue Ledger | Updated | ✅ Current | Issue #444 |
 
 ### 1.2 Specification Quality Metrics
