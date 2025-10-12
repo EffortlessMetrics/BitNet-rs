@@ -76,7 +76,11 @@ coverage/
 *.gguf
 *.safetensors
 *.bin
-models/
+
+# Local model cache (downloaded by xtask); keep it out of git
+# Note: Leading / ensures only top-level models/ directory is ignored
+/models/**
+!/models/.gitkeep
 
 # Claude Working Agents
 .claude/agents/

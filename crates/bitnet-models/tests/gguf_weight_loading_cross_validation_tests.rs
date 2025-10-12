@@ -30,6 +30,30 @@ fn workspace_root() -> PathBuf {
     path
 }
 
+/// Check if C++ reference implementation is available for cross-validation
+///
+/// Returns true if the C++ reference binary exists or BITNET_CPP_PATH points to a valid installation.
+/// When false, tests that require C++ reference should skip gracefully.
+fn cpp_reference_available() -> bool {
+    // Check environment variable first
+    if let Ok(cpp_path) = std::env::var("BITNET_CPP_PATH") {
+        let path = Path::new(&cpp_path);
+        if path.exists() {
+            return true;
+        }
+    }
+
+    // Check for built reference binary in standard location
+    let workspace = workspace_root();
+    let binary_locations = vec![
+        workspace.join("target/release/bitnet_cpp_reference"),
+        workspace.join("target/debug/bitnet_cpp_reference"),
+        workspace.join(".cache/bitnet_cpp/bitnet_cpp_reference"),
+    ];
+
+    binary_locations.iter().any(|p| p.exists())
+}
+
 /// Get model path from environment or standard locations with clear error messages
 ///
 /// Search order:
@@ -185,9 +209,20 @@ pub struct PrecisionLossAnalysis {
 ///
 /// This test validates that Rust GGUF weight loading produces identical results
 /// to the C++ reference implementation within specified numerical tolerance.
+///
+/// Skips gracefully when C++ reference implementation is not available.
 #[cfg(feature = "crossval")]
 #[tokio::test]
 async fn test_ac5_comprehensive_weight_loading_cross_validation() -> Result<()> {
+    // Skip if C++ reference not available (provision with: cargo run -p xtask -- fetch-cpp)
+    if !cpp_reference_available() {
+        eprintln!(
+            "C++ reference implementation not available; skipping cross-validation parity test"
+        );
+        eprintln!("To enable: cargo run -p xtask -- fetch-cpp");
+        return Ok(());
+    }
+
     let config = CrossValidationTestConfig::default();
 
     // Set up deterministic environment for reproducible testing
@@ -254,9 +289,20 @@ async fn test_ac5_comprehensive_weight_loading_cross_validation() -> Result<()> 
 
 /// AC5.2: Inference pipeline cross-validation
 /// Tests feature spec: gguf-weight-loading.md#v4-end-to-end-validation
+///
+/// Skips gracefully when C++ reference implementation is not available.
 #[cfg(feature = "crossval")]
 #[tokio::test]
 async fn test_ac5_inference_pipeline_cross_validation() -> Result<()> {
+    // Skip if C++ reference not available (provision with: cargo run -p xtask -- fetch-cpp)
+    if !cpp_reference_available() {
+        eprintln!(
+            "C++ reference implementation not available; skipping inference pipeline cross-validation"
+        );
+        eprintln!("To enable: cargo run -p xtask -- fetch-cpp");
+        return Ok(());
+    }
+
     let config = CrossValidationTestConfig::default();
 
     // Set up deterministic inference environment
@@ -456,8 +502,7 @@ async fn test_ac5_deterministic_inference_validation() -> Result<()> {
 ///
 /// Provides clear error messages if model not found with provisioning instructions.
 async fn setup_crossval_test_model() -> Result<std::path::PathBuf> {
-    model_path_from_env()
-        .context("Failed to locate cross-validation test model")
+    model_path_from_env().context("Failed to locate cross-validation test model")
 }
 
 /// Load weights using C++ reference implementation
