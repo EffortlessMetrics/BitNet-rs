@@ -118,16 +118,46 @@ rustc --version
 
 ## Setup Process
 
+### Model Provisioning (Required First Step)
+
+Before running cross-validation tests, you need to provision a GGUF model. The test suite uses standardized model path discovery (Issue #443):
+
+```bash
+# Provision the default model (recommended)
+cargo run -p xtask -- download-model
+
+# This downloads to: models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+# Tests will auto-discover this location
+```
+
+**Model Path Discovery Order:**
+1. `BITNET_GGUF` environment variable (if set)
+2. Standard xtask download location: `models/microsoft-bitnet-b1.58-2B-4T-gguf/*.gguf`
+
+**Custom Model Path:**
+```bash
+# Use a custom model for testing
+export BITNET_GGUF=/path/to/your/custom-model.gguf
+cargo test -p bitnet-models --no-default-features --features crossval
+```
+
+**Troubleshooting:**
+- If tests fail with "No model found", run `cargo run -p xtask -- download-model` first
+- The model file is ~2GB and ignored by git (in `.gitignore`)
+- Each developer/CI machine needs to provision the model once
+
 ### Automatic Setup (Recommended)
 
 The easiest way to set up cross-validation:
 
 ```bash
-# 1. Download and build C++ implementation
-./ci/fetch_bitnet_cpp.sh
+# 1. Provision GGUF model (one-time setup)
+cargo run -p xtask -- download-model
 
-# 2. Set up environment
+# 2. C++ reference (REQUIRED - tests will fail if not present)
+./ci/fetch_bitnet_cpp.sh
 source ~/.cache/bitnet_cpp/setup_env.sh
+export BITNET_CPP_PATH=~/.cache/bitnet_cpp   # tests will hard-fail if missing
 
 # 3. Run cross-validation tests
 cargo test --no-default-features --features "cpu,crossval"
@@ -135,6 +165,8 @@ cargo test --no-default-features --features "cpu,crossval"
 # 4. Run performance benchmarks
 cargo bench --no-default-features --features "cpu,crossval"
 ```
+
+**Important Policy:** Cross-validation tests **hard-fail** if the C++ reference is not available. This is intentional - cross-validation without the reference implementation gives false signal. If you enable `--features crossval`, both the model and C++ reference must be provisioned.
 
 ### Manual Setup (Advanced)
 
@@ -337,11 +369,43 @@ jobs:
 
 ### Common Issues
 
-#### 1. "C++ implementation not found"
+#### 1. "No model found for cross-validation testing"
 
 **Error:**
 ```
-ERROR: BitNet C++ implementation not found at ~/.cache/bitnet_cpp
+No model found for cross-validation testing.
+
+To provision a model, run:
+
+cargo run -p xtask -- download-model
+```
+
+**Solution:**
+```bash
+# Provision the default model
+cargo run -p xtask -- download-model
+
+# Or use a custom model
+export BITNET_GGUF=/path/to/your/model.gguf
+cargo test -p bitnet-models --no-default-features --features crossval
+```
+
+**Note:** This is a new requirement (Issue #443) to standardize model path discovery across tests and runtime. Each machine needs to provision the model once (~2GB download).
+
+#### 2. "C++ reference not available for cross-validation"
+
+**Error:**
+```
+thread 'test_ac5_comprehensive_weight_loading_cross_validation' panicked at
+C++ reference not available for cross-validation.
+Policy: crossval must compare against the C++ reference.
+Expected at BITNET_CPP_PATH (/home/user/.cache/bitnet_cpp) or ~/.cache/bitnet_cpp.
+
+Provision instructions:
+  1) ./ci/fetch_bitnet_cpp.sh
+  2) source ~/.cache/bitnet_cpp/setup_env.sh
+  3) export BITNET_CPP_PATH=~/.cache/bitnet_cpp
+  4) re-run: cargo test -p bitnet-models --no-default-features --features crossval
 ```
 
 **Solution:**
@@ -349,11 +413,20 @@ ERROR: BitNet C++ implementation not found at ~/.cache/bitnet_cpp
 # Run the setup script
 ./ci/fetch_bitnet_cpp.sh
 
+# Set up environment
+source ~/.cache/bitnet_cpp/setup_env.sh
+export BITNET_CPP_PATH=~/.cache/bitnet_cpp
+
 # Or set custom path
-export BITNET_CPP_PATH=/path/to/bitnet.cpp
+export BITNET_CPP_PATH=/path/to/your/bitnet.cpp
+
+# Re-run tests
+cargo test -p bitnet-models --no-default-features --features crossval
 ```
 
-#### 2. "clang not found"
+**Note:** This is a **hard-fail by design**. Cross-validation without the C++ reference gives false signal. If you enable `--features crossval`, you must provision the C++ reference.
+
+#### 3. "clang not found"
 
 **Error:**
 ```
@@ -372,7 +445,7 @@ xcode-select --install
 # Install LLVM from https://llvm.org/
 ```
 
-#### 3. "Feature crossval not enabled"
+#### 4. "Feature crossval not enabled"
 
 **Error:**
 ```
@@ -386,7 +459,7 @@ cargo test --no-default-features --features "cpu,crossval"
 cargo bench --no-default-features --features "cpu,crossval"
 ```
 
-#### 4. Build failures
+#### 5. Build failures
 
 **Error:**
 ```

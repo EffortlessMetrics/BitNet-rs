@@ -271,9 +271,11 @@ mod tests {
 
     #[test]
     fn test_apply_fast_overrides() {
-        let mut original = TestConfig::default();
-        original.max_parallel_tests = 8;
-        original.test_timeout = Duration::from_secs(300);
+        let mut original = TestConfig {
+            max_parallel_tests: 8,
+            test_timeout: Duration::from_secs(300),
+            ..Default::default()
+        };
         original.reporting.generate_coverage = true;
 
         let fast = apply_fast_overrides(original);

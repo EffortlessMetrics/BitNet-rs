@@ -427,6 +427,11 @@ mod tests {
     use std::time::Duration;
     use tokio::time::timeout;
 
+    #[cfg(feature = "fixtures")]
+    use super::super::config::FixtureConfig;
+    #[cfg(feature = "fixtures")]
+    use super::super::fixtures::FixtureManager;
+
     struct MockTestCase {
         name: String,
         should_fail: bool,
@@ -488,8 +493,8 @@ mod tests {
         // Test successful execution
         // Create proper fixture context based on feature flags
         #[cfg(feature = "fixtures")]
-        let fixture_manager: fixtures::FixtureManager =
-            fixtures::FixtureManager::new(&FixtureConfig::default()).await.unwrap();
+        let fixture_manager: FixtureManager =
+            FixtureManager::new(&FixtureConfig::default()).await.unwrap();
         #[cfg(feature = "fixtures")]
         let fixture_ctx = &fixture_manager;
         #[cfg(not(feature = "fixtures"))]
@@ -533,8 +538,8 @@ mod tests {
         // Test failure handling
         // Create proper fixture context based on feature flags
         #[cfg(feature = "fixtures")]
-        let fixture_manager: fixtures::FixtureManager =
-            fixtures::FixtureManager::new(&FixtureConfig::default()).await.unwrap();
+        let fixture_manager: FixtureManager =
+            FixtureManager::new(&FixtureConfig::default()).await.unwrap();
         #[cfg(feature = "fixtures")]
         let fixture_ctx = &fixture_manager;
         #[cfg(not(feature = "fixtures"))]

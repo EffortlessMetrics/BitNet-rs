@@ -96,6 +96,11 @@ cargo test --workspace --no-default-features --features cpu
 cargo fmt --all && cargo clippy --all-targets --all-features -- -D warnings
 
 # Cross-validation (when changing inference)
+# First-time setup: provision model
+cargo run -p xtask -- download-model
+# Tests auto-discover model in models/ directory
+cargo test -p bitnet-models --no-default-features --features crossval
+# Or use custom model path
 export BITNET_GGUF="path/to/model.gguf"
 cargo run -p xtask -- crossval
 
@@ -114,7 +119,7 @@ cargo run -p bitnet-cli -- compat-check model.gguf
 
 ## Environment Variables
 - `BITNET_DETERMINISTIC=1 BITNET_SEED=42`: Reproducible inference
-- `BITNET_GGUF`: Default model path for cross-validation
+- `BITNET_GGUF`: Model path override for cross-validation and inference (auto-discovers `models/` if not set)
 - `RAYON_NUM_THREADS=1`: Single-threaded determinism
 - `BITNET_GPU_FAKE=cuda|none`: Override GPU detection for deterministic testing (Issue #439)
 

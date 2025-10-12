@@ -6,7 +6,7 @@
 use anyhow::Result;
 use bitnet_tests::trend_reporting::{TrendConfig, TrendReporter};
 use clap::Parser;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::info;
 
@@ -104,7 +104,7 @@ async fn main() -> Result<()> {
 
 async fn generate_summary_report(
     report: &bitnet_tests::trend_reporting::TrendReport,
-    output_dir: &PathBuf,
+    output_dir: &Path,
 ) -> Result<()> {
     let mut summary = String::new();
 

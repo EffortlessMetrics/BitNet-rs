@@ -7,6 +7,17 @@
 
 use std::path::PathBuf;
 
+/// Helper to find workspace root by walking up to .git directory
+fn workspace_root() -> PathBuf {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    while !path.join(".git").exists() {
+        if !path.pop() {
+            panic!("Could not find workspace root (no .git directory found)");
+        }
+    }
+    path
+}
+
 /// Receipt structure matching bitnet-inference Receipt
 ///
 /// Tests specification: docs/explanation/issue-439-spec.md#receipt-validation-architecture
@@ -254,17 +265,6 @@ mod kernel_prefix_tests {
 mod fixture_integration_tests {
     use super::*;
     use std::fs;
-
-    /// Helper to find workspace root by walking up to .git directory
-    fn workspace_root() -> PathBuf {
-        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        while !path.join(".git").exists() {
-            if !path.pop() {
-                panic!("Could not find workspace root (no .git directory found)");
-            }
-        }
-        path
-    }
 
     fn load_receipt_fixture(name: &str) -> Receipt {
         let fixture_path =
