@@ -746,6 +746,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "serial_test",
  "sysinfo",
  "thiserror 2.0.17",
  "tokio",

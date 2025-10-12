@@ -96,7 +96,7 @@ fn test_ac1_no_prometheus_imports_in_source() -> std::io::Result<()> {
     for entry in walkdir::WalkDir::new(&src_dir)
         .into_iter()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs"))
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
     {
         let content = std::fs::read_to_string(entry.path())?;
         if content.contains("use opentelemetry_prometheus") {

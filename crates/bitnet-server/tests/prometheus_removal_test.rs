@@ -119,7 +119,7 @@ fn test_ac3_no_clippy_warnings_expected() {
     // provides traceability to AC3.
 
     // Compilation success = test passes
-    assert!(true, "Compilation with opentelemetry feature succeeded");
+    // No assertion needed - if this test compiles and runs, it validates AC3
 }
 
 /// AC:3 - Verify monitoring module structure after migration

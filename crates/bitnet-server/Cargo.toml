@@ -56,6 +56,7 @@ vergen-gix = { version = "1.0.9", features = ["build", "cargo", "rustc"] }
 futures = "0.3.31"
 http-body-util = "0.1.3"
 hyper = "1.7.0"
+serial_test = "3.2.0"
 walkdir = "2"
 
 [[bin]]
