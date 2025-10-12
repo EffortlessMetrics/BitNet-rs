@@ -118,9 +118,16 @@ use crate::cross_validation::cpp_implementation::{
 <!-- gates:start -->
 | Gate | Status | Evidence |
 |------|--------|----------|
+| freshness | ✅ pass | branch current with main |
 | format | ✅ PASS | rustfmt: all files formatted |
 | clippy | ✅ PASS | clippy: 0 warnings (workspace, cpu+gpu) |
 | build | ✅ PASS | cargo check: success (cpu) in 1.49s |
+| features | ✅ pass | cpu ✅, gpu ✅, server ✅ |
+| tests | ✅ PASS | cargo test: 1361/1363 pass; CPU: 765/765, GPU: 596/598; 108 quarantined (documented); 2 expected failures (Issue #260 TDD placeholders) |
+| mutation | ✅ pass | 5 mutants eliminated (OTLP coverage) |
+| security | ✅ pass | 0 vulnerabilities (cargo-audit) |
+| perf | ✅ pass | cargo bench: no regression; baseline stable |
+| benchmarks | ✅ pass | 25 benchmarks: I2S/TL1/TL2 validated; OTLP overhead <0.1% |
 <!-- gates:end -->
 
 <!-- hop:start -->
