@@ -5,6 +5,12 @@
 //! compile a lightweight stub so the rest of the test framework can build
 //! without the C++ dependency.
 
+use crate::cross_validation::cpp_implementation::{
+    BitNetCppHandle, CppInferenceConfig, CppInferenceResult, CppModelInfo, CppPerformanceMetrics,
+};
+use std::os::raw::{c_char, c_int, c_uint};
+use std::ptr;
+
 // -------------------------------------------------------------------------
 // Stub implementation (used when the C++ library isn't available)
 // -------------------------------------------------------------------------
@@ -14,7 +20,7 @@
 pub extern "C" fn bitnet_cpp_create() -> *mut BitNetCppHandle {
     // Return a non-null pointer to indicate "success"
     // In a real implementation, this would allocate and return a handle
-    0x1 as *mut BitNetCppHandle
+    std::ptr::dangling_mut::<BitNetCppHandle>()
 }
 
 #[cfg(not(feature = "cpp-ffi"))]
@@ -163,8 +169,9 @@ pub extern "C" fn bitnet_cpp_free_tokens(_ptr: *mut c_uint) {
 
 #[cfg(test)]
 mod tests {
+    use crate::cross_validation::cpp_implementation::BitNetCppHandle;
     use std::ffi::CString;
-    use std::os::raw::c_char;
+    use std::os::raw::{c_char, c_int};
 
     unsafe extern "C" {
         fn bitnet_cpp_create() -> *mut BitNetCppHandle;

@@ -1,0 +1,40 @@
+name: All-Features Exploratory Validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feat/**]
+
+jobs:
+  clippy-all-features:
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Non-blocking until Issue #447 merges
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Clippy All Features
+        run: cargo clippy --workspace --all-features -- -D warnings
+
+      - name: Comment Status
+        if: failure()
+        run: echo "::notice::all-features clippy exploratory gate failed (expected until #447 merges)"
+
+  test-all-features:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Test All Features
+        run: cargo test --workspace --all-features
+
+      - name: Comment Status
+        if: failure()
+        run: echo "::notice::all-features test exploratory gate failed (expected until #447 merges)"

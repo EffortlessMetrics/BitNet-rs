@@ -40,8 +40,8 @@ pub use parity::{
     eval_logits_incremental, eval_logits_once, get_model_config, get_model_vocab_size,
 };
 pub use production_engine::{
-    GenerationResult, PerformanceMetricsCollector, ProductionInferenceEngine, ThroughputMetrics,
-    TimingMetrics,
+    GenerationResult, PerformanceMetricsCollector, PrefillStrategy, ProductionInferenceConfig,
+    ProductionInferenceEngine, ThroughputMetrics, TimingMetrics,
 };
 pub use receipts::{
     AccuracyMetric, AccuracyTestResults, CrossValidation, DeterminismTestResults, InferenceReceipt,

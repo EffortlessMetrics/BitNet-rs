@@ -207,7 +207,7 @@ fn test_model_format() {
     let deserialized: ModelFormat = serde_json::from_str(&serialized).unwrap();
 
     match deserialized {
-        ModelFormat::GGUF => assert!(true),
+        ModelFormat::GGUF => {} // Success case
         _ => panic!("Deserialization failed"),
     }
 }

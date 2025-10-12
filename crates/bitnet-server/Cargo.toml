@@ -30,10 +30,10 @@ metrics-prometheus = { workspace = true, optional = true }
 num_cpus.workspace = true
 opentelemetry = { workspace = true, optional = true }
 opentelemetry-otlp = { workspace = true, optional = true }
-opentelemetry-prometheus = { workspace = true, optional = true }
 opentelemetry-stdout = { workspace = true, optional = true }
 opentelemetry_sdk = { workspace = true, optional = true }
 prometheus = { workspace = true, optional = true }
+tonic = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 sysinfo.workspace = true
@@ -56,6 +56,8 @@ vergen-gix = { version = "1.0.9", features = ["build", "cargo", "rustc"] }
 futures = "0.3.31"
 http-body-util = "0.1.3"
 hyper = "1.7.0"
+serial_test = "3.2.0"
+walkdir = "2"
 
 [[bin]]
 name = "server"
@@ -68,5 +70,5 @@ crossval = []                                                                   
 default = ["prometheus"]
 degraded-ok = []                                                                                                                                                                  # Map Degraded → 200 OK (default is fail-fast)
 gpu = ["cuda"]                                                                                                                                                                    # GPU inference support (alias for cuda)
-opentelemetry = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-prometheus", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tracing-opentelemetry"]
+opentelemetry = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tracing-opentelemetry", "dep:tonic"]
 prometheus = ["dep:prometheus", "dep:metrics-prometheus"]

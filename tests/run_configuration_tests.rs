@@ -71,8 +71,7 @@ mod integration_tests {
 
         // Verify default values
         assert_eq!(config.max_parallel_tests, 4);
-        assert_eq!(config.timeout_seconds, 300);
-        assert!(config.fail_fast);
+        assert_eq!(config.test_timeout, Duration::from_secs(300));
         assert!(config.capture_stdout);
         assert!(config.capture_stderr);
         assert_eq!(config.retry_attempts, 0);
@@ -88,22 +87,19 @@ mod integration_tests {
         // Test minimal config
         let minimal = minimal_config();
         assert_eq!(minimal.max_parallel_tests, 1);
-        assert_eq!(minimal.timeout_seconds, 30);
-        assert!(!minimal.fail_fast);
+        assert_eq!(minimal.test_timeout, Duration::from_secs(30));
         println!("  Minimal configuration: {:?}", minimal);
 
         // Test dev config
         let dev = dev_config();
         assert_eq!(dev.max_parallel_tests, num_cpus::get());
-        assert_eq!(dev.timeout_seconds, 600);
-        assert!(dev.fail_fast);
+        assert_eq!(dev.test_timeout, Duration::from_secs(600));
         println!("  Dev configuration: {:?}", dev);
 
         // Test CI config
         let ci = ci_config();
         assert_eq!(ci.max_parallel_tests, 2);
-        assert_eq!(ci.timeout_seconds, 1800);
-        assert!(!ci.fail_fast);
+        assert_eq!(ci.test_timeout, Duration::from_secs(1800));
         assert_eq!(ci.retry_attempts, 2);
         println!("  CI configuration: {:?}", ci);
 
@@ -124,8 +120,7 @@ mod integration_tests {
 
         // Verify values were loaded correctly
         assert_eq!(config.max_parallel_tests, 8);
-        assert_eq!(config.timeout_seconds, 120);
-        assert!(!config.fail_fast);
+        assert_eq!(config.test_timeout, Duration::from_secs(120));
         assert!(!config.capture_stdout);
         assert_eq!(config.retry_attempts, 3);
         assert_eq!(config.memory_limit_mb, Some(2048));
@@ -149,8 +144,7 @@ mod integration_tests {
         // Create a test configuration
         let config = TestConfig {
             max_parallel_tests: 16,
-            timeout_seconds: 240,
-            fail_fast: false,
+            test_timeout: Duration::from_secs(240),
             capture_stdout: false,
             capture_stderr: false,
             retry_attempts: 5,
@@ -182,8 +176,7 @@ mod integration_tests {
 
         // Verify loaded config matches original
         assert_eq!(loaded_config.max_parallel_tests, config.max_parallel_tests);
-        assert_eq!(loaded_config.timeout_seconds, config.timeout_seconds);
-        assert_eq!(loaded_config.fail_fast, config.fail_fast);
+        assert_eq!(loaded_config.test_timeout, config.test_timeout);
         assert_eq!(loaded_config.retry_attempts, config.retry_attempts);
         assert_eq!(loaded_config.memory_limit_mb, config.memory_limit_mb);
         assert_eq!(loaded_config.test_filter, config.test_filter);
@@ -196,8 +189,7 @@ mod integration_tests {
     async fn test_config_merge() -> TestOpResult<()> {
         let base = TestConfig {
             max_parallel_tests: 4,
-            timeout_seconds: 300,
-            fail_fast: true,
+            test_timeout: Duration::from_secs(300),
             test_filter: Some("unit".to_string()),
             ..Default::default()
         };
@@ -214,8 +206,7 @@ mod integration_tests {
 
         // Verify merge behavior - override values should take precedence
         assert_eq!(merged.max_parallel_tests, 8); // overridden
-        assert_eq!(merged.timeout_seconds, 300); // from base
-        assert!(merged.fail_fast); // from base
+        assert_eq!(merged.test_timeout, Duration::from_secs(300)); // from base
         assert!(merged.verbose); // overridden
         assert_eq!(merged.test_filter, Some("integration".to_string())); // overridden
         assert_eq!(merged.exclude_filter, Some("slow".to_string())); // from override
@@ -228,8 +219,7 @@ mod integration_tests {
         // Create a custom configuration with specific settings
         let custom_config = TestConfig {
             max_parallel_tests: 32,
-            timeout_seconds: 60,
-            fail_fast: false,
+            test_timeout: Duration::from_secs(60),
             capture_stdout: true,
             capture_stderr: true,
             retry_attempts: 1,
@@ -273,8 +263,7 @@ mod integration_tests {
     async fn test_serialization() -> TestOpResult<()> {
         let config = TestConfig {
             max_parallel_tests: 12,
-            timeout_seconds: 180,
-            fail_fast: true,
+            test_timeout: Duration::from_secs(180),
             memory_limit_mb: Some(2048),
             report_format: ReportFormat::Json,
             test_filter: Some("smoke".to_string()),
@@ -295,8 +284,7 @@ mod integration_tests {
 
         // Verify round-trip
         assert_eq!(deserialized.max_parallel_tests, config.max_parallel_tests);
-        assert_eq!(deserialized.timeout_seconds, config.timeout_seconds);
-        assert_eq!(deserialized.fail_fast, config.fail_fast);
+        assert_eq!(deserialized.test_timeout, config.test_timeout);
         assert_eq!(deserialized.memory_limit_mb, config.memory_limit_mb);
         assert_eq!(deserialized.test_filter, config.test_filter);
         assert_eq!(deserialized.seed, config.seed);
@@ -309,7 +297,7 @@ mod integration_tests {
         // Test valid configuration
         let valid_config = TestConfig {
             max_parallel_tests: 4,
-            timeout_seconds: 300,
+            test_timeout: Duration::from_secs(300),
             memory_limit_mb: Some(1024 * BYTES_PER_MB as u64),
             ..Default::default()
         };
@@ -317,7 +305,8 @@ mod integration_tests {
         assert!(validate_config(&valid_config), "Valid config should pass validation");
 
         // Test invalid configuration (timeout too short)
-        let invalid_config = TestConfig { timeout_seconds: 0, ..Default::default() };
+        let invalid_config =
+            TestConfig { test_timeout: Duration::from_secs(0), ..Default::default() };
 
         assert!(!validate_config(&invalid_config), "Invalid config should fail validation");
 

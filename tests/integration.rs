@@ -12,7 +12,7 @@ mod integration_placeholder {
         // This test ensures the integration module loads correctly
         #[allow(clippy::assertions_on_constants)]
         {
-            assert!(true, "Integration module loaded successfully");
+            // Test passes by reaching this point
         }
     }
 }

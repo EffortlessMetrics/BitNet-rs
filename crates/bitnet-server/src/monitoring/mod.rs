@@ -10,6 +10,9 @@ pub mod tracing;
 #[cfg(feature = "opentelemetry")]
 pub mod opentelemetry;
 
+#[cfg(feature = "opentelemetry")]
+pub mod otlp;
+
 use anyhow::Result;
 use std::sync::Arc;
 
