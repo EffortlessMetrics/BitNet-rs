@@ -3,8 +3,6 @@
 //! Tests AC1: Remove opentelemetry-prometheus@0.29.1, migrate to OTLP@0.31
 //! Specification: docs/explanation/specs/opentelemetry-otlp-migration-spec.md
 
-use anyhow::Result;
-
 /// AC:1 - Verify OTLP dependency is present in workspace
 ///
 /// This test validates that opentelemetry-otlp@0.31 with metrics feature
@@ -13,7 +11,7 @@ use anyhow::Result;
 /// Tests specification: opentelemetry-otlp-migration-spec.md#ac1-remove-deprecated-prometheus-exporter
 #[cfg(feature = "opentelemetry")]
 #[test]
-fn test_ac1_otlp_dependency_present() -> Result<()> {
+fn test_ac1_otlp_dependency_present() -> std::io::Result<()> {
     // Parse Cargo.toml to verify OTLP dependency
     let cargo_toml_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.toml");
     let cargo_toml = std::fs::read_to_string(cargo_toml_path)?;
@@ -36,7 +34,7 @@ fn test_ac1_otlp_dependency_present() -> Result<()> {
 /// Tests specification: opentelemetry-otlp-migration-spec.md#ac1-remove-deprecated-prometheus-exporter
 #[cfg(feature = "opentelemetry")]
 #[test]
-fn test_ac1_prometheus_dependency_removed() -> Result<()> {
+fn test_ac1_prometheus_dependency_removed() -> std::io::Result<()> {
     // Parse workspace Cargo.toml
     let cargo_toml_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.toml");
     let cargo_toml = std::fs::read_to_string(cargo_toml_path)?;
@@ -59,7 +57,7 @@ fn test_ac1_prometheus_dependency_removed() -> Result<()> {
 /// Tests specification: opentelemetry-otlp-migration-spec.md#ac1-remove-deprecated-prometheus-exporter
 #[cfg(feature = "opentelemetry")]
 #[test]
-fn test_ac1_tonic_version_compatible() -> Result<()> {
+fn test_ac1_tonic_version_compatible() -> std::io::Result<()> {
     // Parse crate Cargo.toml
     let cargo_toml_path = concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml");
     let cargo_toml = std::fs::read_to_string(cargo_toml_path)?;
@@ -82,7 +80,7 @@ fn test_ac1_tonic_version_compatible() -> Result<()> {
 /// Tests specification: opentelemetry-otlp-migration-spec.md#ac1-remove-deprecated-prometheus-exporter
 #[cfg(feature = "opentelemetry")]
 #[test]
-fn test_ac1_no_prometheus_imports_in_source() -> Result<()> {
+fn test_ac1_no_prometheus_imports_in_source() -> std::io::Result<()> {
     use std::path::PathBuf;
 
     let src_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src");

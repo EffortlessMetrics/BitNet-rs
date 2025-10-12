@@ -3,8 +3,6 @@
 //! Tests AC2: Implement OTLP metrics initialization with localhost fallback
 //! Specification: docs/explanation/specs/opentelemetry-otlp-migration-spec.md
 
-use anyhow::Result;
-
 /// AC:2 - Test OTLP metrics provider initialization
 ///
 /// This test validates that the OTLP metrics exporter can be initialized

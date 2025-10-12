@@ -3,8 +3,6 @@
 //! Tests AC3: Remove Prometheus code paths and verify clean compilation
 //! Specification: docs/explanation/specs/opentelemetry-otlp-migration-spec.md
 
-use anyhow::Result;
-
 /// AC:3 - Verify no Prometheus imports remain in monitoring module
 ///
 /// This test ensures all `use opentelemetry_prometheus::*` statements
@@ -13,7 +11,7 @@ use anyhow::Result;
 /// Tests specification: opentelemetry-otlp-migration-spec.md#ac3-remove-prometheus-code-paths
 #[cfg(feature = "opentelemetry")]
 #[test]
-fn test_ac3_no_prometheus_imports() -> Result<()> {
+fn test_ac3_no_prometheus_imports() -> std::io::Result<()> {
     use std::path::PathBuf;
 
     let monitoring_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/monitoring");
@@ -132,7 +130,7 @@ fn test_ac3_no_clippy_warnings_expected() {
 /// Tests specification: opentelemetry-otlp-migration-spec.md#ac3-remove-prometheus-code-paths
 #[cfg(feature = "opentelemetry")]
 #[test]
-fn test_ac3_monitoring_module_structure() -> Result<()> {
+fn test_ac3_monitoring_module_structure() -> std::io::Result<()> {
     use std::path::PathBuf;
 
     let monitoring_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/monitoring");
@@ -169,7 +167,7 @@ fn test_ac3_monitoring_module_structure() -> Result<()> {
 /// Tests specification: opentelemetry-otlp-migration-spec.md#ac3-remove-prometheus-code-paths
 #[cfg(feature = "opentelemetry")]
 #[test]
-fn test_ac3_init_metrics_uses_otlp() -> Result<()> {
+fn test_ac3_init_metrics_uses_otlp() -> std::io::Result<()> {
     use std::path::PathBuf;
 
     let opentelemetry_rs =
