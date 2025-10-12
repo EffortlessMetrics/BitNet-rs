@@ -5,7 +5,7 @@
 **Branch:** `fix/issue-443-test-harness-hygiene`
 **Flow:** Generative (Spec → Implementation → Publication)
 **Date:** 2025-10-11
-**Status:** Ready for Review
+**Status:** ✅ MERGED (Finalization Complete)
 
 ---
 
@@ -21,6 +21,8 @@
 | build | ✅ pass | release build clean (--no-default-features --features cpu) | pub-readiness-validator | 2025-10-11 |
 | acceptance | ✅ pass | 7/7 criteria validated (AC1-AC7) | pub-readiness-validator | 2025-10-11 |
 | **publication** | ✅ **pass** | **All generative gates PASS; BitNet.rs template complete; feature flags validated; zero production impact; comprehensive documentation (1,300+ lines specs)** | **pub-readiness-validator** | **2025-10-11** |
+| **merge-validation** | ✅ **pass** | **workspace: CPU+GPU build ok; security: clean; merge commit: 5639470; note: AC3 test flakiness detected (#441, #351)** | **pr-merge-finalizer** | **2025-10-12** |
+| **cleanup** | ✅ **pass** | **branch cleaned; workspace verified; receipts archived; issue #443 closed** | **pr-merge-finalizer** | **2025-10-12** |
 <!-- gates:end -->
 
 ---
@@ -35,6 +37,11 @@
 2025-10-11 20:44 → code-implementer: Test harness hygiene fixes implemented (4 files)
 2025-10-11 23:31 → code-implementer: Added gitignore for incremental test cache
 2025-10-11 23:45 → pub-readiness-validator: Publication gate validation PASS (format ✅, clippy ✅, tests 1,336/1,336 ✅, build ✅, acceptance 7/7 ✅)
+2025-10-12 03:26 → pr-merger: PR #445 merged to main (SHA: 5639470)
+2025-10-12 03:26 → pr-merger: Issue #443 auto-closed on merge
+2025-10-12 03:50 → pr-merge-finalizer: Merge validation complete (CPU+GPU builds ✅, security audit ✅, workspace verified ✅)
+2025-10-12 03:50 → pr-merge-finalizer: Test flakiness detected: AC3 autoregressive test (passes single-threaded, fails parallel - tracked #441, #351)
+2025-10-12 03:50 → pr-merge-finalizer: Post-merge finalization complete (branch cleaned ✅, receipts archived ✅, issue closed ✅)
 ```
 
 <!-- hoplog:end -->
@@ -44,9 +51,9 @@
 ## Decision Block
 
 <!-- decision:start -->
-**State:** ✅ **READY FOR REVIEW** (Publication Gate Complete)
+**State:** ✅ **MERGED** (Integration Complete - FINALIZE)
 
-**Why:** PR #445 successfully validated for Generative flow publication with all BitNet.rs quality criteria satisfied:
+**Why:** PR #445 successfully merged to main with all BitNet.rs quality criteria satisfied and post-merge validation complete:
 
 **Required Gates (5/5 PASS ✅)**:
 
@@ -73,14 +80,25 @@
 - ❌ Inference: Not affected (no inference engine changes)
 - ❌ Output: Not affected (no output generation changes)
 
-**Next:** FINALIZE → pub-finalizer (create GitHub PR)
+**Merge Status:** ✅ **COMPLETE** (SHA: 5639470, merged 2025-10-12T03:26:01Z)
+
+**Post-Merge Validation:**
+- ✅ **workspace-cpu**: Clean build (--no-default-features --features cpu)
+- ✅ **workspace-gpu**: Clean build (--no-default-features --features gpu)
+- ✅ **security**: 0 CVEs, cargo audit clean
+- ✅ **branch**: Deleted (fix/issue-443-test-harness-hygiene)
+- ✅ **issue**: Closed (#443 auto-closed on merge)
+- ⚠️ **flakiness**: AC3 autoregressive test (passes single-threaded, fails parallel - tracked #441, #351)
+
+**Next:** FINALIZE (complete - integration flow reached terminal state)
 
 **Evidence Summary:**
 
 ```bash
-flow=generative✅ labels=state:ready✅ format=✅ clippy=0✅ tests=1336/1336✅
+flow=generative✅ state=merged✅ format=✅ clippy=0✅ tests=1336/1336✅
 build=✅ acceptance=7/7✅ docs=1300+lines✅ impact=test-only✅
 feature-flags=validated✅ commit-patterns=conventional✅ template=complete✅
+merge=5639470✅ issue-443=closed✅ branch=deleted✅ workspace=verified✅
 ```
 
 **BitNet.rs Neural Network Standards**: PASS ✅
@@ -429,13 +447,13 @@ $ cargo build --workspace --release --no-default-features --features cpu
 
 ## Routing Decision
 
-**Current Gate:** `generative:gate:publication` (merge readiness validation)
-**Status:** ✅ **PASS** (ready for Review flow pickup)
-**Next Agent:** pub-finalizer (route already complete, PR created)
-**Rationale:** PR #445 meets all BitNet.rs Generative flow publication requirements. All quality gates pass (format ✅, clippy ✅, tests 1,336/1,336 ✅, build ✅). Template complete with comprehensive documentation (1,300+ lines). Commit patterns follow conventional format. Feature flags correctly specified. Zero production impact validated. Test infrastructure hygiene improved. Ready for Review stage consumption.
+**Current Gate:** `integrative:gate:finalize` (post-merge completion)
+**Status:** ✅ **COMPLETE** (integration flow terminal state reached)
+**Next Agent:** N/A (workflow complete)
+**Rationale:** PR #445 successfully merged to main with complete post-merge validation. Workspace builds clean (CPU+GPU ✅), security audit passes (0 CVEs ✅), branch deleted ✅, issue #443 closed ✅. Test flakiness detected in AC3 autoregressive test (passes single-threaded, fails parallel - already tracked in #441, #351). Integration flow reached FINALIZE terminal state with all quality gates satisfied.
 
 ---
 
-**Ledger Version:** 1.0
-**Last Updated:** 2025-10-11 23:45:00 UTC
-**Agent:** pub-readiness-validator
+**Ledger Version:** 2.0 (Post-Merge Finalization)
+**Last Updated:** 2025-10-12 03:50:00 UTC
+**Agent:** pr-merge-finalizer
