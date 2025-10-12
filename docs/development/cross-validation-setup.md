@@ -118,21 +118,52 @@ rustc --version
 
 ## Setup Process
 
+### Model Provisioning (Required First Step)
+
+Before running cross-validation tests, you need to provision a GGUF model. The test suite uses standardized model path discovery (Issue #443):
+
+```bash
+# Provision the default model (recommended)
+cargo run -p xtask -- download-model
+
+# This downloads to: models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+# Tests will auto-discover this location
+```
+
+**Model Path Discovery Order:**
+1. `BITNET_GGUF` environment variable (if set)
+2. Standard xtask download location: `models/microsoft-bitnet-b1.58-2B-4T-gguf/*.gguf`
+
+**Custom Model Path:**
+```bash
+# Use a custom model for testing
+export BITNET_GGUF=/path/to/your/custom-model.gguf
+cargo test -p bitnet-models --no-default-features --features crossval
+```
+
+**Troubleshooting:**
+- If tests fail with "No model found", run `cargo run -p xtask -- download-model` first
+- The model file is ~2GB and ignored by git (in `.gitignore`)
+- Each developer/CI machine needs to provision the model once
+
 ### Automatic Setup (Recommended)
 
 The easiest way to set up cross-validation:
 
 ```bash
-# 1. Download and build C++ implementation
+# 1. Provision GGUF model (one-time setup)
+cargo run -p xtask -- download-model
+
+# 2. Download and build C++ implementation
 ./ci/fetch_bitnet_cpp.sh
 
-# 2. Set up environment
+# 3. Set up environment
 source ~/.cache/bitnet_cpp/setup_env.sh
 
-# 3. Run cross-validation tests
+# 4. Run cross-validation tests
 cargo test --no-default-features --features "cpu,crossval"
 
-# 4. Run performance benchmarks
+# 5. Run performance benchmarks
 cargo bench --no-default-features --features "cpu,crossval"
 ```
 
@@ -337,7 +368,30 @@ jobs:
 
 ### Common Issues
 
-#### 1. "C++ implementation not found"
+#### 1. "No model found for cross-validation testing"
+
+**Error:**
+```
+No model found for cross-validation testing.
+
+To provision a model, run:
+
+cargo run -p xtask -- download-model
+```
+
+**Solution:**
+```bash
+# Provision the default model
+cargo run -p xtask -- download-model
+
+# Or use a custom model
+export BITNET_GGUF=/path/to/your/model.gguf
+cargo test -p bitnet-models --no-default-features --features crossval
+```
+
+**Note:** This is a new requirement (Issue #443) to standardize model path discovery across tests and runtime. Each machine needs to provision the model once (~2GB download).
+
+#### 2. "C++ implementation not found"
 
 **Error:**
 ```
@@ -353,7 +407,7 @@ ERROR: BitNet C++ implementation not found at ~/.cache/bitnet_cpp
 export BITNET_CPP_PATH=/path/to/bitnet.cpp
 ```
 
-#### 2. "clang not found"
+#### 3. "clang not found"
 
 **Error:**
 ```
@@ -372,7 +426,7 @@ xcode-select --install
 # Install LLVM from https://llvm.org/
 ```
 
-#### 3. "Feature crossval not enabled"
+#### 4. "Feature crossval not enabled"
 
 **Error:**
 ```
@@ -386,7 +440,7 @@ cargo test --no-default-features --features "cpu,crossval"
 cargo bench --no-default-features --features "cpu,crossval"
 ```
 
-#### 4. Build failures
+#### 5. Build failures
 
 **Error:**
 ```

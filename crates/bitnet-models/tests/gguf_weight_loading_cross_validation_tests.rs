@@ -13,8 +13,98 @@ use anyhow::{Context, Result};
 use bitnet_common::{BitNetError, Device};
 use candle_core::Tensor as CandleTensor;
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use tempfile::TempDir;
+
+// ============================================================================
+// Model Path Discovery Helpers (Issue #443)
+// ============================================================================
+
+/// Find workspace root by walking up from the current file location
+fn workspace_root() -> PathBuf {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    // Walk up from crates/bitnet-models to workspace root
+    path.pop(); // Remove bitnet-models
+    path.pop(); // Remove crates
+    path
+}
+
+/// Get model path from environment or standard locations with clear error messages
+///
+/// Search order:
+/// 1. `BITNET_GGUF` environment variable (absolute path)
+/// 2. Standard xtask download location: `models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf`
+/// 3. Alternative xtask location with different file name
+///
+/// Returns helpful error message if model not found with instructions to provision.
+fn model_path_from_env() -> Result<PathBuf> {
+    // First: check environment variable
+    if let Ok(path_str) = std::env::var("BITNET_GGUF") {
+        let path = PathBuf::from(path_str);
+        if path.exists() {
+            return Ok(path);
+        } else {
+            anyhow::bail!(
+                "BITNET_GGUF environment variable set to '{}' but file does not exist",
+                path.display()
+            );
+        }
+    }
+
+    // Second: check standard xtask download locations
+    let root = workspace_root();
+    let standard_locations = vec![
+        root.join("models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"),
+        root.join("models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-q4_0.gguf"),
+        root.join("models/microsoft-bitnet-b1.58-2B-4T-gguf/model.gguf"),
+    ];
+
+    for location in &standard_locations {
+        if location.exists() {
+            return Ok(location.clone());
+        }
+    }
+
+    // Third: check if models directory exists at all
+    let models_dir = root.join("models");
+    if !models_dir.exists() {
+        anyhow::bail!(
+            "No model found for cross-validation testing.\n\
+             \n\
+             To provision a model, run:\n\
+             \n\
+             cargo run -p xtask -- download-model\n\
+             \n\
+             Or set BITNET_GGUF to point to an existing GGUF model:\n\
+             \n\
+             export BITNET_GGUF=/path/to/your/model.gguf\n\
+             cargo test -p bitnet-models --no-default-features --features crossval"
+        );
+    }
+
+    // Fourth: models directory exists but no expected files found
+    anyhow::bail!(
+        "Model directory exists at '{}' but no expected model files found.\n\
+         \n\
+         Expected locations:\n\
+         {}\n\
+         \n\
+         To provision a model, run:\n\
+         \n\
+         cargo run -p xtask -- download-model\n\
+         \n\
+         Or set BITNET_GGUF to point to an existing GGUF model:\n\
+         \n\
+         export BITNET_GGUF=/path/to/your/model.gguf",
+        models_dir.display(),
+        standard_locations
+            .iter()
+            .map(|p| format!("  - {}", p.display()))
+            .collect::<Vec<_>>()
+            .join("\n")
+    )
+}
 
 /// Cross-validation test configuration
 #[derive(Debug, Clone)]
@@ -358,19 +448,16 @@ async fn test_ac5_deterministic_inference_validation() -> Result<()> {
 // Helper Functions for Cross-Validation Testing
 // ============================================================================
 
-/// Set up cross-validation test model
+/// Set up cross-validation test model using standardized path discovery (Issue #443)
+///
+/// Uses `model_path_from_env()` to discover model location from:
+/// 1. BITNET_GGUF environment variable
+/// 2. Standard xtask download location
+///
+/// Provides clear error messages if model not found with provisioning instructions.
 async fn setup_crossval_test_model() -> Result<std::path::PathBuf> {
-    // TODO: Replace with actual model download/setup when xtask integration is available
-    // For now, create a mock GGUF file for testing
-    let temp_dir = TempDir::new().context("Failed to create temp directory")?;
-    let model_path = temp_dir.path().join("crossval_test_model.gguf");
-
-    // Create minimal GGUF file structure for testing
-    std::fs::write(&model_path, create_mock_gguf_content())
-        .context("Failed to create mock GGUF file")?;
-
-    // Keep temp_dir alive by returning the path
-    Ok(model_path)
+    model_path_from_env()
+        .context("Failed to locate cross-validation test model")
 }
 
 /// Load weights using C++ reference implementation
@@ -674,16 +761,6 @@ fn validate_numerical_stability(
     }
 
     Ok(())
-}
-
-/// Create mock GGUF content for testing
-fn create_mock_gguf_content() -> Vec<u8> {
-    // Simplified mock GGUF file structure
-    let mut content = Vec::new();
-    content.extend_from_slice(b"GGUF"); // Magic header
-    content.extend_from_slice(&[3u8, 0, 0, 0]); // Version
-    content.extend_from_slice(&[0u8; 100]); // Mock metadata and tensor data
-    content
 }
 
 // ============================================================================
