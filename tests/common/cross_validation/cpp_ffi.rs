@@ -5,11 +5,18 @@
 //! compile a lightweight stub so the rest of the test framework can build
 //! without the C++ dependency.
 
+#[cfg(feature = "cpp-ffi")]
 use crate::cross_validation::cpp_implementation::{
     BitNetCppHandle, CppInferenceConfig, CppInferenceResult, CppModelInfo, CppPerformanceMetrics,
 };
+#[cfg(feature = "cpp-ffi")]
 use std::os::raw::{c_char, c_int, c_uint};
+#[cfg(feature = "cpp-ffi")]
 use std::ptr;
+
+// For stub implementation, we need minimal types
+#[cfg(not(feature = "cpp-ffi"))]
+use crate::cross_validation::cpp_implementation::BitNetCppHandle;
 
 // -------------------------------------------------------------------------
 // Stub implementation (used when the C++ library isn't available)
