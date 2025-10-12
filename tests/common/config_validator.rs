@@ -373,10 +373,8 @@ mod tests {
     #[test]
     fn test_validator_creation() {
         // This test might fail if no config is available, which is expected
-        match ConfigValidator::new() {
-            Ok(_) => {}  // Config loaded successfully
-            Err(_) => {} // No config available, which is fine for testing
-        }
+        // Config loaded successfully or no config available, both are fine for testing
+        let _ = ConfigValidator::new();
     }
 
     #[test]
@@ -399,7 +397,7 @@ mod tests {
     #[test]
     fn test_disk_space_check() {
         let temp_dir = TempDir::new().unwrap();
-        let space = get_available_disk_space(&temp_dir.path().to_path_buf());
+        let space = get_available_disk_space(temp_dir.path());
         // Should return Some value on Unix platforms, None is acceptable on Windows for now
         #[cfg(unix)]
         assert!(space.is_some());

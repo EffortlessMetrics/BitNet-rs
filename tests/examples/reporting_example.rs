@@ -19,6 +19,7 @@ mod reporting_example {
     use tokio::fs;
 
     /// Helper function to create test results with less boilerplate
+    #[allow(dead_code)]
     fn example_result(
         name: &str,
         status: TestStatus,

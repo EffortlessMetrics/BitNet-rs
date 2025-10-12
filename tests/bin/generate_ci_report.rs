@@ -199,7 +199,7 @@ async fn load_junit_test_results(path: &Path) -> Result<TestSuiteResult> {
 
 async fn generate_status_checks_file(
     test_results: &[TestSuiteResult],
-    output_dir: &PathBuf,
+    output_dir: &Path,
 ) -> Result<()> {
     let mut status_checks = Vec::new();
 
@@ -242,7 +242,7 @@ async fn generate_status_checks_file(
 
 async fn generate_pr_comment_file(
     test_results: &[TestSuiteResult],
-    output_dir: &PathBuf,
+    output_dir: &Path,
 ) -> Result<()> {
     let mut comment = String::new();
 
@@ -326,10 +326,7 @@ async fn generate_pr_comment_file(
     Ok(())
 }
 
-async fn save_test_results_json(
-    test_results: &[TestSuiteResult],
-    output_dir: &PathBuf,
-) -> Result<()> {
+async fn save_test_results_json(test_results: &[TestSuiteResult], output_dir: &Path) -> Result<()> {
     let json_content = serde_json::to_string_pretty(test_results)?;
     let json_file = output_dir.join("test-results.json");
     fs::write(json_file, json_content).await?;

@@ -36,6 +36,7 @@ fn workspace_root() -> PathBuf {
 ///  - Preferred: BITNET_CPP_PATH points to the root produced by `./ci/fetch_bitnet_cpp.sh`
 ///    (contains `setup_env.sh` or a `lib/` folder with the built artifacts).
 ///  - Fallback: ~/.cache/bitnet_cpp (same structure).
+///
 /// If neither exists, we panic with instructions to provision the C++ reference.
 fn ensure_cpp_reference_available() -> PathBuf {
     use std::env;

@@ -888,8 +888,10 @@ mod tests {
 
     async fn create_test_fixture_manager() -> (FixtureManager, TempDir) {
         let temp_dir = TempDir::new().unwrap();
-        let mut config = FixtureConfig::default();
-        config.auto_download = false; // Disable auto-download for tests
+        let config = FixtureConfig {
+            auto_download: false, // Disable auto-download for tests
+            ..Default::default()
+        };
 
         // Override cache dir with temp dir
         unsafe {
