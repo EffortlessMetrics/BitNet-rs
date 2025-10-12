@@ -10,8 +10,11 @@
 //! - Mutant #4: OTLP timeout configuration (3 seconds)
 //! - Mutant #5: Periodic reader export interval (60 seconds)
 
+#[cfg(feature = "opentelemetry")]
 use serial_test::serial;
+#[cfg(feature = "opentelemetry")]
 use std::borrow::Cow;
+#[cfg(feature = "opentelemetry")]
 use std::time::Duration;
 
 #[cfg(feature = "opentelemetry")]
