@@ -60,7 +60,7 @@ running 1 test
 test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored
-```
+```text
 
 ---
 
@@ -99,6 +99,7 @@ All neural network inference tests pass:
 **Rationale**: All quality gates satisfied for PR #448. The flaky test is a pre-existing issue requiring systematic environment variable isolation refactoring (tracked in issue #441).
 
 ### Follow-up (Out of Scope for PR #448)
+
 - Add `test_strict_mode_environment_variable_parsing` to quarantine list
 - Implement test-level environment variable isolation using `serial_test::serial`
 - Track in issue #441 with `test_cross_crate_strict_mode_consistency`

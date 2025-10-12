@@ -33,14 +33,14 @@
 #### Workspace Context (Parallel Execution)
 ```bash
 cargo test --workspace --no-default-features --features cpu test_strict_mode_environment_variable_parsing
-```
+```text
 **Reproduction Rate**: ~50% (reported by test-executor)
 **Failure Mode**:
-```
+```text
 thread 'strict_mode_config_tests::test_strict_mode_environment_variable_parsing' panicked at:
 Strict mode should be disabled by default
   at crates/bitnet-common/tests/issue_260_strict_mode_tests.rs:39:9
-```
+```text
 
 **Root Cause**: Environment variable `BITNET_STRICT_MODE` pollution from parallel test execution. Other tests in workspace set this variable causing default state assertion to fail.
 
@@ -49,12 +49,12 @@ Strict mode should be disabled by default
 cargo test -p bitnet-common --test issue_260_strict_mode_tests \
   strict_mode_config_tests::test_strict_mode_environment_variable_parsing \
   -- --exact --nocapture
-```
+```text
 **Reproduction Rate**: 0% (10/10 runs PASS)
 **Result**: ✅ PASS (100% success rate)
 
 **Evidence**:
-```
+```text
 === Run 1/10 === PASS
 === Run 2/10 === PASS
 === Run 3/10 === PASS
@@ -66,7 +66,7 @@ cargo test -p bitnet-common --test issue_260_strict_mode_tests \
 === Run 9/10 === PASS
 === Run 10/10 === PASS
 === SUMMARY === Success rate: 10/10
-```
+```text
 
 ---
 
@@ -75,15 +75,15 @@ cargo test -p bitnet-common --test issue_260_strict_mode_tests \
 ### Git History Analysis
 ```bash
 git log --oneline --all --follow -- crates/bitnet-common/tests/issue_260_strict_mode_tests.rs
-```
+```text
 
 **Result**:
-```
+```text
 4ac8d2a feat(#439): Unify GPU feature predicates with backward-compatible cuda alias (#440)
 90d0d18 Add documentation review and test coverage analysis for PR #440
 90b8eb1 feat(#254): Implement Real Neural Network Inference (#431)
 27c0dd2 feat: Eliminate Mock Computation - Implement Real Quantized Neural Network Inference (Issue #260) (#262)
-```
+```text
 
 **Test Introduced**: PR #262 (Issue #260 mock elimination)
 **Last Modified**: PR #440 (GPU feature predicates - unrelated)
@@ -91,7 +91,7 @@ git log --oneline --all --follow -- crates/bitnet-common/tests/issue_260_strict_
 ### PR #448 Diff Analysis
 ```bash
 git diff main HEAD -- crates/bitnet-common/tests/issue_260_strict_mode_tests.rs
-```
+```text
 
 **Result**: No differences (file not touched by PR #448)
 
@@ -113,7 +113,7 @@ git diff main HEAD -- crates/bitnet-common/tests/issue_260_strict_mode_tests.rs
 fn test_cross_crate_strict_mode_consistency() {
     // ...
 }
-```
+```text
 
 **Pattern Match**: Both tests:
 1. Use `BITNET_STRICT_MODE` environment variable
@@ -127,20 +127,24 @@ fn test_cross_crate_strict_mode_consistency() {
 ## Neural Network Impact Assessment
 
 ### Quantization Accuracy: UNAFFECTED
+
 - **I2S Quantization**: >99% accuracy maintained (15 tests PASS)
 - **TL1/TL2 Quantization**: >99% accuracy maintained (8 tests PASS)
 - **Property-Based Tests**: 14/14 PASS
 
 ### Inference Pipeline: UNAFFECTED
+
 - **QLinear Layers**: 10/10 tests PASS
 - **GQA Shapes**: 3/3 tests PASS
 - **Response Validation**: 3/3 tests PASS
 
 ### Cross-Validation: UNAFFECTED
+
 - Flaky test is orthogonal to C++ vs Rust parity validation
 - No impact on `crossval` crate tests
 
 ### Device-Aware Operations: UNAFFECTED
+
 - GPU/CPU feature tests: 268/268 PASS (excluding flaky)
 - SIMD compatibility: All tests PASS
 
@@ -161,7 +165,7 @@ fn test_cross_crate_strict_mode_consistency() {
 fn test_strict_mode_environment_variable_parsing() {
     // Test implementation unchanged
 }
-```
+```text
 
 ### Rationale
 1. **Non-Deterministic**: ~50% failure rate in workspace runs (meets flaky criteria)
@@ -172,6 +176,7 @@ fn test_strict_mode_environment_variable_parsing() {
 6. **CI Stability**: Quarantine prevents false-positive CI failures
 
 ### Quarantine Criteria Met
+
 - ✅ Reproduction rate between 5-95% (confirmed ~50%)
 - ✅ Non-deterministic behavior confirmed across multiple runs
 - ✅ Test provides value when stable (environment variable validation)
@@ -199,7 +204,7 @@ use serial_test::serial;
 fn test_strict_mode_environment_variable_parsing() {
     // Existing test implementation
 }
-```
+```text
 
 **Pros**: Simple, immediate fix
 **Cons**: Slower test execution for env var tests
@@ -229,7 +234,7 @@ impl Drop for EnvVarCleanup {
         unsafe { env::remove_var(self.0); }
     }
 }
-```
+```text
 
 **Pros**: Proper resource management with RAII, guaranteed cleanup
 **Cons**: Requires more implementation work
@@ -249,7 +254,7 @@ fn test_strict_mode_environment_variable_parsing() {
         assert!(StrictModeConfig::from_env().enabled);
     });
 }
-```
+```text
 
 **Pros**: Clean test code, guaranteed isolation, reusable across codebase
 **Cons**: Requires significant test infrastructure work
@@ -264,12 +269,14 @@ fn test_strict_mode_environment_variable_parsing() {
 ## PR #448 Impact Assessment
 
 ### Promotion Readiness: ✅ READY
+
 - **All PR-introduced tests**: 13/13 PASS (100%)
 - **Core BitNet.rs tests**: 268/268 PASS (excluding documented flaky)
 - **Quality gates**: Format, clippy, tests all PASS
 - **Neural network pipeline**: 100% PASS (quantization, inference, kernels)
 
 ### Flaky Test Impact: ⚠️ NON-BLOCKING
+
 - **Pre-existing**: Not introduced by PR #448
 - **Scope**: Observability infrastructure only (no neural network changes)
 - **Tracked**: Issue #441 documents similar pattern
@@ -288,33 +295,34 @@ fn test_strict_mode_environment_variable_parsing() {
 ## Evidence Grammar (Standardized)
 
 ### Tests Status
-```
+```bash
 tests: cargo test: 268/269 pass; CPU: 268/268 ok; flaky: 1 (pre-existing, issue #441)
 quarantined: 5 tests (3 TDD placeholders, 2 flaky tracked in #441)
 isolation: test_strict_mode_environment_variable_parsing: 10/10 pass (100%)
 workspace: test_strict_mode_environment_variable_parsing: ~50% repro rate
-```
+```text
 
 ### Neural Network Validation
-```
+```text
 quantization: I2S: 99.9%, TL1: 99.9%, TL2: 99.9% accuracy
 inference: pipeline: 100% pass (quantization → kernels → inference)
 device-aware: GPU/CPU parity: 100% pass (excluding flaky env var tests)
-```
+```text
 
 ### Quality Gates
-```
+```bash
 format: cargo fmt: PASS
 clippy: cargo clippy --all-targets: PASS
 tests: workspace CPU: 268/268 ok (excluding documented flaky)
 pre-existing-flake: confirmed via git history and isolation validation
-```
+```text
 
 ---
 
 ## Routing Decision
 
 ### Assessment
+
 - ✅ Flaky test confirmed as pre-existing
 - ✅ Isolation validation: 100% pass rate (10/10 runs)
 - ✅ Neural network pipeline: 100% PASS
@@ -345,7 +353,7 @@ pre-existing-flake: confirmed via git history and isolation validation
      #[test]
      fn test_strict_mode_environment_variable_parsing() {
          println!("🔒 Strict Mode: Testing environment variable parsing");
-```
+```text
 
 **Impact**: Test will be skipped in `cargo test` runs but can be explicitly run with `--ignored` flag.
 

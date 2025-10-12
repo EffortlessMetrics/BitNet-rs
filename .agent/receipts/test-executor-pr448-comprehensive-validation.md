@@ -26,7 +26,7 @@
 ### Primary Test Suite: CPU Features
 ```bash
 cargo test --workspace --no-default-features --features cpu --verbose
-```
+```text
 
 **Execution Time**: ~60 seconds
 **Test Suites Executed**: 83 test binaries
@@ -65,13 +65,14 @@ cargo test --workspace --no-default-features --features cpu --verbose
 **Status**: ❌ FAILED (workspace run) | ✅ PASSED (isolation)
 
 #### Failure Details
-```
+```text
 thread 'strict_mode_config_tests::test_strict_mode_environment_variable_parsing' panicked at:
 Strict mode should be disabled by default
   at crates/bitnet-common/tests/issue_260_strict_mode_tests.rs:39:9
-```
+```text
 
 #### Root Cause Analysis
+
 - **Issue**: Environment variable pollution in workspace test context
 - **Mechanism**: `BITNET_STRICT_MODE` environment variable persists across parallel test execution
 - **Reproducibility**: ~50% failure rate in workspace runs, 100% pass rate in isolation
@@ -83,20 +84,21 @@ Strict mode should be disabled by default
 cargo test -p bitnet-common --test issue_260_strict_mode_tests \
   strict_mode_config_tests::test_strict_mode_environment_variable_parsing \
   -- --exact --nocapture
-```
+```text
 
 **Result**: ✅ PASSED (100% success rate across 3 attempts)
 
-```
+```text
 running 1 test
 🔒 Strict Mode: Testing environment variable parsing
   ✅ Environment variable parsing successful
 test strict_mode_config_tests::test_strict_mode_environment_variable_parsing ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored
-```
+```text
 
 #### PR Impact Assessment
+
 - **Introduced by PR #448**: ❌ NO
 - **Modified by PR #448**: ❌ NO
 - **Pre-existing in main branch**: ✅ YES
@@ -145,19 +147,19 @@ All ignored tests are documented with clear rationale and tracking issues.
 ✅ **Status**: PASS (validated by hygiene-finalizer)
 ```bash
 cargo fmt --all -- --check
-```
+```text
 
 ### Clippy Gate
 ✅ **Status**: PASS (validated by hygiene-finalizer)
 ```bash
 cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings
-```
+```text
 
 ### Test Gate (This Validation)
 ✅ **Status**: PASS (excluding pre-existing flaky test)
 ```bash
 cargo test --workspace --no-default-features --features cpu
-```
+```text
 - **Effective Pass Rate**: 268/268 (100%) excluding documented flaky tests
 - **Flaky Test Impact**: NONE (pre-existing, tracked in issue #441)
 
@@ -203,6 +205,7 @@ cargo test --workspace --no-default-features --features cpu
 ## Routing Decision
 
 ### Assessment
+
 - ✅ All PR-introduced tests PASS (13/13)
 - ✅ All core BitNet.rs tests PASS (268/268 excluding documented flaky)
 - ✅ Neural network pipeline tests PASS (100%)
@@ -228,26 +231,26 @@ cargo test --workspace --no-default-features --features cpu
 ## Evidence Grammar (Standardized)
 
 ### Test Execution
-```
+```bash
 tests: cargo test: 268/269 pass; CPU: 268/268 ok; flaky: 1 (pre-existing, issue #441)
 features: matrix: cpu ok (100% pass rate)
 quarantined: 4 tests (3 TDD placeholders, 1 flaky tracked)
-```
+```text
 
 ### Neural Network Validation
-```
+```text
 quantization: I2S: 99.9%, TL1: 99.9%, TL2: 99.9% accuracy
 inference: pipeline: 100% pass (quantization → kernels → inference)
 fixtures: 45+ test fixtures across 9 ACs
-```
+```text
 
 ### Quality Gates
-```
+```bash
 format: cargo fmt: PASS
 clippy: cargo clippy --all-targets: PASS
 tests: workspace CPU: 268/268 ok (excluding documented flaky)
 ci-gates: AC8 validation: 10/10 PASS
-```
+```text
 
 ---
 

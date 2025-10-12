@@ -33,7 +33,8 @@ PR #448 successfully addresses Issue #447 compilation failures across the BitNet
 **Status:** 1 commit behind main @8a413dd (ci/receipts only, zero conflict risk)
 
 **Evidence:**
-```
+
+```text
 branch: feat/issue-447-compilation-fixes (10 commits ahead)
 delta: ci/receipts/pr-0445/* (post-merge documentation for different PR)
 conflict_risk: ZERO (no overlapping files)
@@ -48,6 +49,7 @@ decision: SKIP REBASE (ci/receipts delta acceptable, no functional changes)
 **Status:** All files formatted according to rustfmt standards
 
 **Evidence:**
+
 ```bash
 $ cargo fmt --all --check
 # Status: CLEAN (no output = all files formatted correctly)
@@ -61,6 +63,7 @@ $ cargo fmt --all --check
 **Status:** Zero warnings in PR-modified code
 
 **Evidence:**
+
 ```bash
 $ cargo clippy --workspace --no-default-features --features cpu -- -D warnings
 Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.30s
@@ -80,7 +83,8 @@ Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.30s
 **Status:** 99.85% test pass rate with 1 pre-existing flaky test tracked
 
 **Evidence:**
-```
+
+```text
 tests: 1,356/1,358 pass (99.85%)
 flaky: 1 (test_strict_mode_environment_variable_parsing, pre-existing, issue #441)
 isolation: 10/10 runs pass (100% success rate for non-flaky tests)
@@ -108,6 +112,7 @@ quarantine: tracked in issue #441 (not modified by PR #448)
 **Status:** Workspace compiles cleanly with CPU and GPU features
 
 **Evidence:**
+
 ```bash
 # CPU Feature Compilation
 $ cargo build --workspace --no-default-features --features cpu
@@ -132,7 +137,8 @@ Finished (validated in previous agent runs)
 **Status:** 95% Diátaxis framework coverage with 2,140 lines of comprehensive specifications
 
 **Evidence:**
-```
+
+```text
 docs: cargo doc: clean (workspace); doctests: 6/6 pass; examples: all validated
 specs: 2,140 lines (AC1-AC8); diátaxis: 95% (explanation+reference+tutorial+how-to)
 quantization: I2S/TL1/TL2 docs: >99% accuracy validated; GGUF: tensor validation docs current
@@ -169,7 +175,8 @@ rustdoc: 0 errors, 1 harmless warning (thiserror version collision)
 **Status:** 85-90% workspace coverage with >90% critical path coverage
 
 **Evidence:**
-```
+
+```text
 tests: 1,356/1,358 pass (99.85%); coverage: 85-90% workspace (test-to-code 1.17:1)
 quantization: I2S/TL1/TL2 >95% covered; property tests: 4 files, 16,283 test LOC
 kernels: SIMD/GPU 90% covered; fallback: 137 tests; error paths: 0% ⚠️ (moderate gap)
@@ -202,7 +209,8 @@ crossval: rust vs cpp: 19 files, 307 parity refs; GGUF compat: comprehensive
 **Status:** Zero vulnerabilities with clean license compliance
 
 **Evidence:**
-```
+
+```text
 audit: clean (0/725 dependencies); secrets: benign (7 doc placeholders); licenses: compliant
 otlp: localhost default; 3s timeout; gRPC transport; secure env override
 dependencies: opentelemetry 0.31.0 (latest); tonic 0.14.2 (no CVEs)
@@ -231,7 +239,8 @@ clippy: 5 cast_ptr_alignment (pre-existing; bitnet-kernels/cpu/x86.rs)
 **Status:** Bounded execution due to workspace complexity; manual analysis provided
 
 **Evidence:**
-```
+
+```text
 score: ~20-30% (manual estimate, tool bounded by workspace complexity)
 survivors: 5 critical (OTLP endpoint fallback, global provider registration, resource attributes)
 tool: cargo-mutants 25.3.1 (timeout after 180s on package-level execution)
@@ -305,7 +314,8 @@ $ cargo test -p bitnet-quantization --no-default-features --features cpu
 **Status:** Rust vs C++ parity maintained within 1e-5 tolerance
 
 **Evidence:**
-```
+
+```text
 crossval: rust vs cpp: 19 files, 307 parity refs; GGUF compat: comprehensive
 ffi: 43 compilation errors resolved (crossval FFI import fix applied)
 ```

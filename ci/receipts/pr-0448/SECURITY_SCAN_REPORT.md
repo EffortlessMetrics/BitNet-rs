@@ -23,7 +23,8 @@
 - Pre-existing clippy alignment lints outside PR scope
 
 **Evidence:**
-```
+
+```text
 audit: clean (0 vulnerabilities in 725 dependencies)
 secrets: benign (documentation placeholders only)
 licenses: compliant (advisories ok, 4 unmatched allowances harmless)
@@ -42,7 +43,8 @@ clippy: 5 pre-existing cast_ptr_alignment warnings (bitnet-kernels/cpu/x86.rs, n
 **Dependencies Scanned:** 725 crate dependencies
 
 **Findings:**
-```
+
+```text
     Fetching advisory database from `https://github.com/RustSec/advisory-db.git`
       Loaded 821 security advisories (from /home/steven/.cargo/advisory-db)
     Updating crates.io index

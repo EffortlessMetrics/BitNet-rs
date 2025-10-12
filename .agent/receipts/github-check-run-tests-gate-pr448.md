@@ -28,7 +28,7 @@
 ### Command
 ```bash
 cargo test --workspace --no-default-features --features cpu --verbose
-```
+```text
 
 ### Results by Category
 
@@ -70,7 +70,7 @@ cargo test --workspace --no-default-features --features cpu --verbose
 ```bash
 cargo test -p bitnet-common --test issue_260_strict_mode_tests \
   strict_mode_config_tests::test_strict_mode_environment_variable_parsing
-```
+```text
 
 **Result**: ✅ PASSED
 
@@ -110,6 +110,7 @@ cargo test -p bitnet-common --test issue_260_strict_mode_tests \
 Comprehensive workspace test suite executed with CPU features. All PR-introduced tests pass (13/13). One pre-existing flaky test identified (`test_strict_mode_environment_variable_parsing`) which passes in isolation but exhibits ~50% failure rate in workspace context due to environment variable pollution. This issue is tracked in #441 and requires systematic test harness refactoring (out of scope for PR #448).
 
 ### Details
+
 - **Test Execution**: `cargo test --workspace --no-default-features --features cpu`
 - **Pass Rate**: 99.6% (268/269 excluding documented flaky tests)
 - **Flaky Test Impact**: NONE (pre-existing, observability changes only)
@@ -145,7 +146,7 @@ Comprehensive workspace test suite executed with CPU features. All PR-introduced
 
 ## Evidence Grammar (Final)
 
-```
+```bash
 tests: cargo test: 268/268 pass; CPU: 268/268, GPU: skip (no hardware); quarantined: 84 (documented)
 quantization: I2S: 99.8%, TL1: 99.6%, TL2: 99.7% accuracy (all >99% ✅)
 crossval: Rust vs C++: parity within 1e-5 (when available)
@@ -156,7 +157,7 @@ coverage: 1.01:1 test-to-prod ratio (excellent)
 feature-matrix: cpu: 100%, gpu: skip, ffi: skip (expected)
 critical-paths: quantization ✅, gguf ✅, kernels ✅, inference ✅
 quarantine-compliance: 84 documented (9 network, 3 crossval, 21 TDD, 2 fixture, 4 property, 2 flaky, 43 other)
-```
+```text
 
 ---
 

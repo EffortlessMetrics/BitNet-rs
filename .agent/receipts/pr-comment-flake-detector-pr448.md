@@ -29,7 +29,7 @@ A single flaky test has been identified in the workspace test suite. This test i
 cd crates/bitnet-common && cargo test --no-default-features \
   --test issue_260_strict_mode_tests \
   strict_mode_config_tests::test_strict_mode_environment_variable_parsing
-```
+```text
 
 **Result**: 10/10 runs PASS (100% success rate)
 
@@ -45,7 +45,7 @@ cd crates/bitnet-common && cargo test --no-default-features \
 ```bash
 git diff main HEAD -- crates/bitnet-common/tests/issue_260_strict_mode_tests.rs
 # Result: (empty - no changes)
-```
+```text
 
 ---
 
@@ -77,7 +77,7 @@ git diff main HEAD -- crates/bitnet-common/tests/issue_260_strict_mode_tests.rs
 #[test]
 #[ignore = "FLAKY: Environment variable pollution in workspace context - repro rate ~50% - passes in isolation - tracked in issue #441"]
 fn test_cross_crate_strict_mode_consistency() { /* ... */ }
-```
+```text
 
 ---
 
@@ -92,7 +92,7 @@ fn test_cross_crate_strict_mode_consistency() { /* ... */ }
 fn test_strict_mode_environment_variable_parsing() {
     // Test implementation unchanged
 }
-```
+```text
 
 ### Rationale
 1. ✅ Non-deterministic behavior confirmed (~50% failure rate)
@@ -120,7 +120,7 @@ use serial_test::serial;
 fn test_strict_mode_environment_variable_parsing() {
     // Existing test implementation
 }
-```
+```text
 
 **Option 2: Environment Variable Scoping** (Preferred Long-term)
 ```rust
@@ -137,7 +137,7 @@ fn test_strict_mode_environment_variable_parsing() {
     let _cleanup = EnvVarCleanup::new("BITNET_STRICT_MODE");
     // Test implementation with guaranteed cleanup
 }
-```
+```text
 
 **Recommended Path Forward**:
 1. **Immediate** (PR #448): Quarantine with `#[ignore]` annotation
@@ -174,14 +174,14 @@ fn test_strict_mode_environment_variable_parsing() {
 
 ## Evidence Grammar
 
-```
+```bash
 tests: cargo test: 268/269 pass; CPU: 268/268 ok; flaky: 1 (pre-existing, issue #441)
 quarantined: 5 tests (3 TDD placeholders, 2 flaky tracked in #441)
 isolation: test_strict_mode_environment_variable_parsing: 10/10 pass (100%)
 workspace: test_strict_mode_environment_variable_parsing: ~50% repro rate
 quantization: I2S: 99.9%, TL1: 99.9%, TL2: 99.9% accuracy maintained
 neural-network-impact: ZERO (environment variable validation only)
-```
+```text
 
 ---
 

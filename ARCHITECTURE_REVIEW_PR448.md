@@ -28,6 +28,7 @@ PR #448 demonstrates **exemplary architectural alignment** with BitNet.rs neural
 ### 1. BitNet.rs Core Principles ✅
 
 #### Feature-Gated Architecture ✅
+
 - **Status**: COMPLIANT
 - **Evidence**:
   - `bitnet-server/Cargo.toml:72` properly gates OTLP dependencies: `opentelemetry = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tracing-opentelemetry", "dep:tonic"]`
@@ -36,11 +37,13 @@ PR #448 demonstrates **exemplary architectural alignment** with BitNet.rs neural
 - **Neural Network Impact**: None - observability is orthogonal to inference
 
 #### Zero-Copy Operations ✅
+
 - **Status**: NOT APPLICABLE
 - **Rationale**: PR modifies observability (OTLP metrics) and type exports, not data flow
 - **Evidence**: No changes to memory-mapped model loading or tensor operations
 
 #### Device-Aware Quantization ✅
+
 - **Status**: PRESERVED
 - **Evidence**:
   - `bitnet-server/src/monitoring/health.rs:107,135,231,250,309` maintains unified GPU predicate: `#[cfg(any(feature = "gpu", feature = "cuda"))]`
@@ -48,6 +51,7 @@ PR #448 demonstrates **exemplary architectural alignment** with BitNet.rs neural
 - **Neural Network Impact**: None - changes do not affect quantization kernels
 
 #### Cross-Validation ✅
+
 - **Status**: PRESERVED
 - **Evidence**: No changes to `crossval` crate or FFI bridge
 - **Neural Network Impact**: None
@@ -63,7 +67,7 @@ PR #448 demonstrates **exemplary architectural alignment** with BitNet.rs neural
 2. **bitnet-inference** (Inference Engine) → Type exports for tests
 
 **Dependency DAG Validation**:
-```
+```text
 bitnet-server (Application)
   ├─→ bitnet-inference (Inference Engine) ✅ Valid
   ├─→ bitnet-models (Model Loading) ✅ Valid
@@ -72,7 +76,7 @@ bitnet-server (Application)
 
 bitnet-inference (Inference Engine)
   └─→ (No new dependencies) ✅ Valid
-```
+```text
 
 **Analysis**: No circular dependencies introduced. All changes respect established layering:
 - Server layer properly depends on inference engine
@@ -111,7 +115,7 @@ pub use production_engine::{
     GenerationResult, PerformanceMetricsCollector, PrefillStrategy, ProductionInferenceConfig,
     ProductionInferenceEngine, ThroughputMetrics, TimingMetrics,
 };
-```
+```text
 
 ---
 
@@ -122,7 +126,7 @@ pub use production_engine::{
 **Evidence**: All existing GPU feature gates use unified predicate:
 ```rust
 #[cfg(any(feature = "gpu", feature = "cuda"))]
-```
+```text
 
 **Locations Verified**:
 - `bitnet-server/src/monitoring/health.rs` (6 occurrences)
@@ -143,7 +147,7 @@ opentelemetry = [
     "dep:tracing-opentelemetry",
     "dep:tonic"
 ]
-```
+```text
 
 **Feature Tree Validation**:
 ```bash
@@ -154,7 +158,7 @@ $ cargo tree -p bitnet-server --features opentelemetry -e normal --depth 1
 ├── opentelemetry_sdk v0.31.0 ✅
 ├── tonic v0.12.3 ✅
 └── tracing-opentelemetry v0.32.0 ✅
-```
+```text
 
 **No feature leakage** - OTLP dependencies properly gated.
 
@@ -163,13 +167,13 @@ $ cargo tree -p bitnet-server --features opentelemetry -e normal --depth 1
 ```toml
 [features]
 default = []  # ✅ EMPTY - unchanged
-```
+```text
 
 **bitnet-server `Cargo.toml`**:
 ```toml
 [features]
 default = ["prometheus"]  # ✅ Unchanged - Prometheus separate from OTLP
-```
+```text
 
 **Analysis**: Default features remain empty at workspace level. Server defaults to Prometheus (backward compatible). OTLP is opt-in via `--features opentelemetry`.
 
@@ -226,7 +230,7 @@ pub fn init_otlp_metrics(endpoint: Option<String>, resource: Resource) -> Result
     // ... reader and provider setup
     Ok(provider)
 }
-```
+```text
 
 **Analysis**:
 - ✅ Uses `anyhow::Result` (established BitNet.rs pattern)
@@ -241,7 +245,7 @@ pub fn init_otlp_metrics(endpoint: Option<String>, resource: Resource) -> Result
 let reader = opentelemetry_sdk::metrics::PeriodicReader::builder(exporter)
     .with_interval(Duration::from_secs(60))  // ✅ 60s interval - low overhead
     .build();
-```
+```text
 
 **Analysis**:
 - ✅ Non-blocking metrics export (PeriodicReader pattern)
@@ -271,7 +275,7 @@ let reader = opentelemetry_sdk::metrics::PeriodicReader::builder(exporter)
 ```bash
 $ cargo check -p bitnet-server --no-default-features --features opentelemetry
 # ✅ SUCCESS - no PrometheusExporter errors
-```
+```text
 
 ### SPEC: inference-engine-type-visibility-spec.md ✅
 **Validation**:
@@ -282,7 +286,7 @@ $ cargo check -p bitnet-server --no-default-features --features opentelemetry
 ```bash
 $ cargo check -p bitnet-inference --all-features
 # ✅ SUCCESS - types accessible
-```
+```text
 
 ---
 
@@ -357,14 +361,14 @@ $ cargo check -p bitnet-inference --all-features
 ## Evidence for Gates Table
 
 **Scannable Evidence**:
-```
+```bash
 architecture: ✅ aligned; crate boundaries: 0 violations; feature gates: unified GPU predicates preserved; OTLP migration: isolated to observability; neural network: zero impact; type exports: internal config only; error handling: proper Result<T>; breaking changes: none
-```
+```text
 
 **Ledger Update** (between `<!-- gates:start -->` and `<!-- gates:end -->`):
 ```markdown
 | architecture | ✅ pass | crate boundaries: 0 violations; feature gates: unified GPU predicates preserved; OTLP migration: isolated to observability; neural network: zero impact; type exports: internal config only; error handling: proper Result<T> |
-```
+```text
 
 ---
 
@@ -413,7 +417,7 @@ cargo test -p bitnet-inference --no-default-features --features full-engine --no
 cargo test --workspace --no-default-features --features cpu
 cargo fmt --all --check
 cargo clippy --workspace --no-default-features --features cpu -- -D warnings
-```
+```text
 
 ### Feature Tree Validation
 ```bash
@@ -422,7 +426,7 @@ cargo tree -p bitnet-server --features opentelemetry -e normal --depth 1 | grep 
 
 # Verify no feature leakage to inference
 cargo tree -p bitnet-inference --all-features -e normal --depth 1
-```
+```text
 
 ### Architecture Boundary Validation
 ```bash
@@ -431,7 +435,7 @@ cargo metadata --format-version 1 --no-deps | jq '.packages[] | select(.name | c
 
 # Verify crate dependency DAG
 cargo tree -p bitnet-server -e normal --depth 2
-```
+```text
 
 ---
 
