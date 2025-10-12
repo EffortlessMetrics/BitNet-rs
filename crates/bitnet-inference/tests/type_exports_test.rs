@@ -45,7 +45,7 @@ fn test_ac4_production_inference_engine_visibility() {
     // let _phantom: Option<ProductionInferenceEngine> = None;
 
     // For now, test compilation with feature gate
-    assert!(true, "Type visibility check compiles");
+    // Test passes by reaching this point
 }
 
 /// AC:4 - Test PrefillStrategy visibility from public API
@@ -70,7 +70,7 @@ fn test_ac4_prefill_strategy_visibility() {
     // assert!(matches!(strategy_always, PrefillStrategy::Always));
 
     // For now, test compilation
-    assert!(true, "PrefillStrategy enum visibility check compiles");
+    // Test passes by reaching this point
 }
 
 /// AC:4 - Test required imports are available in test modules
@@ -88,7 +88,7 @@ fn test_ac4_test_module_imports_available() {
     // Verify imports compile
     let _ = env::var("TEST_VAR").context("test context");
 
-    assert!(true, "Required test imports compile successfully");
+    // Test passes by reaching this point
 }
 
 /// AC:4 - Test configuration types can be constructed
@@ -134,7 +134,7 @@ fn test_ac4_feature_gate_enforcement() {
     {
         // With full-engine feature, types should be available
         // (Actual type checks in other tests)
-        assert!(true, "full-engine feature is enabled");
+        // Test passes by reaching this point
     }
 
     #[cfg(not(feature = "full-engine"))]
@@ -142,6 +142,6 @@ fn test_ac4_feature_gate_enforcement() {
         // Without full-engine feature, types should NOT be available
         // This is a compile-time check - if types were wrongly exported,
         // tests would fail to compile
-        assert!(true, "full-engine feature is disabled (expected)");
+        // Test passes by reaching this point
     }
 }

@@ -24,7 +24,7 @@ fn test_ac6_fixtures_module_accessible() {
     //     pub use crate::common::fixtures::*;
     // }
 
-    assert!(true, "fixtures module accessibility documented for AC6");
+    // Test passes by reaching this point
 }
 
 /// AC:6 - Verify FixtureManager is re-exported correctly
@@ -42,7 +42,7 @@ fn test_ac6_fixture_manager_imports() {
     // Expected import pattern:
     // use crate::fixtures::FixtureManager;
 
-    assert!(true, "FixtureManager re-export documented for AC6");
+    // Test passes by reaching this point
 }
 
 /// AC:6 - Verify fixtures module compiles without feature
@@ -58,17 +58,17 @@ fn test_ac6_compiles_without_fixtures_feature() {
     #[cfg(feature = "fixtures")]
     {
         // With fixtures feature, module should be available
-        assert!(true, "fixtures feature is enabled");
+        // Test passes by reaching this point
     }
 
     #[cfg(not(feature = "fixtures"))]
     {
         // Without fixtures feature, module should NOT be available
         // Compile-time enforcement prevents invalid imports
-        assert!(true, "fixtures feature is disabled (expected)");
+        // Test passes by reaching this point
     }
 
-    assert!(true, "Feature gating working correctly for fixtures module");
+    // Test passes by reaching this point
 }
 
 /// AC:6 - Verify fixtures module structure
@@ -129,7 +129,7 @@ fn test_ac6_fixtures_compilation_command() {
     //
     // The actual compilation validation occurs in CI and manual testing
 
-    assert!(true, "fixtures feature compilation successful");
+    // Test passes by reaching this point
 }
 
 /// AC:6 - Verify fixtures module matches specification
@@ -156,5 +156,5 @@ fn test_ac6_specification_compliance() {
     // pub mod fixtures;
 
     // If this test compiles, it confirms the specification is accurate
-    assert!(true, "fixtures module structure matches specification");
+    // Test passes by reaching this point
 }

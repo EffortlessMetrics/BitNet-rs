@@ -121,7 +121,7 @@ fn test_ac8_required_gates_commands_documented() {
     //
     // These gates ensure BitNet.rs compiles on all platforms without GPU dependencies
 
-    assert!(true, "Required gate validation commands documented for AC8");
+    // Test passes by reaching this point
 }
 
 /// AC:8 - Document exploratory gate validation commands
@@ -142,7 +142,7 @@ fn test_ac8_exploratory_gates_commands_documented() {
     //
     // These gates will pass once AC1-AC7 are implemented and merged
 
-    assert!(true, "Exploratory gate validation commands documented for AC8");
+    // Test passes by reaching this point
 }
 
 /// AC:8 - Verify feature flag discipline in CI commands
@@ -167,7 +167,7 @@ fn test_ac8_feature_flag_discipline() {
     // - cargo test (implicitly uses default features)
     // - cargo build (no feature flags)
 
-    assert!(true, "Feature flag discipline requirements documented for AC8");
+    // Test passes by reaching this point
 }
 
 /// AC:8 - Verify exploratory gate promotion strategy
@@ -197,7 +197,7 @@ fn test_ac8_promotion_strategy_documented() {
     //
     // Timeline: 4-6 days from initial deployment to promotion
 
-    assert!(true, "Exploratory gate promotion strategy documented for AC8");
+    // Test passes by reaching this point
 }
 
 /// AC:8 - Verify CI performance impact is acceptable
@@ -226,7 +226,7 @@ fn test_ac8_ci_performance_impact_documented() {
     // - Separate cache keys prevent contamination
     // - Non-blocking failures during development
 
-    assert!(true, "CI performance impact acceptable (<15 minutes added, parallel execution)");
+    // Test passes by reaching this point
 }
 
 /// AC:8 - Verify caching strategy for exploratory gates
@@ -250,7 +250,7 @@ fn test_ac8_caching_strategy_documented() {
     // - Separate caches prevent feature flag contamination
     // - Improves cache hit rate for both configurations
 
-    assert!(true, "CI caching strategy documented for AC8");
+    // Test passes by reaching this point
 }
 
 /// AC:8 - Verify rollback strategy is documented
@@ -276,7 +276,7 @@ fn test_ac8_rollback_strategy_documented() {
     //
     // Risk: Low (exploratory gates are non-blocking by design)
 
-    assert!(true, "Rollback strategy documented for AC8");
+    // Test passes by reaching this point
 }
 
 /// AC:8 - Verify workflow file locations
