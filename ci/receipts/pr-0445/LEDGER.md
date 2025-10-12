@@ -437,10 +437,10 @@ $ cargo build --workspace --release --no-default-features --features cpu
 
 ## Evidence Files
 
-- **Feature Specification:** `/home/steven/code/Rust/BitNet-rs/docs/explanation/issue-443-spec.md`
-- **Technical Assessment:** `/home/steven/code/Rust/BitNet-rs/docs/explanation/issue-443-technical-assessment.md`
-- **Specification Validation:** `/home/steven/code/Rust/BitNet-rs/docs/explanation/issue-443-spec-validation.md`
-- **PR Ledger:** `/home/steven/code/Rust/BitNet-rs/ci/receipts/pr-0445/LEDGER.md`
+- **Feature Specification:** `docs/explanation/issue-443-spec.md`
+- **Technical Assessment:** `docs/explanation/issue-443-technical-assessment.md`
+- **Specification Validation:** `docs/explanation/issue-443-spec-validation.md`
+- **PR Ledger:** `ci/receipts/pr-0445/LEDGER.md`
 - **GitHub PR:** https://github.com/EffortlessMetrics/BitNet-rs/pull/445
 
 ---

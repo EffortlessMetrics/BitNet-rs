@@ -97,9 +97,9 @@ $ cargo audit --deny warnings
 ### 5. Receipt Archival ✅
 
 **Receipt Locations:**
-- ✅ PR Ledger: `/home/steven/code/Rust/BitNet-rs/ci/receipts/pr-0445/LEDGER.md`
-- ✅ Publication Gate Receipt: `/home/steven/code/Rust/BitNet-rs/ci/receipts/pr-0445/check_run_publication_gate_445.md`
-- ✅ Post-Merge Report: `/home/steven/code/Rust/BitNet-rs/ci/receipts/pr-0445/POST_MERGE_FINALIZATION_REPORT.md`
+- ✅ PR Ledger: `ci/receipts/pr-0445/LEDGER.md`
+- ✅ Publication Gate Receipt: `ci/receipts/pr-0445/check_run_publication_gate_445.md`
+- ✅ Post-Merge Report: `ci/receipts/pr-0445/POST_MERGE_FINALIZATION_REPORT.md`
 
 **Ledger Updates:**
 - ✅ Status updated: "MERGED (Finalization Complete)"
@@ -356,4 +356,4 @@ PR #445 post-merge finalization completed successfully with all quality gates sa
 
 **Report Generated:** 2025-10-12 03:50:00 UTC
 **Agent:** pr-merge-finalizer
-**Ledger Reference:** `/home/steven/code/Rust/BitNet-rs/ci/receipts/pr-0445/LEDGER.md` (v2.0)
+**Ledger Reference:** `ci/receipts/pr-0445/LEDGER.md` (v2.0)
