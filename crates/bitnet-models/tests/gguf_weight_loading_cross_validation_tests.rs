@@ -18,7 +18,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 // ============================================================================
-// Model Path Discovery Helpers (Issue #443)
+// Model & C++ Reference Discovery (Issue #443 policy: hard-fail if missing)
 // ============================================================================
 
 /// Find workspace root by walking up from the current file location
@@ -30,28 +30,39 @@ fn workspace_root() -> PathBuf {
     path
 }
 
-/// Check if C++ reference implementation is available for cross-validation
+/// Ensure C++ reference implementation is available (hard-fail if not).
 ///
-/// Returns true if the C++ reference binary exists or BITNET_CPP_PATH points to a valid installation.
-/// When false, tests that require C++ reference should skip gracefully.
-fn cpp_reference_available() -> bool {
-    // Check environment variable first
-    if let Ok(cpp_path) = std::env::var("BITNET_CPP_PATH") {
-        let path = Path::new(&cpp_path);
-        if path.exists() {
-            return true;
-        }
+/// Contract:
+///  - Preferred: BITNET_CPP_PATH points to the root produced by `./ci/fetch_bitnet_cpp.sh`
+///    (contains `setup_env.sh` or a `lib/` folder with the built artifacts).
+///  - Fallback: ~/.cache/bitnet_cpp (same structure).
+/// If neither exists, we panic with instructions to provision the C++ reference.
+fn ensure_cpp_reference_available() -> PathBuf {
+    use std::env;
+    let root = env::var("BITNET_CPP_PATH").map(PathBuf::from).unwrap_or_else(|_| {
+        dirs::home_dir()
+            .map(|h| h.join(".cache/bitnet_cpp"))
+            .unwrap_or_else(|| PathBuf::from(".cache/bitnet_cpp"))
+    });
+
+    let has_setup = root.join("setup_env.sh").exists();
+    let has_lib = root.join("lib").exists() || root.join("lib64").exists();
+    if !(has_setup || has_lib) {
+        panic!(
+            "C++ reference not available for cross-validation.\n\
+             Policy: crossval must compare against the C++ reference.\n\
+             Expected at BITNET_CPP_PATH ({0}) or ~/.cache/bitnet_cpp.\n\
+             \n\
+             Provision instructions:\n\
+               1) ./ci/fetch_bitnet_cpp.sh\n\
+               2) source ~/.cache/bitnet_cpp/setup_env.sh\n\
+               3) export BITNET_CPP_PATH=~/.cache/bitnet_cpp\n\
+               4) re-run: cargo test -p bitnet-models --no-default-features --features crossval\n\
+            ",
+            root.display()
+        );
     }
-
-    // Check for built reference binary in standard location
-    let workspace = workspace_root();
-    let binary_locations = vec![
-        workspace.join("target/release/bitnet_cpp_reference"),
-        workspace.join("target/debug/bitnet_cpp_reference"),
-        workspace.join(".cache/bitnet_cpp/bitnet_cpp_reference"),
-    ];
-
-    binary_locations.iter().any(|p| p.exists())
+    root
 }
 
 /// Get model path from environment or standard locations with clear error messages
@@ -210,19 +221,10 @@ pub struct PrecisionLossAnalysis {
 /// This test validates that Rust GGUF weight loading produces identical results
 /// to the C++ reference implementation within specified numerical tolerance.
 ///
-/// Skips gracefully when C++ reference implementation is not available.
+/// **Policy:** Hard-fails if C++ reference is not available. Crossval must compare against C++ reference.
 #[cfg(feature = "crossval")]
 #[tokio::test]
 async fn test_ac5_comprehensive_weight_loading_cross_validation() -> Result<()> {
-    // Skip if C++ reference not available (provision with: cargo run -p xtask -- fetch-cpp)
-    if !cpp_reference_available() {
-        eprintln!(
-            "C++ reference implementation not available; skipping cross-validation parity test"
-        );
-        eprintln!("To enable: cargo run -p xtask -- fetch-cpp");
-        return Ok(());
-    }
-
     let config = CrossValidationTestConfig::default();
 
     // Set up deterministic environment for reproducible testing
@@ -290,19 +292,10 @@ async fn test_ac5_comprehensive_weight_loading_cross_validation() -> Result<()> 
 /// AC5.2: Inference pipeline cross-validation
 /// Tests feature spec: gguf-weight-loading.md#v4-end-to-end-validation
 ///
-/// Skips gracefully when C++ reference implementation is not available.
+/// **Policy:** Hard-fails if C++ reference is not available. Crossval must compare against C++ reference.
 #[cfg(feature = "crossval")]
 #[tokio::test]
 async fn test_ac5_inference_pipeline_cross_validation() -> Result<()> {
-    // Skip if C++ reference not available (provision with: cargo run -p xtask -- fetch-cpp)
-    if !cpp_reference_available() {
-        eprintln!(
-            "C++ reference implementation not available; skipping inference pipeline cross-validation"
-        );
-        eprintln!("To enable: cargo run -p xtask -- fetch-cpp");
-        return Ok(());
-    }
-
     let config = CrossValidationTestConfig::default();
 
     // Set up deterministic inference environment
@@ -494,15 +487,18 @@ async fn test_ac5_deterministic_inference_validation() -> Result<()> {
 // Helper Functions for Cross-Validation Testing
 // ============================================================================
 
-/// Set up cross-validation test model using standardized path discovery (Issue #443)
+/// Set up cross-validation preconditions (model + C++ reference).
 ///
-/// Uses `model_path_from_env()` to discover model location from:
-/// 1. BITNET_GGUF environment variable
-/// 2. Standard xtask download location
+/// - Ensures BITNET_GGUF or models/… exists (model)
+/// - Ensures BITNET_CPP_PATH or ~/.cache/bitnet_cpp exists (C++ reference)
 ///
 /// Provides clear error messages if model not found with provisioning instructions.
 async fn setup_crossval_test_model() -> Result<std::path::PathBuf> {
-    model_path_from_env().context("Failed to locate cross-validation test model")
+    // Fail fast if C++ reference is missing (policy).
+    let _cpp_root = ensure_cpp_reference_available();
+    let model_path =
+        model_path_from_env().context("Failed to locate cross-validation test model")?;
+    Ok(model_path)
 }
 
 /// Load weights using C++ reference implementation

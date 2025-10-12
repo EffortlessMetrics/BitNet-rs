@@ -607,6 +607,7 @@ dependencies = [
  "bytemuck",
  "candle-core",
  "candle-nn",
+ "dirs 5.0.1",
  "futures",
  "half",
  "memmap2",

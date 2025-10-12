@@ -154,18 +154,19 @@ The easiest way to set up cross-validation:
 # 1. Provision GGUF model (one-time setup)
 cargo run -p xtask -- download-model
 
-# 2. Download and build C++ implementation
+# 2. C++ reference (REQUIRED - tests will fail if not present)
 ./ci/fetch_bitnet_cpp.sh
-
-# 3. Set up environment
 source ~/.cache/bitnet_cpp/setup_env.sh
+export BITNET_CPP_PATH=~/.cache/bitnet_cpp   # tests will hard-fail if missing
 
-# 4. Run cross-validation tests
+# 3. Run cross-validation tests
 cargo test --no-default-features --features "cpu,crossval"
 
-# 5. Run performance benchmarks
+# 4. Run performance benchmarks
 cargo bench --no-default-features --features "cpu,crossval"
 ```
+
+**Important Policy:** Cross-validation tests **hard-fail** if the C++ reference is not available. This is intentional - cross-validation without the reference implementation gives false signal. If you enable `--features crossval`, both the model and C++ reference must be provisioned.
 
 ### Manual Setup (Advanced)
 
@@ -391,11 +392,20 @@ cargo test -p bitnet-models --no-default-features --features crossval
 
 **Note:** This is a new requirement (Issue #443) to standardize model path discovery across tests and runtime. Each machine needs to provision the model once (~2GB download).
 
-#### 2. "C++ implementation not found"
+#### 2. "C++ reference not available for cross-validation"
 
 **Error:**
 ```
-ERROR: BitNet C++ implementation not found at ~/.cache/bitnet_cpp
+thread 'test_ac5_comprehensive_weight_loading_cross_validation' panicked at
+C++ reference not available for cross-validation.
+Policy: crossval must compare against the C++ reference.
+Expected at BITNET_CPP_PATH (/home/user/.cache/bitnet_cpp) or ~/.cache/bitnet_cpp.
+
+Provision instructions:
+  1) ./ci/fetch_bitnet_cpp.sh
+  2) source ~/.cache/bitnet_cpp/setup_env.sh
+  3) export BITNET_CPP_PATH=~/.cache/bitnet_cpp
+  4) re-run: cargo test -p bitnet-models --no-default-features --features crossval
 ```
 
 **Solution:**
@@ -403,9 +413,18 @@ ERROR: BitNet C++ implementation not found at ~/.cache/bitnet_cpp
 # Run the setup script
 ./ci/fetch_bitnet_cpp.sh
 
+# Set up environment
+source ~/.cache/bitnet_cpp/setup_env.sh
+export BITNET_CPP_PATH=~/.cache/bitnet_cpp
+
 # Or set custom path
-export BITNET_CPP_PATH=/path/to/bitnet.cpp
+export BITNET_CPP_PATH=/path/to/your/bitnet.cpp
+
+# Re-run tests
+cargo test -p bitnet-models --no-default-features --features crossval
 ```
+
+**Note:** This is a **hard-fail by design**. Cross-validation without the C++ reference gives false signal. If you enable `--features crossval`, you must provision the C++ reference.
 
 #### 3. "clang not found"
 
