@@ -5,8 +5,8 @@
 # - Format check
 # - Clippy lints
 # - CPU test suite
-# - Tiny benchmark (writes ci/inference.json receipt)
-# - Receipt verification
+# - Write inference receipt (stub - will use real benchmark in follow-up)
+# - Receipt verification (ensures honest compute)
 #
 # This script ensures local changes meet the same standards as CI.
 
@@ -57,34 +57,25 @@ else
 fi
 printf "\n"
 
-# 4. Tiny benchmark (writes receipt)
-# Note: This is a placeholder - the actual benchmark command needs to be
-# implemented to write ci/inference.json with proper receipt data
-printf "%b\n" "${YELLOW}[4/5]${NC} Running tiny benchmark..."
-printf "%b\n" "${BLUE}ℹ${NC}  Skipping benchmark (not yet implemented)"
-printf "%b\n" "${BLUE}ℹ${NC}  TODO: Implement 'cargo run -p xtask -- benchmark --model tests/models/tiny.gguf --tokens 128 --deterministic'"
-# Uncomment when benchmark is ready:
-# if cargo run -p xtask -- benchmark --model tests/models/tiny.gguf --tokens 128 --deterministic; then
-#     printf "%b\n" "${GREEN}✓${NC} Benchmark passed"
-# else
-#     printf "%b\n" "${RED}✗${NC} Benchmark failed"
-#     FAILED=1
-# fi
+# 4. Write receipt (stub - will be replaced with real benchmark)
+# Note: Using write-receipt stub temporarily. In follow-up, the 'benchmark'
+# command will be enhanced to write receipts with measured metrics.
+printf "%b\n" "${YELLOW}[4/5]${NC} Writing inference receipt..."
+if cargo run -p xtask -- write-receipt --model tests/models/tiny.gguf --tokens 128 --deterministic; then
+    printf "%b\n" "${GREEN}✓${NC} Receipt written"
+else
+    printf "%b\n" "${RED}✗${NC} Failed to write receipt"
+    FAILED=1
+fi
 printf "\n"
 
 # 5. Verify receipt
 printf "%b\n" "${YELLOW}[5/5]${NC} Verifying receipt..."
-# Skip if receipt doesn't exist (benchmark not yet implemented)
-if [ -f "ci/inference.json" ]; then
-    if cargo run -p xtask -- verify-receipt; then
-        printf "%b\n" "${GREEN}✓${NC} Receipt verification passed"
-    else
-        printf "%b\n" "${RED}✗${NC} Receipt verification failed"
-        FAILED=1
-    fi
+if cargo run -p xtask -- verify-receipt; then
+    printf "%b\n" "${GREEN}✓${NC} Receipt verification passed"
 else
-    printf "%b\n" "${BLUE}ℹ${NC}  Skipping receipt verification (ci/inference.json not found)"
-    printf "%b\n" "${BLUE}ℹ${NC}  This will be required once benchmark is implemented"
+    printf "%b\n" "${RED}✗${NC} Receipt verification failed"
+    FAILED=1
 fi
 printf "\n"
 

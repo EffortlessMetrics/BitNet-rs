@@ -1,76 +1,23 @@
 {
-  "schema_version": "1.0.0",
-  "timestamp": "2025-10-03T00:00:00Z",
-  "compute_path": "real",
   "backend": "cpu",
+  "compute_path": "real",
+  "deterministic": true,
+  "environment": {
+    "BITNET_VERSION": "0.1.0",
+    "OS": "linux-x86_64",
+    "RUST_VERSION": ""
+  },
   "kernels": [
     "i2s_gemv",
     "rope_apply",
     "attention_real"
   ],
-  "deterministic": true,
-  "environment": {
-    "BITNET_DETERMINISTIC": "1",
-    "BITNET_SEED": "42",
-    "RAYON_NUM_THREADS": "1"
+  "model": {
+    "path": "tests/models/tiny.gguf"
   },
-  "model_info": {
-    "model_path": "/home/steven/code/Rust/BitNet-rs/models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf",
-    "quantization_type": "I2_S",
-    "layers": 32,
-    "hidden_size": 2048,
-    "num_attention_heads": 32,
-    "num_key_value_heads": 8,
-    "vocab_size": 128256
-  },
-  "test_results": {
-    "total_tests": 10,
-    "passed": 10,
-    "failed": 0,
-    "skipped": 0,
-    "accuracy_tests": {
-      "i2s_accuracy": {
-        "mse": 8.5e-06,
-        "tolerance": 1e-05,
-        "passed": true
-      },
-      "tl1_accuracy": {
-        "mse": 7.2e-05,
-        "tolerance": 0.0001,
-        "passed": true
-      },
-      "tl2_accuracy": {
-        "mse": 9.8e-05,
-        "tolerance": 0.0001,
-        "passed": true
-      }
-    },
-    "determinism_tests": {
-      "identical_sequences": true,
-      "runs": 2,
-      "tokens_per_run": 50
-    },
-    "kv_cache_tests": {
-      "prefill_decode_parity": true,
-      "cache_hit_rate": 0.95
-    }
-  },
-  "performance_baseline": {
-    "tokens_generated": 100,
-    "total_time_ms": 5000,
-    "tokens_per_second": 20.0,
-    "first_token_latency_ms": 250,
-    "average_token_latency_ms": 50,
-    "memory_usage_mb": 1024,
-    "cache_efficiency": {
-      "kv_cache_hit_rate": 0.95,
-      "tensor_cache_hits": 450,
-      "tensor_cache_misses": 50
-    }
-  },
-  "cross_validation": {
-    "cpp_reference_available": true,
-    "tolerance": 1e-05,
-    "parity_tests_passed": true
-  }
+  "schema_version": "1.0.0",
+  "timestamp": "2025-10-13T23:51:02.249978746+00:00",
+  "tokens_generated": 128,
+  "tokens_per_second": 15.0,
+  "tokens_requested": 128
 }

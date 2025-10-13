@@ -27,6 +27,11 @@ cargo run -p bitnet-cli --features cpu,full-cli -- inspect --ln-stats --gate aut
 # Model export and validation (clean GGUF with F16 LayerNorm)
 ./scripts/export_clean_gguf.sh <model_dir> <tokenizer.json> <output_dir>  # Export + validate
 
+# Inference receipt verification (honest compute gates)
+cargo run -p xtask -- write-receipt              # Write stub receipt to ci/inference.json
+cargo run -p xtask -- verify-receipt             # Verify receipt against quality gates
+# Note: write-receipt is a temporary stub. In follow-up, `benchmark` will write real receipts.
+
 # SafeTensors to GGUF converter (Rust st2gguf - preferred)
 cargo run -p bitnet-st2gguf -- --input model.safetensors --output model.gguf --strict
 cargo run --release -p bitnet-st2gguf -- --help      # See all options
