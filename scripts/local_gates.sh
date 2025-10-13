@@ -19,82 +19,82 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║     BitNet.rs Local Quality Gates         ║${NC}"
-echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
-echo ""
+printf "%b\n" "${BLUE}╔════════════════════════════════════════════╗${NC}"
+printf "%b\n" "${BLUE}║     BitNet.rs Local Quality Gates         ║${NC}"
+printf "%b\n" "${BLUE}╚════════════════════════════════════════════╝${NC}"
+printf "\n"
 
 # Track overall status
 FAILED=0
 
 # 1. Format check
-echo -e "${YELLOW}[1/5]${NC} Running format check..."
+printf "%b\n" "${YELLOW}[1/5]${NC} Running format check..."
 if cargo fmt --all -- --check; then
-    echo -e "${GREEN}✓${NC} Format check passed"
+    printf "%b\n" "${GREEN}✓${NC} Format check passed"
 else
-    echo -e "${RED}✗${NC} Format check failed"
+    printf "%b\n" "${RED}✗${NC} Format check failed"
     FAILED=1
 fi
-echo ""
+printf "\n"
 
 # 2. Clippy
-echo -e "${YELLOW}[2/5]${NC} Running clippy..."
+printf "%b\n" "${YELLOW}[2/5]${NC} Running clippy..."
 if cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings; then
-    echo -e "${GREEN}✓${NC} Clippy passed"
+    printf "%b\n" "${GREEN}✓${NC} Clippy passed"
 else
-    echo -e "${RED}✗${NC} Clippy failed"
+    printf "%b\n" "${RED}✗${NC} Clippy failed"
     FAILED=1
 fi
-echo ""
+printf "\n"
 
 # 3. CPU tests
-echo -e "${YELLOW}[3/5]${NC} Running CPU test suite..."
+printf "%b\n" "${YELLOW}[3/5]${NC} Running CPU test suite..."
 if cargo test --workspace --no-default-features --features cpu; then
-    echo -e "${GREEN}✓${NC} CPU tests passed"
+    printf "%b\n" "${GREEN}✓${NC} CPU tests passed"
 else
-    echo -e "${RED}✗${NC} CPU tests failed"
+    printf "%b\n" "${RED}✗${NC} CPU tests failed"
     FAILED=1
 fi
-echo ""
+printf "\n"
 
 # 4. Tiny benchmark (writes receipt)
 # Note: This is a placeholder - the actual benchmark command needs to be
 # implemented to write ci/inference.json with proper receipt data
-echo -e "${YELLOW}[4/5]${NC} Running tiny benchmark..."
-echo -e "${BLUE}ℹ${NC}  Skipping benchmark (not yet implemented)"
-echo -e "${BLUE}ℹ${NC}  TODO: Implement 'cargo run -p xtask -- benchmark --model tests/models/tiny.gguf --tokens 128 --deterministic'"
+printf "%b\n" "${YELLOW}[4/5]${NC} Running tiny benchmark..."
+printf "%b\n" "${BLUE}ℹ${NC}  Skipping benchmark (not yet implemented)"
+printf "%b\n" "${BLUE}ℹ${NC}  TODO: Implement 'cargo run -p xtask -- benchmark --model tests/models/tiny.gguf --tokens 128 --deterministic'"
 # Uncomment when benchmark is ready:
 # if cargo run -p xtask -- benchmark --model tests/models/tiny.gguf --tokens 128 --deterministic; then
-#     echo -e "${GREEN}✓${NC} Benchmark passed"
+#     printf "%b\n" "${GREEN}✓${NC} Benchmark passed"
 # else
-#     echo -e "${RED}✗${NC} Benchmark failed"
+#     printf "%b\n" "${RED}✗${NC} Benchmark failed"
 #     FAILED=1
 # fi
-echo ""
+printf "\n"
 
 # 5. Verify receipt
-echo -e "${YELLOW}[5/5]${NC} Verifying receipt..."
+printf "%b\n" "${YELLOW}[5/5]${NC} Verifying receipt..."
 # Skip if receipt doesn't exist (benchmark not yet implemented)
 if [ -f "ci/inference.json" ]; then
     if cargo run -p xtask -- verify-receipt; then
-        echo -e "${GREEN}✓${NC} Receipt verification passed"
+        printf "%b\n" "${GREEN}✓${NC} Receipt verification passed"
     else
-        echo -e "${RED}✗${NC} Receipt verification failed"
+        printf "%b\n" "${RED}✗${NC} Receipt verification failed"
         FAILED=1
     fi
 else
-    echo -e "${BLUE}ℹ${NC}  Skipping receipt verification (ci/inference.json not found)"
-    echo -e "${BLUE}ℹ${NC}  This will be required once benchmark is implemented"
+    printf "%b\n" "${BLUE}ℹ${NC}  Skipping receipt verification (ci/inference.json not found)"
+    printf "%b\n" "${BLUE}ℹ${NC}  This will be required once benchmark is implemented"
 fi
-echo ""
+printf "\n"
 
 # Summary
-echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
-if [ $FAILED -eq 0 ]; then
-    echo -e "${BLUE}║${NC}  ${GREEN}✓ All local quality gates passed!${NC}       ${BLUE}║${NC}"
+printf "%b\n" "${BLUE}╔════════════════════════════════════════════╗${NC}"
+if [ "$FAILED" -eq 0 ]; then
+    printf "%b\n" "${BLUE}║${NC}  ${GREEN}✓ All local quality gates passed!${NC}       ${BLUE}║${NC}"
 else
-    echo -e "${BLUE}║${NC}  ${RED}✗ Some quality gates failed${NC}            ${BLUE}║${NC}"
+    printf "%b\n" "${BLUE}║${NC}  ${RED}✗ Some quality gates failed${NC}            ${BLUE}║${NC}"
 fi
-echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
+printf "%b\n" "${BLUE}╚════════════════════════════════════════════╝${NC}"
 
-exit $FAILED
+exit "$FAILED"

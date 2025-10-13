@@ -5,17 +5,29 @@
 
 use assert_cmd::Command;
 use predicates::prelude::*;
-use std::path::PathBuf;
+use std::{env, fs, path::PathBuf};
 
 /// Helper to get workspace root
 fn workspace_root() -> PathBuf {
+    if let Ok(dir) = env::var("CARGO_WORKSPACE_DIR") {
+        return PathBuf::from(dir);
+    }
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    while !path.join(".git").exists() {
+    loop {
+        if path.join(".git").exists() {
+            return path;
+        }
+        let cargo_toml = path.join("Cargo.toml");
+        if cargo_toml.exists()
+            && let Ok(contents) = fs::read_to_string(&cargo_toml)
+            && contents.contains("[workspace]")
+        {
+            return path;
+        }
         if !path.pop() {
             panic!("Could not find workspace root");
         }
     }
-    path
 }
 
 /// Helper to get fixture path

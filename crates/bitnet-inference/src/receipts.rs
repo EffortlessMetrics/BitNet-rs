@@ -23,6 +23,9 @@ use std::path::Path;
 /// Schema version for receipt format
 pub const RECEIPT_SCHEMA_VERSION: &str = "1.0.0";
 
+/// Alias for schema version (for consistency)
+pub const RECEIPT_SCHEMA: &str = RECEIPT_SCHEMA_VERSION;
+
 /// Model information in receipt
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ModelInfo {
@@ -255,9 +258,7 @@ impl InferenceReceipt {
         );
 
         // Add CPU and GPU fingerprints (best-effort)
-        if let Some(cpu_brand) = detect_cpu_brand() {
-            env_vars.insert("CPU_BRAND".to_string(), cpu_brand);
-        }
+        env_vars.insert("CPU_BRAND".to_string(), detect_cpu_brand());
         if let Some(gpu_info) = detect_gpu_info() {
             env_vars.insert("GPU_INFO".to_string(), gpu_info);
         }
@@ -394,6 +395,39 @@ impl InferenceReceipt {
     pub fn add_correction(&mut self, correction: CorrectionRecord) {
         self.corrections.push(correction);
     }
+}
+
+/// Detect CPU brand string (best-effort).
+/// Linux: reads `/proc/cpuinfo` model name; otherwise returns arch.
+fn detect_cpu_brand() -> String {
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
+            for line in content.lines() {
+                if line.starts_with("model name")
+                    && let Some(brand) = line.split(':').nth(1)
+                {
+                    return brand.trim().to_string();
+                }
+            }
+        }
+    }
+    std::env::consts::ARCH.to_string()
+}
+
+/// Detect GPU information (best-effort)
+///
+/// Uses bitnet-kernels GPU utilities to detect available GPUs.
+/// Returns GPU name and compute capability if available.
+fn detect_gpu_info() -> Option<String> {
+    #[cfg(feature = "gpu")]
+    {
+        use bitnet_kernels::gpu_utils;
+        if let Ok(gpu_info) = gpu_utils::get_gpu_info() {
+            return Some(format!("{} (CC: {})", gpu_info.name, gpu_info.compute_capability));
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -599,44 +633,4 @@ mod tests {
             std::env::remove_var("BITNET_SEED");
         }
     }
-}
-
-/// Detect CPU brand string (best-effort)
-///
-/// Attempts to extract CPU information from various sources:
-/// - On x86/x86_64: uses CPUID instructions
-/// - On Linux: reads /proc/cpuinfo
-/// - Fallback: returns architecture string
-fn detect_cpu_brand() -> Option<String> {
-    // Try reading /proc/cpuinfo on Linux
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
-            for line in content.lines() {
-                if line.starts_with("model name") {
-                    if let Some(brand) = line.split(':').nth(1) {
-                        return Some(brand.trim().to_string());
-                    }
-                }
-            }
-        }
-    }
-
-    // Fallback: return architecture
-    Some(format!("{}", std::env::consts::ARCH))
-}
-
-/// Detect GPU information (best-effort)
-///
-/// Uses bitnet-kernels GPU utilities to detect available GPUs.
-/// Returns GPU name and compute capability if available.
-fn detect_gpu_info() -> Option<String> {
-    #[cfg(feature = "gpu")]
-    {
-        use bitnet_kernels::gpu_utils;
-        if let Ok(gpu_info) = gpu_utils::get_gpu_info() {
-            return Some(format!("{} (CC: {})", gpu_info.name, gpu_info.compute_capability));
-        }
-    }
-    None
 }

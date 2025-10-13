@@ -7,6 +7,8 @@ use fs2::FileExt;
 use fs2::available_space;
 use httpdate::parse_http_date;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use once_cell::sync::Lazy;
+use regex::Regex;
 use reqwest::StatusCode;
 use reqwest::blocking::Client;
 use reqwest::header::{
@@ -3973,6 +3975,35 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
     Ok(())
 }
 
+/// GPU kernel patterns for receipt verification
+///
+/// Broad but safe set of identifiers we've actually seen in receipts.
+/// NOTE: explicitly exclude i2s_cpu_* so a CPU path can't sneak through.
+static GPU_KERNEL_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
+    [
+        r"^gemm_",    // general GEMM family
+        r"^wmma_",    // warp MMA
+        r"^cublas_",  // cublas wrappers
+        r"^cutlass_", // cutlass wrappers
+        r"^cuda_",    // generic CUDA kernels
+        r"^tl1_gpu_",
+        r"^tl2_gpu_",                   // TL1/TL2 GPU
+        r"^i2s_(quantize|dequantize)$", // observed in GPU receipts
+    ]
+    .into_iter()
+    .map(|p| Regex::new(p).expect("internal GPU kernel regex must compile"))
+    .collect()
+});
+
+/// Check if a kernel ID represents a GPU kernel
+fn is_gpu_kernel_id(id: &str) -> bool {
+    // Disallow CPU variants explicitly
+    if id.starts_with("i2s_cpu_") {
+        return false;
+    }
+    GPU_KERNEL_PATTERNS.iter().any(|re| re.is_match(id))
+}
+
 /// Verify inference receipt against strict quality gates
 ///
 /// Validates that a receipt JSON file meets the requirements for honest
@@ -4027,25 +4058,23 @@ fn verify_receipt_cmd(path: &Path, require_gpu_kernels: bool) -> Result<()> {
     if kernels.is_empty() {
         bail!("Receipt has empty kernels[] — requires at least one real kernel");
     }
+    if kernels.iter().any(|k| !k.is_string()) {
+        bail!("All entries in kernels[] must be strings");
+    }
 
     // GPU kernel validation (if requested)
     if require_gpu_kernels {
-        let gpu_kernel_prefixes = ["gemm_", "wmma_", "cuda_", "i2s_gpu_", "tl1_gpu_", "tl2_gpu_"];
-
-        let has_gpu_kernel = kernels.iter().filter_map(|v| v.as_str()).any(|kernel_id| {
-            gpu_kernel_prefixes.iter().any(|prefix| kernel_id.starts_with(prefix))
-        });
+        let has_gpu_kernel = kernels.iter().filter_map(|v| v.as_str()).any(is_gpu_kernel_id);
 
         if !has_gpu_kernel {
             bail!(
-                "GPU kernel verification requested, but no GPU kernels found in kernels[].\n\
-                 Expected kernel prefixes: {}\n\
+                "GPU kernel verification requested, but no GPU kernels found.\n\
+                 Expected (examples): gemm_*, wmma_*, cublas_*, cutlass_*, cuda_*, tl1_gpu_*, tl2_gpu_*, i2s_(quantize|dequantize)\n\
                  Actual kernels: {:?}\n\n\
                  This likely indicates silent CPU fallback. Verify:\n\
-                 1. GPU feature compiled: cargo build --features gpu\n\
-                 2. CUDA runtime available: nvidia-smi\n\
-                 3. Device selection: Device::Cuda(0) passed to inference",
-                gpu_kernel_prefixes.join(", "),
+                 1) GPU build: cargo build --features gpu\n\
+                 2) CUDA runtime: nvidia-smi\n\
+                 3) Device selection: Device::Cuda(0) in inference",
                 kernels
             );
         }
