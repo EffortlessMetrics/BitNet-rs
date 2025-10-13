@@ -771,6 +771,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-st2gguf"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitnet-common",
+ "bitnet-models",
+ "bytemuck",
+ "clap",
+ "console 0.16.1",
+ "half",
+ "indicatif",
+ "regex",
+ "safetensors 0.6.2",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.17",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "bitnet-sys"
 version = "0.1.0"
 dependencies = [

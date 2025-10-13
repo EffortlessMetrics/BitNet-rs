@@ -1489,8 +1489,11 @@ impl GgufLoader {
                     // PATCH 3: Validate and optionally rescale LayerNorm gamma (policy-driven)
                     if Self::is_layernorm_weight(&info.name) {
                         Self::check_ln_gamma_stats(&info.name, &tensor)?;
-                        let (rescaled, correction) =
-                            Self::maybe_rescale_ln_gamma_with_policy(&info.name, tensor, policy_plan)?;
+                        let (rescaled, correction) = Self::maybe_rescale_ln_gamma_with_policy(
+                            &info.name,
+                            tensor,
+                            policy_plan,
+                        )?;
                         Ok((rescaled, correction))
                     } else {
                         // Log projection RMS for F32 projections
@@ -1543,8 +1546,11 @@ impl GgufLoader {
                     // PATCH 3: Validate and optionally rescale LayerNorm gamma (policy-driven)
                     if Self::is_layernorm_weight(&info.name) {
                         Self::check_ln_gamma_stats(&info.name, &tensor)?;
-                        let (rescaled, correction) =
-                            Self::maybe_rescale_ln_gamma_with_policy(&info.name, tensor, policy_plan)?;
+                        let (rescaled, correction) = Self::maybe_rescale_ln_gamma_with_policy(
+                            &info.name,
+                            tensor,
+                            policy_plan,
+                        )?;
                         Ok((rescaled, correction))
                     } else {
                         // Log projection RMS for F16→F32 projections
