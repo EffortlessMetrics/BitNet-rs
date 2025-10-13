@@ -1,0 +1,562 @@
+name: Validation Gates
+
+# Comprehensive validation workflow for BitNet.rs quality assurance
+# This workflow enforces validation standards across all model operations:
+# - Build validation tools (bitnet-cli with full-cli, st-tools)
+# - Run validation integration tests
+# - Validate GGUF models in strict mode
+# - Block correction flags (no runtime corrections in CI)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "crates/bitnet-cli/**"
+      - "crates/bitnet-st-tools/**"
+      - "crates/bitnet-st2gguf/**"
+      - "crates/bitnet-models/**"
+      - "scripts/validate_gguf.sh"
+      - "scripts/export_clean_gguf.sh"
+      - ".github/workflows/validation.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "crates/bitnet-cli/**"
+      - "crates/bitnet-st-tools/**"
+      - "crates/bitnet-st2gguf/**"
+      - "crates/bitnet-models/**"
+      - "scripts/validate_gguf.sh"
+      - "scripts/export_clean_gguf.sh"
+      - ".github/workflows/validation.yml"
+  workflow_dispatch:
+    inputs:
+      skip_model_validation:
+        description: "Skip model validation (for tooling-only changes)"
+        required: false
+        type: boolean
+        default: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: "-D warnings"
+  # Strict validation mode - fail on suspicious weights
+  BITNET_STRICT_MODE: "1"
+  # Deterministic inference for reproducible tests
+  BITNET_DETERMINISTIC: "1"
+  BITNET_SEED: "42"
+  RAYON_NUM_THREADS: "1"
+  # Git metadata for vergen-gix
+  VERGEN_GIT_SHA: ${{ github.sha }}
+  VERGEN_GIT_BRANCH: ${{ github.ref_name }}
+  VERGEN_GIT_DESCRIBE: ${{ github.ref_name }}-${{ github.sha }}
+  VERGEN_IDEMPOTENT: "1"
+
+jobs:
+  # Security gate: Block correction flags in CI
+  security-guard:
+    name: Security Guard (Block Correction Flags)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for forbidden correction flags
+        run: |
+          echo "🔒 Checking for forbidden correction flags in CI..."
+
+          # Check workflow files
+          if grep -r "BITNET_ALLOW_RUNTIME_CORRECTIONS" .github/workflows/*.yml | grep -v "^\s*#"; then
+            echo "❌ ERROR: BITNET_ALLOW_RUNTIME_CORRECTIONS must not be set in CI"
+            echo "Runtime corrections are only allowed for known-bad models in local development"
+            exit 1
+          fi
+
+          if grep -r "BITNET_CORRECTION_POLICY" .github/workflows/*.yml | grep -v "^\s*#" | grep -v "must not be set"; then
+            echo "❌ ERROR: BITNET_CORRECTION_POLICY must not be set in CI"
+            echo "Policy corrections are only for fingerprinted known-bad models"
+            exit 1
+          fi
+
+          if grep -r "BITNET_FIX_LN_SCALE" .github/workflows/*.yml | grep -v "^\s*#" | grep -v "deprecated"; then
+            echo "❌ ERROR: BITNET_FIX_LN_SCALE must not be set in CI (deprecated)"
+            echo "Use correction policy instead"
+            exit 1
+          fi
+
+          echo "✅ No forbidden correction flags found"
+
+      - name: Verify strict mode is enabled
+        run: |
+          echo "🔍 Verifying strict mode configuration..."
+
+          # Ensure this workflow has BITNET_STRICT_MODE=1
+          if ! grep -q "BITNET_STRICT_MODE.*1" .github/workflows/validation.yml; then
+            echo "❌ ERROR: BITNET_STRICT_MODE must be enabled in validation workflow"
+            exit 1
+          fi
+
+          echo "✅ Strict mode is enabled"
+
+  # Build validation tools
+  build-tools:
+    name: Build Validation Tools (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: security-guard
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: bitnet-linux-x64
+            cli_binary: target/release/bitnet
+            st2gguf_binary: target/release/st2gguf
+            st_ln_inspect_binary: target/release/st-ln-inspect
+            st_merge_binary: target/release/st-merge-ln-f16
+          - os: windows-latest
+            artifact_name: bitnet-windows-x64
+            cli_binary: target/release/bitnet.exe
+            st2gguf_binary: target/release/st2gguf.exe
+            st_ln_inspect_binary: target/release/st-ln-inspect.exe
+            st_merge_binary: target/release/st-merge-ln-f16.exe
+          - os: macos-latest
+            artifact_name: bitnet-macos-x64
+            cli_binary: target/release/bitnet
+            st2gguf_binary: target/release/st2gguf
+            st_ln_inspect_binary: target/release/st-ln-inspect
+            st_merge_binary: target/release/st-merge-ln-f16
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "validation-tools-${{ matrix.os }}"
+          cache-all-crates: true
+          cache-targets: true
+
+      - name: Build bitnet-cli (with full-cli features)
+        run: |
+          echo "🔨 Building bitnet-cli with full-cli features..."
+          cargo build -p bitnet-cli --release --no-default-features --features cpu,full-cli
+
+      - name: Build bitnet-st2gguf
+        run: |
+          echo "🔨 Building bitnet-st2gguf..."
+          cargo build -p bitnet-st2gguf --release
+
+      - name: Build bitnet-st-tools
+        run: |
+          echo "🔨 Building bitnet-st-tools..."
+          cargo build -p bitnet-st-tools --release
+
+      - name: Verify binaries exist
+        shell: bash
+        run: |
+          echo "🔍 Verifying built binaries..."
+
+          if [[ ! -f "${{ matrix.cli_binary }}" ]]; then
+            echo "❌ ERROR: bitnet-cli binary not found at ${{ matrix.cli_binary }}"
+            exit 1
+          fi
+
+          if [[ ! -f "${{ matrix.st2gguf_binary }}" ]]; then
+            echo "❌ ERROR: st2gguf binary not found at ${{ matrix.st2gguf_binary }}"
+            exit 1
+          fi
+
+          if [[ ! -f "${{ matrix.st_ln_inspect_binary }}" ]]; then
+            echo "❌ ERROR: st-ln-inspect binary not found at ${{ matrix.st_ln_inspect_binary }}"
+            exit 1
+          fi
+
+          if [[ ! -f "${{ matrix.st_merge_binary }}" ]]; then
+            echo "❌ ERROR: st-merge-ln-f16 binary not found at ${{ matrix.st_merge_binary }}"
+            exit 1
+          fi
+
+          echo "✅ All binaries built successfully"
+
+      - name: Test binaries execute
+        shell: bash
+        run: |
+          echo "🧪 Testing binary execution..."
+
+          # Test bitnet-cli
+          ${{ matrix.cli_binary }} --version
+          ${{ matrix.cli_binary }} inspect --help
+
+          # Test st2gguf
+          ${{ matrix.st2gguf_binary }} --version || ${{ matrix.st2gguf_binary }} --help
+
+          # Test st-ln-inspect
+          ${{ matrix.st_ln_inspect_binary }} --help
+
+          # Test st-merge-ln-f16
+          ${{ matrix.st_merge_binary }} --help
+
+          echo "✅ All binaries execute successfully"
+
+      - name: Upload validation tools artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}-validation-tools
+          path: |
+            ${{ matrix.cli_binary }}
+            ${{ matrix.st2gguf_binary }}
+            ${{ matrix.st_ln_inspect_binary }}
+            ${{ matrix.st_merge_binary }}
+          retention-days: 7
+
+  # Run validation integration tests
+  validation-tests:
+    name: Validation Integration Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: build-tools
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "validation-tests-${{ matrix.os }}"
+          cache-all-crates: true
+
+      - name: Run validation workflow tests
+        run: |
+          echo "🧪 Running validation workflow integration tests..."
+          cargo test -p bitnet-cli --test validation_workflow --no-default-features --features cpu,full-cli -- --nocapture
+
+      - name: Run inspect tests
+        run: |
+          echo "🧪 Running inspect integration tests..."
+          cargo test -p bitnet-cli --test inspect_ln_stats --no-default-features --features cpu,full-cli -- --nocapture
+
+      - name: Generate test report
+        if: always()
+        shell: bash
+        run: |
+          cat > validation-test-report-${{ matrix.os }}.md << 'EOF'
+          # Validation Test Report
+
+          **Platform**: ${{ matrix.os }}
+          **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Workflow Run**: ${{ github.run_id }}
+
+          ## Test Results
+
+          - Validation workflow integration tests
+          - Inspect command tests
+          - LayerNorm validation tests
+          - Architecture detection tests
+          - JSON output format tests
+
+          ## Configuration
+
+          - **Strict Mode**: BITNET_STRICT_MODE=1
+          - **Deterministic**: BITNET_DETERMINISTIC=1 (seed=42)
+          - **Correction Flags**: Blocked (as required)
+
+          ## Status
+
+          See workflow logs for detailed test output.
+          EOF
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-test-report-${{ matrix.os }}
+          path: validation-test-report-${{ matrix.os }}.md
+          retention-days: 30
+
+  # Validate GGUF models (if available)
+  validate-models:
+    name: Validate GGUF Models (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: build-tools
+    if: ${{ github.event.inputs.skip_model_validation != 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        model:
+          - path: "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
+            name: "BitNet-I2S-2B"
+            expected_ruleset: "bitnet-b1.58:i2_s"
+          - path: "models/clean/clean-f16.gguf"
+            name: "Clean-F16"
+            expected_ruleset: "generic"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download validation tools
+        uses: actions/download-artifact@v4
+        with:
+          name: bitnet-linux-x64-validation-tools
+          path: tools
+
+      - name: Make tools executable
+        run: |
+          chmod +x tools/bitnet
+          chmod +x tools/st2gguf
+          chmod +x tools/st-ln-inspect
+          chmod +x tools/st-merge-ln-f16
+
+      - name: Check if model exists
+        id: check_model
+        continue-on-error: true
+        run: |
+          if [[ -f "${{ matrix.model.path }}" ]]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Model found: ${{ matrix.model.path }}"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Model not found: ${{ matrix.model.path }}"
+            echo "Skipping validation for this model"
+          fi
+
+      - name: Validate model with inspect
+        if: steps.check_model.outputs.exists == 'true'
+        run: |
+          echo "🔍 Validating ${{ matrix.model.name }}..."
+
+          # Run inspect with JSON output for parsing
+          ./tools/bitnet inspect --ln-stats --json "${{ matrix.model.path }}" > validation-output.json
+
+          # Display output
+          cat validation-output.json | jq '.'
+
+          # Verify ruleset
+          RULESET=$(cat validation-output.json | jq -r '.ruleset')
+          echo "Detected ruleset: $RULESET"
+
+          if [[ "$RULESET" != "${{ matrix.model.expected_ruleset }}" ]]; then
+            echo "❌ ERROR: Expected ruleset '${{ matrix.model.expected_ruleset }}' but got '$RULESET'"
+            exit 1
+          fi
+
+          # Check status
+          STATUS=$(cat validation-output.json | jq -r '.status')
+          echo "Validation status: $STATUS"
+
+          # In strict mode, status should be 'ok' or we fail
+          if [[ "$BITNET_STRICT_MODE" == "1" ]] && [[ "$STATUS" == "failed" ]]; then
+            echo "❌ ERROR: Validation failed in strict mode"
+            exit 1
+          fi
+
+          # Check for suspicious weights
+          LN_SUSPICIOUS=$(cat validation-output.json | jq -r '.layernorm.suspicious')
+          PROJ_SUSPICIOUS=$(cat validation-output.json | jq -r '.projection.suspicious')
+
+          echo "Suspicious LayerNorm weights: $LN_SUSPICIOUS"
+          echo "Suspicious projection weights: $PROJ_SUSPICIOUS"
+
+          if [[ "$BITNET_STRICT_MODE" == "1" ]] && [[ "$LN_SUSPICIOUS" != "0" || "$PROJ_SUSPICIOUS" != "0" ]]; then
+            echo "⚠️ WARNING: Suspicious weights detected in strict mode"
+            echo "This may indicate quantized LayerNorm weights (should be F16/F32)"
+          fi
+
+          echo "✅ Validation completed for ${{ matrix.model.name }}"
+
+      - name: Generate validation report
+        if: always()
+        run: |
+          cat > model-validation-report-${{ matrix.model.name }}.md << 'EOF'
+          # Model Validation Report: ${{ matrix.model.name }}
+
+          **Model Path**: ${{ matrix.model.path }}
+          **Expected Ruleset**: ${{ matrix.model.expected_ruleset }}
+          **Platform**: ${{ matrix.os }}
+          **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          ## Validation Configuration
+
+          - **Strict Mode**: BITNET_STRICT_MODE=1
+          - **Deterministic**: BITNET_DETERMINISTIC=1 (seed=42)
+          - **Correction Policy**: None (as required for CI)
+
+          ## Validation Results
+
+          EOF
+
+          if [[ -f "validation-output.json" ]]; then
+            echo "### Detected Configuration" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "- **Ruleset**: $(cat validation-output.json | jq -r '.ruleset')" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "- **Model SHA256**: $(cat validation-output.json | jq -r '.model_sha256')" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "- **Status**: $(cat validation-output.json | jq -r '.status')" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "### LayerNorm Validation" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "- **Total**: $(cat validation-output.json | jq -r '.layernorm.total')" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "- **Suspicious**: $(cat validation-output.json | jq -r '.layernorm.suspicious')" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "### Projection Validation" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "- **Total**: $(cat validation-output.json | jq -r '.projection.total')" >> model-validation-report-${{ matrix.model.name }}.md
+            echo "- **Suspicious**: $(cat validation-output.json | jq -r '.projection.suspicious')" >> model-validation-report-${{ matrix.model.name }}.md
+          else
+            echo "Model not available for validation" >> model-validation-report-${{ matrix.model.name }}.md
+          fi
+
+          cat model-validation-report-${{ matrix.model.name }}.md
+
+      - name: Upload validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-validation-${{ matrix.model.name }}
+          path: |
+            validation-output.json
+            model-validation-report-${{ matrix.model.name }}.md
+          retention-days: 30
+
+  # Summary job
+  validation-summary:
+    name: Validation Summary
+    needs: [security-guard, build-tools, validation-tests, validate-models]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check job results
+        run: |
+          echo "## Validation Gates Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow Run**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Security guard
+          if [[ "${{ needs.security-guard.result }}" == "success" ]]; then
+            echo "✅ **Security Guard**: PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Security Guard**: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Build tools
+          if [[ "${{ needs.build-tools.result }}" == "success" ]]; then
+            echo "✅ **Build Tools**: PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Build Tools**: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Validation tests
+          if [[ "${{ needs.validation-tests.result }}" == "success" ]]; then
+            echo "✅ **Validation Tests**: PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Validation Tests**: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Model validation
+          if [[ "${{ needs.validate-models.result }}" == "success" ]]; then
+            echo "✅ **Model Validation**: PASSED" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ needs.validate-models.result }}" == "skipped" ]]; then
+            echo "⏭️ **Model Validation**: SKIPPED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Model Validation**: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Strict Mode**: BITNET_STRICT_MODE=1" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deterministic**: BITNET_DETERMINISTIC=1 (seed=42)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Correction Flags**: Blocked (no runtime corrections)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Validation Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- bitnet-cli with full-cli features" >> $GITHUB_STEP_SUMMARY
+          echo "- bitnet-st2gguf converter" >> $GITHUB_STEP_SUMMARY
+          echo "- bitnet-st-tools (st-ln-inspect, st-merge-ln-f16)" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration tests for validation workflow" >> $GITHUB_STEP_SUMMARY
+          echo "- Model validation with LayerNorm RMS checks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Platform Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Ubuntu (Linux x86_64)" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows (x86_64)" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS (x86_64)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Verify all gates passed
+        run: |
+          # Check if all required jobs passed
+          if [[ "${{ needs.security-guard.result }}" != "success" ]]; then
+            echo "❌ Security guard failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.build-tools.result }}" != "success" ]]; then
+            echo "❌ Build tools failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.validation-tests.result }}" != "success" ]]; then
+            echo "❌ Validation tests failed"
+            exit 1
+          fi
+
+          # Model validation is allowed to be skipped
+          if [[ "${{ needs.validate-models.result }}" != "success" ]] && [[ "${{ needs.validate-models.result }}" != "skipped" ]]; then
+            echo "❌ Model validation failed"
+            exit 1
+          fi
+
+          echo "✅ All validation gates passed successfully"
+
+  # Quality gate (always runs, blocks PR merge on failure)
+  quality-gate:
+    name: Quality Gate
+    needs: validation-summary
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: write
+
+    steps:
+      - name: Check validation status
+        run: |
+          if [[ "${{ needs.validation-summary.result }}" != "success" ]]; then
+            echo "❌ Validation gates did not pass"
+            echo ""
+            echo "One or more validation gates failed:"
+            echo "  - Security guard (correction flags check)"
+            echo "  - Build validation tools"
+            echo "  - Validation integration tests"
+            echo "  - Model validation (if applicable)"
+            echo ""
+            echo "Review the job logs for detailed failure information."
+            echo ""
+            echo "**Common Issues:**"
+            echo "  - Correction flags set in CI (BITNET_ALLOW_RUNTIME_CORRECTIONS)"
+            echo "  - Suspicious LayerNorm weights detected in strict mode"
+            echo "  - Build failures for validation tools"
+            echo "  - Integration test failures"
+            exit 1
+          fi
+
+          echo "✅ All validation gates passed - ready for merge"

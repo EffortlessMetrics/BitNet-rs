@@ -1,0 +1,504 @@
+# Custom Model Policy - Template and Examples
+# ============================================
+#
+# This template demonstrates how to create validation policies for custom
+# model architectures. Use this as a starting point and customize based on
+# your model's empirical RMS statistics.
+#
+# **This file shows:**
+# 1. Basic policy structure with comments
+# 2. How to define validation rules for different layer types
+# 3. How to add model fingerprints (when using correction policies)
+# 4. Examples of corrections (runtime fixes for known-bad models)
+# 5. Best practices for creating robust policies
+#
+# **Before creating a policy:**
+# - Inspect your model with: `cargo run -p bitnet-cli -- inspect --ln-stats model.gguf`
+# - Review RMS statistics for all LayerNorm and projection weights
+# - Determine appropriate min/max thresholds based on observed distributions
+#
+# See: docs/explanation/correction-policy.md for correction policy details
+
+version: 1
+
+# ==============================================================================
+# SECTION 1: Validation Rules (No Fingerprint Required)
+# ==============================================================================
+#
+# Validation rules define acceptable RMS ranges for LayerNorm gamma weights
+# and projection weights. These rules are used during model loading and
+# inference to detect corruption or quantization issues.
+#
+# Use validation rules when you want to:
+# - Set architecture-specific thresholds for RMS statistics
+# - Validate model exports during CI/CD pipelines
+# - Catch quantization corruption early (before inference)
+
+rules:
+  # Policy key: Use this with --policy-key flag
+  # Format: <architecture>:<variant> (e.g., "custom-arch:f16")
+  custom-model:f16:
+    name: "Custom Model F16 Clean Export"
+
+    # LayerNorm Gamma Weight Rules
+    # =============================
+    # Define RMS envelopes for different LayerNorm types.
+    # Patterns are regex - tested against tensor names from GGUF.
+
+    ln:
+      # Example 1: Specific layer naming (attention)
+      - pattern: "blk\\.[0-9]+\\.attn_norm\\.weight$"
+        min: 0.85
+        max: 1.15
+        description: |
+          Attention LayerNorm in transformer blocks.
+
+          Typical initialization: gamma = 1.0
+          Expected range after training: [0.9, 1.1]
+          Policy envelope: [0.85, 1.15] (small safety margin)
+
+      # Example 2: FFN layers with architectural low gamma
+      - pattern: "blk\\.[0-9]+\\.ffn_norm\\.weight$"
+        min: 0.40
+        max: 1.50
+        description: |
+          FFN LayerNorm in transformer blocks.
+
+          This architecture uses smaller gamma initialization for FFN
+          (architectural choice, not corruption). Wider envelope accommodates
+          this design decision.
+
+      # Example 3: Final output norm (critical for stability)
+      - pattern: "output_norm\\.weight$"
+        min: 0.95
+        max: 1.05
+        description: |
+          Final LayerNorm before output projection.
+
+          This norm is critical for output stability - use NARROW envelope
+          to catch any corruption. Should remain very close to 1.0.
+
+      # Example 4: Fallback for any remaining norms
+      - pattern: ".*norm\\.weight$"
+        min: 0.70
+        max: 1.30
+        description: |
+          Fallback pattern for any norm weight not matched above.
+
+          Conservative envelope that catches obvious corruption while
+          allowing architectural variations.
+
+    # Projection Weight RMS Validation
+    # =================================
+    # Define acceptable RMS range for projection weights (Q/K/V/O/gate/up/down).
+    # Set to null to skip projection validation.
+
+    proj_weight_rms_min: 0.015
+    proj_weight_rms_max: 0.35
+
+    notes: |
+      Custom model projection weights measured empirically:
+        - Attention projections (Q/K/V/O): RMS ~0.02-0.25
+        - FFN projections (gate/up/down): RMS ~0.015-0.30
+
+      Policy bounds [0.015, 0.35] encompass observed range with margin.
+
+  # Second variant: Quantized version of the same architecture
+  custom-model:i2_s:
+    name: "Custom Model I2_S Quantized"
+
+    ln:
+      # After I2_S quantization, attention norms may have lower RMS
+      - pattern: "blk\\.[0-9]+\\.attn_norm\\.weight$"
+        min: 0.50   # Loosened from 0.85 due to quantization
+        max: 1.20
+        description: |
+          Attention LayerNorm after I2_S quantization.
+
+          I2_S quantization reduces RMS for small gamma values.
+          Min threshold loosened to accommodate this artifact.
+
+      # FFN norms less affected by I2_S
+      - pattern: "blk\\.[0-9]+\\.ffn_norm\\.weight$"
+        min: 0.40
+        max: 1.50
+        description: |
+          FFN LayerNorm after I2_S quantization.
+
+          FFN norms are more resilient - same thresholds as F16 version.
+
+      # Final norm should NEVER be quantized
+      - pattern: "output_norm\\.weight$"
+        min: 0.95
+        max: 1.05
+        description: |
+          Final LayerNorm - should NOT be quantized.
+
+          If this fails validation, regenerate GGUF with
+          --skip-layernorm-quantization flag.
+
+      # Generic fallback
+      - pattern: ".*norm\\.weight$"
+        min: 0.50   # More permissive for quantized models
+        max: 1.40
+
+    # Projection RMS reduced after I2_S dequantization
+    proj_weight_rms_min: 0.005
+    proj_weight_rms_max: 0.25
+
+    notes: |
+      I2_S quantization reduces projection weight RMS:
+        - F16 range: [0.015, 0.35]
+        - I2_S range: [0.005, 0.25]
+
+      Lower min threshold catches complete corruption (all zeros).
+      Upper max threshold catches inverted scales (would be >> 1.0).
+
+# ==============================================================================
+# SECTION 2: Correction Policies (Fingerprint Required)
+# ==============================================================================
+#
+# Correction policies are runtime fixes for known-bad models. They require:
+# 1. Model fingerprint (SHA256 hash)
+# 2. BITNET_CORRECTION_POLICY environment variable pointing to this file
+# 3. BITNET_ALLOW_RUNTIME_CORRECTIONS=1 environment variable
+#
+# **IMPORTANT:** Corrections are TEMPORARY WORKAROUNDS. Always prefer
+# regenerating GGUF with proper weight formats for production use.
+#
+# CI blocks correction flags to prevent production deployment.
+
+models:
+  # Example 1: LayerNorm Gamma Rescale
+  # -----------------------------------
+  # For models where LayerNorm was accidentally quantized
+
+  - fingerprint: "sha256-0000000000000000000000000000000000000000000000000000000000000001"
+    notes: |
+      Custom Model 2B - Quantized LayerNorm Fix
+
+      Issue: LayerNorm gamma weights were quantized to I2_S (should be F16).
+      Measured RMS: ~0.018 across all layers (expected ~1.0)
+      Affected layers: All 32 transformer blocks
+
+      This policy rescales LayerNorm gamma to RMS≈1.0 as temporary workaround.
+
+      **Proper fix:** Regenerate GGUF with:
+        cargo run -p bitnet-st2gguf -- \
+          --input model.safetensors \
+          --output model-fixed.gguf \
+          --strict
+
+    corrections:
+      # Rescale LayerNorm gamma to target RMS
+      - type: LN_GAMMA_RESCALE_RMS
+        target_rms: 1.0          # Target RMS for LayerNorm gamma
+        clamp: [0.01, 100.0]     # Safety clamp: factor ∈ [1%, 10000%]
+
+  # Example 2: I2_S Dequantization Override
+  # ----------------------------------------
+  # For models with inverted I2_S scales in attention projections
+
+  - fingerprint: "sha256-0000000000000000000000000000000000000000000000000000000000000002"
+    notes: |
+      Custom Model 2B - I2_S Attention Scale Fix
+
+      Issue: Q/K/V projection scales are inverted in GGUF export.
+      Measured RMS:
+        - Q/K/V with inv=false: ~100,000 (catastrophic)
+        - Q/K/V with inv=true: ~800 (healthy)
+        - FFN gate/up/down: ~850 (baseline)
+
+      This policy forces inv=false for attention projections (counterintuitively,
+      this DISABLES inversion, which is correct when scales are already right).
+
+      **Proper fix:** Regenerate GGUF with correct scale computation during export.
+
+    corrections:
+      # Override I2_S dequantization for specific tensors
+      - type: I2S_DEQUANT_OVERRIDE
+        tensors:
+          - "blk\\.[0-9]+\\.attn_q\\.weight"    # Regex patterns
+          - "blk\\.[0-9]+\\.attn_k\\.weight"
+          - "blk\\.[0-9]+\\.attn_v\\.weight"
+        inv: false   # Do NOT invert scales (they are correct as-is)
+        k: 1.0       # Multiplicative factor (typically 1.0)
+
+  # Example 3: Combined Corrections
+  # --------------------------------
+  # For models with BOTH LayerNorm and I2_S issues
+
+  - fingerprint: "sha256-0000000000000000000000000000000000000000000000000000000000000003"
+    notes: |
+      Custom Model 2B - Multiple Issues
+
+      Issues:
+        1. Quantized LayerNorm weights (RMS ~0.02)
+        2. Inverted I2_S scales in attention projections
+
+      This policy applies both corrections sequentially.
+
+      **Proper fix:** Regenerate GGUF from scratch with:
+        1. LayerNorm in FP16/FP32 (not quantized)
+        2. Correct I2_S scale computation
+
+    corrections:
+      # First: Fix LayerNorm gamma RMS
+      - type: LN_GAMMA_RESCALE_RMS
+        target_rms: 1.0
+        clamp: [0.01, 100.0]
+
+      # Second: Override I2_S for attention
+      - type: I2S_DEQUANT_OVERRIDE
+        tensors:
+          - "blk\\.[0-9]+\\.attn_q\\.weight"
+          - "blk\\.[0-9]+\\.attn_k\\.weight"
+          - "blk\\.[0-9]+\\.attn_v\\.weight"
+        inv: false
+        k: 1.0
+
+# ==============================================================================
+# WORKFLOW: Creating a Policy for Your Model
+# ==============================================================================
+#
+# Step 1: Inspect Model Statistics
+# ---------------------------------
+# cargo run -p bitnet-cli -- inspect --ln-stats your-model.gguf
+#
+# Output example:
+#   LayerNorm Statistics Analysis
+#   =============================
+#   Model: custom-model-2b
+#   Total layers: 32
+#
+#   Per-layer gamma RMS statistics:
+#   Layer  0: attn_norm RMS = 0.95  [OK]
+#   Layer  0: ffn_norm  RMS = 0.42  [OK - architectural]
+#   Layer  1: attn_norm RMS = 0.98  [OK]
+#   ...
+#
+#   Projection weight RMS statistics:
+#   blk.0.attn_q.weight: RMS = 0.025
+#   blk.0.attn_k.weight: RMS = 0.022
+#   ...
+#
+# Step 2: Determine Thresholds
+# -----------------------------
+# Based on inspection output:
+#   - attn_norm: RMS range [0.95, 1.02] → policy envelope [0.85, 1.15]
+#   - ffn_norm:  RMS range [0.40, 0.52] → policy envelope [0.35, 0.60]
+#   - projections: RMS range [0.020, 0.30] → policy envelope [0.015, 0.35]
+#
+# Add 5-10% margin on each side for safety.
+#
+# Step 3: Write Policy Entry
+# ---------------------------
+# rules:
+#   your-model:f16:
+#     name: "Your Model F16"
+#     ln:
+#       - pattern: "attn_norm\\.weight$"
+#         min: 0.85
+#         max: 1.15
+#       - pattern: "ffn_norm\\.weight$"
+#         min: 0.35
+#         max: 0.60
+#     proj_weight_rms_min: 0.015
+#     proj_weight_rms_max: 0.35
+#
+# Step 4: Validate Policy
+# ------------------------
+# cargo run -p bitnet-cli -- inspect --ln-stats \
+#   --policy your-policy.yml \
+#   --policy-key your-model:f16 \
+#   your-model.gguf
+#
+# Should see: "All LayerNorm weights pass validation" (or similar)
+#
+# Step 5: Test Inference
+# -----------------------
+# export BITNET_VALIDATION_POLICY=your-policy.yml
+# cargo run -p bitnet-cli --no-default-features --features cpu -- run \
+#   --model your-model.gguf \
+#   --prompt "Test prompt"
+#
+# Step 6: Document and Commit
+# ----------------------------
+# Add notes to policy file explaining:
+#   - Architecture details
+#   - Why thresholds were chosen
+#   - Known issues or quirks
+#   - Related models or variants
+#
+# Commit policy to git for version control and auditability.
+#
+# ==============================================================================
+# WORKFLOW: Adding Corrections for Known-Bad Model
+# ==============================================================================
+#
+# Step 1: Get Model Fingerprint
+# ------------------------------
+# RUST_LOG=info cargo run -p bitnet-cli -- run --model bad-model.gguf
+#
+# Look for log line:
+#   INFO Model fingerprint: sha256-abc123def456...
+#
+# Step 2: Diagnose Issue
+# ----------------------
+# a) For LayerNorm issues:
+#    cargo run -p bitnet-cli -- inspect --ln-stats bad-model.gguf
+#
+#    If RMS ~0.01-0.02 (expected ~1.0): LayerNorm was quantized
+#
+# b) For I2_S issues:
+#    RUST_LOG=info cargo run -p bitnet-cli -- run --model bad-model.gguf
+#
+#    Look for "PROJ load:" logs showing RMS values
+#    If Q/K/V RMS >> FFN RMS (by >10×): scales may be inverted
+#
+# Step 3: Add Correction Entry
+# -----------------------------
+# models:
+#   - fingerprint: "sha256-abc123def456..."
+#     notes: |
+#       Description of issue, measurements, and proper fix
+#     corrections:
+#       - type: LN_GAMMA_RESCALE_RMS  # or I2S_DEQUANT_OVERRIDE
+#         # ... parameters ...
+#
+# Step 4: Test Correction
+# ------------------------
+# export BITNET_CORRECTION_POLICY=your-policy.yml
+# export BITNET_ALLOW_RUNTIME_CORRECTIONS=1
+# export BITNET_DETERMINISTIC=1
+# export BITNET_SEED=42
+#
+# cargo run -p bitnet-cli -- run --model bad-model.gguf \
+#   --prompt "Test prompt"
+#
+# Check logs for:
+#   INFO Applied 1 correction(s) during model load
+#
+# Step 5: Verify Receipt
+# -----------------------
+# Inference receipts should include correction metadata:
+#   {
+#     "corrections_applied": [
+#       {
+#         "type": "LN_GAMMA_RESCALE_RMS",
+#         "target_rms": 1.0,
+#         ...
+#       }
+#     ]
+#   }
+#
+# Step 6: Plan Regeneration
+# --------------------------
+# Document proper fix in policy notes field:
+#   notes: |
+#     **Proper fix:** Regenerate GGUF with:
+#       cargo run -p bitnet-st2gguf -- \
+#         --input model.safetensors \
+#         --output model-fixed.gguf \
+#         --strict
+#
+# Step 7: Migrate to Clean GGUF
+# ------------------------------
+# 1. Regenerate GGUF with proper format
+# 2. Validate new GGUF passes without corrections
+# 3. Compare inference outputs (corrected vs clean)
+# 4. Remove correction entry from policy once clean GGUF deployed
+#
+# ==============================================================================
+# Best Practices
+# ==============================================================================
+#
+# 1. **Measure first, define second:**
+#    Always inspect actual RMS statistics before setting thresholds.
+#    Don't guess or copy thresholds from other architectures.
+#
+# 2. **Add margins to envelopes:**
+#    If measured RMS range is [0.90, 1.05], set policy to [0.85, 1.10].
+#    5-10% margin accommodates fine-tuning variance and edge cases.
+#
+# 3. **Be stricter for critical layers:**
+#    Final output norm: narrow envelope (e.g., [0.95, 1.05])
+#    Internal norms: wider envelope (e.g., [0.70, 1.30])
+#
+# 4. **Document architecture quirks:**
+#    If your model legitimately has low FFN norm RMS (~0.40), document WHY
+#    in the description field. Future maintainers will thank you.
+#
+# 5. **Version control policies:**
+#    Commit policies to git with clear commit messages explaining changes.
+#    Include model version, date inspected, and any relevant issues.
+#
+# 6. **Test across model variants:**
+#    If you have F16, I2_S, and other quantizations, create separate
+#    policy entries for each and test thoroughly.
+#
+# 7. **Corrections are temporary:**
+#    NEVER use corrections as a long-term solution. Always plan migration
+#    path to properly regenerated GGUF.
+#
+# 8. **CI validation:**
+#    Include policy validation in CI/CD pipelines:
+#      cargo run -p bitnet-cli -- inspect --ln-stats \
+#        --policy my-policy.yml \
+#        --policy-key my-model:f16 \
+#        my-model.gguf
+#    Fail CI if validation fails.
+#
+# ==============================================================================
+# Common Patterns
+# ==============================================================================
+#
+# Pattern 1: LLaMA-style naming
+# ------------------------------
+# ln:
+#   - pattern: "layers\\.[0-9]+\\.attention_norm\\.weight$"
+#     min: 0.80
+#     max: 1.20
+#   - pattern: "layers\\.[0-9]+\\.ffn_norm\\.weight$"
+#     min: 0.80
+#     max: 1.20
+#   - pattern: "norm\\.weight$"  # final norm
+#     min: 0.90
+#     max: 1.10
+#
+# Pattern 2: GPT-style naming
+# ----------------------------
+# ln:
+#   - pattern: "h\\.[0-9]+\\.ln_1\\.weight$"  # pre-attention
+#     min: 0.85
+#     max: 1.15
+#   - pattern: "h\\.[0-9]+\\.ln_2\\.weight$"  # pre-FFN
+#     min: 0.85
+#     max: 1.15
+#   - pattern: "ln_f\\.weight$"  # final norm
+#     min: 0.95
+#     max: 1.05
+#
+# Pattern 3: BitNet-style naming
+# -------------------------------
+# ln:
+#   - pattern: "blk\\.[0-9]+\\.attn_norm\\.weight$"
+#     min: 0.50
+#     max: 2.0
+#   - pattern: "blk\\.[0-9]+\\.ffn_norm\\.weight$"
+#     min: 0.05
+#     max: 2.0
+#   - pattern: "output_norm\\.weight$"
+#     min: 0.50
+#     max: 2.0
+#
+# ==============================================================================
+# Related Documentation
+# ==============================================================================
+#
+# - docs/explanation/correction-policy.md: Detailed correction policy guide
+# - docs/howto/export-clean-gguf.md: Clean GGUF export workflow
+# - CLAUDE.md: Quick reference for LayerNorm troubleshooting
+# - crates/bitnet-cli/src/ln_rules.rs: Rust implementation reference
+#
+# ==============================================================================

@@ -1,0 +1,238 @@
+# LLaMA-style Generic RMSNorm - Validation Policy
+# =================================================
+#
+# This policy defines validation rules for LLaMA-style models with standard
+# RMSNorm (Root Mean Square Layer Normalization). It provides conservative
+# thresholds suitable for most transformer architectures using RMSNorm.
+#
+# **Use this policy for:**
+# - LLaMA, LLaMA-2, LLaMA-3 models
+# - Mistral, Mixtral models
+# - Any model using standard RMSNorm with gamma weights near 1.0
+# - Unknown/generic architectures (safe fallback)
+#
+# **Architecture:** Generic (LLaMA-style RMSNorm)
+# **Precision:** Any (F16, F32, quantized)
+# **Target Use:** Conservative validation for standard transformer models
+#
+# **Key assumption:** RMSNorm gamma weights are initialized near 1.0 and should
+# remain in a narrow envelope [0.8, 1.2] unless the model has been fine-tuned
+# with unusual hyperparameters.
+#
+# See: crates/bitnet-cli/src/ln_rules.rs::rules_generic()
+
+version: 1
+
+rules:
+  generic:
+    name: "Generic LLaMA-style RMSNorm"
+
+    # LayerNorm Gamma Weight Validation
+    # ==================================
+    # Standard RMSNorm implementations initialize gamma weights to 1.0 and
+    # expect them to remain close to that value throughout training. This
+    # policy uses a narrow envelope to catch quantization corruption or
+    # export issues while allowing minor fine-tuning variations.
+
+    ln:
+      # Universal norm pattern: All norm layers treated equally
+      # RMSNorm typically doesn't distinguish between attention/FFN norms
+      - pattern: ".*norm\\.weight$"
+        min: 0.80
+        max: 1.20
+        description: |
+          Generic RMSNorm gamma weights (all layer types).
+
+          Standard RMSNorm initialization: gamma = 1.0
+          Expected range after training: [0.9, 1.1]
+          Policy envelope: [0.8, 1.2] (accommodates fine-tuning variance)
+
+          If RMS falls outside this range, check for:
+            - Quantization corruption (LayerNorm should be FP16/FP32)
+            - Export issues (wrong metadata or scales)
+            - Non-standard architecture (may need custom policy)
+            - Aggressive fine-tuning (widening envelope may be needed)
+
+    # Projection Weight RMS Validation
+    # =================================
+    # No projection weight validation for generic models - too architecture-dependent.
+    # Different models use different activation functions, initializations, and
+    # quantization schemes, making universal thresholds unreliable.
+
+    proj_weight_rms_min: null
+    proj_weight_rms_max: null
+
+    notes: |
+      Generic policy does NOT validate projection weight RMS because:
+        1. Initialization schemes vary widely (Xavier, He, etc.)
+        2. Different activations affect weight distributions (GELU, SiLU, ReLU)
+        3. Quantization artifacts are model-specific
+
+      For projection validation, use architecture-specific policies:
+        - BitNet models: bitnet-b158-f16-clean.yml or bitnet-b158-i2s-quantized.yml
+        - Custom models: Create a custom policy with measured RMS bounds
+
+# ==============================================================================
+# Architecture Compatibility
+# ==============================================================================
+#
+# This policy is designed for standard transformer models using RMSNorm:
+#
+# ✅ **Compatible Architectures:**
+# - LLaMA (all versions: 1, 2, 3)
+# - Mistral, Mixtral
+# - Falcon (with RMSNorm variant)
+# - Gemma, CodeGemma
+# - Phi-2, Phi-3 (with RMSNorm)
+# - Generic transformers using RMSNorm
+#
+# ❌ **NOT Compatible:**
+# - BitNet models (use bitnet-b158-* policies instead)
+# - Models using LayerNorm instead of RMSNorm
+# - Models with unusual norm initialization (e.g., gamma=0.5 by design)
+# - Custom architectures with non-standard norms
+#
+# ==============================================================================
+# Usage Examples
+# ==============================================================================
+#
+# 1. Validate a LLaMA model:
+#    cargo run -p bitnet-cli -- inspect --ln-stats \
+#      --policy examples/policies/llama-generic.yml \
+#      --policy-key generic \
+#      path/to/llama-model.gguf
+#
+# 2. Use as auto-detection fallback:
+#    # Automatically selected when architecture is NOT "bitnet" or "b1.58"
+#    RUST_LOG=info cargo run -p bitnet-cli -- run --model llama-model.gguf
+#
+# 3. Validate after quantization:
+#    # Check that LayerNorm wasn't accidentally quantized
+#    cargo run -p bitnet-cli -- inspect --ln-stats \
+#      --policy examples/policies/llama-generic.yml \
+#      llama-model-q4_0.gguf
+#    # All norms should still be in [0.8, 1.2] envelope
+#
+# ==============================================================================
+# Troubleshooting
+# ==============================================================================
+#
+# Symptom: "norm.weight RMS=0.02 [SUSPICIOUS] (gate: generic)"
+# Cause: LayerNorm was quantized (should always be FP16/FP32)
+# Solution: Regenerate GGUF with --skip-layernorm-quantization or equivalent
+#
+# Symptom: "norm.weight RMS=1.35 [OUT OF RANGE] (gate: generic)"
+# Cause: Either:
+#         1. Model was fine-tuned with unusual learning rate
+#         2. Custom architecture with non-standard initialization
+# Solution: If model works correctly, create custom policy with wider envelope
+#           (see custom-model-example.yml)
+#
+# Symptom: "norm.weight RMS=0.75 [OUT OF RANGE] (gate: generic)"
+# Cause: Close to threshold - may be legitimate fine-tuning variance
+# Solution: 1. Test inference quality
+#           2. If output is good, widen min threshold to 0.70
+#           3. If output is bad, regenerate GGUF from original weights
+#
+# ==============================================================================
+# Adjusting Thresholds for Fine-Tuned Models
+# ==============================================================================
+#
+# If you have a fine-tuned model with legitimate RMS outside [0.8, 1.2]:
+#
+# 1. **Measure actual RMS distribution:**
+#    cargo run -p bitnet-cli -- inspect --ln-stats your-model.gguf > stats.txt
+#    # Review min/max RMS across all layers
+#
+# 2. **Create custom policy:**
+#    cp examples/policies/llama-generic.yml custom-llama-finetuned.yml
+#    # Edit min/max to encompass your observed RMS range + margin
+#
+# 3. **Example: Fine-tuned model with RMS [0.65, 1.40]**
+#    ln:
+#      - pattern: ".*norm\\.weight$"
+#        min: 0.60   # Measured min 0.65 - 0.05 margin
+#        max: 1.50   # Measured max 1.40 + 0.10 margin
+#
+# 4. **Validate custom policy:**
+#    cargo run -p bitnet-cli -- inspect --ln-stats \
+#      --policy custom-llama-finetuned.yml \
+#      your-model.gguf
+#    # Should pass validation
+#
+# ==============================================================================
+# RMSNorm vs LayerNorm
+# ==============================================================================
+#
+# This policy is for RMSNorm, NOT standard LayerNorm:
+#
+# **RMSNorm:**
+# - Single gamma parameter (no beta/bias)
+# - Normalizes by RMS (root mean square)
+# - Used in: LLaMA, Mistral, most modern transformers
+# - Expected gamma RMS: ~1.0
+#
+# **LayerNorm (standard):**
+# - Two parameters: gamma (scale) and beta (shift)
+# - Normalizes by mean and variance
+# - Used in: BERT, GPT-2, older transformers
+# - Expected gamma RMS: ~1.0, beta RMS: ~0.0
+#
+# If your model uses standard LayerNorm (not RMSNorm), this policy may still
+# work for gamma weights, but you'll need to handle beta weights separately.
+#
+# ==============================================================================
+# Comparison with BitNet Policies
+# ==============================================================================
+#
+# Key differences from BitNet-specific policies:
+#
+# | Feature              | LLaMA-Generic | BitNet-F16 | BitNet-I2_S |
+# |----------------------|---------------|------------|-------------|
+# | Min RMS (attn_norm)  | 0.80          | 0.50       | 0.01        |
+# | Min RMS (ffn_norm)   | 0.80          | 0.05       | 0.50        |
+# | Min RMS (other norm) | 0.80          | 0.50       | 0.25        |
+# | Max RMS (all norms)  | 1.20          | 2.0        | 2.0         |
+# | Proj RMS validation  | None          | Yes        | Yes         |
+#
+# **Why narrower for LLaMA?**
+# - LLaMA uses standard RMSNorm with gamma≈1.0 by design
+# - BitNet architecturally has lower gamma values (especially FFN norms)
+# - I2_S quantization creates legitimate low RMS artifacts in BitNet
+#
+# **When to use which policy?**
+# - LLaMA-Generic: Standard RMSNorm transformers (LLaMA, Mistral, etc.)
+# - BitNet-F16: BitNet models exported as F16 (unquantized)
+# - BitNet-I2_S: BitNet models with I2_S quantization
+# - Custom: Your own architecture with measured RMS bounds
+#
+# ==============================================================================
+# Related Policies
+# ==============================================================================
+#
+# - bitnet-b158-f16-clean.yml: BitNet-specific with wider envelopes
+# - bitnet-b158-i2s-quantized.yml: BitNet with I2_S quantization artifacts
+# - custom-model-example.yml: Template for creating architecture-specific policies
+#
+# ==============================================================================
+# Auto-Detection Logic
+# ==============================================================================
+#
+# The generic policy is automatically selected during model loading when:
+#
+# 1. GGUF metadata: general.architecture does NOT contain "bitnet" or "b1.58"
+# 2. No custom policy specified via --policy flag
+# 3. No BITNET_VALIDATION_POLICY environment variable set
+#
+# See: crates/bitnet-cli/src/ln_rules.rs::detect_rules()
+#
+# Example auto-detection scenarios:
+#
+# | GGUF Architecture | File Type | Auto-Selected Policy |
+# |-------------------|-----------|----------------------|
+# | "llama"           | 1 (F16)   | generic              |
+# | "mistral"         | 3 (Q4_0)  | generic              |
+# | "bitnet"          | 1 (F16)   | bitnet-b1.58:f16     |
+# | "bitnet"          | 28        | bitnet-b1.58:i2_s    |
+#
+# ==============================================================================
